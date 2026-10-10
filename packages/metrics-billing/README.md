@@ -1,5 +1,16 @@
 # @croco/metrics-billing
 
+## 배정자당 성과 원천 매핑
+
+`billingOrderOutcome`은 `Order`와 `BillingAccount`의 tenant 연결을 확인하고 실제 수납 minor-unit을 매핑합니다.
+subject와 observed time은 host가 명시적으로 제공합니다. billing에는 환불 조회 계약이 없으므로
+`settledRefundOutcome`은 확정 원천 row와 연결 payment ID를 요구합니다.
+
+`creditGrantOutcome`은 credit units와 명시적인 통화별 액면 valuation을 분리합니다. 자동 현금 환산은 없습니다.
+`engagementContactCostOutcome`은 dispatch와 연결된 확정 비용 영수증이 있을 때만 비용 사건을 만듭니다.
+`queued`나 provider acceptance만으로 비용을 확정하지 않으며 영수증이 없으면 `missing`을 반환합니다.
+host는 이 결과를 `compareAssignedOutcomes`의 비용 coverage에 반영해야 합니다. 별도 금융 원장을 만들지 않습니다.
+
 Billing 도메인 이벤트를 Metrics 계산으로 연결하는 파이프라인 패키지입니다.
 
 ## 설치

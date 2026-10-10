@@ -21,9 +21,9 @@
       "require": "./src/index.ts"
     },
     "./source": {
-      "types": "./src/source.ts",
-      "import": "./src/source.ts",
-      "require": "./src/source.ts"
+      "types": "./dist/source.d.ts",
+      "import": "./dist/source.mjs",
+      "require": "./dist/source.js"
     },
     "./pipeline": {
       "types": "./src/pipeline.ts",

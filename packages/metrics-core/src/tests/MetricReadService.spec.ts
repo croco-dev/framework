@@ -183,6 +183,252 @@ describe("MetricReadService", () => {
     },
   );
 
+  it("awaits the asynchronous input key before looking up reviewed reports", async () => {
+    let releaseKey!: (key: string) => void;
+    const key = new Promise<string>((resolve) => {
+      releaseKey = resolve;
+    });
+    const inputKey = vi.fn(async () => key);
+    const { service, reader, executor } = fixture({ query: { inputKey }, report: report() });
+    const pending = service.runRegisteredQuery("captures_by_currency", { currency: "USD" }, window);
+    await vi.waitFor(() => expect(inputKey).toHaveBeenCalledOnce());
+    expect(reader.readCandidates).not.toHaveBeenCalled();
+    releaseKey("USD");
+    await expect(pending).resolves.toEqual({ status: "verified", source: "report", result });
+    expect(reader.readCandidates).toHaveBeenCalledWith(
+      "captures_by_currency",
+      "USD",
+      context.principal,
+      expect.any(AbortSignal),
+    );
+    expect(executor).not.toHaveBeenCalled();
+  });
+
+  it("never looks up reports after an asynchronous input key exceeds the deadline", async () => {
+    vi.useFakeTimers();
+    try {
+      let releaseKey!: (key: string) => void;
+      const key = new Promise<string>((resolve) => {
+        releaseKey = resolve;
+      });
+      const inputKey = vi.fn(async () => key);
+      const { service, reader, executor } = fixture({
+        query: { inputKey, limits: { ...context.budget, maxTimeMs: 100 } },
+        report: report(),
+      });
+      const pending = service.runRegisteredQuery(
+        "captures_by_currency",
+        { currency: "USD" },
+        window,
+      );
+      const rejected = expect(pending).rejects.toMatchObject({
+        code: "metrics-core/read-timeout",
+      });
+      await vi.advanceTimersByTimeAsync(100);
+      expect(inputKey).toHaveBeenCalledOnce();
+      await rejected;
+      releaseKey("USD");
+      await vi.advanceTimersByTimeAsync(0);
+      expect(reader.readCandidates).not.toHaveBeenCalled();
+      expect(executor).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it.each(["executor", "report"] as const)(
+    "discards opted-in partial %s data after a privacy epoch change",
+    async (source) => {
+      let privacyEpoch = "privacy-1";
+      const partialResult = {
+        ...result,
+        quality: { ...quality, populationCoverage: "partial" as const },
+      };
+      const partialReport = report({ result: partialResult });
+      const { service } = fixture({
+        query: { partialDataPolicy: "authorized" },
+        grant: async () => ({ permissionEpoch: "permission-1", privacyEpoch }),
+        executor: async () => {
+          privacyEpoch = "privacy-2";
+          return partialResult;
+        },
+        ...(source === "report"
+          ? {
+              reader: {
+                readCandidates: async () => [partialReport],
+                verify: async () => {
+                  privacyEpoch = "privacy-2";
+                  return true;
+                },
+              },
+            }
+          : {}),
+      });
+      await expect(
+        service.runRegisteredQuery("captures_by_currency", { currency: "USD" }, window),
+      ).resolves.toEqual({ status: "denied" });
+    },
+  );
+
+  it("rejects opted-in partial executor data exceeding the row budget", async () => {
+    const { service } = fixture({
+      query: { partialDataPolicy: "authorized" },
+      executor: async () => ({
+        ...result,
+        rows: 11,
+        quality: { ...quality, populationCoverage: "partial" },
+      }),
+    });
+    await expect(
+      service.runRegisteredQuery("captures_by_currency", { currency: "USD" }, window),
+    ).rejects.toMatchObject({ code: "metrics-core/result-budget-exceeded" });
+  });
+
+  it.each(["executor", "report"] as const)(
+    "withholds partial %s data by default",
+    async (source) => {
+      const partialResult = {
+        ...result,
+        quality: { ...quality, populationCoverage: "partial" as const },
+      };
+      const { service } = fixture({
+        executor: async () => partialResult,
+        ...(source === "report" ? { report: report({ result: partialResult }) } : {}),
+      });
+      const answer = await service.runRegisteredQuery(
+        "captures_by_currency",
+        { currency: "USD" },
+        window,
+      );
+      expect(answer.status).toBe("partial");
+      expect(answer).not.toHaveProperty("result");
+      expect(answer).not.toHaveProperty("evidence.data");
+    },
+  );
+
+  it.each(["executor", "report"] as const)(
+    "returns opted-in partial %s totals and quality",
+    async (source) => {
+      const partialResult = {
+        ...result,
+        quality: { ...quality, populationCoverage: "partial" as const },
+      };
+      const { service } = fixture({
+        query: { partialDataPolicy: "authorized" },
+        executor: async () => partialResult,
+        ...(source === "report" ? { report: report({ result: partialResult }) } : {}),
+      });
+      await expect(
+        service.runRegisteredQuery("captures_by_currency", { currency: "USD" }, window),
+      ).resolves.toMatchObject({ status: "partial", result: partialResult });
+    },
+  );
+
+  it.each(["executor", "report"] as const)(
+    "withholds stale %s data even when partial data is authorized",
+    async (source) => {
+      const staleResult = {
+        ...result,
+        quality: {
+          ...quality,
+          freshness: "stale" as const,
+          populationCoverage: "partial" as const,
+        },
+      };
+      const { service } = fixture({
+        query: { partialDataPolicy: "authorized" },
+        executor: async () => staleResult,
+        ...(source === "report" ? { report: report({ result: staleResult }) } : {}),
+      });
+      const answer = await service.runRegisteredQuery(
+        "captures_by_currency",
+        { currency: "USD" },
+        window,
+      );
+      expect(answer.status).toBe("stale");
+      expect(answer).not.toHaveProperty("result");
+      expect(answer).not.toHaveProperty("evidence.data");
+    },
+  );
+
+  it.each(["executor", "report"] as const)(
+    "discards opted-in partial %s data after permission revocation",
+    async (source) => {
+      let allowed = true;
+      const partialResult = {
+        ...result,
+        quality: { ...quality, populationCoverage: "partial" as const },
+      };
+      const partialReport = report({ result: partialResult });
+      const { service } = fixture({
+        query: { partialDataPolicy: "authorized" },
+        grant: async () =>
+          allowed ? { permissionEpoch: "permission-1", privacyEpoch: "privacy-1" } : null,
+        executor: async () => {
+          allowed = false;
+          return partialResult;
+        },
+        ...(source === "report"
+          ? {
+              reader: {
+                readCandidates: async () => [partialReport],
+                verify: async () => {
+                  allowed = false;
+                  return true;
+                },
+              },
+            }
+          : {}),
+      });
+      await expect(
+        service.runRegisteredQuery("captures_by_currency", { currency: "USD" }, window),
+      ).resolves.toEqual({ status: "denied" });
+    },
+  );
+
+  it.each(["executor", "report"] as const)(
+    "validates opted-in partial %s output before returning data",
+    async (source) => {
+      const partialResult = {
+        ...result,
+        quality: { ...quality, populationCoverage: "partial" as const },
+      };
+      const invalidOutput = new MetricReadProblem(
+        "metrics-core/invalid-query-output",
+        ProblemCategory.InternalServerError,
+        "Invalid output",
+      );
+      const { service } = fixture({
+        query: {
+          partialDataPolicy: "authorized",
+          outputSchema: {
+            parse: () => {
+              throw invalidOutput;
+            },
+          },
+        },
+        executor: async () => partialResult,
+        ...(source === "report" ? { report: report({ result: partialResult }) } : {}),
+      });
+      await expect(
+        service.runRegisteredQuery("captures_by_currency", { currency: "USD" }, window),
+      ).rejects.toBe(invalidOutput);
+    },
+  );
+
+  it("denies an opted-in partial report that exceeds the row budget", async () => {
+    const { service, executor } = fixture({
+      query: { partialDataPolicy: "authorized" },
+      report: report({
+        result: { ...result, rows: 11, quality: { ...quality, populationCoverage: "partial" } },
+      }),
+    });
+    await expect(
+      service.runRegisteredQuery("captures_by_currency", { currency: "USD" }, window),
+    ).resolves.toEqual({ status: "denied", reportId: "reviewed-report" });
+    expect(executor).not.toHaveBeenCalled();
+  });
+
   it("scopes revisions and snapshots to each registered definition", async () => {
     const sharedContext: MetricReadContext = {
       ...context,

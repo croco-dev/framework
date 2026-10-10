@@ -45,6 +45,8 @@
   },
   "dependencies": {
     "@croco/billing-core": "workspace:*",
+    "@croco/credits-core": "workspace:*",
+    "@croco/engagement-core": "workspace:*",
     "@croco/events-core": "workspace:*",
     "@croco/metrics-core": "workspace:*",
     "@croco/problems-core": "workspace:*"

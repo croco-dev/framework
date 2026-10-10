@@ -479,6 +479,18 @@ export type {
   ReminderOperationsSource,
 } from "./libs/ReminderOperations";
 
+export { createNetOutcomeOperations, NetOutcomeProblem } from "./libs/NetOutcomeOperations";
+export type {
+  NetOutcomeRequest,
+  NetOutcomeSnapshot,
+  NetOutcomeState,
+  NetOutcomeDrilldownRequest,
+  NetOutcomeDrilldown,
+  NetOutcomeGrant,
+  NetOutcomeAuthority,
+  NetOutcomeSource,
+} from "./libs/NetOutcomeOperations";
+
 export {
   ActivationCandidateOperations,
   ActivationAdminProblem,

@@ -5,4 +5,4 @@ prev: false
 title: "SourceEnvelope"
 ---
 
-> **SourceEnvelope** = [`EventSourceEnvelope`](/api/etl-core/src/type-aliases/eventsourceenvelope/)
+> **SourceEnvelope** = `EventSourceEnvelope`

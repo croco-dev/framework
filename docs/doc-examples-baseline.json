@@ -68,21 +68,21 @@
       "file": "packages/admin-core/README.md",
       "blockIndex": 1,
       "language": "ts",
-      "openingLine": 36,
+      "openingLine": 40,
       "reason": "Legacy authored docs block is not yet isolated for documentation typechecking."
     },
     {
       "file": "packages/admin-core/README.md",
       "blockIndex": 2,
       "language": "ts",
-      "openingLine": 85,
+      "openingLine": 89,
       "reason": "Legacy authored docs block is not yet isolated for documentation typechecking."
     },
     {
       "file": "packages/admin-core/README.md",
       "blockIndex": 3,
       "language": "ts",
-      "openingLine": 126,
+      "openingLine": 130,
       "reason": "Legacy authored docs block is not yet isolated for documentation typechecking."
     },
     {
@@ -110,70 +110,70 @@
       "file": "packages/admin-react/README.md",
       "blockIndex": 1,
       "language": "tsx",
-      "openingLine": 28,
+      "openingLine": 32,
       "reason": "Legacy authored docs block is not yet isolated for documentation typechecking."
     },
     {
       "file": "packages/admin-react/README.md",
       "blockIndex": 2,
       "language": "tsx",
-      "openingLine": 68,
+      "openingLine": 72,
       "reason": "Legacy authored docs block is not yet isolated for documentation typechecking."
     },
     {
       "file": "packages/admin-react/README.md",
       "blockIndex": 3,
       "language": "tsx",
-      "openingLine": 110,
+      "openingLine": 114,
       "reason": "Legacy authored docs block is not yet isolated for documentation typechecking."
     },
     {
       "file": "packages/admin-react/README.md",
       "blockIndex": 4,
       "language": "tsx",
-      "openingLine": 165,
+      "openingLine": 169,
       "reason": "Legacy authored docs block is not yet isolated for documentation typechecking."
     },
     {
       "file": "packages/admin-react/README.md",
       "blockIndex": 5,
       "language": "tsx",
-      "openingLine": 210,
+      "openingLine": 214,
       "reason": "Legacy authored docs block is not yet isolated for documentation typechecking."
     },
     {
       "file": "packages/admin-react/README.md",
       "blockIndex": 6,
       "language": "tsx",
-      "openingLine": 234,
+      "openingLine": 238,
       "reason": "Legacy authored docs block is not yet isolated for documentation typechecking."
     },
     {
       "file": "packages/admin-react/README.md",
       "blockIndex": 7,
       "language": "tsx",
-      "openingLine": 260,
+      "openingLine": 264,
       "reason": "Legacy authored docs block is not yet isolated for documentation typechecking."
     },
     {
       "file": "packages/admin-react/README.md",
       "blockIndex": 8,
       "language": "tsx",
-      "openingLine": 300,
+      "openingLine": 304,
       "reason": "Legacy authored docs block is not yet isolated for documentation typechecking."
     },
     {
       "file": "packages/admin-react/README.md",
       "blockIndex": 9,
       "language": "tsx",
-      "openingLine": 359,
+      "openingLine": 363,
       "reason": "Legacy authored docs block is not yet isolated for documentation typechecking."
     },
     {
       "file": "packages/admin-react/README.md",
       "blockIndex": 10,
       "language": "tsx",
-      "openingLine": 419,
+      "openingLine": 423,
       "reason": "Legacy authored docs block is not yet isolated for documentation typechecking."
     },
     {
@@ -1923,28 +1923,28 @@
       "file": "packages/metrics-billing/README.md",
       "blockIndex": 1,
       "language": "typescript",
-      "openingLine": 26,
+      "openingLine": 37,
       "reason": "Legacy authored docs block is not yet isolated for documentation typechecking."
     },
     {
       "file": "packages/metrics-billing/README.md",
       "blockIndex": 2,
       "language": "typescript",
-      "openingLine": 41,
+      "openingLine": 52,
       "reason": "Legacy authored docs block is not yet isolated for documentation typechecking."
     },
     {
       "file": "packages/metrics-core/README.md",
       "blockIndex": 1,
       "language": "ts",
-      "openingLine": 13,
+      "openingLine": 43,
       "reason": "Legacy authored docs block is not yet isolated for documentation typechecking."
     },
     {
       "file": "packages/metrics-core/README.md",
       "blockIndex": 2,
       "language": "ts",
-      "openingLine": 30,
+      "openingLine": 60,
       "reason": "Legacy authored docs block is not yet isolated for documentation typechecking."
     },
     {

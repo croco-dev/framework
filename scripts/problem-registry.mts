@@ -4738,15 +4738,38 @@ function isCompleteRecoveryMetadata(metadata: ProblemRecoveryMetadata): boolean 
   );
 }
 
+function formatReadonlyRegistryType(value: unknown): string {
+  if (
+    value === null ||
+    typeof value === "string" ||
+    typeof value === "number" ||
+    typeof value === "boolean"
+  ) {
+    return JSON.stringify(value);
+  }
+  if (Array.isArray(value)) {
+    return `readonly [${value.map(formatReadonlyRegistryType).join(", ")}]`;
+  }
+  if (typeof value === "object") {
+    return `{ ${Object.entries(value)
+      .map(
+        ([key, entry]) => `readonly ${JSON.stringify(key)}: ${formatReadonlyRegistryType(entry)};`,
+      )
+      .join(" ")} }`;
+  }
+  throw new Error("Problem registry contains a non-JSON value");
+}
+
 function formatGeneratedProblemRegistrySource(registry: ProblemCodeRegistry): string {
   return `${[
     'import type { TypedProblemDetails } from "../libs/Problem";',
     'import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";',
     "",
-    "export const CROCO_PROBLEM_CODE_REGISTRY = ",
+    `export type CrocoProblemRegistry = ${formatReadonlyRegistryType(JSON.parse(JSON.stringify(registry)))};`,
+    "",
+    "export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = ",
     `${JSON.stringify(registry, null, 2)} as const satisfies ProblemCodeRegistry;`,
     "",
-    "export type CrocoProblemRegistry = typeof CROCO_PROBLEM_CODE_REGISTRY;",
     "export type CrocoProblemRegistryEntry = CrocoProblemRegistry['problems'][number];",
     "export type CrocoProblemCode = CrocoProblemRegistryEntry['code'];",
     "",
