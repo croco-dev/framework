@@ -118,6 +118,7 @@ export {
  */
 export { ProblemSerializer } from "./libs/ProblemSerializer";
 export {
+  FALLBACK_INTERNAL_SERVER_ERROR_PROBLEM_CODE,
   OPERATOR_ONLY_PROBLEM_DETAIL,
   createProblemResponseDetail,
   createProblemResponseExtensions,

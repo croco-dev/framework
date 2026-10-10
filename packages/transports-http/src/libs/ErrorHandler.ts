@@ -5,7 +5,11 @@ import {
   Inject,
   LOGGER_TOKEN,
 } from "@croco/framework-context";
-import { Problem, type ProblemDetails } from "@croco/problems-core";
+import {
+  FALLBACK_INTERNAL_SERVER_ERROR_PROBLEM_CODE,
+  Problem,
+  type ProblemDetails,
+} from "@croco/problems-core";
 import { createHttpProblemDetails, redactHttpProblemDetailsBody } from "@croco/protocols-rest";
 import { HTTP_CONTEXT_KEYS } from "./contextKeys";
 import type { CrocoHttpContext } from "./types";
@@ -49,6 +53,7 @@ export class ErrorHandler {
         type: "about:blank",
         title: "Internal Server Error",
         status: 500,
+        code: FALLBACK_INTERNAL_SERVER_ERROR_PROBLEM_CODE,
         detail: "An unexpected error occurred",
         ...this.createFailureMetadata(ctx),
       },
@@ -105,6 +110,7 @@ export class ErrorHandler {
         type: "about:blank",
         title: "Internal Server Error",
         status: 500,
+        code: FALLBACK_INTERNAL_SERVER_ERROR_PROBLEM_CODE,
         detail: "An internal error occurred",
         ...this.createFailureMetadata(ctx),
       },
