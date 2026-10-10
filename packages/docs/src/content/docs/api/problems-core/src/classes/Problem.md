@@ -705,6 +705,8 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`SavepointUnsupportedProblem`](/api/tx-drizzle/src/classes/savepointunsupportedproblem/)
 - [`TenantContextRequiredProblem`](/api/tx-drizzle/src/classes/tenantcontextrequiredproblem/)
 - [`WarehouseContractError`](/api/warehouse-core/src/classes/warehousecontracterror/)
+- [`DataConfigProblem`](/api/warehouse-tooling/src/classes/dataconfigproblem/)
+- [`DataGenerationProblem`](/api/warehouse-tooling/src/classes/datagenerationproblem/)
 - [`DuplicateWorkflowRegistrationProblem`](/api/workflow-core/src/classes/duplicateworkflowregistrationproblem/)
 - [`SagaDefinitionProblem`](/api/workflow-core/src/classes/sagadefinitionproblem/)
 - [`SagaExecutionFailedProblem`](/api/workflow-core/src/classes/sagaexecutionfailedproblem/)

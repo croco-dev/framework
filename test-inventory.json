@@ -1214,6 +1214,12 @@
       "owner": "@croco/cli"
     },
     {
+      "path": "packages/cli/src/tests/Data.spec.ts",
+      "lane": "fast",
+      "qualifiers": ["coverage"],
+      "owner": "@croco/cli"
+    },
+    {
       "path": "packages/cli/src/tests/DesktopRemoved.spec.ts",
       "lane": "fast",
       "qualifiers": ["coverage"],
@@ -5712,6 +5718,18 @@
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/warehouse-postgres"
+    },
+    {
+      "path": "packages/warehouse-tooling/src/tests/DataCompiler.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/warehouse-tooling"
+    },
+    {
+      "path": "packages/warehouse-tooling/src/tests/Generation.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/warehouse-tooling"
     },
     {
       "path": "packages/webhooks-core/src/tests/OutboundWebhookRuntime.spec.ts",

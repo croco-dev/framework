@@ -6,12 +6,15 @@ import { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import {
+  generatePostgresFactSchema,
   installPostgresFactSchema,
   installPostgresWarehouseSchema,
   PostgresWarehouseCatalog,
   PostgresWarehouseReader,
   PostgresWarehouseWriter,
 } from "../facts";
+
+import { compileDataConfig } from "../../../warehouse-tooling/src/libs/compiler";
 
 import type { FactDescriptor } from "@croco/warehouse-core";
 import type {
@@ -33,7 +36,7 @@ const captures = defineFact("warehouse_capture_integration", {
     amount: c.moneyMinor({ currency: "currency", min: BigInt(0) }),
     currency: c.currencyCode(),
     capturedAt: c.instant({ precision: "millisecond" }),
-    privateNote: c.string({ sensitivity: "sensitive" }),
+    privateNote: c.nullable(c.string({ sensitivity: "sensitive" })),
   },
   time: { event: "capturedAt" },
   write: { mode: "append", duplicate: "ignore-identical", conflict: "reject" },
@@ -101,11 +104,83 @@ describe.skipIf(!realResourcesEnabled)("PostgreSQL warehouse facts", () => {
     dispose = started.dispose;
     descriptor = await compileFact(captures);
     searchDescriptor = await compileFact(searchDaily);
-    await installPostgresWarehouseSchema(connection.pool);
-    await installPostgresWarehouseSchema(connection.pool);
-    await installPostgresFactSchema(connection.pool, descriptor);
-    await installPostgresFactSchema(connection.pool, descriptor);
-    await installPostgresFactSchema(connection.pool, searchDescriptor);
+    const compiled = await compileDataConfig({
+      connections: [{ id: "warehouse", env: "DATABASE_URL" }],
+      sources: [],
+      models: [captures, searchDaily].map((fact) => ({
+        backend: "postgres" as const,
+        fact,
+        connection: "warehouse",
+        location: {
+          file: "src/tests/PostgresWarehouseFacts.integration.spec.ts",
+          line: 1,
+          column: 1,
+        },
+      })),
+      pipelines: [],
+    });
+    const migration = compiled.files["migrations/candidate.sql"];
+    expect(migration).toBeTypeOf("string");
+    const migrationClient = await connection.pool.connect();
+    try {
+      await migrationClient.query("BEGIN");
+      await migrationClient.query("CREATE SCHEMA app");
+      await migrationClient.query(
+        "CREATE TABLE app.warehouse_candidates (application_owned TEXT PRIMARY KEY)",
+      );
+      await migrationClient.query("INSERT INTO app.warehouse_candidates VALUES ('preserve-me')");
+      await migrationClient.query("SET LOCAL search_path=app,public");
+      await migrationClient.query(migration);
+      const applicationTable = await migrationClient.query(
+        "SELECT * FROM app.warehouse_candidates",
+      );
+      expect(applicationTable.rows).toEqual([{ application_owned: "preserve-me" }]);
+      const metadata = await migrationClient.query<{ tablename: string }>(
+        "SELECT tablename FROM pg_tables WHERE schemaname='public' AND tablename LIKE 'warehouse_%' ORDER BY tablename",
+      );
+      expect(metadata.rows.map((entry) => entry.tablename)).toEqual([
+        "warehouse_candidates",
+        "warehouse_heads",
+        "warehouse_models",
+        "warehouse_mutations",
+        "warehouse_receipts",
+        "warehouse_snapshots",
+        "warehouse_suppressions",
+      ]);
+      const applicationObjects = await migrationClient.query<{ tablename: string }>(
+        "SELECT tablename FROM pg_tables WHERE schemaname='app' ORDER BY tablename",
+      );
+      expect(applicationObjects.rows).toEqual([{ tablename: "warehouse_candidates" }]);
+      await migrationClient.query("COMMIT");
+    } catch (error) {
+      await migrationClient.query("ROLLBACK");
+      throw error;
+    } finally {
+      migrationClient.release();
+    }
+    for (const model of [descriptor, searchDescriptor]) {
+      const generated = await generatePostgresFactSchema(model);
+      const physical = await connection.pool.query<{
+        name: string;
+        sql_type: string;
+        nullable: boolean;
+      }>(
+        `SELECT attname AS name, format_type(atttypid, atttypmod) AS sql_type, NOT attnotnull AS nullable
+         FROM pg_attribute
+         WHERE attrelid=$1::regclass AND attnum>0 AND NOT attisdropped AND attname LIKE 'c_%'
+         ORDER BY attname`,
+        [`public.${generated.tableName}`],
+      );
+      expect(physical.rows).toEqual(
+        generated.columns.map((column) => ({
+          name: column.name,
+          sql_type: column.sqlType
+            .replace(/^TIMESTAMPTZ\((\d)\)$/, "timestamp($1) with time zone")
+            .toLowerCase(),
+          nullable: column.nullable,
+        })),
+      );
+    }
   }, 180_000);
 
   afterAll(async () => {
@@ -178,25 +253,61 @@ describe.skipIf(!realResourcesEnabled)("PostgreSQL warehouse facts", () => {
     };
   }
 
-  it("upgrades prior candidate metadata without losing staged work", async () => {
-    const store = services(randomUUID());
-    const candidate = await store.catalog.createCandidate({
-      access: store.access(),
-      id: randomUUID(),
-      transformHash: "upgrade-check",
-      sourceRefs: ["captures"],
-      expectedHead: null,
-      partitionSelection: null,
-      audit: { reason: "stage before upgrade", expectedRevision: 0, idempotencyKey: randomUUID() },
+  it("preserves quoted descriptor text when installing generated migration SQL", async () => {
+    const description = "it's \\ $warehouse_binding$; DROP TABLE warehouse_models;";
+    const quoted = await compileFact({
+      ...captures,
+      name: "warehouse_quoted_integration",
+      grain: { ...captures.grain, description },
     });
-    await connection.pool.query("ALTER TABLE warehouse_candidates DROP COLUMN created_at");
-    await installPostgresWarehouseSchema(connection.pool);
-    const restored = await connection.pool.query<{ id: string; created_at: Date }>(
-      "SELECT id,created_at FROM warehouse_candidates WHERE id=$1",
-      [candidate.id],
-    );
-    expect(restored.rows[0]?.id).toBe(candidate.id);
-    expect(restored.rows[0]?.created_at).toBeInstanceOf(Date);
+    const client = await connection.pool.connect();
+    try {
+      await client.query("BEGIN");
+      await client.query((await generatePostgresFactSchema(quoted)).sql);
+      const stored = await client.query<{ descriptor: FactDescriptor }>(
+        "SELECT descriptor FROM warehouse_models WHERE model_version=$1",
+        [quoted.semanticHash],
+      );
+      expect(stored.rows[0].descriptor.grain.description).toBe(description);
+    } finally {
+      await client.query("ROLLBACK");
+      client.release();
+    }
+  });
+
+  it("replays generated migrations after documentation-only changes", async () => {
+    const documented = await compileFact({
+      ...captures,
+      description: "Reviewed capture model documentation",
+      grain: { ...captures.grain, description: "Reviewed capture grain documentation" },
+      columns: {
+        ...captures.columns,
+        captureId: {
+          ...captures.columns.captureId,
+          description: "Reviewed capture identifier documentation",
+        },
+      },
+    });
+    expect(documented.semanticHash).toBe(descriptor.semanticHash);
+    await connection.pool.query((await generatePostgresFactSchema(documented)).sql);
+    await connection.pool.query((await generatePostgresFactSchema(descriptor)).sql);
+  });
+
+  it("replays generated SQL and rejects a conflicting stored model binding", async () => {
+    const generated = await generatePostgresFactSchema(descriptor);
+    await connection.pool.query(generated.sql);
+    const client = await connection.pool.connect();
+    try {
+      await client.query("BEGIN");
+      await client.query(
+        "UPDATE warehouse_models SET descriptor=jsonb_set(descriptor, '{columns,amount,type}', '\"string\"'::jsonb) WHERE model_version=$1",
+        [descriptor.semanticHash],
+      );
+      await expect(client.query(generated.sql)).rejects.toThrow("WAREHOUSE_BINDING_CONFLICT");
+    } finally {
+      await client.query("ROLLBACK");
+      client.release();
+    }
   });
 
   it("publishes only sealed facts and preserves a pinned page after the head advances", async () => {
@@ -1122,4 +1233,32 @@ describe.skipIf(!realResourcesEnabled)("PostgreSQL warehouse facts", () => {
     );
     expect(physical.rows[0].count).toBe("0");
   }, 120_000);
+  it("upgrades prior candidate metadata without losing staged work", async () => {
+    const store = services(randomUUID());
+    const candidate = await store.catalog.createCandidate({
+      access: store.access(),
+      id: randomUUID(),
+      transformHash: "upgrade-check",
+      sourceRefs: ["captures"],
+      expectedHead: null,
+      partitionSelection: null,
+      audit: { reason: "stage before upgrade", expectedRevision: 0, idempotencyKey: randomUUID() },
+    });
+    await connection.pool.query("ALTER TABLE warehouse_candidates DROP COLUMN created_at");
+    await installPostgresWarehouseSchema(connection.pool);
+    const restored = await connection.pool.query<{ id: string; created_at: Date }>(
+      "SELECT id,created_at FROM warehouse_candidates WHERE id=$1",
+      [candidate.id],
+    );
+    expect(restored.rows[0]?.id).toBe(candidate.id);
+    expect(restored.rows[0]?.created_at).toBeInstanceOf(Date);
+  });
+
+  it("replays explicit runtime installers after artifact-created tables served all fact workflows", async () => {
+    await installPostgresWarehouseSchema(connection.pool);
+    await installPostgresWarehouseSchema(connection.pool);
+    await installPostgresFactSchema(connection.pool, descriptor);
+    await installPostgresFactSchema(connection.pool, descriptor);
+    await installPostgresFactSchema(connection.pool, searchDescriptor);
+  });
 });

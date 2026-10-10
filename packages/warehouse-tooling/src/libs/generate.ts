@@ -1,0 +1,215 @@
+import { createHash, randomUUID } from "node:crypto";
+import {
+  cp,
+  lstat,
+  mkdir,
+  readFile,
+  readdir,
+  realpath,
+  rename,
+  rm,
+  writeFile,
+} from "node:fs/promises";
+import { basename, dirname, isAbsolute, join, resolve } from "node:path";
+import { Problem, ProblemCategory } from "@croco/problems-core";
+
+const OWNERSHIP = ".croco-data-ownership.json";
+type Ownership = { version: 1; files: Record<string, string> };
+export class DataGenerationProblem extends Problem {
+  readonly code = "warehouse-tooling/generation-failed";
+  readonly category = ProblemCategory.ValidationError;
+  constructor(
+    readonly reason: string,
+    readonly file?: string,
+    readonly committedManifest?: unknown,
+  ) {
+    super(undefined, undefined, `Data generation ${reason}.`, {
+      extensions: { reason, ...(file === undefined ? {} : { file }) },
+    });
+  }
+}
+const hash = (content: string) => createHash("sha256").update(content).digest("hex");
+function safePath(file: string): void {
+  if (
+    !file ||
+    isAbsolute(file) ||
+    file.includes("\\") ||
+    file.split("/").some((part) => !part || part === "." || part === "..") ||
+    file === OWNERSHIP
+  )
+    throw new DataGenerationProblem("invalid-owned-path");
+}
+async function exists(path: string): Promise<boolean> {
+  try {
+    await lstat(path);
+    return true;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return false;
+    throw error;
+  }
+}
+async function rejectLinks(path: string): Promise<void> {
+  const stat = await lstat(path);
+  if (stat.isSymbolicLink() || (!stat.isDirectory() && !stat.isFile()))
+    throw new DataGenerationProblem("unsupported-file");
+  if (stat.isDirectory())
+    for (const name of await readdir(path)) await rejectLinks(join(path, name));
+}
+async function readOwnership(output: string): Promise<Ownership> {
+  if (!(await exists(join(output, OWNERSHIP)))) return { version: 1, files: {} };
+  let data: unknown;
+  try {
+    data = JSON.parse(await readFile(join(output, OWNERSHIP), "utf8"));
+  } catch {
+    throw new DataGenerationProblem("invalid-ownership");
+  }
+  const value = data as Ownership;
+  if (
+    value?.version !== 1 ||
+    !value.files ||
+    typeof value.files !== "object" ||
+    Array.isArray(value.files)
+  )
+    throw new DataGenerationProblem("invalid-ownership");
+  for (const [file, digest] of Object.entries(value.files)) {
+    safePath(file);
+    if (typeof digest !== "string" || !/^[a-f0-9]{64}$/.test(digest))
+      throw new DataGenerationProblem("invalid-ownership");
+    if (
+      !(await exists(join(output, file))) ||
+      hash(await readFile(join(output, file), "utf8")) !== digest
+    )
+      throw new DataGenerationProblem("modified-owned-file", file);
+  }
+  return value;
+}
+
+/** Commits a complete generated directory while retaining unowned files and immutable migrations. */
+export async function generateDataArtifacts<T>(
+  outputDirectory: string,
+  compilation: { readonly manifest: T; readonly files: Readonly<Record<string, string>> },
+  options: { readonly migrationId: string },
+): Promise<T> {
+  if (!/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,79}$/.test(options.migrationId))
+    throw new DataGenerationProblem("invalid-migration-id");
+  const requested = resolve(outputDirectory);
+  const parent = dirname(requested);
+  if (requested === parent) throw new DataGenerationProblem("invalid-output");
+  await mkdir(parent, { recursive: true });
+  const output = join(await realpath(parent), basename(requested));
+  const lock = `${output}.croco-data-lock`;
+  try {
+    await mkdir(lock, { mode: 0o700 });
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "EEXIST")
+      throw new DataGenerationProblem("generation-in-progress");
+    throw error;
+  }
+  const token = randomUUID();
+  const stage = `${output}.stage-${token}`;
+  const backup = `${output}.backup-${token}`;
+  let backedUp = false;
+  let committed = false;
+  let finalized!: T;
+  let cleanupFailure: DataGenerationProblem | undefined;
+  try {
+    const present = await exists(output);
+    if (present) {
+      await rejectLinks(output);
+      if (!(await lstat(output)).isDirectory()) throw new DataGenerationProblem("invalid-output");
+    }
+    const previous = present ? await readOwnership(output) : { version: 1 as const, files: {} };
+    const files: Record<string, string> = {};
+    for (const [file, content] of Object.entries(compilation.files)) {
+      safePath(file);
+      const path =
+        file === "migrations/candidate.sql" ? `migrations/${options.migrationId}.sql` : file;
+      if (typeof content !== "string" || Object.hasOwn(files, path))
+        throw new DataGenerationProblem("invalid-artifact");
+      files[path] = content;
+    }
+    const manifest = structuredClone(compilation.manifest) as {
+      artifacts?: Record<string, string>;
+    };
+    if (manifest?.artifacts && Object.hasOwn(manifest.artifacts, "migrations/candidate.sql")) {
+      const digest = manifest.artifacts["migrations/candidate.sql"];
+      delete manifest.artifacts["migrations/candidate.sql"];
+      manifest.artifacts[`migrations/${options.migrationId}.sql`] = digest;
+    }
+    files["manifest.json"] = `${JSON.stringify(
+      manifest,
+      (_key, value: unknown) => {
+        if (value !== null && typeof value === "object" && !Array.isArray(value))
+          return Object.fromEntries(
+            Object.entries(value).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)),
+          );
+        return value;
+      },
+      2,
+    )}\n`;
+    for (const [file, content] of Object.entries(files)) {
+      if (present && (await exists(join(output, file)))) {
+        if (!Object.hasOwn(previous.files, file))
+          throw new DataGenerationProblem("unowned-file-conflict", file);
+        if (file.startsWith("migrations/") && previous.files[file] !== hash(content))
+          throw new DataGenerationProblem("migration-id-conflict", file);
+      }
+    }
+    await mkdir(stage, { mode: 0o700 });
+    if (present) await cp(output, stage, { recursive: true, preserveTimestamps: true });
+    const owned: Record<string, string> = {};
+    for (const [file, digest] of Object.entries(previous.files)) {
+      if (file.startsWith("migrations/") && !Object.hasOwn(files, file)) owned[file] = digest;
+      else if (!Object.hasOwn(files, file)) await rm(join(stage, file));
+    }
+    for (const file of Object.keys(files).sort()) {
+      await mkdir(dirname(join(stage, file)), { recursive: true });
+      await writeFile(join(stage, file), files[file], { mode: 0o600 });
+      owned[file] = hash(files[file]);
+    }
+    const ownership = {
+      version: 1,
+      files: Object.fromEntries(Object.entries(owned).sort(([a], [b]) => a.localeCompare(b))),
+    };
+    await writeFile(join(stage, OWNERSHIP), `${JSON.stringify(ownership, null, 2)}\n`, {
+      mode: 0o600,
+    });
+    if (present) {
+      await rename(output, backup);
+      backedUp = true;
+    }
+    try {
+      await rename(stage, output);
+      committed = true;
+    } catch (error) {
+      if (backedUp) {
+        await rename(backup, output);
+        backedUp = false;
+      }
+      throw error;
+    }
+    finalized = JSON.parse(files["manifest.json"]) as T;
+  } finally {
+    try {
+      await rm(stage, { recursive: true, force: true });
+      if (committed && backedUp) await rm(backup, { recursive: true });
+    } catch {
+      cleanupFailure = new DataGenerationProblem(
+        committed ? "committed-cleanup-failed" : "staging-cleanup-failed",
+        undefined,
+        committed ? finalized : undefined,
+      );
+    }
+    try {
+      await rm(lock, { recursive: true });
+    } catch {
+      cleanupFailure = new DataGenerationProblem(
+        committed ? "committed-lock-cleanup-failed" : "lock-cleanup-failed",
+        undefined,
+        committed ? finalized : undefined,
+      );
+    }
+  }
+  if (cleanupFailure) throw cleanupFailure;
+  return finalized;
+}

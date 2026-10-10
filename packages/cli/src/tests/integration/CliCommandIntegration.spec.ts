@@ -10,7 +10,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, relative, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 const REPO_ROOT = resolve(fileURLToPath(new URL("../../../../../", import.meta.url)));
@@ -88,6 +88,100 @@ describe("installed CLI command integration", () => {
       rmSync(harness.tempRoot, { force: true, recursive: true });
     }
   });
+
+  it("generates offline data artifacts from installed source, model and pipeline declarations", () => {
+    const harness = getHarness();
+    const tooling = requiredPackedPackage(harness.packedPackages, "@croco/warehouse-tooling");
+    const drizzleVersion = tooling.packedManifest.dependencies?.["drizzle-orm"];
+    expect(typeof drizzleVersion).toBe("string");
+    run(
+      "pnpm",
+      [
+        "add",
+        "--prod",
+        tooling.tarballPath,
+        requiredPackedPackage(harness.packedPackages, "@croco/warehouse-core").tarballPath,
+        requiredPackedPackage(harness.packedPackages, "@croco/etl-core").tarballPath,
+        requiredPackedPackage(harness.packedPackages, "@croco/warehouse-postgres").tarballPath,
+        `drizzle-orm@${drizzleVersion}`,
+        "--ignore-scripts",
+      ],
+      harness.consumerRoot,
+      { label: "install data config dependencies" },
+    );
+    const configRoot = join(harness.consumerRoot, "packages/warehouse-tooling/examples");
+    mkdirSync(configRoot, { recursive: true });
+    for (const file of ["data.config.ts", "orders.ts"]) {
+      writeFileSync(
+        join(configRoot, file),
+        readFileSync(join(REPO_ROOT, "packages/warehouse-tooling/examples", file)),
+      );
+    }
+    const config = join(configRoot, "data.config.ts");
+    const output = join(harness.consumerRoot, "generated-data");
+    run(
+      process.execPath,
+      [
+        "--experimental-strip-types",
+        "--input-type=module",
+        "--eval",
+        `await import(${JSON.stringify(pathToFileURL(config).href)})`,
+      ],
+      harness.consumerRoot,
+      { label: "import installed data declarations" },
+    );
+    const validated = runInstalledCommand(
+      harness,
+      "croco",
+      ["data", "validate", "--config", config],
+      harness.consumerRoot,
+      0,
+    );
+    const generated = runInstalledCommand(
+      harness,
+      "croco",
+      ["data", "generate", "--config", config, "--output", output, "--migration-id", "initial"],
+      harness.consumerRoot,
+      0,
+    );
+    const validatedReport = JSON.parse(validated.stdout);
+    const generatedReport = JSON.parse(generated.stdout);
+    expect(
+      validatedReport.manifest.nodes.map((node: { kind: string }) => node.kind).sort(),
+    ).toEqual(["metadata", "model", "pipeline", "source"]);
+    expect(generatedReport.manifest.nodes).toEqual(validatedReport.manifest.nodes);
+    expect(readJsonFile(join(output, "manifest.json"))).toEqual(generatedReport.manifest);
+    expect(readFileSync(join(output, "migrations/initial.sql"), "utf8")).toContain("CREATE TABLE");
+    expect(generatedReport.manifest.artifacts).toHaveProperty("migrations/initial.sql");
+    expect(generatedReport.manifest.artifacts).not.toHaveProperty("migrations/candidate.sql");
+    const runner = join(output, "verify.mjs");
+    writeFileSync(
+      runner,
+      `import * as schemas from './schema/index.ts';
+const entries = Object.values(schemas);
+if (entries.length !== 1) throw new Error('Missing generated model');
+for (const entry of entries) { const schema = await entry.schema; if (!schema.sql.includes('CREATE TABLE') || !schema.tableName) throw new Error('Invalid generated schema'); }`,
+    );
+    run(process.execPath, ["--experimental-strip-types", runner], harness.consumerRoot, {
+      label: "execute generated data schema",
+    });
+
+    const unsafe = join(harness.consumerRoot, "network.config.ts");
+    writeFileSync(
+      unsafe,
+      "console.log('private config output'); await fetch('https://example.com'); export default {}; ",
+    );
+    const refused = runInstalledCommand(
+      harness,
+      "croco",
+      ["data", "validate", "--config", unsafe],
+      harness.consumerRoot,
+      1,
+    );
+    expect(refused.stdout).toBe("");
+    expect(refused.stderr).toContain("DATA_CONFIG_NETWORK_DENIED");
+    expect(refused.stderr).not.toContain("private config output");
+  }, 180_000);
 
   it("installs published package graphs and resolves bins under the temp consumer", () => {
     const harness = getHarness();
@@ -633,9 +727,12 @@ function createCliHarness(): CliHarness {
   mkdirSync(commandRoot, { recursive: true });
 
   const packageIndex = packageIndexFor(findPackageJsonFiles(join(REPO_ROOT, "packages")));
-  const rootPackages = ["@croco/cli", "create-croco-app"].map((packageName) =>
-    requiredPackage(packageIndex, packageName),
-  );
+  const rootPackages = [
+    "@croco/cli",
+    "create-croco-app",
+    "@croco/batch-core",
+    "@croco/execution-core",
+  ].map((packageName) => requiredPackage(packageIndex, packageName));
   run(
     "pnpm",
     ["--filter", "@croco/cli...", "--filter", "create-croco-app...", "build"],
