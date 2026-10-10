@@ -121,7 +121,7 @@ export interface CompiledRoute {
    * result stays a JSON body instead of collapsing into 204 no-content.
    * Omitted/falsy preserves the legacy schemaless empty-response behavior.
    */
-  hasResponseBody?: boolean;
+  hasResponseBody?: boolean | undefined;
   handler: (ctx: CrocoHttpContext) => Promise<unknown>;
   controllerInstance?: unknown;
   methodName: string | symbol;

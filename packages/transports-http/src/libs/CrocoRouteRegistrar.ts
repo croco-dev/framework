@@ -387,29 +387,12 @@ export class CrocoRouteRegistrar {
       return result;
     }
 
-    const successStatus = route.successStatus;
-    if (result === undefined) {
-      ctx.res.status = successStatus ?? 204;
+    if (result === undefined || (result === null && !route.hasResponseBody)) {
+      ctx.res.status = route.successStatus ?? 204;
       return this.toEmptyResponse(ctx, ctx.res.status);
     }
-
-    if (result === null) {
-      if (route.hasResponseBody) {
-        return ctx.jsonResponse(result, this.resolveJsonSuccessStatus(successStatus));
-      }
-      ctx.res.status = successStatus ?? 204;
-      return this.toEmptyResponse(ctx, ctx.res.status);
-    }
-
-    return ctx.jsonResponse(result, successStatus ?? 200);
-  }
-
-  private resolveJsonSuccessStatus(successStatus?: number): number {
-    if (successStatus === undefined) {
-      return 200;
-    }
-
-    return this.isNullBodyStatus(successStatus) ? 200 : successStatus;
+    const successStatus = route.successStatus ?? 200;
+    return ctx.jsonResponse(result, this.isNullBodyStatus(successStatus) ? 200 : successStatus);
   }
 
   private toShortCircuitResponse(ctx: HttpContext): Response {
