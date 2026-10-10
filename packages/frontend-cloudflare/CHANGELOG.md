@@ -1,5 +1,57 @@
 # @croco/frontend-cloudflare
 
+## 0.2.0
+
+### Minor Changes
+
+- 3e1ef6a: Expose the Cloudflare SSR handler for meta-vite composition from the published package entrypoint.
+
+### Patch Changes
+
+- b278729: - fix: block critical test tooling advisories
+- 7cdfcae: Declare audited package side effects so bundlers remove pure imports while preserving required initialization and CSS.
+- 7d248c5: Expose host, transport, and build-target composition as separate runtime metadata, bind host callbacks
+  to their owning application scope, preserve the legacy Cloudflare handler context, and teach generated
+  apps and presentation adapters to use explicit host and build-target entry points. Generated Lambda and
+  Cloudflare SaaS apps now advertise commands that validate their actual deployment targets, including a
+  Wrangler configuration with explicit Node.js compatibility for the generated Worker composition. Raw
+  Hono callbacks must explicitly select raw-Hono dispatch when using the canonical Cloudflare host.
+
+  Generated SaaS hosts await provider initialization and leave telemetry shutdown to the application
+  runtime. Lambda and Workers host artifacts do not enable their documentation-only SaaS provider
+  composition; invoking those profiles still reports `CROCO_SAAS_PROFILE_RUNTIME_UNAVAILABLE`.
+
+- 17c8730: Resolve ESM and CommonJS consumers to declaration files matching each published implementation format.
+- 67e0cbe: fix: resolve published package types before runtime conditions
+- 5d54fb4: declare Apache-2.0 license across all publishable package manifests and ship LICENSE in published packages
+- 80cf10b: Return redacted Problem responses with stable diagnostic codes and correlation evidence when Cloudflare API or SSR boundaries fail, and expose a failure reporter for asset, API, and render failures.
+- 5223568: Preserve mutation request bodies for API and SSR handlers by limiting static asset lookups to GET and HEAD requests.
+- Updated dependencies [a6e5d99]
+- Updated dependencies [92bf624]
+- Updated dependencies [66ebeeb]
+- Updated dependencies [ffebb2d]
+- Updated dependencies [34892a3]
+- Updated dependencies [b278729]
+- Updated dependencies [696c76b]
+- Updated dependencies [7cdfcae]
+- Updated dependencies [24f2385]
+- Updated dependencies [d99ede2]
+- Updated dependencies [8522b0c]
+- Updated dependencies [c80252f]
+- Updated dependencies [02b2e26]
+- Updated dependencies [7ab43e0]
+- Updated dependencies [67e0cbe]
+- Updated dependencies [47a4fd9]
+- Updated dependencies [7c006af]
+- Updated dependencies [e90e7bc]
+- Updated dependencies [5d54fb4]
+- Updated dependencies [d1e374a]
+- Updated dependencies [e87ff1a]
+- Updated dependencies [85b2665]
+- Updated dependencies [e07a323]
+- Updated dependencies [9402946]
+  - @croco/meta-vite@0.1.0
+
 ## 0.1.0
 
 ### Minor Changes
