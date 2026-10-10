@@ -4,6 +4,6 @@ export default defineConfig({
   format: ["esm"],
   clean: true,
   dts: true,
-  noExternal: [/^@croco\//],
+  noExternal: [/^@croco\/(?!problems-core$)/],
   target: "node24",
 });

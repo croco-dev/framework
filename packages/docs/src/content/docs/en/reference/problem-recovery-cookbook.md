@@ -18059,7 +18059,7 @@ Sources:
 
 Sources:
 
-- `packages/warehouse-tooling/src/libs/generate.ts:18:1` (problem-class)
+- `packages/warehouse-tooling/src/libs/generate.ts:19:1` (problem-class)
 
 <a id="warehouse-tooling-invalid-config"></a>
 

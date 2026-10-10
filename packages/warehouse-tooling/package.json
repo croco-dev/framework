@@ -44,7 +44,8 @@
     "example:build": "tsup --config examples/tsup.config.ts",
     "lint": "oxlint .",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run",
+    "test": "vitest run src/tests/DataCompiler.spec.ts src/tests/Generation.spec.ts",
+    "test:integration": "CROCO_TEST_REAL_RESOURCES=1 vitest run src/tests/DataCompiler.integration.spec.ts",
     "test:evidence": "pnpm run test --maxWorkers=1 --reporter=json --outputFile=.turbo/croco-test-evidence.json",
     "test:watch": "vitest",
     "docs:api:model": "node --experimental-strip-types ../docs/scripts/generate-package-api-model.mts"
@@ -57,7 +58,10 @@
     "drizzle-orm": "catalog:"
   },
   "devDependencies": {
+    "@croco/testing-resources": "workspace:*",
     "@types/node": "^24.0.0",
+    "@types/pg": "8.20.0",
+    "pg": "8.22.0",
     "tsup": "8.5.1",
     "vitest": "4.1.8"
   }

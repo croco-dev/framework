@@ -29743,7 +29743,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/warehouse-tooling/src/libs/generate.ts",
-          line: 18,
+          line: 19,
           column: 1,
           kind: "problem-class",
         },

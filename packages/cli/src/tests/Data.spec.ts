@@ -1,7 +1,18 @@
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  realpathSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
+import { hostname, tmpdir } from "node:os";
+import { randomUUID } from "node:crypto";
+import { spawnSync } from "node:child_process";
+import { join, sep } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
+import { generateDataArtifacts } from "@croco/warehouse-tooling/offline";
 import { runCroco } from "../commands/root.js";
 
 const directories: string[] = [];
@@ -150,6 +161,79 @@ describe("data CLI", () => {
     expect(readFileSync(join(output, file), "utf8")).toBe(retained);
     expect(readFileSync(join(output, ".env"), "utf8")).toBe("PRIVATE_SECRET=private-secret-value");
   });
+  it.each([
+    "interrupted-generation-restored",
+    "generation-recovery-required",
+    "generation-in-progress",
+  ])("reports the exact relative recovery artifact for %s", async (reason) => {
+    const cwd = fixture(valid);
+    const args = ["--output", "nested/generated", "--migration-id", "initial"];
+    await generateDataArtifacts(
+      join(cwd, "nested/generated"),
+      { manifest: {}, files: { "manifest.json": "{}" } },
+      { migrationId: "initial" },
+    );
+    const output = realpathSync(join(cwd, "nested/generated"));
+    const token = randomUUID();
+    const backup = `${output}.backup-${token}`;
+    const stage = `${output}.stage-${token}`;
+    const lock = `${output}.croco-data-lock`;
+    const pid =
+      reason === "generation-in-progress"
+        ? process.pid
+        : spawnSync(process.execPath, ["-e", ""]).pid;
+    mkdirSync(lock);
+    writeFileSync(
+      join(lock, "owner.json"),
+      JSON.stringify({ token, pid, host: hostname(), output, stage, backup }),
+    );
+    mkdirSync(stage);
+    writeFileSync(join(stage, "preserved"), "incomplete generation");
+    renameSync(output, backup);
+    if (reason === "generation-recovery-required")
+      writeFileSync(join(backup, "manifest.json"), "private changed content");
+    const result = await invoke(cwd, "generate", args);
+    const suffix =
+      reason === "interrupted-generation-restored"
+        ? `.stage-${token}`
+        : reason === "generation-in-progress"
+          ? ".croco-data-lock"
+          : `.backup-${token}`;
+    expect(result.exitCode).toBe(1);
+    expect(result.stdout).toEqual([]);
+    expect(JSON.parse(result.stderr[0])).toEqual({
+      code: "DATA_GENERATION_FAILED",
+      reason,
+      file: `nested/generated${suffix}`,
+    });
+    expect(result.stderr.join()).not.toContain(realpathSync(cwd));
+    expect(result.stderr.join()).not.toContain("private changed content");
+    expect(readFileSync(join(stage, "preserved"), "utf8")).toBe("incomplete generation");
+  });
+  it.each(["generated", ...(sep === "/" ? ["generated\\archive"] : [])])(
+    "reports the exact recovery lock for %s without exposing an untrusted metadata path",
+    async (output) => {
+      const cwd = fixture(valid);
+      const lock = join(cwd, `${output}.croco-data-lock`);
+      mkdirSync(lock);
+      writeFileSync(
+        join(lock, "owner.json"),
+        JSON.stringify({ backup: "/private/secret/location" }),
+      );
+      const result = await invoke(cwd, "generate", [
+        "--output",
+        output,
+        "--migration-id",
+        "initial",
+      ]);
+      expect(JSON.parse(result.stderr[0])).toEqual({
+        code: "DATA_GENERATION_FAILED",
+        reason: "generation-recovery-required",
+        file: `${output}.croco-data-lock`,
+      });
+      expect(result.stderr.join()).not.toContain("secret");
+    },
+  );
   it("denies reads outside the project and installed tooling", async () => {
     const outside = fixture("private file content");
     const cwd = fixture(

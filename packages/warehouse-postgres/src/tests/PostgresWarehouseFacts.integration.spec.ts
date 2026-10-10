@@ -7,14 +7,13 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import {
   generatePostgresFactSchema,
+  generatePostgresWarehouseSchema,
   installPostgresFactSchema,
   installPostgresWarehouseSchema,
   PostgresWarehouseCatalog,
   PostgresWarehouseReader,
   PostgresWarehouseWriter,
 } from "../facts";
-
-import { compileDataConfig } from "../../../warehouse-tooling/src/libs/compiler";
 
 import type { FactDescriptor } from "@croco/warehouse-core";
 import type {
@@ -104,23 +103,11 @@ describe.skipIf(!realResourcesEnabled)("PostgreSQL warehouse facts", () => {
     dispose = started.dispose;
     descriptor = await compileFact(captures);
     searchDescriptor = await compileFact(searchDaily);
-    const compiled = await compileDataConfig({
-      connections: [{ id: "warehouse", env: "DATABASE_URL" }],
-      sources: [],
-      models: [captures, searchDaily].map((fact) => ({
-        backend: "postgres" as const,
-        fact,
-        connection: "warehouse",
-        location: {
-          file: "src/tests/PostgresWarehouseFacts.integration.spec.ts",
-          line: 1,
-          column: 1,
-        },
-      })),
-      pipelines: [],
-    });
-    const migration = compiled.files["migrations/candidate.sql"];
-    expect(migration).toBeTypeOf("string");
+    const migration = [
+      generatePostgresWarehouseSchema(),
+      (await generatePostgresFactSchema(descriptor)).sql,
+      (await generatePostgresFactSchema(searchDescriptor)).sql,
+    ].join("\n");
     const migrationClient = await connection.pool.connect();
     try {
       await migrationClient.query("BEGIN");

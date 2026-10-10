@@ -1,6 +1,6 @@
 import { spawn } from "node:child_process";
 import { existsSync, realpathSync } from "node:fs";
-import { basename, dirname, resolve } from "node:path";
+import { basename, dirname, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { defineCommand } from "citty";
 import { Problem, ProblemCategory } from "@croco/problems-core";
@@ -151,6 +151,42 @@ export function compileOfflineConfig(
   });
 }
 
+function generationDiagnosticFile(
+  error: DataGenerationProblem,
+  output: string | undefined,
+  cwd: string,
+): string | undefined {
+  if (typeof error.file !== "string") return undefined;
+  if (
+    output &&
+    [
+      "generation-recovery-required",
+      "interrupted-generation-restored",
+      "generation-in-progress",
+    ].includes(error.reason)
+  ) {
+    try {
+      const canonicalOutput = join(realpathSync(dirname(output)), basename(output));
+      const suffix = error.file.slice(canonicalOutput.length);
+      if (
+        error.file.startsWith(canonicalOutput) &&
+        /^(?:\.croco-data-lock|\.(?:stage|backup)-[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})$/.test(
+          suffix,
+        )
+      ) {
+        return relative(realpathSync(cwd), error.file).split(sep).join("/");
+      }
+    } catch {
+      return undefined;
+    }
+  }
+  return /^[a-zA-Z0-9_./-]+$/.test(error.file) &&
+    !error.file.startsWith("/") &&
+    error.file.split("/").every((part) => part !== "" && part !== "." && part !== "..")
+    ? error.file
+    : undefined;
+}
+
 function createDataAction(action: "validate" | "generate") {
   return defineCommand({
     meta: { name: action, description: `${action} offline data declarations` },
@@ -185,6 +221,8 @@ function createDataAction(action: "validate" | "generate") {
         "--environment",
         ...(action === "generate" ? ["--output", "--migration-id"] : []),
       ]);
+      const cwd = typeof args.cwd === "string" ? resolve(runtime.cwd, args.cwd) : runtime.cwd;
+      let outputDirectory: string | undefined;
       try {
         for (let index = 0; index < rawArgs.length; index++) {
           const token = rawArgs[index] ?? "";
@@ -193,7 +231,6 @@ function createDataAction(action: "validate" | "generate") {
           if (!allowed.has(flag ?? "") || !value?.trim() || value.startsWith("--"))
             throw invalidDataArgumentsProblem();
         }
-        const cwd = typeof args.cwd === "string" ? resolve(runtime.cwd, args.cwd) : runtime.cwd;
         const compiled = await compileOfflineConfig(
           resolve(cwd, args.config),
           cwd,
@@ -201,7 +238,8 @@ function createDataAction(action: "validate" | "generate") {
         );
         let manifest = compiled.manifest;
         if (action === "generate") {
-          manifest = await generateDataArtifacts(resolve(cwd, String(args["output"])), compiled, {
+          outputDirectory = resolve(cwd, String(args["output"]));
+          manifest = await generateDataArtifacts(outputDirectory, compiled, {
             migrationId: String(args["migration-id"]),
           });
         }
@@ -224,13 +262,7 @@ function createDataAction(action: "validate" | "generate") {
           return;
         }
         if (error instanceof DataGenerationProblem && /^[a-z-]{1,80}$/.test(error.reason)) {
-          const file =
-            typeof error.file === "string" &&
-            /^[a-zA-Z0-9_./-]+$/.test(error.file) &&
-            !error.file.startsWith("/") &&
-            error.file.split("/").every((part) => part !== "" && part !== "." && part !== "..")
-              ? error.file
-              : undefined;
+          const file = generationDiagnosticFile(error, outputDirectory, cwd);
           runtime.stderr(
             JSON.stringify({
               code: "DATA_GENERATION_FAILED",

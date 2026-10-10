@@ -5720,6 +5720,12 @@
       "owner": "@croco/warehouse-postgres"
     },
     {
+      "path": "packages/warehouse-tooling/src/tests/DataCompiler.integration.spec.ts",
+      "lane": "integration",
+      "qualifiers": [],
+      "owner": "@croco/warehouse-tooling"
+    },
+    {
       "path": "packages/warehouse-tooling/src/tests/DataCompiler.spec.ts",
       "lane": "fast",
       "qualifiers": [],

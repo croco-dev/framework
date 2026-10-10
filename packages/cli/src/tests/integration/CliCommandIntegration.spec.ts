@@ -100,6 +100,7 @@ describe("installed CLI command integration", () => {
         "add",
         "--prod",
         tooling.tarballPath,
+        requiredPackedPackage(harness.packedPackages, "@croco/problems-core").tarballPath,
         requiredPackedPackage(harness.packedPackages, "@croco/warehouse-core").tarballPath,
         requiredPackedPackage(harness.packedPackages, "@croco/etl-core").tarballPath,
         requiredPackedPackage(harness.packedPackages, "@croco/warehouse-postgres").tarballPath,
@@ -109,6 +110,18 @@ describe("installed CLI command integration", () => {
       harness.consumerRoot,
       { label: "install data config dependencies" },
     );
+    const diagnostics = join(harness.consumerRoot, "verify-data-problems.mjs");
+    writeFileSync(
+      diagnostics,
+      `import assert from 'node:assert/strict';
+import { Problem } from '@croco/problems-core';
+import { DataConfigProblem, DataGenerationProblem } from '@croco/warehouse-tooling';
+assert.ok(new DataConfigProblem('test', 'test') instanceof Problem);
+assert.ok(new DataGenerationProblem('test') instanceof Problem);`,
+    );
+    run(process.execPath, [diagnostics], harness.consumerRoot, {
+      label: "verify installed data Problem identity",
+    });
     const configRoot = join(harness.consumerRoot, "packages/warehouse-tooling/examples");
     mkdirSync(configRoot, { recursive: true });
     for (const file of ["data.config.ts", "orders.ts"]) {

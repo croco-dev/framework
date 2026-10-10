@@ -10,6 +10,7 @@ import {
   rm,
   writeFile,
 } from "node:fs/promises";
+import { hostname } from "node:os";
 import { basename, dirname, isAbsolute, join, resolve } from "node:path";
 import { Problem, ProblemCategory } from "@croco/problems-core";
 
@@ -27,6 +28,16 @@ export class DataGenerationProblem extends Problem {
       extensions: { reason, ...(file === undefined ? {} : { file }) },
     });
   }
+}
+function causedProblem(
+  reason: string,
+  file: string | undefined,
+  manifest: unknown,
+  cause: unknown,
+): DataGenerationProblem {
+  const problem = new DataGenerationProblem(reason, file, manifest);
+  Object.defineProperty(problem, "cause", { value: cause, configurable: true });
+  return problem;
 }
 const hash = (content: string) => createHash("sha256").update(content).digest("hex");
 function safePath(file: string): void {
@@ -84,6 +95,64 @@ async function readOwnership(output: string): Promise<Ownership> {
   return value;
 }
 
+type GenerationLock = {
+  token: string;
+  pid: number;
+  host: string;
+  output: string;
+  stage: string;
+  backup: string;
+};
+async function recoverInterruptedGeneration(lock: string, output: string): Promise<never> {
+  await rejectLinks(lock);
+  let metadata: GenerationLock;
+  try {
+    metadata = JSON.parse(await readFile(join(lock, "owner.json"), "utf8")) as GenerationLock;
+  } catch {
+    throw new DataGenerationProblem("generation-recovery-required", lock);
+  }
+  if (
+    !metadata ||
+    !/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(metadata.token) ||
+    metadata.output !== output ||
+    metadata.stage !== `${output}.stage-${metadata.token}` ||
+    metadata.backup !== `${output}.backup-${metadata.token}` ||
+    !Number.isSafeInteger(metadata.pid) ||
+    metadata.pid < 1 ||
+    metadata.host !== hostname()
+  )
+    throw new DataGenerationProblem("generation-recovery-required", lock);
+  try {
+    process.kill(metadata.pid, 0);
+    throw new DataGenerationProblem("generation-in-progress", lock);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "ESRCH") throw error;
+  }
+  if ((await exists(output)) || !(await exists(metadata.backup)))
+    throw new DataGenerationProblem("generation-recovery-required", metadata.backup);
+  try {
+    await mkdir(join(lock, "recovery"), { mode: 0o700 });
+  } catch {
+    throw new DataGenerationProblem("generation-recovery-required", metadata.backup);
+  }
+  try {
+    await rejectLinks(metadata.backup);
+    if (
+      !(await lstat(metadata.backup)).isDirectory() ||
+      !(await exists(join(metadata.backup, OWNERSHIP)))
+    )
+      throw new DataGenerationProblem("generation-recovery-required", metadata.backup);
+    await readOwnership(metadata.backup);
+    if (await exists(output))
+      throw new DataGenerationProblem("generation-recovery-required", metadata.backup);
+    await rename(metadata.backup, output);
+    await rm(lock, { recursive: true });
+  } catch (error) {
+    throw causedProblem("generation-recovery-required", metadata.backup, undefined, error);
+  }
+  throw new DataGenerationProblem("interrupted-generation-restored", metadata.stage);
+}
+
 /** Commits a complete generated directory while retaining unowned files and immutable migrations. */
 export async function generateDataArtifacts<T>(
   outputDirectory: string,
@@ -102,7 +171,7 @@ export async function generateDataArtifacts<T>(
     await mkdir(lock, { mode: 0o700 });
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "EEXIST")
-      throw new DataGenerationProblem("generation-in-progress");
+      return recoverInterruptedGeneration(lock, output);
     throw error;
   }
   const token = randomUUID();
@@ -111,8 +180,22 @@ export async function generateDataArtifacts<T>(
   let backedUp = false;
   let committed = false;
   let finalized!: T;
-  let cleanupFailure: DataGenerationProblem | undefined;
+  let generationFailure: unknown;
+  let generationFailed = false;
+  const cleanupFailures: DataGenerationProblem[] = [];
   try {
+    const metadata: GenerationLock = {
+      token,
+      pid: process.pid,
+      host: hostname(),
+      output,
+      stage,
+      backup,
+    };
+    await writeFile(join(lock, "owner.json"), JSON.stringify(metadata), {
+      mode: 0o600,
+      flag: "wx",
+    });
     const present = await exists(output);
     if (present) {
       await rejectLinks(output);
@@ -183,33 +266,63 @@ export async function generateDataArtifacts<T>(
       committed = true;
     } catch (error) {
       if (backedUp) {
-        await rename(backup, output);
-        backedUp = false;
+        try {
+          await rename(backup, output);
+          backedUp = false;
+        } catch (rollbackError) {
+          throw causedProblem(
+            "generation-recovery-required",
+            backup,
+            undefined,
+            new AggregateError([error, rollbackError], "Generation and rollback failures"),
+          );
+        }
       }
       throw error;
     }
     finalized = JSON.parse(files["manifest.json"]) as T;
+  } catch (error) {
+    generationFailed = true;
+    generationFailure = error;
   } finally {
     try {
-      await rm(stage, { recursive: true, force: true });
+      if (!backedUp || committed) await rm(stage, { recursive: true, force: true });
       if (committed && backedUp) await rm(backup, { recursive: true });
-    } catch {
-      cleanupFailure = new DataGenerationProblem(
-        committed ? "committed-cleanup-failed" : "staging-cleanup-failed",
-        undefined,
-        committed ? finalized : undefined,
+    } catch (error) {
+      cleanupFailures.push(
+        causedProblem(
+          committed ? "committed-cleanup-failed" : "staging-cleanup-failed",
+          undefined,
+          committed ? finalized : undefined,
+          error,
+        ),
       );
     }
     try {
-      await rm(lock, { recursive: true });
-    } catch {
-      cleanupFailure = new DataGenerationProblem(
-        committed ? "committed-lock-cleanup-failed" : "lock-cleanup-failed",
-        undefined,
-        committed ? finalized : undefined,
+      if (!backedUp || committed) await rm(lock, { recursive: true });
+    } catch (error) {
+      cleanupFailures.push(
+        causedProblem(
+          committed ? "committed-lock-cleanup-failed" : "lock-cleanup-failed",
+          undefined,
+          committed ? finalized : undefined,
+          error,
+        ),
       );
     }
   }
-  if (cleanupFailure) throw cleanupFailure;
+  if (cleanupFailures.length) {
+    const first = cleanupFailures[0];
+    throw causedProblem(
+      first.reason,
+      first.file,
+      first.committedManifest,
+      new AggregateError(
+        [...(generationFailed ? [generationFailure] : []), ...cleanupFailures],
+        "Generation and cleanup failures",
+      ),
+    );
+  }
+  if (generationFailed) throw generationFailure;
   return finalized;
 }
