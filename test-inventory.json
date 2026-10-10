@@ -5648,8 +5648,26 @@
       "owner": "@croco/warehouse-core"
     },
     {
+      "path": "packages/warehouse-postgres/src/tests/CompilePostgresMetric.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/warehouse-postgres"
+    },
+    {
       "path": "packages/warehouse-postgres/src/tests/Pipeline.integration.spec.ts",
       "lane": "integration",
+      "qualifiers": [],
+      "owner": "@croco/warehouse-postgres"
+    },
+    {
+      "path": "packages/warehouse-postgres/src/tests/PostgresMetricRead.integration.spec.ts",
+      "lane": "integration",
+      "qualifiers": [],
+      "owner": "@croco/warehouse-postgres"
+    },
+    {
+      "path": "packages/warehouse-postgres/src/tests/PostgresMetricRead.spec.ts",
+      "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/warehouse-postgres"
     },

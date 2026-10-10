@@ -204,6 +204,16 @@ function fail(code: string, category: ProblemCategory, detail: string): never {
 function validWindow(window: MetricWindow): boolean {
   const from = Date.parse(window.from);
   const to = Date.parse(window.to);
+  const calendar = /^\d{4}-\d{2}-\d{2}$/.test(window.from) && /^\d{4}-\d{2}-\d{2}$/.test(window.to);
+  if (calendar) {
+    return (
+      Number.isFinite(from) &&
+      Number.isFinite(to) &&
+      from < to &&
+      new Date(from).toISOString().slice(0, 10) === window.from &&
+      new Date(to).toISOString().slice(0, 10) === window.to
+    );
+  }
   return (
     Number.isFinite(from) &&
     Number.isFinite(to) &&

@@ -92,6 +92,68 @@ remain shared with other work; set pool sizes and read concurrency for the appli
 `suppress` deletes matching physical rows, keeps a tombstone against reimport, and advances the
 privacy epoch. These operations require the `drop` role and audited requests.
 
+## Native fact metrics
+
+`PostgresWarehouseReader.readMetric` executes a trusted `metrics-core` definition against an
+explicitly pinned warehouse snapshot. `count`, `sum`, `min`, `max`, exact distinct, sum/count
+average, ratio, equality filters, and day/month buckets run as native PostgreSQL aggregates.
+Money requires a currency filter or group. Integer and decimal results remain decimal strings;
+ratios and averages retain numerator/denominator and use 12-digit half-even rounding. The provider
+formats only bounded aggregate results in JavaScript and never downloads fact rows to emulate SQL.
+
+```typescript no-check
+import { defineMetric, project, sum } from "@croco/metrics-core";
+
+// descriptor comes from compileFact; access is resolved by the server.
+const definition = defineMetric("cash_received", {
+  version: 1,
+  from: descriptor,
+  measure: sum(project(descriptor, "amountMinor")),
+  groupByRequired: [project(descriptor, "currency")],
+  time: project(descriptor, "capturedAt"),
+  population: "server-confirmed-captures",
+  unit: "currency-minor",
+});
+const snapshot = await catalog.pinSnapshot({ access });
+const result = await reader.readMetric({
+  access,
+  snapshotId: snapshot.id,
+  definition,
+  window: { from: "2026-09-01T00:00:00.000Z", to: "2026-10-01T00:00:00.000Z" },
+  maxRows: 100,
+  maxBytes: 65536,
+  timeoutMs: 5000,
+  signal,
+});
+```
+
+Register the executor in the existing `MetricReadService`; supply the pinned snapshot in its
+trusted context and preserve the definition identity, source revisions, window, population,
+field permissions, and actual snapshot quality in `MetricReadResult`. API, CLI/MCP and
+`MetricInspector` continue to consume that service. Hosts map unknown/incomplete warehouse
+quality to explicit partial results and set freshness using their source contract, never just
+`MAX(eventTime)`. The existing [standalone/report example](../../examples/metric-read/README.md)
+requires no database. The [native registered-query fixture](src/tests/PostgresMetricRead.integration.spec.ts)
+is executable with `pnpm --filter @croco/warehouse-postgres test:integration` and uses temporary
+PostgreSQL with synthetic rows.
+
+The native read uses `BEGIN READ ONLY` and works with a SELECT-only database role. Provision
+schema and publications with separate writer credentials. The cancellation pool must connect to
+the same database and be authorized to cancel its reader backends. The reader enforces field
+permissions, row/byte/time/concurrency limits and abort; the registered service additionally
+owns window and cost capabilities. Configure PostgreSQL resource limits for scan cost: output
+limits do not estimate scanned rows or physical database cost.
+
+The aggregate response is complete or fails on its row/byte bound; it has no pagination or
+implicit truncation. Drilldowns use `read` with `result.snapshot.id` and its encrypted cursor,
+so later head publications cannot repin the read. Current server access and database epochs are
+checked before returning aggregates; changed privacy/permission, expiration and suppression
+remain explicit failures. This path does not introduce a cache or claim simultaneous observation
+across independent sources. Empty sum/count are zero; empty extrema fail and zero denominators
+remain null. Nullable group/time columns, timestamp windows finer than PostgreSQL microseconds,
+cross-fact joins and quantiles are unsupported, rather than approximated or evaluated over a
+full-row download.
+
 ## Metrics integration
 
 ```typescript no-check

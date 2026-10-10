@@ -43795,6 +43795,18 @@
               "declarationKind": "class"
             },
             {
+              "name": "compilePostgresMetric",
+              "exportKind": "named",
+              "source": "./facts/compilePostgresMetric",
+              "declarationKind": "function"
+            },
+            {
+              "name": "decodePostgresMetricResult",
+              "exportKind": "named",
+              "source": "./facts/compilePostgresMetric",
+              "declarationKind": "function"
+            },
+            {
               "name": "installPostgresFactSchema",
               "exportKind": "named",
               "source": "./facts/schema",
@@ -43808,6 +43820,16 @@
             }
           ],
           "typeExports": [
+            {
+              "name": "PostgresMetricReadRequest",
+              "exportKind": "named",
+              "source": "./facts/PostgresWarehouseReader"
+            },
+            {
+              "name": "PostgresMetricReadResult",
+              "exportKind": "named",
+              "source": "./facts/PostgresWarehouseReader"
+            },
             {
               "name": "WarehousePostgresClient",
               "exportKind": "named",
