@@ -167,7 +167,8 @@
         "@croco/protocol-codegen",
         "@croco/rpc-codegen",
         "@croco/testing",
-        "@croco/testing-resources"
+        "@croco/testing-resources",
+        "@croco/warehouse-tooling"
       ]
     },
     "application": {

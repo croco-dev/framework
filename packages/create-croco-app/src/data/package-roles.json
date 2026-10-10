@@ -133,6 +133,7 @@
   "@croco/ui-astryx": "plugins",
   "@croco/warehouse-core": "contracts",
   "@croco/warehouse-postgres": "plugins",
+  "@croco/warehouse-tooling": "tooling",
   "@croco/webhooks-core": "contracts",
   "@croco/workflow-core": "contracts"
 }

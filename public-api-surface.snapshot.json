@@ -43813,6 +43813,18 @@
               "declarationKind": "function"
             },
             {
+              "name": "generatePostgresFactSchema",
+              "exportKind": "named",
+              "source": "./facts/schema",
+              "declarationKind": "function"
+            },
+            {
+              "name": "generatePostgresWarehouseSchema",
+              "exportKind": "named",
+              "source": "./facts/schema",
+              "declarationKind": "function"
+            },
+            {
               "name": "installPostgresFactSchema",
               "exportKind": "named",
               "source": "./facts/schema",
@@ -43826,6 +43838,11 @@
             }
           ],
           "typeExports": [
+            {
+              "name": "PostgresFactSchema",
+              "exportKind": "named",
+              "source": "./facts/schema"
+            },
             {
               "name": "PostgresMetricReadRequest",
               "exportKind": "named",
@@ -43940,6 +43957,266 @@
             }
           ],
           "typeExports": []
+        }
+      ]
+    },
+    {
+      "packageName": "@croco/warehouse-tooling",
+      "relativeDir": "packages/warehouse-tooling",
+      "entrypoints": [
+        {
+          "exportPath": ".",
+          "kind": "code",
+          "targets": [
+            {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
+              "conditions": ["import"],
+              "target": "./dist/index.js"
+            }
+          ],
+          "sourceEntrypoint": "packages/warehouse-tooling/src/index.ts",
+          "runtimeExports": [
+            {
+              "name": "DataConfigProblem",
+              "exportKind": "declaration",
+              "source": "./libs/DataConfigProblem",
+              "declarationKind": "class"
+            },
+            {
+              "name": "DataGenerationProblem",
+              "exportKind": "declaration",
+              "source": "./libs/generate",
+              "declarationKind": "class"
+            },
+            {
+              "name": "compileDataConfig",
+              "exportKind": "declaration",
+              "source": "./libs/compiler",
+              "declarationKind": "function"
+            },
+            {
+              "name": "connectionRef",
+              "exportKind": "declaration",
+              "source": "./libs/config",
+              "declarationKind": "function"
+            },
+            {
+              "name": "defineDataConfig",
+              "exportKind": "declaration",
+              "source": "./libs/config",
+              "declarationKind": "function"
+            },
+            {
+              "name": "externalModel",
+              "exportKind": "declaration",
+              "source": "./libs/config",
+              "declarationKind": "function"
+            },
+            {
+              "name": "generateDataArtifacts",
+              "exportKind": "declaration",
+              "source": "./libs/generate",
+              "declarationKind": "function"
+            },
+            {
+              "name": "oltpSourceRef",
+              "exportKind": "declaration",
+              "source": "./libs/config",
+              "declarationKind": "function"
+            },
+            {
+              "name": "postgresModel",
+              "exportKind": "declaration",
+              "source": "./libs/config",
+              "declarationKind": "function"
+            }
+          ],
+          "typeExports": [
+            {
+              "name": "CompiledDataConfig",
+              "exportKind": "declaration",
+              "source": "./libs/types",
+              "declarationKind": "type"
+            },
+            {
+              "name": "ConnectionRef",
+              "exportKind": "declaration",
+              "source": "./libs/types",
+              "declarationKind": "type"
+            },
+            {
+              "name": "DataConfig",
+              "exportKind": "declaration",
+              "source": "./libs/types",
+              "declarationKind": "type"
+            },
+            {
+              "name": "DataManifest",
+              "exportKind": "declaration",
+              "source": "./libs/types",
+              "declarationKind": "type"
+            },
+            {
+              "name": "DataNode",
+              "exportKind": "declaration",
+              "source": "./libs/types",
+              "declarationKind": "type"
+            },
+            {
+              "name": "DataOverlay",
+              "exportKind": "declaration",
+              "source": "./libs/types",
+              "declarationKind": "type"
+            },
+            {
+              "name": "ModelBinding",
+              "exportKind": "declaration",
+              "source": "./libs/types",
+              "declarationKind": "type"
+            },
+            {
+              "name": "OltpSourceRef",
+              "exportKind": "declaration",
+              "source": "./libs/types",
+              "declarationKind": "type"
+            },
+            {
+              "name": "SourceLocation",
+              "exportKind": "declaration",
+              "source": "./libs/types",
+              "declarationKind": "type"
+            }
+          ]
+        },
+        {
+          "exportPath": "./offline",
+          "kind": "code",
+          "targets": [
+            {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
+              "conditions": ["import"],
+              "target": "./dist/index.js"
+            }
+          ],
+          "sourceEntrypoint": "packages/warehouse-tooling/src/index.ts",
+          "runtimeExports": [
+            {
+              "name": "DataConfigProblem",
+              "exportKind": "declaration",
+              "source": "./libs/DataConfigProblem",
+              "declarationKind": "class"
+            },
+            {
+              "name": "DataGenerationProblem",
+              "exportKind": "declaration",
+              "source": "./libs/generate",
+              "declarationKind": "class"
+            },
+            {
+              "name": "compileDataConfig",
+              "exportKind": "declaration",
+              "source": "./libs/compiler",
+              "declarationKind": "function"
+            },
+            {
+              "name": "connectionRef",
+              "exportKind": "declaration",
+              "source": "./libs/config",
+              "declarationKind": "function"
+            },
+            {
+              "name": "defineDataConfig",
+              "exportKind": "declaration",
+              "source": "./libs/config",
+              "declarationKind": "function"
+            },
+            {
+              "name": "externalModel",
+              "exportKind": "declaration",
+              "source": "./libs/config",
+              "declarationKind": "function"
+            },
+            {
+              "name": "generateDataArtifacts",
+              "exportKind": "declaration",
+              "source": "./libs/generate",
+              "declarationKind": "function"
+            },
+            {
+              "name": "oltpSourceRef",
+              "exportKind": "declaration",
+              "source": "./libs/config",
+              "declarationKind": "function"
+            },
+            {
+              "name": "postgresModel",
+              "exportKind": "declaration",
+              "source": "./libs/config",
+              "declarationKind": "function"
+            }
+          ],
+          "typeExports": [
+            {
+              "name": "CompiledDataConfig",
+              "exportKind": "declaration",
+              "source": "./libs/types",
+              "declarationKind": "type"
+            },
+            {
+              "name": "ConnectionRef",
+              "exportKind": "declaration",
+              "source": "./libs/types",
+              "declarationKind": "type"
+            },
+            {
+              "name": "DataConfig",
+              "exportKind": "declaration",
+              "source": "./libs/types",
+              "declarationKind": "type"
+            },
+            {
+              "name": "DataManifest",
+              "exportKind": "declaration",
+              "source": "./libs/types",
+              "declarationKind": "type"
+            },
+            {
+              "name": "DataNode",
+              "exportKind": "declaration",
+              "source": "./libs/types",
+              "declarationKind": "type"
+            },
+            {
+              "name": "DataOverlay",
+              "exportKind": "declaration",
+              "source": "./libs/types",
+              "declarationKind": "type"
+            },
+            {
+              "name": "ModelBinding",
+              "exportKind": "declaration",
+              "source": "./libs/types",
+              "declarationKind": "type"
+            },
+            {
+              "name": "OltpSourceRef",
+              "exportKind": "declaration",
+              "source": "./libs/types",
+              "declarationKind": "type"
+            },
+            {
+              "name": "SourceLocation",
+              "exportKind": "declaration",
+              "source": "./libs/types",
+              "declarationKind": "type"
+            }
+          ]
         }
       ]
     },

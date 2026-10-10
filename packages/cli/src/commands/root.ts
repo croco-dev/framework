@@ -97,9 +97,13 @@ function createBoundCrocoCommand(runtime: CrocoCommandRuntime): CommandDef<typeo
     },
     setup({ rawArgs }) {
       const commandIndex = findRootCommandIndex(rawArgs);
-      if (commandIndex !== undefined && rawArgs[commandIndex] === "pipeline" && commandIndex > 0) {
+      if (
+        commandIndex !== undefined &&
+        (rawArgs[commandIndex] === "pipeline" || rawArgs[commandIndex] === "data") &&
+        commandIndex > 0
+      ) {
         throw createCliError(
-          "Pipeline options must follow the pipeline subcommand",
+          `${rawArgs[commandIndex] === "data" ? "Data" : "Pipeline"} options must follow the ${rawArgs[commandIndex]} subcommand`,
           "E_PIPELINE_ARGUMENTS",
         );
       }
@@ -129,6 +133,11 @@ function createBoundCrocoCommand(runtime: CrocoCommandRuntime): CommandDef<typeo
         "contracts",
         "Validate Croco contract graph artifacts",
         async () => (await import("./contracts.js")).contracts as LoadedCommand,
+      ),
+      data: lazyCommand(
+        "data",
+        "Validate and generate offline data artifacts",
+        async () => (await import("./data.js")).data as LoadedCommand,
       ),
       desktop: desktopRemoved,
       "architecture-policy": lazyCommand(

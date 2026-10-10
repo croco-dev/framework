@@ -66,6 +66,7 @@
     "@croco/protocols-core": "workspace:*",
     "@croco/rpc-codegen": "workspace:*",
     "@croco/testing": "workspace:*",
+    "@croco/warehouse-tooling": "workspace:*",
     "@modelcontextprotocol/server": "2.2.0",
     "citty": "^0.1.6",
     "ts-morph": "^24.0.0",
