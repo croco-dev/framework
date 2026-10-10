@@ -862,7 +862,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/transports-http/src/libs/CrocoApp.ts",
-          line: 326,
+          line: 336,
           column: 11,
           kind: "problem-factory",
         },
@@ -28100,7 +28100,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/transports-http/src/libs/CrocoApp.ts",
-          line: 368,
+          line: 378,
           column: 11,
           kind: "problem-factory",
         },
@@ -28179,11 +28179,12 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       cookbookPath:
         "/reference/problem-recovery-cookbook/#transports-http-duplicate-route-definition",
       recovery: {
-        cause: "Two REST controller methods compile to the same HTTP method and runtime path.",
+        cause:
+          "REST controller routes collide with each other or with an enabled built-in operational GET endpoint.",
         userAction:
-          "Use an application build where every route decorator has a unique HTTP method and path combination.",
+          "Use an application build where controller routes have unique HTTP method and path combinations and GET or ALL routes avoid enabled built-in operational paths.",
         operatorAction:
-          "Inspect the duplicate-route diagnostic for the existing and conflicting controller methods and their route decorator source locations, then rename one route path or change one HTTP method.",
+          "Inspect the duplicate-route diagnostic for the conflicting controller method and the existing controller route or built-in operational endpoint, then rename the controller path or change its HTTP method.",
         retryability: "not-retryable",
         redactionPolicy: "operator-only",
         telemetry: {
@@ -28198,8 +28199,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/transports-http/src/libs/RouteCompiler.ts",
-          line: 127,
-          column: 15,
+          line: 331,
+          column: 10,
           kind: "problem-factory",
         },
       ],
@@ -28564,7 +28565,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/transports-http/src/libs/RouteCompiler.ts",
-          line: 206,
+          line: 205,
           column: 17,
           kind: "problem-factory",
         },
@@ -28629,7 +28630,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/transports-http/src/libs/CrocoApp.ts",
-          line: 99,
+          line: 103,
           column: 55,
           kind: "problem-metadata",
         },

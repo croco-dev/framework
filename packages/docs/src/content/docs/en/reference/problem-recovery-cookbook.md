@@ -1494,7 +1494,7 @@ Sources:
 
 Sources:
 
-- `packages/transports-http/src/libs/CrocoApp.ts:326:11` (problem-factory)
+- `packages/transports-http/src/libs/CrocoApp.ts:336:11` (problem-factory)
 
 <a id="croco-http-security-002"></a>
 
@@ -17136,7 +17136,7 @@ Sources:
 
 Sources:
 
-- `packages/transports-http/src/libs/CrocoApp.ts:368:11` (problem-factory)
+- `packages/transports-http/src/libs/CrocoApp.ts:378:11` (problem-factory)
 
 <a id="transports-http-diagnostics-invalid-configuration"></a>
 
@@ -17183,14 +17183,14 @@ Sources:
 - Retryability: `not-retryable`
 - Redaction policy: `operator-only`
 - Lifecycle: `active`
-- Cause: Two REST controller methods compile to the same HTTP method and runtime path.
-- User action: Use an application build where every route decorator has a unique HTTP method and path combination.
-- Operator action: Inspect the duplicate-route diagnostic for the existing and conflicting controller methods and their route decorator source locations, then rename one route path or change one HTTP method.
+- Cause: REST controller routes collide with each other or with an enabled built-in operational GET endpoint.
+- User action: Use an application build where controller routes have unique HTTP method and path combinations and GET or ALL routes avoid enabled built-in operational paths.
+- Operator action: Inspect the duplicate-route diagnostic for the conflicting controller method and the existing controller route or built-in operational endpoint, then rename the controller path or change its HTTP method.
 - Telemetry: `croco.problem.error` (error) with `problem.code`, `problem.category`, `problem.status`
 
 Sources:
 
-- `packages/transports-http/src/libs/RouteCompiler.ts:127:15` (problem-factory)
+- `packages/transports-http/src/libs/RouteCompiler.ts:331:10` (problem-factory)
 
 <a id="transports-http-graceful-shutdown-configuration"></a>
 
@@ -17388,7 +17388,7 @@ Sources:
 
 Sources:
 
-- `packages/transports-http/src/libs/RouteCompiler.ts:206:17` (problem-factory)
+- `packages/transports-http/src/libs/RouteCompiler.ts:205:17` (problem-factory)
 
 <a id="transports-http-runtime-capability-invalid"></a>
 
@@ -17424,7 +17424,7 @@ Sources:
 
 Sources:
 
-- `packages/transports-http/src/libs/CrocoApp.ts:99:55` (problem-metadata)
+- `packages/transports-http/src/libs/CrocoApp.ts:103:55` (problem-metadata)
 
 <a id="transports-http-unsupported-media-type"></a>
 
