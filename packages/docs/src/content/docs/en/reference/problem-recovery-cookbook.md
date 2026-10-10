@@ -1404,7 +1404,7 @@ Sources:
 
 Sources:
 
-- `packages/cli/src/commands/generateUsageDashboard.ts:30:5` (problem-constructor)
+- `packages/cli/src/commands/generateUsageDashboard.ts:25:5` (problem-constructor)
 
 <a id="croco-executable-assurance-contract-invalid"></a>
 
