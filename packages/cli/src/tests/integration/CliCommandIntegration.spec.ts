@@ -166,7 +166,10 @@ describe("installed CLI command integration", () => {
             ".": {
               "import": "./dist/index.mjs",
               "require": "./dist/index.js",
-              "types": "./dist/index.d.ts",
+              "types": {
+                "import": "./dist/index.d.mts",
+                "require": "./dist/index.d.ts",
+              },
             },
           },
           "main": "./dist/index.js",
@@ -181,7 +184,10 @@ describe("installed CLI command integration", () => {
             ".": {
               "import": "./dist/index.mjs",
               "require": "./dist/index.js",
-              "types": "./dist/index.d.ts",
+              "types": {
+                "import": "./dist/index.d.mts",
+                "require": "./dist/index.d.ts",
+              },
             },
           },
           "main": "./dist/index.js",
@@ -196,7 +202,10 @@ describe("installed CLI command integration", () => {
             ".": {
               "import": "./dist/index.js",
               "require": "./dist/index.cjs",
-              "types": "./dist/index.d.ts",
+              "types": {
+                "import": "./dist/index.d.ts",
+                "require": "./dist/index.d.cts",
+              },
             },
           },
           "main": "./dist/index.js",
@@ -211,12 +220,18 @@ describe("installed CLI command integration", () => {
             ".": {
               "import": "./dist/index.mjs",
               "require": "./dist/index.js",
-              "types": "./dist/index.d.ts",
+              "types": {
+                "import": "./dist/index.d.mts",
+                "require": "./dist/index.d.ts",
+              },
             },
             "./cli": {
               "import": "./dist/cli.mjs",
               "require": "./dist/cli.js",
-              "types": "./dist/cli.d.ts",
+              "types": {
+                "import": "./dist/cli.d.mts",
+                "require": "./dist/cli.d.ts",
+              },
             },
           },
           "main": "./dist/index.js",
