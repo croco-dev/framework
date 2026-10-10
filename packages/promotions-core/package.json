@@ -17,12 +17,18 @@
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
+      "types": {
+        "import": "./dist/index.d.mts",
+        "require": "./dist/index.d.ts"
+      },
       "import": "./dist/index.mjs",
       "require": "./dist/index.js"
     },
     "./credit-grant": {
-      "types": "./dist/credit-grant.d.ts",
+      "types": {
+        "import": "./dist/credit-grant.d.mts",
+        "require": "./dist/credit-grant.d.ts"
+      },
       "import": "./dist/credit-grant.mjs",
       "require": "./dist/credit-grant.js"
     }
@@ -32,12 +38,18 @@
     "types": "./dist/index.d.ts",
     "exports": {
       ".": {
-        "types": "./dist/index.d.ts",
+        "types": {
+          "import": "./dist/index.d.mts",
+          "require": "./dist/index.d.ts"
+        },
         "import": "./dist/index.mjs",
         "require": "./dist/index.js"
       },
       "./credit-grant": {
-        "types": "./dist/credit-grant.d.ts",
+        "types": {
+          "import": "./dist/credit-grant.d.mts",
+          "require": "./dist/credit-grant.d.ts"
+        },
         "import": "./dist/credit-grant.mjs",
         "require": "./dist/credit-grant.js"
       }

@@ -20,12 +20,18 @@
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
+      "types": {
+        "import": "./dist/index.d.mts",
+        "require": "./dist/index.d.ts"
+      },
       "import": "./dist/index.mjs",
       "require": "./dist/index.js"
     },
     "./goal-validation": {
-      "types": "./dist/goal-validation.d.ts",
+      "types": {
+        "import": "./dist/goal-validation.d.mts",
+        "require": "./dist/goal-validation.d.ts"
+      },
       "import": "./dist/goal-validation.mjs",
       "require": "./dist/goal-validation.js"
     }
@@ -35,12 +41,18 @@
     "types": "./dist/index.d.ts",
     "exports": {
       ".": {
-        "types": "./dist/index.d.ts",
+        "types": {
+          "import": "./dist/index.d.mts",
+          "require": "./dist/index.d.ts"
+        },
         "import": "./dist/index.mjs",
         "require": "./dist/index.js"
       },
       "./goal-validation": {
-        "types": "./dist/goal-validation.d.ts",
+        "types": {
+          "import": "./dist/goal-validation.d.mts",
+          "require": "./dist/goal-validation.d.ts"
+        },
         "import": "./dist/goal-validation.mjs",
         "require": "./dist/goal-validation.js"
       }

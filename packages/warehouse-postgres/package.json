@@ -17,22 +17,34 @@
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
+      "types": {
+        "import": "./dist/index.d.mts",
+        "require": "./dist/index.d.ts"
+      },
       "import": "./dist/index.mjs",
       "require": "./dist/index.js"
     },
     "./metrics": {
-      "types": "./dist/metrics.d.ts",
+      "types": {
+        "import": "./dist/metrics.d.mts",
+        "require": "./dist/metrics.d.ts"
+      },
       "import": "./dist/metrics.mjs",
       "require": "./dist/metrics.js"
     },
     "./facts": {
-      "types": "./dist/facts.d.ts",
+      "types": {
+        "import": "./dist/facts.d.mts",
+        "require": "./dist/facts.d.ts"
+      },
       "import": "./dist/facts.mjs",
       "require": "./dist/facts.js"
     },
     "./pipeline": {
-      "types": "./dist/pipeline.d.ts",
+      "types": {
+        "import": "./dist/pipeline.d.mts",
+        "require": "./dist/pipeline.d.ts"
+      },
       "import": "./dist/pipeline.mjs",
       "require": "./dist/pipeline.js"
     }
@@ -42,22 +54,34 @@
     "types": "./dist/index.d.ts",
     "exports": {
       ".": {
-        "types": "./dist/index.d.ts",
+        "types": {
+          "import": "./dist/index.d.mts",
+          "require": "./dist/index.d.ts"
+        },
         "import": "./dist/index.mjs",
         "require": "./dist/index.js"
       },
       "./metrics": {
-        "types": "./dist/metrics.d.ts",
+        "types": {
+          "import": "./dist/metrics.d.mts",
+          "require": "./dist/metrics.d.ts"
+        },
         "import": "./dist/metrics.mjs",
         "require": "./dist/metrics.js"
       },
       "./facts": {
-        "types": "./dist/facts.d.ts",
+        "types": {
+          "import": "./dist/facts.d.mts",
+          "require": "./dist/facts.d.ts"
+        },
         "import": "./dist/facts.mjs",
         "require": "./dist/facts.js"
       },
       "./pipeline": {
-        "types": "./dist/pipeline.d.ts",
+        "types": {
+          "import": "./dist/pipeline.d.mts",
+          "require": "./dist/pipeline.d.ts"
+        },
         "import": "./dist/pipeline.mjs",
         "require": "./dist/pipeline.js"
       }

@@ -19,7 +19,10 @@
     "types": "./dist/worker.d.ts",
     "exports": {
       ".": {
-        "types": "./dist/worker.d.ts",
+        "types": {
+          "import": "./dist/worker.d.ts",
+          "require": "./dist/worker.d.cts"
+        },
         "import": "./dist/worker.js",
         "require": "./dist/worker.cjs"
       }

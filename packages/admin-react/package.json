@@ -24,17 +24,26 @@
     "types": "./dist/index.d.ts",
     "exports": {
       ".": {
-        "types": "./dist/index.d.ts",
+        "types": {
+          "import": "./dist/index.d.mts",
+          "require": "./dist/index.d.ts"
+        },
         "import": "./dist/index.mjs",
         "require": "./dist/index.js"
       },
       "./experience-console": {
-        "types": "./dist/experience-console.d.ts",
+        "types": {
+          "import": "./dist/experience-console.d.mts",
+          "require": "./dist/experience-console.d.ts"
+        },
         "import": "./dist/experience-console.mjs",
         "require": "./dist/experience-console.js"
       },
       "./experiment-console": {
-        "types": "./dist/experiment-console.d.ts",
+        "types": {
+          "import": "./dist/experiment-console.d.mts",
+          "require": "./dist/experiment-console.d.ts"
+        },
         "import": "./dist/experiment-console.mjs",
         "require": "./dist/experiment-console.js"
       }

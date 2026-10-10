@@ -10,7 +10,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -252,7 +256,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -292,7 +300,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -2702,7 +2714,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/fact-history-operations.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/fact-history-operations.d.ts"
             },
             {
@@ -2730,7 +2746,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/fact-history-validation.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/fact-history-validation.d.ts"
             },
             {
@@ -2770,7 +2790,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/targeting-impact-operations.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/targeting-impact-operations.d.ts"
             },
             {
@@ -2847,7 +2871,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -2987,7 +3015,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -3431,7 +3463,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -3492,7 +3528,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -5154,7 +5194,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/experience-console.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/experience-console.d.ts"
             },
             {
@@ -5188,7 +5232,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/experiment-console.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/experiment-console.d.ts"
             },
             {
@@ -5238,8 +5286,12 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
               "target": "./dist/index.d.ts"
+            },
+            {
+              "conditions": ["types", "require"],
+              "target": "./dist/index.d.cts"
             },
             {
               "conditions": ["import"],
@@ -5448,7 +5500,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -5792,7 +5848,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/runtime.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/runtime.d.ts"
             },
             {
@@ -5859,7 +5919,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -5916,7 +5980,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -6164,7 +6232,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -6349,7 +6421,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -6431,7 +6507,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -6696,7 +6776,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -7031,7 +7115,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -7474,7 +7562,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -7586,7 +7678,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -7734,7 +7830,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -7829,7 +7929,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -8997,7 +9101,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/cancellation.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/cancellation.d.ts"
             },
             {
@@ -9170,7 +9278,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -9216,7 +9328,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -9485,7 +9601,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -10953,7 +11073,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -11149,7 +11273,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -11210,7 +11338,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -11639,7 +11771,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -11770,7 +11906,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -12005,7 +12145,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -12147,8 +12291,12 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
               "target": "./dist/index.d.ts"
+            },
+            {
+              "conditions": ["types", "require"],
+              "target": "./dist/index.d.cts"
             },
             {
               "conditions": ["import"],
@@ -12221,7 +12369,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -12414,7 +12566,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -13711,7 +13867,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -13939,7 +14099,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -14384,7 +14548,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -14471,7 +14639,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -14645,7 +14817,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -14727,7 +14903,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/pipeline.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/pipeline.d.ts"
             },
             {
@@ -14877,7 +15057,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/source.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/source.d.ts"
             },
             {
@@ -14965,7 +15149,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -15041,7 +15229,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/postgres.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/postgres.d.ts"
             },
             {
@@ -15097,7 +15289,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -15440,7 +15636,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -15617,7 +15817,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -15975,7 +16179,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -16373,7 +16581,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -16424,7 +16636,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -16756,7 +16972,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -16807,7 +17027,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -17545,7 +17769,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -17910,7 +18138,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -17950,7 +18182,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -18193,7 +18429,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -19662,7 +19902,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -19719,7 +19963,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -20118,7 +20366,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -20194,7 +20446,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -20579,8 +20835,12 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
               "target": "./dist/worker.d.ts"
+            },
+            {
+              "conditions": ["types", "require"],
+              "target": "./dist/worker.d.cts"
             },
             {
               "conditions": ["import"],
@@ -20665,7 +20925,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -20952,7 +21216,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -21711,7 +21979,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/experience-slot.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/experience-slot.d.ts"
             },
             {
@@ -21756,7 +22028,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -21824,7 +22100,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -22292,7 +22572,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/mission-validation.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/mission-validation.d.ts"
             },
             {
@@ -22332,7 +22616,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/reward-contracts.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/reward-contracts.d.ts"
             },
             {
@@ -22408,7 +22696,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -22647,7 +22939,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -22716,7 +23012,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -22988,7 +23288,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -23107,7 +23411,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -23469,7 +23777,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -23707,7 +24019,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -23771,7 +24087,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -24086,7 +24406,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -24239,7 +24563,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -25341,7 +25669,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -25381,7 +25713,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -25687,7 +26023,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -26667,7 +27007,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -27137,7 +27481,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -27299,7 +27647,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -27375,7 +27727,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -27437,7 +27793,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -28132,7 +28492,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/runtime.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/runtime.d.ts"
             },
             {
@@ -28318,7 +28682,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -28469,7 +28837,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/cli.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/cli.d.ts"
             },
             {
@@ -28552,7 +28924,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -28995,7 +29371,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -29085,7 +29465,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -29142,7 +29526,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -29244,7 +29632,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -29574,7 +29966,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/goal-validation.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/goal-validation.d.ts"
             },
             {
@@ -29620,7 +30016,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -29758,7 +30158,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -29820,7 +30224,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -30064,7 +30472,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -30308,7 +30720,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -30557,7 +30973,7 @@
           "targets": [
             {
               "conditions": ["types"],
-              "target": "./dist/index.d.ts"
+              "target": "./dist/index.d.mts"
             },
             {
               "conditions": ["import"],
@@ -30673,7 +31089,7 @@
           "targets": [
             {
               "conditions": ["types"],
-              "target": "./dist/fetch.d.ts"
+              "target": "./dist/fetch.d.mts"
             },
             {
               "conditions": ["import"],
@@ -30787,7 +31203,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -30889,7 +31309,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/handler.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/handler.d.ts"
             },
             {
@@ -30962,7 +31386,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/handler.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/handler.d.ts"
             },
             {
@@ -31041,7 +31469,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -31146,7 +31578,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/entry.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/entry.d.ts"
             },
             {
@@ -31211,7 +31647,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -31644,7 +32084,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -31994,7 +32438,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/credit-grant.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/credit-grant.d.ts"
             },
             {
@@ -32034,7 +32482,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -32085,7 +32537,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -32202,7 +32658,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -33002,8 +33462,12 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
               "target": "./dist/index.d.ts"
+            },
+            {
+              "conditions": ["types", "require"],
+              "target": "./dist/index.d.cts"
             },
             {
               "conditions": ["import"],
@@ -33506,7 +33970,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -34329,8 +34797,12 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
               "target": "./dist/index.d.ts"
+            },
+            {
+              "conditions": ["types", "require"],
+              "target": "./dist/index.d.cts"
             },
             {
               "conditions": ["import"],
@@ -34381,7 +34853,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -34754,7 +35230,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -34824,7 +35304,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -35231,7 +35715,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/credit-grant.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/credit-grant.d.ts"
             },
             {
@@ -35265,7 +35753,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/link-token.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/link-token.d.ts"
             },
             {
@@ -35305,7 +35797,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -35356,7 +35852,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -35503,7 +36003,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -35885,8 +36389,12 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
               "target": "./dist/index.d.ts"
+            },
+            {
+              "conditions": ["types", "require"],
+              "target": "./dist/index.d.cts"
             },
             {
               "conditions": ["import"],
@@ -36628,7 +37136,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -36762,7 +37274,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -36914,7 +37430,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -37087,7 +37607,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/node.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/node.d.ts"
             },
             {
@@ -37139,7 +37663,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -37230,7 +37758,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -37406,7 +37938,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -37486,7 +38022,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -37643,7 +38183,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -37864,7 +38408,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -38353,7 +38901,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/tenant-model.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/tenant-model.d.ts"
             },
             {
@@ -38537,7 +39089,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -40566,7 +41122,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/drizzle.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/drizzle.d.ts"
             },
             {
@@ -40641,7 +41201,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/executable-assurance.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/executable-assurance.d.ts"
             },
             {
@@ -40852,7 +41416,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/notifications.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/notifications.d.ts"
             },
             {
@@ -40911,7 +41479,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/playwright-reporter.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/playwright-reporter.d.ts"
             },
             {
@@ -40973,7 +41545,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/vitest-reporter.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/vitest-reporter.d.ts"
             },
             {
@@ -41019,7 +41595,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -41126,7 +41706,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -41176,8 +41760,12 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
               "target": "./dist/index.d.ts"
+            },
+            {
+              "conditions": ["types", "require"],
+              "target": "./dist/index.d.cts"
             },
             {
               "conditions": ["import"],
@@ -41286,7 +41874,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -41985,7 +42577,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -42140,7 +42736,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -42252,7 +42852,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -42450,7 +43054,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -42671,7 +43279,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -42786,7 +43398,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -42923,7 +43539,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/runtime.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/runtime.d.ts"
             },
             {
@@ -43113,7 +43733,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -43134,7 +43758,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/facts.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/facts.d.ts"
             },
             {
@@ -43202,7 +43830,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/metrics.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/metrics.d.ts"
             },
             {
@@ -43254,7 +43886,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/pipeline.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/pipeline.d.ts"
             },
             {
@@ -43288,7 +43924,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
@@ -43867,7 +44507,11 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
               "target": "./dist/index.d.ts"
             },
             {
