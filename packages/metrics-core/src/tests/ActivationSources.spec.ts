@@ -536,7 +536,7 @@ describe("activation shared sources", () => {
               id: "saved",
               queryId: "activation",
               queryVersion: 1,
-              inputKey: registration.query.inputKey(null),
+              inputKey: await registration.query.inputKey(null),
               resultHash: "trusted-digest",
               result: { ...result, data },
               reviewed: {
