@@ -1,7 +1,8 @@
 import { execFileSync, spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { dirname, join, resolve } from "node:path";
+import ts from "typescript";
 import { afterEach, describe, expect, it } from "vitest";
 
 import {
@@ -24,6 +25,115 @@ describe("problem-registry.mts", () => {
     for (const repo of tempRepos.splice(0)) {
       rmSync(repo, { force: true, recursive: true });
     }
+  });
+
+  it.each([
+    "inferred",
+    "explicit",
+    ...Array.from(
+      { length: Math.ceil(readRegistry(resolve(".")).problems.length / 200) },
+      (_, index) => index,
+    ),
+  ])("checks large registry declaration emit and exact literal precision (%s)", (mode) => {
+    const repo = createTempRepo();
+    const current = readRegistry(resolve("."));
+    const problems =
+      typeof mode === "number"
+        ? current.problems.slice(mode * 200, (mode + 1) * 200)
+        : Array.from({ length: 1600 }, (_, index) => ({
+            ...current.problems[index % current.problems.length],
+            code: `emit-regression/${index}`,
+          }));
+    const registry = { ...current, problemCount: problems.length, problems };
+    const generated = createProblemRegistryArtifacts(registry).get(
+      "packages/problems-core/src/generated/problem-code-registry.ts",
+    );
+    if (generated === undefined) throw new Error("Missing generated registry source");
+    const source = generated
+      .replace(
+        '"../libs/Problem"',
+        JSON.stringify(resolve("packages/problems-core/src/libs/Problem")),
+      )
+      .replace(
+        '"../libs/ProblemRegistry"',
+        JSON.stringify(resolve("packages/problems-core/src/libs/ProblemRegistry")),
+      );
+    const typeStart = source.indexOf("export type CrocoProblemRegistry =");
+    const valueStart = source.indexOf("export const CROCO_PROBLEM_CODE_REGISTRY");
+    expect(typeStart).toBeGreaterThan(0);
+    const inferred =
+      source.slice(0, typeStart) +
+      source.slice(valueStart).replace(": CrocoProblemRegistry =", " =") +
+      "\nexport type CrocoProblemRegistry = typeof CROCO_PROBLEM_CODE_REGISTRY;\n";
+    const file = join(repo, "registry.ts");
+    const compile = (text: string) => {
+      writeFileSync(file, text);
+      const program = ts.createProgram([file], {
+        target: ts.ScriptTarget.ES2022,
+        module: ts.ModuleKind.ESNext,
+        moduleResolution: ts.ModuleResolutionKind.Bundler,
+        strict: true,
+        skipLibCheck: true,
+        types: [],
+        declaration: true,
+        emitDeclarationOnly: true,
+      });
+      const emitted = new Map<string, string>();
+      const result = program.emit(undefined, (path, content) => emitted.set(path, content));
+      return {
+        diagnostics: [...ts.getPreEmitDiagnostics(program), ...result.diagnostics],
+        emitted,
+      };
+    };
+    if (mode === "inferred") {
+      expect(compile(inferred).diagnostics.map(({ code }) => code)).toContain(7056);
+      return;
+    }
+    if (mode === "explicit") {
+      const result = compile(source);
+      expect(result.diagnostics).toEqual([]);
+      expect(result.emitted.get(join(repo, "registry.d.ts"))).toContain(
+        "CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry",
+      );
+      return;
+    }
+    const fixed = problems.find((entry) => !entry.statusPolicy && !entry.categoryPolicy);
+    const configurable = problems.find((entry) => entry.statusPolicy);
+    const correlated = problems.find((entry) => entry.categoryPolicy);
+
+    const precision = `
+const expected = ${JSON.stringify(registry)} as const;
+type Equal<A, B> = (<T>() => T extends A ? 1 : 2) extends (<T>() => T extends B ? 1 : 2) ? true : false;
+type Assert<T extends true> = T;
+type RootKeys = Assert<Equal<keyof CrocoProblemRegistry, keyof typeof expected>>;
+type Version = Assert<Equal<CrocoProblemRegistry['version'], typeof expected.version>>;
+type Count = Assert<Equal<CrocoProblemRegistry['problemCount'], typeof expected.problemCount>>;
+type Factories = Assert<Equal<CrocoProblemRegistry['dynamicCodeFactories'], typeof expected.dynamicCodeFactories>>;
+type TupleKeys = Assert<Equal<keyof CrocoProblemRegistry['problems'], keyof typeof expected.problems>>;
+type TupleLength = Assert<Equal<CrocoProblemRegistry['problems']['length'], typeof expected.problems['length']>>;
+${problems.map((_, index) => `type Record${index} = Assert<Equal<CrocoProblemRegistry['problems'][${index}], typeof expected.problems[${index}]>>;`).join("\n")}
+type ValueLiteral = Assert<Equal<typeof CROCO_PROBLEM_CODE_REGISTRY, CrocoProblemRegistry>>;
+type Codes = Assert<Equal<CrocoProblemCode, typeof expected.problems[number]['code']>>;
+${fixed ? `type FixedStatus = Assert<Equal<CrocoProblemStatus<${JSON.stringify(fixed.code)}>, ${fixed.status}>>;` : ""}
+${configurable ? `type ConfigurableStatus = Assert<Equal<CrocoProblemStatus<${JSON.stringify(configurable.code)}>, number>>;` : ""}
+${correlated ? `type CorrelatedStatus = Assert<Equal<CrocoProblemStatus<${JSON.stringify(correlated.code)}>, ${correlated.categoryPolicy?.possibleStatuses.join(" | ")}>>;` : ""}
+${fixed ? `type DetailsCorrelation = Assert<Equal<CrocoProblemDetails<${JSON.stringify(fixed.code)}>['status'], ${fixed.status}>>;` : ""}
+// @ts-expect-error The root properties remain readonly.
+CROCO_PROBLEM_CODE_REGISTRY.problems = expected.problems;
+// @ts-expect-error The generated tuple remains readonly.
+CROCO_PROBLEM_CODE_REGISTRY.problems.push(expected.problems[0]);
+// @ts-expect-error Unknown codes cannot enter the public code union.
+const invalidCode: CrocoProblemCode = "not-a-registered-code";
+`;
+    const result = compile(source + precision);
+    expect(
+      result.diagnostics.map((diagnostic) =>
+        ts.flattenDiagnosticMessageText(diagnostic.messageText, "\n"),
+      ),
+    ).toEqual([]);
+    expect(result.emitted.get(join(repo, "registry.d.ts"))).toContain(
+      "CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry",
+    );
   });
 
   it.each([
