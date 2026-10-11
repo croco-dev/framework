@@ -8,7 +8,7 @@ const packageRoot = fileURLToPath(new URL("../", import.meta.url));
 
 registerHooks({
   resolve(specifier, context, nextResolve) {
-    const dependency = /^@croco\/([^/]+)$/.exec(specifier);
+    const dependency = /^@croco\/([^/]+)(?:\/([^/]+))?$/.exec(specifier);
     if (!dependency || dependency[1] === "admin-core") return nextResolve(specifier, context);
 
     const isRequire = context.conditions.includes("require");
@@ -17,7 +17,7 @@ registerHooks({
       "packages",
       dependency[1],
       "dist",
-      isRequire ? "index.js" : "index.mjs",
+      `${dependency[2] ?? "index"}.${isRequire ? "js" : "mjs"}`,
     );
     return nextResolve(isRequire ? file : pathToFileURL(file).href, context);
   },
