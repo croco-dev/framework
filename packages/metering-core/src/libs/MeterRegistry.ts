@@ -24,6 +24,8 @@ export class MeterRegistry {
   private readonly cache = new Map<string, Map<string, MeterDefinition>>();
   private readonly cacheUpdatedAt = new Map<string, number>();
   private readonly tenantSnapshotUpdatedAt = new Map<string, number>();
+  private readonly tenantCacheVersions = new Map<string, number>();
+  private cacheGeneration = 0;
 
   constructor(
     private readonly repository: MeterRepository,
@@ -119,9 +121,11 @@ export class MeterRegistry {
    * 캐시 초기화 (테스트용)
    */
   clearCache(): void {
+    this.cacheGeneration += 1;
     this.cache.clear();
     this.cacheUpdatedAt.clear();
     this.tenantSnapshotUpdatedAt.clear();
+    this.tenantCacheVersions.clear();
   }
 
   getCachedBillingRequirement(tenantId: string, meterId: string): "local" | "required" | "unknown" {
@@ -142,6 +146,10 @@ export class MeterRegistry {
       this.cache.set(meter.tenantId, tenantCache);
     }
     tenantCache.set(meter.meterId, meter);
+    this.tenantCacheVersions.set(
+      meter.tenantId,
+      (this.tenantCacheVersions.get(meter.tenantId) ?? 0) + 1,
+    );
     this.cacheUpdatedAt.set(meter.tenantId, Date.now());
   }
 
@@ -150,7 +158,15 @@ export class MeterRegistry {
   }
 
   private async refreshTenantCache(tenantId: string): Promise<MeterDefinition[]> {
+    const generation = this.cacheGeneration;
+    const version = this.tenantCacheVersions.get(tenantId) ?? 0;
     const meters = await this.repository.findByTenant(tenantId);
+    if (
+      generation !== this.cacheGeneration ||
+      version !== (this.tenantCacheVersions.get(tenantId) ?? 0)
+    ) {
+      return Array.from(this.cache.get(tenantId)?.values() ?? []);
+    }
     const tenantCache = new Map<string, MeterDefinition>();
 
     for (const meter of meters) {
@@ -159,6 +175,7 @@ export class MeterRegistry {
     }
 
     this.cache.set(tenantId, tenantCache);
+    this.tenantCacheVersions.set(tenantId, version + 1);
     const updatedAt = Date.now();
     this.cacheUpdatedAt.set(tenantId, updatedAt);
     this.tenantSnapshotUpdatedAt.set(tenantId, updatedAt);

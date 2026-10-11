@@ -425,6 +425,157 @@ describe("MeterRegistry", () => {
     });
   });
 
+  describe("in-flight tenant refresh", () => {
+    const deferred = <T>() => {
+      let resolve!: (value: T) => void;
+      const promise = new Promise<T>((complete) => {
+        resolve = complete;
+      });
+      return { promise, resolve };
+    };
+
+    beforeEach(async () => {
+      vi.useFakeTimers();
+      vi.mocked(mockRepository.findAll).mockResolvedValue([createMeter({ quota: 10 })]);
+      await registry.loadAll();
+      vi.advanceTimersByTime(61_000);
+    });
+
+    it.each(["api_calls", "new_meter"])(
+      "should preserve a successful registration of %s",
+      async (meterId) => {
+        const pending = deferred<MeterDefinition[]>();
+        vi.mocked(mockRepository.findByTenant).mockReturnValueOnce(pending.promise);
+        const refreshing = registry.getByTenant("tenant-1");
+        expect(mockRepository.findByTenant).toHaveBeenCalledTimes(1);
+        const registered = createMeter({ meterId, quota: 20 });
+        vi.mocked(mockRepository.save).mockResolvedValue(registered);
+        await registry.register({ tenantId: "tenant-1", meterId, type: "COUNT", quota: 20 });
+        pending.resolve([createMeter({ quota: 10 })]);
+
+        expect(await refreshing).toContainEqual(registered);
+        expect(await registry.get("tenant-1", meterId)).toEqual(registered);
+        const external = createMeter({ meterId: "external" });
+        const currentSnapshot =
+          meterId === "api_calls"
+            ? [registered, external]
+            : [createMeter({ quota: 10 }), registered, external];
+        vi.mocked(mockRepository.findByTenant).mockResolvedValue(currentSnapshot);
+        expect(await registry.getByTenant("tenant-1")).toEqual(currentSnapshot);
+        expect(await registry.getByTenant("tenant-1")).toEqual(currentSnapshot);
+        expect(mockRepository.findByTenant).toHaveBeenCalledTimes(2);
+      },
+    );
+
+    it("should keep cache cleared when an earlier refresh completes", async () => {
+      const pending = deferred<MeterDefinition[]>();
+      vi.mocked(mockRepository.findByTenant).mockReturnValueOnce(pending.promise);
+      const refreshing = registry.getByTenant("tenant-1");
+      registry.clearCache();
+      pending.resolve([createMeter({ quota: 10 })]);
+
+      expect(await refreshing).toEqual([]);
+      expect(registry.getCachedBillingRequirement("tenant-1", "api_calls")).toBe("unknown");
+      const current = createMeter({ quota: 30 });
+      vi.mocked(mockRepository.findByTenant).mockResolvedValue([current]);
+      expect(await registry.getByTenant("tenant-1")).toEqual([current]);
+      expect(mockRepository.findByTenant).toHaveBeenCalledTimes(2);
+    });
+
+    it("should fence a cold refresh across clearCache and a new registration", async () => {
+      registry.clearCache();
+      const pending = deferred<MeterDefinition[]>();
+      vi.mocked(mockRepository.findByTenant).mockReturnValueOnce(pending.promise);
+      const refreshing = registry.getByTenant("tenant-1");
+      registry.clearCache();
+      const current = createMeter({ quota: 40 });
+      vi.mocked(mockRepository.save).mockResolvedValue(current);
+      await registry.register({
+        tenantId: "tenant-1",
+        meterId: "api_calls",
+        type: "COUNT",
+        quota: 40,
+      });
+      pending.resolve([createMeter({ quota: 10 })]);
+
+      expect(await refreshing).toEqual([current]);
+      expect(await registry.get("tenant-1", "api_calls")).toEqual(current);
+    });
+
+    it("should install a refresh despite another tenant registration", async () => {
+      const pending = deferred<MeterDefinition[]>();
+      vi.mocked(mockRepository.findByTenant).mockReturnValueOnce(pending.promise);
+      const refreshing = registry.getByTenant("tenant-1");
+      const other = createMeter({ tenantId: "tenant-2", quota: 40 });
+      vi.mocked(mockRepository.save).mockResolvedValue(other);
+      await registry.register({
+        tenantId: "tenant-2",
+        meterId: "api_calls",
+        type: "COUNT",
+        quota: 40,
+      });
+      const current = createMeter({ quota: 30 });
+      pending.resolve([current]);
+
+      expect(await refreshing).toEqual([current]);
+      expect(await registry.get("tenant-1", "api_calls")).toEqual(current);
+      expect(await registry.get("tenant-2", "api_calls")).toEqual(other);
+    });
+
+    it("should refresh again after the preserved registration TTL expires", async () => {
+      const pending = deferred<MeterDefinition[]>();
+      vi.mocked(mockRepository.findByTenant).mockReturnValueOnce(pending.promise);
+      const refreshing = registry.get("tenant-1", "api_calls");
+      const registered = createMeter({ quota: 20 });
+      vi.mocked(mockRepository.save).mockResolvedValue(registered);
+      await registry.register({
+        tenantId: "tenant-1",
+        meterId: "api_calls",
+        type: "COUNT",
+        quota: 20,
+      });
+      vi.advanceTimersByTime(30_000);
+      pending.resolve([createMeter({ quota: 10 })]);
+      expect(await refreshing).toEqual(registered);
+      expect(await registry.get("tenant-1", "api_calls")).toEqual(registered);
+      expect(mockRepository.findByTenant).toHaveBeenCalledTimes(1);
+      vi.advanceTimersByTime(30_000);
+      const current = createMeter({ quota: 30 });
+      vi.mocked(mockRepository.findByTenant).mockResolvedValue([current]);
+      expect(await registry.get("tenant-1", "api_calls")).toEqual(current);
+      expect(mockRepository.findByTenant).toHaveBeenCalledTimes(2);
+    });
+
+    it("should preserve loadAll replacement when an earlier refresh completes", async () => {
+      const pending = deferred<MeterDefinition[]>();
+      vi.mocked(mockRepository.findByTenant).mockReturnValueOnce(pending.promise);
+      const refreshing = registry.getByTenant("tenant-1");
+      const current = createMeter({ meterId: "replacement", quota: 30 });
+      vi.mocked(mockRepository.findAll).mockResolvedValue([current]);
+      await registry.loadAll();
+      pending.resolve([createMeter({ quota: 10 })]);
+
+      expect(await refreshing).toEqual([current]);
+      expect(await registry.getByTenant("tenant-1")).toEqual([current]);
+    });
+
+    it("should preserve the first installed snapshot when refreshes finish out of order", async () => {
+      const older = deferred<MeterDefinition[]>();
+      const newer = deferred<MeterDefinition[]>();
+      vi.mocked(mockRepository.findByTenant)
+        .mockReturnValueOnce(older.promise)
+        .mockReturnValueOnce(newer.promise);
+      const first = registry.getByTenant("tenant-1");
+      const second = registry.getByTenant("tenant-1");
+      const current = createMeter({ quota: 30 });
+      newer.resolve([current]);
+      expect(await second).toEqual([current]);
+      older.resolve([createMeter({ quota: 10 })]);
+      expect(await first).toEqual([current]);
+      expect(await registry.get("tenant-1", "api_calls")).toEqual(current);
+    });
+  });
+
   describe("clearCache", () => {
     it("should clear all cached meters", async () => {
       const meter = createMeter();
