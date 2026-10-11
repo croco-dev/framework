@@ -528,6 +528,25 @@ function isSchemaCompatible(
     return areWrappedSchemasCompatible(baseline, current, variance);
   }
 
+  if (baseline.kind === "string" && current.kind === "string") {
+    const {
+      minLength: baselineMin = 0,
+      maxLength: baselineMax = Number.POSITIVE_INFINITY,
+      ...baselineShape
+    } = baseline;
+    const {
+      minLength: currentMin = 0,
+      maxLength: currentMax = Number.POSITIVE_INFINITY,
+      ...currentShape
+    } = current;
+    return (
+      JSON.stringify(baselineShape) === JSON.stringify(currentShape) &&
+      (variance === "request"
+        ? currentMin <= baselineMin && currentMax >= baselineMax
+        : currentMin >= baselineMin && currentMax <= baselineMax)
+    );
+  }
+
   if (baseline.kind === "object" && current.kind === "object") {
     return areObjectSchemasCompatible(baseline, current, variance);
   }
