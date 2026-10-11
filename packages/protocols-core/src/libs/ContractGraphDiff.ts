@@ -395,8 +395,7 @@ function diffRequestSchema(
   }
 
   if (
-    baselineFields.size === 0 &&
-    currentFields.size === 0 &&
+    !changes.some((change) => change.severity === "breaking") &&
     !isRequestSchemaCompatible(baselineSchema, currentSchema)
   ) {
     changes.push({
@@ -550,7 +549,10 @@ function areObjectSchemasCompatible(
     const currentField = currentFields.get(baselineField.name);
 
     if (!currentField) {
-      return variance === "request";
+      if (variance === "response") {
+        return false;
+      }
+      continue;
     }
 
     if (variance === "response" && baselineField.required && !currentField.required) {
@@ -566,6 +568,13 @@ function areObjectSchemasCompatible(
     ) {
       return false;
     }
+  }
+
+  if (variance === "request") {
+    const baselineFields = new Set((baseline.fields ?? []).map((field) => field.name));
+    return (current.fields ?? []).every(
+      (field) => !field.required || baselineFields.has(field.name),
+    );
   }
 
   return true;

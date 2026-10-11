@@ -2554,6 +2554,86 @@ describe("buildContractGraph", () => {
     ]);
   });
 
+  it.each([
+    [
+      "root optional removal",
+      z.object({ name: z.string() }).optional(),
+      z.object({ name: z.string() }),
+      undefined,
+    ],
+    [
+      "array item required addition",
+      z.array(z.object({ id: z.string() })),
+      z.array(z.object({ id: z.string(), name: z.string() })),
+      [{ id: "1" }],
+    ],
+    [
+      "nested array required addition",
+      z.object({ items: z.array(z.object({ id: z.string() })) }),
+      z.object({ items: z.array(z.object({ id: z.string(), name: z.string() })) }),
+      { items: [{ id: "1" }] },
+    ],
+    [
+      "optional object required addition",
+      z.object({ profile: z.object({ id: z.string() }).optional() }),
+      z.object({ profile: z.object({ id: z.string(), name: z.string() }).optional() }),
+      { profile: { id: "1" } },
+    ],
+    [
+      "removed field before array expansion",
+      z.array(z.object({ removed: z.string(), id: z.string() })),
+      z.array(z.object({ id: z.string(), name: z.string() })),
+      [{ removed: "x", id: "1" }],
+    ],
+  ])("reports %s as breaking without duplicate diagnostics", (_name, baseline, current, input) => {
+    const snapshot = (schema: z.ZodTypeAny) => {
+      @Controller("/users")
+      class UsersController {
+        @Post("/")
+        createUser(@Body(schema) _body: unknown): void {}
+      }
+      return createContractGraphSnapshot(buildContractGraph([UsersController]));
+    };
+    expect(baseline.safeParse(input).success).toBe(true);
+    expect(current.safeParse(input).success).toBe(false);
+    const diff = diffContractGraphSnapshots(snapshot(baseline), snapshot(current));
+    expect(diff.hasBreakingChanges).toBe(true);
+    expect(diff.breakingChanges).toHaveLength(1);
+    expect(diff.breakingChanges[0]).toMatchObject({ location: "body" });
+    expect(diffContractGraphSnapshots(snapshot(baseline), snapshot(baseline)).changes).toEqual([]);
+    expect(diffContractGraphSnapshots(snapshot(current), snapshot(current)).changes).toEqual([]);
+  });
+
+  it.each([
+    [
+      "root optional addition",
+      z.object({ name: z.string() }),
+      z.object({ name: z.string() }).optional(),
+    ],
+    [
+      "array item optional addition",
+      z.array(z.object({ id: z.string() })),
+      z.array(z.object({ id: z.string(), name: z.string().optional() })),
+    ],
+    [
+      "array item field removal",
+      z.array(z.object({ name: z.string(), id: z.string() })),
+      z.array(z.object({ id: z.string() })),
+    ],
+  ])("allows %s", (_name, baseline, current) => {
+    const snapshot = (schema: z.ZodTypeAny) => {
+      @Controller("/users")
+      class UsersController {
+        @Post("/")
+        createUser(@Body(schema) _body: unknown): void {}
+      }
+      return createContractGraphSnapshot(buildContractGraph([UsersController]));
+    };
+    expect(
+      diffContractGraphSnapshots(snapshot(baseline), snapshot(current)).hasBreakingChanges,
+    ).toBe(false);
+  });
+
   it("should classify request field schema changes as breaking", () => {
     const BaselineController = (() => {
       @Controller("/users")
