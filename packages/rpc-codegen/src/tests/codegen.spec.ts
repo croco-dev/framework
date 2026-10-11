@@ -22,6 +22,7 @@ import {
   createFrontendActionManifestFromContractGraph,
   generateClientFiles,
   generateClientFilesFromContractGraph,
+  type GenerateClientOptions,
 } from "../libs/generate";
 
 const TEMP_DIR = path.join(__dirname, "codegen-temp");
@@ -544,6 +545,133 @@ describe("generateClientFiles", () => {
     );
     expect(fs.readdirSync(TEMP_DIR)).toEqual([]);
   });
+
+  describe.each([
+    ["generation", generateClientFiles],
+    ["drift check", checkGeneratedClientFiles],
+  ] as const)("output path collisions during %s", (_mode, generateOrCheck) => {
+    it.each([
+      { controllerName: "RpcController", domain: null, fileName: "rpc.ts", origin: "RPC support" },
+      {
+        controllerName: "IndexController",
+        domain: null,
+        fileName: "index.ts",
+        origin: "client index",
+      },
+    ])(
+      "rejects $fileName domain collisions before changing any files",
+      ({ controllerName, domain, fileName, origin }) => {
+        generateClientFiles([createBasicRoute()], TEMP_DIR);
+        const before = collectDirectoryContents(TEMP_DIR);
+        const routes = [{ ...createBasicRoute(), controllerName, domain }];
+        const options = { manifestBundlePath: ".croco/manifest" };
+
+        expect(() => generateOrCheck(routes, TEMP_DIR, options)).toThrow(
+          expect.objectContaining({
+            code: "rpc-codegen/invalid-contract",
+            message: expect.stringContaining(fileName),
+          }),
+        );
+        expect(() => generateOrCheck(routes, TEMP_DIR, options)).toThrow(origin);
+        expect(() => generateOrCheck(routes, TEMP_DIR, options)).toThrow(
+          `domain '${fileName.replace(/\.ts$/, "")}'`,
+        );
+        expect(collectDirectoryContents(TEMP_DIR)).toEqual(before);
+      },
+    );
+
+    it.each([
+      ["user.ts", "domain 'user'"],
+      ["rpc.ts", "RPC support"],
+      ["index.ts", "client index"],
+      ["manifest-source.ts", "manifest source"],
+      ["nested/../user.ts", "domain 'user'"],
+      ["USER.TS", "domain 'user'"],
+      ["RPC.TS", "RPC support"],
+      ["INDEX.TS", "client index"],
+      ["MANIFEST-SOURCE.TS", "manifest source"],
+    ])("rejects frontend manifest alias %s before changing any files", (fileName, origin) => {
+      generateClientFiles([createBasicRoute()], TEMP_DIR);
+      const before = collectDirectoryContents(TEMP_DIR);
+      const options: GenerateClientOptions = {
+        manifestBundlePath: ".croco/manifest",
+        frontendActionManifestPath: `${TEMP_DIR}/${fileName}`,
+      };
+
+      expect(() => generateOrCheck([createBasicRoute()], TEMP_DIR, options)).toThrow(
+        expect.objectContaining({ code: "rpc-codegen/invalid-contract" }),
+      );
+      expect(() => generateOrCheck([createBasicRoute()], TEMP_DIR, options)).toThrow(origin);
+      expect(() => generateOrCheck([createBasicRoute()], TEMP_DIR, options)).toThrow(
+        "frontend action manifest",
+      );
+      expect(collectDirectoryContents(TEMP_DIR)).toEqual(before);
+    });
+
+    it.each([
+      ".croco-rpc-codegen.json",
+      ".CROCO-RPC-CODEGEN.JSON",
+      "nested/../.croco-rpc-codegen.json",
+    ])("rejects frontend manifest ownership alias %s before changing any files", (fileName) => {
+      generateClientFiles([createBasicRoute()], TEMP_DIR);
+      const before = collectDirectoryContents(TEMP_DIR);
+      const options = { frontendActionManifestPath: `${TEMP_DIR}/${fileName}` };
+
+      expect(() => generateOrCheck([createBasicRoute()], TEMP_DIR, options)).toThrow(
+        expect.objectContaining({
+          code: "rpc-codegen/invalid-contract",
+          message: expect.stringContaining("conflicts with the reserved ownership manifest"),
+        }),
+      );
+      expect(collectDirectoryContents(TEMP_DIR)).toEqual(before);
+    });
+
+    it("reserves the ownership manifest when the output directory is relative", () => {
+      generateClientFiles([createBasicRoute()], TEMP_DIR);
+      const before = collectDirectoryContents(TEMP_DIR);
+      const outputDirectory = path.relative(process.cwd(), TEMP_DIR);
+      const options = {
+        frontendActionManifestPath: path.join(TEMP_DIR, ".croco-rpc-codegen.json"),
+      };
+
+      expect(() => generateOrCheck([createBasicRoute()], outputDirectory, options)).toThrow(
+        expect.objectContaining({
+          code: "rpc-codegen/invalid-contract",
+          message: expect.stringContaining("conflicts with the reserved ownership manifest"),
+        }),
+      );
+      expect(collectDirectoryContents(TEMP_DIR)).toEqual(before);
+    });
+
+    it("rejects collisions before creating an output directory", () => {
+      const outputDirectory = path.join(TEMP_DIR, "missing-output");
+      const routes = [{ ...createBasicRoute(), controllerName: "RpcController" }];
+
+      expect(() => generateOrCheck(routes, outputDirectory)).toThrow(
+        expect.objectContaining({ code: "rpc-codegen/invalid-contract" }),
+      );
+      expect(fs.existsSync(outputDirectory)).toBe(false);
+    });
+  });
+
+  it.each([undefined, ".croco/manifest"])(
+    "keeps the normalized manifest-source domain distinct from optional manifest source %s",
+    (manifestBundlePath) => {
+      const routes = [{ ...createBasicRoute(), domain: "manifest-source" }];
+      const options = { manifestBundlePath };
+
+      generateClientFiles(routes, TEMP_DIR, options);
+
+      expect(checkGeneratedClientFiles(routes, TEMP_DIR, options)).toEqual([]);
+      assertGeneratedPackageTypechecks([
+        "index.ts",
+        "rpc.ts",
+        "manifestSource.ts",
+        ...(manifestBundlePath ? ["manifest-source.ts"] : []),
+      ]);
+    },
+    GENERATED_CLIENT_TYPECHECK_TIMEOUT_MS,
+  );
 
   it("should generate a GET fetch client", () => {
     const routes: RouteIR[] = [
