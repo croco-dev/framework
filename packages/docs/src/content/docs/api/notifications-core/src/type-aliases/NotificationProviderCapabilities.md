@@ -42,3 +42,11 @@ title: "NotificationProviderCapabilities"
 ### supportsRenderedTemplates
 
 > `readonly` **supportsRenderedTemplates**: `boolean`
+
+---
+
+### terminalEndpointFailureCodes?
+
+> `readonly` `optional` **terminalEndpointFailureCodes?**: readonly `string`[]
+
+Stable failure codes whose failed task replay must still invalidate the destination endpoint.

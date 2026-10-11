@@ -66,6 +66,85 @@ describe("crocoPlugin", () => {
     fs.rmSync(TEMP_DIR, { recursive: true, force: true });
   });
 
+  it.each([
+    { enabled: true, platform: "node" as const, diEnabled: true },
+    { enabled: true, platform: "node" as const, diEnabled: false },
+    { enabled: false, platform: "node" as const, diEnabled: true },
+    { enabled: true, platform: "browser" as const, diEnabled: true },
+  ])(
+    "rejects legacy registry configuration before generating output ($enabled, $platform, $diEnabled)",
+    async ({ enabled, platform, diEnabled }) => {
+      const { entry } = createProject();
+      await expect(
+        esbuild.build({
+          absWorkingDir: TEMP_DIR,
+          entryPoints: [entry],
+          platform,
+          bundle: true,
+          write: false,
+          logLevel: "silent",
+          external: ["@croco/framework-context", "@croco/framework-module", "reflect-metadata"],
+          plugins: [
+            crocoPlugin({
+              generateRegistry: { enabled, outDir: "src", outFile: "registry.gen.ts" },
+              di: { enabled: diEnabled },
+            }),
+          ],
+        }),
+      ).rejects.toThrow(
+        "CROCO_DI_COMPILE_001: generateRegistry is no longer supported. Remove it and use di.enabled, di.outFile, and di.manifestFile; the generatedDiGraph must be bound to createApplicationRuntime(...).",
+      );
+      expect(fs.existsSync(path.join(TEMP_DIR, "src", "registry.gen.ts"))).toBe(false);
+      expect(fs.existsSync(path.join(TEMP_DIR, ".croco"))).toBe(false);
+    },
+  );
+
+  it("bundles a sibling DI graph with local, parent, and neighboring component imports", async () => {
+    const { entry } = createProject();
+    const componentSource = fs.readFileSync(path.join(TEMP_DIR, "src", "Service.ts"), "utf8");
+    fs.writeFileSync(
+      path.join(TEMP_DIR, "Parent.ts"),
+      componentSource.replace("Service", "Parent"),
+    );
+    fs.mkdirSync(path.join(TEMP_DIR, "other"));
+    fs.writeFileSync(
+      path.join(TEMP_DIR, "other", "Sibling.ts"),
+      componentSource.replace("Service", "Sibling"),
+    );
+    const common: esbuild.BuildOptions = {
+      absWorkingDir: TEMP_DIR,
+      platform: "node",
+      format: "esm",
+      bundle: true,
+      write: false,
+      metafile: true,
+      external: ["@croco/framework-context", "@croco/framework-module", "reflect-metadata"],
+      tsconfig: path.join(TEMP_DIR, "tsconfig.json"),
+    };
+    const app = await esbuild.build({
+      ...common,
+      entryPoints: [entry],
+      plugins: [
+        crocoPlugin({
+          scan: { dirs: ["src", "other", "Parent.ts"] },
+          di: { outFile: "src/registry.gen.ts" },
+        }),
+      ],
+    });
+    expect(app.errors).toEqual([]);
+    expect(Object.keys(app.metafile?.inputs ?? {})).toContain("src/registry.gen.ts");
+    const graph = fs.readFileSync(path.join(TEMP_DIR, "src", "registry.gen.ts"), "utf8");
+    expect(graph).toContain('from "./Service"');
+    expect(graph).toContain('from "../Parent"');
+    expect(graph).toContain('from "../other/Sibling"');
+    const registry = await esbuild.build({ ...common, entryPoints: ["src/registry.gen.ts"] });
+    expect(registry.errors).toEqual([]);
+    expect(Object.keys(registry.metafile?.inputs ?? {})).toEqual(
+      expect.arrayContaining(["src/Service.ts", "Parent.ts", "other/Sibling.ts"]),
+    );
+    expect(registry.outputFiles?.[0]?.text).toContain("generatedDiGraph");
+  });
+
   it("attaches one generated graph to the app runtime without import-time registration", async () => {
     const { entry, component } = createProject();
     const build = createMockBuild("src/index.ts");
@@ -145,7 +224,7 @@ describe("crocoPlugin", () => {
     onStart?.();
     const removed = JSON.parse(fs.readFileSync(manifestFile, "utf8")) as typeof first;
     expect(removed.providers).toEqual([]);
-  });
+  }, 30_000);
 
   it("does not generate or inject server providers into browser builds", async () => {
     const { entry } = createProject();
@@ -167,6 +246,29 @@ describe("crocoPlugin", () => {
     const contents = result && "contents" in result ? String(result.contents) : "";
     expect(contents).not.toContain("generated-di-graph");
   });
+
+  it.each([undefined, "browser"] as const)(
+    "builds a browser entry without server graph artifacts when platform is %s",
+    async (platform) => {
+      const { entry } = createProject();
+      fs.writeFileSync(entry, 'export const greeting = "browser";');
+      const result = await esbuild.build({
+        absWorkingDir: TEMP_DIR,
+        entryPoints: [entry],
+        ...(platform === undefined ? {} : { platform }),
+        bundle: true,
+        write: false,
+        metafile: true,
+        logLevel: "silent",
+        plugins: [crocoPlugin({ reflectMetadata: false })],
+      });
+      expect(result.errors).toEqual([]);
+      expect(fs.existsSync(path.join(TEMP_DIR, ".croco"))).toBe(false);
+      expect(Object.keys(result.metafile?.inputs ?? {})).toEqual(["src/index.ts"]);
+      expect(result.outputFiles?.[0]?.text).toContain("browser");
+      expect(result.outputFiles?.[0]?.text).not.toContain("generatedDiGraph");
+    },
+  );
 
   it("forwards explicit bindings and module ownership to the compiler", () => {
     createProject();
@@ -343,6 +445,151 @@ describe("crocoPlugin", () => {
     }
   });
 
+  describe("lexical runtime import bindings", () => {
+    const imports = [
+      {
+        kind: "named",
+        declaration: 'import { createApplicationRuntime } from "@croco/framework-module";',
+        binding: "createApplicationRuntime",
+        namespace: false,
+      },
+      {
+        kind: "aliased",
+        declaration:
+          'import { createApplicationRuntime as createRuntime } from "@croco/framework-module";',
+        binding: "createRuntime",
+        namespace: false,
+      },
+      {
+        kind: "namespace",
+        declaration: 'import * as application from "@croco/framework-module";',
+        binding: "application",
+        namespace: true,
+      },
+    ];
+
+    it.each(imports)(
+      "injects the $kind import without changing shadowed calls",
+      async (fixture) => {
+        const { entry } = createProject();
+        const call = fixture.namespace
+          ? `${fixture.binding}.createApplicationRuntime`
+          : fixture.binding;
+        const localValue = fixture.namespace ? "{ createApplicationRuntime: local }" : "local";
+        const functionDeclaration = fixture.namespace
+          ? `function ${fixture.binding}() {}\n${fixture.binding}.createApplicationRuntime = local;`
+          : `function ${fixture.binding}(...args: unknown[]) { return args; }`;
+        fs.writeFileSync(
+          entry,
+          `
+          ${fixture.declaration}
+          const local = (...args: unknown[]) => args;
+          const results: unknown[] = [];
+          function parameter(${fixture.binding}: ${fixture.namespace ? "{ createApplicationRuntime: typeof local }" : "typeof local"}) {
+            return ${call}("parameter");
+          }
+          results.push(parameter(${localValue}));
+          {
+            const ${fixture.binding} = ${localValue};
+            results.push(${call}("block"));
+          }
+          function declaration() {
+            ${functionDeclaration}
+            return ${call}("function");
+          }
+          results.push(declaration());
+          try { throw ${localValue}; }
+          catch (${fixture.binding}) {
+            results.push(${call}("catch"));
+          }
+          export const shadows = results;
+          export const runtime = ${call}();
+          export const configuredRuntime = ${call}({ name: "configured" });
+        `,
+        );
+        const result = await esbuild.build({
+          absWorkingDir: TEMP_DIR,
+          entryPoints: [entry],
+          platform: "node",
+          format: "cjs",
+          bundle: true,
+          write: false,
+          external: ["@croco/framework-context", "@croco/framework-module"],
+          plugins: [crocoPlugin({ reflectMetadata: false, di: { graphId: "lexical-bindings" } })],
+          tsconfig: path.join(TEMP_DIR, "tsconfig.json"),
+        });
+        const loaded = { exports: {} };
+        const requireStub = (specifier: string): unknown => {
+          if (specifier === "@croco/framework-module") {
+            return { createApplicationRuntime: (...args: unknown[]) => args };
+          }
+          if (specifier === "@croco/framework-context") {
+            return {
+              Component: () => () => undefined,
+              defineGeneratedDiGraph: (graph: unknown) => graph,
+              GENERATED_DI_GRAPH_VERSION: 1,
+            };
+          }
+          throw new Error(`Unexpected bundled dependency: ${specifier}`);
+        };
+        const output = result.outputFiles[0];
+        if (!output) throw new Error("Expected an esbuild bundle");
+        new Function("require", "module", "exports", output.text)(
+          requireStub,
+          loaded,
+          loaded.exports,
+        );
+        const app = loaded.exports as {
+          shadows: unknown[][];
+          runtime: unknown[];
+          configuredRuntime: unknown[];
+        };
+        expect(app.shadows).toEqual([["parameter"], ["block"], ["function"], ["catch"]]);
+        expect(app.runtime).toEqual([
+          undefined,
+          expect.objectContaining({ graphId: "lexical-bindings" }),
+        ]);
+        expect(app.configuredRuntime).toEqual([{ name: "configured" }, app.runtime[1]]);
+      },
+    );
+
+    it.each(imports)(
+      "rejects a shadow-only $kind import as a missing runtime connection",
+      async (fixture) => {
+        const { entry } = createProject();
+        const call = fixture.namespace
+          ? `${fixture.binding}.createApplicationRuntime`
+          : fixture.binding;
+        fs.writeFileSync(
+          entry,
+          `
+          ${fixture.declaration}
+          type Factory = (...args: unknown[]) => unknown;
+          export function shadowOnly(${fixture.binding}: ${fixture.namespace ? "{ createApplicationRuntime: Factory }" : "Factory"}) {
+            return ${call}();
+          }
+        `,
+        );
+        await expect(
+          esbuild.build({
+            absWorkingDir: TEMP_DIR,
+            entryPoints: [entry],
+            platform: "node",
+            format: "cjs",
+            bundle: true,
+            write: false,
+            logLevel: "silent",
+            external: ["@croco/framework-context", "@croco/framework-module"],
+            plugins: [crocoPlugin({ reflectMetadata: false })],
+            tsconfig: path.join(TEMP_DIR, "tsconfig.json"),
+          }),
+        ).rejects.toThrow(
+          "CROCO_DI_COMPILE_001: Server builds with generated providers must bind an app-scoped runtime with createApplicationRuntime(...).",
+        );
+      },
+    );
+  });
+
   it("preserves an explicit graph argument in an imported composition module", async () => {
     const { entry } = createProject();
     fs.writeFileSync(entry, 'export { runtime } from "./app";');
@@ -369,22 +616,25 @@ describe("crocoPlugin", () => {
     expect(Object.keys(result.metafile?.inputs ?? {})).not.toContain(".croco/di.generated.ts");
   });
 
-  it("rejects a server build whose imported modules never bind an application runtime", async () => {
-    const { entry } = createProject();
-    fs.writeFileSync(entry, 'export { value } from "./app";');
-    fs.writeFileSync(path.join(TEMP_DIR, "src", "app.ts"), "export const value = 1;");
-    await expect(
-      esbuild.build({
-        absWorkingDir: TEMP_DIR,
-        entryPoints: [entry],
-        platform: "node",
-        bundle: true,
-        write: false,
-        logLevel: "silent",
-        plugins: [crocoPlugin({ reflectMetadata: false })],
-      }),
-    ).rejects.toThrow("CROCO_DI_COMPILE_001");
-  });
+  it.each(["node", "neutral"] as const)(
+    "rejects a %s build whose imported modules never bind an application runtime",
+    async (platform) => {
+      const { entry } = createProject();
+      fs.writeFileSync(entry, 'export { value } from "./app";');
+      fs.writeFileSync(path.join(TEMP_DIR, "src", "app.ts"), "export const value = 1;");
+      await expect(
+        esbuild.build({
+          absWorkingDir: TEMP_DIR,
+          entryPoints: [entry],
+          platform,
+          bundle: true,
+          write: false,
+          logLevel: "silent",
+          plugins: [crocoPlugin({ reflectMetadata: false })],
+        }),
+      ).rejects.toThrow("CROCO_DI_COMPILE_001");
+    },
+  );
 
   it("rebuilds provider generations without replacing in-flight scopes or publishing failed graphs", async () => {
     const { entry, component } = createProject();

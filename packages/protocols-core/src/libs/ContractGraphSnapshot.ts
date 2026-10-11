@@ -1,3 +1,4 @@
+import { compareStrings } from "../../../../tooling/compareStrings.mjs";
 import type { z } from "zod";
 import type {
   ContractAccessMetadata,
@@ -85,6 +86,8 @@ export type ContractGraphSnapshotRoute = {
     readonly query: ContractSchemaSnapshot | null;
     readonly headers: ContractSchemaSnapshot | null;
   };
+  /** Missing in historical v1 artifacts: 200 with a response schema, otherwise 204. */
+  readonly successStatus?: number;
   readonly response: ContractSchemaSnapshot | null;
   readonly problems: readonly ContractGraphSnapshotProblemResponse[];
 };
@@ -172,6 +175,8 @@ export type ContractGraphV1Route = {
     readonly query: ContractSchemaSnapshot | null;
     readonly headers: ContractSchemaSnapshot | null;
   };
+  /** Missing in historical v1 artifacts: 200 with an output schema, otherwise 204. */
+  readonly successStatus?: number;
   readonly outputSchema: ContractSchemaSnapshot | null;
   readonly problems: readonly ContractGraphSnapshotProblemResponse[];
   readonly policies: readonly ContractGraphV1PolicyRef[];
@@ -293,7 +298,13 @@ export function isContractGraphSnapshot(value: unknown): value is ContractGraphS
  */
 export function parseContractGraphSnapshot(value: unknown): ContractGraphSnapshot | null {
   if (isContractGraphSnapshot(value)) {
-    return value;
+    return {
+      ...value,
+      routes: value.routes.map((route) => ({
+        ...route,
+        successStatus: route.successStatus ?? (route.response ? 200 : 204),
+      })),
+    };
   }
 
   if (!isLegacyContractGraphSnapshot(value)) {
@@ -347,6 +358,7 @@ function toContractGraphV1Route(route: ContractGraphSnapshotRoute): ContractGrap
     path: route.path,
     source: route.routeContract?.sourceLocation ?? null,
     inputSchemas: route.request,
+    successStatus: route.successStatus ?? (route.response ? 200 : 204),
     outputSchema: route.response,
     problems: route.problems,
     policies: toContractGraphV1Policies(route),
@@ -427,6 +439,7 @@ function toSnapshotRoute(route: ContractGraphRoute): ContractGraphSnapshotRoute 
       query: snapshotZodSchema(route.inputSchemas.query),
       headers: snapshotZodSchema(route.inputSchemas.headers),
     },
+    successStatus: route.successStatus ?? (route.outputSchema ? 200 : 204),
     response: snapshotZodSchema(route.outputSchema),
     problems: [...(route.problemResponses ?? [])]
       .map((problem) => ({
@@ -556,10 +569,6 @@ function compareDiagnostics(left: ContractDiagnostic, right: ContractDiagnostic)
   );
 }
 
-function compareStrings(left: string, right: string): number {
-  return left.localeCompare(right);
-}
-
 function isContractGraphV1Route(value: unknown): value is ContractGraphV1Route {
   if (!isRecord(value)) {
     return false;
@@ -578,6 +587,7 @@ function isContractGraphV1Route(value: unknown): value is ContractGraphV1Route {
     (value["source"] === null || isContractSourceLocation(value["source"])) &&
     isContractGraphV1InputSchemas(value["inputSchemas"]) &&
     isContractSchemaSnapshotOrNull(value["outputSchema"]) &&
+    isOptionalSuccessStatus(value["successStatus"], value["outputSchema"]) &&
     Array.isArray(problems) &&
     problems.every(isContractGraphProblemResponse) &&
     Array.isArray(policies) &&
@@ -661,6 +671,7 @@ function isLegacyContractGraphSnapshotRoute(
     value["params"].every(isLegacyContractGraphSnapshotParam) &&
     isLegacyContractGraphSnapshotRequest(value["request"]) &&
     isLegacyContractSchemaSnapshotOrNull(value["response"]) &&
+    isOptionalSuccessStatus(value["successStatus"], value["response"]) &&
     (value["problems"] === undefined ||
       (Array.isArray(value["problems"]) && value["problems"].every(isContractGraphProblemResponse)))
   );
@@ -713,6 +724,7 @@ function isLegacyContractSchemaSnapshot(
   const valid =
     typeof value["kind"] === "string" &&
     typeof value["typeName"] === "string" &&
+    hasValidStringLengthBounds(value) &&
     value["jsonSafe"] === undefined &&
     value["unsupportedReason"] === undefined &&
     value["effectType"] === undefined &&
@@ -770,6 +782,7 @@ function normalizeLegacyContractGraphSnapshotRoute(
         ? normalizeLegacyContractSchemaSnapshot(route.request.headers)
         : null,
     },
+    successStatus: route.successStatus ?? (route.response ? 200 : 204),
     response: route.response ? normalizeLegacyContractSchemaSnapshot(route.response) : null,
     problems: route.problems ?? [],
   };
@@ -805,6 +818,8 @@ function normalizeLegacyContractSchemaSnapshot(
     ...(element !== undefined ? { element } : {}),
     ...(inner !== undefined ? { inner } : {}),
     ...(options ? { options } : {}),
+    ...(schema.minLength !== undefined ? { minLength: schema.minLength } : {}),
+    ...(schema.maxLength !== undefined ? { maxLength: schema.maxLength } : {}),
     ...(schema.values ? { values: schema.values } : {}),
     ...(schema.value !== undefined ? { value: schema.value } : {}),
   };
@@ -824,6 +839,17 @@ function isContractGraphSnapshotController(
     value["guards"].every(isContractMetadataReference) &&
     isStringArray(value["roles"]) &&
     isStringArray(value["routeIds"])
+  );
+}
+
+function isOptionalSuccessStatus(value: unknown, response: unknown): value is number | undefined {
+  return (
+    value === undefined ||
+    (typeof value === "number" &&
+      Number.isInteger(value) &&
+      value >= 200 &&
+      value <= 299 &&
+      ((value !== 204 && value !== 205) || response === null))
   );
 }
 
@@ -850,6 +876,7 @@ function isContractGraphSnapshotRoute(value: unknown): value is ContractGraphSna
     value["params"].every(isContractGraphSnapshotParam) &&
     isContractGraphSnapshotRequest(value["request"]) &&
     isContractSchemaSnapshotOrNull(value["response"]) &&
+    isOptionalSuccessStatus(value["successStatus"], value["response"]) &&
     Array.isArray(value["problems"]) &&
     value["problems"].every(isContractGraphProblemResponse)
   );
@@ -901,7 +928,10 @@ function isContractGraphSnapshotParamKind(value: unknown): value is ParamIR["kin
     value === "query" ||
     value === "path" ||
     value === "header" ||
-    value === "ctx"
+    value === "ctx" ||
+    value === "principal" ||
+    value === "user" ||
+    value === "apiKey"
   );
 }
 
@@ -933,6 +963,7 @@ function isContractSchemaSnapshot(
     typeof value["kind"] === "string" &&
     typeof value["typeName"] === "string" &&
     typeof value["jsonSafe"] === "boolean" &&
+    hasValidStringLengthBounds(value) &&
     isOptionalString(value["unsupportedReason"]) &&
     isOptionalString(value["effectType"]) &&
     (value["fields"] === undefined ||
@@ -957,6 +988,16 @@ function isContractSchemaSnapshot(
   ancestors.delete(value);
 
   return valid;
+}
+
+function hasValidStringLengthBounds(value: Record<string, unknown>): boolean {
+  return (["minLength", "maxLength"] as const).every(
+    (key) =>
+      value[key] === undefined ||
+      (value["kind"] === "string" &&
+        value["typeName"] === "ZodString" &&
+        isNonNegativeInteger(value[key])),
+  );
 }
 
 function isContractSchemaFieldSnapshot(

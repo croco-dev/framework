@@ -59,6 +59,13 @@ export class NotificationProviderRegistry {
     const capabilities: NotificationProviderCapabilities = Object.freeze({
       ...declaredCapabilities,
       channels: Object.freeze([...declaredCapabilities.channels]),
+      ...(declaredCapabilities.terminalEndpointFailureCodes === undefined
+        ? {}
+        : {
+            terminalEndpointFailureCodes: Object.freeze([
+              ...declaredCapabilities.terminalEndpointFailureCodes,
+            ]),
+          }),
     });
 
     if (!isDefault) {

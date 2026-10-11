@@ -477,6 +477,123 @@ function assertMetaViteBrowserBuildEntrypoint(packageDir: string, buildScript: s
   expect(viteConfig).toContain("outDir: 'dist/client'");
 }
 
+function assertWorkerServiceBindingHasMain(workerDir: string, expectedMain: string): void {
+  const wranglerConfig = readFileSync(join(workerDir, "wrangler.toml"), "utf8");
+  const packageJson = readPackageJson(join(workerDir, "package.json"));
+  const buildScript = packageJson.scripts?.build ?? "";
+
+  expect(wranglerConfig).toContain("[[services]]");
+  expect(wranglerConfig).toContain(`main = "${expectedMain}"`);
+  expect(buildScript).toContain("--ssr src/index.ts");
+  expect(buildScript).toContain("--outDir dist");
+  expect(existsSync(join(workerDir, "src", "index.ts"))).toBe(true);
+}
+
+function parseWranglerMain(wranglerContent: string): string | undefined {
+  for (const line of wranglerContent.split("\n")) {
+    const match = line.match(/^\s*main\s*=\s*("(?:[^"]*)"|'(?:[^']*)')\s*(?:#.*)?$/);
+    if (match) {
+      return match[1].slice(1, -1);
+    }
+  }
+
+  return undefined;
+}
+
+function parseWranglerAssetsDirectory(wranglerContent: string): string | undefined {
+  for (const line of wranglerContent.split("\n")) {
+    const match = line.match(/^\s*directory\s*=\s*("(?:[^"]*)"|'(?:[^']*)')\s*(?:#.*)?$/);
+    if (match) {
+      return match[1].slice(1, -1);
+    }
+  }
+
+  return undefined;
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function buildScriptReferencesPath(buildScript: string, targetPath: string): boolean {
+  return new RegExp(`(^|[^\\w./-])${escapeRegExp(targetPath)}($|[^\\w./-])`).test(buildScript);
+}
+
+function buildScriptOutputDirs(buildScript: string): string[] {
+  return [...buildScript.matchAll(/--outDir\s+([^\s]+)/g)].map((match) => match[1]);
+}
+
+function buildScriptProducesMain(buildScript: string, main: string): boolean {
+  if (buildScriptReferencesPath(buildScript, main)) {
+    return true;
+  }
+
+  const mainParentDir = main.split("/").slice(0, -1).join("/");
+
+  return buildScriptOutputDirs(buildScript).some(
+    (outDir) => mainParentDir === outDir || mainParentDir.startsWith(`${outDir}/`),
+  );
+}
+
+function assertWranglerMainMatchesBuildOutput(packageDir: string): void {
+  const wranglerPath = join(packageDir, "wrangler.toml");
+
+  if (!existsSync(wranglerPath)) {
+    return;
+  }
+
+  const wranglerContent = readFileSync(wranglerPath, "utf8");
+  const main = parseWranglerMain(wranglerContent);
+
+  if (main === undefined) {
+    const packageJson = readPackageJson(join(packageDir, "package.json"));
+    const buildScript = packageJson.scripts?.build ?? "";
+    const assetsDir = parseWranglerAssetsDirectory(wranglerContent);
+
+    expect(wranglerContent).toContain("[assets]");
+    expect(parseWranglerMain(wranglerContent)).toBeUndefined();
+    expect(
+      assetsDir !== undefined &&
+        buildScriptOutputDirs(buildScript).some(
+          (outDir) => assetsDir === outDir || assetsDir.startsWith(`${outDir}/`),
+        ),
+      `wrangler assets directory "${assetsDir}" must be produced by build script "${buildScript}" in ${packageDir}`,
+    ).toBe(true);
+    return;
+  }
+
+  if (main.startsWith("src/")) {
+    expect(existsSync(join(packageDir, main))).toBe(true);
+    return;
+  }
+
+  if (main.startsWith("dist/")) {
+    const packageJson = readPackageJson(join(packageDir, "package.json"));
+    const buildScript = packageJson.scripts?.build ?? "";
+
+    expect(
+      buildScriptProducesMain(buildScript, main),
+      `wrangler main "${main}" must be produced by build script "${buildScript}" in ${packageDir}`,
+    ).toBe(true);
+    return;
+  }
+
+  expect(wranglerContent).toContain("[assets]");
+  expect(parseWranglerMain(wranglerContent)).toBe(main);
+}
+
+function assertAllWranglerMainsMatchBuildOutputs(projectDir: string): void {
+  const wranglerFiles = collectFiles(projectDir).filter(
+    (filePath) => basename(filePath) === "wrangler.toml",
+  );
+
+  expect(wranglerFiles.length).toBeGreaterThan(0);
+
+  for (const wranglerFile of wranglerFiles) {
+    assertWranglerMainMatchesBuildOutput(wranglerFile.slice(0, -"/wrangler.toml".length));
+  }
+}
+
 function assertNoExternalCrocoWorkspaceRanges(projectDir: string): void {
   const manifests = collectFiles(projectDir)
     .filter((filePath) => basename(filePath) === "package.json")
@@ -833,6 +950,11 @@ describe("E2E: generate()", () => {
       assertMetaViteBrowserBuildEntrypoint(webDir, "vite build --outDir dist/client");
       assertViteConfigImportsDeclared(webDir);
       assertSourceBareImportsDeclared(webDir);
+      const webWranglerContent = readFileSync(join(webDir, "wrangler.toml"), "utf8");
+      expect(webWranglerContent).not.toContain("dist/worker-ssr");
+      expect(parseWranglerMain(webWranglerContent)).toBeUndefined();
+      assertWranglerMainMatchesBuildOutput(webDir);
+      assertAllWranglerMainsMatchBuildOutputs(testDir);
       assertNoHandlebarsPlaceholders(testDir);
       assertNoExternalCrocoWorkspaceRanges(testDir);
     },
@@ -904,6 +1026,9 @@ describe("E2E: generate()", () => {
       expect(workspaceConfig).toContain("tsup@8.5.1: patches/tsup@8.5.1.patch");
       expect(existsSync(join(testDir, "patches", "tsup@8.5.1.patch"))).toBe(true);
       expect(workerWranglerConfig).not.toMatch(/^\s*\[build\]\s*$/m);
+      const ssrWorkerWranglerConfig = readFileSync(join(ssrWorkerDir, "wrangler.toml"), "utf8");
+      expect(ssrWorkerWranglerConfig).toContain('binding = "API_WORKER"');
+      assertWorkerServiceBindingHasMain(ssrWorkerDir, "dist/index.js");
       expect(ssrWorkerPackageJson.dependencies?.["@croco/meta-vite"]).toBe(
         externalCrocoRange("@croco/meta-vite"),
       );
@@ -927,6 +1052,9 @@ describe("E2E: generate()", () => {
       assertSourceBareImportsDeclared(join(testDir, "api-worker"));
       assertViteConfigImportsDeclared(ssrWorkerDir);
       assertSourceBareImportsDeclared(ssrWorkerDir);
+      assertWranglerMainMatchesBuildOutput(join(testDir, "api-worker"));
+      assertWranglerMainMatchesBuildOutput(ssrWorkerDir);
+      assertAllWranglerMainsMatchBuildOutputs(testDir);
       assertNoHandlebarsPlaceholders(testDir);
       assertNoExternalCrocoWorkspaceRanges(testDir);
     },
@@ -2782,7 +2910,7 @@ describe("E2E: generate()", () => {
       lifecycle: "process",
       hostPackage: "@croco/preset-node",
       entry: "./src/index.ts",
-      build: "tsup src/index.ts --format esm,cjs --clean --dts",
+      build: "pnpm di:generate && tsup src/index.ts --format esm,cjs --clean --dts",
       buildFormat: "dual",
       source: "index.ts",
       canonicalHost: "createNodeHost",
@@ -2794,7 +2922,7 @@ describe("E2E: generate()", () => {
       lifecycle: "invocation",
       hostPackage: "@croco/preset-lambda",
       entry: "./src/lambda.ts",
-      build: "tsup src/lambda.ts --format cjs --clean --dts",
+      build: "pnpm di:generate && tsup src/lambda.ts --format cjs --clean --dts",
       buildFormat: "cjs",
       source: "lambda.ts",
       canonicalHost: "createLambdaHost",
@@ -2806,7 +2934,7 @@ describe("E2E: generate()", () => {
       lifecycle: "fetch",
       hostPackage: "@croco/preset-cloudflare",
       entry: "./src/worker.ts",
-      build: "tsup src/worker.ts --format esm --platform browser --clean --dts",
+      build: "pnpm di:generate && tsup src/worker.ts --format esm --platform browser --clean --dts",
       buildFormat: "esm",
       source: "worker.ts",
       canonicalHost: "createCloudflareWorkersHost",

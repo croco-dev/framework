@@ -290,6 +290,58 @@ describe("InMemoryBillingStore", () => {
   });
 
   describe("saveOrder and findOrdersByAccount", () => {
+    it.each([false, true])(
+      "should snapshot saved orders on insert and update (update: %s)",
+      async (update) => {
+        const order: Order = {
+          id: "order-1",
+          billingAccountId: "tenant-1",
+          externalOrderId: "ext-order-1",
+          amount: 1000,
+          currency: "USD",
+          reason: "subscription_cycle",
+          paidAt: new Date("2026-09-01T00:00:00Z"),
+        };
+        if (update) {
+          await store.saveOrder({ ...order, amount: 500 });
+        }
+        await store.saveOrder(order);
+        order.amount = 0;
+        order.paidAt.setTime(0);
+
+        expect(await store.findOrdersByAccount("tenant-1")).toEqual([
+          { ...order, amount: 1000, paidAt: new Date("2026-09-01T00:00:00Z") },
+        ]);
+      },
+    );
+
+    it("should isolate returned arrays, orders and dates from stored history and earlier reads", async () => {
+      const order: Order = {
+        id: "order-1",
+        billingAccountId: "tenant-1",
+        externalOrderId: "ext-order-1",
+        amount: 1000,
+        currency: "USD",
+        reason: "subscription_cycle",
+        paidAt: new Date("2026-09-01T00:00:00Z"),
+      };
+      const otherOrder = { ...order, id: "order-2", amount: 2000 };
+      await store.saveOrder(order);
+      await store.saveOrder(otherOrder);
+      const earlierRead = await store.findOrdersByAccount("tenant-1");
+      const result = await store.findOrdersByAccount("tenant-1");
+      result.sort((left, right) => right.amount - left.amount);
+      expect(await store.findOrdersByAccount("tenant-1")).toEqual([order, otherOrder]);
+      result[0].amount = 0;
+      result[0].paidAt.setTime(0);
+      expect(await store.findOrdersByAccount("tenant-1")).toEqual([order, otherOrder]);
+      result.splice(0, result.length);
+      expect(await store.findOrdersByAccount("tenant-1")).toEqual([order, otherOrder]);
+      expect(earlierRead).toEqual([order, otherOrder]);
+      await store.saveOrder({ ...order, amount: 3000 });
+      expect(earlierRead).toEqual([order, otherOrder]);
+    });
+
     it("should save order and find by account ID", async () => {
       const order1: Order = {
         id: "order-1",

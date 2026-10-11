@@ -6,6 +6,8 @@ import { ApiKeyGuard } from "../integrations/ApiKeyGuard";
 @Meter({ meterId: "api_user_create" })
 @Controller("/api/users")
 export class UserController {
+  readonly tenantId = "test";
+
   constructor(private readonly users: UserService) {}
 
   @Get()

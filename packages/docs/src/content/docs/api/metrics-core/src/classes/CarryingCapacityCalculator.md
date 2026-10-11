@@ -98,7 +98,11 @@ Capacity = Daily New Users / Daily Churn Rate
 
 #### Formula
 
-Daily Churn Rate = (1 - (NRR / 100)) ^ (1/30) (derived from monthly NRR)
+Daily Churn Rate = -ln(NRR / 100) / lookbackDays (NRR covers the full lookback period)
+
+#### Description
+
+Days follow local calendar dates, matching the inflow and retention queries, even across DST changes.
 
 #### Throws
 

@@ -193,6 +193,37 @@ class MockExecutionStore implements ExecutionStore, ExecutionLogStore, Execution
   }
 }
 
+class InterleavingStore extends MockExecutionStore {
+  beforeFirstTimeoutWrite?: () => Promise<void>;
+
+  override async updateIfStatus(
+    id: string,
+    expectedStatus: ExecutionStatus,
+    data: Partial<Execution>,
+  ): Promise<Execution | null> {
+    const hook = this.beforeFirstTimeoutWrite;
+    if (data.status === "timed_out" && hook) {
+      this.beforeFirstTimeoutWrite = undefined;
+      await hook();
+    }
+    return super.updateIfStatus(id, expectedStatus, data);
+  }
+
+  override async updateIfStatusAndAttempt(
+    id: string,
+    expectedStatus: ExecutionStatus,
+    expectedAttempt: number,
+    data: Partial<Execution>,
+  ): Promise<Execution | null> {
+    const hook = this.beforeFirstTimeoutWrite;
+    if (data.status === "timed_out" && hook) {
+      this.beforeFirstTimeoutWrite = undefined;
+      await hook();
+    }
+    return super.updateIfStatusAndAttempt(id, expectedStatus, expectedAttempt, data);
+  }
+}
+
 describe("MockExecutionStore checkpoint conformance", () => {
   const suite = createExecutionCheckpointStoreConformanceSuite({
     createStore: () => new MockExecutionStore(),
@@ -1235,10 +1266,120 @@ describe("ExecutionManagerImpl", () => {
       });
     });
 
+    it("uses the fenced timeout write when the store supports attempt fencing", async () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date("2026-01-01T00:00:00.000Z"));
+      const created = await manager.create({ type: "task", timeout: 1000 });
+      await manager.start(created.id);
+      const fenced = vi.spyOn(store, "updateIfStatusAndAttempt");
+      const unfenced = vi.spyOn(store, "updateIfStatus");
+
+      const result = await manager.reconcileTimedOut({
+        now: new Date("2026-01-01T00:00:01.000Z"),
+      });
+
+      expect(result).toEqual({ scanned: 1, timedOut: 1 });
+      expect(fenced).toHaveBeenCalledWith(
+        created.id,
+        "running",
+        1,
+        expect.objectContaining({
+          status: "timed_out",
+          error: {
+            message: "Execution timed out with an indeterminate outcome",
+            code: "execution/timeout-indeterminate",
+            retryable: false,
+            indeterminate: true,
+          },
+        }),
+      );
+      expect(unfenced).not.toHaveBeenCalled();
+      await expect(manager.get(created.id)).resolves.toMatchObject({
+        status: "timed_out",
+        error: {
+          code: "execution/timeout-indeterminate",
+          retryable: false,
+          indeterminate: true,
+        },
+      });
+    });
+
+    it("keeps the status-only timeout write when the store lacks attempt fencing", async () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date("2026-01-01T00:00:00.000Z"));
+      const plain = new MockExecutionStore();
+      const fencedMethods = {
+        updateIfStatusAndAttempt: undefined as never,
+        mergeCheckpointIfStatusAndAttempt: undefined as never,
+        appendLogIfStatusAndAttempt: undefined as never,
+      };
+      Object.assign(plain, fencedMethods);
+      const unfencedManager = new ExecutionManagerImpl(plain as unknown as ExecutionStore);
+      expect(unfencedManager.supportsAttemptFencing()).toBe(false);
+      const created = await unfencedManager.create({ type: "task", timeout: 1000 });
+      await unfencedManager.start(created.id);
+      const unfenced = vi.spyOn(plain, "updateIfStatus");
+
+      const result = await unfencedManager.reconcileTimedOut({
+        now: new Date("2026-01-01T00:00:01.000Z"),
+      });
+
+      expect(result).toEqual({ scanned: 1, timedOut: 1 });
+      expect(unfenced).toHaveBeenCalledWith(
+        created.id,
+        "running",
+        expect.objectContaining({
+          status: "timed_out",
+          error: {
+            message: "Execution timed out with an indeterminate outcome",
+            code: "execution/timeout-indeterminate",
+            retryable: false,
+            indeterminate: true,
+          },
+        }),
+      );
+      await expect(unfencedManager.get(created.id)).resolves.toMatchObject({
+        status: "timed_out",
+        error: {
+          code: "execution/timeout-indeterminate",
+          retryable: false,
+          indeterminate: true,
+        },
+      });
+    });
+
     it("rejects an invalid batch size", async () => {
       await expect(manager.reconcileTimedOut({ batchSize: 0 })).rejects.toThrow(
         "batchSize must be a positive integer",
       );
+    });
+
+    it("does not time out an attempt that started after the running page was read", async () => {
+      let now = new Date("2026-09-01T00:00:00.000Z");
+      const interleaving = new InterleavingStore();
+      const clockManager = new ExecutionManagerImpl(interleaving, { clock: () => now });
+      const created = await clockManager.create({ type: "sync", maxAttempts: 2, timeout: 1_000 });
+      await clockManager.start(created.id);
+
+      now = new Date("2026-09-01T00:00:05.000Z");
+      interleaving.beforeFirstTimeoutWrite = async () => {
+        await clockManager.failAttempt(
+          { executionId: created.id, attempt: 1 },
+          { message: "upstream reset", retryable: true },
+        );
+        await clockManager.start(created.id);
+      };
+
+      const reconciled = await clockManager.reconcileTimedOut();
+
+      expect(reconciled.timedOut).toBe(0);
+      await expect(clockManager.get(created.id)).resolves.toMatchObject({
+        status: "running",
+        attempts: 2,
+      });
+      await expect(
+        clockManager.completeAttempt({ executionId: created.id, attempt: 2 }, "ok"),
+      ).resolves.toMatchObject({ status: "completed", attempts: 2 });
     });
   });
 

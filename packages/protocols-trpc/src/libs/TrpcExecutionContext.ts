@@ -1,3 +1,4 @@
+import { Context } from "@croco/framework-context";
 import { Problem, ProblemCategory } from "@croco/problems-core";
 import type { Constructor, ExecutionContext } from "@croco/protocols-rest";
 
@@ -5,6 +6,8 @@ import type { Constructor, ExecutionContext } from "@croco/protocols-rest";
  * Adapts a tRPC procedure invocation to Croco's controller execution context.
  */
 export class TrpcExecutionContext<TContext = unknown> implements ExecutionContext {
+  private readonly values = new Map<string, unknown>();
+
   constructor(
     private readonly trpcContext: TContext,
     private readonly controllerClass: Constructor,
@@ -14,7 +17,47 @@ export class TrpcExecutionContext<TContext = unknown> implements ExecutionContex
   ) {}
 
   getRequest(): Request {
-    return readRequest(this.trpcContext);
+    const request = readTrpcRequest(this.trpcContext);
+    if (!request) {
+      throw new TrpcRequestUnavailableProblem();
+    }
+    return request;
+  }
+
+  getOptionalRequest(): Request | undefined {
+    return readTrpcRequest(this.trpcContext);
+  }
+
+  get<T>(key: string): T | undefined {
+    if (this.values.has(key)) {
+      return this.values.get(key) as T | undefined;
+    }
+
+    const requestContext = Context.get();
+    const value: unknown = (() => {
+      switch (key) {
+        case "method":
+          return this.method;
+        case "path":
+          return this.path;
+        case "tenant":
+          return requestContext?.tenantId ? { id: requestContext.tenantId } : undefined;
+        case "tenantId":
+          return requestContext?.tenantId;
+        case "user":
+          return requestContext?.user;
+        case "userId":
+          return requestContext?.user?.id;
+        default:
+          return undefined;
+      }
+    })();
+
+    return value as T | undefined;
+  }
+
+  set<T>(key: string, value: T): void {
+    this.values.set(key, value);
   }
 
   getClass(): Constructor {
@@ -56,7 +99,9 @@ class TrpcRequestNormalizationProblem extends Problem {
   }
 }
 
-function readRequest(context: unknown): Request {
+const normalizedNodeRequests = new WeakMap<object, Request>();
+
+export function readTrpcRequest(context: unknown): Request | undefined {
   if (context instanceof Request) {
     return context;
   }
@@ -77,7 +122,7 @@ function readRequest(context: unknown): Request {
     }
   }
 
-  throw new TrpcRequestUnavailableProblem();
+  return undefined;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -89,6 +134,11 @@ function normalizeNodeRequest(
 ): Request | TrpcRequestNormalizationProblem | undefined {
   if (!isRecord(value) || typeof value.url !== "string" || typeof value.method !== "string") {
     return undefined;
+  }
+
+  const cachedRequest = normalizedNodeRequests.get(value);
+  if (cachedRequest) {
+    return cachedRequest;
   }
 
   try {
@@ -119,7 +169,9 @@ function normalizeNodeRequest(
     const encrypted = isRecord(value.socket) && value.socket.encrypted === true;
     const url = new URL(value.url, `${encrypted ? "https" : "http"}://${host}`);
 
-    return new Request(url, { method: value.method, headers });
+    const request = new Request(url, { method: value.method, headers });
+    normalizedNodeRequests.set(value, request);
+    return request;
   } catch (error) {
     return new TrpcRequestNormalizationProblem(toError(error));
   }

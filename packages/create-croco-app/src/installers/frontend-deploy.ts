@@ -16,11 +16,17 @@ export function installFrontendDeploy(
   webAppName: string | undefined,
   options: FrontendDeployInstallerOptions,
 ): void {
-  const appTargetDir = join(targetDir, "apps", webAppName ?? "web");
+  const resolvedWebAppName = webAppName ?? "web";
+  const appTargetDir = join(targetDir, "apps", resolvedWebAppName);
+  const vars = {
+    projectName: options.projectName,
+    scope: options.scope,
+    webAppName: resolvedWebAppName,
+  };
 
   if (options.frontendDeploy === "vite-spa") {
     const addonDir = join(TEMPLATES_DIR, "addons", "frontend-vite-spa");
-    mergeInto(addonDir, appTargetDir, { projectName: options.projectName, scope: options.scope });
+    mergeInto(addonDir, appTargetDir, vars);
     return;
   }
 
@@ -29,33 +35,32 @@ export function installFrontendDeploy(
       options.preset === "ddd-vike-fullstack"
         ? join(TEMPLATES_DIR, "addons", "web-meta-vite-fullstack")
         : join(TEMPLATES_DIR, "addons", "web-meta-vite");
-    const installTargetDir =
-      options.preset === "ddd-vike-fullstack"
-        ? targetDir
-        : join(targetDir, "apps", webAppName ?? "web");
+    const installTargetDir = options.preset === "ddd-vike-fullstack" ? targetDir : appTargetDir;
 
-    mergeInto(addonDir, installTargetDir, {
-      projectName: options.projectName,
-      scope: options.scope,
-    });
+    mergeInto(addonDir, installTargetDir, vars);
     return;
   }
 
   if (options.frontendDeploy === "docker") {
-    const dockerDir = join(targetDir, webAppName ?? "web");
+    const dockerTemplateDir = join(TEMPLATES_DIR, "addons", "docker", "web");
+    const dockerDir = join(targetDir, resolvedWebAppName);
     mkdirSync(dockerDir, { recursive: true });
     writeFileSync(
       join(dockerDir, "Dockerfile"),
-      renderHandlebars(join(TEMPLATES_DIR, "addons", "docker", "web", "Dockerfile"), {
-        projectName: options.projectName,
-        scope: options.scope,
-        webPackageName: `${options.scope}/${webAppName ?? "web"}`,
+      renderHandlebars(join(dockerTemplateDir, "Dockerfile"), {
+        ...vars,
+        webPackageName: `${options.scope}/${resolvedWebAppName}`,
       }),
     );
+    writeFileSync(
+      join(appTargetDir, "next.config.ts"),
+      renderHandlebars(join(dockerTemplateDir, "next.config.ts"), {}),
+    );
+    mergeInto(join(dockerTemplateDir, "public"), join(appTargetDir, "public"), {});
     return;
   }
 
   const addonKey = `frontend-${options.frontendDeploy}`;
   const addonDir = join(TEMPLATES_DIR, "addons", addonKey);
-  mergeInto(addonDir, appTargetDir, { projectName: options.projectName, scope: options.scope });
+  mergeInto(addonDir, appTargetDir, vars);
 }

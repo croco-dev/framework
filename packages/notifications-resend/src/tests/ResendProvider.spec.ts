@@ -8,6 +8,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   ResendIdempotencyConflictProblem,
   ResendMissingConfigProblem,
+  ResendRetryableUpstreamProblem,
   ResendTerminalUpstreamProblem,
   ResendValidationProblem,
 } from "../libs/problems/ResendNotificationProblem";
@@ -340,6 +341,53 @@ describe("ResendProvider", () => {
         }),
       );
       expect(JSON.stringify(vi.mocked(recordEvent).mock.calls)).not.toContain("fixed-key");
+    });
+
+    it("should send a deterministic key within Resend's 256-character limit for long caller keys", async () => {
+      vi.mocked(mockResendClient.emails.send).mockResolvedValue(mockSuccessResponse);
+      const longKey =
+        "engagement:5f0c7c1e-8d2a-4b8e-9d61-0a4f3b7c2e19:billing.trial-ending:b3d1e2f4-6a7b-4c8d-9e0f-1a2b3c4d5e6f:email:campaign%3Atenant%253A5f0c7c1e-8d2a-4b8e-9d61-0a4f3b7c2e19%3Atrial-reminder%3A2026-09-01%3Abilling.trial-ending%3Asnapshot%3A0d9c8b7a-6f5e-4d3c-2b1a-0f9e8d7c6b5a%3Amember%3A7e6d5c4b-3a29-4817-a6b5-c4d3e2f1a0b9:c9e8d7c6-b5a4-4938-8271-6f5e4d3c2b1a:1";
+      const payload: NotificationPayload = {
+        to: "member@example.com",
+        subject: "Trial",
+        content: "<p>Trial</p>",
+      };
+
+      await provider.send(payload, { idempotencyKey: longKey });
+      await provider.send(payload, { idempotencyKey: longKey });
+      await provider.send(payload, { idempotencyKey: `${longKey}:different` });
+
+      const sentKeys = vi
+        .mocked(mockResendClient.emails.send)
+        .mock.calls.map(([, options]) => options?.idempotencyKey);
+      expect(longKey).toHaveLength(360);
+      expect(sentKeys[0]).toBe(
+        "croco:v1:c269557f0f3ab0e52fbab080558d7a72805172ce79f8f3760dbf39625ccc8d33",
+      );
+      expect(sentKeys[0]?.length).toBeLessThanOrEqual(256);
+      expect(sentKeys[1]).toBe(sentKeys[0]);
+      expect(sentKeys[2]).not.toBe(sentKeys[0]);
+    });
+
+    it("should preserve caller keys at 256 characters and transform them at 257", async () => {
+      vi.mocked(mockResendClient.emails.send).mockResolvedValue(mockSuccessResponse);
+      const boundaryKey = "k".repeat(256);
+
+      await provider.send(
+        { to: "member@example.com", content: "Hello" },
+        { idempotencyKey: boundaryKey },
+      );
+      await provider.send(
+        { to: "member@example.com", content: "Hello" },
+        { idempotencyKey: `${boundaryKey}k` },
+      );
+
+      expect(vi.mocked(mockResendClient.emails.send).mock.calls[0]?.[1]?.idempotencyKey).toBe(
+        boundaryKey,
+      );
+      expect(vi.mocked(mockResendClient.emails.send).mock.calls[1]?.[1]?.idempotencyKey).toMatch(
+        /^croco:v1:[0-9a-f]{64}$/,
+      );
     });
 
     it("should use metadata idempotency keys and let send options take precedence", async () => {
@@ -695,6 +743,148 @@ describe("ResendProvider", () => {
       expect(recordError).toHaveBeenCalledWith(expect.any(Error));
     });
 
+    it("should preserve provider responses through exhausted transient response retries", async () => {
+      const transientErrorResponse: CreateEmailResponse = {
+        data: null,
+        error: { message: "Rate limit exceeded", name: "rate_limit_exceeded" },
+      };
+
+      vi.mocked(mockResendClient.emails.send).mockResolvedValue(transientErrorResponse);
+
+      const payload: NotificationPayload = {
+        to: "recipient@example.com",
+        subject: "Retry Subject",
+        content: "<h1>Retry Content</h1>",
+      };
+
+      const result = await provider.send(payload);
+
+      expectFailedNotificationResult(result);
+      expect(result.problem).toBeInstanceOf(ResendRetryableUpstreamProblem);
+      expect(result.problem.extensions).toMatchObject({
+        provider: "resend",
+        operation: "send",
+        retryable: true,
+        upstreamCode: "rate_limit_exceeded",
+      });
+      expect(result.problem.detail).toContain("Rate limit exceeded");
+      expect(result.providerResponse).toEqual(transientErrorResponse);
+      expect(mockResendClient.emails.send).toHaveBeenCalledTimes(3);
+      expect(result.problem.cause).toBeUndefined();
+    });
+
+    it("should classify exhausted transient retries as retryable with upstream cause preserved", async () => {
+      const { normalizeResendProblem } = await import("../libs/ResendProblemMapping");
+      const { RetryExhaustedProblem } = await import("@croco/retry-core");
+      const upstream = Object.assign(new Error("Service unavailable"), {
+        code: "internal_server_error",
+        status: 500,
+      });
+      const exhausted = RetryExhaustedProblem.fromContext("send", 3, upstream);
+
+      const problem = normalizeResendProblem(exhausted, "send");
+
+      expect(problem).toBeInstanceOf(ResendRetryableUpstreamProblem);
+      expect(problem.extensions).toMatchObject({
+        provider: "resend",
+        operation: "send",
+        retryable: true,
+        retryAttempts: 3,
+        upstreamStatus: 500,
+        upstreamCode: "internal_server_error",
+      });
+      expect(problem.detail).toContain("Service unavailable");
+      expect(problem.cause).toBe(upstream);
+    });
+
+    it("should classify exhausted terminal retries as non-retryable with upstream cause preserved", async () => {
+      const { normalizeResendProblem } = await import("../libs/ResendProblemMapping");
+      const { RetryExhaustedProblem } = await import("@croco/retry-core");
+      const networkError = new Error("Network connection failed");
+      const exhausted = RetryExhaustedProblem.fromContext("send", 3, networkError);
+
+      const problem = normalizeResendProblem(exhausted, "send");
+
+      expect(problem).toBeInstanceOf(ResendTerminalUpstreamProblem);
+      expect(problem.extensions).toMatchObject({
+        provider: "resend",
+        operation: "send",
+        retryable: false,
+        retryAttempts: 3,
+      });
+      expect(problem.cause).toBe(networkError);
+    });
+
+    it("should preserve terminal Problem causes without reclassifying outward status", async () => {
+      const { normalizeResendProblem } = await import("../libs/ResendProblemMapping");
+      const { RetryExhaustedProblem } = await import("@croco/retry-core");
+      const terminalCause = new ResendTerminalUpstreamProblem(
+        {
+          provider: "resend",
+          operation: "send",
+          retryable: false,
+          status: 500,
+          upstreamCode: "internal_server_error",
+        },
+        "Service unavailable",
+      );
+      const exhausted = RetryExhaustedProblem.fromContext("send", 3, terminalCause);
+
+      const problem = normalizeResendProblem(exhausted, "send");
+
+      expect(problem).toBeInstanceOf(ResendTerminalUpstreamProblem);
+      expect(problem.extensions).toMatchObject({
+        provider: "resend",
+        operation: "send",
+        retryable: false,
+        retryAttempts: 3,
+        upstreamStatus: 500,
+        upstreamCode: "internal_server_error",
+      });
+      expect(problem.cause).toBe(terminalCause);
+    });
+
+    it("should map exhausted retryTemplate failures through send with providerResponse fallback", async () => {
+      const { RetryExhaustedProblem } = await import("@croco/retry-core");
+      const upstreamResponse: CreateEmailResponse = {
+        data: null,
+        error: { message: "Service unavailable", name: "internal_server_error" },
+      };
+      const upstream = Object.assign(new Error("Service unavailable"), {
+        code: "internal_server_error",
+        status: 500,
+        providerResponse: upstreamResponse,
+      });
+      const exhausted = RetryExhaustedProblem.fromContext("send", 3, upstream);
+
+      const internals = provider as unknown as {
+        retryTemplate: { execute: (...args: unknown[]) => Promise<unknown> };
+      };
+      vi.spyOn(internals.retryTemplate, "execute").mockRejectedValue(exhausted);
+
+      const payload: NotificationPayload = {
+        to: "recipient@example.com",
+        subject: "Retry Subject",
+        content: "<h1>Retry Content</h1>",
+      };
+
+      const result = await provider.send(payload);
+
+      expectFailedNotificationResult(result);
+      expect(result.problem).toBeInstanceOf(ResendRetryableUpstreamProblem);
+      expect(result.problem.extensions).toMatchObject({
+        provider: "resend",
+        operation: "send",
+        retryable: true,
+        retryAttempts: 3,
+        upstreamStatus: 500,
+        upstreamCode: "internal_server_error",
+      });
+      expect(result.problem.detail).toContain("Service unavailable");
+      expect(result.problem.cause).toBe(upstream);
+      expect(result.providerResponse).toEqual(upstreamResponse);
+    });
+
     it("should reject invalid recipients before calling Resend", async () => {
       const payload: NotificationPayload = {
         to: "not-an-email",
@@ -766,6 +956,37 @@ describe("ResendProvider", () => {
       expect(recordedErrors).not.toContain("secret-header");
       expect(recordedErrors).not.toContain("fixed-key");
       expect(recordedErrors).not.toContain("re_leaked-key");
+    });
+
+    it("should redact both the caller key and transformed key from upstream Problems and telemetry", async () => {
+      const longKey = "sensitive-campaign-key-".repeat(20);
+      let sentKey: string | undefined;
+      vi.mocked(mockResendClient.emails.send).mockImplementation(async (_emailOptions, options) => {
+        sentKey = options?.idempotencyKey;
+        return {
+          data: null,
+          error: {
+            name: "invalid_parameter",
+            message: `Rejected caller key ${longKey} and Resend key ${sentKey}`,
+          },
+        };
+      });
+
+      const result = await provider.send(
+        { to: "member@example.com", content: "Hello" },
+        { idempotencyKey: longKey },
+      );
+
+      expectFailedNotificationResult(result);
+      expect(sentKey).toMatch(/^croco:v1:[0-9a-f]{64}$/);
+      const serializedProblem = JSON.stringify(result.problem.toJSON());
+      const serializedTelemetry = JSON.stringify(vi.mocked(recordEvent).mock.calls);
+      expect(serializedProblem).not.toContain(longKey);
+      expect(serializedProblem).not.toContain(sentKey);
+      expect(serializedTelemetry).not.toContain(longKey);
+      expect(serializedTelemetry).not.toContain(sentKey);
+      expect(getRecordedErrorMessages()).not.toContain(longKey);
+      expect(getRecordedErrorMessages()).not.toContain(sentKey);
     });
 
     it("should not report an idempotency key for validation failures before key creation", async () => {
@@ -1020,6 +1241,25 @@ describe("ResendProvider", () => {
       expect(payloads.map((payload) => payload.metadata?.idempotencyKey)).toEqual(
         Array.from({ length: 6 }, (_, index) => `batch-message-${index}`),
       );
+    });
+
+    it("should transform long metadata keys consistently across batch retries", async () => {
+      vi.mocked(mockResendClient.emails.send).mockResolvedValue(mockSuccessResponse);
+      const longKey = "batch-message-".repeat(20);
+      const payload: NotificationPayload = {
+        to: "member@example.com",
+        content: "Hello",
+        metadata: { idempotencyKey: longKey },
+      };
+
+      await provider.sendBatch([payload]);
+      await provider.sendBatch([structuredClone(payload)]);
+
+      const sentKeys = vi
+        .mocked(mockResendClient.emails.send)
+        .mock.calls.map(([, options]) => options?.idempotencyKey);
+      expect(sentKeys[0]).toMatch(/^croco:v1:[0-9a-f]{64}$/);
+      expect(sentKeys[1]).toBe(sentKeys[0]);
     });
 
     it("should handle mixed success and failure in batch", async () => {

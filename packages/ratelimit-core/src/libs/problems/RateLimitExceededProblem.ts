@@ -21,7 +21,7 @@ export class RateLimitExceededProblem extends Problem {
           limit: result.limit,
           remaining: 0,
           resetAt: new Date(result.resetAtMs).toISOString(),
-          retryAfterSeconds: Math.ceil((result.resetAtMs - Date.now()) / 1000),
+          retryAfterSeconds: Math.max(0, Math.ceil((result.resetAtMs - Date.now()) / 1000)),
         },
       },
     );
@@ -33,6 +33,6 @@ export class RateLimitExceededProblem extends Problem {
    * Get Retry-After header value in seconds.
    */
   get retryAfterSeconds(): number {
-    return Math.ceil(this.retryAfterMs / 1000);
+    return this.extensions?.retryAfterSeconds as number;
   }
 }

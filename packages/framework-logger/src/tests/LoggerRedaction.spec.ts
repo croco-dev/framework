@@ -168,7 +168,7 @@ describe("Logger serialized redaction", () => {
           { Cookie: "array-cookie", status: 202 },
         ],
         callbackUrl: new URL("https://example.com/callback"),
-        eventSequence: 9007199254740993n,
+        eventSequence: BigInt("9007199254740993"),
       });
     });
 

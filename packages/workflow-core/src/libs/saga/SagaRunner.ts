@@ -55,12 +55,39 @@ class StepCompletionPersistenceError extends Error {
 type SagaOutboxPhase = SagaOutboxRecord["phase"];
 
 function toSagaFailure(error: unknown): SagaFailure {
-  const candidate = error as { readonly code?: unknown; readonly retryable?: unknown };
+  let message: string;
+  try {
+    message = error instanceof Error ? error.message : String(error);
+  } catch {
+    message = "Unknown error";
+  }
+
+  let code: string | undefined;
+  try {
+    if ((typeof error === "object" && error !== null) || typeof error === "function") {
+      const codeValue = (error as { readonly code?: unknown }).code;
+      if (typeof codeValue === "string") {
+        code = codeValue;
+      }
+    }
+  } catch {
+    code = undefined;
+  }
+
+  let stack: string | undefined;
+  try {
+    if (error instanceof Error && typeof error.stack === "string") {
+      stack = error.stack;
+    }
+  } catch {
+    stack = undefined;
+  }
+
   return {
-    message: error instanceof Error ? error.message : String(error),
+    message,
     retryable: isRetryableError(error),
-    ...(typeof candidate.code === "string" ? { code: candidate.code } : {}),
-    ...(error instanceof Error && error.stack !== undefined ? { stack: error.stack } : {}),
+    ...(code === undefined ? {} : { code }),
+    ...(stack === undefined ? {} : { stack }),
   };
 }
 
@@ -120,8 +147,8 @@ function isOutboxDispatchableStatus(status: SagaExecution["status"]): boolean {
   return status === "completed" || status === "failed" || status === "compensated";
 }
 
-function createSagaInvocationId(sagaName: string): string {
-  return `${sagaName}:${Date.now()}:${Math.random().toString(36).slice(2)}`;
+function createSagaInvocationId(sagaName: string, now: Date): string {
+  return `${sagaName}:${now.getTime()}:${Math.random().toString(36).slice(2)}`;
 }
 
 function getStepRecordAttributes(
@@ -137,7 +164,14 @@ function getStepRecordAttributes(
 }
 
 export class SagaRunner {
-  constructor(private readonly store: SagaStore = new InMemorySagaStore()) {}
+  private readonly store: SagaStore;
+
+  constructor(
+    store?: SagaStore,
+    private readonly clock: () => Date = () => new Date(),
+  ) {
+    this.store = store ?? new InMemorySagaStore(clock);
+  }
 
   async execute(definition: SagaDefinition, payload: unknown): Promise<SagaRunResult> {
     this.assertValidDefinition(definition);
@@ -171,7 +205,7 @@ export class SagaRunner {
       );
     }
 
-    const replayedAt = new Date().toISOString();
+    const replayedAt = this.clock().toISOString();
     const metadata = {
       ...execution.metadata,
       ...params.metadata,
@@ -222,7 +256,9 @@ export class SagaRunner {
         ? this.resolveSagaIdempotencyKey(definition, payload)
         : undefined;
     const invocationId =
-      idempotencyKey !== undefined ? createSagaInvocationId(definition.name) : undefined;
+      idempotencyKey !== undefined
+        ? createSagaInvocationId(definition.name, this.clock())
+        : undefined;
 
     if (idempotencyKey !== undefined) {
       const existing = await this.store.findByIdempotencyKey(definition.name, idempotencyKey);
@@ -257,7 +293,7 @@ export class SagaRunner {
 
     const running = await this.store.update(created.id, {
       status: "running",
-      startedAt: new Date(),
+      startedAt: this.clock(),
     });
 
     return this.runSteps(definition, running, span);
@@ -368,7 +404,7 @@ export class SagaRunner {
       const completed = await this.store.update(execution.id, {
         status: "completed",
         result,
-        completedAt: new Date(),
+        completedAt: this.clock(),
       });
       span.addEvent("saga.execution.completed", {
         "saga.name": definition.name,
@@ -416,7 +452,7 @@ export class SagaRunner {
         status: finalStatus,
         error: failure,
         compensationFailures,
-        completedAt: new Date(),
+        completedAt: this.clock(),
       });
     } catch (failureRecordError) {
       const problem = new SagaExecutionFailedProblem(definition.name, executionId, failure, {
@@ -495,7 +531,7 @@ export class SagaRunner {
         ...record,
         status: "failed",
         error: toSagaFailure(error),
-        completedAt: new Date(),
+        completedAt: this.clock(),
       });
       throw error;
     }
@@ -505,7 +541,7 @@ export class SagaRunner {
         ...record,
         status: "running",
         attempts: attempt,
-        startedAt: record.startedAt ?? new Date(),
+        startedAt: record.startedAt ?? this.clock(),
       } satisfies SagaStepExecutionRecord;
       delete runningRecord.error;
       record = await this.replaceStepRecord(execution.id, runningRecord);
@@ -558,7 +594,7 @@ export class SagaRunner {
           status: "failed",
           attempts: attempt,
           error: failure,
-          completedAt: new Date(),
+          completedAt: this.clock(),
         });
         throw error;
       }
@@ -568,7 +604,7 @@ export class SagaRunner {
         status: "completed",
         result,
         outboxMessages,
-        completedAt: new Date(),
+        completedAt: this.clock(),
       };
       try {
         await this.replaceStepRecord(execution.id, completedRecord);
@@ -578,7 +614,7 @@ export class SagaRunner {
           status: "failed",
           attempts: attempt,
           error: toSagaFailure(error),
-          completedAt: new Date(),
+          completedAt: this.clock(),
         });
         throw new StepCompletionPersistenceError(error, completedRecord);
       }
@@ -629,7 +665,7 @@ export class SagaRunner {
       await this.replaceStepRecord(executionId, {
         ...record,
         status: "compensating",
-        compensationStartedAt: new Date(),
+        compensationStartedAt: this.clock(),
       });
 
       try {
@@ -670,8 +706,8 @@ export class SagaRunner {
           status: "compensated",
           compensationResult: result,
           outboxMessages: [...record.outboxMessages, ...outboxMessages],
-          compensationStartedAt: record.compensationStartedAt ?? new Date(),
-          compensationCompletedAt: new Date(),
+          compensationStartedAt: record.compensationStartedAt ?? this.clock(),
+          compensationCompletedAt: this.clock(),
         });
       } catch (error) {
         const compensationFailure = toSagaFailure(error);
@@ -680,8 +716,8 @@ export class SagaRunner {
           ...record,
           status: "compensation_failed",
           compensationError: compensationFailure,
-          compensationStartedAt: record.compensationStartedAt ?? new Date(),
-          compensationCompletedAt: new Date(),
+          compensationStartedAt: record.compensationStartedAt ?? this.clock(),
+          compensationCompletedAt: this.clock(),
         });
       }
     }
@@ -834,7 +870,7 @@ export class SagaRunner {
       stepId,
       phase,
       status: "pending",
-      enqueuedAt: new Date().toISOString(),
+      enqueuedAt: this.clock().toISOString(),
     };
   }
 
@@ -853,7 +889,7 @@ export class SagaRunner {
     }
     const outboxMessages = record.outboxMessages.map((message) =>
       message.deliveryId === deliveryId
-        ? { ...message, status: "published" as const, publishedAt: new Date().toISOString() }
+        ? { ...message, status: "published" as const, publishedAt: this.clock().toISOString() }
         : message,
     );
     await this.replaceStepRecord(executionId, { ...record, outboxMessages });

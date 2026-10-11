@@ -1,4 +1,5 @@
 import * as fs from "node:fs";
+import { createRequire } from "node:module";
 import * as os from "node:os";
 import * as path from "node:path";
 import { Problem, ProblemCategory } from "@croco/problems-core";
@@ -54,6 +55,13 @@ describe("loadRestControllerSources", () => {
     tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "protocol-codegen-rest-sources-"));
     sourceDir = path.join(tempRoot, "src");
     fs.mkdirSync(sourceDir, { recursive: true });
+    const dependenciesDir = path.join(tempRoot, "node_modules");
+    fs.mkdirSync(dependenciesDir);
+    fs.symlinkSync(
+      path.dirname(createRequire(import.meta.url).resolve("reflect-metadata")),
+      path.join(dependenciesDir, "reflect-metadata"),
+      "dir",
+    );
   });
 
   afterEach(() => {

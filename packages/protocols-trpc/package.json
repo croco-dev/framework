@@ -19,7 +19,10 @@
     "types": "./dist/index.d.ts",
     "exports": {
       ".": {
-        "types": "./dist/index.d.ts",
+        "types": {
+          "import": "./dist/index.d.ts",
+          "require": "./dist/index.d.cts"
+        },
         "import": "./dist/index.js",
         "require": "./dist/index.cjs"
       }
@@ -44,6 +47,9 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@croco/auth-core": "workspace:*",
+    "@croco/impersonation-core": "workspace:*",
+    "@croco/ratelimit-core": "workspace:*",
     "@trpc/client": "11.17.0",
     "reflect-metadata": "^0.2.2"
   }

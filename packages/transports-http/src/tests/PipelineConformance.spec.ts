@@ -14,10 +14,17 @@ import {
   UseGuards,
   UseInterceptors,
 } from "@croco/protocols-rest";
-import { beforeEach, describe, expect, it } from "vitest";
+import {
+  createSlidingWindowPolicy,
+  RateLimiter,
+  SlidingWindowInMemoryStore,
+} from "@croco/ratelimit-core";
+import { SpanStatusCode, trace } from "@opentelemetry/api";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { type CrocoApp, createApp } from "../libs/CrocoApp";
 import { ErrorHandler } from "../libs/ErrorHandler";
 import { HealthCheckRegistry } from "../libs/HealthCheckRegistry";
+import { rateLimitHttpMiddleware } from "../libs/middleware/RateLimitMiddleware";
 import type { MiddlewareFunction } from "../libs/types";
 
 type RuntimeEvent =
@@ -389,4 +396,107 @@ describe("HTTP request pipeline conformance", () => {
       );
     },
   );
+
+  describe("native Response completion", () => {
+    @Controller("/native-response")
+    class NativeResponseController {
+      @Get("/unavailable")
+      unavailable(): Response {
+        return new Response("unavailable", { status: 503 });
+      }
+
+      @Get("/unauthorized")
+      unauthorized(): Response {
+        return new Response("unauthorized", { status: 401 });
+      }
+    }
+
+    function createNativeResponseApp(middlewares: MiddlewareFunction[] = []): CrocoApp {
+      return createApp({
+        controllers: [NativeResponseController],
+        middlewares,
+        securityValidation: "off",
+      });
+    }
+
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it("records the returned 503 in HTTP telemetry and marks the server span as ERROR", async () => {
+      const span = trace.wrapSpanContext({
+        traceId: "11111111111111111111111111111111",
+        spanId: "2222222222222222",
+        traceFlags: 1,
+      });
+      const setAttribute = vi.spyOn(span, "setAttribute");
+      const setStatus = vi.spyOn(span, "setStatus");
+      const tracer = trace.getTracer("croco-http", "0.0.1");
+      vi.spyOn(tracer, "startSpan").mockReturnValue(span);
+      vi.spyOn(trace, "getTracer").mockReturnValue(tracer);
+      const app = createNativeResponseApp([() => new Response("unavailable", { status: 503 })]);
+
+      const response = await app.fetch(new Request("http://localhost/native-response/unavailable"));
+
+      expect(response.status).toBe(503);
+      expect(await response.text()).toBe("unavailable");
+      expect(setAttribute).toHaveBeenCalledWith("http.status_code", 503);
+      expect(setStatus).toHaveBeenCalledWith({ code: SpanStatusCode.ERROR });
+    });
+
+    it.each([
+      { option: "skipSuccessfulRequests", secondStatus: 429 },
+      { option: "skipFailedRequests", secondStatus: 401 },
+    ] as const)(
+      "accounts for returned 401 responses with $option",
+      async ({ option, secondStatus }) => {
+        const app = createNativeResponseApp([
+          rateLimitHttpMiddleware({
+            rateLimiter: new RateLimiter(new SlidingWindowInMemoryStore(), () => "native-response"),
+            policy: createSlidingWindowPolicy("native-response", 1, 60000),
+            [option]: true,
+          }),
+          () => new Response("unauthorized", { status: 401 }),
+        ]);
+
+        const first = await app.fetch(new Request("http://localhost/native-response/unauthorized"));
+        const second = await app.fetch(
+          new Request("http://localhost/native-response/unauthorized"),
+        );
+
+        expect(first.status).toBe(401);
+        expect(await first.text()).toBe("unauthorized");
+        expect(second.status).toBe(secondStatus);
+      },
+    );
+
+    it("synchronizes each replacement before outer middleware resumes and preserves its body", async () => {
+      const observed: Array<{ middleware: string; status: number }> = [];
+      const outer: MiddlewareFunction = async (ctx, next) => {
+        await next();
+        observed.push({ middleware: "outer", status: ctx.res.status });
+      };
+      const middle: MiddlewareFunction = async (ctx, next) => {
+        await next();
+        observed.push({ middleware: "middle", status: ctx.res.status });
+        return new Response("second replacement", { status: 502 });
+      };
+      const inner: MiddlewareFunction = async (ctx, next) => {
+        await next();
+        observed.push({ middleware: "inner", status: ctx.res.status });
+        return new Response("first replacement", { status: 401 });
+      };
+      const app = createNativeResponseApp([outer, middle, inner]);
+
+      const response = await app.fetch(new Request("http://localhost/native-response/unavailable"));
+
+      expect(observed).toEqual([
+        { middleware: "inner", status: 503 },
+        { middleware: "middle", status: 401 },
+        { middleware: "outer", status: 502 },
+      ]);
+      expect(response.status).toBe(502);
+      expect(await response.text()).toBe("second replacement");
+    });
+  });
 });

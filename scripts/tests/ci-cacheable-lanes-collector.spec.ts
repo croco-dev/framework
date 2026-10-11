@@ -387,3 +387,218 @@ describe("cacheable CI observation collector", () => {
     ).toThrow(/conclusion must be a string or null/);
   });
 });
+
+type ListedRun = {
+  id: number;
+  run_attempt: number;
+  created_at: string;
+  updated_at: string;
+  status: string;
+  conclusion: string;
+};
+
+function listedRun(id: number, createdAt: string): ListedRun {
+  return {
+    id,
+    run_attempt: 1,
+    created_at: createdAt,
+    updated_at: createdAt,
+    status: "completed",
+    conclusion: "success",
+  };
+}
+
+function cappedRepository(sourceCount: number, observerCount = 1) {
+  const queries: { workflow: string; page: number; range: string }[] = [];
+  const earlierRuns = (count: number, offset: number) =>
+    Array.from({ length: count }, (_, index) =>
+      listedRun(
+        offset + index,
+        new Date(Date.parse("2026-06-01T00:00:00Z") + index * 3_600_000).toISOString(),
+      ),
+    );
+  const sourceRuns = [
+    listedRun(101, "2026-08-13T00:00:00.000Z"),
+    ...earlierRuns(sourceCount - 1, 10_000),
+  ];
+  const observerRuns = [
+    listedRun(900, "2026-08-13T00:31:00Z"),
+    ...earlierRuns(observerCount - 1, 20_000),
+  ];
+  const base = fixture();
+  const client: CacheableCiCollectionClient = {
+    ...base,
+    listWorkflowRuns: (workflow, page, range) => {
+      queries.push({ workflow, page, range });
+      const [from = "", to = ""] = range.split("..");
+      const matches = (workflow === "ci.yml" ? sourceRuns : observerRuns)
+        .filter(
+          (run) =>
+            Date.parse(run.created_at) >= Date.parse(from) &&
+            Date.parse(run.created_at) <= Date.parse(to),
+        )
+        .sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at));
+      return page > 10
+        ? { total_count: 0, workflow_runs: [] }
+        : {
+            total_count: matches.length,
+            workflow_runs: matches.slice((page - 1) * 100, page * 100),
+          };
+    },
+  };
+  return { client, queries, sourceRuns, observerRuns };
+}
+
+const collectionOptions = { cutoffAt: CUTOFF, cohortStartedAt: COHORT_STARTED_AT };
+
+describe("cacheable CI observation collector listing limits", () => {
+  it.each([900, 999, 1000, 1050])("collects all %i sources under the filtered API cap", (count) => {
+    const { client, queries } = cappedRepository(count);
+    const dataset = collectCacheableCiDataset(client, collectionOptions);
+    expect(dataset.inventory.sourceRunCount).toBe(count);
+    expect(evaluateDataset(dataset, { contractOnly: true }).failed).toBe(false);
+    expect(queries.every(({ page }) => page <= 10)).toBe(true);
+    if (count >= 1000) {
+      expect(
+        new Set(queries.filter(({ workflow }) => workflow === "ci.yml").map(({ range }) => range))
+          .size,
+      ).toBeGreaterThan(1);
+      expect(
+        dataset.inventory.pages.some(({ query }) => query.startsWith("source-runs:created=")),
+      ).toBe(true);
+    }
+  });
+
+  it("collects observer artifacts beyond the newest 1000 runs", () => {
+    const { client, observerRuns } = cappedRepository(1, 1050);
+    observerRuns[0] = listedRun(900, "2026-05-17T00:00:00Z");
+    const dataset = collectCacheableCiDataset(client, collectionOptions);
+    expect(dataset.observations).toHaveLength(1);
+    expect(
+      dataset.inventory.pages.filter(({ query }) => query.startsWith("observer-artifacts:")),
+    ).toHaveLength(1050);
+    expect(evaluateDataset(dataset, { contractOnly: true }).failed).toBe(false);
+  });
+
+  it.each([0, 100, 102])("rejects a later total_count changing to %i", (total) => {
+    const base = fixture({ truncateSourcePagination: true });
+    const client = {
+      ...base,
+      listWorkflowRuns: (workflow: string, page: number, range: string) => {
+        const response = base.listWorkflowRuns(workflow, page, range);
+        return workflow === "ci.yml" && page > 1 ? { ...response, total_count: total } : response;
+      },
+    };
+    expect(() => collectCacheableCiDataset(client, collectionOptions)).toThrow(
+      /total_count changed/,
+    );
+  });
+
+  it("fails when a single second remains saturated", () => {
+    const { client, sourceRuns } = cappedRepository(1001);
+    sourceRuns.forEach((run) => {
+      run.created_at = "2026-06-01T00:00:00Z";
+    });
+    expect(() => collectCacheableCiDataset(client, collectionOptions)).toThrow(
+      /cannot subdivide.*1000/,
+    );
+  });
+
+  it("preserves inclusive subdivision seconds and excludes timestamps outside a fractional window", () => {
+    const { client, sourceRuns, queries } = cappedRepository(1050);
+    const cutoff = Date.parse(CUTOFF) + 500;
+    const start = cutoff - 90 * 24 * 60 * 60_000;
+    const lower = Math.ceil(start / 1000);
+    const upper = Math.floor(cutoff / 1000);
+    const midpoint = Math.floor((lower + upper) / 2);
+    [lower, midpoint, midpoint, midpoint + 1, midpoint + 1, upper, lower - 1, upper + 1].forEach(
+      (second, index) => {
+        sourceRuns[index + 1] = listedRun(30_000 + index, new Date(second * 1000).toISOString());
+      },
+    );
+    const dataset = collectCacheableCiDataset(client, {
+      ...collectionOptions,
+      cutoffAt: new Date(cutoff).toISOString(),
+    });
+    expect(dataset.inventory.sourceRunCount).toBe(1048);
+    const accounted = [
+      ...dataset.inventory.sources,
+      ...dataset.inventory.excludedSources,
+      ...dataset.inventory.operationalSources,
+    ].map(({ sourceRunId }) => sourceRunId);
+    expect(accounted).toEqual(
+      expect.arrayContaining(["30000", "30001", "30002", "30003", "30004", "30005"]),
+    );
+    expect(accounted).not.toContain("30006");
+    expect(accounted).not.toContain("30007");
+    expect(queries).toContainEqual({
+      workflow: "ci.yml",
+      page: 1,
+      range: `${new Date(lower * 1000).toISOString()}..${new Date(midpoint * 1000).toISOString()}`,
+    });
+    expect(queries).toContainEqual({
+      workflow: "ci.yml",
+      page: 1,
+      range: `${new Date((midpoint + 1) * 1000).toISOString()}..${new Date(upper * 1000).toISOString()}`,
+    });
+    expect(evaluateDataset(dataset, { contractOnly: true }).failed).toBe(false);
+    const groups = Map.groupBy(
+      dataset.inventory.pages.filter(({ query }) => query.startsWith("source-runs:")),
+      ({ query }) => query,
+    );
+    for (const pages of groups.values()) {
+      expect(pages.reduce((sum, { itemCount }) => sum + itemCount, 0)).toBe(pages[0]?.totalCount);
+      expect(pages.at(-1)?.nextCursor).toBeNull();
+      expect(pages.at(-1)?.itemCount).toBeLessThan(100);
+    }
+  });
+
+  it("rejects repeated run IDs that conceal missing runs in a leaf", () => {
+    const { client } = cappedRepository(150);
+    const duplicateClient = {
+      ...client,
+      listWorkflowRuns: (workflow: string, page: number, range: string) => {
+        const response = client.listWorkflowRuns(workflow, page, range);
+        return workflow === "ci.yml" && page === 2
+          ? {
+              ...response,
+              workflow_runs: client
+                .listWorkflowRuns(workflow, 1, range)
+                .workflow_runs?.slice(0, 50),
+            }
+          : response;
+      },
+    };
+    expect(() => collectCacheableCiDataset(duplicateClient, collectionOptions)).toThrow(
+      /unique run count does not equal total_count/,
+    );
+  });
+
+  it("deduplicates run IDs across independently collected ranges", () => {
+    const { client, sourceRuns } = cappedRepository(1050);
+    sourceRuns[1] = listedRun(77_777, "2026-06-01T00:00:00Z");
+    sourceRuns[2] = listedRun(77_777, "2026-08-01T00:00:00Z");
+    const dataset = collectCacheableCiDataset(client, collectionOptions);
+    expect(dataset.inventory.sourceRunCount).toBe(1049);
+    expect(
+      dataset.inventory.pages
+        .flatMap(({ sourceRunIds }) => sourceRunIds)
+        .filter((id) => id === "77777"),
+    ).toHaveLength(1);
+    expect(evaluateDataset(dataset, { contractOnly: true }).failed).toBe(false);
+  });
+
+  it("rejects counts that increase even after all originally declared items were received", () => {
+    const { client } = cappedRepository(100);
+    const changedClient = {
+      ...client,
+      listWorkflowRuns: (workflow: string, page: number, range: string) => {
+        const response = client.listWorkflowRuns(workflow, page, range);
+        return workflow === "ci.yml" && page === 2 ? { ...response, total_count: 101 } : response;
+      },
+    };
+    expect(() => collectCacheableCiDataset(changedClient, collectionOptions)).toThrow(
+      /total_count changed from 100 to 101/,
+    );
+  });
+});

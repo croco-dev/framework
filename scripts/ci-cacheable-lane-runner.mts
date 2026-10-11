@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 
+import { compareStrings } from "../tooling/compareStrings.mjs";
+
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
@@ -528,7 +530,7 @@ function expandImmutableFiles(path: string): readonly string[] {
     );
   }
   return readdirSync(path, { withFileTypes: true })
-    .sort((left, right) => left.name.localeCompare(right.name))
+    .sort((left, right) => compareStrings(left.name, right.name))
     .flatMap((entry) => expandImmutableFiles(join(path, entry.name)));
 }
 

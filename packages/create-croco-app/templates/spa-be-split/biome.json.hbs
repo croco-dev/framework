@@ -1,0 +1,29 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.3.12/schema.json",
+  "files": {
+    "includes": [
+      "**",
+      "!apps/console-web/public/mockServiceWorker.js",
+      "!libs/shared/provider-rpc/src"
+    ]
+  },
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineWidth": 120
+  },
+  "linter": {
+    "enabled": true
+  },
+  "javascript": {
+    "parser": {
+      "unsafeParameterDecoratorsEnabled": true
+    },
+    "formatter": {
+      "jsxQuoteStyle": "single",
+      "quoteStyle": "single",
+      "trailingCommas": "es5"
+    }
+  }
+}

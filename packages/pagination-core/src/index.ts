@@ -20,6 +20,7 @@ export {
   ConflictingPaginationProblem,
   InvalidCursorProblem,
   InvalidPaginationDirectionProblem,
+  InvalidPaginationLimitProblem,
 } from "./libs/problems";
 export type { InvalidPaginationDirectionProblemOptions } from "./libs/problems";
 export type {

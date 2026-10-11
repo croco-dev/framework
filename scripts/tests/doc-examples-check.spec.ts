@@ -88,6 +88,45 @@ describe("doc-examples-check.mts", () => {
   );
 
   it(
+    "resolves documentation dependencies from the Markdown package directory",
+    () => {
+      const root = createTempRoot();
+      writeValidDocs(root);
+      const packageDir = join(root, "packages", "docs");
+      const dependencyDir = join(packageDir, "node_modules", "doc-schema");
+      writeJson(join(dependencyDir, "package.json"), {
+        name: "doc-schema",
+        types: "index.d.ts",
+      });
+      writeFileSync(join(dependencyDir, "index.d.ts"), "export declare const value: string;\n");
+      const guidePath = join(packageDir, "src", "content", "docs", "en", "guides", "schema.mdx");
+      mkdirSync(dirname(guidePath), { recursive: true });
+      writeFileSync(
+        guidePath,
+        [
+          "```ts typecheck",
+          'import { value } from "doc-schema";',
+          "const result: string = value;",
+          "```",
+          "",
+        ].join("\n"),
+      );
+
+      const passing = runScript(root, "--check");
+      expect(passing.stdout).toContain("checked 2 TypeScript documentation examples");
+      expect(passing.status).toBe(0);
+
+      writeFileSync(join(dependencyDir, "index.d.ts"), "export declare const value: number;\n");
+      const drift = runScript(root, "--check");
+      expect(drift.status).toBe(1);
+      expect(drift.stdout).toContain(
+        "schema.mdx:3: Type 'number' is not assignable to type 'string'",
+      );
+    },
+    scriptTestTimeout,
+  );
+
+  it(
     "requires untypechecked TypeScript fences to be explicitly marked or recorded",
     () => {
       const root = createTempRoot();
@@ -571,6 +610,7 @@ function writeOperationalEnvironmentTemplate(
   overrides: Readonly<Record<string, string | undefined>> = {},
 ): void {
   const variables: Record<string, string> = {
+    CROCO_AGENT_APPLICATION: "/absolute/path/to/application.mjs",
     CROCO_DEV_INSPECTOR_ENABLED: "false",
     CROCO_DEV_INSPECTOR_EXPOSURE: "off",
     CROCO_DEV_INSPECTOR_TOKEN: "<croco-secret:CROCO_DEV_INSPECTOR_TOKEN>",
@@ -584,6 +624,7 @@ function writeOperationalEnvironmentTemplate(
     NODE_ENV: "development",
     OTEL_EXPORTER_OTLP_ENDPOINT: "http://localhost:4318",
     OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: "http://localhost:4318/v1/traces",
+    OTEL_SDK_DISABLED: "false",
     OTEL_SAMPLING_PROBABILITY: "1.0",
     OTEL_SERVICE_NAME: "test-service",
     TELEMETRY_ENABLED: "false",

@@ -31,6 +31,18 @@ title: "InMemoryIdempotencyStore"
 
 `InMemoryIdempotencyStore`\<`TResult`\>
 
+## Properties
+
+### processingLeaseVersion
+
+> `readonly` **processingLeaseVersion**: `1` = `1`
+
+Declared by stores that apply leaseMs independently of ttlMs.
+
+#### Implementation of
+
+`IdempotencyStore.processingLeaseVersion`
+
 ## Accessors
 
 ### size

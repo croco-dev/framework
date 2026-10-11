@@ -623,7 +623,12 @@ export function createLifecycleRetryConsoleSource(
     async recover(
       item: RetryConsoleItem,
       request: RetryConsoleRecoveryInput,
+      action: RetryConsoleRecoveryAction,
     ): Promise<RetryConsoleSourceRecoveryResult> {
+      if (action.kind !== "replay") {
+        return { item };
+      }
+
       if (!options.recover) {
         throw new Error("Lifecycle recovery provider is not configured");
       }

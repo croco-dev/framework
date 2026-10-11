@@ -7,6 +7,7 @@ import { InMemoryCircuitBreakerStateStore } from "../libs/CircuitBreakerState";
 import {
   CircuitBreakerOpenProblem,
   DuplicateRecoverHandlerProblem,
+  LambdaTimeoutProblem,
   RetryAbortedProblem,
   RetryExhaustedProblem,
 } from "../libs/errors";
@@ -629,6 +630,80 @@ describe("@Retryable", () => {
     }
   });
 
+  it("uses the injected clock to preserve half-open recovery after a long open duration", async () => {
+    let time = 0;
+    const openDuration = 10 * 60 * 1000;
+    let attempts = 0;
+    let shouldFail = true;
+
+    class TestService {
+      @Retryable({
+        now: () => time,
+        maxAttempts: 1,
+        backoffPolicy: new NoBackoff(),
+        circuitBreaker: {
+          failureThreshold: 3,
+          successThreshold: 2,
+          timeout: openDuration,
+        },
+      })
+      async doWork(): Promise<void> {
+        attempts++;
+        if (shouldFail) {
+          throw new Error("fail");
+        }
+      }
+    }
+
+    const service = new TestService();
+    await expect(service.doWork()).rejects.toThrow("fail");
+    await expect(service.doWork()).rejects.toThrow("fail");
+    await expect(service.doWork()).rejects.toThrow("fail");
+
+    time = openDuration + 1;
+    shouldFail = false;
+    await expect(service.doWork()).resolves.toBeUndefined();
+
+    shouldFail = true;
+    await expect(service.doWork()).rejects.toThrow("fail");
+    await expect(service.doWork()).rejects.toBeInstanceOf(CircuitBreakerOpenProblem);
+    expect(attempts).toBe(5);
+  });
+
+  it("uses the injected clock for registry release and idle eviction boundaries", async () => {
+    let time = 0;
+    const idleTtl = 5 * 60 * 1000;
+    const executeSpy = vi.spyOn(CircuitBreaker.prototype, "execute");
+
+    try {
+      class TestService {
+        @Retryable({
+          now: () => time,
+          maxAttempts: 1,
+          trace: false,
+          circuitBreaker: { failureThreshold: 3 },
+        })
+        async doWork(): Promise<void> {
+          if (time === 0) time = 100;
+        }
+      }
+
+      const service = new TestService();
+      await service.doWork();
+      const firstBreaker = executeSpy.mock.contexts[0];
+
+      time = 100 + idleTtl;
+      await service.doWork();
+      expect(executeSpy.mock.contexts[1]).toBe(firstBreaker);
+
+      time += idleTtl + 1;
+      await service.doWork();
+      expect(executeSpy.mock.contexts[2]).not.toBe(firstBreaker);
+    } finally {
+      executeSpy.mockRestore();
+    }
+  });
+
   it("reopens after a failed half-open probe across calls", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(0);
@@ -937,6 +1012,182 @@ describe("@Retryable", () => {
     await expect(service.doWork(false)).rejects.toBeInstanceOf(OtherError);
   });
 
+  describe.each([
+    {
+      guard: "open circuit",
+      options: { circuitBreaker: { failureThreshold: 1 } },
+      lambdaContext: null,
+      stopProblem: CircuitBreakerOpenProblem,
+    },
+    {
+      guard: "Lambda timeout",
+      options: { lambdaTimeoutReserveMs: 50 },
+      lambdaContext: { getRemainingTimeInMillis: () => 40 },
+      stopProblem: LambdaTimeoutProblem,
+    },
+  ])("recovery when $guard stops retries", ({ options, lambdaContext, stopProblem }) => {
+    it.each([1, 3])(
+      "calls typed recovery with the upstream error at maxAttempts=%i",
+      async (maxAttempts) => {
+        class UpstreamError extends Error {
+          constructor(..._args: unknown[]) {
+            super("upstream failed");
+          }
+        }
+        const upstreamError = new UpstreamError("upstream failed");
+        const original = vi.fn();
+        const recover = vi.fn();
+        const payload = { id: "request" };
+
+        class TestService {
+          readonly prefix = "recovered";
+
+          @Retryable({ ...options, maxAttempts, backoffPolicy: new NoBackoff() })
+          async doWork(id: string, input: object): Promise<string> {
+            original(id, input);
+            throw upstreamError;
+          }
+
+          @Recover(UpstreamError)
+          async handleError(error: UpstreamError, id: string, input: object): Promise<string> {
+            recover(error, id, input);
+            return `${this.prefix}:${id}`;
+          }
+        }
+
+        await expect(
+          runWithLambdaContext(lambdaContext, () => new TestService().doWork("item", payload)),
+        ).resolves.toBe("recovered:item");
+        expect(original).toHaveBeenCalledExactlyOnceWith("item", payload);
+        expect(recover).toHaveBeenCalledExactlyOnceWith(upstreamError, "item", payload);
+      },
+    );
+
+    it("calls options.recover with the upstream error and original arguments", async () => {
+      const upstreamError = new Error("upstream failed");
+      const original = vi.fn();
+      const recover = vi.fn();
+      const payload = { id: "request" };
+
+      class TestService {
+        readonly prefix = "recovered";
+
+        @Retryable({
+          ...options,
+          maxAttempts: 3,
+          backoffPolicy: new NoBackoff(),
+          recover: "handleError",
+        })
+        async doWork(id: string, input: object): Promise<string> {
+          original(id, input);
+          throw upstreamError;
+        }
+
+        async handleError(error: Error, id: string, input: object): Promise<string> {
+          recover(error, id, input);
+          return `${this.prefix}:${id}`;
+        }
+      }
+
+      await expect(
+        runWithLambdaContext(lambdaContext, () => new TestService().doWork("item", payload)),
+      ).resolves.toBe("recovered:item");
+      expect(original).toHaveBeenCalledExactlyOnceWith("item", payload);
+      expect(recover).toHaveBeenCalledExactlyOnceWith(upstreamError, "item", payload);
+    });
+
+    it.each([false, true])(
+      "preserves the stop Problem and cause without recovery, wrapExhausted=%s",
+      async (wrapExhausted) => {
+        const upstreamError = new Error("upstream failed");
+        const original = vi.fn();
+
+        class TestService {
+          @Retryable({ ...options, maxAttempts: 3, backoffPolicy: new NoBackoff(), wrapExhausted })
+          async doWork(): Promise<void> {
+            original();
+            throw upstreamError;
+          }
+        }
+
+        const result = runWithLambdaContext(lambdaContext, () => new TestService().doWork());
+        await expect(result).rejects.toBeInstanceOf(stopProblem);
+        await expect(result).rejects.toHaveProperty("cause", upstreamError);
+        expect(original).toHaveBeenCalledTimes(1);
+      },
+    );
+
+    it.each([false, true])(
+      "uses exhaustion semantics for a typed recovery mismatch, wrapExhausted=%s",
+      async (wrapExhausted) => {
+        class OtherError extends Error {
+          constructor(..._args: unknown[]) {
+            super("other");
+          }
+        }
+        const upstreamError = new Error("upstream failed");
+        const original = vi.fn();
+        const recover = vi.fn();
+
+        class TestService {
+          @Retryable({ ...options, maxAttempts: 3, backoffPolicy: new NoBackoff(), wrapExhausted })
+          async doWork(): Promise<void> {
+            original();
+            throw upstreamError;
+          }
+
+          @Recover(OtherError)
+          async handleOther(error: OtherError): Promise<void> {
+            recover(error);
+          }
+        }
+
+        const result = runWithLambdaContext(lambdaContext, () => new TestService().doWork());
+        if (wrapExhausted) {
+          await expect(result).rejects.toBeInstanceOf(RetryExhaustedProblem);
+          await expect(result).rejects.toHaveProperty("cause", upstreamError);
+          await expect(result).rejects.toHaveProperty("lastError", upstreamError);
+        } else {
+          await expect(result).rejects.toBe(upstreamError);
+        }
+        expect(original).toHaveBeenCalledTimes(1);
+        expect(recover).not.toHaveBeenCalled();
+      },
+    );
+  });
+
+  it.each([1, 3])("recovers an initially open circuit with maxAttempts=%i", async (maxAttempts) => {
+    const upstreamError = new Error("upstream failed");
+    const original = vi.fn();
+    const recover = vi.fn();
+
+    class TestService {
+      @Retryable({
+        maxAttempts,
+        backoffPolicy: new NoBackoff(),
+        circuitBreaker: { failureThreshold: 1 },
+      })
+      async doWork(id: string): Promise<string> {
+        original(id);
+        throw upstreamError;
+      }
+
+      @Recover()
+      async handleError(error: Error, id: string): Promise<string> {
+        recover(error, id);
+        return `recovered:${id}`;
+      }
+    }
+
+    const service = new TestService();
+    await expect(service.doWork("first")).resolves.toBe("recovered:first");
+    await expect(service.doWork("second")).resolves.toBe("recovered:second");
+    expect(original).toHaveBeenCalledExactlyOnceWith("first");
+    expect(recover).toHaveBeenCalledTimes(2);
+    expect(recover).toHaveBeenNthCalledWith(1, upstreamError, "first");
+    expect(recover).toHaveBeenNthCalledWith(2, expect.any(CircuitBreakerOpenProblem), "second");
+  });
+
   it("fails fast when duplicate typed recover handlers are registered", () => {
     class SpecificError extends Error {
       constructor(..._args: unknown[]) {
@@ -1000,5 +1251,147 @@ describe("@Retryable", () => {
         await expect(service.doWork()).rejects.toThrow("Lambda timeout guard");
       },
     );
+  });
+});
+
+describe("@Recover inheritance", () => {
+  class UpstreamProblem extends Problem {
+    constructor() {
+      super("UPSTREAM_TIMEOUT", ProblemCategory.InternalServerError, "upstream timed out");
+    }
+  }
+
+  class TimeoutProblem extends UpstreamProblem {}
+
+  class QuotaProblem extends Problem {
+    constructor() {
+      super("UPSTREAM_QUOTA", ProblemCategory.InternalServerError, "upstream quota exhausted");
+    }
+  }
+
+  it("isolates sibling handlers and retains inherited typed recovery", async () => {
+    class BaseGateway {
+      @Retryable({ maxAttempts: 1, trace: false })
+      async call(error: Problem): Promise<string> {
+        throw error;
+      }
+
+      @Recover(TimeoutProblem)
+      async recoverTimeout(): Promise<string> {
+        return "base-timeout";
+      }
+    }
+
+    class PaymentsGateway extends BaseGateway {
+      @Recover(QuotaProblem)
+      async recoverPaymentsQuota(): Promise<string> {
+        return "payments-quota";
+      }
+    }
+
+    class RefundsGateway extends BaseGateway {
+      @Recover(QuotaProblem)
+      async recoverRefundsQuota(): Promise<string> {
+        return "refunds-quota";
+      }
+    }
+
+    await expect(new PaymentsGateway().call(new QuotaProblem())).resolves.toBe("payments-quota");
+    await expect(new RefundsGateway().call(new QuotaProblem())).resolves.toBe("refunds-quota");
+    await expect(new PaymentsGateway().call(new TimeoutProblem())).resolves.toBe("base-timeout");
+    await expect(new RefundsGateway().call(new TimeoutProblem())).resolves.toBe("base-timeout");
+    const quota = new QuotaProblem();
+    await expect(new BaseGateway().call(quota)).rejects.toBe(quota);
+  });
+
+  it("preserves parent and inherited catch-all recovery after a child adds a typed handler", async () => {
+    class BaseGateway {
+      @Retryable({ maxAttempts: 1, trace: false })
+      async call(error: Problem): Promise<string> {
+        throw error;
+      }
+
+      @Recover()
+      async recoverAll(): Promise<string> {
+        return "base-fallback";
+      }
+    }
+
+    class PaymentsGateway extends BaseGateway {
+      @Recover(QuotaProblem)
+      async recoverQuota(): Promise<string> {
+        return "payments-quota";
+      }
+    }
+
+    await expect(new PaymentsGateway().call(new QuotaProblem())).resolves.toBe("payments-quota");
+    await expect(new BaseGateway().call(new QuotaProblem())).resolves.toBe("base-fallback");
+    await expect(new PaymentsGateway().call(new TimeoutProblem())).resolves.toBe("base-fallback");
+  });
+
+  it.each([TimeoutProblem, undefined])(
+    "prefers the nearest declaration for %s through multiple levels",
+    async (exceptionType) => {
+      class BaseGateway {
+        @Retryable({ maxAttempts: 1, trace: false })
+        async call(): Promise<string> {
+          throw new TimeoutProblem();
+        }
+
+        @Recover(exceptionType)
+        async recoverBase(): Promise<string> {
+          return "base";
+        }
+      }
+
+      class ChildGateway extends BaseGateway {
+        @Recover(exceptionType)
+        async recoverChild(): Promise<string> {
+          return "child";
+        }
+      }
+
+      class UndecoratedGateway extends ChildGateway {}
+
+      class GrandchildGateway extends UndecoratedGateway {
+        @Recover(exceptionType)
+        async recoverGrandchild(): Promise<string> {
+          return "grandchild";
+        }
+      }
+
+      await expect(new BaseGateway().call()).resolves.toBe("base");
+      await expect(new ChildGateway().call()).resolves.toBe("child");
+      await expect(new UndecoratedGateway().call()).resolves.toBe("child");
+      await expect(new GrandchildGateway().call()).resolves.toBe("grandchild");
+    },
+  );
+
+  it("prefers an inherited specific error type over a child catch-all or broader type", async () => {
+    class BaseGateway {
+      @Retryable({ maxAttempts: 1, trace: false })
+      async call(): Promise<string> {
+        throw new TimeoutProblem();
+      }
+
+      @Recover(TimeoutProblem)
+      async recoverTimeout(): Promise<string> {
+        return "specific";
+      }
+    }
+
+    class ChildGateway extends BaseGateway {
+      @Recover(UpstreamProblem)
+      async recoverProblem(): Promise<string> {
+        return "broad";
+      }
+
+      @Recover()
+      async recoverAll(): Promise<string> {
+        return "catch-all";
+      }
+    }
+
+    await expect(new ChildGateway().call()).resolves.toBe("specific");
   });
 });

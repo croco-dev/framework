@@ -15,7 +15,7 @@ Reports a runtime env preset whose variables cross the client/server exposure bo
 
 ### Constructor
 
-> **new RuntimeEnvPresetBoundaryProblem**(`section`, `envName`): `RuntimeEnvPresetBoundaryProblem`
+> **new RuntimeEnvPresetBoundaryProblem**(`section`, `envName`, `clientPrefix?`): `RuntimeEnvPresetBoundaryProblem`
 
 #### Parameters
 
@@ -26,6 +26,10 @@ Reports a runtime env preset whose variables cross the client/server exposure bo
 ##### envName
 
 `string`
+
+##### clientPrefix?
+
+`string` = `"NEXT_PUBLIC_"`
 
 #### Returns
 

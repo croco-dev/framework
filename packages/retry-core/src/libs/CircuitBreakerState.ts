@@ -26,6 +26,8 @@ export type CircuitStateTransition =
   | { from: CircuitState.HALF_OPEN; to: CircuitState.OPEN; reason: "failure_occurred" };
 
 export type InMemoryCircuitBreakerStateStoreOptions = {
+  /** Millisecond clock for idle expiry (default: Date.now). */
+  now?: () => number;
   maxEntries?: number;
   idleTtlMs?: number;
 };
@@ -53,8 +55,13 @@ export abstract class CircuitBreakerStateStore {
    *
    * @param circuitId 회로 식별자
    * @param state 설정할 상태
+   * @param options 만료 가능한 저장소의 최소 보존 기간 (ms)
    */
-  abstract setState(circuitId: string, state: CircuitState): Promise<void>;
+  abstract setState(
+    circuitId: string,
+    state: CircuitState,
+    options?: { minRetentionMs?: number },
+  ): Promise<void>;
 
   /**
    * 현재 실패 카운트를 가져옵니다.
@@ -92,8 +99,13 @@ export abstract class CircuitBreakerStateStore {
    *
    * @param circuitId 회로 식별자
    * @param time 타임스탬프 (ms)
+   * @param options 만료 가능한 저장소의 최소 보존 기간 (ms)
    */
-  abstract setLastFailureTime(circuitId: string, time: number): Promise<void>;
+  abstract setLastFailureTime(
+    circuitId: string,
+    time: number,
+    options?: { minRetentionMs?: number },
+  ): Promise<void>;
 
   /**
    * 분산 락을 사용하여 회로별 작업을 원자적으로 실행합니다.
@@ -176,11 +188,13 @@ export class InMemoryCircuitBreakerStateStore extends CircuitBreakerStateStore {
   private readonly halfOpenSuccessCounts = new Map<string, number>();
   private readonly locks = new Map<string, Promise<void>>();
   private readonly lastAccessed = new Map<string, number>();
+  private readonly now: () => number;
   private readonly maxEntries: number;
   private readonly idleTtlMs: number;
 
   constructor(options: InMemoryCircuitBreakerStateStoreOptions = {}) {
     super();
+    this.now = options.now ?? (() => Date.now());
     this.maxEntries = Math.max(1, options.maxEntries ?? DEFAULT_MAX_ENTRIES);
     this.idleTtlMs = Math.max(0, options.idleTtlMs ?? DEFAULT_IDLE_TTL_MS);
   }
@@ -321,7 +335,7 @@ export class InMemoryCircuitBreakerStateStore extends CircuitBreakerStateStore {
       this.evictOverflow();
     }
 
-    this.lastAccessed.set(circuitId, Date.now());
+    this.lastAccessed.set(circuitId, this.now());
   }
 
   private touchIfTracked(circuitId: string): void {
@@ -329,7 +343,7 @@ export class InMemoryCircuitBreakerStateStore extends CircuitBreakerStateStore {
       return;
     }
 
-    this.lastAccessed.set(circuitId, Date.now());
+    this.lastAccessed.set(circuitId, this.now());
   }
 
   private pruneStaleEntries(): void {
@@ -337,7 +351,7 @@ export class InMemoryCircuitBreakerStateStore extends CircuitBreakerStateStore {
       return;
     }
 
-    const now = Date.now();
+    const now = this.now();
 
     for (const [circuitId, lastAccessedAt] of this.lastAccessed.entries()) {
       if (now - lastAccessedAt <= this.idleTtlMs) {

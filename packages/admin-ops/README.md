@@ -91,3 +91,13 @@ The package exports small React primitives for building an admin retry console:
 - `RetryConsoleAuditConfirmation`
 
 These primitives render from `RetryConsoleItem` contracts and leave authorization, data loading, and styling to the host admin console.
+
+## Customer Explorer adapters
+
+`EngagementCustomerExplorerSource` wraps the existing tenant/recipient dispatch store's `listByRecipient` and `getDispatch`, reusing the engagement normalizer. Pin its app/environment/tenant scope because the underlying store is tenant-aware. Queued and accepted delivery evidence must retain their original meanings; this adapter does not infer a click or server payment from message delivery. A page can have no in-window events while still carrying a continuation cursor.
+
+`OperationsCustomerExplorerSource` wraps an existing normalized `OperationsTimelineSourceAdapter` and checks tenant/customer boundaries. Its upstream `collect` contract is unbounded, so use the SQL source for large histories. Original source and event ID form a composite reference; unrelated sources are never merged by ID alone.
+
+PostgreSQL persistence and normalized SQL timeline reads are provided by the [`@croco/admin-postgres` provider package](../admin-postgres/README.md).
+
+[Standalone PostgreSQL example](../../examples/customer-explorer/README.md) demonstrates source mapping, authorization, migration setup and durable note rereads. These adapters are source-verified implementations; local synthetic tests do not establish provider certification or production identity policy.

@@ -1,3 +1,4 @@
+import { Problem, ProblemCategory } from "@croco/problems-core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { BillableUsageClaim, BillableUsageEvent } from "../libs/BillableUsageJournal";
 import { RedisBillableUsageJournal } from "../libs/RedisBillableUsageJournal";
@@ -16,6 +17,16 @@ const EVENT: BillableUsageEvent = {
 function storedEntry(entry: Record<string, unknown>): Record<string, unknown> {
   const { event, ...state } = entry;
   return { ...state, eventJson: JSON.stringify(event) };
+}
+
+class RedisConfigurationProblem extends Problem {
+  constructor() {
+    super(
+      "test/redis-configuration",
+      ProblemCategory.InternalServerError,
+      "Redis client configuration is invalid",
+    );
+  }
 }
 
 describe("RedisBillableUsageJournal", () => {
@@ -63,6 +74,21 @@ describe("RedisBillableUsageJournal", () => {
 
     await expect(journal.append(EVENT)).rejects.toMatchObject({
       code: "metering/transition-conflict",
+    });
+  });
+
+  it("preserves an adapter configuration Problem", async () => {
+    const configuration = new RedisConfigurationProblem();
+    vi.mocked(redis.eval).mockRejectedValue(configuration);
+
+    await expect(journal.append(EVENT)).rejects.toBe(configuration);
+  });
+
+  it("wraps an untyped Redis failure", async () => {
+    vi.mocked(redis.eval).mockRejectedValue(new Error("connection failed"));
+
+    await expect(journal.append(EVENT)).rejects.toMatchObject({
+      code: "metering/redis-error",
     });
   });
 

@@ -29,6 +29,17 @@ title: "CompiledRoute"
 
 ---
 
+### hasResponseBody?
+
+> `optional` **hasResponseBody?**: `boolean`
+
+Declared output-schema presence. True when the route declares a response
+body contract (for example `@ResponseSchema`), so an explicit `null`
+result stays a JSON body instead of collapsing into 204 no-content.
+Omitted/falsy preserves the legacy schemaless empty-response behavior.
+
+---
+
 ### method
 
 > **method**: `string`

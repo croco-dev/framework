@@ -12,6 +12,7 @@ import {
 import { CreditLedgerStore } from "./CreditLedgerStore";
 import {
   cloneCreditLedgerEventIntent,
+  createCreditIdempotencyIdentity,
   createCreditLedgerEventIntent,
   type CreditLedgerEventIntent,
   type ClaimedCreditLedgerEventIntent,
@@ -77,6 +78,7 @@ type AllocationOptions = {
   readonly account: AccountState;
   readonly amount: CreditAmount;
   readonly meterKey?: string;
+  readonly ignoreMeterRestrictions?: boolean;
   readonly asOf: Date;
 };
 
@@ -274,8 +276,13 @@ export class InMemoryCreditLedgerStore extends CreditLedgerStore {
 
   async execute(command: CreditLedgerCommand): Promise<CreditCommandResult> {
     this.validateCommand(command);
+    const tenantId =
+      command.operation === "open"
+        ? command.tenantId
+        : this.requireAccount(command.accountId).account.tenantId;
+    const idempotencyIdentity = createCreditIdempotencyIdentity(tenantId, command.idempotencyKey);
     const fingerprint = stableSerialize(semanticCommand(command));
-    const existing = this.idempotency.get(command.idempotencyKey);
+    const existing = this.idempotency.get(idempotencyIdentity);
     if (existing) {
       if (existing.fingerprint !== fingerprint) {
         throw new CreditDuplicateConflictProblem(command.idempotencyKey);
@@ -288,7 +295,7 @@ export class InMemoryCreditLedgerStore extends CreditLedgerStore {
       command.operation === "open"
         ? this.openAccount(command)
         : this.executeOnAccountAtomically(this.requireAccount(command.accountId), command);
-    this.idempotency.set(command.idempotencyKey, {
+    this.idempotency.set(idempotencyIdentity, {
       fingerprint,
       result: cloneResult(result),
     });
@@ -784,6 +791,7 @@ export class InMemoryCreditLedgerStore extends CreditLedgerStore {
             account,
             amount: command.amount,
             asOf: command.occurredAt,
+            ignoreMeterRestrictions: true,
           })
         : [];
     const grant = command.direction === "credit" ? (command.grant ?? {}) : undefined;
@@ -806,7 +814,7 @@ export class InMemoryCreditLedgerStore extends CreditLedgerStore {
     const candidates = [...account.lots.values()]
       .filter(
         (lot) =>
-          isExpired(lot, command.asOf) &&
+          isExpired(lot, command.asOf ?? command.occurredAt) &&
           compareCreditAmounts(lot.available, ZERO_CREDIT_AMOUNT) > 0 &&
           isAfterCursor(lot, command.cursor),
       )
@@ -842,7 +850,7 @@ export class InMemoryCreditLedgerStore extends CreditLedgerStore {
       .filter(
         (lot) =>
           !isExpired(lot, options.asOf) &&
-          isMeterEligible(lot, options.meterKey) &&
+          (options.ignoreMeterRestrictions || isMeterEligible(lot, options.meterKey)) &&
           compareCreditAmounts(lot.available, ZERO_CREDIT_AMOUNT) > 0,
       )
       .sort(compareLots);
@@ -855,7 +863,7 @@ export class InMemoryCreditLedgerStore extends CreditLedgerStore {
         .filter(
           (lot) =>
             isExpired(lot, options.asOf) &&
-            isMeterEligible(lot, options.meterKey) &&
+            (options.ignoreMeterRestrictions || isMeterEligible(lot, options.meterKey)) &&
             compareCreditAmounts(lot.available, ZERO_CREDIT_AMOUNT) > 0,
         )
         .reduce((total, lot) => addCreditAmounts(total, lot.available), ZERO_CREDIT_AMOUNT);
@@ -1037,7 +1045,7 @@ export class InMemoryCreditLedgerStore extends CreditLedgerStore {
       if (!Number.isInteger(command.limit) || command.limit < 1 || command.limit > 100) {
         throw new InvalidCreditCommandProblem("expiry limit must be an integer between 1 and 100");
       }
-      if (Number.isNaN(command.asOf.getTime())) {
+      if (command.asOf !== undefined && Number.isNaN(command.asOf.getTime())) {
         throw new InvalidCreditCommandProblem("expiry asOf must be a valid date");
       }
     }

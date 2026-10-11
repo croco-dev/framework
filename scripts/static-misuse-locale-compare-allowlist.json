@@ -1,0 +1,6 @@
+{
+  "schemaVersion": 1,
+  "baselineEntryCount": 0,
+  "description": "Reviewed exceptions for CROCO_STATIC_DETERMINISTIC_LOCALE_COMPARE. Entries require package, file, line, excerpt, reason, owner, and an unexpired expiresOn. Scripts and tooling use the root package name.",
+  "entries": []
+}

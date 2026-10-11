@@ -1,3 +1,5 @@
+import ts from "typescript";
+import { compareStrings } from "../tooling/compareStrings.mjs";
 import { spawnSync } from "node:child_process";
 import {
   existsSync,
@@ -232,7 +234,7 @@ function main(): void {
         cjsCount: plan.cjs.length,
         esmCount: plan.esm.length,
         packageName: packageInfo.packageName,
-        typesCount: plan.types.length,
+        typesCount: new Set(plan.types.map((target) => target.specifier)).size,
       });
     }
 
@@ -413,7 +415,7 @@ function publishArtifactTargets(
   for (const fieldName of ["main", "module", "types", "typings", "exports", "bin"] as const) {
     collectPublishArtifactTargets(publishManifest[fieldName], fieldName, targets);
   }
-  return targets.sort((left, right) => left.fieldName.localeCompare(right.fieldName));
+  return targets.sort((left, right) => compareStrings(left.fieldName, right.fieldName));
 }
 
 function collectPublishArtifactTargets(
@@ -561,9 +563,26 @@ function runPackageSmoke(
     (packageInfo) => packageInfo.tarballPath,
   );
 
+  const externalPeerSpecifiers = Array.from(
+    new Set(
+      graphPackages.flatMap((dependency) =>
+        smokeAdditionalDependencyNames(dependency.packedManifest)
+          .filter((name) => !name.startsWith("@croco/"))
+          .map((name) => `${name}@${dependency.packedManifest.peerDependencies?.[name]}`),
+      ),
+    ),
+  );
+
   run(
     "pnpm",
-    ["add", "--prod", packageInfo.tarballPath, ...internalPeerTarballs, "--ignore-scripts"],
+    [
+      "add",
+      "--prod",
+      packageInfo.tarballPath,
+      ...internalPeerTarballs,
+      ...externalPeerSpecifiers,
+      "--ignore-scripts",
+    ],
     packageSmokeRoot,
     {
       label: `${packageInfo.packageName}: install packed tarball`,
@@ -575,7 +594,7 @@ function runPackageSmoke(
 
   writeEsmConsumer(packageSmokeRoot, plan.esm);
   writeCjsConsumer(packageSmokeRoot, plan.cjs);
-  writeTypesConsumer(packageSmokeRoot, plan.types);
+  writeTypesConsumer(packageSmokeRoot, plan, packageInfo);
 
   if (plan.cjs.length > 0) {
     run("node", [join(packageSmokeRoot, "cjs.cjs")], packageSmokeRoot, {
@@ -587,13 +606,16 @@ function runPackageSmoke(
       label: `${packageInfo.packageName}: esm entrypoints`,
     });
   }
-  if (plan.types.length > 0) {
+  for (const consumerMode of ["esm", "cjs"] as const) {
+    if (plan.types.length === 0 || (consumerMode === "cjs" && plan.cjs.length === 0)) {
+      continue;
+    }
     run(
       process.execPath,
-      [tscPath(), "-p", join(packageSmokeRoot, "tsconfig.json")],
+      [tscPath(), "-p", join(packageSmokeRoot, `tsconfig.${consumerMode}.json`)],
       packageSmokeRoot,
       {
-        label: `${packageInfo.packageName}: types entrypoints`,
+        label: `${packageInfo.packageName}: ${consumerMode} types entrypoints`,
       },
     );
   }
@@ -610,12 +632,48 @@ function runPackageSmoke(
     runFrameworkLoggerStartupSmoke(packageSmokeRoot);
   }
 
+  if (packageInfo.packageName === "@croco/gamification-core") {
+    runMissionValidationIdentitySmoke(packageSmokeRoot);
+  }
+
   const decoratorMetadataContract = decoratorMetadataContractFor(packageInfo.packageName);
   if (decoratorMetadataContract) {
     runDecoratorMetadataSmoke(packageSmokeRoot, graphPackages, decoratorMetadataContract);
   }
 
   runPublishedBundleSmoke(packageSmokeRoot, packageInfo.packageName);
+}
+
+function runMissionValidationIdentitySmoke(smokeRoot: string): void {
+  for (const mode of ["cjs", "esm"] as const) {
+    const smokePath = join(
+      smokeRoot,
+      `mission-validation-identity.${mode === "cjs" ? "cjs" : "mjs"}`,
+    );
+    const load = (specifier: string): string =>
+      mode === "cjs"
+        ? `require(${JSON.stringify(specifier)})`
+        : `await import(${JSON.stringify(specifier)})`;
+    writeFileSync(
+      smokePath,
+      [
+        `const assert = ${load("node:assert/strict")};`,
+        `const root = ${load("@croco/gamification-core")};`,
+        `const validation = ${load("@croco/gamification-core/mission-validation")};`,
+        'assert.equal(typeof root.MissionInvalidProblem, "function");',
+        'assert.equal(typeof root.validateMissionDefinition, "function");',
+        'assert.equal(validation.MissionInvalidProblem, root.MissionInvalidProblem, "mission Problem identity");',
+        'assert.equal(validation.validateMissionDefinition, root.validateMissionDefinition, "mission validator identity");',
+        "assert.throws(() => validation.validateMissionDefinition({}), root.MissionInvalidProblem);",
+        `console.log("mission validation ${mode} identity ok");`,
+        "",
+      ].join("\n"),
+    );
+    run("node", [smokePath], smokeRoot, {
+      label: `@croco/gamification-core: ${mode} mission validation identity`,
+    });
+    console.log(`mission validation ${mode} identity ok`);
+  }
 }
 
 function runPublishedBundleSmoke(smokeRoot: string, packageName: string): void {
@@ -857,8 +915,25 @@ function collectInternalRuntimeGraph(
   visit(rootPackage);
 
   return Array.from(graph.values()).sort((left, right) =>
-    left.packageName.localeCompare(right.packageName),
+    compareStrings(left.packageName, right.packageName),
   );
+}
+
+function smokeAdditionalDependencyNames(pkg: PackageJson): string[] {
+  const selectedPeers =
+    pkg.name === "@croco/etl-core"
+      ? ["@croco/batch-core", "@croco/execution-core", "@croco/warehouse-core"]
+      : pkg.name === "@croco/warehouse-postgres"
+        ? [
+            "@croco/etl-core",
+            "@croco/execution-core",
+            "@croco/execution-drizzle",
+            "drizzle-orm",
+            "pg",
+          ]
+        : [];
+
+  return selectedPeers.filter((name) => pkg.peerDependencies?.[name] !== undefined);
 }
 
 function internalRuntimeDependencyNames(pkg: PackageJson): string[] {
@@ -868,6 +943,7 @@ function internalRuntimeDependencyNames(pkg: PackageJson): string[] {
     new Set([
       ...dependencyNames(pkg.dependencies),
       ...dependencyNames(pkg.optionalDependencies),
+      ...smokeAdditionalDependencyNames(pkg),
       ...dependencyNames(pkg.peerDependencies).filter((name) => !optionalPeers.has(name)),
     ]),
   ).sort();
@@ -1019,14 +1095,12 @@ function writeConsumerPackageJson(
   );
   writeFileSync(
     join(consumerRoot, "pnpm-workspace.yaml"),
-    `${JSON.stringify(
-      {
-        packages: [],
-        overrides,
-      },
-      null,
-      2,
-    )}\n`,
+    `packages: []\noverrides:\n${Object.entries(overrides)
+      .map(
+        ([packageName, tarballPath]) =>
+          `  ${JSON.stringify(packageName)}: ${JSON.stringify(tarballPath)}`,
+      )
+      .join("\n")}\n`,
   );
   writeFileSync(
     join(consumerRoot, ".npmrc"),
@@ -1045,8 +1119,11 @@ function directInternalPeerDependencyNames(packageInfo: PackageInfo): string[] {
     packageInfo.sourceManifest.peerDependenciesMeta,
   );
 
+  const selectedPeers = new Set(smokeAdditionalDependencyNames(packageInfo.sourceManifest));
   return dependencyNames(packageInfo.sourceManifest.peerDependencies).filter(
-    (dependencyName) => !optionalPeers.has(dependencyName) && dependencyName.startsWith("@croco/"),
+    (dependencyName) =>
+      (!optionalPeers.has(dependencyName) || selectedPeers.has(dependencyName)) &&
+      dependencyName.startsWith("@croco/"),
   );
 }
 
@@ -1066,7 +1143,7 @@ function internalPeerPackagesFor(graphPackages: readonly PackedPackageInfo[]): P
   }
 
   return Array.from(peerPackages.values()).sort((left, right) =>
-    left.packageName.localeCompare(right.packageName),
+    compareStrings(left.packageName, right.packageName),
   );
 }
 
@@ -1418,15 +1495,16 @@ function pushConditionalTarget(
     return;
   }
   if (condition === "types" && target && typeof target === "object" && !Array.isArray(target)) {
-    const importTarget = (target as Record<string, unknown>).import;
-    pushStringTarget(
-      specifier,
-      importTarget,
-      `${fieldName}.import`,
-      packageInfo,
-      diagnostics,
-      targets,
-    );
+    for (const resolutionMode of ["import", "require"] as const) {
+      pushStringTarget(
+        specifier,
+        (target as Record<string, unknown>)[resolutionMode],
+        `${fieldName}.${resolutionMode}`,
+        packageInfo,
+        diagnostics,
+        targets,
+      );
+    }
     return;
   }
   if (typeof target === "string" && isStaticAssetTargetPath(target)) {
@@ -1546,36 +1624,83 @@ function writeCjsConsumer(smokeRoot: string, targets: readonly SmokeTarget[]): v
   );
 }
 
-function writeTypesConsumer(smokeRoot: string, targets: readonly SmokeTarget[]): void {
-  writeFileSync(
-    join(smokeRoot, "types.ts"),
-    targets
-      .flatMap((target, index) => [
-        `import type * as Package${index} from ${JSON.stringify(target.specifier)};`,
-        `type Package${index}Entrypoint = typeof Package${index};`,
-        `declare const package${index}: Package${index}Entrypoint | undefined;`,
-        `void package${index};`,
-        "",
-      ])
-      .join("\n"),
-  );
-  writeFileSync(
-    join(smokeRoot, "tsconfig.json"),
-    `${JSON.stringify(
-      {
-        compilerOptions: {
-          module: "NodeNext",
-          moduleResolution: "NodeNext",
-          noEmit: true,
-          skipLibCheck: true,
-          strict: true,
-          target: "ES2022",
+function writeTypesConsumer(
+  smokeRoot: string,
+  plan: PackageSmokePlan,
+  packageInfo: PackedPackageInfo,
+): void {
+  const cjsSpecifiers = new Set(plan.cjs.map((target) => target.specifier));
+  for (const consumerMode of ["esm", "cjs"] as const) {
+    const targets = plan.types.filter((target) =>
+      consumerMode === "esm"
+        ? !target.fieldName.endsWith(".require")
+        : cjsSpecifiers.has(target.specifier) && !target.fieldName.endsWith(".import"),
+    );
+    const fileName = consumerMode === "esm" ? "types.mts" : "types.cts";
+    writeFileSync(
+      join(smokeRoot, fileName),
+      targets
+        .flatMap((target, index) => {
+          const specifier = JSON.stringify(target.specifier);
+          const lines = [
+            `import * as Package${index} from ${specifier};`,
+            `type Package${index}Entrypoint = typeof Package${index};`,
+            `declare const package${index}: Package${index}Entrypoint | undefined;`,
+            `void package${index};`,
+          ];
+          if (consumerMode === "esm" && declarationHasDefaultExport(packageInfo, target)) {
+            lines.push(
+              `import Package${index}Default from ${specifier};`,
+              `type Package${index}DefaultExport = typeof import(${specifier}) extends { default: infer T } ? T : never;`,
+              `export const package${index}Default: Package${index}DefaultExport = Package${index}Default;`,
+            );
+          }
+          return [...lines, ""];
+        })
+        .join("\n"),
+    );
+    writeFileSync(
+      join(smokeRoot, `tsconfig.${consumerMode}.json`),
+      `${JSON.stringify(
+        {
+          compilerOptions: {
+            module: consumerMode === "esm" ? "NodeNext" : "Node16",
+            moduleResolution: consumerMode === "esm" ? "NodeNext" : "Node16",
+            noEmit: true,
+            skipLibCheck: true,
+            strict: true,
+            target: "ES2022",
+          },
+          files: [fileName],
         },
-        include: ["types.ts"],
-      },
-      null,
-      2,
-    )}\n`,
+        null,
+        2,
+      )}\n`,
+    );
+  }
+}
+
+function declarationHasDefaultExport(packageInfo: PackedPackageInfo, target: SmokeTarget): boolean {
+  const content = readPackedFile(
+    packageInfo.tarballPath,
+    `package/${target.target.slice(2)}`,
+    packageInfo.packageDir,
+  );
+  const source = ts.createSourceFile(target.target, content, ts.ScriptTarget.Latest);
+  return source.statements.some(
+    (statement) =>
+      (ts.isExportAssignment(statement) && !statement.isExportEquals) ||
+      ((ts.isClassDeclaration(statement) || ts.isFunctionDeclaration(statement)) &&
+        ts
+          .getModifiers(statement)
+          ?.some((modifier) => modifier.kind === ts.SyntaxKind.DefaultKeyword)) ||
+      (ts.isExportDeclaration(statement) &&
+        !statement.isTypeOnly &&
+        statement.exportClause !== undefined &&
+        ts.isNamedExports(statement.exportClause) &&
+        statement.exportClause.elements.some(
+          (element) => element.name.text === "default" && !element.isTypeOnly,
+        )),
   );
 }
 

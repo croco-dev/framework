@@ -11,6 +11,8 @@ export type RuntimeContext = {
   lambdaContext?: unknown;
 };
 
+export type { DeferredRegionReader } from "./deferredRegions";
+
 /**
  * Core fetch handler type.
  * Web Fetch API `Request -> Response`, Hono-free.

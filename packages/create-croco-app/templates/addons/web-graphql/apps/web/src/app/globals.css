@@ -32,4 +32,5 @@
   }
 }
 
+/* biome-ignore lint/suspicious/noUnknownAtRules: StyleX processes this at-rule. */
 @stylex;

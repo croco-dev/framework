@@ -1,4 +1,5 @@
-import type { Server as HTTPServer } from "node:http";
+import type { Server as HTTPServer, ServerResponse } from "node:http";
+import type { Socket } from "node:net";
 import { serve } from "@hono/node-server";
 import type { Hono } from "hono";
 
@@ -44,6 +45,7 @@ export function createNodeHost(
   let startPromise: Promise<void> | null = null;
   let closePromise: Promise<void> | null = null;
   let serverClosePromise: Promise<void> | null = null;
+  const activeResponses = new Map<Socket, Set<ServerResponse>>();
 
   const start = (): Promise<void> => {
     if (state === "closing" || state === "closed") {
@@ -86,6 +88,57 @@ export function createNodeHost(
           handleListening,
         ) as unknown as HTTPServer;
         server = createdServer;
+        createdServer.prependListener("request", (request, response: ServerResponse) => {
+          const socket = request.socket;
+          let responses = activeResponses.get(socket);
+          if (!responses) {
+            responses = new Set<ServerResponse>();
+            activeResponses.set(socket, responses);
+          }
+          responses.add(response);
+          const releaseResponse = () => {
+            if (!responses.delete(response)) {
+              return;
+            }
+            if (responses.size === 0) {
+              activeResponses.delete(socket);
+              if (state === "closing" && !socket.destroyed) {
+                socket.destroySoon();
+              }
+            }
+          };
+          response.once("close", releaseResponse);
+          response.once("finish", releaseResponse);
+          const writeHead = response.writeHead;
+          response.writeHead = ((...args: unknown[]) => {
+            if (
+              state === "closing" &&
+              !response.headersSent &&
+              [...responses].at(-1) === response
+            ) {
+              response.setHeader("Connection", "close");
+              const headersIndex = args[2] === undefined && typeof args[1] !== "string" ? 1 : 2;
+              const headers = args[headersIndex];
+              if (Array.isArray(headers)) {
+                const remaining: unknown[] = [];
+                for (let index = 0; index < headers.length; index += 2) {
+                  if (String(headers[index]).toLowerCase() !== "connection") {
+                    remaining.push(headers[index], headers[index + 1]);
+                  }
+                }
+                args[headersIndex] = [...remaining, "Connection", "close"];
+              } else if (headers && typeof headers === "object") {
+                args[headersIndex] = {
+                  ...Object.fromEntries(
+                    Object.entries(headers).filter(([name]) => name.toLowerCase() !== "connection"),
+                  ),
+                  Connection: "close",
+                };
+              }
+            }
+            return Reflect.apply(writeHead, response, args) as ServerResponse;
+          }) as ServerResponse["writeHead"];
+        });
         createdServer.once("error", handleStartError);
 
         if (listening) {
@@ -168,7 +221,9 @@ export function createNodeHost(
               }
               resolve();
             });
-            activeServer.closeIdleConnections?.();
+            if (activeResponses.size === 0) {
+              activeServer.closeIdleConnections?.();
+            }
           } catch (error) {
             reject(new NodeEntryLifecycleIoProblem("close", asError(error)));
           }

@@ -205,18 +205,18 @@ const asyncValidationCases = [
   {
     source: "query",
     request: (name: string) => new Request(`http://localhost/async-validation/query?name=${name}`),
-    issuePath: "query.value",
+    issuePath: "query.name",
   },
   {
     source: "param",
     request: (name: string) => new Request(`http://localhost/async-validation/param/${name}`),
-    issuePath: "params.value",
+    issuePath: "params.name",
   },
   {
     source: "header",
     request: (name: string) =>
       new Request("http://localhost/async-validation/header", { headers: { "x-name": name } }),
-    issuePath: "headers.value",
+    issuePath: "headers.x-name",
   },
 ] as const;
 

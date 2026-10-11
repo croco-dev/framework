@@ -90,6 +90,10 @@ export class FileBillableUsageJournal implements BillableUsageJournal {
     now = this.defaultNow,
   ): Promise<BillableUsageJournalEntry> {
     return updateSqliteFixtureState(this.filePath, EMPTY_JOURNAL, (journal) => {
+      const existing = journal.entries[eventId];
+      if (existing?.deliverableAt !== undefined && existing.state !== "terminal-failed") {
+        return toEntry(existing);
+      }
       const entry = requirePending(journal, eventId, "activate-billable-usage");
       entry.failure = undefined;
       entry.deliverableAt = now.toISOString();

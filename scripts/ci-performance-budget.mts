@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 
+import { compareStrings } from "../tooling/compareStrings.mjs";
+
 import { createHash } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
@@ -538,9 +540,9 @@ export function selectPromotionSamples(
     .sort(
       (left, right) =>
         timestampMs(right.timestamp) - timestampMs(left.timestamp) ||
-        right.runId.localeCompare(left.runId) ||
-        right.jobId.localeCompare(left.jobId) ||
-        right.commitSha.localeCompare(left.commitSha),
+        compareStrings(right.runId, left.runId) ||
+        compareStrings(right.jobId, left.jobId) ||
+        compareStrings(right.commitSha, left.commitSha),
     );
   const seenExecutions = new Set<string>();
   return eligible
@@ -776,7 +778,7 @@ export function createCiPerformanceReport(input: {
           (entry): entry is { runId: string; reason: NonNullable<typeof entry.reason> } =>
             entry.reason !== undefined,
         )
-        .sort((left, right) => left.runId.localeCompare(right.runId)),
+        .sort((left, right) => compareStrings(left.runId, right.runId)),
       ...(candidate.statistics ? { statistics: candidate.statistics } : {}),
       ...(baseline ? { baseline } : {}),
       ...(currentSample
@@ -851,7 +853,7 @@ export function promoteCiPerformanceBaselines(input: {
   }
   return {
     schemaVersion: CI_PERFORMANCE_BASELINE_SCHEMA,
-    baselines: [...byKey.values()].sort((left, right) => left.key.localeCompare(right.key)),
+    baselines: [...byKey.values()].sort((left, right) => compareStrings(left.key, right.key)),
   };
 }
 
@@ -1220,8 +1222,8 @@ function main(): void {
           samples: [...byExecution.values()].sort(
             (left, right) =>
               timestampMs(left.timestamp) - timestampMs(right.timestamp) ||
-              left.runId.localeCompare(right.runId) ||
-              left.jobId.localeCompare(right.jobId),
+              compareStrings(left.runId, right.runId) ||
+              compareStrings(left.jobId, right.jobId),
           ),
         },
         null,

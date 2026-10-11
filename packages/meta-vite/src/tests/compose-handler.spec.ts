@@ -125,7 +125,54 @@ describe("createMetaFetchHandler", () => {
 });
 
 describe("createMetaFetchHandler with apiRoutes", () => {
+  it.each(["/webhooks/stripe", "/healthz", "/apix", "/apiary", "/API/foo", "/", ""])(
+    "rejects API route outside the /api namespace: %j",
+    (path) => {
+      const create = () =>
+        createMetaFetchHandler({ apiRoutes: [{ path, method: "POST", handler: vi.fn() }] });
+
+      expect(create).toThrow(
+        expect.objectContaining({
+          code: "CROCO_META_VITE_API_ROUTE_PREFIX_REQUIRED",
+          path,
+          method: "POST",
+        }),
+      );
+      expect(create).toThrow("POST");
+    },
+  );
+
   const createApiRoutes = (routes: ApiRouteIR[]): readonly ApiRouteIR[] => routes;
+
+  it("dispatches /api/foo to a registered /api prefix route", async () => {
+    const apiHandler = vi.fn(async () => new Response("api-prefix"));
+    const pageHandler = vi.fn(async () => new Response("page"));
+    const handler = createMetaFetchHandler({
+      apiRoutes: [{ path: "/api", handler: apiHandler }],
+      pageHandler,
+    });
+
+    const response = await handler(new Request("https://example.com/api/foo"));
+
+    await expect(response.text()).resolves.toBe("api-prefix");
+    expect(apiHandler).toHaveBeenCalledOnce();
+    expect(pageHandler).not.toHaveBeenCalled();
+  });
+
+  it("preserves page fallback for the exact /api request with a registered /api prefix", async () => {
+    const apiHandler = vi.fn(async () => new Response("api-prefix"));
+    const pageHandler = vi.fn(async () => new Response("page"));
+    const handler = createMetaFetchHandler({
+      apiRoutes: [{ path: "/api", handler: apiHandler }],
+      pageHandler,
+    });
+
+    const response = await handler(new Request("https://example.com/api"));
+
+    await expect(response.text()).resolves.toBe("page");
+    expect(pageHandler).toHaveBeenCalledOnce();
+    expect(apiHandler).not.toHaveBeenCalled();
+  });
 
   it("dispatches to matching API route handler", async () => {
     const apiRoutes = createApiRoutes([

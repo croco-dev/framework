@@ -5,4 +5,4 @@ prev: false
 title: "TelemetryLifecycleSkipReason"
 ---
 
-> **TelemetryLifecycleSkipReason** = `"telemetry-disabled"` \| `"tracing-disabled"`
+> **TelemetryLifecycleSkipReason** = `"telemetry-disabled"` \| `"tracing-disabled"` \| `"sdk-disabled"` \| `"external-tracer-provider"`

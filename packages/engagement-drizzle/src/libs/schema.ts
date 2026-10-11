@@ -1,4 +1,10 @@
 import type {
+  Reminder,
+  ReminderOccurrence,
+  ReminderSchedule,
+  ContactPolicyConfig,
+  ContactPolicyReconciliation,
+  ContactPolicyTopic,
   CampaignMemberOutcomeStatus,
   CampaignSnapshotState,
   CampaignSnapshotValue,
@@ -13,6 +19,8 @@ import type {
 import type { MessageChannel } from "@croco/engagement-core";
 import { sql } from "drizzle-orm";
 import {
+  bigint,
+  boolean,
   check,
   foreignKey,
   index,
@@ -388,3 +396,207 @@ export type EngagementCampaignSnapshotMemberRow =
   typeof engagementCampaignSnapshotMembers.$inferSelect;
 export type EngagementCampaignMemberOutcomeRow =
   typeof engagementCampaignMemberOutcomes.$inferSelect;
+
+export const engagementContactPolicyBuckets = pgTable(
+  "engagement_contact_policy_buckets",
+  { scopeKey: text("scope_key").notNull(), subject: text("subject").notNull() },
+  (table) => [
+    primaryKey({
+      name: "engagement_contact_policy_buckets_primary",
+      columns: [table.scopeKey, table.subject],
+    }),
+  ],
+);
+
+export const engagementContactPolicyReservations = pgTable(
+  "engagement_contact_policy_reservations",
+  {
+    scopeKey: text("scope_key").notNull(),
+    subject: text("subject").notNull(),
+    logicalSendId: text("logical_send_id").notNull(),
+    recipient: text("recipient").notNull(),
+    channel: text("channel").notNull().$type<MessageChannel>(),
+    topic: text("topic").notNull(),
+    messageId: text("message_id").notNull(),
+    campaignId: text("campaign_id"),
+    payloadFingerprint: text("payload_fingerprint").notNull(),
+    policyVersion: text("policy_version").notNull(),
+    windowKey: text("window_key").notNull(),
+    state: text("state", { enum: ["reserved", "committed", "released", "unknown"] }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    executionIds: jsonb("execution_ids").$type<string[]>().notNull(),
+    exempt: boolean("exempt").notNull(),
+    reconciliation: jsonb("reconciliation").$type<ContactPolicyReconciliation>(),
+  },
+  (table) => [
+    primaryKey({
+      name: "engagement_contact_policy_reservations_primary",
+      columns: [table.scopeKey, table.subject, table.logicalSendId],
+    }),
+    foreignKey({
+      name: "engagement_contact_policy_reservations_bucket_fk",
+      columns: [table.scopeKey, table.subject],
+      foreignColumns: [
+        engagementContactPolicyBuckets.scopeKey,
+        engagementContactPolicyBuckets.subject,
+      ],
+    }),
+    check(
+      "engagement_contact_policy_reservations_state_valid",
+      sql`${table.state} in ('reserved', 'committed', 'released', 'unknown')`,
+    ),
+    index("engagement_contact_policy_reservations_history_idx").on(
+      table.scopeKey,
+      table.subject,
+      table.createdAt,
+    ),
+  ],
+);
+
+export const engagementContactPolicySettings = pgTable(
+  "engagement_contact_policy_settings",
+  {
+    scopeKey: text("scope_key").notNull(),
+    revision: integer("revision").notNull(),
+    config: jsonb("config").$type<ContactPolicyConfig>().notNull(),
+    topics: jsonb("topics").$type<ContactPolicyTopic[]>().notNull(),
+  },
+  (table) => [
+    primaryKey({
+      name: "engagement_contact_policy_settings_primary",
+      columns: [table.scopeKey],
+    }),
+    check("engagement_contact_policy_settings_revision_positive", sql`${table.revision} > 0`),
+  ],
+);
+
+export const engagementContactPolicyAudit = pgTable(
+  "engagement_contact_policy_audit",
+  {
+    scopeKey: text("scope_key").notNull(),
+    idempotencyKey: text("idempotency_key").notNull(),
+    fingerprint: text("fingerprint").notNull(),
+    actorId: text("actor_id").notNull(),
+    reason: text("reason").notNull(),
+    recordedAt: timestamp("recorded_at", { withTimezone: true }).notNull(),
+    policy: jsonb("policy")
+      .$type<
+        Readonly<{
+          revision: number;
+          config: ContactPolicyConfig;
+          topics: readonly ContactPolicyTopic[];
+        }>
+      >()
+      .notNull(),
+  },
+  (table) => [
+    primaryKey({
+      name: "engagement_contact_policy_audit_primary",
+      columns: [table.scopeKey, table.idempotencyKey],
+    }),
+  ],
+);
+
+export const engagementReminderBuckets = pgTable(
+  "engagement_reminder_buckets",
+  {
+    scopeKey: text("scope_key").notNull(),
+    subject: text("subject").notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.scopeKey, table.subject] })],
+);
+
+export const engagementReminders = pgTable(
+  "engagement_reminders",
+  {
+    scopeKey: text("scope_key").notNull(),
+    subject: text("subject").notNull(),
+    id: text("id").notNull(),
+    topic: text("topic").notNull(),
+    resourceRef: text("resource_ref").notNull(),
+    timezone: text("timezone").notNull(),
+    schedule: jsonb("schedule").$type<ReminderSchedule>().notNull(),
+    channel: text("channel").$type<MessageChannel>().notNull(),
+    lateDeliveryMs: bigint("late_delivery_ms", { mode: "number" }).notNull(),
+    version: integer("version").notNull(),
+    state: text("state").$type<Reminder["state"]>().notNull(),
+    nextScheduledAt: timestamp("next_scheduled_at", { withTimezone: true }),
+  },
+  (table) => [
+    primaryKey({ columns: [table.scopeKey, table.subject, table.id] }),
+    foreignKey({
+      columns: [table.scopeKey, table.subject],
+      foreignColumns: [engagementReminderBuckets.scopeKey, engagementReminderBuckets.subject],
+    }),
+    check("engagement_reminders_version_positive", sql`${table.version} > 0`),
+    check(
+      "engagement_reminders_state_valid",
+      sql`${table.state} in ('active', 'snoozed', 'canceled')`,
+    ),
+    check("engagement_reminders_late_nonnegative", sql`${table.lateDeliveryMs} >= 0`),
+  ],
+);
+
+export const engagementReminderOccurrences = pgTable(
+  "engagement_reminder_occurrences",
+  {
+    scopeKey: text("scope_key").notNull(),
+    subject: text("subject").notNull(),
+    id: text("id").notNull(),
+    reminderId: text("reminder_id").notNull(),
+    reminderVersion: integer("reminder_version").notNull(),
+    scheduledAt: timestamp("scheduled_at", { withTimezone: true }).notNull(),
+    state: text("state").$type<ReminderOccurrence["state"]>().notNull(),
+    reason: text("reason").$type<ReminderOccurrence["reason"]>(),
+    executionIds: jsonb("execution_ids").$type<readonly string[]>().notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.scopeKey, table.subject, table.id] }),
+    foreignKey({
+      columns: [table.scopeKey, table.subject, table.reminderId],
+      foreignColumns: [
+        engagementReminders.scopeKey,
+        engagementReminders.subject,
+        engagementReminders.id,
+      ],
+    }),
+    uniqueIndex("engagement_reminder_occurrence_identity").on(
+      table.scopeKey,
+      table.subject,
+      table.reminderId,
+      table.reminderVersion,
+      table.scheduledAt,
+    ),
+    check(
+      "engagement_reminder_occurrences_state_valid",
+      sql`${table.state} in ('pending', 'claimed', 'queued', 'suppressed', 'expired', 'unknown')`,
+    ),
+  ],
+);
+
+export const engagementReminderMutations = pgTable(
+  "engagement_reminder_mutations",
+  {
+    scopeKey: text("scope_key").notNull(),
+    subject: text("subject").notNull(),
+    idempotencyKey: text("idempotency_key").notNull(),
+    fingerprint: text("fingerprint").notNull(),
+    actor: text("actor").notNull(),
+    reason: text("reason").notNull(),
+    recordedAt: timestamp("recorded_at", { withTimezone: true }).notNull(),
+    result: jsonb("result")
+      .$type<Omit<Reminder, "nextScheduledAt"> & { nextScheduledAt: string | null }>()
+      .notNull(),
+    occurrenceId: text("occurrence_id"),
+    evidence: text("evidence"),
+    outcome: text("outcome").$type<"accepted" | "not-accepted">(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.scopeKey, table.subject, table.idempotencyKey] }),
+    foreignKey({
+      columns: [table.scopeKey, table.subject],
+      foreignColumns: [engagementReminderBuckets.scopeKey, engagementReminderBuckets.subject],
+    }),
+  ],
+);

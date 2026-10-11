@@ -1,4 +1,4 @@
-import { Problem, ProblemCategory } from "@croco/problems-core";
+import { Problem, ProblemCategory, readExplicitRetryability } from "@croco/problems-core";
 import type { MessageChannel } from "./MessageContracts";
 import type { RecipientRef } from "./RecipientContracts";
 
@@ -79,12 +79,14 @@ export type InvalidateContactEndpointInput = Readonly<{
   expectedVersion: number;
   reason: EndpointInvalidationReason;
   invalidatedAt: Date;
+  lastSeenBefore?: Date;
 }>;
 
 export type ContactEndpointInvalidationResult =
   | Readonly<{ status: "invalidated"; endpoint: ContactEndpoint }>
   | Readonly<{ status: "already-invalid"; endpoint: ContactEndpoint }>
   | Readonly<{ status: "version-mismatch"; endpoint: ContactEndpoint }>
+  | Readonly<{ status: "freshness-mismatch"; endpoint: ContactEndpoint }>
   | Readonly<{ status: "not-found" }>;
 
 export interface ContactEndpointStore {
@@ -159,7 +161,19 @@ export type EngagementDispatchOutcome =
       executionIds: readonly string[];
       providerMessageIds?: readonly string[];
     }>
-  | Readonly<{ kind: "suppressed"; reason: "preference" | "suppression" }>
+  | Readonly<{
+      kind: "suppressed";
+      reason: "preference" | "suppression";
+      contactPolicy?: Readonly<{
+        app: string;
+        environment: string;
+        reason: string;
+        blockingRuleId: string | null;
+        campaignId?: string;
+        blockingCampaignIds?: readonly string[];
+        nextEligibleAt?: string;
+      }>;
+    }>
   | Readonly<{ kind: "unavailable"; reason: "no-endpoint" }>
   | Readonly<{ kind: "skipped"; reason: "policy" }>
   | Readonly<{
@@ -168,6 +182,7 @@ export type EngagementDispatchOutcome =
       failureCode: string;
       retryable: boolean;
       executionIds: readonly string[];
+      invalidEndpoint?: Readonly<{ endpointId: string; provider: string; providerCode?: string }>;
     }>;
 
 export type EngagementDispatchIdentity = Readonly<{
@@ -201,6 +216,8 @@ export type RecordEngagementDispatchInput = EngagementDispatchIdentity &
     topic: string;
     targets: readonly EngagementDispatchTarget[];
     outcome: EngagementDispatchOutcome;
+    /** Atomically reject an existing queued or failed outcome before recording eligibility. */
+    expectedState?: "absent-or-eligibility";
     recordedAt: Date;
   }>;
 
@@ -262,6 +279,11 @@ export type RecordEngagementDeliveryEventInput = Omit<
 export type EngagementDeliveryEventRecordResult = Readonly<{
   event: EngagementDeliveryEvent;
   duplicate: boolean;
+}>;
+
+export type EngagementDeliveryEventProcessingResult = Readonly<{
+  event: EngagementDeliveryEventRecordResult;
+  invalidation?: ContactEndpointInvalidationResult;
 }>;
 
 export interface EngagementDeliveryEventStore {
@@ -331,7 +353,7 @@ export class EngagementPersistenceProblem extends Problem {
       `Engagement persistence operation ${operation} failed for tenant ${tenantId}`,
       {
         cause,
-        extensions: { operation, tenantId, retryable: true },
+        extensions: { operation, tenantId, retryable: readExplicitRetryability(cause) ?? true },
       },
     );
   }

@@ -47,6 +47,17 @@ const CLOUDINARY_RETRY_POLICY: RetryPolicy = {
 
 const DEFAULT_CLOUDINARY_API_BASE_URL = "https://api.cloudinary.com";
 
+const CLOUDINARY_FORMAT_CONTENT_TYPES: ReadonlyMap<string, string> = new Map([
+  ["jpg", "image/jpeg"],
+  ["jpeg", "image/jpeg"],
+  ["png", "image/png"],
+  ["webp", "image/webp"],
+  ["avif", "image/avif"],
+  ["gif", "image/gif"],
+  ["pdf", "application/pdf"],
+  ["mp4", "video/mp4"],
+]);
+
 type CloudinaryResourceType = "image" | "video" | "raw";
 
 function resolveResourceType(key: string): CloudinaryResourceType {
@@ -416,7 +427,10 @@ export class CloudinaryProvider extends BaseStorageProvider implements ImageProv
 
       return {
         size: resource.bytes ?? 0,
-        contentType: resource.format,
+        contentType:
+          resource.format === undefined
+            ? undefined
+            : CLOUDINARY_FORMAT_CONTENT_TYPES.get(resource.format),
         lastModified: new Date(resource.created_at),
         etag: resource.etag,
         metadata: resource.context ? this.parseContext(resource.context) : undefined,
@@ -464,7 +478,7 @@ export class CloudinaryProvider extends BaseStorageProvider implements ImageProv
     }
 
     const now = Date.now();
-    const timestamp = Math.floor(now / 1000);
+    const timestamp = Math.floor(now / 1000) + ttl - CLOUDINARY_UPLOAD_SIGNATURE_VALIDITY_SECONDS;
     const signedFields = {
       public_id: resolvePublicId(key),
       timestamp,
@@ -642,9 +656,10 @@ export class CloudinaryProvider extends BaseStorageProvider implements ImageProv
   ): Promise<{ result: string }> {
     const resourceType = resolveResourceType(key);
     const timestamp = Math.floor(Date.now() / 1000);
-    const signedFields = { public_id: resolvePublicId(key), timestamp };
+    const signedFields = { invalidate: true, public_id: resolvePublicId(key), timestamp };
     const body = new URLSearchParams({
       api_key: this.apiKey,
+      invalidate: "true",
       public_id: resolvePublicId(key),
       signature: cloudinary.utils.api_sign_request(signedFields, this.apiSecret),
       timestamp: String(timestamp),

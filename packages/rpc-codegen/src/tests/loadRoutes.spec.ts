@@ -22,6 +22,13 @@ describe("loadRoutes", () => {
     tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "rpc-load-routes-"));
     sourceDir = path.join(tempRoot, "src");
     fs.mkdirSync(sourceDir, { recursive: true });
+    const dependenciesDir = path.join(tempRoot, "node_modules");
+    fs.mkdirSync(dependenciesDir);
+    fs.symlinkSync(
+      path.dirname(createRequire(import.meta.url).resolve("reflect-metadata")),
+      path.join(dependenciesDir, "reflect-metadata"),
+      "dir",
+    );
   });
 
   afterEach(() => {
@@ -46,19 +53,37 @@ describe("loadRoutes", () => {
     LOAD_ROUTES_TIMEOUT_MS,
   );
 
-  it(
-    "evaluates OpenAPI schemas with each application's Zod runtime before extracting routes",
-    async () => {
+  it.each(["CommonJS", "NodeNext"] as const)(
+    "evaluates OpenAPI schemas with each application's Zod runtime before extracting routes (%s)",
+    async (moduleKind) => {
       const workspaceRequire = createRequire(import.meta.url);
       const zodRoot = path.dirname(workspaceRequire.resolve("zod/package.json"));
       const openapiRoot = path.dirname(
         workspaceRequire.resolve("@asteasolutions/zod-to-openapi/package.json"),
+      );
+      const tsconfigPath = path.join(tempRoot, "tsconfig.json");
+      fs.writeFileSync(
+        tsconfigPath,
+        JSON.stringify({
+          compilerOptions: {
+            experimentalDecorators: true,
+            module: moduleKind,
+            moduleResolution: moduleKind === "NodeNext" ? "NodeNext" : "Node",
+            target: "ES2022",
+          },
+        }),
       );
       const esmRuntimes: (typeof Zod)[] = [];
       for (const name of ["first", "second"]) {
         const applicationRoot = path.join(tempRoot, name);
         const controllerPath = path.join(applicationRoot, "src", "UsersController.ts");
         fs.mkdirSync(path.dirname(controllerPath), { recursive: true });
+        fs.writeFileSync(
+          path.join(applicationRoot, "package.json"),
+          JSON.stringify({
+            type: moduleKind === "NodeNext" ? "module" : "commonjs",
+          }),
+        );
         fs.cpSync(zodRoot, path.join(applicationRoot, "node_modules", "zod"), { recursive: true });
         fs.symlinkSync(
           openapiRoot,
@@ -93,7 +118,7 @@ schema.parse({ id: 'user-1' });`,
         esmRuntimes.push(esmZod);
       }
 
-      const routes = await loadRoutes(path.join(tempRoot, "*", "src", "*.ts"));
+      const routes = await loadRoutes(path.join(tempRoot, "*", "src", "*.ts"), { tsconfigPath });
 
       expect(routes.map((route) => route.path).sort()).toEqual(["/first", "/second"]);
       expect(routes.every((route) => route.methodName === "listUsers")).toBe(true);

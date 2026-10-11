@@ -1,3 +1,4 @@
+import { compareStrings } from "../../../../tooling/compareStrings.mjs";
 import type { z } from "zod";
 
 export const CONTRACT_SCHEMA_JSON_UNSAFE_DIAGNOSTIC_CODE = "contract-schema-json-unsafe";
@@ -29,6 +30,8 @@ export type ContractSchemaDescriptor = {
   readonly jsonSafe: boolean;
   readonly unsupportedReason?: string;
   readonly effectType?: string;
+  readonly minLength?: number;
+  readonly maxLength?: number;
   readonly fields?: readonly ContractSchemaFieldDescriptor[];
   readonly element?: ContractSchemaDescriptor | null;
   readonly inner?: ContractSchemaDescriptor | null;
@@ -48,7 +51,7 @@ export const JSON_SAFE_ZOD_SCHEMA_SUPPORT_MATRIX = [
     typeName: "ZodString",
     kind: "string",
     jsonSafe: "supported",
-    note: "Emitted as a JSON string contract.",
+    note: "Emitted as a JSON string contract with min/max/length checks normalized to minLength/maxLength. Length checks combined with trim/case mutations are unsupported. Other string checks are not represented.",
   },
   {
     typeName: "ZodNumber",
@@ -239,6 +242,7 @@ export const JSON_SAFE_ZOD_SCHEMA_SUPPORT_MATRIX = [
 ] as const satisfies readonly ContractSchemaSupportMatrixEntry[];
 
 type ZodDefinition = {
+  readonly checks?: readonly { readonly kind: string; readonly value?: unknown }[];
   readonly shape?: unknown;
   readonly in?: unknown;
   readonly innerType?: unknown;
@@ -655,6 +659,16 @@ export function getZodObjectShape(schema: unknown): Record<string, unknown> {
   return getObjectShape(schema);
 }
 
+export function getContractFieldSchema(
+  contractSchema: z.ZodType | null | undefined,
+  fieldName: string,
+): z.ZodType | null {
+  const shape = contractSchema ? getZodObjectShape(getZodInputObjectSchema(contractSchema)) : {};
+  const field = shape[fieldName];
+
+  return isZodType(field) ? field : null;
+}
+
 export function getZodObjectUnsupportedDynamicKeyMode(
   schema: unknown,
 ): "catchall" | "passthrough" | undefined {
@@ -696,7 +710,52 @@ function describeUnknownSchema(schema: unknown, seen: Set<unknown>): ContractSch
   const definition = getZodDefinition(schema);
 
   if (typeName === "ZodString") {
-    return supportedDescriptor("string", typeName);
+    const checks = definition?.checks ?? [];
+    if (
+      checks.some(
+        (check) => check.kind === "min" || check.kind === "max" || check.kind === "length",
+      ) &&
+      checks.some(
+        (check) =>
+          check.kind === "trim" || check.kind === "toLowerCase" || check.kind === "toUpperCase",
+      )
+    ) {
+      return unsupportedDescriptor(
+        "string",
+        typeName,
+        "String length checks combined with trim/toLowerCase/toUpperCase mutations are not supported by generated JSON contracts.",
+      );
+    }
+    let minLength: number | undefined;
+    let maxLength: number | undefined;
+    for (const check of checks) {
+      if (check.kind !== "min" && check.kind !== "max" && check.kind !== "length") {
+        continue;
+      }
+      if (
+        typeof check.value !== "number" ||
+        !Number.isFinite(check.value) ||
+        !Number.isInteger(check.value) ||
+        check.value < 0
+      ) {
+        return unsupportedDescriptor(
+          "string",
+          typeName,
+          "String length bounds must be finite non-negative integers.",
+        );
+      }
+      if (check.kind === "min" || check.kind === "length") {
+        minLength = Math.max(minLength ?? 0, check.value);
+      }
+      if (check.kind === "max" || check.kind === "length") {
+        maxLength = Math.min(maxLength ?? Number.POSITIVE_INFINITY, check.value);
+      }
+    }
+    return {
+      ...supportedDescriptor("string", typeName),
+      ...(minLength !== undefined ? { minLength } : {}),
+      ...(maxLength !== undefined ? { maxLength } : {}),
+    };
   }
 
   if (typeName === "ZodNumber") {
@@ -1206,14 +1265,14 @@ function compareSchemaFields(
   left: ContractSchemaFieldDescriptor,
   right: ContractSchemaFieldDescriptor,
 ): number {
-  return left.name.localeCompare(right.name);
+  return compareStrings(left.name, right.name);
 }
 
 function compareSchemaDescriptors(
   left: ContractSchemaDescriptor,
   right: ContractSchemaDescriptor,
 ): number {
-  return JSON.stringify(left).localeCompare(JSON.stringify(right));
+  return compareStrings(JSON.stringify(left), JSON.stringify(right));
 }
 
 function comparePrimitiveValues(left: string | number, right: string | number): number {
@@ -1227,4 +1286,26 @@ function compareCodeUnits(left: string, right: string): number {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+export function getUnsupportedZodMajor(
+  schema: unknown,
+): { readonly major: number; readonly kind: string } | undefined {
+  if (typeof schema !== "object" || schema === null || !("_zod" in schema)) return undefined;
+  const internals = schema._zod;
+  if (typeof internals !== "object" || internals === null || !("version" in internals))
+    return undefined;
+  const version = internals.version;
+  if (typeof version !== "object" || version === null || !("major" in version)) return undefined;
+  const major = version.major;
+  if (typeof major !== "number" || major === 3) return undefined;
+  const definition = "def" in internals ? internals.def : undefined;
+  const kind =
+    typeof definition === "object" &&
+    definition !== null &&
+    "type" in definition &&
+    typeof definition.type === "string"
+      ? definition.type
+      : schema.constructor.name;
+  return { major, kind };
 }

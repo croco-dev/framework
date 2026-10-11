@@ -2,6 +2,17 @@ import type { DiagnosticCode } from "@croco/diagnostics-core";
 import type { ProblemOptions } from "@croco/problems-core";
 
 export const CLI_DIAGNOSTIC_CODES = {
+  agentReadUnknownTool: "CROCO_CLI_AGENT_READ_001",
+  agentReadInvalidInput: "CROCO_CLI_AGENT_READ_002",
+  agentReadResponseLimit: "CROCO_CLI_AGENT_READ_003",
+  agentReadInternalError: "CROCO_CLI_AGENT_READ_004",
+  agentReadCancelled: "CROCO_CLI_AGENT_READ_005",
+  agentReadInvalidCommand: "CROCO_CLI_AGENT_READ_006",
+  agentReadInvalidApplication: "CROCO_CLI_AGENT_READ_007",
+  agentReadInvalidJson: "CROCO_CLI_AGENT_READ_008",
+  agentReadTransportFailed: "CROCO_CLI_AGENT_READ_009",
+  agentReadStartupFailed: "CROCO_CLI_AGENT_READ_010",
+
   doctorWorkspaceNotFound: "CROCO_CLI_DOCTOR_001",
   doctorWorkspacePackagesEmpty: "CROCO_CLI_DOCTOR_002",
   doctorWorkspacePackageInvalid: "CROCO_CLI_DOCTOR_003",
@@ -58,6 +69,7 @@ export const CLI_DIAGNOSTIC_CODES = {
   jobsMissingTargetUrl: "CROCO_CLI_JOBS_003",
   jobsHttpError: "CROCO_CLI_JOBS_004",
   jobsEndpointNotFound: "CROCO_CLI_JOBS_005",
+  jobsInvalidId: "CROCO_CLI_JOBS_006",
   diCheckManifestInvalid: "CROCO_CLI_DI_CHECK_001",
   diCheckManifestFailed: "CROCO_CLI_DI_CHECK_002",
   diCheckDiagnosticUnknown: "CROCO_CLI_DI_CHECK_003",
@@ -90,6 +102,7 @@ export const CLI_LEGACY_DIAGNOSTIC_CODES = {
   jobsMissingTargetUrl: "cli/missing-jobs-target-url",
   jobsHttpError: "cli/jobs-http-error",
   jobsEndpointNotFound: "cli/jobs-endpoint-not-found",
+  jobsInvalidId: "cli/invalid-jobs-id",
   diCheckManifestInvalid: "cli/di-manifest-invalid",
   diCheckManifestFailed: "cli/di-manifest-failed",
   diCheckDiagnosticUnknown: "cli/di-diagnostic-unknown",
@@ -105,6 +118,16 @@ export const CLI_LEGACY_DIAGNOSTIC_CODES = {
 export type CliDiagnosticKey = keyof typeof CLI_DIAGNOSTIC_CODES;
 export type CliDiagnosticCode = (typeof CLI_DIAGNOSTIC_CODES)[CliDiagnosticKey];
 type CliNonLegacyDiagnosticKey =
+  | "agentReadUnknownTool"
+  | "agentReadInvalidInput"
+  | "agentReadResponseLimit"
+  | "agentReadInternalError"
+  | "agentReadCancelled"
+  | "agentReadInvalidCommand"
+  | "agentReadInvalidApplication"
+  | "agentReadInvalidJson"
+  | "agentReadTransportFailed"
+  | "agentReadStartupFailed"
   | "doctorWorkspaceVersionConflict"
   | "doctorSpinePackageNotInstalled"
   | "doctorSpinePackageManifestInvalid"

@@ -34,6 +34,7 @@ export function installDocker(targetDir: string, options: DockerInstallerOptions
     apiPort: options.api === "graphql" ? 4000 : 3001,
     apiRuntimePath: `apps/${apiAppName}/dist/index.js`,
     webPackageName: `${options.scope}/web`,
+    webAppName: "web",
   };
 
   copyDockerFile(join(addonDir, ".dockerignore"), join(targetDir, ".dockerignore"));
@@ -63,4 +64,7 @@ export function installDocker(targetDir: string, options: DockerInstallerOptions
     join(targetDir, "web", webDockerfileName),
     context,
   );
+  if (options.frontendDeploy === "vite-spa") {
+    copyDockerFile(join(addonDir, "web", "gateway.mjs"), join(targetDir, "web", "gateway.mjs"));
+  }
 }

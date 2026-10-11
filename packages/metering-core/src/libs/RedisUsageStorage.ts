@@ -461,8 +461,8 @@ return { exceeded and 1 or 0, newUsage }
       const batchMembers = await Promise.all(
         batch.map((key) =>
           withScores === "WITHSCORES"
-            ? this.redis.zrangebyscore(key, min, max, withScores)
-            : this.redis.zrangebyscore(key, min, max),
+            ? this.redis.zrangebyscore(key, min, partitionMax, withScores)
+            : this.redis.zrangebyscore(key, min, partitionMax),
         ),
       );
 

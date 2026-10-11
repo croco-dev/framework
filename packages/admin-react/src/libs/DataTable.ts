@@ -358,7 +358,7 @@ function renderPagination<TData>(
                 createPageChangeEvent(state, {
                   cursor: pagination.prevCursor,
                   direction: "backward",
-                  limit: pagination.limit ?? state.rows.length,
+                  limit: pagination.limit,
                   mode: "cursor",
                 }),
               )
@@ -377,7 +377,7 @@ function renderPagination<TData>(
                 createPageChangeEvent(state, {
                   cursor: pagination.nextCursor,
                   direction: "forward",
-                  limit: pagination.limit ?? state.rows.length,
+                  limit: pagination.limit,
                   mode: "cursor",
                 }),
               )

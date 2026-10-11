@@ -52,6 +52,7 @@ class TelemetryRuntime {
   private ownsTracerProvider = false;
   private ownsMeterProvider = false;
   private ownsLoggerProvider = false;
+  private lifecycleSkipReason: TelemetryLifecycleSkipReason | null = null;
   private readonly fingerprintIdentities = new WeakMap<object, number>();
   private nextFingerprintIdentity = 1;
 
@@ -127,7 +128,13 @@ class TelemetryRuntime {
     this.config = config;
     this.configFingerprint = requestedFingerprint;
 
-    if (config.enabled === false || config.trace?.enabled === false) {
+    if (config.enabled === false || config.trace?.enabled === false || isOtelSdkDisabled()) {
+      this.lifecycleSkipReason =
+        config.enabled === false
+          ? "telemetry-disabled"
+          : config.trace?.enabled === false
+            ? "tracing-disabled"
+            : "sdk-disabled";
       // A disabled runtime still owns this configuration until shutdown clears the contract.
       return;
     }
@@ -201,6 +208,9 @@ class TelemetryRuntime {
 
         this.sdk.start();
         this.ownsTracerProvider = getTracerProviderIdentity() !== tracerProviderBefore;
+        if (!this.ownsTracerProvider) {
+          this.lifecycleSkipReason = "external-tracer-provider";
+        }
         this.ownsMeterProvider = metrics.getMeterProvider() !== meterProviderBefore;
         this.ownsLoggerProvider = logs.getLoggerProvider() !== loggerProviderBefore;
         this.activeInstrumentations = resolvedInstrumentation.instrumentations;
@@ -258,11 +268,13 @@ class TelemetryRuntime {
       }
     }
 
+    const reason = this.getLifecycleSkipReason();
+    if (reason) {
+      return { outcome: "skipped", reason, flushedSpans: 0 };
+    }
+
     if (!this.processor) {
-      const reason = this.getDisabledLifecycleReason();
-      return reason
-        ? { outcome: "skipped", reason, flushedSpans: 0 }
-        : { outcome: "unsupported", reason: "not-initialized", flushedSpans: 0 };
+      return { outcome: "unsupported", reason: "not-initialized", flushedSpans: 0 };
     }
 
     const effectiveTimeout = timeoutMillis ?? 30000;
@@ -346,7 +358,7 @@ class TelemetryRuntime {
     this.initialized = false;
 
     if (!this.sdk) {
-      const reason = this.getDisabledLifecycleReason();
+      const reason = this.getLifecycleSkipReason();
       this.initPromise = null;
       this.shutdownFailure = null;
       this.clearInitializationContract();
@@ -448,14 +460,8 @@ class TelemetryRuntime {
     return [...this.enabledAutoInstrumentationModules];
   }
 
-  private getDisabledLifecycleReason(): TelemetryLifecycleSkipReason | null {
-    if (this.config?.enabled === false) {
-      return "telemetry-disabled";
-    }
-    if (this.config?.trace?.enabled === false) {
-      return "tracing-disabled";
-    }
-    return null;
+  getLifecycleSkipReason(): TelemetryLifecycleSkipReason | null {
+    return this.lifecycleSkipReason;
   }
 
   private getInitializationState():
@@ -483,6 +489,7 @@ class TelemetryRuntime {
     this.config = null;
     this.configFingerprint = null;
     this.initPromise = null;
+    this.lifecycleSkipReason = null;
     clearTelemetryInitializationFailure(this);
   }
 
@@ -559,6 +566,10 @@ class TelemetryRuntime {
 function getTracerProviderIdentity(): TracerProvider {
   const provider = trace.getTracerProvider();
   return provider instanceof ProxyTracerProvider ? provider.getDelegate() : provider;
+}
+
+function isOtelSdkDisabled(): boolean {
+  return process.env["OTEL_SDK_DISABLED"]?.trim().toLowerCase() === "true";
 }
 
 const MAX_BATCH_PROCESSOR_INTEGER = 2_147_483_647;
@@ -735,7 +746,11 @@ function canonicalizeFingerprintValue(
   }
 }
 
-type TelemetryLifecycleSkipReason = "telemetry-disabled" | "tracing-disabled";
+type TelemetryLifecycleSkipReason =
+  | "telemetry-disabled"
+  | "tracing-disabled"
+  | "sdk-disabled"
+  | "external-tracer-provider";
 
 type ForceFlushResult =
   | { outcome: "completed"; flushedSpans: -1 }

@@ -1,6 +1,6 @@
 import { Container, RuntimeContainer } from "@croco/framework-context";
 import { Problem, ProblemCategory } from "@croco/problems-core";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CustomerHealthService } from "../libs/CustomerHealthService";
 import { HealthScoreDroppedEvent, HealthStatusChangedEvent } from "../libs/events";
 import { HealthScoreCalculator } from "../libs/HealthScoreCalculator";
@@ -12,7 +12,12 @@ import {
   HealthSignalRegistry,
 } from "../libs/interfaces";
 import type { HealthTransitionCommitResult } from "../libs/interfaces";
-import type { HealthScoreProfile, HealthSignal, SignalCategory } from "../libs/types";
+import type {
+  HealthScoreProfile,
+  HealthSignal,
+  SignalCategory,
+  TenantHealthScore,
+} from "../libs/types";
 
 class MockSignalProvider implements HealthSignalRegistry {
   private providers: {
@@ -532,6 +537,94 @@ describe("CustomerHealthService", () => {
     expect(await store.listPendingEventIntents("tenant-1")).toHaveLength(0);
   });
 
+  it.each([
+    {
+      name: "does not commit an older calculation over a newer score committed during its CAS retry",
+      freshTime: "2026-03-15T10:06:00Z",
+      expectedStatus: "critical",
+      expectedStatusChanges: [["at_risk", "critical"]],
+      expectedHistoryLength: 2,
+    },
+    {
+      name: "retries when the conflicting score has the same calculation time",
+      freshTime: "2026-03-15T10:05:00Z",
+      expectedStatus: "healthy",
+      expectedStatusChanges: [
+        ["at_risk", "critical"],
+        ["critical", "healthy"],
+      ],
+      expectedHistoryLength: 3,
+    },
+  ])(
+    "$name",
+    async ({ freshTime, expectedStatus, expectedStatusChanges, expectedHistoryLength }) => {
+      vi.useFakeTimers({ toFake: ["Date"] });
+      try {
+        const profile: HealthScoreProfile = {
+          id: "profile-1",
+          name: "Default Profile",
+          weights: { usage: 1, business: 0, engagement: 0 },
+          thresholds: { healthy: 80, atRisk: 60 },
+        };
+        const statusChanges: Array<[string, string]> = [];
+        vi.mocked(mockEventPublisher.publishIdempotently).mockImplementation(async (event) => {
+          if (event instanceof HealthStatusChangedEvent) {
+            statusChanges.push([event.oldStatus, event.newStatus]);
+          }
+        });
+        const serviceReturning = (value: number, collectedAt: string) => {
+          const registry = new MockSignalProvider();
+          registry.addProvider("usage", [healthSignal(value, collectedAt)]);
+          return new CustomerHealthService(registry, store, calculator, mockEventPublisher);
+        };
+
+        vi.setSystemTime(new Date("2026-03-15T10:00:00.000Z"));
+        await serviceReturning(70, "2026-03-15T10:00:00Z").calculateAndStore("tenant-1", profile);
+        const listPendingEventIntents = vi.spyOn(store, "listPendingEventIntents");
+
+        let markStaleReadLatest!: () => void;
+        const staleReadLatest = new Promise<void>((resolve) => {
+          markStaleReadLatest = resolve;
+        });
+        let releaseStale!: () => void;
+        const staleReleased = new Promise<void>((resolve) => {
+          releaseStale = resolve;
+        });
+        const readLatest = store.findLatest.bind(store);
+        vi.spyOn(store, "findLatest").mockImplementationOnce(async (tenantId) => {
+          const latest = await readLatest(tenantId);
+          markStaleReadLatest();
+          await staleReleased;
+          return latest;
+        });
+
+        vi.setSystemTime(new Date("2026-03-15T10:05:00.000Z"));
+        const stale = serviceReturning(90, "2026-03-15T10:05:00Z").calculateAndStore(
+          "tenant-1",
+          profile,
+        );
+        await staleReadLatest;
+
+        vi.setSystemTime(new Date(freshTime));
+        const fresh = await serviceReturning(40, freshTime).calculateAndStore("tenant-1", profile);
+
+        releaseStale();
+        const staleResult = await stale;
+
+        const latest = await store.findLatest("tenant-1");
+        expect(latest?.status).toBe(expectedStatus);
+        expect(latest?.calculatedAt.toISOString()).toBe(fresh.calculatedAt.toISOString());
+        expect(statusChanges).toEqual(expectedStatusChanges);
+        expect(await store.findHistory("tenant-1", 10)).toHaveLength(expectedHistoryLength);
+        expect(staleResult.status).toBe(expectedStatus);
+        expect(staleResult.calculatedAt.toISOString()).toBe(fresh.calculatedAt.toISOString());
+        expect(listPendingEventIntents).toHaveBeenCalledTimes(expectedHistoryLength - 1);
+      } finally {
+        vi.useRealTimers();
+      }
+    },
+  );
+
   it("should not publish score dropped event when score drop is below threshold", async () => {
     const initialSignals: HealthSignal[] = [
       {
@@ -763,3 +856,128 @@ function healthSignal(value: number, collectedAt: string): HealthSignal {
     collectedAt: new Date(collectedAt),
   };
 }
+
+describe("CustomerHealthService.getTrend day window", () => {
+  const NOW = new Date("2026-03-31T00:00:00.000Z");
+  const HOUR = 60 * 60 * 1000;
+  const DAY = 24 * HOUR;
+  let store: InMemoryHealthScoreStore;
+  let service: CustomerHealthService;
+
+  beforeEach(() => {
+    Container.reset();
+    vi.useFakeTimers({ now: NOW, toFake: ["Date"] });
+    store = new InMemoryHealthScoreStore();
+    service = new CustomerHealthService(
+      new MockSignalProvider(),
+      store,
+      new HealthScoreCalculator(),
+    );
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
+  async function commitScores(entries: readonly (readonly [number, number])[]): Promise<void> {
+    let previous: TenantHealthScore | null = null;
+    for (const [overallScore, millisecondsAgo] of entries) {
+      const current: TenantHealthScore = {
+        tenantId: "tenant-1",
+        overallScore,
+        status: overallScore >= 80 ? "healthy" : "critical",
+        categoryScores: { usage: overallScore, business: 0, engagement: 0 },
+        signals: [],
+        trend: "stable",
+        calculatedAt: new Date(NOW.getTime() - millisecondsAgo),
+      };
+      await store.saveTransition(current, previous, []);
+      previous = current;
+    }
+  }
+
+  it("compares scores across the requested days for hourly scoring", async () => {
+    await commitScores([
+      [90, 20 * DAY],
+      ...Array.from({ length: 48 }, (_, index): [number, number] => [45, (47 - index) * HOUR]),
+    ]);
+    expect(await service.getTrend("tenant-1", 30)).toEqual({
+      trend: "declining",
+      changePercentage: -50,
+    });
+  });
+
+  it("ignores older scores for weekly scoring", async () => {
+    await commitScores(
+      Array.from({ length: 40 }, (_, index): [number, number] => {
+        const weeksAgo = 39 - index;
+        return [weeksAgo > 5 ? 20 : 80, weeksAgo * 7 * DAY];
+      }),
+    );
+    expect(await service.getTrend("tenant-1", 30)).toEqual({
+      trend: "stable",
+      changePercentage: 0,
+    });
+  });
+
+  it("includes the exact start and end boundaries for daily scoring", async () => {
+    await commitScores([
+      [10, 30 * DAY + 1],
+      ...Array.from({ length: 31 }, (_, index): [number, number] => [
+        40 + index,
+        (30 - index) * DAY,
+      ]),
+      [100, -1],
+    ]);
+    expect(await service.getTrend("tenant-1", 30)).toEqual({
+      trend: "improving",
+      changePercentage: 75,
+    });
+  });
+
+  it.each([0, 1])("returns null with %i scores inside the window", async (count) => {
+    await commitScores([
+      [90, 31 * DAY],
+      [80, 30 * DAY + 1],
+      ...(count ? [[45, DAY] as const] : []),
+    ]);
+    expect(await service.getTrend("tenant-1", 30)).toBeNull();
+  });
+
+  it("sorts descending period results before comparing endpoints", async () => {
+    await commitScores([
+      [90, 20 * DAY],
+      [70, DAY],
+      [45, 0],
+    ]);
+    const findByPeriod = store.findHistoryByPeriod.bind(store);
+    vi.spyOn(store, "findHistoryByPeriod").mockImplementation(async (...args) =>
+      (await findByPeriod(...args)).reverse(),
+    );
+    expect(await service.getTrend("tenant-1", 30)).toEqual({
+      trend: "declining",
+      changePercentage: -50,
+    });
+    expect(store.findHistoryByPeriod).toHaveBeenCalledWith(
+      "tenant-1",
+      "day",
+      new Date(NOW.getTime() - 30 * DAY),
+      NOW,
+    );
+  });
+
+  it.each([
+    [0, 2, "improving", 200],
+    [100, 105, "improving", 5],
+    [100, 95, "declining", -5],
+    [100, 104, "stable", 4],
+    [100, 96, "stable", -4],
+  ])("preserves the formula for %i to %i", async (oldest, newest, trend, changePercentage) => {
+    await commitScores([
+      [oldest, DAY],
+      [newest, 0],
+    ]);
+    expect(await service.getTrend("tenant-1", 30)).toEqual({ trend, changePercentage });
+  });
+});

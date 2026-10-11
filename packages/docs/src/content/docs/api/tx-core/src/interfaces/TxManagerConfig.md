@@ -19,4 +19,4 @@ title: "TxManagerConfig"
 
 > `optional` **defaultTimeout?**: `number`
 
-Positive integer milliseconds up to 2,147,483,647. Omit for no timeout.
+Positive integer milliseconds up to 2,147,483,647. Omit for no timeout. Nested joins reject this default.

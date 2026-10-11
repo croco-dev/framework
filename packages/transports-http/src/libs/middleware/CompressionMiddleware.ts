@@ -48,7 +48,12 @@ export const compressionMiddleware = (options: CompressionOptions = {}): Middlew
     ctx.res.status = response.status;
     ctx.res.headers["content-encoding"] = encoding;
     ctx.res.headers["vary"] = headers.get("Vary") ?? "Accept-Encoding";
-    delete ctx.res.headers["content-length"];
+    for (const key of Object.keys(ctx.res.headers)) {
+      if (key.toLowerCase() === "content-length") {
+        delete ctx.res.headers[key];
+      }
+    }
+    ctx.raw.header("Content-Length", undefined);
 
     return new Response(toResponseBody(compressed), {
       status: response.status,
@@ -79,21 +84,37 @@ function selectEncoding(
   acceptEncoding: string,
   preferred: CompressionEncoding[],
 ): CompressionEncoding | null {
-  const accepted = acceptEncoding
-    .toLowerCase()
-    .split(",")
-    .map((e) => e.trim().split(";")[0].trim())
-    .filter((e): e is CompressionEncoding =>
-      COMPRESSION_ALGORITHMS.includes(e as CompressionEncoding),
-    );
+  const accepted = new Map<CompressionEncoding | "*", number>();
 
-  for (const encoding of preferred) {
-    if (accepted.includes(encoding)) {
-      return encoding;
+  for (const entry of acceptEncoding.split(",")) {
+    const match = /^(gzip|br|deflate|\*)(?:\s*;\s*q=(0(?:\.\d{0,3})?|1(?:\.0{0,3})?))?$/i.exec(
+      entry.trim(),
+    );
+    if (!match) continue;
+
+    const coding = match[1];
+    if (!coding) continue;
+
+    const encoding = coding.toLowerCase() as CompressionEncoding | "*";
+    const quality = match[2] === undefined ? 1 : Number(match[2]);
+    accepted.set(encoding, Math.min(accepted.get(encoding) ?? 1, quality));
+  }
+
+  let selected: CompressionEncoding | null = null;
+  let highestQuality = 0;
+  const listed = [...accepted.keys()].filter(
+    (encoding): encoding is CompressionEncoding => encoding !== "*",
+  );
+
+  for (const encoding of new Set([...preferred, ...listed, ...COMPRESSION_ALGORITHMS])) {
+    const quality = accepted.get(encoding) ?? accepted.get("*") ?? 0;
+    if (quality > highestQuality) {
+      selected = encoding;
+      highestQuality = quality;
     }
   }
 
-  return accepted[0] ?? null;
+  return selected;
 }
 
 function getResponseBody(ctx: Parameters<MiddlewareFunction>[0]): Buffer | null {

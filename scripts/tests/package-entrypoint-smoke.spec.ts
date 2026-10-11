@@ -1,5 +1,6 @@
 import { spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
@@ -48,6 +49,100 @@ describe("package-entrypoint-smoke.mts", () => {
     expect(result.stdout).toContain("summary checked=1 exempt=0 skippedPrivate=1");
   });
 
+  it.each([
+    ["etl-core", ["@croco/batch-core", "@croco/execution-core", "@croco/warehouse-core"]],
+    [
+      "warehouse-postgres",
+      ["@croco/etl-core", "@croco/execution-core", "@croco/execution-drizzle", "drizzle-orm", "pg"],
+    ],
+  ] as const)("installs selected optional pipeline peers for %s entrypoints", (name, peers) => {
+    const root = createTempRoot();
+    for (const peer of peers.filter((peer) => peer.startsWith("@croco/"))) {
+      writeImportablePackage(root, peer.slice("@croco/".length));
+    }
+    writeImportablePackage(root, name, {
+      peerDependencies: Object.fromEntries(
+        peers.map((peer) => [
+          peer,
+          peer === "drizzle-orm" ? "^0.45.2" : peer === "pg" ? "8.22.0" : "0.0.0",
+        ]),
+      ),
+      peerDependenciesMeta: Object.fromEntries(peers.map((peer) => [peer, { optional: true }])),
+      cjsContent:
+        peers.map((peer) => `require(${JSON.stringify(peer)});`).join("\n") +
+        '\nexports.value = "ok";\n',
+      esmContent:
+        peers.map((peer) => `import ${JSON.stringify(peer)};`).join("\n") +
+        '\nexport const value = "ok";\n',
+      exportsValue: {
+        ...defaultPublishExports(),
+        "./pipeline": {
+          types: "./dist/index.d.ts",
+          import: "./dist/index.mjs",
+          require: "./dist/index.js",
+        },
+      },
+    });
+
+    const result = runScript(root);
+
+    expect(result.status, result.stderr || result.stdout).toBe(0);
+    expect(result.stdout).toContain(`✓ @croco/${name}: esm 2, cjs 2, types 2`);
+  });
+
+  it("preserves packed overrides when pnpm edits the generated consumer workspace", () => {
+    const repositoryRoot = resolve(__dirname, "../..");
+    const { packageManager } = JSON.parse(
+      readFileSync(join(repositoryRoot, "package.json"), "utf8"),
+    );
+    const root = createTempRoot({ packageManager });
+    writeImportablePackage(root, "writer-helper");
+    writeImportablePackage(root, "writer-consumer", {
+      dependencies: { "@croco/writer-helper": "0.0.0" },
+    });
+    const preloadPath = join(root, "workspace-writer.cjs");
+    const evidencePath = join(root, "writer-evidence.txt");
+    const yamlPath = createRequire(import.meta.url).resolve("yaml");
+    writeFileSync(
+      preloadPath,
+      `
+const assert = require("node:assert/strict");
+const childProcess = require("node:child_process");
+const fs = require("node:fs");
+const path = require("node:path");
+const { parse } = require(${JSON.stringify(yamlPath)});
+const originalSpawnSync = childProcess.spawnSync;
+childProcess.spawnSync = (command, args, options) => {
+  if (command === "pnpm" && args[0] === "add") {
+    const manifestPath = path.join(options.cwd, "pnpm-workspace.yaml");
+    const before = parse(fs.readFileSync(manifestPath, "utf8"));
+    assert.ok(Object.keys(before.overrides).length > 0);
+    assert.ok(Object.values(before.overrides).every(value => value.startsWith("file:")));
+    const edit = originalSpawnSync("pnpm", ["config", "--location", "project", "set", "minimumReleaseAgeExclude", '["example@1.0.0"]', "--json"], options);
+    if (edit.error || edit.status !== 0) return edit;
+    const after = parse(fs.readFileSync(manifestPath, "utf8"));
+    assert.deepEqual(after.packages, []);
+    assert.deepEqual(after.overrides, before.overrides);
+    assert.deepEqual(after.minimumReleaseAgeExclude, ["example@1.0.0"]);
+    fs.appendFileSync(${JSON.stringify(evidencePath)}, Object.keys(after.overrides).sort().join(",") + "\\n");
+  }
+  return originalSpawnSync(command, args, options);
+};
+`,
+    );
+
+    const result = runScript(root, {
+      NODE_OPTIONS: `${process.env.NODE_OPTIONS ?? ""} --require=${JSON.stringify(preloadPath)}`,
+    });
+
+    expect(result.status, result.stderr || result.stdout).toBe(0);
+    expect(readFileSync(evidencePath, "utf8").trim().split("\n")).toEqual([
+      "@croco/writer-consumer,@croco/writer-helper",
+      "@croco/writer-helper",
+    ]);
+    expect(result.stdout).toContain("summary checked=2 exempt=0 skippedPrivate=0");
+  });
+
   it("rejects packed exports whose types condition is not first", () => {
     const root = createTempRoot();
     writeImportablePackage(root, "misordered", {
@@ -87,6 +182,112 @@ describe("package-entrypoint-smoke.mts", () => {
 
     expect(result.status, result.stderr || result.stdout).toBe(0);
     expect(result.stdout).toContain("✓ @croco/mode-specific-types: esm 1, cjs 1, types 1");
+  });
+
+  it.each([false, true])(
+    "checks ESM default import fidelity with mode-specific types=%s",
+    (fixed) => {
+      const root = createTempRoot();
+      writeImportablePackage(root, "default-export", {
+        cjsContent: "exports.default = class Reporter {};\n",
+        esmContent: "export default class Reporter {}\n",
+        declarationContent:
+          "declare class Reporter { report(): void; }\nexport { Reporter as default };\n",
+        exportsValue: {
+          ".": {
+            types: fixed
+              ? { import: "./dist/index.d.mts", require: "./dist/index.d.ts" }
+              : "./dist/index.d.ts",
+            import: "./dist/index.mjs",
+            require: "./dist/index.js",
+          },
+        },
+      });
+
+      const result = runScript(root);
+
+      expect(result.status, result.stderr || result.stdout).toBe(fixed ? 0 : 1);
+      if (!fixed) {
+        expect(result.stderr).toContain("esm types entrypoints");
+        expect(result.stderr).toContain("TS2741");
+      }
+    },
+  );
+
+  it.each([
+    "interface Shape { value: string; }\nexport type { Shape as default };\n",
+    "export default interface Shape { value: string; }\n",
+  ])("accepts type-only default exports without a value import: %s", (declarationContent) => {
+    const root = createTempRoot();
+    writeImportablePackage(root, "type-only-default", {
+      declarationContent,
+      exportsValue: {
+        ".": {
+          types: { import: "./dist/index.d.mts", require: "./dist/index.d.ts" },
+          import: "./dist/index.mjs",
+          require: "./dist/index.js",
+        },
+      },
+    });
+
+    const result = runScript(root);
+
+    expect(result.status, result.stderr || result.stdout).toBe(0);
+  });
+
+  it.each(["flat", "wrong-require", "fixed"] as const)(
+    "checks Node16 CJS consumption of module packages: %s",
+    (condition) => {
+      const root = createTempRoot();
+      writeImportablePackage(root, "module-types", {
+        packageType: "module",
+        exportsValue: {
+          ".": {
+            types:
+              condition === "flat"
+                ? "./dist/index.d.ts"
+                : {
+                    import: "./dist/index.d.ts",
+                    require: condition === "fixed" ? "./dist/index.d.cts" : "./dist/index.d.ts",
+                  },
+            import: "./dist/index.mjs",
+            require: "./dist/index.cjs",
+          },
+        },
+      });
+
+      const result = runScript(root);
+
+      expect(result.status, result.stderr || result.stdout).toBe(condition === "fixed" ? 0 : 1);
+      if (condition !== "fixed") {
+        expect(result.stderr).toContain("cjs types entrypoints");
+        expect(result.stderr).toContain("TS1479");
+      }
+    },
+  );
+
+  it("validates dependencies in the require declaration target", () => {
+    const root = createTempRoot();
+    writeImportablePackage(root, "require-dependency", {
+      exportsValue: {
+        ".": {
+          types: { import: "./dist/index.d.mts", require: "./dist/index.d.ts" },
+          import: "./dist/index.mjs",
+          require: "./dist/index.js",
+        },
+      },
+    });
+    writeFileSync(
+      join(root, "packages/require-dependency/dist/index.d.ts"),
+      'export type { Missing } from "@croco-smoke/missing-types";\n',
+    );
+
+    const result = runScript(root);
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain(
+      'exports["."].types.require imports undeclared type dependency @croco-smoke/missing-types',
+    );
   });
 
   it("validates CSS exports as static assets without loading them in Node", () => {
@@ -340,6 +541,28 @@ describe("package-entrypoint-smoke.mts", () => {
       "package-entrypoint-smoke: @croco/uses-runtime-bridge packed tarball installed with node-linker=isolated",
     );
     expect(result.stdout).toContain("summary checked=3 exempt=0 skippedPrivate=0");
+  });
+
+  it("preserves packed mission validation identities across root and subpath", () => {
+    const root = createTempRoot();
+    writeMissionValidationPackage(root);
+
+    const result = runScript(root);
+
+    expect(result.status, result.stderr || result.stdout).toBe(0);
+    expect(result.stdout).toContain("mission validation cjs identity ok");
+    expect(result.stdout).toContain("mission validation esm identity ok");
+  });
+
+  it.each(["cjs", "esm"] as const)("rejects duplicated packed mission %s identities", (mode) => {
+    const root = createTempRoot();
+    writeMissionValidationPackage(root, mode);
+
+    const result = runScript(root);
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain(`${mode} mission validation identity`);
+    expect(result.stderr).toContain("mission Problem identity");
   });
 
   it("constructs the packed framework logger in development and production", () => {
@@ -700,7 +923,9 @@ function writeImportablePackage(
     readonly exportsValue?: unknown;
     readonly importTarget?: string;
     readonly packageName?: string;
+    readonly packageType?: "commonjs" | "module";
     readonly peerDependencies?: Record<string, string>;
+    readonly peerDependenciesMeta?: Record<string, { readonly optional: boolean }>;
     readonly publishConfig?: Record<string, unknown>;
     readonly sideEffects?: boolean | readonly string[];
     readonly sourceExports?: unknown;
@@ -716,7 +941,7 @@ function writeImportablePackage(
   const packageName = options.packageName ?? `@croco/${packageDirName}`;
   writeFileSync(join(packageDir, "src", "index.ts"), 'export const value = "ok";\n');
   writeFileSync(
-    join(packageDir, "dist", "index.js"),
+    join(packageDir, "dist", options.packageType === "module" ? "index.cjs" : "index.js"),
     options.cjsContent ?? 'exports.value = "ok";\n',
   );
   writeFileSync(
@@ -728,7 +953,7 @@ function writeImportablePackage(
     options.declarationContent ?? "export declare const value: string;\n",
   );
   writeFileSync(
-    join(packageDir, "dist", "index.d.mts"),
+    join(packageDir, "dist", options.packageType === "module" ? "index.d.cts" : "index.d.mts"),
     options.declarationContent ?? "export declare const value: string;\n",
   );
   writeFileSync(
@@ -737,19 +962,20 @@ function writeImportablePackage(
       {
         name: packageName,
         peerDependencies: options.peerDependencies,
+        peerDependenciesMeta: options.peerDependenciesMeta,
         sideEffects: options.sideEffects,
         exports: options.sourceExports,
         version: "0.0.0",
         dependencies: options.dependencies,
         files: ["dist"],
-        type: "commonjs",
+        type: options.packageType ?? "commonjs",
         main: options.sourceMain ?? "./src/index.ts",
         types: options.sourceTypes ?? "./src/index.ts",
         publishConfig:
           options.publishConfig ??
           ({
             access: "public",
-            main: "./dist/index.js",
+            main: options.packageType === "module" ? "./dist/index.cjs" : "./dist/index.js",
             types: options.typesTarget ?? "./dist/index.d.ts",
             exports: options.exportsValue ?? {
               ".": {
@@ -764,6 +990,40 @@ function writeImportablePackage(
       2,
     )}\n`,
   );
+}
+
+function writeMissionValidationPackage(root: string, duplicatedMode?: "cjs" | "esm"): void {
+  const declarationContent =
+    "export declare class MissionInvalidProblem extends Error {}\nexport declare function validateMissionDefinition(value: unknown): void;\n";
+  writeImportablePackage(root, "gamification-core", {
+    cjsContent: 'module.exports = require("./shared.js");\n',
+    esmContent: 'export * from "./shared.mjs";\n',
+    declarationContent,
+    exportsValue: {
+      ...defaultPublishExports(),
+      "./mission-validation": {
+        types: "./dist/mission-validation.d.ts",
+        import: "./dist/mission-validation.mjs",
+        require: "./dist/mission-validation.js",
+      },
+    },
+  });
+  const dist = join(root, "packages/gamification-core/dist");
+  const cjs =
+    "class MissionInvalidProblem extends Error {}\nfunction validateMissionDefinition() { throw new MissionInvalidProblem(); }\nexports.MissionInvalidProblem = MissionInvalidProblem;\nexports.validateMissionDefinition = validateMissionDefinition;\n";
+  const esm =
+    "export class MissionInvalidProblem extends Error {}\nexport function validateMissionDefinition() { throw new MissionInvalidProblem(); }\n";
+  writeFileSync(join(dist, "shared.js"), cjs);
+  writeFileSync(join(dist, "shared.mjs"), esm);
+  writeFileSync(
+    join(dist, "mission-validation.js"),
+    duplicatedMode === "cjs" ? cjs : 'module.exports = require("./shared.js");\n',
+  );
+  writeFileSync(
+    join(dist, "mission-validation.mjs"),
+    duplicatedMode === "esm" ? esm : 'export * from "./shared.mjs";\n',
+  );
+  writeFileSync(join(dist, "mission-validation.d.ts"), declarationContent);
 }
 
 function defaultPublishExports(): Record<string, unknown> {
@@ -1027,9 +1287,10 @@ function writePublicDocsPackage(root: string): void {
   );
 }
 
-function runScript(root: string): ScriptResult {
+function runScript(root: string, environment: NodeJS.ProcessEnv = {}): ScriptResult {
   const result = spawnSync("node", ["--experimental-strip-types", scriptPath, "--root", root], {
     encoding: "utf-8",
+    env: { ...process.env, ...environment },
     timeout: spawnTimeoutMs,
   });
 

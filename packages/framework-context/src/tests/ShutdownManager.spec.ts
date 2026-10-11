@@ -13,6 +13,7 @@ import {
 } from "../libs/problems/ShutdownProblems";
 import { ShutdownManager } from "../libs/ShutdownManager";
 import type { Constructor, ShutdownHook } from "../libs/types";
+import { createDeferred } from "./createDeferred";
 
 function createMockLogger(overrides: Partial<ILogger> = {}): ILogger {
   const logger: ILogger = {
@@ -54,28 +55,28 @@ describe("ShutdownManager", () => {
 
       @OnShutdown()
       class FirstService implements ShutdownHook {
-        onShutdown(): void {
+        async onShutdown(): Promise<void> {
           firstCalls();
         }
       }
 
       @OnShutdown()
       class SecondService implements ShutdownHook {
-        onShutdown(): void {
+        async onShutdown(): Promise<void> {
           secondCalls();
         }
       }
 
       @OnShutdown()
       class ExplicitService implements ShutdownHook {
-        onShutdown(): void {
+        async onShutdown(): Promise<void> {
           explicitCalls();
         }
       }
 
       @OnShutdown()
       class RootComponent implements ShutdownHook {
-        onShutdown(): void {
+        async onShutdown(): Promise<void> {
           rootComponentCalls();
         }
       }
@@ -154,14 +155,14 @@ describe("ShutdownManager", () => {
 
       @OnShutdown()
       class FirstService implements ShutdownHook {
-        onShutdown(): void {
+        async onShutdown(): Promise<void> {
           firstCalls();
         }
       }
 
       @OnShutdown()
       class SecondService implements ShutdownHook {
-        onShutdown(): void {
+        async onShutdown(): Promise<void> {
           secondCalls();
         }
       }
@@ -615,9 +616,11 @@ describe("ShutdownManager", () => {
         expect.any(ShutdownTimeoutProblem),
       );
       expect(
-        logger.error.mock.calls.filter(
-          ([message]) => message === "[ShutdownManager] Signal shutdown failed:",
-        ),
+        vi
+          .mocked(logger.error)
+          .mock.calls.filter(
+            ([message]) => message === "[ShutdownManager] Signal shutdown failed:",
+          ),
       ).toHaveLength(1);
       expect(process.exitCode).toBe(1);
     });
@@ -664,9 +667,11 @@ describe("ShutdownManager", () => {
 
       expect(hook.onShutdown).toHaveBeenCalledTimes(1);
       expect(
-        logger.error.mock.calls.filter(
-          ([message]) => message === "[ShutdownManager] Signal shutdown failed:",
-        ),
+        vi
+          .mocked(logger.error)
+          .mock.calls.filter(
+            ([message]) => message === "[ShutdownManager] Signal shutdown failed:",
+          ),
       ).toHaveLength(1);
     });
   });
@@ -746,7 +751,7 @@ describe("ShutdownManager", () => {
 
     it("should keep concurrent callers pending until the active shutdown completes", async () => {
       const manager = ShutdownManager.getInstance();
-      const hookCompletion = Promise.withResolvers<void>();
+      const hookCompletion = createDeferred();
       const hook = {
         onShutdown: vi.fn(() => hookCompletion.promise),
       };
@@ -835,7 +840,7 @@ describe("ShutdownManager", () => {
 
     it("should keep an active shutdown joinable through reset", async () => {
       const manager = ShutdownManager.getInstance();
-      const hookCompletion = Promise.withResolvers<void>();
+      const hookCompletion = createDeferred();
       const hook = {
         onShutdown: vi.fn(() => hookCompletion.promise),
       };

@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { afterEach, describe, expect, expectTypeOf, it, vi } from "vitest";
 
-import type { RuntimeEnvPreset } from "../core";
+import type { DefineRuntimeEnvOptions, RuntimeEnvPreset } from "../core";
 
 import { InvalidBooleanEnvProblem } from "../libs/problems/ConfigProblems";
 
@@ -64,7 +64,9 @@ describe("framework-config core skipValidation parser", () => {
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
 
     try {
-      expect(() => core.fullEnv.NODE_ENV).toThrow("Invalid environment variables");
+      expect(() => core.fullEnv.NODE_ENV).toThrow(
+        expect.objectContaining({ code: "framework-config/config-validation-failed" }),
+      );
     } finally {
       consoleError.mockRestore();
     }
@@ -81,7 +83,9 @@ describe("framework-config core skipValidation parser", () => {
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
 
     try {
-      expect(() => core.fullEnv.NODE_ENV).toThrow("Invalid environment variables");
+      expect(() => core.fullEnv.NODE_ENV).toThrow(
+        expect.objectContaining({ code: "framework-config/config-validation-failed" }),
+      );
     } finally {
       consoleError.mockRestore();
     }
@@ -121,13 +125,14 @@ describe("framework-config core skipValidation parser", () => {
     const core = await importCoreWithEnv("true", { preserveProcessEnvIdentity: true });
 
     expect(Reflect.set(core.env, "PORT", 4000)).toBe(true);
-    expect(core.env.PORT).toBe("4000");
+    expect(core.env.PORT).toBe(4000);
     expect(Object.getOwnPropertyDescriptor(core.env, "PORT")?.value).toBe(core.env.PORT);
 
     process.env.PORT = "5000";
 
-    expect(core.env.PORT).toBe("5000");
+    expect(core.env.PORT).toBe(4000);
     expect(Object.getOwnPropertyDescriptor(core.env, "PORT")?.value).toBe(core.env.PORT);
+    expect(process.env.PORT).toBe("5000");
   });
 
   it("rejects invalid SKIP_ENV_VALIDATION values on first env access", async () => {
@@ -171,14 +176,93 @@ describe("framework-config runtime env preset composition", () => {
     try {
       expect(() =>
         core.defineRuntimeEnv({ presets: [core.appConfig, core.databaseConfig] }),
-      ).toThrow("Invalid environment variables");
-      expect(consoleError).toHaveBeenCalledWith(
-        "❌ Invalid environment variables:",
-        expect.arrayContaining([expect.objectContaining({ path: ["DATABASE_URL"] })]),
-      );
+      ).toThrow(expect.objectContaining({ code: "framework-config/config-validation-failed" }));
+      expect(consoleError).not.toHaveBeenCalled();
     } finally {
       consoleError.mockRestore();
     }
+  });
+
+  it.each([undefined, ""])(
+    "reports a missing preset value %s without console output",
+    async (value) => {
+      const core = await importCoreWithEnv(undefined, { omitRequiredServices: true });
+      if (value !== undefined) process.env.DATABASE_URL = value;
+      const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+      try {
+        expect(() => core.defineRuntimeEnv({ presets: [core.databaseConfig] })).toThrow(
+          expect.objectContaining({
+            code: "framework-config/config-validation-failed",
+            detail: "Config validation failed: DATABASE_URL: Missing required",
+          }),
+        );
+        expect(consoleError).not.toHaveBeenCalled();
+      } finally {
+        consoleError.mockRestore();
+      }
+    },
+  );
+
+  it.each(["PORT", "NODE_ENV"])(
+    "reports invalid %s safely through direct and lazy paths",
+    async (key) => {
+      const core = await importCoreWithEnv(undefined);
+      process.env[key] = "not-a-port";
+      const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+      try {
+        for (const run of [
+          () => core.defineRuntimeEnv({ presets: [core.appConfig] }),
+          () => core.env.NODE_ENV,
+          () => core.fullEnv.NODE_ENV,
+        ]) {
+          let failure: unknown;
+          try {
+            run();
+          } catch (error) {
+            failure = error;
+          }
+          expect(failure).toBeInstanceOf(core.ConfigValidationProblem);
+          expect(failure).toMatchObject({
+            code: "framework-config/config-validation-failed",
+            detail: expect.stringContaining(`${key}: invalid_`),
+          });
+          expect((failure as { detail: string }).detail).not.toMatch(/Missing required|not-a-port/);
+        }
+        expect(consoleError).not.toHaveBeenCalled();
+      } finally {
+        consoleError.mockRestore();
+      }
+    },
+  );
+
+  it("redacts code-less Standard Schema messages and nested paths", async () => {
+    const core = await importCoreWithEnv(undefined);
+    process.env.SECRET = "sensitive-value";
+    expect(() =>
+      core.defineRuntimeEnv({
+        presets: [
+          {
+            server: {
+              SECRET: {
+                "~standard": {
+                  version: 1,
+                  vendor: "test",
+                  validate: () => ({
+                    issues: [{ message: "sensitive-value", path: [{ key: "sensitive-value" }] }],
+                  }),
+                },
+              },
+            },
+            client: {},
+            shared: {},
+          },
+        ],
+      }),
+    ).toThrow(
+      expect.objectContaining({
+        detail: "Config validation failed: SECRET: invalid_value: Invalid value",
+      }),
+    );
   });
 
   it("narrows the result type to the selected presets", async () => {
@@ -294,6 +378,149 @@ describe("framework-config runtime env preset composition", () => {
     expectTypeOf(assertInvalidBoundaryTypes).toBeFunction();
   });
 
+  it("uses the configured client prefix for validation and client exposure", async () => {
+    const core = await importCoreWithEnv(undefined);
+    process.env.VITE_API_URL = "https://api.example.com";
+    process.env.SERVER_SECRET = "secret";
+    Reflect.set(globalThis, "window", {});
+
+    const runtimeEnv = core.defineRuntimeEnv({
+      clientPrefix: "VITE_",
+      presets: [
+        { server: { SERVER_SECRET: z.string() }, client: { VITE_API_URL: z.url() }, shared: {} },
+      ],
+    });
+
+    expectTypeOf(runtimeEnv).toEqualTypeOf<
+      Readonly<{ SERVER_SECRET: string; VITE_API_URL: string }>
+    >();
+    expect(runtimeEnv.VITE_API_URL).toBe("https://api.example.com");
+    expect(() => runtimeEnv.SERVER_SECRET).toThrow(
+      "Attempted to access a server-side environment variable on the client",
+    );
+  });
+
+  it("accepts a widened client prefix while preserving inferred schema output", async () => {
+    const core = await importCoreWithEnv(undefined);
+    const config = { envPrefix: "VITE_" };
+    process.env.SERVER_PORT = "3000";
+    process.env.VITE_API_URL = "https://api.example.com";
+
+    expectTypeOf(config.envPrefix).toEqualTypeOf<string>();
+    const runtimeEnv = core.defineRuntimeEnv({
+      clientPrefix: config.envPrefix,
+      presets: [
+        {
+          server: { SERVER_PORT: z.coerce.number() },
+          client: { VITE_API_URL: z.url() },
+          shared: {},
+        },
+      ],
+    });
+
+    expectTypeOf(runtimeEnv).toEqualTypeOf<
+      Readonly<{ SERVER_PORT: number; VITE_API_URL: string }>
+    >();
+    expect(runtimeEnv.SERVER_PORT).toBe(3000);
+    expect(runtimeEnv.VITE_API_URL).toBe("https://api.example.com");
+  });
+
+  it.each([undefined, "true"])(
+    "checks widened prefix boundaries with skipValidation=%s",
+    async (skip) => {
+      const core = await importCoreWithEnv(skip);
+      const config = { envPrefix: "VITE_" };
+
+      expect(() =>
+        core.defineRuntimeEnv({
+          clientPrefix: config.envPrefix,
+          presets: [{ server: { VITE_SECRET: z.string() }, client: {}, shared: {} }],
+        }),
+      ).toThrow("server variables cannot use the 'VITE_' prefix");
+      expect(() =>
+        core.defineRuntimeEnv({
+          clientPrefix: config.envPrefix,
+          presets: [{ server: {}, client: { NEXT_PUBLIC_LABEL: z.string() }, shared: {} }],
+        }),
+      ).toThrow("client variables must use the 'VITE_' prefix");
+    },
+  );
+
+  it.each([undefined, "true"])(
+    "checks configured prefix boundaries with skipValidation=%s",
+    async (skip) => {
+      const core = await importCoreWithEnv(skip);
+      const serverPreset: RuntimeEnvPreset = {
+        server: { VITE_SECRET: z.string() },
+        client: {},
+        shared: {},
+      };
+      const clientPreset: RuntimeEnvPreset = {
+        server: {},
+        client: { NEXT_PUBLIC_LABEL: z.string() },
+        shared: {},
+      };
+
+      expect(() =>
+        core.defineRuntimeEnv({ clientPrefix: "VITE_", presets: [serverPreset] }),
+      ).toThrow("server variables cannot use the 'VITE_' prefix");
+      expect(() =>
+        core.defineRuntimeEnv({ clientPrefix: "VITE_", presets: [clientPreset] }),
+      ).toThrow("client variables must use the 'VITE_' prefix");
+
+      const assertInvalidPrefixTypes = (): void => {
+        core.defineRuntimeEnv({
+          clientPrefix: "VITE_",
+          // @ts-expect-error the configured public prefix cannot appear in the server section
+          presets: [{ server: { VITE_SECRET: z.string() }, client: {}, shared: {} }],
+        });
+        core.defineRuntimeEnv({
+          clientPrefix: "VITE_",
+          // @ts-expect-error client keys must use the configured prefix, even if they use the default prefix
+          presets: [{ server: {}, client: { NEXT_PUBLIC_LABEL: z.string() }, shared: {} }],
+        });
+        core.defineRuntimeEnv({
+          // @ts-expect-error without an option, Vite keys do not match the default prefix
+          presets: [{ server: {}, client: { VITE_LABEL: z.string() }, shared: {} }],
+        });
+      };
+      expectTypeOf<{ presets: readonly [RuntimeEnvPreset] }>().not.toExtend<
+        DefineRuntimeEnvOptions<readonly [RuntimeEnvPreset], "VITE_">
+      >();
+      expectTypeOf(assertInvalidPrefixTypes).toBeFunction();
+    },
+  );
+
+  it("rejects an empty client prefix even when schema validation is skipped", async () => {
+    const core = await importCoreWithEnv("true");
+    const clientPrefix: string = "";
+    expect(() =>
+      core.defineRuntimeEnv({ clientPrefix, presets: [{ server: {}, client: {}, shared: {} }] }),
+    ).toThrow("clientPrefix must not be empty");
+    const assertEmptyPrefixType = (): void => {
+      core.defineRuntimeEnv({
+        // @ts-expect-error an empty literal cannot provide a client exposure prefix
+        clientPrefix: "",
+        presets: [{ server: {}, client: {}, shared: {} }],
+      });
+    };
+    expectTypeOf(assertEmptyPrefixType).toBeFunction();
+  });
+
+  it("supports custom bundler prefixes and last-wins client schema inference", async () => {
+    const core = await importCoreWithEnv(undefined);
+    process.env.PUBLIC_PORT = "8080";
+    const runtimeEnv = core.defineRuntimeEnv({
+      clientPrefix: "PUBLIC_",
+      presets: [
+        { server: {}, client: { PUBLIC_PORT: z.string() }, shared: {} },
+        { server: {}, client: { PUBLIC_PORT: z.coerce.number() }, shared: {} },
+      ],
+    });
+    expectTypeOf(runtimeEnv).toEqualTypeOf<Readonly<{ PUBLIC_PORT: number }>>();
+    expect(runtimeEnv.PUBLIC_PORT).toBe(8080);
+  });
+
   it("keeps the previous all-presets behavior behind explicit exports", async () => {
     const core = await importCoreWithEnv(undefined);
 
@@ -305,5 +532,33 @@ describe("framework-config runtime env preset composition", () => {
     ]);
     expect(core.fullEnv.DATABASE_URL).toBe("postgresql://localhost:5432/test");
     expect("DATABASE_URL" in core.fullEnv).toBe(true);
+  });
+
+  it("does not delete empty-string entries from process.env during validation", async () => {
+    const core = await importCoreWithEnv(undefined, { omitRequiredServices: true });
+    process.env.EMPTY_FLAG = "";
+
+    const composedEnv = core.defineRuntimeEnv({
+      presets: [
+        {
+          server: { EMPTY_FLAG: z.string().optional() },
+          client: {},
+          shared: {},
+        },
+      ],
+    });
+
+    expect(composedEnv.EMPTY_FLAG).toBeUndefined();
+    expect(process.env.EMPTY_FLAG).toBe("");
+    expect("EMPTY_FLAG" in process.env).toBe(true);
+  });
+
+  it("preserves process.env empty-string entries on lazy first access", async () => {
+    const core = await importCoreWithEnv(undefined, { omitRequiredServices: true });
+    process.env.EMPTY_FLAG = "";
+
+    expect(core.env.NODE_ENV).toBe("test");
+    expect(process.env.EMPTY_FLAG).toBe("");
+    expect("EMPTY_FLAG" in process.env).toBe(true);
   });
 });

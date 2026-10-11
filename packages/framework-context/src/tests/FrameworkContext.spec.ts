@@ -1,6 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import "reflect-metadata";
-import { Container, Context, Inject, InjectOptional, MetadataStorage, Token } from "../index";
+import {
+  Container,
+  Context,
+  Inject,
+  InjectOptional,
+  MetadataStorage,
+  Token,
+  GENERATED_DI_GRAPH_VERSION,
+  defineGeneratedDiGraph,
+} from "../index";
 import type { RuntimeContext } from "../index";
 import { registerInjectionMetadata } from "../libs/InjectionMetadata";
 import {
@@ -142,6 +151,24 @@ describe("Container", () => {
       expect(beforeReset).not.toBe(afterReset);
     });
 
+    it("should preserve metadata owned by other packages across repeated resets", () => {
+      @Component()
+      class RegisteredService {}
+
+      const key = Symbol("external-decorator");
+      const metadata = { registered: true };
+      MetadataStorage.define(key, RegisteredService, metadata);
+      MetadataStorage.define(key, RegisteredService, "member metadata", "handle");
+
+      Container.reset();
+      Container.reset();
+
+      expect(Container.getComponentMetadata(RegisteredService)).toBeUndefined();
+      expect(MetadataStorage.get(key, RegisteredService)).toBe(metadata);
+      expect(MetadataStorage.get(key, RegisteredService, "handle")).toBe("member metadata");
+      expect(MetadataStorage.getAll(key)).toHaveLength(2);
+    });
+
     it("should clear component metadata on reset", () => {
       @Component()
       class ResettableService {}
@@ -220,6 +247,127 @@ describe("Container", () => {
       const token = new Token<SimpleService>("optional.missing");
 
       expect(Container.getOptional(token)).toBeUndefined();
+    });
+
+    it("should propagate a missing dependency from a registered optional provider", () => {
+      const missing = new Token<SimpleService>("optional.required");
+      const provider = new Token<SimpleService>("optional.broken");
+      Container.installGeneratedGraph(
+        defineGeneratedDiGraph({
+          version: GENERATED_DI_GRAPH_VERSION,
+          graphId: "optional-broken-provider",
+          compilerVersion: "test",
+          inputHash: "optional-broken-provider",
+          providers: [
+            {
+              token: provider,
+              tokenId: "test:optional-broken-provider",
+              debugName: "BrokenOptionalProvider",
+              scope: "singleton",
+              sourceLocation: { file: "FrameworkContext.spec.ts", line: 1, column: 1 },
+              dependencies: [{ token: missing, tokenId: "test:optional-required" }],
+              factory: (resolver) => resolver.get(missing),
+            },
+          ],
+          roots: [provider],
+        }),
+      );
+
+      expect(() => Container.getOptional(provider)).toThrow(
+        expect.objectContaining({
+          code: "framework-context/di-resolution-failed",
+          reason: "missing-provider",
+          detail: expect.stringContaining("optional.required"),
+        }),
+      );
+    });
+
+    it("should resolve an optional component registered without an instance", () => {
+      class OptionalComponent {}
+      Component({ scope: "singleton" })(OptionalComponent);
+
+      expect(Container.has(OptionalComponent)).toBe(false);
+      expect(Container.getOptional(OptionalComponent)).toBeInstanceOf(OptionalComponent);
+    });
+
+    it("should keep a Component-only class optional until it is registered", () => {
+      @RuntimeComponent()
+      class UnregisteredComponent {}
+
+      expect(Container.getOptional(UnregisteredComponent)).toBeUndefined();
+    });
+
+    it("should propagate a missing dependency from an InjectOptional provider", () => {
+      const missing = new Token<SimpleService>("optional.required");
+      const provider = new Token<SimpleService>("optional.broken");
+      class OptionalConsumer {
+        constructor(@InjectOptional(provider) readonly dependency?: SimpleService) {}
+      }
+      Component()(OptionalConsumer);
+      Container.registerLazy(provider, () => Container.get(missing));
+
+      expect(() => Container.get(OptionalConsumer)).toThrow(
+        expect.objectContaining({
+          code: "framework-context/di-resolution-failed",
+          reason: "missing-provider",
+          detail: expect.stringContaining("optional.required"),
+        }),
+      );
+    });
+
+    it("should distinguish absent and broken providers in generated optional resolution", () => {
+      const missing = new Token<SimpleService>("optional.required");
+      const provider = new Token<SimpleService>("optional.generated-dependency");
+      const consumer = new Token<{ dependency?: SimpleService }>("optional.generated-consumer");
+      Container.installGeneratedGraph(
+        defineGeneratedDiGraph({
+          version: GENERATED_DI_GRAPH_VERSION,
+          graphId: "optional-resolution",
+          compilerVersion: "test",
+          inputHash: "optional-resolution",
+          providers: [
+            {
+              token: consumer,
+              tokenId: "test:optional-consumer",
+              debugName: "OptionalConsumer",
+              sourceLocation: { file: "FrameworkContext.spec.ts", line: 1, column: 1 },
+              scope: "transient",
+              dependencies: [],
+              factory: (resolver) => ({ dependency: resolver.getOptional(provider) }),
+            },
+          ],
+          roots: [consumer],
+        }),
+      );
+
+      expect(Container.get(consumer).dependency).toBeUndefined();
+      Container.installGeneratedGraph(
+        defineGeneratedDiGraph({
+          version: GENERATED_DI_GRAPH_VERSION,
+          graphId: "optional-broken-provider",
+          compilerVersion: "test",
+          inputHash: "optional-broken-provider",
+          providers: [
+            {
+              token: provider,
+              tokenId: "test:optional-broken-provider",
+              debugName: "BrokenOptionalProvider",
+              scope: "singleton",
+              sourceLocation: { file: "FrameworkContext.spec.ts", line: 1, column: 1 },
+              dependencies: [{ token: missing, tokenId: "test:optional-required" }],
+              factory: (resolver) => resolver.get(missing),
+            },
+          ],
+          roots: [provider],
+        }),
+      );
+      expect(() => Container.get(consumer)).toThrow(
+        expect.objectContaining({
+          code: "framework-context/di-resolution-failed",
+          reason: "missing-provider",
+          detail: expect.stringContaining("optional.required"),
+        }),
+      );
     });
 
     it("should register async provider and resolve the created instance", async () => {

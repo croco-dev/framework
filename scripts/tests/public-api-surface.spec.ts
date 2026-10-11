@@ -227,6 +227,200 @@ describe("public-api-surface.mts", () => {
     );
   });
 
+  it.each(["export type *", "export *"])(
+    "%s preserves star symbols without forwarding default exports",
+    (exportStatement) => {
+      const repo = createTempRepo();
+      writePackage(repo, "alpha", "@croco/alpha", `${exportStatement} from "./symbols.js";\n`);
+      writeFile(
+        repo,
+        "packages/alpha/src/symbols.ts",
+        [
+          'export class Widget { label = "example"; }',
+          "export enum State { Ready }",
+          "export const enum Mode { Active }",
+          "export function createWidget(): Widget { return new Widget(); }",
+          "export const value = 1;",
+          "export namespace Options { export type Label = string; }",
+          "export interface Shape { label: string; }",
+          "export default class DefaultWidget {}",
+        ].join("\n"),
+      );
+
+      const root = getCodeEntrypoint(createPublicApiSnapshot(repo).packages[0]);
+      const symbols = exportStatement === "export type *" ? root.typeExports : root.runtimeExports;
+      expect(symbols.map((entry) => entry.name).sort()).toEqual(
+        [
+          "Widget",
+          "State",
+          "Mode",
+          "createWidget",
+          "value",
+          "Options",
+          ...(exportStatement === "export type *" ? ["Shape"] : []),
+        ].sort(),
+      );
+      expect(root.typeExports).toContainEqual(expect.objectContaining({ name: "Shape" }));
+      expect(
+        [...root.runtimeExports, ...root.typeExports].map((entry) => entry.name),
+      ).not.toContain("default");
+      if (exportStatement === "export type *") {
+        expect(root.runtimeExports).toEqual([]);
+      }
+    },
+  );
+
+  it("keeps nested type-star and named type re-exports on the type surface", () => {
+    const repo = createTempRepo();
+    writePackage(repo, "alpha", "@croco/alpha", 'export * from "./barrel.js";\n');
+    writeFile(repo, "packages/alpha/src/barrel.ts", 'export type * from "./nested.js";\n');
+    writeFile(
+      repo,
+      "packages/alpha/src/nested.ts",
+      'export * from "./symbols.js";\nexport type { Widget as NamedWidget, State as NamedState, default as NamedDefault } from "./symbols.js";\n',
+    );
+    writeFile(
+      repo,
+      "packages/alpha/src/symbols.ts",
+      "export class Widget {}\nexport enum State { Ready }\nexport default class DefaultWidget {}\n",
+    );
+
+    const root = getCodeEntrypoint(createPublicApiSnapshot(repo).packages[0]);
+    expect(root.runtimeExports).toEqual([]);
+    expect(root.typeExports.map((entry) => entry.name).sort()).toEqual(
+      ["Widget", "State", "NamedWidget", "NamedState", "NamedDefault"].sort(),
+    );
+    expect(root.typeExports).toContainEqual(
+      expect.objectContaining({ name: "Widget", declarationKind: "class" }),
+    );
+    expect(root.typeExports).toContainEqual(
+      expect.objectContaining({ name: "State", declarationKind: "enum" }),
+    );
+    expect(root.typeExports).toContainEqual(
+      expect.objectContaining({ name: "NamedDefault", localName: "default", exportKind: "named" }),
+    );
+  });
+
+  it("detects removal of a type-star class used by a packed consumer", () => {
+    const repo = createTempRepo();
+    writePackage(repo, "alpha", "@croco/alpha", 'export type * from "./types.js";\n');
+    writeFile(repo, "packages/alpha/src/types.ts", 'export class Widget { label = "example"; }\n');
+    const packagePath = join(repo, "packages/alpha");
+    const manifestPath = join(packagePath, "package.json");
+    const manifest = JSON.parse(readFileSync(manifestPath, "utf-8"));
+    writeFileSync(manifestPath, JSON.stringify({ ...manifest, type: "module", files: ["dist"] }));
+    writeFile(
+      repo,
+      "packages/alpha/tsconfig.json",
+      JSON.stringify({
+        compilerOptions: {
+          target: "ES2022",
+          module: "NodeNext",
+          moduleResolution: "NodeNext",
+          strict: true,
+          declaration: true,
+          rootDir: "src",
+          outDir: "dist",
+          types: [],
+        },
+        include: ["src"],
+      }),
+    );
+    writeFile(repo, "consumer/package.json", JSON.stringify({ private: true, type: "module" }));
+    writeFile(
+      repo,
+      "consumer/consumer.ts",
+      'import type { Widget } from "@croco/alpha";\nexport type WidgetLabel = Widget["label"];\n',
+    );
+    writeFile(
+      repo,
+      "consumer/tsconfig.json",
+      JSON.stringify({
+        compilerOptions: {
+          target: "ES2022",
+          module: "NodeNext",
+          moduleResolution: "NodeNext",
+          strict: true,
+          noEmit: true,
+          types: [],
+        },
+        files: ["consumer.ts"],
+      }),
+    );
+    const tscPath = resolve(__dirname, "../../node_modules/typescript/bin/tsc");
+    const packedPath = join(repo, "packed");
+    const installedPath = join(repo, "consumer/node_modules/@croco/alpha");
+    mkdirSync(packedPath, { recursive: true });
+    mkdirSync(installedPath, { recursive: true });
+    const buildAndPack = () => {
+      expect(
+        spawnSync(process.execPath, [tscPath, "-p", join(packagePath, "tsconfig.json")], {
+          encoding: "utf-8",
+        }).status,
+      ).toBe(0);
+      expect(
+        spawnSync("pnpm", ["pack", "--pack-destination", packedPath], {
+          cwd: packagePath,
+          encoding: "utf-8",
+        }).status,
+      ).toBe(0);
+      expect(
+        spawnSync(
+          "tar",
+          [
+            "-xzf",
+            join(packedPath, "croco-alpha-0.0.0.tgz"),
+            "--strip-components=1",
+            "-C",
+            installedPath,
+          ],
+          { encoding: "utf-8" },
+        ).status,
+      ).toBe(0);
+    };
+    const checkConsumer = () =>
+      spawnSync(process.execPath, [tscPath, "-p", join(repo, "consumer/tsconfig.json")], {
+        encoding: "utf-8",
+      });
+
+    buildAndPack();
+    expect(checkConsumer().status).toBe(0);
+    const before = createPublicApiSnapshot(repo);
+    const root = getCodeEntrypoint(before.packages[0]);
+    expect(root.runtimeExports).toEqual([]);
+    expect(root.typeExports).toEqual([
+      expect.objectContaining({ name: "Widget", declarationKind: "class" }),
+    ]);
+    expect(runScript(repo, "--write").status).toBe(0);
+    writeFile(repo, "packages/alpha/src/types.ts", "export {};\n");
+    buildAndPack();
+    const consumerResult = checkConsumer();
+    expect(consumerResult.status).toBe(2);
+    expect(consumerResult.stdout).toMatch(/TS2305.*has no exported member 'Widget'/);
+    const diff = diffPublicApiSnapshots(before, createPublicApiSnapshot(repo));
+    const summary = summarizePublicApiDiff(
+      before,
+      diff,
+      "public-api-surface.snapshot.json",
+      "public-api-diff.md",
+    );
+    expect(summary).toEqual(
+      expect.objectContaining({ changedPackages: 1, typeRemoved: 1, runtimeRemoved: 0 }),
+    );
+    expect(runScript(repo, "--check").status).toBe(1);
+    const cliSummary = JSON.parse(
+      readFileSync(join(repo, "ci-reports/package-quality/public-api-summary.json"), "utf-8"),
+    );
+    expect(cliSummary).toEqual(
+      expect.objectContaining({
+        changedPackages: 1,
+        typeRemoved: 1,
+        runtimeRemoved: 0,
+        status: "fail",
+      }),
+    );
+  }, 20000);
+
   it("renders package-level public API diffs for reviewers", () => {
     const repo = createTempRepo();
     writePackage(

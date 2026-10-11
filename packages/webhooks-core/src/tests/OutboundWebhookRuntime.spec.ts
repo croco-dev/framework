@@ -164,6 +164,131 @@ describe("OutboundWebhookRuntime", () => {
     expect(await store.listUnpublishedIntents(EVENT.tenantId)).toHaveLength(1);
   });
 
+  describe("delivery intent publication", () => {
+    const poisonedPublisher = (): OutboundWebhookTaskPublisher => ({
+      publish: vi.fn(async ({ contracts }) => {
+        if (contracts.outbox.source?.eventId === "event_poisoned") {
+          throw new OutboundWebhookPermanentProblem("poisoned", "task rejected");
+        }
+      }),
+    });
+
+    async function publishHealthyBehindPoisoned(runtime: OutboundWebhookRuntime): Promise<string> {
+      await expect(runtime.publish({ ...EVENT, id: "event_poisoned" })).rejects.toBeInstanceOf(
+        OutboundWebhookPermanentProblem,
+      );
+      const healthy = await runtime.publish({ ...EVENT, id: "event_healthy" });
+      return healthy.deliveries[0]?.id ?? "";
+    }
+
+    it("isolates retry dispatch from another delivery's failed intent", async () => {
+      const store = new InMemoryOutboundWebhookStore();
+      const runtime = createRuntime({
+        store,
+        publisher: poisonedPublisher(),
+        transport: new FakeOutboundWebhookTransport([{ kind: "http", status: 503 }]),
+      });
+      const deliveryId = await publishHealthyBehindPoisoned(runtime);
+
+      await expect(runtime.dispatch(EVENT.tenantId, deliveryId)).resolves.toMatchObject({
+        id: deliveryId,
+        status: "retrying",
+      });
+      expect(await store.listUnpublishedIntents(EVENT.tenantId)).toEqual([
+        expect.objectContaining({
+          deliveryId: `${EVENT.tenantId}:event_poisoned:${ACTIVE_ENDPOINT.id}`,
+        }),
+      ]);
+    });
+
+    it("isolates replay from another delivery's failed intent", async () => {
+      const store = new InMemoryOutboundWebhookStore();
+      const runtime = createRuntime({ store, publisher: poisonedPublisher() });
+      const deliveryId = await publishHealthyBehindPoisoned(runtime);
+      await runtime.dispatch(EVENT.tenantId, deliveryId);
+
+      await expect(runtime.replay(EVENT.tenantId, deliveryId, "replay_1")).resolves.toMatchObject({
+        id: deliveryId,
+        status: "pending",
+      });
+      expect(await store.listUnpublishedIntents(EVENT.tenantId)).toEqual([
+        expect.objectContaining({
+          deliveryId: `${EVENT.tenantId}:event_poisoned:${ACTIVE_ENDPOINT.id}`,
+        }),
+      ]);
+    });
+
+    it("isolates resume from another delivery's failed intent", async () => {
+      const store = new InMemoryOutboundWebhookStore();
+      const runtime = createRuntime({ store, publisher: poisonedPublisher() });
+      const deliveryId = await publishHealthyBehindPoisoned(runtime);
+
+      await expect(runtime.resume(EVENT.tenantId, deliveryId)).resolves.toMatchObject({
+        id: deliveryId,
+        status: "pending",
+      });
+      expect(await store.listUnpublishedIntents(EVENT.tenantId)).toEqual([
+        expect.objectContaining({
+          deliveryId: `${EVENT.tenantId}:event_poisoned:${ACTIVE_ENDPOINT.id}`,
+        }),
+      ]);
+    });
+
+    it.each([
+      ["dispatch", "retryable"],
+      ["dispatch", "permanent"],
+      ["replay", "retryable"],
+      ["replay", "permanent"],
+      ["resume", "retryable"],
+      ["resume", "permanent"],
+    ] as const)(
+      "reports the target delivery's %s publication failure as %s",
+      async (operation, classification) => {
+        let failPublication = false;
+        const publisher: OutboundWebhookTaskPublisher = {
+          publish: vi.fn(async ({ deliveryId }) => {
+            if (failPublication) {
+              if (classification === "permanent") {
+                throw new OutboundWebhookPermanentProblem(deliveryId, "task rejected");
+              }
+              throw new Error("broker unavailable");
+            }
+          }),
+        };
+        const runtime = createRuntime({
+          store: new InMemoryOutboundWebhookStore(),
+          publisher,
+          transport: new FakeOutboundWebhookTransport([
+            { kind: "http", status: operation === "dispatch" ? 503 : 204 },
+          ]),
+        });
+        const deliveryId = (await runtime.publish(EVENT)).deliveries[0]?.id ?? "";
+        if (operation === "replay") {
+          await runtime.dispatch(EVENT.tenantId, deliveryId);
+        }
+        failPublication = true;
+
+        const result =
+          operation === "dispatch"
+            ? runtime.dispatch(EVENT.tenantId, deliveryId)
+            : operation === "replay"
+              ? runtime.replay(EVENT.tenantId, deliveryId, "replay_1")
+              : runtime.resume(EVENT.tenantId, deliveryId);
+        const failure: unknown = await result.then(
+          () => undefined,
+          (error: unknown) => error,
+        );
+
+        expect(failure).toBeInstanceOf(
+          classification === "permanent"
+            ? OutboundWebhookPermanentProblem
+            : OutboundWebhookRetryableProblem,
+        );
+        expect(failure).toMatchObject({ extensions: { deliveryId } });
+      },
+    );
+  });
+
   it("retries only unpublished intents when publishing a duplicate event", async () => {
     const store = new InMemoryOutboundWebhookStore();
     let unavailable = true;
@@ -567,6 +692,224 @@ describe("OutboundWebhookRuntime", () => {
     expect((await runtime.dispatch(EVENT.tenantId, deliveryId)).status).toBe("dead");
   });
 
+  it("lets another worker dispatch a delivery whose claiming worker never finished", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(START);
+    try {
+      const store = new InMemoryOutboundWebhookStore();
+      let markSendStarted!: () => void;
+      const sendStarted = new Promise<void>((resolve) => {
+        markSendStarted = resolve;
+      });
+      const abandonedTransport: OutboundWebhookTransport = {
+        send: () => {
+          markSendStarted();
+          return new Promise<never>(() => undefined);
+        },
+      };
+      const workerA = createRuntime({ store, transport: abandonedTransport });
+      const deliveryId = (await workerA.publish(EVENT)).deliveries[0]?.id ?? "";
+      void workerA.dispatch(EVENT.tenantId, deliveryId).catch(() => undefined);
+      await sendStarted;
+
+      const oneDayLater = new Date(START.getTime() + 86_400_000);
+      vi.setSystemTime(oneDayLater);
+      const healthyTransport = new FakeOutboundWebhookTransport([{ kind: "http", status: 204 }]);
+      const workerB = createRuntime({
+        store,
+        transport: healthyTransport,
+        now: () => new Date(oneDayLater),
+      });
+      expect((await workerB.resume(EVENT.tenantId, deliveryId)).status).toBe("pending");
+      await expect(workerB.dispatch(EVENT.tenantId, deliveryId)).resolves.toMatchObject({
+        status: "delivered",
+      });
+      expect(healthyTransport.requests).toHaveLength(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it.each([
+    { transportTimeoutMs: 0, claimLeaseDurationMs: 1_000 },
+    { transportTimeoutMs: -1, claimLeaseDurationMs: 1_000 },
+    { transportTimeoutMs: 0.5, claimLeaseDurationMs: 1_000 },
+    { transportTimeoutMs: Number.NaN, claimLeaseDurationMs: 1_000 },
+    { transportTimeoutMs: 2_147_483_648, claimLeaseDurationMs: 2_147_483_649 },
+    { transportTimeoutMs: 100, claimLeaseDurationMs: 0 },
+    { transportTimeoutMs: 100, claimLeaseDurationMs: 100.5 },
+    { transportTimeoutMs: 100, claimLeaseDurationMs: Number.POSITIVE_INFINITY },
+    { transportTimeoutMs: 100, claimLeaseDurationMs: 100 },
+    { transportTimeoutMs: 100, claimLeaseDurationMs: 99 },
+  ])("rejects invalid runtime timing options %j", (options) => {
+    expect(() =>
+      createRuntime({ store: new InMemoryOutboundWebhookStore(), ...options }),
+    ).toThrowError(OutboundWebhookConfigurationProblem);
+  });
+
+  it("accepts the maximum supported transport timeout with a longer lease", () => {
+    expect(() =>
+      createRuntime({
+        store: new InMemoryOutboundWebhookStore(),
+        transportTimeoutMs: 2_147_483_647,
+        claimLeaseDurationMs: 2_147_483_648,
+      }),
+    ).not.toThrow();
+  });
+
+  it.each([false, true])(
+    "propagates caller cancellation through the transport signal (already aborted: %s)",
+    async (alreadyAborted) => {
+      const store = new InMemoryOutboundWebhookStore();
+      const caller = new AbortController();
+      const reason = new Error("caller canceled dispatch");
+      let transportSignal: AbortSignal | undefined;
+      let markSendStarted!: () => void;
+      const sendStarted = new Promise<void>((resolve) => {
+        markSendStarted = resolve;
+      });
+      const runtime = createRuntime({
+        store,
+        transport: {
+          send: ({ signal }) => {
+            transportSignal = signal;
+            markSendStarted();
+            return new Promise((_resolve, reject) => {
+              if (signal?.aborted) {
+                reject(signal.reason);
+                return;
+              }
+              signal?.addEventListener("abort", () => reject(signal.reason), { once: true });
+            });
+          },
+        },
+      });
+      const deliveryId = (await runtime.publish(EVENT)).deliveries[0]?.id ?? "";
+      if (alreadyAborted) caller.abort(reason);
+      const dispatch = expect(
+        runtime.dispatch(EVENT.tenantId, deliveryId, caller.signal),
+      ).rejects.toBe(reason);
+      await sendStarted;
+      expect(transportSignal).not.toBe(caller.signal);
+      if (!alreadyAborted) {
+        expect(transportSignal?.aborted).toBe(false);
+        caller.abort(reason);
+      }
+      await dispatch;
+      expect(transportSignal?.aborted).toBe(true);
+      expect(transportSignal?.reason).toBe(reason);
+      expect(await store.listAttempts(EVENT.tenantId, deliveryId)).toEqual([]);
+      await expect(
+        createRuntime({ store }).dispatch(EVENT.tenantId, deliveryId),
+      ).resolves.toMatchObject({ status: "delivered" });
+    },
+  );
+
+  it("times out an unresponsive transport, aborts its signal, and releases its claim", async () => {
+    vi.useFakeTimers();
+    try {
+      const store = new InMemoryOutboundWebhookStore();
+      let signal: AbortSignal | undefined;
+      let markSendStarted!: () => void;
+      const sendStarted = new Promise<void>((resolve) => {
+        markSendStarted = resolve;
+      });
+      const runtime = createRuntime({
+        store,
+        transportTimeoutMs: 100,
+        claimLeaseDurationMs: 1_000,
+        transport: {
+          send: (request) => {
+            signal = request.signal;
+            markSendStarted();
+            return new Promise<never>(() => undefined);
+          },
+        },
+      });
+      const deliveryId = (await runtime.publish(EVENT)).deliveries[0]?.id ?? "";
+      const dispatch = expect(runtime.dispatch(EVENT.tenantId, deliveryId)).rejects.toBeInstanceOf(
+        OutboundWebhookRetryableProblem,
+      );
+      await sendStarted;
+      expect(signal?.aborted).toBe(false);
+      await vi.advanceTimersByTimeAsync(100);
+      await dispatch;
+      expect(signal?.aborted).toBe(true);
+      expect(await store.listAttempts(EVENT.tenantId, deliveryId)).toEqual([]);
+      expect(await store.getDelivery(EVENT.tenantId, deliveryId)).toMatchObject({
+        status: "pending",
+        attemptCount: 0,
+      });
+      const healthyWorker = createRuntime({ store });
+      await expect(healthyWorker.dispatch(EVENT.tenantId, deliveryId)).resolves.toMatchObject({
+        status: "delivered",
+      });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("rejects a late worker completion without releasing the replacement worker claim", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(START);
+    try {
+      const store = new InMemoryOutboundWebhookStore();
+      let finishOldSend!: (outcome: OutboundWebhookAttemptOutcome) => void;
+      let finishNewSend!: (outcome: OutboundWebhookAttemptOutcome) => void;
+      let markOldStarted!: () => void;
+      let markNewStarted!: () => void;
+      const oldStarted = new Promise<void>((resolve) => {
+        markOldStarted = resolve;
+      });
+      const newStarted = new Promise<void>((resolve) => {
+        markNewStarted = resolve;
+      });
+      const workerA = createRuntime({
+        store,
+        createId: () => "old_attempt",
+        transport: {
+          send: () =>
+            new Promise((resolve) => {
+              finishOldSend = resolve;
+              markOldStarted();
+            }),
+        },
+      });
+      const deliveryId = (await workerA.publish(EVENT)).deliveries[0]?.id ?? "";
+      const oldDispatch = expect(
+        workerA.dispatch(EVENT.tenantId, deliveryId),
+      ).rejects.toBeInstanceOf(OutboundWebhookConfigurationProblem);
+      await oldStarted;
+      vi.setSystemTime(START.getTime() + 60_001);
+      const workerB = createRuntime({
+        store,
+        createId: () => "new_attempt",
+        transport: {
+          send: () =>
+            new Promise((resolve) => {
+              finishNewSend = resolve;
+              markNewStarted();
+            }),
+        },
+      });
+      const newDispatch = workerB.dispatch(EVENT.tenantId, deliveryId);
+      await newStarted;
+      finishOldSend({ kind: "http", status: 204 });
+      await oldDispatch;
+      expect(await store.listAttempts(EVENT.tenantId, deliveryId)).toEqual([]);
+      await expect(
+        createRuntime({ store }).dispatch(EVENT.tenantId, deliveryId),
+      ).rejects.toBeInstanceOf(OutboundWebhookConfigurationProblem);
+      finishNewSend({ kind: "http", status: 204 });
+      await expect(newDispatch).resolves.toMatchObject({ status: "delivered", attemptCount: 1 });
+      expect(await store.listAttempts(EVENT.tenantId, deliveryId)).toEqual([
+        expect.objectContaining({ id: "new_attempt", number: 1 }),
+      ]);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("claims a delivery before transport so concurrent tasks cannot send twice", async () => {
     const store = new InMemoryOutboundWebhookStore();
     let releaseSend: (() => void) | undefined;
@@ -754,6 +1097,105 @@ describe("OutboundWebhookRuntime", () => {
     await runtime.resume(EVENT.tenantId, deliveryId);
 
     expect(publisher.publish).toHaveBeenCalledTimes(1);
+  });
+
+  it("reschedules a retrying delivery once its paused endpoint is active again", async () => {
+    let now = new Date(START);
+    const store = new InMemoryOutboundWebhookStore();
+    const endpointStore = new InMemoryOutboundWebhookEndpointStore([ACTIVE_ENDPOINT]);
+    const publisher: OutboundWebhookTaskPublisher = { publish: vi.fn() };
+    const runtime = new OutboundWebhookRuntime({
+      store,
+      endpointStore,
+      secretStore: new InMemoryOutboundWebhookSecretStore([ACTIVE_SECRET]),
+      taskPublisher: publisher,
+      transport: new FakeOutboundWebhookTransport([
+        { kind: "http", status: 503 },
+        { kind: "http", status: 204 },
+      ]),
+      urlPolicy: publicTestUrlPolicy(),
+      now: () => new Date(now),
+    });
+    const deliveryId = (await runtime.publish(EVENT)).deliveries[0]?.id ?? "";
+    expect((await runtime.dispatch(EVENT.tenantId, deliveryId)).status).toBe("retrying");
+
+    endpointStore.set({ ...ACTIVE_ENDPOINT, status: "paused" });
+    now = new Date(START.getTime() + 120_000);
+    await expect(runtime.dispatch(EVENT.tenantId, deliveryId)).rejects.toBeInstanceOf(
+      OutboundWebhookReplayNotAllowedProblem,
+    );
+
+    endpointStore.set(ACTIVE_ENDPOINT);
+    vi.mocked(publisher.publish).mockClear();
+    await expect(runtime.resume(EVENT.tenantId, deliveryId)).resolves.toMatchObject({
+      id: deliveryId,
+      status: "retrying",
+      attemptCount: 1,
+      nextAttemptAt: new Date(START.getTime() + 60_000),
+    });
+    expect(publisher.publish).toHaveBeenCalledTimes(1);
+
+    now = new Date(START.getTime() + 180_000);
+    expect((await runtime.dispatch(EVENT.tenantId, deliveryId)).status).toBe("delivered");
+    expect(
+      (await store.listAttempts(EVENT.tenantId, deliveryId)).map((attempt) => attempt.number),
+    ).toEqual([1, 2]);
+  });
+
+  it("publishes the retained retry intent once when resuming after publication failed", async () => {
+    let now = new Date(START);
+    let failRetryPublication = true;
+    const store = new InMemoryOutboundWebhookStore();
+    const endpointStore = new InMemoryOutboundWebhookEndpointStore([ACTIVE_ENDPOINT]);
+    const publisher: OutboundWebhookTaskPublisher = {
+      publish: vi.fn(async ({ idempotencyKey }) => {
+        if (failRetryPublication && idempotencyKey.endsWith(":attempt:2")) {
+          throw new Error("task broker unavailable");
+        }
+      }),
+    };
+    const runtime = new OutboundWebhookRuntime({
+      store,
+      endpointStore,
+      secretStore: new InMemoryOutboundWebhookSecretStore([ACTIVE_SECRET]),
+      taskPublisher: publisher,
+      transport: new FakeOutboundWebhookTransport([
+        { kind: "http", status: 503 },
+        { kind: "http", status: 204 },
+      ]),
+      urlPolicy: publicTestUrlPolicy(),
+      now: () => new Date(now),
+    });
+    const deliveryId = (await runtime.publish(EVENT)).deliveries[0]?.id ?? "";
+    await expect(runtime.dispatch(EVENT.tenantId, deliveryId)).rejects.toBeInstanceOf(
+      OutboundWebhookRetryableProblem,
+    );
+    const retainedIntent = (await store.listUnpublishedIntents(EVENT.tenantId))[0];
+    expect(retainedIntent?.idempotencyKey).toBe(`${deliveryId}:attempt:2`);
+
+    endpointStore.set({ ...ACTIVE_ENDPOINT, status: "paused" });
+    now = new Date(START.getTime() + 120_000);
+    await expect(runtime.dispatch(EVENT.tenantId, deliveryId)).rejects.toBeInstanceOf(
+      OutboundWebhookReplayNotAllowedProblem,
+    );
+
+    endpointStore.set(ACTIVE_ENDPOINT);
+    failRetryPublication = false;
+    vi.mocked(publisher.publish).mockClear();
+    await expect(runtime.resume(EVENT.tenantId, deliveryId)).resolves.toMatchObject({
+      status: "retrying",
+      attemptCount: 1,
+      nextAttemptAt: new Date(START.getTime() + 60_000),
+    });
+    expect(publisher.publish).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({ idempotencyKey: retainedIntent?.idempotencyKey }),
+    );
+    expect(await store.listUnpublishedIntents(EVENT.tenantId)).toEqual([]);
+
+    expect((await runtime.dispatch(EVENT.tenantId, deliveryId)).status).toBe("delivered");
+    expect(
+      (await store.listAttempts(EVENT.tenantId, deliveryId)).map((attempt) => attempt.number),
+    ).toEqual([1, 2]);
   });
 
   it("enforces tenant isolation when committing endpoint-specific deliveries", async () => {
@@ -1210,6 +1652,9 @@ describe("outbound webhook signing and URL policy", () => {
 describe("outbound webhook store conformance", () => {
   const suite = createOutboundWebhookStoreConformanceSuite({
     createStore: () => new InMemoryOutboundWebhookStore(),
+    advanceStoreTime: (milliseconds) => {
+      vi.setSystemTime(Date.now() + milliseconds);
+    },
     event: {
       id: EVENT.id,
       name: EVENT.name,
@@ -1225,7 +1670,15 @@ describe("outbound webhook store conformance", () => {
 
   it.each(suite.cases.map((testCase) => [testCase.name, testCase.run] as const))(
     "%s",
-    async (_name, run) => run(),
+    async (_name, run) => {
+      vi.useFakeTimers();
+      vi.setSystemTime(START);
+      try {
+        await run();
+      } finally {
+        vi.useRealTimers();
+      }
+    },
   );
 });
 
@@ -1241,6 +1694,8 @@ function createRuntime(options: {
   };
   readonly now?: () => Date;
   readonly createId?: () => string;
+  readonly claimLeaseDurationMs?: number;
+  readonly transportTimeoutMs?: number;
 }): OutboundWebhookRuntime {
   return new OutboundWebhookRuntime({
     store: options.store,
@@ -1253,6 +1708,12 @@ function createRuntime(options: {
     now: options.now ?? (() => new Date(START)),
     createId: options.createId ?? (() => "attempt_1"),
     ...(options.retryPolicy === undefined ? {} : { retryPolicy: options.retryPolicy }),
+    ...(options.claimLeaseDurationMs === undefined
+      ? {}
+      : { claimLeaseDurationMs: options.claimLeaseDurationMs }),
+    ...(options.transportTimeoutMs === undefined
+      ? {}
+      : { transportTimeoutMs: options.transportTimeoutMs }),
   });
 }
 

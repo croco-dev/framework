@@ -141,6 +141,7 @@ export class FixedWindowInMemoryStore extends FixedWindowStore {
     string,
     { count: number; windowStart: number; windowMs: number }
   >();
+  private readonly counters = new Map<string, InMemoryCounterEntry>();
   private readonly globalStats = { allowed: 0, denied: 0, total: 0 };
   private readonly cancelPruning?: () => void;
 
@@ -204,6 +205,7 @@ export class FixedWindowInMemoryStore extends FixedWindowStore {
     key: string,
     entry: { count: number; windowStart: number; windowMs: number },
   ): Promise<void> {
+    this.counters.delete(key);
     this.windows.set(key, entry);
   }
 
@@ -213,20 +215,23 @@ export class FixedWindowInMemoryStore extends FixedWindowStore {
       entry.count += amount;
       return entry.count;
     }
-    return amount;
+    return incrementCounter(this.counters, key, amount, this.now());
   }
 
   async getCount(key: string): Promise<number> {
-    return this.windows.get(key)?.count ?? 0;
+    return (
+      this.windows.get(key)?.count ?? getActiveCounter(this.counters, key, this.now())?.count ?? 0
+    );
   }
 
   async reset(key: string): Promise<void> {
     this.windows.delete(key);
+    this.counters.delete(key);
     this.clearFixedWindowRefundReceipts(key);
   }
 
-  async expire(): Promise<void> {
-    return;
+  async expire(key: string, ttlMs: number): Promise<void> {
+    expireCounter(this.counters, key, ttlMs, this.now());
   }
 
   async pruneExpired(): Promise<number> {
@@ -242,7 +247,7 @@ export class FixedWindowInMemoryStore extends FixedWindowStore {
       }
     }
 
-    return deletedCount;
+    return deletedCount + pruneExpiredCounters(this.counters, now);
   }
 
   async getStats(): Promise<{ allowed: number; denied: number; total: number }> {
@@ -370,13 +375,13 @@ export class SlidingWindowInMemoryStore extends SlidingWindowStore {
   protected async getTimestamps(key: string, since: number): Promise<number[]> {
     const entry = this.windows.get(key);
     if (!entry) return [];
-    return entry.entries.filter((item) => item.timestamp >= since).map((item) => item.timestamp);
+    return entry.entries.filter((item) => item.timestamp > since).map((item) => item.timestamp);
   }
 
   protected async removeTimestamps(key: string, before: number): Promise<void> {
     const entry = this.windows.get(key);
     if (!entry) return;
-    entry.entries = entry.entries.filter((item) => item.timestamp >= before);
+    entry.entries = entry.entries.filter((item) => item.timestamp > before);
     if (entry.entries.length === 0) {
       this.windows.delete(key);
     } else {
@@ -413,7 +418,7 @@ export class SlidingWindowInMemoryStore extends SlidingWindowStore {
     for (const [key, entry] of this.windows.entries()) {
       const windowStart = now - entry.windowMs;
       const originalLength = entry.entries.length;
-      entry.entries = entry.entries.filter((item) => item.timestamp >= windowStart);
+      entry.entries = entry.entries.filter((item) => item.timestamp > windowStart);
 
       if (entry.entries.length === 0) {
         this.windows.delete(key);

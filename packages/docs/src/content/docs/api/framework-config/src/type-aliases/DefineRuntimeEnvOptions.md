@@ -5,7 +5,13 @@ prev: false
 title: "DefineRuntimeEnvOptions"
 ---
 
-> **DefineRuntimeEnvOptions**\<`TPresets`\> = `object`
+> **DefineRuntimeEnvOptions**\<`TPresets`, `TPrefix`\> = `object` & \[`TPrefix`\] _extends_ \[`"NEXT_PUBLIC_"`\] ? `object` : `object`
+
+## Type Declaration
+
+### presets
+
+> `readonly` **presets**: `number` _extends_ `TPresets`\[`"length"`\] ? `never` : `TPresets` & `RuntimeEnvBoundaryValidation`\<`TPresets`, `NoInfer`\<`TPrefix`\>\>
 
 ## Type Parameters
 
@@ -13,8 +19,6 @@ title: "DefineRuntimeEnvOptions"
 
 `TPresets` _extends_ readonly [`RuntimeEnvPreset`](/api/framework-config/src/type-aliases/runtimeenvpreset/)[]
 
-## Properties
+### TPrefix
 
-### presets
-
-> `readonly` **presets**: `number` _extends_ `TPresets`\[`"length"`\] ? `never` : `TPresets` & `RuntimeEnvBoundaryValidation`\<`TPresets`\>
+`TPrefix` _extends_ `string` = `"NEXT_PUBLIC_"`

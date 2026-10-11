@@ -1,3 +1,4 @@
+import { compareStrings } from "../../../../tooling/compareStrings.mjs";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import {
@@ -60,6 +61,7 @@ type DomainRoutes = {
 };
 
 type GeneratedClientFile = {
+  readonly origin: string;
   readonly filePath: string;
   readonly content: string;
 };
@@ -232,6 +234,7 @@ function emitClientFiles(
     assertNoZodImport(content);
 
     return {
+      origin: `domain '${domainRoutes.domain}'`,
       filePath: path.join(outDir, `${domainRoutes.domain}.ts`),
       content,
     };
@@ -242,12 +245,14 @@ function emitClientFiles(
   const indexContent = generateClientIndex(domainRouteGroups, options);
   const manifestSourceFile = options.manifestBundlePath
     ? {
+        origin: "manifest source",
         filePath: path.join(outDir, "manifest-source.ts"),
         content: generateManifestSource(options.manifestBundlePath),
       }
     : null;
   const frontendActionManifestFile = options.frontendActionManifestPath
     ? {
+        origin: "frontend action manifest",
         filePath: options.frontendActionManifestPath,
         content: serializeFrontendActionManifest(
           mergeFrontendActionManifests([
@@ -262,11 +267,13 @@ function emitClientFiles(
     : null;
   const files: readonly GeneratedClientFile[] = [
     ...domainFiles,
-    { filePath: supportPath, content: supportContent },
+    { origin: "RPC support", filePath: supportPath, content: supportContent },
     ...(manifestSourceFile ? [manifestSourceFile] : []),
-    { filePath: indexPath, content: indexContent },
+    { origin: "client index", filePath: indexPath, content: indexContent },
     ...(frontendActionManifestFile ? [frontendActionManifestFile] : []),
   ];
+
+  assertDistinctOutputPaths(files, outDir);
 
   return files;
 }
@@ -448,16 +455,6 @@ function compareFrontendActionEntitlements(
   return compareStrings(JSON.stringify(left), JSON.stringify(right));
 }
 
-function compareStrings(left: string, right: string): number {
-  if (left < right) {
-    return -1;
-  }
-  if (left > right) {
-    return 1;
-  }
-  return 0;
-}
-
 function assertGeneratedClientRoutes(routes: readonly GeneratedClientRoute[]): void {
   for (const route of routes) {
     if (route.httpMethod.toUpperCase() === "ALL") {
@@ -552,7 +549,7 @@ function groupRoutesByDomain(routes: readonly GeneratedClientRoute[]): DomainRou
   }
 
   return [...groups.entries()]
-    .sort(([left], [right]) => left.localeCompare(right))
+    .sort(([left], [right]) => compareStrings(left, right))
     .map(([domain, domainRoutes]) => ({ domain, routes: domainRoutes }));
 }
 
@@ -897,8 +894,8 @@ function compareGeneratedProblems(
   right: { readonly code: string; readonly category: string; readonly status: number },
 ): number {
   return (
-    left.code.localeCompare(right.code) ||
-    left.category.localeCompare(right.category) ||
+    compareStrings(left.code, right.code) ||
+    compareStrings(left.category, right.category) ||
     left.status - right.status
   );
 }
@@ -1416,8 +1413,8 @@ export class RpcClientResponseError extends Error {
 }
 
 export class RpcClientStatusMismatchError extends Problem {
-  readonly code = 'rpc-codegen/status-mismatch';
-  readonly category = ProblemCategory.InternalServerError;
+  readonly code = ${literalValueToTypeScript(RPC_STATUS_MISMATCH_PROBLEM.code)};
+  readonly category = ProblemCategory.${RPC_STATUS_MISMATCH_PROBLEM.category};
   readonly response: Response;
   readonly httpStatus: number;
   readonly problemStatus: number;
@@ -1435,8 +1432,8 @@ export class RpcClientStatusMismatchError extends Problem {
 }
 
 export class RpcQueryKeyInputError extends Problem {
-  readonly code = 'rpc-codegen/query-key-input-unsupported';
-  readonly category = ProblemCategory.ValidationError;
+  readonly code = ${literalValueToTypeScript(RPC_QUERY_KEY_INPUT_PROBLEM.code)};
+  readonly category = ProblemCategory.${RPC_QUERY_KEY_INPUT_PROBLEM.category};
   readonly path: string;
 
   constructor(path: string, detail: string) {
@@ -1946,6 +1943,16 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
   `;
 }
+
+const RPC_STATUS_MISMATCH_PROBLEM = {
+  code: "rpc-codegen/status-mismatch",
+  category: ProblemCategory.InternalServerError,
+} as const;
+
+const RPC_QUERY_KEY_INPUT_PROBLEM = {
+  code: "rpc-codegen/query-key-input-unsupported",
+  category: ProblemCategory.ValidationError,
+} as const;
 
 const RPC_PATH_PARAM_INPUT_PROBLEM = {
   code: "rpc-codegen/path-param-input-unsupported",
@@ -2596,8 +2603,8 @@ function generateRpcQueryKeySupport(includeProblemImport = true): string {
   | { readonly [key: string]: RpcQueryKeyValue };
 
 export class RpcQueryKeyInputError extends Problem {
-  readonly code = 'rpc-codegen/query-key-input-unsupported';
-  readonly category = ProblemCategory.ValidationError;
+  readonly code = ${literalValueToTypeScript(RPC_QUERY_KEY_INPUT_PROBLEM.code)};
+  readonly category = ProblemCategory.${RPC_QUERY_KEY_INPUT_PROBLEM.category};
   readonly path: string;
 
   constructor(path: string, detail: string) {
@@ -4246,39 +4253,46 @@ function compareClientFiles(
   );
 }
 
-function collectOwnedOutputPaths(
-  files: readonly GeneratedClientFile[],
-  outDir: string,
-): ReadonlySet<string> {
-  const outputRoot = path.resolve(outDir);
-  const portablePaths = new Map<string, string>();
-  const ownedPaths: string[] = [];
+function assertDistinctOutputPaths(files: readonly GeneratedClientFile[], outDir: string): void {
+  const portablePaths = new Map<string, GeneratedClientFile>();
+  const ownershipManifestPath = path
+    .resolve(getGeneratedClientOwnershipManifestPath(outDir))
+    .toLowerCase();
 
   for (const file of files) {
-    const ownedPath = getOwnedOutputPath(file.filePath, outputRoot);
+    const resolvedPath = path.resolve(file.filePath);
+    const portablePath = resolvedPath.toLowerCase();
 
-    if (!ownedPath) {
-      continue;
-    }
-
-    if (ownedPath.toLowerCase() === GENERATED_CLIENT_OWNERSHIP_MANIFEST_NAME) {
+    if (portablePath === ownershipManifestPath) {
       throw new RpcCodegenContractProblem(
         `Generated output path '${file.filePath}' conflicts with the reserved ownership manifest. Choose a different frontend action manifest path.`,
       );
     }
 
-    const portablePath = ownedPath.toLowerCase();
-    const existingPath = portablePaths.get(portablePath);
+    const existingFile = portablePaths.get(portablePath);
 
-    if (existingPath && existingPath !== ownedPath) {
+    if (existingFile) {
+      const caseConflict =
+        path.resolve(existingFile.filePath) !== resolvedPath
+          ? " Paths differ only by case and cannot be emitted portably."
+          : "";
+
       throw new RpcCodegenContractProblem(
-        `Generated output paths '${existingPath}' and '${ownedPath}' differ only by case and cannot be emitted portably. Rename one route domain.`,
+        `Generated output path '${existingFile.filePath}' (${existingFile.origin}) conflicts with '${file.filePath}' (${file.origin}).${caseConflict} Choose distinct output paths.`,
       );
     }
 
-    portablePaths.set(portablePath, ownedPath);
-    ownedPaths.push(ownedPath);
+    portablePaths.set(portablePath, file);
   }
+}
+
+function collectOwnedOutputPaths(
+  files: readonly GeneratedClientFile[],
+  outDir: string,
+): ReadonlySet<string> {
+  const ownedPaths = files
+    .map((file) => getOwnedOutputPath(file.filePath, outDir))
+    .filter((ownedPath): ownedPath is string => ownedPath !== null);
 
   return new Set(ownedPaths.sort());
 }

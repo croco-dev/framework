@@ -2,9 +2,33 @@ import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
 import { describe, expect, it } from "vitest";
+import { createCrocoCommandRuntime, runWithCrocoCommandRuntime } from "../libs/cliRuntime.js";
 import { generateEntity } from "../commands/makeEntity.js";
 
 describe("generateEntity", () => {
+  it.each(["api", "server", "backend"])("should generate in detected apps/%s", async (app) => {
+    const cwd = await createWorkspace();
+    await fs.rename(path.join(cwd, "apps", "api-server"), path.join(cwd, "apps", app));
+    const result = await generateEntity("User", { cwd });
+    const target = path.join(cwd, "apps", app, "src", "entities", "UserEntity.ts");
+    expect(result?.status).toBe("created");
+    expect(result?.path).toBe(target);
+    await expect(fs.access(target)).resolves.toBeUndefined();
+    await expect(fs.access(path.join(cwd, "apps", "api-server"))).rejects.toThrow();
+  });
+
+  it("should distinguish a workspace without an API app", async () => {
+    const cwd = await createWorkspace();
+    await fs.rm(path.join(cwd, "apps", "api-server"), { recursive: true });
+    const messages: string[] = [];
+    const runtime = createCrocoCommandRuntime({ stdout: (message) => messages.push(message) });
+    const result = await runWithCrocoCommandRuntime(runtime, () => generateEntity("User", { cwd }));
+    expect(result).toBeNull();
+    expect(messages).toEqual([
+      "No API server app detected in apps/ (checked api-server, api, server, backend).",
+    ]);
+    await expect(fs.access(path.join(cwd, "apps", "api-server"))).rejects.toThrow();
+  });
   it("should create an entity file", async () => {
     const cwd = await createWorkspace();
 

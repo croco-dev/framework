@@ -1,10 +1,11 @@
+import * as assert from "node:assert/strict";
+import { deriveIdempotencyKey } from "./deriveIdempotencyKey";
 import {
   IdempotencyConflictProblem,
   IdempotencyReservationStateProblem,
   InvalidIdempotencyTtlProblem,
 } from "./problems/IdempotencyProblems";
-import { deriveIdempotencyKey } from "./deriveIdempotencyKey";
-import type { IdempotencyStore } from "./types";
+import type { LeaseAwareIdempotencyStore } from "./types";
 
 export type IdempotencyStoreConformanceCase = {
   readonly name: string;
@@ -12,7 +13,9 @@ export type IdempotencyStoreConformanceCase = {
 };
 
 export type IdempotencyStoreConformanceOptions<TResult = string> = {
-  readonly createStore: () => IdempotencyStore<TResult> | Promise<IdempotencyStore<TResult>>;
+  readonly createStore: () =>
+    | LeaseAwareIdempotencyStore<TResult>
+    | Promise<LeaseAwareIdempotencyStore<TResult>>;
   readonly createResponse?: () => TResult;
 };
 
@@ -62,7 +65,11 @@ export function createIdempotencyStoreConformanceSuite<TResult = string>(
           const replay = await store.reserve(key);
           assertEqual(replay.outcome, "replay", "completed records must replay");
           if (replay.outcome === "replay") {
-            assertEqual(replay.response, response, "replay must return the committed response");
+            assert.deepStrictEqual(
+              replay.response,
+              response,
+              "replay must return the committed response",
+            );
           }
         },
       },
@@ -98,7 +105,11 @@ export function createIdempotencyStoreConformanceSuite<TResult = string>(
           const replay = await store.reserve(key);
           assertEqual(replay.outcome, "replay", "fail must not replace a completed record");
           if (replay.outcome === "replay") {
-            assertEqual(replay.response, response, "fail must preserve the committed response");
+            assert.deepStrictEqual(
+              replay.response,
+              response,
+              "fail must preserve the committed response",
+            );
           }
         },
       },
@@ -282,6 +293,39 @@ export function createIdempotencyStoreConformanceSuite<TResult = string>(
               inFlight.outcome,
               "in-flight",
               `${invalidTtl.name} fail TTL must preserve the reservation`,
+            );
+          }
+        },
+      },
+      {
+        name: "separates reservation lease from completed retention",
+        run: async () => {
+          const store = await options.createStore();
+          const key = createConformanceKey("separate-lease");
+          const reserveOptions = { leaseMs: 3_000, ttlMs: 60_000 };
+          const abandoned = await store.reserve(key, reserveOptions);
+          assertEqual(abandoned.outcome, "reserved", "first attempt must reserve");
+          await new Promise((resolve) => setTimeout(resolve, 4_100));
+          const recovered = await store.reserve(key, reserveOptions);
+          assertEqual(recovered.outcome, "reserved", "expired lease must allow a new reservation");
+          if (recovered.outcome !== "reserved") {
+            return;
+          }
+          const response = createResponse();
+          await store.commit({
+            key,
+            reservationId: recovered.reservation.reservationId,
+            response,
+            ttlMs: reserveOptions.ttlMs,
+          });
+          await new Promise((resolve) => setTimeout(resolve, 4_100));
+          const replay = await store.reserve(key, reserveOptions);
+          assertEqual(replay.outcome, "replay", "completed retention must outlast the lease");
+          if (replay.outcome === "replay") {
+            assert.deepStrictEqual(
+              replay.response,
+              response,
+              "replay must preserve the completed response",
             );
           }
         },

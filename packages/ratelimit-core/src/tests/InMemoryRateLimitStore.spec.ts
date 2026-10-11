@@ -27,6 +27,92 @@ describe("InMemoryRateLimitStore", () => {
     store.close();
   });
 
+  describe.each([SlidingWindowInMemoryStore, InMemoryRateLimitStore])(
+    "%s window boundary",
+    (Store) => {
+      it("allows a request at the resetAtMs reported when denying", async () => {
+        let now = 10_000;
+        const slidingStore = new Store({ now: () => now, pruneIntervalMs: 0 });
+        const boundaryPolicy: SlidingWindowPolicy = { ...policy, limit: 1, windowMs: 1000 };
+
+        expect((await slidingStore.check("user:boundary", boundaryPolicy)).success).toBe(true);
+        now = 10_999;
+        const denied = await slidingStore.check("user:boundary", boundaryPolicy);
+        expect(denied.success).toBe(false);
+        expect(denied.resetAtMs).toBe(11_000);
+
+        now = denied.resetAtMs;
+        const atReset = await slidingStore.check("user:boundary", boundaryPolicy);
+        expect(atReset.success).toBe(true);
+        expect(atReset.remaining).toBe(0);
+        expect(atReset.resetAtMs).toBe(12_000);
+        expect((await slidingStore.check("user:boundary", boundaryPolicy)).success).toBe(false);
+        slidingStore.close();
+      });
+
+      it("does not refund an expired receipt at the window boundary", async () => {
+        let now = 10_000;
+        const slidingStore = new Store({ now: () => now, pruneIntervalMs: 0 });
+        const boundaryPolicy: SlidingWindowPolicy = { ...policy, limit: 2, windowMs: 1000 };
+        const expired = await slidingStore.check("user:boundary", boundaryPolicy);
+        now = 10_001;
+        const active = await slidingStore.check("user:boundary", boundaryPolicy);
+
+        now = 11_000;
+        const refund = await slidingStore.refund(
+          "user:boundary",
+          boundaryPolicy,
+          expired.refundReceipt,
+        );
+        expect(refund.refunded).toBe(false);
+        expect(refund.remaining).toBe(1);
+        expect(refund.resetAtMs).toBe(11_001);
+        expect(await slidingStore.getStats()).toEqual({ allowed: 2, denied: 0, total: 2 });
+        expect(
+          (await slidingStore.refund("user:boundary", boundaryPolicy, active.refundReceipt))
+            .refunded,
+        ).toBe(true);
+        slidingStore.close();
+      });
+
+      it("prunes timestamps at the window boundary while retaining newer requests", async () => {
+        let now = 10_000;
+        const slidingStore = new Store({ now: () => now, pruneIntervalMs: 0 });
+        const boundaryPolicy: SlidingWindowPolicy = { ...policy, limit: 2, windowMs: 1000 };
+        await slidingStore.check("user:boundary", boundaryPolicy);
+        now = 10_001;
+        await slidingStore.check("user:boundary", boundaryPolicy);
+
+        now = 10_999;
+        expect(await slidingStore.pruneExpired()).toBe(0);
+        now = 11_000;
+        expect(await slidingStore.pruneExpired()).toBe(1);
+        expect(await slidingStore.pruneExpired()).toBe(0);
+        now = 11_001;
+        expect(await slidingStore.pruneExpired()).toBe(1);
+        slidingStore.close();
+      });
+    },
+  );
+
+  it("reads only timestamps strictly after the sliding window start", async () => {
+    class ReadableSlidingWindowStore extends SlidingWindowInMemoryStore {
+      readTimestamps(key: string, since: number): Promise<number[]> {
+        return this.getTimestamps(key, since);
+      }
+    }
+    let now = 10_000;
+    const slidingStore = new ReadableSlidingWindowStore({ now: () => now, pruneIntervalMs: 0 });
+    await slidingStore.check("user:boundary", policy);
+    now = 10_001;
+    await slidingStore.check("user:boundary", policy);
+
+    expect(await slidingStore.readTimestamps("user:boundary", 9999)).toEqual([10_000, 10_001]);
+    expect(await slidingStore.readTimestamps("user:boundary", 10_000)).toEqual([10_001]);
+    expect(await slidingStore.readTimestamps("user:boundary", 10_001)).toEqual([]);
+    slidingStore.close();
+  });
+
   it.each([Number.NaN, Number.POSITIVE_INFINITY, 2_147_483_648])(
     "rejects unsupported native prune intervals (%s) with a stable Problem",
     (pruneIntervalMs) => {
@@ -182,6 +268,157 @@ describe("InMemoryRateLimitStore", () => {
 
     expect(vi.getTimerCount()).toBe(0);
     vi.useRealTimers();
+  });
+
+  describe("FixedWindowInMemoryStore counters", () => {
+    let fixedStore!: FixedWindowInMemoryStore;
+    let now: number;
+    const fixedPolicy: FixedWindowPolicy = {
+      name: "fixed-counter",
+      algorithm: "fixed",
+      limit: 10,
+      windowMs: 1000,
+    };
+
+    beforeEach(() => {
+      now = 0;
+      fixedStore = new FixedWindowInMemoryStore({ now: () => now, pruneIntervalMs: 0 });
+    });
+
+    afterEach(() => {
+      fixedStore.close();
+    });
+
+    it.each([5, 0, 1.5, -2])("should persist a new key's increment of %s", async (amount) => {
+      expect(await fixedStore.getCount("user:counter")).toBe(0);
+      expect(await fixedStore.increment("user:counter", amount)).toBe(amount);
+      expect(await fixedStore.getCount("user:counter")).toBe(amount);
+      expect(await fixedStore.increment("user:counter")).toBe(amount + 1);
+      expect(await fixedStore.getCount("user:counter")).toBe(amount + 1);
+      expect(await fixedStore.getCount("user:other")).toBe(0);
+      expect(await fixedStore.getStats()).toEqual({ allowed: 0, denied: 0, total: 0 });
+    });
+
+    it("should reset only the requested counter and start its next increment from zero", async () => {
+      await fixedStore.increment("", 5);
+      await fixedStore.increment("user:other", 2);
+
+      await fixedStore.reset("");
+
+      expect(await fixedStore.getCount("")).toBe(0);
+      expect(await fixedStore.getCount("user:other")).toBe(2);
+      expect(await fixedStore.increment("")).toBe(1);
+    });
+
+    it("should accumulate concurrent standalone increments without losing updates", async () => {
+      const counts = await Promise.all(
+        Array.from({ length: 20 }, () => fixedStore.increment("user:counter")),
+      );
+
+      expect(counts).toEqual(Array.from({ length: 20 }, (_, index) => index + 1));
+      expect(await fixedStore.getCount("user:counter")).toBe(20);
+    });
+
+    it("should retain a standalone counter's TTL across increments and expire reads at its boundary", async () => {
+      await fixedStore.increment("user:counter", 5);
+      await fixedStore.expire("user:counter", 100);
+      now = 99;
+
+      expect(await fixedStore.increment("user:counter", 2)).toBe(7);
+      expect(await fixedStore.getCount("user:counter")).toBe(7);
+      now = 100;
+
+      expect(await fixedStore.getCount("user:counter")).toBe(0);
+      expect(await fixedStore.pruneExpired()).toBe(0);
+    });
+
+    it("should restart an expired standalone counter on increment without a preceding read", async () => {
+      await fixedStore.increment("user:counter", 5);
+      await fixedStore.expire("user:counter", 100);
+      now = 100;
+
+      expect(await fixedStore.increment("user:counter", 2)).toBe(2);
+      expect(await fixedStore.getCount("user:counter")).toBe(2);
+    });
+
+    it("should prune expired standalone counters alongside windows while retaining active counters", async () => {
+      await fixedStore.increment("user:counter", 5);
+      await fixedStore.expire("user:counter", 100);
+      await fixedStore.increment("user:active", 2);
+      await fixedStore.check("user:window", fixedPolicy);
+      now = 1001;
+
+      expect(await fixedStore.pruneExpired()).toBe(2);
+      expect(await fixedStore.getCount("user:counter")).toBe(0);
+      expect(await fixedStore.getCount("user:window")).toBe(0);
+      expect(await fixedStore.getCount("user:active")).toBe(2);
+    });
+
+    it.each([0, -1])(
+      "should immediately expire only the standalone counter for TTL %s",
+      async (ttlMs) => {
+        await fixedStore.increment("user:counter", 5);
+        await fixedStore.check("user:window", fixedPolicy);
+
+        await fixedStore.expire("user:counter", ttlMs);
+        await fixedStore.expire("user:window", ttlMs);
+
+        expect(await fixedStore.getCount("user:counter")).toBe(0);
+        expect(await fixedStore.getCount("user:window")).toBe(1);
+      },
+    );
+
+    it("should clear TTL state on reset and avoid expiring a counter that did not exist", async () => {
+      await fixedStore.increment("user:counter", 5);
+      await fixedStore.expire("user:counter", 100);
+      await fixedStore.reset("user:counter");
+      await fixedStore.increment("user:counter", 2);
+      await fixedStore.expire("user:missing", 100);
+      await fixedStore.increment("user:missing", 3);
+      now = 100;
+
+      expect(await fixedStore.getCount("user:counter")).toBe(2);
+      expect(await fixedStore.getCount("user:missing")).toBe(3);
+    });
+
+    it("should continue incrementing and resetting existing policy windows", async () => {
+      await fixedStore.check("user:window", fixedPolicy);
+
+      expect(await fixedStore.increment("user:window", 5)).toBe(6);
+      expect(await fixedStore.getCount("user:window")).toBe(6);
+      expect((await fixedStore.check("user:window", fixedPolicy)).remaining).toBe(3);
+
+      await fixedStore.reset("user:window");
+
+      expect(await fixedStore.getCount("user:window")).toBe(0);
+      expect(await fixedStore.increment("user:window", 2)).toBe(2);
+      expect(await fixedStore.getCount("user:window")).toBe(2);
+    });
+
+    it("should keep standalone counters when pruning unrelated policy windows", async () => {
+      await fixedStore.increment("user:counter", 5);
+      await fixedStore.check("user:window", fixedPolicy);
+      now = 1001;
+
+      expect(await fixedStore.pruneExpired()).toBe(1);
+      expect(await fixedStore.getCount("user:counter")).toBe(5);
+      expect(await fixedStore.getCount("user:window")).toBe(0);
+    });
+
+    it("should replace a standalone counter with a policy window without restoring it after pruning", async () => {
+      await fixedStore.increment("user:counter", 5);
+      await fixedStore.expire("user:counter", 100);
+
+      expect((await fixedStore.check("user:counter", fixedPolicy)).remaining).toBe(9);
+      expect(await fixedStore.increment("user:counter", 2)).toBe(3);
+      now = 100;
+      expect(await fixedStore.getCount("user:counter")).toBe(3);
+      now = 1001;
+
+      expect(await fixedStore.pruneExpired()).toBe(1);
+      expect(await fixedStore.getCount("user:counter")).toBe(0);
+      expect(await fixedStore.increment("user:counter")).toBe(1);
+    });
   });
 
   it("should automatically prune expired fixed window entries", async () => {

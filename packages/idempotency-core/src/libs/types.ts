@@ -115,6 +115,8 @@ export type IdempotencyReservation = {
 };
 
 export type IdempotencyReserveOptions = {
+  /** In-flight lease; defaults to ttlMs, then the store default. */
+  readonly leaseMs?: number;
   readonly ttlMs?: number;
   readonly metadata?: Record<string, unknown>;
 };
@@ -165,6 +167,8 @@ export type IdempotencyReserveResult<TResult = unknown> =
     };
 
 export type IdempotencyExecutionRequest = {
+  /** In-flight lease; omitted values preserve the legacy ttlMs lease. */
+  readonly leaseMs?: number;
   /** Overrides handler failure retryability; audit and commit recovery are unchanged. */
   readonly isRetryable?: (error: unknown) => boolean;
   readonly key: DerivedIdempotencyKey;
@@ -193,6 +197,8 @@ export type IdempotencyExecutionResult<TResult> =
     };
 
 export type IdempotencyStore<TResult = unknown> = {
+  /** Declared by stores that apply leaseMs independently of ttlMs. */
+  readonly processingLeaseVersion?: 1;
   reserve(
     key: DerivedIdempotencyKey,
     options?: IdempotencyReserveOptions,
@@ -201,6 +207,10 @@ export type IdempotencyStore<TResult = unknown> = {
   replay(key: DerivedIdempotencyKey): Promise<IdempotencyCompletedRecord<TResult> | null>;
   fail(options: IdempotencyFailOptions): Promise<IdempotencyFailedRecord>;
   expire(options: IdempotencyExpireOptions): Promise<boolean>;
+};
+
+export type LeaseAwareIdempotencyStore<TResult = unknown> = IdempotencyStore<TResult> & {
+  readonly processingLeaseVersion: 1;
 };
 
 export type IdempotencyAuditEvent = {

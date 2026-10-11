@@ -111,6 +111,21 @@ Registering another version never replaces the active version. It remains `inact
 
 Production runs and action emissions record both `ruleVersion` and `ruleFingerprint`. A paused rule still records a skipped run with `skipReason: "rule_paused"`, but it does not dispatch actions. Resuming does not replay signals.
 
+Default dedupe preserves the redeliverable source event identity: the idempotency key is the
+`(rule id, rule version, tenant id, signal type, source namespace, source event id)` tuple.
+Issue one stable `signal.id` at the durable ingress boundary (for example with
+`ensureDurableLifecycleSignal()`) and preserve it on every redelivery envelope. Signals without
+a source identity fail evaluation with `lifecycle-core/source-identity-missing` instead of being
+estimated from timestamps, payloads, or per-attempt UUIDs. Redelivery with the same identity and
+semantic payload returns the same logical run; redelivery with a conflicting payload fails with
+`lifecycle-core/source-payload-conflict`. The conflict fingerprint covers semantic signal
+type/data only and excludes receiver timestamps and attempt metadata. An explicit custom
+`idempotencyKey` resolver is business coalescing: it intentionally merges distinct source events
+into one unit of work. `InMemoryLifecycleRunStore` retains finalized receipts for 30 days by
+default (`receiptTtlMs`); align this with the supported replay horizon because redelivery after
+expiry is treated as a new receipt. Receipts persisted with the previous default key
+(`rule:version:tenant:type:signal-or-timestamp`) are accepted as a migration fallback for one release.
+
 `LifecycleRunStore.claim()` atomically reserves the idempotency key and optional cooldown window together with an `indeterminate` dispatch boundary before any action adapter starts. Distributed adapters must commit the claim and boundary in shared durable storage; separate read-then-save checks are not sufficient under concurrent evaluation or process termination. The durable run means dispatch may have occurred and blocks automatic replay until an operator or provider-specific reconciler supplies action evidence through `finalizeDispatch()`. Finalization must compare-and-set the same run ID and idempotency key. `abortClaim()` may remove the boundary only when dispatch is proven not to have started; finalization failure must retain the claim and indeterminate run. Diagnostics report indeterminate runs as degraded health without exposing action payloads.
 
 ## Dry-run evaluation
@@ -126,6 +141,13 @@ const preview = await evaluator.dryRun({
 ```
 
 The result includes the exact rule version and fingerprint, matched state, boolean `conditionEvidence`, payload-free proposed action descriptors, suppression/cooldown decisions, and redacted Problem summaries. Context and action payload values are not returned by default. Keep `when`, `conditionEvidence`, and dynamic action mapping free of side effects because dry-run executes that code.
+
+Receipt suppression uses `context.now` and the same TTL boundary as `claim()`: a finalized receipt
+expires when `completedAt + receiptTtlMs <= context.now`, including for cooldown checks.
+Indeterminate dispatch evidence continues to suppress replay until reconciliation.
+`LifecycleRunStore.findByIdempotencyKey()` and `findLatestForRule()` accept an optional `evaluatedAt`
+for this active-receipt view. Omitting it preserves retained history lookup; neither view prunes
+history, reserves a claim, or consumes cooldown. Actual claims retain their existing expiry pruning.
 
 Pass an `InMemoryLifecycleDryRunStore` (or another `LifecycleDryRunStore`) to the evaluator when recent dry-run audit evidence should be available to `LifecycleDiagnosticsProvider`. Diagnostics can also receive the registry to report active versions, paused rules, unavailable executable registrations, and run fingerprint mismatches.
 
@@ -207,3 +229,74 @@ Installation fails with `MonetizationRecipeCapabilityProblem` when a required so
 Default evidence never accepts arbitrary provider metadata. It contains only the factory's documented numeric, timestamp, status, meter, unit, period, and correlation fields. Keep customer contact data, payment instruments, provider customer/subscription IDs, and raw webhook bodies outside signal evidence and action predicates.
 
 Pass the threshold store to `LifecycleDiagnosticsProvider` to report suppressed duplicate crossings. Diagnostics also report monetization run counts by signal type, failed actions, and the latest subscription recovery result without returning signal or action payloads.
+
+## Bounded journeys
+
+`JourneyEngine` adds versioned, code-defined journeys with at most eight reachable,
+acyclic `wait`, `condition`, `action`, and `end` nodes. Register predicates and
+message actions with parameter validators and declared capabilities before
+registering a definition. The engine rejects missing registrations, unsupported
+capabilities, graph cycles, and attempts to overwrite a registered version.
+Existing episodes retain their original definition version.
+Object and nested parameter key order does not change a pinned definition's identity.
+Wait paths, retry intervals, and deadlines must fit the JavaScript Date range;
+invalid intervals fail registration with a Journey diagnostic.
+
+`enter()` requires an application, environment, tenant, subject, business object,
+episode key, and source event ID. Reentry defaults are explicit in the definition:
+`once` admits one episode per definition/subject/business object, while
+`episode-key` additionally distinguishes the supplied business episode key.
+Timestamps are never used as entry idempotency identities.
+
+A `tick()` evaluates one node and persists its receipt. Waits persist `wakeAt`;
+no process sleeps. `JourneyTaskBridge.dispatchDue()` leases a bounded batch of due
+episodes and invokes the application's existing task dispatcher.
+Register `croco.journey.node` with the existing TaskRunner and delegate its input
+to `bridge.execute()`. Invoke the due scanner from an existing scheduled trigger;
+the bridge does not install a scheduler. Task delivery keys include the persisted
+revision, while external action keys retain the episode/node identity.
+
+Every tick checks the goal, including a delayed queue delivery. Actions additionally
+recheck current consent and resource validity immediately before admission. Domain
+predicates and these checks are application responsibilities. Unknown results
+persist a retry time and fail with `blocked-unknown-deadline` after the configured
+deadline. Source changes after a successful check remain possible: these reads do
+not form a distributed transaction with a message provider.
+
+The store's revision compare-and-set is the dispatch admission boundary. A pause
+that wins first prevents admission; a pause after admission fails explicitly.
+Admission is durably recorded before invoking the provider. A crash or uncertain
+provider response leaves an `indeterminate` episode that is never automatically
+replayed. `reconcile()` requires actor, reason, revision, command identity, action attempt
+identity, and a provider/operator proof reference. Accepted proof advances once;
+rejected proof fails the episode. Neither outcome resends the action. The
+application must authorize and verify the proof before calling this method. Stop cannot retract an already admitted action. Resume
+starts a paused wait again for its full duration, preventing catch-up bursts.
+
+`command()` requires actor, reason, expected revision, and command idempotency key.
+Applications must authorize the scope and operation server-side before invoking
+it. `dryRun()` evaluates the registered goal and current checks without dispatching,
+reserving quota, or writing episodes. Predicate/check implementations must be
+read-only. Do not expose raw episode identities or source context in admin views;
+use the authorized admin projection.
+
+`InMemoryJourneyStore` is intended for tests and single-process use. Durable stores
+must enforce scope and reentry uniqueness, lease wake claims, and atomically write
+node receipts, action intents, and revisions. See `@croco/lifecycle-drizzle` for the
+PostgreSQL implementation and migration.
+
+Dry-run returns `steps` for the selected condition path, including matched or
+unmatched predicates, projected waits, proposed actions, and suppressed or deferred
+execution. Unknown results report both the next retry and the deadline at which
+continued uncertainty would block execution. Wait projection advances a simulated
+clock; it does not predict future source data. Check timestamps identify when the
+read-only application callbacks actually ran. No action callback is invoked.
+Later predicates receive projected wait and condition receipts. Continuation after
+an action is a proposal: it records `action-proposed` without inventing provider
+acceptance or an accepted intent. Predicates that depend on provider outcomes
+cannot treat a dry run as evidence of those outcomes.
+
+Action receipts and intents retain the check values and evaluation time, an
+execution reference, and an engine-owned failure code. Provider exception messages,
+stacks, and arbitrary provider codes are excluded. Resume appends a new wait epoch;
+all earlier receipts remain available for audit.

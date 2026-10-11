@@ -3,9 +3,11 @@ import { Container, Context as FrameworkContext, LOGGER_TOKEN } from "@croco/fra
 import type { Logger } from "@croco/framework-logger";
 import { Problem, ProblemCategory } from "@croco/problems-core";
 import { HttpExceptionFilter } from "@croco/protocols-rest";
+import { Hono } from "hono";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { HTTP_CONTEXT_KEYS } from "../libs/contextKeys";
 import { ErrorHandler } from "../libs/ErrorHandler";
+import { HttpContext } from "../libs/HttpContext";
 import { HttpRequestBodyTooLargeProblem } from "../libs/problems/HttpRequestBodyProblems";
 import type { CrocoHttpContext } from "../libs/types";
 
@@ -15,18 +17,24 @@ type TestProblemOptions = {
   detail?: string;
   extensions?: Record<string, unknown>;
   instance?: string;
+  cause?: Error;
+  status?: number;
 };
 
 class TestProblem extends Problem {
+  private readonly statusOverride?: number;
+
+  override get status(): number {
+    return this.statusOverride ?? super.status;
+  }
   constructor(options: TestProblemOptions = {}) {
     super(
       options.code ?? "test/error",
       options.category ?? ProblemCategory.BadRequest,
       options.detail,
-      options.extensions === undefined && options.instance === undefined
-        ? undefined
-        : { extensions: options.extensions, instance: options.instance },
+      { extensions: options.extensions, instance: options.instance, cause: options.cause },
     );
+    this.statusOverride = options.status;
   }
 }
 
@@ -41,7 +49,7 @@ describe("ErrorHandler", () => {
     mockLogger = {
       info: () => {},
       warn: () => {},
-      error: () => {},
+      error: vi.fn(),
       debug: () => {},
       fatal: vi.fn(),
       child: () => mockLogger,
@@ -77,6 +85,78 @@ describe("ErrorHandler", () => {
 
     expect(handler).toBeInstanceOf(ErrorHandler);
     expect(Reflect.get(handler, "logger")).toBe(mockLogger);
+  });
+
+  describe("Problem Details media type", () => {
+    it.each([
+      {
+        name: "Problem",
+        error: new TestProblem({ detail: "Invalid request" }),
+        status: 400,
+        body: {
+          type: "about:blank",
+          title: "Bad Request",
+          status: 400,
+          code: "test/error",
+          detail: "Invalid request",
+          instance: "http://localhost/test",
+        },
+      },
+      {
+        name: "Error",
+        error: new Error("private error detail"),
+        status: 500,
+        body: {
+          type: "about:blank",
+          title: "Internal Server Error",
+          status: 500,
+          code: "INTERNAL_SERVER_ERROR",
+          detail: "An internal error occurred",
+        },
+      },
+      {
+        name: "non-Error exception",
+        error: "private thrown value",
+        status: 500,
+        body: {
+          type: "about:blank",
+          title: "Internal Server Error",
+          status: 500,
+          code: "INTERNAL_SERVER_ERROR",
+          detail: "An unexpected error occurred",
+        },
+      },
+    ])(
+      "should return application/problem+json for $name through Hono",
+      async ({ error, status, body }) => {
+        const app = new Hono();
+        let context: HttpContext | undefined;
+        app.get("/test", (raw) => {
+          context = new HttpContext(raw);
+          return errorHandler.handleError(error, context);
+        });
+
+        const response = await app.request("/test");
+
+        expect(response.status).toBe(status);
+        expect(response.headers.get("content-type")).toBe("application/problem+json");
+        expect(context?.res.headers["content-type"]).toBe(
+          error instanceof Problem ? "application/problem+json" : undefined,
+        );
+        expect(await response.json()).toEqual(body);
+      },
+    );
+
+    it("should preserve application/json for successful responses", async () => {
+      const app = new Hono();
+      app.get("/test", (raw) => new HttpContext(raw).jsonResponse({ ok: true }));
+
+      const response = await app.request("/test");
+
+      expect(response.status).toBe(200);
+      expect(response.headers.get("content-type")).toContain("application/json");
+      expect(await response.json()).toEqual({ ok: true });
+    });
   });
 
   describe("RFC 7807 Standard Field Protection", () => {
@@ -197,6 +277,71 @@ describe("ErrorHandler", () => {
   });
 
   describe("handleProblem", () => {
+    it.each([500, 503, 599])(
+      "should log status %i with the original Problem and response correlation",
+      async (status) => {
+        const cause = new Error("upstream connection refused");
+        const problem = new TestProblem({
+          category: ProblemCategory.InternalServerError,
+          detail: "Provider failed",
+          cause,
+          status,
+        });
+        mockCtx.get = ((key: string) =>
+          key === HTTP_CONTEXT_KEYS.traceId
+            ? "trace-server"
+            : undefined) as CrocoHttpContext["get"];
+        const response = await FrameworkContext.run({ requestId: "request-server" }, () =>
+          errorHandler.handleError(problem, mockCtx),
+        );
+        const body = await response.json();
+
+        expect(response.status).toBe(status);
+        expect(response.headers.get("Content-Type")).toBe("application/problem+json");
+        expect(body).toMatchObject({
+          status,
+          detail: "An internal error occurred",
+          traceId: "trace-server",
+          requestId: "request-server",
+        });
+        expect(mockLogger.error).toHaveBeenCalledExactlyOnceWith("Server problem:", {
+          problem,
+          traceId: body.traceId,
+          requestId: body.requestId,
+        });
+        const [, context] = vi.mocked(mockLogger.error).mock.calls[0];
+        expect(context).toHaveProperty("problem", problem);
+        expect(problem.cause).toBe(cause);
+      },
+    );
+
+    it.each([400, 499])("should not log status %i", (status) => {
+      errorHandler.handleError(new TestProblem({ status }), mockCtx);
+      expect(mockLogger.error).not.toHaveBeenCalled();
+    });
+
+    it.each(["throw", "reject"])(
+      "should preserve the Problem response when logging fails by %s",
+      async (failure) => {
+        const problem = new TestProblem({
+          category: ProblemCategory.InternalServerError,
+          detail: "secret provider failure",
+        });
+        const expected = errorHandler.handleError(problem, mockCtx);
+        vi.mocked(mockLogger.error).mockClear();
+        vi.mocked(mockLogger.error).mockImplementation(() => {
+          const error = new Error("log sink failed");
+          if (failure === "throw") throw error;
+          return Promise.reject(error);
+        });
+        const response = errorHandler.handleError(problem, mockCtx);
+        expect(response.status).toBe(expected.status);
+        expect([...response.headers]).toEqual([...expected.headers]);
+        expect(await response.json()).toEqual(await expected.json());
+        expect(mockLogger.error).toHaveBeenCalledOnce();
+      },
+    );
+
     it.each([
       { name: "divergent source instance", sourceInstance: "/source-instance" },
       { name: "absent source instance", sourceInstance: undefined },
@@ -570,6 +715,7 @@ describe("ErrorHandler", () => {
         type: "about:blank",
         title: "Internal Server Error",
         status: 500,
+        code: "INTERNAL_SERVER_ERROR",
         detail: "An internal error occurred",
       });
       expect(throwingLogger.error).toHaveBeenCalledOnce();

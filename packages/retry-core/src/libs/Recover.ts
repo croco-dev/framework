@@ -37,9 +37,8 @@ export function Recover(exceptionType?: new (...args: unknown[]) => Error): Meth
   return (target: object, propertyKey: string | symbol, _descriptor: PropertyDescriptor): void => {
     const methodName = String(propertyKey);
 
-    // Get existing recover methods or create new array
     const recoverMethods: RecoverMetadata[] =
-      Reflect.getMetadata(RECOVER_METADATA_KEY, target) || [];
+      Reflect.getOwnMetadata(RECOVER_METADATA_KEY, target) || [];
 
     const duplicateRecover = recoverMethods.find(
       (recoverMethod) => recoverMethod.exceptionType === exceptionType,
@@ -49,14 +48,10 @@ export function Recover(exceptionType?: new (...args: unknown[]) => Error): Meth
       throw new DuplicateRecoverHandlerProblem(methodName, exceptionType?.name ?? "catch-all");
     }
 
-    // Add this method
-    recoverMethods.push({
-      methodName,
-      exceptionType,
-    });
-
-    // Store updated metadata
-    Reflect.defineMetadata(RECOVER_METADATA_KEY, recoverMethods, target);
+    const recoverMethod: RecoverMetadata = exceptionType
+      ? { methodName, exceptionType }
+      : { methodName };
+    Reflect.defineMetadata(RECOVER_METADATA_KEY, [...recoverMethods, recoverMethod], target);
   };
 }
 
@@ -64,7 +59,23 @@ export function Recover(exceptionType?: new (...args: unknown[]) => Error): Meth
  * Get all @Recover methods for a class instance.
  */
 export function getRecoverMethods(target: object): RecoverMetadata[] {
-  return Reflect.getMetadata(RECOVER_METADATA_KEY, target) || [];
+  const methods: RecoverMetadata[] = [];
+  const seenTypes = new Set<RecoverMetadata["exceptionType"]>();
+  let prototype: object | null = target;
+
+  while (prototype) {
+    const ownMethods: RecoverMetadata[] =
+      Reflect.getOwnMetadata(RECOVER_METADATA_KEY, prototype) || [];
+    for (const method of ownMethods) {
+      if (!seenTypes.has(method.exceptionType)) {
+        seenTypes.add(method.exceptionType);
+        methods.push(method);
+      }
+    }
+    prototype = Object.getPrototypeOf(prototype);
+  }
+
+  return methods;
 }
 
 /**

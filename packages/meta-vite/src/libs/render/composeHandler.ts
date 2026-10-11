@@ -1,3 +1,5 @@
+import { validateApiRoute } from "../routes/validateApiRoute";
+
 import type { ApiRouteIR } from "../routes/types";
 import type { RenderServer } from "./renderServer";
 import type { CrocoApiHandlerResult, CrocoFetchHandler, RuntimeContext } from "./types";
@@ -44,6 +46,10 @@ export type MetaFetchHandlerOptions = {
 };
 
 export function createMetaFetchHandler(options: MetaFetchHandlerOptions): CrocoFetchHandler {
+  for (const route of options.apiRoutes ?? []) {
+    validateApiRoute(route);
+  }
+
   return async (request: Request, context?: RuntimeContext): Promise<Response> => {
     const url = new URL(request.url);
     const pathname = url.pathname;

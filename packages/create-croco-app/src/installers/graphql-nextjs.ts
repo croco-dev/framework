@@ -11,5 +11,6 @@ export function installGraphqlNextjs(
   mergeInto(addonDir, targetDir, {
     projectName: options.projectName,
     scope: options.scope,
+    webAppName: "web",
   });
 }

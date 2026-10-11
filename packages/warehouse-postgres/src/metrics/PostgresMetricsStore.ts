@@ -30,6 +30,8 @@ type MovementRow = {
 
 /** PostgreSQL implementation of the metrics repository contract. */
 export class PostgresMetricsStore extends MetricsRepository {
+  readonly mrrMovementIdentityVersion = 2;
+
   private static readonly MRR_MOVEMENTS_TABLE = "mrr_movements";
   private static readonly MRR_MOVEMENT_EVENT_KEYS_TABLE = "mrr_movement_event_keys";
   private static readonly SNAPSHOTS_TABLE = "metrics_snapshots";
@@ -46,6 +48,7 @@ export class PostgresMetricsStore extends MetricsRepository {
     timestamp: Date,
     eventKey?: string,
     dedupeEventKeys: readonly string[] = [],
+    legacyEventKeys: readonly string[] = [],
   ): Promise<void> {
     const sql = eventKey
       ? `
@@ -77,6 +80,10 @@ export class PostgresMetricsStore extends MetricsRepository {
       SELECT $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15
       FROM claim
       WHERE claim.won
+        AND NOT EXISTS (
+          SELECT 1 FROM ${PostgresMetricsStore.MRR_MOVEMENTS_TABLE} AS historical
+          WHERE historical.tenant_id = $1 AND historical.event_key = ANY($17::text[])
+        )
     `
       : `
       INSERT INTO ${PostgresMetricsStore.MRR_MOVEMENTS_TABLE} (
@@ -105,7 +112,14 @@ export class PostgresMetricsStore extends MetricsRepository {
       movement.net.currency,
     ];
     const params = eventKey
-      ? [tenantId, eventKey, timestamp, ...movementParams, [eventKey, ...dedupeEventKeys]]
+      ? [
+          tenantId,
+          eventKey,
+          timestamp,
+          ...movementParams,
+          [eventKey, ...dedupeEventKeys],
+          legacyEventKeys,
+        ]
       : [tenantId, timestamp, ...movementParams];
 
     await this.db.query(sql, params);

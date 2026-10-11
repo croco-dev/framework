@@ -47,6 +47,10 @@ const rotated = await manager.rotate(created.id, {
 });
 ```
 
+위 예시는 `allowedIps`가 없는 키입니다. `allowedIps`를 설정한 키를 검증할 때는 어댑터가 신뢰할 수 있는 경로에서 확인한
+클라이언트 IP를 `manager.verify(rawKey, verifiedClientIp)`로 전달해야 합니다. 주소가 없거나 빈 문자열이면 인증이
+거부되며, 허용 목록에 없는 주소도 거부됩니다. 빈 허용 목록은 모든 주소를 거부합니다.
+
 `rotate()`는 호출자가 제공한 멱등성 키로 하나의 논리적 회전을 식별합니다. 저장소는 기존 키 폐기와 대체 키 저장을
 원자적으로 처리해야 하며, 성공 응답이나 이벤트 발행이 유실되면 같은 멱등성 키로 재시도해 동일한 대체 키를 복구합니다.
 복구 자료는 AES-256-GCM으로 보호되며, 회전 레코드가 재생 가능한 동안 해당 레코드를 암호화한 이전 보호 키도 설정에
@@ -99,6 +103,12 @@ class ProjectController {
 - `ApiKeyExpiredProblem`, `ApiKeyRevokedProblem`, `ApiKeyNotFoundProblem`
 - `ApiKeyRotationConflictProblem`, `ApiKeyRotationProtectionProblem`
 - `InvalidPermissionFormatProblem`, `InvalidPermissionActionProblem`
+
+## API 키 형식
+
+API 키는 `<prefix>_<shortToken>_<longToken>` 형식입니다. `shortToken`과 `longToken`에는 밑줄(`_`)이
+들어가지 않으므로, `prefix`에는 밑줄을 포함할 수 있습니다(예: `sk_live`). `verify()`는 마지막 두 조각을
+토큰으로 해석하고 그 앞부분 전체를 `prefix`로 해석합니다.
 
 ## AuthGuard conformance
 

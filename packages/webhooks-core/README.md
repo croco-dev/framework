@@ -74,22 +74,35 @@ const result = await gateway.handle({
 });
 ```
 
+`idempotencyTtlMs` keeps completed or terminally failed results for 24 hours by default.
+`processingLeaseMs` controls the in-flight reservation separately and defaults to 15 minutes.
+After an abandoned worker's lease expires, a redelivery can run the handler again; deliveries
+within the lease remain in-flight, and completed deliveries replay until the result TTL expires.
+Set `processingLeaseMs` longer than the provider's response timeout and at least as long as the
+handler's maximum execution time. A live handler that exceeds its lease can overlap a redelivery
+and run side effects twice; the stale handler cannot commit its result over the new reservation.
+Custom idempotency stores must apply `leaseMs` independently of the result TTL, pass the
+idempotency store conformance suite, and declare `processingLeaseVersion: 1`. The gateway rejects
+an incompatible store during construction.
+
 The gateway calls the adapter's `verify()` function before handler resolution. Invalid signatures
 therefore fail before a typed handler can run. Completed event ids replay the stored handled,
 ignored, or reported result through `@croco/idempotency-core`; same event id with a different
 fingerprint fails with `IdempotencyConflictProblem`.
 
 Handler failures surface as `WebhookDispatchProblem` and unknown-event reporter failures as
-`WebhookReporterProblem`, both with the `InternalServerError` category. When the original error is a
-`Problem`, the wrapper records its retry classification from `isRetryableHandlerFailure()` in
-`extensions.retryable`. A non-retryable failure is stored once, and redeliveries of the same event
-return `outcome: "failed"` without running the handler again. Retryable Problems and other errors
-leave the event open, so the next delivery runs the handler again.
+`WebhookReporterProblem`, both with the `InternalServerError` category and status 500. For every
+supplied `Error` cause, including SDK errors and Problems, the wrapper records the result of
+`isRetryableHandlerFailure()` in `extensions.retryable`. A non-retryable failure is stored once,
+and redeliveries of the same event return `outcome: "failed"` without running the handler or reporter
+again. Retryable failures allow the next delivery to run the handler or reporter again.
 
-A Problem without an explicit boolean `retryable` or `extensions.retryable` flag is non-retryable
-when its HTTP `status` is a 4xx other than 408 or 429; with the default category mapping, that is
-every 4xx category except `TooManyRequests`. The stored failure then lasts for `idempotencyTtlMs`
-(24 hours by default). Mark a transient client error such as an out-of-order event with
+An explicit boolean `retryable` or `extensions.retryable` flag takes precedence over HTTP `status`
+for both ordinary `Error` and `Problem` causes. Without an explicit flag, a 4xx `status` other than 408
+or 429 is non-retryable; with the default Problem category mapping, that is every 4xx category except
+`TooManyRequests`. Errors without a recognized retry flag or status remain retryable.
+
+A non-retryable failure remains stored for `idempotencyTtlMs` (24 hours by default). Mark a transient client error such as an out-of-order event with
 `extensions.retryable: true` to keep redeliveries running. `replay()` uses the same idempotency key
 and returns the stored failure until the record expires. To run the handler again sooner, keep a
 reference to the store passed as `idempotencyStore` and call
@@ -198,7 +211,20 @@ failures stop the batch before later tasks are published. Store adapters atomica
 publication once, and task publishers must honor the stable idempotency key so concurrent drains or
 a store-acknowledgement retry cannot create duplicate task, execution, or outbox records.
 Persistent adapters can use `createOutboundWebhookStoreConformanceSuite()` (including its optional
-reopen hook) to verify durability and concurrent-claim behavior.
+reopen and datastore-clock hooks) to verify durability, concurrent claims, lease recovery, and stale
+token rejection. `claimDelivery()` must atomically grant a claim using the datastore's current time,
+return `{ delivery, claimToken, leaseUntil }`, and allow another worker to claim after the lease
+expires. `recordAttempt()` must atomically reject an expired or replaced token before changing the
+delivery, attempts, or retry intent. `releaseDeliveryClaim()` returns `false` for an expired or
+replaced token, without releasing another worker's claim.
+
+`OutboundWebhookRuntime` defaults to a 60-second claim lease and a 30-second transport timeout.
+Set `claimLeaseDurationMs` longer than `transportTimeoutMs` and long enough to include signing,
+transport, attempt recording, and task publication. The runtime passes an abort signal to the
+transport and stops waiting when the timeout expires, even if the transport ignores the signal.
+An expired claim cannot record an attempt; a later dispatch can reclaim the delivery. A timeout
+leaves the delivery state unchanged for a retry and does not establish whether the remote endpoint
+accepted the request.
 
 Each attempt includes `webhook-id`, `webhook-delivery-id`, `webhook-timestamp`,
 `webhook-signature-version`, and `webhook-signature`. HMAC-SHA256 signs
@@ -221,8 +247,10 @@ material is never included in Problems or diagnostics.
 
 Replay schedules a new attempt on the existing endpoint delivery and is allowed only from
 `delivered`, `dead`, `canceled`, or `acceptance-unknown`; it never creates a second logical delivery.
-Paused endpoints retain a pending delivery without a dispatch intent, and `resume(tenantId,
-deliveryId)` schedules that evidence after activation. Disabled endpoints retain canceled evidence.
+Paused endpoints retain pending deliveries without dispatch intents. After activation,
+`resume(tenantId, deliveryId)` schedules a pending delivery or a retrying delivery whose
+`nextAttemptAt` has passed. A retrying delivery that is not due keeps its existing schedule.
+Disabled endpoints retain canceled evidence.
 `dispatch`, `replay`, `resume`, diagnostics, and all store lookups require tenant context.
 
 The default URL policy requires HTTPS, resolves DNS, and rejects embedded credentials, localhost,

@@ -18,3 +18,15 @@ title: "InMemoryCircuitBreakerStateStoreOptions"
 ### maxEntries?
 
 > `optional` **maxEntries?**: `number`
+
+---
+
+### now?
+
+> `optional` **now?**: () => `number`
+
+Millisecond clock for idle expiry (default: Date.now).
+
+#### Returns
+
+`number`

@@ -10,6 +10,7 @@ const EXTERNAL_CROCO_PACKAGE_RANGES = {
   "@croco/billing-core": "^0.0.4",
   "@croco/billing-polar": "^0.0.4",
   "@croco/cli": "^0.0.4",
+  "@croco/cohort-core": "^0.1.0",
   "@croco/credits-core": "^0.0.1",
   "@croco/diagnostics-core": "^0.0.4",
   "@croco/engagement-core": "^0.1.0",

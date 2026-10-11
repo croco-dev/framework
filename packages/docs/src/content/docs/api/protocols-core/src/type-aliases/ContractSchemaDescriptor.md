@@ -45,6 +45,18 @@ title: "ContractSchemaDescriptor"
 
 ---
 
+### maxLength?
+
+> `readonly` `optional` **maxLength?**: `number`
+
+---
+
+### minLength?
+
+> `readonly` `optional` **minLength?**: `number`
+
+---
+
 ### options?
 
 > `readonly` `optional` **options?**: readonly `ContractSchemaDescriptor`[]

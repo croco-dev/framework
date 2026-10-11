@@ -10,6 +10,7 @@ import {
   createMetaViteRouteManifest,
   createMetaViteRouteManifestFromRegistry,
   MetaViteRouteManifestError,
+  MetaViteUnsupportedCapabilityProblem,
   serializeMetaViteRouteManifest,
   writeMetaViteRouteManifest,
 } from "../libs/build/routeManifest";
@@ -17,13 +18,130 @@ import { createServerAction, createServerActionRegistry } from "../libs/actions/
 import { defineApiRoute } from "../libs/routes/defineApiRoute";
 import { defineRoute } from "../libs/routes/defineRoute";
 import { RouteRegistry } from "../libs/routes/routeRegistry";
-import type { RenderRouteComponentProps } from "../libs/routes/types";
+import type { PageRouteIR, RenderRouteComponentProps } from "../libs/routes/types";
 
 function Page({ request }: RenderRouteComponentProps) {
   return createElement("main", null, request.url);
 }
 
+describe("buffered route capabilities", () => {
+  const pages = [{ path: "/buffered", mode: "rsc" as const, componentRef: "src/Page.tsx#Page" }];
+
+  it("preserves requested mode while reporting only implemented capabilities", () => {
+    const [page] = createMetaViteRouteManifest({ pages }).pages;
+    expect(page?.mode).toBe("rsc");
+    expect(page?.runtimeCapabilities).toEqual(["fetch", "react-ssr"]);
+    expect(page?.runtimeRequirements).toEqual([
+      {
+        code: "CROCO_META_VITE_RSC_RUNTIME_REQUIRED",
+        capability: "react-server-components",
+        phase: "runtime",
+      },
+    ]);
+  });
+  it.each(["react-server-components", "streaming-response"] as const)(
+    "rejects profiles requiring %s before certifying their manifest",
+    (capability) => {
+      expect(() =>
+        createMetaViteRouteManifest({ pages, requiredCapabilities: [capability] }),
+      ).toThrow(MetaViteUnsupportedCapabilityProblem);
+      try {
+        createMetaViteRouteManifest({ pages, requiredCapabilities: [capability] });
+      } catch (error) {
+        expect(error).toMatchObject({
+          code: "meta-vite/unsupported-render-capability",
+          status: 501,
+          extensions: { path: "/buffered", capability },
+        });
+      }
+    },
+  );
+
+  it("accepts buffered SSR requirements and enforces registry profile requirements", () => {
+    expect(
+      createMetaViteRouteManifest({ pages, requiredCapabilities: ["fetch", "react-ssr"] }).pages,
+    ).toHaveLength(1);
+  });
+});
+
 describe("createMetaViteRouteManifestFromRegistry", () => {
+  it.each([NaN, Infinity, -Infinity, -1])(
+    "rejects invalid milliseconds %s in direct manifest input with a route diagnostic",
+    (revalidateMs) => {
+      expect(() =>
+        createMetaViteRouteManifest({
+          pages: [
+            { path: "/invalid-ttl", mode: "isr", componentRef: "src/Page.tsx#Page", revalidateMs },
+          ],
+        }),
+      ).toThrowError(
+        expect.objectContaining({
+          code: "CROCO_META_VITE_ROUTE_REVALIDATE_INVALID",
+          path: "/invalid-ttl",
+        }),
+      );
+    },
+  );
+
+  it("rejects an unsupported mode in direct manifest input with a route diagnostic", () => {
+    expect(() =>
+      createMetaViteRouteManifest({
+        pages: [
+          {
+            path: "/invalid-mode",
+            mode: "invalid",
+            componentRef: "src/Page.tsx#Page",
+          } as unknown as PageRouteIR,
+        ],
+      }),
+    ).toThrowError(
+      expect.objectContaining({
+        code: "CROCO_META_VITE_ROUTE_MODE_UNSUPPORTED",
+        path: "/invalid-mode",
+      }),
+    );
+  });
+
+  it.each(["/webhooks/stripe", "/healthz", "/apix", "/apiary", "/API/foo", "/", ""])(
+    "rejects API route outside the /api namespace: %j",
+    (path) => {
+      const create = () =>
+        createMetaViteRouteManifest({
+          pages: [],
+          apiRoutes: [{ path, method: "POST", handler: vi.fn() }],
+        });
+
+      expect(create).toThrow(
+        expect.objectContaining({
+          code: "CROCO_META_VITE_API_ROUTE_PREFIX_REQUIRED",
+          path,
+          method: "POST",
+        }),
+      );
+      expect(create).toThrow("POST");
+    },
+  );
+
+  it.each(["/api", "/api/", "/api/users"])(
+    "includes API namespace path %s in the manifest",
+    (path) => {
+      const manifest = createMetaViteRouteManifest({
+        pages: [],
+        apiRoutes: [{ path, handler: vi.fn() }],
+      });
+
+      expect(manifest.apiRoutes).toEqual([
+        {
+          kind: "api",
+          order: 0,
+          path,
+          method: "GET",
+          runtimeCapabilities: ["fetch", "api-dispatch"],
+        },
+      ]);
+    },
+  );
+
   it("emits a deterministic route manifest for pages, API routes, and server actions", () => {
     const routeRegistry = new RouteRegistry();
     routeRegistry.register(
@@ -162,8 +280,7 @@ describe("createMetaViteRouteManifestFromRegistry", () => {
             "componentRef": "src/pages/Feed.server.tsx#FeedPage",
             "runtimeCapabilities": [
               "fetch",
-              "react-server-components",
-              "streaming-response"
+              "react-ssr"
             ],
             "runtimeRequirements": [
               {
@@ -253,6 +370,40 @@ describe("createMetaViteRouteManifestFromRegistry", () => {
     });
 
     expect(manifest.serverActions[0]?.invalidates).toEqual([]);
+  });
+
+  it("reports streaming-response only for shell-first SSR pages with regions", () => {
+    const registry = new RouteRegistry();
+    registry.register(
+      defineRoute({
+        path: "/pdp",
+        mode: "ssr",
+        componentRef: "src/pages/Pdp.tsx#PdpPage",
+        component: Page,
+        regions: [{ id: "reviews", loader: async () => "ok" }],
+      }),
+    );
+    registry.register(
+      defineRoute({
+        path: "/plain",
+        mode: "ssr",
+        componentRef: "src/pages/Plain.tsx#PlainPage",
+        component: Page,
+      }),
+    );
+
+    const manifest = createMetaViteRouteManifestFromRegistry({ routeRegistry: registry });
+    const pdp = manifest.pages.find((page) => page.path === "/pdp");
+    const plain = manifest.pages.find((page) => page.path === "/plain");
+
+    expect(pdp?.runtimeCapabilities).toEqual(["fetch", "react-ssr", "streaming-response"]);
+    expect(plain?.runtimeCapabilities).toEqual(["fetch", "react-ssr"]);
+    expect(() =>
+      createMetaViteRouteManifestFromRegistry({
+        routeRegistry: registry,
+        requiredCapabilities: ["streaming-response"],
+      }),
+    ).toThrow(MetaViteUnsupportedCapabilityProblem);
   });
 
   it("canonicalizes equivalent route sets regardless of registration order", () => {

@@ -18,9 +18,9 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN addgroup --system --gid 1001 nodejs && adduser --system --uid 1001 nodejs
-COPY --from=builder --chown=nodejs:nodejs /app/apps/web/.next/standalone ./
-COPY --from=builder --chown=nodejs:nodejs /app/apps/web/.next/static ./apps/web/.next/static
-COPY --from=builder --chown=nodejs:nodejs /app/apps/web/public ./apps/web/public
+COPY --from=builder --chown=nodejs:nodejs /app/apps/{{webAppName}}/.next/standalone ./
+COPY --from=builder --chown=nodejs:nodejs /app/apps/{{webAppName}}/.next/static ./apps/{{webAppName}}/.next/static
+COPY --from=builder --chown=nodejs:nodejs /app/apps/{{webAppName}}/public ./apps/{{webAppName}}/public
 USER nodejs
 EXPOSE 3000
-CMD ["node", "apps/web/server.js"]
+CMD ["node", "apps/{{webAppName}}/server.js"]

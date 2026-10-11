@@ -1,0 +1,11 @@
+{
+  "extends": "../../tsconfig/tsconfig.node.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "paths": {
+      "@croco/gamification-core": ["../gamification-core/src/index.ts"],
+      "@croco/problems-core": ["../problems-core/src/index.ts"]
+    }
+  },
+  "include": ["src/**/*.ts"]
+}

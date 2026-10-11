@@ -101,15 +101,20 @@ export class InMemoryMembershipStore extends MembershipStore {
 
   async findByTenantAndUser(tenantId: string, userId: string): Promise<Membership | null> {
     const key = this.getKey(tenantId, userId);
-    return this.storage.get(key) ?? null;
+    const membership = this.storage.get(key);
+    return membership ? this.cloneMembership(membership) : null;
   }
 
   async findAllByTenant(tenantId: string): Promise<Membership[]> {
-    return [...this.storage.values()].filter((membership) => membership.tenantId === tenantId);
+    return [...this.storage.values()]
+      .filter((membership) => membership.tenantId === tenantId)
+      .map((membership) => this.cloneMembership(membership));
   }
 
   async findAllByUser(userId: string): Promise<Membership[]> {
-    return [...this.storage.values()].filter((membership) => membership.userId === userId);
+    return [...this.storage.values()]
+      .filter((membership) => membership.userId === userId)
+      .map((membership) => this.cloneMembership(membership));
   }
 
   protected override async save(input: MembershipCreateInput): Promise<Membership> {
@@ -122,12 +127,12 @@ export class InMemoryMembershipStore extends MembershipStore {
       tenantId: input.tenantId,
       userId: input.userId,
       role: input.role,
-      createdAt: previous?.createdAt ?? now,
+      createdAt: previous?.createdAt ? new Date(previous.createdAt) : now,
       updatedAt: now,
     };
 
     this.storage.set(key, membership);
-    return membership;
+    return this.cloneMembership(membership);
   }
 
   protected override async delete(tenantId: string, userId: string): Promise<void> {
@@ -150,7 +155,7 @@ export class InMemoryMembershipStore extends MembershipStore {
 
     if (input.operation === "remove") {
       this.storage.delete(key);
-      return { status: "applied", membership };
+      return { status: "applied", membership: this.cloneMembership(membership) };
     }
 
     const updated: Membership = {
@@ -159,7 +164,7 @@ export class InMemoryMembershipStore extends MembershipStore {
       updatedAt: new Date(),
     };
     this.storage.set(key, updated);
-    return { status: "applied", membership: updated };
+    return { status: "applied", membership: this.cloneMembership(updated) };
   }
 
   protected override async transferOwnership(
@@ -182,8 +187,8 @@ export class InMemoryMembershipStore extends MembershipStore {
     if (fromKey === toKey) {
       return {
         status: "applied",
-        fromMembership,
-        toMembership,
+        fromMembership: this.cloneMembership(fromMembership),
+        toMembership: this.cloneMembership(toMembership),
         previousToRole: toMembership.role,
       };
     }
@@ -196,8 +201,8 @@ export class InMemoryMembershipStore extends MembershipStore {
 
     return {
       status: "applied",
-      fromMembership: updatedFrom,
-      toMembership: updatedTo,
+      fromMembership: this.cloneMembership(updatedFrom),
+      toMembership: this.cloneMembership(updatedTo),
       previousToRole: toMembership.role,
     };
   }
@@ -312,16 +317,24 @@ export class InMemoryMembershipStore extends MembershipStore {
     return JSON.stringify(semantic, Object.keys(semantic).sort());
   }
 
+  private cloneMembership(membership: Membership): Membership {
+    return {
+      ...membership,
+      createdAt: new Date(membership.createdAt),
+      updatedAt: new Date(membership.updatedAt),
+    };
+  }
+
   private cloneResult(result: MembershipCommandResult, replayed: boolean): MembershipCommandResult {
     if (result.operation === "transfer_ownership") {
       return {
         ...result,
-        fromMembership: { ...result.fromMembership },
-        toMembership: { ...result.toMembership },
+        fromMembership: this.cloneMembership(result.fromMembership),
+        toMembership: this.cloneMembership(result.toMembership),
         replayed,
       };
     }
-    return { ...result, membership: { ...result.membership }, replayed };
+    return { ...result, membership: this.cloneMembership(result.membership), replayed };
   }
 
   private countOwners(tenantId: string): number {

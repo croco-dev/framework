@@ -7,5 +7,7 @@ const server = createHTTPServer({
   createContext,
 });
 
-server.listen(3001);
-console.log("🚀 tRPC server listening on port 3001");
+const port = Number(process.env.PORT ?? "3001");
+
+server.listen(port);
+console.log(`🚀 tRPC server listening on port ${port}`);

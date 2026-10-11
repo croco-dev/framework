@@ -1,3 +1,4 @@
+import { compareStrings } from "../../../../tooling/compareStrings.mjs";
 import "reflect-metadata";
 import {
   createProblemRegistrySnapshot,
@@ -9,6 +10,7 @@ import {
 } from "@croco/problems-core";
 import type { z } from "zod";
 import { extractRouteIR } from "./extractRouteIR";
+import { toRouteMatchKey } from "./routePath";
 import type { ProblemRegistryReferenceIR, ProblemResponseIR, RouteIR } from "./RouteIR";
 import {
   buildContractMonetizationGraph,
@@ -19,6 +21,7 @@ import {
 } from "./ContractGraphMonetization";
 import {
   describeZodSchema,
+  getUnsupportedZodMajor,
   getSchemaDescriptorDiagnostics,
   getZodObjectShape,
   getZodInputObjectSchema,
@@ -215,6 +218,7 @@ export function buildContractGraph(
 
   diagnostics.push(...validateUniqueControllerNames(graphControllers));
   diagnostics.push(...validateUniqueRouteIds(graphRoutes));
+  diagnostics.push(...validateUniqueRoutePaths(graphRoutes));
   diagnostics.push(...validateUniqueOperationIds(graphRoutes));
   const monetization = buildContractMonetizationGraph(graphRoutes, options.monetization);
   diagnostics.push(...monetization.diagnostics);
@@ -427,11 +431,46 @@ function toProblemRegistryReference(
   };
 }
 
+export function getRouteContractSchemaDiagnostics(route: RouteIR): ContractDiagnostic[] {
+  const contract = route.routeContract;
+  if (!contract) return [];
+
+  const diagnostics: ContractDiagnostic[] = [];
+  const schemas: readonly [string, unknown][] = [
+    ["params", contract.inputSchemas.path],
+    ["query", contract.inputSchemas.query],
+    ["body", contract.inputSchemas.body],
+    ["response", contract.outputSchema],
+  ];
+
+  for (const [slot, schema] of schemas) {
+    const unsupported = getUnsupportedZodMajor(schema);
+    if (!unsupported) continue;
+    const { major, kind } = unsupported;
+
+    diagnostics.push({
+      ...createRouteDiagnostic(
+        route,
+        "contract-schema-unsupported-zod-major",
+        "error",
+        `Route contract ${slot} uses unsupported Zod major ${major} (schema kind: ${kind}); Croco route contracts require Zod 3.`,
+      ),
+      recoveryAction:
+        "Declare this route contract schema with Zod 3; Zod 4 schemas cannot be used in Croco route contracts.",
+    });
+  }
+
+  return diagnostics;
+}
+
 function validateRoute(
   route: ContractGraphRoute,
   options: BuildContractGraphOptions,
   problemRegistryIndex: ProblemRegistryIndex,
 ): ContractDiagnostic[] {
+  const unsupportedSchemas = getRouteContractSchemaDiagnostics(route);
+  if (unsupportedSchemas.length > 0) return unsupportedSchemas;
+
   const diagnostics: ContractDiagnostic[] = [];
 
   if (route.httpMethod.toUpperCase() === "ALL") {
@@ -513,7 +552,12 @@ function validateStrictSchemas(
   }
 
   for (const param of route.params) {
-    if (param.kind === "ctx") {
+    if (
+      param.kind === "ctx" ||
+      param.kind === "principal" ||
+      param.kind === "user" ||
+      param.kind === "apiKey"
+    ) {
       continue;
     }
 
@@ -655,14 +699,19 @@ function validateContractNamedParams(
   }
 
   const schemaBoundParams = params.filter((param) => param.contractSchema);
-  const hasContractBinding = schemaBoundParams.some(
-    (param) => param.contractSchema === contractSchema,
-  );
+  const hasWholeSchemaBinding =
+    schemaBoundParams.length > 0 &&
+    (contractNames.size === 0 ||
+      schemaBoundParams.some(
+        (param) =>
+          param.contractSchema === contractSchema &&
+          !Object.prototype.hasOwnProperty.call(contractShape, param.name),
+      ));
 
   for (const name of contractNames) {
     const param = params.find((candidate) => candidate.name === name);
 
-    if (!param && hasContractBinding) {
+    if (!param && hasWholeSchemaBinding) {
       continue;
     }
     if (!param) {
@@ -1019,7 +1068,7 @@ function compareProblemResponses(
   left: NonNullable<ContractGraphRoute["problemResponses"]>[number],
   right: NonNullable<ContractGraphRoute["problemResponses"]>[number],
 ): number {
-  return left.code.localeCompare(right.code) || left.status - right.status;
+  return compareStrings(left.code, right.code) || left.status - right.status;
 }
 
 function validatePathParams(route: ContractGraphRoute): ContractDiagnostic[] {
@@ -1151,6 +1200,32 @@ function validateRouteSchemas(route: ContractGraphRoute): ContractDiagnostic[] {
         ),
       );
     }
+  }
+
+  return diagnostics;
+}
+
+function validateUniqueRoutePaths(routes: readonly ContractGraphRoute[]): ContractDiagnostic[] {
+  const diagnostics: ContractDiagnostic[] = [];
+  const routePaths = new Map<string, ContractGraphRoute>();
+
+  for (const route of routes) {
+    const key = `${route.httpMethod.toUpperCase()} ${toRouteMatchKey(route.path)}`;
+    const existingRoute = routePaths.get(key);
+
+    if (existingRoute) {
+      diagnostics.push(
+        createRouteDiagnostic(
+          route,
+          "contract-route-duplicate-path",
+          "error",
+          `Route '${route.httpMethod.toUpperCase()} ${route.path}' matches the same path as '${existingRoute.httpMethod.toUpperCase()} ${existingRoute.path}' declared by ${existingRoute.controllerName}.${existingRoute.methodName}.`,
+        ),
+      );
+      continue;
+    }
+
+    routePaths.set(key, route);
   }
 
   return diagnostics;
@@ -1315,6 +1390,9 @@ function isParamSchemaCoveredByRouteSchema(
       return getNamedSchemaShape(schema)[param.name] === param.schema;
     }
     case "ctx":
+    case "principal":
+    case "user":
+    case "apiKey":
       return false;
   }
 }
@@ -1348,7 +1426,7 @@ function formatSchemaLocation(
 }
 
 function createRouteDiagnostic(
-  route: ContractGraphRoute,
+  route: RouteIR,
   code: string,
   severity: ContractDiagnosticSeverity,
   message: string,
@@ -1362,7 +1440,7 @@ function createRouteDiagnostic(
     severity,
     target: getDiagnosticTarget(code),
     message,
-    routeId: route.routeId,
+    routeId: `${route.controllerName}.${route.methodName}`,
     ...(route.routeContract?.id ? { contractId: route.routeContract.id } : {}),
     controllerName: route.controllerName,
     methodName: route.methodName,
@@ -1392,6 +1470,12 @@ function getParamDecoratorName(kind: ContractGraphRoute["params"][number]["kind"
       return "Body";
     case "ctx":
       return "Ctx";
+    case "principal":
+      return "CurrentPrincipal";
+    case "user":
+      return "User";
+    case "apiKey":
+      return "CurrentApiKey";
   }
 }
 

@@ -21,7 +21,7 @@ const WORKSPACE_DEPENDENCY_FIELDS = [
 
 const CASE_TEMPLATE_ROOTS = {
   "blank-basic": ["blank"],
-  "goal-saas-api": ["saas"],
+  "goal-saas-api": ["saas", "saas-node-postgres-contracts"],
   "goal-spa-backend-split": ["spa-be-split"],
   "goal-worker": ["base-ddd", "addons/web-meta-vite-fullstack"],
   "goal-internal-tool": ["spa-be-split", "admin-console"],
@@ -37,6 +37,26 @@ const CASE_TEMPLATE_ROOTS = {
     "addons/lambda",
     "addons/mongodb",
     "addons/redis",
+  ],
+  "trpc-lambda-api": [
+    "base-ddd",
+    "addons/trpc-standalone",
+    "addons/lambda/shared",
+    "addons/lambda/apps/api",
+  ],
+  "graphql-standalone-nextjs-opennext": [
+    "base-ddd",
+    "addons/graphql-standalone",
+    "addons/web-graphql",
+    "addons/lambda",
+    "addons/frontend-opennext",
+  ],
+  "trpc-standalone-nextjs-opennext": [
+    "base-ddd",
+    "addons/trpc-standalone",
+    "addons/web-trpc",
+    "addons/lambda",
+    "addons/frontend-opennext",
   ],
   "trpc-nextjs-vercel-fullstack": [
     "base-ddd",
@@ -73,6 +93,7 @@ const CASE_TEMPLATE_ROOTS = {
   "production-app-starter": ["spa-be-split"],
   "admin-console-starter": ["spa-be-split", "admin-console"],
   "saas-golden-path": ["saas"],
+  "saas-single-tenant": ["saas", "saas-node-postgres-contracts", "saas-single-tenant-contracts"],
   "saas-cloudflare-profile": ["saas"],
   "saas-lambda-profile": ["saas"],
   "ai-saas-golden-path": ["saas", "ai-saas"],
@@ -85,14 +106,29 @@ const CASE_TEST_PATH_PREFIXES = {
   "goal-spa-backend-split": ["spa-be-split/apps/"],
   "goal-worker": [],
   "goal-internal-tool": ["spa-be-split/apps/", "admin-console/apps/"],
-  "graphql-standalone-api": [],
-  "graphql-lambda-api": ["base-ddd/libs/shared/utils-env/"],
-  "trpc-nextjs-vercel-fullstack": [],
+  "graphql-standalone-api": [
+    "base-ddd/libs/shared/utils-env/",
+    "addons/graphql-standalone/apps/graphql-api/",
+  ],
+  "graphql-lambda-api": [
+    "base-ddd/libs/shared/utils-env/",
+    "addons/graphql-standalone/apps/graphql-api/",
+  ],
+  "trpc-lambda-api": [],
+  "graphql-standalone-nextjs-opennext": [],
+  "trpc-standalone-nextjs-opennext": [],
+  "trpc-nextjs-vercel-fullstack": [
+    "base-ddd/libs/shared/utils-env/",
+    "addons/trpc-nextjs/apps/web/src/server/tests/",
+  ],
   "graphql-nextjs-opennext": [],
   "trpc-nextjs-docker-frontend": [],
   "graphql-vite-spa-docker": [],
   "graphql-vite-spa-astryx": [],
-  "meta-vite-web": ["base-ddd/libs/shared/utils-env/"],
+  "meta-vite-web": [
+    "base-ddd/libs/shared/utils-env/",
+    "addons/graphql-standalone/apps/graphql-api/",
+  ],
   "meta-vite-fullstack-workers": ["base-ddd/libs/shared/utils-env/"],
   "production-app-starter": ["spa-be-split/apps/", "spa-be-split/tests/journeys/"],
   "admin-console-starter": [
@@ -101,6 +137,7 @@ const CASE_TEST_PATH_PREFIXES = {
     "admin-console/tests/journeys/plan-release.spec.ts",
   ],
   "saas-golden-path": ["saas/apps/"],
+  "saas-single-tenant": ["saas/apps/"],
   "saas-cloudflare-profile": ["saas/apps/"],
   "saas-lambda-profile": ["saas/apps/"],
   "ai-saas-golden-path": ["saas/apps/", "ai-saas/apps/"],
@@ -110,6 +147,7 @@ const CASE_TEST_PATH_PREFIXES = {
 const CASE_SAAS_PROVIDER_PROFILES = {
   "goal-saas-api": "saas-node-postgres",
   "saas-golden-path": "saas-node-postgres",
+  "saas-single-tenant": "saas-node-postgres",
   "saas-cloudflare-profile": "saas-cloudflare",
   "saas-lambda-profile": "saas-lambda",
   "ai-saas-golden-path": "saas-node-postgres",
@@ -118,6 +156,7 @@ const CASE_SAAS_PROVIDER_PROFILES = {
 const CASE_TENANT_MODELS = {
   "goal-saas-api": "org",
   "saas-golden-path": "rls-backed",
+  "saas-single-tenant": "single",
   "saas-cloudflare-profile": "workspace",
   "saas-lambda-profile": "shared-schema",
   "ai-saas-golden-path": "single",
@@ -125,6 +164,7 @@ const CASE_TENANT_MODELS = {
 
 const CASE_ADDITIONAL_DEPENDENCY_SOURCES = {
   "graphql-lambda-api": ["packages/create-croco-app/src/installers/lambda.ts"],
+  "graphql-standalone-nextjs-opennext": ["packages/create-croco-app/src/installers/lambda.ts"],
   "graphql-vite-spa-astryx": ["packages/create-croco-app/src/installers/ui-profile.ts"],
 } as const satisfies Partial<Record<keyof typeof CASE_TEMPLATE_ROOTS, readonly string[]>>;
 

@@ -247,6 +247,20 @@ describe("ApiKeyManager", () => {
       expect(result.key).toMatch(/^sk_/);
     });
 
+    it("should authenticate a key created with a prefix that contains an underscore", async () => {
+      const created = await manager.create({
+        name: "Live key",
+        tenantId: "tenant_123",
+        permissions: ["orders:read"],
+        prefix: "sk_live",
+      });
+
+      const principal = await manager.verify(created.key);
+
+      expect(principal?.id).toBe(created.id);
+      expect(principal?.keyStart).toBe(created.keyStart);
+    });
+
     it("should handle null expiresAt when not provided", async () => {
       const options: CreateApiKeyOptions = {
         name: "Test Key",
@@ -378,27 +392,57 @@ describe("ApiKeyManager", () => {
         allowedIps: ["192.168.1.1"],
       });
 
-      await expect(manager.verify(restrictedKey.key, "10.0.0.1")).rejects.toThrow(ForbiddenProblem);
-    });
-
-    it("should skip allowed IP checks when no IP address is provided", async () => {
-      const restrictedKey = await manager.create({
-        name: "Restricted Key",
-        tenantId: "tenant_123",
-        permissions: ["read:users"],
-        allowedIps: ["192.168.1.1"],
+      await expect(manager.verify(restrictedKey.key, "10.0.0.1")).rejects.toMatchObject({
+        code: "FORBIDDEN",
+        detail: "API key is not allowed from this IP address",
       });
-
-      const principal = await manager.verify(restrictedKey.key);
-
-      expect(principal?.id).toBe(restrictedKey.id);
     });
 
-    it("should skip allowed IP checks when key has no allowed IP restrictions", async () => {
-      const principal = await manager.verify(createdKey.key, "10.0.0.1");
+    it.each([undefined, ""])(
+      "should reject a restricted key without an IP address (%s)",
+      async (ip) => {
+        const restrictedKey = await manager.create({
+          name: "Restricted Key",
+          tenantId: "tenant_123",
+          permissions: ["read:users"],
+          allowedIps: ["192.168.1.1"],
+        });
 
-      expect(principal?.id).toBe(createdKey.id);
-    });
+        mockEventBus.publish.mockClear();
+        await expect(manager.verify(restrictedKey.key, ip)).rejects.toMatchObject({
+          code: "FORBIDDEN",
+          detail: "API key requires a client IP address",
+        });
+
+        expect(mockStore.updateLastUsed).not.toHaveBeenCalled();
+        expect(mockEventBus.publish).not.toHaveBeenCalled();
+      },
+    );
+
+    it.each([undefined, "", "10.0.0.1"])(
+      "should verify an unrestricted key regardless of the IP address (%s)",
+      async (ip) => {
+        const principal = await manager.verify(createdKey.key, ip);
+
+        expect(principal?.id).toBe(createdKey.id);
+      },
+    );
+
+    it.each([undefined, "", "192.168.1.1"])(
+      "should reject every IP address when the allowlist is empty (%s)",
+      async (ip) => {
+        const restrictedKey = await manager.create({
+          name: "Restricted Key",
+          tenantId: "tenant_123",
+          permissions: ["read:users"],
+          allowedIps: [],
+        });
+
+        await expect(manager.verify(restrictedKey.key, ip)).rejects.toBeInstanceOf(
+          ForbiddenProblem,
+        );
+      },
+    );
 
     it("should publish ApiKeyUsedEvent on successful verification", async () => {
       mockEventBus.publish.mockClear();
@@ -520,6 +564,21 @@ describe("ApiKeyManager", () => {
         rateLimit: { limit: 1000, duration: 60 },
       };
       originalKey = await manager.create(options);
+    });
+
+    it("should authenticate a rotated key that keeps an underscore prefix", async () => {
+      const created = await manager.create({
+        name: "Live key",
+        tenantId: "tenant_123",
+        permissions: ["orders:read"],
+        prefix: "sk_live",
+      });
+
+      const rotated = await manager.rotate(created.id, { idempotencyKey: "rotation-underscore" });
+      const principal = await manager.verify(rotated.key);
+
+      expect(principal?.id).toBe(rotated.id);
+      expect(principal?.keyStart).toBe(rotated.keyStart);
     });
 
     it("should create a new key and revoke the old one", async () => {

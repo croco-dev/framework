@@ -14,6 +14,17 @@ export class MissingUpstashMeteringConfigProblem extends Problem {
   }
 }
 
+export class InvalidUpstashMeteringDeserializationProblem extends Problem {
+  readonly code = "metering-upstash/automatic-deserialization-enabled";
+  readonly category = ProblemCategory.InternalServerError;
+
+  constructor() {
+    super(undefined, undefined, "Upstash Redis metering requires automaticDeserialization: false", {
+      extensions: { retryable: false },
+    });
+  }
+}
+
 export class UpstashMeteringUpstreamProblem extends Problem {
   readonly code = "metering-upstash/upstream-failed";
 

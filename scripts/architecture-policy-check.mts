@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 
+import { compareStrings } from "../tooling/compareStrings.mjs";
+
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import {
@@ -237,8 +239,8 @@ function readPublicWorkspacePackages(
   }
 
   return packages.sort((left, right) => {
-    const byShortName = left.shortName.localeCompare(right.shortName);
-    return byShortName === 0 ? left.relativeDir.localeCompare(right.relativeDir) : byShortName;
+    const byShortName = compareStrings(left.shortName, right.shortName);
+    return byShortName === 0 ? compareStrings(left.relativeDir, right.relativeDir) : byShortName;
   });
 }
 
@@ -248,7 +250,7 @@ function findMatchingArchitecturePackageGroups(
 ): readonly string[] {
   const matches = new Set<string>();
   const groups = Object.entries(manifest.packageGroups ?? {}).sort(([left], [right]) =>
-    left.localeCompare(right),
+    compareStrings(left, right),
   );
 
   for (const [groupName, group] of groups) {
@@ -261,7 +263,7 @@ function findMatchingArchitecturePackageGroups(
     }
   }
 
-  return [...matches].sort((left, right) => left.localeCompare(right));
+  return [...matches].sort((left, right) => compareStrings(left, right));
 }
 
 function formatPackageCatalogGroupViolation(violation: PackageCatalogGroupViolation): string {

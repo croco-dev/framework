@@ -10,5 +10,9 @@ export function installWebTrpc(
 ): void {
   const addonDir = join(TEMPLATES_DIR, "addons/web-trpc/apps/web");
   const appTargetDir = join(targetDir, "apps", webAppName);
-  mergeInto(addonDir, appTargetDir, { projectName: options.projectName, scope: options.scope });
+  mergeInto(addonDir, appTargetDir, {
+    projectName: options.projectName,
+    scope: options.scope,
+    webAppName,
+  });
 }

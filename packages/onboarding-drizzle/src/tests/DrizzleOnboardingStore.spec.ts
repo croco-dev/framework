@@ -4,6 +4,8 @@ import {
   type OnboardingState,
 } from "@croco/onboarding-core";
 import type { TxManager } from "@croco/tx-core";
+import type { SQL } from "drizzle-orm";
+import { PgDialect } from "drizzle-orm/pg-core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { DrizzleOnboardingClient } from "../libs/DrizzleOnboardingStore";
 import { DrizzleOnboardingStore } from "../libs/DrizzleOnboardingStore";
@@ -125,7 +127,7 @@ describe("DrizzleOnboardingStore", () => {
         }),
       }),
     );
-    expect(onConflictDoUpdate.mock.calls[0]?.[0].set).not.toHaveProperty("completionStepId");
+    expect(onConflictDoUpdate.mock.calls[0]?.[0].set).toHaveProperty("completionStepId", null);
   });
 
   it("should clear omitted lifecycle fields on update", async () => {
@@ -148,7 +150,7 @@ describe("DrizzleOnboardingStore", () => {
     );
   });
 
-  it("should preserve the completion step identity when updating state", async () => {
+  it("should preserve the completion step identity when saving completed state", async () => {
     let row: Record<string, unknown> = { completionStepId: "step-final" };
     const onConflictDoUpdate = vi.fn(async ({ set }: { set: Record<string, unknown> }) => {
       row = { ...row, ...set };
@@ -214,6 +216,10 @@ describe("DrizzleOnboardingStore", () => {
     expect(onConflictDoUpdate).toHaveBeenCalledWith(
       expect.objectContaining({ set: expect.any(Object), setWhere: expect.any(Object) }),
     );
+    const update = onConflictDoUpdate.mock.calls[0]?.[0] as { set: { completedAt: SQL } };
+    const query = new PgDialect().sqlToQuery(update.set.completedAt);
+    expect(query.params).toContain(serializedCompletedAt);
+    expect(query.params).not.toContain(completedAt);
     expect(mockTxManager.run).not.toHaveBeenCalled();
   });
 

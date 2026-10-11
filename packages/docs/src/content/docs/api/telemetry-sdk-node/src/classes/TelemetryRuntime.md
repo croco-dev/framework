@@ -43,6 +43,16 @@ title: "TelemetryRuntime"
 
 ---
 
+### getLifecycleSkipReason()
+
+> **getLifecycleSkipReason**(): [`TelemetryLifecycleSkipReason`](/api/telemetry-sdk-node/src/type-aliases/telemetrylifecycleskipreason/) \| `null`
+
+#### Returns
+
+[`TelemetryLifecycleSkipReason`](/api/telemetry-sdk-node/src/type-aliases/telemetrylifecycleskipreason/) \| `null`
+
+---
+
 ### init()
 
 > **init**(`config`): `Promise`\<`void`\>

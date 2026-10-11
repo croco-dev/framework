@@ -1,10 +1,16 @@
 #!/usr/bin/env node
 
+import { compareStrings } from "../tooling/compareStrings.mjs";
+
 /**
  * Enforce release metadata for publishable package behavior changes.
+ * Package files are release-significant by default, including build configuration,
+ * schemas, dist-generation scripts, and generated source for their owning package.
  *
  * Narrow exemptions:
- * - package docs and tests do not require a changeset;
+ * - package README.md, CHANGELOG.md, docs/, and test files do not require a changeset;
+ * - root vitest.config.*, vitest.setup.*, tsconfig.contract-strict.json, and
+ *   test-fixtures/ are test/check-only inputs and do not require a changeset;
  * - adding the canonical CI-only API model script does not change published behavior;
  * - private packages do not require a changeset;
  * - root-only lockfile/package-manager changes do not require a changeset here;
@@ -402,7 +408,7 @@ function getChangesetCoverage(
   const uncoveredPackages = new Map(
     [...significantChanges]
       .filter(([packageName]) => !validPublishableNames.has(packageName))
-      .sort(([left], [right]) => left.localeCompare(right)),
+      .sort(([left], [right]) => compareStrings(left, right)),
   );
 
   return {
@@ -1003,31 +1009,22 @@ function isPackageTestFile(packageRelativeFile: string): boolean {
 }
 
 function isReleaseSignificantPackageFile(packageRelativeFile: string): boolean {
-  if (packageRelativeFile === "package.json") {
-    return true;
-  }
-
   if (isPackageTestFile(packageRelativeFile)) {
     return false;
   }
 
   if (
-    packageRelativeFile.startsWith("src/") ||
-    packageRelativeFile.startsWith("templates/") ||
-    packageRelativeFile.startsWith("bin/")
-  ) {
-    return true;
-  }
-
-  if (
     packageRelativeFile === "README.md" ||
     packageRelativeFile === "CHANGELOG.md" ||
-    packageRelativeFile.startsWith("docs/")
+    packageRelativeFile.startsWith("docs/") ||
+    /^vitest\.(config|setup)\.[^/]+$/.test(packageRelativeFile) ||
+    packageRelativeFile === "tsconfig.contract-strict.json" ||
+    packageRelativeFile.startsWith("test-fixtures/")
   ) {
     return false;
   }
 
-  return false;
+  return true;
 }
 
 function getReleaseSignificantChanges(
@@ -1089,6 +1086,19 @@ function addReleaseSignificantChange(
   );
 }
 
+function normalizeSnapshotExportOrder(record: Record<string, unknown>): Record<string, unknown> {
+  const normalized = { ...record };
+  for (const field of ["runtimeExports", "typeExports"]) {
+    const exports = record[field];
+    if (Array.isArray(exports)) {
+      normalized[field] = [...exports].sort((left, right) =>
+        compareStrings(JSON.stringify(left), JSON.stringify(right)),
+      );
+    }
+  }
+  return normalized;
+}
+
 function readPublicApiSnapshotPackages(
   options: CheckOptions,
   ref: string,
@@ -1125,7 +1135,7 @@ function readPublicApiSnapshotPackages(
         throw new Error(`${publicApiSnapshotPath} contains an invalid package name`);
       }
 
-      const packageRecord = pkg as Record<string, unknown>;
+      const packageRecord = normalizeSnapshotExportOrder(pkg as Record<string, unknown>);
       const entrypoints = new Map<string, string>();
       const metadataKey = JSON.stringify({
         compatibilityGroups: packageRecord.compatibilityGroups ?? null,
@@ -1138,7 +1148,7 @@ function readPublicApiSnapshotPackages(
           runtimeExports: packageRecord.runtimeExports ?? null,
           typeExports: packageRecord.typeExports ?? null,
         });
-        entrypoints.set(".", JSON.stringify(pkg));
+        entrypoints.set(".", JSON.stringify(packageRecord));
       } else if (schemaVersion === 2 && Array.isArray(packageRecord.entrypoints)) {
         for (const entrypoint of packageRecord.entrypoints) {
           if (
@@ -1151,9 +1161,11 @@ function readPublicApiSnapshotPackages(
             );
           }
           const exportPath = (entrypoint as { exportPath: string }).exportPath;
-          entrypoints.set(exportPath, JSON.stringify(entrypoint));
+          const entrypointRecord = normalizeSnapshotExportOrder(
+            entrypoint as Record<string, unknown>,
+          );
+          entrypoints.set(exportPath, JSON.stringify(entrypointRecord));
           if (exportPath === ".") {
-            const entrypointRecord = entrypoint as Record<string, unknown>;
             migrationRootKey = JSON.stringify({
               kind: entrypointRecord.kind ?? null,
               runtimeExports: entrypointRecord.runtimeExports ?? null,
@@ -1171,7 +1183,7 @@ function readPublicApiSnapshotPackages(
         migrationRootKey,
       };
     })
-    .sort((left, right) => left.packageName.localeCompare(right.packageName));
+    .sort((left, right) => compareStrings(left.packageName, right.packageName));
   return { schemaVersion, packages };
 }
 
@@ -1296,7 +1308,7 @@ function logInvalidChangesetFiles(changesets: ChangedChangesetMetadata): void {
   log("");
   log("Invalid changeset files:");
   for (const invalid of [...changesets.invalidFiles].sort((left, right) =>
-    left.file.localeCompare(right.file),
+    compareStrings(left.file, right.file),
   )) {
     log(`- ${invalid.file} (${invalid.state} metadata)`);
   }
@@ -1319,6 +1331,14 @@ function logUncoveredPackages(coverage: ChangesetCoverage): void {
     log(`- ${packageName} (${change.surface}${snapshotSurface})`);
     for (const file of [...change.files].sort()) {
       log(`  - ${file}`);
+    }
+    if (change.files.some((file) => file.includes("/src/generated/"))) {
+      log(
+        "  Generated source is part of the published package; regeneration does not exempt its owning package from release metadata.",
+      );
+      log(
+        `  Changeset frontmatter entry (choose the appropriate bump; patch shown): ${JSON.stringify(packageName)}: patch`,
+      );
     }
   }
 }

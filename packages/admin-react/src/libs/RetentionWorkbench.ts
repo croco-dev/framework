@@ -173,6 +173,57 @@ export function RetentionWorkbench({
             ? "History is insufficient to establish retention."
             : "Observed retention results",
     ),
+    ...(["periodic", "cohort"] as const).map((kind) => {
+      const cells = snapshot.cards.filter((card) => card.kind === kind);
+      if (cells.length === 0) return null;
+      return createElement(
+        "section",
+        { key: kind, "aria-label": kind === "periodic" ? "Retention trend" : "Cohort cells" },
+        createElement("h3", null, kind === "periodic" ? "Retention trend" : "Cohort cells"),
+        table(
+          kind === "periodic" ? "Periodic retention by window" : "First behavior cohort by window",
+          ["Baseline", "Returning window", "Retained / baseline", "Retention", "Observation"],
+          cells.map((card) =>
+            createElement(
+              "tr",
+              { key: card.id },
+              createElement(
+                "td",
+                null,
+                card.baselineWindow
+                  ? `${card.baselineWindow.from} – ${card.baselineWindow.to}`
+                  : "Unknown",
+              ),
+              createElement("td", null, `${card.window.from} – ${card.window.to}`),
+              createElement(
+                "td",
+                null,
+                createElement(
+                  "button",
+                  {
+                    type: "button",
+                    onClick: () => onSelectMetric(card.id, snapshot.inputToken),
+                    "aria-label": `Inspect cell ${card.id}`,
+                  },
+                  `${card.numerator} / ${card.denominator}`,
+                ),
+              ),
+              createElement(
+                "td",
+                null,
+                card.value === null
+                  ? "Not established"
+                  : card.value.toLocaleString(undefined, {
+                      style: "percent",
+                      maximumFractionDigits: 1,
+                    }),
+              ),
+              createElement("td", null, card.availability),
+            ),
+          ),
+        ),
+      );
+    }),
     ...snapshot.cards.map((card) =>
       cardView(card, (id) => onSelectMetric(id, snapshot.inputToken)),
     ),

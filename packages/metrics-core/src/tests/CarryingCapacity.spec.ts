@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ActiveUserProvider, MetricsRepository, MRRMovement } from "..";
-import { CarryingCapacityCalculator } from "../libs/CarryingCapacityCalculator";
+import { CarryingCapacityCalculator } from "..";
 import {
   CarryingCapacityTenantRequiredProblem,
   RetentionMetricsUnavailableProblem,
@@ -21,6 +21,7 @@ describe("CarryingCapacityCalculator", () => {
     };
 
     mockMetricsRepository = {
+      mrrMovementIdentityVersion: 2,
       recordMRRMovement: vi.fn(),
       recordSnapshot: vi.fn(),
       getSnapshot: vi.fn(),
@@ -32,6 +33,48 @@ describe("CarryingCapacityCalculator", () => {
   });
 
   describe("calculateUserCC", () => {
+    it.each([1, 7, 30, 60])(
+      "should preserve daily churn and capacity across a %s-calendar-day lookback",
+      async (lookbackDays) => {
+        vi.useFakeTimers();
+        vi.setSystemTime(new Date(2026, 2, 15, 12));
+        try {
+          vi.spyOn(mockUserProvider, "getNewUsersCount").mockResolvedValue(100);
+          vi.spyOn(mockUserProvider, "getDailyActiveUsers").mockResolvedValue(1000);
+          vi.spyOn(mockMetricsRepository, "getRetentionMetrics").mockImplementation(
+            async (tenantId, period) => {
+              const fromDay = Date.UTC(
+                period.from.getFullYear(),
+                period.from.getMonth(),
+                period.from.getDate(),
+              );
+              const toDay = Date.UTC(
+                period.to.getFullYear(),
+                period.to.getMonth(),
+                period.to.getDate(),
+              );
+              const calendarDays = (toDay - fromDay) / 86_400_000;
+              expect(tenantId).toBe(TENANT_ID);
+              expect(period.granularity).toBe("day");
+              expect(calendarDays).toBe(lookbackDays);
+              expect(period.from.getHours()).toBe(12);
+              const nrr = 100 * Math.exp(-0.01 * calendarDays);
+              return { logoChurn: 0, revenueChurn: 0, grr: nrr, nrr };
+            },
+          );
+
+          const result = await calculator.calculateUserCC({ lookbackDays, tenantId: TENANT_ID });
+
+          expect(result).toMatchObject({ dailyInflow: 100, current: 1000 });
+          expect(result?.dailyChurnRate).toBeCloseTo(0.01, 10);
+          expect(result?.capacity).toBeCloseTo(10000, 6);
+          expect(mockUserProvider.getNewUsersCount).toHaveBeenCalledTimes(lookbackDays);
+        } finally {
+          vi.useRealTimers();
+        }
+      },
+    );
+
     it.each([0, -1, Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY, 1.5])(
       "should reject invalid lookbackDays %s before reading metrics",
       async (lookbackDays) => {
@@ -329,6 +372,38 @@ describe("CarryingCapacityCalculator", () => {
       expect(result.simulated.dailyChurnRate).toBeCloseTo((-Math.log(0.98) / 30) * 0.8, 3);
     });
 
+    it.each([0, 10000])(
+      "should report zero capacity when inflow decreases by 100% and current=%s",
+      async (current) => {
+        vi.spyOn(mockUserProvider, "getDailyActiveUsers").mockResolvedValue(current);
+
+        const result = await calculator.simulate({ tenantId: TENANT_ID, inflowChange: -100 });
+
+        expect(result.simulated.capacity).toBe(0);
+        expect(result.simulated.headroom).toBe(0);
+        expect(result.simulated.headroomPercent).toBe(0);
+        expect(result.simulated.current).toBe(current);
+        expect(result.capacityDelta).toBe(-result.baseline.capacity);
+        expect(result.headroomDelta).toBe(-result.baseline.headroom);
+        expect(result.headroomPercentDelta).toBe(-result.baseline.headroomPercent);
+        expect(Object.values(result.simulated).every(Number.isFinite)).toBe(true);
+      },
+    );
+
+    it("should keep zero-inflow baseline and simulation finite", async () => {
+      vi.spyOn(mockUserProvider, "getNewUsersCount").mockResolvedValue(0);
+
+      const result = await calculator.simulate({ tenantId: TENANT_ID, inflowChange: 50 });
+
+      expect(result.baseline.headroomPercent).toBe(0);
+      expect(result.simulated.headroomPercent).toBe(0);
+      expect(result.capacityDelta).toBe(0);
+      expect(result.headroomDelta).toBe(0);
+      expect(result.headroomPercentDelta).toBe(0);
+      expect(Object.values(result.baseline).every(Number.isFinite)).toBe(true);
+      expect(Object.values(result.simulated).every(Number.isFinite)).toBe(true);
+    });
+
     it("should simulate inflow increase by 50%", async () => {
       const result = await calculator.simulate({ tenantId: TENANT_ID, inflowChange: 50 });
 
@@ -416,25 +491,31 @@ describe("CarryingCapacityCalculator", () => {
   });
 
   describe("Edge Cases", () => {
-    it("should handle zero new users", async () => {
-      vi.spyOn(mockUserProvider, "getNewUsersCount").mockResolvedValue(0);
-      vi.spyOn(mockUserProvider, "getDailyActiveUsers").mockResolvedValue(1000);
+    it.each([0, 1000])(
+      "should report zero headroom percent with zero new users and current=%s",
+      async (current) => {
+        vi.spyOn(mockUserProvider, "getNewUsersCount").mockResolvedValue(0);
+        vi.spyOn(mockUserProvider, "getDailyActiveUsers").mockResolvedValue(current);
 
-      vi.spyOn(mockMetricsRepository, "getRetentionMetrics").mockResolvedValue({
-        logoChurn: 2,
-        revenueChurn: 2,
-        grr: 98,
-        nrr: 98,
-      });
+        vi.spyOn(mockMetricsRepository, "getRetentionMetrics").mockResolvedValue({
+          logoChurn: 2,
+          revenueChurn: 2,
+          grr: 98,
+          nrr: 98,
+        });
 
-      const result = await calculator.calculateUserCC({ lookbackDays: 30, tenantId: TENANT_ID });
+        const result = await calculator.calculateUserCC({ lookbackDays: 30, tenantId: TENANT_ID });
 
-      expect(result).not.toBeNull();
-      if (!result) return;
+        expect(result).not.toBeNull();
+        if (!result) return;
 
-      expect(result.capacity).toBe(0);
-      expect(result.headroom).toBe(0);
-    });
+        expect(result.capacity).toBe(0);
+        expect(result.headroom).toBe(0);
+        expect(result.headroomPercent).toBe(0);
+        expect(result.current).toBe(current);
+        expect(Object.values(result).every(Number.isFinite)).toBe(true);
+      },
+    );
 
     it("should handle empty movements array for Revenue CC", async () => {
       vi.spyOn(mockMetricsRepository, "getMRRHistory").mockResolvedValue([]);
@@ -454,6 +535,9 @@ describe("CarryingCapacityCalculator", () => {
       if (!result) return;
 
       expect(result.capacity).toBe(0);
+      expect(result.headroom).toBe(0);
+      expect(result.headroomPercent).toBe(0);
+      expect(Object.values(result).every(Number.isFinite)).toBe(true);
     });
 
     it("should handle negative churn change that would result in negative churn", async () => {

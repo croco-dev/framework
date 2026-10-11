@@ -1,4 +1,6 @@
 {
+  "@croco/admin-postgres": ["CUSTOMER_EXPLORER_TEST_DATABASE_URL"],
+  "@croco/audit-drizzle": ["AUDIT_POSTGRES_URL"],
   "@croco/auth-drizzle": ["AUTH_POSTGRES_URL"],
   "@croco/billing-polar": [
     "POLAR_ACCESS_TOKEN",
@@ -37,6 +39,8 @@
   "@croco/storage-r2": ["R2_ACCOUNT_ID", "R2_ACCESS_KEY_ID", "R2_SECRET_ACCESS_KEY", "R2_BUCKET"],
   "@croco/metering-core": [],
   "@croco/metering-drizzle": ["METERING_POSTGRES_URL"],
+  "@croco/onboarding-drizzle": ["ONBOARDING_POSTGRES_URL"],
   "@croco/warehouse-postgres": [],
-  "@croco/testing-resources": []
+  "@croco/testing-resources": [],
+  "@croco/cohort-drizzle": ["COHORT_TEST_DATABASE_URL"]
 }

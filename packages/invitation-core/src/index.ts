@@ -58,9 +58,10 @@ export type {
 export { InvitationManager } from "./libs/InvitationManager";
 
 /**
- * 초대 저장소 추상 계약입니다.
+ * 초대 저장소 추상 계약과 상태 전이 메타 타입입니다.
  */
 export { InvitationStore } from "./libs/InvitationStore";
+export type { InvitationStatusTransitionMeta } from "./libs/InvitationStore";
 
 /**
  * batch invite 크기 제한 위반 시 발생하는 Problem 타입입니다.

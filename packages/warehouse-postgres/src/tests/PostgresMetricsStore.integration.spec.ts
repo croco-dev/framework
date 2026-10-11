@@ -108,6 +108,38 @@ describe.skipIf(!realResourcesEnabled).each(["PostgreSQL", "TimescaleDB"] as con
       );
     }
 
+    async function expectHistoricalLookupIndex(): Promise<void> {
+      if (!connection) {
+        throw new Error(`${backend} test resource did not start`);
+      }
+      const result = await connection.query<{
+        indisunique: boolean;
+        first_column: string;
+        second_column: string;
+        predicate: string;
+      }>(`
+        SELECT indisunique,
+          pg_get_indexdef(indexrelid, 1, true) AS first_column,
+          pg_get_indexdef(indexrelid, 2, true) AS second_column,
+          pg_get_expr(indpred, indrelid) AS predicate
+        FROM pg_index
+        WHERE indexrelid = 'idx_mrr_movements_tenant_event_key'::regclass
+          AND indrelid = 'mrr_movements'::regclass
+      `);
+      expect(result.rows).toEqual([
+        {
+          indisunique: false,
+          first_column: "tenant_id",
+          second_column: "event_key",
+          predicate: "(event_key IS NOT NULL)",
+        },
+      ]);
+    }
+
+    it("installs a nonunique tenant and event key index for historical lookups", async () => {
+      await expectHistoricalLookupIndex();
+    });
+
     it("preserves snapshot upsert behavior", async () => {
       const [store] = stores();
       const date = new Date("2026-03-01T00:00:00.000Z");
@@ -204,9 +236,8 @@ describe.skipIf(!realResourcesEnabled).each(["PostgreSQL", "TimescaleDB"] as con
       ]);
     });
 
-    it.skipIf(backend !== "TimescaleDB")(
-      "converts populated PostgreSQL tables to hypertables without data loss",
-      async () => {
+    if (backend === "TimescaleDB")
+      it("converts populated PostgreSQL tables to hypertables without data loss", async () => {
         if (!connection) {
           throw new Error("TimescaleDB test resource did not start");
         }
@@ -258,62 +289,63 @@ describe.skipIf(!realResourcesEnabled).each(["PostgreSQL", "TimescaleDB"] as con
           await client.query("DROP SCHEMA IF EXISTS metrics_timescale_upgrade CASCADE");
           client.release();
         }
-      },
-    );
+      });
 
-    it.skipIf(backend !== "PostgreSQL")("preserves caller transaction ownership", async () => {
-      if (!connection) {
-        throw new Error("PostgreSQL test resource did not start");
-      }
+    if (backend === "PostgreSQL")
+      it("preserves caller transaction ownership", async () => {
+        if (!connection) {
+          throw new Error("PostgreSQL test resource did not start");
+        }
 
-      const client = await connection.pool.connect();
-      try {
-        await client.query("CREATE SCHEMA metrics_transaction_ownership");
-        await client.query("SET search_path TO metrics_transaction_ownership, public");
-        await client.query("BEGIN");
-        await client.query("CREATE TABLE caller_marker (id INTEGER PRIMARY KEY)");
-        await client.query("INSERT INTO caller_marker (id) VALUES (1)");
-        await installPostgresMetricsSchema(client);
-        await client.query("ROLLBACK");
+        const client = await connection.pool.connect();
+        try {
+          await client.query("CREATE SCHEMA metrics_transaction_ownership");
+          await client.query("SET search_path TO metrics_transaction_ownership, public");
+          await client.query("BEGIN");
+          await client.query("CREATE TABLE caller_marker (id INTEGER PRIMARY KEY)");
+          await client.query("INSERT INTO caller_marker (id) VALUES (1)");
+          await installPostgresMetricsSchema(client);
+          await client.query("ROLLBACK");
 
-        const relations = await client.query<{ marker: string | null; movements: string | null }>(
-          `SELECT
+          const relations = await client.query<{ marker: string | null; movements: string | null }>(
+            `SELECT
              to_regclass('metrics_transaction_ownership.caller_marker')::text AS marker,
              to_regclass('metrics_transaction_ownership.mrr_movements')::text AS movements`,
-        );
-        expect(relations.rows).toEqual([{ marker: null, movements: null }]);
-      } finally {
-        await client.query("RESET search_path");
-        await client.query("DROP SCHEMA IF EXISTS metrics_transaction_ownership CASCADE");
-        client.release();
-      }
-    });
+          );
+          expect(relations.rows).toEqual([{ marker: null, movements: null }]);
+        } finally {
+          await client.query("RESET search_path");
+          await client.query("DROP SCHEMA IF EXISTS metrics_transaction_ownership CASCADE");
+          client.release();
+        }
+      });
 
-    it.skipIf(backend !== "PostgreSQL")("rolls back a failed standalone schema batch", async () => {
-      if (!connection) {
-        throw new Error("PostgreSQL test resource did not start");
-      }
+    if (backend === "PostgreSQL")
+      it("rolls back a failed standalone schema batch", async () => {
+        if (!connection) {
+          throw new Error("PostgreSQL test resource did not start");
+        }
 
-      const client = await connection.pool.connect();
-      try {
-        await client.query("CREATE SCHEMA metrics_failed_install");
-        await client.query("SET search_path TO metrics_failed_install, public");
-        await client.query(
-          "CREATE VIEW metrics_snapshots AS SELECT 'occupied'::text AS incompatible_column",
-        );
+        const client = await connection.pool.connect();
+        try {
+          await client.query("CREATE SCHEMA metrics_failed_install");
+          await client.query("SET search_path TO metrics_failed_install, public");
+          await client.query(
+            "CREATE VIEW metrics_snapshots AS SELECT 'occupied'::text AS incompatible_column",
+          );
 
-        await expect(installPostgresMetricsSchema(client)).rejects.toThrow();
+          await expect(installPostgresMetricsSchema(client)).rejects.toThrow();
 
-        const relations = await client.query<{ movements: string | null }>(
-          "SELECT to_regclass('metrics_failed_install.mrr_movements')::text AS movements",
-        );
-        expect(relations.rows).toEqual([{ movements: null }]);
-      } finally {
-        await client.query("RESET search_path");
-        await client.query("DROP SCHEMA IF EXISTS metrics_failed_install CASCADE");
-        client.release();
-      }
-    });
+          const relations = await client.query<{ movements: string | null }>(
+            "SELECT to_regclass('metrics_failed_install.mrr_movements')::text AS movements",
+          );
+          expect(relations.rows).toEqual([{ movements: null }]);
+        } finally {
+          await client.query("RESET search_path");
+          await client.query("DROP SCHEMA IF EXISTS metrics_failed_install CASCADE");
+          client.release();
+        }
+      });
 
     it("deduplicates concurrent current-key deliveries across separate pool connections", async () => {
       await expectConcurrentDeliveryKeys("current", [], "current", [], ["current"]);
@@ -474,6 +506,145 @@ describe.skipIf(!realResourcesEnabled).each(["PostgreSQL", "TimescaleDB"] as con
       );
     });
 
+    it.each([false, true])(
+      "keeps concurrent distinct IDs sharing a legacy timestamp independent (stale claim: %s)",
+      async (staleClaim) => {
+        if (!connection) {
+          throw new Error(`${backend} test resource did not start`);
+        }
+        const timestamp = new Date("2026-03-02T00:00:00.000Z");
+        if (staleClaim) {
+          const [previousWriter] = stores();
+          await previousWriter.recordMRRMovement(
+            "tenant-1",
+            movement,
+            timestamp,
+            "previous-current",
+            ["legacy-timestamp"],
+          );
+        }
+        const leftConnection = await connection.pool.connect();
+        const rightConnection = await connection.pool.connect();
+        try {
+          await Promise.all([
+            new PostgresMetricsStore(leftConnection).recordMRRMovement(
+              "tenant-1",
+              movement,
+              timestamp,
+              "current-1",
+              [],
+              ["legacy-timestamp"],
+            ),
+            new PostgresMetricsStore(rightConnection).recordMRRMovement(
+              "tenant-1",
+              movement,
+              timestamp,
+              "current-2",
+              [],
+              ["legacy-timestamp"],
+            ),
+          ]);
+        } finally {
+          leftConnection.release();
+          rightConnection.release();
+        }
+        const [store] = stores();
+        await store.recordMRRMovement(
+          "tenant-1",
+          movement,
+          timestamp,
+          "current-1",
+          [],
+          ["legacy-timestamp"],
+        );
+        const result = await connection.query<{ event_key: string }>(
+          "SELECT event_key FROM mrr_movements ORDER BY event_key",
+        );
+        expect(result.rows).toEqual([
+          { event_key: "current-1" },
+          { event_key: "current-2" },
+          ...(staleClaim ? [{ event_key: "previous-current" }] : []),
+        ]);
+        const claims = await connection.query<{ event_key: string }>(
+          "SELECT event_key FROM mrr_movement_event_keys ORDER BY event_key",
+        );
+        expect(claims.rows).toEqual([
+          { event_key: "current-1" },
+          { event_key: "current-2" },
+          ...(staleClaim
+            ? [{ event_key: "legacy-timestamp" }, { event_key: "previous-current" }]
+            : []),
+        ]);
+      },
+    );
+
+    it("suppresses historical primary-key replays only within their tenant", async () => {
+      if (!connection) {
+        throw new Error(`${backend} test resource did not start`);
+      }
+      const [store] = stores();
+      const timestamp = new Date("2026-03-02T00:00:00.000Z");
+      await store.recordMRRMovement("tenant-1", movement, timestamp);
+      await connection.query("UPDATE mrr_movements SET event_key = 'legacy-timestamp'");
+      await store.recordMRRMovement(
+        "tenant-1",
+        movement,
+        timestamp,
+        "current",
+        [],
+        ["legacy-timestamp"],
+      );
+      await store.recordMRRMovement(
+        "tenant-2",
+        movement,
+        timestamp,
+        "current",
+        [],
+        ["legacy-timestamp"],
+      );
+      const result = await connection.query<{ tenant_id: string; event_key: string }>(
+        "SELECT tenant_id, event_key FROM mrr_movements ORDER BY tenant_id",
+      );
+      expect(result.rows).toEqual([
+        { tenant_id: "tenant-1", event_key: "legacy-timestamp" },
+        { tenant_id: "tenant-2", event_key: "current" },
+      ]);
+    });
+
+    it("claims the churn alias when a historical cancellation suppresses insertion", async () => {
+      if (!connection) {
+        throw new Error(`${backend} test resource did not start`);
+      }
+      const [store] = stores();
+      const timestamp = new Date("2026-03-02T00:00:00.000Z");
+      await store.recordMRRMovement("tenant-1", movement, timestamp);
+      await connection.query("UPDATE mrr_movements SET event_key = 'legacy-canceled'");
+      await store.recordMRRMovement(
+        "tenant-1",
+        movement,
+        timestamp,
+        "current-canceled",
+        ["churn"],
+        ["legacy-canceled"],
+      );
+      const claims = await connection.query<{ event_key: string }>(
+        "SELECT event_key FROM mrr_movement_event_keys ORDER BY event_key",
+      );
+      expect(claims.rows).toEqual([{ event_key: "churn" }, { event_key: "current-canceled" }]);
+      await store.recordMRRMovement(
+        "tenant-1",
+        movement,
+        timestamp,
+        "current-revoked",
+        ["churn"],
+        ["legacy-revoked"],
+      );
+      const result = await connection.query<{ event_key: string }>(
+        "SELECT event_key FROM mrr_movements",
+      );
+      expect(result.rows).toEqual([{ event_key: "legacy-canceled" }]);
+    });
+
     it("prevents a post-migration current alias from duplicating a reconciled legacy row", async () => {
       if (!connection) {
         throw new Error(`${backend} test resource did not start`);
@@ -528,6 +699,7 @@ describe.skipIf(!realResourcesEnabled).each(["PostgreSQL", "TimescaleDB"] as con
         date,
       );
       await connection.query("DROP TABLE mrr_movement_event_keys");
+      await connection.query("DROP INDEX idx_mrr_movements_tenant_event_key");
       if (backend === "PostgreSQL") {
         await connection.query(`
         ALTER TABLE mrr_movements DROP CONSTRAINT mrr_movements_pkey;
@@ -558,6 +730,7 @@ describe.skipIf(!realResourcesEnabled).each(["PostgreSQL", "TimescaleDB"] as con
           granularity: "month",
         }),
       ).resolves.toEqual([movement]);
+      await expectHistoricalLookupIndex();
       await expect(store.getSnapshot("tenant-1", date)).resolves.toMatchObject({
         activeCustomers: 10,
         totalMRR: { amount: 1000, currency: "USD" },

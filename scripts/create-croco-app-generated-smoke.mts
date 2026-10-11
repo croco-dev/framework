@@ -1,3 +1,4 @@
+import { compareStrings } from "../tooling/compareStrings.mjs";
 import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
 import {
@@ -935,8 +936,20 @@ const smokeCaseDefinitionsWithoutLint: readonly Omit<SmokeCase, "tier" | "adviso
     name: "goal-saas-api",
     args: ["--goal", "saas-api", "--scope", "@smoke", "--no-install", "--no-git"],
     runtimeTarget: "node",
-    matrixTargets: ["saas"],
+    matrixTargets: ["saas", "saas-node-postgres-contracts"],
     validations: [
+      {
+        label: "install-immediate contract verify",
+        readOnly: true,
+        recovery: "pnpm codegen",
+        args: ["contract:verify"],
+      },
+      { label: "test", packagePath: ["apps", "api-server"], args: ["test"] },
+      {
+        label: "build",
+        args: ["build"],
+        paths: ["apps/api-server/dist/index.js", "apps/api-server/dist/index.mjs"],
+      },
       {
         label: "manifest",
         json: {
@@ -993,11 +1006,6 @@ const smokeCaseDefinitionsWithoutLint: readonly Omit<SmokeCase, "tier" | "adviso
       },
       { label: "doctor", args: ["doctor"] },
       { label: "typecheck", args: ["typecheck"] },
-      {
-        label: "build",
-        args: ["build"],
-        paths: ["apps/api-server/dist/index.js", "apps/api-server/dist/index.mjs"],
-      },
       { label: "test", args: ["test"] },
       { label: "demo:smoke", args: ["demo:smoke"] },
       {
@@ -1230,6 +1238,7 @@ const smokeCaseDefinitionsWithoutLint: readonly Omit<SmokeCase, "tier" | "adviso
         args: ["exec", "tsx", "--eval", graphqlStandaloneProtectedRouteSmokeScript],
       },
       { label: "build", args: ["build"], paths: ["apps/graphql-api/dist/index.js"] },
+      { label: "test", args: ["test"] },
     ],
   },
   {
@@ -1276,6 +1285,94 @@ const smokeCaseDefinitionsWithoutLint: readonly Omit<SmokeCase, "tier" | "adviso
     ],
   },
   {
+    name: "trpc-lambda-api",
+    args: [
+      "--preset",
+      "ddd-api",
+      "--scope",
+      "@smoke",
+      "--api",
+      "trpc",
+      "--api-hosting",
+      "standalone",
+      "--backend-deploy",
+      "lambda",
+      "--no-install",
+      "--no-git",
+    ],
+    runtimeTarget: "lambda",
+    matrixTargets: ["base-ddd"],
+    validations: [
+      { label: "typecheck", args: ["typecheck"] },
+      { label: "build", args: ["build"], paths: ["apps/api/dist/handler.js"] },
+    ],
+  },
+  {
+    name: "graphql-standalone-nextjs-opennext",
+    args: [
+      "--preset",
+      "ddd-fullstack",
+      "--scope",
+      "@smoke",
+      "--api",
+      "graphql",
+      "--api-hosting",
+      "standalone",
+      "--web-apps",
+      "web",
+      "--backend-deploy",
+      "lambda",
+      "--frontend-deploy",
+      "opennext",
+      "--no-install",
+      "--no-git",
+    ],
+    runtimeTarget: "lambda+opennext",
+    matrixTargets: ["base-ddd"],
+    validations: [
+      {
+        label: GRAPHQL_CONTRACT_CHECK_LABEL,
+        packagePath: GRAPHQL_STANDALONE_CONTRACT_PACKAGE_PATH,
+        args: ["contract:check"],
+      },
+      {
+        label: GRAPHQL_CONTRACT_SNAPSHOT_LABEL,
+        packagePath: GRAPHQL_STANDALONE_CONTRACT_PACKAGE_PATH,
+        args: ["contract:snapshot"],
+        paths: [GRAPHQL_CONTRACT_SNAPSHOT_PATH],
+      },
+      { label: "typecheck", args: ["typecheck"] },
+      { label: "build", args: ["build"] },
+    ],
+  },
+  {
+    name: "trpc-standalone-nextjs-opennext",
+    args: [
+      "--preset",
+      "ddd-fullstack",
+      "--scope",
+      "@smoke",
+      "--api",
+      "trpc",
+      "--api-hosting",
+      "standalone",
+      "--web-apps",
+      "web",
+      "--backend-deploy",
+      "lambda",
+      "--frontend-deploy",
+      "opennext",
+      "--no-install",
+      "--no-git",
+    ],
+    runtimeTarget: "lambda+opennext",
+    matrixTargets: ["base-ddd"],
+    validations: [
+      { label: "typecheck", args: ["typecheck"] },
+      { label: "build", args: ["build"] },
+    ],
+  },
+  {
     name: "trpc-nextjs-vercel-fullstack",
     args: [
       "--preset",
@@ -1295,7 +1392,12 @@ const smokeCaseDefinitionsWithoutLint: readonly Omit<SmokeCase, "tier" | "adviso
     ],
     runtimeTarget: "node+browser",
     matrixTargets: ["base-ddd"],
-    validations: [{ label: "build", args: ["build"] }],
+    validations: [
+      { label: "test", args: ["test"] },
+      { label: "product typecheck", packagePath: ["apps", "web"], args: ["typecheck"] },
+      { label: "build", args: ["build"] },
+      { label: "local product HTTP smoke", packagePath: ["apps", "web"], args: ["product:smoke"] },
+    ],
   },
   {
     name: "graphql-nextjs-opennext",
@@ -1357,7 +1459,19 @@ const smokeCaseDefinitionsWithoutLint: readonly Omit<SmokeCase, "tier" | "adviso
     ],
     runtimeTarget: "container+browser",
     matrixTargets: ["base-ddd"],
-    validations: [{ label: "frontend Dockerfile", paths: ["web/Dockerfile"] }],
+    validations: [
+      { label: "build", args: ["build"] },
+      {
+        label: "frontend Docker output",
+        paths: [
+          "web/Dockerfile",
+          "apps/web/.next/standalone/apps/web/server.js",
+          "apps/web/.next/static",
+          "apps/web/public",
+        ],
+      },
+      { label: "rebuild with standalone output", args: ["build"] },
+    ],
   },
   {
     name: "graphql-vite-spa-docker",
@@ -1519,7 +1633,7 @@ const smokeCaseDefinitionsWithoutLint: readonly Omit<SmokeCase, "tier" | "adviso
         packagePath: ["apps", "web"],
         args: ["presentation:smoke"],
       },
-      { label: "test", packagePath: ["libs", "shared", "utils-env"], args: ["test"] },
+      { label: "test", args: ["test"] },
     ],
   },
   {
@@ -1579,6 +1693,12 @@ const smokeCaseDefinitionsWithoutLint: readonly Omit<SmokeCase, "tier" | "adviso
     runtimeTarget: "node+browser",
     matrixTargets: ["spa-be-split"],
     validations: [
+      {
+        label: "install-immediate contract verify",
+        readOnly: true,
+        recovery: "pnpm codegen",
+        args: ["contract:verify"],
+      },
       { label: "dev smoke", args: ["dev:smoke"] },
       {
         label: "browser testing contract",
@@ -1669,6 +1789,12 @@ const smokeCaseDefinitionsWithoutLint: readonly Omit<SmokeCase, "tier" | "adviso
     runtimeTarget: "node+browser",
     matrixTargets: ["admin-console", "spa-be-split"],
     validations: [
+      {
+        label: "install-immediate contract verify",
+        readOnly: true,
+        recovery: "pnpm codegen",
+        args: ["contract:verify"],
+      },
       { label: "admin smoke", args: ["admin:smoke"] },
       {
         label: "browser testing contract",
@@ -1949,6 +2075,56 @@ const smokeCaseDefinitionsWithoutLint: readonly Omit<SmokeCase, "tier" | "adviso
     ],
   },
   {
+    name: "saas-single-tenant",
+    args: [
+      "--preset",
+      "saas",
+      "--scope",
+      "@smoke",
+      "--tenant-model",
+      "single",
+      "--no-install",
+      "--no-git",
+    ],
+    runtimeTarget: "node",
+    matrixTargets: ["saas", "saas-node-postgres-contracts", "saas-single-tenant-contracts"],
+    validations: [
+      {
+        label: "install-immediate contract verify",
+        readOnly: true,
+        recovery: "pnpm codegen",
+        args: ["contract:verify"],
+      },
+      {
+        label: "provider profile manifest",
+        readOnly: true,
+        recovery: "Regenerate the application from its create-croco-app preset",
+        args: ["profile:check"],
+        json: {
+          path: "croco-tenant-model.manifest.json",
+          matches: { currentModel: "single" },
+        },
+      },
+      runtimeCapabilityManifestValidation("saas-node"),
+      { label: "build", args: ["build"], paths: ["apps/api-server/dist/index.js"] },
+      { label: "typecheck", args: ["typecheck"] },
+      { label: "test", args: ["test"] },
+      { label: "contract:snapshot", args: ["contract:snapshot"] },
+      {
+        label: "codegen",
+        args: ["codegen"],
+        paths: ["croco.project-map.json", "openapi.json", "libs/shared/provider-rpc/src/saas.ts"],
+      },
+      {
+        label: "contract:verify",
+        readOnly: true,
+        recovery: "pnpm codegen",
+        args: ["contract:verify"],
+      },
+      { label: "demo:smoke", args: ["demo:smoke"] },
+    ],
+  },
+  {
     name: "saas-cloudflare-profile",
     args: [
       "--preset",
@@ -2093,8 +2269,8 @@ const smokeCaseDefinitionsWithoutLint: readonly Omit<SmokeCase, "tier" | "adviso
     runtimeTarget: "node",
     matrixTargets: ["ai-saas", "saas"],
     validations: [
-      { label: "typecheck", args: ["typecheck"] },
       { label: "build", args: ["build"] },
+      { label: "typecheck", args: ["typecheck"] },
       {
         label: "Contract snapshot",
         args: ["contract:snapshot"],
@@ -2172,14 +2348,16 @@ const smokeCases = selectableSmokeCases.filter(
 export function getGeneratedSmokeDependencyCaseInputs(): readonly {
   readonly name: string;
   readonly args: readonly string[];
+  readonly matrixTargets: readonly string[];
   readonly validations: readonly Pick<
     SmokeValidation,
     "args" | "label" | "packagePath" | "paths"
   >[];
 }[] {
-  return smokeCases.map(({ name, args, validations }) => ({
+  return smokeCases.map(({ name, args, matrixTargets, validations }) => ({
     name,
     args,
+    matrixTargets,
     validations: validations.map(({ args: validationArgs, label, packagePath, paths }) => ({
       args: validationArgs,
       label,
@@ -2187,6 +2365,28 @@ export function getGeneratedSmokeDependencyCaseInputs(): readonly {
       paths,
     })),
   }));
+}
+
+export function prepareGeneratedSmokeDependencyOverrides(
+  projectDir: string,
+  smokeCaseName: string,
+  rangeOverrides: Readonly<Record<string, string>>,
+): void {
+  if (
+    ![
+      "goal-saas-api",
+      "saas-single-tenant",
+      "production-app-starter",
+      "admin-console-starter",
+    ].includes(smokeCaseName)
+  ) {
+    rewriteExternalCrocoRanges(
+      projectDir,
+      rangeOverrides,
+      generatedSmokeExternalCrocoRangeExceptions,
+    );
+  }
+  writePnpmWorkspaceOverrides(projectDir, rangeOverrides);
 }
 
 export function getGeneratedGoalSmokeCaseInputs(): readonly {
@@ -2333,17 +2533,16 @@ if (isMainModule()) {
           packedWorkspacePackages,
           builtWorkspacePackageNames,
         );
-        rewriteExternalCrocoRanges(
-          projectDir,
-          generatedSmokeRangeOverrides,
-          generatedSmokeExternalCrocoRangeExceptions,
-        );
         assertGeneratedReadme(projectDir, smokeCase);
         assertGeneratedNodeRuntimeContract(projectDir, smokeCase);
         assertGeneratedEnvironmentTemplate(projectDir, smokeCase);
         assertNoGeneratedSecurityValidationOptOut(projectDir, smokeCase);
         assertNoGeneratedCredentialLookingValues(projectDir, smokeCase);
-        writePnpmWorkspaceOverrides(projectDir, generatedSmokeRangeOverrides);
+        prepareGeneratedSmokeDependencyOverrides(
+          projectDir,
+          smokeCase.name,
+          generatedSmokeRangeOverrides,
+        );
         runSmokeCaseCommand(
           smokeReport,
           caseResult,
@@ -2685,10 +2884,10 @@ function readTemplateMatrixTargets(cases: readonly SmokeCase[]): readonly Templa
   }
 
   return [...targetCases.entries()]
-    .sort(([left], [right]) => left.localeCompare(right))
+    .sort(([left], [right]) => compareStrings(left, right))
     .map(([template, caseNames]) => ({
       template,
-      cases: caseNames.sort((left, right) => left.localeCompare(right)),
+      cases: caseNames.sort((left, right) => compareStrings(left, right)),
     }));
 }
 
@@ -4077,7 +4276,7 @@ function compareGraphQLOperations(
   left: GraphQLContractOperationJson,
   right: GraphQLContractOperationJson,
 ): number {
-  return `${left.kind}:${left.name}`.localeCompare(`${right.kind}:${right.name}`);
+  return compareStrings(`${left.kind}:${left.name}`, `${right.kind}:${right.name}`);
 }
 
 function assertSmokeCoverage(cases: readonly SmokeCase[]): void {

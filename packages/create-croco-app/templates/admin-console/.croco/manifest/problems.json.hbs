@@ -1,0 +1,112 @@
+{
+  "schemaVersion": "croco.manifest.problems.v1",
+  "source": {
+    "schemaVersion": "croco.project-map.manifest.v1",
+    "artifact": "croco.project-map.json",
+    "packageName": "{{projectName}}",
+    "generatedArtifacts": [
+      {
+        "kind": "framework-manifest",
+        "path": ".croco/build/framework-manifest.json",
+        "commitPolicy": "commit-required"
+      },
+      {
+        "kind": "intent-map",
+        "path": ".croco/build/intent-map.json",
+        "commitPolicy": "commit-required"
+      },
+      {
+        "kind": "route-registration-table",
+        "path": ".croco/build/route-registration-table.json",
+        "commitPolicy": "commit-required"
+      },
+      {
+        "kind": "routes-module",
+        "path": ".croco/build/routes.mjs",
+        "commitPolicy": "commit-required"
+      }
+    ]
+  },
+  "project": {
+    "root": ".",
+    "packageName": "{{projectName}}",
+    "packageManager": "pnpm@12.7.0"
+  },
+  "summary": {
+    "responses": 12
+  },
+  "responses": [
+    {
+      "routeId": "AdminController.creditOperations",
+      "code": "admin-core/credit-operations-permission-denied",
+      "category": "Forbidden",
+      "status": 403
+    },
+    {
+      "routeId": "AdminController.creditOperations",
+      "code": "admin-core/credit-operations-validation-failed",
+      "category": "ValidationError",
+      "status": 422
+    },
+    {
+      "routeId": "AdminController.executeCreditOperation",
+      "code": "admin-core/credit-operations-permission-denied",
+      "category": "Forbidden",
+      "status": 403
+    },
+    {
+      "routeId": "AdminController.executeCreditOperation",
+      "code": "admin-core/credit-operations-validation-failed",
+      "category": "ValidationError",
+      "status": 422
+    },
+    {
+      "routeId": "AdminController.executeCreditOperation",
+      "code": "credits-core/duplicate-conflict",
+      "category": "Conflict",
+      "status": 409
+    },
+    {
+      "routeId": "AdminController.executeCreditOperation",
+      "code": "credits-core/event-publication-failed",
+      "category": "InternalServerError",
+      "status": 500
+    },
+    {
+      "routeId": "AdminController.executeCreditOperation",
+      "code": "credits-core/stale-ledger-position",
+      "category": "Conflict",
+      "status": 409
+    },
+    {
+      "routeId": "AdminController.executeCreditOperation",
+      "code": "protocols-rest/request-validation-failed",
+      "category": "ValidationError",
+      "status": 422
+    },
+    {
+      "routeId": "AdminController.getUser",
+      "code": "admin-console/user-not-found",
+      "category": "NotFound",
+      "status": 404
+    },
+    {
+      "routeId": "UserController.delete",
+      "code": "starter/user-not-found",
+      "category": "NotFound",
+      "status": 404
+    },
+    {
+      "routeId": "UserController.getById",
+      "code": "starter/user-not-found",
+      "category": "NotFound",
+      "status": 404
+    },
+    {
+      "routeId": "UserController.update",
+      "code": "starter/user-not-found",
+      "category": "NotFound",
+      "status": 404
+    }
+  ]
+}

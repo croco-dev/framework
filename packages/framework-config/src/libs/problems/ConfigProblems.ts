@@ -32,11 +32,11 @@ export class InvalidBooleanEnvProblem extends Problem {
 export class RuntimeEnvPresetBoundaryProblem extends Problem {
   readonly code = "framework-config/runtime-env-preset-boundary";
   readonly category = ProblemCategory.ValidationError;
-  constructor(section: "client" | "server", envName: string) {
+  constructor(section: "client" | "server", envName: string, clientPrefix = "NEXT_PUBLIC_") {
     const requirement =
       section === "client"
-        ? "client variables must use the 'NEXT_PUBLIC_' prefix"
-        : "server variables cannot use the 'NEXT_PUBLIC_' prefix";
+        ? `client variables must use the '${clientPrefix}' prefix`
+        : `server variables cannot use the '${clientPrefix}' prefix`;
 
     super(undefined, undefined, `Invalid ${section} env '${envName}': ${requirement}`);
   }

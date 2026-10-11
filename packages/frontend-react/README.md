@@ -192,7 +192,8 @@ so apps can show sign-in, request-access, or retry actions without treating unkn
 
 Croco Problem Details can be rendered without collapsing diagnostic evidence into a generic string.
 `ProblemPanel` displays the RFC 7807 fields and typed recovery actions, `ProblemBoundary`
-normalizes thrown Croco Problems, unknown thrown values, and external `Error` objects, and
+normalizes thrown Croco Problems, client errors carrying `error.problem`, unknown thrown values,
+and external `Error` objects, and
 `ProblemToastAdapter` maps the same model to provider-specific toast libraries.
 
 ```typescript
@@ -309,7 +310,8 @@ loading/unavailable 상태와 독립적으로 평가됩니다. tenant-dependent 
 
 ### `ProblemBoundary`
 
-React 자식 트리에서 던져진 Croco Problem, plain Problem Details, 외부 `Error`, unknown 값을
+React 자식 트리에서 던져진 Croco Problem, plain Problem Details, `error.problem`에
+Problem Details를 담은 클라이언트 오류, 외부 `Error`, unknown 값을
 `ProblemDetails`로 정규화하고 fallback 또는 `ProblemPanel`로 렌더링합니다.
 
 ### `ProblemToastAdapter`
@@ -355,3 +357,36 @@ export type FrontendAuthBridgeState = {
 ## 라이선스
 
 Apache-2.0
+
+### Owner reminder controls
+
+`ReminderSettingsForm` loads an owner-scoped `ReminderSettingsSource`, previews the
+next occurrence on the server, then creates or updates an explicit schedule.
+`SnoozeControl` accepts a UTC timestamp for a one-shot snooze. Cancellation stops
+future occurrences; messages already accepted cannot be recalled. Change
+`scopeKey` when the authenticated owner changes. The server must derive identity,
+authorize every request, enforce version checks, and return decoded `Date` values.
+Partial history and failed mutations require reload before further writes.
+
+## Saved items without an ExperienceSlot
+
+`SavedItems` and `ContinueCard` consume the server's `SavedIntentPage` in its policy-selected
+order. Their controlled state explicitly represents loading, empty, ready, partial, denied,
+and error. One page is rendered at a time; `onNextPage` requests the supplied bounded server
+offset. `onRemove`, `onComplete`, and `onPin` receive the intent including its current revision.
+Use that revision and an idempotency key for each server command, then reload the page.
+Failed actions require a reload before another mutation; unavailable candidates mask their
+labels and disable continuation.
+
+`onContinue` must call the authenticated server's `resolveIntent` immediately before navigating.
+The components deliberately emit no cached `safeUrl` anchor. The destination must also enforce
+its own current authorization. Keep server responses uncached and bind scope/subject to the
+verified server session, never client request fields. See the executable
+[Saved reports example](../../examples/saved-intents/README.md), which uses the same service for
+customer components and operator policy editing.
+
+### Cancellation flow
+
+`CancellationFlow` renders an independent subscription cancellation surface. Supply a server-created `CancellationSession` in `state: { kind: "ready", session }`, route `onDecide` to authenticated `CancellationService.decide`, and use `onRefresh` to reconcile the existing command or load fresh authoritative terms. Wire `onDisplayed` to `markDisplayed` for display evidence. Client validation uses the same `@croco/billing-core/cancellation` validator as the server; server authorization and current-state admission remain required.
+
+The direct cancellation confirmation precedes optional reasons and retention choices. Skipping a reason and declining offers return keyboard focus to that button. Declined offers stay hidden across session refreshes in the mounted flow. Unsupported choices are disabled. Expired/conflicting terms require a refresh; an unknown submission outcome locks further decisions until refresh. Command acceptance, scheduled cancellation, ended access and refund confirmation are shown separately. The host must return the authoritative session after decisions and reconciliation and must never create a replacement command to recover an unknown result.

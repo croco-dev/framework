@@ -59,6 +59,16 @@ const cliDiagnosticDefinitionsTable = [
   formatMarkdownTable([
     "| Code | Legacy aliases / patterns | Title | Action |",
     "| --- | --- | --- | --- |",
+    "| `CROCO_CLI_AGENT_READ_001` | None | Unknown read tool | Choose a tool returned by tools/list. |",
+    "| `CROCO_CLI_AGENT_READ_002` | None | Invalid read arguments | Use the advertised input schema and remove unsupported fields. |",
+    "| `CROCO_CLI_AGENT_READ_003` | None | Read response exceeds the byte budget | Narrow the authorized request or ask the operator to review the response budget. |",
+    "| `CROCO_CLI_AGENT_READ_004` | None | Read tool failed | Inspect operator-owned logs before retrying the authorized request. |",
+    "| `CROCO_CLI_AGENT_READ_005` | None | Read invocation was cancelled | Retry only if a new authorized invocation is still needed. |",
+    "| `CROCO_CLI_AGENT_READ_006` | None | Invalid read command | Run croco-agent --help and use a supported command. |",
+    "| `CROCO_CLI_AGENT_READ_007` | None | Invalid read application | Set CROCO_AGENT_APPLICATION to the trusted absolute .mjs application module. |",
+    "| `CROCO_CLI_AGENT_READ_008` | None | Invalid read JSON | Pass one valid JSON argument matching the advertised tool schema. |",
+    "| `CROCO_CLI_AGENT_READ_009` | None | Read transport failed | Inspect operator-owned stderr and restart the configured client connection. |",
+    "| `CROCO_CLI_AGENT_READ_010` | None | Read application startup failed | Inspect operator-owned application logs and configuration before restarting. |",
     "| `CROCO_CLI_DOCTOR_001` | `doctor/workspace-not-found` | Croco workspace root is missing | Run `croco doctor` inside a Croco monorepo or pass `--cwd` to a directory under the workspace root. |",
     "| `CROCO_CLI_DOCTOR_002` | `doctor/workspace-packages-empty` | Workspace package globs found no packages | Fix the workspace package globs or run `croco doctor` from the repository root. |",
     "| `CROCO_CLI_DOCTOR_003` | `doctor/workspace-package-invalid` | Workspace package manifest is invalid | Fix the `package.json` so it contains valid JSON and a string package name. |",
@@ -76,6 +86,7 @@ const cliDiagnosticDefinitionsTable = [
     "| `CROCO_CLI_JOBS_003` | `cli/missing-jobs-target-url` | Jobs command target URL is missing | Pass `--url` or set `CROCO_JOBS_URL` before running the jobs command. |",
     "| `CROCO_CLI_JOBS_004` | `cli/jobs-http-error` | Jobs endpoint returned an error | Inspect the endpoint response detail and retry after the app or requested job id is corrected. |",
     "| `CROCO_CLI_JOBS_005` | `cli/jobs-endpoint-not-found` | Jobs endpoint was not found | Check the app base URL and requested job id, then retry the jobs command. |",
+    '| `CROCO_CLI_JOBS_006` | `cli/invalid-jobs-id` | Jobs command job id is invalid | Pass a job id other than an empty string, ".", or ".." before retrying the command. |',
     "| `CROCO_CLI_DI_CHECK_001` | `cli/di-manifest-invalid` | DI check manifest is invalid | Regenerate the manifest or pass a path to a valid JSON manifest. |",
     "| `CROCO_CLI_DI_CHECK_002` | `cli/di-manifest-failed` | DI check manifest failed without diagnostics | Regenerate the manifest with diagnostics or fix the producer that emitted the failed manifest. |",
     "| `CROCO_CLI_DI_CHECK_003` | `cli/di-diagnostic-unknown` | DI check diagnostic code is missing | Fix the manifest producer so every diagnostic carries a stable code. |",
@@ -295,6 +306,21 @@ export async function sanitizeTypeDocIndex() {
   await sanitizeRestRouteContractDocs();
   await sanitizeFrontendReactDocs();
   await sanitizeTasksCoreDocs();
+  await sanitizeDrizzleChallengeClient();
+}
+
+export function normalizeDrizzleChallengeClient(content) {
+  return content.replaceAll(
+    "[`challengeSchema`](/api/gamification-drizzle/src/namespaces/challengeschema/readme/)",
+    "`challengeSchema`",
+  );
+}
+
+async function sanitizeDrizzleChallengeClient() {
+  const path = apiDocsPath("gamification-drizzle/src/type-aliases/DrizzleChallengeClient.md");
+  const content = await readFile(path, "utf8");
+  const sanitized = normalizeDrizzleChallengeClient(content);
+  if (sanitized !== content) await writeFile(path, sanitized);
 }
 
 async function sanitizeApiIndex() {

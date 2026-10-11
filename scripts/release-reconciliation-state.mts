@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 
+import { compareStrings } from "../tooling/compareStrings.mjs";
+
 import { execFileSync } from "node:child_process";
 import { appendFileSync, readFileSync, readdirSync } from "node:fs";
 import { isAbsolute, relative, resolve } from "node:path";
@@ -120,7 +122,7 @@ export function readPublishableWorkspacePackages(
       registry: packageRegistry(packageJson),
     });
   }
-  return packages.sort((left, right) => left.name.localeCompare(right.name));
+  return packages.sort((left, right) => compareStrings(left.name, right.name));
 }
 
 function packageVersionUrl(pkg: PublishableWorkspacePackage): string {
@@ -167,7 +169,7 @@ export async function findUnpublishedPackages(
       }
     }),
   );
-  return unpublished.sort((left, right) => left.localeCompare(right));
+  return unpublished.sort((left, right) => compareStrings(left, right));
 }
 
 export function hasPendingChangesets(rootDir: string): boolean {

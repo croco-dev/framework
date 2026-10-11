@@ -77,3 +77,23 @@ export {
   MAX_CACHE_TIMER_DELAY_MS,
 } from "./libs/problems/CacheStoreProblems";
 export type { CacheNumericOption } from "./libs/problems/CacheStoreProblems";
+export { PersonalizedCachePolicyProblem } from "./libs/problems/PersonalizedCacheProblems";
+export {
+  createPersonalizedCacheKey,
+  definePersonalizedCachePolicy,
+  invalidatePersonalizedFragment,
+  isPersonalizedCacheFresh,
+  PERSONALIZED_CACHE_DIMENSION_ALLOWLIST,
+} from "./libs/personalizedCache";
+export type {
+  PersonalizedCacheDependency,
+  PersonalizedCacheDimensionName,
+  PersonalizedCacheDimensionScope,
+  PersonalizedCacheFreshnessPolicy,
+  PersonalizedCachePolicy,
+  PersonalizedCachePolicyInput,
+  PersonalizedCacheZone,
+  PersonalizedCacheZonePolicyInput,
+  PersonalizedInvalidationScope,
+  ResolvedPersonalizedCacheZonePolicy,
+} from "./libs/personalizedCache";

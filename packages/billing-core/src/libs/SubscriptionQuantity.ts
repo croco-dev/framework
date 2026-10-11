@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { DomainEvent } from "@croco/events-core";
-import { Problem, ProblemCategory } from "@croco/problems-core";
+import { Problem, ProblemCategory, readExplicitRetryability } from "@croco/problems-core";
 import { recordError, recordEvent, withSpan } from "@croco/telemetry-api";
 import type { PlanVersionDefinition, PlanVersionRef, SubscriptionQuantityPolicy } from "../types";
 import type { PlanRegistry } from "./PlanRegistry";
@@ -674,9 +674,10 @@ export class SubscriptionQuantityReconciler {
     const unsupported = problem instanceof ProviderCapabilityUnavailableProblem;
     const retryable =
       !unsupported &&
-      (problem.status === 408 ||
-        problem.category === ProblemCategory.TooManyRequests ||
-        problem.status >= 500);
+      (readExplicitRetryability(problem) ??
+        (problem.status === 408 ||
+          problem.category === ProblemCategory.TooManyRequests ||
+          problem.status >= 500));
     const attemptCount =
       snapshot.state === "drifted"
         ? snapshot.attemptCount

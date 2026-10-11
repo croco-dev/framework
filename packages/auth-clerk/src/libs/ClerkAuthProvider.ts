@@ -41,6 +41,76 @@ function getStrictStringArrayClaim(payload: Record<string, unknown>, key: string
   return parsed;
 }
 
+function getV2OrganizationClaims(payload: Record<string, unknown>): {
+  orgId: string | undefined;
+  orgRole: string | undefined;
+  orgSlug: string | undefined;
+  permissions: string[];
+} {
+  const organization = payload.o;
+  if (organization === undefined) {
+    return { orgId: undefined, orgRole: undefined, orgSlug: undefined, permissions: [] };
+  }
+
+  if (!isObjectRecord(organization) || Array.isArray(organization)) {
+    throw new ClerkMalformedClaimProblem("o");
+  }
+
+  const { id, rol, slg, per, fpm } = organization;
+  if (
+    typeof id !== "string" ||
+    typeof rol !== "string" ||
+    typeof slg !== "string" ||
+    typeof per !== "string" ||
+    typeof fpm !== "string"
+  ) {
+    throw new ClerkMalformedClaimProblem("o");
+  }
+
+  const featureClaim = payload.fea;
+  if (featureClaim !== undefined && typeof featureClaim !== "string") {
+    throw new ClerkMalformedClaimProblem("fea");
+  }
+
+  const features = featureClaim
+    ? featureClaim
+        .split(",")
+        .map((feature) => feature.trim().split(":"))
+        .filter(([scope]) => scope.includes("o"))
+        .map(([, feature]) => feature)
+    : [];
+  const permissionNames = per ? per.split(",").map((permission) => permission.trim()) : [];
+  const permissionMaps = fpm ? fpm.split(",") : [];
+  const permissions: string[] = [];
+
+  for (const [featureIndex, feature] of features.entries()) {
+    const encodedMap = permissionMaps[featureIndex]?.trim();
+    if (encodedMap === undefined) {
+      continue;
+    }
+    if (!/^\d+$/.test(encodedMap)) {
+      throw new ClerkMalformedClaimProblem("o");
+    }
+
+    const bitmap = Number(encodedMap);
+    if (!Number.isSafeInteger(bitmap)) {
+      throw new ClerkMalformedClaimProblem("o");
+    }
+    for (const [permissionIndex, permission] of permissionNames.entries()) {
+      if (Math.floor(bitmap / 2 ** permissionIndex) % 2 === 1) {
+        permissions.push(`org:${feature}:${permission}`);
+      }
+    }
+  }
+
+  return {
+    orgId: id,
+    orgRole: rol ? `org:${rol}` : undefined,
+    orgSlug: slg,
+    permissions,
+  };
+}
+
 export class ClerkAuthProvider implements AuthProvider<AuthorizationHeaderCarrier> {
   constructor(private options: ClerkAuthOptions) {}
 
@@ -68,20 +138,28 @@ export class ClerkAuthProvider implements AuthProvider<AuthorizationHeaderCarrie
 
       const payload = verified;
 
-      const orgRole = getStringClaim(payload, "org_role");
+      const organization =
+        payload.v === 2
+          ? getV2OrganizationClaims(payload)
+          : {
+              orgId: getStringClaim(payload, "org_id"),
+              orgRole: getStringClaim(payload, "org_role"),
+              orgSlug: getStringClaim(payload, "org_slug"),
+              permissions: getStrictStringArrayClaim(payload, "org_permissions"),
+            };
+      const orgRole = organization.orgRole;
       const roles: string[] = orgRole ? [orgRole] : [];
-      const permissions = getStrictStringArrayClaim(payload, "org_permissions");
 
       return {
         id: userId,
         email: getStringClaim(payload, "email"),
         roles,
-        permissions,
+        permissions: organization.permissions,
         metadata: {
           clerkUserId: userId,
-          orgId: getStringClaim(payload, "org_id"),
+          orgId: organization.orgId,
           orgRole,
-          orgSlug: getStringClaim(payload, "org_slug"),
+          orgSlug: organization.orgSlug,
           sessionId: getStringClaim(payload, "sid"),
         },
       };

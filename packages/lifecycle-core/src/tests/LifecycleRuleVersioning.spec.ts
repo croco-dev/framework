@@ -76,7 +76,11 @@ function createContext(signalId = "signal-1", now = NOW) {
 function registerVersion(
   registry: LifecycleRuleRegistry,
   version: string,
-  options: { readonly activate?: boolean; readonly executableRegistrationId?: string } = {},
+  options: {
+    readonly activate?: boolean;
+    readonly executableRegistrationId?: string;
+    readonly registeredAt?: Date;
+  } = {},
 ) {
   return registry.registerVersion({
     rule: createRule(version),
@@ -85,6 +89,7 @@ function registerVersion(
     executableFingerprint: `retention-risk-bundle:${version}`,
     contextRequirements: ["metadata.atRisk", "onboarding.isCompleted"],
     activate: options.activate,
+    registeredAt: options.registeredAt,
   });
 }
 
@@ -367,6 +372,125 @@ describe("LifecycleRuleRegistry versioning", () => {
       { version: "1.0.0", state: "active", revision: 1 },
     ]);
     expect((await restartedRegistry.getIdentityState("retention-risk"))?.history).toHaveLength(1);
+  });
+
+  it("reuses a settled version registration without reusing its activation command", async () => {
+    const stateStore = new InMemoryLifecycleRuleStateStore();
+    const registry = new LifecycleRuleRegistry({ stateStore });
+    await registerVersion(registry, "1.0.0", { activate: true });
+    await registry.pause({
+      commandId: "pause-settled-version",
+      ruleId: "retention-risk",
+      version: "1.0.0",
+      expectedRevision: 1,
+    });
+
+    const reread = await registerVersion(registry, "1.0.0", { activate: true });
+    await registerVersion(registry, "1.0.0", { activate: true });
+
+    expect(reread.descriptor.version).toBe("1.0.0");
+    expect(await registry.getIdentityState("retention-risk")).toMatchObject({
+      revision: 2,
+      versions: [{ state: "paused" }],
+      history: [{ command: "activate" }, { command: "pause" }],
+    });
+
+    await expect(
+      registry.resume({
+        commandId: "resume-after-settled-reread",
+        ruleId: "retention-risk",
+        version: "1.0.0",
+        expectedRevision: 2,
+      }),
+    ).resolves.toMatchObject({ state: { revision: 3 } });
+    expect(await registry.getRegistrationState("retention-risk", "1.0.0")).toBe("active");
+  });
+
+  it("leaves a superseded version registration settled across reinstalls", async () => {
+    const stateStore = new InMemoryLifecycleRuleStateStore();
+    const registry = new LifecycleRuleRegistry({ stateStore });
+    await registerVersion(registry, "1.0.0", { activate: true });
+    await registry.supersede({
+      commandId: "supersede-settled-version",
+      ruleId: "retention-risk",
+      version: "1.0.0",
+      expectedRevision: 1,
+    });
+
+    await registerVersion(registry, "1.0.0", { activate: true });
+
+    expect(await registry.getIdentityState("retention-risk")).toMatchObject({
+      revision: 2,
+      versions: [{ state: "superseded" }],
+      history: [{ command: "activate" }, { command: "supersede" }],
+    });
+  });
+
+  it("reuses a paused version registration after a process restart", async () => {
+    const stateStore = new InMemoryLifecycleRuleStateStore();
+    const firstRegistry = new LifecycleRuleRegistry({ stateStore });
+    await registerVersion(firstRegistry, "1.0.0", { activate: true });
+    await firstRegistry.pause({
+      commandId: "pause-before-restart",
+      ruleId: "retention-risk",
+      version: "1.0.0",
+      expectedRevision: 1,
+    });
+    const restartedRegistry = new LifecycleRuleRegistry({ stateStore });
+
+    const restarted = await registerVersion(restartedRegistry, "1.0.0", { activate: true });
+
+    expect(restarted.descriptor.version).toBe("1.0.0");
+    expect(await restartedRegistry.inspect()).toMatchObject([
+      { version: "1.0.0", state: "paused", revision: 2 },
+    ]);
+    expect((await restartedRegistry.getIdentityState("retention-risk"))?.history).toHaveLength(2);
+  });
+
+  it("converges a stale compatibility view when a peer changed activation state", async () => {
+    const stateStore = new InMemoryLifecycleRuleStateStore();
+    const firstRegistry = new LifecycleRuleRegistry({ stateStore });
+    const secondRegistry = new LifecycleRuleRegistry({ stateStore });
+    await registerVersion(firstRegistry, "1.0.0", { activate: true });
+    await registerVersion(secondRegistry, "1.0.0", { activate: true });
+    await secondRegistry.pause({
+      commandId: "pause-from-peer",
+      ruleId: "retention-risk",
+      version: "1.0.0",
+      expectedRevision: 1,
+    });
+
+    await registerVersion(firstRegistry, "1.0.0", { activate: true });
+
+    expect(await firstRegistry.getIdentityState("retention-risk")).toMatchObject({
+      revision: 2,
+      versions: [{ state: "paused" }],
+    });
+    expect(firstRegistry.get("retention-risk")).toBeUndefined();
+  });
+
+  it("converges concurrent fresh installations without command conflicts", async () => {
+    const stateStore = new AsyncLifecycleRuleStateStore();
+    const firstRegistry = new LifecycleRuleRegistry({ stateStore });
+    const secondRegistry = new LifecycleRuleRegistry({ stateStore });
+
+    const [first, second] = await Promise.all([
+      registerVersion(firstRegistry, "1.0.0", {
+        activate: true,
+        registeredAt: new Date("2026-01-01T00:00:00.000Z"),
+      }),
+      registerVersion(secondRegistry, "1.0.0", {
+        activate: true,
+        registeredAt: new Date("2026-02-01T00:00:00.000Z"),
+      }),
+    ]);
+
+    expect(first.descriptor).toEqual(second.descriptor);
+    expect(await firstRegistry.getIdentityState("retention-risk")).toMatchObject({
+      revision: 1,
+      versions: [{ state: "active" }],
+      history: [{ command: "activate", version: "1.0.0" }],
+    });
   });
 
   it("rejects a changed executable artifact reattaching to a persisted active version", async () => {

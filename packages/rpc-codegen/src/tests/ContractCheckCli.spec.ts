@@ -1,5 +1,6 @@
 import "reflect-metadata";
 import * as fs from "node:fs";
+import { createRequire } from "node:module";
 import * as os from "node:os";
 import * as path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -15,6 +16,13 @@ describe("rpc-codegen contract check CLI", () => {
     tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "rpc-contract-check-"));
     sourceDir = path.join(tempRoot, "src");
     fs.mkdirSync(sourceDir, { recursive: true });
+    const dependenciesDir = path.join(tempRoot, "node_modules");
+    fs.mkdirSync(dependenciesDir);
+    fs.symlinkSync(
+      path.dirname(createRequire(import.meta.url).resolve("reflect-metadata")),
+      path.join(dependenciesDir, "reflect-metadata"),
+      "dir",
+    );
   });
 
   afterEach(() => {

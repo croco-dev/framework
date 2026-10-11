@@ -129,8 +129,13 @@ await handler.handleWebhook(request);
 운영 환경에서는 모든 worker가 공유하는 durable `IdempotencyStore`를 전달해야 합니다. 핸들러는
 서명 검증을 통과한 `svix-id`만 예약하며, 완료된 delivery의 결과를 저장한 뒤에만 이후 재전달을
 중복으로 승인합니다. 처리 중인 중복은 retryable `auth-clerk/webhook-delivery-in-flight` Problem으로
-실패하므로 Clerk가 완료 결과를 다시 확인할 수 있습니다. 예약과 완료 결과는 기본 24시간 동안
-유지되며, `idempotencyTtlMs`로 provider retry 정책에 맞게 조정할 수 있습니다.
+실패하므로 Clerk가 완료 결과를 다시 확인할 수 있습니다. 처리 예약은 기본 15분 뒤 만료되어
+중단된 worker의 delivery를 재시도할 수 있으며, `processingLeaseMs`로 조정합니다. 완료 결과는
+완료 시점부터 기본 24시간 동안 유지되며, `idempotencyTtlMs`로 provider retry 정책에 맞게
+조정할 수 있습니다. 처리 lease는 자동 연장되지 않으므로 예상 최대 처리 시간보다 길게 설정해야 합니다.
+Lease 만료 후에는 이전 worker도 계속 실행 중일 수 있으므로 mutation 자체의 중복 방지도 필요합니다.
+Durable 저장소는 `leaseMs`를 결과 보존 기간과 독립적으로 구현하고 conformance suite를 통과한 뒤
+`processingLeaseVersion: 1`을 선언해야 합니다. 선언하지 않은 저장소는 handler 구성 시 거부됩니다.
 
 ## Diagnostics와 Conformance
 
@@ -150,8 +155,10 @@ const diagnostics = new ClerkAuthDiagnosticsProvider({
 패키지 테스트는 `@croco/testing`의 `createAuthProviderConformanceSuite()`를 사용해 아래
 계약을 기본 no-credential CI에서 검증합니다.
 
-- 유효한 Bearer token을 `AuthUser`로 변환하고 Clerk `org_id`, `org_role`, `org_slug`,
-  `sid`를 metadata로 보존합니다.
+- 유효한 Bearer token을 `AuthUser`로 변환합니다. v1의 `org_id`, `org_role`,
+  `org_slug`와 v2의 `o.id`, `o.rol`, `o.slg`를 같은 조직 metadata로 보존하고,
+  `sid`를 세션 ID로 보존합니다. v2의 `o.rol`에는 `org:` 접두사를 붙이며,
+  조직 권한은 `fea`의 조직 feature와 `o.per`, `o.fpm` 비트맵에서 복원합니다.
 - 누락 credentials는 `null`을 반환하고, 무효 token과 malformed claim은 stable Clerk
   Problem code로 실패합니다.
 - Clerk upstream 실패는 secret 값을 redaction한 `auth-clerk/token-verification-upstream-failed`

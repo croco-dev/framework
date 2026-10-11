@@ -423,6 +423,7 @@ export class CampaignBroadcastService {
         recipient: member.recipient,
         data: decodeCampaignSnapshotData(member.data),
         key: campaignMemberSendKey(snapshot, member),
+        campaignId: campaign.id,
         ...(member.policy === undefined ? {} : { policy: member.policy }),
       });
     } catch (error) {

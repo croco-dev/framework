@@ -46,6 +46,7 @@ export {
  * 레이트 리밋 설정 오류에 사용하는 Problem 타입입니다.
  */
 export {
+  RateLimitDuplicateDefaultPolicyProblem,
   RateLimitKeyBuilderProblem,
   RateLimitPruneIntervalProblem,
   RateLimitRefundUnsupportedProblem,

@@ -1,21 +1,10 @@
+import type { FrontendRecoveryAction } from "@croco/frontend-react";
 import type { ProblemDetails } from "@croco/problems-core";
 
-export type AstryxRecoveryAction = {
-  readonly id: string;
-  readonly label: string;
-  readonly href?: string;
-  readonly onRecover?: () => void | Promise<void>;
-  readonly problemCodes?: readonly string[];
-};
+export type AstryxRecoveryAction = FrontendRecoveryAction;
 
-export type AstryxProblemRecoveryAction = {
-  readonly id: string;
-  readonly label: string;
-  readonly href?: string;
+export type AstryxProblemRecoveryAction = Omit<FrontendRecoveryAction, "onRecover"> & {
   readonly onRecover?: (problem: ProblemDetails) => void | Promise<void>;
-  readonly problemCodes?: readonly string[];
-  readonly disabled?: boolean;
-  readonly ariaLabel?: string;
 };
 
 export type AstryxSession = {

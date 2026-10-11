@@ -31,6 +31,7 @@ export type InMemoryIdempotencyStoreOptions = {
 };
 
 export class InMemoryIdempotencyStore<TResult = unknown> implements IdempotencyStore<TResult> {
+  readonly processingLeaseVersion = 1;
   private readonly records = new Map<string, IdempotencyRecord<TResult>>();
   private readonly now: Clock;
   private reservationSequence = 0;
@@ -44,7 +45,11 @@ export class InMemoryIdempotencyStore<TResult = unknown> implements IdempotencyS
     options: IdempotencyReserveOptions = {},
   ): Promise<IdempotencyReserveResult<TResult>> {
     const reservedAt = this.now();
-    const recordExpiresAt = expiresAt(reservedAt, options.ttlMs ?? DEFAULT_IN_FLIGHT_LEASE_MS);
+    const retentionExpiresAt = expiresAt(reservedAt, options.ttlMs);
+    const recordExpiresAt =
+      options.leaseMs === undefined
+        ? (retentionExpiresAt ?? expiresAt(reservedAt, DEFAULT_IN_FLIGHT_LEASE_MS))
+        : expiresAt(reservedAt, options.leaseMs, "leaseMs");
     const existing = this.records.get(key.storageKey);
     if (existing !== undefined && !isExpired(existing, reservedAt)) {
       this.assertSameFingerprint(existing, key);
@@ -264,13 +269,18 @@ export class InMemoryIdempotencyStore<TResult = unknown> implements IdempotencyS
   }
 }
 
-function expiresAt(from: Date, ttlMs: number | undefined): Date | null {
+function expiresAt(
+  from: Date,
+  ttlMs: number | undefined,
+  field: "ttlMs" | "leaseMs" = "ttlMs",
+): Date | null {
   if (ttlMs === undefined) {
     return null;
   }
 
   if (!Number.isSafeInteger(ttlMs) || ttlMs <= 0) {
     throw new InvalidIdempotencyTtlProblem({
+      field,
       constraint: "positive-safe-integer",
       receivedValue: toDiagnosticTtl(ttlMs),
     });
@@ -279,6 +289,7 @@ function expiresAt(from: Date, ttlMs: number | undefined): Date | null {
   const expiration = new Date(from.getTime() + ttlMs);
   if (!Number.isFinite(expiration.getTime())) {
     throw new InvalidIdempotencyTtlProblem({
+      field,
       constraint: "valid-date-range",
       receivedValue: ttlMs,
     });

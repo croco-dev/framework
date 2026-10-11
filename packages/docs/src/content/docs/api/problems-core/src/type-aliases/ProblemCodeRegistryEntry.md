@@ -11,7 +11,13 @@ title: "ProblemCodeRegistryEntry"
 
 ### category
 
-> `readonly` **category**: [`ProblemCategoryName`](/api/problems-core/src/type-aliases/problemcategoryname/)
+> `readonly` **category**: [`ProblemCategoryName`](/api/problems-core/src/type-aliases/problemcategoryname/) \| `null`
+
+---
+
+### categoryPolicy?
+
+> `readonly` `optional` **categoryPolicy?**: [`ProblemCategoryPolicy`](/api/problems-core/src/type-aliases/problemcategorypolicy/)
 
 ---
 
@@ -47,7 +53,7 @@ title: "ProblemCodeRegistryEntry"
 
 ### status
 
-> `readonly` **status**: `number`
+> `readonly` **status**: `number` \| `null`
 
 ---
 
@@ -59,4 +65,4 @@ title: "ProblemCodeRegistryEntry"
 
 ### title
 
-> `readonly` **title**: `string`
+> `readonly` **title**: `string` \| `null`

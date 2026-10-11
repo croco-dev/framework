@@ -1,3 +1,4 @@
+import { compareStrings } from "../tooling/compareStrings.mjs";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { resolve } from "node:path";
 
@@ -49,6 +50,7 @@ const VERIFICATION_COMMAND_IDS = [
   "dependency-boundaries",
   "security-allowlists",
   "generated-secret-placeholders",
+  "package-test-typecheck",
   "compiler-baseline",
   "decorator-signature-spike",
   "strict-contract-typecheck",
@@ -108,6 +110,7 @@ export const VERIFICATION_LANE_OWNERSHIP = {
   "dependency-boundaries": "core-verification",
   "security-allowlists": "coverage-security",
   "generated-secret-placeholders": "coverage-security",
+  "package-test-typecheck": "core-verification",
   "compiler-baseline": "core-verification",
   "decorator-signature-spike": "core-verification",
   "strict-contract-typecheck": "core-verification",
@@ -188,6 +191,7 @@ export const PUBLISH_REQUIRED_GENERATED_SMOKE_CASES = [
   ),
   "admin-console-starter",
   "ai-saas-golden-path",
+  "trpc-nextjs-vercel-fullstack",
 ] as const;
 
 function isApplicableToChangedFiles(
@@ -212,8 +216,13 @@ function affectsScaffold(path: string): boolean {
   );
 }
 
+function affectsSharedComparator(path: string): boolean {
+  return path === "tooling/compareStrings.mjs" || path === "tooling/compareStrings.d.mts";
+}
+
 function affectsPackageEntrypoints(path: string): boolean {
   return (
+    affectsSharedComparator(path) ||
     /^(?:package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml|turbo\.json|mise\.toml)$/.test(path) ||
     /^packages\/(?!create-croco-app\/)[^/]+\/(?:package\.json|src\/index\.ts)$/.test(path) ||
     path === "scripts/package-entrypoint-smoke.mts"
@@ -234,6 +243,7 @@ function affectsPackedDecoratorConsumers(path: string): boolean {
 
 function affectsPackageBins(path: string): boolean {
   return (
+    affectsSharedComparator(path) ||
     /^(?:package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml|turbo\.json|mise\.toml)$/.test(path) ||
     /^packages\/(?:cli|create-croco-app|migration-runner|openapi-spec|rpc-codegen)\/(?:package\.json|src\/)/.test(
       path,
@@ -248,6 +258,7 @@ function affectsCreateCrocoApp(path: string): boolean {
 
 function affectsPackageGraph(path: string): boolean {
   return (
+    affectsSharedComparator(path) ||
     /^(?:package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml|turbo\.json|mise\.toml)$/.test(path) ||
     /^(?:apps|examples|packages)\//.test(path) ||
     path === "docs/package-catalog.json"
@@ -279,9 +290,18 @@ function packageAccountabilitySelection(context: VerificationContext): {
         }),
       ),
     ].sort();
+    const fullEvidence = relevantFiles.some((path) => !/^(?:apps|examples|packages)\//.test(path));
+    if (packages.length === 0 && !fullEvidence) {
+      return {
+        applicable: false,
+        fullEvidence: false,
+        packages,
+        reason: `Skipped because no package under packages/ changed: ${relevantFiles.join(", ")}.`,
+      };
+    }
     return {
       applicable: true,
-      fullEvidence: relevantFiles.some((path) => !/^(?:apps|examples|packages)\//.test(path)),
+      fullEvidence,
       packages,
       reason: `Selected because package accountability inputs changed: ${relevantFiles.join(", ")}.`,
     };
@@ -349,7 +369,7 @@ function readWorkspacePackages(): readonly WorkspacePackage[] {
         ];
       });
     })
-    .sort((left, right) => left.name.localeCompare(right.name));
+    .sort((left, right) => compareStrings(left.name, right.name));
 }
 
 const WORKSPACE_PACKAGES = readWorkspacePackages();
@@ -393,6 +413,7 @@ function laneSelection(
   const changedFiles = context.changedFiles ?? [];
   const full = changedFiles.some(
     (path) =>
+      affectsSharedComparator(path) ||
       path === "test-inventory.json" ||
       /^(?:package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml|turbo\.json|vitest(?:\.[^/]+)?\.ts)$/.test(
         path,
@@ -509,6 +530,7 @@ const repoOnly = (
       "scripts/tests/test-inventory.spec.ts",
       "scripts/tests/test-lane-runner.spec.ts",
       "scripts/tests/turbo-cache-contract.spec.ts",
+      "scripts/tests/package-test-typecheck-check.spec.ts",
     ],
     timeoutMs: minutes(10),
     applicable: !suppressVerificationContractTests,
@@ -687,6 +709,13 @@ const repoOnly = (
     timeoutMs: minutes(5),
   },
   {
+    id: "package-test-typecheck",
+    label: "Package test typecheck coverage",
+    category: "quality",
+    command: nodeScript("scripts/package-test-typecheck-check.mts"),
+    timeoutMs: minutes(5),
+  },
+  {
     id: "compiler-baseline",
     label: "TypeScript compiler baseline",
     category: "typecheck",
@@ -854,7 +883,7 @@ const spineOnly = (
       label: "Quick-start Lambda smoke",
       category: "runtime-smoke",
       command: nodeScript("scripts/quick-start-lambda-smoke.mts"),
-      timeoutMs: minutes(10),
+      timeoutMs: minutes(15),
       applicable: scaffoldApplicable,
     },
     {

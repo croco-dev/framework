@@ -23,8 +23,9 @@ async function bootstrap() {
     schema,
     formatError: formatCrocoGraphQLError,
   });
+  const port = Number(process.env.PORT ?? "4000");
   const { url } = await startStandaloneServer(server, {
-    listen: { port: 4000 },
+    listen: { port },
     context: async ({ req }) => createGraphQLContext(normalizeHeaders(req.headers)),
   });
   console.log(`🚀 GraphQL server ready at ${url}`);

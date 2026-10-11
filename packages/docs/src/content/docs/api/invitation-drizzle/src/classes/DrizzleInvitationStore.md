@@ -155,13 +155,7 @@ Drizzle 클라이언트와 트랜잭션 매니저를 받아 저장소를 초기�
 
 ##### meta?
 
-###### acceptedAt?
-
-`Date`
-
-###### rejectedAt?
-
-`Date`
+[`InvitationStatusTransitionMeta`](/api/invitation-core/src/type-aliases/invitationstatustransitionmeta/) = `{}`
 
 #### Returns
 

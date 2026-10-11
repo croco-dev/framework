@@ -61,6 +61,28 @@ describe("MigrationScanner", () => {
     expect(files[0]?.path).toBe(migrationFile);
     expect(pathToFileURL(files[0]?.path ?? "").protocol).toBe("file:");
   });
+
+  it("ignores TypeScript declaration files emitted next to compiled migrations", async () => {
+    const { migrationFile, migrationsDir } = createMigrationDirectory();
+    writeFileSync(
+      join(migrationsDir, "20260728000000_initialize.d.ts"),
+      "export declare function up(): Promise<void>;\nexport declare function down(): Promise<void>;\n",
+    );
+    writeFileSync(
+      join(migrationsDir, "20260728000001_add_status.d.mts"),
+      "export declare function up(): Promise<void>;\nexport declare function down(): Promise<void>;\n",
+    );
+    writeFileSync(
+      join(migrationsDir, "20260728000002_add_flag.d.cts"),
+      "export declare function up(): Promise<void>;\nexport declare function down(): Promise<void>;\n",
+    );
+
+    const files = await new MigrationScanner(migrationsDir).scan();
+
+    expect(files.map(({ id, name, path }) => ({ id, name, path }))).toEqual([
+      { id: "20260728000000", name: "initialize", path: migrationFile },
+    ]);
+  });
 });
 
 function createMigrationDirectory(

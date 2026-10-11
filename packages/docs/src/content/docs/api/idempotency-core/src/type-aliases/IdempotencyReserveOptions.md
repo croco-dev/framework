@@ -9,6 +9,14 @@ title: "IdempotencyReserveOptions"
 
 ## Properties
 
+### leaseMs?
+
+> `readonly` `optional` **leaseMs?**: `number`
+
+In-flight lease; defaults to ttlMs, then the store default.
+
+---
+
 ### metadata?
 
 > `readonly` `optional` **metadata?**: `Record`\<`string`, `unknown`\>

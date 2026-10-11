@@ -444,7 +444,7 @@ class InMemoryMeterRepository extends MeterRepository {
   private meters: MeterDefinition[] = [
     {
       id: "meter-api-user-create",
-      tenantId: "default",
+      tenantId: "test",
       meterId: "api_user_create",
       type: "COUNT",
       createdAt: new Date(),

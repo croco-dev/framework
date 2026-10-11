@@ -11,6 +11,7 @@ The framework provides `InMemoryBillingStore`; applications may supply persisten
 ## Extended by
 
 - [`InMemoryBillingStore`](/api/billing-core/src/classes/inmemorybillingstore/)
+- [`DrizzleBillingStore`](/api/billing-drizzle/src/classes/drizzlebillingstore/)
 
 ## Constructors
 

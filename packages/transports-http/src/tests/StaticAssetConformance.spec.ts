@@ -31,6 +31,8 @@ type StaticResponseContract = {
   readonly status: number;
   readonly contentType: string | null;
   readonly cacheControl: string | null;
+  readonly etag: string | null;
+  readonly lastModified: string | null;
   readonly bodyKind: string;
   readonly leakedOutsideRootSentinel: boolean;
 };
@@ -84,6 +86,8 @@ async function readStaticResponseContract(
     status: response.status,
     contentType: response.headers.get("content-type"),
     cacheControl: response.headers.get("cache-control"),
+    etag: response.headers.get("etag") === null ? null : "<etag>",
+    lastModified: response.headers.get("last-modified") === null ? null : "<last-modified>",
     bodyKind: classifyBody(body),
     leakedOutsideRootSentinel: body.includes(OUTSIDE_ROOT_SENTINEL),
   };
@@ -135,7 +139,7 @@ describe("Static asset and SPA fallback conformance", () => {
     vi.mocked(serve).mockClear();
   });
 
-  it("serves normal and nested static assets with stable response headers", async () => {
+  it("serves normal and nested static assets with conditional-request headers", async () => {
     const { app, fixture } = await createStaticApp({
       "index.html": "<html><body><main>spa shell</main></body></html>",
       "assets/app.js": 'console.log("asset app");',
@@ -143,6 +147,31 @@ describe("Static asset and SPA fallback conformance", () => {
     });
 
     try {
+      const first = await app.fetch(new Request("http://localhost/assets/app.js"));
+      const etag = first.headers.get("etag");
+      const lastModified = first.headers.get("last-modified");
+
+      expect(etag).toBeTruthy();
+      expect(lastModified).toBeTruthy();
+      expect(first.headers.get("cache-control")).toBe("public, max-age=3600");
+
+      const conditional = await app.fetch(
+        new Request("http://localhost/assets/app.js", {
+          headers: { "if-none-match": etag ?? "*" },
+        }),
+      );
+
+      expect(conditional.status).toBe(304);
+      expect(await conditional.text()).toBe("");
+
+      const modifiedSince = await app.fetch(
+        new Request("http://localhost/assets/app.js", {
+          headers: { "if-modified-since": lastModified ?? new Date().toUTCString() },
+        }),
+      );
+
+      expect(modifiedSince.status).toBe(304);
+
       const contracts = await Promise.all(
         ["/assets/app.js", "/assets/icons/logo.svg"].map(async (path) =>
           readStaticResponseContract(path, await app.fetch(new Request(`http://localhost${path}`))),
@@ -153,22 +182,187 @@ describe("Static asset and SPA fallback conformance", () => {
         [
           {
             "bodyKind": "asset:app-js",
-            "cacheControl": null,
+            "cacheControl": "public, max-age=3600",
             "contentType": "text/javascript; charset=utf-8",
+            "etag": "<etag>",
+            "lastModified": "<last-modified>",
             "leakedOutsideRootSentinel": false,
             "path": "/assets/app.js",
             "status": 200,
           },
           {
             "bodyKind": "asset:nested-svg",
-            "cacheControl": null,
+            "cacheControl": "public, max-age=3600",
             "contentType": "image/svg+xml; charset=utf-8",
+            "etag": "<etag>",
+            "lastModified": "<last-modified>",
             "leakedOutsideRootSentinel": false,
             "path": "/assets/icons/logo.svg",
             "status": 200,
           },
         ]
       `);
+    } finally {
+      await fixture.cleanup();
+    }
+  });
+
+  it("serves SPA fallback with no-cache policy and conditional requests", async () => {
+    const { app, fixture } = await createStaticApp({
+      "index.html": "<html><body><main>spa shell</main></body></html>",
+    });
+
+    try {
+      const first = await app.fetch(
+        new Request("http://localhost/dashboard", {
+          headers: { Accept: "text/html,application/xhtml+xml" },
+        }),
+      );
+      const etag = first.headers.get("etag");
+
+      expect(first.headers.get("cache-control")).toBe("public, max-age=0, must-revalidate");
+      expect(etag).toBeTruthy();
+
+      const conditional = await app.fetch(
+        new Request("http://localhost/dashboard", {
+          headers: {
+            Accept: "text/html,application/xhtml+xml",
+            "if-none-match": etag ?? "*",
+          },
+        }),
+      );
+
+      expect(conditional.status).toBe(304);
+      expect(await conditional.text()).toBe("");
+    } finally {
+      await fixture.cleanup();
+    }
+  });
+
+  it("streams large static assets without changing conditional-request headers", async () => {
+    const { app, fixture } = await createStaticApp({
+      "index.html": "<html><body><main>spa shell</main></body></html>",
+      "assets/large.js": `${'console.log("large asset");\n'.repeat(100)}`,
+    });
+
+    try {
+      const small = await app.fetch(new Request("http://localhost/assets/large.js"));
+      expect(small.status).toBe(200);
+
+      const streamedApp = createApp({ controllers: [] });
+      await streamedApp.listen(3000, {
+        staticDir: fixture.directory,
+        spaFallback: true,
+        staticStreamThresholdBytes: 1,
+      });
+      const streamed = await streamedApp.fetch(new Request("http://localhost/assets/large.js"));
+      const etag = streamed.headers.get("etag");
+
+      expect(streamed.status).toBe(200);
+      expect(etag).toBeTruthy();
+      expect(await streamed.text()).toContain("large asset");
+
+      const conditional = await streamedApp.fetch(
+        new Request("http://localhost/assets/large.js", {
+          headers: { "if-none-match": etag ?? "*" },
+        }),
+      );
+
+      expect(conditional.status).toBe(304);
+      expect(await conditional.text()).toBe("");
+    } finally {
+      await fixture.cleanup();
+    }
+  });
+
+  it("matches quoted entity-tag lists without splitting inside quotes", async () => {
+    const { app, fixture } = await createStaticApp({
+      "index.html": "<html><body><main>spa shell</main></body></html>",
+      "assets/app.js": 'console.log("asset app");',
+    });
+
+    try {
+      const first = await app.fetch(new Request("http://localhost/assets/app.js"));
+      const etag = first.headers.get("etag");
+      expect(etag).toBeTruthy();
+
+      const conditional = await app.fetch(
+        new Request("http://localhost/assets/app.js", {
+          headers: { "if-none-match": `"a,b", ${etag ?? "*"}` },
+        }),
+      );
+
+      expect(conditional.status).toBe(304);
+      expect(await conditional.text()).toBe("");
+    } finally {
+      await fixture.cleanup();
+    }
+  });
+
+  it("serves HEAD for static assets and SPA fallback without a body", async () => {
+    const { app, fixture } = await createStaticApp({
+      "index.html": "<html><body><main>spa shell</main></body></html>",
+      "assets/app.js": 'console.log("asset app");',
+    });
+
+    try {
+      const getResponse = await app.fetch(new Request("http://localhost/assets/app.js"));
+      const headResponse = await app.fetch(
+        new Request("http://localhost/assets/app.js", { method: "HEAD" }),
+      );
+
+      expect(headResponse.status).toBe(200);
+      expect(await headResponse.text()).toBe("");
+      expect(headResponse.headers.get("etag")).toBe(getResponse.headers.get("etag"));
+      expect(headResponse.headers.get("last-modified")).toBe(
+        getResponse.headers.get("last-modified"),
+      );
+      expect(headResponse.headers.get("cache-control")).toBe(
+        getResponse.headers.get("cache-control"),
+      );
+      expect(headResponse.headers.get("content-length")).toBe(
+        (await getResponse.text()).length.toString(),
+      );
+
+      const fallbackHead = await app.fetch(
+        new Request("http://localhost/dashboard", {
+          method: "HEAD",
+          headers: { Accept: "text/html,application/xhtml+xml" },
+        }),
+      );
+
+      expect(fallbackHead.status).toBe(200);
+      expect(await fallbackHead.text()).toBe("");
+      expect(fallbackHead.headers.get("etag")).toBeTruthy();
+      expect(fallbackHead.headers.get("cache-control")).toBe("public, max-age=0, must-revalidate");
+    } finally {
+      await fixture.cleanup();
+    }
+  });
+
+  it("keeps SPA fallback cache independent from the asset cache override", async () => {
+    const app = createApp({ controllers: [] });
+    const fixture = await createStaticFixture({
+      "index.html": "<html><body><main>spa shell</main></body></html>",
+      "assets/app.js": 'console.log("asset app");',
+    });
+
+    await app.listen(3000, {
+      staticDir: fixture.directory,
+      spaFallback: true,
+      staticCacheControl: "public, max-age=31536000, immutable",
+    });
+
+    try {
+      const asset = await app.fetch(new Request("http://localhost/assets/app.js"));
+      const fallback = await app.fetch(
+        new Request("http://localhost/dashboard", {
+          headers: { Accept: "text/html,application/xhtml+xml" },
+        }),
+      );
+
+      expect(asset.headers.get("cache-control")).toBe("public, max-age=31536000, immutable");
+      expect(fallback.headers.get("cache-control")).toBe("public, max-age=0, must-revalidate");
     } finally {
       await fixture.cleanup();
     }
@@ -202,8 +396,10 @@ describe("Static asset and SPA fallback conformance", () => {
         [
           {
             "bodyKind": "spa:index-html",
-            "cacheControl": null,
+            "cacheControl": "public, max-age=0, must-revalidate",
             "contentType": "text/html; charset=utf-8",
+            "etag": "<etag>",
+            "lastModified": "<last-modified>",
             "leakedOutsideRootSentinel": false,
             "path": "/dashboard",
             "status": 200,
@@ -212,6 +408,8 @@ describe("Static asset and SPA fallback conformance", () => {
             "bodyKind": "transport:not-found",
             "cacheControl": null,
             "contentType": "text/plain; charset=UTF-8",
+            "etag": null,
+            "lastModified": null,
             "leakedOutsideRootSentinel": false,
             "path": "/assets/missing.js",
             "status": 404,
@@ -220,6 +418,8 @@ describe("Static asset and SPA fallback conformance", () => {
             "bodyKind": "transport:not-found",
             "cacheControl": null,
             "contentType": "text/plain; charset=UTF-8",
+            "etag": null,
+            "lastModified": null,
             "leakedOutsideRootSentinel": false,
             "path": "/dashboard",
             "status": 404,
@@ -258,6 +458,8 @@ describe("Static asset and SPA fallback conformance", () => {
             "bodyKind": "transport:not-found",
             "cacheControl": null,
             "contentType": "text/plain; charset=UTF-8",
+            "etag": null,
+            "lastModified": null,
             "leakedOutsideRootSentinel": false,
             "path": "/assets/..%2f..%2f<outside-root-sentinel>.txt",
             "status": 404,
@@ -266,6 +468,8 @@ describe("Static asset and SPA fallback conformance", () => {
             "bodyKind": "transport:not-found",
             "cacheControl": null,
             "contentType": "text/plain; charset=UTF-8",
+            "etag": null,
+            "lastModified": null,
             "leakedOutsideRootSentinel": false,
             "path": "/assets/%2e%2e%2f%2e%2e%2f<outside-root-sentinel>.txt",
             "status": 404,

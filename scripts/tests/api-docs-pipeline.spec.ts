@@ -18,6 +18,7 @@ import { moveBuildOutput } from "../../packages/docs/scripts/move-build-output.m
 import { prunePreviouslyDocumentedExports } from "../../packages/docs/scripts/prepare-api-models.mjs";
 import {
   normalizeCliDiagnosticDefinitions,
+  normalizeDrizzleChallengeClient,
   sanitizeGeneratedTypeDocIndex,
 } from "../../packages/docs/scripts/sanitize-typedoc-index.mjs";
 
@@ -99,10 +100,10 @@ describe("API documentation pipeline", () => {
   });
 
   it("keeps one canonical, ordered package-model catalog", () => {
-    expect(apiDocPackages).toHaveLength(118);
-    expect(new Set(apiDocPackages.map(({ packageName }) => packageName)).size).toBe(118);
-    expect(new Set(apiDocPackages.map(({ directory }) => directory)).size).toBe(118);
-    expect(new Set(apiDocPackages.map(({ moduleName }) => moduleName)).size).toBe(118);
+    expect(apiDocPackages).toHaveLength(137);
+    expect(new Set(apiDocPackages.map(({ packageName }) => packageName)).size).toBe(137);
+    expect(new Set(apiDocPackages.map(({ directory }) => directory)).size).toBe(137);
+    expect(new Set(apiDocPackages.map(({ moduleName }) => moduleName)).size).toBe(137);
     expect(apiDocModelEntryPoints).toEqual(
       apiDocPackages.map(({ directory }) => `../${directory}/.turbo/docs-api/model.json`),
     );
@@ -235,7 +236,35 @@ describe("API documentation pipeline", () => {
       "| ------------------------------- | ----------------------------------------- | ------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |",
     );
     expect(normalized).toContain("---\n\n## CLI Diagnostic Definitions");
+    const jobsIdRow = normalized.split("\n").find((line) => line.includes("`CROCO_CLI_JOBS_006`"));
+    expect(jobsIdRow).toContain("`cli/invalid-jobs-id`");
+    expect(jobsIdRow).toContain("Jobs command job id is invalid");
+    expect(jobsIdRow).toContain(
+      'Pass a job id other than an empty string, ".", or ".." before retrying the command.',
+    );
     expect(normalizeCliDiagnosticDefinitions(normalized)).toBe(normalized);
+  });
+
+  it("removes only the absent challenge schema namespace link from the client type", () => {
+    const namespaceLink =
+      "[`challengeSchema`](/api/gamification-drizzle/src/namespaces/challengeschema/readme/)";
+    const validLink =
+      "[`DrizzleChallengeStore`](/api/gamification-drizzle/src/classes/drizzlechallengestore/)";
+    const input = `> **DrizzleChallengeClient** = \`NodePgDatabase\`\\<_typeof_ ${namespaceLink}\\>\n\n${validLink}\n`;
+    const normalized = normalizeDrizzleChallengeClient(input);
+
+    expect(normalized).toBe(input.replace(namespaceLink, "`challengeSchema`"));
+    expect(normalized).toContain(validLink);
+    expect(normalizeDrizzleChallengeClient(normalized)).toBe(normalized);
+  });
+
+  it("renders the challenge client without a link to an absent namespace page", () => {
+    const client = readFileSync(
+      join(API_DOCS_ROOT, "gamification-drizzle/src/type-aliases/DrizzleChallengeClient.md"),
+      "utf8",
+    );
+    expect(client).toContain("_typeof_ `challengeSchema`");
+    expect(client).not.toContain("/namespaces/challengeschema/readme/");
   });
 
   it("does not sanitize tracked API docs during Astro preview", async () => {
@@ -265,6 +294,93 @@ describe("API documentation pipeline", () => {
     expect(problemSubclass).toContain(
       "[`Problem`](/api/problems-core/src/classes/problem/).[`cause`](/api/problems-core/src/classes/problem/#cause)",
     );
+  });
+
+  it("keeps pruned inheritance links broken so merge revive binds the direct parent", () => {
+    // A pruned `inheritedFrom` numeric target points at a member clone inside
+    // a pruned re-export alias of the direct parent (for example `4`, the alias
+    // member of `Parent`). Rewriting it to the shared declaration symbol would
+    // let the merge resolve it to whichever sibling clone registered that
+    // symbol first, making links catalog-order dependent (see #3417).
+    const parentSymbol = {
+      packageName: "@croco/owner",
+      packagePath: "src/index.ts",
+      qualifiedName: "Parent",
+    };
+    const problemCauseSymbol = {
+      packageName: "@croco/problems-core",
+      packagePath: "src/libs/Problem.ts",
+      qualifiedName: "Problem.cause",
+    };
+    const ownerModel = {
+      children: [
+        {
+          id: 1,
+          name: "Parent",
+          children: [{ id: 2, name: "cause" }],
+        },
+      ],
+      symbolIdMap: { 1: parentSymbol, 2: problemCauseSymbol },
+    };
+    const childModel = {
+      children: [
+        {
+          // Re-export alias of Parent, pruned when the owner model ran first.
+          id: 3,
+          name: "Parent",
+          children: [{ id: 4, name: "cause" }],
+        },
+        {
+          id: 5,
+          name: "ChildProblem",
+          extendedTypes: [{ type: "reference", name: "Parent", target: 3 }],
+          children: [
+            {
+              id: 6,
+              name: "cause",
+              inheritedFrom: { type: "reference", name: "Parent.cause", target: 4 },
+            },
+          ],
+        },
+      ],
+      groups: [{ title: "Problems", children: [3, 5] }],
+      symbolIdMap: {
+        3: parentSymbol,
+        4: problemCauseSymbol,
+        5: {
+          packageName: "@croco/child",
+          packagePath: "src/index.ts",
+          qualifiedName: "ChildProblem",
+        },
+        6: problemCauseSymbol,
+      },
+    };
+
+    const seenSymbols = new Set<string>();
+    prunePreviouslyDocumentedExports(structuredClone(ownerModel), seenSymbols, "@croco/owner");
+    const prepared = prunePreviouslyDocumentedExports(
+      structuredClone(childModel),
+      seenSymbols,
+      "@croco/child",
+    );
+
+    const childClass = prepared.children.find(
+      (reflection: { name: string }) => reflection.name === "ChildProblem",
+    );
+    // The alias member is pruned but the surviving class and its member stay.
+    expect(prepared.children.map((reflection: { name: string }) => reflection.name)).toEqual([
+      "ChildProblem",
+    ]);
+    expect(childClass.children[0].inheritedFrom).toEqual({
+      type: "reference",
+      name: "Parent.cause",
+      target: -1,
+    });
+    // The direct-parent link itself is preserved as a symbol reference so
+    // merge revive can recompute the member link from it.
+    expect(childClass.extendedTypes).toEqual([
+      { type: "reference", name: "Parent", target: parentSymbol },
+    ]);
   });
 
   it("deduplicates re-exports while preserving references to the canonical symbol", () => {

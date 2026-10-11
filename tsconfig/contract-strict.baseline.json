@@ -77,13 +77,6 @@
       "targetMilestone": "1.0 RC"
     },
     {
-      "packageName": "@croco/retry-core",
-      "reason": "Full-spine strict-contract enrollment captures existing diagnostics for targeted hardening before the 1.0 RC gate.",
-      "owner": "@croco/reliability",
-      "debt": "staged-rollout",
-      "targetMilestone": "1.0 RC"
-    },
-    {
       "packageName": "@croco/idempotency-core",
       "reason": "Full-spine strict-contract enrollment captures existing diagnostics for targeted hardening before the 1.0 RC gate.",
       "owner": "@croco/reliability",
@@ -120,14 +113,6 @@
       "column": 13,
       "code": "TS2722",
       "message": "Cannot invoke an object which is possibly 'undefined'."
-    },
-    {
-      "packageName": "@croco/framework-context",
-      "file": "packages/framework-context/src/libs/problems/ContainerResolutionProblem.ts",
-      "line": 21,
-      "column": 98,
-      "code": "TS2379",
-      "message": "Argument of type '{ cause: Error | undefined; extensions: { reason: ContainerResolutionFailureReason; resolution: DependencyResolutionTrace; }; }' is not assignable to parameter of type 'ProblemOptions' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
     },
     {
       "packageName": "@croco/framework-context",
@@ -316,7 +301,7 @@
     {
       "packageName": "@croco/openapi-spec",
       "file": "packages/openapi-spec/src/libs/emitOpenAPI.ts",
-      "line": 139,
+      "line": 141,
       "column": 35,
       "code": "TS2379",
       "message": "Argument of type '{ openapi: string; info: { [x: `x-${string}`]: any; title: string; description?: string; termsOfService?: string; contact?: ContactObject; license?: LicenseObject; version: string; }; servers: ServerObject[] | undefined; security: SecurityRequirementObject[]; tags: TagObject[] | { ...; }[]; }' is not assignable to parameter of type 'OpenAPIObjectConfigV31' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
@@ -324,7 +309,7 @@
     {
       "packageName": "@croco/openapi-spec",
       "file": "packages/openapi-spec/src/libs/emitOpenAPI.ts",
-      "line": 263,
+      "line": 265,
       "column": 3,
       "code": "TS2375",
       "message": "Type '{ request?: { body?: ZodRequestBody; params?: RouteParameter; query?: RouteParameter; cookies?: RouteParameter; headers?: RouteParameter | ZodType<unknown>[]; } | undefined; ... 6 more ...; responses: { ...; }; }' is not assignable to type 'RouteConfig' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
@@ -332,7 +317,7 @@
     {
       "packageName": "@croco/openapi-spec",
       "file": "packages/openapi-spec/src/libs/emitOpenAPI.ts",
-      "line": 519,
+      "line": 522,
       "column": 52,
       "code": "TS4111",
       "message": "Property 'summary' comes from an index signature, so it must be accessed with ['summary']."
@@ -340,16 +325,8 @@
     {
       "packageName": "@croco/openapi-spec",
       "file": "packages/openapi-spec/src/libs/emitOpenAPI.ts",
-      "line": 524,
+      "line": 527,
       "column": 26,
-      "code": "TS4111",
-      "message": "Property 'operationId' comes from an index signature, so it must be accessed with ['operationId']."
-    },
-    {
-      "packageName": "@croco/openapi-spec",
-      "file": "packages/openapi-spec/src/libs/emitOpenAPI.ts",
-      "line": 524,
-      "column": 63,
       "code": "TS4111",
       "message": "Property 'operationId' comes from an index signature, so it must be accessed with ['operationId']."
     },
@@ -357,6 +334,14 @@
       "packageName": "@croco/openapi-spec",
       "file": "packages/openapi-spec/src/libs/emitOpenAPI.ts",
       "line": 527,
+      "column": 63,
+      "code": "TS4111",
+      "message": "Property 'operationId' comes from an index signature, so it must be accessed with ['operationId']."
+    },
+    {
+      "packageName": "@croco/openapi-spec",
+      "file": "packages/openapi-spec/src/libs/emitOpenAPI.ts",
+      "line": 530,
       "column": 28,
       "code": "TS4111",
       "message": "Property 'summary' comes from an index signature, so it must be accessed with ['summary']."
@@ -364,7 +349,7 @@
     {
       "packageName": "@croco/openapi-spec",
       "file": "packages/openapi-spec/src/libs/emitOpenAPI.ts",
-      "line": 531,
+      "line": 534,
       "column": 30,
       "code": "TS4111",
       "message": "Property 'summary' comes from an index signature, so it must be accessed with ['summary']."
@@ -372,7 +357,7 @@
     {
       "packageName": "@croco/openapi-spec",
       "file": "packages/openapi-spec/src/libs/emitOpenAPI.ts",
-      "line": 561,
+      "line": 564,
       "column": 26,
       "code": "TS4111",
       "message": "Property 'operationId' comes from an index signature, so it must be accessed with ['operationId']."
@@ -380,7 +365,7 @@
     {
       "packageName": "@croco/openapi-spec",
       "file": "packages/openapi-spec/src/libs/emitOpenAPI.ts",
-      "line": 579,
+      "line": 582,
       "column": 29,
       "code": "TS4111",
       "message": "Property 'requestBody' comes from an index signature, so it must be accessed with ['requestBody']."
@@ -388,7 +373,7 @@
     {
       "packageName": "@croco/openapi-spec",
       "file": "packages/openapi-spec/src/libs/emitOpenAPI.ts",
-      "line": 586,
+      "line": 589,
       "column": 46,
       "code": "TS4111",
       "message": "Property 'parameters' comes from an index signature, so it must be accessed with ['parameters']."
@@ -396,7 +381,7 @@
     {
       "packageName": "@croco/openapi-spec",
       "file": "packages/openapi-spec/src/libs/emitOpenAPI.ts",
-      "line": 586,
+      "line": 589,
       "column": 70,
       "code": "TS4111",
       "message": "Property 'parameters' comes from an index signature, so it must be accessed with ['parameters']."
@@ -404,7 +389,7 @@
     {
       "packageName": "@croco/openapi-spec",
       "file": "packages/openapi-spec/src/libs/emitOpenAPI.ts",
-      "line": 590,
+      "line": 593,
       "column": 36,
       "code": "TS4111",
       "message": "Property 'in' comes from an index signature, so it must be accessed with ['in']."
@@ -412,7 +397,7 @@
     {
       "packageName": "@croco/openapi-spec",
       "file": "packages/openapi-spec/src/libs/emitOpenAPI.ts",
-      "line": 590,
+      "line": 593,
       "column": 72,
       "code": "TS4111",
       "message": "Property 'name' comes from an index signature, so it must be accessed with ['name']."
@@ -420,16 +405,8 @@
     {
       "packageName": "@croco/openapi-spec",
       "file": "packages/openapi-spec/src/libs/emitOpenAPI.ts",
-      "line": 597,
+      "line": 600,
       "column": 40,
-      "code": "TS4111",
-      "message": "Property 'responses' comes from an index signature, so it must be accessed with ['responses']."
-    },
-    {
-      "packageName": "@croco/openapi-spec",
-      "file": "packages/openapi-spec/src/libs/emitOpenAPI.ts",
-      "line": 597,
-      "column": 63,
       "code": "TS4111",
       "message": "Property 'responses' comes from an index signature, so it must be accessed with ['responses']."
     },
@@ -439,12 +416,20 @@
       "line": 600,
       "column": 63,
       "code": "TS4111",
+      "message": "Property 'responses' comes from an index signature, so it must be accessed with ['responses']."
+    },
+    {
+      "packageName": "@croco/openapi-spec",
+      "file": "packages/openapi-spec/src/libs/emitOpenAPI.ts",
+      "line": 603,
+      "column": 63,
+      "code": "TS4111",
       "message": "Property 'content' comes from an index signature, so it must be accessed with ['content']."
     },
     {
       "packageName": "@croco/openapi-spec",
       "file": "packages/openapi-spec/src/libs/emitOpenAPI.ts",
-      "line": 604,
+      "line": 607,
       "column": 39,
       "code": "TS4111",
       "message": "Property 'content' comes from an index signature, so it must be accessed with ['content']."
@@ -452,7 +437,7 @@
     {
       "packageName": "@croco/openapi-spec",
       "file": "packages/openapi-spec/src/libs/emitOpenAPI.ts",
-      "line": 606,
+      "line": 609,
       "column": 56,
       "code": "TS4111",
       "message": "Property 'schema' comes from an index signature, so it must be accessed with ['schema']."
@@ -460,7 +445,7 @@
     {
       "packageName": "@croco/openapi-spec",
       "file": "packages/openapi-spec/src/libs/emitOpenAPI.ts",
-      "line": 610,
+      "line": 613,
       "column": 40,
       "code": "TS4111",
       "message": "Property 'responses' comes from an index signature, so it must be accessed with ['responses']."
@@ -468,7 +453,7 @@
     {
       "packageName": "@croco/openapi-spec",
       "file": "packages/openapi-spec/src/libs/emitOpenAPI.ts",
-      "line": 610,
+      "line": 613,
       "column": 63,
       "code": "TS4111",
       "message": "Property 'responses' comes from an index signature, so it must be accessed with ['responses']."
@@ -476,7 +461,7 @@
     {
       "packageName": "@croco/openapi-spec",
       "file": "packages/openapi-spec/src/libs/emitOpenAPI.ts",
-      "line": 632,
+      "line": 635,
       "column": 26,
       "code": "TS4111",
       "message": "Property 'code' comes from an index signature, so it must be accessed with ['code']."
@@ -484,7 +469,7 @@
     {
       "packageName": "@croco/openapi-spec",
       "file": "packages/openapi-spec/src/libs/emitOpenAPI.ts",
-      "line": 633,
+      "line": 636,
       "column": 30,
       "code": "TS4111",
       "message": "Property 'category' comes from an index signature, so it must be accessed with ['category']."
@@ -492,7 +477,7 @@
     {
       "packageName": "@croco/openapi-spec",
       "file": "packages/openapi-spec/src/libs/emitOpenAPI.ts",
-      "line": 634,
+      "line": 637,
       "column": 28,
       "code": "TS4111",
       "message": "Property 'status' comes from an index signature, so it must be accessed with ['status']."
@@ -500,7 +485,7 @@
     {
       "packageName": "@croco/openapi-spec",
       "file": "packages/openapi-spec/src/libs/emitOpenAPI.ts",
-      "line": 634,
+      "line": 637,
       "column": 58,
       "code": "TS4111",
       "message": "Property 'status' comes from an index signature, so it must be accessed with ['status']."
@@ -508,7 +493,7 @@
     {
       "packageName": "@croco/openapi-spec",
       "file": "packages/openapi-spec/src/libs/emitOpenAPI.ts",
-      "line": 634,
+      "line": 637,
       "column": 82,
       "code": "TS4111",
       "message": "Property 'status' comes from an index signature, so it must be accessed with ['status']."
@@ -516,7 +501,7 @@
     {
       "packageName": "@croco/openapi-spec",
       "file": "packages/openapi-spec/src/libs/emitOpenAPI.ts",
-      "line": 635,
+      "line": 638,
       "column": 24,
       "code": "TS4111",
       "message": "Property 'description' comes from an index signature, so it must be accessed with ['description']."
@@ -524,7 +509,7 @@
     {
       "packageName": "@croco/openapi-spec",
       "file": "packages/openapi-spec/src/libs/emitOpenAPI.ts",
-      "line": 635,
+      "line": 638,
       "column": 74,
       "code": "TS4111",
       "message": "Property 'description' comes from an index signature, so it must be accessed with ['description']."
@@ -532,7 +517,7 @@
     {
       "packageName": "@croco/openapi-spec",
       "file": "packages/openapi-spec/src/libs/emitOpenAPI.ts",
-      "line": 636,
+      "line": 639,
       "column": 24,
       "code": "TS4111",
       "message": "Property 'type' comes from an index signature, so it must be accessed with ['type']."
@@ -540,7 +525,7 @@
     {
       "packageName": "@croco/openapi-spec",
       "file": "packages/openapi-spec/src/libs/emitOpenAPI.ts",
-      "line": 636,
+      "line": 639,
       "column": 60,
       "code": "TS4111",
       "message": "Property 'type' comes from an index signature, so it must be accessed with ['type']."
@@ -548,7 +533,7 @@
     {
       "packageName": "@croco/openapi-spec",
       "file": "packages/openapi-spec/src/libs/emitOpenAPI.ts",
-      "line": 655,
+      "line": 658,
       "column": 33,
       "code": "TS4111",
       "message": "Property 'feature' comes from an index signature, so it must be accessed with ['feature']."
@@ -556,7 +541,7 @@
     {
       "packageName": "@croco/openapi-spec",
       "file": "packages/openapi-spec/src/libs/emitOpenAPI.ts",
-      "line": 656,
+      "line": 659,
       "column": 28,
       "code": "TS4111",
       "message": "Property 'description' comes from an index signature, so it must be accessed with ['description']."
@@ -564,7 +549,7 @@
     {
       "packageName": "@croco/openapi-spec",
       "file": "packages/openapi-spec/src/libs/emitOpenAPI.ts",
-      "line": 657,
+      "line": 660,
       "column": 36,
       "code": "TS4111",
       "message": "Property 'description' comes from an index signature, so it must be accessed with ['description']."
@@ -572,7 +557,7 @@
     {
       "packageName": "@croco/openapi-spec",
       "file": "packages/openapi-spec/src/libs/emitOpenAPI.ts",
-      "line": 659,
+      "line": 662,
       "column": 30,
       "code": "TS4111",
       "message": "Property 'resource' comes from an index signature, so it must be accessed with ['resource']."
@@ -580,7 +565,7 @@
     {
       "packageName": "@croco/openapi-spec",
       "file": "packages/openapi-spec/src/libs/emitOpenAPI.ts",
-      "line": 660,
+      "line": 663,
       "column": 73,
       "code": "TS4111",
       "message": "Property 'resource' comes from an index signature, so it must be accessed with ['resource']."
@@ -588,7 +573,7 @@
     {
       "packageName": "@croco/openapi-spec",
       "file": "packages/openapi-spec/src/libs/emitOpenAPI.ts",
-      "line": 669,
+      "line": 672,
       "column": 27,
       "code": "TS4111",
       "message": "Property 'type' comes from an index signature, so it must be accessed with ['type']."
@@ -596,7 +581,7 @@
     {
       "packageName": "@croco/openapi-spec",
       "file": "packages/openapi-spec/src/libs/emitOpenAPI.ts",
-      "line": 670,
+      "line": 673,
       "column": 25,
       "code": "TS4111",
       "message": "Property 'id' comes from an index signature, so it must be accessed with ['id']."
@@ -604,7 +589,7 @@
     {
       "packageName": "@croco/openapi-spec",
       "file": "packages/openapi-spec/src/libs/emitOpenAPI.ts",
-      "line": 670,
+      "line": 673,
       "column": 58,
       "code": "TS4111",
       "message": "Property 'id' comes from an index signature, so it must be accessed with ['id']."
@@ -612,7 +597,7 @@
     {
       "packageName": "@croco/openapi-spec",
       "file": "packages/openapi-spec/src/libs/emitOpenAPI.ts",
-      "line": 671,
+      "line": 674,
       "column": 25,
       "code": "TS4111",
       "message": "Property 'idParam' comes from an index signature, so it must be accessed with ['idParam']."
@@ -620,7 +605,7 @@
     {
       "packageName": "@croco/openapi-spec",
       "file": "packages/openapi-spec/src/libs/emitOpenAPI.ts",
-      "line": 671,
+      "line": 674,
       "column": 68,
       "code": "TS4111",
       "message": "Property 'idParam' comes from an index signature, so it must be accessed with ['idParam']."
@@ -712,14 +697,6 @@
       "column": 5,
       "code": "TS2375",
       "message": "Type '{ details?: HealthIndicatorResult[\"details\"]; name: string; status: HealthStatus; }' is not assignable to type 'HealthIndicatorResult' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
-    },
-    {
-      "packageName": "@croco/transports-http",
-      "file": "packages/transports-http/src/libs/middleware/CompressionMiddleware.ts",
-      "line": 85,
-      "column": 17,
-      "code": "TS2532",
-      "message": "Object is possibly 'undefined'."
     },
     {
       "packageName": "@croco/transports-http",
@@ -868,7 +845,7 @@
     {
       "packageName": "@croco/events-tx",
       "file": "packages/events-tx/src/libs/InMemoryTransactionalEventStore.ts",
-      "line": 345,
+      "line": 407,
       "column": 11,
       "code": "TS2375",
       "message": "Type '{ status: \"published\"; updatedAt: Date; publishedAt: Date; lockedUntil: undefined; diagnostics: TransactionalEventDiagnostic[]; id: string; ... 14 more ...; deadLetterReason?: string; }' is not assignable to type 'TransactionalOutboxMessage' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
@@ -876,7 +853,7 @@
     {
       "packageName": "@croco/events-tx",
       "file": "packages/events-tx/src/libs/InMemoryTransactionalEventStore.ts",
-      "line": 375,
+      "line": 437,
       "column": 11,
       "code": "TS2375",
       "message": "Type '{ diagnostics: TransactionalEventDiagnostic[]; deadLetterReason?: string; status: \"retrying\" | \"poisoned\"; visibleAt: Date; updatedAt: Date; ... 15 more ...; deadLetteredAt?: Date; }' is not assignable to type 'TransactionalOutboxMessage' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
@@ -884,7 +861,7 @@
     {
       "packageName": "@croco/events-tx",
       "file": "packages/events-tx/src/libs/InMemoryTransactionalEventStore.ts",
-      "line": 440,
+      "line": 502,
       "column": 11,
       "code": "TS2375",
       "message": "Type '{ status: \"dead_lettered\"; updatedAt: Date; deadLetteredAt: Date; deadLetterReason: string; lockedUntil: undefined; diagnostics: TransactionalEventDiagnostic[]; ... 14 more ...; lastError?: TransactionalEventError; }' is not assignable to type 'TransactionalOutboxMessage' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
@@ -892,7 +869,7 @@
     {
       "packageName": "@croco/events-tx",
       "file": "packages/events-tx/src/libs/InMemoryTransactionalEventStore.ts",
-      "line": 567,
+      "line": 629,
       "column": 11,
       "code": "TS2375",
       "message": "Type '{ status: \"failed\"; updatedAt: Date; failedAt: Date; lastError: TransactionalEventError | undefined; failureReason: string; diagnostics: TransactionalEventDiagnostic[]; ... 8 more ...; metadata: Record<string, unknown>; }' is not assignable to type 'TransactionalInboxRecord' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
@@ -920,14 +897,6 @@
       "column": 11,
       "code": "TS2379",
       "message": "Argument of type '{ id: string; eventId: string; eventType: string; aggregateId: string | undefined; idempotencyKey: string; payload: Record<string, unknown>; metadata: { [x: string]: unknown; traceContext?: EventTraceContext; }; ... 4 more ...; diagnostics: TransactionalEventDiagnostic[]; }' is not assignable to parameter of type 'AppendOutboxMessageInput' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
-    },
-    {
-      "packageName": "@croco/retry-core",
-      "file": "packages/retry-core/src/libs/Recover.ts",
-      "line": 53,
-      "column": 25,
-      "code": "TS2379",
-      "message": "Argument of type '{ methodName: string; exceptionType: (new (...args: unknown[]) => Error) | undefined; }' is not assignable to parameter of type 'RecoverMetadata' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
     },
     {
       "packageName": "@croco/idempotency-core",
@@ -972,15 +941,15 @@
     {
       "packageName": "@croco/idempotency-core",
       "file": "packages/idempotency-core/src/libs/IdempotencyCoordinator.ts",
-      "line": 119,
+      "line": 124,
       "column": 52,
       "code": "TS2379",
-      "message": "Argument of type '{ metadata: Record<string, unknown> | undefined; ttlMs: number | undefined; }' is not assignable to parameter of type 'IdempotencyReserveOptions' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
+      "message": "Argument of type '{ metadata: Record<string, unknown> | undefined; ttlMs: number | undefined; leaseMs?: number; }' is not assignable to parameter of type 'IdempotencyReserveOptions' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
     },
     {
       "packageName": "@croco/idempotency-core",
       "file": "packages/idempotency-core/src/libs/IdempotencyCoordinator.ts",
-      "line": 139,
+      "line": 145,
       "column": 29,
       "code": "TS2379",
       "message": "Argument of type '{ key: DerivedIdempotencyKey; reservationId: string; problem: { readonly code: string; readonly status?: number; readonly detail?: string; }; retryable: boolean; ttlMs: number | undefined; metadata: Record<...>; }' is not assignable to parameter of type 'IdempotencyFailOptions' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
@@ -988,7 +957,7 @@
     {
       "packageName": "@croco/idempotency-core",
       "file": "packages/idempotency-core/src/libs/IdempotencyCoordinator.ts",
-      "line": 240,
+      "line": 246,
       "column": 3,
       "code": "TS2375",
       "message": "Type '{ detail: string | undefined; status?: number; code: string; }' is not assignable to type '{ readonly code: string; readonly status?: number; readonly detail?: string; }' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
@@ -996,7 +965,7 @@
     {
       "packageName": "@croco/idempotency-core",
       "file": "packages/idempotency-core/src/libs/IdempotencyCoordinator.ts",
-      "line": 92,
+      "line": 97,
       "column": 40,
       "code": "TS2379",
       "message": "Argument of type '{ key: DerivedIdempotencyKey; reservationId: string; response: TResult; ttlMs: number | undefined; metadata: Record<string, unknown> | undefined; }' is not assignable to parameter of type 'IdempotencyCommitOptions<TResult>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
@@ -1204,7 +1173,7 @@
     {
       "packageName": "create-croco-app",
       "file": "packages/create-croco-app/src/generator.ts",
-      "line": 11,
+      "line": 12,
       "column": 8,
       "code": "TS6059",
       "message": "File 'packages/framework-context/src/index.ts' is not under 'rootDir' 'packages/create-croco-app/src'. 'rootDir' is expected to contain all source files."
@@ -1212,7 +1181,7 @@
     {
       "packageName": "create-croco-app",
       "file": "packages/create-croco-app/src/generator.ts",
-      "line": 7,
+      "line": 8,
       "column": 8,
       "code": "TS6059",
       "message": "File 'packages/tenant-core/src/tenant-model.ts' is not under 'rootDir' 'packages/create-croco-app/src'. 'rootDir' is expected to contain all source files."
@@ -1235,32 +1204,8 @@
     },
     {
       "packageName": "@croco/cli",
-      "file": "packages/cli/src/commands/architecturePolicy.ts",
-      "line": 8,
-      "column": 8,
-      "code": "TS6059",
-      "message": "File 'packages/architecture-policy/src/index.ts' is not under 'rootDir' 'packages/cli/src'. 'rootDir' is expected to contain all source files."
-    },
-    {
-      "packageName": "@croco/cli",
-      "file": "packages/cli/src/commands/contractsCheck.ts",
-      "line": 11,
-      "column": 8,
-      "code": "TS6059",
-      "message": "File 'packages/protocols-core/src/index.ts' is not under 'rootDir' 'packages/cli/src'. 'rootDir' is expected to contain all source files."
-    },
-    {
-      "packageName": "@croco/cli",
-      "file": "packages/cli/src/commands/contractsCheck.ts",
-      "line": 171,
-      "column": 46,
-      "code": "TS6059",
-      "message": "File 'packages/rpc-codegen/src/index.ts' is not under 'rootDir' 'packages/cli/src'. 'rootDir' is expected to contain all source files."
-    },
-    {
-      "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/createDomain.ts",
-      "line": 140,
+      "line": 146,
       "column": 67,
       "code": "TS2379",
       "message": "Argument of type '{ dryRun: boolean; overwrite: boolean; cwd: string | undefined; register: boolean; }' is not assignable to parameter of type 'RunCreateDomainOptions' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
@@ -1384,14 +1329,6 @@
       "column": 62,
       "code": "TS4111",
       "message": "Property 'column' comes from an index signature, so it must be accessed with ['column']."
-    },
-    {
-      "packageName": "@croco/cli",
-      "file": "packages/cli/src/commands/diGraph.ts",
-      "line": 9,
-      "column": 8,
-      "code": "TS6059",
-      "message": "File 'packages/framework-context/src/index.ts' is not under 'rootDir' 'packages/cli/src'. 'rootDir' is expected to contain all source files."
     },
     {
       "packageName": "@croco/cli",
@@ -2716,7 +2653,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/generateUsageDashboard.ts",
-      "line": 164,
+      "line": 173,
       "column": 52,
       "code": "TS2379",
       "message": "Argument of type '{ dryRun: boolean; overwrite: boolean; cwd: string | undefined; apiPath: string | undefined; pagePath: string | undefined; page: boolean; }' is not assignable to parameter of type 'RunGenerateUsageDashboardOptions' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
@@ -2764,7 +2701,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/jobs.ts",
-      "line": 541,
+      "line": 545,
       "column": 46,
       "code": "TS2379",
       "message": "Argument of type '{ fetchJobEndpoint: JobsStatusFetch; token: string | undefined; tokenHeader: string; timeoutMs: number; query: JobsListFilters | undefined; }' is not assignable to parameter of type '{ readonly fetchJobEndpoint: JobsStatusFetch; readonly timeoutMs: number; readonly token?: string; readonly tokenHeader: string; readonly method?: \"GET\" | \"POST\"; readonly body?: unknown; readonly query?: Record<...>; }' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
@@ -2772,7 +2709,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/jobs.ts",
-      "line": 550,
+      "line": 554,
       "column": 72,
       "code": "TS2379",
       "message": "Argument of type '{ fetchJobEndpoint: JobsStatusFetch; token: string | undefined; tokenHeader: string; timeoutMs: number; }' is not assignable to parameter of type '{ readonly fetchJobEndpoint: JobsStatusFetch; readonly timeoutMs: number; readonly token?: string; readonly tokenHeader: string; readonly method?: \"GET\" | \"POST\"; readonly body?: unknown; readonly query?: Record<...>; }' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
@@ -2780,7 +2717,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/jobs.ts",
-      "line": 558,
+      "line": 562,
       "column": 77,
       "code": "TS2379",
       "message": "Argument of type '{ fetchJobEndpoint: JobsStatusFetch; token: string | undefined; tokenHeader: string; timeoutMs: number; }' is not assignable to parameter of type '{ readonly fetchJobEndpoint: JobsStatusFetch; readonly timeoutMs: number; readonly token?: string; readonly tokenHeader: string; readonly method?: \"GET\" | \"POST\"; readonly body?: unknown; readonly query?: Record<...>; }' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
@@ -2788,7 +2725,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/jobs.ts",
-      "line": 566,
+      "line": 570,
       "column": 79,
       "code": "TS2379",
       "message": "Argument of type '{ fetchJobEndpoint: JobsStatusFetch; token: string | undefined; tokenHeader: string; timeoutMs: number; method: \"POST\"; body: { readonly reason?: string; }; }' is not assignable to parameter of type '{ readonly fetchJobEndpoint: JobsStatusFetch; readonly timeoutMs: number; readonly token?: string; readonly tokenHeader: string; readonly method?: \"GET\" | \"POST\"; readonly body?: unknown; readonly query?: Record<...>; }' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
@@ -2796,7 +2733,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/jobs.ts",
-      "line": 576,
+      "line": 580,
       "column": 79,
       "code": "TS2379",
       "message": "Argument of type '{ fetchJobEndpoint: JobsStatusFetch; token: string | undefined; tokenHeader: string; timeoutMs: number; method: \"POST\"; body: { readonly reason?: string; }; }' is not assignable to parameter of type '{ readonly fetchJobEndpoint: JobsStatusFetch; readonly timeoutMs: number; readonly token?: string; readonly tokenHeader: string; readonly method?: \"GET\" | \"POST\"; readonly body?: unknown; readonly query?: Record<...>; }' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
@@ -2804,7 +2741,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/jobs.ts",
-      "line": 613,
+      "line": 617,
       "column": 98,
       "code": "TS2379",
       "message": "Argument of type '{ method: \"GET\" | \"POST\"; headers: Headers; body: string | undefined; signal: AbortSignal; }' is not assignable to parameter of type 'RequestInit' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
@@ -2812,7 +2749,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/jobs.ts",
-      "line": 670,
+      "line": 674,
       "column": 25,
       "code": "TS4111",
       "message": "Property 'detail' comes from an index signature, so it must be accessed with ['detail']."
@@ -2820,7 +2757,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/jobs.ts",
-      "line": 674,
+      "line": 678,
       "column": 26,
       "code": "TS4111",
       "message": "Property 'message' comes from an index signature, so it must be accessed with ['message']."
@@ -2828,7 +2765,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/jobs.ts",
-      "line": 687,
+      "line": 691,
       "column": 48,
       "code": "TS4111",
       "message": "Property 'CROCO_JOBS_URL' comes from an index signature, so it must be accessed with ['CROCO_JOBS_URL']."
@@ -2836,7 +2773,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/makeController.ts",
-      "line": 115,
+      "line": 121,
       "column": 70,
       "code": "TS2379",
       "message": "Argument of type '{ dryRun: boolean; overwrite: boolean; cwd: string | undefined; }' is not assignable to parameter of type 'GenerateControllerOptions' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
@@ -2844,7 +2781,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/makeEntity.ts",
-      "line": 78,
+      "line": 84,
       "column": 66,
       "code": "TS2379",
       "message": "Argument of type '{ dryRun: boolean; overwrite: boolean; cwd: string | undefined; }' is not assignable to parameter of type 'GenerateEntityOptions' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
@@ -2852,7 +2789,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/makeEvent.ts",
-      "line": 90,
+      "line": 96,
       "column": 65,
       "code": "TS2379",
       "message": "Argument of type '{ dryRun: boolean; overwrite: boolean; cwd: string | undefined; }' is not assignable to parameter of type 'GenerateEventOptions' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
@@ -2860,7 +2797,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/makeListener.ts",
-      "line": 92,
+      "line": 98,
       "column": 68,
       "code": "TS2379",
       "message": "Argument of type '{ dryRun: boolean; overwrite: boolean; cwd: string | undefined; }' is not assignable to parameter of type 'GenerateListenerOptions' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
@@ -2868,7 +2805,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/makeRepository.ts",
-      "line": 102,
+      "line": 108,
       "column": 70,
       "code": "TS2379",
       "message": "Argument of type '{ dryRun: boolean; overwrite: boolean; cwd: string | undefined; }' is not assignable to parameter of type 'GenerateRepositoryOptions' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
@@ -3124,14 +3061,6 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/projectMap.ts",
-      "line": 17,
-      "column": 40,
-      "code": "TS6059",
-      "message": "File 'packages/framework-routes/src/index.ts' is not under 'rootDir' 'packages/cli/src'. 'rootDir' is expected to contain all source files."
-    },
-    {
-      "packageName": "@croco/cli",
-      "file": "packages/cli/src/commands/projectMap.ts",
       "line": 522,
       "column": 51,
       "code": "TS2379",
@@ -3272,14 +3201,6 @@
       "column": 41,
       "code": "TS4111",
       "message": "Property 'decorator' comes from an index signature, so it must be accessed with ['decorator']."
-    },
-    {
-      "packageName": "@croco/cli",
-      "file": "packages/cli/src/libs/diagnosticCodes.ts",
-      "line": 1,
-      "column": 37,
-      "code": "TS6059",
-      "message": "File 'packages/diagnostics-core/src/index.ts' is not under 'rootDir' 'packages/cli/src'. 'rootDir' is expected to contain all source files."
     },
     {
       "packageName": "@croco/cli",

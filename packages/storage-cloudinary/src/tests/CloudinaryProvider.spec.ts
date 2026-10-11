@@ -619,7 +619,60 @@ describe("CloudinaryProvider", () => {
     });
   });
 
+  describe("dot-segment keys", () => {
+    it.each([".", "..", "tenant/./image.png", "tenant/../image.png"])(
+      "rejects %s before fetching a delivery URL",
+      async (key) => {
+        await expect(provider.get(key)).rejects.toThrow(InvalidKeyProblem);
+        await expect(provider.getStream(key)).rejects.toThrow(InvalidKeyProblem);
+        await expect(provider.exists(key)).rejects.toThrow(InvalidKeyProblem);
+
+        expect(global.fetch).not.toHaveBeenCalled();
+      },
+    );
+
+    it.each(["...", ".hidden", "a.b/c"])("allows non-dot-segment key %s", async (key) => {
+      vi.mocked(global.fetch).mockImplementation(async () => new Response(new Uint8Array([1])));
+
+      await expect(provider.get(key)).resolves.toBeInstanceOf(Uint8Array);
+      await expect(provider.getStream(key)).resolves.toBeInstanceOf(ReadableStream);
+      await expect(provider.exists(key)).resolves.toBe(true);
+      expect(global.fetch).toHaveBeenCalledTimes(3);
+    });
+  });
+
   describe("delete()", () => {
+    it.each([
+      ["test-key", "image"],
+      ["clips/intro.mp4", "video"],
+      ["docs/report.pdf", "raw"],
+    ])("asks Cloudinary to invalidate CDN copies when deleting %s", async (key, resourceType) => {
+      vi.mocked(global.fetch).mockResolvedValue(jsonResponse({ result: "ok" }));
+
+      await provider.delete(key);
+
+      const [url, init] = vi.mocked(global.fetch).mock.calls[0] ?? [];
+      expect(url).toBe(`https://api.cloudinary.com/v1_1/test-cloud/${resourceType}/destroy`);
+      expect((init?.body as URLSearchParams).get("invalidate")).toBe("true");
+    });
+
+    it("signs the invalidate flag together with the destroy request", async () => {
+      const now = 1_800_000_000_000;
+      vi.spyOn(Date, "now").mockReturnValue(now);
+      vi.mocked(global.fetch).mockResolvedValue(jsonResponse({ result: "ok" }));
+
+      await provider.delete("test-key");
+
+      const [, init] = vi.mocked(global.fetch).mock.calls[0] ?? [];
+      expect((init?.body as URLSearchParams).get("signature")).toBe(
+        createHash("sha1")
+          .update(
+            `invalidate=true&public_id=test-key&timestamp=${now / 1000}${mockConfig.apiSecret}`,
+          )
+          .digest("hex"),
+      );
+    });
+
     it("should delete resource successfully", async () => {
       const now = 1_800_000_000_000;
       const controller = new AbortController();
@@ -635,13 +688,9 @@ describe("CloudinaryProvider", () => {
       expect(init).toMatchObject({ method: "POST", signal: controller.signal });
       expect(init?.body).toBeInstanceOf(URLSearchParams);
       expect((init?.body as URLSearchParams).get("api_key")).toBe(mockConfig.apiKey);
+      expect((init?.body as URLSearchParams).get("invalidate")).toBe("true");
       expect((init?.body as URLSearchParams).get("public_id")).toBe("test-key");
       expect((init?.body as URLSearchParams).get("timestamp")).toBe(String(now / 1000));
-      expect((init?.body as URLSearchParams).get("signature")).toBe(
-        createHash("sha1")
-          .update(`public_id=test-key&timestamp=${now / 1000}${mockConfig.apiSecret}`)
-          .digest("hex"),
-      );
     });
 
     it("should handle not found result gracefully", async () => {
@@ -810,6 +859,30 @@ describe("CloudinaryProvider", () => {
   });
 
   describe("getMetadata()", () => {
+    it.each([
+      ["jpg", "image/jpeg"],
+      ["jpeg", "image/jpeg"],
+      ["png", "image/png"],
+      ["webp", "image/webp"],
+      ["avif", "image/avif"],
+      ["gif", "image/gif"],
+      ["pdf", "application/pdf"],
+      ["mp4", "video/mp4"],
+      ["unknown", undefined],
+      ["toString", undefined],
+      ["__proto__", undefined],
+      ["", undefined],
+      [undefined, undefined],
+    ])("should map format %s to MIME content type %s", async (format, contentType) => {
+      vi.mocked(global.fetch).mockResolvedValue(
+        jsonResponse({ bytes: 1024, format, created_at: "2024-01-01T00:00:00Z" }),
+      );
+
+      const metadata = await provider.getMetadata("test-key");
+
+      expect(metadata.contentType).toBe(contentType);
+    });
+
     it("should return resource metadata", async () => {
       const mockResource = {
         bytes: 1024,
@@ -825,7 +898,7 @@ describe("CloudinaryProvider", () => {
 
       const expectedMetadata: ObjectMetadata = {
         size: 1024,
-        contentType: "jpg",
+        contentType: "image/jpeg",
         lastModified: new Date("2024-01-01T00:00:00Z"),
         etag: "abc123",
         metadata: { alt: "test", author: "test" },
@@ -1095,6 +1168,43 @@ describe("CloudinaryProvider", () => {
       expect(intent).toEqual(expectedIntent);
       expect(repeatedIntent).toEqual(expectedIntent);
       expect(Object.values(intent.fields ?? {})).not.toContain(mockConfig.apiSecret);
+    });
+
+    it.each([1, 60, 120, 3599, 3600])(
+      "should end the signed upload window by expiresAt for TTL %i",
+      async (ttlInSeconds) => {
+        for (const milliseconds of [0, 999]) {
+          const now = 1_800_000_000_000 + milliseconds;
+          vi.spyOn(Date, "now").mockReturnValue(now);
+
+          const intent = await provider.getUploadIntent("test-key", { ttlInSeconds });
+          const timestamp = intent.fields?.timestamp;
+          const validUntil = (Number(timestamp) + 3600) * 1000;
+
+          expect(intent.expiresAt.getTime()).toBe(now + ttlInSeconds * 1000);
+          expect(validUntil).toBeLessThanOrEqual(intent.expiresAt.getTime());
+          expect(validUntil).toBeGreaterThan(now);
+          expect(Number(timestamp)).toBeLessThanOrEqual(Math.floor(now / 1000));
+          expect(intent.fields?.signature).toBe(
+            createHash("sha1")
+              .update(`public_id=test-key&timestamp=${timestamp}${mockConfig.apiSecret}`)
+              .digest("hex"),
+          );
+        }
+      },
+    );
+
+    it("should apply the configured TTL to the signed upload window", async () => {
+      const now = 1_800_000_000_999;
+      vi.spyOn(Date, "now").mockReturnValue(now);
+      const configuredProvider = new CloudinaryProvider({ ...mockConfig, ttl: 60 });
+
+      const intent = await configuredProvider.getUploadIntent("test-key");
+
+      expect(intent.expiresAt.getTime()).toBe(now + 60 * 1000);
+      expect((Number(intent.fields?.timestamp) + 3600) * 1000).toBe(
+        Math.floor(now / 1000) * 1000 + 60 * 1000,
+      );
     });
 
     it("should apply ttlInSeconds option to upload intent", async () => {

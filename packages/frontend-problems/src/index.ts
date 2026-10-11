@@ -800,12 +800,7 @@ export async function readDeclaredProblemErrorResult<Problem extends ProblemDecl
   const bodyResult = await readJsonBody(response);
 
   if (!bodyResult.ok) {
-    return {
-      ok: false,
-      kind: "external",
-      error: new ProblemResponseError(response),
-      response,
-    };
+    return toProblemResponseFailure(response, bodyResult.text, bodyResult.cause);
   }
 
   const problem = parseProblemDetails(bodyResult.body);
@@ -859,12 +854,7 @@ export async function readProblemErrorResult<
   const bodyResult = await readJsonBody(response);
 
   if (!bodyResult.ok) {
-    return {
-      ok: false,
-      kind: "external",
-      error: new ProblemResponseError(response),
-      response,
-    };
+    return toProblemResponseFailure(response, bodyResult.text, bodyResult.cause);
   }
 
   const problem = parseProblemDetails(bodyResult.body);
@@ -1030,7 +1020,7 @@ async function rejectErrorResponse(response: Response): Promise<never> {
   const bodyResult = await readJsonBody(response);
 
   if (!bodyResult.ok) {
-    throw new ProblemResponseError(response);
+    throw new ProblemResponseError(response, bodyResult.text, bodyResult.cause);
   }
 
   const problem = parseProblemDetails(bodyResult.body);
@@ -1059,11 +1049,25 @@ function createProblemStatusMismatchError(
 
 async function readJsonBody(
   response: Response,
-): Promise<{ readonly ok: true; readonly body: unknown } | { readonly ok: false }> {
+): Promise<
+  | { readonly ok: true; readonly body: unknown }
+  | { readonly ok: false; readonly text?: string; readonly cause?: SyntaxError }
+> {
+  let text: string;
   try {
-    return { ok: true, body: await response.json() };
+    text = await response.text();
   } catch {
     return { ok: false };
+  }
+
+  if (text.length === 0) {
+    return { ok: false };
+  }
+
+  try {
+    return { ok: true, body: JSON.parse(text) as unknown };
+  } catch (cause) {
+    return { ok: false, text, cause: toJsonParsingCause(cause) };
   }
 }
 

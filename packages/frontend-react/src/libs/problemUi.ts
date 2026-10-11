@@ -253,6 +253,10 @@ function toSerializedProblemDetails(value: unknown): ProblemDetails | undefined 
     }
   }
 
+  if (value instanceof Error && "problem" in value && isProblemDetails(value.problem)) {
+    return value.problem;
+  }
+
   return isProblemDetails(value) ? value : undefined;
 }
 

@@ -103,7 +103,17 @@ title: "FixedWindowInMemoryStore"
 
 ### expire()
 
-> **expire**(): `Promise`\<`void`\>
+> **expire**(`key`, `ttlMs`): `Promise`\<`void`\>
+
+#### Parameters
+
+##### key
+
+`string`
+
+##### ttlMs
+
+`number`
 
 #### Returns
 

@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 
+import { compareStrings } from "../tooling/compareStrings.mjs";
+
 import * as ts from "typescript";
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, extname, join, relative, resolve } from "node:path";
@@ -60,6 +62,7 @@ const operationalEnvironmentSourceExcludedDirectories = new Set([
   "type-fixtures",
 ]);
 const publicOperationalEnvironmentVariables = {
+  CROCO_AGENT_APPLICATION: { sensitive: false },
   CROCO_DEV_INSPECTOR_ENABLED: { sensitive: false },
   CROCO_DEV_INSPECTOR_EXPOSURE: { sensitive: false },
   CROCO_DEV_INSPECTOR_TOKEN: { sensitive: true },
@@ -73,6 +76,7 @@ const publicOperationalEnvironmentVariables = {
   NODE_ENV: { sensitive: false },
   OTEL_EXPORTER_OTLP_ENDPOINT: { sensitive: false },
   OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: { sensitive: false },
+  OTEL_SDK_DISABLED: { sensitive: false },
   OTEL_SAMPLING_PROBABILITY: { sensitive: false },
   OTEL_SERVICE_NAME: { sensitive: false },
   TELEMETRY_ENABLED: { sensitive: false },
@@ -200,7 +204,7 @@ function validateRootEnvironmentTemplate(rootDir: string): string[] {
   const runtimeMissingFromTemplate = new Set<string>();
 
   for (const [variable, locations] of Array.from(sourceLocations.entries()).sort(
-    ([left], [right]) => left.localeCompare(right),
+    ([left], [right]) => compareStrings(left, right),
   )) {
     if (variable in operationalEnvironmentVariableExclusions) {
       continue;
@@ -230,7 +234,7 @@ function validateRootEnvironmentTemplate(rootDir: string): string[] {
   }
 
   for (const [variable, locations] of Array.from(documentationLocations.entries()).sort(
-    ([left], [right]) => left.localeCompare(right),
+    ([left], [right]) => compareStrings(left, right),
   )) {
     if (
       publicVariables.has(variable) ||
@@ -263,7 +267,7 @@ function validateRootEnvironmentTemplate(rootDir: string): string[] {
 
 function collectOperationalSourceFiles(directory: string): string[] {
   return readdirSync(directory, { withFileTypes: true })
-    .sort((left, right) => left.name.localeCompare(right.name))
+    .sort((left, right) => compareStrings(left.name, right.name))
     .flatMap((entry) => {
       const path = join(directory, entry.name);
 
@@ -433,7 +437,7 @@ function collectDocumentedOperationalEnvironmentVariableSources(
 ): ReadonlyMap<string, readonly string[]> {
   const locationsByVariable = new Map<string, Set<string>>();
   const tokenPattern =
-    /\b(?:CROCO_[A-Z0-9_]+|NODE_ENV|OTEL_EXPORTER_OTLP(?:_TRACES)?_ENDPOINT|OTEL_SAMPLING_PROBABILITY|OTEL_SERVICE_NAME|PUBLIC_ORIGIN|SERVICE_NAME|TELEMETRY_ENABLED|TRACE_SAMPLE_RATE)\b/g;
+    /\b(?:CROCO_[A-Z0-9_]+|NODE_ENV|OTEL_EXPORTER_OTLP(?:_TRACES)?_ENDPOINT|OTEL_SAMPLING_PROBABILITY|OTEL_SDK_DISABLED|OTEL_SERVICE_NAME|PUBLIC_ORIGIN|SERVICE_NAME|TELEMETRY_ENABLED|TRACE_SAMPLE_RATE)\b/g;
 
   for (const file of collectMarkdownFilesFromRoots(
     rootDir,
@@ -573,7 +577,7 @@ function collectMarkdownFiles(rootDir: string): string[] {
   return [
     ...collectMarkdownFilesFromRoots(rootDir, docsRoots),
     ...collectPublicPackageReadmes(rootDir),
-  ].sort((left, right) => relative(rootDir, left).localeCompare(relative(rootDir, right)));
+  ].sort((left, right) => compareStrings(relative(rootDir, left), relative(rootDir, right)));
 }
 
 function collectPublicPackageReadmes(rootDir: string): string[] {
@@ -620,12 +624,12 @@ function collectMarkdownFilesFromRoots(rootDir: string, roots: readonly string[]
         return collectMarkdownFilesInDirectory(path);
       }),
     ),
-  ).sort((left, right) => relative(rootDir, left).localeCompare(relative(rootDir, right)));
+  ).sort((left, right) => compareStrings(relative(rootDir, left), relative(rootDir, right)));
 }
 
 function collectMarkdownFilesInDirectory(dir: string): string[] {
   return readdirSync(dir, { withFileTypes: true })
-    .sort((left, right) => left.name.localeCompare(right.name))
+    .sort((left, right) => compareStrings(left.name, right.name))
     .flatMap((entry) => {
       const path = join(dir, entry.name);
 
@@ -986,7 +990,7 @@ function createPackagePaths(rootDir: string): ts.MapLike<string[]> {
   }
 
   for (const entry of readdirSync(packagesDir, { withFileTypes: true }).sort((left, right) =>
-    left.name.localeCompare(right.name),
+    compareStrings(left.name, right.name),
   )) {
     if (!entry.isDirectory()) {
       continue;
@@ -1006,6 +1010,15 @@ function createPackagePaths(rootDir: string): ts.MapLike<string[]> {
     }
 
     paths[packageJson.name] = [normalizePath(sourceIndexPath)];
+    if (isRecord(packageJson.exports)) {
+      for (const subpath of Object.keys(packageJson.exports)) {
+        if (!subpath.startsWith("./") || subpath.includes("*")) continue;
+        const sourcePath = join(packageDir, "src", `${subpath.slice(2)}.ts`);
+        if (existsSync(sourcePath)) {
+          paths[`${packageJson.name}/${subpath.slice(2)}`] = [normalizePath(sourcePath)];
+        }
+      }
+    }
   }
 
   return paths;
@@ -1025,8 +1038,8 @@ function generateVirtualFiles(
     const extension = block.language === "tsx" ? "tsx" : "ts";
     const fileName = join(
       rootDir,
-      ".croco-doc-examples",
-      `${sanitizeFileName(block.file)}.${block.typeScriptBlockIndex}.${extension}`,
+      dirname(block.file),
+      `.croco-doc-example.${sanitizeFileName(block.file)}.${block.typeScriptBlockIndex}.${extension}`,
     );
     const source = [`// Source: ${formatBlock(block)}`, "", block.code, "", "export {};", ""].join(
       "\n",

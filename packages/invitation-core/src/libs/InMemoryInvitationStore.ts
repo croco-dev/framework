@@ -1,4 +1,5 @@
 import { InvitationStore } from "./InvitationStore";
+import type { InvitationStatusTransitionMeta } from "./InvitationStore";
 import { InvitationIdempotencyConflictProblem } from "./problems/InvitationProblems";
 import type {
   EmailInvitationCreation,
@@ -72,10 +73,7 @@ export class InMemoryInvitationStore extends InvitationStore {
       if (existing.invitation.expiresAt.getTime() > Date.now()) {
         return structuredClone(existing);
       }
-      this.storage.set(existing.invitation.id, {
-        ...existing.invitation,
-        status: "expired",
-      });
+      this.expireInvitationIfPending(existing.invitation.id);
       this.emailCreations.delete(scope);
     }
 
@@ -212,10 +210,7 @@ export class InMemoryInvitationStore extends InvitationStore {
     let deleted = 0;
     for (const [scope, creation] of this.emailCreations) {
       if (creation.invitation.expiresAt.getTime() <= now.getTime()) {
-        this.storage.set(creation.invitation.id, {
-          ...creation.invitation,
-          status: "expired",
-        });
+        this.expireInvitationIfPending(creation.invitation.id);
         this.emailCreations.delete(scope);
         deleted += 1;
       }
@@ -247,7 +242,7 @@ export class InMemoryInvitationStore extends InvitationStore {
     id: string,
     expected: InvitationStatus,
     desired: InvitationStatus,
-    meta: { acceptedAt?: Date; rejectedAt?: Date } = {},
+    meta: InvitationStatusTransitionMeta = {},
   ): Promise<Invitation | null> {
     const invitation = this.storage.get(id);
     if (!invitation || invitation.tenantId !== tenantId || invitation.status !== expected) {
@@ -255,10 +250,9 @@ export class InMemoryInvitationStore extends InvitationStore {
     }
 
     const transitionTime = Date.now();
-    const acceptedAt =
-      desired === "accepted"
-        ? new Date(Math.max(meta.acceptedAt?.getTime() ?? transitionTime, transitionTime))
-        : meta.acceptedAt;
+    const resolveMetaAt = (value: Date | undefined): Date | undefined =>
+      value ? new Date(Math.max(value.getTime(), transitionTime)) : new Date(transitionTime);
+    const acceptedAt = desired === "accepted" ? resolveMetaAt(meta.acceptedAt) : meta.acceptedAt;
     if (
       acceptedAt &&
       desired === "accepted" &&
@@ -266,11 +260,13 @@ export class InMemoryInvitationStore extends InvitationStore {
     ) {
       return null;
     }
+    const revokedAt = desired === "revoked" ? resolveMetaAt(meta.revokedAt) : meta.revokedAt;
 
     const updated = snapshotInvitation({
       ...invitation,
       status: desired,
       acceptedAt: acceptedAt ?? invitation.acceptedAt,
+      revokedAt: revokedAt ?? invitation.revokedAt,
     });
 
     this.storage.set(id, updated);
@@ -386,5 +382,14 @@ export class InMemoryInvitationStore extends InvitationStore {
 
   private creationScope(tenantId: string, idempotencyKey: string): string {
     return `${encodeURIComponent(tenantId)}:${encodeURIComponent(idempotencyKey)}`;
+  }
+
+  private expireInvitationIfPending(invitationId: string): void {
+    const current = this.storage.get(invitationId);
+    if (!current || (current.status !== "creating" && current.status !== "pending")) {
+      return;
+    }
+
+    this.storage.set(invitationId, snapshotInvitation({ ...current, status: "expired" }));
   }
 }

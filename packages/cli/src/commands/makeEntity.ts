@@ -32,15 +32,21 @@ export async function generateEntity(
   const className = normalize(name, "pascal");
   const workspace = await detect(cwd);
 
-  if (!workspace.root || !workspace.hasApiServer) {
+  if (!workspace.root) {
     getCrocoCommandRuntime().stdout("No Croco workspace detected. Run from a Croco project.");
+    return null;
+  }
+
+  if (!workspace.apiServerDir) {
+    getCrocoCommandRuntime().stdout(
+      "No API server app detected in apps/ (checked api-server, api, server, backend).",
+    );
     return null;
   }
 
   const targetPath = join(
     workspace.root,
-    "apps",
-    "api-server",
+    workspace.apiServerDir,
     "src",
     "entities",
     `${className}Entity.ts`,

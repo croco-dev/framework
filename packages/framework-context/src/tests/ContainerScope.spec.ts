@@ -7,6 +7,7 @@ import {
 } from "../index";
 import type { ServiceMetadata } from "../index";
 import { Component } from "./registerTestComponent";
+import { createDeferred } from "./createDeferred";
 
 describe("ContainerScope", () => {
   beforeEach(() => {
@@ -250,8 +251,8 @@ describe("ContainerScope", () => {
   });
 
   it("rejects disposal while a successful rollback-protected transaction is active", async () => {
-    const blocked = Promise.withResolvers<void>();
-    const started = Promise.withResolvers<void>();
+    const blocked = createDeferred();
+    const started = createDeferred();
     const scope = Container.createScope();
 
     const transaction = scope.runWithRollback(async () => {
@@ -271,8 +272,8 @@ describe("ContainerScope", () => {
 
   it("rejects disposal while a failing rollback-protected transaction is active", async () => {
     const token = new Token<string>("active-rollback");
-    const blocked = Promise.withResolvers<void>();
-    const started = Promise.withResolvers<void>();
+    const blocked = createDeferred();
+    const started = createDeferred();
     const scope = Container.createScope();
 
     const transaction = scope.runWithRollback(async () => {

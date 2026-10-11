@@ -1,4 +1,4 @@
-import { Problem, ProblemCategory } from "@croco/problems-core";
+import { OPERATOR_ONLY_PROBLEM_DETAIL, Problem, ProblemCategory } from "@croco/problems-core";
 import { beforeEach, describe, expect, it } from "vitest";
 import { z } from "zod";
 import {
@@ -28,6 +28,31 @@ class SignupClosedProblem extends Problem {
   constructor() {
     super("test/signup-closed", ProblemCategory.BusinessRuleViolation, "Signup is closed", {
       extensions: { recoveryAction: "join_waitlist" },
+    });
+  }
+}
+
+class PaymentGatewayProblem extends Problem {
+  readonly code = "test/gateway-failed";
+  readonly category = ProblemCategory.InternalServerError;
+
+  constructor() {
+    super(
+      "test/gateway-failed",
+      ProblemCategory.InternalServerError,
+      "Stripe request failed for customer cus_123 at postgres://db.internal/prod",
+      { extensions: { upstreamRequestId: "req_internal_9f2", sqlState: "57P01" } },
+    );
+  }
+}
+
+class SeatLimitProblem extends Problem {
+  readonly code = "test/seat-limit";
+  readonly category = ProblemCategory.Conflict;
+
+  constructor() {
+    super("test/seat-limit", ProblemCategory.Conflict, "Seat limit reached", {
+      extensions: { max: 5, internalAccountId: "acct_internal_42" },
     });
   }
 }
@@ -109,6 +134,37 @@ describe("Server Actions", () => {
     });
   });
 
+  it("preserves field and form validation errors in the Problem response", async () => {
+    const schema = z.object({ email: z.string() }).superRefine((_data, context) => {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["email"],
+        message: "Email is invalid",
+      });
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Form is invalid",
+      });
+    });
+
+    createServerAction({
+      name: "validate-form",
+      schema,
+      handler: async () => new Response("ok"),
+    });
+
+    const response = await dispatchServerAction("validate-form", { email: "test@example.com" });
+    expect(response.status).toBe(422);
+    expect(response.headers.get("Content-Type")).toBe("application/problem+json");
+    await expect(response.json()).resolves.toMatchObject({
+      ok: false,
+      kind: "validation",
+      code: "meta-vite/server-action-validation-failed",
+      fields: { email: ["Email is invalid"] },
+      formErrors: ["Form is invalid"],
+    });
+  });
+
   it("returns Problem result when action is not registered", async () => {
     const response = await dispatchServerAction("nonexistent-action", {});
     expect(response.status).toBe(404);
@@ -173,6 +229,52 @@ describe("Server Actions", () => {
       code: "test/signup-closed",
       detail: "Signup is closed",
       recoveryAction: "join_waitlist",
+    });
+  });
+
+  it("redacts operator-only Problem details and extensions", async () => {
+    const registry = createServerActionRegistry();
+    registry.register({
+      name: "checkout",
+      handler: async () => {
+        throw new PaymentGatewayProblem();
+      },
+    });
+
+    const response = await registry.dispatch("checkout", {});
+    expect(response.status).toBe(500);
+    expect(response.headers.get("Content-Type")).toBe("application/problem+json");
+    await expect(response.json()).resolves.toEqual({
+      type: "about:blank",
+      title: "Internal Server Error",
+      status: 500,
+      code: "test/gateway-failed",
+      detail: OPERATOR_ONLY_PROBLEM_DETAIL,
+      ok: false,
+      kind: "domain_problem",
+    });
+  });
+
+  it("keeps public extensions and removes private 4xx extensions", async () => {
+    const registry = createServerActionRegistry();
+    registry.register({
+      name: "reserve-seat",
+      handler: async () => {
+        throw new SeatLimitProblem();
+      },
+    });
+
+    const response = await registry.dispatch("reserve-seat", {});
+    expect(response.status).toBe(409);
+    await expect(response.json()).resolves.toEqual({
+      type: "about:blank",
+      title: "Conflict",
+      status: 409,
+      code: "test/seat-limit",
+      detail: "Seat limit reached",
+      max: 5,
+      ok: false,
+      kind: "domain_problem",
     });
   });
 
@@ -543,6 +645,82 @@ describe("Server Action HTTP Integration", () => {
       detail: "Invalid server action path",
       path: "/api/action/signup/extra",
     });
+  });
+
+  it("returns Problem result for non-form-data POST bodies", async () => {
+    createServerAction({
+      name: "json-post",
+      handler: async () => new Response("ok"),
+    });
+
+    const route = createServerActionHandler();
+
+    const response = await route.handler(
+      new Request("http://localhost/api/action/json-post", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: "test@example.com" }),
+      }),
+    );
+
+    expect(response.status).toBe(415);
+    expect(response.headers.get("Content-Type")).toBe("application/problem+json");
+    await expect(response.json()).resolves.toMatchObject({
+      ok: false,
+      kind: "invalid_content_type",
+      title: "Unsupported Media Type",
+      status: 415,
+      code: "meta-vite/server-action-invalid-content-type",
+      detail: "Server actions require a form-data request body",
+      reason: "application/json",
+    });
+  });
+
+  it("returns Problem result for malformed form bodies with a form content type", async () => {
+    createServerAction({
+      name: "malformed-post",
+      handler: async () => new Response("ok"),
+    });
+
+    const route = createServerActionHandler();
+
+    const response = await route.handler(
+      new Request("http://localhost/api/action/malformed-post", {
+        method: "POST",
+        headers: { "Content-Type": "multipart/form-data; boundary=----invalid" },
+        body: "this is not valid multipart",
+      }),
+    );
+
+    expect(response.status).toBe(400);
+    expect(response.headers.get("Content-Type")).toBe("application/problem+json");
+    await expect(response.json()).resolves.toMatchObject({
+      ok: false,
+      kind: "malformed_body",
+      title: "Bad Request",
+      status: 400,
+      code: "meta-vite/server-action-malformed-body",
+      detail: "Server action request body could not be parsed",
+    });
+  });
+
+  it("rethrows request aborts instead of mapping them to 415", async () => {
+    createServerAction({
+      name: "aborted-post",
+      handler: async () => new Response("ok"),
+    });
+
+    const route = createServerActionHandler();
+    const controller = new AbortController();
+    const request = new Request("http://localhost/api/action/aborted-post", {
+      method: "POST",
+      body: new FormData(),
+      signal: controller.signal,
+    });
+    const abortError = new DOMException("This operation was aborted", "AbortError");
+    request.formData = () => Promise.reject(abortError);
+
+    await expect(route.handler(request)).rejects.toBe(abortError);
   });
 
   it("returns 405 for non-POST method on action endpoint", async () => {

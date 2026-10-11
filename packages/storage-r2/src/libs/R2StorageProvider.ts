@@ -377,7 +377,8 @@ export class R2StorageProvider extends BaseStorageProvider {
 
     if (this.options.publicUrlBase) {
       const normalizedBase = this.options.publicUrlBase.replace(/\/+$/, "");
-      return `${normalizedBase}/${key}`;
+      const encodedKey = key.split("/").map(encodeURIComponent).join("/");
+      return `${normalizedBase}/${encodedKey}`;
     }
 
     throw new MissingR2ConfigProblem("R2_PUBLIC_URL_BASE");

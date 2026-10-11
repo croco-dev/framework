@@ -20,6 +20,8 @@ export type BehaviorObservation = {
   scope: BehaviorScope;
 };
 export type BehaviorDataset = {
+  /** Immutable host source run or warehouse snapshot reference, when available. */
+  sourceRef?: string;
   definitionId: string;
   version: string;
   subjectKind: string;
@@ -97,6 +99,9 @@ export class ConflictingBehaviorEventProblem extends Problem {
       "Conflicting observations share the same scope, source and event identity",
     );
   }
+}
+function compareText(a: string, b: string): number {
+  return a < b ? -1 : a > b ? 1 : 0;
 }
 function requireValue(condition: boolean, field: string): asserts condition {
   if (!condition) throw new InvalidBehaviorMetricProblem(field);
@@ -266,9 +271,9 @@ function prepare(definition: BehaviorDefinition, dataset: BehaviorDataset) {
   events.sort(
     (a, b) =>
       instant(a.occurredAt, "occurredAt") - instant(b.occurredAt, "occurredAt") ||
-      a.subjectId.localeCompare(b.subjectId) ||
-      a.source.localeCompare(b.source) ||
-      a.eventId.localeCompare(b.eventId),
+      compareText(a.subjectId, b.subjectId) ||
+      compareText(a.source, b.source) ||
+      compareText(a.eventId, b.eventId),
   );
   return {
     events,
@@ -357,7 +362,7 @@ function retention(
     prepared.history === undefined ||
     prepared.history > (cohort ? prepared.historyStart : Date.parse(baselineWindow.from));
   const subjects = [...groupSubjects(prepared.events)]
-    .sort(([a], [b]) => a.localeCompare(b))
+    .sort(([a], [b]) => compareText(a, b))
     .map(([subjectId, events]) => {
       const baseline = events.some((event) => inside(event, baselineWindow));
       const earlier =
@@ -425,7 +430,7 @@ export function computeFrequencyDistribution(
   const window = resolveWindow(options.window, prepared.format);
   const events = prepared.events.filter((event) => inside(event, window));
   const subjects = [...groupSubjects(events)]
-    .sort(([a], [b]) => a.localeCompare(b))
+    .sort(([a], [b]) => compareText(a, b))
     .map(([subjectId, subjectEvents]) => {
       const included =
         definition.deletedSubjectPolicy === "include" || !prepared.deleted.has(subjectId);

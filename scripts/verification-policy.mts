@@ -1,3 +1,4 @@
+import { compareStrings } from "../tooling/compareStrings.mjs";
 import { readFileSync, readdirSync } from "node:fs";
 import { relative, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -470,7 +471,7 @@ function outputCheckPolicy(owner: string): VerificationPolicy {
 }
 
 function compareVerificationPaths(left: VerificationPath, right: VerificationPath): number {
-  return left.id.localeCompare(right.id);
+  return compareStrings(left.id, right.id);
 }
 
 export function main(root = process.cwd()): number {

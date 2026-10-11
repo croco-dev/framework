@@ -2,7 +2,67 @@
   "version": 1,
   "tests": [
     {
+      "path": "examples/cancellation-flow/src/tests/RequestValidation.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "repo:examples"
+    },
+    {
+      "path": "examples/experiment-runtime/src/tests/CohortEligibility.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "repo:examples"
+    },
+    {
       "path": "examples/first-party-plugin-composition/src/tests/FirstPartyPluginComposition.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "repo:examples"
+    },
+    {
+      "path": "examples/first-party-plugin-composition/src/tests/StartCommand.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "repo:examples"
+    },
+    {
+      "path": "examples/growth-analysis/src/tests/LocalProvider.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "repo:examples"
+    },
+    {
+      "path": "examples/growth-analysis/src/tests/OpenAIPlanProposal.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "repo:examples"
+    },
+    {
+      "path": "examples/growth-analysis/src/tests/Server.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "repo:examples"
+    },
+    {
+      "path": "examples/lifecycle-journey/src/tests/TaskRecovery.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "repo:examples"
+    },
+    {
+      "path": "examples/promotion-offers/src/tests/personalized-pdp.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "repo:examples"
+    },
+    {
+      "path": "examples/promotion-offers/src/tests/promotion-offers.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "repo:examples"
+    },
+    {
+      "path": "examples/referral-program/src/tests/referral-program.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "repo:examples"
@@ -21,6 +81,30 @@
     },
     {
       "path": "examples/saas-billing-golden-path/src/tests/membership-quantity.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "repo:examples"
+    },
+    {
+      "path": "examples/saved-intents/src/tests/Database.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "repo:examples"
+    },
+    {
+      "path": "examples/saved-intents/src/tests/Request.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "repo:examples"
+    },
+    {
+      "path": "examples/saved-intents/src/tests/Server.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "repo:examples"
+    },
+    {
+      "path": "examples/targeting-impact/src/tests/TargetingImpact.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "repo:examples"
@@ -74,13 +158,49 @@
       "owner": "@croco/access-drizzle"
     },
     {
+      "path": "packages/admin-core/src/tests/ActivationCandidateOperations.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-core"
+    },
+    {
+      "path": "packages/admin-core/src/tests/ActivationGuide.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-core"
+    },
+    {
       "path": "packages/admin-core/src/tests/AdminResource.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/admin-core"
     },
     {
+      "path": "packages/admin-core/src/tests/ChallengeOperations.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-core"
+    },
+    {
+      "path": "packages/admin-core/src/tests/CohortOperations.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-core"
+    },
+    {
+      "path": "packages/admin-core/src/tests/ContactPolicyOperations.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-core"
+    },
+    {
       "path": "packages/admin-core/src/tests/CreditOperations.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-core"
+    },
+    {
+      "path": "packages/admin-core/src/tests/CustomerExplorer.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/admin-core"
@@ -98,6 +218,24 @@
       "owner": "@croco/admin-core"
     },
     {
+      "path": "packages/admin-core/src/tests/ExperienceOperations.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-core"
+    },
+    {
+      "path": "packages/admin-core/src/tests/ExperimentOperations.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-core"
+    },
+    {
+      "path": "packages/admin-core/src/tests/ExperimentReviewConsole.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-core"
+    },
+    {
       "path": "packages/admin-core/src/tests/FactHistoryEntrypoints.spec.ts",
       "lane": "fast",
       "qualifiers": [],
@@ -110,7 +248,67 @@
       "owner": "@croco/admin-core"
     },
     {
+      "path": "packages/admin-core/src/tests/JourneyOperations.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-core"
+    },
+    {
+      "path": "packages/admin-core/src/tests/MissionConsole.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-core"
+    },
+    {
+      "path": "packages/admin-core/src/tests/OfferConsole.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-core"
+    },
+    {
+      "path": "packages/admin-core/src/tests/PolicyReleaseOperations.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-core"
+    },
+    {
+      "path": "packages/admin-core/src/tests/ReferralConsole.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-core"
+    },
+    {
+      "path": "packages/admin-core/src/tests/ReminderOperations.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-core"
+    },
+    {
+      "path": "packages/admin-core/src/tests/RetentionOfferOperations.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-core"
+    },
+    {
       "path": "packages/admin-core/src/tests/RetentionWorkbench.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-core"
+    },
+    {
+      "path": "packages/admin-core/src/tests/RewardOperations.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-core"
+    },
+    {
+      "path": "packages/admin-core/src/tests/SavedIntentOperations.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-core"
+    },
+    {
+      "path": "packages/admin-core/src/tests/TargetingImpactOperations.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/admin-core"
@@ -132,6 +330,12 @@
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/admin-generated"
+    },
+    {
+      "path": "packages/admin-ops/src/tests/CustomerExplorerAdapters.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-ops"
     },
     {
       "path": "packages/admin-ops/src/tests/EngagementAdapters.spec.ts",
@@ -164,6 +368,36 @@
       "owner": "@croco/admin-ops"
     },
     {
+      "path": "packages/admin-postgres/src/tests/CustomerExplorerAdapters.postgres.spec.ts",
+      "lane": "live",
+      "qualifiers": [],
+      "owner": "@croco/admin-postgres"
+    },
+    {
+      "path": "packages/admin-postgres/src/tests/CustomerExplorerAdapters.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-postgres"
+    },
+    {
+      "path": "packages/admin-react/src/tests/ActivationCandidateExplorer.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-react"
+    },
+    {
+      "path": "packages/admin-react/src/tests/ActivationGuideConsole.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-react"
+    },
+    {
+      "path": "packages/admin-react/src/tests/ActivationGuideConsoleIdentity.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-react"
+    },
+    {
       "path": "packages/admin-react/src/tests/AdminForm.spec.ts",
       "lane": "fast",
       "qualifiers": [],
@@ -182,13 +416,49 @@
       "owner": "@croco/admin-react"
     },
     {
+      "path": "packages/admin-react/src/tests/ChallengeConsole.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-react"
+    },
+    {
+      "path": "packages/admin-react/src/tests/CohortBuilder.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-react"
+    },
+    {
+      "path": "packages/admin-react/src/tests/CohortBuilderInteraction.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-react"
+    },
+    {
+      "path": "packages/admin-react/src/tests/ContactPolicyConsole.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-react"
+    },
+    {
       "path": "packages/admin-react/src/tests/CreditOperationsConsole.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/admin-react"
     },
     {
+      "path": "packages/admin-react/src/tests/CustomerExplorer.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-react"
+    },
+    {
       "path": "packages/admin-react/src/tests/DataTable.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-react"
+    },
+    {
+      "path": "packages/admin-react/src/tests/DatasetExplorer.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/admin-react"
@@ -206,7 +476,49 @@
       "owner": "@croco/admin-react"
     },
     {
+      "path": "packages/admin-react/src/tests/ExperienceConsole.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-react"
+    },
+    {
+      "path": "packages/admin-react/src/tests/ExperimentConsole.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-react"
+    },
+    {
+      "path": "packages/admin-react/src/tests/ExperimentReviewConsole.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-react"
+    },
+    {
       "path": "packages/admin-react/src/tests/FactHistoryPanel.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-react"
+    },
+    {
+      "path": "packages/admin-react/src/tests/GrowthAnalysisPanel.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-react"
+    },
+    {
+      "path": "packages/admin-react/src/tests/JourneyConsole.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-react"
+    },
+    {
+      "path": "packages/admin-react/src/tests/JourneyConsoleProblem.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-react"
+    },
+    {
+      "path": "packages/admin-react/src/tests/JourneyConsoleRevision.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/admin-react"
@@ -218,13 +530,79 @@
       "owner": "@croco/admin-react"
     },
     {
+      "path": "packages/admin-react/src/tests/MetricInspector.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-react"
+    },
+    {
+      "path": "packages/admin-react/src/tests/MissionConsole.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-react"
+    },
+    {
+      "path": "packages/admin-react/src/tests/OfferConsole.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-react"
+    },
+    {
       "path": "packages/admin-react/src/tests/PlanReleaseConsole.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/admin-react"
     },
     {
+      "path": "packages/admin-react/src/tests/PolicyReleaseConsole.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-react"
+    },
+    {
+      "path": "packages/admin-react/src/tests/PolicyReleaseConsoleInteraction.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-react"
+    },
+    {
+      "path": "packages/admin-react/src/tests/ReferralProgramConsole.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-react"
+    },
+    {
+      "path": "packages/admin-react/src/tests/ReminderOperationsPanel.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-react"
+    },
+    {
+      "path": "packages/admin-react/src/tests/RetentionOfferConsole.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-react"
+    },
+    {
       "path": "packages/admin-react/src/tests/RetentionWorkbench.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-react"
+    },
+    {
+      "path": "packages/admin-react/src/tests/RewardConsole.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-react"
+    },
+    {
+      "path": "packages/admin-react/src/tests/SavedIntentConsole.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-react"
+    },
+    {
+      "path": "packages/admin-react/src/tests/TargetingImpactInspector.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/admin-react"
@@ -302,6 +680,12 @@
       "owner": "@croco/analytics-core"
     },
     {
+      "path": "packages/analytics-core/src/tests/GrowthAnalysisService.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/analytics-core"
+    },
+    {
       "path": "packages/analytics-core/src/tests/ProductEvent.spec.ts",
       "lane": "fast",
       "qualifiers": [],
@@ -360,6 +744,12 @@
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/audit-core"
+    },
+    {
+      "path": "packages/audit-drizzle/src/tests/DrizzleAuditLogRepository.postgres.spec.ts",
+      "lane": "live",
+      "qualifiers": [],
+      "owner": "@croco/audit-drizzle"
     },
     {
       "path": "packages/audit-drizzle/src/tests/DrizzleAuditLogRepository.spec.ts",
@@ -602,6 +992,12 @@
       "owner": "@croco/batch-core"
     },
     {
+      "path": "packages/batch-core/src/tests/DocExamples.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/batch-core"
+    },
+    {
       "path": "packages/batch-core/src/tests/JobBuilder.spec.ts",
       "lane": "fast",
       "qualifiers": [],
@@ -612,6 +1008,12 @@
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/batch-qstash"
+    },
+    {
+      "path": "packages/billing-core/src/tests/BillingCancellationAction.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/billing-core"
     },
     {
       "path": "packages/billing-core/src/tests/BillingProblems.spec.ts",
@@ -627,6 +1029,12 @@
     },
     {
       "path": "packages/billing-core/src/tests/BillingService.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/billing-core"
+    },
+    {
+      "path": "packages/billing-core/src/tests/CancellationService.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/billing-core"
@@ -672,6 +1080,24 @@
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/billing-core"
+    },
+    {
+      "path": "packages/billing-core/src/tests/SubscriptionRevokedEvent.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/billing-core"
+    },
+    {
+      "path": "packages/billing-drizzle/src/tests/DrizzleBillingStore.postgres.spec.ts",
+      "lane": "live",
+      "qualifiers": [],
+      "owner": "@croco/billing-drizzle"
+    },
+    {
+      "path": "packages/billing-drizzle/src/tests/DrizzleCancellationStore.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/billing-drizzle"
     },
     {
       "path": "packages/billing-polar/src/tests/PolarBillingDiagnosticsProvider.spec.ts",
@@ -764,6 +1190,24 @@
       "owner": "@croco/cache-core"
     },
     {
+      "path": "packages/cache-core/src/tests/PersonalizedCache.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/cache-core"
+    },
+    {
+      "path": "packages/cli/src/tests/AgentReadProcess.spec.ts",
+      "lane": "fast",
+      "qualifiers": ["coverage"],
+      "owner": "@croco/cli"
+    },
+    {
+      "path": "packages/cli/src/tests/AgentReadTools.spec.ts",
+      "lane": "fast",
+      "qualifiers": ["coverage"],
+      "owner": "@croco/cli"
+    },
+    {
       "path": "packages/cli/src/tests/CliError.spec.ts",
       "lane": "fast",
       "qualifiers": ["coverage"],
@@ -782,6 +1226,12 @@
       "owner": "@croco/cli"
     },
     {
+      "path": "packages/cli/src/tests/Data.spec.ts",
+      "lane": "fast",
+      "qualifiers": ["coverage"],
+      "owner": "@croco/cli"
+    },
+    {
       "path": "packages/cli/src/tests/DesktopRemoved.spec.ts",
       "lane": "fast",
       "qualifiers": ["coverage"],
@@ -789,6 +1239,12 @@
     },
     {
       "path": "packages/cli/src/tests/GenerateUsageDashboard.spec.ts",
+      "lane": "fast",
+      "qualifiers": ["coverage"],
+      "owner": "@croco/cli"
+    },
+    {
+      "path": "packages/cli/src/tests/Pipeline.spec.ts",
       "lane": "fast",
       "qualifiers": ["coverage"],
       "owner": "@croco/cli"
@@ -998,6 +1454,24 @@
       "owner": "@croco/cli"
     },
     {
+      "path": "packages/cohort-core/src/tests/Cohort.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/cohort-core"
+    },
+    {
+      "path": "packages/cohort-drizzle/src/tests/PostgresCohortStore.postgres.spec.ts",
+      "lane": "live",
+      "qualifiers": [],
+      "owner": "@croco/cohort-drizzle"
+    },
+    {
+      "path": "packages/cohort-drizzle/src/tests/PostgresCohortStore.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/cohort-drizzle"
+    },
+    {
       "path": "packages/create-croco-app/src/tests/E2E.spec.ts",
       "lane": "integration",
       "qualifiers": ["coverage"],
@@ -1010,6 +1484,18 @@
       "owner": "create-croco-app"
     },
     {
+      "path": "packages/create-croco-app/src/tests/FreshScaffoldArtifacts.spec.ts",
+      "lane": "fast",
+      "qualifiers": ["coverage"],
+      "owner": "create-croco-app"
+    },
+    {
+      "path": "packages/create-croco-app/src/tests/FrontendDockerDeploy.spec.ts",
+      "lane": "fast",
+      "qualifiers": ["coverage"],
+      "owner": "create-croco-app"
+    },
+    {
       "path": "packages/create-croco-app/src/tests/GenerationResult.spec.ts",
       "lane": "fast",
       "qualifiers": ["coverage"],
@@ -1017,6 +1503,18 @@
     },
     {
       "path": "packages/create-croco-app/src/tests/GeneratorOptions.spec.ts",
+      "lane": "fast",
+      "qualifiers": ["coverage"],
+      "owner": "create-croco-app"
+    },
+    {
+      "path": "packages/create-croco-app/src/tests/LambdaScaffold.spec.ts",
+      "lane": "fast",
+      "qualifiers": ["coverage"],
+      "owner": "create-croco-app"
+    },
+    {
+      "path": "packages/create-croco-app/src/tests/LocalProductProfile.spec.ts",
       "lane": "fast",
       "qualifiers": ["coverage"],
       "owner": "create-croco-app"
@@ -1046,6 +1544,18 @@
       "owner": "create-croco-app"
     },
     {
+      "path": "packages/create-croco-app/src/tests/SaasDiBuildOrder.spec.ts",
+      "lane": "fast",
+      "qualifiers": ["coverage"],
+      "owner": "create-croco-app"
+    },
+    {
+      "path": "packages/create-croco-app/src/tests/StandaloneNextWebApp.spec.ts",
+      "lane": "fast",
+      "qualifiers": ["coverage"],
+      "owner": "create-croco-app"
+    },
+    {
       "path": "packages/create-croco-app/src/tests/TelemetryFlushTemplate.spec.ts",
       "lane": "fast",
       "qualifiers": ["coverage"],
@@ -1053,6 +1563,12 @@
     },
     {
       "path": "packages/create-croco-app/src/tests/TemplatePath.spec.ts",
+      "lane": "fast",
+      "qualifiers": ["coverage"],
+      "owner": "create-croco-app"
+    },
+    {
+      "path": "packages/create-croco-app/src/tests/WebAppNaming.spec.ts",
       "lane": "fast",
       "qualifiers": ["coverage"],
       "owner": "create-croco-app"
@@ -1116,6 +1632,39 @@
       "lane": "fast",
       "qualifiers": ["coverage"],
       "owner": "create-croco-app"
+    },
+    {
+      "path": "packages/create-croco-app/templates/addons/graphql-standalone/apps/graphql-api/src/formatGraphQLError.spec.ts",
+      "lane": "generated-app",
+      "qualifiers": [],
+      "owner": "create-croco-app",
+      "generated": {
+        "sourcePath": "packages/create-croco-app/templates/addons/graphql-standalone/apps/graphql-api/src/formatGraphQLError.spec.ts",
+        "generatedPath": "apps/graphql-api/src/formatGraphQLError.spec.ts",
+        "commandId": "create-croco-app"
+      }
+    },
+    {
+      "path": "packages/create-croco-app/templates/addons/trpc-nextjs/apps/web/src/server/tests/LocalSessionProvider.spec.ts",
+      "lane": "generated-app",
+      "qualifiers": [],
+      "owner": "create-croco-app",
+      "generated": {
+        "sourcePath": "packages/create-croco-app/templates/addons/trpc-nextjs/apps/web/src/server/tests/LocalSessionProvider.spec.ts",
+        "generatedPath": "apps/web/src/server/tests/LocalSessionProvider.spec.ts",
+        "commandId": "create-croco-app"
+      }
+    },
+    {
+      "path": "packages/create-croco-app/templates/addons/trpc-nextjs/apps/web/src/server/tests/ProductTrials.spec.ts",
+      "lane": "generated-app",
+      "qualifiers": [],
+      "owner": "create-croco-app",
+      "generated": {
+        "sourcePath": "packages/create-croco-app/templates/addons/trpc-nextjs/apps/web/src/server/tests/ProductTrials.spec.ts",
+        "generatedPath": "apps/web/src/server/tests/ProductTrials.spec.ts",
+        "commandId": "create-croco-app"
+      }
     },
     {
       "path": "packages/create-croco-app/templates/admin-console/apps/api-server/src/tests/AdminConsole.spec.ts",
@@ -1451,7 +2000,19 @@
       "owner": "@croco/dataloader-core"
     },
     {
+      "path": "packages/dataloader-core/src/tests/BatchLoaderCache.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/dataloader-core"
+    },
+    {
       "path": "packages/dataloader-core/src/tests/BatchLoaderFactory.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/dataloader-core"
+    },
+    {
+      "path": "packages/dataloader-core/src/tests/BatchLoaderProblems.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/dataloader-core"
@@ -1511,6 +2072,18 @@
       "owner": "@croco/engagement-core"
     },
     {
+      "path": "packages/engagement-core/src/tests/ContactPolicy.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/engagement-core"
+    },
+    {
+      "path": "packages/engagement-core/src/tests/ContactPolicyPushLifecycle.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/engagement-core"
+    },
+    {
       "path": "packages/engagement-core/src/tests/EngagementService.spec.ts",
       "lane": "fast",
       "qualifiers": [],
@@ -1529,8 +2102,32 @@
       "owner": "@croco/engagement-core"
     },
     {
+      "path": "packages/engagement-core/src/tests/NextOccurrence.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/engagement-core"
+    },
+    {
       "path": "packages/engagement-core/src/tests/PublishedMessageContracts.spec.ts",
       "lane": "published",
+      "qualifiers": [],
+      "owner": "@croco/engagement-core"
+    },
+    {
+      "path": "packages/engagement-core/src/tests/PushEndpointLifecycle.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/engagement-core"
+    },
+    {
+      "path": "packages/engagement-core/src/tests/ReminderEngagement.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/engagement-core"
+    },
+    {
+      "path": "packages/engagement-core/src/tests/ReminderService.spec.ts",
+      "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/engagement-core"
     },
@@ -1547,6 +2144,18 @@
       "owner": "@croco/engagement-drizzle"
     },
     {
+      "path": "packages/engagement-drizzle/src/tests/DrizzleContactPolicyAdminStore.postgres.spec.ts",
+      "lane": "live",
+      "qualifiers": [],
+      "owner": "@croco/engagement-drizzle"
+    },
+    {
+      "path": "packages/engagement-drizzle/src/tests/DrizzleContactPolicyStore.postgres.spec.ts",
+      "lane": "live",
+      "qualifiers": [],
+      "owner": "@croco/engagement-drizzle"
+    },
+    {
       "path": "packages/engagement-drizzle/src/tests/DrizzleEngagementStore.postgres.spec.ts",
       "lane": "live",
       "qualifiers": [],
@@ -1555,6 +2164,24 @@
     {
       "path": "packages/engagement-drizzle/src/tests/DrizzleEngagementStore.spec.ts",
       "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/engagement-drizzle"
+    },
+    {
+      "path": "packages/engagement-drizzle/src/tests/DrizzleReminderStore.postgres.spec.ts",
+      "lane": "live",
+      "qualifiers": [],
+      "owner": "@croco/engagement-drizzle"
+    },
+    {
+      "path": "packages/engagement-drizzle/src/tests/DrizzleReminderStore.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/engagement-drizzle"
+    },
+    {
+      "path": "packages/engagement-drizzle/src/tests/ReminderRunner.postgres.spec.ts",
+      "lane": "live",
       "qualifiers": [],
       "owner": "@croco/engagement-drizzle"
     },
@@ -1661,6 +2288,48 @@
       "owner": "@croco/esbuild-plugin"
     },
     {
+      "path": "packages/etl-core/src/tests/EventSourceEnvelope.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/etl-core"
+    },
+    {
+      "path": "packages/etl-core/src/tests/FileSource.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/etl-core"
+    },
+    {
+      "path": "packages/etl-core/src/tests/Pipeline.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/etl-core"
+    },
+    {
+      "path": "packages/etl-core/src/tests/Projection.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/etl-core"
+    },
+    {
+      "path": "packages/etl-core/src/tests/SourceDecoder.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/etl-core"
+    },
+    {
+      "path": "packages/etl-events-tx/src/tests/AnalyticsOutboxConsumer.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/etl-events-tx"
+    },
+    {
+      "path": "packages/etl-events-tx/src/tests/OutboxFactSource.integration.spec.ts",
+      "lane": "integration",
+      "qualifiers": [],
+      "owner": "@croco/etl-events-tx"
+    },
+    {
       "path": "packages/events-core/src/tests/BehavioralEvidence.spec.ts",
       "lane": "fast",
       "qualifiers": ["coverage"],
@@ -1698,6 +2367,12 @@
     },
     {
       "path": "packages/events-core/src/tests/EventBusStats.spec.ts",
+      "lane": "fast",
+      "qualifiers": ["coverage"],
+      "owner": "@croco/events-core"
+    },
+    {
+      "path": "packages/events-core/src/tests/EventMetadataReset.spec.ts",
       "lane": "fast",
       "qualifiers": ["coverage"],
       "owner": "@croco/events-core"
@@ -1781,6 +2456,12 @@
       "owner": "@croco/events-tx"
     },
     {
+      "path": "packages/events-tx/src/tests/InMemoryTransactionalEventStore.spec.ts",
+      "lane": "fast",
+      "qualifiers": ["coverage"],
+      "owner": "@croco/events-tx"
+    },
+    {
       "path": "packages/events-tx/src/tests/OutboxIdempotencyConformance.spec.ts",
       "lane": "fast",
       "qualifiers": ["coverage"],
@@ -1835,10 +2516,100 @@
       "owner": "@croco/execution-drizzle"
     },
     {
+      "path": "packages/experience-core/src/tests/Experience.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/experience-core"
+    },
+    {
+      "path": "packages/experience-core/src/tests/SavedIntent.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/experience-core"
+    },
+    {
+      "path": "packages/experience-drizzle/src/tests/PostgresExperienceStore.postgres.spec.ts",
+      "lane": "live",
+      "qualifiers": [],
+      "owner": "@croco/experience-drizzle"
+    },
+    {
+      "path": "packages/experience-drizzle/src/tests/PostgresExperienceStore.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/experience-drizzle"
+    },
+    {
+      "path": "packages/experience-drizzle/src/tests/PostgresSavedIntentStore.postgres.spec.ts",
+      "lane": "live",
+      "qualifiers": [],
+      "owner": "@croco/experience-drizzle"
+    },
+    {
+      "path": "packages/experience-drizzle/src/tests/PostgresSavedIntentStore.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/experience-drizzle"
+    },
+    {
+      "path": "packages/features-core/src/tests/ExperimentRuntime.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/features-core"
+    },
+    {
       "path": "packages/features-core/src/tests/FeatureManager.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/features-core"
+    },
+    {
+      "path": "packages/features-core/src/tests/PolicyReleaseService.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/features-core"
+    },
+    {
+      "path": "packages/features-drizzle/src/tests/DrizzleExperimentStore.postgres.spec.ts",
+      "lane": "live",
+      "qualifiers": [],
+      "owner": "@croco/features-drizzle"
+    },
+    {
+      "path": "packages/features-drizzle/src/tests/DrizzleExperimentStore.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/features-drizzle"
+    },
+    {
+      "path": "packages/features-drizzle/src/tests/DrizzlePolicyReleaseStore.postgres.spec.ts",
+      "lane": "live",
+      "qualifiers": [],
+      "owner": "@croco/features-drizzle"
+    },
+    {
+      "path": "packages/features-drizzle/src/tests/ExperimentSchema.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/features-drizzle"
+    },
+    {
+      "path": "packages/features-drizzle/src/tests/FeaturesSchema.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/features-drizzle"
+    },
+    {
+      "path": "packages/features-drizzle/src/tests/ScheduledPolicyPublisher.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/features-drizzle"
+    },
+    {
+      "path": "packages/features-posthog/src/tests/PostHogExperimentProvider.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/features-posthog"
     },
     {
       "path": "packages/features-posthog/src/tests/PostHogFeatureManager.spec.ts",
@@ -1871,18 +2642,6 @@
       "owner": "@croco/framework-config"
     },
     {
-      "path": "packages/framework-context/src/libs/Container.test.ts",
-      "lane": "fast",
-      "qualifiers": ["coverage"],
-      "owner": "@croco/framework-context"
-    },
-    {
-      "path": "packages/framework-context/src/libs/Middleware.test.ts",
-      "lane": "fast",
-      "qualifiers": ["coverage"],
-      "owner": "@croco/framework-context"
-    },
-    {
       "path": "packages/framework-context/src/tests/ApplicationIntentManifest.spec.ts",
       "lane": "fast",
       "qualifiers": ["coverage"],
@@ -1896,6 +2655,12 @@
     },
     {
       "path": "packages/framework-context/src/tests/CircularDependency.spec.ts",
+      "lane": "fast",
+      "qualifiers": ["coverage"],
+      "owner": "@croco/framework-context"
+    },
+    {
+      "path": "packages/framework-context/src/tests/Container.spec.ts",
       "lane": "fast",
       "qualifiers": ["coverage"],
       "owner": "@croco/framework-context"
@@ -1937,6 +2702,12 @@
       "owner": "@croco/framework-context"
     },
     {
+      "path": "packages/framework-context/src/tests/Middleware.spec.ts",
+      "lane": "fast",
+      "qualifiers": ["coverage"],
+      "owner": "@croco/framework-context"
+    },
+    {
       "path": "packages/framework-context/src/tests/MiddlewareChain.spec.ts",
       "lane": "fast",
       "qualifiers": ["coverage"],
@@ -1956,6 +2727,12 @@
     },
     {
       "path": "packages/framework-context/src/tests/RuntimeCapabilities.spec.ts",
+      "lane": "fast",
+      "qualifiers": ["coverage"],
+      "owner": "@croco/framework-context"
+    },
+    {
+      "path": "packages/framework-context/src/tests/RuntimeContainerProblems.spec.ts",
       "lane": "fast",
       "qualifiers": ["coverage"],
       "owner": "@croco/framework-context"
@@ -2099,6 +2876,72 @@
       "owner": "@croco/frontend-problems"
     },
     {
+      "path": "packages/frontend-react/src/tests/CancellationFlow.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/frontend-react"
+    },
+    {
+      "path": "packages/frontend-react/src/tests/ExperienceSlot.spec.tsx",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/frontend-react"
+    },
+    {
+      "path": "packages/frontend-react/src/tests/ExperienceSlotProcess.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/frontend-react"
+    },
+    {
+      "path": "packages/frontend-react/src/tests/GoalProgress.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/frontend-react"
+    },
+    {
+      "path": "packages/frontend-react/src/tests/GroupProgress.spec.tsx",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/frontend-react"
+    },
+    {
+      "path": "packages/frontend-react/src/tests/MissionProgress.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/frontend-react"
+    },
+    {
+      "path": "packages/frontend-react/src/tests/OfferCard.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/frontend-react"
+    },
+    {
+      "path": "packages/frontend-react/src/tests/ReferralCards.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/frontend-react"
+    },
+    {
+      "path": "packages/frontend-react/src/tests/ReminderSettingsForm.spec.tsx",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/frontend-react"
+    },
+    {
+      "path": "packages/frontend-react/src/tests/Rewards.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/frontend-react"
+    },
+    {
+      "path": "packages/frontend-react/src/tests/SavedItems.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/frontend-react"
+    },
+    {
       "path": "packages/frontend-react/src/tests/authBridge.spec.ts",
       "lane": "fast",
       "qualifiers": [],
@@ -2139,6 +2982,72 @@
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/frontend-vite"
+    },
+    {
+      "path": "packages/gamification-core/src/tests/ChallengeService.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/gamification-core"
+    },
+    {
+      "path": "packages/gamification-core/src/tests/MissionService.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/gamification-core"
+    },
+    {
+      "path": "packages/gamification-core/src/tests/RewardPolicy.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/gamification-core"
+    },
+    {
+      "path": "packages/gamification-drizzle/src/tests/ChallengeService.postgres.spec.ts",
+      "lane": "live",
+      "qualifiers": [],
+      "owner": "@croco/gamification-drizzle"
+    },
+    {
+      "path": "packages/gamification-drizzle/src/tests/DrizzleChallengeStore.postgres.spec.ts",
+      "lane": "live",
+      "qualifiers": [],
+      "owner": "@croco/gamification-drizzle"
+    },
+    {
+      "path": "packages/gamification-drizzle/src/tests/DrizzleChallengeStore.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/gamification-drizzle"
+    },
+    {
+      "path": "packages/gamification-drizzle/src/tests/DrizzleMissionStore.postgres.spec.ts",
+      "lane": "live",
+      "qualifiers": [],
+      "owner": "@croco/gamification-drizzle"
+    },
+    {
+      "path": "packages/gamification-drizzle/src/tests/DrizzleRewardStore.postgres.spec.ts",
+      "lane": "live",
+      "qualifiers": [],
+      "owner": "@croco/gamification-drizzle"
+    },
+    {
+      "path": "packages/gamification-drizzle/src/tests/DrizzleRewardStore.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/gamification-drizzle"
+    },
+    {
+      "path": "packages/gamification-drizzle/src/tests/MissionCompletedDomainEvent.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/gamification-drizzle"
+    },
+    {
+      "path": "packages/gamification-drizzle/src/tests/MissionMigration.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/gamification-drizzle"
     },
     {
       "path": "packages/gid-core/src/tests/GidProblems.spec.ts",
@@ -2297,6 +3206,24 @@
       "owner": "@croco/invitation-drizzle"
     },
     {
+      "path": "packages/lifecycle-core/src/tests/JourneyDefinition.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/lifecycle-core"
+    },
+    {
+      "path": "packages/lifecycle-core/src/tests/JourneyDryRun.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/lifecycle-core"
+    },
+    {
+      "path": "packages/lifecycle-core/src/tests/JourneyEngine.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/lifecycle-core"
+    },
+    {
       "path": "packages/lifecycle-core/src/tests/LifecycleCore.spec.ts",
       "lane": "fast",
       "qualifiers": [],
@@ -2304,6 +3231,12 @@
     },
     {
       "path": "packages/lifecycle-core/src/tests/LifecycleRuleVersioning.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/lifecycle-core"
+    },
+    {
+      "path": "packages/lifecycle-core/src/tests/LifecycleSourceIdentity.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/lifecycle-core"
@@ -2319,6 +3252,18 @@
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/lifecycle-core"
+    },
+    {
+      "path": "packages/lifecycle-drizzle/src/tests/PostgresJourneyStore.postgres.spec.ts",
+      "lane": "live",
+      "qualifiers": [],
+      "owner": "@croco/lifecycle-drizzle"
+    },
+    {
+      "path": "packages/lifecycle-drizzle/src/tests/PostgresJourneyStore.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/lifecycle-drizzle"
     },
     {
       "path": "packages/membership-core/src/tests/MembershipManager.spec.ts",
@@ -2358,6 +3303,12 @@
     },
     {
       "path": "packages/membership-drizzle/src/tests/DrizzleProviderConformance.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/membership-drizzle"
+    },
+    {
+      "path": "packages/membership-drizzle/src/tests/MembershipSchema.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/membership-drizzle"
@@ -2435,8 +3386,20 @@
       "owner": "@croco/meta-vite"
     },
     {
+      "path": "packages/meta-vite/src/tests/personalized-fragments.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/meta-vite"
+    },
+    {
       "path": "packages/meta-vite/src/tests/published-contract.spec.ts",
       "lane": "published",
+      "qualifiers": [],
+      "owner": "@croco/meta-vite"
+    },
+    {
+      "path": "packages/meta-vite/src/tests/real-http-stream.spec.ts",
+      "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/meta-vite"
     },
@@ -2502,6 +3465,12 @@
     },
     {
       "path": "packages/meta-vite/src/tests/server-action.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/meta-vite"
+    },
+    {
+      "path": "packages/meta-vite/src/tests/shell-streaming.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/meta-vite"
@@ -2663,13 +3632,37 @@
       "owner": "@croco/metrics-billing"
     },
     {
+      "path": "packages/metrics-core/src/tests/ActivationCandidates.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/metrics-core"
+    },
+    {
+      "path": "packages/metrics-core/src/tests/ActivationSources.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/metrics-core"
+    },
+    {
       "path": "packages/metrics-core/src/tests/BehaviorMetrics.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/metrics-core"
     },
     {
+      "path": "packages/metrics-core/src/tests/BehaviorSources.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/metrics-core"
+    },
+    {
       "path": "packages/metrics-core/src/tests/CarryingCapacity.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/metrics-core"
+    },
+    {
+      "path": "packages/metrics-core/src/tests/ExperimentReview.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/metrics-core"
@@ -2682,6 +3675,18 @@
     },
     {
       "path": "packages/metrics-core/src/tests/Ltv.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/metrics-core"
+    },
+    {
+      "path": "packages/metrics-core/src/tests/MetricExpression.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/metrics-core"
+    },
+    {
+      "path": "packages/metrics-core/src/tests/MetricReadService.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/metrics-core"
@@ -2700,6 +3705,12 @@
     },
     {
       "path": "packages/metrics-core/src/tests/MrrCalculator.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/metrics-core"
+    },
+    {
+      "path": "packages/metrics-core/src/tests/PolicyReplay.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/metrics-core"
@@ -2813,6 +3824,24 @@
       "owner": "@croco/notifications-core"
     },
     {
+      "path": "packages/notifications-fcm/src/tests/FcmLifecycle.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/notifications-fcm"
+    },
+    {
+      "path": "packages/notifications-fcm/src/tests/FcmProvider.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/notifications-fcm"
+    },
+    {
+      "path": "packages/notifications-fcm/src/tests/NotificationProviderConformance.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/notifications-fcm"
+    },
+    {
       "path": "packages/notifications-react-email/src/tests/PublishedReactEmail.spec.ts",
       "lane": "published",
       "qualifiers": [],
@@ -2843,6 +3872,12 @@
       "owner": "@croco/notifications-resend"
     },
     {
+      "path": "packages/onboarding-core/src/tests/GoalManager.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/onboarding-core"
+    },
+    {
       "path": "packages/onboarding-core/src/tests/InMemoryOnboardingStore.spec.ts",
       "lane": "fast",
       "qualifiers": [],
@@ -2859,6 +3894,18 @@
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/onboarding-core"
+    },
+    {
+      "path": "packages/onboarding-drizzle/src/tests/DrizzleGoalStore.postgres.spec.ts",
+      "lane": "live",
+      "qualifiers": [],
+      "owner": "@croco/onboarding-drizzle"
+    },
+    {
+      "path": "packages/onboarding-drizzle/src/tests/DrizzleOnboardingStore.postgres.spec.ts",
+      "lane": "live",
+      "qualifiers": [],
+      "owner": "@croco/onboarding-drizzle"
     },
     {
       "path": "packages/onboarding-drizzle/src/tests/DrizzleOnboardingStore.spec.ts",
@@ -2880,6 +3927,12 @@
     },
     {
       "path": "packages/openapi-spec/src/tests/Cli.spec.ts",
+      "lane": "fast",
+      "qualifiers": ["coverage"],
+      "owner": "@croco/openapi-spec"
+    },
+    {
+      "path": "packages/openapi-spec/src/tests/LocaleGeneration.spec.ts",
       "lane": "fast",
       "qualifiers": ["coverage"],
       "owner": "@croco/openapi-spec"
@@ -2919,6 +3972,24 @@
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/outbox-core"
+    },
+    {
+      "path": "packages/oxlint-rules/src/tests/NoCrossDomainImport.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/oxlint-rules"
+    },
+    {
+      "path": "packages/oxlint-rules/src/tests/NoDatasourceImport.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/oxlint-rules"
+    },
+    {
+      "path": "packages/oxlint-rules/src/tests/decorator-binding.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/oxlint-rules"
     },
     {
       "path": "packages/oxlint-rules/src/tests/index.spec.ts",
@@ -3071,6 +4142,36 @@
       "owner": "@croco/problems-core"
     },
     {
+      "path": "packages/promotions-core/src/tests/OfferPolicy.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/promotions-core"
+    },
+    {
+      "path": "packages/promotions-core/src/tests/OfferService.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/promotions-core"
+    },
+    {
+      "path": "packages/promotions-core/src/tests/QuoteDiscount.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/promotions-core"
+    },
+    {
+      "path": "packages/promotions-drizzle/src/tests/PostgresPromotionStore.postgres.spec.ts",
+      "lane": "live",
+      "qualifiers": [],
+      "owner": "@croco/promotions-drizzle"
+    },
+    {
+      "path": "packages/promotions-drizzle/src/tests/PostgresPromotionStore.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/promotions-drizzle"
+    },
+    {
       "path": "packages/protocol-codegen/src/tests/ControllerProject.spec.ts",
       "lane": "fast",
       "qualifiers": [],
@@ -3095,6 +4196,12 @@
       "owner": "@croco/protocols-core"
     },
     {
+      "path": "packages/protocols-core/src/tests/ContractSuccessStatus.spec.ts",
+      "lane": "fast",
+      "qualifiers": ["coverage"],
+      "owner": "@croco/protocols-core"
+    },
+    {
       "path": "packages/protocols-core/src/tests/RoutePath.spec.ts",
       "lane": "fast",
       "qualifiers": ["coverage"],
@@ -3102,6 +4209,12 @@
     },
     {
       "path": "packages/protocols-core/src/tests/SchemaDescriptor.spec.ts",
+      "lane": "fast",
+      "qualifiers": ["coverage"],
+      "owner": "@croco/protocols-core"
+    },
+    {
+      "path": "packages/protocols-core/src/tests/UnsupportedZodMajor.spec.ts",
       "lane": "fast",
       "qualifiers": ["coverage"],
       "owner": "@croco/protocols-core"
@@ -3299,6 +4412,18 @@
       "owner": "@croco/protocols-trpc"
     },
     {
+      "path": "packages/protocols-trpc/src/tests/TrpcPipes.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/protocols-trpc"
+    },
+    {
+      "path": "packages/protocols-trpc/src/tests/TrpcRateLimit.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/protocols-trpc"
+    },
+    {
       "path": "packages/protocols-trpc/src/tests/createTrpcRouter.spec.ts",
       "lane": "fast",
       "qualifiers": [],
@@ -3369,6 +4494,24 @@
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/ratelimit-upstash"
+    },
+    {
+      "path": "packages/referral-core/src/tests/ReferralService.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/referral-core"
+    },
+    {
+      "path": "packages/referral-drizzle/src/tests/PostgresReferralStore.postgres.spec.ts",
+      "lane": "live",
+      "qualifiers": [],
+      "owner": "@croco/referral-drizzle"
+    },
+    {
+      "path": "packages/referral-drizzle/src/tests/PostgresReferralStore.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/referral-drizzle"
     },
     {
       "path": "packages/repository-core/src/tests/BatchLoadProblems.spec.ts",
@@ -3474,6 +4617,12 @@
     },
     {
       "path": "packages/rpc-codegen/src/tests/ContractCheckCli.spec.ts",
+      "lane": "fast",
+      "qualifiers": ["coverage"],
+      "owner": "@croco/rpc-codegen"
+    },
+    {
+      "path": "packages/rpc-codegen/src/tests/LocaleGeneration.spec.ts",
       "lane": "fast",
       "qualifiers": ["coverage"],
       "owner": "@croco/rpc-codegen"
@@ -3983,6 +5132,12 @@
       "owner": "@croco/tenant-core"
     },
     {
+      "path": "packages/tenant-core/src/tests/TenantRequiredProblem.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/tenant-core"
+    },
+    {
       "path": "packages/testing-resources/src/tests/PluginApplicationRuntime.spec.ts",
       "lane": "fast",
       "qualifiers": [],
@@ -4026,6 +5181,12 @@
     },
     {
       "path": "packages/testing/src/tests/ContractTesting.spec.ts",
+      "lane": "fast",
+      "qualifiers": ["coverage"],
+      "owner": "@croco/testing"
+    },
+    {
+      "path": "packages/testing/src/tests/EventTestingHarness.spec.ts",
       "lane": "fast",
       "qualifiers": ["coverage"],
       "owner": "@croco/testing"
@@ -4101,6 +5262,12 @@
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/transports-cloudflare-workers"
+    },
+    {
+      "path": "packages/transports-graphql/src/tests/GraphQLExecutionMiddleware.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/transports-graphql"
     },
     {
       "path": "packages/transports-graphql/src/tests/GraphQLServer.lazy-import.spec.ts",
@@ -4517,6 +5684,54 @@
       "owner": "@croco/ui-astryx"
     },
     {
+      "path": "packages/warehouse-core/src/tests/FixtureImporter.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/warehouse-core"
+    },
+    {
+      "path": "packages/warehouse-core/src/tests/WarehouseContract.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/warehouse-core"
+    },
+    {
+      "path": "packages/warehouse-core/src/tests/WarehouseRuntime.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/warehouse-core"
+    },
+    {
+      "path": "packages/warehouse-core/src/tests/WarehouseTypes.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/warehouse-core"
+    },
+    {
+      "path": "packages/warehouse-postgres/src/tests/CompilePostgresMetric.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/warehouse-postgres"
+    },
+    {
+      "path": "packages/warehouse-postgres/src/tests/Pipeline.integration.spec.ts",
+      "lane": "integration",
+      "qualifiers": [],
+      "owner": "@croco/warehouse-postgres"
+    },
+    {
+      "path": "packages/warehouse-postgres/src/tests/PostgresMetricRead.integration.spec.ts",
+      "lane": "integration",
+      "qualifiers": [],
+      "owner": "@croco/warehouse-postgres"
+    },
+    {
+      "path": "packages/warehouse-postgres/src/tests/PostgresMetricRead.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/warehouse-postgres"
+    },
+    {
       "path": "packages/warehouse-postgres/src/tests/PostgresMetricsStore.integration.spec.ts",
       "lane": "live",
       "qualifiers": [],
@@ -4527,6 +5742,54 @@
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/warehouse-postgres"
+    },
+    {
+      "path": "packages/warehouse-postgres/src/tests/PostgresWarehouseCatalog.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/warehouse-postgres"
+    },
+    {
+      "path": "packages/warehouse-postgres/src/tests/PostgresWarehouseFacts.integration.spec.ts",
+      "lane": "integration",
+      "qualifiers": [],
+      "owner": "@croco/warehouse-postgres"
+    },
+    {
+      "path": "packages/warehouse-postgres/src/tests/PostgresWarehouseReader.integration.spec.ts",
+      "lane": "integration",
+      "qualifiers": [],
+      "owner": "@croco/warehouse-postgres"
+    },
+    {
+      "path": "packages/warehouse-postgres/src/tests/PostgresWarehouseReader.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/warehouse-postgres"
+    },
+    {
+      "path": "packages/warehouse-postgres/src/tests/PostgresWarehouseWriter.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/warehouse-postgres"
+    },
+    {
+      "path": "packages/warehouse-tooling/src/tests/DataCompiler.integration.spec.ts",
+      "lane": "integration",
+      "qualifiers": [],
+      "owner": "@croco/warehouse-tooling"
+    },
+    {
+      "path": "packages/warehouse-tooling/src/tests/DataCompiler.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/warehouse-tooling"
+    },
+    {
+      "path": "packages/warehouse-tooling/src/tests/Generation.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/warehouse-tooling"
     },
     {
       "path": "packages/webhooks-core/src/tests/OutboundWebhookRuntime.spec.ts",
@@ -4572,6 +5835,12 @@
     },
     {
       "path": "packages/workflow-core/src/tests/SagaRunner.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/workflow-core"
+    },
+    {
+      "path": "packages/workflow-core/src/tests/WorkflowClock.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/workflow-core"
@@ -4763,6 +6032,12 @@
       "owner": "repo:ci"
     },
     {
+      "path": "scripts/tests/compareStrings.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "repo:ci"
+    },
+    {
       "path": "scripts/tests/compiler-baseline-check.spec.ts",
       "lane": "fast",
       "qualifiers": [],
@@ -4866,6 +6141,12 @@
     },
     {
       "path": "scripts/tests/package-roles.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "repo:ci"
+    },
+    {
+      "path": "scripts/tests/package-test-typecheck-check.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "repo:ci"

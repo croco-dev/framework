@@ -5,6 +5,12 @@ import type {
   InvitationStatus,
 } from "./types";
 
+export type InvitationStatusTransitionMeta = {
+  acceptedAt?: Date;
+  rejectedAt?: Date;
+  revokedAt?: Date;
+};
+
 export abstract class InvitationStore {
   abstract findById(id: string): Promise<Invitation | null>;
   abstract findByTokenHash(tokenHash: string): Promise<Invitation | null>;
@@ -65,7 +71,7 @@ export abstract class InvitationStore {
     id: string,
     expected: InvitationStatus,
     desired: InvitationStatus,
-    meta?: { acceptedAt?: Date; rejectedAt?: Date },
+    meta?: InvitationStatusTransitionMeta,
   ): Promise<Invitation | null>;
   /** Count all invitations created at or after since for this tenant, regardless of status. */
   abstract countIssuedByTenant(tenantId: string, since: Date): Promise<number>;

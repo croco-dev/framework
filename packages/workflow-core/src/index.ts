@@ -11,6 +11,7 @@ export {
   SagaReplayProblem,
   SagaStoreConflictProblem,
   WorkflowDefinitionProblem,
+  WorkflowExecutionCancelledProblem,
   WorkflowExecutionFailedProblem,
   WorkflowExecutionInProgressProblem,
   WorkflowNotFoundProblem,

@@ -639,7 +639,9 @@ export class DrizzleMembershipStore extends MembershipStore {
       select ${command.membershipId}, ${command.tenantId}, ${command.userId}, ${command.role}, slot
       from candidate
       on conflict do nothing
-      returning id, tenant_id, user_id, role, created_at, updated_at
+      returning id, tenant_id, user_id, role,
+        created_at at time zone 'utc' as created_at,
+        updated_at at time zone 'utc' as updated_at
     `)) as unknown as { rows: RawMembershipRow[] };
     const row = result.rows[0];
     if (row) return this.mapRawToMembership(row);

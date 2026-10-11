@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "extends": "../../tsconfig/tsconfig.node.json",
+  "compilerOptions": {
+    "paths": {
+      "@croco/diagnostics-core": ["../diagnostics-core/src/index.ts"],
+      "@croco/execution-core": ["../execution-core/src/index.ts"],
+      "@croco/lifecycle-core": ["../lifecycle-core/src/index.ts"],
+      "@croco/problems-core": ["../problems-core/src/index.ts"],
+      "@croco/admin-core": ["../admin-core/src/index.ts"],
+      "@croco/admin-core/fact-history-validation": ["../admin-core/src/fact-history-validation.ts"],
+      "@croco/experience-core": ["../experience-core/src/index.ts"]
+    },
+    "target": "ES2022"
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules"]
+}

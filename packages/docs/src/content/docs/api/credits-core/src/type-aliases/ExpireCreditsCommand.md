@@ -13,9 +13,9 @@ title: "ExpireCreditsCommand"
 
 > `readonly` **accountId**: [`CreditAccountId`](/api/credits-core/src/type-aliases/creditaccountid/)
 
-### asOf
+### asOf?
 
-> `readonly` **asOf**: `Date`
+> `readonly` `optional` **asOf?**: `Date`
 
 ### cursor?
 

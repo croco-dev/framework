@@ -15,13 +15,19 @@ title: "CircuitBreakerOpenProblem"
 
 ### Constructor
 
-> **new CircuitBreakerOpenProblem**(`circuitId`): `CircuitBreakerOpenProblem`
+> **new CircuitBreakerOpenProblem**(`circuitId`, `options?`): `CircuitBreakerOpenProblem`
 
 #### Parameters
 
 ##### circuitId
 
 `string`
+
+##### options?
+
+###### cause?
+
+`Error`
 
 #### Returns
 

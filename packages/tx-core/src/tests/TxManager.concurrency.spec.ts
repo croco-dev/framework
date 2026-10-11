@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   AfterCommitHooksProblem,
   InvalidTransactionTimeoutProblem,
+  JoinedTransactionTimeoutProblem,
   Transactional,
   TransactionOutcomeUnknownProblem,
   TransactionRollbackConfirmedProblem,
@@ -697,6 +698,77 @@ describe("TxManager Transaction Timeout", () => {
           { timeout: 1000 },
         ),
       ).rejects.toThrow(TransactionTimeoutProblem);
+    });
+  });
+
+  describe("timeout with joined nesting", () => {
+    it("should reject an explicit joined timeout before invoking the nested operation", async () => {
+      const adapter = createMockAdapter();
+      const nestedOperation = vi.fn(async () => "nested");
+      txManager = new TxManager(adapter);
+
+      await txManager.run(async () => {
+        await expect(
+          txManager.run(nestedOperation, { nesting: "join", timeout: 10 }),
+        ).rejects.toThrow(JoinedTransactionTimeoutProblem);
+      });
+
+      expect(nestedOperation).not.toHaveBeenCalled();
+      expect(adapter.transaction).toHaveBeenCalledTimes(1);
+      expect(adapter.savepoint).not.toHaveBeenCalled();
+    });
+
+    it("should reject an inherited timeout for the default join strategy", async () => {
+      const adapter = createMockAdapter();
+      const nestedOperation = vi.fn(async () => "nested");
+      txManager = new TxManager(adapter, { defaultTimeout: 1000 });
+
+      await txManager.run(async () => {
+        await expect(txManager.run(nestedOperation)).rejects.toThrow(
+          JoinedTransactionTimeoutProblem,
+        );
+      });
+
+      expect(nestedOperation).not.toHaveBeenCalled();
+      expect(adapter.savepoint).not.toHaveBeenCalled();
+    });
+
+    it("should reject a timed savepoint when the adapter can only join", async () => {
+      const adapter = createMockAdapter({ supportsSavepoint: false });
+      const nestedOperation = vi.fn(async () => "nested");
+      txManager = new TxManager(adapter);
+
+      await txManager.run(async () => {
+        await expect(
+          txManager.run(nestedOperation, { nesting: "savepoint", timeout: 10 }),
+        ).rejects.toThrow(JoinedTransactionTimeoutProblem);
+      });
+
+      expect(nestedOperation).not.toHaveBeenCalled();
+      expect(adapter.savepoint).not.toHaveBeenCalled();
+    });
+
+    it("should reject a timed join inside a savepoint without aborting the savepoint", async () => {
+      const adapter = createMockAdapter();
+      const nestedOperation = vi.fn(async () => "nested");
+      txManager = new TxManager(adapter);
+
+      await expect(
+        txManager.run(() =>
+          txManager.run(
+            async () => {
+              await expect(
+                txManager.run(nestedOperation, { nesting: "join", timeout: 10 }),
+              ).rejects.toThrow(JoinedTransactionTimeoutProblem);
+              return "savepoint committed";
+            },
+            { nesting: "savepoint" },
+          ),
+        ),
+      ).resolves.toBe("savepoint committed");
+
+      expect(nestedOperation).not.toHaveBeenCalled();
+      expect(adapter.savepoint).toHaveBeenCalledTimes(1);
     });
   });
 

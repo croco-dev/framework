@@ -1,4 +1,4 @@
-import { InMemoryIdempotencyStore, type IdempotencyStore } from "@croco/idempotency-core";
+import { InMemoryIdempotencyStore, type LeaseAwareIdempotencyStore } from "@croco/idempotency-core";
 import { WebhookGateway } from "./WebhookGateway";
 import { createWebhookEventRouter } from "./WebhookEventRouter";
 import { normalizeWebhookHeaders } from "./headers";
@@ -27,8 +27,8 @@ export type WebhookProviderAdapterConformanceOptions<TEvent extends WebhookEvent
     readonly provider?: string;
   };
   readonly createIdempotencyStore?: () =>
-    | Promise<IdempotencyStore<WebhookGatewayStoredResult>>
-    | IdempotencyStore<WebhookGatewayStoredResult>;
+    | Promise<LeaseAwareIdempotencyStore<WebhookGatewayStoredResult>>
+    | LeaseAwareIdempotencyStore<WebhookGatewayStoredResult>;
 };
 
 export type WebhookProviderAdapterConformanceSuite = {

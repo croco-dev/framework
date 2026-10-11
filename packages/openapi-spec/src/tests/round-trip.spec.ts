@@ -6,12 +6,14 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { Problem, ProblemCategory } from "@croco/problems-core";
-import { extractRouteIR } from "@croco/protocols-core";
+import { buildContractGraph, extractRouteIR } from "@croco/protocols-core";
 import {
   Body,
   Controller,
+  defineRouteContract,
   Get,
   Header,
+  HttpMethod,
   Param,
   Post,
   ProblemResponse,
@@ -96,6 +98,61 @@ class RoundTripWidgetNotFoundProblem extends Problem {
 }
 
 describe("OpenAPI round trip", () => {
+  it("keeps refined contract query fields aligned with OpenAPI documentation", async () => {
+    const queryInput = z.object({
+      page: z.coerce.number().int().min(1),
+      size: z.coerce.number().int().min(1).max(100),
+    });
+    const listItemsContract = defineRouteContract({
+      id: "items.list",
+      method: HttpMethod.GET,
+      path: "/items",
+      query: queryInput.refine(({ page }) => page > 0),
+      response: z.array(z.string()),
+    });
+
+    @Controller("/items")
+    class ItemsController {
+      @Get(listItemsContract)
+      listItems(
+        @Query(listItemsContract, "page") _page: number,
+        @Query(listItemsContract, "size") _size: number,
+      ): string[] {
+        return [];
+      }
+    }
+
+    const spec = emitOpenAPI([ItemsController]);
+    expect(spec.paths?.["/items"]?.get?.parameters).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          in: "query",
+          name: "page",
+          required: true,
+          schema: expect.objectContaining({ type: "integer" }),
+        }),
+        expect.objectContaining({
+          in: "query",
+          name: "size",
+          required: true,
+          schema: expect.objectContaining({ type: "integer" }),
+        }),
+      ]),
+    );
+
+    const app = createApp({
+      controllers: [ItemsController],
+      diValidation: "off",
+      securityValidation: "off",
+    });
+    const missingSize = await app.fetch(new Request("http://localhost/items?page=2"));
+    const complete = await app.fetch(new Request("http://localhost/items?page=2&size=10"));
+
+    expect(missingSize.status).toBe(422);
+    expect(complete.status).toBe(200);
+    expect(await complete.json()).toEqual([]);
+  });
+
   it("dispatches a concrete path to the operation documented by OpenAPI", async () => {
     @Controller("/users")
     class UserController {
@@ -769,3 +826,38 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 function isString(value: unknown): value is string {
   return typeof value === "string";
 }
+
+describe("renamed path parameters", () => {
+  it.each([
+    ["/:id", "/:userId"],
+    ["/:...path", "/:...rest"],
+  ])(
+    "rejects matching route templates %s and %s before bootstrap or generation",
+    (firstPath, secondPath) => {
+      @Controller("/users")
+      class UsersController {
+        @Get(firstPath)
+        @ResponseSchema(z.object({ id: z.string() }))
+        first() {
+          return { id: "1" };
+        }
+      }
+      @Controller("/users")
+      class LegacyController {
+        @Get(secondPath)
+        @ResponseSchema(z.object({ id: z.string() }))
+        second() {
+          return { id: "2" };
+        }
+      }
+      const controllers = [UsersController, LegacyController];
+      expect(() => createApp({ controllers, securityValidation: "off" }).getHono()).toThrow(
+        /Duplicate route/,
+      );
+      expect(buildContractGraph(controllers).diagnostics).toContainEqual(
+        expect.objectContaining({ code: "contract-route-duplicate-path", severity: "error" }),
+      );
+      expect(() => emitOpenAPI(controllers)).toThrow(/contract-route-duplicate-path/);
+    },
+  );
+});

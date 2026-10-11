@@ -76,7 +76,15 @@ function getNestedValue(sources: readonly Record<string, unknown>[], key: string
 }
 
 function extractRoles(user: readonly Record<string, unknown>[]): string[] {
-  return mergeStringArrays(getNestedValue(user, "roles"), getNestedValue(user, "role"));
+  const role = getNestedValue(user, "role");
+  const roles =
+    typeof role === "string"
+      ? role
+          .split(",")
+          .map((item) => item.trim())
+          .filter(Boolean)
+      : role;
+  return mergeStringArrays(getNestedValue(user, "roles"), roles);
 }
 
 function extractPermissions(user: readonly Record<string, unknown>[]): string[] {

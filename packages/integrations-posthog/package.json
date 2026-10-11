@@ -20,7 +20,10 @@
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
+      "types": {
+        "import": "./dist/index.d.mts",
+        "require": "./dist/index.d.ts"
+      },
       "import": "./dist/index.mjs",
       "require": "./dist/index.js"
     }
@@ -30,7 +33,10 @@
     "types": "./dist/index.d.ts",
     "exports": {
       ".": {
-        "types": "./dist/index.d.ts",
+        "types": {
+          "import": "./dist/index.d.mts",
+          "require": "./dist/index.d.ts"
+        },
         "import": "./dist/index.mjs",
         "require": "./dist/index.js"
       }
@@ -49,6 +55,7 @@
   "dependencies": {
     "@croco/framework-context": "workspace:*",
     "@croco/problems-core": "workspace:*",
+    "axios": "1.20.0",
     "posthog-node": "^4.0.0"
   },
   "devDependencies": {

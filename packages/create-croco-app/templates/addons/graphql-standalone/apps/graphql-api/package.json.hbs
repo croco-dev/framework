@@ -9,6 +9,7 @@
     "contract:check": "tsx src/graphql-contract.ts --check",
     "contract:snapshot": "tsx src/graphql-contract.ts --write",
     "dev": "tsx watch src/index.ts",
+    "test": "vitest run",
     "typecheck": "pnpm contract:check && tsc --noEmit"
   },
   "dependencies": {
@@ -23,6 +24,7 @@
   "devDependencies": {
     "tsup": "^8.5.1",
     "tsx": "^4.0.0",
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.8"
   }
 }

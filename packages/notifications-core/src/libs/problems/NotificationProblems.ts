@@ -43,6 +43,17 @@ export class NotificationProviderNotConfiguredProblem extends Problem {
   }
 }
 
+export class NotificationTaskResultInvalidProblem extends Problem {
+  constructor() {
+    super(
+      "notifications-core/task-result-invalid",
+      ProblemCategory.InternalServerError,
+      "Recorded notification task result does not identify the sending provider",
+      { extensions: { retryable: false } },
+    );
+  }
+}
+
 export class NotificationProviderNotRegisteredProblem extends Problem {
   constructor(providerName: string) {
     super(

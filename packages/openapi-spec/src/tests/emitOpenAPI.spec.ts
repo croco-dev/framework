@@ -33,10 +33,83 @@ import {
 } from "@croco/protocols-rest";
 import { beforeEach, describe, expect, it } from "vitest";
 import { z } from "zod";
+import { z as z4 } from "zod/v4";
 import { emitOpenAPI, emitOpenAPIFromContractGraph } from "../libs/emitOpenAPI";
 
 describe("emitOpenAPI", () => {
   beforeEach(() => {});
+
+  it.each(["params", "query", "body", "response"] as const)(
+    "rejects a Zod 4 route-contract %s schema with its source diagnostic",
+    (schemaKind) => {
+      const supportedSchema = z.object({ id: z.string() });
+      const unsupportedSchema = z4.object({ id: z4.string() }) as unknown as typeof supportedSchema;
+      const contract = defineRouteContract({
+        method: HttpMethod.POST,
+        path: "/unsupported-zod/:id",
+        params: supportedSchema,
+        query: supportedSchema,
+        body: supportedSchema,
+        response: supportedSchema,
+        [schemaKind]: unsupportedSchema,
+      });
+
+      @Controller("/unsupported-zod")
+      class UnsupportedZodController {
+        @Post(contract)
+        handle(
+          @Param(contract, "id") _id: string,
+          @Query(contract, "id") _queryId: string,
+          @Body(contract) body: { id: string },
+        ): { id: string } {
+          return body;
+        }
+      }
+
+      expect(() => emitOpenAPI([UnsupportedZodController])).toThrowError(
+        expect.objectContaining({
+          diagnostics: [
+            expect.objectContaining({
+              code: "contract-schema-unsupported-zod-major",
+              routeId: "UnsupportedZodController.handle",
+              sourceLocation: expect.objectContaining({
+                path: expect.stringContaining("emitOpenAPI.spec.ts"),
+              }),
+              message: `Route contract ${schemaKind} uses unsupported Zod major 4 (schema kind: object); Croco route contracts require Zod 3.`,
+            }),
+          ],
+        }),
+      );
+    },
+  );
+
+  it("does not expose auth injection parameters as client input", () => {
+    @Controller("/identity")
+    class IdentityController {
+      @Get("/")
+      getIdentity(): void {}
+    }
+
+    Reflect.defineMetadata(
+      Symbol.for("croco:rest:params"),
+      new Map([
+        [
+          "getIdentity",
+          [
+            { index: 0, type: "principal" },
+            { index: 1, type: "user" },
+            { index: 2, type: "apikey" },
+          ],
+        ],
+      ]),
+      IdentityController,
+    );
+
+    const operation = emitOpenAPI([IdentityController]).paths?.["/identity"]?.get;
+
+    expect(operation?.parameters).toBeUndefined();
+    expect(operation?.requestBody).toBeUndefined();
+  });
 
   it("should emit a GET operation with a path parameter", () => {
     @Controller("/users")
@@ -822,6 +895,81 @@ describe("emitOpenAPI", () => {
         },
       },
     });
+  });
+
+  it.each(["plain", "refined"] as const)(
+    "should emit wrapped contract query fields with plain-contract types (%s)",
+    (name) => {
+      const queryInput = z.object({
+        page: z.coerce.number().int().min(1),
+        size: z.coerce.number().int().min(1).max(100),
+      });
+      const query = name === "refined" ? queryInput.refine(({ page }) => page > 0) : queryInput;
+      const listItemsContract = defineRouteContract({
+        id: "items.list",
+        method: HttpMethod.GET,
+        path: "/items",
+        query,
+        response: z.string(),
+      });
+
+      @Controller("/items")
+      class ItemsController {
+        @Get(listItemsContract)
+        listItems(
+          @Query(listItemsContract, "page") _page: number,
+          @Query(listItemsContract, "size") _size: number,
+        ): string {
+          return "ok";
+        }
+      }
+
+      const spec = emitOpenAPI([ItemsController]);
+      const parameters = spec.paths?.["/items"]?.get?.parameters;
+
+      expect(parameters).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            in: "query",
+            name: "page",
+            required: true,
+            schema: expect.objectContaining({ type: "integer" }),
+          }),
+          expect.objectContaining({
+            in: "query",
+            name: "size",
+            required: true,
+            schema: expect.objectContaining({ type: "integer" }),
+          }),
+        ]),
+      );
+    },
+  );
+
+  it("should reject partially bound refined contract query fields", () => {
+    const queryInput = z.object({
+      page: z.coerce.number().int().min(1),
+      size: z.coerce.number().int().min(1).max(100),
+    });
+    const listItemsContract = defineRouteContract({
+      id: "items.list",
+      method: HttpMethod.GET,
+      path: "/items",
+      query: queryInput.refine(({ page }) => page > 0),
+      response: z.string(),
+    });
+
+    @Controller("/items")
+    class ItemsController {
+      @Get(listItemsContract)
+      listItems(@Query(listItemsContract, "page") _page: number): string {
+        return "ok";
+      }
+    }
+
+    expect(() => emitOpenAPI([ItemsController])).toThrow(
+      "contract-route-missing-query-param-binding",
+    );
   });
 
   it("should document Problem Details responses by default", () => {

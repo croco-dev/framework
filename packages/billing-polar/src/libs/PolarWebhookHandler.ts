@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import type { SubscriptionStatus as PolarSubscriptionStatus } from "@polar-sh/sdk/models/components/subscriptionstatus";
 import type {
   BillingSubscriptionWebhookTransition,
   BillingStore,
@@ -192,6 +193,10 @@ export class PolarWebhookHandler {
       return this.processSubscriptionEventAtomically(eventId, parsedEvent);
     }
 
+    if (parsedEvent.kind === "order") {
+      return this.processOrderEventWithLease(eventId, eventType, parsedEvent);
+    }
+
     const shouldProcess = await this.reserveWebhook(eventId, eventType);
     if (!shouldProcess) {
       return { success: true, eventId };
@@ -209,6 +214,53 @@ export class PolarWebhookHandler {
         rollbackErrorMessage
           ? `${baseErrorMessage}; rollback failed: ${rollbackErrorMessage}`
           : baseErrorMessage,
+        this.getProcessingCause(error),
+      );
+    }
+  }
+
+  private async processOrderEventWithLease(
+    eventId: string,
+    eventType: string,
+    event: Extract<ParsedWebhookEvent, { kind: "order" }>,
+  ): Promise<WebhookHandlerResult> {
+    let claim: Awaited<ReturnType<BillingStore["claimWebhookDelivery"]>>;
+    try {
+      claim = await this.store.claimWebhookDelivery(
+        eventId,
+        eventType,
+        PolarWebhookHandler.DELIVERY_LEASE_MS,
+      );
+    } catch (error) {
+      throw new WebhookProcessingProblem(
+        "Webhook delivery claim failed",
+        this.getProcessingCause(error),
+      );
+    }
+    if (claim.status === "completed") return { success: true, eventId };
+    if (claim.status === "in_progress") {
+      throw new WebhookProcessingProblem("Order delivery is already in progress");
+    }
+
+    try {
+      await this.processParsedEvent(eventId, event);
+      const completed = await this.store.completeWebhookDelivery(eventId, claim.token);
+      if (!completed) {
+        throw new WebhookProcessingProblem("Order delivery claim expired before completion");
+      }
+      return { success: true, eventId };
+    } catch (error) {
+      let releaseFailure: string | null = null;
+      try {
+        if (!(await this.store.releaseWebhookDelivery(eventId, claim.token))) {
+          releaseFailure = "delivery claim expired";
+        }
+      } catch (releaseError) {
+        releaseFailure = this.getErrorMessage(releaseError);
+      }
+      const message = `Event processing failed: ${this.getErrorMessage(error)}`;
+      throw new WebhookProcessingProblem(
+        releaseFailure ? `${message}; release failed: ${releaseFailure}` : message,
         this.getProcessingCause(error),
       );
     }
@@ -244,7 +296,12 @@ export class PolarWebhookHandler {
         await this.store.markWebhookEventIntentPublished(eventId, intent.event.eventId);
       }
 
-      await this.store.completeWebhook(eventId);
+      try {
+        await this.store.completeWebhook(eventId);
+      } catch (error) {
+        if (error instanceof WebhookAlreadyProcessedProblem) return { success: true, eventId };
+        throw error;
+      }
       return { success: true, eventId };
     } catch (error) {
       throw new WebhookProcessingProblem(
@@ -282,7 +339,7 @@ export class PolarWebhookHandler {
       return {
         kind: "subscription",
         eventType: eventType as PolarSubscriptionEventType,
-        payload: this.parseSubscriptionPayload(data),
+        payload: this.parseSubscriptionPayload(data, eventType),
       };
     }
 
@@ -308,14 +365,17 @@ export class PolarWebhookHandler {
     }
   }
 
-  private parseSubscriptionPayload(data: unknown): ParsedSubscriptionPayload {
+  private parseSubscriptionPayload(data: unknown, eventType: string): ParsedSubscriptionPayload {
     const subscriptionData = PolarSubscriptionDataSchema.parse(data);
     const providerModifiedAt = new Date(subscriptionData.modifiedAt ?? subscriptionData.createdAt);
     if (Number.isNaN(providerModifiedAt.getTime())) {
       throw new WebhookValidationProblem("Subscription provider timestamp is invalid");
     }
 
-    const status = this.mapStatus(subscriptionData.status);
+    const status =
+      subscriptionData.status === "revoked"
+        ? "revoked"
+        : this.mapStatus(subscriptionData.status, eventType);
     return {
       id: subscriptionData.id,
       tenantId: this.extractTenantId(subscriptionData.customer),
@@ -543,21 +603,23 @@ export class PolarWebhookHandler {
   }
 
   private mapStatus(
-    polarStatus: string,
-  ): "active" | "past_due" | "canceled" | "revoked" | "trialing" {
+    polarStatus: (typeof PolarSubscriptionStatus)[keyof typeof PolarSubscriptionStatus],
+    eventType: string,
+  ): Subscription["status"] {
     switch (polarStatus) {
       case "active":
-        return "active";
       case "past_due":
-        return "past_due";
+      case "trialing":
+        return polarStatus;
       case "canceled":
         return "canceled";
-      case "revoked":
-        return "revoked";
-      case "trialing":
-        return "trialing";
+      case "incomplete":
+      case "incomplete_expired":
+      case "unpaid":
+      case "paused":
+        throw new BillingStatusMappingProblem(polarStatus, eventType);
       default:
-        throw new BillingStatusMappingProblem(polarStatus);
+        throw new BillingStatusMappingProblem(polarStatus satisfies never, eventType);
     }
   }
 

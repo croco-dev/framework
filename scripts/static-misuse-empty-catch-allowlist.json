@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "baselineEntryCount": 6,
+  "baselineEntryCount": 7,
   "description": "Reviewed baseline for CROCO_STATIC_EMPTY_CATCH_RUNTIME_BOUNDARY. New production empty catch blocks must be converted or added with package/file/reason and owner and unexpired expiresOn metadata.",
   "entries": [
     {
@@ -28,12 +28,12 @@
       "excerpt": "} catch {",
       "reason": "Runtime inspector failure reporters are optional instrumentation and must not affect application behavior.",
       "owner": "framework-error-handling",
-      "expiresOn": "2026-09-30"
+      "expiresOn": "2026-10-29"
     },
     {
       "package": "@croco/onboarding-core",
       "file": "packages/onboarding-core/src/libs/OnboardingManager.ts",
-      "line": 160,
+      "line": 219,
       "excerpt": "} catch {",
       "reason": "Analytics delivery is best-effort after onboarding state has already been persisted.",
       "owner": "framework-error-handling",
@@ -51,11 +51,20 @@
     {
       "package": "@croco/transports-graphql",
       "file": "packages/transports-graphql/src/libs/GraphQLServer.ts",
-      "line": 247,
+      "line": 255,
       "excerpt": "} catch {",
       "reason": "Startup logging is optional and must not prevent the GraphQL server from resolving a successful listen callback.",
       "owner": "framework-error-handling",
       "expiresOn": "2026-10-29"
+    },
+    {
+      "package": "@croco/lifecycle-core",
+      "file": "packages/lifecycle-core/src/libs/WebhookLifecycleActionAdapter.ts",
+      "line": 47,
+      "excerpt": "} catch {",
+      "reason": "Reviewed 2026-09-29: response body drain failures must not replace the already-determined webhook status (derived from response.ok/status before the drain). The body is discarded, not interpreted, and the adapter has no diagnostic sink; WebhookLifecycleActionAdapter.spec.ts covers body consumption on both branches.",
+      "owner": "framework-error-handling",
+      "expiresOn": "2026-12-29"
     }
   ]
 }

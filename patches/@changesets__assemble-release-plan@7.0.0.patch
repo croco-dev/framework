@@ -1,0 +1,15 @@
+diff --git a/dist/index.mjs b/dist/index.mjs
+index bfa552e9888167b157de18c4ff3558fb2b21dd98..671371442a8486977173ef7f63a4e8df5e01d27e 100644
+--- a/dist/index.mjs
++++ b/dist/index.mjs
+@@ -92,6 +92,10 @@ function determineDependents({ releases, packagesByName, rootDir, dependencyGrap
+ 				const dependencyPackage = mapGetOrThrowInternal(packagesByName, nextRelease.name, "Dependency map is incorrect");
+ 				const dependencyVersionRanges = getDependencyVersionRanges(rootDir, dependentPackage.packageJson, nextRelease, dependencyPackage);
+ 				for (const { depType, versionRange } of dependencyVersionRanges) if (nextRelease.type === "none") continue;
++				else if (depType === "peerDependencies" && nextRelease.type !== "patch" &&
++					(!config.___experimentalUnsafeOptions_WILL_CHANGE_IN_PATCH.onlyUpdatePeerDependentsWhenOutOfRange ||
++						!semverSatisfies(incrementVersion(nextRelease, preInfo), versionRange)) &&
++					(!releases.has(dependent) || releases.get(dependent).type !== "major")) type = "major";
+ 				else if ((!releases.has(dependent) || releases.get(dependent).type === "none") && (config.___experimentalUnsafeOptions_WILL_CHANGE_IN_PATCH.updateInternalDependents === "always" || !semverSatisfies(incrementVersion(nextRelease, preInfo), versionRange))) switch (depType) {
+ 					case "dependencies":
+ 					case "optionalDependencies":

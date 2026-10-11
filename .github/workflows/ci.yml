@@ -650,6 +650,8 @@ jobs:
               - 'packages/auth-drizzle/**'
               - 'packages/analytics-core/**'
               - 'packages/analytics-drizzle/**'
+              - 'packages/cohort-core/**'
+              - 'packages/cohort-drizzle/**'
               - 'packages/credits-core/**'
               - 'packages/credits-drizzle/**'
               - 'packages/customer-health-core/**'
@@ -658,11 +660,16 @@ jobs:
               - 'packages/engagement-drizzle/**'
               - 'packages/entitlements-core/**'
               - 'packages/entitlements-drizzle/**'
+              - 'packages/etl-core/**'
+              - 'packages/etl-events-tx/**'
               - 'packages/events-core/**'
               - 'packages/events-tx/**'
               - 'packages/execution-core/**'
               - 'packages/execution-drizzle/**'
+              - 'packages/experience-drizzle/**'
               - 'packages/framework-context/**'
+              - 'packages/gamification-core/**'
+              - 'packages/gamification-drizzle/**'
               - 'packages/membership-core/**'
               - 'packages/membership-drizzle/**'
               - 'packages/metering-core/**'
@@ -671,6 +678,8 @@ jobs:
               - 'packages/warehouse-postgres/**'
               - 'packages/migration-runner/**'
               - 'packages/problems-core/**'
+              - 'packages/promotions-core/**'
+              - 'packages/promotions-drizzle/**'
               - 'packages/testing/**'
               - 'packages/testing-resources/**'
               - 'packages/transports-http/**'
@@ -682,6 +691,7 @@ jobs:
               - 'packages/admin-core/src/**'
               - 'packages/admin-generated/src/**'
               - 'packages/admin-ops/src/**'
+              - 'packages/admin-postgres/src/**'
               - 'packages/admin-react/src/**'
               - 'packages/ai-usage/src/**'
               - 'packages/analytics-core/src/**'
@@ -697,9 +707,12 @@ jobs:
               - 'packages/batch-core/src/**'
               - 'packages/batch-qstash/src/**'
               - 'packages/billing-core/src/**'
+              - 'packages/billing-drizzle/src/**'
               - 'packages/billing-polar/src/**'
               - 'packages/cache-core/src/**'
               - 'packages/cli/src/**'
+              - 'packages/cohort-core/src/**'
+              - 'packages/cohort-drizzle/src/**'
               - 'packages/create-croco-app/src/**'
               - 'packages/credits-core/src/**'
               - 'packages/credits-drizzle/src/**'
@@ -712,12 +725,17 @@ jobs:
               - 'packages/entitlements-core/src/**'
               - 'packages/entitlements-drizzle/src/**'
               - 'packages/esbuild-plugin/src/**'
+              - 'packages/etl-core/src/**'
+              - 'packages/etl-events-tx/src/**'
               - 'packages/events-core/src/**'
               - 'packages/events-inmemory/src/**'
               - 'packages/events-tx/src/**'
               - 'packages/execution-core/src/**'
               - 'packages/execution-drizzle/src/**'
+              - 'packages/experience-core/src/**'
+              - 'packages/experience-drizzle/src/**'
               - 'packages/features-core/src/**'
+              - 'packages/features-drizzle/src/**'
               - 'packages/features-posthog/src/**'
               - 'packages/framework-config/src/**'
               - 'packages/framework-context/src/**'
@@ -729,6 +747,8 @@ jobs:
               - 'packages/frontend-problems/src/**'
               - 'packages/frontend-react/src/**'
               - 'packages/frontend-vite/src/**'
+              - 'packages/gamification-core/src/**'
+              - 'packages/gamification-drizzle/src/**'
               - 'packages/gid-core/src/**'
               - 'packages/governance-core/src/**'
               - 'packages/health-core/src/**'
@@ -738,6 +758,7 @@ jobs:
               - 'packages/invitation-core/src/**'
               - 'packages/invitation-drizzle/src/**'
               - 'packages/lifecycle-core/src/**'
+              - 'packages/lifecycle-drizzle/src/**'
               - 'packages/membership-core/src/**'
               - 'packages/membership-drizzle/src/**'
               - 'packages/meta-vite/src/**'
@@ -748,6 +769,7 @@ jobs:
               - 'packages/metrics-core/src/**'
               - 'packages/migration-runner/src/**'
               - 'packages/notifications-core/src/**'
+              - 'packages/notifications-fcm/src/**'
               - 'packages/notifications-react-email/src/**'
               - 'packages/notifications-resend/src/**'
               - 'packages/onboarding-core/src/**'
@@ -760,6 +782,8 @@ jobs:
               - 'packages/preset-lambda/src/**'
               - 'packages/preset-node/src/**'
               - 'packages/problems-core/src/**'
+              - 'packages/promotions-core/src/**'
+              - 'packages/promotions-drizzle/src/**'
               - 'packages/protocol-codegen/src/**'
               - 'packages/protocols-core/src/**'
               - 'packages/protocols-graphql/src/**'
@@ -767,6 +791,8 @@ jobs:
               - 'packages/protocols-trpc/src/**'
               - 'packages/ratelimit-core/src/**'
               - 'packages/ratelimit-upstash/src/**'
+              - 'packages/referral-core/src/**'
+              - 'packages/referral-drizzle/src/**'
               - 'packages/repository-core/src/**'
               - 'packages/retry-core/src/**'
               - 'packages/rpc-codegen/src/**'
@@ -792,7 +818,9 @@ jobs:
               - 'packages/tx-core/src/**'
               - 'packages/tx-drizzle/src/**'
               - 'packages/ui-astryx/src/**'
+              - 'packages/warehouse-core/src/**'
               - 'packages/warehouse-postgres/src/**'
+              - 'packages/warehouse-tooling/src/**'
               - 'packages/webhooks-core/src/**'
               - 'packages/workflow-core/src/**'
               - 'packages/*/package.json'
@@ -1485,16 +1513,26 @@ jobs:
       - name: Verify persistence concurrency against PostgreSQL
         env:
           ANALYTICS_POSTGRES_URL: postgresql://postgres:postgres@127.0.0.1:5432/croco_membership
+          COHORT_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/croco_membership
           CREDITS_POSTGRES_URL: postgresql://postgres:postgres@127.0.0.1:5432/croco_membership
           CUSTOMER_HEALTH_POSTGRES_URL: postgresql://postgres:postgres@127.0.0.1:5432/croco_membership
           ENGAGEMENT_POSTGRES_URL: postgresql://postgres:postgres@127.0.0.1:5432/croco_membership
           ENTITLEMENTS_POSTGRES_URL: postgresql://postgres:postgres@127.0.0.1:5432/croco_membership
           EXECUTION_POSTGRES_URL: postgresql://postgres:postgres@127.0.0.1:5432/croco_membership
+          EXPERIENCE_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/croco_membership
+          FEATURES_POSTGRES_URL: postgresql://postgres:postgres@127.0.0.1:5432/croco_membership
+          GAMIFICATION_POSTGRES_URL: postgresql://postgres:postgres@127.0.0.1:5432/croco_membership
+          REWARDS_POSTGRES_URL: postgresql://postgres:postgres@127.0.0.1:5432/croco_membership
           MEMBERSHIP_POSTGRES_URL: postgresql://postgres:postgres@127.0.0.1:5432/croco_membership
           METERING_POSTGRES_URL: postgresql://postgres:postgres@127.0.0.1:5432/croco_membership
+          MISSIONS_POSTGRES_URL: postgresql://postgres:postgres@127.0.0.1:5432/croco_membership
+          ONBOARDING_POSTGRES_URL: postgresql://postgres:postgres@127.0.0.1:5432/croco_membership
+          PROMOTIONS_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/croco_membership
         run: |
           pnpm build --filter=@croco/analytics-drizzle...
           pnpm --filter @croco/analytics-drizzle test:postgres
+          pnpm build --filter=@croco/cohort-drizzle...
+          pnpm --filter @croco/cohort-drizzle test:live
           pnpm build --filter=@croco/credits-drizzle...
           pnpm --filter @croco/credits-drizzle test:postgres
           pnpm build --filter=@croco/customer-health-drizzle...
@@ -1507,8 +1545,18 @@ jobs:
           pnpm --filter @croco/membership-drizzle exec vitest run src/tests/DrizzleMembershipStore.postgres.spec.ts
           pnpm build --filter=@croco/execution-drizzle...
           pnpm --filter @croco/execution-drizzle test:postgres
+          pnpm build --filter=@croco/experience-drizzle...
+          pnpm --filter @croco/experience-drizzle test:live
+          pnpm build --filter=@croco/features-drizzle...
+          pnpm --filter @croco/features-drizzle test:postgres
+          pnpm build --filter=@croco/gamification-drizzle...
+          pnpm --filter @croco/gamification-drizzle test:postgres
+          pnpm build --filter=@croco/promotions-drizzle...
+          pnpm --filter @croco/promotions-drizzle test:live
           pnpm build --filter=@croco/metering-drizzle...
           pnpm --filter @croco/metering-drizzle test:postgres
+          pnpm build --filter=@croco/onboarding-drizzle...
+          pnpm --filter @croco/onboarding-drizzle test:live
 
       - name: Verify fresh migration status against PostgreSQL
         env:
@@ -1530,6 +1578,8 @@ jobs:
           pnpm --filter @croco/metering-core test:real
           pnpm build --filter=@croco/warehouse-postgres...
           pnpm --filter @croco/warehouse-postgres test:real
+          pnpm build --filter=@croco/etl-events-tx...
+          pnpm --filter @croco/etl-events-tx test:real
 
   docs-sync-check:
     needs: changes

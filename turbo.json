@@ -1,6 +1,11 @@
 {
   "$schema": "https://turbo.build/schema.json",
-  "globalDependencies": ["mise.toml", "pnpm-lock.yaml", "**/.env.*local"],
+  "globalDependencies": [
+    "mise.toml",
+    "pnpm-lock.yaml",
+    "**/.env.*local",
+    "tooling/compareStrings.*"
+  ],
   "globalPassThroughEnv": ["CROCO_TEST_EVIDENCE_DIR"],
   "tasks": {
     "build": {

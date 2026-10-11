@@ -1,0 +1,4 @@
+DROP TABLE croco_experience_dismissals;
+DROP TABLE croco_experience_decisions;
+DROP TABLE croco_experience_current;
+DROP TABLE croco_experience_config_revisions;

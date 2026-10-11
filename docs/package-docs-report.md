@@ -6,12 +6,12 @@
 
 | Metric                         | Count |
 | ------------------------------ | ----: |
-| Public packages                |   118 |
+| Public packages                |   137 |
 | Private packages skipped       |     2 |
 | Missing package README         |     0 |
 | Missing generated API docs     |     0 |
 | Missing package test directory |     0 |
-| Extension matrix packages      |    49 |
+| Extension matrix packages      |    60 |
 | Certification records          |     8 |
 | Croco 1.0 spine packages       |    18 |
 
@@ -112,6 +112,7 @@ None.
 | `@croco/admin-core`                    | Contracts      | domain        | Admin                   | unclaimed                                 |
 | `@croco/admin-generated`               | Tooling        | codegen       | Admin Generated         | unclaimed                                 |
 | `@croco/admin-ops`                     | Contracts      | domain        | Admin Ops               | unclaimed                                 |
+| `@croco/admin-postgres`                | Plugins        | provider      | Admin                   | node                                      |
 | `@croco/admin-react`                   | Plugins        | presentation  | Admin React             | browser, node                             |
 | `@croco/ai-usage`                      | Plugins        | integration   | AI Usage                | unclaimed                                 |
 | `@croco/analytics-core`                | Contracts      | domain        | Analytics               | unclaimed                                 |
@@ -127,9 +128,12 @@ None.
 | `@croco/batch-core`                    | Contracts      | domain        | Batch                   | unclaimed                                 |
 | `@croco/batch-qstash`                  | Plugins        | provider      | Batch                   | node, lambda                              |
 | `@croco/billing-core`                  | Contracts      | domain        | Billing                 | unclaimed                                 |
+| `@croco/billing-drizzle`               | Plugins        | provider      | Billing                 | node, lambda                              |
 | `@croco/billing-polar`                 | Plugins        | provider      | Billing                 | node, lambda                              |
 | `@croco/cache-core`                    | Contracts      | domain        | Cache                   | unclaimed                                 |
 | `@croco/cli`                           | Tooling        | cli           | Cli                     | unclaimed                                 |
+| `@croco/cohort-core`                   | Contracts      | domain        | Cohorts                 | unclaimed                                 |
+| `@croco/cohort-drizzle`                | Plugins        | provider      | Cohorts                 | node, lambda                              |
 | `create-croco-app`                     | Tooling        | cli           | Create Croco App        | unclaimed                                 |
 | `@croco/credits-core`                  | Contracts      | domain        | Credits                 | unclaimed                                 |
 | `@croco/credits-drizzle`               | Plugins        | provider      | Credits                 | node, lambda                              |
@@ -142,12 +146,17 @@ None.
 | `@croco/entitlements-core`             | Contracts      | domain        | Entitlements            | unclaimed                                 |
 | `@croco/entitlements-drizzle`          | Plugins        | provider      | Entitlements            | node, lambda                              |
 | `@croco/esbuild-plugin`                | Tooling        | build-target  | Esbuild Plugin          | unclaimed                                 |
+| `@croco/etl-core`                      | Contracts      | domain        | ETL                     | unclaimed                                 |
+| `@croco/etl-events-tx`                 | Plugins        | integration   | ETL                     | node                                      |
 | `@croco/events-core`                   | Contracts      | domain        | Events                  | unclaimed                                 |
 | `@croco/events-inmemory`               | Plugins        | provider      | Events Inmemory         | unclaimed                                 |
 | `@croco/events-tx`                     | Plugins        | integration   | Events Tx               | unclaimed                                 |
 | `@croco/execution-core`                | Contracts      | domain        | Execution               | unclaimed                                 |
 | `@croco/execution-drizzle`             | Plugins        | provider      | Execution               | node, lambda                              |
+| `@croco/experience-core`               | Contracts      | domain        | Experiences             | unclaimed                                 |
+| `@croco/experience-drizzle`            | Plugins        | provider      | Experiences             | node, lambda                              |
 | `@croco/features-core`                 | Contracts      | domain        | Features                | unclaimed                                 |
+| `@croco/features-drizzle`              | Plugins        | provider      | Features                | node, lambda                              |
 | `@croco/features-posthog`              | Plugins        | integration   | Feature flags           | node, lambda                              |
 | `@croco/framework-config`              | Kernel         | runtime       | Framework Config        | unclaimed                                 |
 | `@croco/framework-context`             | Kernel         | runtime       | Framework Context       | unclaimed                                 |
@@ -159,6 +168,8 @@ None.
 | `@croco/frontend-problems`             | Plugins        | presentation  | Frontend Problems       | browser, cloudflare-workers               |
 | `@croco/frontend-react`                | Plugins        | presentation  | Frontend React          | browser, node                             |
 | `@croco/frontend-vite`                 | Tooling        | build-target  | Frontend Vite           | node, browser, cloudflare-workers         |
+| `@croco/gamification-core`             | Contracts      | domain        | Gamification            | unclaimed                                 |
+| `@croco/gamification-drizzle`          | Plugins        | provider      | Gamification            | node, lambda                              |
 | `@croco/gid-core`                      | Contracts      | domain        | Gid                     | unclaimed                                 |
 | `@croco/governance-core`               | Contracts      | domain        | Governance              | unclaimed                                 |
 | `@croco/health-core`                   | Contracts      | domain        | Health                  | unclaimed                                 |
@@ -168,6 +179,7 @@ None.
 | `@croco/invitation-core`               | Contracts      | domain        | Invitation              | unclaimed                                 |
 | `@croco/invitation-drizzle`            | Plugins        | provider      | Invitation              | node, lambda                              |
 | `@croco/lifecycle-core`                | Contracts      | domain        | Lifecycle               | unclaimed                                 |
+| `@croco/lifecycle-drizzle`             | Plugins        | provider      | Lifecycle               | node, lambda                              |
 | `@croco/membership-core`               | Contracts      | domain        | Membership              | unclaimed                                 |
 | `@croco/membership-drizzle`            | Plugins        | provider      | Membership              | node, lambda                              |
 | `@croco/meta-vite`                     | Tooling        | build-target  | Frontend routing        | node, lambda, cloudflare-workers, browser |
@@ -178,6 +190,7 @@ None.
 | `@croco/metrics-core`                  | Contracts      | domain        | Metrics                 | unclaimed                                 |
 | `@croco/migration-runner`              | Tooling        | migration     | Migration Runner        | unclaimed                                 |
 | `@croco/notifications-core`            | Contracts      | domain        | Notifications           | unclaimed                                 |
+| `@croco/notifications-fcm`             | Plugins        | provider      | Notifications           | node, lambda                              |
 | `@croco/notifications-react-email`     | Plugins        | presentation  | Notifications           | node, lambda                              |
 | `@croco/notifications-resend`          | Plugins        | provider      | Notifications           | node, lambda                              |
 | `@croco/onboarding-core`               | Contracts      | domain        | Onboarding              | unclaimed                                 |
@@ -190,6 +203,8 @@ None.
 | `@croco/preset-lambda`                 | Plugins        | host          | AWS Lambda host         | lambda                                    |
 | `@croco/preset-node`                   | Plugins        | host          | Node host               | node                                      |
 | `@croco/problems-core`                 | Kernel         | runtime       | Problems                | unclaimed                                 |
+| `@croco/promotions-core`               | Contracts      | domain        | Promotions              | unclaimed                                 |
+| `@croco/promotions-drizzle`            | Plugins        | provider      | Promotions              | node, lambda                              |
 | `@croco/protocol-codegen`              | Tooling        | codegen       | Protocol Codegen        | unclaimed                                 |
 | `@croco/protocols-core`                | Contracts      | protocol      | Protocols               | unclaimed                                 |
 | `@croco/protocols-graphql`             | Plugins        | protocol      | Protocols Graphql       | unclaimed                                 |
@@ -197,6 +212,8 @@ None.
 | `@croco/protocols-trpc`                | Plugins        | protocol      | Protocols Trpc          | unclaimed                                 |
 | `@croco/ratelimit-core`                | Contracts      | domain        | Ratelimit               | unclaimed                                 |
 | `@croco/ratelimit-upstash`             | Plugins        | provider      | Rate limiting           | node, lambda                              |
+| `@croco/referral-core`                 | Contracts      | domain        | Referrals               | unclaimed                                 |
+| `@croco/referral-drizzle`              | Plugins        | provider      | Referrals               | node, lambda                              |
 | `@croco/repository-core`               | Contracts      | domain        | Repository              | unclaimed                                 |
 | `@croco/retry-core`                    | Contracts      | domain        | Retry                   | unclaimed                                 |
 | `@croco/rpc-codegen`                   | Tooling        | codegen       | Rpc Codegen             | unclaimed                                 |
@@ -222,7 +239,9 @@ None.
 | `@croco/tx-core`                       | Contracts      | domain        | Tx                      | unclaimed                                 |
 | `@croco/tx-drizzle`                    | Plugins        | provider      | Tx Drizzle              | unclaimed                                 |
 | `@croco/ui-astryx`                     | Plugins        | presentation  | Astryx UI               | browser, node                             |
-| `@croco/warehouse-postgres`            | Plugins        | provider      | Metrics                 | node, lambda                              |
+| `@croco/warehouse-core`                | Contracts      | domain        | Warehouse               | browser, node, lambda, cloudflare-workers |
+| `@croco/warehouse-postgres`            | Plugins        | provider      | Warehouse               | node, lambda                              |
+| `@croco/warehouse-tooling`             | Tooling        | build-target  | Warehouse               | node                                      |
 | `@croco/webhooks-core`                 | Contracts      | domain        | Webhooks                | unclaimed                                 |
 | `@croco/workflow-core`                 | Contracts      | domain        | Workflow                | unclaimed                                 |
 
@@ -231,21 +250,21 @@ None.
 | Group        | Packages |
 | ------------ | -------: |
 | Core         |       23 |
-| Domain       |       30 |
-| Provider     |       29 |
-| Integration  |        5 |
+| Domain       |       37 |
+| Provider     |       39 |
+| Integration  |        6 |
 | Protocol     |        8 |
 | Transport    |        2 |
 | Host         |        4 |
 | Build Target |        1 |
 | Presentation |        9 |
-| Tooling      |        7 |
+| Tooling      |        8 |
 
 | Maturity            | Packages |
 | ------------------- | -------: |
 | 🟢 production-ready |       23 |
 | 🟡 beta             |       78 |
-| 🔴 alpha/WIP        |       17 |
+| 🔴 alpha/WIP        |       36 |
 | ⚠️ deprecated       |        0 |
 
 ## Extension Matrix
@@ -254,8 +273,8 @@ Extension matrix metadata is maintained in `docs/package-catalog.json` and rende
 
 | Group        | Packages | Without package tests |
 | ------------ | -------: | --------------------: |
-| Provider     |       29 |                     0 |
-| Integration  |        5 |                     0 |
+| Provider     |       39 |                     0 |
+| Integration  |        6 |                     0 |
 | Transport    |        2 |                     0 |
 | Host         |        4 |                     0 |
 | Presentation |        9 |                     0 |

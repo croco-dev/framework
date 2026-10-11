@@ -1,5 +1,5 @@
 import type { AuthUser } from "@croco/auth-core";
-import type { IdempotencyStore } from "@croco/idempotency-core";
+import type { LeaseAwareIdempotencyStore } from "@croco/idempotency-core";
 import type { WebhookGatewayStoredResult } from "@croco/webhooks-core";
 
 /**
@@ -28,7 +28,9 @@ export type BetterAuthWebhookHandler = {
  */
 export type BetterAuthWebhookOptions = {
   signingSecret: string;
-  idempotencyStore: IdempotencyStore<WebhookGatewayStoredResult>;
+  idempotencyStore: LeaseAwareIdempotencyStore<WebhookGatewayStoredResult>;
+  /** Processing lease in milliseconds; defaults to 15 minutes. Set above the maximum handler duration. */
+  processingLeaseMs?: number;
 };
 
 /**

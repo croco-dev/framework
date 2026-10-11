@@ -126,7 +126,7 @@ type ExplicitVikeGeneratorOptions = ResolvedGeneratorOptions &
   NonSaasOptions & {
     goal?: never;
     preset: "ddd-vike-fullstack";
-    api?: GeneratorApi;
+    api?: never;
     apiHosting: "standalone";
     backendDeploy?: GeneratorBackendDeploy;
     frontendDeploy: "cloudflare-meta-vite";

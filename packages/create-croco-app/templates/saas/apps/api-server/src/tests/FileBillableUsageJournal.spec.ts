@@ -54,6 +54,79 @@ describe("FileBillableUsageJournal", () => {
     });
   });
 
+  it.each(["pending", "delivering", "retryable-failed", "accepted"] as const)(
+    "preserves activated %s entries when activation is replayed",
+    async (state) => {
+      await withStateDirectory(async (stateDir) => {
+        const path = join(stateDir, "journal.sqlite");
+        const journal = new FileBillableUsageJournal(path, NOW);
+        await journal.append(billableEvent("usage-1", 1));
+        await journal.markDeliverable("usage-1", NOW);
+        const claim =
+          state === "pending"
+            ? null
+            : await journal.claimNext({
+                ownerId: "worker-1",
+                leaseDurationMs: 30_000,
+                now: NOW,
+              });
+        if (state !== "pending" && !claim) throw new Error("Expected one journal claim.");
+        if (state === "retryable-failed" && claim) {
+          await journal.markRetryableFailed(
+            claim,
+            { code: "provider/unavailable", message: "Provider unavailable" },
+            new Date(NOW.getTime() + 60_000),
+            NOW,
+          );
+        }
+        if (state === "accepted" && claim) await journal.markAccepted(claim, NOW);
+        const before = await journal.get("usage-1");
+        const reopened = new FileBillableUsageJournal(path, NOW);
+        const replayAt = new Date(NOW.getTime() + 1_000);
+
+        await expect(reopened.markDeliverable("usage-1", replayAt)).resolves.toEqual(before);
+        await expect(journal.get("usage-1")).resolves.toEqual(before);
+        if (state === "delivering" && claim) {
+          await expect(journal.markAccepted(claim, replayAt)).resolves.toMatchObject({
+            state: "accepted",
+          });
+        }
+        if (state === "retryable-failed" || state === "accepted") {
+          await expect(
+            reopened.claimNext({
+              ownerId: "worker-2",
+              leaseDurationMs: 30_000,
+              now: replayAt,
+            }),
+          ).resolves.toBeNull();
+        }
+      });
+    },
+  );
+
+  it("rejects activation of terminal failures and missing events", async () => {
+    await withStateDirectory(async (stateDir) => {
+      const journal = new FileBillableUsageJournal(join(stateDir, "journal.sqlite"), NOW);
+      await journal.append(billableEvent("usage-1", 1));
+      await journal.markDeliverable("usage-1", NOW);
+      const claim = await journal.claimNext({
+        ownerId: "worker-1",
+        leaseDurationMs: 30_000,
+        now: NOW,
+      });
+      if (!claim) throw new Error("Expected one journal claim.");
+      const failed = await journal.markTerminalFailed(
+        claim,
+        { code: "provider/rejected", message: "Provider rejected usage" },
+        NOW,
+      );
+
+      await expect(journal.markDeliverable("usage-1")).rejects.toThrow("STATUS:terminal-failed");
+      await expect(journal.get("usage-1")).resolves.toEqual(failed);
+      await expect(journal.markDeliverable("missing")).rejects.toThrow("MISSING");
+    });
+  });
+
   it("rejects invalid leases", async () => {
     await withStateDirectory(async (stateDir) => {
       const journal = new FileBillableUsageJournal(join(stateDir, "journal.sqlite"), NOW);

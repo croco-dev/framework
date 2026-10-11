@@ -6,11 +6,13 @@ import {
   type PlanVersionRef,
   type OrderPaymentReason,
   SubscriptionCanceledEvent,
+  SubscriptionRevokedEvent,
 } from "@croco/billing-core";
 import { type DomainEvent, type EventHandler, RegisterEventHandler } from "@croco/events-core";
 import type { MetricsRepository, Money, PlanProvider } from "@croco/metrics-core";
 import type { MRRMovement } from "@croco/metrics-core";
-import { MrrCalculator } from "@croco/metrics-core";
+import { MixedCurrencyMRRProblem, MrrCalculator } from "@croco/metrics-core";
+import { ProblemFactory } from "@croco/problems-core";
 import {
   BillingMetricDroppedProblem,
   BillingMetricRecordingProblem,
@@ -18,14 +20,21 @@ import {
 } from "./problems/BillingMetricsProblems";
 import type { BillingMetricDropReason } from "./problems/BillingMetricsProblems";
 
-type BillingMetricEvent = OrderPaidEvent | PlanChangedEvent | SubscriptionCanceledEvent;
+type BillingMetricEvent =
+  | OrderPaidEvent
+  | PlanChangedEvent
+  | SubscriptionCanceledEvent
+  | SubscriptionRevokedEvent;
 
 @RegisterEventHandler(OrderPaidEvent)
 @RegisterEventHandler(PlanChangedEvent)
 @RegisterEventHandler(SubscriptionCanceledEvent)
+@RegisterEventHandler(SubscriptionRevokedEvent)
 export class BillingEventHandler
   implements
-    EventHandler<OrderPaidEvent | PlanChangedEvent | SubscriptionCanceledEvent>,
+    EventHandler<
+      OrderPaidEvent | PlanChangedEvent | SubscriptionCanceledEvent | SubscriptionRevokedEvent
+    >,
     PlanProvider
 {
   private readonly calculator = new MrrCalculator();
@@ -34,7 +43,14 @@ export class BillingEventHandler
     private readonly planRegistry: PlanRegistry,
     private readonly billingStore: BillingStore,
     private readonly metricsRepository: MetricsRepository,
-  ) {}
+  ) {
+    if (metricsRepository.mrrMovementIdentityVersion !== 2) {
+      throw ProblemFactory.internalServerError(
+        "metrics-billing/repository-contract-unsupported",
+        "Upgrade the metrics provider to movement identity version 2 with historical primary-key lookups before using BillingEventHandler",
+      );
+    }
+  }
 
   async getPlan(planId: string) {
     const plan = await this.planRegistry.getPlan(planId);
@@ -79,6 +95,11 @@ export class BillingEventHandler
 
     if (event instanceof SubscriptionCanceledEvent) {
       await this.handleSubscriptionCanceled(event);
+      return;
+    }
+
+    if (event instanceof SubscriptionRevokedEvent) {
+      await this.recordChurn(event);
     }
   }
 
@@ -151,6 +172,9 @@ export class BillingEventHandler
         previousPlan === null ? event.previousPlanId : event.newPlanId,
       );
     }
+    if (previousPlan.currency !== newPlan.currency) {
+      throw new MixedCurrencyMRRProblem(previousPlan.currency, newPlan.currency);
+    }
 
     const previousMrrAmount = this.calculator.normalizeMRR(
       previousPlan.amount,
@@ -181,6 +205,12 @@ export class BillingEventHandler
       return;
     }
 
+    await this.recordChurn(event);
+  }
+
+  private async recordChurn(
+    event: SubscriptionCanceledEvent | SubscriptionRevokedEvent,
+  ): Promise<void> {
     let planVersionRef = event.planVersionRef;
     let planResourceId: string = planVersionRef ?? event.externalSubscriptionId;
     if (planVersionRef === undefined) {
@@ -207,7 +237,9 @@ export class BillingEventHandler
     const mrr: Money = { amount: mrrAmount, currency: plan.currency };
     const movement = this.createMRRMovement(mrr, "churned");
 
-    await this.recordMRRMovement(event, movement);
+    await this.recordMRRMovement(event, movement, [
+      `billing.subscription_churned_${event.externalSubscriptionId}`,
+    ]);
   }
 
   private createMRRMovement(
@@ -282,9 +314,14 @@ export class BillingEventHandler
     return `${event.eventName}_${event.timestamp.getTime()}`;
   }
 
-  private async recordMRRMovement(event: BillingMetricEvent, movement: MRRMovement): Promise<void> {
+  private async recordMRRMovement(
+    event: BillingMetricEvent,
+    movement: MRRMovement,
+    dedupeEventKeys: readonly string[] = [],
+  ): Promise<void> {
     const eventKey = this.getEventKey(event);
-    const legacyEventKeys = [this.getLegacyTimestampEventKey(event)];
+    const legacyEventKeys =
+      event instanceof SubscriptionRevokedEvent ? [] : [this.getLegacyTimestampEventKey(event)];
 
     try {
       await this.metricsRepository.recordMRRMovement(
@@ -292,6 +329,7 @@ export class BillingEventHandler
         movement,
         event.timestamp,
         eventKey,
+        dedupeEventKeys,
         legacyEventKeys,
       );
     } catch (error) {

@@ -66,7 +66,6 @@ const scaffoldCases = [
       scope: "@test",
       preset: "ddd-vike-fullstack",
       webApps: [],
-      api: "graphql",
       apiHosting: "standalone",
       frontendDeploy: "cloudflare-meta-vite",
       db: [],

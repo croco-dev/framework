@@ -107,6 +107,9 @@ export class CheckoutService {
 }
 
 function normalizeCheckoutRequest(rawInput: CheckoutRequest): CheckoutRequest {
+  if (typeof rawInput !== "object" || rawInput === null || Array.isArray(rawInput)) {
+    throw new CheckoutValidationProblem("checkout body must be a JSON object.");
+  }
   const input = rawInput as Partial<CheckoutRequest>;
   const customerId = input.customerId;
   const paymentToken = input.paymentToken;

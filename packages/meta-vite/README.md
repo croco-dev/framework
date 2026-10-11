@@ -1,6 +1,6 @@
 # @croco/meta-vite
 
-Croco-native Vite SSR/RSC meta-framework. Croco의 유일한 SSR 엔진입니다. 모든 서버 렌더링 페이지는 `@croco/meta-vite`를 통해 제공됩니다.
+Croco-native Vite buffered SSR meta-framework. Croco의 유일한 SSR 엔진입니다. 모든 서버 렌더링 페이지는 `@croco/meta-vite`를 통해 제공됩니다.
 
 ## Installation
 
@@ -19,7 +19,7 @@ pnpm add ioredis
 ## Features
 
 - **SSR**: Server-side rendering with React 19, head metadata injection, XSS-safe HTML shell
-- **RSC**: React Server Components with Flight payload embedding and browser hydration
+- **Legacy `rsc` mode**: Buffered SSR HTML with an embedded JSON marker; React Flight and progressive streaming are unsupported
 - **SSG**: Static site generation at build time (`prerenderSsgRoutes`)
 - **ISR**: TTL-only incremental static regeneration via CacheStore. `InMemoryCacheStore` for local/single-process, `RedisCacheStoreAdapter` for production durable caching (extends `AbstractCacheStoreAdapter`), and runtime support diagnostics for durable production claims
 - **API Co-location**: Define API routes alongside page routes with `defineApiRoute()`. Compose pages and APIs under a single fetch handler using `createMetaFetchHandler`'s `apiRoutes` option
@@ -69,6 +69,13 @@ const handler = createMetaFetchHandler({
 ```
 
 ### 4. SSR Page + API Route (combined)
+
+The `apiRoutes` option accepts `/api` and paths under `/api/`. Registration, route manifest
+creation, and fetch handler creation reject other paths with
+`CROCO_META_VITE_API_ROUTE_PREFIX_REQUIRED`, including the route path and HTTP method.
+A route registered at `/api` can handle `/api/*`; a request to exactly `/api` still follows
+the page handler flow. For paths outside this namespace, use the legacy `apiHandler` or
+provider adapter `apiHandlers.match`.
 
 ```typescript
 import {
@@ -121,6 +128,48 @@ const handler = createMetaFetchHandler({
 // /api/* → API routes, /* → SSR pages
 const response = await handler(new Request("https://example.com/api/hello"));
 ```
+
+### Shell-First Streaming SSR
+
+Critical shells stream first; deferred regions resolve later through React Suspense:
+
+```typescript no-check
+import { defineRoute, RenderServer, RouteRegistry } from "@croco/meta-vite";
+
+const registry = new RouteRegistry();
+registry.register(
+  defineRoute({
+    path: "/pdp",
+    component: ProductPage,
+    mode: "ssr",
+    // Decided before headers commit: 404/redirect/critical 5xx.
+    resolveShell: async ({ request }) => {
+      const product = await lookupProduct(request);
+      if (!product) {
+        return { kind: "notFound" };
+      }
+      return { kind: "render" };
+    },
+    // Non-critical regions render behind Suspense after the shell flushes.
+    // Loaders receive the per-request `{ request, context, signal }` input so
+    // parallel fetches and cancellation never mix tenant/auth data.
+    regions: [{ id: "recommendations", loader: ({ signal }) => fetchRecommendations(signal) }],
+    stream: { deadlineMs: 10_000, regionTimeoutMs: 5_000, maxBufferedBytes: 65_536 },
+  }),
+);
+
+const server = new RenderServer(registry.compile());
+```
+
+Delivery is host-driven: Node and Cloudflare pipe the shell-first stream;
+Lambda buffers the complete HTML before returning (`x-croco-delivery` reports
+`stream` or `buffered`). After headers commit, region errors keep a safe
+fallback and are observed through `console.error`; status is never rewritten
+and stacks never leak. Shell streams carry only safe aggregates in
+`Server-Timing: shell;dur=0, regions`.
+
+`streaming-response` is reported in the route manifest only for SSR pages with
+declared regions. Plain SSR pages remain on the buffered render path.
 
 ## Route Manifest
 
@@ -187,12 +236,26 @@ current server-action registry without rewriting the file.
 
 ## Route Modes
 
-| Mode | Description                                 | Revalidate             |
-| ---- | ------------------------------------------- | ---------------------- |
-| ssr  | Server-side render every request            | N/A                    |
-| ssg  | Static pre-render at build time             | N/A                    |
-| isr  | TTL-based revalidation with CacheStore      | `revalidate` (seconds) |
-| rsc  | React Server Components with Flight payload | N/A                    |
+| Mode | Description                            | Revalidate             |
+| ---- | -------------------------------------- | ---------------------- |
+| ssr  | Server-side render every request       | N/A                    |
+| ssg  | Static pre-render at build time        | N/A                    |
+| isr  | TTL-based revalidation with CacheStore | `revalidate` (seconds) |
+| rsc  | Buffered SSR with embedded JSON marker | N/A                    |
+
+`mode` records the requested route mode. `runtimeCapabilities` records the implementation's
+capabilities; the legacy `rsc` mode reports `fetch` and `react-ssr`. Its
+`runtimeRequirements` retains the requested React Server Components requirement, which the
+buffered implementation does not satisfy. A `Response` body alone does not prove progressive rendering.
+
+Profiles requiring page capabilities must pass `requiredCapabilities` to
+`createMetaViteRouteManifest()` or `createMetaViteRouteManifestFromRegistry()`.
+For example, `requiredCapabilities: ["react-server-components", "streaming-response"]`
+fails before manifest emission with `MetaViteUnsupportedCapabilityProblem`
+(`meta-vite/unsupported-render-capability`, status 501, route path and capability extensions).
+Omitting requirements preserves the legacy buffered payload; it does not certify Flight or streaming.
+Actual Flight streaming remains tracked in #2835; SSR shell-first streaming shipped in #2836.
+Adapter preservation of externally supplied streams is a separate capability from page rendering.
 
 ## Provider Adapters
 
@@ -209,7 +272,7 @@ Detailed promotion gates live in [Presentation Runtime Support](../docs/src/cont
 | SSR pages         | Supported through `createNodeComposedHandler()` and `RenderServer`.                                           | Supported through `createLambdaComposedHandler()` with API Gateway event conversion.                      | Supported through `createCloudflareComposedHandler()` and `@croco/frontend-cloudflare`.                 |
 | SSG routes        | Supported at build time through `prerenderSsgRoutes()`.                                                       | Supported before Lambda packaging as static output.                                                       | Supported before Worker asset upload as static output.                                                  |
 | ISR routes        | v1 exact-key TTL. Use `RedisCacheStoreAdapter` or another durable `IsrCacheStore` for production persistence. | v1 exact-key TTL. In-memory cache is warm-container only; use durable storage for production persistence. | v1 exact-key TTL only when a Worker-safe `IsrCacheStore` is supplied. In-memory cache is isolate-local. |
-| RSC routes        | Beta with React 19.                                                                                           | Beta and buffered; no streaming claim.                                                                    | Beta with Worker `Response` streaming; development reload remains full reload.                          |
+| RSC routes        | Buffered SSR with legacy JSON marker; no React Flight support.                                                | Buffered SSR with legacy JSON marker; no React Flight or streaming support.                               | Buffered SSR with legacy JSON marker; no React Flight or progressive rendering.                         |
 | Server actions    | Supported through `createServerActionHandler()`.                                                              | Supported after Lambda request conversion.                                                                | Supported with Cloudflare `RuntimeContext` propagation.                                                 |
 | API routes        | API-first/page-fallback composition.                                                                          | API-first/page-fallback composition.                                                                      | API-first/page-fallback composition or Worker service bindings.                                         |
 | Streaming         | Fetch `Response` streams are preserved by the fetch surface.                                                  | Not supported by this adapter; responses are buffered.                                                    | Supported for streaming `Response` bodies.                                                              |
@@ -275,10 +338,10 @@ Recovery diagnostics:
 Common errors and their diagnostics:
 
 - **Server-only leakage**: Importing `node:fs` or other server-only modules from a `'use client'` boundary produces an explicit error with the module path. This validation scans imported module specifiers and reports which server-only modules leaked across a client boundary.
-- **Invalid route**: Route without a `component` field or with an unsupported mode produces an error. The route path is included in the diagnostic.
-- **Invalid ISR revalidate**: `revalidate` without `mode: 'isr'` is silently ignored. A `revalidate` value that is not a positive integer produces a validation warning.
+- **Invalid route**: Registration rejects a missing or invalid `component` with `CROCO_META_VITE_ROUTE_COMPONENT_REQUIRED` and an unsupported mode with `CROCO_META_VITE_ROUTE_MODE_UNSUPPORTED`. Components must be functions or non-null objects (including React `memo` and `forwardRef` components). Both errors include the route path. Direct manifest creation also rejects unsupported modes.
+- **Invalid ISR revalidate**: Registration rejects NaN, ±Infinity, negative `revalidate`, and values that overflow when converted to milliseconds with `CROCO_META_VITE_ROUTE_REVALIDATE_INVALID` and the route path. Zero and finite positive fractions are allowed. Direct manifest creation rejects non-finite or negative `revalidateMs`. `revalidate` without `mode: 'isr'` remains silently ignored by rendering.
 - **Missing durable ISR configuration**: `evaluateIsrRuntimeSupport({ requireDurable: true })` reports `CROCO_META_VITE_ISR_LOCAL_CACHE_ONLY` for local-only stores and `CROCO_META_VITE_ISR_WORKER_STORE_UNSAFE` for Workers stores that are not explicitly Worker-safe.
-- **RSC rendering failure**: Returns a JSON diagnostic `{ error: 'RSC rendering failed', route: string, detail: string }` with status 500. The `detail` field contains the original error message from the React render call.
+- **RSC rendering failure**: Returns a JSON diagnostic `{ error: 'RSC rendering failed', route: string, detail: string }` with status 500. For `Error` values, `detail` is redacted to `An internal server error occurred`.
 - **Render error (SSR)**: SSR rendering errors fall back to a generic `500 Internal Server Error` HTML response. Error details are not included in the HTML to prevent server-side information leakage.
 - **Route not found**: Unmatched routes return a `404 Not Found` HTML response.
 
@@ -349,9 +412,12 @@ import { RedisCacheStoreAdapter } from "@croco/meta-vite/isr/adapters";
 | `ServerActionContractIR`            | type     | Serializable server action contract used by the route manifest builder.                                                                         |
 | `ServerActionResult`                | type     | Typed action result union: `{ ok: true, data }` or RFC 7807 Problem details with `{ ok: false, kind }`.                                         |
 
-Server action failures use a stable action result contract. Missing actions, invalid paths, validation
-failures, and thrown Croco `Problem` instances return `application/problem+json` with top-level RFC 7807
-fields plus `ok: false` and `kind`.
+Server action failures use a stable action result contract. Missing actions, invalid paths, invalid
+content types, validation failures, and thrown Croco `Problem` instances return
+`application/problem+json` with top-level RFC 7807 fields plus `ok: false` and `kind`. Server action
+calls are multipart: send `FormData` (`multipart/form-data` or
+`application/x-www-form-urlencoded`). JSON POST bodies are rejected with
+`meta-vite/server-action-invalid-content-type` (415).
 
 ```typescript
 import { createServerAction, createServerActionSuccess } from "@croco/meta-vite";
@@ -380,16 +446,16 @@ should now read the Problem result shape: `ok === false`, `kind`, RFC 7807 field
 
 ### Route Manifest
 
-| Export                                    | Type     | Description                                                                              |
-| ----------------------------------------- | -------- | ---------------------------------------------------------------------------------------- |
-| `createMetaViteRouteManifest`             | function | Build a deterministic manifest from explicit page, API, and server action IR arrays.     |
-| `createMetaViteRouteManifestFromRegistry` | function | Build a deterministic manifest from `RouteRegistry` and optional `ServerActionRegistry`. |
-| `serializeMetaViteRouteManifest`          | function | Serialize a route manifest as stable pretty JSON with a trailing newline.                |
-| `writeMetaViteRouteManifest`              | function | Write the serialized manifest to disk, creating parent directories when needed.          |
-| `MetaViteRouteManifestError`              | class    | Error thrown when route metadata cannot produce a stable manifest contract.              |
-| `MetaViteRouteManifest`                   | type     | Stable route manifest artifact shape.                                                    |
-| `MetaViteRuntimeCapability`               | type     | Runtime-neutral capability hints such as `isr-cache` and `react-server-components`.      |
-| `MetaViteRuntimeRequirement`              | type     | Build/runtime requirement codes for SSG, ISR, and RSC routes.                            |
+| Export                                    | Type     | Description                                                                                             |
+| ----------------------------------------- | -------- | ------------------------------------------------------------------------------------------------------- |
+| `createMetaViteRouteManifest`             | function | Build a deterministic manifest from explicit page, API, and server action IR arrays.                    |
+| `createMetaViteRouteManifestFromRegistry` | function | Build a deterministic manifest from `RouteRegistry` and optional `ServerActionRegistry`.                |
+| `serializeMetaViteRouteManifest`          | function | Serialize a route manifest as stable pretty JSON with a trailing newline.                               |
+| `writeMetaViteRouteManifest`              | function | Write the serialized manifest to disk, creating parent directories when needed.                         |
+| `MetaViteRouteManifestError`              | class    | Error thrown when route metadata cannot produce a stable manifest contract.                             |
+| `MetaViteRouteManifest`                   | type     | Stable route manifest artifact shape.                                                                   |
+| `MetaViteRuntimeCapability`               | type     | Implemented route capabilities; buffered pages report `react-ssr`, without Flight or streaming support. |
+| `MetaViteRuntimeRequirement`              | type     | Build/runtime requirement codes for SSG, ISR, and RSC routes.                                           |
 
 ### Vite Plugin
 

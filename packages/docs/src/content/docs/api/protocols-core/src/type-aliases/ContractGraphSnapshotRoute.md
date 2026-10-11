@@ -112,3 +112,11 @@ title: "ContractGraphSnapshotRoute"
 ### routeId
 
 > `readonly` **routeId**: `string`
+
+---
+
+### successStatus?
+
+> `readonly` `optional` **successStatus?**: `number`
+
+Missing in historical v1 artifacts: 200 with a response schema, otherwise 204.

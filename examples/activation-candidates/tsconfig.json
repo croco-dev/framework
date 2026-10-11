@@ -1,0 +1,39 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "jsx": "react-jsx",
+    "experimentalDecorators": true,
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "types": ["node"],
+    "noEmit": true,
+    "paths": {
+      "@croco/admin-core": ["../../packages/admin-core/src/index.ts"],
+      "@croco/admin-ops": ["../../packages/admin-ops/src/libs/types.ts"],
+      "@croco/billing-core": ["../../packages/billing-core/src/index.ts"],
+      "@croco/entitlements-core": ["../../packages/entitlements-core/src/libs/types.ts"],
+      "@croco/impersonation-core": ["../../packages/impersonation-core/src/libs/types.ts"],
+      "@croco/lifecycle-core": ["../../packages/lifecycle-core/src/index.ts"],
+      "@croco/metering-core": ["../../packages/metering-core/src/libs/types.ts"],
+      "@croco/pagination-core": ["../../packages/pagination-core/src/index.ts"],
+      "@croco/problems-core": ["../../packages/problems-core/src/index.ts"],
+      "@croco/search-core": ["../../packages/search-core/src/index.ts"],
+      "@croco/tenant-core": ["../../packages/tenant-core/src/libs/types.ts"],
+      "@croco/analytics-core": ["../../packages/analytics-core/src/index.ts"],
+      "@croco/warehouse-core": ["../../packages/warehouse-core/src/index.ts"],
+      "@croco/warehouse-core/runtime": ["../../packages/warehouse-core/src/runtime.ts"],
+      "@croco/warehouse-postgres/facts": ["../../packages/warehouse-postgres/src/facts.ts"],
+      "@croco/admin-core/fact-history-validation": [
+        "../../packages/admin-core/src/fact-history-validation.ts"
+      ],
+      "@croco/admin-react": ["../../packages/admin-react/src/index.ts"],
+      "@croco/metrics-core": ["../../packages/metrics-core/src/index.ts"],
+      "@croco/etl-core/source": ["../../packages/etl-core/src/source/index.ts"],
+      "@croco/metrics-core/runtime": ["../../packages/metrics-core/src/runtime.ts"]
+    }
+  },
+  "include": ["src/**/*.ts"]
+}

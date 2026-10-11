@@ -3,6 +3,7 @@ import type { DependencyResolutionTrace } from "../types";
 
 export type ContainerResolutionFailureReason =
   | "missing-provider"
+  | "not-instantiable"
   | "construction-failed"
   | "scope-mismatch";
 
@@ -19,7 +20,7 @@ export class ContainerResolutionProblem extends Problem {
     cause?: Error,
   ) {
     super("framework-context/di-resolution-failed", ProblemCategory.InternalServerError, detail, {
-      cause,
+      ...(cause ? { cause } : {}),
       extensions: { reason, resolution: trace },
     });
     this.reason = reason;

@@ -113,6 +113,7 @@ export type {
   MessageRendererConstructor,
   MessageRegistryInspection,
 } from "./libs/MessageContracts";
+export type { PushContent } from "@croco/notifications-core";
 export {
   EngagementCommandInvalidProblem,
   EngagementDispatchFailedProblem,
@@ -203,12 +204,73 @@ export {
 } from "./libs/PersistentEngagement";
 export type {
   EngagementDeliveryEventProcessingResult,
-  PushTokenResolver,
   StoredEngagementPolicyOptions,
 } from "./libs/PersistentEngagement";
 export { createEngagementStoreConformanceSuite } from "./libs/EngagementStoreConformance";
+export { PushEndpointLifecycle, createPushEndpointId } from "./libs/PushEndpointLifecycle";
+export type {
+  PushEndpointRegistrationResult,
+  PushEndpointScope,
+  RegisterPushEndpointInput,
+} from "./libs/PushEndpointLifecycle";
 export type {
   EngagementStoreConformanceCase,
   EngagementStoreConformanceOptions,
   EngagementStoreConformanceSuite,
 } from "./libs/EngagementStoreConformance";
+export {
+  ContactPolicy,
+  ContactPolicyInvalidProblem,
+  ContactPolicyConflictProblem,
+  ContactPolicyAcceptanceUnknownProblem,
+  InMemoryContactPolicyStore,
+  assertContactPolicyScope,
+  validateContactPolicyConfig,
+} from "./libs/ContactPolicy";
+export type {
+  ContactPolicyScope,
+  ContactPolicyTopic,
+  ContactPolicyRule,
+  ContactPolicyConfig,
+  ContactPolicyRequest,
+  ContactPolicyDecision,
+  ContactPolicyReservation,
+  ContactPolicyReserveResult,
+  ContactPolicyReconciliation,
+  ContactPolicyTransaction,
+  ContactPolicyStore,
+  ContactPolicyOptions,
+  ContactPolicyReservationRef,
+  EngagementContactPolicyGate,
+} from "./libs/ContactPolicy";
+export {
+  ReminderInvalidProblem,
+  ReminderConflictProblem,
+  ReminderAccessDeniedProblem,
+  ReminderNotFoundProblem,
+  ReminderDispatchProblem,
+  assertReminderScope,
+  assertReminderInput,
+  assertReminderSchedule,
+  reminderOccurrenceId,
+} from "./libs/ReminderContracts";
+export type {
+  ReminderScope,
+  ReminderSchedule,
+  ReminderInput,
+  Reminder,
+  ReminderOccurrence,
+  ReminderMutation,
+  ReminderTransaction,
+  ReminderStore,
+  ReminderActor,
+  ReminderAccess,
+  ReminderCommand,
+  ReminderRevisionCommand,
+} from "./libs/ReminderContracts";
+export { nextOccurrence } from "./libs/nextOccurrence";
+export { createReminderEngagementSender } from "./libs/ReminderEngagement";
+export type { ReminderMessageBinding } from "./libs/ReminderEngagement";
+export { ReminderService } from "./libs/ReminderService";
+export type { ReminderServiceOptions } from "./libs/ReminderService";
+export { InMemoryReminderStore } from "./libs/InMemoryReminderStore";

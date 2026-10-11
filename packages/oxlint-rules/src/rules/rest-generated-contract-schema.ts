@@ -1,13 +1,6 @@
 import type { Rule } from "eslint";
-import type {
-  CallExpression,
-  Expression,
-  Identifier,
-  ImportDeclaration,
-  ImportSpecifier,
-  Literal,
-  Node,
-} from "estree";
+import type { CallExpression, Expression, Literal, Node } from "estree";
+import { resolveDecoratorBinding } from "./decorator-binding.ts";
 
 const REST_PROTOCOLS_MODULE = "@croco/protocols-rest";
 const NAMED_PARAMETER_DECORATORS = new Set(["Param", "Query", "Header"]);
@@ -19,28 +12,12 @@ type DecoratorNode = Node & {
 
 const isDecoratorCall = (
   expression: Expression,
-): expression is CallExpression & { callee: Identifier } => {
-  return expression.type === "CallExpression" && expression.callee.type === "Identifier";
+): expression is CallExpression & { callee: { readonly type: string } } => {
+  return expression.type === "CallExpression";
 };
 
 const isStringLiteral = (node: Node | undefined): node is Literal & { value: string } => {
   return node?.type === "Literal" && typeof node.value === "string";
-};
-
-const isRestProtocolImport = (node: ImportDeclaration): boolean => {
-  return node.source.type === "Literal" && node.source.value === REST_PROTOCOLS_MODULE;
-};
-
-const getRestDecoratorImport = (
-  specifier: ImportSpecifier,
-): { readonly importedName: string; readonly localName: string } | null => {
-  if (specifier.imported.type !== "Identifier") {
-    return null;
-  }
-
-  return REST_CONTRACT_DECORATORS.has(specifier.imported.name)
-    ? { importedName: specifier.imported.name, localName: specifier.local.name }
-    : null;
 };
 
 const rule: Rule.RuleModule = {
@@ -59,35 +36,26 @@ const rule: Rule.RuleModule = {
     schema: [],
   },
   create(context) {
-    const restDecoratorNames = new Map<string, string>();
-
     return {
-      ImportDeclaration(node: ImportDeclaration) {
-        if (!isRestProtocolImport(node)) {
-          return;
-        }
-
-        for (const specifier of node.specifiers) {
-          if (specifier.type !== "ImportSpecifier") {
-            continue;
-          }
-
-          const restDecoratorImport = getRestDecoratorImport(specifier);
-          if (restDecoratorImport) {
-            restDecoratorNames.set(restDecoratorImport.localName, restDecoratorImport.importedName);
-          }
-        }
-      },
       Decorator(node: DecoratorNode) {
         if (!isDecoratorCall(node.expression)) {
           return;
         }
 
-        const decoratorName = node.expression.callee.name;
-        const importedDecoratorName = restDecoratorNames.get(decoratorName);
-        if (!importedDecoratorName) {
+        const binding = resolveDecoratorBinding(
+          context,
+          node as unknown as Record<string, unknown>,
+          {
+            moduleSpecifier: REST_PROTOCOLS_MODULE,
+            targetNames: REST_CONTRACT_DECORATORS,
+          },
+        );
+
+        if (!binding) {
           return;
         }
+
+        const importedDecoratorName = binding.importedName;
 
         if (importedDecoratorName === "All") {
           context.report({

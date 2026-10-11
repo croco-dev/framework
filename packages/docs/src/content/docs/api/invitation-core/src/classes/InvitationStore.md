@@ -5,7 +5,7 @@ prev: false
 title: "InvitationStore"
 ---
 
-초대 저장소 추상 계약입니다.
+초대 저장소 추상 계약과 상태 전이 메타 타입입니다.
 
 ## Extended by
 
@@ -124,13 +124,7 @@ title: "InvitationStore"
 
 ##### meta?
 
-###### acceptedAt?
-
-`Date`
-
-###### rejectedAt?
-
-`Date`
+[`InvitationStatusTransitionMeta`](/api/invitation-core/src/type-aliases/invitationstatustransitionmeta/)
 
 #### Returns
 

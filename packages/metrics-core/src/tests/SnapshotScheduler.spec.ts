@@ -29,6 +29,7 @@ describe("SnapshotScheduler", () => {
 
   beforeEach(() => {
     mockRepository = {
+      mrrMovementIdentityVersion: 2,
       recordMRRMovement: vi.fn(),
       recordSnapshot: vi.fn(),
       getSnapshot: vi.fn(),

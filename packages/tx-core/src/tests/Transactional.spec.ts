@@ -263,6 +263,54 @@ describe("@Transactional decorator", () => {
       expect(result).toBe("result");
       expect(mockAdapter.transaction).toHaveBeenCalledTimes(1);
     });
+
+    it("should honor manager defaultNesting when nesting is omitted", async () => {
+      const savepointAdapter = createMockAdapter();
+      const savepointManager = new TxManager(savepointAdapter, {
+        defaultNesting: "savepoint",
+      });
+
+      class TestService {
+        @Transactional(() => savepointManager)
+        async outer() {
+          return await this.inner();
+        }
+
+        @Transactional(() => savepointManager)
+        async inner() {
+          return "nested-result";
+        }
+      }
+
+      const result = await new TestService().outer();
+
+      expect(result).toBe("nested-result");
+      expect(savepointAdapter.transaction).toHaveBeenCalledTimes(1);
+      expect(savepointAdapter.savepoint).toHaveBeenCalledTimes(1);
+    });
+
+    it("should let explicit nesting override manager defaultNesting", async () => {
+      const joinAdapter = createMockAdapter();
+      const joinManager = new TxManager(joinAdapter, { defaultNesting: "savepoint" });
+
+      class TestService {
+        @Transactional(() => joinManager)
+        async outer() {
+          return await this.inner();
+        }
+
+        @Transactional(() => joinManager, { nesting: "join" })
+        async inner() {
+          return "nested-result";
+        }
+      }
+
+      const result = await new TestService().outer();
+
+      expect(result).toBe("nested-result");
+      expect(joinAdapter.transaction).toHaveBeenCalledTimes(1);
+      expect(joinAdapter.savepoint).not.toHaveBeenCalled();
+    });
   });
 
   describe("REQUIRES_NEW propagation", () => {

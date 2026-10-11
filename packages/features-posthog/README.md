@@ -1,5 +1,27 @@
 # @croco/features-posthog
 
+## Experiment evaluation capability
+
+`PostHogExperimentProvider` implements the separate `ExperimentEvaluationProvider`
+contract. It calls the installed SDK with an explicit stable subject and tenant group,
+and disables `$feature_flag_called` events. Flag evaluation and prefetch are not actual
+exposures. The existing `PostHogFeatureManager` API retains its compatibility behavior.
+
+The installed `posthog-node` 4.18.0 public API returns a value but does not expose the
+detailed compute-error status or a verifiable flag revision. Consequently this adapter
+reports `unavailable` with `detailed_metadata_unavailable` for observed values, including
+`false`; an absent value reports `provider_value_unavailable`, and a rejected request
+reports `evaluation_failed`. Observed values are diagnostic metadata and never become
+control assignments. Only the application revision is recorded; provider revision is
+not fabricated. Use the local allocator for supported experiment assignment until a
+provider can attest the required detailed contract.
+
+`previewDetailed` uses the same event-free SDK boundary and reports the same unsupported
+capability; a Console preview cannot present a local successful assignment for this provider.
+
+The HTTP fixture tests use the actual installed SDK against a local server and verify
+that evaluations emit no feature-call or exposure events.
+
 PostHog 기반 Feature 플래그 관리 구현체. `@croco/features-core`의 `FeatureManager`를 구현하여 PostHog Feature Flags와 통합합니다.
 
 ## 설치

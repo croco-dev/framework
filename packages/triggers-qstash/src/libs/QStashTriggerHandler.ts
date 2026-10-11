@@ -26,6 +26,7 @@ const EXECUTION_RETRY_PENDING_ERROR_CODE = "triggers-qstash/execution-retry-pend
 const INVALID_PAYLOAD_ERROR_CODE = "triggers-qstash/invalid-payload";
 const INVALID_SIGNATURE_ERROR_CODE = "triggers-qstash/invalid-signature";
 const INVALID_DELIVERY_IDENTITY_ERROR_CODE = "triggers-qstash/invalid-delivery-identity";
+const TRIGGER_DISABLED_ERROR_CODE = "triggers-qstash/trigger-disabled";
 const MISSING_DELIVERY_IDENTITY_ERROR_CODE = "triggers-qstash/missing-delivery-identity";
 const METHOD_NOT_FOUND_ERROR_CODE = "triggers-qstash/method-not-found";
 const SERVICE_RESOLUTION_ERROR_CODE = "triggers-qstash/service-resolution-failed";
@@ -122,7 +123,7 @@ export type QStashWebhookPayload = {
   readonly cronExpression: string;
 
   /**
-   * Timestamp when the webhook was triggered.
+   * Timestamp when the schedule payload was built during sync, reused for every firing.
    */
   readonly timestamp: string;
 
@@ -373,6 +374,11 @@ export class QStashTriggerHandler {
 
     // Resolve target instance and execute
     try {
+      const disabledResult = this.rejectDisabledTrigger(payload);
+      if (disabledResult) {
+        return disabledResult;
+      }
+
       const result = await this.dispatchExecution(payload, messageId);
       return result;
     } catch (error) {
@@ -441,6 +447,147 @@ export class QStashTriggerHandler {
   }
 
   /**
+   * Reject deliveries for triggers that are currently disabled.
+   *
+   * A schedule created before the trigger was disabled can still deliver, so
+   * the registry state is authoritative when it identifies the trigger and the
+   * payload carries an explicit disabled flag otherwise.
+   */
+  private rejectDisabledTrigger(payload: QStashWebhookPayload): HandleResult | undefined {
+    const authoritative = this.findAuthoritativeCronTrigger(payload);
+    if (authoritative?.options?.enabled === false) {
+      return {
+        success: false,
+        statusCode: 410,
+        body: createErrorResponse(
+          "Trigger is disabled",
+          TRIGGER_DISABLED_ERROR_CODE,
+          ProblemCategory.Gone,
+        ),
+      };
+    }
+
+    if (payload.options?.enabled === false && !authoritative) {
+      return {
+        success: false,
+        statusCode: 410,
+        body: createErrorResponse(
+          "Trigger is disabled",
+          TRIGGER_DISABLED_ERROR_CODE,
+          ProblemCategory.Gone,
+        ),
+      };
+    }
+
+    return undefined;
+  }
+
+  /**
+   * Registry state is authoritative when it uniquely identifies the trigger:
+   * an exact schedule-ID match wins, otherwise the same unique
+   * class/method/trigger-name fallback used by target resolution applies.
+   * Returns undefined on ambiguity so stale payload flags stay fail-open.
+   */
+  private findAuthoritativeCronTrigger(
+    payload: QStashWebhookPayload,
+  ): { readonly options?: { readonly enabled?: boolean } } | undefined {
+    const canonical = this.findMatchingCronTrigger(payload);
+    if (canonical) {
+      return canonical;
+    }
+
+    return this.findUniqueMethodCronTrigger(payload);
+  }
+
+  /**
+   * Mirror of `resolveTargetClass` fallback: triggers matching class,
+   * method, and trigger name without requiring a schedule-ID match.
+   * Only a unique match is authoritative.
+   */
+  private findUniqueMethodCronTrigger(
+    payload: QStashWebhookPayload,
+  ): { readonly options?: { readonly enabled?: boolean } } | undefined {
+    const allTriggers = triggerRegistry.getAllTriggers();
+    const matches: Array<{ readonly options?: { readonly enabled?: boolean } }> = [];
+
+    for (const [target, triggers] of allTriggers.entries()) {
+      const targetClass = this.getTargetClass(target);
+      if (!targetClass) {
+        continue;
+      }
+
+      if (payload.className !== undefined && payload.className !== targetClass.name) {
+        continue;
+      }
+
+      for (const trigger of triggers.values()) {
+        if (
+          trigger.type !== "cron" ||
+          String(trigger.methodName) !== payload.methodName ||
+          (payload.triggerName !== undefined &&
+            payload.triggerName !== (trigger.options?.name ?? String(trigger.methodName)))
+        ) {
+          continue;
+        }
+
+        matches.push(trigger);
+      }
+    }
+
+    if (matches.length === 1) {
+      return matches[0];
+    }
+
+    return undefined;
+  }
+
+  private findMatchingCronTrigger(
+    payload: QStashWebhookPayload,
+  ): { readonly options?: { readonly enabled?: boolean } } | undefined {
+    const allTriggers = triggerRegistry.getAllTriggers();
+    const matches: Array<{ readonly options?: { readonly enabled?: boolean } }> = [];
+
+    for (const [target, triggers] of allTriggers.entries()) {
+      const targetClass = this.getTargetClass(target);
+      if (!targetClass) {
+        continue;
+      }
+
+      if (payload.className !== undefined && payload.className !== targetClass.name) {
+        continue;
+      }
+
+      for (const trigger of triggers.values()) {
+        if (
+          trigger.type !== "cron" ||
+          String(trigger.methodName) !== payload.methodName ||
+          (payload.triggerName !== undefined &&
+            payload.triggerName !== (trigger.options?.name ?? String(trigger.methodName)))
+        ) {
+          continue;
+        }
+
+        if (
+          this.matchesScheduleId(
+            payload.scheduleId,
+            targetClass.name,
+            trigger.options?.name,
+            payload.methodName,
+          )
+        ) {
+          matches.push(trigger);
+        }
+      }
+    }
+
+    if (matches.length === 1) {
+      return matches[0];
+    }
+
+    return undefined;
+  }
+
+  /**
    * Dispatch execution to the target method.
    */
   private async dispatchExecution(
@@ -478,6 +625,7 @@ export class QStashTriggerHandler {
     }
 
     // Create execution
+    const timestamp = new Date().toISOString();
     const execution = await this.executionManager.create({
       type: "cron",
       idempotencyKey: `qstash:${messageId}`,
@@ -494,6 +642,7 @@ export class QStashTriggerHandler {
         messageId,
         scheduleId,
         triggerType: "cron",
+        timestamp,
         options: options ?? {},
       },
     });
@@ -544,7 +693,18 @@ export class QStashTriggerHandler {
         timeoutClaimed = true;
         if (timeoutHandle !== undefined) clearTimeout(timeoutHandle);
         controller.abort();
-        void this.claimTimeout(attemptManager, attemptToken).then(resolve, reject);
+        void this.claimTimeout(attemptManager, attemptToken)
+          .then((claimed) => {
+            if (
+              claimed.status === "timed_out" &&
+              claimed.attempts === attemptToken.attempt &&
+              claimed.attempts < claimed.maxAttempts
+            ) {
+              return this.recoverTimedOutExecution(claimed, attemptManager);
+            }
+            return claimed;
+          })
+          .then(resolve, reject);
       };
 
       const scheduleTimeout = () => {
@@ -581,7 +741,7 @@ export class QStashTriggerHandler {
         handlerPromise.then((value) => ({ kind: "completed" as const, value })),
         timeoutPromise.then((timedOut) => ({ kind: "timed_out" as const, timedOut })),
       ]);
-      if (claimExpiredTimeout()) {
+      if (timeoutClaimed) {
         return this.createTimeoutResult(await timeoutPromise);
       }
       if (outcome.kind === "timed_out") {
@@ -736,6 +896,13 @@ export class QStashTriggerHandler {
       }
     }
     const reconciled = await this.executionManager.get(execution.id);
+    return this.recoverTimedOutExecution(reconciled, attemptManager);
+  }
+
+  private async recoverTimedOutExecution(
+    reconciled: Execution,
+    attemptManager: ExecutionAttemptManager | undefined,
+  ): Promise<Execution> {
     if (reconciled.status !== "timed_out" || this.timeoutRetryPolicy === "indeterminate") {
       return reconciled;
     }

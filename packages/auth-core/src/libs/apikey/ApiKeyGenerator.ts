@@ -20,8 +20,10 @@ export class ApiKeyGenerator {
 
   parse(rawKey: string): { prefix: string; shortToken: string; longToken: string } | null {
     const parts = rawKey.split("_");
-    if (parts.length !== 3) return null;
-    const [prefix, shortToken, longToken] = parts;
+    if (parts.length < 3) return null;
+    const shortToken = parts[parts.length - 2];
+    const longToken = parts[parts.length - 1];
+    const prefix = parts.slice(0, -2).join("_");
     if (!prefix || !shortToken || !longToken) return null;
     return { prefix, shortToken, longToken };
   }

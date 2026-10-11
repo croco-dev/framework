@@ -15,6 +15,12 @@ title: "InvalidIdempotencyTtlProblemOptions"
 
 ---
 
+### field?
+
+> `readonly` `optional` **field?**: `"ttlMs"` \| `"leaseMs"`
+
+---
+
 ### receivedValue
 
 > `readonly` **receivedValue**: `number` \| `string`

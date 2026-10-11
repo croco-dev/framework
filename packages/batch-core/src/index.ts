@@ -10,20 +10,34 @@
  *
  * @example
  * ```typescript
- * import { JobBuilder, Step } from '@croco/batch-core';
+ * import { ChunkExecutor, JobBuilder, Step } from '@croco/batch-core';
  * import type { ItemReader, ItemProcessor, ItemWriter } from '@croco/batch-core';
+ * import type { ExecutionManager } from '@croco/execution-core';
+ *
+ * type User = { id: string; name: string };
+ * type UserDTO = { id: string; name: string };
+ *
+ * declare const reader: ItemReader<User>;
+ * declare const processor: ItemProcessor<User, UserDTO>;
+ * declare const writer: ItemWriter<UserDTO>;
+ * declare const executionManager: ExecutionManager;
  *
  * const step = new Step({
  *   name: 'process-users',
- *   reader: new UserReader(),
- *   processor: new UserProcessor(),
- *   writer: new UserWriter(),
+ *   reader,
+ *   processor,
+ *   writer,
  *   chunkSize: 100
  * });
  *
  * const job = new JobBuilder('daily-batch').start(step).build();
- * await job.execute();
+ * const execution = await executionManager.create({ type: 'batch' });
+ * const executor = new ChunkExecutor(executionManager);
+ * await executor.execute(execution.id, job.steps[0] as Step<User, UserDTO>);
  * ```
+ *
+ * `Job`은 스텝 구성의 스냅샷이며 실행 메서드를 갖지 않습니다.
+ * 실행은 `ChunkExecutor`가 `execution-core`의 실행 ID와 함께 수행합니다.
  */
 
 /**
@@ -38,10 +52,20 @@
  *
  * @example
  * ```typescript
- * import { ChunkExecutor } from '@croco/batch-core';
+ * import { ChunkExecutor, Step } from '@croco/batch-core';
+ * import type { ItemReader, ItemWriter } from '@croco/batch-core';
+ * import type { ExecutionManager } from '@croco/execution-core';
  *
- * const executor = new ChunkExecutor(reader, processor, writer, { chunkSize: 100 });
- * await executor.execute();
+ * type User = { id: string; name: string };
+ *
+ * declare const reader: ItemReader<User>;
+ * declare const writer: ItemWriter<User>;
+ * declare const executionManager: ExecutionManager;
+ *
+ * const step = new Step({ name: 'process-users', reader, writer, chunkSize: 100 });
+ * const execution = await executionManager.create({ type: 'batch' });
+ * const executor = new ChunkExecutor(executionManager);
+ * await executor.execute(execution.id, step);
  * ```
  */
 export * from "./libs/ChunkExecutor";
@@ -155,14 +179,27 @@ export * from "./libs/interfaces/ItemWriter";
  *
  * @example
  * ```typescript
+ * import { ChunkExecutor, JobBuilder, Step } from '@croco/batch-core';
+ * import type { ItemReader, ItemWriter } from '@croco/batch-core';
+ * import type { ExecutionManager } from '@croco/execution-core';
+ *
+ * type User = { id: string; name: string };
+ *
+ * declare const reader: ItemReader<User>;
+ * declare const writer: ItemWriter<User>;
+ * declare const executionManager: ExecutionManager;
+ *
  * const job = new JobBuilder('daily-user-batch')
- *   .start(preprocessStep)
- *   .next(processStep)
- *   .next(cleanupStep)
+ *   .start(new Step({ name: 'preprocess', reader, writer }))
  *   .build();
  *
- * await job.execute();
+ * const execution = await executionManager.create({ type: 'batch' });
+ * const executor = new ChunkExecutor(executionManager);
+ * await executor.execute(execution.id, job.steps[0] as Step<User, User>);
  * ```
+ *
+ * `Job`은 스텝 구성의 스냅샷이며 실행 메서드를 갖지 않습니다.
+ * 실행은 `ChunkExecutor`가 `execution-core`의 실행 ID와 함께 수행합니다.
  */
 export * from "./libs/JobBuilder";
 export * from "./libs/problems/BatchStepProblems";
@@ -179,11 +216,21 @@ export * from "./libs/StepFailure";
  *
  * @example
  * ```typescript
+ * import { Step } from '@croco/batch-core';
+ * import type { ItemReader, ItemProcessor, ItemWriter } from '@croco/batch-core';
+ *
+ * type User = { id: string; name: string };
+ * type UserDTO = { id: string; name: string };
+ *
+ * declare const reader: ItemReader<User>;
+ * declare const processor: ItemProcessor<User, UserDTO>;
+ * declare const writer: ItemWriter<UserDTO>;
+ *
  * const step = new Step({
  *   name: 'process-active-users',
- *   reader: new UserReader(),
- *   processor: new UserProcessor(),
- *   writer: new UserWriter(),
+ *   reader,
+ *   processor,
+ *   writer,
  *   chunkSize: 100
  * });
  * ```

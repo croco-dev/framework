@@ -2,7 +2,7 @@
   "name": "@croco-example/first-party-plugin-composition",
   "version": "0.0.0",
   "private": true,
-  "type": "module",
+  "type": "commonjs",
   "scripts": {
     "build": "tsc --noEmit",
     "start": "tsx src/index.ts",

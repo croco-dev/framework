@@ -1,0 +1,185 @@
+{
+  "schemaVersion": "croco.manifest.runtime.v1",
+  "source": {
+    "schemaVersion": "croco.project-map.manifest.v1",
+    "artifact": "croco.project-map.json",
+    "packageName": "{{projectName}}",
+    "generatedArtifacts": [
+      {
+        "kind": "framework-manifest",
+        "path": ".croco/build/framework-manifest.json",
+        "commitPolicy": "commit-required"
+      },
+      {
+        "kind": "intent-map",
+        "path": ".croco/build/intent-map.json",
+        "commitPolicy": "commit-required"
+      },
+      {
+        "kind": "route-registration-table",
+        "path": ".croco/build/route-registration-table.json",
+        "commitPolicy": "commit-required"
+      },
+      {
+        "kind": "routes-module",
+        "path": ".croco/build/routes.mjs",
+        "commitPolicy": "commit-required"
+      }
+    ]
+  },
+  "project": {
+    "root": ".",
+    "packageName": "{{projectName}}",
+    "packageManager": "pnpm@12.7.0"
+  },
+  "summary": {
+    "telemetryBoundaries": 15,
+    "diagnostics": 0
+  },
+  "policy": {
+    "manifestPath": "croco-runtime-policy.manifest.json",
+    "target": "node",
+    "planCount": 0,
+    "requiredCapabilities": []
+  },
+  "telemetry": {
+    "boundaries": [
+      {
+        "kind": "span-wrapper",
+        "id": "span-wrapper:apps/api-server/src/demo/operational-failure-drills.ts:14",
+        "source": {
+          "file": "apps/api-server/src/demo/operational-failure-drills.ts",
+          "line": 14,
+          "column": 1
+        }
+      },
+      {
+        "kind": "span-wrapper",
+        "id": "span-wrapper:apps/api-server/src/demo/operational-failure-drills.ts:188",
+        "source": {
+          "file": "apps/api-server/src/demo/operational-failure-drills.ts",
+          "line": 188,
+          "column": 9
+        }
+      },
+      {
+        "kind": "telemetry-flush",
+        "id": "telemetry-flush:apps/api-server/src/demo/operational-failure-drills.ts:138",
+        "source": {
+          "file": "apps/api-server/src/demo/operational-failure-drills.ts",
+          "line": 138,
+          "column": 5
+        }
+      },
+      {
+        "kind": "telemetry-flush",
+        "id": "telemetry-flush:apps/api-server/src/demo/operational-failure-drills.ts:191",
+        "source": {
+          "file": "apps/api-server/src/demo/operational-failure-drills.ts",
+          "line": 191,
+          "column": 9
+        }
+      },
+      {
+        "kind": "telemetry-flush",
+        "id": "telemetry-flush:apps/api-server/src/demo/operational-failure-drills.ts:194",
+        "source": {
+          "file": "apps/api-server/src/demo/operational-failure-drills.ts",
+          "line": 194,
+          "column": 11
+        }
+      },
+      {
+        "kind": "telemetry-flush",
+        "id": "telemetry-flush:apps/api-server/src/generatedSaasProviderProfile.ts:553",
+        "source": {
+          "file": "apps/api-server/src/generatedSaasProviderProfile.ts",
+          "line": 553,
+          "column": 5
+        }
+      },
+      {
+        "kind": "telemetry-flush",
+        "id": "telemetry-flush:apps/api-server/src/generatedSaasProviderProfile.ts:559",
+        "source": {
+          "file": "apps/api-server/src/generatedSaasProviderProfile.ts",
+          "line": 559,
+          "column": 1
+        }
+      },
+      {
+        "kind": "telemetry-flush",
+        "id": "telemetry-flush:apps/api-server/src/index.ts:32",
+        "source": {
+          "file": "apps/api-server/src/index.ts",
+          "line": 32,
+          "column": 5
+        }
+      },
+      {
+        "kind": "telemetry-runtime",
+        "id": "telemetry-runtime:apps/api-server/src/demo/operational-failure-drills.ts:138",
+        "source": {
+          "file": "apps/api-server/src/demo/operational-failure-drills.ts",
+          "line": 138,
+          "column": 5
+        }
+      },
+      {
+        "kind": "telemetry-runtime",
+        "id": "telemetry-runtime:apps/api-server/src/demo/operational-failure-drills.ts:15",
+        "source": {
+          "file": "apps/api-server/src/demo/operational-failure-drills.ts",
+          "line": 15,
+          "column": 1
+        }
+      },
+      {
+        "kind": "telemetry-runtime",
+        "id": "telemetry-runtime:apps/api-server/src/demo/operational-failure-drills.ts:176",
+        "source": {
+          "file": "apps/api-server/src/demo/operational-failure-drills.ts",
+          "line": 176,
+          "column": 9
+        }
+      },
+      {
+        "kind": "telemetry-runtime",
+        "id": "telemetry-runtime:apps/api-server/src/demo/operational-failure-drills.ts:177",
+        "source": {
+          "file": "apps/api-server/src/demo/operational-failure-drills.ts",
+          "line": 177,
+          "column": 9
+        }
+      },
+      {
+        "kind": "telemetry-runtime",
+        "id": "telemetry-runtime:apps/api-server/src/demo/operational-failure-drills.ts:214",
+        "source": {
+          "file": "apps/api-server/src/demo/operational-failure-drills.ts",
+          "line": 214,
+          "column": 11
+        }
+      },
+      {
+        "kind": "telemetry-runtime",
+        "id": "telemetry-runtime:apps/api-server/src/generatedSaasProviderProfile.ts:553",
+        "source": {
+          "file": "apps/api-server/src/generatedSaasProviderProfile.ts",
+          "line": 553,
+          "column": 5
+        }
+      },
+      {
+        "kind": "telemetry-runtime",
+        "id": "telemetry-runtime:apps/api-server/src/generatedSaasProviderProfile.ts:559",
+        "source": {
+          "file": "apps/api-server/src/generatedSaasProviderProfile.ts",
+          "line": 559,
+          "column": 1
+        }
+      }
+    ]
+  },
+  "diagnostics": []
+}

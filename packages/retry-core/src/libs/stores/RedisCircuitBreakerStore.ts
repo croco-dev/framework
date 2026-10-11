@@ -96,13 +96,18 @@ export class RedisCircuitBreakerStore extends CircuitBreakerStateStore {
     );
   }
 
-  async setState(circuitId: string, state: CircuitState): Promise<void> {
+  async setState(
+    circuitId: string,
+    state: CircuitState,
+    options?: { minRetentionMs?: number },
+  ): Promise<void> {
+    const ttlSeconds = this.retentionSeconds(options?.minRetentionMs);
     return this.runWithStoreErrorHandling(
       circuitId,
       async () => {
-        await this.redis.set(this.key(circuitId, "state"), state, { ex: this.ttlSeconds });
-        await this.redis.set(this.key(circuitId, "halfOpenActive"), "0", { ex: this.ttlSeconds });
-        await this.redis.set(this.key(circuitId, "halfOpenSuccess"), "0", { ex: this.ttlSeconds });
+        await this.redis.set(this.key(circuitId, "state"), state, { ex: ttlSeconds });
+        await this.redis.set(this.key(circuitId, "halfOpenActive"), "0", { ex: ttlSeconds });
+        await this.redis.set(this.key(circuitId, "halfOpenSuccess"), "0", { ex: ttlSeconds });
       },
       (store) => store.setState(circuitId, state),
       async () => undefined,
@@ -192,12 +197,17 @@ export class RedisCircuitBreakerStore extends CircuitBreakerStateStore {
     );
   }
 
-  async setLastFailureTime(circuitId: string, time: number): Promise<void> {
+  async setLastFailureTime(
+    circuitId: string,
+    time: number,
+    options?: { minRetentionMs?: number },
+  ): Promise<void> {
+    const ttlSeconds = this.retentionSeconds(options?.minRetentionMs);
     return this.runWithStoreErrorHandling(
       circuitId,
       async () => {
         await this.redis.set(this.key(circuitId, "lastFailureTime"), String(time), {
-          ex: this.ttlSeconds,
+          ex: ttlSeconds,
         });
       },
       (store) => store.setLastFailureTime(circuitId, time),
@@ -382,6 +392,21 @@ export class RedisCircuitBreakerStore extends CircuitBreakerStateStore {
     }
 
     return this.fallbackStore;
+  }
+
+  private retentionSeconds(minRetentionMs = 0): number {
+    assertValidRetryNumber(
+      "redisCircuitBreaker.minRetentionMs",
+      minRetentionMs,
+      "non-negative-timer-integer",
+    );
+    const ttlSeconds = this.ttlSeconds + Math.ceil(minRetentionMs / 1000);
+    assertValidRetryNumber(
+      "redisCircuitBreaker.retentionSeconds",
+      ttlSeconds,
+      "positive-safe-integer",
+    );
+    return ttlSeconds;
   }
 
   private key(circuitId: string, suffix: string): string {

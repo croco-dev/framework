@@ -4,6 +4,7 @@ import * as path from "node:path";
 import { pathToFileURL } from "node:url";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
+import { createCrocoCommandRuntime, runWithCrocoCommandRuntime } from "../libs/cliRuntime.js";
 import { runGenerateUsageDashboard } from "../commands/generateUsageDashboard.js";
 import { CLI_DIAGNOSTIC_CODES, CLI_LEGACY_DIAGNOSTIC_CODES } from "../libs/diagnosticCodes.js";
 
@@ -25,6 +26,68 @@ type GeneratedServiceModule = {
 };
 
 describe("GenerateUsageDashboard", () => {
+  it.each(["api", "server", "backend"])("should generate in detected apps/%s", async (app) => {
+    const cwd = await createWorkspace();
+    await fs.rename(path.join(cwd, "apps", "api-server"), path.join(cwd, "apps", app));
+    const result = await runGenerateUsageDashboard({ cwd, page: false });
+    expect(result?.api.files).toHaveLength(5);
+    expect(result?.api.registration.status).toBe("updated");
+    expect(await fs.readFile(path.join(cwd, "apps", app, "src", "app.ts"), "utf-8")).toContain(
+      "UsageDashboardController",
+    );
+    const runtime = await fs.readFile(
+      path.join(cwd, "apps", app, "src", "usage-dashboard", "UsageDashboardRuntime.ts"),
+      "utf-8",
+    );
+    expect(runtime).toContain(`apps/${app}/src/saasDemo.ts failed to load`);
+    await expect(fs.access(path.join(cwd, "apps", "api-server"))).rejects.toThrow();
+  });
+
+  it("should distinguish a missing workspace from a missing API app", async () => {
+    const cwd = await createWorkspace();
+    await fs.rm(path.join(cwd, "pnpm-workspace.yaml"));
+    const messages: string[] = [];
+    const runtime = createCrocoCommandRuntime({ stdout: (message) => messages.push(message) });
+    const result = await runWithCrocoCommandRuntime(runtime, () =>
+      runGenerateUsageDashboard({ cwd }),
+    );
+    expect(result).toBeNull();
+    expect(messages).toEqual(["No Croco workspace detected. Run from a Croco project."]);
+    await expect(
+      fs.access(path.join(cwd, "apps", "api-server", "src", "usage-dashboard")),
+    ).rejects.toThrow();
+  });
+
+  it("should distinguish a workspace without an API app", async () => {
+    const cwd = await createWorkspace();
+    await fs.rm(path.join(cwd, "apps", "api-server"), { recursive: true });
+    const messages: string[] = [];
+    const runtime = createCrocoCommandRuntime({ stdout: (message) => messages.push(message) });
+    const result = await runWithCrocoCommandRuntime(runtime, () =>
+      runGenerateUsageDashboard({ cwd, page: false }),
+    );
+    expect(result).toBeNull();
+    expect(messages).toEqual([
+      "No API server app detected in apps/ (checked api-server, api, server, backend).",
+    ]);
+    await expect(fs.access(path.join(cwd, "apps", "api-server"))).rejects.toThrow();
+  });
+
+  it.each(["api", "server", "backend"])(
+    "should validate the detected apps/%s manifest before writing",
+    async (app) => {
+      const cwd = await createWorkspace({ apiServerManifest: "{}" });
+      await fs.rename(path.join(cwd, "apps", "api-server"), path.join(cwd, "apps", app));
+      await expect(runGenerateUsageDashboard({ cwd, page: false })).rejects.toThrow(
+        `Missing dependencies in apps/${app}/package.json`,
+      );
+      await expect(
+        fs.access(
+          path.join(cwd, "apps", app, "src", "usage-dashboard", "UsageDashboardRuntime.ts"),
+        ),
+      ).rejects.toThrow();
+    },
+  );
   it("should create a usage dashboard API and console page", async () => {
     const cwd = await createWorkspace();
 

@@ -21,6 +21,8 @@ import {
 import { addMembershipEventIntents } from "../migrations/membershipEventIntents";
 import { addMembershipSeatOrdinals } from "../migrations/addMembershipSeatOrdinals";
 
+import { setMembershipTimestampDefaults } from "../index";
+
 const connectionString = process.env.MEMBERSHIP_POSTGRES_URL ?? "";
 
 class TestDrizzleMembershipStore extends DrizzleMembershipStore {
@@ -60,6 +62,7 @@ describe.skipIf(connectionString.length === 0)(
       )
       `);
       await addMembershipSeatOrdinals({ execute: (query) => db.execute(query) });
+      await setMembershipTimestampDefaults({ execute: (query) => db.execute(query) });
       await addMembershipEventIntents({ execute: (query) => db.execute(query) });
     });
 
@@ -476,5 +479,124 @@ describe.skipIf(connectionString.length === 0)(
         { events: [{ eventName: "membership.removed" }] },
       ]);
     });
+  },
+);
+
+describe.skipIf(connectionString.length === 0).each(["UTC", "Asia/Seoul"])(
+  "DrizzleMembershipStore timestamps in a %s PostgreSQL session",
+  (timezone) => {
+    let pool!: Pool;
+    let store!: DrizzleMembershipStore;
+
+    beforeAll(async () => {
+      pool = new Pool({ connectionString, max: 2, options: `-c timezone=${timezone}` });
+      const db = drizzle(pool);
+      const client = db as unknown as DrizzleMembershipClient;
+      store = new DrizzleMembershipStore(client, new TxManager(createDrizzleTxAdapter(client)));
+      await pool.query(`
+        create table if not exists memberships (
+          id text primary key,
+          tenant_id text not null,
+          user_id text not null,
+          role text not null,
+          created_at timestamp not null default now(),
+          updated_at timestamp not null default now(),
+          unique (tenant_id, user_id)
+        )
+      `);
+      await addMembershipSeatOrdinals({ execute: (query) => db.execute(query) });
+      await setMembershipTimestampDefaults({ execute: (query) => db.execute(query) });
+      await addMembershipEventIntents({ execute: (query) => db.execute(query) });
+    });
+
+    beforeEach(async () => {
+      await pool.query(
+        "truncate table membership_event_intents, membership_idempotency_records, memberships",
+      );
+    });
+
+    afterAll(async () => {
+      await pool.end();
+    });
+
+    it("reapplies UTC defaults without changing existing timestamps or column types", async () => {
+      await pool.query(`
+        alter table memberships
+          alter column created_at set default now(),
+          alter column updated_at set default now();
+        insert into memberships (id, tenant_id, user_id, role, created_at, updated_at)
+        values ('legacy', 'tenant-legacy', 'user-legacy', 'member', '2020-01-02 03:04:05', '2020-02-03 04:05:06');
+      `);
+      const db = drizzle(pool);
+      const client = { execute: (query: Parameters<typeof db.execute>[0]) => db.execute(query) };
+      await setMembershipTimestampDefaults(client);
+      await setMembershipTimestampDefaults(client);
+
+      const { rows } = await pool.query(`
+        select created_at::text, updated_at::text,
+          pg_typeof(created_at)::text as created_type,
+          pg_typeof(updated_at)::text as updated_type
+        from memberships where id = 'legacy'
+      `);
+      expect(rows).toEqual([
+        {
+          created_at: "2020-01-02 03:04:05",
+          updated_at: "2020-02-03 04:05:06",
+          created_type: "timestamp without time zone",
+          updated_type: "timestamp without time zone",
+        },
+      ]);
+      const service = new MembershipService({ store });
+      const inserted = await service.addMember(
+        "tenant-migrated",
+        "user-migrated",
+        "member",
+        "add:migrated",
+      );
+      expect(Math.abs(inserted.createdAt.getTime() - Date.now())).toBeLessThan(1_000);
+      expect(inserted.updatedAt).toEqual(inserted.createdAt);
+    });
+
+    it.each([null, 2])(
+      "returns and reloads the actual creation instant with maxSeats=%s",
+      async (maxSeats) => {
+        const service = new MembershipService({
+          store,
+          eventPublisher: { publishIdempotently: async () => undefined },
+          ...(maxSeats === null
+            ? {}
+            : {
+                seatLimitChecker: {
+                  checkSeatAvailability: async () => ({
+                    usage: 0,
+                    quota: maxSeats,
+                    exceeded: false,
+                    remaining: maxSeats,
+                  }),
+                  getCurrentMemberCount: async () => 0,
+                  getMaxSeats: async () => maxSeats,
+                },
+              }),
+        });
+        const before = Date.now();
+        const membership = await service.addMember("tenant-tz", "user-tz", "admin", "add:tz");
+        const after = Date.now();
+        const reloaded = await store.findByTenantAndUser("tenant-tz", "user-tz");
+
+        expect(membership.createdAt.getTime()).toBeGreaterThanOrEqual(before - 1_000);
+        expect(membership.createdAt.getTime()).toBeLessThanOrEqual(after + 1_000);
+        expect(membership.updatedAt).toEqual(membership.createdAt);
+        expect(reloaded).toEqual(membership);
+        await expect(service.addMember("tenant-tz", "user-tz", "admin", "add:tz")).resolves.toEqual(
+          membership,
+        );
+
+        await service.updateRole("tenant-tz", "user-tz", "member", "demote:tz");
+        const updated = await store.findByTenantAndUser("tenant-tz", "user-tz");
+        expect(updated).not.toBeNull();
+        expect(updated?.createdAt).toEqual(membership.createdAt);
+        expect(updated?.updatedAt.getTime()).toBeGreaterThanOrEqual(membership.createdAt.getTime());
+      },
+    );
   },
 );

@@ -25,7 +25,7 @@ title: "SendNotificationTask"
 
 ### handle()
 
-> **handle**(`payload`): `Promise`\<`void`\>
+> **handle**(`payload`): `Promise`\<`Readonly`\<\{ `providerMessageId?`: `string`; `providerName`: `string`; \}\>\>
 
 #### Parameters
 
@@ -35,7 +35,7 @@ title: "SendNotificationTask"
 
 #### Returns
 
-`Promise`\<`void`\>
+`Promise`\<`Readonly`\<\{ `providerMessageId?`: `string`; `providerName`: `string`; \}\>\>
 
 ---
 

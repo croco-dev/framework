@@ -5,8 +5,13 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 import type { DatabaseClient } from "./libs/db-types";
 import { MigrationRunner } from "./libs/MigrationRunner";
+import { MigrationScanner } from "./libs/MigrationScanner";
 import { DatabaseUrlRequiredProblem } from "./libs/problems/DatabaseUrlRequiredProblem";
+import { MigrationFileLoadProblem } from "./libs/problems/MigrationFileLoadProblem";
+import { MissingDownFunctionProblem } from "./libs/problems/MissingDownFunctionProblem";
+import { MissingUpFunctionProblem } from "./libs/problems/MissingUpFunctionProblem";
 import { UnsupportedDialectProblem } from "./libs/problems/UnsupportedDialectProblem";
+import { assertUniqueMigrationFileIds } from "./libs/reconcileMigrationHistory";
 import { parseMigrationCount } from "./libs/validateMigrationCount";
 import { assertValidMigrationTarget } from "./libs/validateMigrationTarget";
 import { getPackageVersion } from "./package-version";
@@ -49,6 +54,10 @@ export type StatusOptions = {
   connection?: string;
   table: string;
   dialect: string;
+};
+
+type ValidateOptions = {
+  dir: string;
 };
 
 export async function runUp(
@@ -158,6 +167,36 @@ export async function runStatus(
   }
 }
 
+async function runValidate(options: ValidateOptions, runtime: MigrationCliRuntime): Promise<void> {
+  let exitCode = 0;
+  try {
+    const files = await new MigrationScanner(options.dir).scan();
+    assertUniqueMigrationFileIds(files);
+
+    for (const file of files) {
+      if (typeof file.up !== "function") {
+        throw new MissingUpFunctionProblem(file.id, file.name);
+      }
+      if (typeof file.down !== "function") {
+        throw new MissingDownFunctionProblem(file.id, file.name);
+      }
+    }
+
+    writeMigrationList(
+      runtime,
+      files.map(({ id, name }) => `${id}_${name}`),
+      "Validated",
+      "No migrations found",
+      "✓",
+    );
+  } catch (error) {
+    runtime.writeError(formatCliFailure("Validation failed", error));
+    exitCode = 1;
+  } finally {
+    await finalizeCommand(runtime, undefined, exitCode);
+  }
+}
+
 export function createProgram(runtime: MigrationCliRuntime = DEFAULT_RUNTIME): Command {
   const program = new Command();
   program.name("migrate").description("Drizzle migration runner").version(getPackageVersion());
@@ -198,6 +237,14 @@ export function createProgram(runtime: MigrationCliRuntime = DEFAULT_RUNTIME): C
     .option("--dialect <dialect>", "database dialect (postgres)", "postgres")
     .action(async (options: StatusOptions) => {
       await runStatus(options, runtime);
+    });
+
+  program
+    .command("validate")
+    .description("Load and validate migration files without a database connection")
+    .option("-d, --dir <path>", "migrations directory", "./migrations")
+    .action(async (options: ValidateOptions) => {
+      await runValidate(options, runtime);
     });
 
   return program;
@@ -250,7 +297,13 @@ function formatCliError(error: unknown): string {
   if (error instanceof Problem) {
     const details = error.toJSON();
     const detail = typeof details.detail === "string" ? `: ${details.detail}` : "";
-    return `${details.code} (${details.status} ${details.title})${detail}`;
+    const message = `${details.code} (${details.status} ${details.title})${detail}`;
+
+    if (error instanceof MigrationFileLoadProblem && error.cause instanceof Error) {
+      return `${message}: ${error.cause.message}\nRecovery: Check the migration and its imports. For .ts files, match the package module type and use erasable TypeScript syntax. Replace enums, parameter properties, runtime namespaces, and decorators with JavaScript, or compile to .js before deployment.`;
+    }
+
+    return message;
   }
 
   if (error instanceof Error) {

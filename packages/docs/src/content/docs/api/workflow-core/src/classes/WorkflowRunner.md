@@ -9,7 +9,7 @@ title: "WorkflowRunner"
 
 ### Constructor
 
-> **new WorkflowRunner**(`executionManager`, `registry?`, `taskRunner?`): `WorkflowRunner`
+> **new WorkflowRunner**(`executionManager`, `registry?`, `taskRunner?`, `clock?`): `WorkflowRunner`
 
 #### Parameters
 
@@ -24,6 +24,10 @@ title: "WorkflowRunner"
 ##### taskRunner?
 
 [`TaskRunner`](/api/tasks-core/src/classes/taskrunner/) = `...`
+
+##### clock?
+
+() => `Date`
 
 #### Returns
 

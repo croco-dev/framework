@@ -1,6 +1,7 @@
 import {
-  IdempotencyCoordinator,
+  assertProcessingLeaseStore,
   deriveWebhookIdempotencyKey,
+  IdempotencyCoordinator,
   type DerivedIdempotencyKey,
   type IdempotencyCompletedRecord,
   type IdempotencyExecutionResult,
@@ -30,6 +31,7 @@ import type {
 } from "./types";
 
 const DEFAULT_IDEMPOTENCY_TTL_MS = 86_400_000;
+const DEFAULT_PROCESSING_LEASE_MS = 15 * 60_000;
 
 export class WebhookGateway {
   private readonly options: WebhookGatewayOptions;
@@ -38,6 +40,7 @@ export class WebhookGateway {
 
   constructor(options: WebhookGatewayOptions) {
     assertConfiguration(options);
+    assertProcessingLeaseStore(options.idempotencyStore);
     this.options = options;
     this.coordinator = new IdempotencyCoordinator({ store: options.idempotencyStore });
     this.now = options.now ?? (() => new Date());
@@ -104,6 +107,7 @@ export class WebhookGateway {
       {
         key: idempotencyKey,
         ttlMs: this.options.idempotencyTtlMs ?? DEFAULT_IDEMPOTENCY_TTL_MS,
+        leaseMs: this.options.processingLeaseMs ?? DEFAULT_PROCESSING_LEASE_MS,
         metadata: {
           provider: event.provider,
           eventId: event.id,

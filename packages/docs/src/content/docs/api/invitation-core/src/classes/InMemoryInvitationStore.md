@@ -139,13 +139,7 @@ title: "InMemoryInvitationStore"
 
 ##### meta?
 
-###### acceptedAt?
-
-`Date`
-
-###### rejectedAt?
-
-`Date`
+[`InvitationStatusTransitionMeta`](/api/invitation-core/src/type-aliases/invitationstatustransitionmeta/) = `{}`
 
 #### Returns
 

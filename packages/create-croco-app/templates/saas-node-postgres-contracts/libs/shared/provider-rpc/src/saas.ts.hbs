@@ -1,0 +1,60 @@
+import { createRpcClientRequest, handleRpcRequestError, handleRpcRequestResultError, handleJsonResponse, handleJsonResult } from './rpc';
+import type { RpcClientConfig, RpcClientRequestOptions, RpcClientResult, RpcDeclaredProblem, RpcProblemDetailsFor } from './rpc';
+export type SeedDemoOutput = { access: { allowed: boolean; object: string; relation: string; }; ai: { completionTokens: number; costUsd: number; modelId: string; promptQuota: number; promptTokens: number; promptUsage: number; provider: string; quotaFailureCode: string; responseText: string; totalTokens: number; }; auth: { allowed: boolean; permission: string; roles: string[]; sessionId: string; userId: string; }; billing: { checkoutUrl: string; entitlementPlanId: string | null; mockEvent: { duplicateFailureCode: string; eventId: string; eventType: string; externalSubscriptionId: string; planVersionRef: string; processedStatus: 'completed'; }; subscriptionStatus: string; }; contract: { providerProfile: string; version: 'saas-smoke-contract/v1'; }; entitlement: { featureKey: string; granted: boolean; planId?: string | undefined; quota?: number | undefined; remaining?: number | undefined; usage?: number | undefined; }; invitation: { invitedUserId: string; status: string; }; jobs: { failurePolicyState: string; id: string; logCount: number; status: string; type: string; }; lifecycle: { duplicateRunStatus: string; duplicateSkipReason: string; emittedActionCount: number; emittedActionType: string; firstRunStatus: string; ruleId: string; visibleRunCount: number; }; membership: { memberCount: number; memberRole: string; ownerRole: string; seatLimit: { exceeded: boolean; failureCode: string; quota: number; rejectedUserId: string; remaining: number; usage: number; }; }; metering: { currentUsage: number; meterId: string; recordedValue: number; }; operations: { diagnosticsSummary: 'all_healthy' | 'degraded' | 'issues_detected'; healthStatus: 'down' | 'up'; }; tenant: { id: string; name: string; slug: string; status: string; }; };
+export type SmokeDemoOutput = { access: { allowed: boolean; object: string; relation: string; }; ai: { completionTokens: number; costUsd: number; modelId: string; promptQuota: number; promptTokens: number; promptUsage: number; provider: string; quotaFailureCode: string; responseText: string; totalTokens: number; }; auth: { allowed: boolean; permission: string; roles: string[]; sessionId: string; userId: string; }; billing: { checkoutUrl: string; entitlementPlanId: string | null; mockEvent: { duplicateFailureCode: string; eventId: string; eventType: string; externalSubscriptionId: string; planVersionRef: string; processedStatus: 'completed'; }; subscriptionStatus: string; }; contract: { providerProfile: string; version: 'saas-smoke-contract/v1'; }; entitlement: { featureKey: string; granted: boolean; planId?: string | undefined; quota?: number | undefined; remaining?: number | undefined; usage?: number | undefined; }; invitation: { invitedUserId: string; status: string; }; jobs: { failurePolicyState: string; id: string; logCount: number; status: string; type: string; }; lifecycle: { duplicateRunStatus: string; duplicateSkipReason: string; emittedActionCount: number; emittedActionType: string; firstRunStatus: string; ruleId: string; visibleRunCount: number; }; membership: { memberCount: number; memberRole: string; ownerRole: string; seatLimit: { exceeded: boolean; failureCode: string; quota: number; rejectedUserId: string; remaining: number; usage: number; }; }; metering: { currentUsage: number; meterId: string; recordedValue: number; }; operations: { diagnosticsSummary: 'all_healthy' | 'degraded' | 'issues_detected'; healthStatus: 'down' | 'up'; }; tenant: { id: string; name: string; slug: string; status: string; }; };
+export type SeedDemoProblem = RpcDeclaredProblem<'saas-demo/demo-endpoint-disabled', 'Forbidden', 403> | RpcDeclaredProblem<'saas-demo/smoke-failed', 'InternalServerError', 500> | RpcDeclaredProblem<'saas-demo/tenant-already-exists', 'Conflict', 409> | RpcDeclaredProblem<'saas-demo/tenant-not-found', 'NotFound', 404>;
+export type SeedDemoProblemDetails = RpcProblemDetailsFor<SeedDemoProblem>;
+export type SeedDemoResult = RpcClientResult<SeedDemoOutput, SeedDemoProblem>;
+export type SmokeDemoProblem = RpcDeclaredProblem<'saas-demo/demo-endpoint-disabled', 'Forbidden', 403> | RpcDeclaredProblem<'saas-demo/smoke-failed', 'InternalServerError', 500> | RpcDeclaredProblem<'saas-demo/tenant-already-exists', 'Conflict', 409> | RpcDeclaredProblem<'saas-demo/tenant-not-found', 'NotFound', 404>;
+export type SmokeDemoProblemDetails = RpcProblemDetailsFor<SmokeDemoProblem>;
+export type SmokeDemoResult = RpcClientResult<SmokeDemoOutput, SmokeDemoProblem>;
+export const seedDemoProblemDeclarations = [
+  { code: 'saas-demo/demo-endpoint-disabled', category: 'Forbidden', status: 403, description: 'Demo endpoints are disabled for this environment.', cookbookPath: '/reference/problem-recovery-cookbook/#saas-demo-demo-endpoint-disabled' },
+  { code: 'saas-demo/smoke-failed', category: 'InternalServerError', status: 500, description: 'The SaaS demo smoke flow failed.', cookbookPath: '/reference/problem-recovery-cookbook/#saas-demo-smoke-failed' },
+  { code: 'saas-demo/tenant-already-exists', category: 'Conflict', status: 409, description: 'The demo tenant already exists.', cookbookPath: '/reference/problem-recovery-cookbook/#saas-demo-tenant-already-exists' },
+  { code: 'saas-demo/tenant-not-found', category: 'NotFound', status: 404, description: 'The requested tenant does not exist.', cookbookPath: '/reference/problem-recovery-cookbook/#saas-demo-tenant-not-found' }
+] as const satisfies readonly RpcDeclaredProblem[];
+export const smokeDemoProblemDeclarations = [
+  { code: 'saas-demo/demo-endpoint-disabled', category: 'Forbidden', status: 403, description: 'Demo endpoints are disabled for this environment.', cookbookPath: '/reference/problem-recovery-cookbook/#saas-demo-demo-endpoint-disabled' },
+  { code: 'saas-demo/smoke-failed', category: 'InternalServerError', status: 500, description: 'The SaaS demo smoke flow failed.', cookbookPath: '/reference/problem-recovery-cookbook/#saas-demo-smoke-failed' },
+  { code: 'saas-demo/tenant-already-exists', category: 'Conflict', status: 409, description: 'The demo tenant already exists.', cookbookPath: '/reference/problem-recovery-cookbook/#saas-demo-tenant-already-exists' },
+  { code: 'saas-demo/tenant-not-found', category: 'NotFound', status: 404, description: 'The requested tenant does not exist.', cookbookPath: '/reference/problem-recovery-cookbook/#saas-demo-tenant-not-found' }
+] as const satisfies readonly RpcDeclaredProblem[];
+
+export const saasContractRoutes = [
+  { routeId: 'SaasController.seedDemo', operationId: 'seedSaasDemo', methodName: 'seedDemo', method: 'POST', path: '/saas/demo/seed' },
+  { routeId: 'SaasController.smokeDemo', operationId: 'smokeSaasDemo', methodName: 'smokeDemo', method: 'GET', path: '/saas/demo/smoke' }
+] as const;
+export const saasKeys = {
+  all: () => ['saas'] as const,
+  seedDemo: () => [...saasKeys.all(), 'seedDemo'] as const,
+  smokeDemo: () => [...saasKeys.all(), 'smokeDemo'] as const,
+};
+export const saasInvalidationManifest = {
+  seedDemo: { route: saasContractRoutes[0], invalidates: [saasKeys.all()] },
+} as const;
+
+export function createSaasClient(config: RpcClientConfig = {}) {
+  return {
+    seedDemo: (options?: RpcClientRequestOptions): Promise<SeedDemoOutput> => {
+      const request = createRpcClientRequest(saasContractRoutes[0], 'mutation', '/saas/demo/seed', { method: 'POST' }, options, config);
+      return request.fetch(request.url, request.init).catch((error) => handleRpcRequestError(error, request.telemetry)).then((response) => handleJsonResponse<SeedDemoOutput>(response, request.telemetry));
+    },
+    seedDemoResult: (options?: RpcClientRequestOptions): Promise<SeedDemoResult> => {
+      const request = createRpcClientRequest(saasContractRoutes[0], 'mutation', '/saas/demo/seed', { method: 'POST' }, options, config);
+      return request.fetch(request.url, request.init).then((response) => handleJsonResult<SeedDemoOutput, SeedDemoProblem>(response, seedDemoProblemDeclarations, request.telemetry), (error) => handleRpcRequestResultError(error, request.telemetry));
+    },
+    smokeDemo: (options?: RpcClientRequestOptions): Promise<SmokeDemoOutput> => {
+      const request = createRpcClientRequest(saasContractRoutes[1], 'query', '/saas/demo/smoke', { method: 'GET' }, options, config);
+      return request.fetch(request.url, request.init).catch((error) => handleRpcRequestError(error, request.telemetry)).then((response) => handleJsonResponse<SmokeDemoOutput>(response, request.telemetry));
+    },
+    smokeDemoResult: (options?: RpcClientRequestOptions): Promise<SmokeDemoResult> => {
+      const request = createRpcClientRequest(saasContractRoutes[1], 'query', '/saas/demo/smoke', { method: 'GET' }, options, config);
+      return request.fetch(request.url, request.init).then((response) => handleJsonResult<SmokeDemoOutput, SmokeDemoProblem>(response, smokeDemoProblemDeclarations, request.telemetry), (error) => handleRpcRequestResultError(error, request.telemetry));
+    },
+  };
+}
+
+export type SaasClient = ReturnType<typeof createSaasClient>;
+
+export const saasClient = createSaasClient();

@@ -248,3 +248,14 @@ export class SagaExecutionInFlightProblem extends Problem {
     );
   }
 }
+
+export class WorkflowExecutionCancelledProblem extends Problem {
+  constructor(workflowName: string, executionId: string) {
+    super(
+      "workflow-core/workflow-execution-cancelled",
+      ProblemCategory.Conflict,
+      `Workflow '${workflowName}' execution '${executionId}' was cancelled`,
+      { extensions: { workflowName, executionId, retryable: false } },
+    );
+  }
+}

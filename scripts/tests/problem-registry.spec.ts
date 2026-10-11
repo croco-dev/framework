@@ -26,6 +26,355 @@ describe("problem-registry.mts", () => {
     }
   });
 
+  it.each([
+    `const TABLE = { one: { code: "a", category: ProblemCategory.Conflict }, two: { code: "b", category: ProblemCategory.InternalServerError } };
+let key = false;
+function next() { key = !key; return key ? "one" : "two"; }
+class Unstable extends Problem { constructor() { super(TABLE[next()].code, TABLE[next()].category, "failed"); } }`,
+    `let flag = true;
+function code() { flag = false; return "a"; }
+const a = { code: "a", category: ProblemCategory.Conflict };
+const b = { code: "b", category: ProblemCategory.InternalServerError };
+class Unstable extends Problem { constructor() { super(flag ? code() : "b", flag ? ProblemCategory.Conflict : ProblemCategory.InternalServerError, "failed"); } }`,
+  ])("purity review regression: rejects effectful correlation (%s)", (body) => {
+    const repo = createTempRepo();
+    writeFile(
+      repo,
+      "packages/alpha/src/problems.ts",
+      `import { Problem, ProblemCategory } from "@croco/problems-core";
+${body}`,
+    );
+    expect(() => createProblemCodeRegistry(discoverProblemCodes(repo))).toThrow(
+      /multiple categories|declared/,
+    );
+  });
+
+  it("preserves correlation through an entry captured once in a const alias", () => {
+    const repo = createTempRepo();
+    writeFile(
+      repo,
+      "packages/alpha/src/problems.ts",
+      `import { Problem, ProblemCategory } from "@croco/problems-core";
+const TABLE = { one: { code: "a", category: ProblemCategory.Conflict }, two: { code: "b", category: ProblemCategory.InternalServerError } };
+function select(key: boolean) { return key ? "one" : "two"; }
+class Stable extends Problem { constructor(key: boolean) { const spec = TABLE[select(key)]; super(spec.code, spec.category, "failed"); } }`,
+    );
+    expect(
+      createProblemCodeRegistry(discoverProblemCodes(repo)).problems.map((entry) => [
+        entry.code,
+        entry.status,
+      ]),
+    ).toEqual([
+      ["a", 409],
+      ["b", 500],
+    ]);
+  });
+
+  it.each([
+    `const metadata = { code: "a", category: ProblemCategory.Conflict };
+class Multi extends Problem { constructor(code: "a" | "b", flag: boolean) { super(code, category(flag), "failed"); } }`,
+    `abstract class Base extends Problem { constructor(options: { code: string; category: ProblemCategory }, flag: boolean) { super(options.code, category(flag), "failed"); } }
+class Child extends Base { constructor(flag: boolean) { super({ code: "a", category: ProblemCategory.Conflict }, flag); } }`,
+    `const TABLE = { one: { code: "a", category: ProblemCategory.Conflict } };
+class Lookup extends Problem { constructor(key: keyof typeof TABLE, flag: boolean) { const spec = TABLE[key]; super(spec.code, category(flag), "failed"); } }`,
+  ])("metadata review regression: rejects metadata that hides a runtime category (%s)", (body) => {
+    const repo = createTempRepo();
+    writeFile(
+      repo,
+      "packages/alpha/src/problems.ts",
+      `import { Problem, ProblemCategory } from "@croco/problems-core";
+function category(flag: boolean) { return flag ? ProblemCategory.Conflict : ProblemCategory.InternalServerError; }
+${body}`,
+    );
+    expect(() => createProblemCodeRegistry(discoverProblemCodes(repo))).toThrow(
+      /multiple categories|declared/,
+    );
+  });
+
+  it("preserves categories correlated through metadata objects and conditional branches", () => {
+    const repo = createTempRepo();
+    writeFile(
+      repo,
+      "packages/alpha/src/codes.ts",
+      'export const CODES = { three: "three", four: "four" } satisfies Record<string, string>;',
+    );
+    writeFile(
+      repo,
+      "packages/alpha/src/problems.ts",
+      `import { Problem, ProblemCategory } from "@croco/problems-core";
+const TABLE = { one: { code: "one", category: ProblemCategory.Conflict }, two: { code: "two", category: ProblemCategory.InternalServerError } };
+class Lookup extends Problem { constructor(key: keyof typeof TABLE) { const spec = TABLE[key]; super(spec.code, spec.category, "failed"); } }
+import { CODES } from "./codes";
+class Conditional extends Problem { constructor(flag: boolean) { super(flag ? CODES.three : CODES.four, flag ? ProblemCategory.NotFound : ProblemCategory.BadRequest, "failed"); } }
+const three = { code: "three", category: ProblemCategory.NotFound };
+const four = { code: "four", category: ProblemCategory.BadRequest };`,
+    );
+    const registry = createProblemCodeRegistry(discoverProblemCodes(repo));
+    expect(
+      Object.fromEntries(registry.problems.map((entry) => [entry.code, entry.status])),
+    ).toEqual({ one: 409, two: 500, three: 404, four: 400 });
+  });
+
+  it("review regression: checks subclasses imported from workspace package exports", () => {
+    const repo = createTempRepo();
+    writeFile(
+      repo,
+      "packages/base/package.json",
+      JSON.stringify({
+        name: "@croco/base",
+        exports: {
+          ".": "./src/index.ts",
+          "./problem": { types: "./dist/problem.d.ts", import: "./dist/problem.js" },
+        },
+      }),
+    );
+    writeFile(repo, "packages/base/src/index.ts", 'export { Base } from "./problem";');
+    writeFile(
+      repo,
+      "packages/base/src/problem.ts",
+      `import { Problem } from "@croco/problems-core";
+export abstract class Base extends Problem {}`,
+    );
+    writeFile(
+      repo,
+      "packages/child/src/problems.ts",
+      `import { Base } from "@croco/base";
+import { Base as SubpathBase } from "@croco/base/problem";
+class Missing extends Base {}
+class SubpathMissing extends SubpathBase {}`,
+    );
+    const result = runProblemRegistryCheck(repo);
+    expect(result.diagnostics).toContainEqual(
+      expect.stringContaining("packages/child/src/problems.ts:3:1: Missing"),
+    );
+    expect(result.diagnostics).toContainEqual(
+      expect.stringContaining("packages/child/src/problems.ts:4:1: SubpathMissing"),
+    );
+  });
+
+  it("review regression: rejects overlapping fixed and dynamic declarations of one code", () => {
+    const repo = createTempRepo();
+    writeFile(
+      repo,
+      "packages/alpha/src/problems.ts",
+      `import { Problem, ProblemCategory } from "@croco/problems-core";
+class Fixed extends Problem { constructor() { super("shared", ProblemCategory.Conflict, "fixed"); } }
+function category(flag: boolean) { return flag ? ProblemCategory.Conflict : ProblemCategory.InternalServerError; }
+class Dynamic extends Problem { constructor(flag: boolean) { super("shared", category(flag), "dynamic"); } }`,
+    );
+    expect(() => createProblemCodeRegistry(discoverProblemCodes(repo))).toThrow(
+      /multiple categories|declared/,
+    );
+  });
+
+  it("review regression: binds helper arguments instead of claiming their default category", () => {
+    const repo = createTempRepo();
+    writeFile(
+      repo,
+      "packages/alpha/src/problems.ts",
+      `import { Problem, ProblemCategory } from "@croco/problems-core";
+function category(value: ProblemCategory = ProblemCategory.Conflict) { return value; }
+class Passed extends Problem { constructor() { super("passed", category(ProblemCategory.InternalServerError), "failed"); } }
+class Defaulted extends Problem { constructor() { super("defaulted", category(), "failed"); } }`,
+    );
+    const registry = createProblemCodeRegistry(discoverProblemCodes(repo));
+    expect(registry.problems.find((entry) => entry.code === "passed")?.status).toBe(500);
+    expect(registry.problems.find((entry) => entry.code === "defaulted")?.status).toBe(409);
+    writeFile(
+      repo,
+      "packages/alpha/src/unknown.ts",
+      `import { Problem, ProblemCategory } from "@croco/problems-core";
+function category(value: ProblemCategory = ProblemCategory.Conflict) { return value; }
+class Unknown extends Problem { constructor(value: ProblemCategory) { super("unknown", category(value), "failed"); } }`,
+    );
+    expect(runProblemRegistryCheck(repo).diagnostics).toContainEqual(
+      expect.stringContaining("packages/alpha/src/unknown.ts:3:1: Unknown"),
+    );
+  });
+
+  it("accounts for dynamic categories, inherited codes, and finite lookup codes", () => {
+    const repo = createTempRepo();
+    writeFile(
+      repo,
+      "packages/alpha/src/base.ts",
+      `
+import { Problem, ProblemCategory } from "@croco/problems-core";
+export class ConstraintProblem extends Problem {
+  constructor(detail: string, extensions?: object, code = "constraint") {
+    super(code, ProblemCategory.Forbidden, detail, { extensions });
+  }
+}`,
+    );
+    writeFile(
+      repo,
+      "packages/alpha/src/problems.ts",
+      `
+import { Problem, ProblemCategory } from "@croco/problems-core";
+import { ConstraintProblem } from "./base";
+function category(status: number): ProblemCategory {
+  if (status === 429) return ProblemCategory.TooManyRequests;
+  return ProblemCategory.InternalServerError;
+}
+export class UpstreamProblem extends Problem {
+  readonly code = "upstream";
+  constructor(status: number) { super("upstream", category(status), "failed"); }
+}
+export class LastOwnerProblem extends ConstraintProblem {
+  constructor() { super("owner", {}, "last-owner"); }
+}
+const FAILURES = { first: { code: "first" }, second: { code: "second" } };
+export class CommandProblem extends Problem {
+  constructor(stage: keyof typeof FAILURES) {
+    const failure = FAILURES[stage];
+    super(failure.code, ProblemCategory.InternalServerError, "failed");
+  }
+}`,
+    );
+    const registry = createProblemCodeRegistry(discoverProblemCodes(repo));
+    expect(registry.problems.map(({ code }) => code)).toEqual([
+      "constraint",
+      "first",
+      "last-owner",
+      "second",
+      "upstream",
+    ]);
+    expect(registry.problems.find(({ code }) => code === "upstream")).toMatchObject({
+      category: null,
+      status: null,
+      title: null,
+      categoryPolicy: {
+        kind: "runtime-dependent",
+        possibleCategories: ["InternalServerError", "TooManyRequests"],
+        possibleStatuses: [429, 500],
+      },
+    });
+  });
+
+  it("fails with a source location for unaccounted concrete Problem subclasses", () => {
+    const repo = createTempRepo();
+    writeFile(
+      repo,
+      "packages/alpha/src/problems.ts",
+      `import { Problem } from "@croco/problems-core";
+export class MissingProblem extends Problem {
+  constructor() { super(computeCode(), computeCategory(), "failed"); }
+}`,
+    );
+    const result = runProblemRegistryCheck(repo, "check");
+    expect(result.status).toBe("fail");
+    expect(result.diagnostics).toContainEqual(
+      expect.stringContaining(
+        "problem-class-unaccounted at packages/alpha/src/problems.ts:2:1: MissingProblem",
+      ),
+    );
+  });
+
+  it("records runtime code factories without changing factory call-site discovery", () => {
+    const repo = createTempRepo();
+    writeFile(
+      repo,
+      "packages/alpha/src/problems.ts",
+      `
+import { Problem, ProblemCategory } from "@croco/problems-core";
+class GenericProblem extends Problem {
+  constructor(code: string, category: ProblemCategory) { super(code, category, "failed"); }
+}
+class OptionProblem extends Problem {
+  constructor(options: { code: string; category: ProblemCategory }) { super(options.code, options.category, "failed"); }
+}
+class TemplateProblem extends Problem {
+  constructor(code: string) { super(\`alpha/\${code}\`, ProblemCategory.Conflict, "failed"); }
+}
+new GenericProblem("alpha/known", ProblemCategory.NotFound);
+`,
+    );
+    const result = runProblemRegistryCheck(repo, "write");
+    expect(result.diagnostics).toEqual([]);
+    const registry = JSON.parse(
+      readFileSync(join(repo, "docs/problem-code-registry.json"), "utf-8"),
+    );
+    expect(registry.problems.map((problem: { code: string }) => problem.code)).toEqual([
+      "alpha/known",
+    ]);
+    expect(
+      registry.dynamicCodeFactories.map((factory: { className: string }) => factory.className),
+    ).toEqual(["GenericProblem", "OptionProblem", "TemplateProblem"]);
+    expect(registry.dynamicCodeFactories[0].source).toMatchObject({
+      file: "packages/alpha/src/problems.ts",
+      line: 3,
+    });
+    expect(runProblemRegistryCheck(repo, "check").status).toBe("pass");
+  });
+
+  it("checks aliased and transitively inherited concrete classes but permits abstract bases", () => {
+    const repo = createTempRepo();
+    writeFile(
+      repo,
+      "packages/alpha/src/base.ts",
+      `import { Problem as Base } from "@croco/problems-core";
+export abstract class Intermediate extends Base {}`,
+    );
+    writeFile(
+      repo,
+      "packages/alpha/src/child.ts",
+      `import { Intermediate as Parent } from "./base";
+export class Unaccounted extends Parent {}`,
+    );
+    expect(runProblemRegistryCheck(repo).diagnostics).toContainEqual(
+      expect.stringContaining(
+        "problem-class-unaccounted at packages/alpha/src/child.ts:2:1: Unaccounted",
+      ),
+    );
+  });
+
+  it("rejects partially unresolved category functions instead of claiming a partial set", () => {
+    const repo = createTempRepo();
+    writeFile(
+      repo,
+      "packages/alpha/src/problems.ts",
+      `import { Problem, ProblemCategory } from "@croco/problems-core";
+function category(flag: boolean) { if (flag) return ProblemCategory.Conflict; return externalCategory(); }
+class PartialProblem extends Problem { constructor(flag: boolean) { super("partial", category(flag), "failed"); } }`,
+    );
+    expect(runProblemRegistryCheck(repo).diagnostics).toContainEqual(
+      expect.stringContaining("problem-class-unaccounted"),
+    );
+  });
+
+  it("does not let unrelated nested metadata conceal missing class contracts", () => {
+    const repo = createTempRepo();
+    writeFile(
+      repo,
+      "packages/alpha/src/problems.ts",
+      `import * as problems from "@croco/problems-core";
+class Hidden extends problems.Problem {
+  constructor() { super(computeCode(), computeCategory(), "failed"); }
+  metadata() { return { code: "unrelated", category: ProblemCategory.Conflict }; }
+}`,
+    );
+    expect(runProblemRegistryCheck(repo).diagnostics).toContainEqual(
+      expect.stringContaining(
+        "problem-class-unaccounted at packages/alpha/src/problems.ts:2:1: Hidden",
+      ),
+    );
+  });
+
+  it("does not classify a literal inherited code with unknown category as a dynamic code factory", () => {
+    const repo = createTempRepo();
+    writeFile(
+      repo,
+      "packages/alpha/src/problems.ts",
+      `import { Problem } from "@croco/problems-core";
+abstract class Base extends Problem { constructor(code: string) { super(code, unknownCategory(), "failed"); } }
+class Missing extends Base { constructor() { super("literal"); } }`,
+    );
+    expect(runProblemRegistryCheck(repo).diagnostics).toContainEqual(
+      expect.stringContaining(
+        "problem-class-unaccounted at packages/alpha/src/problems.ts:3:1: Missing",
+      ),
+    );
+  });
+
   it("rejects Problem constructors that drop Error and Error-union causes", () => {
     const repo = createTempRepo();
     writeFile(
@@ -513,6 +862,32 @@ describe("problem-registry.mts", () => {
     expect(checkResult.status).toBe("pass");
   });
 
+  it("discovers generated RPC Problems from generator metadata exactly once", () => {
+    const repo = createTempRepo();
+    const sourcePath = "packages/rpc-codegen/src/libs/generate.ts";
+    writeFile(repo, sourcePath, readFileSync(join(process.cwd(), sourcePath), "utf-8"));
+
+    const registry = createProblemCodeRegistry(discoverProblemCodes(repo));
+    for (const [code, category, status] of [
+      ["rpc-codegen/status-mismatch", "InternalServerError", 500],
+      ["rpc-codegen/query-key-input-unsupported", "ValidationError", 422],
+      ["rpc-codegen/path-param-input-unsupported", "ValidationError", 422],
+    ] as const) {
+      expect(registry.problems.find((problem) => problem.code === code)).toMatchObject({
+        category,
+        status,
+        sources: [
+          {
+            file: sourcePath,
+            kind: "problem-metadata",
+            line: expect.any(Number),
+            column: expect.any(Number),
+          },
+        ],
+      });
+    }
+  });
+
   it("publishes profile-selection recovery for SaaS profile mismatches", () => {
     const repo = createTempRepo();
     writeFile(
@@ -544,6 +919,31 @@ describe("problem-registry.mts", () => {
     });
   });
 
+  it("requires a configuration correction for invalid batch loader sizes", () => {
+    const repo = createTempRepo();
+    writeFile(
+      repo,
+      "packages/dataloader-core/src/problems.ts",
+      [
+        'import { Problem, ProblemCategory } from "@croco/problems-core";',
+        "export class InvalidBatchLoaderConfigurationProblem extends Problem {",
+        "  constructor() {",
+        '    super("dataloader-core/invalid-configuration", ProblemCategory.InternalServerError);',
+        "  }",
+        "}",
+      ].join("\n"),
+    );
+
+    const registry = createProblemCodeRegistry(discoverProblemCodes(repo));
+
+    expect(registry.problems[0]?.recovery).toMatchObject({
+      cause: expect.stringContaining("maxBatchSize"),
+      operatorAction: expect.stringContaining("positive safe integer or Infinity"),
+      retryability: "not-retryable",
+      redactionPolicy: "operator-only",
+    });
+  });
+
   it("publishes installation recovery for missing testing resource drivers", () => {
     const repo = createTempRepo();
     writeFile(
@@ -570,6 +970,149 @@ describe("problem-registry.mts", () => {
       redactionPolicy: "public",
       telemetry: { severity: "error" },
     });
+  });
+
+  it.each([
+    ["analysis-cancelled", "BadRequest", "cancelled"],
+    ["analysis-invalid-json", "ValidationError", "model"],
+    ["analysis-invalid-plan", "ValidationError", "plan"],
+    ["analysis-invalid-usage", "ValidationError", "usage"],
+    ["analysis-invalid-completion", "ValidationError", "completion"],
+    ["analysis-output-budget-exceeded", "ValidationError", "output"],
+  ])("publishes growth analysis recovery for %s", (code, category, cause) => {
+    const repo = createTempRepo();
+    writeFile(
+      repo,
+      "packages/analytics-core/src/problems.ts",
+      [
+        'import { Problem, ProblemCategory } from "@croco/problems-core";',
+        "export class AnalysisProblem extends Problem {",
+        "  constructor() {",
+        `    super("analytics-core/${code}", ProblemCategory.${category});`,
+        "  }",
+        "}",
+      ].join("\n"),
+    );
+    const registry = createProblemCodeRegistry(discoverProblemCodes(repo));
+    expect(registry.problems[0]?.recovery).toMatchObject({
+      cause: expect.stringContaining(cause),
+      retryability: "conditional",
+      redactionPolicy: "public",
+      telemetry: { severity: "info" },
+    });
+    expect(registry.problems[0]?.recovery.operatorAction).toContain("receipt");
+  });
+
+  it.each([
+    {
+      code: "analysis-input-budget-exceeded",
+      category: "ValidationError",
+      cause: [/serialized|payload/i, /byte/i],
+      user: [/shorten|narrow|reduce/i],
+      operator: [/maxInputBytes|input.*budget|input.*limit/i, /definition|choice/i],
+      retryability: "not-retryable",
+      redactionPolicy: "public",
+      severity: "info",
+    },
+    {
+      code: "analysis-invalid-facts",
+      category: "InternalServerError",
+      cause: [/fact|project/i],
+      user: [/operator|report/i],
+      operator: [/project|facts/i, /numeric|decimal|number/i],
+      retryability: "conditional",
+      redactionPolicy: "operator-only",
+      severity: "error",
+    },
+    {
+      code: "analysis-invalid-limits",
+      category: "ValidationError",
+      cause: [/limit/i],
+      user: [/operator|configuration|configur/i],
+      operator: [/positive/i, /safe.integer/i],
+      retryability: "not-retryable",
+      redactionPolicy: "public",
+      severity: "info",
+    },
+    {
+      code: "analysis-invalid-registration",
+      category: "ValidationError",
+      cause: [/registration|registered/i],
+      user: [/operator|registration/i],
+      operator: [/duplicate|unique/i, /32|bound|limit/i, /JSON/i],
+      retryability: "not-retryable",
+      redactionPolicy: "public",
+      severity: "info",
+    },
+    {
+      code: "analysis-question-blocked",
+      category: "Forbidden",
+      cause: [/question|content/i, /policy/i],
+      user: [/personal|sensitive|redact|remove/i],
+      operator: [/prepareQuestion|content.*policy/i],
+      retryability: "not-retryable",
+      redactionPolicy: "safe-message",
+      severity: "warning",
+    },
+  ])("publishes boundary-specific growth analysis recovery for $code", (contract) => {
+    const repo = createTempRepo();
+    writeFile(
+      repo,
+      "packages/analytics-core/src/problems.ts",
+      [
+        'import { Problem, ProblemCategory } from "@croco/problems-core";',
+        "export class AnalysisProblem extends Problem {",
+        "  constructor() {",
+        `    super("analytics-core/${contract.code}", ProblemCategory.${contract.category});`,
+        "  }",
+        "}",
+      ].join("\n"),
+    );
+    const registry = createProblemCodeRegistry(discoverProblemCodes(repo));
+    const recovery = registry.problems[0]?.recovery;
+    expect(recovery).toMatchObject({
+      retryability: contract.retryability,
+      redactionPolicy: contract.redactionPolicy,
+      telemetry: {
+        eventName: `croco.problem.${contract.severity}`,
+        severity: contract.severity,
+        attributes: ["problem.code", "problem.category", "problem.status"],
+      },
+    });
+    for (const expected of contract.cause) expect(recovery?.cause).toMatch(expected);
+    for (const expected of contract.user) expect(recovery?.userAction).toMatch(expected);
+    for (const expected of contract.operator) expect(recovery?.operatorAction).toMatch(expected);
+  });
+
+  it("recovers growth analysis settlement without repeating inference", () => {
+    const repo = createTempRepo();
+    writeFile(
+      repo,
+      "packages/analytics-core/src/problems.ts",
+      [
+        'import { Problem, ProblemCategory } from "@croco/problems-core";',
+        "export class AnalysisSettlementProblem extends Problem {",
+        "  constructor() {",
+        '    super("analytics-core/analysis-settlement-failed", ProblemCategory.InternalServerError);',
+        "  }",
+        "}",
+      ].join("\n"),
+    );
+    const registry = createProblemCodeRegistry(discoverProblemCodes(repo));
+    const recovery = registry.problems[0]?.recovery;
+    expect(recovery).toMatchObject({
+      cause: expect.stringMatching(/usage.*receipt.*settlement/i),
+      userAction: expect.stringMatching(/operator/i),
+      retryability: "conditional",
+      redactionPolicy: "operator-only",
+      telemetry: { severity: "error" },
+    });
+    expect(recovery?.userAction).toMatch(/do not resubmit/i);
+    expect(recovery?.operatorAction).toMatch(/AnalysisSettlementProblem\.resume\(\)/);
+    expect(recovery?.operatorAction).toMatch(/same invocationId/i);
+    expect(recovery?.operatorAction).toMatch(/without repeating inference/i);
+    expect(recovery?.operatorAction).toMatch(/process-local/i);
+    expect(recovery?.operatorAction).toMatch(/durable.*restart recovery/i);
   });
 
   it("publishes cancellation-specific recovery for aborted search operations", () => {
@@ -821,7 +1364,7 @@ describe("problem-registry.mts", () => {
     expect(cookbook).toContain("runtime-configurable via `bodyLimitMiddleware.statusCode`");
     expect(generatedRegistrySource).toContain("CrocoProblemEntryStatus");
     expect(generatedRegistrySource).toContain("? number");
-    expect(generatedRegistrySource).toContain(': Entry["status"]');
+    expect(generatedRegistrySource).toContain(': Extract<Entry["status"], number>');
   });
 
   it("publishes deterministic recovery metadata for graceful shutdown configuration", () => {
@@ -905,6 +1448,43 @@ describe("problem-registry.mts", () => {
     });
   });
 
+  it("requires provider evidence to reconcile unknown contact policy acceptance", () => {
+    const repo = createTempRepo();
+    writeFile(
+      repo,
+      "packages/engagement-core/src/problems.ts",
+      [
+        'import { Problem, ProblemCategory } from "@croco/problems-core";',
+        "export class ContactPolicyAcceptanceUnknownProblem extends Problem {",
+        "  constructor() {",
+        '    super("engagement-core/contact-policy-acceptance-unknown", ProblemCategory.InternalServerError);',
+        "  }",
+        "}",
+        "",
+      ].join("\n"),
+    );
+
+    expect(runProblemRegistryCheck(repo, "write").status).toBe("pass");
+    const problem = readRegistry(repo).problems.find(
+      ({ code }) => code === "engagement-core/contact-policy-acceptance-unknown",
+    );
+
+    expect(problem?.recovery).toEqual({
+      cause: "Provider acceptance could not be durably confirmed for a contact policy reservation.",
+      userAction:
+        "Do not automatically resend the message or refund the contact budget; request operator reconciliation.",
+      operatorAction:
+        "Verify provider evidence, then call ContactPolicy.reconcile with the evidence reference, actor, and reason. Record accepted execution IDs or release the reservation only when evidence confirms non-acceptance; expiry alone must not refund the budget.",
+      retryability: "not-retryable",
+      redactionPolicy: "operator-only",
+      telemetry: {
+        eventName: "croco.problem.error",
+        severity: "error",
+        attributes: ["problem.code", "problem.category", "problem.status"],
+      },
+    });
+  });
+
   it("publishes non-retryable recovery metadata for invalid auth route targets", () => {
     const repo = createTempRepo();
     writeFile(
@@ -941,6 +1521,37 @@ describe("problem-registry.mts", () => {
         severity: "error",
         attributes: ["problem.code", "problem.category", "problem.status"],
       },
+    });
+  });
+
+  it("does not recommend resending notifications with invalid persisted delivery evidence", () => {
+    const repo = createTempRepo();
+    writeFile(
+      repo,
+      "packages/notifications-core/src/problems.ts",
+      [
+        'import { Problem, ProblemCategory } from "@croco/problems-core";',
+        "export class NotificationTaskResultInvalidProblem extends Problem {",
+        "  constructor() {",
+        '    super("notifications-core/task-result-invalid", ProblemCategory.InternalServerError);',
+        "  }",
+        "}",
+        "",
+      ].join("\n"),
+    );
+
+    expect(runProblemRegistryCheck(repo, "write").status).toBe("pass");
+    const problem = readRegistry(repo).problems.find(
+      ({ code }) => code === "notifications-core/task-result-invalid",
+    );
+
+    expect(problem?.recovery).toMatchObject({
+      retryability: "not-retryable",
+      redactionPolicy: "operator-only",
+      userAction:
+        "Do not retry the unchanged delivery or resend automatically; report the execution ID to the service operator.",
+      operatorAction:
+        "Inspect and reconcile the persisted task result against the original provider delivery before repairing the record.",
     });
   });
 

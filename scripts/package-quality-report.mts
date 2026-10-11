@@ -1,3 +1,4 @@
+import { compareStrings } from "../tooling/compareStrings.mjs";
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -460,7 +461,7 @@ export function readPackages(rootDir: string): PackageInfo[] {
         scripts: normalizeScripts(packageJson.scripts),
       };
     })
-    .sort((left, right) => left.name.localeCompare(right.name));
+    .sort((left, right) => compareStrings(left.name, right.name));
 }
 
 function readCatalogSpineEntries(rootDir: string): string[] {
@@ -568,7 +569,7 @@ function readWorkspacePackageManifests(rootDir: string): WorkspacePackageManifes
         },
       ];
     })
-    .sort((left, right) => left.name.localeCompare(right.name));
+    .sort((left, right) => compareStrings(left.name, right.name));
 }
 
 function readCompatibilityTrainSpinePackageNames(
@@ -718,8 +719,10 @@ function collectGeneratedAppCrocoDependencies(
       });
 
   return [...templateDependencies, ...versionSetOnlyDependencies].sort((left, right) => {
-    const packageCompare = left.packageName.localeCompare(right.packageName);
-    return packageCompare === 0 ? left.sourcePath.localeCompare(right.sourcePath) : packageCompare;
+    const packageCompare = compareStrings(left.packageName, right.packageName);
+    return packageCompare === 0
+      ? compareStrings(left.sourcePath, right.sourcePath)
+      : packageCompare;
   });
 }
 
@@ -835,7 +838,8 @@ function createCompatibilityTrainReport(
         compatibilityRationale: exception.compatibilityRationale,
       }))
       .sort((left, right) =>
-        formatInternalPeerDependencyRangeException(left).localeCompare(
+        compareStrings(
+          formatInternalPeerDependencyRangeException(left),
           formatInternalPeerDependencyRangeException(right),
         ),
       ),
@@ -974,7 +978,7 @@ function mergePackagesWithTurboTasks(
     }
   }
 
-  return [...byName.values()].sort((left, right) => left.name.localeCompare(right.name));
+  return [...byName.values()].sort((left, right) => compareStrings(left.name, right.name));
 }
 
 function getTaskResult(
@@ -1433,7 +1437,7 @@ function collectPackageBundleSizeArtifacts(
   }
 
   const artifacts = [...artifactSizes.entries()]
-    .sort(([leftPath], [rightPath]) => leftPath.localeCompare(rightPath))
+    .sort(([leftPath], [rightPath]) => compareStrings(leftPath, rightPath))
     .map(([artifactPath, sizeBytes]) =>
       createBundleSizeArtifact(
         pkg,

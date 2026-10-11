@@ -5,6 +5,7 @@ import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 import { describe, expect, it } from "vitest";
+import { createCrocoCommandRuntime, runWithCrocoCommandRuntime } from "../libs/cliRuntime.js";
 import { generateEntity } from "../commands/makeEntity.js";
 import { generateRepository } from "../commands/makeRepository.js";
 
@@ -12,6 +13,45 @@ const execFileAsync = promisify(execFile);
 const REPO_ROOT = fileURLToPath(new URL("../../../../", import.meta.url));
 
 describe("generateRepository", () => {
+  it.each(["api", "server", "backend"])("should generate in detected apps/%s", async (app) => {
+    const cwd = await createWorkspace();
+    await fs.rename(path.join(cwd, "apps", "api-server"), path.join(cwd, "apps", app));
+    const result = await generateRepository("User", { cwd });
+    const target = path.join(cwd, "apps", app, "src", "repositories", "UserRepository.ts");
+    expect(result?.status).toBe("created");
+    expect(result?.path).toBe(target);
+    await expect(fs.access(target)).resolves.toBeUndefined();
+    await expect(fs.access(path.join(cwd, "apps", "api-server"))).rejects.toThrow();
+  });
+
+  it("should distinguish a workspace without an API app", async () => {
+    const cwd = await createWorkspace();
+    await fs.rm(path.join(cwd, "apps", "api-server"), { recursive: true });
+    const messages: string[] = [];
+    const runtime = createCrocoCommandRuntime({ stdout: (message) => messages.push(message) });
+    const result = await runWithCrocoCommandRuntime(runtime, () =>
+      generateRepository("User", { cwd }),
+    );
+    expect(result).toBeNull();
+    expect(messages).toEqual([
+      "No API server app detected in apps/ (checked api-server, api, server, backend).",
+    ]);
+    await expect(fs.access(path.join(cwd, "apps", "api-server"))).rejects.toThrow();
+  });
+
+  it.each(["api", "server", "backend"])(
+    "should validate the detected apps/%s manifest before writing",
+    async (app) => {
+      const cwd = await createWorkspace({ apiServerManifest: "{}" });
+      await fs.rename(path.join(cwd, "apps", "api-server"), path.join(cwd, "apps", app));
+      await expect(generateRepository("User", { cwd })).rejects.toThrow(
+        `Missing dependencies in apps/${app}/package.json`,
+      );
+      await expect(
+        fs.access(path.join(cwd, "apps", app, "src", "repositories", "UserRepository.ts")),
+      ).rejects.toThrow();
+    },
+  );
   it("should create a repository file", async () => {
     const cwd = await createWorkspace();
 

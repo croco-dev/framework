@@ -20,7 +20,7 @@ export async function myStack() {
   new StaticSite("Web", {
     build: {
       command: "pnpm run build",
-      output: "apps/web/dist",
+      output: "apps/{{webAppName}}/dist",
     },
     environment: {
       VITE_API_URL: api.url,

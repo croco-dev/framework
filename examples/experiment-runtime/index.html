@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Croco Experiment Console</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: #f3f6fa;
+        color: #172436;
+        font: 16px/1.5 system-ui;
+      }
+      main {
+        max-width: 1040px;
+        margin: auto;
+        padding: 28px 20px;
+        display: grid;
+        gap: 24px;
+      }
+      .eyebrow {
+        font-weight: 700;
+        letter-spacing: 0.04em;
+      }
+      .panel {
+        background: white;
+        border: 1px solid #ced8e4;
+        border-radius: 12px;
+        padding: 24px;
+        min-width: 0;
+      }
+      h1 {
+        font-size: 28px;
+        line-height: 1.2;
+      }
+      h2 {
+        font-size: 20px;
+      }
+      fieldset {
+        min-width: 0;
+        border: 1px solid #bdcadd;
+        border-radius: 8px;
+        margin: 24px 0;
+        padding: 18px;
+      }
+      legend {
+        font-weight: 650;
+      }
+      label {
+        display: block;
+        margin: 12px 0;
+      }
+      input,
+      textarea,
+      select,
+      button {
+        font: inherit;
+        max-width: 100%;
+        border: 1px solid #7f91aa;
+        border-radius: 5px;
+        padding: 8px;
+      }
+      input,
+      textarea,
+      select {
+        display: block;
+        width: min(100%, 620px);
+        margin-top: 4px;
+      }
+      button {
+        margin: 6px 8px 6px 0;
+        background: #163e6c;
+        color: white;
+        cursor: pointer;
+      }
+      button:disabled {
+        background: #e5ebf3;
+        color: #5b6879;
+        cursor: default;
+      }
+      button:focus-visible,
+      input:focus-visible,
+      select:focus-visible,
+      textarea:focus-visible {
+        outline: 3px solid #b15d00;
+        outline-offset: 3px;
+      }
+      dt {
+        font-weight: 650;
+      }
+      dd {
+        margin: 0 0 10px;
+      }
+      pre {
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+        background: #edf4fa;
+        padding: 16px;
+      }
+      [role="alert"] {
+        color: #a11919;
+        border-left: 3px solid #a11919;
+        padding-left: 12px;
+      }
+      @media (max-width: 600px) {
+        main {
+          padding: 12px;
+        }
+        .panel {
+          padding: 16px;
+        }
+        h1 {
+          font-size: 24px;
+        }
+        fieldset {
+          padding: 12px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script src="/browser.js" defer></script>
+  </body>
+</html>

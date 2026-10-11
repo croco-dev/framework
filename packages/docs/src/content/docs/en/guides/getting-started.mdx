@@ -79,25 +79,49 @@ in production. The CLI `pnpm demo:smoke` path does not require opening those HTT
 ## 4. Extend the Generated Controller
 
 Add REST behavior in `apps/api-server/src/controllers/SaasController.ts`, where the generated app
-already keeps route metadata and Problem responses together:
+already keeps route metadata and Problem responses together. This excerpt is excluded from standalone
+documentation typechecking because it imports generated `saasDemo`, route schemas, provider profiles,
+and Problem modules. Validate changes in the generated workspace with `pnpm demo:smoke`.
 
 ```typescript no-check
+import { Inject } from "@croco/framework-context";
+import {
+  Controller,
+  Get,
+  Post,
+  ProblemResponses,
+  routeProblemResponses,
+} from "@croco/protocols-rest";
+import { SAAS_RUNTIME_STATE_TOKEN, runSaasDemoFlow, type SaasRuntimeState } from "../saasDemo";
+import { seedSaasDemoRoute, smokeSaasDemoRoute } from "./schemas";
+
+export async function assertDemoEndpointsEnabled(): Promise<void> {
+  const { isSaasDemoEndpointEnabled } = await import("../providerProfiles");
+  if (!isSaasDemoEndpointEnabled()) {
+    const { DemoEndpointDisabledProblem } = await import("../problems");
+    throw new DemoEndpointDisabledProblem();
+  }
+}
+
 @Controller("/saas")
 export class SaasController {
+  constructor(
+    @Inject(SAAS_RUNTIME_STATE_TOKEN)
+    private readonly runtimeState: SaasRuntimeState,
+  ) {}
+
   @Post(seedSaasDemoRoute)
   @ProblemResponses(...routeProblemResponses(seedSaasDemoRoute))
   async seedDemo() {
     await assertDemoEndpointsEnabled();
-    const { seedDefaultSaasRuntime } = await import("../saasDemo");
-    return seedDefaultSaasRuntime();
+    return runSaasDemoFlow(this.runtimeState.reset());
   }
 
   @Get(smokeSaasDemoRoute)
   @ProblemResponses(...routeProblemResponses(smokeSaasDemoRoute))
   async smokeDemo() {
     await assertDemoEndpointsEnabled();
-    const { seedDefaultSaasRuntime } = await import("../saasDemo");
-    return seedDefaultSaasRuntime();
+    return runSaasDemoFlow(this.runtimeState.reset());
   }
 }
 ```
@@ -139,4 +163,4 @@ Now that you have a running SaaS API, explore what Croco can do:
 - **[Events Core](/en/guides/events-core/)** — Build event-driven workflows with transactional consistency.
 - **[Retry Core](/en/guides/retry-core/)** — Add resilience with retries, backoff, and circuit breakers.
 - **[CLI & Generators](https://github.com/croco-dev/framework/tree/trunk/packages/create-croco-app)** — Scaffold new projects with presets for DDD API, fullstack, and more.
-- **[Package Catalog](https://github.com/croco-dev/framework#readme)** — Browse all 118 packages by domain and maturity.
+- **[Package Catalog](https://github.com/croco-dev/framework#readme)** — Browse all 137 packages by domain and maturity.

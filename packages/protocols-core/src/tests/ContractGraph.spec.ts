@@ -59,6 +59,110 @@ describe("buildContractGraph", () => {
     vi.restoreAllMocks();
   });
 
+  it.each([
+    ["/:id", "/:userId"],
+    ["/:id?", "/:userId?"],
+    ["/:...path", "/:...file"],
+    ["/:id", "/:id"],
+  ])(
+    "rejects same-controller route match collisions between %s and %s",
+    (firstPath, secondPath) => {
+      @Controller("/users")
+      class UsersController {
+        @Get(firstPath)
+        first(@Param(firstPath.slice(2).replace(/^\.\.\./, "")) value: string): string {
+          return value;
+        }
+
+        @Get(secondPath)
+        second(@Param(secondPath.slice(2).replace(/^\.\.\./, "")) value: string): string {
+          return value;
+        }
+      }
+
+      const graph = buildContractGraph([UsersController]);
+      expect(graph.diagnostics).toContainEqual(
+        expect.objectContaining({
+          code: "contract-route-duplicate-path",
+          severity: "error",
+          routeId: "UsersController.second",
+          path: `/users${secondPath}`,
+        }),
+      );
+      const diagnostic = graph.diagnostics.find(
+        ({ code }) => code === "contract-route-duplicate-path",
+      );
+      expect(diagnostic?.message).toContain(`/users${firstPath}`);
+      expect(diagnostic?.message).toContain(`/users${secondPath}`);
+      expect(diagnostic?.message).toContain("UsersController.first");
+      expect(() => assertContractGraphHasNoErrors(graph)).toThrow(ContractGraphDiagnosticError);
+    },
+  );
+
+  it("rejects route match collisions across controllers", () => {
+    @Controller("/users")
+    class UsersController {
+      @Get("/:id")
+      first(@Param("id") id: string): string {
+        return id;
+      }
+    }
+    @Controller("/users")
+    class LegacyUsersController {
+      @Get("/:userId")
+      second(@Param("userId") userId: string): string {
+        return userId;
+      }
+    }
+
+    expect(buildContractGraph([UsersController, LegacyUsersController]).diagnostics).toContainEqual(
+      expect.objectContaining({ code: "contract-route-duplicate-path", severity: "error" }),
+    );
+  });
+
+  it("allows required and optional parameter matchers", () => {
+    @Controller("/users")
+    class UsersController {
+      @Get("/:id")
+      required() {}
+      @Get("/actions:read")
+      readAction() {}
+      @Get("/actions:write")
+      writeAction() {}
+      @Get("/:userId?")
+      optional() {}
+    }
+    expect(
+      buildContractGraph([UsersController]).diagnostics.filter(
+        ({ code }) => code === "contract-route-duplicate-path",
+      ),
+    ).toEqual([]);
+  });
+
+  it("allows distinct methods, static segments, and parameter matchers", () => {
+    @Controller("/users")
+    class UsersController {
+      @Get("/:id")
+      first(@Param("id") id: string): string {
+        return id;
+      }
+      @Post("/:userId")
+      second(@Param("userId") userId: string): string {
+        return userId;
+      }
+      @Get("/teams/:id")
+      third(@Param("id") id: string): string {
+        return id;
+      }
+      @Get("/:...path")
+      fourth(@Param("path") path: string): string {
+        return path;
+      }
+    }
+
+    expect(buildContractGraph([UsersController]).diagnostics).toEqual([]);
+  });
+
   it.each([204, 205])("rejects response schemas for bodyless success status %i", (status) => {
     @Controller("/orders")
     class OrdersController {
@@ -92,6 +196,50 @@ describe("buildContractGraph", () => {
     expect(buildContractGraph([OrdersController]).diagnostics).toContainEqual(
       expect.objectContaining({ code: "contract-route-invalid-success-status", severity: "error" }),
     );
+  });
+
+  it("should preserve auth injection in snapshots without requiring request schemas", () => {
+    @Controller("/identity")
+    class IdentityController {
+      @Get("/")
+      @ResponseSchema(z.object({ id: z.string() }))
+      identity(): void {}
+    }
+
+    Reflect.defineMetadata(
+      REST_PARAMS_KEY,
+      new Map<string, ParamMetadata[]>([
+        [
+          "identity",
+          [
+            { index: 0, type: ParamType.PRINCIPAL, name: "principal" },
+            { index: 1, type: ParamType.USER, name: "user" },
+            { index: 2, type: ParamType.API_KEY, name: "apiKey" },
+          ],
+        ],
+      ]),
+      IdentityController,
+    );
+
+    const graph = buildContractGraph([IdentityController], { strictSchemas: true });
+    const snapshot = createContractGraphSnapshot(graph);
+    const serialized = JSON.parse(stringifyContractGraphSnapshot(snapshot));
+
+    expect(graph.diagnostics).toEqual([]);
+    expect(snapshot.routes[0]?.params.map((param) => param.kind)).toEqual([
+      "principal",
+      "user",
+      "apiKey",
+    ]);
+    expect(snapshot.routes[0]?.request).toEqual({
+      body: null,
+      path: null,
+      query: null,
+      headers: null,
+    });
+    expect(isContractGraphSnapshot(serialized)).toBe(true);
+    expect(parseContractGraphSnapshot(serialized)).toEqual(snapshot);
+    expect(isContractGraphV1(createContractGraphV1(graph))).toBe(true);
   });
 
   it("should build stable controller, route id, operation id, and schema graph nodes", () => {
@@ -1296,6 +1444,37 @@ describe("buildContractGraph", () => {
       diagnostics: [],
     };
 
+    for (const bounds of [
+      { minLength: 5, maxLength: 10 },
+      { minLength: 0 },
+      { minLength: 10, maxLength: 5 },
+    ]) {
+      const withBounds = {
+        ...persisted,
+        routes: persisted.routes.map((route) => ({
+          ...route,
+          response: { kind: "string", typeName: "ZodString", ...bounds },
+        })),
+      };
+      expect(parseContractGraphSnapshot(withBounds)?.routes[0]?.response).toEqual({
+        kind: "string",
+        typeName: "ZodString",
+        jsonSafe: true,
+        ...bounds,
+      });
+    }
+    for (const bounds of [{ minLength: -1 }, { maxLength: 1.5 }, { minLength: "5" }]) {
+      expect(
+        parseContractGraphSnapshot({
+          ...persisted,
+          routes: persisted.routes.map((route) => ({
+            ...route,
+            response: { kind: "string", typeName: "ZodString", ...bounds },
+          })),
+        }),
+      ).toBeNull();
+    }
+
     expect(isContractGraphSnapshot(persisted)).toBe(false);
     expect(parseContractGraphSnapshot(persisted)).toMatchObject({
       routes: [
@@ -2406,6 +2585,120 @@ describe("buildContractGraph", () => {
     ]);
   });
 
+  it.each([
+    [
+      "root optional removal",
+      z.object({ name: z.string() }).optional(),
+      z.object({ name: z.string() }),
+      undefined,
+    ],
+    [
+      "array item required addition",
+      z.array(z.object({ id: z.string() })),
+      z.array(z.object({ id: z.string(), name: z.string() })),
+      [{ id: "1" }],
+    ],
+    [
+      "nested array required addition",
+      z.object({ items: z.array(z.object({ id: z.string() })) }),
+      z.object({ items: z.array(z.object({ id: z.string(), name: z.string() })) }),
+      { items: [{ id: "1" }] },
+    ],
+    [
+      "nested object required addition",
+      z.object({ profile: z.object({ id: z.string() }) }),
+      z.object({ profile: z.object({ id: z.string(), name: z.string() }) }),
+      { profile: { id: "1" } },
+    ],
+    [
+      "deep nested array required addition",
+      z.object({ group: z.object({ items: z.array(z.object({ id: z.string() })) }) }),
+      z.object({
+        group: z.object({ items: z.array(z.object({ id: z.string(), name: z.string() })) }),
+      }),
+      { group: { items: [{ id: "1" }] } },
+    ],
+    [
+      "optional object required addition",
+      z.object({ profile: z.object({ id: z.string() }).optional() }),
+      z.object({ profile: z.object({ id: z.string(), name: z.string() }).optional() }),
+      { profile: { id: "1" } },
+    ],
+    [
+      "removed field before array expansion",
+      z.array(z.object({ removed: z.string(), id: z.string() })),
+      z.array(z.object({ id: z.string(), name: z.string() })),
+      [{ removed: "x", id: "1" }],
+    ],
+  ])("reports %s as breaking without duplicate diagnostics", (_name, baseline, current, input) => {
+    const snapshot = (schema: z.ZodTypeAny) => {
+      @Controller("/users")
+      class UsersController {
+        @Post("/")
+        createUser(@Body(schema) _body: unknown): void {}
+      }
+      return createContractGraphSnapshot(buildContractGraph([UsersController]));
+    };
+    expect(baseline.safeParse(input).success).toBe(true);
+    expect(current.safeParse(input).success).toBe(false);
+    const diff = diffContractGraphSnapshots(snapshot(baseline), snapshot(current));
+    expect(diff.hasBreakingChanges).toBe(true);
+    expect(diff.breakingChanges).toHaveLength(1);
+    expect(diff.breakingChanges[0]).toMatchObject({ location: "body" });
+    expect(diffContractGraphSnapshots(snapshot(baseline), snapshot(baseline)).changes).toEqual([]);
+    expect(diffContractGraphSnapshots(snapshot(current), snapshot(current)).changes).toEqual([]);
+  });
+
+  it.each([
+    [
+      "root optional addition",
+      z.object({ name: z.string() }),
+      z.object({ name: z.string() }).optional(),
+    ],
+    [
+      "array item optional addition",
+      z.array(z.object({ id: z.string() })),
+      z.array(z.object({ id: z.string(), name: z.string().optional() })),
+    ],
+    [
+      "array item field removal",
+      z.array(z.object({ name: z.string(), id: z.string() })),
+      z.array(z.object({ id: z.string() })),
+    ],
+  ])("allows %s", (_name, baseline, current) => {
+    const snapshot = (schema: z.ZodTypeAny) => {
+      @Controller("/users")
+      class UsersController {
+        @Post("/")
+        createUser(@Body(schema) _body: unknown): void {}
+      }
+      return createContractGraphSnapshot(buildContractGraph([UsersController]));
+    };
+    expect(
+      diffContractGraphSnapshots(snapshot(baseline), snapshot(current)).hasBreakingChanges,
+    ).toBe(false);
+  });
+
+  it("preserves independent wrapper and descendant incompatibilities", () => {
+    const baseline = z.object({ profile: z.object({ id: z.string() }).nullable().optional() });
+    const current = z.object({ profile: z.object({ id: z.number() }).optional() });
+    const snapshot = (schema: z.ZodTypeAny) => {
+      @Controller("/users")
+      class UsersController {
+        @Post("/")
+        createUser(@Body(schema) _body: unknown): void {}
+      }
+      return createContractGraphSnapshot(buildContractGraph([UsersController]));
+    };
+    expect(baseline.safeParse({ profile: null }).success).toBe(true);
+    expect(current.safeParse({ profile: null }).success).toBe(false);
+    const diff = diffContractGraphSnapshots(snapshot(baseline), snapshot(current));
+    expect(diff.breakingChanges.map((change) => change.fieldPath)).toEqual([
+      "profile",
+      "profile.id",
+    ]);
+  });
+
   it("should classify request field schema changes as breaking", () => {
     const BaselineController = (() => {
       @Controller("/users")
@@ -2785,6 +3078,40 @@ function createController(
   return UsersController;
 }
 
+function createPerFieldBindingController(
+  schema: z.ZodType,
+  boundNames: readonly string[],
+  kind: "path" | "query" = "query",
+) {
+  @Controller("/users")
+  class UsersController {
+    @Get(kind === "path" ? "/:id/:page" : "/")
+    getUser(_id: unknown, _page: unknown): void {}
+  }
+  const routes = Reflect.getMetadata(REST_ROUTES_KEY, UsersController) as RouteMetadata[];
+  Reflect.defineMetadata(
+    REST_ROUTES_KEY,
+    routes.map((route) => ({
+      ...route,
+      contract: {
+        method: "GET",
+        response: z.string(),
+        path: kind === "path" ? "/users/:id/:page" : "/users",
+        [kind === "path" ? "params" : "query"]: schema,
+      },
+    })),
+    UsersController,
+  );
+  const params: ParamMetadata[] = boundNames.map((name, index) => ({
+    type: kind === "path" ? ParamType.PARAM : ParamType.QUERY,
+    index,
+    name,
+    contractSchema: schema,
+  }));
+  Reflect.defineMetadata(REST_PARAMS_KEY, new Map([["getUser", params]]), UsersController);
+  return UsersController;
+}
+
 describe("wrapped object contract bindings", () => {
   const input = z.object({ id: z.string(), filter: z.string().optional() });
   const schemas = [
@@ -3005,5 +3332,185 @@ describe("wrapped object contract bindings", () => {
         (diagnostic) => diagnostic.code === "contract-route-missing-query-param-binding",
       ),
     ).toHaveLength(2);
+  });
+
+  it.each(["query", "path"] as const)(
+    "requires every input field when wrapped %s bindings are per-field",
+    (kind) => {
+      const inputShape = { id: z.string(), page: z.coerce.number().int().min(1) };
+      const base = z.object(inputShape);
+      const queries = [
+        base.refine(({ id }) => id.length > 0),
+        base.pipe(z.object({ id: z.string(), page: z.number().int().min(1) })),
+      ];
+      for (const query of queries) {
+        const ControllerClass = createPerFieldBindingController(query, ["id"], kind);
+        const graph = buildContractGraph([ControllerClass]);
+
+        expect(
+          graph.diagnostics.filter(
+            (diagnostic) =>
+              diagnostic.code === `contract-route-missing-${kind}-param-binding` &&
+              diagnostic.message.includes('"page"'),
+          ),
+        ).toHaveLength(1);
+      }
+    },
+  );
+
+  it.each(["query", "path"] as const)(
+    "accepts complete per-field bindings for wrapped %s contracts",
+    (kind) => {
+      const inputShape = { id: z.string(), page: z.coerce.number().int().min(1) };
+      const query = z.object(inputShape).refine(({ id }) => id.length > 0);
+      const graph = buildContractGraph([
+        createPerFieldBindingController(query, ["id", "page"], kind),
+      ]);
+
+      expect(
+        graph.diagnostics.filter(
+          (diagnostic) =>
+            diagnostic.severity === "error" &&
+            (diagnostic.code === `contract-route-missing-${kind}-param-binding` ||
+              diagnostic.code === `contract-route-uncontracted-${kind}-param`),
+        ),
+      ).toEqual([]);
+    },
+  );
+});
+
+describe("string length snapshot contracts", () => {
+  function snapshot(schema: z.ZodType, direction: "request" | "response") {
+    @Controller("/names")
+    class NamesController {
+      @Post("/")
+      @ResponseSchema(direction === "response" ? z.object({ name: schema }) : z.boolean())
+      create(
+        @Body(direction === "request" ? z.object({ name: schema }) : z.object({})) _body: unknown,
+      ): void {}
+    }
+    return createContractGraphSnapshot(buildContractGraph([NamesController]));
+  }
+
+  it.each([
+    [z.string(), z.string().min(5), true, false],
+    [z.string().min(5), z.string().min(3), false, true],
+    [z.string().min(5), z.string().min(5), false, false],
+    [z.string(), z.string().max(5), true, false],
+    [z.string().max(5), z.string().max(8), false, true],
+    [z.string().min(5), z.string(), false, true],
+    [z.string().max(5), z.string(), false, true],
+    [z.string(), z.string().min(0), false, false],
+    [z.string().length(5), z.string().min(5).max(5), false, false],
+  ])(
+    "should compare string bounds with request/response variance %#",
+    (before, after, requestBreaking, responseBreaking) => {
+      for (const [direction, breaking] of [
+        ["request", requestBreaking],
+        ["response", responseBreaking],
+      ] as const) {
+        const baseline = snapshot(before, direction);
+        const current = snapshot(after, direction);
+        const loadedBaseline = parseContractGraphSnapshot(
+          JSON.parse(stringifyContractGraphSnapshot(baseline)),
+        );
+        const loadedCurrent = parseContractGraphSnapshot(
+          JSON.parse(stringifyContractGraphSnapshot(current)),
+        );
+        expect(loadedBaseline).not.toBeNull();
+        expect(loadedCurrent).not.toBeNull();
+        if (!loadedBaseline || !loadedCurrent) return;
+        expect(diffContractGraphSnapshots(loadedBaseline, loadedCurrent).hasBreakingChanges).toBe(
+          breaking,
+        );
+        expect(
+          parseContractGraphSnapshot(JSON.parse(stringifyContractGraphSnapshot(current))),
+        ).toEqual(current);
+      }
+    },
+  );
+
+  it("should compare array element bounds through existing recursive compatibility", () => {
+    const baseline = snapshot(z.array(z.string()), "request");
+    const current = snapshot(z.array(z.string().min(5)), "request");
+    expect(diffContractGraphSnapshots(baseline, current).hasBreakingChanges).toBe(true);
+    expect(diffContractGraphSnapshots(current, baseline).hasBreakingChanges).toBe(false);
+  });
+
+  it("should persist length bounds and identify the incompatible field", () => {
+    expect(z.object({ name: z.string() }).safeParse({ name: "Ada" }).success).toBe(true);
+    expect(z.object({ name: z.string().min(5) }).safeParse({ name: "Ada" }).success).toBe(false);
+    const baseline = snapshot(z.string(), "request");
+    const current = snapshot(z.string().min(5), "request");
+    expect(stringifyContractGraphSnapshot(baseline)).not.toBe(
+      stringifyContractGraphSnapshot(current),
+    );
+    expect(diffContractGraphSnapshots(baseline, current).breakingChanges).toEqual([
+      expect.objectContaining({
+        code: "contract-request-field-schema-incompatible",
+        fieldPath: "name",
+        location: "body",
+      }),
+    ]);
+  });
+
+  it.each(["minLength", "maxLength"])("should reject malformed persisted %s bounds", (key) => {
+    const baseline = snapshot(z.string(), "response");
+    const route = baseline.routes[0];
+    expect(route).toBeDefined();
+    expect(
+      parseContractGraphSnapshot({
+        ...baseline,
+        routes: [
+          {
+            ...route,
+            response: { kind: "number", typeName: "ZodNumber", jsonSafe: true, [key]: 5 },
+          },
+        ],
+      }),
+    ).toBeNull();
+    for (const value of [-1, 1.5, "5", null, Number.NaN, Number.POSITIVE_INFINITY]) {
+      const persisted = {
+        ...baseline,
+        routes: [
+          {
+            ...route,
+            response: { kind: "string", typeName: "ZodString", jsonSafe: true, [key]: value },
+          },
+        ],
+      };
+      expect(parseContractGraphSnapshot(persisted)).toBeNull();
+    }
+  });
+});
+
+describe("order-sensitive string length contracts", () => {
+  it.each([
+    z.string().min(5).trim().min(2),
+    z.string().min(2).trim().min(5),
+    z.string().max(1).toUpperCase(),
+    z.string().toUpperCase().max(1),
+    z.string().max(1).toLowerCase(),
+    z.string().toLowerCase().max(1),
+  ])("should fail graph validation for mutated bounded strings %#", (schema) => {
+    @Controller("/mutated-names")
+    class MutatedNamesController {
+      @Post("/")
+      @ResponseSchema(z.object({ name: schema }))
+      create(@Body(z.object({ name: schema })) _body: unknown): void {}
+    }
+    const graph = buildContractGraph([MutatedNamesController]);
+    expect(graph.diagnostics).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: CONTRACT_SCHEMA_JSON_UNSAFE_DIAGNOSTIC_CODE,
+          severity: "error",
+        }),
+      ]),
+    );
+    expect(() => assertContractGraphHasNoErrors(graph)).toThrow(ContractGraphDiagnosticError);
+    const snapshot = createContractGraphSnapshot(graph);
+    expect(snapshot.routes[0]?.request.body?.jsonSafe).toBe(false);
+    expect(snapshot.routes[0]?.response?.jsonSafe).toBe(false);
   });
 });

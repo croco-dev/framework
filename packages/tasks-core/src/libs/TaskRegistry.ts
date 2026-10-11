@@ -104,6 +104,7 @@ export class TaskRegistry {
       existingOptions?.maxAttempts === nextOptions?.maxAttempts &&
       existingOptions?.isRetryable === nextOptions?.isRetryable &&
       existingOptions?.timeout === nextOptions?.timeout &&
+      existingOptions?.timeoutRetry === nextOptions?.timeoutRetry &&
       existingOptions?.idempotencyKey === nextOptions?.idempotencyKey &&
       existingOptions?.name === nextOptions?.name
     );

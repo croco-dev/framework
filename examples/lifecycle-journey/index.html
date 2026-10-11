@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Lifecycle Journey example</title>
+    <style>
+      :root {
+        font-family: system-ui, sans-serif;
+        color: #152238;
+        background: #f5f7fb;
+      }
+      body {
+        max-width: 980px;
+        margin: 0 auto;
+        padding: 24px;
+      }
+      main {
+        background: white;
+        border: 1px solid #d8e0ec;
+        border-radius: 12px;
+        padding: 24px;
+      }
+      h1,
+      h2,
+      h3 {
+        line-height: 1.2;
+      }
+      ol {
+        padding-left: 24px;
+      }
+      li,
+      article {
+        border-top: 1px solid #e4e9f1;
+        padding: 12px 0;
+      }
+      input,
+      select {
+        box-sizing: border-box;
+        width: 100%;
+        max-width: 420px;
+        padding: 8px;
+        border: 1px solid #aab8cb;
+        border-radius: 6px;
+      }
+      button {
+        margin: 8px 8px 8px 0;
+        padding: 8px 14px;
+        border: 1px solid #2b5189;
+        border-radius: 6px;
+        background: #285ca0;
+        color: white;
+        cursor: pointer;
+      }
+      button:disabled {
+        cursor: default;
+        opacity: 0.55;
+      }
+      [role="alert"] {
+        color: #aa1826;
+      }
+      fieldset {
+        border: 1px solid #d8e0ec;
+        border-radius: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <main id="root"><p role="status">Loading journeys…</p></main>
+    <script src="/browser.global.js"></script>
+  </body>
+</html>

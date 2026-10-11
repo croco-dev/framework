@@ -230,6 +230,89 @@ describe("frontend Problem client runtime", () => {
     }
   });
 
+  describe.each([
+    ["required response", (response: Response) => handleJsonResponse(response), true],
+    ["optional response", (response: Response) => readOptionalJsonResponse(response), true],
+    ["required result", (response: Response) => handleJsonResult(response), false],
+    ["Problem result", (response: Response) => readJsonProblemResult(response), false],
+    ["optional result", (response: Response) => readOptionalJsonResult(response), false],
+    [
+      "optional Problem result",
+      (response: Response) => readOptionalJsonProblemResult(response),
+      false,
+    ],
+  ] as const)("non-JSON error evidence: %s", (_name, reader, throws) => {
+    async function readFailure(response: Response): Promise<ProblemResponseError> {
+      const result = throws ? await captureRejectedValue(reader(response)) : await reader(response);
+      if (throws) {
+        expect(result).toBeInstanceOf(ProblemResponseError);
+        return result as ProblemResponseError;
+      }
+      expect(result).toMatchObject({ ok: false, kind: "external", response });
+      const failure = result as { readonly error: ProblemResponseError; readonly body?: unknown };
+      expect(failure.error).toBeInstanceOf(ProblemResponseError);
+      expect(failure.body).toBe(failure.error.body);
+      if (failure.error.body === undefined) {
+        expect(failure).not.toHaveProperty("body");
+      }
+      return failure.error;
+    }
+
+    it.each([
+      [502, "text/html", "<html><body>502 Bad Gateway: upstream connect error</body></html>"],
+      [503, "text/plain", "Service unavailable"],
+      [400, "text/plain", "Bad request"],
+    ])("keeps the body excerpt and parse cause for HTTP %s", async (status, contentType, body) => {
+      const response = new Response(body, { status, headers: { "content-type": contentType } });
+      const error = await readFailure(response);
+      expect(error).toMatchObject({ body, bodyTruncated: false, contentType, response });
+      expect(error.cause).toBeInstanceOf(SyntaxError);
+      expect(error.cause).toMatchObject({ message: "Response body is not valid JSON." });
+      expect(response.bodyUsed).toBe(true);
+    });
+
+    it("redacts and bounds the body and sanitizes the parse cause", async () => {
+      const secret = "gateway-private-secret";
+      const body = `password=${secret}\nmessage=${"x".repeat(600)}`;
+      const error = await readFailure(textResponse(body, 503));
+      expect(error.bodyTruncated).toBe(true);
+      expect(typeof error.body).toBe("string");
+      const excerpt = error.body as string;
+      expect(excerpt).toContain("[redacted]");
+      expect(excerpt).not.toContain(secret);
+      expect(excerpt.length).toBeLessThanOrEqual(500);
+      expect(excerpt).toMatch(/\.\.\.$/);
+      expect(error.cause).toBeInstanceOf(SyntaxError);
+      expect(String(error.cause)).not.toContain(secret);
+    });
+
+    it("preserves absent evidence for empty error bodies", async () => {
+      const error = await readFailure(textResponse("", 500));
+      expect(error.body).toBeUndefined();
+      expect(error.cause).toBeUndefined();
+      expect(error.bodyTruncated).toBe(false);
+    });
+
+    it.each([createAbortError(), new TypeError("Body read failed")])(
+      "preserves absent evidence when reading the body fails: %s",
+      async (cause) => {
+        const response = new Response(
+          new ReadableStream({
+            start(controller) {
+              controller.error(cause);
+            },
+          }),
+          {
+            status: 502,
+          },
+        );
+        const error = await readFailure(response);
+        expect(error.body).toBeUndefined();
+        expect(error.cause).toBeUndefined();
+      },
+    );
+  });
+
   it("returns success data and optional valid, empty, and 204 success bodies", async () => {
     await expect(
       fetchProblemJson<{ readonly id: string }>("/users/1", undefined, {

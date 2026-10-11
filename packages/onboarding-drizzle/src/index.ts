@@ -10,6 +10,15 @@ export { DRIZZLE_TOKEN, DrizzleOnboardingStore } from "./libs/DrizzleOnboardingS
  * 온보딩 상태 영속화에 사용하는 스키마입니다.
  */
 export { onboardingStates } from "./libs/schema";
+export { DrizzleGoalStore, GoalAchievedDomainEvent } from "./libs/DrizzleGoalStore";
+export type { DrizzleGoalClient } from "./libs/DrizzleGoalStore";
+export {
+  onboardingGoalDefinitions,
+  onboardingGoalEpisodes,
+  onboardingGoalReceipts,
+} from "./libs/goalSchema";
+export { addOnboardingGoals, removeOnboardingGoals } from "./migrations/addOnboardingGoals";
+export type { GoalMigrationClient } from "./migrations/addOnboardingGoals";
 export {
   addCompletionStepIdentity,
   removeCompletionStepIdentity,

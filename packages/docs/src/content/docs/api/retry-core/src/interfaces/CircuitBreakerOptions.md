@@ -37,6 +37,18 @@ Positive safe integer (default: 1).
 
 ---
 
+### now?
+
+> `optional` **now?**: () => `number`
+
+Millisecond clock for circuit transitions and default state-store expiry (default: Date.now).
+
+#### Returns
+
+`number`
+
+---
+
 ### openDuration?
 
 > `optional` **openDuration?**: `number`

@@ -6,6 +6,7 @@ import {
 import type {
   RetentionWorkbenchRequest,
   RetentionWorkbenchAdapter,
+  RetentionSavedViewStore,
 } from "../libs/RetentionWorkbench";
 import type { BehaviorDefinition, BehaviorDataset } from "@croco/metrics-core";
 
@@ -60,6 +61,7 @@ const dataset: BehaviorDataset = {
 function source(
   data = dataset,
   authorize = vi.fn<RetentionWorkbenchAdapter["authorize"]>(async () => true),
+  savedViews?: RetentionSavedViewStore,
 ) {
   const read = vi.fn(async () => data);
   const subjectLabel = vi.fn<RetentionWorkbenchAdapter["subjectLabel"]>(async ({ subjectId }) =>
@@ -76,6 +78,7 @@ function source(
         read,
         subjectLabel,
       },
+      savedViews,
       maxEvents: 10,
       maxPageSize: 1,
     }),
@@ -137,7 +140,17 @@ describe("RetentionWorkbench source", () => {
       { selectionId: "cohort", offset: 0, limit: 1, inputToken },
     );
     expect(granted.authorize.mock.calls.map((call) => call[0])).toEqual(
-      ["retention:read", "retention:drilldown", "retention:saved-view:read"].map((permission) => ({
+      [
+        "retention:read",
+        "retention:drilldown",
+        "retention:saved-view:read",
+        "retention:read",
+        "retention:drilldown",
+        "retention:saved-view:read",
+        "retention:read",
+        "retention:drilldown",
+        "retention:saved-view:read",
+      ].map((permission) => ({
         scope,
         subjectKind: "user",
         savedViewId: "saved-view",
@@ -283,5 +296,69 @@ describe("RetentionWorkbench source", () => {
       subjectKind: "user",
       subjectId: "other@example.com",
     });
+  });
+});
+
+describe("Retention saved views", () => {
+  it("persists pinned aggregate evidence in the host repository and detects changed or corrupt inputs", async () => {
+    let record: Awaited<ReturnType<ReturnType<typeof source>["source"]["save"]>> | undefined;
+    const store: RetentionSavedViewStore = {
+      read: vi.fn(async () => record),
+      write: vi.fn(async (_scope, _kind, value) => {
+        record = structuredClone(value);
+      }),
+    };
+    const pinned = { ...dataset, sourceRef: "run-1" };
+    const savedRequest = { ...request, sourceRef: "run-1" };
+    const current = source(pinned, undefined, store);
+    const inputToken = await token(current.source, savedRequest);
+    const saved = await current.source.save(savedRequest, "weekly", inputToken);
+    expect(saved.snapshot.inputToken).toBe(inputToken);
+    expect(JSON.stringify(saved)).not.toMatch(/private@|subjectId|eventId/);
+    expect(
+      await source(pinned, undefined, store).source.readSaved(scope, "user", "weekly"),
+    ).toEqual(saved);
+    expect(store.write).toHaveBeenCalledWith(scope, "user", saved);
+    if (record) {
+      record.snapshot = Object.fromEntries(
+        Object.entries(record.snapshot).reverse(),
+      ) as typeof record.snapshot;
+      Object.assign(record.request, { unexpectedPrivateData: "private@example.com" });
+    }
+    expect(await current.source.readSaved(scope, "user", "weekly")).toEqual(saved);
+
+    await expect(
+      source({ ...pinned, completeThrough: baseline.to }, undefined, store).source.readSaved(
+        scope,
+        "user",
+        "weekly",
+      ),
+    ).rejects.toMatchObject({ reason: "stale-input" });
+    await expect(
+      current.source.readSaved({ ...scope, tenantId: "other" }, "user", "weekly"),
+    ).rejects.toMatchObject({ reason: "invalid-request" });
+    if (record) record.snapshot.cards = [];
+    await expect(current.source.readSaved(scope, "user", "weekly")).rejects.toMatchObject({
+      reason: "stale-input",
+    });
+  });
+  it("requires save permission, an immutable source and the displayed token before persistence", async () => {
+    const store = { read: vi.fn(async () => undefined), write: vi.fn(async () => undefined) };
+    const denied = source(
+      { ...dataset, sourceRef: "run-1" },
+      vi.fn(async (input) => input.permission !== "retention:saved-view:write"),
+      store,
+    );
+    await expect(
+      denied.source.save({ ...request, sourceRef: "run-1" }, "weekly", "0".repeat(64)),
+    ).rejects.toMatchObject({ reason: "denied" });
+    const allowed = source({ ...dataset, sourceRef: "run-1" }, undefined, store);
+    await expect(allowed.source.save(request, "weekly", "0".repeat(64))).rejects.toMatchObject({
+      reason: "invalid-request",
+    });
+    await expect(
+      allowed.source.save({ ...request, sourceRef: "run-1" }, "weekly", "0".repeat(64)),
+    ).rejects.toMatchObject({ reason: "stale-input" });
+    expect(store.write).not.toHaveBeenCalled();
   });
 });

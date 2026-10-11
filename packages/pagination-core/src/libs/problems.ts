@@ -52,6 +52,29 @@ export class ConflictingPaginationProblem extends Problem {
   }
 }
 
+export class InvalidPaginationLimitProblem extends Problem {
+  readonly code = "INVALID_PAGINATION_LIMIT";
+  readonly category = ProblemCategory.BadRequest;
+  readonly limit: number;
+
+  constructor(limit: number) {
+    super(
+      "INVALID_PAGINATION_LIMIT",
+      ProblemCategory.BadRequest,
+      "Pagination limit must be an integer greater than or equal to 1",
+      {
+        extensions: {
+          field: "limit",
+          reason: "below-minimum",
+          limit: Number.isFinite(limit) ? limit : String(limit),
+          minimum: 1,
+        },
+      },
+    );
+    this.limit = limit;
+  }
+}
+
 export type InvalidPaginationDirectionProblemOptions =
   | {
       mode: "cursor";

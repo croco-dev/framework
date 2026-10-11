@@ -1,6 +1,6 @@
 # Static misuse exceptions
 
-Croco treats raw built-in errors and empty runtime catch blocks as temporary exceptions, not permanent
+Croco treats raw built-in errors, direct built-in Error subclasses, and empty runtime catch blocks as temporary exceptions, not permanent
 conventions. Prefer converting a finding to a `Problem`, a diagnostic-coded error, explicit telemetry or
 logging, or recovery behavior.
 

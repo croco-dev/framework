@@ -59,6 +59,10 @@ Fetch at most limit normalized observations; never silently truncate a complete 
 
 [`BehaviorScope`](/api/metrics-core/src/type-aliases/behaviorscope/)
 
+###### sourceRef?
+
+`string`
+
 #### Returns
 
 `Promise`\<[`BehaviorDataset`](/api/metrics-core/src/type-aliases/behaviordataset/)\>

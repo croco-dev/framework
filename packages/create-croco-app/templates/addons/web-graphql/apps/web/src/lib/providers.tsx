@@ -1,8 +1,8 @@
 "use client";
+import { HttpLink } from "@apollo/client";
 import {
   ApolloClient,
   ApolloNextAppProvider,
-  HttpLink,
   InMemoryCache,
 } from "@apollo/experimental-nextjs-app-support";
 

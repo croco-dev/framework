@@ -2,7 +2,10 @@ import type { Guard, ILogger } from "@croco/framework-context";
 import { ProblemFactory } from "@croco/problems-core";
 import {
   extractRouteIR,
+  ContractGraphDiagnosticError,
+  getRouteContractSchemaDiagnostics,
   toRuntimeRoutePath,
+  toRouteMatchKey,
   type RouteContractSourceLocation,
   type RouteIR,
 } from "@croco/protocols-core";
@@ -92,6 +95,10 @@ export class RouteCompiler {
 
     for (const controller of controllers) {
       const routeIRs = extractRouteIR(controller);
+      const schemaDiagnostics = routeIRs.flatMap(getRouteContractSchemaDiagnostics);
+      if (schemaDiagnostics.length > 0) {
+        throw new ContractGraphDiagnosticError(schemaDiagnostics);
+      }
       if (routeIRs.length === 0) {
         this.logger.warn(`[RouteCompiler] ${controller.name} is not decorated with @Controller`);
         continue;
@@ -113,13 +120,16 @@ export class RouteCompiler {
 
     for (const entry of routeEntries) {
       const route = entry.route;
-      const routeKey = `${route.method.toUpperCase()} ${route.path}`;
+      const routeKey = `${route.method.toUpperCase()} ${toRouteMatchKey(route.path)}`;
       const existingRoute = seenRoutes.get(routeKey);
 
       if (existingRoute) {
-        throw ProblemFactory.internalServerError(
-          "transports-http/duplicate-route-definition",
-          this.formatDuplicateRouteDetail(routeKey, existingRoute, entry),
+        throw createDuplicateRouteDefinitionProblem(
+          this.formatDuplicateRouteDetail(
+            `${route.method.toUpperCase()} ${route.path}`,
+            existingRoute,
+            entry,
+          ),
         );
       }
 
@@ -218,6 +228,7 @@ export class RouteCompiler {
       method: routeIR.httpMethod,
       path: fullPath,
       ...(routeIR.successStatus === undefined ? {} : { successStatus: routeIR.successStatus }),
+      ...(routeIR.outputSchema === null ? {} : { hasResponseBody: true }),
       handler,
       controllerInstance: undefined,
       methodName: routeIR.methodName,
@@ -247,7 +258,7 @@ export class RouteCompiler {
         controllerName: routeIR.controllerName,
         methodName: routeIR.methodName,
         httpMethod: routeIR.httpMethod.toUpperCase(),
-        path: fullPath,
+        path: routeIR.path,
         ...(routeIR.sourceLocation ? { sourceLocation: routeIR.sourceLocation } : {}),
       },
     };
@@ -296,4 +307,27 @@ export class RouteCompiler {
 
     return `${sourceLocation.path}${line}${column}`;
   }
+}
+
+export function assertNoOperationalRouteConflicts(
+  routes: readonly CompiledRoute[],
+  systemRoutes: ReadonlyMap<string, unknown>,
+): void {
+  for (const route of routes) {
+    const method = route.method.toUpperCase();
+    if ((method === "GET" || method === "ALL") && systemRoutes.has(route.path)) {
+      throw createDuplicateRouteDefinitionProblem(
+        [
+          `Duplicate route definition detected for ${method} ${route.path}.`,
+          `Existing route: built-in operational endpoint (GET ${route.path}).`,
+          `Conflicting route: ${route.pipelineGraphConfig?.handlerLabel} (${method} ${route.path}).`,
+          "Recovery: give the controller route a unique HTTP method or path before starting the HTTP transport.",
+        ].join(" "),
+      );
+    }
+  }
+}
+
+function createDuplicateRouteDefinitionProblem(detail: string) {
+  return ProblemFactory.internalServerError("transports-http/duplicate-route-definition", detail);
 }

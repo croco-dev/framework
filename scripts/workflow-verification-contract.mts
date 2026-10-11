@@ -1,3 +1,4 @@
+import { compareStrings } from "../tooling/compareStrings.mjs";
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
@@ -54,14 +55,21 @@ export const ACTIONS_ONLY_WORKFLOW_COMMAND_ALLOWLIST = [
   "pnpm audit:prod",
   "pnpm build --filter=@croco/auth-drizzle...",
   "pnpm build --filter=@croco/analytics-drizzle...",
+  "pnpm build --filter=@croco/cohort-drizzle...",
   "pnpm build --filter=@croco/credits-drizzle...",
   "pnpm build --filter=@croco/customer-health-drizzle...",
   "pnpm build --filter=@croco/engagement-drizzle...",
   "pnpm build --filter=@croco/entitlements-drizzle...",
+  "pnpm build --filter=@croco/etl-events-tx...",
   "pnpm build --filter=@croco/execution-drizzle...",
+  "pnpm build --filter=@croco/experience-drizzle...",
+  "pnpm build --filter=@croco/features-drizzle...",
+  "pnpm build --filter=@croco/gamification-drizzle...",
   "pnpm build --filter=@croco/membership-drizzle...",
   "pnpm build --filter=@croco/metering-core...",
   "pnpm build --filter=@croco/metering-drizzle...",
+  "pnpm build --filter=@croco/onboarding-drizzle...",
+  "pnpm build --filter=@croco/promotions-drizzle...",
   "pnpm build --filter=@croco/warehouse-postgres...",
   "pnpm build --filter=@croco/testing-resources...",
   "pnpm security:gitleaks-smoke",
@@ -69,14 +77,21 @@ export const ACTIONS_ONLY_WORKFLOW_COMMAND_ALLOWLIST = [
   "pnpm turbo run test",
   "pnpm --filter @croco/auth-drizzle exec vitest run src/tests/DrizzleApiKeyStore.postgres.spec.ts",
   "pnpm --filter @croco/analytics-drizzle test:postgres",
+  "pnpm --filter @croco/cohort-drizzle test:live",
   "pnpm --filter @croco/credits-drizzle test:postgres",
   "pnpm --filter @croco/customer-health-drizzle test:postgres",
   "pnpm --filter @croco/engagement-drizzle test:postgres",
   "pnpm --filter @croco/entitlements-drizzle test:postgres",
+  "pnpm --filter @croco/etl-events-tx test:real",
   "pnpm --filter @croco/execution-drizzle test:postgres",
+  "pnpm --filter @croco/experience-drizzle test:live",
+  "pnpm --filter @croco/features-drizzle test:postgres",
+  "pnpm --filter @croco/gamification-drizzle test:postgres",
   "pnpm --filter @croco/membership-drizzle exec vitest run src/tests/DrizzleMembershipStore.postgres.spec.ts",
   "pnpm --filter @croco/metering-core test:real",
   "pnpm --filter @croco/metering-drizzle test:postgres",
+  "pnpm --filter @croco/onboarding-drizzle test:live",
+  "pnpm --filter @croco/promotions-drizzle test:live",
   "pnpm --filter @croco/warehouse-postgres test:real",
   "pnpm --filter @croco/migration-runner exec vitest run src/tests/MigrationStatusPostgres.spec.ts",
   "pnpm --filter @croco/testing-resources test:real",
@@ -315,7 +330,7 @@ export function findWorkflowPermissionViolations(
   const violations: WorkflowPermissionViolation[] = [];
 
   for (const [path, source] of Object.entries(workflows).sort(([left], [right]) =>
-    left.localeCompare(right),
+    compareStrings(left, right),
   )) {
     let workflow: unknown;
     try {

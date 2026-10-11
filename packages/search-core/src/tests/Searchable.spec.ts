@@ -18,6 +18,7 @@ import type { SearchableIndexDeclaration } from "../libs/decorators/Searchable";
 describe("@Searchable decorator", () => {
   beforeEach(() => {
     Container.reset();
+    MetadataStorage.clear();
   });
 
   describe("basic usage", () => {

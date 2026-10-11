@@ -95,12 +95,7 @@ export interface AutoInstrumentationConfig {
  * Default modules enabled for Lambda environments.
  * Optimized for minimal overhead and maximum utility.
  */
-export const LAMBDA_DEFAULT_MODULES: AutoInstrumentationModule[] = [
-  "http",
-  "https",
-  "aws-sdk",
-  "aws-lambda",
-];
+export const LAMBDA_DEFAULT_MODULES: AutoInstrumentationModule[] = ["http", "https", "aws-sdk"];
 
 /**
  * Default modules enabled for standard Node.js applications.
@@ -275,6 +270,11 @@ export function createAutoInstrumentationConfigPlan(
   }
 
   const modules = new Set(normalized.modules ?? []);
+  if (modules.has("aws-lambda")) {
+    throw new TelemetryAutoInstrumentationProblem(
+      "Auto-instrumentation module 'aws-lambda' cannot wrap the handler because the handler module is loaded before instrumentation registration",
+    );
+  }
   if (modules.has("http") !== modules.has("https")) {
     throw new TelemetryAutoInstrumentationProblem(
       "The 'http' and 'https' modules must be selected together because OpenTelemetry provides one shared instrumentation",

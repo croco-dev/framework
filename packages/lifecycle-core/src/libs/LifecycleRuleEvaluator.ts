@@ -2,9 +2,18 @@ import {
   LifecycleActionAdapterProblem,
   LifecycleRunFinalizationProblem,
   LifecycleRuleActionContractProblem,
+  LifecycleSourcePayloadConflictProblem,
+  MissingLifecycleSourceIdentityProblem,
   UnknownLifecycleRuleVersionProblem,
 } from "./problems/LifecycleProblems";
 import { InMemoryLifecycleDryRunStore } from "./InMemoryLifecycleDryRunStore";
+import {
+  buildLegacyLifecycleIdempotencyKey,
+  encodeLifecycleCustomKey,
+  encodeLifecycleSourceKey,
+  fingerprintLifecycleSourcePayload,
+  resolveLifecycleSourceIdentity,
+} from "./sourceIdentity";
 import type { LifecycleRuleRegistry } from "./LifecycleRuleRegistry";
 import type {
   LifecycleAction,
@@ -44,28 +53,124 @@ function createRunId(): string {
   return `lifecycle_run_${globalThis.crypto.randomUUID()}`;
 }
 
-function defaultIdempotencyKey(
+export type ResolvedLifecycleIdempotency =
+  | { readonly kind: "source"; readonly key: string; readonly fingerprint: string }
+  | { readonly kind: "custom"; readonly key: string };
+
+function resolveIdempotency(
   registration: LifecycleRuleRegistration,
   context: LifecycleContext,
-): string {
-  const signalKey = context.signal.id ?? context.signal.occurredAt.toISOString();
-  return [
-    registration.rule.id,
-    registration.descriptor.version,
-    context.tenantId,
-    context.signal.type,
-    signalKey,
-  ].join(":");
+): ResolvedLifecycleIdempotency | undefined {
+  const custom = registration.rule.idempotencyKey?.({ rule: registration.rule, context });
+  if (custom !== undefined) {
+    return {
+      kind: "custom",
+      key: encodeLifecycleCustomKey({
+        ruleId: registration.rule.id,
+        ruleVersion: registration.descriptor.version,
+        tenantId: context.tenantId,
+        customKey: custom,
+      }),
+    };
+  }
+  const identity = resolveLifecycleSourceIdentity({
+    ruleId: registration.rule.id,
+    ruleVersion: registration.descriptor.version,
+    context,
+  });
+  if (!identity) {
+    return undefined;
+  }
+  return {
+    kind: "source",
+    key: encodeLifecycleSourceKey(identity),
+    fingerprint: fingerprintLifecycleSourcePayload(context.signal),
+  };
 }
 
-function resolveIdempotencyKey(
+function legacyIdempotencyKey(
   registration: LifecycleRuleRegistration,
   context: LifecycleContext,
 ): string {
-  const custom = registration.rule.idempotencyKey?.({ rule: registration.rule, context });
-  return custom === undefined
-    ? defaultIdempotencyKey(registration, context)
-    : [registration.rule.id, registration.descriptor.version, custom].join(":");
+  return buildLegacyLifecycleIdempotencyKey({
+    ruleId: registration.rule.id,
+    ruleVersion: registration.descriptor.version,
+    tenantId: context.tenantId,
+    signalType: context.signal.type,
+    signalId: context.signal.id,
+    occurredAt: context.signal.occurredAt,
+  });
+}
+
+function createMissingIdentityRun(input: {
+  readonly registration: LifecycleRuleRegistration;
+  readonly context: LifecycleContext;
+}): LifecycleFinalizedRun {
+  const problem = new MissingLifecycleSourceIdentityProblem(
+    input.registration.rule.id,
+    input.registration.descriptor.version,
+  );
+  const problemMessage = problem.detail ?? problem.message;
+  const completedAt = new Date(input.context.now);
+  return {
+    id: createRunId(),
+    ruleId: input.registration.rule.id,
+    ruleVersion: input.registration.descriptor.version,
+    ruleFingerprint: input.registration.descriptor.fingerprint,
+    tenantId: input.context.tenantId,
+    signalType: input.context.signal.type,
+    ...(input.context.signal.source !== undefined
+      ? { signalSource: input.context.signal.source }
+      : {}),
+    severity: input.registration.rule.severity,
+    status: "failed",
+    idempotencyKey: legacyIdempotencyKey(input.registration, input.context),
+    actionResults: [],
+    error: {
+      code: problem.code,
+      message: problemMessage,
+    },
+    startedAt: completedAt,
+    completedAt,
+  };
+}
+
+function createPayloadConflictRun(input: {
+  readonly registration: LifecycleRuleRegistration;
+  readonly context: LifecycleContext;
+  readonly idempotencyKey: string;
+  readonly fingerprint?: string;
+  readonly existingRun: LifecycleRun;
+}): LifecycleFinalizedRun {
+  const problem = new LifecycleSourcePayloadConflictProblem(
+    input.registration.rule.id,
+    input.registration.descriptor.version,
+  );
+  const problemMessage = problem.detail ?? problem.message;
+  const completedAt = new Date(input.context.now);
+  return {
+    id: createRunId(),
+    ruleId: input.registration.rule.id,
+    ruleVersion: input.registration.descriptor.version,
+    ruleFingerprint: input.registration.descriptor.fingerprint,
+    tenantId: input.context.tenantId,
+    signalType: input.context.signal.type,
+    signalId: input.context.signal.id,
+    ...(input.context.signal.source !== undefined
+      ? { signalSource: input.context.signal.source }
+      : {}),
+    severity: input.registration.rule.severity,
+    status: "failed",
+    idempotencyKey: input.idempotencyKey,
+    ...(input.fingerprint !== undefined ? { sourceFingerprint: input.fingerprint } : {}),
+    actionResults: [],
+    error: {
+      code: problem.code,
+      message: `${problemMessage} (existing run '${input.existingRun.id}')`,
+    },
+    startedAt: completedAt,
+    completedAt,
+  };
 }
 
 function summarizeAdapterError(action: LifecycleAction, error: unknown): LifecycleActionResult {
@@ -100,22 +205,27 @@ function createSkippedRun(input: {
   readonly idempotencyKey: string;
   readonly reason: LifecycleSkipReason;
   readonly runId?: string;
+  readonly existingRun?: LifecycleRun;
 }): LifecycleFinalizedRun {
   const completedAt = new Date(input.context.now);
 
   return {
-    id: input.runId ?? createRunId(),
+    id: input.runId ?? input.existingRun?.id ?? createRunId(),
     ruleId: input.registration.rule.id,
     ruleVersion: input.registration.descriptor.version,
     ruleFingerprint: input.registration.descriptor.fingerprint,
     tenantId: input.context.tenantId,
     signalType: input.context.signal.type,
     signalId: input.context.signal.id,
+    ...(input.context.signal.source !== undefined
+      ? { signalSource: input.context.signal.source }
+      : {}),
     severity: input.registration.rule.severity,
     status: "skipped",
     idempotencyKey: input.idempotencyKey,
     skipReason: input.reason,
-    actionResults: [],
+    actionResults: input.existingRun?.actionResults ?? [],
+    ...(input.existingRun?.error ? { error: { ...input.existingRun.error } } : {}),
     startedAt: completedAt,
     completedAt,
   };
@@ -182,18 +292,31 @@ export class LifecycleRuleEvaluator {
 
   async evaluate(context: LifecycleContext): Promise<LifecycleEvaluationResult> {
     const runs: LifecycleRun[] = [];
+    let firstError: unknown;
+    let hasError = false;
 
     for (const registration of await this.registry.matchRegistrations(context.signal)) {
-      const evaluation = await this.evaluateRule(registration, context);
-      if (!evaluation.persisted) {
-        try {
-          await this.runStore.save(evaluation.run);
-        } catch (error) {
-          await this.runStore.abortClaim(evaluation.run.id, evaluation.run.idempotencyKey);
-          throw error;
+      try {
+        const evaluation = await this.evaluateRule(registration, context);
+        if (!evaluation.persisted) {
+          try {
+            await this.runStore.save(evaluation.run);
+          } catch (error) {
+            await this.runStore.abortClaim(evaluation.run.id, evaluation.run.idempotencyKey);
+            throw error;
+          }
+        }
+        runs.push(evaluation.run);
+      } catch (error) {
+        if (!hasError) {
+          firstError = error;
+          hasError = true;
         }
       }
-      runs.push(evaluation.run);
+    }
+
+    if (hasError) {
+      throw firstError;
     }
 
     return {
@@ -257,7 +380,7 @@ export class LifecycleRuleEvaluator {
     const matched = signalMatched && conditionMatched && problems.length === 0;
     let idempotencyKey: string | undefined;
     try {
-      idempotencyKey = resolveIdempotencyKey(registration, input.context);
+      idempotencyKey = resolveIdempotency(registration, input.context)?.key;
     } catch {
       problems.push(dryRunProblem("lifecycle-core/dry-run-idempotency-key-failed"));
     }
@@ -309,7 +432,17 @@ export class LifecycleRuleEvaluator {
     registration: LifecycleRuleRegistration & { readonly state: "active" | "paused" },
     context: LifecycleContext,
   ): Promise<{ readonly run: LifecycleFinalizedRun; readonly persisted: boolean }> {
-    const idempotencyKey = resolveIdempotencyKey(registration, context);
+    const resolved = resolveIdempotency(registration, context);
+    if (!resolved) {
+      return {
+        run: createMissingIdentityRun({ registration, context }),
+        persisted: false,
+      };
+    }
+    const idempotencyKey = resolved.key;
+    const fingerprint = resolved.kind === "source" ? resolved.fingerprint : undefined;
+    const legacyKey =
+      resolved.kind === "source" ? legacyIdempotencyKey(registration, context) : undefined;
 
     if (registration.state === "paused") {
       return {
@@ -357,9 +490,11 @@ export class LifecycleRuleEvaluator {
           tenantId: context.tenantId,
           signalType: context.signal.type,
           signalId: context.signal.id,
+          ...(context.signal.source !== undefined ? { signalSource: context.signal.source } : {}),
           severity: registration.rule.severity,
           status: "failed",
           idempotencyKey,
+          ...(fingerprint !== undefined ? { sourceFingerprint: fingerprint } : {}),
           actionResults: undeclaredActions.map((action) => ({
             actionId: action.id,
             type: action.type,
@@ -405,8 +540,10 @@ export class LifecycleRuleEvaluator {
       ...runBase,
       signalType: context.signal.type,
       signalId: context.signal.id,
+      ...(context.signal.source !== undefined ? { signalSource: context.signal.source } : {}),
       severity: registration.rule.severity,
       status: "indeterminate",
+      ...(fingerprint !== undefined ? { sourceFingerprint: fingerprint } : {}),
       actionResults: [],
       startedAt,
       completedAt: startedAt,
@@ -421,6 +558,8 @@ export class LifecycleRuleEvaluator {
           tenantId: context.tenantId,
           ruleId: registration.rule.id,
           claimedAt: startedAt,
+          ...(fingerprint !== undefined ? { sourceFingerprint: fingerprint } : {}),
+          ...(legacyKey !== undefined ? { legacyIdempotencyKey: legacyKey } : {}),
           cooldownSince: registration.rule.cooldown
             ? new Date(context.now.getTime() - registration.rule.cooldown.durationMs)
             : undefined,
@@ -432,12 +571,25 @@ export class LifecycleRuleEvaluator {
       throw error;
     }
     if (!runClaim.claimed) {
+      if (runClaim.reason === "source_payload_conflict" && runClaim.existingRun) {
+        return {
+          run: createPayloadConflictRun({
+            registration,
+            context,
+            idempotencyKey,
+            ...(fingerprint !== undefined ? { fingerprint } : {}),
+            existingRun: runClaim.existingRun,
+          }),
+          persisted: false,
+        };
+      }
       return {
         run: createSkippedRun({
           registration,
           context,
           idempotencyKey,
           reason: runClaim.reason,
+          ...(runClaim.existingRun ? { existingRun: runClaim.existingRun } : {}),
         }),
         persisted: false,
       };
@@ -495,8 +647,10 @@ export class LifecycleRuleEvaluator {
       ...runBase,
       signalType: context.signal.type,
       signalId: context.signal.id,
+      ...(context.signal.source !== undefined ? { signalSource: context.signal.source } : {}),
       severity: registration.rule.severity,
       status,
+      ...(fingerprint !== undefined ? { sourceFingerprint: fingerprint } : {}),
       skipReason: status === "skipped" ? "all_actions_skipped" : undefined,
       actionResults,
       error: firstFailure?.error,
@@ -523,7 +677,7 @@ export class LifecycleRuleEvaluator {
       return { suppressed: true, reason: "rule_not_active" };
     }
 
-    const existingRun = await this.runStore.findByIdempotencyKey(idempotencyKey);
+    const existingRun = await this.runStore.findByIdempotencyKey(idempotencyKey, context.now);
     if (existingRun !== null) {
       return { suppressed: true, reason: "idempotency_key_reused" };
     }
@@ -534,6 +688,7 @@ export class LifecycleRuleEvaluator {
         context.tenantId,
         registration.rule.id,
         since,
+        context.now,
       );
       if (latestRun !== null) {
         return { suppressed: true, reason: "cooldown_active" };

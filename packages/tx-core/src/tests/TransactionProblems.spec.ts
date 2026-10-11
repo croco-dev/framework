@@ -11,6 +11,7 @@ import {
   AfterCommitHooksProblem,
   DetachedTransactionOperationProblem,
   InvalidTransactionTimeoutProblem,
+  JoinedTransactionTimeoutProblem,
   TransactionContextProblem,
   TransactionDecoratorProblem,
   TransactionOutcomeContextProblem,
@@ -79,6 +80,14 @@ describe("TransactionProblems", () => {
     expect(problem.detail).toBe(
       "Transaction run timeout must be an integer between 1 and 2147483647 milliseconds; received NaN",
     );
+  });
+
+  it("should identify an unsupported joined timeout as a validation Problem", () => {
+    const problem = new JoinedTransactionTimeoutProblem(50);
+
+    expect(problem.code).toBe("tx-core/join-timeout-unsupported");
+    expect(problem.category).toBe(ProblemCategory.ValidationError);
+    expect(problem.detail).toContain("50ms timeout");
   });
 
   it("should create AfterCommitHooksProblem with expected metadata", () => {

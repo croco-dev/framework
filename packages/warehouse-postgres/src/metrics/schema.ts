@@ -24,6 +24,9 @@ CREATE TABLE IF NOT EXISTS mrr_movements (
 CREATE INDEX IF NOT EXISTS idx_mrr_movements_tenant_timestamp
   ON mrr_movements (tenant_id, timestamp DESC);
 
+CREATE INDEX IF NOT EXISTS idx_mrr_movements_tenant_event_key
+  ON mrr_movements (tenant_id, event_key) WHERE event_key IS NOT NULL;
+
 CREATE TABLE IF NOT EXISTS mrr_movement_event_keys (
   tenant_id VARCHAR(255) NOT NULL,
   event_key VARCHAR(255) NOT NULL,
@@ -105,6 +108,8 @@ INSERT INTO mrr_movement_event_keys (tenant_id, event_key)
 SELECT tenant_id, event_key FROM mrr_movements WHERE event_key IS NOT NULL
 ON CONFLICT (tenant_id, event_key) DO NOTHING;
 DROP INDEX IF EXISTS uq_mrr_movements_tenant_event_key;
+CREATE INDEX IF NOT EXISTS idx_mrr_movements_tenant_event_key
+  ON mrr_movements (tenant_id, event_key) WHERE event_key IS NOT NULL;
 ALTER TABLE mrr_movements DROP CONSTRAINT IF EXISTS mrr_movements_pkey;
 ALTER TABLE mrr_movements ADD PRIMARY KEY (id, timestamp);
 ALTER TABLE metrics_snapshots DROP CONSTRAINT IF EXISTS metrics_snapshots_pkey;

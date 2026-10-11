@@ -513,12 +513,12 @@ describe("CI performance observer", () => {
       nodeVersion: "v22.23.1",
       pnpmVersion: "11.9.0",
       turboVersion: "2.10.2",
-      cacheEligibleTaskIds: ["@croco/example#test@packages/example", "repo:ci#test@."],
-      validCacheHitTaskIds: ["@croco/example#test@packages/example"],
+      cacheEligibleTaskIds: ["@croco/example#test", "repo:ci#test"],
+      validCacheHitTaskIds: ["@croco/example#test"],
       freshAttestation: true,
       stableDiagnostics: [],
     });
-    expect(observation.checkResults).toHaveLength(54);
+    expect(observation.checkResults).toHaveLength(55);
     expect(observation.securityResults).toHaveLength(5);
     for (const digest of [
       observation.toolchainDigest,
@@ -739,21 +739,51 @@ describe("CI performance observer", () => {
     ).toThrow(/incomplete/);
   });
 
-  it("keeps separate cache tasks for one owner running in two directories", () => {
+  it("records one cache hit when every workspace for an owner hits", () => {
     const observation = createCiPerformanceObservation(
       createInput({
         fastLane: fastLane({
           commands: [
-            { owner: "repo:examples", cwd: "examples/a", status: "passed" },
-            { owner: "repo:examples", cwd: "examples/b", status: "passed" },
+            { owner: "repo:examples", cwd: "examples/a", status: "passed", cacheStatus: "hit" },
+            { owner: "repo:examples", cwd: "examples/b", status: "passed", cacheStatus: "hit" },
           ],
         }),
       }),
     );
-    expect(observation.cacheEligibleTaskIds).toEqual([
-      "repo:examples#test@examples/a",
-      "repo:examples#test@examples/b",
-    ]);
+    expect(observation.cacheEligibleTaskIds).toEqual(["repo:examples#test"]);
+    expect(observation.validCacheHitTaskIds).toEqual(["repo:examples#test"]);
+  });
+
+  it("records one cache task per owner only when every workspace hits", () => {
+    const observation = createCiPerformanceObservation(
+      createInput({
+        fastLane: fastLane({
+          commands: [
+            {
+              owner: "@croco/example",
+              cwd: "packages/example",
+              status: "passed",
+              cacheStatus: "hit",
+            },
+            {
+              owner: "repo:examples",
+              cwd: "examples/first-party-plugin-composition",
+              status: "passed",
+              cacheStatus: "hit",
+            },
+            {
+              owner: "repo:examples",
+              cwd: "examples/saas-billing-golden-path",
+              status: "passed",
+              cacheStatus: "miss",
+            },
+          ],
+        }),
+      }),
+    );
+
+    expect(observation.cacheEligibleTaskIds).toEqual(["@croco/example#test", "repo:examples#test"]);
+    expect(observation.validCacheHitTaskIds).toEqual(["@croco/example#test"]);
   });
 
   it("rejects a fast-lane command missing its working directory", () => {
@@ -792,6 +822,40 @@ describe("CI performance observer", () => {
     });
   });
 
+  it.each([false, true])(
+    "records only the monolith with earlier attempt artifacts (expired: %s)",
+    (expired) => {
+      const artifacts = phaseBArtifacts().artifacts.map(({ name }) => ({
+        name: name.replace(/-2$/, "-1"),
+        expired,
+      }));
+      const observations = createCiPerformanceObservations(
+        createInput({ artifacts: { total_count: artifacts.length, artifacts } }),
+      );
+
+      expect(observations).toEqual([createCiPerformanceObservation(createInput())]);
+    },
+  );
+
+  it("uses only current attempt split evidence after a full re-run", () => {
+    const previous = phaseBArtifacts().artifacts.map(({ name }) => ({
+      name: name.replace(/-2$/, "-1"),
+      expired: true,
+    }));
+    expect(
+      createCiPerformanceObservations(phaseBInput({ artifacts: phaseBArtifacts(previous) })),
+    ).toEqual(createCiPerformanceObservations(phaseBInput()));
+  });
+
+  it.each([1, 2, 3, 4])("rejects %i current attempt lane artifacts", (count) => {
+    const artifacts = phaseBArtifacts().artifacts.slice(0, count);
+    expect(() =>
+      createCiPerformanceObservations(
+        createInput({ artifacts: { total_count: artifacts.length, artifacts } }),
+      ),
+    ).toThrow(/split evidence artifact names/);
+  });
+
   it("emits the monolith and an exact five-record Phase B split observation", () => {
     const observations = createCiPerformanceObservations(phaseBInput());
 
@@ -811,7 +875,7 @@ describe("CI performance observer", () => {
       operationalFailure: false,
       conclusion: "success",
     });
-    expect(synthesis?.cacheEligibleTaskIds).toHaveLength(50);
+    expect(synthesis?.cacheEligibleTaskIds).toHaveLength(51);
     expect(synthesis?.validCacheHitTaskIds).toHaveLength(4);
     expect(synthesis?.securityResults).toContainEqual({
       id: "security-upload",

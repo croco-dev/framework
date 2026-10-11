@@ -318,6 +318,65 @@ describe("RateLimitedInvitationService", () => {
   });
 
   describe("batchInvite", () => {
+    it.each([0, 1])(
+      "should re-invite an email %i ms after expiry without a prior sweep",
+      async (offset) => {
+        vi.useFakeTimers();
+        vi.setSystemTime(new Date("2026-01-01T00:00:00.000Z"));
+
+        try {
+          const first = await service.batchInvite("tenant-1", ["user@example.com"], {
+            idempotencyKey: "expired-batch-1",
+            expiresInDays: 1,
+          });
+          expect(first.failed).toEqual([]);
+          expect(first.successful).toHaveLength(1);
+          const firstToken = first.successful[0].token;
+
+          vi.setSystemTime(new Date(new Date("2026-01-02T00:00:00.000Z").getTime() + offset));
+          const previous = await store.findByTenantAndEmail("tenant-1", "user@example.com");
+          expect(previous?.status).toBe("pending");
+
+          const second = await service.batchInvite("tenant-1", ["  USER@EXAMPLE.COM  "], {
+            idempotencyKey: "expired-batch-2",
+            expiresInDays: 1,
+          });
+
+          expect(second.failed).toEqual([]);
+          expect(second.successful).toHaveLength(1);
+          expect(second.successful[0].email).toBe("user@example.com");
+          expect(second.successful[0].token).not.toBe(firstToken);
+          const invitations = await store.findAllByTenant("tenant-1");
+          expect(
+            invitations.find((invitation) => invitation.tokenHash === hashToken(firstToken))
+              ?.status,
+          ).toBe("expired");
+          expect(
+            invitations.find(
+              (invitation) => invitation.tokenHash === hashToken(second.successful[0].token),
+            )?.status,
+          ).toBe("pending");
+        } finally {
+          vi.useRealTimers();
+        }
+      },
+    );
+
+    it("should reject an email with an unexpired pending invitation", async () => {
+      await store.save(createInvitation());
+
+      const result = await service.batchInvite("tenant-1", ["  USER@EXAMPLE.COM  "], {
+        idempotencyKey: "active-batch",
+      });
+
+      expect(result.successful).toEqual([]);
+      expect(result.failed).toEqual([
+        { email: "user@example.com", error: "Invitation already pending" },
+      ]);
+      expect(send).not.toHaveBeenCalled();
+      expect(publishNow).not.toHaveBeenCalled();
+    });
+
     it("should invite multiple emails successfully", async () => {
       const result = await service.batchInvite(
         "tenant-1",

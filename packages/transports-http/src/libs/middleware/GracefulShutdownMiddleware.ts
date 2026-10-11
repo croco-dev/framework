@@ -193,6 +193,16 @@ function createMiddlewareForState(state: ShutdownState): MiddlewareFunction {
   return middleware;
 }
 
+/** @internal Reports whether any of the given middlewares has an active graceful shutdown. */
+export function isGracefulShutdownActive(middlewares: readonly MiddlewareFunction[] = []): boolean {
+  for (const middleware of middlewares) {
+    if (middlewareStates.get(middleware)?.isShuttingDown) {
+      return true;
+    }
+  }
+  return false;
+}
+
 /** @internal Associates a Node listener with the graceful lifecycle of a configured middleware. */
 export function bindGracefulShutdownServer(
   middleware: MiddlewareFunction,

@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Croco customer explorer</title>
+    <style>
+      body {
+        margin: 0;
+        background: #f4f6f8;
+        color: #182433;
+        font: 16px/1.5 system-ui;
+      }
+      main {
+        max-width: 1080px;
+        margin: 32px auto;
+        padding: 24px;
+        background: white;
+        border: 1px solid #d4dce4;
+        border-radius: 12px;
+      }
+      fieldset {
+        border: 1px solid #b8c5d1;
+        border-radius: 6px;
+        margin: 12px 0;
+        padding: 16px;
+        min-width: 0;
+      }
+      button,
+      input,
+      select {
+        font: inherit;
+        padding: 6px 10px;
+        margin: 4px;
+        max-width: 100%;
+        box-sizing: border-box;
+      }
+      button {
+        cursor: pointer;
+      }
+      button:disabled {
+        cursor: default;
+      }
+      pre {
+        background: #f4f6f8;
+        padding: 12px;
+        font-size: 12px;
+      }
+      h1,
+      h2,
+      h3 {
+        line-height: 1.2;
+      }
+      @media (max-width: 600px) {
+        main {
+          margin: 0;
+          padding: 12px;
+          border: 0;
+          border-radius: 0;
+        }
+        fieldset {
+          padding: 8px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script src="/browser.js"></script>
+  </body>
+</html>

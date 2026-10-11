@@ -27,11 +27,11 @@ title: "WebhookProviderAdapterConformanceOptions"
 
 ### createIdempotencyStore?
 
-> `readonly` `optional` **createIdempotencyStore?**: () => `Promise`\<[`IdempotencyStore`](/api/idempotency-core/src/type-aliases/idempotencystore/)\<[`WebhookGatewayStoredResult`](/api/webhooks-core/src/type-aliases/webhookgatewaystoredresult/)\>\> \| [`IdempotencyStore`](/api/idempotency-core/src/type-aliases/idempotencystore/)\<[`WebhookGatewayStoredResult`](/api/webhooks-core/src/type-aliases/webhookgatewaystoredresult/)\>
+> `readonly` `optional` **createIdempotencyStore?**: () => `Promise`\<[`LeaseAwareIdempotencyStore`](/api/idempotency-core/src/type-aliases/leaseawareidempotencystore/)\<[`WebhookGatewayStoredResult`](/api/webhooks-core/src/type-aliases/webhookgatewaystoredresult/)\>\> \| [`LeaseAwareIdempotencyStore`](/api/idempotency-core/src/type-aliases/leaseawareidempotencystore/)\<[`WebhookGatewayStoredResult`](/api/webhooks-core/src/type-aliases/webhookgatewaystoredresult/)\>
 
 #### Returns
 
-`Promise`\<[`IdempotencyStore`](/api/idempotency-core/src/type-aliases/idempotencystore/)\<[`WebhookGatewayStoredResult`](/api/webhooks-core/src/type-aliases/webhookgatewaystoredresult/)\>\> \| [`IdempotencyStore`](/api/idempotency-core/src/type-aliases/idempotencystore/)\<[`WebhookGatewayStoredResult`](/api/webhooks-core/src/type-aliases/webhookgatewaystoredresult/)\>
+`Promise`\<[`LeaseAwareIdempotencyStore`](/api/idempotency-core/src/type-aliases/leaseawareidempotencystore/)\<[`WebhookGatewayStoredResult`](/api/webhooks-core/src/type-aliases/webhookgatewaystoredresult/)\>\> \| [`LeaseAwareIdempotencyStore`](/api/idempotency-core/src/type-aliases/leaseawareidempotencystore/)\<[`WebhookGatewayStoredResult`](/api/webhooks-core/src/type-aliases/webhookgatewaystoredresult/)\>
 
 ---
 

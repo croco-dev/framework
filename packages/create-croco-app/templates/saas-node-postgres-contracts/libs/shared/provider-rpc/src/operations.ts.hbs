@@ -1,0 +1,52 @@
+import { createRpcClientRequest, handleRpcRequestError, handleRpcRequestResultError, handleJsonResponse, handleJsonResult } from './rpc';
+import type { RpcClientConfig, RpcClientRequestOptions, RpcClientResult, RpcDeclaredProblem, RpcProblemDetailsFor } from './rpc';
+export type HealthOutput = { results: ({ details?: Record<string, unknown> | undefined; name: string; status: 'down' | 'up'; })[]; status: 'down' | 'up'; };
+export type DiagnosticsOutput = { components: ({ component: string; details?: Record<string, unknown> | undefined; lastChecked: string; message?: string | undefined; status: 'degraded' | 'healthy' | 'unhealthy'; })[]; recentErrors: ({ cause?: string | undefined; code: string; component: string; message: string; timestamp: string; })[]; summary: 'all_healthy' | 'degraded' | 'issues_detected'; timestamp: string; };
+export type HealthProblem = never;
+export type HealthProblemDetails = RpcProblemDetailsFor<HealthProblem>;
+export type HealthResult = RpcClientResult<HealthOutput, HealthProblem>;
+export type DiagnosticsProblem = never;
+export type DiagnosticsProblemDetails = RpcProblemDetailsFor<DiagnosticsProblem>;
+export type DiagnosticsResult = RpcClientResult<DiagnosticsOutput, DiagnosticsProblem>;
+export const healthProblemDeclarations = [
+
+] as const satisfies readonly RpcDeclaredProblem[];
+export const diagnosticsProblemDeclarations = [
+
+] as const satisfies readonly RpcDeclaredProblem[];
+
+export const operationsContractRoutes = [
+  { routeId: 'OperationsController.health', operationId: 'getOperationsHealth', methodName: 'health', method: 'GET', path: '/ops/health' },
+  { routeId: 'OperationsController.diagnostics', operationId: 'getOperationsDiagnostics', methodName: 'diagnostics', method: 'GET', path: '/ops/diagnostics' }
+] as const;
+export const operationsKeys = {
+  all: () => ['operations'] as const,
+  health: () => [...operationsKeys.all(), 'health'] as const,
+  diagnostics: () => [...operationsKeys.all(), 'diagnostics'] as const,
+};
+
+
+export function createOperationsClient(config: RpcClientConfig = {}) {
+  return {
+    health: (options?: RpcClientRequestOptions): Promise<HealthOutput> => {
+      const request = createRpcClientRequest(operationsContractRoutes[0], 'query', '/ops/health', { method: 'GET' }, options, config);
+      return request.fetch(request.url, request.init).catch((error) => handleRpcRequestError(error, request.telemetry)).then((response) => handleJsonResponse<HealthOutput>(response, request.telemetry));
+    },
+    healthResult: (options?: RpcClientRequestOptions): Promise<HealthResult> => {
+      const request = createRpcClientRequest(operationsContractRoutes[0], 'query', '/ops/health', { method: 'GET' }, options, config);
+      return request.fetch(request.url, request.init).then((response) => handleJsonResult<HealthOutput, HealthProblem>(response, healthProblemDeclarations, request.telemetry), (error) => handleRpcRequestResultError(error, request.telemetry));
+    },
+    diagnostics: (options?: RpcClientRequestOptions): Promise<DiagnosticsOutput> => {
+      const request = createRpcClientRequest(operationsContractRoutes[1], 'query', '/ops/diagnostics', { method: 'GET' }, options, config);
+      return request.fetch(request.url, request.init).catch((error) => handleRpcRequestError(error, request.telemetry)).then((response) => handleJsonResponse<DiagnosticsOutput>(response, request.telemetry));
+    },
+    diagnosticsResult: (options?: RpcClientRequestOptions): Promise<DiagnosticsResult> => {
+      const request = createRpcClientRequest(operationsContractRoutes[1], 'query', '/ops/diagnostics', { method: 'GET' }, options, config);
+      return request.fetch(request.url, request.init).then((response) => handleJsonResult<DiagnosticsOutput, DiagnosticsProblem>(response, diagnosticsProblemDeclarations, request.telemetry), (error) => handleRpcRequestResultError(error, request.telemetry));
+    },
+  };
+}
+
+export type OperationsClient = ReturnType<typeof createOperationsClient>;
+
+export const operationsClient = createOperationsClient();

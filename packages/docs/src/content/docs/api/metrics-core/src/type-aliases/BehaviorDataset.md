@@ -45,6 +45,14 @@ title: "BehaviorDataset"
 
 ---
 
+### sourceRef?
+
+> `optional` **sourceRef?**: `string`
+
+Immutable host source run or warehouse snapshot reference, when available.
+
+---
+
 ### subjectKind
 
 > **subjectKind**: `string`

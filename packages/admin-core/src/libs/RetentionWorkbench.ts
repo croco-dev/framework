@@ -26,6 +26,8 @@ export type RetentionWorkbenchRequest = {
   subjectKind: string;
   selections: readonly RetentionMetricSelection[];
   savedViewId?: string;
+  /** Immutable host source run; required when saving a view. */
+  sourceRef?: string;
 };
 export type RetentionMetricCard = Omit<BehaviorMetricResult, "subjects" | "sourceRefs"> & {
   id: string;
@@ -65,7 +67,8 @@ export type RetentionDrilldownPage = {
 export type RetentionPermission =
   | "retention:read"
   | "retention:drilldown"
-  | "retention:saved-view:read";
+  | "retention:saved-view:read"
+  | "retention:saved-view:write";
 export interface RetentionWorkbenchAdapter {
   authorize(input: {
     scope: BehaviorScope;
@@ -84,7 +87,22 @@ export interface RetentionWorkbenchAdapter {
     definition: BehaviorDefinition;
     scope: BehaviorScope;
     limit: number;
+    sourceRef?: string;
   }): Promise<BehaviorDataset>;
+}
+/** The host repository must scope records by app, environment, tenant and subject kind. */
+export type RetentionSavedView = {
+  id: string;
+  request: RetentionWorkbenchRequest;
+  snapshot: RetentionWorkbenchSnapshot;
+};
+export interface RetentionSavedViewStore {
+  read(
+    scope: BehaviorScope,
+    subjectKind: string,
+    id: string,
+  ): Promise<RetentionSavedView | undefined>;
+  write(scope: BehaviorScope, subjectKind: string, record: RetentionSavedView): Promise<void>;
 }
 const RETENTION_PROBLEMS = {
   "invalid-request": {
@@ -138,6 +156,67 @@ function windowIdentity(window: BehaviorWindow) {
     ? [window.kind, window.from, window.to]
     : [window.kind, window.anchor, window.durationMs, window.index];
 }
+function sameRecord(left: unknown, right: unknown): boolean {
+  if (Object.is(left, right)) return true;
+  if (!left || !right || typeof left !== "object" || typeof right !== "object") return false;
+  if (Array.isArray(left) || Array.isArray(right))
+    return (
+      Array.isArray(left) &&
+      Array.isArray(right) &&
+      left.length === right.length &&
+      left.every((value, index) => sameRecord(value, right[index]))
+    );
+  const actual = left as Record<string, unknown>;
+  const expected = right as Record<string, unknown>;
+  return (
+    Object.keys(actual).length === Object.keys(expected).length &&
+    Object.keys(actual).every(
+      (key) => Object.hasOwn(expected, key) && sameRecord(actual[key], expected[key]),
+    )
+  );
+}
+function savedRequest(request: RetentionWorkbenchRequest, id: string): RetentionWorkbenchRequest {
+  const window = (value: BehaviorWindow): BehaviorWindow =>
+    value.kind === "calendar"
+      ? { kind: value.kind, from: value.from, to: value.to }
+      : {
+          kind: value.kind,
+          anchor: value.anchor,
+          durationMs: value.durationMs,
+          index: value.index,
+        };
+  return {
+    definitionId: request.definitionId,
+    definitionVersion: request.definitionVersion,
+    subjectKind: request.subjectKind,
+    scope: {
+      appId: request.scope.appId,
+      environment: request.scope.environment,
+      tenantId: request.scope.tenantId,
+    },
+    sourceRef: request.sourceRef,
+    savedViewId: id,
+    selections: request.selections.map((selection) =>
+      selection.kind === "frequency"
+        ? {
+            id: selection.id,
+            kind: selection.kind,
+            options: {
+              window: window(selection.options.window),
+              measure: selection.options.measure,
+            },
+          }
+        : {
+            id: selection.id,
+            kind: selection.kind,
+            options: {
+              baseline: window(selection.options.baseline),
+              returning: window(selection.options.returning),
+            },
+          },
+    ),
+  };
+}
 async function inputIdentity(
   definition: BehaviorDefinition,
   dataset: BehaviorDataset,
@@ -157,7 +236,7 @@ async function inputIdentity(
     [
       scope(request.scope),
       request.subjectKind,
-      request.savedViewId ?? null,
+      request.sourceRef ?? null,
       request.selections.map((selection) => [
         selection.id,
         selection.kind,
@@ -170,6 +249,7 @@ async function inputIdentity(
       ]),
     ],
     [
+      dataset.sourceRef ?? null,
       dataset.definitionId,
       dataset.version,
       dataset.subjectKind,
@@ -204,6 +284,7 @@ export function createRetentionWorkbenchSource(input: {
   adapter: RetentionWorkbenchAdapter;
   maxEvents: number;
   maxPageSize: number;
+  savedViews?: RetentionSavedViewStore;
 }) {
   assertRequest(
     Number.isSafeInteger(input.maxEvents) &&
@@ -272,9 +353,10 @@ export function createRetentionWorkbenchSource(input: {
     }
     const dataset = structuredClone(
       await input.adapter.read({
-        definition,
-        scope: request.scope,
+        definition: structuredClone(definition),
+        scope: { ...request.scope },
         limit: input.maxEvents + 1,
+        ...(request.sourceRef ? { sourceRef: request.sourceRef } : {}),
       }),
     );
     if (dataset == null || !Array.isArray(dataset.events) || dataset.scope == null)
@@ -286,6 +368,8 @@ export function createRetentionWorkbenchSource(input: {
       dataset.scope.tenantId !== request.scope.tenantId
     )
       throw new RetentionWorkbenchProblem("scope-mismatch");
+    if (request.sourceRef !== undefined && dataset.sourceRef !== request.sourceRef)
+      throw new RetentionWorkbenchProblem("stale-input");
     const results = request.selections.map((selection) => ({
       selection,
       result:
@@ -295,14 +379,21 @@ export function createRetentionWorkbenchSource(input: {
             ? computeCohortRetention(definition, dataset, selection.options)
             : computePeriodicRetention(definition, dataset, selection.options),
     }));
-    return {
-      definition,
-      dataset,
-      results,
-      inputToken: await inputIdentity(definition, dataset, request),
-    };
+    const inputToken = await inputIdentity(definition, dataset, request);
+    for (const permission of permissions) {
+      if (
+        !(await input.adapter.authorize({
+          scope: request.scope,
+          subjectKind: request.subjectKind,
+          permission,
+          savedViewId: request.savedViewId,
+        }))
+      )
+        throw new RetentionWorkbenchProblem("denied");
+    }
+    return { definition, dataset, results, inputToken };
   }
-  return {
+  const api = {
     async load(request: RetentionWorkbenchRequest): Promise<RetentionWorkbenchState> {
       try {
         const { definition, dataset, results, inputToken } = await calculate(request, false);
@@ -377,6 +468,19 @@ export function createRetentionWorkbenchSource(input: {
             return { ...membership, subjectLabel };
           }),
       );
+      const permissions: RetentionPermission[] = ["retention:read", "retention:drilldown"];
+      if (request.savedViewId) permissions.push("retention:saved-view:read");
+      for (const permission of permissions) {
+        if (
+          !(await input.adapter.authorize({
+            scope: request.scope,
+            subjectKind: request.subjectKind,
+            permission,
+            savedViewId: request.savedViewId,
+          }))
+        )
+          throw new RetentionWorkbenchProblem("denied");
+      }
       return {
         selectionId: page.selectionId,
         inputToken,
@@ -386,5 +490,97 @@ export function createRetentionWorkbenchSource(input: {
         total: subjects.length,
       };
     },
+    async save(
+      request: RetentionWorkbenchRequest,
+      id: string,
+      expectedInputToken: string,
+    ): Promise<RetentionSavedView> {
+      request = structuredClone(request);
+      assertRequest(
+        input.savedViews !== undefined &&
+          typeof id === "string" &&
+          id.trim().length > 0 &&
+          typeof request.sourceRef === "string" &&
+          request.sourceRef.trim().length > 0,
+      );
+      const pinnedRequest = savedRequest(request, id);
+      const grant = async () => {
+        for (const permission of [
+          "retention:read",
+          "retention:saved-view:read",
+          "retention:saved-view:write",
+        ] as const) {
+          if (
+            !(await input.adapter.authorize({
+              scope: pinnedRequest.scope,
+              subjectKind: pinnedRequest.subjectKind,
+              permission,
+              savedViewId: id,
+            }))
+          )
+            return false;
+        }
+        return true;
+      };
+      if (!(await grant())) throw new RetentionWorkbenchProblem("denied");
+      const state = await api.load(pinnedRequest);
+      if (!("snapshot" in state))
+        throw new RetentionWorkbenchProblem(state.kind === "denied" ? "denied" : "invalid-dataset");
+      if (state.snapshot.inputToken !== expectedInputToken)
+        throw new RetentionWorkbenchProblem("stale-input");
+      const record = { id, request: pinnedRequest, snapshot: state.snapshot };
+      if (!(await grant())) throw new RetentionWorkbenchProblem("denied");
+      await input.savedViews.write(
+        pinnedRequest.scope,
+        pinnedRequest.subjectKind,
+        structuredClone(record),
+      );
+      if (!(await grant())) throw new RetentionWorkbenchProblem("denied");
+      return structuredClone(record);
+    },
+    async readSaved(
+      scope: BehaviorScope,
+      subjectKind: string,
+      id: string,
+    ): Promise<RetentionSavedView | undefined> {
+      scope = structuredClone(scope);
+      assertRequest(
+        input.savedViews !== undefined && typeof id === "string" && id.trim().length > 0,
+      );
+      const grant = async () => {
+        for (const permission of ["retention:read", "retention:saved-view:read"] as const) {
+          if (!(await input.adapter.authorize({ scope, subjectKind, permission, savedViewId: id })))
+            return false;
+        }
+        return true;
+      };
+      if (!(await grant())) throw new RetentionWorkbenchProblem("denied");
+      const record = structuredClone(await input.savedViews.read(scope, subjectKind, id));
+      if (!(await grant())) throw new RetentionWorkbenchProblem("denied");
+      if (!record) return undefined;
+      assertRequest(
+        record.id === id &&
+          record.request.savedViewId === id &&
+          record.request.subjectKind === subjectKind &&
+          record.request.scope.appId === scope.appId &&
+          record.request.scope.environment === scope.environment &&
+          record.request.scope.tenantId === scope.tenantId &&
+          typeof record.request.sourceRef === "string" &&
+          record.request.sourceRef.trim().length > 0,
+      );
+      const current = await api.load(record.request);
+      if (!("snapshot" in current))
+        throw new RetentionWorkbenchProblem(
+          current.kind === "denied" ? "denied" : "invalid-dataset",
+        );
+      if (
+        current.snapshot.inputToken !== record.snapshot.inputToken ||
+        !sameRecord(current.snapshot, record.snapshot)
+      )
+        throw new RetentionWorkbenchProblem("stale-input");
+      if (!(await grant())) throw new RetentionWorkbenchProblem("denied");
+      return { id, request: savedRequest(record.request, id), snapshot: current.snapshot };
+    },
   };
+  return api;
 }

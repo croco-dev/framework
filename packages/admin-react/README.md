@@ -469,6 +469,158 @@ export function CreateUserForm() {
 Problems with explicit recovery actions, so custom visual components can reuse
 the same state model without losing failure evidence.
 
+## Metric Inspector
+
+`MetricInspector` displays the verified result's definition identity, field and snapshot references, numerator and denominator, and separate quality axes. Pass the outcome returned by the application's registered metric read after authorization. Partial and stale outcomes retain authorized provenance, quality, and diagnostic codes while withholding raw result data. Denied and unavailable outcomes show only a recovery message.
+
+## Policy release console
+
+`PolicyReleaseConsole` is a controlled view for the `features-core` policy release service. It
+renders registered text, number, boolean, UTC datetime, select, and JSON fields, validation diagnostics, semantic changes,
+and impact evidence (`fact`, `estimate`, `insufficient-data`). It has explicit loading,
+empty, partial, denied, error, and ready states; busy commands disable mutation controls. Native
+labels, inputs, fieldsets, and buttons support keyboard navigation. JSON parse errors and error
+diagnostics block commands; warnings remain visible without blocking review or publish. The
+registered risk and independent-review requirement are displayed beside the review action.
+
+Use authenticated `PolicyReleaseOperations` endpoints for `onSave`, `onReview`, `onPublish`,
+and `onReload`. Resolve access on the server; client permission flags only control the view.
+On a local edit, clear `reviewHash` immediately and save before reviewing again. Replace the
+snapshot with each server result; preserve failed operations as an error state and use
+`onReload` to recover server state. Generate a fresh idempotency key for each new command
+and retain it when retrying that command. Set `effectiveAt` to an ISO 8601 UTC time to schedule
+or leave it blank to publish now. The receipt is displayed only after the service succeeds.
+
+JSON text and parse errors belong to the current policy, revision, and field. Changing the
+policy or revision, leaving the ready state, or clicking Reload clears the local JSON draft.
+Replacing a JSON field's `value` also resets its text and parse error, including a fresh object
+with the same JSON content. For ordinary rerenders, retain the field's value identity. When
+handling `onEdit`, pass the emitted value directly back as `field.value`; this preserves the
+user's JSON formatting and caret while acknowledging the edit. A cloned value is treated as
+an external replacement. For a reload whose primitive value is unchanged, use Reload or
+transition through loading before passing the ready snapshot.
+
+Map snapshot fields directly using `input`, `min`, `max`, and `options`; diagnostics retain
+`code`, `path`, and `severity`. Pass only code-declared fields and redacted diff/diagnostic text. Never send a secret field's
+raw value to a browser merely because its input uses `type="password"`. There are no
+handler, class, URL, or JavaScript execution inputs, and no billing Plan types are required.
+
+## Standalone contact policy console
+
+`ContactPolicyConsole` renders code-permitted contact budget limits, quiet hours,
+and topic priorities without a Journey, Cohort, or Policy Release dependency.
+Pass an explicit `target`, `registration`, and `ContactPolicyConsoleState`, with
+`onSave` and `onDryRun` callbacks connected to server `ContactPolicyOperations`.
+The dry-run callback evaluates the selected subject's intended registered
+message; it must use the send policy evaluator without reserving budget.
+
+The console supports loading, empty, partial, denied, error and ready states,
+native keyboard form controls, audit reason validation, read-only access, and
+cross-campaign suppression reasons. The host refreshes state after successful
+save and returns the current revision. `canWrite` controls presentation only;
+server authorization remains required. Display history contains logical IDs and
+policy decisions, never contact addresses or provider tokens. The UI explicitly
+limits its guarantee to sends through the installed gate and priority within a
+submitted batch.
+
+## Experiment Console
+
+Import `ExperimentConsole` from `@croco/admin-react/experiment-console`. Provide a public `ExperimentAdminSnapshot` from `ExperimentOperations` and authenticated server callbacks for preview, state commands, configuration, and reload. The Console shows registered variants, hypothesis/objective, assignment unit, allocation, eligibility, period, and state.
+
+Preview uses only server-owned sample identifiers. Start/resume, pause, stop, and new-revision configuration require a change reason. Failed commands retain their idempotency key when retried with the same payload; failures remain visible until the next operation or reload. A changed experiment scope or revision resets the editor. New revision fields live in a keyboard-accessible disclosure below the operating controls.
+
+The component is a view, not an authorization boundary: the server must resolve the actor, app/environment/tenant, and subject ownership and must never trust client-provided variants, handlers, or receipts. The local executable example is `examples/experiment-runtime`.
+
+## Growth analysis
+
+`GrowthAnalysisPanel` accepts `propose(question, signal)` and `execute(plan, signal)` server callbacks. It displays explicit plan choices before execution, supports rejection/cancellation, and renders actual aggregate facts with the definition, period, population, numerator/denominator, and source references. Missing, stale, partial, denied, unsupported, truncated, and error states remain explicit. Vendor SDKs and query execution stay on the server. The [growth-analysis example](../../examples/growth-analysis/README.md) connects the panel to the actual common runner.
+
+## Journey console
+
+`JourneyConsole` renders an ordered journey form with wait duration, condition
+branches and registered actions, sample dry-runs, and redacted episode evidence.
+Its `state` explicitly represents loading, empty, denied, error or ready. Pass a
+`scopeKey` that changes with the authenticated tenant/app/environment to reset the
+editor and pending results on scope changes.
+
+Bind `onDryRun(definition, sampleId)` and `onCommand(command)` to authenticated
+`JourneyOperations` server endpoints. Client permissions only control affordances;
+the server rechecks authority. Pause/resume/stop require an audit reason, carry the
+shown revision and a fresh idempotency key, and display operation failure without
+marking it successful. Dry-runs never publish the edited definition. The host owns
+publication policy and production registration.
+
+### Reminder operations
+
+`ReminderOperationsPanel` shows canonical local and UTC next times and occurrence
+outcomes from `ReminderOperationsSource`. `reminder.read` controls loading;
+`reminder.cancel` exposes cancellation with actor, reason, idempotency key and
+expected version. The server independently authorizes both operations. Operators
+cannot enable or change owner schedules. Change `scopeKey` with authenticated
+scope and decode server timestamps to `Date` values before returning source data.
+
+## Customer Explorer
+
+`CustomerExplorer` accepts a required scope, saved sample ID and `CustomerExplorerOperations` callbacks bound to an authorized server `CustomerExplorerService`. It reads the saved sample, navigates achievers and prior-step comparisons, and loads 50 events per source per page. Source completeness/truncation, anchor phase, observed time, gaps and session grouping remain visible. Subject progress is explicitly local to the current workspace session.
+
+The workspace provides source/kind filters, explicit fact/hypothesis notes with event references, note edits using the expected revision, conflict reload/recovery and a downloadable typed observation definition. Unavailable references remain visible after originals are deleted. It has no raw-record download or link to an absent Cohort screen. Server permissions apply even when a user invokes callbacks outside the UI.
+
+See the [standalone example](../../examples/customer-explorer/README.md) for PostgreSQL-backed callbacks. Loading, empty, partial, denied, error and ready states are exercised by the mounted browser regression in `src/tests/CustomerExplorer.mounted.ts`.
+
+Run the committed browser regression with `node packages/admin-react/scripts/verify-customer-explorer-browser.mjs` from the repository root. It uses the repository's existing Playwright/tsup tooling and requires installed Chrome; its fixture stays outside published artifacts.
+
+## Activation candidate explorer
+
+`ActivationCandidateExplorer` consumes server-calculated ready/partial reports and explicit
+loading, empty, denied and error states. It compares thresholds/windows, support, retention precision,
+coverage, NOREDO, cohort exclusions and supported achievement times. Native controls allow keyboard
+selection, support filtering, saving and export. Server callbacks receive the viewed report, and
+returned saved evidence must match it. Loading/save/export failures retain a retry action;
+results do not automatically name a best candidate or claim causation.
+
+See [activation-candidates](../../examples/activation-candidates/README.md) for executable callbacks
+backed by `ActivationCandidateOperations`, common file decoding and a real PostgreSQL smoke.
+
+### Saved intent console
+
+`SavedIntentConsole` edits display limits, retention days, and completion exclusion
+for the code-declared resource types in its server-provided policy state. Its
+`onSave` callback must call `SavedIntentOperations.updatePolicy`; supply the
+verified operator identity on the server rather than trusting a client actor.
+The console preserves the same idempotency key when retrying an unchanged failed
+save and offers a reload action after a revision or provider failure.
+
+Inspection targets are an authorized, masked server-provided list. `onInspect`
+uses `SavedIntentOperations.inspect` and bounded pagination to display current
+availability and exclusion reasons without cached source labels or links. Loading,
+denied, and error states hide the policy editor. See `examples/saved-intents` for
+the shared customer and operator flow.
+
+## Targeting impact inspector
+
+`TargetingImpactInspector` renders controlled loading, empty, denied, unavailable, error,
+partial, and ready states. Its `onReplay(unknownPolicy)` callback must invoke the
+server-owned `TargetingImpactOperations`. Callers must wire its optional `onExport`
+callback to a server export operation that applies the same authorization and
+aggregate projection as report reads; the component does not enforce these protections.
+
+The comparison keeps historical populations, observed dispatch costs, temporal visit
+categories, and crediting assumptions separate. Missing dispatch costs are unavailable
+or partial; missing decision-time traits remain unknown. Omitted touchpoint or outcome
+evidence differs from an observed empty list; coverage and scenario availability remain
+explicit. Changing unknown handling requires a new definition revision in the server
+request; the report retains the applied revision and hashes. The component
+does not execute browser code or SQL and does not expose individual historical rows.
+
+Run the synthetic HTTP example in `examples/targeting-impact` to exercise comparison,
+save/re-read, export, and failure recovery without a campaign execution engine or DB.
+
+### Retention offer console
+
+`RetentionOfferConsole` consumes a `RetentionOfferView` from `RetentionOfferOperations`. It edits registered offer labels, display order and billing-period/refund-group targets, with a required audit reason. `canWrite` disables the editing surface; authenticated server operations enforce authority independently. `onSave` receives `RetentionOfferEdit`, and `onRefresh` loads the latest revision after saves or uncertain outcomes. The built-in direct cancellation action is independent of this offer policy.
+
+The console reports initial and renewal sessions grouped by policy, subscription age at session creation and exact authoritative quote amount/currency. Scheduled cancellation, ended access and confirmed refunds are separate counts. Loading, empty, denied, error and partial-history states are explicit.
+
 ## Retention workbench
 
 `RetentionWorkbench` renders the state from `createRetentionWorkbenchSource` in `@croco/admin-core`. Supply `state` and `onSelectMetric(selectionId, inputToken)`; fetch the selected denominator page from the server and pass it as `drilldown`. Use `drilldownState` for loading, denial or failure and `onNextPage` for bounded pagination. All metric formulas execute through metrics-core on the server; the browser only formats returned values.
@@ -476,3 +628,5 @@ the same state model without losing failure evidence.
 Cards distinguish periodic retention, first-behavior cohort retention and frequency distributions. They show observed numerator/denominator counts, definition/version, timezone, source names, windows, completion cutoff and deleted-subject policy. Unestablished values remain explicit rather than displaying zero percent. Native buttons support keyboard selection; the denominator table reports inclusion/exclusion reasons without receiving raw behavior rows.
 
 Pass the callback token to the server unchanged, including `onNextPage(selectionId, offset, inputToken)`. Set `drilldownState="stale"` when the source returns `admin-core/retention-stale-input`. Stale pages are hidden, including pages whose token differs from the displayed snapshot. The required `onReload` callback reloads aggregate results and clears the previous drilldown. Provider errors also expose this reload action; access denial remains explicit.
+
+The retention workbench renders periodic window trends and first-behavior cohort cells from server-provided cards. Cell buttons use the same snapshot token as denominator inspection. Multiple registered window selections form the trend/cohort table; frequency buckets remain server-calculated.

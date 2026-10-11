@@ -223,6 +223,37 @@ describe("EntitlementManager", () => {
     });
   });
 
+  it("uses the inline quota of a version-bound metered rule without consulting the meter quota lookup", async () => {
+    const pinnedRef = planVersionRef("pro@2026-09");
+    registry.register({
+      planId: "pro",
+      planVersionRef: pinnedRef,
+      entitlements: [
+        { featureKey: "api_calls", type: "metered", meterId: "api_calls", quota: 100 },
+      ],
+    });
+    const meterQuotaSpy = vi
+      .spyOn(meterLookup, "getMeterQuota")
+      .mockRejectedValue(new Error("meter registry unavailable"));
+    quotaChecker.setQuotaStatus({ usage: 12, quota: 100, exceeded: false, remaining: 88 });
+    manager = new EntitlementManager(
+      registry,
+      new StaticSubscriptionProvider({ planId: "pro", planVersionRef: pinnedRef }),
+      quotaChecker,
+      meterLookup,
+      {},
+      eventPublisher,
+    );
+
+    await expect(manager.check("tenant-1", "api_calls")).resolves.toMatchObject({
+      granted: true,
+      status: "allowed",
+      quota: 100,
+      usage: 12,
+    });
+    expect(meterQuotaSpy).not.toHaveBeenCalled();
+  });
+
   it("should use rule quota before meter lookup quota for metered entitlement", async () => {
     registry.register("pro", [
       {

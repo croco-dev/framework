@@ -3,8 +3,23 @@ export { InMemoryLifecycleActionSink } from "./libs/InMemoryLifecycleActionSink"
 export { InMemoryLifecycleDryRunStore } from "./libs/InMemoryLifecycleDryRunStore";
 export { InMemoryLifecycleRuleStateStore } from "./libs/InMemoryLifecycleRuleStateStore";
 export { InMemoryLifecycleRunStore } from "./libs/InMemoryLifecycleRunStore";
+export type { InMemoryLifecycleRunStoreOptions } from "./libs/InMemoryLifecycleRunStore";
 export { LifecycleRuleEvaluator } from "./libs/LifecycleRuleEvaluator";
 export { LifecycleRuleRegistry } from "./libs/LifecycleRuleRegistry";
+export {
+  LIFECYCLE_SOURCE_IDEMPOTENCY_VERSION,
+  buildLegacyLifecycleIdempotencyKey,
+  encodeLifecycleCustomKey,
+  encodeLifecycleSourceKey,
+  ensureDurableLifecycleSignal,
+  fingerprintLifecycleSourcePayload,
+  resolveLifecycleSourceIdentity,
+} from "./libs/sourceIdentity";
+export type {
+  DurableLifecycleEnvelopeInput,
+  DurableLifecycleSignal,
+  LifecycleSourceIdentity,
+} from "./libs/sourceIdentity";
 export {
   InMemoryMonetizationThresholdStore,
   InMemoryMonetizationConditionStore,
@@ -57,7 +72,9 @@ export {
   LifecycleRuleTransitionProblem,
   LifecycleRuleVersionConflictProblem,
   LifecycleRuleVersionDefinitionProblem,
+  LifecycleSourcePayloadConflictProblem,
   MAX_WEBHOOK_TIMEOUT_MS,
+  MissingLifecycleSourceIdentityProblem,
   MonetizationRecipeCapabilityProblem,
   MonetizationSignalDefinitionProblem,
   MonetizationThresholdClaimProblem,
@@ -168,3 +185,36 @@ export type {
 } from "./libs/diagnostics/LifecycleDiagnosticsProvider";
 export type { LifecycleRuleRegistryOptions } from "./libs/LifecycleRuleRegistry";
 export type { WebhookLifecycleActionAdapterOptions } from "./libs/WebhookLifecycleActionAdapter";
+export {
+  JourneyEngine,
+  JourneyProblem,
+  validateJourneyScope,
+  validateJourneyScope as assertJourneyScope,
+} from "./libs/journey/JourneyEngine";
+export { InMemoryJourneyStore } from "./libs/journey/InMemoryJourneyStore";
+export { JourneyTaskBridge } from "./libs/journey/JourneyTaskBridge";
+export type { JourneyTaskInvoker } from "./libs/journey/JourneyTaskBridge";
+export type {
+  JourneyScope,
+  JourneyReference,
+  JourneyReconciliation,
+  JourneyNode,
+  JourneyDefinition,
+  JourneyStatus,
+  JourneyActionIntent,
+  JourneyReceipt,
+  JourneyCommand,
+  JourneyCheckSnapshot,
+  JourneyDispatchProblemCode,
+  JourneyDryRunStep,
+  JourneyDryRunResult,
+  JourneyEpisode,
+  JourneyStore,
+  JourneyFacts,
+  JourneyContext,
+  JourneyPredicate,
+  JourneyAction,
+  JourneyEngineOptions,
+  JourneyEntry,
+} from "./libs/journey/types";
+export { defineJourneyPredicate, defineJourneyAction } from "./libs/journey/registrations";

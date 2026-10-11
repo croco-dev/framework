@@ -74,6 +74,7 @@ export type BillableUsageJournalDiagnostics = {
 export interface BillableUsageJournal {
   readonly durability: "persistent" | "volatile";
   append(event: BillableUsageEvent, now?: Date): Promise<BillableUsageAppendResult>;
+  /** Replays of an activated entry preserve its delivery state, claim, and failure evidence. */
   markDeliverable(eventId: string, now?: Date): Promise<BillableUsageJournalEntry>;
   markUndeliverable(
     eventId: string,
@@ -215,6 +216,10 @@ export class InMemoryBillableUsageJournal implements BillableUsageJournal {
   }
 
   async markDeliverable(eventId: string, now = new Date()): Promise<BillableUsageJournalEntry> {
+    const existing = this.entries.get(eventId);
+    if (existing?.deliverableAt && existing.state !== "terminal-failed") {
+      return copyEntry(existing);
+    }
     const entry = this.requirePending(eventId, "activate-billable-usage");
     entry.failure = undefined;
     entry.deliverableAt = new Date(now);

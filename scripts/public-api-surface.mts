@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 
+import { compareStrings } from "../tooling/compareStrings.mjs";
+
 import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { dirname, extname, join, relative, resolve } from "node:path";
 import { argv, exit, stdout } from "node:process";
@@ -884,13 +886,15 @@ function addExportDeclaration(
   if (!statement.exportClause) {
     if (resolvedSource) {
       const targetExports = extractEntrypointExports(resolvedSource, context);
-      if (!statement.isTypeOnly) {
-        exportsBySurface.runtime.push(
-          ...targetExports.runtimeExports.map((entry) => entryWithSourceFallback(entry, source)),
-        );
-      }
+      exportsBySurface[surface].push(
+        ...targetExports.runtimeExports
+          .filter((entry) => entry.name !== "default" && entry.name !== "export=")
+          .map((entry) => entryWithSourceFallback(entry, source)),
+      );
       exportsBySurface.type.push(
-        ...targetExports.typeExports.map((entry) => entryWithSourceFallback(entry, source)),
+        ...targetExports.typeExports
+          .filter((entry) => entry.name !== "default" && entry.name !== "export=")
+          .map((entry) => entryWithSourceFallback(entry, source)),
       );
       return;
     }
@@ -1026,7 +1030,7 @@ function dedupeExports(entries: readonly PublicApiExport[]): PublicApiExport[] {
 }
 
 function sortExports(entries: readonly PublicApiExport[]): PublicApiExport[] {
-  return [...entries].sort((left, right) => exportKey(left).localeCompare(exportKey(right)));
+  return [...entries].sort((left, right) => compareStrings(exportKey(left), exportKey(right)));
 }
 
 function describeExportForContract(entry: PublicApiExport): string {
@@ -1111,7 +1115,7 @@ function findLegacyRootTarget(manifest: Record<string, unknown>): string | null 
   if (isRecord(manifest.bin)) {
     return (
       Object.entries(manifest.bin)
-        .sort(([left], [right]) => left.localeCompare(right))
+        .sort(([left], [right]) => compareStrings(left, right))
         .map(([, target]) => target)
         .find((target): target is string => typeof target === "string") ?? null
     );
@@ -1153,7 +1157,7 @@ export function createPublicApiSnapshot(rootDir: string): PublicApiSnapshot {
       }
       const compatibilityContract = compatibilityContractsByPackage.get(pkg.name);
       const entrypoints = Object.entries(exportMap)
-        .sort(([left], [right]) => left.localeCompare(right))
+        .sort(([left], [right]) => compareStrings(left, right))
         .map(([exportPath, targetValue]) =>
           createManifestEntrypoint(
             rootDir,
@@ -1182,7 +1186,7 @@ export function createPublicApiSnapshot(rootDir: string): PublicApiSnapshot {
         },
       ];
     })
-    .sort((left, right) => left.packageName.localeCompare(right.packageName));
+    .sort((left, right) => compareStrings(left.packageName, right.packageName));
 
   return {
     schemaVersion: 2,
@@ -1550,7 +1554,7 @@ function parsePackage(value: unknown): PublicApiPackage {
     relativeDir: value.relativeDir,
     ...(compatibilityGroups ? { compatibilityGroups } : {}),
     entrypoints: [...entrypoints].sort((left, right) =>
-      left.exportPath.localeCompare(right.exportPath),
+      compareStrings(left.exportPath, right.exportPath),
     ),
   };
 }
@@ -1568,7 +1572,7 @@ export function parsePublicApiSnapshot(value: unknown): PublicApiSnapshot {
 
   return {
     schemaVersion: 2,
-    packages: packages.sort((left, right) => left.packageName.localeCompare(right.packageName)),
+    packages: packages.sort((left, right) => compareStrings(left.packageName, right.packageName)),
   };
 }
 
@@ -1619,7 +1623,7 @@ function compatibilityGroupMetadataKey(group: PublicApiCompatibilityGroup): stri
 function sortCompatibilityGroups(
   groups: readonly PublicApiCompatibilityGroup[],
 ): PublicApiCompatibilityGroup[] {
-  return [...groups].sort((left, right) => left.id.localeCompare(right.id));
+  return [...groups].sort((left, right) => compareStrings(left.id, right.id));
 }
 
 function diffCompatibilityGroupMetadata(

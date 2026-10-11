@@ -1,3 +1,4 @@
+import { compareStrings } from "../../../../tooling/compareStrings.mjs";
 import {
   extendZodWithOpenApi,
   OpenAPIRegistry,
@@ -15,6 +16,7 @@ import {
   type ContractEntitlementRequirement,
   type ContractGraphObservedConsumerRoute,
   type ContractGraphRoute,
+  getContractFieldSchema,
   getContractPathParams,
   isZodArraySchema,
   normalizeProjectManifestBundlePath,
@@ -364,14 +366,14 @@ function compareDeclaredProblems(
   left: DeclaredProblemOpenAPI,
   right: DeclaredProblemOpenAPI,
 ): number {
-  return left.code.localeCompare(right.code) || left.status - right.status;
+  return compareStrings(left.code, right.code) || left.status - right.status;
 }
 
 function compareDeclaredEntitlements(
   left: DeclaredEntitlementOpenAPI,
   right: DeclaredEntitlementOpenAPI,
 ): number {
-  return JSON.stringify(left).localeCompare(JSON.stringify(right));
+  return compareStrings(JSON.stringify(left), JSON.stringify(right));
 }
 
 function toTags(routes: ContractGraphRoute[]): { name: string; description: string }[] {
@@ -423,7 +425,8 @@ function toZodObject(params: ParamIR[]): z.ZodObject<Record<string, ZodType>> | 
 }
 
 function withParameterMetadata(param: ParamIR): ZodType {
-  const schemaWithoutCatch = unwrapZodParameterSchema(param.schema);
+  const resolvedSchema = getContractFieldSchema(param.contractSchema, param.name) ?? param.schema;
+  const schemaWithoutCatch = unwrapZodParameterSchema(resolvedSchema);
   const schema = unwrapZodEffectsSchema(schemaWithoutCatch) ?? z.string();
   const location = toOpenAPIParamLocation(param.kind);
 
@@ -431,7 +434,7 @@ function withParameterMetadata(param: ParamIR): ZodType {
     param: {
       name: param.name,
       in: location,
-      required: isRequiredOpenAPIParameter(param.kind, param.schema),
+      required: isRequiredOpenAPIParameter(param.kind, resolvedSchema),
       ...toArrayParameterSerialization(param.kind, schemaWithoutCatch),
     },
   });
@@ -642,8 +645,8 @@ function compareOpenAPIProblemFingerprints(
   right: DeclaredProblemOpenAPI,
 ): number {
   return (
-    left.code.localeCompare(right.code) ||
-    left.category.localeCompare(right.category) ||
+    compareStrings(left.code, right.code) ||
+    compareStrings(left.category, right.category) ||
     left.status - right.status
   );
 }
@@ -676,7 +679,7 @@ function compareOpenAPIEntitlementFingerprints(
   left: DeclaredEntitlementOpenAPI,
   right: DeclaredEntitlementOpenAPI,
 ): number {
-  return JSON.stringify(left).localeCompare(JSON.stringify(right));
+  return compareStrings(JSON.stringify(left), JSON.stringify(right));
 }
 
 function isRequiredOpenAPIParameter(kind: ParamIR["kind"], schema: ParamIR["schema"]): boolean {

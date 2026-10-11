@@ -29,6 +29,12 @@ const adminCount = await store.countByRole("tenant-1", "admin");
 
 Existing deployments must run `addMembershipEventIntents(client)` before using atomic membership commands. It creates the idempotency and recoverable event-intent tables without modifying membership rows.
 
+Existing deployments must also run `setMembershipTimestampDefaults(client)` from
+`@croco/membership-drizzle` to store new membership timestamps as UTC regardless of the PostgreSQL
+session time zone. This migration can be run repeatedly. It preserves the `timestamp without time zone`
+column types and does not correct timestamps in existing rows. Seat-limited inserts return the same
+instants as ordinary inserts and subsequent reads, regardless of the Node.js process time zone.
+
 ## API 레퍼런스
 
 ### `DrizzleMembershipStore`

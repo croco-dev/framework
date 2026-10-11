@@ -1,0 +1,9 @@
+DROP TABLE croco_cancellation_policy_audits;
+DROP TABLE croco_cancellation_policies;
+DROP TABLE croco_cancellation_sessions;
+DROP TABLE croco_billing_transitions;
+DROP TABLE croco_billing_webhooks;
+DROP TABLE croco_billing_orders;
+DROP TABLE croco_billing_commands;
+DROP TABLE croco_billing_subscriptions;
+DROP TABLE croco_billing_accounts;

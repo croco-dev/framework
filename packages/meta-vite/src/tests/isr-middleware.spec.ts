@@ -238,6 +238,43 @@ describe("createIsrMiddleware", () => {
     await expect(second.text()).resolves.toBe("render-2");
     expect(renderCount).toBe(2);
   });
+
+  it("does not cache wildcard vary responses", async () => {
+    let renderCount = 0;
+    const middleware = createIsrMiddleware({
+      cache,
+      ttlMs: 1000,
+      render: async () =>
+        new Response(`vary-${++renderCount}`, { status: 200, headers: { Vary: "*" } }),
+    });
+
+    const first = await middleware(new Request("https://example.com/page"));
+    const second = await middleware(new Request("https://example.com/page"));
+
+    await expect(first.text()).resolves.toBe("vary-1");
+    await expect(second.text()).resolves.toBe("vary-2");
+    expect(renderCount).toBe(2);
+  });
+
+  it("keeps caching when header names merely contain identity substrings", async () => {
+    let renderCount = 0;
+    const middleware = createIsrMiddleware({
+      cache,
+      ttlMs: 1000,
+      render: async () =>
+        new Response(`consent-${++renderCount}`, {
+          status: 200,
+          headers: { Vary: "X-Cookie-Consent" },
+        }),
+    });
+
+    const first = await middleware(new Request("https://example.com/page"));
+    const second = await middleware(new Request("https://example.com/page"));
+
+    await expect(first.text()).resolves.toBe("consent-1");
+    await expect(second.text()).resolves.toBe("consent-1");
+    expect(renderCount).toBe(1);
+  });
 });
 
 function resolveRender(renderResolvers: ReadonlyArray<() => void>, index: number): void {

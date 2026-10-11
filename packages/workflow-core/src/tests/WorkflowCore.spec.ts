@@ -31,6 +31,17 @@ class TestWorkflowProblem extends Problem {
   }
 }
 
+class BillingProviderUnavailableProblem extends Problem {
+  constructor(retryable: boolean) {
+    super(
+      "billing/provider-unavailable",
+      ProblemCategory.InternalServerError,
+      "billing provider temporarily unavailable",
+      { extensions: { retryable } },
+    );
+  }
+}
+
 class InMemoryExecutionStore
   extends ExecutionStore
   implements ExecutionLogStore, ExecutionAttemptStore
@@ -299,6 +310,348 @@ describe("workflow-core", () => {
     TaskRegistry.getInstance().reset();
     store = new InMemoryExecutionStore();
     manager = new ExecutionManagerImpl(store);
+  });
+
+  it("uses its clock for workflow invocation IDs", async () => {
+    @Component()
+    class ClockTasks {
+      @Task({ name: "clock.task" })
+      run() {
+        return "done";
+      }
+    }
+    @Component()
+    class ClockWorkflows {
+      @Workflow({ name: "clock.workflow", steps: ["clock.task"], idempotencyKey: "clock" })
+      run() {}
+    }
+    const instant = new Date("2001-02-03T04:05:06.000Z");
+    const registry = WorkflowRegistry.fromMetadata();
+    const taskRunner = new TaskRunner(manager, registry.taskRegistry, undefined, {
+      serviceResolver: () => new ClockTasks(),
+    });
+    const runner = new WorkflowRunner(manager, registry, taskRunner, () => new Date(instant));
+    const result = await runner.execute("clock.workflow", {});
+    expect((await manager.get(result.executionId)).metadata?.workflowInvocationId).toMatch(
+      new RegExp(`^clock.workflow:${instant.getTime()}:`),
+    );
+  });
+
+  it.each([
+    ["completed", false],
+    ["failed", false],
+    ["completed", true],
+  ] as const)(
+    "stops a cancelled workflow after its active task is %s (last step: %s)",
+    async (childStatus, lastStep) => {
+      let release!: () => void;
+      let entered!: () => void;
+      const gate = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      const started = new Promise<void>((resolve) => {
+        entered = resolve;
+      });
+      const calls: string[] = [];
+
+      @Component()
+      class CancellationTasks {
+        @Task({ name: "cancellation.first" })
+        async first() {
+          calls.push("first");
+          entered();
+          await gate;
+          if (childStatus === "failed") throw new TestWorkflowProblem("active task failed");
+          return 1;
+        }
+
+        @Task({ name: "cancellation.second" })
+        second() {
+          calls.push("second");
+          return 2;
+        }
+      }
+
+      @Component()
+      class CancellationWorkflows {
+        @Workflow({
+          name: "cancellation",
+          steps: lastStep ? ["cancellation.first"] : ["cancellation.first", "cancellation.second"],
+        })
+        run() {}
+      }
+
+      instances.set(CancellationTasks, new CancellationTasks());
+      const runner = createWorkflowRunner(manager, WorkflowRegistry.fromMetadata());
+      const complete = vi.spyOn(manager, "complete");
+      const fail = vi.spyOn(manager, "fail");
+      const mockSpan = createMockSpan();
+      vi.spyOn(trace, "getTracer").mockReturnValue(createMockTracer(mockSpan.span));
+      const pending = runner.execute("cancellation", {}).catch((error: unknown) => error);
+      await started;
+      const parent = await waitForWorkflowExecution(manager);
+      const cancelled = await runner.cancel(parent.id, "operator stop");
+      release();
+      const outcome = await pending;
+
+      expect(calls).toEqual(["first"]);
+      expect(outcome).toMatchObject({
+        code: "workflow-core/workflow-execution-cancelled",
+        extensions: { workflowName: "cancellation", executionId: parent.id, retryable: false },
+      });
+      expect(await manager.get(parent.id)).toMatchObject({
+        status: "cancelled",
+        completedAt: cancelled.completedAt,
+        metadata: cancelled.metadata,
+      });
+      expect((await manager.get(parent.id)).error).toBe(cancelled.error);
+      expect((await manager.get(parent.id)).result).toBe(cancelled.result);
+      expect(await manager.list({ parentId: parent.id })).toEqual([
+        expect.objectContaining({ type: "cancellation.first", status: childStatus }),
+      ]);
+      expect(complete.mock.calls.some(([id]) => id === parent.id)).toBe(false);
+      expect(fail.mock.calls.some(([id]) => id === parent.id)).toBe(false);
+      expect(mockSpan.addEvent).toHaveBeenCalledWith(
+        "workflow.execution.cancelled",
+        expect.objectContaining({
+          "workflow.execution.id": parent.id,
+          "workflow.execution.status": "cancelled",
+        }),
+      );
+      expect((await manager.get(parent.id)).logs).not.toContainEqual(
+        expect.objectContaining({ message: "Workflow execution failed" }),
+      );
+    },
+  );
+
+  it.each(["Workflow step started", "Workflow execution failed"])(
+    "honors cancellation completed during %s logging",
+    async (logMessage) => {
+      const call = vi.fn();
+
+      @Component()
+      class CancellationTasks {
+        @Task({ name: "cancellation.first" })
+        first() {
+          call();
+          throw new TestWorkflowProblem("active task failed");
+        }
+      }
+
+      @Component()
+      class CancellationWorkflows {
+        @Workflow({ name: "cancellation", steps: ["cancellation.first"] })
+        run() {}
+      }
+
+      instances.set(CancellationTasks, new CancellationTasks());
+      const runner = createWorkflowRunner(manager, WorkflowRegistry.fromMetadata());
+      const originalRecordLog = manager.recordLog.bind(manager);
+      vi.spyOn(manager, "recordLog").mockImplementation(async (id, entry) => {
+        const recorded = await originalRecordLog(id, entry);
+        if (entry.message === logMessage) await runner.cancel(id, "operator stop");
+        return recorded;
+      });
+      const complete = vi.spyOn(manager, "complete");
+      const fail = vi.spyOn(manager, "fail");
+
+      await expect(runner.execute("cancellation", {})).rejects.toMatchObject({
+        code: "workflow-core/workflow-execution-cancelled",
+      });
+      const [parent] = await manager.list({ type: "workflow" });
+      expect(parent.status).toBe("cancelled");
+      expect(await manager.list({ parentId: parent.id })).toHaveLength(
+        logMessage === "Workflow step started" ? 0 : 1,
+      );
+      expect(call).toHaveBeenCalledTimes(logMessage === "Workflow step started" ? 0 : 1);
+      expect(complete).not.toHaveBeenCalled();
+      expect(fail.mock.calls.some(([id]) => id === parent.id)).toBe(false);
+    },
+  );
+
+  it.each([1, 2])(
+    "finalizes the parent after advisory failure inspection %s rejects once",
+    async (failedInspection) => {
+      const taskFailure = new TestWorkflowProblem("task failed");
+      const inspectionFailure = new TestWorkflowProblem("parent inspection unavailable");
+      let taskFailed = false;
+      let inspections = 0;
+      @Component()
+      class InspectionTasks {
+        @Task({ name: "inspection.failure" })
+        run() {
+          taskFailed = true;
+          throw taskFailure;
+        }
+      }
+      @Component()
+      class InspectionWorkflows {
+        @Workflow({ name: "inspection", steps: ["inspection.failure"] })
+        run() {}
+      }
+      instances.set(InspectionTasks, new InspectionTasks());
+      const runner = createWorkflowRunner(manager, WorkflowRegistry.fromMetadata());
+      const get = manager.get.bind(manager);
+      vi.spyOn(manager, "get").mockImplementation(async (id) => {
+        if (taskFailed && id === "exec-1" && ++inspections === failedInspection) {
+          throw inspectionFailure;
+        }
+        return get(id);
+      });
+      const mockSpan = createMockSpan();
+      vi.spyOn(trace, "getTracer").mockReturnValue(createMockTracer(mockSpan.span));
+
+      await expect(runner.execute("inspection", {})).rejects.toBe(taskFailure);
+
+      expect(await store.findById("exec-1")).toMatchObject({
+        status: "failed",
+        error: { message: taskFailure.message, retryable: false },
+      });
+      expect(taskFailure).toHaveProperty("workflowFailureRecordError", inspectionFailure);
+      expect(mockSpan.addEvent).toHaveBeenCalledWith(
+        "workflow.execution.failure_record.failed",
+        expect.objectContaining({
+          "workflow.execution.id": "exec-1",
+          "workflow.failure_record.error.message": inspectionFailure.message,
+        }),
+      );
+    },
+  );
+
+  it("returns cancellation when cancellation wins the parent failure transition", async () => {
+    @Component()
+    class FailureRaceTasks {
+      @Task({ name: "failure-race.task" })
+      run() {
+        throw new TestWorkflowProblem("task failed");
+      }
+    }
+    @Component()
+    class FailureRaceWorkflows {
+      @Workflow({ name: "failure-race", steps: ["failure-race.task"] })
+      run() {}
+    }
+    instances.set(FailureRaceTasks, new FailureRaceTasks());
+    const runner = createWorkflowRunner(manager, WorkflowRegistry.fromMetadata());
+    const updateIfStatus = store.updateIfStatus.bind(store);
+    let cancelled: Execution | undefined;
+    vi.spyOn(store, "updateIfStatus").mockImplementation(async (id, status, data) => {
+      if (id === "exec-1" && data.status === "failed") {
+        cancelled = await runner.cancel(id, "operator won failure race");
+      }
+      return updateIfStatus(id, status, data);
+    });
+    const mockSpan = createMockSpan();
+    vi.spyOn(trace, "getTracer").mockReturnValue(createMockTracer(mockSpan.span));
+
+    await expect(runner.execute("failure-race", {})).rejects.toMatchObject({
+      code: "workflow-core/workflow-execution-cancelled",
+    });
+
+    expect(cancelled).toBeDefined();
+    expect(await store.findById("exec-1")).toMatchObject({
+      status: "cancelled",
+      metadata: cancelled?.metadata,
+      completedAt: cancelled?.completedAt,
+      error: cancelled?.error,
+      logs: expect.arrayContaining([
+        expect.objectContaining({ message: "Workflow execution cancelled" }),
+      ]),
+    });
+    expect(mockSpan.addEvent).toHaveBeenCalledWith(
+      "workflow.execution.cancelled",
+      expect.objectContaining({ "workflow.execution.id": "exec-1" }),
+    );
+  });
+
+  it("returns cancellation when cancellation wins the invocation-owned pending start", async () => {
+    const call = vi.fn();
+    @Component()
+    class StartRaceTasks {
+      @Task({ name: "start-race.task" })
+      run() {
+        call();
+      }
+    }
+    @Component()
+    class StartRaceWorkflows {
+      @Workflow({
+        name: "start-race",
+        steps: ["start-race.task"],
+        idempotencyKey: "start-race-key",
+      })
+      run() {}
+    }
+    instances.set(StartRaceTasks, new StartRaceTasks());
+    const runner = createWorkflowRunner(manager, WorkflowRegistry.fromMetadata());
+    const updateIfStatus = store.updateIfStatus.bind(store);
+    let cancelled: Execution | undefined;
+    vi.spyOn(store, "updateIfStatus").mockImplementation(async (id, status, data) => {
+      if (id === "exec-1" && status === "pending" && data.status === "running") {
+        cancelled = await runner.cancel(id, "operator won start race");
+      }
+      return updateIfStatus(id, status, data);
+    });
+
+    await expect(runner.execute("start-race", {})).rejects.toMatchObject({
+      code: "workflow-core/workflow-execution-cancelled",
+    });
+
+    expect(call).not.toHaveBeenCalled();
+    expect(await store.list({ parentId: "exec-1" })).toHaveLength(0);
+    expect(cancelled).toBeDefined();
+    expect(await store.findById("exec-1")).toMatchObject({
+      status: "cancelled",
+      metadata: cancelled?.metadata,
+      completedAt: cancelled?.completedAt,
+    });
+    await expect(runner.execute("start-race", {})).rejects.toMatchObject({
+      code: "execution/invalid-state-transition",
+    });
+  });
+
+  it("records step failure when the step input mapper throws before child creation", async () => {
+    const mapperFailure = new TestWorkflowProblem("input mapping failed");
+    const call = vi.fn();
+    @Component()
+    class MapperTasks {
+      @Task({ name: "mapper.task" })
+      run() {
+        call();
+      }
+    }
+    @Component()
+    class MapperWorkflows {
+      @Workflow({
+        name: "mapper",
+        steps: [
+          {
+            name: "mapped-step",
+            task: "mapper.task",
+            input: () => {
+              throw mapperFailure;
+            },
+          },
+        ],
+      })
+      run() {}
+    }
+    instances.set(MapperTasks, new MapperTasks());
+    const runner = createWorkflowRunner(manager, WorkflowRegistry.fromMetadata());
+    const mockSpan = createMockSpan();
+    vi.spyOn(trace, "getTracer").mockReturnValue(createMockTracer(mockSpan.span));
+
+    await expect(runner.execute("mapper", {})).rejects.toBe(mapperFailure);
+
+    expect(mockSpan.addEvent).toHaveBeenCalledWith("workflow.step.failed", {
+      "workflow.name": "mapper",
+      "workflow.execution.id": "exec-1",
+      "workflow.step.name": "mapped-step",
+      "workflow.step.task": "mapper.task",
+      "workflow.error.message": mapperFailure.message,
+    });
+    expect(call).not.toHaveBeenCalled();
+    expect(await store.list({ parentId: "exec-1" })).toHaveLength(0);
   });
 
   it("resolves workflow tasks through the supplied application runner", async () => {
@@ -1169,6 +1522,269 @@ describe("workflow-core", () => {
     expect(allExecutions).toHaveLength(2);
   });
 
+  it("resumes an idempotent workflow after a step Problem with extensions.retryable", async () => {
+    let calls = 0;
+
+    @Component()
+    class BillingTasks {
+      @Task({ name: "billing.sync", maxAttempts: 2 })
+      sync(): { synced: true } {
+        calls += 1;
+        if (calls === 1) throw new BillingProviderUnavailableProblem(true);
+        return { synced: true };
+      }
+    }
+
+    @Component()
+    class BillingWorkflows {
+      @OnWebhook("/webhooks/billing", "POST")
+      @Workflow({
+        name: "billing-sync",
+        steps: ["billing.sync"],
+        maxAttempts: 2,
+        idempotencyKey: "billing-sync:sub_123",
+      })
+      run(): void {}
+    }
+
+    instances.set(BillingTasks, new BillingTasks());
+    instances.set(BillingWorkflows, new BillingWorkflows());
+    const runner = createWorkflowRunner(manager, WorkflowRegistry.fromMetadata());
+
+    await expect(runner.execute("billing-sync", {})).rejects.toThrow(
+      "billing provider temporarily unavailable",
+    );
+
+    const [workflow] = await store.list({ type: "workflow" });
+    const [child] = await store.list({ parentId: workflow.id });
+    expect(child).toMatchObject({ status: "retrying", attempts: 1 });
+    expect(workflow).toMatchObject({
+      status: "retrying",
+      attempts: 1,
+      maxAttempts: 2,
+      error: { retryable: true },
+    });
+
+    await expect(runner.execute("billing-sync", {})).resolves.toMatchObject({
+      executionId: workflow.id,
+      reused: false,
+    });
+    expect(calls).toBe(2);
+    expect(await manager.get(child.id)).toMatchObject({ status: "completed", attempts: 2 });
+  });
+
+  it("resumes a keyed workflow when child execution creation fails transiently", async () => {
+    const creationFailure = new BillingProviderUnavailableProblem(true);
+    let calls = 0;
+
+    @Component()
+    class BillingTasks {
+      @Task({ name: "billing.create" })
+      sync(): { synced: true } {
+        calls += 1;
+        return { synced: true };
+      }
+    }
+
+    @Component()
+    class BillingWorkflows {
+      @Workflow({
+        name: "billing-create",
+        steps: ["billing.create"],
+        maxAttempts: 2,
+        idempotencyKey: "billing-create:sub_123",
+      })
+      run(): void {}
+    }
+
+    instances.set(BillingTasks, new BillingTasks());
+    instances.set(BillingWorkflows, new BillingWorkflows());
+    const createExecution = store.create.bind(store);
+    let taskCreationAttempts = 0;
+    vi.spyOn(store, "create").mockImplementation((params) => {
+      if (params.type === "billing.create" && ++taskCreationAttempts === 1) {
+        return Promise.reject(creationFailure);
+      }
+      return createExecution(params);
+    });
+    const runner = createWorkflowRunner(manager, WorkflowRegistry.fromMetadata());
+
+    await expect(runner.execute("billing-create", {})).rejects.toBe(creationFailure);
+    const [workflow] = await store.list({ type: "workflow" });
+    expect(workflow).toMatchObject({
+      status: "retrying",
+      attempts: 1,
+      error: { retryable: true },
+    });
+    expect(await store.list({ parentId: workflow.id })).toHaveLength(0);
+    expect(calls).toBe(0);
+
+    await expect(runner.execute("billing-create", {})).resolves.toMatchObject({
+      executionId: workflow.id,
+      reused: false,
+    });
+    expect(calls).toBe(1);
+    expect(taskCreationAttempts).toBe(2);
+  });
+
+  it("keeps a workflow failed when a step Problem has extensions.retryable false", async () => {
+    @Component()
+    class BillingTasks {
+      @Task({ name: "billing.declined", maxAttempts: 2 })
+      sync(): never {
+        throw new BillingProviderUnavailableProblem(false);
+      }
+    }
+
+    @Component()
+    class BillingWorkflows {
+      @Workflow({
+        name: "billing-declined",
+        steps: ["billing.declined"],
+        maxAttempts: 2,
+        idempotencyKey: "billing-declined:sub_123",
+      })
+      run(): void {}
+    }
+
+    instances.set(BillingTasks, new BillingTasks());
+    instances.set(BillingWorkflows, new BillingWorkflows());
+    const runner = createWorkflowRunner(manager, WorkflowRegistry.fromMetadata());
+
+    await expect(runner.execute("billing-declined", {})).rejects.toThrow(
+      "billing provider temporarily unavailable",
+    );
+    const [workflow] = await store.list({ type: "workflow" });
+    expect(workflow).toMatchObject({
+      status: "failed",
+      attempts: 1,
+      error: { retryable: false },
+    });
+  });
+
+  it("keeps a keyless workflow replayable after a retryable step failure", async () => {
+    @Component()
+    class BillingTasks {
+      @Task({ name: "billing.keyless", maxAttempts: 2 })
+      sync(): never {
+        throw new BillingProviderUnavailableProblem(true);
+      }
+    }
+
+    @Component()
+    class BillingWorkflows {
+      @Workflow({ name: "billing-keyless", steps: ["billing.keyless"], maxAttempts: 2 })
+      run(): void {}
+    }
+
+    instances.set(BillingTasks, new BillingTasks());
+    instances.set(BillingWorkflows, new BillingWorkflows());
+    const runner = createWorkflowRunner(manager, WorkflowRegistry.fromMetadata());
+
+    await expect(runner.execute("billing-keyless", {})).rejects.toThrow(
+      "billing provider temporarily unavailable",
+    );
+    const [workflow] = await store.list({ type: "workflow" });
+    expect(workflow).toMatchObject({
+      status: "failed",
+      error: { message: "billing provider temporarily unavailable", retryable: false },
+    });
+    await expect(runner.replay(workflow.id)).resolves.toMatchObject({
+      status: "pending",
+      replayOf: workflow.id,
+    });
+  });
+
+  it("keeps the step failure when child retryability inspection fails", async () => {
+    const stepFailure = new BillingProviderUnavailableProblem(true);
+    const inspectionFailure = new Error("execution store unavailable");
+
+    @Component()
+    class BillingTasks {
+      @Task({ name: "billing.inspect", maxAttempts: 2 })
+      sync(): never {
+        throw stepFailure;
+      }
+    }
+
+    @Component()
+    class BillingWorkflows {
+      @Workflow({
+        name: "billing-inspect",
+        steps: ["billing.inspect"],
+        maxAttempts: 2,
+        idempotencyKey: "billing-inspect:sub_123",
+      })
+      run(): void {}
+    }
+
+    instances.set(BillingTasks, new BillingTasks());
+    instances.set(BillingWorkflows, new BillingWorkflows());
+    const readExecution = manager.get.bind(manager);
+    vi.spyOn(manager, "get").mockImplementation((id) =>
+      id === "exec-2" ? Promise.reject(inspectionFailure) : readExecution(id),
+    );
+    const runner = createWorkflowRunner(manager, WorkflowRegistry.fromMetadata());
+
+    await expect(runner.execute("billing-inspect", {})).rejects.toBe(stepFailure);
+    expect(stepFailure).toHaveProperty("workflowRetryabilityInspectionError", inspectionFailure);
+    const [workflow] = await store.list({ type: "workflow" });
+    expect(workflow).toMatchObject({
+      status: "failed",
+      error: { message: "billing provider temporarily unavailable", retryable: false },
+    });
+  });
+
+  it("preserves the original failure when the child task has no retry left", async () => {
+    let calls = 0;
+
+    @Component()
+    class BillingTasks {
+      @Task({ name: "billing.once" })
+      sync(): never {
+        calls += 1;
+        throw new BillingProviderUnavailableProblem(true);
+      }
+    }
+
+    @Component()
+    class BillingWorkflows {
+      @Workflow({
+        name: "billing-once",
+        steps: ["billing.once"],
+        maxAttempts: 2,
+        idempotencyKey: "billing-once:sub_123",
+      })
+      run(): void {}
+    }
+
+    instances.set(BillingTasks, new BillingTasks());
+    instances.set(BillingWorkflows, new BillingWorkflows());
+    const runner = createWorkflowRunner(manager, WorkflowRegistry.fromMetadata());
+
+    await expect(runner.execute("billing-once", {})).rejects.toThrow(
+      "billing provider temporarily unavailable",
+    );
+    const [workflow] = await store.list({ type: "workflow" });
+    const [child] = await store.list({ parentId: workflow.id });
+    expect(child).toMatchObject({ status: "failed", attempts: 1 });
+    expect(workflow).toMatchObject({
+      status: "failed",
+      attempts: 1,
+      error: { message: "billing provider temporarily unavailable", retryable: false },
+    });
+
+    await expect(runner.execute("billing-once", {})).rejects.toThrow(
+      "billing provider temporarily unavailable",
+    );
+    expect(calls).toBe(1);
+    expect(await manager.get(workflow.id)).toMatchObject({
+      status: "failed",
+      attempts: 1,
+      error: { message: "billing provider temporarily unavailable", retryable: false },
+    });
+  });
+
   it("re-enters an idempotent workflow when the existing execution is retrying", async () => {
     let attempts = 0;
     const handledSubscriptions: string[] = [];
@@ -1700,23 +2316,33 @@ describe("workflow-core", () => {
   );
 
   it.each([
-    ["extensible", new TestWorkflowProblem("billing provider unavailable"), false],
+    ["extensible", new TestWorkflowProblem("billing provider unavailable"), false, "fail"],
     [
       "non-extensible",
       Object.preventExtensions(new TestWorkflowProblem("billing provider unavailable")),
       true,
+      "fail",
+    ],
+    ["extensible", new TestWorkflowProblem("billing provider unavailable"), false, "get"],
+    [
+      "non-extensible",
+      Object.preventExtensions(new TestWorkflowProblem("billing provider unavailable")),
+      true,
+      "get",
     ],
   ] as const)(
-    "preserves the %s workflow error when recording the failed execution rejects",
-    async (_errorKind, workflowFailure, attachmentFailed) => {
+    "preserves the %s workflow error when failure recording %s rejects",
+    async (_errorKind, workflowFailure, attachmentFailed, operation) => {
       const mockSpan = createMockSpan();
       vi.spyOn(trace, "getTracer").mockReturnValue(createMockTracer(mockSpan.span));
       const failureRecordError = new TestWorkflowProblem("execution store unavailable");
+      let taskFailed = false;
 
       @Component()
       class FailureRecordTasks {
         @Task({ name: "billing.failure-record" })
         run(): never {
+          taskFailed = true;
           throw workflowFailure;
         }
       }
@@ -1735,15 +2361,26 @@ describe("workflow-core", () => {
       const fail = manager.fail.bind(manager);
       vi.spyOn(manager, "fail").mockImplementation(async (executionId, error) => {
         const execution = await store.findById(executionId);
-        if (execution?.type === "workflow") {
+        if (operation === "fail" && execution?.type === "workflow") {
           throw failureRecordError;
         }
 
         return fail(executionId, error);
       });
+      const get = manager.get.bind(manager);
+      vi.spyOn(manager, "get").mockImplementation(async (id) => {
+        if (operation === "get" && taskFailed && id === "exec-1") throw failureRecordError;
+        return get(id);
+      });
       const runner = createWorkflowRunner(manager, WorkflowRegistry.fromMetadata());
 
       await expect(runner.execute("billing-failure-record", {})).rejects.toBe(workflowFailure);
+      if (operation === "get") {
+        expect(await store.findById("exec-1")).toMatchObject({
+          status: "failed",
+          error: { message: workflowFailure.message, retryable: false },
+        });
+      }
 
       expect(
         Object.getOwnPropertyDescriptor(workflowFailure, "workflowFailureRecordError"),

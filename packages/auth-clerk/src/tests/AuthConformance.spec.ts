@@ -62,12 +62,32 @@ function isClerkLiveSmokeEnabled(): boolean {
   );
 }
 
-describe("Clerk auth conformance", () => {
+describe.each([
+  {
+    version: "v1",
+    expectedPermissions: ["tenant:read"],
+    organizationClaims: {
+      org_id: "org_123",
+      org_role: "org:admin",
+      org_permissions: ["tenant:read"],
+      org_slug: "croco",
+    },
+  },
+  {
+    version: "v2",
+    expectedPermissions: ["org:tenant:read"],
+    organizationClaims: {
+      v: 2,
+      fea: "o:tenant",
+      o: { id: "org_123", rol: "admin", slg: "croco", per: "read", fpm: "1" },
+    },
+  },
+])("Clerk auth conformance $version", ({ organizationClaims, expectedPermissions }) => {
   const expectedUser = {
     id: "user_123",
     email: "user@example.com",
     roles: ["org:admin"],
-    permissions: ["tenant:read"],
+    permissions: expectedPermissions,
     metadata: {
       clerkUserId: "user_123",
       orgId: "org_123",
@@ -79,10 +99,7 @@ describe("Clerk auth conformance", () => {
   const verifiedToken = {
     sub: "user_123",
     email: "user@example.com",
-    org_id: "org_123",
-    org_role: "org:admin",
-    org_permissions: ["tenant:read"],
-    org_slug: "croco",
+    ...organizationClaims,
     sid: "sess_123",
   } as unknown as VerifiedToken;
   const suite = createAuthProviderConformanceSuite({

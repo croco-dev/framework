@@ -46,6 +46,22 @@ export type NodeRequestHandler = (
 export interface ListenOptions {
   staticDir?: string;
   spaFallback?: boolean;
+  /**
+   * Versioned-asset cache policy. Hashed JS/CSS/image responses use this value.
+   * Set to `false` to omit the header. Defaults to `public, max-age=3600`.
+   */
+  staticCacheControl?: string | false;
+  /**
+   * SPA fallback (`index.html`) cache policy. Always defaults to
+   * `public, max-age=0, must-revalidate` so an asset override never marks the
+   * shell immutable. Set to `false` to omit the header.
+   */
+  staticSpaFallbackCacheControl?: string | false;
+  /**
+   * Files at or above this byte size stream via `Readable.toWeb` instead of
+   * `readFile` buffering. Defaults to 1 MiB.
+   */
+  staticStreamThresholdBytes?: number;
 }
 
 export type NodeServerHandle = Server | Http2Server | Http2SecureServer;
@@ -99,6 +115,13 @@ export interface CompiledRoute {
   method: string;
   path: string;
   successStatus?: number;
+  /**
+   * Declared output-schema presence. True when the route declares a response
+   * body contract (for example `@ResponseSchema`), so an explicit `null`
+   * result stays a JSON body instead of collapsing into 204 no-content.
+   * Omitted/falsy preserves the legacy schemaless empty-response behavior.
+   */
+  hasResponseBody?: boolean | undefined;
   handler: (ctx: CrocoHttpContext) => Promise<unknown>;
   controllerInstance?: unknown;
   methodName: string | symbol;

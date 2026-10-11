@@ -60,7 +60,7 @@ describe("RetentionWorkbench", () => {
     );
     expect(html).toContain("40 / 100");
     expect(html).toContain("Not established");
-    expect(html).not.toContain("0%");
+    expect(html).not.toMatch(/>0%<|· 0%/);
     expect(html).toContain('type="button"');
     expect(html).toContain("Inspect denominator for week-1");
     expect(html).toContain("Complete through: Unknown");

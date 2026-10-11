@@ -14,6 +14,7 @@ import type { Logger } from "@croco/framework-logger";
 import {
   DeleteFailedProblem,
   FileNotFoundProblem,
+  InvalidKeyProblem,
   MAX_SIGNED_URL_EXPIRY_SECONDS,
   readStorageBody,
   readStorageStream,
@@ -375,6 +376,61 @@ describe("R2StorageProvider", () => {
 
       expect(customProvider.getPublicUrl("test/file.txt")).toBe(expected);
     });
+
+    it.each(["https://cdn.example.com/assets///", "https://pub-example.r2.dev"])(
+      "encodes each key segment with the public URL base %s",
+      (publicUrlBase) => {
+        vi.mocked(configService.get).mockImplementation((key: string) =>
+          key === "R2_PUBLIC_URL_BASE" ? publicUrlBase : defaultEnvs[key],
+        );
+        const publicProvider = new R2StorageProvider(configService, logger);
+        const key = "docs/a b?#%.png";
+        const url = publicProvider.getPublicUrl(key);
+
+        expect(url).toBe(`${publicUrlBase.replace(/\/+$/, "")}/docs/a%20b%3F%23%25.png`);
+        expect(decodeURIComponent(new URL(url).pathname.split("/").slice(-2).join("/"))).toBe(key);
+      },
+    );
+  });
+
+  describe("dot-segment keys", () => {
+    it.each([".", "..", "tenant/./file.txt", "tenant/../file.txt", "tenant/.", "tenant/.."])(
+      "rejects %s before URL construction or remote calls",
+      async (key) => {
+        vi.mocked(configService.get).mockImplementation((name: string) =>
+          name === "R2_PUBLIC_URL_BASE" ? "https://cdn.example.com" : defaultEnvs[name],
+        );
+        const publicProvider = new R2StorageProvider(configService, logger);
+
+        expect(() => publicProvider.getPublicUrl(key)).toThrow(InvalidKeyProblem);
+        await expect(publicProvider.put(key, Buffer.from("data"))).rejects.toBeInstanceOf(
+          InvalidKeyProblem,
+        );
+        await expect(publicProvider.get(key)).rejects.toBeInstanceOf(InvalidKeyProblem);
+        await expect(publicProvider.getStream(key)).rejects.toBeInstanceOf(InvalidKeyProblem);
+        await expect(publicProvider.delete(key)).rejects.toBeInstanceOf(InvalidKeyProblem);
+        await expect(publicProvider.exists(key)).rejects.toBeInstanceOf(InvalidKeyProblem);
+        await expect(publicProvider.getMetadata(key)).rejects.toBeInstanceOf(InvalidKeyProblem);
+        await expect(publicProvider.getSignedUrl(key, { expiresIn: 60 })).rejects.toBeInstanceOf(
+          InvalidKeyProblem,
+        );
+
+        expect(mockSend).not.toHaveBeenCalled();
+        expect(vi.mocked(getSignedUrl)).not.toHaveBeenCalled();
+      },
+    );
+
+    it.each(["...", ".hidden", "a.b/c", "tenant/.../file.txt", "tenant/.hidden/file.txt"])(
+      "allows a non-dot-segment key %s",
+      (key) => {
+        vi.mocked(configService.get).mockImplementation((name: string) =>
+          name === "R2_PUBLIC_URL_BASE" ? "https://cdn.example.com" : defaultEnvs[name],
+        );
+        const publicProvider = new R2StorageProvider(configService, logger);
+
+        expect(publicProvider.getPublicUrl(key)).toBe(`https://cdn.example.com/${key}`);
+      },
+    );
   });
 
   describe("getSignedUrl", () => {

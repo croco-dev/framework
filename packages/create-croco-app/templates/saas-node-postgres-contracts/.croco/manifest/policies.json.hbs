@@ -1,0 +1,46 @@
+{
+  "schemaVersion": "croco.manifest.policies.v1",
+  "source": {
+    "schemaVersion": "croco.project-map.manifest.v1",
+    "artifact": "croco.project-map.json",
+    "packageName": "{{projectName}}",
+    "generatedArtifacts": [
+      {
+        "kind": "framework-manifest",
+        "path": ".croco/build/framework-manifest.json",
+        "commitPolicy": "commit-required"
+      },
+      {
+        "kind": "intent-map",
+        "path": ".croco/build/intent-map.json",
+        "commitPolicy": "commit-required"
+      },
+      {
+        "kind": "route-registration-table",
+        "path": ".croco/build/route-registration-table.json",
+        "commitPolicy": "commit-required"
+      },
+      {
+        "kind": "routes-module",
+        "path": ".croco/build/routes.mjs",
+        "commitPolicy": "commit-required"
+      }
+    ]
+  },
+  "project": {
+    "root": ".",
+    "packageName": "{{projectName}}",
+    "packageManager": "pnpm@12.7.0"
+  },
+  "summary": {
+    "policies": 1,
+    "diagnostics": 0
+  },
+  "runtime": {
+    "manifestPath": "croco-runtime-policy.manifest.json",
+    "target": "node",
+    "planCount": 0,
+    "requiredCapabilities": []
+  },
+  "diagnostics": []
+}

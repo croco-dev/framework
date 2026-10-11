@@ -60,6 +60,7 @@ export type {
   OutboundWebhookAttemptOutcome,
   OutboundWebhookCommitResult,
   OutboundWebhookDelivery,
+  OutboundWebhookDeliveryClaim,
   OutboundWebhookDeliveryStatus,
   OutboundWebhookDiagnostics,
   OutboundWebhookDispatchIntent,

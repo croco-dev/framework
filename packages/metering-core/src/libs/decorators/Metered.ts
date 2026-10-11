@@ -174,7 +174,13 @@ export function Metered(
 
     descriptor.value = async function (...args: unknown[]): Promise<unknown> {
       const service = resolveMeteringService();
-      const tenantId = (this as { tenantId?: string }).tenantId ?? "default";
+      const tenantId = (this as { tenantId: string }).tenantId;
+      if (service && (typeof tenantId !== "string" || !tenantId.trim())) {
+        throw new InvalidUsageEnvelopeProblem(
+          metadata.meterId,
+          "@Metered requires a non-empty tenantId on the instance",
+        );
+      }
       let billingRequirement =
         service && typeof service.getBillableUsageRequirement === "function"
           ? service.getBillableUsageRequirement(tenantId, metadata.meterId)

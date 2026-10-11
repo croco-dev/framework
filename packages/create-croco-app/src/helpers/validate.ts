@@ -5,6 +5,29 @@ const PORTABLE_WEB_APP_NAME = /^[a-z0-9_-]+$/;
 const WINDOWS_RESERVED_PATH_SEGMENT = /^(?:con|prn|aux|nul|clock\$|com[1-9]|lpt[1-9])$/i;
 const RESERVED_PACKAGE_PATH_SEGMENTS = new Set(["node_modules"]);
 
+export type WebAppCollisionOptions = {
+  readonly preset?: string | undefined;
+  readonly api?: "graphql" | "trpc" | undefined;
+  readonly apiHosting?: "standalone" | "nextjs" | undefined;
+};
+
+export function resolveStandaloneApiDirectory(options: WebAppCollisionOptions): string | null {
+  if (options.preset !== "ddd-fullstack") return null;
+  if (options.apiHosting !== "standalone") return null;
+  if (options.api === "graphql") return "graphql-api";
+  if (options.api === "trpc") return "api";
+  return null;
+}
+
+export function findCollidingWebAppName(
+  names: readonly string[],
+  options: WebAppCollisionOptions,
+): string | null {
+  const apiDirectory = resolveStandaloneApiDirectory(options);
+  if (!apiDirectory) return null;
+  return names.find((name) => name === apiDirectory) ?? null;
+}
+
 export function validateProjectName(name: string): string | null {
   if (!name) return "Project name is required";
   if (!/^[a-z0-9-_]+$/.test(name)) {

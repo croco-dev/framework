@@ -15,4 +15,4 @@ title: "TelemetryConfiguredDiagnosticsDetails"
 
 ### mode
 
-> `readonly` **mode**: `"active"` \| `"disabled"` \| `"not_initialized"` \| `"sampling_disabled"`
+> `readonly` **mode**: `"active"` \| `"disabled"` \| `"external_tracer_provider"` \| `"not_initialized"` \| `"sampling_disabled"`

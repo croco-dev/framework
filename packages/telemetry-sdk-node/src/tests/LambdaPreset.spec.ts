@@ -223,6 +223,21 @@ describe("lambdaPreset", () => {
     expect(config.trace?.exporterUrl).toBe("http://traces:4318/v1/traces");
   });
 
+  it("should not enable aws-lambda instrumentation for a module-scope handler", async () => {
+    process.env.AWS_LAMBDA_FUNCTION_NAME = "orders-fn";
+    process.env.NODE_ENV = "development";
+    const runtime = TelemetryRuntime.getInstance();
+
+    await runtime.init(
+      lambdaPreset({ serviceName: "orders", exporterUrl: "http://127.0.0.1:4318/v1/traces" }),
+    );
+
+    expect(runtime.getEnabledAutoInstrumentationModules()).toEqual([
+      "@opentelemetry/instrumentation-http",
+      "@opentelemetry/instrumentation-aws-sdk",
+    ]);
+  });
+
   it("should surface Lambda flush failures after request work completes", async () => {
     const runtime = TelemetryRuntime.getInstance();
     const events: string[] = [];

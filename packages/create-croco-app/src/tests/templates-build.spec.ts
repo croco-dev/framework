@@ -897,6 +897,16 @@ function checkWebMetaViteFullstackAddonStructure() {
     ["api-worker", "wrangler.toml.hbs"],
     /^\s*\[build\]\s*$/m,
   );
+  checkFileContains(
+    "addons/web-meta-vite-fullstack",
+    ["ssr-worker", "wrangler.toml.hbs"],
+    /^\s*main\s*=\s*"dist\/index\.js"\s*$/m,
+  );
+  checkFileContains(
+    "addons/web-meta-vite-fullstack",
+    ["ssr-worker", "wrangler.toml.hbs"],
+    /^\s*binding\s*=\s*"API_WORKER"\s*$/m,
+  );
 }
 
 function checkContainerFullstackStructure() {
@@ -1044,7 +1054,7 @@ function checkSaasStructure() {
   expect(apiPackageJson).toMatchObject({
     scripts: expect.objectContaining({
       "di:graph": GENERATED_SAAS_API_DI_GRAPH_SCRIPT,
-      build: "tsup --config tsup.config.ts",
+      build: "pnpm di:generate && tsup --config tsup.config.ts",
       dev: expect.stringContaining("tsup --config tsup.config.ts --watch"),
       "demo:seed": "pnpm di:generate && tsx src/demo/seed.ts",
       "demo:smoke": "pnpm di:generate && tsx src/demo/smoke.ts",

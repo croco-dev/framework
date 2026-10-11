@@ -27,8 +27,8 @@ title: "IdempotencyStoreConformanceOptions"
 
 ### createStore
 
-> `readonly` **createStore**: () => [`IdempotencyStore`](/api/idempotency-core/src/type-aliases/idempotencystore/)\<`TResult`\> \| `Promise`\<[`IdempotencyStore`](/api/idempotency-core/src/type-aliases/idempotencystore/)\<`TResult`\>\>
+> `readonly` **createStore**: () => [`LeaseAwareIdempotencyStore`](/api/idempotency-core/src/type-aliases/leaseawareidempotencystore/)\<`TResult`\> \| `Promise`\<[`LeaseAwareIdempotencyStore`](/api/idempotency-core/src/type-aliases/leaseawareidempotencystore/)\<`TResult`\>\>
 
 #### Returns
 
-[`IdempotencyStore`](/api/idempotency-core/src/type-aliases/idempotencystore/)\<`TResult`\> \| `Promise`\<[`IdempotencyStore`](/api/idempotency-core/src/type-aliases/idempotencystore/)\<`TResult`\>\>
+[`LeaseAwareIdempotencyStore`](/api/idempotency-core/src/type-aliases/leaseawareidempotencystore/)\<`TResult`\> \| `Promise`\<[`LeaseAwareIdempotencyStore`](/api/idempotency-core/src/type-aliases/leaseawareidempotencystore/)\<`TResult`\>\>

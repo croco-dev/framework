@@ -1,6 +1,7 @@
 import type { ContractSchemaDescriptor } from "@croco/protocols-core";
 import { describeZodSchema } from "@croco/protocols-core";
 import { Problem, ProblemCategory } from "@croco/problems-core";
+import type { PushContent } from "@croco/notifications-core";
 import type { z } from "zod";
 
 export const MESSAGE_CHANNELS = Object.freeze(["email", "push", "sms", "inApp"] as const);
@@ -17,11 +18,7 @@ export type EmailContent = {
 
 export type MessageContentByChannel = {
   readonly email: EmailContent;
-  readonly push: {
-    readonly title: string;
-    readonly body: string;
-    readonly deepLink?: string;
-  };
+  readonly push: PushContent;
   readonly sms: {
     readonly body: string;
   };

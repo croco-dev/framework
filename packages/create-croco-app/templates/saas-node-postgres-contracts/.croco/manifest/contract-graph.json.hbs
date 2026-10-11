@@ -1,0 +1,187 @@
+{
+  "schemaVersion": "croco.manifest.contract-graph.v1",
+  "source": {
+    "schemaVersion": "croco.project-map.manifest.v1",
+    "artifact": "croco.project-map.json",
+    "packageName": "{{projectName}}",
+    "generatedArtifacts": [
+      {
+        "kind": "framework-manifest",
+        "path": ".croco/build/framework-manifest.json",
+        "commitPolicy": "commit-required"
+      },
+      {
+        "kind": "intent-map",
+        "path": ".croco/build/intent-map.json",
+        "commitPolicy": "commit-required"
+      },
+      {
+        "kind": "route-registration-table",
+        "path": ".croco/build/route-registration-table.json",
+        "commitPolicy": "commit-required"
+      },
+      {
+        "kind": "routes-module",
+        "path": ".croco/build/routes.mjs",
+        "commitPolicy": "commit-required"
+      }
+    ]
+  },
+  "project": {
+    "root": ".",
+    "packageName": "{{projectName}}",
+    "packageManager": "pnpm@12.7.0"
+  },
+  "summary": {
+    "controllers": 3,
+    "routes": 9,
+    "diagnostics": 0,
+    "errors": 0,
+    "warnings": 0
+  },
+  "frameworkManifestVersion": "croco.framework-manifest.v1",
+  "contractGraphSnapshotVersion": "croco.contract-graph.snapshot.v1",
+  "controllers": [
+    {
+      "id": "JobsController",
+      "name": "JobsController",
+      "path": "/ops/jobs",
+      "source": {
+        "file": "apps/api-server/src/controllers/JobsController.ts",
+        "line": 71,
+        "column": 8
+      }
+    },
+    {
+      "id": "OperationsController",
+      "name": "OperationsController",
+      "path": "/ops",
+      "source": {
+        "file": "apps/api-server/src/controllers/OperationsController.ts",
+        "line": 7,
+        "column": 8
+      }
+    },
+    {
+      "id": "SaasController",
+      "name": "SaasController",
+      "path": "/saas",
+      "source": {
+        "file": "apps/api-server/src/controllers/SaasController.ts",
+        "line": 21,
+        "column": 8
+      }
+    }
+  ],
+  "routes": [
+    {
+      "id": "JobsController.cancel",
+      "method": "POST",
+      "path": "/ops/jobs/:id/cancel",
+      "controllerId": "JobsController",
+      "handlerName": "cancel",
+      "source": {
+        "file": "apps/api-server/src/controllers/JobsController.ts",
+        "line": 71,
+        "column": 8
+      }
+    },
+    {
+      "id": "JobsController.list",
+      "method": "GET",
+      "path": "/ops/jobs",
+      "controllerId": "JobsController",
+      "handlerName": "list",
+      "source": {
+        "file": "apps/api-server/src/controllers/JobsController.ts",
+        "line": 71,
+        "column": 8
+      }
+    },
+    {
+      "id": "JobsController.logs",
+      "method": "GET",
+      "path": "/ops/jobs/:id/logs",
+      "controllerId": "JobsController",
+      "handlerName": "logs",
+      "source": {
+        "file": "apps/api-server/src/controllers/JobsController.ts",
+        "line": 71,
+        "column": 8
+      }
+    },
+    {
+      "id": "JobsController.replay",
+      "method": "POST",
+      "path": "/ops/jobs/:id/replay",
+      "controllerId": "JobsController",
+      "handlerName": "replay",
+      "source": {
+        "file": "apps/api-server/src/controllers/JobsController.ts",
+        "line": 71,
+        "column": 8
+      }
+    },
+    {
+      "id": "JobsController.show",
+      "method": "GET",
+      "path": "/ops/jobs/:id",
+      "controllerId": "JobsController",
+      "handlerName": "show",
+      "source": {
+        "file": "apps/api-server/src/controllers/JobsController.ts",
+        "line": 71,
+        "column": 8
+      }
+    },
+    {
+      "id": "OperationsController.diagnostics",
+      "method": "GET",
+      "path": "/ops/diagnostics",
+      "controllerId": "OperationsController",
+      "handlerName": "diagnostics",
+      "source": {
+        "file": "apps/api-server/src/controllers/OperationsController.ts",
+        "line": 7,
+        "column": 8
+      }
+    },
+    {
+      "id": "OperationsController.health",
+      "method": "GET",
+      "path": "/ops/health",
+      "controllerId": "OperationsController",
+      "handlerName": "health",
+      "source": {
+        "file": "apps/api-server/src/controllers/OperationsController.ts",
+        "line": 7,
+        "column": 8
+      }
+    },
+    {
+      "id": "SaasController.seedDemo",
+      "method": "POST",
+      "path": "/saas/demo/seed",
+      "controllerId": "SaasController",
+      "handlerName": "seedDemo",
+      "source": {
+        "file": "apps/api-server/src/controllers/SaasController.ts",
+        "line": 21,
+        "column": 8
+      }
+    },
+    {
+      "id": "SaasController.smokeDemo",
+      "method": "GET",
+      "path": "/saas/demo/smoke",
+      "controllerId": "SaasController",
+      "handlerName": "smokeDemo",
+      "source": {
+        "file": "apps/api-server/src/controllers/SaasController.ts",
+        "line": 21,
+        "column": 8
+      }
+    }
+  ],
+  "diagnostics": []
+}

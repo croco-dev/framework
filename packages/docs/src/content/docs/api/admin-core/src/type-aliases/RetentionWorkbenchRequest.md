@@ -39,6 +39,14 @@ title: "RetentionWorkbenchRequest"
 
 ---
 
+### sourceRef?
+
+> `optional` **sourceRef?**: `string`
+
+Immutable host source run; required when saving a view.
+
+---
+
 ### subjectKind
 
 > **subjectKind**: `string`

@@ -9,6 +9,17 @@ const POSTCSS_WORKSPACE_TEMPLATES = ["blank", "spa-be-split"] as const;
 const SHARP_WORKSPACE_TEMPLATES = ["blank", "base-ddd", "spa-be-split", "saas"] as const;
 
 describe("Next.js addon templates", () => {
+  it.each(["base-ddd", "spa-be-split", "saas"] as const)(
+    "keeps GraphQL dependencies patched in an independent %s workspace",
+    (template) => {
+      const workspace = readFileSync(
+        join(TEMPLATES_DIR, template, "pnpm-workspace.yaml.hbs"),
+        "utf8",
+      );
+      expect(workspace).toContain('"@graphql-tools/utils@<=12.0.0": 12.0.3');
+    },
+  );
+
   it.each(NEXT_ADDONS)("pins %s to a Server Actions and Sharp-safe release", (addon) => {
     const manifestPath = join(TEMPLATES_DIR, "addons", addon, "apps", "web", "package.json.hbs");
     const manifest = JSON.parse(readFileSync(manifestPath, "utf8")) as {

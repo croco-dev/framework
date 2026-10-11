@@ -1,3 +1,4 @@
+import { compareStrings } from "../../../../tooling/compareStrings.mjs";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { Problem, ProblemCategory } from "@croco/problems-core";
@@ -68,6 +69,7 @@ export function getAdminGeneratedDiagnostics(
 ): readonly AdminGeneratedDiagnostic[] {
   const diagnostics: AdminGeneratedDiagnostic[] = [];
   const seenOperationKeys = new Map<string, ContractGraphRoute>();
+  const seenBindingNames = new Map<string, ContractGraphRoute>();
 
   for (const route of graph.routes) {
     const classified = classifyRoute(route);
@@ -91,6 +93,21 @@ export function getAdminGeneratedDiagnostics(
     }
 
     seenOperationKeys.set(operationKey, route);
+
+    const bindingName = bindingNameForRoute(route);
+    const existingBindingRoute = seenBindingNames.get(bindingName);
+
+    if (existingBindingRoute) {
+      diagnostics.push({
+        code: "admin-generated-duplicate-binding",
+        routeId: route.routeId,
+        path: route.path,
+        message: `Cannot generate admin client binding '${bindingName}': operation id '${route.operationId}' (route '${route.routeId}') collides with operation id '${existingBindingRoute.operationId}' (route '${existingBindingRoute.routeId}'). Rename one operation id so the normalized binding names are distinct.`,
+      });
+      continue;
+    }
+
+    seenBindingNames.set(bindingName, route);
   }
 
   return diagnostics.sort(compareDiagnostics);
@@ -102,6 +119,14 @@ export function createAdminGeneratedArtifact(graph: ContractGraph): AdminGenerat
   const diagnostics = [...getAdminGeneratedDiagnostics(graph)];
   const resourceDrafts = new Map<string, ResourceDraft>();
   const clientBindings: Record<string, AdminGeneratedClientBinding> = {};
+
+  const bindingDiagnostics = diagnostics.filter(
+    (diagnostic) => diagnostic.code === "admin-generated-duplicate-binding",
+  );
+
+  if (bindingDiagnostics.length > 0) {
+    throw new AdminGeneratedContractProblem(bindingDiagnostics);
+  }
 
   if (diagnostics.length > 0) {
     return {
@@ -644,11 +669,11 @@ function generateInputType(route: ContractGraphRoute): string {
     !route.inputSchemas.query &&
     !route.inputSchemas.headers
   ) {
-    return zodTypeToTypeScript(entries[0][1]);
+    return zodTypeToTypeScript(entries[0][1], "input");
   }
 
   return `{ ${entries
-    .map(([name, schema]) => `${name}: ${zodTypeToTypeScript(schema)};`)
+    .map(([name, schema]) => `${name}: ${zodTypeToTypeScript(schema, "input")};`)
     .join(" ")} }`;
 }
 
@@ -786,7 +811,7 @@ function getInputSchemaEntries(route: ContractGraphRoute): [string, unknown][] {
   );
 }
 
-function zodTypeToTypeScript(schema: unknown): string {
+function zodTypeToTypeScript(schema: unknown, mode: "input" | "output" = "output"): string {
   const schemaName = getSchemaName(schema);
 
   if (schemaName === "ZodString") {
@@ -830,37 +855,39 @@ function zodTypeToTypeScript(schema: unknown): string {
   }
 
   if (schemaName === "ZodUnion" || schemaName === "ZodDiscriminatedUnion") {
-    return unionTypes(getUnionOptions(schema).map(zodTypeToTypeScript));
+    return unionTypes(getUnionOptions(schema).map((option) => zodTypeToTypeScript(option, mode)));
   }
 
   if (schemaName === "ZodOptional") {
-    return `${zodTypeToTypeScript(getInnerSchema(schema))} | undefined`;
+    return `${zodTypeToTypeScript(getInnerSchema(schema), mode)} | undefined`;
   }
 
   if (schemaName === "ZodNullable") {
-    return `${zodTypeToTypeScript(getInnerSchema(schema))} | null`;
+    return `${zodTypeToTypeScript(getInnerSchema(schema), mode)} | null`;
   }
 
   if (schemaName === "ZodDefault") {
-    return zodTypeToTypeScript(getInnerSchema(schema));
+    const innerType = zodTypeToTypeScript(getInnerSchema(schema), mode);
+    return mode === "input" ? `${innerType} | undefined` : innerType;
   }
 
   if (schemaName === "ZodEffects" || schemaName === "ZodBranded" || schemaName === "ZodReadonly") {
-    return zodTypeToTypeScript(getInnerSchema(schema));
+    return zodTypeToTypeScript(getInnerSchema(schema), mode);
   }
 
   if (schemaName === "ZodArray") {
-    return `${zodTypeToTypeScript(getArrayElementSchema(schema))}[]`;
+    const elementSchema = getArrayElementSchema(schema);
+    return `${getArrayElementTypeScript(zodTypeToTypeScript(elementSchema, mode))}[]`;
   }
 
   if (schemaName === "ZodRecord") {
     const valueSchema = getRecordValueSchema(schema);
 
-    return `Record<string, ${valueSchema === undefined ? "unknown" : zodTypeToTypeScript(valueSchema)}>`;
+    return `Record<string, ${valueSchema === undefined ? "unknown" : zodTypeToTypeScript(valueSchema, mode)}>`;
   }
 
   if (schemaName === "ZodObject") {
-    return getObjectTypeScript(schema);
+    return getObjectTypeScript(schema, mode);
   }
 
   throw new AdminGeneratedContractProblem([
@@ -926,7 +953,7 @@ function getLiteralValue(schema: unknown): unknown {
     readonly values?: readonly unknown[];
   };
 
-  return definition.value ?? definition.values?.[0];
+  return "value" in definition ? definition.value : definition.values?.[0];
 }
 
 function getEnumValues(schema: unknown): unknown[] {
@@ -951,7 +978,18 @@ function getNativeEnumValues(schema: unknown): unknown[] {
     readonly values?: Record<string, unknown>;
   };
 
-  return [...new Set(Object.values(definition.values ?? {}).filter(isLiteralTypeValue))];
+  const nativeEnum = schema as {
+    readonly _def: unknown;
+    safeParse(value: unknown): { success: boolean };
+  };
+
+  return [
+    ...new Set(
+      Object.values(definition.values ?? {}).filter(
+        (value) => isLiteralTypeValue(value) && nativeEnum.safeParse(value).success,
+      ),
+    ),
+  ];
 }
 
 function getUnionOptions(schema: unknown): unknown[] {
@@ -970,28 +1008,67 @@ function getUnionOptions(schema: unknown): unknown[] {
   return [...(definition.options ?? [])];
 }
 
-function getObjectTypeScript(schema: unknown): string {
+function getObjectTypeScript(schema: unknown, mode: "input" | "output"): string {
   const fields = Object.entries(getObjectShape(schema))
     .sort(([left], [right]) => compareStrings(left, right))
     .map(([key, value]) => {
-      const optionalFieldSchema = getOptionalObjectFieldSchema(value);
+      const optionalFieldSchema = getOptionalObjectFieldSchema(value, mode);
 
       if (optionalFieldSchema !== undefined) {
-        return `${formatObjectKey(key)}?: ${zodTypeToTypeScript(optionalFieldSchema)};`;
+        return `${formatObjectKey(key)}?: ${zodTypeToTypeScript(optionalFieldSchema, mode)};`;
       }
 
-      return `${formatObjectKey(key)}: ${zodTypeToTypeScript(value)};`;
+      return `${formatObjectKey(key)}: ${zodTypeToTypeScript(value, mode)};`;
     });
 
   return `{ ${fields.join(" ")} }`;
 }
 
-function getOptionalObjectFieldSchema(schema: unknown): unknown {
-  if (getSchemaName(schema) !== "ZodOptional") {
-    return undefined;
+function getOptionalObjectFieldSchema(
+  schema: unknown,
+  mode: "input" | "output",
+  requireDefault = false,
+): unknown {
+  const schemaName = getSchemaName(schema);
+  if (schemaName === "ZodOptional") {
+    if (requireDefault) {
+      return getOptionalObjectFieldSchema(getInnerSchema(schema), mode, true) !== undefined
+        ? schema
+        : undefined;
+    }
+    return getInnerSchema(schema);
   }
 
-  return getInnerSchema(schema);
+  if (mode === "input" && schemaName === "ZodDefault") {
+    return getInnerSchema(schema);
+  }
+
+  if (mode === "input" && schemaName === "ZodUnion") {
+    return getUnionOptions(schema).some(
+      (option) => getOptionalObjectFieldSchema(option, mode, true) !== undefined,
+    )
+      ? schema
+      : undefined;
+  }
+
+  const effectType =
+    schemaName === "ZodEffects" && schema && typeof schema === "object" && "_def" in schema
+      ? (schema._def as { readonly effect?: { readonly type?: string } }).effect?.type
+      : undefined;
+
+  if (
+    mode === "input" &&
+    (schemaName === "ZodNullable" ||
+      schemaName === "ZodBranded" ||
+      schemaName === "ZodReadonly" ||
+      effectType === "refinement")
+  ) {
+    return getOptionalObjectFieldSchema(getInnerSchema(schema), mode, true) !== undefined
+      ? schema
+      : undefined;
+  }
+
+  return undefined;
 }
 
 function getObjectShape(schema: unknown): Record<string, unknown> {
@@ -1013,6 +1090,10 @@ function getObjectShape(schema: unknown): Record<string, unknown> {
   const shape = typeof definition.shape === "function" ? definition.shape() : definition.shape;
 
   return shape && typeof shape === "object" ? (shape as Record<string, unknown>) : {};
+}
+
+function getArrayElementTypeScript(type: string): string {
+  return type.includes(" | ") ? `(${type})` : type;
 }
 
 function unionTypes(types: readonly string[]): string {
@@ -1132,10 +1213,6 @@ function compareDiagnostics(
     compareStrings(left.routeId ?? "", right.routeId ?? "") ||
     compareStrings(left.message, right.message)
   );
-}
-
-function compareStrings(left: string, right: string): number {
-  return left.localeCompare(right);
 }
 
 function toCamelCase(value: string): string {

@@ -33,18 +33,58 @@ export function Cacheable<V = unknown>(options: CacheableOptions<V>): MethodDeco
     const originalMethod = descriptor.value as (...args: unknown[]) => Promise<V | undefined>;
     const methodName = String(propertyKey);
     const prefix = resolveCachePrefix(options, methodName);
+    const inFlightAttempts = new Map<string, Promise<V | undefined>>();
 
     descriptor.value = async function (this: unknown, ...args: unknown[]): Promise<V | undefined> {
       const cacheKey = createCacheKey(prefix, args, options.scope);
+      const invokeOriginal = (): Promise<V | undefined> => originalMethod.apply(this, args);
 
-      return options.store.getOrSet(
-        cacheKey,
-        async () => {
-          const result = await originalMethod.apply(this, args);
+      const runLoad = async (): Promise<V | undefined> => {
+        let loaderRan = false;
+        let loadedValue: V | undefined;
+
+        const result = await options.store.getOrSet(
+          cacheKey,
+          async () => {
+            loaderRan = true;
+            loadedValue = await invokeOriginal();
+            return loadedValue;
+          },
+          { ttlMs: options.ttl },
+        );
+
+        if (result !== undefined) {
           return result;
-        },
-        { ttlMs: options.ttl },
-      );
+        }
+
+        if (loaderRan) {
+          // The store suppressed this load after an overlapping invalidation:
+          // return the method result without restoring the cache.
+          return loadedValue;
+        }
+
+        return undefined;
+      };
+
+      if (options.ttl === 0) {
+        return runLoad();
+      }
+
+      const pending = inFlightAttempts.get(cacheKey);
+      if (pending !== undefined) {
+        return pending;
+      }
+
+      const attempt = runLoad();
+      inFlightAttempts.set(cacheKey, attempt);
+
+      try {
+        return await attempt;
+      } finally {
+        if (inFlightAttempts.get(cacheKey) === attempt) {
+          inFlightAttempts.delete(cacheKey);
+        }
+      }
     };
 
     return descriptor;

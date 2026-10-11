@@ -24,7 +24,7 @@ pre-existing serialized RouteIR artifacts that only preserve declaration order.
 
 ### kind
 
-> **kind**: `"path"` \| `"body"` \| `"query"` \| `"header"` \| `"ctx"`
+> **kind**: `"path"` \| `"body"` \| `"query"` \| `"header"` \| `"ctx"` \| `"principal"` \| `"user"` \| `"apiKey"`
 
 ---
 

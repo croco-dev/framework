@@ -110,6 +110,30 @@ describe("ProbabilitySampler", () => {
       expect(result.decision).toBe(SamplingDecision.RECORD_AND_SAMPLED);
     });
 
+    it.each([{ isRemote: true }, { isRemote: false }])(
+      "should preserve a valid unsampled parent decision (isRemote: $isRemote)",
+      ({ isRemote }) => {
+        const alwaysSampler = new ProbabilitySampler({ probability: 1 });
+        const unsampledParentContext = trace.setSpanContext(ROOT_CONTEXT, {
+          traceId: "4bf92f3577b34da6a3ce929d0e0e4736",
+          spanId: "00f067aa0ba902b7",
+          traceFlags: TraceFlags.NONE,
+          isRemote,
+        });
+
+        const result = alwaysSampler.shouldSample(
+          unsampledParentContext,
+          "4bf92f3577b34da6a3ce929d0e0e4736",
+          "GET /orders",
+          SpanKind.SERVER,
+          {},
+          [],
+        );
+
+        expect(result.decision).toBe(SamplingDecision.NOT_RECORD);
+      },
+    );
+
     describe("BUG-08 64비트 TraceID에서 정밀도 유지", () => {
       it("MAX_SAFE_INTEGER 초과 traceId로 일관된 샘플링 결과 반환", () => {
         const sampler = new ProbabilitySampler({ probability: 0.5 });

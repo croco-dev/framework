@@ -1,3 +1,4 @@
+import { compareStrings } from "../tooling/compareStrings.mjs";
 import { createHash } from "node:crypto";
 
 import {
@@ -307,7 +308,7 @@ function stableJson(value: unknown): string {
   if (Array.isArray(value)) return `[${value.map(stableJson).join(",")}]`;
   if (isRecord(value)) {
     return `{${Object.entries(value)
-      .sort(([left], [right]) => left.localeCompare(right))
+      .sort(([left], [right]) => compareStrings(left, right))
       .map(([key, entry]) => `${JSON.stringify(key)}:${stableJson(entry)}`)
       .join(",")}}`;
   }

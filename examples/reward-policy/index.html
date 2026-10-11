@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Croco achievement rewards</title>
+    <style>
+      body {
+        font-family: system-ui, sans-serif;
+        margin: 0;
+        background: #f6f8fb;
+        color: #182335;
+      }
+      main {
+        max-width: 900px;
+        margin: 32px auto;
+        padding: 0 24px;
+      }
+      section {
+        background: white;
+        border: 1px solid #ccd5e1;
+        border-radius: 12px;
+        padding: 24px;
+        margin: 20px 0;
+      }
+      fieldset {
+        border: 0;
+        padding: 0;
+      }
+      legend {
+        font-weight: 600;
+        margin-bottom: 16px;
+      }
+      label {
+        display: block;
+        margin: 12px 0;
+      }
+      input:not([type="checkbox"]),
+      select {
+        display: block;
+        box-sizing: border-box;
+        width: 100%;
+        max-width: 560px;
+        padding: 9px;
+        margin-top: 5px;
+        border: 1px solid #8d99aa;
+        border-radius: 4px;
+      }
+      input[type="checkbox"] {
+        margin-right: 8px;
+      }
+      button {
+        padding: 10px 16px;
+        margin: 10px 8px 0 0;
+        background: #174cc4;
+        color: white;
+        border: 0;
+        border-radius: 5px;
+        cursor: pointer;
+      }
+      button:disabled {
+        opacity: 0.55;
+        cursor: default;
+      }
+      button:focus-visible,
+      input:focus-visible,
+      select:focus-visible {
+        outline: 3px solid #ed9400;
+        outline-offset: 3px;
+      }
+      [role="alert"] {
+        color: #a21f2d;
+      }
+      dt {
+        font-weight: 600;
+        margin-top: 10px;
+      }
+      dd {
+        margin: 3px 0;
+        overflow-wrap: anywhere;
+      }
+      @media (max-width: 600px) {
+        main {
+          padding: 0 12px;
+        }
+        section {
+          padding: 16px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script src="/browser.js"></script>
+  </body>
+</html>

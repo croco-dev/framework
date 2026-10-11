@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 821,
+  problemCount: 990,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -32,6 +32,4095 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
           line: 239,
           column: 15,
           kind: "problem-factory",
+        },
+      ],
+    },
+    {
+      code: "ADMIN_LIFECYCLE_DEMO_INVARIANT",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#admin-lifecycle-demo-invariant",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/create-croco-app/templates/admin-console/apps/console-web/src/LifecycleAutomationDemo.tsx",
+          line: 66,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "ALREADY_MEMBER",
+      category: "Conflict",
+      status: 409,
+      title: "Conflict",
+      cookbookPath: "/reference/problem-recovery-cookbook/#already-member",
+      recovery: {
+        cause: "The request conflicts with current state or an idempotency constraint.",
+        userAction: "Refresh state, resolve the conflict, and retry with the updated intent.",
+        operatorAction: "Inspect concurrent writes, idempotency keys, and uniqueness constraints.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/membership-core/src/libs/problems/MembershipProblems.ts",
+          line: 18,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "AMBIGUOUS_PAGINATION_PARAMETER",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath: "/reference/problem-recovery-cookbook/#ambiguous-pagination-parameter",
+      recovery: {
+        cause: "The caller sent malformed input or unsupported request options.",
+        userAction: "Correct the request input and retry after validation passes.",
+        operatorAction:
+          "Inspect validation details and request logs; do not retry unchanged input.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/pagination-core/src/libs/problems.ts",
+          line: 6,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "API_KEY_EXPIRED",
+      category: "Unauthorized",
+      status: 401,
+      title: "Unauthorized",
+      cookbookPath: "/reference/problem-recovery-cookbook/#api-key-expired",
+      recovery: {
+        cause: "The request did not include valid authentication credentials.",
+        userAction: "Sign in again or provide a valid credential.",
+        operatorAction: "Check authentication configuration, token issuer, and clock skew.",
+        retryability: "not-retryable",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/auth-core/src/libs/problems/AuthProblems.ts",
+          line: 47,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "API_KEY_NOT_FOUND",
+      category: "NotFound",
+      status: 404,
+      title: "Not Found",
+      cookbookPath: "/reference/problem-recovery-cookbook/#api-key-not-found",
+      recovery: {
+        cause: "The requested resource or route-visible record does not exist.",
+        userAction: "Verify the identifier and refresh the resource list before retrying.",
+        operatorAction:
+          "Confirm tenant scoping, data retention, and backing-store lookup behavior.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/auth-core/src/libs/apikey/problems/ApiKeyNotFoundProblem.ts",
+          line: 3,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "API_KEY_REVOKED",
+      category: "Unauthorized",
+      status: 401,
+      title: "Unauthorized",
+      cookbookPath: "/reference/problem-recovery-cookbook/#api-key-revoked",
+      recovery: {
+        cause: "The request did not include valid authentication credentials.",
+        userAction: "Sign in again or provide a valid credential.",
+        operatorAction: "Check authentication configuration, token issuer, and clock skew.",
+        retryability: "not-retryable",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/auth-core/src/libs/problems/AuthProblems.ts",
+          line: 55,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "BAD_REQUEST",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath: "/reference/problem-recovery-cookbook/#bad-request",
+      recovery: {
+        cause: "The caller sent malformed input or unsupported request options.",
+        userAction: "Correct the request input and retry after validation passes.",
+        operatorAction:
+          "Inspect validation details and request logs; do not retry unchanged input.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/access-core/src/libs/guards/AccessGuard.ts",
+          line: 11,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "BILLING_STATUS_MAPPING_FAILED",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#billing-status-mapping-failed",
+      recovery: {
+        cause: "Polar sent a valid subscription status that the billing contract cannot represent.",
+        userAction: "Do not retry the unchanged webhook payload.",
+        operatorAction:
+          "Inspect rawStatus and eventType. Define a supported billing mapping before replaying the webhook.",
+        retryability: "not-retryable",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/billing-polar/src/libs/problems/BillingStatusMappingProblem.ts",
+          line: 3,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "BLOCKED_DURING_IMPERSONATION",
+      category: "Forbidden",
+      status: 403,
+      title: "Forbidden",
+      cookbookPath: "/reference/problem-recovery-cookbook/#blocked-during-impersonation",
+      recovery: {
+        cause: "The authenticated caller is not allowed to perform the requested action.",
+        userAction: "Request the required permission or choose an allowed action.",
+        operatorAction: "Review policy, role, tenant, entitlement, and impersonation context.",
+        retryability: "not-retryable",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts",
+          line: 94,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "CIRCUIT_BREAKER_OPEN",
+      category: "TooManyRequests",
+      status: 429,
+      title: "Too Many Requests",
+      cookbookPath: "/reference/problem-recovery-cookbook/#circuit-breaker-open",
+      recovery: {
+        cause: "The caller exceeded a rate, quota, or concurrency limit.",
+        userAction: "Wait for the retry window or reduce request volume.",
+        operatorAction: "Check limiter state, quota configuration, and abuse signals.",
+        retryability: "retryable",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/retry-core/src/libs/errors/CircuitBreakerOpenProblem.ts",
+          line: 6,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "CONFLICTING_PAGINATION",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath: "/reference/problem-recovery-cookbook/#conflicting-pagination",
+      recovery: {
+        cause: "The caller sent malformed input or unsupported request options.",
+        userAction: "Correct the request input and retry after validation passes.",
+        operatorAction:
+          "Inspect validation details and request logs; do not retry unchanged input.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/pagination-core/src/libs/problems.ts",
+          line: 42,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "CROCO_CHANGED_TEST_PLAN_INVALID",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#croco-changed-test-plan-invalid",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/testing/src/libs/changed-test-plan.mts",
+          line: 99,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "CROCO_CLI_JOBS_001",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath: "/reference/problem-recovery-cookbook/#croco-cli-jobs-001",
+      recovery: {
+        cause: "The caller sent malformed input or unsupported request options.",
+        userAction: "Correct the request input and retry after validation passes.",
+        operatorAction:
+          "Inspect validation details and request logs; do not retry unchanged input.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/cli/src/commands/jobs.ts",
+          line: 89,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "CROCO_CLI_JOBS_002",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath: "/reference/problem-recovery-cookbook/#croco-cli-jobs-002",
+      recovery: {
+        cause: "The caller sent malformed input or unsupported request options.",
+        userAction: "Correct the request input and retry after validation passes.",
+        operatorAction:
+          "Inspect validation details and request logs; do not retry unchanged input.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/cli/src/commands/jobs.ts",
+          line: 100,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "CROCO_CLI_JOBS_003",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath: "/reference/problem-recovery-cookbook/#croco-cli-jobs-003",
+      recovery: {
+        cause: "The caller sent malformed input or unsupported request options.",
+        userAction: "Correct the request input and retry after validation passes.",
+        operatorAction:
+          "Inspect validation details and request logs; do not retry unchanged input.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/cli/src/commands/jobs.ts",
+          line: 111,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "CROCO_CLI_JOBS_004",
+      category: "Conflict",
+      status: 409,
+      title: "Conflict",
+      cookbookPath: "/reference/problem-recovery-cookbook/#croco-cli-jobs-004",
+      recovery: {
+        cause: "The request conflicts with current state or an idempotency constraint.",
+        userAction: "Refresh state, resolve the conflict, and retry with the updated intent.",
+        operatorAction: "Inspect concurrent writes, idempotency keys, and uniqueness constraints.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/cli/src/commands/jobs.ts",
+          line: 138,
+          column: 49,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "CROCO_CLI_JOBS_005",
+      category: "NotFound",
+      status: 404,
+      title: "Not Found",
+      cookbookPath: "/reference/problem-recovery-cookbook/#croco-cli-jobs-005",
+      recovery: {
+        cause: "The requested resource or route-visible record does not exist.",
+        userAction: "Verify the identifier and refresh the resource list before retrying.",
+        operatorAction:
+          "Confirm tenant scoping, data retention, and backing-store lookup behavior.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/cli/src/commands/jobs.ts",
+          line: 133,
+          column: 63,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "CROCO_CLI_JOBS_006",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath: "/reference/problem-recovery-cookbook/#croco-cli-jobs-006",
+      recovery: {
+        cause: "The caller sent malformed input or unsupported request options.",
+        userAction: "Correct the request input and retry after validation passes.",
+        operatorAction:
+          "Inspect validation details and request logs; do not retry unchanged input.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/cli/src/commands/jobs.ts",
+          line: 728,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "CROCO_CLI_OPS_001",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath: "/reference/problem-recovery-cookbook/#croco-cli-ops-001",
+      recovery: {
+        cause: "The caller sent malformed input or unsupported request options.",
+        userAction: "Correct the request input and retry after validation passes.",
+        operatorAction:
+          "Inspect validation details and request logs; do not retry unchanged input.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/cli/src/libs/ops.ts",
+          line: 66,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "CROCO_CLI_OPS_002",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath: "/reference/problem-recovery-cookbook/#croco-cli-ops-002",
+      recovery: {
+        cause: "The caller sent malformed input or unsupported request options.",
+        userAction: "Correct the request input and retry after validation passes.",
+        operatorAction:
+          "Inspect validation details and request logs; do not retry unchanged input.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/cli/src/libs/ops.ts",
+          line: 55,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "CROCO_CLI_PIPELINE_INVALID_CONFIG",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath: "/reference/problem-recovery-cookbook/#croco-cli-pipeline-invalid-config",
+      recovery: {
+        cause: "The caller sent malformed input or unsupported request options.",
+        userAction: "Correct the request input and retry after validation passes.",
+        operatorAction:
+          "Inspect validation details and request logs; do not retry unchanged input.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/cli/src/commands/pipeline.ts",
+          line: 19,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "CROCO_CLI_USAGE_DASHBOARD_005",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath: "/reference/problem-recovery-cookbook/#croco-cli-usage-dashboard-005",
+      recovery: {
+        cause: "The caller sent malformed input or unsupported request options.",
+        userAction: "Correct the request input and retry after validation passes.",
+        operatorAction:
+          "Inspect validation details and request logs; do not retry unchanged input.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/cli/src/commands/generateUsageDashboard.ts",
+          line: 30,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "CROCO_EXECUTABLE_ASSURANCE_CONTRACT_INVALID",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#croco-executable-assurance-contract-invalid",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/testing/src/libs/executable-assurance.mts",
+          line: 245,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "CROCO_EXECUTABLE_ASSURANCE_UNSATISFIED",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#croco-executable-assurance-unsatisfied",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/testing/src/libs/executable-assurance.mts",
+          line: 259,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "CROCO_HTTP_MIDDLEWARE_001",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#croco-http-middleware-001",
+      recovery: {
+        cause:
+          "HTTP middleware returned without a Response, without shortCircuit(reason), and without calling next() exactly once.",
+        userAction: "Retry only after the service owner ships a middleware contract fix.",
+        operatorAction:
+          "Update the named @croco/transports-http middleware to return next(), await next() once, return a Response, or return shortCircuit(reason) for intentional termination.",
+        retryability: "not-retryable",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/transports-http/src/libs/CrocoRouteRegistrar.ts",
+          line: 371,
+          column: 12,
+          kind: "problem-factory",
+        },
+      ],
+    },
+    {
+      code: "CROCO_HTTP_MIDDLEWARE_002",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#croco-http-middleware-002",
+      recovery: {
+        cause: "HTTP middleware attempted to resume the downstream pipeline more than once.",
+        userAction: "Retry only after the service owner ships a middleware contract fix.",
+        operatorAction:
+          "Store the Response from a single next() call and reuse or transform it instead of calling next() again.",
+        retryability: "not-retryable",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/transports-http/src/libs/CrocoRouteRegistrar.ts",
+          line: 276,
+          column: 15,
+          kind: "problem-factory",
+        },
+      ],
+    },
+    {
+      code: "CROCO_HTTP_SECURITY_001",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#croco-http-security-001",
+      recovery: {
+        cause:
+          "HTTP bootstrap validation found a generated or application app without the required security middleware set.",
+        userAction:
+          "Use an app build that registers security headers, CORS, body limit, and rate-limit middleware before first run.",
+        operatorAction:
+          "Add the missing @croco/transports-http middleware or keep securityValidation disabled only in an explicit local migration/testing fixture.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/transports-http/src/libs/CrocoApp.ts",
+          line: 336,
+          column: 11,
+          kind: "problem-factory",
+        },
+      ],
+    },
+    {
+      code: "CROCO_HTTP_SECURITY_002",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath: "/reference/problem-recovery-cookbook/#croco-http-security-002",
+      recovery: {
+        cause: "The caller sent malformed input or unsupported request options.",
+        userAction: "Correct the request input and retry after validation passes.",
+        operatorAction:
+          "Inspect validation details and request logs; do not retry unchanged input.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/transports-http/src/libs/middleware/SecurityMiddlewareMarker.ts",
+          line: 154,
+          column: 11,
+          kind: "problem-factory",
+        },
+      ],
+    },
+    {
+      code: "CROCO_META_VITE_API_ROUTE_PREFIX_REQUIRED",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#croco-meta-vite-api-route-prefix-required",
+      recovery: {
+        cause: "The caller sent malformed input or unsupported request options.",
+        userAction: "Correct the request input and retry after validation passes.",
+        operatorAction:
+          "Inspect validation details and request logs; do not retry unchanged input.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/meta-vite/src/libs/routes/validateApiRoute.ts",
+          line: 5,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "CROCO_SAAS_PROFILE_MISMATCH",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#croco-saas-profile-mismatch",
+      recovery: {
+        cause: "The generated profile and requested profile do not match.",
+        userAction: "Select the generated profile or correct the explicit profile override.",
+        operatorAction: "Compare the generated manifest with the requested profile override.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/create-croco-app/templates/saas/apps/api-server/src/problems.ts",
+          line: 100,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "CROCO_SAAS_PROFILE_RUNTIME_UNAVAILABLE",
+      category: "NotImplemented",
+      status: 501,
+      title: "Not Implemented",
+      cookbookPath: "/reference/problem-recovery-cookbook/#croco-saas-profile-runtime-unavailable",
+      recovery: {
+        cause: "The requested capability is not supported by this runtime or adapter.",
+        userAction: "Use a supported capability or choose an adapter/runtime that provides it.",
+        operatorAction:
+          "Check runtime capability declarations and provider maturity documentation.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/create-croco-app/templates/saas/apps/api-server/src/problems.ts",
+          line: 113,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "CROCO_TEST_EVIDENCE_CONTRACT_INVALID",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#croco-test-evidence-contract-invalid",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/testing/src/libs/test-evidence.mts",
+          line: 163,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "CROCO_TEST_EVIDENCE_FIDELITY_UNSATISFIED",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#croco-test-evidence-fidelity-unsatisfied",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/testing/src/libs/test-evidence.mts",
+          line: 177,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "DATA_COMMAND_INVALID_ARGUMENTS",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath: "/reference/problem-recovery-cookbook/#data-command-invalid-arguments",
+      recovery: {
+        cause: "The caller sent malformed input or unsupported request options.",
+        userAction: "Correct the request input and retry after validation passes.",
+        operatorAction:
+          "Inspect validation details and request logs; do not retry unchanged input.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/cli/src/commands/data.ts",
+          line: 25,
+          column: 10,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "DATA_CONFIG_RUNTIME_LOCATION",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath: "/reference/problem-recovery-cookbook/#data-config-runtime-location",
+      recovery: {
+        cause: "The caller sent malformed input or unsupported request options.",
+        userAction: "Correct the request input and retry after validation passes.",
+        operatorAction:
+          "Inspect validation details and request logs; do not retry unchanged input.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/cli/src/commands/data.ts",
+          line: 83,
+          column: 44,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "DATA_CONFIG_WORKER_FAILED",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath: "/reference/problem-recovery-cookbook/#data-config-worker-failed",
+      recovery: {
+        cause: "The caller sent malformed input or unsupported request options.",
+        userAction: "Correct the request input and retry after validation passes.",
+        operatorAction:
+          "Inspect validation details and request logs; do not retry unchanged input.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/cli/src/commands/data.ts",
+          line: 28,
+          column: 10,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "DOMAIN_AUTO_JOIN_RECOVERY_FAILED",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#domain-auto-join-recovery-failed",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/invitation-core/src/libs/problems/DomainPolicyProblems.ts",
+          line: 29,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "DUPLICATE_INVITATION",
+      category: "Conflict",
+      status: 409,
+      title: "Conflict",
+      cookbookPath: "/reference/problem-recovery-cookbook/#duplicate-invitation",
+      recovery: {
+        cause: "The request conflicts with current state or an idempotency constraint.",
+        userAction: "Refresh state, resolve the conflict, and retry with the updated intent.",
+        operatorAction: "Inspect concurrent writes, idempotency keys, and uniqueness constraints.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/invitation-core/src/libs/problems/RateLimitProblems.ts",
+          line: 12,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "DUPLICATE_RECOVER_HANDLER",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#duplicate-recover-handler",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/retry-core/src/libs/errors/DuplicateRecoverHandlerProblem.ts",
+          line: 6,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "DURATION_PARSE_ERROR",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath: "/reference/problem-recovery-cookbook/#duration-parse-error",
+      recovery: {
+        cause: "The caller sent malformed input or unsupported request options.",
+        userAction: "Correct the request input and retry after validation passes.",
+        operatorAction:
+          "Inspect validation details and request logs; do not retry unchanged input.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/framework-context/src/libs/problems/ContextProblems.ts",
+          line: 14,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "ENTITLEMENT_DENIED",
+      category: "Forbidden",
+      status: 403,
+      title: "Forbidden",
+      cookbookPath: "/reference/problem-recovery-cookbook/#entitlement-denied",
+      recovery: {
+        cause: "The authenticated caller is not allowed to perform the requested action.",
+        userAction: "Request the required permission or choose an allowed action.",
+        operatorAction: "Review policy, role, tenant, entitlement, and impersonation context.",
+        retryability: "not-retryable",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/entitlements-core/src/libs/problems/EntitlementProblems.ts",
+          line: 19,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "ENTITLEMENT_INACTIVE_SUBSCRIPTION",
+      category: "Forbidden",
+      status: 403,
+      title: "Forbidden",
+      cookbookPath: "/reference/problem-recovery-cookbook/#entitlement-inactive-subscription",
+      recovery: {
+        cause: "The authenticated caller is not allowed to perform the requested action.",
+        userAction: "Request the required permission or choose an allowed action.",
+        operatorAction: "Review policy, role, tenant, entitlement, and impersonation context.",
+        retryability: "not-retryable",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/entitlements-core/src/libs/problems/EntitlementProblems.ts",
+          line: 45,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "ENTITLEMENT_MISSING_PLAN",
+      category: "Forbidden",
+      status: 403,
+      title: "Forbidden",
+      cookbookPath: "/reference/problem-recovery-cookbook/#entitlement-missing-plan",
+      recovery: {
+        cause: "The authenticated caller is not allowed to perform the requested action.",
+        userAction: "Request the required permission or choose an allowed action.",
+        operatorAction: "Review policy, role, tenant, entitlement, and impersonation context.",
+        retryability: "not-retryable",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/entitlements-core/src/libs/problems/EntitlementProblems.ts",
+          line: 31,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "ENTITLEMENT_NOT_FOUND",
+      category: "NotFound",
+      status: 404,
+      title: "Not Found",
+      cookbookPath: "/reference/problem-recovery-cookbook/#entitlement-not-found",
+      recovery: {
+        cause: "The requested resource or route-visible record does not exist.",
+        userAction: "Verify the identifier and refresh the resource list before retrying.",
+        operatorAction:
+          "Confirm tenant scoping, data retention, and backing-store lookup behavior.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/entitlements-core/src/libs/problems/EntitlementProblems.ts",
+          line: 85,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "ENTITLEMENT_PROVIDER_UNAVAILABLE",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#entitlement-provider-unavailable",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/entitlements-core/src/libs/problems/EntitlementProblems.ts",
+          line: 73,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "ENTITLEMENT_QUOTA_EXCEEDED",
+      category: "TooManyRequests",
+      status: 429,
+      title: "Too Many Requests",
+      cookbookPath: "/reference/problem-recovery-cookbook/#entitlement-quota-exceeded",
+      recovery: {
+        cause: "The caller exceeded a rate, quota, or concurrency limit.",
+        userAction: "Wait for the retry window or reduce request volume.",
+        operatorAction: "Check limiter state, quota configuration, and abuse signals.",
+        retryability: "retryable",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/entitlements-core/src/libs/problems/EntitlementProblems.ts",
+          line: 59,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "ENTITLEMENT_REQUIREMENT_INVALID",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#entitlement-requirement-invalid",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/entitlements-core/src/libs/problems/EntitlementProblems.ts",
+          line: 10,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "FORBIDDEN",
+      category: "Forbidden",
+      status: 403,
+      title: "Forbidden",
+      cookbookPath: "/reference/problem-recovery-cookbook/#forbidden",
+      recovery: {
+        cause: "The authenticated caller is not allowed to perform the requested action.",
+        userAction: "Request the required permission or choose an allowed action.",
+        operatorAction: "Review policy, role, tenant, entitlement, and impersonation context.",
+        retryability: "not-retryable",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/auth-core/src/libs/problems/AuthProblems.ts",
+          line: 12,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "GRAPHQL_NOT_FOUND",
+      category: "NotFound",
+      status: 404,
+      title: "Not Found",
+      cookbookPath: "/reference/problem-recovery-cookbook/#graphql-not-found",
+      recovery: {
+        cause: "The requested resource or route-visible record does not exist.",
+        userAction: "Verify the identifier and refresh the resource list before retrying.",
+        operatorAction:
+          "Confirm tenant scoping, data retention, and backing-store lookup behavior.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/protocols-graphql/src/libs/errors/GraphQLProblems.ts",
+          line: 23,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "HEALTH_SCORE_NOT_FOUND",
+      category: "NotFound",
+      status: 404,
+      title: "Not Found",
+      cookbookPath: "/reference/problem-recovery-cookbook/#health-score-not-found",
+      recovery: {
+        cause: "The requested resource or route-visible record does not exist.",
+        userAction: "Verify the identifier and refresh the resource list before retrying.",
+        operatorAction:
+          "Confirm tenant scoping, data retention, and backing-store lookup behavior.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/customer-health-core/src/libs/problems/HealthProblems.ts",
+          line: 24,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "IMPERSONATION_CONFIGURATION_INVALID",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#impersonation-configuration-invalid",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts",
+          line: 29,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "IMPERSONATION_IDENTITY_CONFLICT",
+      category: "Forbidden",
+      status: 403,
+      title: "Forbidden",
+      cookbookPath: "/reference/problem-recovery-cookbook/#impersonation-identity-conflict",
+      recovery: {
+        cause: "The authenticated caller is not allowed to perform the requested action.",
+        userAction: "Request the required permission or choose an allowed action.",
+        operatorAction: "Review policy, role, tenant, entitlement, and impersonation context.",
+        retryability: "not-retryable",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts",
+          line: 58,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "IMPERSONATION_LIFECYCLE_PUBLICATION_PENDING",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#impersonation-lifecycle-publication-pending",
+      recovery: {
+        cause:
+          "The impersonation session mutation committed, but its lifecycle event remains pending at the reported publish, acknowledge, or predecessor stage.",
+        userAction:
+          "Do not repeat a failed start request. An end request may be retried with the same session and authenticated actor; ask the service operator to reconcile the pending lifecycle event if it remains pending.",
+        operatorAction:
+          "Inspect the Problem reconciliationState and stage, call getLifecycleDiagnostics() to confirm reconciliation_required, then call publishPendingEvents() to replay and acknowledge the stored intent.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts",
+          line: 128,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "IMPERSONATION_REASON_REQUIRED",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath: "/reference/problem-recovery-cookbook/#impersonation-reason-required",
+      recovery: {
+        cause: "The caller sent malformed input or unsupported request options.",
+        userAction: "Correct the request input and retry after validation passes.",
+        operatorAction:
+          "Inspect validation details and request logs; do not retry unchanged input.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts",
+          line: 85,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "IMPERSONATION_SESSION_ACTOR_MISMATCH",
+      category: "Forbidden",
+      status: 403,
+      title: "Forbidden",
+      cookbookPath: "/reference/problem-recovery-cookbook/#impersonation-session-actor-mismatch",
+      recovery: {
+        cause: "The authenticated caller is not allowed to perform the requested action.",
+        userAction: "Request the required permission or choose an allowed action.",
+        operatorAction: "Review policy, role, tenant, entitlement, and impersonation context.",
+        retryability: "not-retryable",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts",
+          line: 117,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "IMPERSONATION_SESSION_NOT_FOUND",
+      category: "NotFound",
+      status: 404,
+      title: "Not Found",
+      cookbookPath: "/reference/problem-recovery-cookbook/#impersonation-session-not-found",
+      recovery: {
+        cause: "The requested resource or route-visible record does not exist.",
+        userAction: "Verify the identifier and refresh the resource list before retrying.",
+        operatorAction:
+          "Confirm tenant scoping, data retention, and backing-store lookup behavior.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts",
+          line: 103,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "IMPERSONATION_TARGET_NOT_FOUND",
+      category: "NotFound",
+      status: 404,
+      title: "Not Found",
+      cookbookPath: "/reference/problem-recovery-cookbook/#impersonation-target-not-found",
+      recovery: {
+        cause: "The requested resource or route-visible record does not exist.",
+        userAction: "Verify the identifier and refresh the resource list before retrying.",
+        operatorAction:
+          "Confirm tenant scoping, data retention, and backing-store lookup behavior.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts",
+          line: 67,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "INDEX_NOT_FOUND",
+      category: "NotFound",
+      status: 404,
+      title: "Not Found",
+      cookbookPath: "/reference/problem-recovery-cookbook/#index-not-found",
+      recovery: {
+        cause: "The requested resource or route-visible record does not exist.",
+        userAction: "Verify the identifier and refresh the resource list before retrying.",
+        operatorAction:
+          "Confirm tenant scoping, data retention, and backing-store lookup behavior.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/search-core/src/libs/problems/SearchProblems.ts",
+          line: 127,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "INVALID_AUTO_JOIN_ROLE",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath: "/reference/problem-recovery-cookbook/#invalid-auto-join-role",
+      recovery: {
+        cause: "The caller sent malformed input or unsupported request options.",
+        userAction: "Correct the request input and retry after validation passes.",
+        operatorAction:
+          "Inspect validation details and request logs; do not retry unchanged input.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/invitation-core/src/libs/problems/DomainPolicyProblems.ts",
+          line: 18,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "INVALID_CURSOR",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath: "/reference/problem-recovery-cookbook/#invalid-cursor",
+      recovery: {
+        cause: "The caller sent malformed input or unsupported request options.",
+        userAction: "Correct the request input and retry after validation passes.",
+        operatorAction:
+          "Inspect validation details and request logs; do not retry unchanged input.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/pagination-core/src/libs/problems.ts",
+          line: 29,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "INVALID_INVITATION_EXPIRY_DURATION",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#invalid-invitation-expiry-duration",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/invitation-core/src/libs/problems/InvitationProblems.ts",
+          line: 31,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "INVALID_MEMBERSHIP_COMMAND",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath: "/reference/problem-recovery-cookbook/#invalid-membership-command",
+      recovery: {
+        cause: "The caller sent malformed input or unsupported request options.",
+        userAction: "Correct the request input and retry after validation passes.",
+        operatorAction:
+          "Inspect validation details and request logs; do not retry unchanged input.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/membership-core/src/libs/problems/MembershipProblems.ts",
+          line: 104,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "INVALID_PAGINATION_DIRECTION",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath: "/reference/problem-recovery-cookbook/#invalid-pagination-direction",
+      recovery: {
+        cause: "The caller sent malformed input or unsupported request options.",
+        userAction: "Correct the request input and retry after validation passes.",
+        operatorAction:
+          "Inspect validation details and request logs; do not retry unchanged input.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/pagination-core/src/libs/problems.ts",
+          line: 88,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "INVALID_PAGINATION_LIMIT",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath: "/reference/problem-recovery-cookbook/#invalid-pagination-limit",
+      recovery: {
+        cause: "The caller sent malformed input or unsupported request options.",
+        userAction: "Correct the request input and retry after validation passes.",
+        operatorAction:
+          "Inspect validation details and request logs; do not retry unchanged input.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/pagination-core/src/libs/problems.ts",
+          line: 55,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "INVALID_RETRY_CONFIGURATION",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#invalid-retry-configuration",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/retry-core/src/libs/errors/RetryInfrastructureProblem.ts",
+          line: 51,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "INVALID_ROLE",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath: "/reference/problem-recovery-cookbook/#invalid-role",
+      recovery: {
+        cause: "The caller sent malformed input or unsupported request options.",
+        userAction: "Correct the request input and retry after validation passes.",
+        operatorAction:
+          "Inspect validation details and request logs; do not retry unchanged input.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/membership-core/src/libs/problems/MembershipProblems.ts",
+          line: 44,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "INVITATION_ALREADY_ACCEPTED",
+      category: "Conflict",
+      status: 409,
+      title: "Conflict",
+      cookbookPath: "/reference/problem-recovery-cookbook/#invitation-already-accepted",
+      recovery: {
+        cause: "The request conflicts with current state or an idempotency constraint.",
+        userAction: "Refresh state, resolve the conflict, and retry with the updated intent.",
+        operatorAction: "Inspect concurrent writes, idempotency keys, and uniqueness constraints.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/invitation-core/src/libs/problems/InvitationProblems.ts",
+          line: 72,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "INVITATION_CREATION_FAILED",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#invitation-creation-failed",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/invitation-core/src/libs/problems/InvitationProblems.ts",
+          line: 3,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "INVITATION_EMAIL_MISMATCH",
+      category: "Forbidden",
+      status: 403,
+      title: "Forbidden",
+      cookbookPath: "/reference/problem-recovery-cookbook/#invitation-email-mismatch",
+      recovery: {
+        cause: "The authenticated caller is not allowed to perform the requested action.",
+        userAction: "Request the required permission or choose an allowed action.",
+        operatorAction: "Review policy, role, tenant, entitlement, and impersonation context.",
+        retryability: "not-retryable",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/invitation-core/src/libs/problems/InvitationProblems.ts",
+          line: 83,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "INVITATION_EXPIRED",
+      category: "Gone",
+      status: 410,
+      title: "Gone",
+      cookbookPath: "/reference/problem-recovery-cookbook/#invitation-expired",
+      recovery: {
+        cause: "The requested resource is no longer available through this API surface.",
+        userAction:
+          "Stop using the stale reference and follow the replacement flow when available.",
+        operatorAction: "Verify lifecycle, migration, deprecation, and retention state.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/invitation-core/src/libs/problems/InvitationProblems.ts",
+          line: 61,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "INVITATION_IDEMPOTENCY_CONFLICT",
+      category: "Conflict",
+      status: 409,
+      title: "Conflict",
+      cookbookPath: "/reference/problem-recovery-cookbook/#invitation-idempotency-conflict",
+      recovery: {
+        cause: "The request conflicts with current state or an idempotency constraint.",
+        userAction: "Refresh state, resolve the conflict, and retry with the updated intent.",
+        operatorAction: "Inspect concurrent writes, idempotency keys, and uniqueness constraints.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/invitation-core/src/libs/problems/InvitationProblems.ts",
+          line: 18,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "INVITATION_INVALID_STATUS",
+      category: "Conflict",
+      status: 409,
+      title: "Conflict",
+      cookbookPath: "/reference/problem-recovery-cookbook/#invitation-invalid-status",
+      recovery: {
+        cause: "The request conflicts with current state or an idempotency constraint.",
+        userAction: "Refresh state, resolve the conflict, and retry with the updated intent.",
+        operatorAction: "Inspect concurrent writes, idempotency keys, and uniqueness constraints.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/invitation-core/src/libs/problems/InvitationProblems.ts",
+          line: 94,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "INVITATION_NOT_FOUND",
+      category: "NotFound",
+      status: 404,
+      title: "Not Found",
+      cookbookPath: "/reference/problem-recovery-cookbook/#invitation-not-found",
+      recovery: {
+        cause: "The requested resource or route-visible record does not exist.",
+        userAction: "Verify the identifier and refresh the resource list before retrying.",
+        operatorAction:
+          "Confirm tenant scoping, data retention, and backing-store lookup behavior.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/invitation-core/src/libs/problems/InvitationProblems.ts",
+          line: 50,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "INVITATION_RATE_LIMIT_EXCEEDED",
+      category: "TooManyRequests",
+      status: 429,
+      title: "Too Many Requests",
+      cookbookPath: "/reference/problem-recovery-cookbook/#invitation-rate-limit-exceeded",
+      recovery: {
+        cause: "The caller exceeded a rate, quota, or concurrency limit.",
+        userAction: "Wait for the retry window or reduce request volume.",
+        operatorAction: "Check limiter state, quota configuration, and abuse signals.",
+        retryability: "retryable",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/invitation-core/src/libs/problems/RateLimitProblems.ts",
+          line: 3,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "LAMBDA_TIMEOUT_GUARD",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#lambda-timeout-guard",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/retry-core/src/libs/errors/RetryInfrastructureProblem.ts",
+          line: 38,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "LAST_OWNER",
+      category: "Forbidden",
+      status: 403,
+      title: "Forbidden",
+      cookbookPath: "/reference/problem-recovery-cookbook/#last-owner",
+      recovery: {
+        cause: "The authenticated caller is not allowed to perform the requested action.",
+        userAction: "Request the required permission or choose an allowed action.",
+        operatorAction: "Review policy, role, tenant, entitlement, and impersonation context.",
+        retryability: "not-retryable",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/membership-core/src/libs/problems/MembershipProblems.ts",
+          line: 31,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "LAST_OWNER_CANNOT_BE_REMOVED",
+      category: "Forbidden",
+      status: 403,
+      title: "Forbidden",
+      cookbookPath: "/reference/problem-recovery-cookbook/#last-owner-cannot-be-removed",
+      recovery: {
+        cause: "Removing this member would leave the tenant without an owner.",
+        userAction: "Transfer ownership to another member before removing the current owner.",
+        operatorAction:
+          "Check the tenant membership and ownership transfer workflow; preserve at least one owner.",
+        retryability: "not-retryable",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/membership-core/src/libs/problems/LastOwnerCannotBeRemovedProblem.ts",
+          line: 3,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "MEMBERSHIP_CONSTRAINT",
+      category: "Forbidden",
+      status: 403,
+      title: "Forbidden",
+      cookbookPath: "/reference/problem-recovery-cookbook/#membership-constraint",
+      recovery: {
+        cause: "The authenticated caller is not allowed to perform the requested action.",
+        userAction: "Request the required permission or choose an allowed action.",
+        operatorAction: "Review policy, role, tenant, entitlement, and impersonation context.",
+        retryability: "not-retryable",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/membership-core/src/libs/problems/MembershipConstraintProblem.ts",
+          line: 9,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "MEMBERSHIP_EVENT_PUBLICATION_FAILED",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#membership-event-publication-failed",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/membership-core/src/libs/problems/MembershipProblems.ts",
+          line: 115,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "MEMBERSHIP_IDEMPOTENCY_CONFLICT",
+      category: "Conflict",
+      status: 409,
+      title: "Conflict",
+      cookbookPath: "/reference/problem-recovery-cookbook/#membership-idempotency-conflict",
+      recovery: {
+        cause: "The request conflicts with current state or an idempotency constraint.",
+        userAction: "Refresh state, resolve the conflict, and retry with the updated intent.",
+        operatorAction: "Inspect concurrent writes, idempotency keys, and uniqueness constraints.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/membership-core/src/libs/problems/MembershipProblems.ts",
+          line: 92,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "MEMBERSHIP_NOT_FOUND",
+      category: "NotFound",
+      status: 404,
+      title: "Not Found",
+      cookbookPath: "/reference/problem-recovery-cookbook/#membership-not-found",
+      recovery: {
+        cause: "The requested resource or route-visible record does not exist.",
+        userAction: "Verify the identifier and refresh the resource list before retrying.",
+        operatorAction:
+          "Confirm tenant scoping, data retention, and backing-store lookup behavior.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/membership-core/src/libs/problems/MembershipProblems.ts",
+          line: 5,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "METRIC_INVALID_ZONE",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#metric-invalid-zone",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/metrics-core/src/libs/metric/MetricExpression.ts",
+          line: 208,
+          column: 11,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "METRIC_UNSUPPORTED_OPERATION",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#metric-unsupported-operation",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/metrics-core/src/libs/metric/MetricExpression.ts",
+          line: 233,
+          column: 11,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "MIDDLEWARE_EXECUTION_ERROR",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#middleware-execution-error",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/framework-context/src/libs/problems/MiddlewareProblems.ts",
+          line: 6,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "MISSING_TENANT",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath: "/reference/problem-recovery-cookbook/#missing-tenant",
+      recovery: {
+        cause: "The caller sent malformed input or unsupported request options.",
+        userAction: "Correct the request input and retry after validation passes.",
+        operatorAction:
+          "Inspect validation details and request logs; do not retry unchanged input.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/search-core/src/libs/problems/SearchProblems.ts",
+          line: 57,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "NESTED_IMPERSONATION_NOT_ALLOWED",
+      category: "Forbidden",
+      status: 403,
+      title: "Forbidden",
+      cookbookPath: "/reference/problem-recovery-cookbook/#nested-impersonation-not-allowed",
+      recovery: {
+        cause: "The authenticated caller is not allowed to perform the requested action.",
+        userAction: "Request the required permission or choose an allowed action.",
+        operatorAction: "Review policy, role, tenant, entitlement, and impersonation context.",
+        retryability: "not-retryable",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts",
+          line: 76,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "OTLP_ENDPOINT_REQUIRED",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#otlp-endpoint-required",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/telemetry-sdk-node/src/libs/problems/TelemetryProblems.ts",
+          line: 18,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "OWNERSHIP_TRANSFER_REQUIRED",
+      category: "Forbidden",
+      status: 403,
+      title: "Forbidden",
+      cookbookPath: "/reference/problem-recovery-cookbook/#ownership-transfer-required",
+      recovery: {
+        cause: "The authenticated caller is not allowed to perform the requested action.",
+        userAction: "Request the required permission or choose an allowed action.",
+        operatorAction: "Review policy, role, tenant, entitlement, and impersonation context.",
+        retryability: "not-retryable",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/membership-core/src/libs/problems/MembershipProblems.ts",
+          line: 65,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "PUBLIC_EMAIL_DOMAIN_NOT_ALLOWED",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath: "/reference/problem-recovery-cookbook/#public-email-domain-not-allowed",
+      recovery: {
+        cause: "The caller sent malformed input or unsupported request options.",
+        userAction: "Correct the request input and retry after validation passes.",
+        operatorAction:
+          "Inspect validation details and request logs; do not retry unchanged input.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/invitation-core/src/libs/problems/DomainPolicyProblems.ts",
+          line: 5,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "RATE_LIMIT_EXCEEDED",
+      category: "TooManyRequests",
+      status: 429,
+      title: "Too Many Requests",
+      cookbookPath: "/reference/problem-recovery-cookbook/#rate-limit-exceeded",
+      recovery: {
+        cause: "The caller exceeded a rate, quota, or concurrency limit.",
+        userAction: "Wait for the retry window or reduce request volume.",
+        operatorAction: "Check limiter state, quota configuration, and abuse signals.",
+        retryability: "retryable",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/ratelimit-core/src/libs/problems/RateLimitExceededProblem.ts",
+          line: 15,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "RATE_LIMIT_KEY_BUILDER_ERROR",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#rate-limit-key-builder-error",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/ratelimit-core/src/libs/problems/RateLimitConfigProblems.ts",
+          line: 5,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "RATE_LIMIT_REFUND_UNSUPPORTED",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#rate-limit-refund-unsupported",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/ratelimit-core/src/libs/problems/RateLimitConfigProblems.ts",
+          line: 43,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "RATE_LIMIT_WINDOW_ERROR",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath: "/reference/problem-recovery-cookbook/#rate-limit-window-error",
+      recovery: {
+        cause: "The caller sent malformed input or unsupported request options.",
+        userAction: "Correct the request input and retry after validation passes.",
+        operatorAction:
+          "Inspect validation details and request logs; do not retry unchanged input.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/ratelimit-core/src/libs/problems/RateLimitConfigProblems.ts",
+          line: 15,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "RESEND_NOTIFICATION_FAILED",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#resend-notification-failed",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/notifications-resend/src/libs/problems/ResendNotificationProblem.ts",
+          line: 113,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "RETRY_ABORTED",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#retry-aborted",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/retry-core/src/libs/errors/RetryAbortedProblem.ts",
+          line: 6,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "RETRY_CIRCUIT_BREAKER_INVALID_STATE",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#retry-circuit-breaker-invalid-state",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/retry-core/src/libs/errors/RetryInfrastructureProblem.ts",
+          line: 12,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "RETRY_CIRCUIT_BREAKER_LOCK_FAILED",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#retry-circuit-breaker-lock-failed",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/retry-core/src/libs/errors/RetryInfrastructureProblem.ts",
+          line: 25,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "RETRY_EXHAUSTED",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#retry-exhausted",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/retry-core/src/libs/errors/RetryExhaustedProblem.ts",
+          line: 6,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "ROLE_HIERARCHY_VIOLATION",
+      category: "Forbidden",
+      status: 403,
+      title: "Forbidden",
+      cookbookPath: "/reference/problem-recovery-cookbook/#role-hierarchy-violation",
+      recovery: {
+        cause: "The authenticated caller is not allowed to perform the requested action.",
+        userAction: "Request the required permission or choose an allowed action.",
+        operatorAction: "Review policy, role, tenant, entitlement, and impersonation context.",
+        retryability: "not-retryable",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/membership-core/src/libs/problems/MembershipProblems.ts",
+          line: 52,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "SEARCH_CAPABILITY_UNAVAILABLE",
+      category: "NotImplemented",
+      status: 501,
+      title: "Not Implemented",
+      cookbookPath: "/reference/problem-recovery-cookbook/#search-capability-unavailable",
+      recovery: {
+        cause: "The requested capability is not supported by this runtime or adapter.",
+        userAction: "Use a supported capability or choose an adapter/runtime that provides it.",
+        operatorAction:
+          "Check runtime capability declarations and provider maturity documentation.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/search-core/src/libs/problems/SearchProblems.ts",
+          line: 135,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "SEARCH_DRIZZLE_INVALID_ROW",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#search-drizzle-invalid-row",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/search-drizzle/src/libs/problems/InvalidSearchRowProblem.ts",
+          line: 6,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "SEAT_LIMIT_EXCEEDED",
+      category: "Forbidden",
+      status: 403,
+      title: "Forbidden",
+      cookbookPath: "/reference/problem-recovery-cookbook/#seat-limit-exceeded",
+      recovery: {
+        cause: "The authenticated caller is not allowed to perform the requested action.",
+        userAction: "Request the required permission or choose an allowed action.",
+        operatorAction: "Review policy, role, tenant, entitlement, and impersonation context.",
+        retryability: "not-retryable",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/membership-core/src/libs/problems/MembershipProblems.ts",
+          line: 78,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "SELF_IMPERSONATION_NOT_ALLOWED",
+      category: "Forbidden",
+      status: 403,
+      title: "Forbidden",
+      cookbookPath: "/reference/problem-recovery-cookbook/#self-impersonation-not-allowed",
+      recovery: {
+        cause: "The authenticated caller is not allowed to perform the requested action.",
+        userAction: "Request the required permission or choose an allowed action.",
+        operatorAction: "Review policy, role, tenant, entitlement, and impersonation context.",
+        retryability: "not-retryable",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts",
+          line: 49,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "STORAGE_DELETE_FAILED",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#storage-delete-failed",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/storage-core/src/libs/problems/DeleteFailedProblem.ts",
+          line: 8,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "STORAGE_FILE_NOT_FOUND",
+      category: "NotFound",
+      status: 404,
+      title: "Not Found",
+      cookbookPath: "/reference/problem-recovery-cookbook/#storage-file-not-found",
+      recovery: {
+        cause: "The requested resource or route-visible record does not exist.",
+        userAction: "Verify the identifier and refresh the resource list before retrying.",
+        operatorAction:
+          "Confirm tenant scoping, data retention, and backing-store lookup behavior.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/storage-core/src/libs/problems/FileNotFoundProblem.ts",
+          line: 11,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "STORAGE_INVALID_KEY",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath: "/reference/problem-recovery-cookbook/#storage-invalid-key",
+      recovery: {
+        cause: "The caller sent malformed input or unsupported request options.",
+        userAction: "Correct the request input and retry after validation passes.",
+        operatorAction:
+          "Inspect validation details and request logs; do not retry unchanged input.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/storage-core/src/libs/problems/InvalidKeyProblem.ts",
+          line: 4,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "STORAGE_INVALID_NODE_BODY",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath: "/reference/problem-recovery-cookbook/#storage-invalid-node-body",
+      recovery: {
+        cause: "The caller sent malformed input or unsupported request options.",
+        userAction: "Correct the request input and retry after validation passes.",
+        operatorAction:
+          "Inspect validation details and request logs; do not retry unchanged input.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/storage-core/src/libs/problems/InvalidNodeStorageBodyProblem.ts",
+          line: 4,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "STORAGE_INVALID_SIGNED_URL_EXPIRY",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath: "/reference/problem-recovery-cookbook/#storage-invalid-signed-url-expiry",
+      recovery: {
+        cause: "The caller sent malformed input or unsupported request options.",
+        userAction: "Correct the request input and retry after validation passes.",
+        operatorAction:
+          "Inspect validation details and request logs; do not retry unchanged input.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/storage-core/src/libs/problems/InvalidSignedUrlExpiryProblem.ts",
+          line: 8,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "STORAGE_OPERATION_ABORTED",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath: "/reference/problem-recovery-cookbook/#storage-operation-aborted",
+      recovery: {
+        cause: "The caller sent malformed input or unsupported request options.",
+        userAction: "Correct the request input and retry after validation passes.",
+        operatorAction:
+          "Inspect validation details and request logs; do not retry unchanged input.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/storage-core/src/libs/problems/StorageOperationAbortedProblem.ts",
+          line: 12,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "STORAGE_R2_EMPTY_BODY",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#storage-r2-empty-body",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/storage-r2/src/libs/problems/EmptyR2BodyProblem.ts",
+          line: 9,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "STORAGE_R2_MISSING_CONFIG",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#storage-r2-missing-config",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/storage-r2/src/libs/problems/MissingR2ConfigProblem.ts",
+          line: 7,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "STORAGE_R2_OBJECT_TOO_LARGE",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#storage-r2-object-too-large",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/storage-r2/src/libs/problems/R2ObjectTooLargeProblem.ts",
+          line: 7,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "STORAGE_R2_READINESS_FAILED",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#storage-r2-readiness-failed",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/storage-r2/src/libs/problems/R2ReadinessProblem.ts",
+          line: 13,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "STORAGE_UPLOAD_FAILED",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#storage-upload-failed",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/storage-core/src/libs/problems/UploadFailedProblem.ts",
+          line: 11,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "STRATEGY_UNAVAILABLE",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#strategy-unavailable",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/search-core/src/libs/problems/SearchProblems.ts",
+          line: 114,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "TELEMETRY_AUTO_INSTRUMENTATION_INVALID_CONFIG",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#telemetry-auto-instrumentation-invalid-config",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/telemetry-sdk-node/src/libs/problems/TelemetryAutoInstrumentationProblem.ts",
+          line: 6,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "TELEMETRY_FORCE_FLUSH_UNSUPPORTED",
+      category: "NotImplemented",
+      status: 501,
+      title: "Not Implemented",
+      cookbookPath: "/reference/problem-recovery-cookbook/#telemetry-force-flush-unsupported",
+      recovery: {
+        cause: "The requested capability is not supported by this runtime or adapter.",
+        userAction: "Use a supported capability or choose an adapter/runtime that provides it.",
+        operatorAction:
+          "Check runtime capability declarations and provider maturity documentation.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/telemetry-sdk-node/src/libs/problems/TelemetryProblems.ts",
+          line: 100,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "TELEMETRY_RUNTIME_ERROR",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#telemetry-runtime-error",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/telemetry-sdk-node/src/libs/problems/TelemetryProblems.ts",
+          line: 180,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "TELEMETRY_SAMPLER_INVALID_CONFIG",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath: "/reference/problem-recovery-cookbook/#telemetry-sampler-invalid-config",
+      recovery: {
+        cause: "The caller sent malformed input or unsupported request options.",
+        userAction: "Correct the request input and retry after validation passes.",
+        operatorAction:
+          "Inspect validation details and request logs; do not retry unchanged input.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/telemetry-sdk-node/src/libs/problems/TelemetryProblems.ts",
+          line: 6,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "TELEMETRY_SIGNAL_UNSUPPORTED",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath: "/reference/problem-recovery-cookbook/#telemetry-signal-unsupported",
+      recovery: {
+        cause: "The caller sent malformed input or unsupported request options.",
+        userAction: "Correct the request input and retry after validation passes.",
+        operatorAction:
+          "Inspect validation details and request logs; do not retry unchanged input.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/telemetry-sdk-node/src/libs/problems/TelemetryProblems.ts",
+          line: 82,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "TRIAL_AUTH_REQUIRED",
+      category: "Unauthorized",
+      status: 401,
+      title: "Unauthorized",
+      cookbookPath: "/reference/problem-recovery-cookbook/#trial-auth-required",
+      recovery: {
+        cause: "The request did not include valid authentication credentials.",
+        userAction: "Sign in again or provide a valid credential.",
+        operatorAction: "Check authentication configuration, token issuer, and clock skew.",
+        retryability: "not-retryable",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/create-croco-app/templates/addons/trpc-nextjs/apps/web/src/server/product/ProductTrials.ts",
+          line: 113,
+          column: 13,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "TRIAL_COMMAND_CONFLICT",
+      category: "Conflict",
+      status: 409,
+      title: "Conflict",
+      cookbookPath: "/reference/problem-recovery-cookbook/#trial-command-conflict",
+      recovery: {
+        cause: "The request conflicts with current state or an idempotency constraint.",
+        userAction: "Refresh state, resolve the conflict, and retry with the updated intent.",
+        operatorAction: "Inspect concurrent writes, idempotency keys, and uniqueness constraints.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/create-croco-app/templates/addons/trpc-nextjs/apps/web/src/server/product/ProductTrials.ts",
+          line: 137,
+          column: 17,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "TRIAL_EVENT_INVALID",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#trial-event-invalid",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/create-croco-app/templates/addons/trpc-nextjs/apps/web/src/server/product/ProductTrials.ts",
+          line: 209,
+          column: 13,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "TRIAL_INPUT_INVALID",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath: "/reference/problem-recovery-cookbook/#trial-input-invalid",
+      recovery: {
+        cause: "The caller sent malformed input or unsupported request options.",
+        userAction: "Correct the request input and retry after validation passes.",
+        operatorAction:
+          "Inspect validation details and request logs; do not retry unchanged input.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/create-croco-app/templates/addons/trpc-nextjs/apps/web/src/server/product/ProductTrials.ts",
+          line: 121,
+          column: 13,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "TRIAL_MIGRATION_REQUIRED",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#trial-migration-required",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/create-croco-app/templates/addons/trpc-nextjs/apps/web/src/server/product/ProductTrials.ts",
+          line: 44,
+          column: 10,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "TRIAL_NESTING_UNSUPPORTED",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#trial-nesting-unsupported",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/create-croco-app/templates/addons/trpc-nextjs/apps/web/src/server/product/ProductTrials.ts",
+          line: 76,
+          column: 13,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "TRIAL_NOT_FOUND",
+      category: "NotFound",
+      status: 404,
+      title: "Not Found",
+      cookbookPath: "/reference/problem-recovery-cookbook/#trial-not-found",
+      recovery: {
+        cause: "The requested resource or route-visible record does not exist.",
+        userAction: "Verify the identifier and refresh the resource list before retrying.",
+        operatorAction:
+          "Confirm tenant scoping, data retention, and backing-store lookup behavior.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/create-croco-app/templates/addons/trpc-nextjs/apps/web/src/server/product/ProductTrials.ts",
+          line: 200,
+          column: 13,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "TRIAL_STORAGE_FAILED",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#trial-storage-failed",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/create-croco-app/templates/addons/trpc-nextjs/apps/web/src/server/product/ProductTrials.ts",
+          line: 255,
+          column: 13,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "TRPC_ACCESS_DENIED",
+      category: "Forbidden",
+      status: 403,
+      title: "Forbidden",
+      cookbookPath: "/reference/problem-recovery-cookbook/#trpc-access-denied",
+      recovery: {
+        cause: "The authenticated caller is not allowed to perform the requested action.",
+        userAction: "Request the required permission or choose an allowed action.",
+        operatorAction: "Review policy, role, tenant, entitlement, and impersonation context.",
+        retryability: "not-retryable",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/protocols-trpc/src/libs/TrpcExecutionPipeline.ts",
+          line: 40,
+          column: 15,
+          kind: "problem-factory",
+        },
+      ],
+    },
+    {
+      code: "UNAUTHORIZED",
+      category: "Unauthorized",
+      status: 401,
+      title: "Unauthorized",
+      cookbookPath: "/reference/problem-recovery-cookbook/#unauthorized",
+      recovery: {
+        cause: "The request did not include valid authentication credentials.",
+        userAction: "Sign in again or provide a valid credential.",
+        operatorAction: "Check authentication configuration, token issuer, and clock skew.",
+        retryability: "not-retryable",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/auth-core/src/libs/problems/AuthProblems.ts",
+          line: 4,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "WEBHOOK_PROCESSING_FAILED",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#webhook-processing-failed",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/billing-polar/src/libs/problems/WebhookProcessingProblem.ts",
+          line: 3,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "WEBHOOK_VALIDATION_FAILED",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath: "/reference/problem-recovery-cookbook/#webhook-validation-failed",
+      recovery: {
+        cause: "The caller sent malformed input or unsupported request options.",
+        userAction: "Correct the request input and retry after validation passes.",
+        operatorAction:
+          "Inspect validation details and request logs; do not retry unchanged input.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/billing-polar/src/libs/problems/WebhookValidationProblem.ts",
+          line: 3,
+          column: 1,
+          kind: "problem-class",
         },
       ],
     },
@@ -92,7 +4181,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/access-core/src/libs/AccessEngine.ts",
-          line: 110,
+          line: 160,
           column: 10,
           kind: "problem-factory",
         },
@@ -123,7 +4212,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/access-core/src/libs/AccessEngine.ts",
-          line: 143,
+          line: 193,
           column: 10,
           kind: "problem-factory",
         },
@@ -160,38 +4249,6 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       ],
     },
     {
-      code: "ADMIN_LIFECYCLE_DEMO_INVARIANT",
-      category: "InternalServerError",
-      status: 500,
-      title: "Internal Server Error",
-      cookbookPath: "/reference/problem-recovery-cookbook/#admin-lifecycle-demo-invariant",
-      recovery: {
-        cause: "Croco or an upstream dependency failed after accepting the request.",
-        userAction:
-          "Retry later only when the operation is idempotent or the caller owns retry safety.",
-        operatorAction:
-          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
-        retryability: "conditional",
-        redactionPolicy: "operator-only",
-        telemetry: {
-          eventName: "croco.problem.error",
-          severity: "error",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/create-croco-app/templates/admin-console/apps/console-web/src/LifecycleAutomationDemo.tsx",
-          line: 66,
-          column: 5,
-          kind: "problem-constructor",
-        },
-      ],
-    },
-    {
       code: "admin-console/user-not-found",
       category: "NotFound",
       status: 404,
@@ -219,6 +4276,156 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
           line: 20,
           column: 79,
           kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "admin-core/activation-denied",
+      category: "Forbidden",
+      status: 403,
+      title: "Forbidden",
+      cookbookPath: "/reference/problem-recovery-cookbook/#admin-core-activation-denied",
+      recovery: {
+        cause: "The authenticated caller is not allowed to perform the requested action.",
+        userAction: "Request the required permission or choose an allowed action.",
+        operatorAction: "Review policy, role, tenant, entitlement, and impersonation context.",
+        retryability: "not-retryable",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/admin-core/src/libs/ActivationCandidateOperations.ts",
+          line: 59,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "admin-core/activation-invalid-report",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#admin-core-activation-invalid-report",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/admin-core/src/libs/ActivationCandidateOperations.ts",
+          line: 59,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "admin-core/challenge-operation-invalid",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#admin-core-challenge-operation-invalid",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/admin-core/src/libs/ChallengeOperations.ts",
+          line: 47,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "admin-core/contact-policy-denied",
+      category: "Forbidden",
+      status: 403,
+      title: "Forbidden",
+      cookbookPath: "/reference/problem-recovery-cookbook/#admin-core-contact-policy-denied",
+      recovery: {
+        cause: "The authenticated caller is not allowed to perform the requested action.",
+        userAction: "Request the required permission or choose an allowed action.",
+        operatorAction: "Review policy, role, tenant, entitlement, and impersonation context.",
+        retryability: "not-retryable",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/admin-core/src/libs/ContactPolicyOperations.ts",
+          line: 79,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "admin-core/contact-policy-invalid",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#admin-core-contact-policy-invalid",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/admin-core/src/libs/ContactPolicyOperations.ts",
+          line: 73,
+          column: 5,
+          kind: "problem-constructor",
         },
       ],
     },
@@ -347,6 +4554,37 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       ],
     },
     {
+      code: "admin-core/experiment-review-console-validation-failed",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#admin-core-experiment-review-console-validation-failed",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/admin-core/src/libs/ExperimentReviewConsole.ts",
+          line: 22,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
       code: "admin-core/fact-history-input",
       category: "ValidationError",
       status: 422,
@@ -371,6 +4609,98 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
         {
           file: "packages/admin-core/src/libs/FactHistoryValidation.ts",
           line: 80,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "admin-core/offer-console-validation-failed",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#admin-core-offer-console-validation-failed",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/admin-core/src/libs/OfferConsole.ts",
+          line: 187,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "admin-core/referral-console-validation-failed",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#admin-core-referral-console-validation-failed",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/admin-core/src/libs/ReferralConsole.ts",
+          line: 25,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "admin-core/reminder-operation-invalid",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#admin-core-reminder-operation-invalid",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/admin-core/src/libs/ReminderOperations.ts",
+          line: 28,
           column: 5,
           kind: "problem-constructor",
         },
@@ -430,7 +4760,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/admin-core/src/libs/RetentionWorkbench.ts",
-          line: 94,
+          line: 112,
           column: 11,
           kind: "problem-metadata",
         },
@@ -460,7 +4790,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/admin-core/src/libs/RetentionWorkbench.ts",
-          line: 103,
+          line: 121,
           column: 22,
           kind: "problem-metadata",
         },
@@ -490,7 +4820,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/admin-core/src/libs/RetentionWorkbench.ts",
-          line: 90,
+          line: 108,
           column: 22,
           kind: "problem-metadata",
         },
@@ -520,7 +4850,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/admin-core/src/libs/RetentionWorkbench.ts",
-          line: 95,
+          line: 113,
           column: 16,
           kind: "problem-metadata",
         },
@@ -550,7 +4880,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/admin-core/src/libs/RetentionWorkbench.ts",
-          line: 99,
+          line: 117,
           column: 21,
           kind: "problem-metadata",
         },
@@ -582,7 +4912,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/admin-core/src/libs/RetentionWorkbench.ts",
-          line: 111,
+          line: 129,
           column: 20,
           kind: "problem-metadata",
         },
@@ -612,7 +4942,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/admin-core/src/libs/RetentionWorkbench.ts",
-          line: 107,
+          line: 125,
           column: 18,
           kind: "problem-metadata",
         },
@@ -673,43 +5003,11 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/admin-generated/src/libs/generate.ts",
-          line: 56,
+          line: 57,
           column: 5,
           kind: "problem-constructor",
         },
       ],
-    },
-    {
-      code: "ai-saas/model-not-found",
-      category: "NotFound",
-      status: 404,
-      title: "Not Found",
-      cookbookPath: "/reference/problem-recovery-cookbook/#ai-saas-model-not-found",
-      recovery: {
-        cause: "The requested resource or route-visible record does not exist.",
-        userAction: "Verify the identifier and refresh the resource list before retrying.",
-        operatorAction:
-          "Confirm tenant scoping, data retention, and backing-store lookup behavior.",
-        retryability: "not-retryable",
-        redactionPolicy: "public",
-        telemetry: {
-          eventName: "croco.problem.info",
-          severity: "info",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "deprecated",
-        deprecation: {
-          reason:
-            "The framework-owned LLM abstraction or its generated example contract was retired.",
-          migrationNote:
-            "Remove branches for this code and handle vendor SDK failures explicitly at the application call boundary.",
-          noReplacementReason:
-            "The retired generic LLM capability has no framework-level equivalent.",
-        },
-      },
-      sources: [],
     },
     {
       code: "ai-saas/model-required",
@@ -1081,16 +5379,50 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       ],
     },
     {
-      code: "ALREADY_MEMBER",
-      category: "Conflict",
-      status: 409,
-      title: "Conflict",
-      cookbookPath: "/reference/problem-recovery-cookbook/#already-member",
+      code: "analytics-core/analysis-cancelled",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath: "/reference/problem-recovery-cookbook/#analytics-core-analysis-cancelled",
       recovery: {
-        cause: "The request conflicts with current state or an idempotency constraint.",
-        userAction: "Refresh state, resolve the conflict, and retry with the updated intent.",
-        operatorAction: "Inspect concurrent writes, idempotency keys, and uniqueness constraints.",
+        cause:
+          "The growth analysis was cancelled by its AbortSignal or exceeded its model deadline.",
+        userAction:
+          "Submit the question again after the cancellation reason is cleared and the prior invocation has settled.",
+        operatorAction:
+          "Inspect the cancellation signal, deadline, active invocation and usage receipt before starting another inference.",
         retryability: "conditional",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/analytics-core/src/libs/analysis/GrowthAnalysisService.ts",
+          line: 48,
+          column: 25,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "analytics-core/analysis-concurrency-exceeded",
+      category: "TooManyRequests",
+      status: 429,
+      title: "Too Many Requests",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#analytics-core-analysis-concurrency-exceeded",
+      recovery: {
+        cause: "The caller exceeded a rate, quota, or concurrency limit.",
+        userAction: "Wait for the retry window or reduce request volume.",
+        operatorAction: "Check limiter state, quota configuration, and abuse signals.",
+        retryability: "retryable",
         redactionPolicy: "safe-message",
         telemetry: {
           eventName: "croco.problem.warning",
@@ -1103,24 +5435,27 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       },
       sources: [
         {
-          file: "packages/membership-core/src/libs/problems/MembershipProblems.ts",
-          line: 18,
-          column: 5,
-          kind: "problem-constructor",
+          file: "packages/analytics-core/src/libs/analysis/GrowthAnalysisService.ts",
+          line: 44,
+          column: 36,
+          kind: "problem-metadata",
         },
       ],
     },
     {
-      code: "AMBIGUOUS_PAGINATION_PARAMETER",
-      category: "BadRequest",
-      status: 400,
-      title: "Bad Request",
-      cookbookPath: "/reference/problem-recovery-cookbook/#ambiguous-pagination-parameter",
+      code: "analytics-core/analysis-input-budget-exceeded",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#analytics-core-analysis-input-budget-exceeded",
       recovery: {
-        cause: "The caller sent malformed input or unsupported request options.",
-        userAction: "Correct the request input and retry after validation passes.",
+        cause:
+          "The serialized question, allowed definitions and choices exceeded the input byte budget.",
+        userAction:
+          "Shorten the question or narrow its authorized analysis choices before submitting again.",
         operatorAction:
-          "Inspect validation details and request logs; do not retry unchanged input.",
+          "Inspect maxInputBytes and the serialized definition and choice payload; reduce its size before another proposal.",
         retryability: "not-retryable",
         redactionPolicy: "public",
         telemetry: {
@@ -1134,10 +5469,400 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       },
       sources: [
         {
-          file: "packages/pagination-core/src/libs/problems.ts",
-          line: 6,
-          column: 1,
-          kind: "problem-class",
+          file: "packages/analytics-core/src/libs/analysis/GrowthAnalysisService.ts",
+          line: 40,
+          column: 37,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "analytics-core/analysis-invalid-completion",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#analytics-core-analysis-invalid-completion",
+      recovery: {
+        cause: "The provider response did not satisfy the supported completion contract.",
+        userAction:
+          "Request another proposal only after the provider completion mapping is corrected.",
+        operatorAction:
+          "Inspect completion status mapping with sanitized fixtures and reconcile the usage receipt before another inference.",
+        retryability: "conditional",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/analytics-core/src/libs/analysis/GrowthAnalysisService.ts",
+          line: 52,
+          column: 34,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "analytics-core/analysis-invalid-facts",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#analytics-core-analysis-invalid-facts",
+      recovery: {
+        cause:
+          "The registered facts projector returned values outside the supported fact contract.",
+        userAction:
+          "Report the failed analysis to the operator before requesting another execution.",
+        operatorAction:
+          "Correct the facts projector to return a nonempty array of at most 32 labeled facts with bounded decimal numeric strings or null values; validate it with sanitized fixtures.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/analytics-core/src/libs/analysis/GrowthAnalysisService.ts",
+          line: 68,
+          column: 29,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "analytics-core/analysis-invalid-json",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#analytics-core-analysis-invalid-json",
+      recovery: {
+        cause: "The model response was not valid JSON.",
+        userAction:
+          "Request another proposal only after the response contract is checked; another inference may incur usage.",
+        operatorAction:
+          "Check the model response schema and parser with sanitized fixtures, then reconcile the usage receipt before another inference.",
+        retryability: "conditional",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/analytics-core/src/libs/analysis/GrowthAnalysisService.ts",
+          line: 64,
+          column: 28,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "analytics-core/analysis-invalid-limits",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#analytics-core-analysis-invalid-limits",
+      recovery: {
+        cause:
+          "A configured input, output, token, time or concurrency limit was not a positive safe integer.",
+        userAction: "Ask the operator to correct the analysis limit configuration.",
+        operatorAction:
+          "Configure maxInputBytes, maxOutputBytes, maxOutputTokens, maxTimeMs and maxConcurrency as positive safe integers before constructing the service.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/analytics-core/src/libs/analysis/GrowthAnalysisService.ts",
+          line: 28,
+          column: 30,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "analytics-core/analysis-invalid-plan",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#analytics-core-analysis-invalid-plan",
+      recovery: {
+        cause:
+          "The supplied plan or model selection did not match the authorized finite JSON plan contract.",
+        userAction:
+          "Correct the supplied plan or request a new proposal after its response contract is checked.",
+        operatorAction:
+          "Inspect the plan shape, registered choice IDs and authorization binding with sanitized fixtures; reconcile the usage receipt before another inference.",
+        retryability: "conditional",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/analytics-core/src/libs/analysis/GrowthAnalysisService.ts",
+          line: 24,
+          column: 28,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "analytics-core/analysis-invalid-question",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#analytics-core-analysis-invalid-question",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/analytics-core/src/libs/analysis/GrowthAnalysisService.ts",
+          line: 32,
+          column: 32,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "analytics-core/analysis-invalid-registration",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#analytics-core-analysis-invalid-registration",
+      recovery: {
+        cause:
+          "The analysis registrations contained duplicate IDs, exceeded their bound or contained an invalid JSON plan.",
+        userAction: "Ask the operator to correct the registered analysis choices.",
+        operatorAction:
+          "Register at most 32 choices with unique IDs and finite plain JSON plans; validate registrations before accepting questions.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/analytics-core/src/libs/analysis/GrowthAnalysisService.ts",
+          line: 72,
+          column: 36,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "analytics-core/analysis-invalid-usage",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#analytics-core-analysis-invalid-usage",
+      recovery: {
+        cause:
+          "The provider response did not satisfy the known, estimated or unknown usage contract.",
+        userAction: "Ask the operator to reconcile usage before requesting another proposal.",
+        operatorAction:
+          "Correct provider usage mapping and retain the invocation receipt for reconciliation; do not assume unknown usage is zero.",
+        retryability: "conditional",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/analytics-core/src/libs/analysis/GrowthAnalysisService.ts",
+          line: 20,
+          column: 29,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "analytics-core/analysis-output-budget-exceeded",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#analytics-core-analysis-output-budget-exceeded",
+      recovery: {
+        cause: "The model output exceeded the configured byte or token budget.",
+        userAction:
+          "Request a bounded proposal after the operator checks the output limits; another inference may incur usage.",
+        operatorAction:
+          "Inspect response bytes, output tokens and configured limits, then reconcile the usage receipt before another inference.",
+        retryability: "conditional",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/analytics-core/src/libs/analysis/GrowthAnalysisService.ts",
+          line: 60,
+          column: 38,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "analytics-core/analysis-provider-failed",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#analytics-core-analysis-provider-failed",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/analytics-core/src/libs/analysis/GrowthAnalysisService.ts",
+          line: 56,
+          column: 31,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "analytics-core/analysis-question-blocked",
+      category: "Forbidden",
+      status: 403,
+      title: "Forbidden",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#analytics-core-analysis-question-blocked",
+      recovery: {
+        cause: "The question content was rejected by the configured content policy.",
+        userAction:
+          "Remove personal or sensitive content from the question before submitting again.",
+        operatorAction:
+          "Inspect the prepareQuestion content policy with sanitized fixtures; keep rejected question content out of model requests and logs.",
+        retryability: "not-retryable",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/analytics-core/src/libs/analysis/GrowthAnalysisService.ts",
+          line: 36,
+          column: 32,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "analytics-core/analysis-settlement-failed",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#analytics-core-analysis-settlement-failed",
+      recovery: {
+        cause: "The model invocation's usage receipt settlement failed.",
+        userAction:
+          "Ask the operator to recover the preserved usage receipt; do not resubmit the question or request another inference to recover settlement.",
+        operatorAction:
+          "Repair the idempotent receipt sink and call the preserved server-side AnalysisSettlementProblem.resume() to settle the same invocationId without repeating inference. The recovery handle is process-local; applications must retain durable receipt references and status through their existing execution boundary for restart recovery.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/analytics-core/src/libs/analysis/GrowthAnalysisService.ts",
+          line: 112,
+          column: 5,
+          kind: "problem-constructor",
         },
       ],
     },
@@ -1605,97 +6330,6 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
           line: 113,
           column: 22,
           kind: "problem-metadata",
-        },
-      ],
-    },
-    {
-      code: "API_KEY_EXPIRED",
-      category: "Unauthorized",
-      status: 401,
-      title: "Unauthorized",
-      cookbookPath: "/reference/problem-recovery-cookbook/#api-key-expired",
-      recovery: {
-        cause: "The request did not include valid authentication credentials.",
-        userAction: "Sign in again or provide a valid credential.",
-        operatorAction: "Check authentication configuration, token issuer, and clock skew.",
-        retryability: "not-retryable",
-        redactionPolicy: "safe-message",
-        telemetry: {
-          eventName: "croco.problem.warning",
-          severity: "warning",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/auth-core/src/libs/problems/AuthProblems.ts",
-          line: 47,
-          column: 1,
-          kind: "problem-class",
-        },
-      ],
-    },
-    {
-      code: "API_KEY_NOT_FOUND",
-      category: "NotFound",
-      status: 404,
-      title: "Not Found",
-      cookbookPath: "/reference/problem-recovery-cookbook/#api-key-not-found",
-      recovery: {
-        cause: "The requested resource or route-visible record does not exist.",
-        userAction: "Verify the identifier and refresh the resource list before retrying.",
-        operatorAction:
-          "Confirm tenant scoping, data retention, and backing-store lookup behavior.",
-        retryability: "not-retryable",
-        redactionPolicy: "public",
-        telemetry: {
-          eventName: "croco.problem.info",
-          severity: "info",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/auth-core/src/libs/apikey/problems/ApiKeyNotFoundProblem.ts",
-          line: 3,
-          column: 1,
-          kind: "problem-class",
-        },
-      ],
-    },
-    {
-      code: "API_KEY_REVOKED",
-      category: "Unauthorized",
-      status: 401,
-      title: "Unauthorized",
-      cookbookPath: "/reference/problem-recovery-cookbook/#api-key-revoked",
-      recovery: {
-        cause: "The request did not include valid authentication credentials.",
-        userAction: "Sign in again or provide a valid credential.",
-        operatorAction: "Check authentication configuration, token issuer, and clock skew.",
-        retryability: "not-retryable",
-        redactionPolicy: "safe-message",
-        telemetry: {
-          eventName: "croco.problem.warning",
-          severity: "warning",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/auth-core/src/libs/problems/AuthProblems.ts",
-          line: 55,
-          column: 1,
-          kind: "problem-class",
         },
       ],
     },
@@ -2464,9 +7098,9 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
         cause:
           "Another worker currently owns the Clerk delivery reservation for this deliveryId and eventType.",
         userAction:
-          "Retry the same delivery after the active worker completes or after the configured idempotencyTtlMs expires.",
+          "Retry the same delivery after the active worker completes or after the configured processingLeaseMs expires.",
         operatorAction:
-          "Inspect concurrent worker state for the reported deliveryId and eventType; if the owner was abandoned, wait for idempotencyTtlMs expiry before retrying.",
+          "Inspect concurrent worker state for the reported deliveryId and eventType. Set processingLeaseMs above the handler's maximum runtime; after lease expiry, retry only when the handler prevents duplicate external side effects.",
         retryability: "retryable",
         redactionPolicy: "safe-message",
         telemetry: {
@@ -2832,37 +7466,6 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       ],
     },
     {
-      code: "BAD_REQUEST",
-      category: "BadRequest",
-      status: 400,
-      title: "Bad Request",
-      cookbookPath: "/reference/problem-recovery-cookbook/#bad-request",
-      recovery: {
-        cause: "The caller sent malformed input or unsupported request options.",
-        userAction: "Correct the request input and retry after validation passes.",
-        operatorAction:
-          "Inspect validation details and request logs; do not retry unchanged input.",
-        retryability: "not-retryable",
-        redactionPolicy: "public",
-        telemetry: {
-          eventName: "croco.problem.info",
-          severity: "info",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/access-core/src/libs/guards/AccessGuard.ts",
-          line: 11,
-          column: 5,
-          kind: "problem-constructor",
-        },
-      ],
-    },
-    {
       code: "batch-core/duplicate-step-name",
       category: "ValidationError",
       status: 422,
@@ -3018,19 +7621,24 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       ],
     },
     {
-      code: "BILLING_STATUS_MAPPING_FAILED",
-      category: "InternalServerError",
-      status: 500,
-      title: "Internal Server Error",
-      cookbookPath: "/reference/problem-recovery-cookbook/#billing-status-mapping-failed",
+      code: "batch-qstash/publish-failed",
+      category: null,
+      status: null,
+      categoryPolicy: {
+        kind: "runtime-dependent",
+        possibleCategories: ["BadRequest", "InternalServerError", "TooManyRequests"],
+        possibleStatuses: [400, 429, 500],
+      },
+      title: null,
+      cookbookPath: "/reference/problem-recovery-cookbook/#batch-qstash-publish-failed",
       recovery: {
-        cause: "Croco or an upstream dependency failed after accepting the request.",
+        cause: "The QStash provider rejected or failed the batch dispatch.",
         userAction:
-          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+          "Check the retryable extension before retrying. Correct invalid requests; use bounded backoff for transient provider failures.",
         operatorAction:
-          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+          "Inspect provider status and sanitized operation metadata. Verify credentials, quotas, and QStash availability before replaying the operation.",
         retryability: "conditional",
-        redactionPolicy: "operator-only",
+        redactionPolicy: "safe-message",
         telemetry: {
           eventName: "croco.problem.error",
           severity: "error",
@@ -3042,8 +7650,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       },
       sources: [
         {
-          file: "packages/billing-polar/src/libs/problems/BillingStatusMappingProblem.ts",
-          line: 3,
+          file: "packages/batch-qstash/src/libs/problems/QStashBatchProblems.ts",
+          line: 30,
           column: 1,
           kind: "problem-class",
         },
@@ -3392,6 +8000,128 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       ],
     },
     {
+      code: "billing/cancellation-action-unavailable",
+      category: "BusinessRuleViolation",
+      status: 422,
+      title: "Business Rule Violation",
+      cookbookPath: "/reference/problem-recovery-cookbook/#billing-cancellation-action-unavailable",
+      recovery: {
+        cause: "The request is syntactically valid but violates a domain rule.",
+        userAction:
+          "Change the workflow state or request values so the business rule is satisfied.",
+        operatorAction: "Review domain policy, entitlement, quota, and lifecycle rule evidence.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/billing-core/src/libs/problems/CancellationProblems.ts",
+          line: 27,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "billing/cancellation-conflict",
+      category: "Conflict",
+      status: 409,
+      title: "Conflict",
+      cookbookPath: "/reference/problem-recovery-cookbook/#billing-cancellation-conflict",
+      recovery: {
+        cause: "The request conflicts with current state or an idempotency constraint.",
+        userAction: "Refresh state, resolve the conflict, and retry with the updated intent.",
+        operatorAction: "Inspect concurrent writes, idempotency keys, and uniqueness constraints.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/billing-core/src/libs/problems/CancellationProblems.ts",
+          line: 18,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "billing/cancellation-invalid-input",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath: "/reference/problem-recovery-cookbook/#billing-cancellation-invalid-input",
+      recovery: {
+        cause: "The caller sent malformed input or unsupported request options.",
+        userAction: "Correct the request input and retry after validation passes.",
+        operatorAction:
+          "Inspect validation details and request logs; do not retry unchanged input.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/billing-core/src/libs/problems/CancellationProblems.ts",
+          line: 4,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "billing/cancellation-ownership-denied",
+      category: "Forbidden",
+      status: 403,
+      title: "Forbidden",
+      cookbookPath: "/reference/problem-recovery-cookbook/#billing-cancellation-ownership-denied",
+      recovery: {
+        cause: "The authenticated caller is not allowed to perform the requested action.",
+        userAction: "Request the required permission or choose an allowed action.",
+        operatorAction: "Review policy, role, tenant, entitlement, and impersonation context.",
+        retryability: "not-retryable",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/billing-core/src/libs/problems/CancellationProblems.ts",
+          line: 11,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
       code: "billing/checkout-creation-failed",
       category: "InternalServerError",
       status: 500,
@@ -3480,7 +8210,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-core/src/libs/problems/BillingProblems.ts",
-          line: 126,
+          line: 138,
           column: 1,
           kind: "problem-class",
         },
@@ -3575,7 +8305,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-core/src/libs/problems/BillingProblems.ts",
-          line: 139,
+          line: 151,
           column: 1,
           kind: "problem-class",
         },
@@ -3606,7 +8336,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-core/src/libs/problems/BillingProblems.ts",
-          line: 147,
+          line: 159,
           column: 1,
           kind: "problem-class",
         },
@@ -3699,7 +8429,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-core/src/libs/problems/BillingProblems.ts",
-          line: 183,
+          line: 195,
           column: 1,
           kind: "problem-class",
         },
@@ -3730,7 +8460,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-core/src/libs/problems/BillingProblems.ts",
-          line: 175,
+          line: 187,
           column: 1,
           kind: "problem-class",
         },
@@ -3761,7 +8491,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-core/src/libs/problems/BillingProblems.ts",
-          line: 242,
+          line: 254,
           column: 1,
           kind: "problem-class",
         },
@@ -3883,7 +8613,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-core/src/libs/problems/BillingProblems.ts",
-          line: 155,
+          line: 167,
           column: 1,
           kind: "problem-class",
         },
@@ -3914,7 +8644,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-core/src/libs/problems/BillingProblems.ts",
-          line: 167,
+          line: 179,
           column: 1,
           kind: "problem-class",
         },
@@ -4066,7 +8796,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-core/src/libs/problems/BillingProblems.ts",
-          line: 191,
+          line: 203,
           column: 1,
           kind: "problem-class",
         },
@@ -4096,7 +8826,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-core/src/libs/problems/BillingProblems.ts",
-          line: 199,
+          line: 211,
           column: 1,
           kind: "problem-class",
         },
@@ -4220,7 +8950,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-core/src/libs/problems/BillingProblems.ts",
-          line: 229,
+          line: 241,
           column: 1,
           kind: "problem-class",
         },
@@ -4253,7 +8983,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-core/src/libs/problems/BillingProblems.ts",
-          line: 288,
+          line: 300,
           column: 1,
           kind: "problem-class",
         },
@@ -4284,7 +9014,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-core/src/libs/problems/BillingProblems.ts",
-          line: 301,
+          line: 313,
           column: 1,
           kind: "problem-class",
         },
@@ -4315,7 +9045,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-core/src/libs/problems/BillingProblems.ts",
-          line: 267,
+          line: 279,
           column: 1,
           kind: "problem-class",
         },
@@ -4348,7 +9078,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-core/src/libs/problems/BillingProblems.ts",
-          line: 277,
+          line: 289,
           column: 1,
           kind: "problem-class",
         },
@@ -4379,7 +9109,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-core/src/libs/problems/BillingProblems.ts",
-          line: 250,
+          line: 262,
           column: 1,
           kind: "problem-class",
         },
@@ -4410,7 +9140,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-core/src/libs/problems/BillingProblems.ts",
-          line: 207,
+          line: 219,
           column: 1,
           kind: "problem-class",
         },
@@ -4441,7 +9171,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-core/src/libs/problems/BillingProblems.ts",
-          line: 215,
+          line: 227,
           column: 1,
           kind: "problem-class",
         },
@@ -4502,36 +9232,6 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
         {
           file: "packages/billing-core/src/libs/problems/BillingProblems.ts",
           line: 66,
-          column: 1,
-          kind: "problem-class",
-        },
-      ],
-    },
-    {
-      code: "BLOCKED_DURING_IMPERSONATION",
-      category: "Forbidden",
-      status: 403,
-      title: "Forbidden",
-      cookbookPath: "/reference/problem-recovery-cookbook/#blocked-during-impersonation",
-      recovery: {
-        cause: "The authenticated caller is not allowed to perform the requested action.",
-        userAction: "Request the required permission or choose an allowed action.",
-        operatorAction: "Review policy, role, tenant, entitlement, and impersonation context.",
-        retryability: "not-retryable",
-        redactionPolicy: "safe-message",
-        telemetry: {
-          eventName: "croco.problem.warning",
-          severity: "warning",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts",
-          line: 94,
           column: 1,
           kind: "problem-class",
         },
@@ -4821,20 +9521,21 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       ],
     },
     {
-      code: "CIRCUIT_BREAKER_OPEN",
-      category: "TooManyRequests",
-      status: 429,
-      title: "Too Many Requests",
-      cookbookPath: "/reference/problem-recovery-cookbook/#circuit-breaker-open",
+      code: "cache-core/personalized-cache-policy-invalid",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#cache-core-personalized-cache-policy-invalid",
       recovery: {
-        cause: "The caller exceeded a rate, quota, or concurrency limit.",
-        userAction: "Wait for the retry window or reduce request volume.",
-        operatorAction: "Check limiter state, quota configuration, and abuse signals.",
-        retryability: "retryable",
-        redactionPolicy: "safe-message",
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
         telemetry: {
-          eventName: "croco.problem.warning",
-          severity: "warning",
+          eventName: "croco.problem.info",
+          severity: "info",
           attributes: ["problem.code", "problem.category", "problem.status"],
         },
       },
@@ -4843,8 +9544,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       },
       sources: [
         {
-          file: "packages/retry-core/src/libs/errors/CircuitBreakerOpenProblem.ts",
-          line: 6,
+          file: "packages/cache-core/src/libs/problems/PersonalizedCacheProblems.ts",
+          line: 8,
           column: 1,
           kind: "problem-class",
         },
@@ -4908,7 +9609,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/storage-cloudflare/src/libs/CloudflareImagesProvider.ts",
-          line: 539,
+          line: 544,
           column: 19,
           kind: "problem-factory",
         },
@@ -4941,23 +9642,22 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/storage-cloudflare/src/libs/CloudflareImagesProvider.ts",
-          line: 645,
+          line: 650,
           column: 15,
           kind: "problem-factory",
         },
       ],
     },
     {
-      code: "CONFLICTING_PAGINATION",
-      category: "BadRequest",
-      status: 400,
-      title: "Bad Request",
-      cookbookPath: "/reference/problem-recovery-cookbook/#conflicting-pagination",
+      code: "cohort/admin-invalid",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#cohort-admin-invalid",
       recovery: {
-        cause: "The caller sent malformed input or unsupported request options.",
-        userAction: "Correct the request input and retry after validation passes.",
-        operatorAction:
-          "Inspect validation details and request logs; do not retry unchanged input.",
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
         retryability: "not-retryable",
         redactionPolicy: "public",
         telemetry: {
@@ -4971,8 +9671,101 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       },
       sources: [
         {
-          file: "packages/pagination-core/src/libs/problems.ts",
-          line: 42,
+          file: "packages/admin-core/src/libs/CohortOperations.ts",
+          line: 77,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "cohort/invalid",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#cohort-invalid",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/cohort-core/src/libs/evaluation.ts",
+          line: 20,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "cohort/unavailable",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#cohort-unavailable",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/cohort-core/src/libs/evaluation.ts",
+          line: 25,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "create-croco-app/dependency-install-failed",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#create-croco-app-dependency-install-failed",
+      recovery: {
+        cause: "pnpm failed to install generated workspace dependencies.",
+        userAction:
+          "Run the reported diagnostic command, correct the installation error, and rerun generation.",
+        operatorAction:
+          "Inspect the command and stage extensions and the local pnpm diagnostic output. Verify registry access and supported tooling versions.",
+        retryability: "not-retryable",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/create-croco-app/src/libs/problems/PnpmCommandProblem.ts",
+          line: 28,
           column: 1,
           kind: "problem-class",
         },
@@ -5161,6 +9954,70 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
         {
           file: "packages/create-croco-app/templates/addons/lambda/apps/graphql-api/src/telemetryFlush.ts",
           line: 9,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "create-croco-app/lockfile-validation-failed",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#create-croco-app-lockfile-validation-failed",
+      recovery: {
+        cause: "pnpm failed to validate the generated workspace lockfile.",
+        userAction: "Reconcile generated manifests with pnpm-lock.yaml and rerun generation.",
+        operatorAction:
+          "Inspect the command and stage extensions and the local pnpm diagnostic output. Verify registry access and supported tooling versions.",
+        retryability: "not-retryable",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/create-croco-app/src/libs/problems/PnpmCommandProblem.ts",
+          line: 28,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "create-croco-app/pnpm-unavailable",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#create-croco-app-pnpm-unavailable",
+      recovery: {
+        cause: "pnpm is unavailable for generated workspace installation.",
+        userAction:
+          "Install pnpm and rerun generation, or use --no-install and install dependencies manually.",
+        operatorAction:
+          "Inspect the command and stage extensions and the local pnpm diagnostic output. Verify registry access and supported tooling versions.",
+        retryability: "not-retryable",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/create-croco-app/src/libs/problems/PnpmCommandProblem.ts",
+          line: 28,
           column: 1,
           kind: "problem-class",
         },
@@ -5695,593 +10552,6 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       ],
     },
     {
-      code: "CROCO_CHANGED_TEST_PLAN_INVALID",
-      category: "ValidationError",
-      status: 422,
-      title: "Validation Error",
-      cookbookPath: "/reference/problem-recovery-cookbook/#croco-changed-test-plan-invalid",
-      recovery: {
-        cause: "The request or generated contract failed schema or semantic validation.",
-        userAction: "Fix the invalid fields and retry with schema-conformant input.",
-        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
-        retryability: "not-retryable",
-        redactionPolicy: "public",
-        telemetry: {
-          eventName: "croco.problem.info",
-          severity: "info",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/testing/src/libs/changed-test-plan.mts",
-          line: 99,
-          column: 5,
-          kind: "problem-constructor",
-        },
-      ],
-    },
-    {
-      code: "CROCO_CLI_JOBS_001",
-      category: "BadRequest",
-      status: 400,
-      title: "Bad Request",
-      cookbookPath: "/reference/problem-recovery-cookbook/#croco-cli-jobs-001",
-      recovery: {
-        cause: "The caller sent malformed input or unsupported request options.",
-        userAction: "Correct the request input and retry after validation passes.",
-        operatorAction:
-          "Inspect validation details and request logs; do not retry unchanged input.",
-        retryability: "not-retryable",
-        redactionPolicy: "public",
-        telemetry: {
-          eventName: "croco.problem.info",
-          severity: "info",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/cli/src/commands/jobs.ts",
-          line: 89,
-          column: 5,
-          kind: "problem-constructor",
-        },
-      ],
-    },
-    {
-      code: "CROCO_CLI_JOBS_002",
-      category: "BadRequest",
-      status: 400,
-      title: "Bad Request",
-      cookbookPath: "/reference/problem-recovery-cookbook/#croco-cli-jobs-002",
-      recovery: {
-        cause: "The caller sent malformed input or unsupported request options.",
-        userAction: "Correct the request input and retry after validation passes.",
-        operatorAction:
-          "Inspect validation details and request logs; do not retry unchanged input.",
-        retryability: "not-retryable",
-        redactionPolicy: "public",
-        telemetry: {
-          eventName: "croco.problem.info",
-          severity: "info",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/cli/src/commands/jobs.ts",
-          line: 100,
-          column: 5,
-          kind: "problem-constructor",
-        },
-      ],
-    },
-    {
-      code: "CROCO_CLI_JOBS_003",
-      category: "BadRequest",
-      status: 400,
-      title: "Bad Request",
-      cookbookPath: "/reference/problem-recovery-cookbook/#croco-cli-jobs-003",
-      recovery: {
-        cause: "The caller sent malformed input or unsupported request options.",
-        userAction: "Correct the request input and retry after validation passes.",
-        operatorAction:
-          "Inspect validation details and request logs; do not retry unchanged input.",
-        retryability: "not-retryable",
-        redactionPolicy: "public",
-        telemetry: {
-          eventName: "croco.problem.info",
-          severity: "info",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/cli/src/commands/jobs.ts",
-          line: 111,
-          column: 5,
-          kind: "problem-constructor",
-        },
-      ],
-    },
-    {
-      code: "CROCO_CLI_JOBS_004",
-      category: "Conflict",
-      status: 409,
-      title: "Conflict",
-      cookbookPath: "/reference/problem-recovery-cookbook/#croco-cli-jobs-004",
-      recovery: {
-        cause: "The request conflicts with current state or an idempotency constraint.",
-        userAction: "Refresh state, resolve the conflict, and retry with the updated intent.",
-        operatorAction: "Inspect concurrent writes, idempotency keys, and uniqueness constraints.",
-        retryability: "conditional",
-        redactionPolicy: "safe-message",
-        telemetry: {
-          eventName: "croco.problem.warning",
-          severity: "warning",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/cli/src/commands/jobs.ts",
-          line: 138,
-          column: 49,
-          kind: "problem-metadata",
-        },
-      ],
-    },
-    {
-      code: "CROCO_CLI_JOBS_005",
-      category: "NotFound",
-      status: 404,
-      title: "Not Found",
-      cookbookPath: "/reference/problem-recovery-cookbook/#croco-cli-jobs-005",
-      recovery: {
-        cause: "The requested resource or route-visible record does not exist.",
-        userAction: "Verify the identifier and refresh the resource list before retrying.",
-        operatorAction:
-          "Confirm tenant scoping, data retention, and backing-store lookup behavior.",
-        retryability: "not-retryable",
-        redactionPolicy: "public",
-        telemetry: {
-          eventName: "croco.problem.info",
-          severity: "info",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/cli/src/commands/jobs.ts",
-          line: 133,
-          column: 63,
-          kind: "problem-metadata",
-        },
-      ],
-    },
-    {
-      code: "CROCO_CLI_OPS_001",
-      category: "BadRequest",
-      status: 400,
-      title: "Bad Request",
-      cookbookPath: "/reference/problem-recovery-cookbook/#croco-cli-ops-001",
-      recovery: {
-        cause: "The caller sent malformed input or unsupported request options.",
-        userAction: "Correct the request input and retry after validation passes.",
-        operatorAction:
-          "Inspect validation details and request logs; do not retry unchanged input.",
-        retryability: "not-retryable",
-        redactionPolicy: "public",
-        telemetry: {
-          eventName: "croco.problem.info",
-          severity: "info",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/cli/src/libs/ops.ts",
-          line: 66,
-          column: 5,
-          kind: "problem-constructor",
-        },
-      ],
-    },
-    {
-      code: "CROCO_CLI_OPS_002",
-      category: "BadRequest",
-      status: 400,
-      title: "Bad Request",
-      cookbookPath: "/reference/problem-recovery-cookbook/#croco-cli-ops-002",
-      recovery: {
-        cause: "The caller sent malformed input or unsupported request options.",
-        userAction: "Correct the request input and retry after validation passes.",
-        operatorAction:
-          "Inspect validation details and request logs; do not retry unchanged input.",
-        retryability: "not-retryable",
-        redactionPolicy: "public",
-        telemetry: {
-          eventName: "croco.problem.info",
-          severity: "info",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/cli/src/libs/ops.ts",
-          line: 55,
-          column: 5,
-          kind: "problem-constructor",
-        },
-      ],
-    },
-    {
-      code: "CROCO_CLI_USAGE_DASHBOARD_005",
-      category: "BadRequest",
-      status: 400,
-      title: "Bad Request",
-      cookbookPath: "/reference/problem-recovery-cookbook/#croco-cli-usage-dashboard-005",
-      recovery: {
-        cause: "The caller sent malformed input or unsupported request options.",
-        userAction: "Correct the request input and retry after validation passes.",
-        operatorAction:
-          "Inspect validation details and request logs; do not retry unchanged input.",
-        retryability: "not-retryable",
-        redactionPolicy: "public",
-        telemetry: {
-          eventName: "croco.problem.info",
-          severity: "info",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/cli/src/commands/generateUsageDashboard.ts",
-          line: 30,
-          column: 5,
-          kind: "problem-constructor",
-        },
-      ],
-    },
-    {
-      code: "CROCO_EXECUTABLE_ASSURANCE_CONTRACT_INVALID",
-      category: "ValidationError",
-      status: 422,
-      title: "Validation Error",
-      cookbookPath:
-        "/reference/problem-recovery-cookbook/#croco-executable-assurance-contract-invalid",
-      recovery: {
-        cause: "The request or generated contract failed schema or semantic validation.",
-        userAction: "Fix the invalid fields and retry with schema-conformant input.",
-        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
-        retryability: "not-retryable",
-        redactionPolicy: "public",
-        telemetry: {
-          eventName: "croco.problem.info",
-          severity: "info",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/testing/src/libs/executable-assurance.mts",
-          line: 245,
-          column: 5,
-          kind: "problem-constructor",
-        },
-      ],
-    },
-    {
-      code: "CROCO_EXECUTABLE_ASSURANCE_UNSATISFIED",
-      category: "ValidationError",
-      status: 422,
-      title: "Validation Error",
-      cookbookPath: "/reference/problem-recovery-cookbook/#croco-executable-assurance-unsatisfied",
-      recovery: {
-        cause: "The request or generated contract failed schema or semantic validation.",
-        userAction: "Fix the invalid fields and retry with schema-conformant input.",
-        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
-        retryability: "not-retryable",
-        redactionPolicy: "public",
-        telemetry: {
-          eventName: "croco.problem.info",
-          severity: "info",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/testing/src/libs/executable-assurance.mts",
-          line: 259,
-          column: 5,
-          kind: "problem-constructor",
-        },
-      ],
-    },
-    {
-      code: "CROCO_HTTP_MIDDLEWARE_001",
-      category: "InternalServerError",
-      status: 500,
-      title: "Internal Server Error",
-      cookbookPath: "/reference/problem-recovery-cookbook/#croco-http-middleware-001",
-      recovery: {
-        cause:
-          "HTTP middleware returned without a Response, without shortCircuit(reason), and without calling next() exactly once.",
-        userAction: "Retry only after the service owner ships a middleware contract fix.",
-        operatorAction:
-          "Update the named @croco/transports-http middleware to return next(), await next() once, return a Response, or return shortCircuit(reason) for intentional termination.",
-        retryability: "not-retryable",
-        redactionPolicy: "operator-only",
-        telemetry: {
-          eventName: "croco.problem.error",
-          severity: "error",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/transports-http/src/libs/CrocoRouteRegistrar.ts",
-          line: 371,
-          column: 12,
-          kind: "problem-factory",
-        },
-      ],
-    },
-    {
-      code: "CROCO_HTTP_MIDDLEWARE_002",
-      category: "InternalServerError",
-      status: 500,
-      title: "Internal Server Error",
-      cookbookPath: "/reference/problem-recovery-cookbook/#croco-http-middleware-002",
-      recovery: {
-        cause: "HTTP middleware attempted to resume the downstream pipeline more than once.",
-        userAction: "Retry only after the service owner ships a middleware contract fix.",
-        operatorAction:
-          "Store the Response from a single next() call and reuse or transform it instead of calling next() again.",
-        retryability: "not-retryable",
-        redactionPolicy: "operator-only",
-        telemetry: {
-          eventName: "croco.problem.error",
-          severity: "error",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/transports-http/src/libs/CrocoRouteRegistrar.ts",
-          line: 276,
-          column: 15,
-          kind: "problem-factory",
-        },
-      ],
-    },
-    {
-      code: "CROCO_HTTP_SECURITY_001",
-      category: "InternalServerError",
-      status: 500,
-      title: "Internal Server Error",
-      cookbookPath: "/reference/problem-recovery-cookbook/#croco-http-security-001",
-      recovery: {
-        cause:
-          "HTTP bootstrap validation found a generated or application app without the required security middleware set.",
-        userAction:
-          "Use an app build that registers security headers, CORS, body limit, and rate-limit middleware before first run.",
-        operatorAction:
-          "Add the missing @croco/transports-http middleware or keep securityValidation disabled only in an explicit local migration/testing fixture.",
-        retryability: "not-retryable",
-        redactionPolicy: "public",
-        telemetry: {
-          eventName: "croco.problem.error",
-          severity: "error",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/transports-http/src/libs/CrocoApp.ts",
-          line: 313,
-          column: 11,
-          kind: "problem-factory",
-        },
-      ],
-    },
-    {
-      code: "CROCO_HTTP_SECURITY_002",
-      category: "BadRequest",
-      status: 400,
-      title: "Bad Request",
-      cookbookPath: "/reference/problem-recovery-cookbook/#croco-http-security-002",
-      recovery: {
-        cause: "The caller sent malformed input or unsupported request options.",
-        userAction: "Correct the request input and retry after validation passes.",
-        operatorAction:
-          "Inspect validation details and request logs; do not retry unchanged input.",
-        retryability: "not-retryable",
-        redactionPolicy: "public",
-        telemetry: {
-          eventName: "croco.problem.info",
-          severity: "info",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/transports-http/src/libs/middleware/SecurityMiddlewareMarker.ts",
-          line: 154,
-          column: 11,
-          kind: "problem-factory",
-        },
-      ],
-    },
-    {
-      code: "CROCO_SAAS_PROFILE_MISMATCH",
-      category: "ValidationError",
-      status: 422,
-      title: "Validation Error",
-      cookbookPath: "/reference/problem-recovery-cookbook/#croco-saas-profile-mismatch",
-      recovery: {
-        cause: "The generated profile and requested profile do not match.",
-        userAction: "Select the generated profile or correct the explicit profile override.",
-        operatorAction: "Compare the generated manifest with the requested profile override.",
-        retryability: "not-retryable",
-        redactionPolicy: "public",
-        telemetry: {
-          eventName: "croco.problem.info",
-          severity: "info",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/create-croco-app/templates/saas/apps/api-server/src/problems.ts",
-          line: 100,
-          column: 1,
-          kind: "problem-class",
-        },
-      ],
-    },
-    {
-      code: "CROCO_SAAS_PROFILE_RUNTIME_UNAVAILABLE",
-      category: "NotImplemented",
-      status: 501,
-      title: "Not Implemented",
-      cookbookPath: "/reference/problem-recovery-cookbook/#croco-saas-profile-runtime-unavailable",
-      recovery: {
-        cause: "The requested capability is not supported by this runtime or adapter.",
-        userAction: "Use a supported capability or choose an adapter/runtime that provides it.",
-        operatorAction:
-          "Check runtime capability declarations and provider maturity documentation.",
-        retryability: "not-retryable",
-        redactionPolicy: "public",
-        telemetry: {
-          eventName: "croco.problem.info",
-          severity: "info",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/create-croco-app/templates/saas/apps/api-server/src/problems.ts",
-          line: 113,
-          column: 1,
-          kind: "problem-class",
-        },
-      ],
-    },
-    {
-      code: "CROCO_TEST_EVIDENCE_CONTRACT_INVALID",
-      category: "ValidationError",
-      status: 422,
-      title: "Validation Error",
-      cookbookPath: "/reference/problem-recovery-cookbook/#croco-test-evidence-contract-invalid",
-      recovery: {
-        cause: "The request or generated contract failed schema or semantic validation.",
-        userAction: "Fix the invalid fields and retry with schema-conformant input.",
-        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
-        retryability: "not-retryable",
-        redactionPolicy: "public",
-        telemetry: {
-          eventName: "croco.problem.info",
-          severity: "info",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/testing/src/libs/test-evidence.mts",
-          line: 163,
-          column: 5,
-          kind: "problem-constructor",
-        },
-      ],
-    },
-    {
-      code: "CROCO_TEST_EVIDENCE_FIDELITY_UNSATISFIED",
-      category: "ValidationError",
-      status: 422,
-      title: "Validation Error",
-      cookbookPath:
-        "/reference/problem-recovery-cookbook/#croco-test-evidence-fidelity-unsatisfied",
-      recovery: {
-        cause: "The request or generated contract failed schema or semantic validation.",
-        userAction: "Fix the invalid fields and retry with schema-conformant input.",
-        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
-        retryability: "not-retryable",
-        redactionPolicy: "public",
-        telemetry: {
-          eventName: "croco.problem.info",
-          severity: "info",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/testing/src/libs/test-evidence.mts",
-          line: 177,
-          column: 5,
-          kind: "problem-constructor",
-        },
-      ],
-    },
-    {
       code: "customer-health-core/event-intent-conflict",
       category: "Conflict",
       status: 409,
@@ -6538,65 +10808,36 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       ],
     },
     {
-      code: "desktop-codegen/invalid-contract-graph",
-      category: "ValidationError",
-      status: 422,
-      title: "Validation Error",
-      cookbookPath: "/reference/problem-recovery-cookbook/#desktop-codegen-invalid-contract-graph",
+      code: "dataloader-core/invalid-configuration",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#dataloader-core-invalid-configuration",
       recovery: {
-        cause: "The request or generated contract failed schema or semantic validation.",
-        userAction: "Fix the invalid fields and retry with schema-conformant input.",
-        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        cause:
+          "The batch loader configured maxBatchSize outside the positive safe-integer or Infinity domain.",
+        userAction: "Use an application build with a valid batch loader configuration.",
+        operatorAction:
+          "Set maxBatchSize to a positive safe integer or Infinity, then recreate the batch loader.",
         retryability: "not-retryable",
-        redactionPolicy: "public",
+        redactionPolicy: "operator-only",
         telemetry: {
-          eventName: "croco.problem.info",
-          severity: "info",
+          eventName: "croco.problem.error",
+          severity: "error",
           attributes: ["problem.code", "problem.category", "problem.status"],
         },
       },
       lifecycle: {
-        status: "deprecated",
-        deprecation: {
-          reason:
-            "Croco desktop contracts and code generation were removed from the supported product scope.",
-          migrationNote: "See docs/release/problem-code-migrations.md#desktop-support-removal.",
-          noReplacementReason:
-            "Croco does not provide a replacement desktop bridge or silently map desktop contracts to web scaffolds.",
-        },
+        status: "active",
       },
-      sources: [],
-    },
-    {
-      code: "desktop-codegen/invalid-renderer-contract-graph",
-      category: "ValidationError",
-      status: 422,
-      title: "Validation Error",
-      cookbookPath:
-        "/reference/problem-recovery-cookbook/#desktop-codegen-invalid-renderer-contract-graph",
-      recovery: {
-        cause: "The request or generated contract failed schema or semantic validation.",
-        userAction: "Fix the invalid fields and retry with schema-conformant input.",
-        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
-        retryability: "not-retryable",
-        redactionPolicy: "public",
-        telemetry: {
-          eventName: "croco.problem.info",
-          severity: "info",
-          attributes: ["problem.code", "problem.category", "problem.status"],
+      sources: [
+        {
+          file: "packages/dataloader-core/src/libs/problems/BatchLoaderProblems.ts",
+          line: 31,
+          column: 1,
+          kind: "problem-class",
         },
-      },
-      lifecycle: {
-        status: "deprecated",
-        deprecation: {
-          reason:
-            "Croco desktop contracts and code generation were removed from the supported product scope.",
-          migrationNote: "See docs/release/problem-code-migrations.md#desktop-support-removal.",
-          noReplacementReason:
-            "Croco does not provide a replacement desktop bridge or silently map desktop contracts to web scaffolds.",
-        },
-      },
-      sources: [],
+      ],
     },
     {
       code: "diagnostics-core/duplicate-provider",
@@ -6659,164 +10900,6 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
           kind: "problem-class",
         },
       ],
-    },
-    {
-      code: "DOMAIN_AUTO_JOIN_RECOVERY_FAILED",
-      category: "InternalServerError",
-      status: 500,
-      title: "Internal Server Error",
-      cookbookPath: "/reference/problem-recovery-cookbook/#domain-auto-join-recovery-failed",
-      recovery: {
-        cause: "Croco or an upstream dependency failed after accepting the request.",
-        userAction:
-          "Retry later only when the operation is idempotent or the caller owns retry safety.",
-        operatorAction:
-          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
-        retryability: "conditional",
-        redactionPolicy: "operator-only",
-        telemetry: {
-          eventName: "croco.problem.error",
-          severity: "error",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/invitation-core/src/libs/problems/DomainPolicyProblems.ts",
-          line: 29,
-          column: 1,
-          kind: "problem-class",
-        },
-      ],
-    },
-    {
-      code: "DUPLICATE_INVITATION",
-      category: "Conflict",
-      status: 409,
-      title: "Conflict",
-      cookbookPath: "/reference/problem-recovery-cookbook/#duplicate-invitation",
-      recovery: {
-        cause: "The request conflicts with current state or an idempotency constraint.",
-        userAction: "Refresh state, resolve the conflict, and retry with the updated intent.",
-        operatorAction: "Inspect concurrent writes, idempotency keys, and uniqueness constraints.",
-        retryability: "conditional",
-        redactionPolicy: "safe-message",
-        telemetry: {
-          eventName: "croco.problem.warning",
-          severity: "warning",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/invitation-core/src/libs/problems/RateLimitProblems.ts",
-          line: 12,
-          column: 1,
-          kind: "problem-class",
-        },
-      ],
-    },
-    {
-      code: "DUPLICATE_RECOVER_HANDLER",
-      category: "InternalServerError",
-      status: 500,
-      title: "Internal Server Error",
-      cookbookPath: "/reference/problem-recovery-cookbook/#duplicate-recover-handler",
-      recovery: {
-        cause: "Croco or an upstream dependency failed after accepting the request.",
-        userAction:
-          "Retry later only when the operation is idempotent or the caller owns retry safety.",
-        operatorAction:
-          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
-        retryability: "conditional",
-        redactionPolicy: "operator-only",
-        telemetry: {
-          eventName: "croco.problem.error",
-          severity: "error",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/retry-core/src/libs/errors/DuplicateRecoverHandlerProblem.ts",
-          line: 6,
-          column: 1,
-          kind: "problem-class",
-        },
-      ],
-    },
-    {
-      code: "DURATION_PARSE_ERROR",
-      category: "BadRequest",
-      status: 400,
-      title: "Bad Request",
-      cookbookPath: "/reference/problem-recovery-cookbook/#duration-parse-error",
-      recovery: {
-        cause: "The caller sent malformed input or unsupported request options.",
-        userAction: "Correct the request input and retry after validation passes.",
-        operatorAction:
-          "Inspect validation details and request logs; do not retry unchanged input.",
-        retryability: "not-retryable",
-        redactionPolicy: "public",
-        telemetry: {
-          eventName: "croco.problem.info",
-          severity: "info",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/framework-context/src/libs/problems/ContextProblems.ts",
-          line: 14,
-          column: 1,
-          kind: "problem-class",
-        },
-      ],
-    },
-    {
-      code: "EMBEDDING_ERROR",
-      category: "InternalServerError",
-      status: 500,
-      title: "Internal Server Error",
-      cookbookPath: "/reference/problem-recovery-cookbook/#embedding-error",
-      recovery: {
-        cause: "Croco or an upstream dependency failed after accepting the request.",
-        userAction:
-          "Retry later only when the operation is idempotent or the caller owns retry safety.",
-        operatorAction:
-          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
-        retryability: "conditional",
-        redactionPolicy: "operator-only",
-        telemetry: {
-          eventName: "croco.problem.error",
-          severity: "error",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "deprecated",
-        deprecation: {
-          reason:
-            "The framework-owned LLM abstraction or its generated example contract was retired.",
-          migrationNote:
-            "Remove branches for this code and handle vendor SDK failures explicitly at the application call boundary.",
-          noReplacementReason:
-            "The retired generic LLM capability has no framework-level equivalent.",
-        },
-      },
-      sources: [],
     },
     {
       code: "engagement-core/audience-already-registered",
@@ -7090,7 +11173,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/engagement-core/src/libs/CampaignServices.ts",
-          line: 544,
+          line: 545,
           column: 5,
           kind: "problem-constructor",
         },
@@ -7121,7 +11204,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/engagement-core/src/libs/CampaignServices.ts",
-          line: 519,
+          line: 520,
           column: 5,
           kind: "problem-constructor",
         },
@@ -7152,7 +11235,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/engagement-core/src/libs/CampaignServices.ts",
-          line: 527,
+          line: 528,
           column: 5,
           kind: "problem-constructor",
         },
@@ -7185,7 +11268,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/engagement-core/src/libs/CampaignServices.ts",
-          line: 555,
+          line: 556,
           column: 5,
           kind: "problem-constructor",
         },
@@ -7249,7 +11332,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/engagement-core/src/libs/CampaignServices.ts",
-          line: 508,
+          line: 509,
           column: 5,
           kind: "problem-constructor",
         },
@@ -7410,6 +11493,100 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       ],
     },
     {
+      code: "engagement-core/contact-policy-acceptance-unknown",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#engagement-core-contact-policy-acceptance-unknown",
+      recovery: {
+        cause:
+          "Provider acceptance could not be durably confirmed for a contact policy reservation.",
+        userAction:
+          "Do not automatically resend the message or refund the contact budget; request operator reconciliation.",
+        operatorAction:
+          "Verify provider evidence, then call ContactPolicy.reconcile with the evidence reference, actor, and reason. Record accepted execution IDs or release the reservation only when evidence confirms non-acceptance; expiry alone must not refund the budget.",
+        retryability: "not-retryable",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/engagement-core/src/libs/ContactPolicy.ts",
+          line: 125,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "engagement-core/contact-policy-conflict",
+      category: "Conflict",
+      status: 409,
+      title: "Conflict",
+      cookbookPath: "/reference/problem-recovery-cookbook/#engagement-core-contact-policy-conflict",
+      recovery: {
+        cause: "The request conflicts with current state or an idempotency constraint.",
+        userAction: "Refresh state, resolve the conflict, and retry with the updated intent.",
+        operatorAction: "Inspect concurrent writes, idempotency keys, and uniqueness constraints.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/engagement-core/src/libs/ContactPolicy.ts",
+          line: 119,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "engagement-core/contact-policy-invalid",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#engagement-core-contact-policy-invalid",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/engagement-core/src/libs/ContactPolicy.ts",
+          line: 114,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
       code: "engagement-core/delivery-event-correlation-invalid",
       category: "ValidationError",
       status: 422,
@@ -7434,7 +11611,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/engagement-core/src/libs/PersistentEngagement.ts",
-          line: 210,
+          line: 189,
           column: 5,
           kind: "problem-constructor",
         },
@@ -7466,7 +11643,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/engagement-core/src/libs/EngagementService.ts",
-          line: 884,
+          line: 1144,
           column: 5,
           kind: "problem-constructor",
         },
@@ -7497,7 +11674,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/engagement-core/src/libs/MessageContracts.ts",
-          line: 372,
+          line: 369,
           column: 5,
           kind: "problem-constructor",
         },
@@ -7527,7 +11704,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/engagement-core/src/libs/MessageContracts.ts",
-          line: 359,
+          line: 356,
           column: 5,
           kind: "problem-constructor",
         },
@@ -7558,7 +11735,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/engagement-core/src/libs/MessageContracts.ts",
-          line: 351,
+          line: 348,
           column: 5,
           kind: "problem-constructor",
         },
@@ -7590,7 +11767,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/engagement-core/src/libs/EngagementStores.ts",
-          line: 328,
+          line: 350,
           column: 5,
           kind: "problem-constructor",
         },
@@ -7623,7 +11800,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/engagement-core/src/libs/EngagementService.ts",
-          line: 800,
+          line: 1056,
           column: 5,
           kind: "problem-constructor",
         },
@@ -7656,7 +11833,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/engagement-core/src/libs/EngagementService.ts",
-          line: 815,
+          line: 1075,
           column: 5,
           kind: "problem-constructor",
         },
@@ -7687,7 +11864,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/engagement-core/src/libs/EngagementService.ts",
-          line: 788,
+          line: 1044,
           column: 5,
           kind: "problem-constructor",
         },
@@ -7720,7 +11897,161 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/engagement-core/src/libs/EngagementService.ts",
-          line: 912,
+          line: 1172,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "engagement-core/reminder-access-denied",
+      category: "Forbidden",
+      status: 403,
+      title: "Forbidden",
+      cookbookPath: "/reference/problem-recovery-cookbook/#engagement-core-reminder-access-denied",
+      recovery: {
+        cause: "The authenticated caller is not allowed to perform the requested action.",
+        userAction: "Request the required permission or choose an allowed action.",
+        operatorAction: "Review policy, role, tenant, entitlement, and impersonation context.",
+        retryability: "not-retryable",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/engagement-core/src/libs/ReminderContracts.ts",
+          line: 92,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "engagement-core/reminder-conflict",
+      category: "Conflict",
+      status: 409,
+      title: "Conflict",
+      cookbookPath: "/reference/problem-recovery-cookbook/#engagement-core-reminder-conflict",
+      recovery: {
+        cause: "The request conflicts with current state or an idempotency constraint.",
+        userAction: "Refresh state, resolve the conflict, and retry with the updated intent.",
+        operatorAction: "Inspect concurrent writes, idempotency keys, and uniqueness constraints.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/engagement-core/src/libs/ReminderContracts.ts",
+          line: 87,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "engagement-core/reminder-dispatch-failed",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#engagement-core-reminder-dispatch-failed",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/engagement-core/src/libs/ReminderContracts.ts",
+          line: 174,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "engagement-core/reminder-invalid",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#engagement-core-reminder-invalid",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/engagement-core/src/libs/ReminderContracts.ts",
+          line: 82,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "engagement-core/reminder-not-found",
+      category: "NotFound",
+      status: 404,
+      title: "Not Found",
+      cookbookPath: "/reference/problem-recovery-cookbook/#engagement-core-reminder-not-found",
+      recovery: {
+        cause: "The requested resource or route-visible record does not exist.",
+        userAction: "Verify the identifier and refresh the resource list before retrying.",
+        operatorAction:
+          "Confirm tenant scoping, data retention, and backing-store lookup behavior.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/engagement-core/src/libs/ReminderContracts.ts",
+          line: 101,
           column: 5,
           kind: "problem-constructor",
         },
@@ -7752,7 +12083,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/engagement-core/src/libs/EngagementService.ts",
-          line: 836,
+          line: 1096,
           column: 5,
           kind: "problem-constructor",
         },
@@ -7783,7 +12114,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/engagement-core/src/libs/MessageContracts.ts",
-          line: 385,
+          line: 382,
           column: 5,
           kind: "problem-constructor",
         },
@@ -7814,7 +12145,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/engagement-core/src/libs/MessageContracts.ts",
-          line: 437,
+          line: 434,
           column: 5,
           kind: "problem-constructor",
         },
@@ -7847,7 +12178,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/engagement-core/src/libs/MessageContracts.ts",
-          line: 426,
+          line: 423,
           column: 5,
           kind: "problem-constructor",
         },
@@ -7878,7 +12209,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/engagement-core/src/libs/MessageContracts.ts",
-          line: 448,
+          line: 445,
           column: 5,
           kind: "problem-constructor",
         },
@@ -7911,7 +12242,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/engagement-core/src/libs/MessageContracts.ts",
-          line: 407,
+          line: 404,
           column: 5,
           kind: "problem-constructor",
         },
@@ -7943,7 +12274,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/engagement-core/src/libs/MessageContracts.ts",
-          line: 396,
+          line: 393,
           column: 5,
           kind: "problem-constructor",
         },
@@ -7973,7 +12304,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/engagement-core/src/libs/EngagementService.ts",
-          line: 827,
+          line: 1087,
           column: 5,
           kind: "problem-constructor",
         },
@@ -8003,7 +12334,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/engagement-core/src/libs/EngagementStores.ts",
-          line: 320,
+          line: 342,
           column: 5,
           kind: "problem-constructor",
         },
@@ -8036,222 +12367,9 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/engagement-core/src/libs/EngagementService.ts",
-          line: 857,
+          line: 1117,
           column: 5,
           kind: "problem-constructor",
-        },
-      ],
-    },
-    {
-      code: "ENTITLEMENT_DENIED",
-      category: "Forbidden",
-      status: 403,
-      title: "Forbidden",
-      cookbookPath: "/reference/problem-recovery-cookbook/#entitlement-denied",
-      recovery: {
-        cause: "The authenticated caller is not allowed to perform the requested action.",
-        userAction: "Request the required permission or choose an allowed action.",
-        operatorAction: "Review policy, role, tenant, entitlement, and impersonation context.",
-        retryability: "not-retryable",
-        redactionPolicy: "safe-message",
-        telemetry: {
-          eventName: "croco.problem.warning",
-          severity: "warning",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/entitlements-core/src/libs/problems/EntitlementProblems.ts",
-          line: 19,
-          column: 1,
-          kind: "problem-class",
-        },
-      ],
-    },
-    {
-      code: "ENTITLEMENT_INACTIVE_SUBSCRIPTION",
-      category: "Forbidden",
-      status: 403,
-      title: "Forbidden",
-      cookbookPath: "/reference/problem-recovery-cookbook/#entitlement-inactive-subscription",
-      recovery: {
-        cause: "The authenticated caller is not allowed to perform the requested action.",
-        userAction: "Request the required permission or choose an allowed action.",
-        operatorAction: "Review policy, role, tenant, entitlement, and impersonation context.",
-        retryability: "not-retryable",
-        redactionPolicy: "safe-message",
-        telemetry: {
-          eventName: "croco.problem.warning",
-          severity: "warning",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/entitlements-core/src/libs/problems/EntitlementProblems.ts",
-          line: 45,
-          column: 1,
-          kind: "problem-class",
-        },
-      ],
-    },
-    {
-      code: "ENTITLEMENT_MISSING_PLAN",
-      category: "Forbidden",
-      status: 403,
-      title: "Forbidden",
-      cookbookPath: "/reference/problem-recovery-cookbook/#entitlement-missing-plan",
-      recovery: {
-        cause: "The authenticated caller is not allowed to perform the requested action.",
-        userAction: "Request the required permission or choose an allowed action.",
-        operatorAction: "Review policy, role, tenant, entitlement, and impersonation context.",
-        retryability: "not-retryable",
-        redactionPolicy: "safe-message",
-        telemetry: {
-          eventName: "croco.problem.warning",
-          severity: "warning",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/entitlements-core/src/libs/problems/EntitlementProblems.ts",
-          line: 31,
-          column: 1,
-          kind: "problem-class",
-        },
-      ],
-    },
-    {
-      code: "ENTITLEMENT_NOT_FOUND",
-      category: "NotFound",
-      status: 404,
-      title: "Not Found",
-      cookbookPath: "/reference/problem-recovery-cookbook/#entitlement-not-found",
-      recovery: {
-        cause: "The requested resource or route-visible record does not exist.",
-        userAction: "Verify the identifier and refresh the resource list before retrying.",
-        operatorAction:
-          "Confirm tenant scoping, data retention, and backing-store lookup behavior.",
-        retryability: "not-retryable",
-        redactionPolicy: "public",
-        telemetry: {
-          eventName: "croco.problem.info",
-          severity: "info",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/entitlements-core/src/libs/problems/EntitlementProblems.ts",
-          line: 85,
-          column: 1,
-          kind: "problem-class",
-        },
-      ],
-    },
-    {
-      code: "ENTITLEMENT_PROVIDER_UNAVAILABLE",
-      category: "InternalServerError",
-      status: 500,
-      title: "Internal Server Error",
-      cookbookPath: "/reference/problem-recovery-cookbook/#entitlement-provider-unavailable",
-      recovery: {
-        cause: "Croco or an upstream dependency failed after accepting the request.",
-        userAction:
-          "Retry later only when the operation is idempotent or the caller owns retry safety.",
-        operatorAction:
-          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
-        retryability: "conditional",
-        redactionPolicy: "operator-only",
-        telemetry: {
-          eventName: "croco.problem.error",
-          severity: "error",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/entitlements-core/src/libs/problems/EntitlementProblems.ts",
-          line: 73,
-          column: 1,
-          kind: "problem-class",
-        },
-      ],
-    },
-    {
-      code: "ENTITLEMENT_QUOTA_EXCEEDED",
-      category: "TooManyRequests",
-      status: 429,
-      title: "Too Many Requests",
-      cookbookPath: "/reference/problem-recovery-cookbook/#entitlement-quota-exceeded",
-      recovery: {
-        cause: "The caller exceeded a rate, quota, or concurrency limit.",
-        userAction: "Wait for the retry window or reduce request volume.",
-        operatorAction: "Check limiter state, quota configuration, and abuse signals.",
-        retryability: "retryable",
-        redactionPolicy: "safe-message",
-        telemetry: {
-          eventName: "croco.problem.warning",
-          severity: "warning",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/entitlements-core/src/libs/problems/EntitlementProblems.ts",
-          line: 59,
-          column: 1,
-          kind: "problem-class",
-        },
-      ],
-    },
-    {
-      code: "ENTITLEMENT_REQUIREMENT_INVALID",
-      category: "ValidationError",
-      status: 422,
-      title: "Validation Error",
-      cookbookPath: "/reference/problem-recovery-cookbook/#entitlement-requirement-invalid",
-      recovery: {
-        cause: "The request or generated contract failed schema or semantic validation.",
-        userAction: "Fix the invalid fields and retry with schema-conformant input.",
-        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
-        retryability: "not-retryable",
-        redactionPolicy: "public",
-        telemetry: {
-          eventName: "croco.problem.info",
-          severity: "info",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/entitlements-core/src/libs/problems/EntitlementProblems.ts",
-          line: 10,
-          column: 1,
-          kind: "problem-class",
         },
       ],
     },
@@ -8373,6 +12491,156 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
         {
           file: "packages/entitlements-core/src/libs/problems/EntitlementProblems.ts",
           line: 103,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "etl-core/file-source-failed",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#etl-core-file-source-failed",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/etl-core/src/pipeline/fileSource.ts",
+          line: 33,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "etl-core/invalid-event-envelope",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#etl-core-invalid-event-envelope",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/etl-core/src/source/EventSourceEnvelope.ts",
+          line: 14,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "etl-core/pipeline-failed",
+      category: "Conflict",
+      status: 409,
+      title: "Conflict",
+      cookbookPath: "/reference/problem-recovery-cookbook/#etl-core-pipeline-failed",
+      recovery: {
+        cause: "The request conflicts with current state or an idempotency constraint.",
+        userAction: "Refresh state, resolve the conflict, and retry with the updated intent.",
+        operatorAction: "Inspect concurrent writes, idempotency keys, and uniqueness constraints.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/etl-core/src/pipeline/PipelineProblem.ts",
+          line: 12,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "etl-core/projection-failed",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#etl-core-projection-failed",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/etl-core/src/pipeline/projection.ts",
+          line: 37,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "etl-core/source-decode-failed",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#etl-core-source-decode-failed",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/etl-core/src/source/SourceDecodeProblem.ts",
+          line: 15,
           column: 1,
           kind: "problem-class",
         },
@@ -8760,39 +13028,6 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
           kind: "problem-class",
         },
       ],
-    },
-    {
-      code: "events-core/transaction-context-unavailable",
-      category: "InternalServerError",
-      status: 500,
-      title: "Internal Server Error",
-      cookbookPath:
-        "/reference/problem-recovery-cookbook/#events-core-transaction-context-unavailable",
-      recovery: {
-        cause: "Croco or an upstream dependency failed after accepting the request.",
-        userAction:
-          "Retry later only when the operation is idempotent or the caller owns retry safety.",
-        operatorAction:
-          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
-        retryability: "conditional",
-        redactionPolicy: "operator-only",
-        telemetry: {
-          eventName: "croco.problem.error",
-          severity: "error",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "deprecated",
-        deprecation: {
-          reason:
-            "After-commit publication no longer resolves a transaction context through a process-global container.",
-          migrationNote:
-            "See docs/release/problem-code-migrations.md#explicit-event-transaction-context.",
-          replacementCode: "events-core/after-commit-requires-active-transaction",
-        },
-      },
-      sources: [],
     },
     {
       code: "events-core/unknown-event-type",
@@ -9932,11 +14167,131 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       ],
     },
     {
-      code: "FORBIDDEN",
+      code: "experience/admin-denied",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#experience-admin-denied",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/admin-core/src/libs/ExperienceOperations.ts",
+          line: 45,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "experience/invalid",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#experience-invalid",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/experience-core/src/libs/experience.ts",
+          line: 21,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "experience/store-invalid",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#experience-store-invalid",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/experience-drizzle/src/libs/PostgresExperienceStore.ts",
+          line: 24,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "experience/unavailable",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#experience-unavailable",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/experience-core/src/libs/experience.ts",
+          line: 26,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "features/experiment/admin-denied",
       category: "Forbidden",
       status: 403,
       title: "Forbidden",
-      cookbookPath: "/reference/problem-recovery-cookbook/#forbidden",
+      cookbookPath: "/reference/problem-recovery-cookbook/#features-experiment-admin-denied",
       recovery: {
         cause: "The authenticated caller is not allowed to perform the requested action.",
         userAction: "Request the required permission or choose an allowed action.",
@@ -9954,10 +14309,648 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       },
       sources: [
         {
-          file: "packages/auth-core/src/libs/problems/AuthProblems.ts",
-          line: 12,
-          column: 1,
-          kind: "problem-class",
+          file: "packages/admin-core/src/libs/ExperimentOperations.ts",
+          line: 56,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "features/experiment/conflict",
+      category: "Conflict",
+      status: 409,
+      title: "Conflict",
+      cookbookPath: "/reference/problem-recovery-cookbook/#features-experiment-conflict",
+      recovery: {
+        cause: "The request conflicts with current state or an idempotency constraint.",
+        userAction: "Refresh state, resolve the conflict, and retry with the updated intent.",
+        operatorAction: "Inspect concurrent writes, idempotency keys, and uniqueness constraints.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/features-core/src/libs/Experiment.ts",
+          line: 215,
+          column: 13,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "features/experiment/forbidden",
+      category: "Forbidden",
+      status: 403,
+      title: "Forbidden",
+      cookbookPath: "/reference/problem-recovery-cookbook/#features-experiment-forbidden",
+      recovery: {
+        cause: "The authenticated caller is not allowed to perform the requested action.",
+        userAction: "Request the required permission or choose an allowed action.",
+        operatorAction: "Review policy, role, tenant, entitlement, and impersonation context.",
+        retryability: "not-retryable",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/features-core/src/libs/Experiment.ts",
+          line: 216,
+          column: 14,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "features/experiment/idempotency-conflict",
+      category: "Conflict",
+      status: 409,
+      title: "Conflict",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#features-experiment-idempotency-conflict",
+      recovery: {
+        cause: "The request conflicts with current state or an idempotency constraint.",
+        userAction: "Refresh state, resolve the conflict, and retry with the updated intent.",
+        operatorAction: "Inspect concurrent writes, idempotency keys, and uniqueness constraints.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/features-core/src/libs/Experiment.ts",
+          line: 218,
+          column: 27,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "features/experiment/invalid",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#features-experiment-invalid",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/features-core/src/libs/Experiment.ts",
+          line: 214,
+          column: 12,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "features/experiment/missing",
+      category: "NotFound",
+      status: 404,
+      title: "Not Found",
+      cookbookPath: "/reference/problem-recovery-cookbook/#features-experiment-missing",
+      recovery: {
+        cause: "The requested resource or route-visible record does not exist.",
+        userAction: "Verify the identifier and refresh the resource list before retrying.",
+        operatorAction:
+          "Confirm tenant scoping, data retention, and backing-store lookup behavior.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/features-core/src/libs/Experiment.ts",
+          line: 217,
+          column: 12,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "features/experiment/unavailable",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#features-experiment-unavailable",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/features-core/src/libs/Experiment.ts",
+          line: 222,
+          column: 16,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "features/policy/activation-conflict",
+      category: "Conflict",
+      status: 409,
+      title: "Conflict",
+      cookbookPath: "/reference/problem-recovery-cookbook/#features-policy-activation-conflict",
+      recovery: {
+        cause: "The request conflicts with current state or an idempotency constraint.",
+        userAction: "Refresh state, resolve the conflict, and retry with the updated intent.",
+        operatorAction: "Inspect concurrent writes, idempotency keys, and uniqueness constraints.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/features-core/src/libs/problems/PolicyProblems.ts",
+          line: 66,
+          column: 26,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "features/policy/admin-denied",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#features-policy-admin-denied",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/admin-core/src/libs/PolicyReleaseOperations.ts",
+          line: 26,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "features/policy/authorization-denied",
+      category: "Forbidden",
+      status: 403,
+      title: "Forbidden",
+      cookbookPath: "/reference/problem-recovery-cookbook/#features-policy-authorization-denied",
+      recovery: {
+        cause: "The authenticated caller is not allowed to perform the requested action.",
+        userAction: "Request the required permission or choose an allowed action.",
+        operatorAction: "Review policy, role, tenant, entitlement, and impersonation context.",
+        retryability: "not-retryable",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/features-core/src/libs/problems/PolicyProblems.ts",
+          line: 54,
+          column: 27,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "features/policy/idempotency-conflict",
+      category: "Conflict",
+      status: 409,
+      title: "Conflict",
+      cookbookPath: "/reference/problem-recovery-cookbook/#features-policy-idempotency-conflict",
+      recovery: {
+        cause: "The request conflicts with current state or an idempotency constraint.",
+        userAction: "Refresh state, resolve the conflict, and retry with the updated intent.",
+        operatorAction: "Inspect concurrent writes, idempotency keys, and uniqueness constraints.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/features-core/src/libs/problems/PolicyProblems.ts",
+          line: 58,
+          column: 27,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "features/policy/invalid-definition",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#features-policy-invalid-definition",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/features-core/src/libs/problems/PolicyProblems.ts",
+          line: 22,
+          column: 25,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "features/policy/invalid-schedule",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath: "/reference/problem-recovery-cookbook/#features-policy-invalid-schedule",
+      recovery: {
+        cause: "The caller sent malformed input or unsupported request options.",
+        userAction: "Correct the request input and retry after validation passes.",
+        operatorAction:
+          "Inspect validation details and request logs; do not retry unchanged input.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/features-core/src/libs/problems/PolicyProblems.ts",
+          line: 62,
+          column: 23,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "features/policy/invalid-transition",
+      category: "BusinessRuleViolation",
+      status: 422,
+      title: "Business Rule Violation",
+      cookbookPath: "/reference/problem-recovery-cookbook/#features-policy-invalid-transition",
+      recovery: {
+        cause: "The request is syntactically valid but violates a domain rule.",
+        userAction:
+          "Change the workflow state or request values so the business rule is satisfied.",
+        operatorAction: "Review domain policy, entitlement, quota, and lifecycle rule evidence.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/features-core/src/libs/problems/PolicyProblems.ts",
+          line: 50,
+          column: 25,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "features/policy/registration-conflict",
+      category: "Conflict",
+      status: 409,
+      title: "Conflict",
+      cookbookPath: "/reference/problem-recovery-cookbook/#features-policy-registration-conflict",
+      recovery: {
+        cause: "The request conflicts with current state or an idempotency constraint.",
+        userAction: "Refresh state, resolve the conflict, and retry with the updated intent.",
+        operatorAction: "Inspect concurrent writes, idempotency keys, and uniqueness constraints.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/features-core/src/libs/problems/PolicyProblems.ts",
+          line: 30,
+          column: 28,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "features/policy/registration-missing",
+      category: "NotFound",
+      status: 404,
+      title: "Not Found",
+      cookbookPath: "/reference/problem-recovery-cookbook/#features-policy-registration-missing",
+      recovery: {
+        cause: "The requested resource or route-visible record does not exist.",
+        userAction: "Verify the identifier and refresh the resource list before retrying.",
+        operatorAction:
+          "Confirm tenant scoping, data retention, and backing-store lookup behavior.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/features-core/src/libs/problems/PolicyProblems.ts",
+          line: 26,
+          column: 27,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "features/policy/revision-conflict",
+      category: "Conflict",
+      status: 409,
+      title: "Conflict",
+      cookbookPath: "/reference/problem-recovery-cookbook/#features-policy-revision-conflict",
+      recovery: {
+        cause: "The request conflicts with current state or an idempotency constraint.",
+        userAction: "Refresh state, resolve the conflict, and retry with the updated intent.",
+        operatorAction: "Inspect concurrent writes, idempotency keys, and uniqueness constraints.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/features-core/src/libs/problems/PolicyProblems.ts",
+          line: 42,
+          column: 24,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "features/policy/revision-not-found",
+      category: "NotFound",
+      status: 404,
+      title: "Not Found",
+      cookbookPath: "/reference/problem-recovery-cookbook/#features-policy-revision-not-found",
+      recovery: {
+        cause: "The requested resource or route-visible record does not exist.",
+        userAction: "Verify the identifier and refresh the resource list before retrying.",
+        operatorAction:
+          "Confirm tenant scoping, data retention, and backing-store lookup behavior.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/features-core/src/libs/problems/PolicyProblems.ts",
+          line: 38,
+          column: 25,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "features/policy/schema-version-mismatch",
+      category: "Conflict",
+      status: 409,
+      title: "Conflict",
+      cookbookPath: "/reference/problem-recovery-cookbook/#features-policy-schema-version-mismatch",
+      recovery: {
+        cause: "The request conflicts with current state or an idempotency constraint.",
+        userAction: "Refresh state, resolve the conflict, and retry with the updated intent.",
+        operatorAction: "Inspect concurrent writes, idempotency keys, and uniqueness constraints.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/features-core/src/libs/problems/PolicyProblems.ts",
+          line: 34,
+          column: 30,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "features/policy/stale-review",
+      category: "Conflict",
+      status: 409,
+      title: "Conflict",
+      cookbookPath: "/reference/problem-recovery-cookbook/#features-policy-stale-review",
+      recovery: {
+        cause: "The request conflicts with current state or an idempotency constraint.",
+        userAction: "Refresh state, resolve the conflict, and retry with the updated intent.",
+        operatorAction: "Inspect concurrent writes, idempotency keys, and uniqueness constraints.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/features-core/src/libs/problems/PolicyProblems.ts",
+          line: 46,
+          column: 19,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "features/policy/unavailable",
+      category: "Conflict",
+      status: 409,
+      title: "Conflict",
+      cookbookPath: "/reference/problem-recovery-cookbook/#features-policy-unavailable",
+      recovery: {
+        cause: "The request conflicts with current state or an idempotency constraint.",
+        userAction: "Refresh state, resolve the conflict, and retry with the updated intent.",
+        operatorAction: "Inspect concurrent writes, idempotency keys, and uniqueness constraints.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/features-core/src/libs/problems/PolicyProblems.ts",
+          line: 74,
+          column: 16,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "features/policy/validation-failed",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#features-policy-validation-failed",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/features-core/src/libs/problems/PolicyProblems.ts",
+          line: 70,
+          column: 24,
+          kind: "problem-metadata",
         },
       ],
     },
@@ -10064,11 +15057,11 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
         "/reference/problem-recovery-cookbook/#framework-config-runtime-env-preset-boundary",
       recovery: {
         cause:
-          "A selected runtime env preset exposed a client variable without the `NEXT_PUBLIC_` prefix or exposed a server variable with that prefix.",
+          "A selected runtime env preset exposed a client variable without the configured `clientPrefix` (`NEXT_PUBLIC_` by default) or exposed a server variable with that prefix.",
         userAction:
-          "Correct the `NEXT_PUBLIC_` prefix or remove the incompatible preset from defineRuntimeEnv, then retry configuration validation.",
+          "Match client keys to the configured `clientPrefix`, keep that prefix out of server keys, or remove the incompatible preset, then retry configuration validation.",
         operatorAction:
-          "Inspect the reported preset section and variable name, then keep public `NEXT_PUBLIC_` variables in client and private variables in server.",
+          "Inspect `clientPrefix`, the reported preset section, and variable name; keep variables with the configured prefix in client and private variables in server.",
         retryability: "not-retryable",
         redactionPolicy: "public",
         telemetry: {
@@ -10148,7 +15141,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-context/src/libs/Container.ts",
-          line: 287,
+          line: 288,
           column: 13,
           kind: "problem-factory",
         },
@@ -10181,7 +15174,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-context/src/libs/Container.ts",
-          line: 161,
+          line: 162,
           column: 10,
           kind: "problem-factory",
         },
@@ -10214,7 +15207,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-context/src/libs/Container.ts",
-          line: 437,
+          line: 438,
           column: 17,
           kind: "problem-factory",
         },
@@ -10247,7 +15240,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-context/src/libs/Container.ts",
-          line: 458,
+          line: 459,
           column: 13,
           kind: "problem-factory",
         },
@@ -10278,7 +15271,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-context/src/libs/Container.ts",
-          line: 230,
+          line: 231,
           column: 13,
           kind: "problem-factory",
         },
@@ -10343,7 +15336,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-context/src/libs/problems/ContainerResolutionProblem.ts",
-          line: 9,
+          line: 10,
           column: 1,
           kind: "problem-class",
         },
@@ -10375,7 +15368,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-context/src/libs/problems/ContainerResolutionProblem.ts",
-          line: 30,
+          line: 31,
           column: 1,
           kind: "problem-class",
         },
@@ -10407,7 +15400,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-context/src/libs/Container.ts",
-          line: 844,
+          line: 847,
           column: 13,
           kind: "problem-factory",
         },
@@ -10439,7 +15432,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-context/src/libs/Container.ts",
-          line: 838,
+          line: 841,
           column: 13,
           kind: "problem-factory",
         },
@@ -10470,7 +15463,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-context/src/libs/Container.ts",
-          line: 1462,
+          line: 1465,
           column: 15,
           kind: "problem-factory",
         },
@@ -10501,7 +15494,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-context/src/libs/Container.ts",
-          line: 1530,
+          line: 1533,
           column: 13,
           kind: "problem-factory",
         },
@@ -10688,8 +15681,42 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-context/src/libs/Context.ts",
-          line: 106,
+          line: 121,
           column: 28,
+          kind: "problem-factory",
+        },
+      ],
+    },
+    {
+      code: "framework-context/request-scope-disposed",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#framework-context-request-scope-disposed",
+      recovery: {
+        cause:
+          "A request provider was resolved or an instance was tracked after its request scope began cleanup.",
+        userAction:
+          "Capture the values needed by background work while the request scope is active and pass them explicitly.",
+        operatorAction:
+          "Inspect waitUntil and other asynchronous continuations for request provider access after Context.run() settles; do not reuse disposed provider instances.",
+        retryability: "not-retryable",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/framework-context/src/libs/Context.ts",
+          line: 46,
+          column: 11,
           kind: "problem-factory",
         },
       ],
@@ -10720,7 +15747,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-context/src/libs/Context.ts",
-          line: 28,
+          line: 33,
           column: 11,
           kind: "problem-factory",
         },
@@ -10753,7 +15780,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-context/src/libs/Container.ts",
-          line: 2605,
+          line: 2655,
           column: 12,
           kind: "problem-factory",
         },
@@ -11584,11 +16611,133 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       ],
     },
     {
-      code: "GENERATION_ERROR",
+      code: "gamification-core/access-denied",
+      category: "Forbidden",
+      status: 403,
+      title: "Forbidden",
+      cookbookPath: "/reference/problem-recovery-cookbook/#gamification-core-access-denied",
+      recovery: {
+        cause: "The authenticated caller is not allowed to perform the requested action.",
+        userAction: "Request the required permission or choose an allowed action.",
+        operatorAction: "Review policy, role, tenant, entitlement, and impersonation context.",
+        retryability: "not-retryable",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/gamification-core/src/libs/problems.ts",
+          line: 10,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "gamification-core/challenge-access-denied",
+      category: "Forbidden",
+      status: 403,
+      title: "Forbidden",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#gamification-core-challenge-access-denied",
+      recovery: {
+        cause: "The authenticated caller is not allowed to perform the requested action.",
+        userAction: "Request the required permission or choose an allowed action.",
+        operatorAction: "Review policy, role, tenant, entitlement, and impersonation context.",
+        retryability: "not-retryable",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/gamification-core/src/libs/ChallengeContracts.ts",
+          line: 131,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "gamification-core/challenge-conflict",
+      category: "Conflict",
+      status: 409,
+      title: "Conflict",
+      cookbookPath: "/reference/problem-recovery-cookbook/#gamification-core-challenge-conflict",
+      recovery: {
+        cause: "The request conflicts with current state or an idempotency constraint.",
+        userAction: "Refresh state, resolve the conflict, and retry with the updated intent.",
+        operatorAction: "Inspect concurrent writes, idempotency keys, and uniqueness constraints.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/gamification-core/src/libs/ChallengeContracts.ts",
+          line: 126,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "gamification-core/challenge-evidence",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#gamification-core-challenge-evidence",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/gamification-core/src/libs/ChallengeContracts.ts",
+          line: 149,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "gamification-core/challenge-evidence-unavailable",
       category: "InternalServerError",
       status: 500,
       title: "Internal Server Error",
-      cookbookPath: "/reference/problem-recovery-cookbook/#generation-error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#gamification-core-challenge-evidence-unavailable",
       recovery: {
         cause: "Croco or an upstream dependency failed after accepting the request.",
         userAction:
@@ -11604,17 +16753,414 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
         },
       },
       lifecycle: {
-        status: "deprecated",
-        deprecation: {
-          reason:
-            "The framework-owned LLM abstraction or its generated example contract was retired.",
-          migrationNote:
-            "Remove branches for this code and handle vendor SDK failures explicitly at the application call boundary.",
-          noReplacementReason:
-            "The retired generic LLM capability has no framework-level equivalent.",
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/gamification-core/src/libs/ChallengeContracts.ts",
+          line: 154,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "gamification-core/challenge-invalid",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#gamification-core-challenge-invalid",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
         },
       },
-      sources: [],
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/gamification-core/src/libs/ChallengeContracts.ts",
+          line: 121,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "gamification-core/challenge-not-found",
+      category: "NotFound",
+      status: 404,
+      title: "Not Found",
+      cookbookPath: "/reference/problem-recovery-cookbook/#gamification-core-challenge-not-found",
+      recovery: {
+        cause: "The requested resource or route-visible record does not exist.",
+        userAction: "Verify the identifier and refresh the resource list before retrying.",
+        operatorAction:
+          "Confirm tenant scoping, data retention, and backing-store lookup behavior.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/gamification-core/src/libs/ChallengeContracts.ts",
+          line: 140,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "gamification-core/conflict",
+      category: "Conflict",
+      status: 409,
+      title: "Conflict",
+      cookbookPath: "/reference/problem-recovery-cookbook/#gamification-core-conflict",
+      recovery: {
+        cause: "The request conflicts with current state or an idempotency constraint.",
+        userAction: "Refresh state, resolve the conflict, and retry with the updated intent.",
+        operatorAction: "Inspect concurrent writes, idempotency keys, and uniqueness constraints.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/gamification-core/src/libs/problems.ts",
+          line: 24,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "gamification-core/invalid-evidence",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#gamification-core-invalid-evidence",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/gamification-core/src/libs/problems.ts",
+          line: 17,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "gamification-core/invalid-policy",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#gamification-core-invalid-policy",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/gamification-core/src/libs/problems.ts",
+          line: 3,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "gamification-core/unavailable",
+      category: "BusinessRuleViolation",
+      status: 422,
+      title: "Business Rule Violation",
+      cookbookPath: "/reference/problem-recovery-cookbook/#gamification-core-unavailable",
+      recovery: {
+        cause: "The request is syntactically valid but violates a domain rule.",
+        userAction:
+          "Change the workflow state or request values so the business rule is satisfied.",
+        operatorAction: "Review domain policy, entitlement, quota, and lifecycle rule evidence.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/gamification-core/src/libs/problems.ts",
+          line: 31,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "gamification-drizzle/persistence",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#gamification-drizzle-persistence",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/gamification-drizzle/src/libs/ChallengePersistenceProblem.ts",
+          line: 4,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "gamification-drizzle/persistence-failure",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#gamification-drizzle-persistence-failure",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/gamification-drizzle/src/libs/problems.ts",
+          line: 2,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "gamification/access-denied",
+      category: "Forbidden",
+      status: 403,
+      title: "Forbidden",
+      cookbookPath: "/reference/problem-recovery-cookbook/#gamification-access-denied",
+      recovery: {
+        cause: "The authenticated caller is not allowed to perform the requested action.",
+        userAction: "Request the required permission or choose an allowed action.",
+        operatorAction: "Review policy, role, tenant, entitlement, and impersonation context.",
+        retryability: "not-retryable",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/gamification-core/src/libs/MissionContracts.ts",
+          line: 18,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "gamification/conflict",
+      category: "Conflict",
+      status: 409,
+      title: "Conflict",
+      cookbookPath: "/reference/problem-recovery-cookbook/#gamification-conflict",
+      recovery: {
+        cause: "The request conflicts with current state or an idempotency constraint.",
+        userAction: "Refresh state, resolve the conflict, and retry with the updated intent.",
+        operatorAction: "Inspect concurrent writes, idempotency keys, and uniqueness constraints.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/gamification-core/src/libs/MissionContracts.ts",
+          line: 11,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "gamification/console-invalid",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#gamification-console-invalid",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/admin-core/src/libs/MissionConsole.ts",
+          line: 17,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "gamification/invalid",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#gamification-invalid",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/gamification-core/src/libs/MissionContracts.ts",
+          line: 4,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "gamification/not-found",
+      category: "NotFound",
+      status: 404,
+      title: "Not Found",
+      cookbookPath: "/reference/problem-recovery-cookbook/#gamification-not-found",
+      recovery: {
+        cause: "The requested resource or route-visible record does not exist.",
+        userAction: "Verify the identifier and refresh the resource list before retrying.",
+        operatorAction:
+          "Confirm tenant scoping, data retention, and backing-store lookup behavior.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/gamification-core/src/libs/MissionContracts.ts",
+          line: 25,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
     },
     {
       code: "gid-core/duplicate-prefix",
@@ -11802,68 +17348,6 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       ],
     },
     {
-      code: "GRAPHQL_NOT_FOUND",
-      category: "NotFound",
-      status: 404,
-      title: "Not Found",
-      cookbookPath: "/reference/problem-recovery-cookbook/#graphql-not-found",
-      recovery: {
-        cause: "The requested resource or route-visible record does not exist.",
-        userAction: "Verify the identifier and refresh the resource list before retrying.",
-        operatorAction:
-          "Confirm tenant scoping, data retention, and backing-store lookup behavior.",
-        retryability: "not-retryable",
-        redactionPolicy: "public",
-        telemetry: {
-          eventName: "croco.problem.info",
-          severity: "info",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/protocols-graphql/src/libs/errors/GraphQLProblems.ts",
-          line: 23,
-          column: 5,
-          kind: "problem-constructor",
-        },
-      ],
-    },
-    {
-      code: "HEALTH_SCORE_NOT_FOUND",
-      category: "NotFound",
-      status: 404,
-      title: "Not Found",
-      cookbookPath: "/reference/problem-recovery-cookbook/#health-score-not-found",
-      recovery: {
-        cause: "The requested resource or route-visible record does not exist.",
-        userAction: "Verify the identifier and refresh the resource list before retrying.",
-        operatorAction:
-          "Confirm tenant scoping, data retention, and backing-store lookup behavior.",
-        retryability: "not-retryable",
-        redactionPolicy: "public",
-        telemetry: {
-          eventName: "croco.problem.info",
-          severity: "info",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/customer-health-core/src/libs/problems/HealthProblems.ts",
-          line: 24,
-          column: 1,
-          kind: "problem-class",
-        },
-      ],
-    },
-    {
       code: "health-core/duplicate-indicator-id",
       category: "InternalServerError",
       status: 500,
@@ -11983,7 +17467,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/idempotency-core/src/libs/problems/IdempotencyProblems.ts",
-          line: 168,
+          line: 181,
           column: 11,
           kind: "problem-metadata",
         },
@@ -12014,7 +17498,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/idempotency-core/src/libs/problems/IdempotencyProblems.ts",
-          line: 58,
+          line: 59,
           column: 11,
           kind: "problem-metadata",
         },
@@ -12044,7 +17528,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/idempotency-core/src/libs/problems/IdempotencyProblems.ts",
-          line: 77,
+          line: 78,
           column: 11,
           kind: "problem-metadata",
         },
@@ -12075,7 +17559,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/idempotency-core/src/libs/problems/IdempotencyProblems.ts",
-          line: 100,
+          line: 102,
           column: 11,
           kind: "problem-metadata",
         },
@@ -12105,7 +17589,40 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/idempotency-core/src/libs/problems/IdempotencyProblems.ts",
-          line: 42,
+          line: 43,
+          column: 11,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "idempotency-core/processing-lease-unsupported",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#idempotency-core-processing-lease-unsupported",
+      recovery: {
+        cause:
+          "The configured idempotency store has not declared independent processing lease support.",
+        userAction: "Do not retry until the store supports the processing lease contract.",
+        operatorAction:
+          "Implement leaseMs independently of ttlMs, verify the store conformance suite, and declare processingLeaseVersion: 1.",
+        retryability: "not-retryable",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/idempotency-core/src/libs/problems/IdempotencyProblems.ts",
+          line: 117,
           column: 11,
           kind: "problem-metadata",
         },
@@ -12135,7 +17652,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/idempotency-core/src/libs/problems/IdempotencyProblems.ts",
-          line: 129,
+          line: 142,
           column: 11,
           kind: "problem-metadata",
         },
@@ -12165,7 +17682,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/idempotency-core/src/libs/problems/IdempotencyProblems.ts",
-          line: 115,
+          line: 128,
           column: 11,
           kind: "problem-metadata",
         },
@@ -12195,228 +17712,9 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/idempotency-core/src/libs/problems/IdempotencyProblems.ts",
-          line: 148,
+          line: 161,
           column: 11,
           kind: "problem-metadata",
-        },
-      ],
-    },
-    {
-      code: "IMPERSONATION_CONFIGURATION_INVALID",
-      category: "InternalServerError",
-      status: 500,
-      title: "Internal Server Error",
-      cookbookPath: "/reference/problem-recovery-cookbook/#impersonation-configuration-invalid",
-      recovery: {
-        cause: "Croco or an upstream dependency failed after accepting the request.",
-        userAction:
-          "Retry later only when the operation is idempotent or the caller owns retry safety.",
-        operatorAction:
-          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
-        retryability: "conditional",
-        redactionPolicy: "operator-only",
-        telemetry: {
-          eventName: "croco.problem.error",
-          severity: "error",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts",
-          line: 29,
-          column: 1,
-          kind: "problem-class",
-        },
-      ],
-    },
-    {
-      code: "IMPERSONATION_IDENTITY_CONFLICT",
-      category: "Forbidden",
-      status: 403,
-      title: "Forbidden",
-      cookbookPath: "/reference/problem-recovery-cookbook/#impersonation-identity-conflict",
-      recovery: {
-        cause: "The authenticated caller is not allowed to perform the requested action.",
-        userAction: "Request the required permission or choose an allowed action.",
-        operatorAction: "Review policy, role, tenant, entitlement, and impersonation context.",
-        retryability: "not-retryable",
-        redactionPolicy: "safe-message",
-        telemetry: {
-          eventName: "croco.problem.warning",
-          severity: "warning",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts",
-          line: 58,
-          column: 1,
-          kind: "problem-class",
-        },
-      ],
-    },
-    {
-      code: "IMPERSONATION_LIFECYCLE_PUBLICATION_PENDING",
-      category: "InternalServerError",
-      status: 500,
-      title: "Internal Server Error",
-      cookbookPath:
-        "/reference/problem-recovery-cookbook/#impersonation-lifecycle-publication-pending",
-      recovery: {
-        cause:
-          "The impersonation session mutation committed, but its lifecycle event remains pending at the reported publish, acknowledge, or predecessor stage.",
-        userAction:
-          "Do not repeat a failed start request. An end request may be retried with the same session and authenticated actor; ask the service operator to reconcile the pending lifecycle event if it remains pending.",
-        operatorAction:
-          "Inspect the Problem reconciliationState and stage, call getLifecycleDiagnostics() to confirm reconciliation_required, then call publishPendingEvents() to replay and acknowledge the stored intent.",
-        retryability: "conditional",
-        redactionPolicy: "operator-only",
-        telemetry: {
-          eventName: "croco.problem.error",
-          severity: "error",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts",
-          line: 128,
-          column: 1,
-          kind: "problem-class",
-        },
-      ],
-    },
-    {
-      code: "IMPERSONATION_REASON_REQUIRED",
-      category: "BadRequest",
-      status: 400,
-      title: "Bad Request",
-      cookbookPath: "/reference/problem-recovery-cookbook/#impersonation-reason-required",
-      recovery: {
-        cause: "The caller sent malformed input or unsupported request options.",
-        userAction: "Correct the request input and retry after validation passes.",
-        operatorAction:
-          "Inspect validation details and request logs; do not retry unchanged input.",
-        retryability: "not-retryable",
-        redactionPolicy: "public",
-        telemetry: {
-          eventName: "croco.problem.info",
-          severity: "info",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts",
-          line: 85,
-          column: 1,
-          kind: "problem-class",
-        },
-      ],
-    },
-    {
-      code: "IMPERSONATION_SESSION_ACTOR_MISMATCH",
-      category: "Forbidden",
-      status: 403,
-      title: "Forbidden",
-      cookbookPath: "/reference/problem-recovery-cookbook/#impersonation-session-actor-mismatch",
-      recovery: {
-        cause: "The authenticated caller is not allowed to perform the requested action.",
-        userAction: "Request the required permission or choose an allowed action.",
-        operatorAction: "Review policy, role, tenant, entitlement, and impersonation context.",
-        retryability: "not-retryable",
-        redactionPolicy: "safe-message",
-        telemetry: {
-          eventName: "croco.problem.warning",
-          severity: "warning",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts",
-          line: 117,
-          column: 1,
-          kind: "problem-class",
-        },
-      ],
-    },
-    {
-      code: "IMPERSONATION_SESSION_NOT_FOUND",
-      category: "NotFound",
-      status: 404,
-      title: "Not Found",
-      cookbookPath: "/reference/problem-recovery-cookbook/#impersonation-session-not-found",
-      recovery: {
-        cause: "The requested resource or route-visible record does not exist.",
-        userAction: "Verify the identifier and refresh the resource list before retrying.",
-        operatorAction:
-          "Confirm tenant scoping, data retention, and backing-store lookup behavior.",
-        retryability: "not-retryable",
-        redactionPolicy: "public",
-        telemetry: {
-          eventName: "croco.problem.info",
-          severity: "info",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts",
-          line: 103,
-          column: 1,
-          kind: "problem-class",
-        },
-      ],
-    },
-    {
-      code: "IMPERSONATION_TARGET_NOT_FOUND",
-      category: "NotFound",
-      status: 404,
-      title: "Not Found",
-      cookbookPath: "/reference/problem-recovery-cookbook/#impersonation-target-not-found",
-      recovery: {
-        cause: "The requested resource or route-visible record does not exist.",
-        userAction: "Verify the identifier and refresh the resource list before retrying.",
-        operatorAction:
-          "Confirm tenant scoping, data retention, and backing-store lookup behavior.",
-        retryability: "not-retryable",
-        redactionPolicy: "public",
-        telemetry: {
-          eventName: "croco.problem.info",
-          severity: "info",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts",
-          line: 67,
-          column: 1,
-          kind: "problem-class",
         },
       ],
     },
@@ -12483,37 +17781,6 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       ],
     },
     {
-      code: "INDEX_NOT_FOUND",
-      category: "NotFound",
-      status: 404,
-      title: "Not Found",
-      cookbookPath: "/reference/problem-recovery-cookbook/#index-not-found",
-      recovery: {
-        cause: "The requested resource or route-visible record does not exist.",
-        userAction: "Verify the identifier and refresh the resource list before retrying.",
-        operatorAction:
-          "Confirm tenant scoping, data retention, and backing-store lookup behavior.",
-        retryability: "not-retryable",
-        redactionPolicy: "public",
-        telemetry: {
-          eventName: "croco.problem.info",
-          severity: "info",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/search-core/src/libs/problems/SearchProblems.ts",
-          line: 127,
-          column: 5,
-          kind: "problem-constructor",
-        },
-      ],
-    },
-    {
       code: "integrations-posthog/missing-config",
       category: "InternalServerError",
       status: 500,
@@ -12539,465 +17806,6 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/integrations-posthog/src/libs/problems/PostHogProblems.ts",
-          line: 3,
-          column: 1,
-          kind: "problem-class",
-        },
-      ],
-    },
-    {
-      code: "INVALID_AUTO_JOIN_ROLE",
-      category: "BadRequest",
-      status: 400,
-      title: "Bad Request",
-      cookbookPath: "/reference/problem-recovery-cookbook/#invalid-auto-join-role",
-      recovery: {
-        cause: "The caller sent malformed input or unsupported request options.",
-        userAction: "Correct the request input and retry after validation passes.",
-        operatorAction:
-          "Inspect validation details and request logs; do not retry unchanged input.",
-        retryability: "not-retryable",
-        redactionPolicy: "public",
-        telemetry: {
-          eventName: "croco.problem.info",
-          severity: "info",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/invitation-core/src/libs/problems/DomainPolicyProblems.ts",
-          line: 18,
-          column: 5,
-          kind: "problem-constructor",
-        },
-      ],
-    },
-    {
-      code: "INVALID_CURSOR",
-      category: "BadRequest",
-      status: 400,
-      title: "Bad Request",
-      cookbookPath: "/reference/problem-recovery-cookbook/#invalid-cursor",
-      recovery: {
-        cause: "The caller sent malformed input or unsupported request options.",
-        userAction: "Correct the request input and retry after validation passes.",
-        operatorAction:
-          "Inspect validation details and request logs; do not retry unchanged input.",
-        retryability: "not-retryable",
-        redactionPolicy: "public",
-        telemetry: {
-          eventName: "croco.problem.info",
-          severity: "info",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/pagination-core/src/libs/problems.ts",
-          line: 29,
-          column: 1,
-          kind: "problem-class",
-        },
-      ],
-    },
-    {
-      code: "INVALID_INVITATION_EXPIRY_DURATION",
-      category: "ValidationError",
-      status: 422,
-      title: "Validation Error",
-      cookbookPath: "/reference/problem-recovery-cookbook/#invalid-invitation-expiry-duration",
-      recovery: {
-        cause: "The request or generated contract failed schema or semantic validation.",
-        userAction: "Fix the invalid fields and retry with schema-conformant input.",
-        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
-        retryability: "not-retryable",
-        redactionPolicy: "public",
-        telemetry: {
-          eventName: "croco.problem.info",
-          severity: "info",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/invitation-core/src/libs/problems/InvitationProblems.ts",
-          line: 31,
-          column: 1,
-          kind: "problem-class",
-        },
-      ],
-    },
-    {
-      code: "INVALID_MEMBERSHIP_COMMAND",
-      category: "BadRequest",
-      status: 400,
-      title: "Bad Request",
-      cookbookPath: "/reference/problem-recovery-cookbook/#invalid-membership-command",
-      recovery: {
-        cause: "The caller sent malformed input or unsupported request options.",
-        userAction: "Correct the request input and retry after validation passes.",
-        operatorAction:
-          "Inspect validation details and request logs; do not retry unchanged input.",
-        retryability: "not-retryable",
-        redactionPolicy: "public",
-        telemetry: {
-          eventName: "croco.problem.info",
-          severity: "info",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/membership-core/src/libs/problems/MembershipProblems.ts",
-          line: 104,
-          column: 5,
-          kind: "problem-constructor",
-        },
-      ],
-    },
-    {
-      code: "INVALID_PAGINATION_DIRECTION",
-      category: "BadRequest",
-      status: 400,
-      title: "Bad Request",
-      cookbookPath: "/reference/problem-recovery-cookbook/#invalid-pagination-direction",
-      recovery: {
-        cause: "The caller sent malformed input or unsupported request options.",
-        userAction: "Correct the request input and retry after validation passes.",
-        operatorAction:
-          "Inspect validation details and request logs; do not retry unchanged input.",
-        retryability: "not-retryable",
-        redactionPolicy: "public",
-        telemetry: {
-          eventName: "croco.problem.info",
-          severity: "info",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/pagination-core/src/libs/problems.ts",
-          line: 65,
-          column: 1,
-          kind: "problem-class",
-        },
-      ],
-    },
-    {
-      code: "INVALID_RETRY_CONFIGURATION",
-      category: "ValidationError",
-      status: 422,
-      title: "Validation Error",
-      cookbookPath: "/reference/problem-recovery-cookbook/#invalid-retry-configuration",
-      recovery: {
-        cause: "The request or generated contract failed schema or semantic validation.",
-        userAction: "Fix the invalid fields and retry with schema-conformant input.",
-        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
-        retryability: "not-retryable",
-        redactionPolicy: "public",
-        telemetry: {
-          eventName: "croco.problem.info",
-          severity: "info",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/retry-core/src/libs/errors/RetryInfrastructureProblem.ts",
-          line: 51,
-          column: 1,
-          kind: "problem-class",
-        },
-      ],
-    },
-    {
-      code: "INVALID_ROLE",
-      category: "BadRequest",
-      status: 400,
-      title: "Bad Request",
-      cookbookPath: "/reference/problem-recovery-cookbook/#invalid-role",
-      recovery: {
-        cause: "The caller sent malformed input or unsupported request options.",
-        userAction: "Correct the request input and retry after validation passes.",
-        operatorAction:
-          "Inspect validation details and request logs; do not retry unchanged input.",
-        retryability: "not-retryable",
-        redactionPolicy: "public",
-        telemetry: {
-          eventName: "croco.problem.info",
-          severity: "info",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/membership-core/src/libs/problems/MembershipProblems.ts",
-          line: 44,
-          column: 5,
-          kind: "problem-constructor",
-        },
-      ],
-    },
-    {
-      code: "INVITATION_ALREADY_ACCEPTED",
-      category: "Conflict",
-      status: 409,
-      title: "Conflict",
-      cookbookPath: "/reference/problem-recovery-cookbook/#invitation-already-accepted",
-      recovery: {
-        cause: "The request conflicts with current state or an idempotency constraint.",
-        userAction: "Refresh state, resolve the conflict, and retry with the updated intent.",
-        operatorAction: "Inspect concurrent writes, idempotency keys, and uniqueness constraints.",
-        retryability: "conditional",
-        redactionPolicy: "safe-message",
-        telemetry: {
-          eventName: "croco.problem.warning",
-          severity: "warning",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/invitation-core/src/libs/problems/InvitationProblems.ts",
-          line: 72,
-          column: 1,
-          kind: "problem-class",
-        },
-      ],
-    },
-    {
-      code: "INVITATION_CREATION_FAILED",
-      category: "InternalServerError",
-      status: 500,
-      title: "Internal Server Error",
-      cookbookPath: "/reference/problem-recovery-cookbook/#invitation-creation-failed",
-      recovery: {
-        cause: "Croco or an upstream dependency failed after accepting the request.",
-        userAction:
-          "Retry later only when the operation is idempotent or the caller owns retry safety.",
-        operatorAction:
-          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
-        retryability: "conditional",
-        redactionPolicy: "operator-only",
-        telemetry: {
-          eventName: "croco.problem.error",
-          severity: "error",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/invitation-core/src/libs/problems/InvitationProblems.ts",
-          line: 3,
-          column: 1,
-          kind: "problem-class",
-        },
-      ],
-    },
-    {
-      code: "INVITATION_EMAIL_MISMATCH",
-      category: "Forbidden",
-      status: 403,
-      title: "Forbidden",
-      cookbookPath: "/reference/problem-recovery-cookbook/#invitation-email-mismatch",
-      recovery: {
-        cause: "The authenticated caller is not allowed to perform the requested action.",
-        userAction: "Request the required permission or choose an allowed action.",
-        operatorAction: "Review policy, role, tenant, entitlement, and impersonation context.",
-        retryability: "not-retryable",
-        redactionPolicy: "safe-message",
-        telemetry: {
-          eventName: "croco.problem.warning",
-          severity: "warning",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/invitation-core/src/libs/problems/InvitationProblems.ts",
-          line: 83,
-          column: 1,
-          kind: "problem-class",
-        },
-      ],
-    },
-    {
-      code: "INVITATION_EXPIRED",
-      category: "Gone",
-      status: 410,
-      title: "Gone",
-      cookbookPath: "/reference/problem-recovery-cookbook/#invitation-expired",
-      recovery: {
-        cause: "The requested resource is no longer available through this API surface.",
-        userAction:
-          "Stop using the stale reference and follow the replacement flow when available.",
-        operatorAction: "Verify lifecycle, migration, deprecation, and retention state.",
-        retryability: "not-retryable",
-        redactionPolicy: "public",
-        telemetry: {
-          eventName: "croco.problem.info",
-          severity: "info",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/invitation-core/src/libs/problems/InvitationProblems.ts",
-          line: 61,
-          column: 1,
-          kind: "problem-class",
-        },
-      ],
-    },
-    {
-      code: "INVITATION_IDEMPOTENCY_CONFLICT",
-      category: "Conflict",
-      status: 409,
-      title: "Conflict",
-      cookbookPath: "/reference/problem-recovery-cookbook/#invitation-idempotency-conflict",
-      recovery: {
-        cause: "The request conflicts with current state or an idempotency constraint.",
-        userAction: "Refresh state, resolve the conflict, and retry with the updated intent.",
-        operatorAction: "Inspect concurrent writes, idempotency keys, and uniqueness constraints.",
-        retryability: "conditional",
-        redactionPolicy: "safe-message",
-        telemetry: {
-          eventName: "croco.problem.warning",
-          severity: "warning",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/invitation-core/src/libs/problems/InvitationProblems.ts",
-          line: 18,
-          column: 1,
-          kind: "problem-class",
-        },
-      ],
-    },
-    {
-      code: "INVITATION_INVALID_STATUS",
-      category: "Conflict",
-      status: 409,
-      title: "Conflict",
-      cookbookPath: "/reference/problem-recovery-cookbook/#invitation-invalid-status",
-      recovery: {
-        cause: "The request conflicts with current state or an idempotency constraint.",
-        userAction: "Refresh state, resolve the conflict, and retry with the updated intent.",
-        operatorAction: "Inspect concurrent writes, idempotency keys, and uniqueness constraints.",
-        retryability: "conditional",
-        redactionPolicy: "safe-message",
-        telemetry: {
-          eventName: "croco.problem.warning",
-          severity: "warning",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/invitation-core/src/libs/problems/InvitationProblems.ts",
-          line: 94,
-          column: 1,
-          kind: "problem-class",
-        },
-      ],
-    },
-    {
-      code: "INVITATION_NOT_FOUND",
-      category: "NotFound",
-      status: 404,
-      title: "Not Found",
-      cookbookPath: "/reference/problem-recovery-cookbook/#invitation-not-found",
-      recovery: {
-        cause: "The requested resource or route-visible record does not exist.",
-        userAction: "Verify the identifier and refresh the resource list before retrying.",
-        operatorAction:
-          "Confirm tenant scoping, data retention, and backing-store lookup behavior.",
-        retryability: "not-retryable",
-        redactionPolicy: "public",
-        telemetry: {
-          eventName: "croco.problem.info",
-          severity: "info",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/invitation-core/src/libs/problems/InvitationProblems.ts",
-          line: 50,
-          column: 1,
-          kind: "problem-class",
-        },
-      ],
-    },
-    {
-      code: "INVITATION_RATE_LIMIT_EXCEEDED",
-      category: "TooManyRequests",
-      status: 429,
-      title: "Too Many Requests",
-      cookbookPath: "/reference/problem-recovery-cookbook/#invitation-rate-limit-exceeded",
-      recovery: {
-        cause: "The caller exceeded a rate, quota, or concurrency limit.",
-        userAction: "Wait for the retry window or reduce request volume.",
-        operatorAction: "Check limiter state, quota configuration, and abuse signals.",
-        retryability: "retryable",
-        redactionPolicy: "safe-message",
-        telemetry: {
-          eventName: "croco.problem.warning",
-          severity: "warning",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/invitation-core/src/libs/problems/RateLimitProblems.ts",
           line: 3,
           column: 1,
           kind: "problem-class",
@@ -13068,22 +17876,20 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       ],
     },
     {
-      code: "LAMBDA_TIMEOUT_GUARD",
-      category: "InternalServerError",
-      status: 500,
-      title: "Internal Server Error",
-      cookbookPath: "/reference/problem-recovery-cookbook/#lambda-timeout-guard",
+      code: "journey/admin-denied",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#journey-admin-denied",
       recovery: {
-        cause: "Croco or an upstream dependency failed after accepting the request.",
-        userAction:
-          "Retry later only when the operation is idempotent or the caller owns retry safety.",
-        operatorAction:
-          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
-        retryability: "conditional",
-        redactionPolicy: "operator-only",
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
         telemetry: {
-          eventName: "croco.problem.error",
-          severity: "error",
+          eventName: "croco.problem.info",
+          severity: "info",
           attributes: ["problem.code", "problem.category", "problem.status"],
         },
       },
@@ -13092,28 +17898,28 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       },
       sources: [
         {
-          file: "packages/retry-core/src/libs/errors/RetryInfrastructureProblem.ts",
-          line: 38,
+          file: "packages/admin-core/src/libs/JourneyOperations.ts",
+          line: 52,
           column: 1,
           kind: "problem-class",
         },
       ],
     },
     {
-      code: "LAST_OWNER",
-      category: "Forbidden",
-      status: 403,
-      title: "Forbidden",
-      cookbookPath: "/reference/problem-recovery-cookbook/#last-owner",
+      code: "journey/admin-validation",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#journey-admin-validation",
       recovery: {
-        cause: "The authenticated caller is not allowed to perform the requested action.",
-        userAction: "Request the required permission or choose an allowed action.",
-        operatorAction: "Review policy, role, tenant, entitlement, and impersonation context.",
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
         retryability: "not-retryable",
-        redactionPolicy: "safe-message",
+        redactionPolicy: "public",
         telemetry: {
-          eventName: "croco.problem.warning",
-          severity: "warning",
+          eventName: "croco.problem.info",
+          severity: "info",
           attributes: ["problem.code", "problem.category", "problem.status"],
         },
       },
@@ -13122,10 +17928,10 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       },
       sources: [
         {
-          file: "packages/membership-core/src/libs/problems/MembershipProblems.ts",
-          line: 31,
-          column: 5,
-          kind: "problem-constructor",
+          file: "packages/admin-core/src/libs/JourneyOperations.ts",
+          line: 52,
+          column: 1,
+          kind: "problem-class",
         },
       ],
     },
@@ -13218,7 +18024,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/lifecycle-core/src/libs/problems/LifecycleProblems.ts",
-          line: 228,
+          line: 279,
           column: 5,
           kind: "problem-constructor",
         },
@@ -13249,7 +18055,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/lifecycle-core/src/libs/problems/LifecycleProblems.ts",
-          line: 211,
+          line: 262,
           column: 5,
           kind: "problem-constructor",
         },
@@ -13280,7 +18086,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/lifecycle-core/src/libs/problems/LifecycleProblems.ts",
-          line: 246,
+          line: 297,
           column: 5,
           kind: "problem-constructor",
         },
@@ -13597,6 +18403,66 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       ],
     },
     {
+      code: "lifecycle-core/source-identity-missing",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#lifecycle-core-source-identity-missing",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/lifecycle-core/src/libs/problems/LifecycleProblems.ts",
+          line: 214,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "lifecycle-core/source-payload-conflict",
+      category: "Conflict",
+      status: 409,
+      title: "Conflict",
+      cookbookPath: "/reference/problem-recovery-cookbook/#lifecycle-core-source-payload-conflict",
+      recovery: {
+        cause: "The request conflicts with current state or an idempotency constraint.",
+        userAction: "Refresh state, resolve the conflict, and retry with the updated intent.",
+        operatorAction: "Inspect concurrent writes, idempotency keys, and uniqueness constraints.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/lifecycle-core/src/libs/problems/LifecycleProblems.ts",
+          line: 239,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
       code: "lifecycle-core/webhook-timeout-invalid",
       category: "ValidationError",
       status: 422,
@@ -13620,733 +18486,27 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/lifecycle-core/src/libs/problems/LifecycleProblems.ts",
-          line: 263,
+          line: 314,
           column: 1,
           kind: "problem-class",
         },
       ],
     },
     {
-      code: "LLM_PROVIDER_NOT_FOUND",
-      category: "NotFound",
-      status: 404,
-      title: "Not Found",
-      cookbookPath: "/reference/problem-recovery-cookbook/#llm-provider-not-found",
+      code: "meta-vite/personalized-fragment-invalid",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#meta-vite-personalized-fragment-invalid",
       recovery: {
-        cause: "The requested resource or route-visible record does not exist.",
-        userAction: "Verify the identifier and refresh the resource list before retrying.",
-        operatorAction:
-          "Confirm tenant scoping, data retention, and backing-store lookup behavior.",
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
         retryability: "not-retryable",
         redactionPolicy: "public",
         telemetry: {
           eventName: "croco.problem.info",
           severity: "info",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "deprecated",
-        deprecation: {
-          reason:
-            "The framework-owned LLM abstraction or its generated example contract was retired.",
-          migrationNote:
-            "Remove branches for this code and handle vendor SDK failures explicitly at the application call boundary.",
-          noReplacementReason:
-            "The retired generic LLM capability has no framework-level equivalent.",
-        },
-      },
-      sources: [],
-    },
-    {
-      code: "LLM_SERVICE_ERROR",
-      category: "InternalServerError",
-      status: 500,
-      title: "Internal Server Error",
-      cookbookPath: "/reference/problem-recovery-cookbook/#llm-service-error",
-      recovery: {
-        cause: "Croco or an upstream dependency failed after accepting the request.",
-        userAction:
-          "Retry later only when the operation is idempotent or the caller owns retry safety.",
-        operatorAction:
-          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
-        retryability: "conditional",
-        redactionPolicy: "operator-only",
-        telemetry: {
-          eventName: "croco.problem.error",
-          severity: "error",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "deprecated",
-        deprecation: {
-          reason:
-            "The framework-owned LLM abstraction or its generated example contract was retired.",
-          migrationNote:
-            "Remove branches for this code and handle vendor SDK failures explicitly at the application call boundary.",
-          noReplacementReason:
-            "The retired generic LLM capability has no framework-level equivalent.",
-        },
-      },
-      sources: [],
-    },
-    {
-      code: "llm-core/completion-event-publication-failed",
-      category: "Conflict",
-      status: 409,
-      title: "Conflict",
-      cookbookPath:
-        "/reference/problem-recovery-cookbook/#llm-core-completion-event-publication-failed",
-      recovery: {
-        cause:
-          "The model completed billable work, but its completion event was not durably confirmed afterward.",
-        userAction:
-          "Hand the opaque failure reference to an operator; do not invoke the model again or manually publish the completion event.",
-        operatorAction:
-          "Use retryCompletionEvent with the in-process Problem or saved intent: published_unconfirmed confirms storage without republishing, delivery_in_progress waits for the active claim, and not_published atomically claims delivery before publishing. Never publish the event manually.",
-        retryability: "not-retryable",
-        redactionPolicy: "operator-only",
-        telemetry: {
-          eventName: "croco.problem.error",
-          severity: "error",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "deprecated",
-        deprecation: {
-          reason:
-            "The framework-owned LLM abstraction or its generated example contract was retired.",
-          migrationNote:
-            "Remove branches for this code and handle vendor SDK failures explicitly at the application call boundary.",
-          noReplacementReason:
-            "The retired generic LLM capability has no framework-level equivalent.",
-        },
-      },
-      sources: [],
-    },
-    {
-      code: "llm-core/invalid-llm-prompt",
-      category: "BadRequest",
-      status: 400,
-      title: "Bad Request",
-      cookbookPath: "/reference/problem-recovery-cookbook/#llm-core-invalid-llm-prompt",
-      recovery: {
-        cause: "The caller sent malformed input or unsupported request options.",
-        userAction: "Correct the request input and retry after validation passes.",
-        operatorAction:
-          "Inspect validation details and request logs; do not retry unchanged input.",
-        retryability: "not-retryable",
-        redactionPolicy: "public",
-        telemetry: {
-          eventName: "croco.problem.info",
-          severity: "info",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "deprecated",
-        deprecation: {
-          reason:
-            "The framework-owned LLM abstraction or its generated example contract was retired.",
-          migrationNote:
-            "Remove branches for this code and handle vendor SDK failures explicitly at the application call boundary.",
-          noReplacementReason:
-            "The retired generic LLM capability has no framework-level equivalent.",
-        },
-      },
-      sources: [],
-    },
-    {
-      code: "llm-core/invalid-llm-response",
-      category: "InternalServerError",
-      status: 500,
-      title: "Internal Server Error",
-      cookbookPath: "/reference/problem-recovery-cookbook/#llm-core-invalid-llm-response",
-      recovery: {
-        cause: "Croco or an upstream dependency failed after accepting the request.",
-        userAction:
-          "Retry later only when the operation is idempotent or the caller owns retry safety.",
-        operatorAction:
-          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
-        retryability: "conditional",
-        redactionPolicy: "operator-only",
-        telemetry: {
-          eventName: "croco.problem.error",
-          severity: "error",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "deprecated",
-        deprecation: {
-          reason:
-            "The framework-owned LLM abstraction or its generated example contract was retired.",
-          migrationNote:
-            "Remove branches for this code and handle vendor SDK failures explicitly at the application call boundary.",
-          noReplacementReason:
-            "The retired generic LLM capability has no framework-level equivalent.",
-        },
-      },
-      sources: [],
-    },
-    {
-      code: "llm-core/llm-service-not-initialized",
-      category: "InternalServerError",
-      status: 500,
-      title: "Internal Server Error",
-      cookbookPath: "/reference/problem-recovery-cookbook/#llm-core-llm-service-not-initialized",
-      recovery: {
-        cause: "Croco or an upstream dependency failed after accepting the request.",
-        userAction:
-          "Retry later only when the operation is idempotent or the caller owns retry safety.",
-        operatorAction:
-          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
-        retryability: "conditional",
-        redactionPolicy: "operator-only",
-        telemetry: {
-          eventName: "croco.problem.error",
-          severity: "error",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "deprecated",
-        deprecation: {
-          reason:
-            "The framework-owned LLM abstraction or its generated example contract was retired.",
-          migrationNote:
-            "Remove branches for this code and handle vendor SDK failures explicitly at the application call boundary.",
-          noReplacementReason:
-            "The retired generic LLM capability has no framework-level equivalent.",
-        },
-      },
-      sources: [],
-    },
-    {
-      code: "llm-core/operation-aborted",
-      category: "BadRequest",
-      status: 400,
-      title: "Bad Request",
-      cookbookPath: "/reference/problem-recovery-cookbook/#llm-core-operation-aborted",
-      recovery: {
-        cause: "The caller sent malformed input or unsupported request options.",
-        userAction: "Correct the request input and retry after validation passes.",
-        operatorAction:
-          "Inspect validation details and request logs; do not retry unchanged input.",
-        retryability: "not-retryable",
-        redactionPolicy: "public",
-        telemetry: {
-          eventName: "croco.problem.info",
-          severity: "info",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "deprecated",
-        deprecation: {
-          reason:
-            "The framework-owned LLM abstraction or its generated example contract was retired.",
-          migrationNote:
-            "Remove branches for this code and handle vendor SDK failures explicitly at the application call boundary.",
-          noReplacementReason:
-            "The retired generic LLM capability has no framework-level equivalent.",
-        },
-      },
-      sources: [],
-    },
-    {
-      code: "llm-core/rate-limit-exceeded",
-      category: "TooManyRequests",
-      status: 429,
-      title: "Too Many Requests",
-      cookbookPath: "/reference/problem-recovery-cookbook/#llm-core-rate-limit-exceeded",
-      recovery: {
-        cause: "The caller exceeded a rate, quota, or concurrency limit.",
-        userAction: "Wait for the retry window or reduce request volume.",
-        operatorAction: "Check limiter state, quota configuration, and abuse signals.",
-        retryability: "retryable",
-        redactionPolicy: "safe-message",
-        telemetry: {
-          eventName: "croco.problem.warning",
-          severity: "warning",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "deprecated",
-        deprecation: {
-          reason:
-            "The framework-owned LLM abstraction or its generated example contract was retired.",
-          migrationNote:
-            "Remove branches for this code and handle vendor SDK failures explicitly at the application call boundary.",
-          noReplacementReason:
-            "The retired generic LLM capability has no framework-level equivalent.",
-        },
-      },
-      sources: [],
-    },
-    {
-      code: "llm-metering/cost-limit-exceeded",
-      category: "Forbidden",
-      status: 403,
-      title: "Forbidden",
-      cookbookPath: "/reference/problem-recovery-cookbook/#llm-metering-cost-limit-exceeded",
-      recovery: {
-        cause: "The authenticated caller is not allowed to perform the requested action.",
-        userAction: "Request the required permission or choose an allowed action.",
-        operatorAction: "Review policy, role, tenant, entitlement, and impersonation context.",
-        retryability: "not-retryable",
-        redactionPolicy: "safe-message",
-        telemetry: {
-          eventName: "croco.problem.warning",
-          severity: "warning",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "deprecated",
-        deprecation: {
-          reason:
-            "The framework-owned LLM abstraction was removed in favor of application-owned SDK calls and SDK-independent usage ingestion.",
-          migrationNote:
-            "Branch on ai-usage/cost-limit-exceeded after migrating usage handling to @croco/ai-usage.",
-          replacementCode: "ai-usage/cost-limit-exceeded",
-        },
-      },
-      sources: [],
-    },
-    {
-      code: "llm-metering/pricing-not-found",
-      category: "NotFound",
-      status: 404,
-      title: "Not Found",
-      cookbookPath: "/reference/problem-recovery-cookbook/#llm-metering-pricing-not-found",
-      recovery: {
-        cause: "The requested resource or route-visible record does not exist.",
-        userAction: "Verify the identifier and refresh the resource list before retrying.",
-        operatorAction:
-          "Confirm tenant scoping, data retention, and backing-store lookup behavior.",
-        retryability: "not-retryable",
-        redactionPolicy: "public",
-        telemetry: {
-          eventName: "croco.problem.info",
-          severity: "info",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "deprecated",
-        deprecation: {
-          reason:
-            "The framework-owned LLM abstraction was removed in favor of application-owned SDK calls and SDK-independent usage ingestion.",
-          migrationNote:
-            "Branch on ai-usage/pricing-not-found after migrating usage handling to @croco/ai-usage.",
-          replacementCode: "ai-usage/pricing-not-found",
-        },
-      },
-      sources: [],
-    },
-    {
-      code: "llm-metering/pricing-registry-conflict",
-      category: "Conflict",
-      status: 409,
-      title: "Conflict",
-      cookbookPath: "/reference/problem-recovery-cookbook/#llm-metering-pricing-registry-conflict",
-      recovery: {
-        cause: "The request conflicts with current state or an idempotency constraint.",
-        userAction: "Refresh state, resolve the conflict, and retry with the updated intent.",
-        operatorAction: "Inspect concurrent writes, idempotency keys, and uniqueness constraints.",
-        retryability: "conditional",
-        redactionPolicy: "safe-message",
-        telemetry: {
-          eventName: "croco.problem.warning",
-          severity: "warning",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "deprecated",
-        deprecation: {
-          reason:
-            "The framework-owned LLM abstraction was removed in favor of application-owned SDK calls and SDK-independent usage ingestion.",
-          migrationNote:
-            "Branch on ai-usage/pricing-registry-conflict after migrating usage handling to @croco/ai-usage.",
-          replacementCode: "ai-usage/pricing-registry-conflict",
-        },
-      },
-      sources: [],
-    },
-    {
-      code: "llm-metering/quota-exceeded",
-      category: "Forbidden",
-      status: 403,
-      title: "Forbidden",
-      cookbookPath: "/reference/problem-recovery-cookbook/#llm-metering-quota-exceeded",
-      recovery: {
-        cause: "The authenticated caller is not allowed to perform the requested action.",
-        userAction: "Request the required permission or choose an allowed action.",
-        operatorAction: "Review policy, role, tenant, entitlement, and impersonation context.",
-        retryability: "not-retryable",
-        redactionPolicy: "safe-message",
-        telemetry: {
-          eventName: "croco.problem.warning",
-          severity: "warning",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "deprecated",
-        deprecation: {
-          reason:
-            "The framework-owned LLM abstraction was removed in favor of application-owned SDK calls and SDK-independent usage ingestion.",
-          migrationNote:
-            "Branch on ai-usage/quota-exceeded after migrating usage handling to @croco/ai-usage.",
-          replacementCode: "ai-usage/quota-exceeded",
-        },
-      },
-      sources: [],
-    },
-    {
-      code: "llm-metering/record-failed",
-      category: "InternalServerError",
-      status: 500,
-      title: "Internal Server Error",
-      cookbookPath: "/reference/problem-recovery-cookbook/#llm-metering-record-failed",
-      recovery: {
-        cause: "Croco or an upstream dependency failed after accepting the request.",
-        userAction:
-          "Retry later only when the operation is idempotent or the caller owns retry safety.",
-        operatorAction:
-          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
-        retryability: "conditional",
-        redactionPolicy: "operator-only",
-        telemetry: {
-          eventName: "croco.problem.error",
-          severity: "error",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "deprecated",
-        deprecation: {
-          reason:
-            "The framework-owned LLM abstraction was removed in favor of application-owned SDK calls and SDK-independent usage ingestion.",
-          migrationNote:
-            "Branch on ai-usage/record-failed after migrating usage handling to @croco/ai-usage.",
-          replacementCode: "ai-usage/record-failed",
-        },
-      },
-      sources: [],
-    },
-    {
-      code: "llm-metering/service-required",
-      category: "InternalServerError",
-      status: 500,
-      title: "Internal Server Error",
-      cookbookPath: "/reference/problem-recovery-cookbook/#llm-metering-service-required",
-      recovery: {
-        cause:
-          "@AiMetered required usage recording, but no scoped or global LlmMeteringService was configured.",
-        userAction:
-          "Do not retry the unchanged operation; ask the service operator to configure LLM metering or explicitly disable it for an intentionally unmetered method.",
-        operatorAction:
-          'Bind LlmMeteringService at bootstrap with setLlmMeteringService(), bind it per execution with runWithLlmMeteringService(), or set @AiMetered({ metering: "disabled" }) only when skipping usage recording is intentional.',
-        retryability: "not-retryable",
-        redactionPolicy: "operator-only",
-        telemetry: {
-          eventName: "croco.problem.error",
-          severity: "error",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "deprecated",
-        deprecation: {
-          reason:
-            "The framework-owned LLM abstraction or its generated example contract was retired.",
-          migrationNote:
-            "Remove branches for this code and handle vendor SDK failures explicitly at the application call boundary.",
-          noReplacementReason:
-            "The retired generic LLM capability has no framework-level equivalent.",
-        },
-      },
-      sources: [],
-    },
-    {
-      code: "llm-openai/aborted",
-      category: "BadRequest",
-      status: 400,
-      title: "Bad Request",
-      cookbookPath: "/reference/problem-recovery-cookbook/#llm-openai-aborted",
-      recovery: {
-        cause: "The caller sent malformed input or unsupported request options.",
-        userAction: "Correct the request input and retry after validation passes.",
-        operatorAction:
-          "Inspect validation details and request logs; do not retry unchanged input.",
-        retryability: "not-retryable",
-        redactionPolicy: "public",
-        telemetry: {
-          eventName: "croco.problem.info",
-          severity: "info",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "deprecated",
-        deprecation: {
-          reason:
-            "The framework-owned LLM abstraction or its generated example contract was retired.",
-          migrationNote:
-            "Remove branches for this code and handle vendor SDK failures explicitly at the application call boundary.",
-          noReplacementReason:
-            "The retired generic LLM capability has no framework-level equivalent.",
-        },
-      },
-      sources: [],
-    },
-    {
-      code: "llm-openai/authentication-failed",
-      category: "Unauthorized",
-      status: 401,
-      title: "Unauthorized",
-      cookbookPath: "/reference/problem-recovery-cookbook/#llm-openai-authentication-failed",
-      recovery: {
-        cause: "The request did not include valid authentication credentials.",
-        userAction: "Sign in again or provide a valid credential.",
-        operatorAction: "Check authentication configuration, token issuer, and clock skew.",
-        retryability: "not-retryable",
-        redactionPolicy: "safe-message",
-        telemetry: {
-          eventName: "croco.problem.warning",
-          severity: "warning",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "deprecated",
-        deprecation: {
-          reason:
-            "The framework-owned LLM abstraction or its generated example contract was retired.",
-          migrationNote:
-            "Remove branches for this code and handle vendor SDK failures explicitly at the application call boundary.",
-          noReplacementReason:
-            "The retired generic LLM capability has no framework-level equivalent.",
-        },
-      },
-      sources: [],
-    },
-    {
-      code: "llm-openai/invalid-response",
-      category: "InternalServerError",
-      status: 500,
-      title: "Internal Server Error",
-      cookbookPath: "/reference/problem-recovery-cookbook/#llm-openai-invalid-response",
-      recovery: {
-        cause: "Croco or an upstream dependency failed after accepting the request.",
-        userAction:
-          "Retry later only when the operation is idempotent or the caller owns retry safety.",
-        operatorAction:
-          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
-        retryability: "conditional",
-        redactionPolicy: "operator-only",
-        telemetry: {
-          eventName: "croco.problem.error",
-          severity: "error",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "deprecated",
-        deprecation: {
-          reason:
-            "The framework-owned LLM abstraction or its generated example contract was retired.",
-          migrationNote:
-            "Remove branches for this code and handle vendor SDK failures explicitly at the application call boundary.",
-          noReplacementReason:
-            "The retired generic LLM capability has no framework-level equivalent.",
-        },
-      },
-      sources: [],
-    },
-    {
-      code: "llm-openai/missing-config",
-      category: "InternalServerError",
-      status: 500,
-      title: "Internal Server Error",
-      cookbookPath: "/reference/problem-recovery-cookbook/#llm-openai-missing-config",
-      recovery: {
-        cause: "Croco or an upstream dependency failed after accepting the request.",
-        userAction:
-          "Retry later only when the operation is idempotent or the caller owns retry safety.",
-        operatorAction:
-          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
-        retryability: "conditional",
-        redactionPolicy: "operator-only",
-        telemetry: {
-          eventName: "croco.problem.error",
-          severity: "error",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "deprecated",
-        deprecation: {
-          reason:
-            "The framework-owned LLM abstraction or its generated example contract was retired.",
-          migrationNote:
-            "Remove branches for this code and handle vendor SDK failures explicitly at the application call boundary.",
-          noReplacementReason:
-            "The retired generic LLM capability has no framework-level equivalent.",
-        },
-      },
-      sources: [],
-    },
-    {
-      code: "llm-openai/rate-limited",
-      category: "TooManyRequests",
-      status: 429,
-      title: "Too Many Requests",
-      cookbookPath: "/reference/problem-recovery-cookbook/#llm-openai-rate-limited",
-      recovery: {
-        cause: "The caller exceeded a rate, quota, or concurrency limit.",
-        userAction: "Wait for the retry window or reduce request volume.",
-        operatorAction: "Check limiter state, quota configuration, and abuse signals.",
-        retryability: "retryable",
-        redactionPolicy: "safe-message",
-        telemetry: {
-          eventName: "croco.problem.warning",
-          severity: "warning",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "deprecated",
-        deprecation: {
-          reason:
-            "The framework-owned LLM abstraction or its generated example contract was retired.",
-          migrationNote:
-            "Remove branches for this code and handle vendor SDK failures explicitly at the application call boundary.",
-          noReplacementReason:
-            "The retired generic LLM capability has no framework-level equivalent.",
-        },
-      },
-      sources: [],
-    },
-    {
-      code: "llm-openai/retryable-upstream",
-      category: "InternalServerError",
-      status: 500,
-      title: "Internal Server Error",
-      cookbookPath: "/reference/problem-recovery-cookbook/#llm-openai-retryable-upstream",
-      recovery: {
-        cause: "Croco or an upstream dependency failed after accepting the request.",
-        userAction:
-          "Retry later only when the operation is idempotent or the caller owns retry safety.",
-        operatorAction:
-          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
-        retryability: "conditional",
-        redactionPolicy: "operator-only",
-        telemetry: {
-          eventName: "croco.problem.error",
-          severity: "error",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "deprecated",
-        deprecation: {
-          reason:
-            "The framework-owned LLM abstraction or its generated example contract was retired.",
-          migrationNote:
-            "Remove branches for this code and handle vendor SDK failures explicitly at the application call boundary.",
-          noReplacementReason:
-            "The retired generic LLM capability has no framework-level equivalent.",
-        },
-      },
-      sources: [],
-    },
-    {
-      code: "llm-openai/terminal-upstream",
-      category: "InternalServerError",
-      status: 500,
-      title: "Internal Server Error",
-      cookbookPath: "/reference/problem-recovery-cookbook/#llm-openai-terminal-upstream",
-      recovery: {
-        cause: "Croco or an upstream dependency failed after accepting the request.",
-        userAction:
-          "Retry later only when the operation is idempotent or the caller owns retry safety.",
-        operatorAction:
-          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
-        retryability: "conditional",
-        redactionPolicy: "operator-only",
-        telemetry: {
-          eventName: "croco.problem.error",
-          severity: "error",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "deprecated",
-        deprecation: {
-          reason:
-            "The framework-owned LLM abstraction or its generated example contract was retired.",
-          migrationNote:
-            "Remove branches for this code and handle vendor SDK failures explicitly at the application call boundary.",
-          noReplacementReason:
-            "The retired generic LLM capability has no framework-level equivalent.",
-        },
-      },
-      sources: [],
-    },
-    {
-      code: "llm-openai/validation-failed",
-      category: "BadRequest",
-      status: 400,
-      title: "Bad Request",
-      cookbookPath: "/reference/problem-recovery-cookbook/#llm-openai-validation-failed",
-      recovery: {
-        cause: "The caller sent malformed input or unsupported request options.",
-        userAction: "Correct the request input and retry after validation passes.",
-        operatorAction:
-          "Inspect validation details and request logs; do not retry unchanged input.",
-        retryability: "not-retryable",
-        redactionPolicy: "public",
-        telemetry: {
-          eventName: "croco.problem.info",
-          severity: "info",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "deprecated",
-        deprecation: {
-          reason:
-            "The framework-owned LLM abstraction or its generated example contract was retired.",
-          migrationNote:
-            "Remove branches for this code and handle vendor SDK failures explicitly at the application call boundary.",
-          noReplacementReason:
-            "The retired generic LLM capability has no framework-level equivalent.",
-        },
-      },
-      sources: [],
-    },
-    {
-      code: "MEMBERSHIP_CONSTRAINT",
-      category: "Forbidden",
-      status: 403,
-      title: "Forbidden",
-      cookbookPath: "/reference/problem-recovery-cookbook/#membership-constraint",
-      recovery: {
-        cause: "The authenticated caller is not allowed to perform the requested action.",
-        userAction: "Request the required permission or choose an allowed action.",
-        operatorAction: "Review policy, role, tenant, entitlement, and impersonation context.",
-        retryability: "not-retryable",
-        redactionPolicy: "safe-message",
-        telemetry: {
-          eventName: "croco.problem.warning",
-          severity: "warning",
           attributes: ["problem.code", "problem.category", "problem.status"],
         },
       },
@@ -14355,86 +18515,24 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       },
       sources: [
         {
-          file: "packages/membership-core/src/libs/problems/MembershipConstraintProblem.ts",
+          file: "packages/meta-vite/src/libs/isr/personalizedFragmentProblems.ts",
           line: 9,
-          column: 5,
-          kind: "problem-constructor",
+          column: 1,
+          kind: "problem-class",
         },
       ],
     },
     {
-      code: "MEMBERSHIP_EVENT_PUBLICATION_FAILED",
-      category: "InternalServerError",
-      status: 500,
-      title: "Internal Server Error",
-      cookbookPath: "/reference/problem-recovery-cookbook/#membership-event-publication-failed",
+      code: "meta-vite/server-action-invalid-content-type",
+      category: "UnsupportedMediaType",
+      status: 415,
+      title: "Unsupported Media Type",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#meta-vite-server-action-invalid-content-type",
       recovery: {
-        cause: "Croco or an upstream dependency failed after accepting the request.",
-        userAction:
-          "Retry later only when the operation is idempotent or the caller owns retry safety.",
-        operatorAction:
-          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
-        retryability: "conditional",
-        redactionPolicy: "operator-only",
-        telemetry: {
-          eventName: "croco.problem.error",
-          severity: "error",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/membership-core/src/libs/problems/MembershipProblems.ts",
-          line: 115,
-          column: 5,
-          kind: "problem-constructor",
-        },
-      ],
-    },
-    {
-      code: "MEMBERSHIP_IDEMPOTENCY_CONFLICT",
-      category: "Conflict",
-      status: 409,
-      title: "Conflict",
-      cookbookPath: "/reference/problem-recovery-cookbook/#membership-idempotency-conflict",
-      recovery: {
-        cause: "The request conflicts with current state or an idempotency constraint.",
-        userAction: "Refresh state, resolve the conflict, and retry with the updated intent.",
-        operatorAction: "Inspect concurrent writes, idempotency keys, and uniqueness constraints.",
-        retryability: "conditional",
-        redactionPolicy: "safe-message",
-        telemetry: {
-          eventName: "croco.problem.warning",
-          severity: "warning",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/membership-core/src/libs/problems/MembershipProblems.ts",
-          line: 92,
-          column: 5,
-          kind: "problem-constructor",
-        },
-      ],
-    },
-    {
-      code: "MEMBERSHIP_NOT_FOUND",
-      category: "NotFound",
-      status: 404,
-      title: "Not Found",
-      cookbookPath: "/reference/problem-recovery-cookbook/#membership-not-found",
-      recovery: {
-        cause: "The requested resource or route-visible record does not exist.",
-        userAction: "Verify the identifier and refresh the resource list before retrying.",
-        operatorAction:
-          "Confirm tenant scoping, data retention, and backing-store lookup behavior.",
+        cause: "The request body uses a media type that the endpoint does not support.",
+        userAction: "Send the request body with a supported Content-Type and retry.",
+        operatorAction: "Confirm the route media-type contract and request Content-Type header.",
         retryability: "not-retryable",
         redactionPolicy: "public",
         telemetry: {
@@ -14448,10 +18546,10 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       },
       sources: [
         {
-          file: "packages/membership-core/src/libs/problems/MembershipProblems.ts",
-          line: 5,
-          column: 5,
-          kind: "problem-constructor",
+          file: "packages/meta-vite/src/libs/actions/serverActions.ts",
+          line: 131,
+          column: 1,
+          kind: "problem-class",
         },
       ],
     },
@@ -14480,7 +18578,38 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/meta-vite/src/libs/actions/serverActions.ts",
-          line: 79,
+          line: 87,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "meta-vite/server-action-malformed-body",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath: "/reference/problem-recovery-cookbook/#meta-vite-server-action-malformed-body",
+      recovery: {
+        cause: "The caller sent malformed input or unsupported request options.",
+        userAction: "Correct the request input and retry after validation passes.",
+        operatorAction:
+          "Inspect validation details and request logs; do not retry unchanged input.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/meta-vite/src/libs/actions/serverActions.ts",
+          line: 115,
           column: 1,
           kind: "problem-class",
         },
@@ -14511,7 +18640,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/meta-vite/src/libs/actions/serverActions.ts",
-          line: 65,
+          line: 73,
           column: 1,
           kind: "problem-class",
         },
@@ -14542,7 +18671,38 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/meta-vite/src/libs/actions/serverActions.ts",
-          line: 93,
+          line: 101,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "meta-vite/unsupported-render-capability",
+      category: "NotImplemented",
+      status: 501,
+      title: "Not Implemented",
+      cookbookPath: "/reference/problem-recovery-cookbook/#meta-vite-unsupported-render-capability",
+      recovery: {
+        cause: "The requested capability is not supported by this runtime or adapter.",
+        userAction: "Use a supported capability or choose an adapter/runtime that provides it.",
+        operatorAction:
+          "Check runtime capability declarations and provider maturity documentation.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/meta-vite/src/libs/build/routeManifest.ts",
+          line: 22,
           column: 1,
           kind: "problem-class",
         },
@@ -14574,8 +18734,41 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/metering-drizzle/src/libs/DrizzleMeterRepository.ts",
-          line: 237,
+          line: 272,
           column: 13,
+          kind: "problem-factory",
+        },
+      ],
+    },
+    {
+      code: "meter/invalid-column-mapping",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath: "/reference/problem-recovery-cookbook/#meter-invalid-column-mapping",
+      recovery: {
+        cause:
+          "A meterSchema field references a column outside the configured meterTable or shares its target with another field.",
+        userAction:
+          "Do not retry unchanged configuration; correct the meterSchema mapping before creating the repository.",
+        operatorAction:
+          "Read the meterSchema field named in detail and map it to a distinct corresponding meterTable column. Table property names may differ from MeterTable keys.",
+        retryability: "not-retryable",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/metering-drizzle/src/libs/DrizzleMeterRepository.ts",
+          line: 186,
+          column: 17,
           kind: "problem-factory",
         },
       ],
@@ -14627,7 +18820,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
         userAction:
           "Do not retry with the same meter definition; register the meter with a supported billing, aggregation, and unit.",
         operatorAction:
-          "Use the tenantId, meterId, field, and receivedValue extensions to correct the registration or the stored row, and confirm that meterTable property names match the MeterTable keys.",
+          "Use the tenantId, meterId, field, and receivedValue extensions to correct the registration or the stored row.",
         retryability: "not-retryable",
         redactionPolicy: "operator-only",
         telemetry: {
@@ -14715,6 +18908,39 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       ],
     },
     {
+      code: "metering-upstash/automatic-deserialization-enabled",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#metering-upstash-automatic-deserialization-enabled",
+      recovery: {
+        cause: "The injected Upstash Redis client deserialized a Lua-returned JSON string.",
+        userAction:
+          "Retry after the Redis client is configured with automaticDeserialization: false.",
+        operatorAction:
+          "Construct the injected @upstash/redis instance with automaticDeserialization: false.",
+        retryability: "not-retryable",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/metering-upstash/src/libs/problems/UpstashMeteringProblems.ts",
+          line: 17,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
       code: "metering-upstash/missing-config",
       category: "InternalServerError",
       status: 500,
@@ -14741,6 +18967,43 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
         {
           file: "packages/metering-upstash/src/libs/problems/UpstashMeteringProblems.ts",
           line: 3,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "metering-upstash/upstream-failed",
+      category: null,
+      status: null,
+      categoryPolicy: {
+        kind: "runtime-dependent",
+        possibleCategories: ["BadRequest", "InternalServerError", "TooManyRequests"],
+        possibleStatuses: [400, 429, 500],
+      },
+      title: null,
+      cookbookPath: "/reference/problem-recovery-cookbook/#metering-upstash-upstream-failed",
+      recovery: {
+        cause: "The Upstash Redis provider rejected or failed the metering operation.",
+        userAction:
+          "Check the retryable extension before retrying. Correct invalid requests; use bounded backoff for transient provider failures.",
+        operatorAction:
+          "Inspect provider status and sanitized operation metadata. Verify credentials, quotas, and Upstash Redis availability before replaying the operation.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/metering-upstash/src/libs/problems/UpstashMeteringProblems.ts",
+          line: 28,
           column: 1,
           kind: "problem-class",
         },
@@ -15217,6 +19480,40 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       ],
     },
     {
+      code: "metrics-billing/repository-contract-unsupported",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#metrics-billing-repository-contract-unsupported",
+      recovery: {
+        cause:
+          "BillingEventHandler was constructed with a metrics provider that does not declare movement identity version 2.",
+        userAction:
+          "Do not retry with the unchanged provider; use a provider that implements the required identity contract.",
+        operatorAction:
+          "Upgrade warehouse-postgres with metrics-core and metrics-billing, or implement tenant-scoped historical primary-key lookups in the custom provider before declaring version 2.",
+        retryability: "not-retryable",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/metrics-billing/src/libs/BillingEventHandler.ts",
+          line: 48,
+          column: 13,
+          kind: "problem-factory",
+        },
+      ],
+    },
+    {
       code: "metrics-core/carrying-capacity-simulation-error",
       category: "BusinessRuleViolation",
       status: 422,
@@ -15303,7 +19600,67 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/metrics-core/src/libs/BehaviorMetrics.ts",
-          line: 90,
+          line: 92,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "metrics-core/experiment-input-invalid",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#metrics-core-experiment-input-invalid",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/metrics-core/src/libs/experiment/ExperimentReview.ts",
+          line: 194,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "metrics-core/experiment-plan-invalid",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#metrics-core-experiment-plan-invalid",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/metrics-core/src/libs/experiment/ExperimentReview.ts",
+          line: 185,
           column: 1,
           kind: "problem-class",
         },
@@ -15340,6 +19697,36 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       ],
     },
     {
+      code: "metrics-core/invalid-activation-input",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#metrics-core-invalid-activation-input",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/metrics-core/src/libs/activation/ActivationCandidates.ts",
+          line: 81,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
       code: "metrics-core/invalid-behavior-metric",
       category: "ValidationError",
       status: 422,
@@ -15363,7 +19750,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/metrics-core/src/libs/BehaviorMetrics.ts",
-          line: 83,
+          line: 85,
           column: 1,
           kind: "problem-class",
         },
@@ -15395,6 +19782,36 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
         {
           file: "packages/metrics-core/src/libs/problems/MetricsProblems.ts",
           line: 19,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "metrics-core/invalid-policy-replay",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#metrics-core-invalid-policy-replay",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/metrics-core/src/libs/replay/PolicyReplay.ts",
+          line: 101,
           column: 1,
           kind: "problem-class",
         },
@@ -15492,6 +19909,67 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       ],
     },
     {
+      code: "metrics-core/read-cancelled",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath: "/reference/problem-recovery-cookbook/#metrics-core-read-cancelled",
+      recovery: {
+        cause: "The metric read was cancelled by its trusted or invocation AbortSignal.",
+        userAction: "Retry the read after the cancellation reason is cleared.",
+        operatorAction: "Inspect the cancellation signal and invocation lifecycle.",
+        retryability: "conditional",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/metrics-core/src/libs/read/MetricReadService.ts",
+          line: 189,
+          column: 10,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "metrics-core/read-timeout",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath: "/reference/problem-recovery-cookbook/#metrics-core-read-timeout",
+      recovery: {
+        cause: "The metric read exceeded its authorized invocation time budget.",
+        userAction: "Retry after read latency or the authorized time budget has been reviewed.",
+        operatorAction:
+          "Inspect authorization, report reader, and executor latency against the effective time budget; retain concurrency slots until pending work settles.",
+        retryability: "conditional",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/metrics-core/src/libs/read/MetricReadService.ts",
+          line: 193,
+          column: 10,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
       code: "metrics-core/retention-metrics-unavailable",
       category: "NotImplemented",
       status: 501,
@@ -15554,22 +20032,22 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       ],
     },
     {
-      code: "MIDDLEWARE_EXECUTION_ERROR",
-      category: "InternalServerError",
-      status: 500,
-      title: "Internal Server Error",
-      cookbookPath: "/reference/problem-recovery-cookbook/#middleware-execution-error",
+      code: "migration-runner/conflicting-rollback-options",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#migration-runner-conflicting-rollback-options",
       recovery: {
-        cause: "Croco or an upstream dependency failed after accepting the request.",
-        userAction:
-          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        cause: "The caller sent malformed input or unsupported request options.",
+        userAction: "Correct the request input and retry after validation passes.",
         operatorAction:
-          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
-        retryability: "conditional",
-        redactionPolicy: "operator-only",
+          "Inspect validation details and request logs; do not retry unchanged input.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
         telemetry: {
-          eventName: "croco.problem.error",
-          severity: "error",
+          eventName: "croco.problem.info",
+          severity: "info",
           attributes: ["problem.code", "problem.category", "problem.status"],
         },
       },
@@ -15578,8 +20056,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       },
       sources: [
         {
-          file: "packages/framework-context/src/libs/problems/MiddlewareProblems.ts",
-          line: 6,
+          file: "packages/migration-runner/src/libs/problems/ConflictingRollbackOptionsProblem.ts",
+          line: 3,
           column: 1,
           kind: "problem-class",
         },
@@ -15900,99 +20378,6 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       ],
     },
     {
-      code: "MISSING_TENANT",
-      category: "BadRequest",
-      status: 400,
-      title: "Bad Request",
-      cookbookPath: "/reference/problem-recovery-cookbook/#missing-tenant",
-      recovery: {
-        cause: "The caller sent malformed input or unsupported request options.",
-        userAction: "Correct the request input and retry after validation passes.",
-        operatorAction:
-          "Inspect validation details and request logs; do not retry unchanged input.",
-        retryability: "not-retryable",
-        redactionPolicy: "public",
-        telemetry: {
-          eventName: "croco.problem.info",
-          severity: "info",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/search-core/src/libs/problems/SearchProblems.ts",
-          line: 57,
-          column: 5,
-          kind: "problem-constructor",
-        },
-      ],
-    },
-    {
-      code: "MODEL_NOT_FOUND",
-      category: "NotFound",
-      status: 404,
-      title: "Not Found",
-      cookbookPath: "/reference/problem-recovery-cookbook/#model-not-found",
-      recovery: {
-        cause: "The requested resource or route-visible record does not exist.",
-        userAction: "Verify the identifier and refresh the resource list before retrying.",
-        operatorAction:
-          "Confirm tenant scoping, data retention, and backing-store lookup behavior.",
-        retryability: "not-retryable",
-        redactionPolicy: "public",
-        telemetry: {
-          eventName: "croco.problem.info",
-          severity: "info",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "deprecated",
-        deprecation: {
-          reason:
-            "The framework-owned LLM abstraction or its generated example contract was retired.",
-          migrationNote:
-            "Remove branches for this code and handle vendor SDK failures explicitly at the application call boundary.",
-          noReplacementReason:
-            "The retired generic LLM capability has no framework-level equivalent.",
-        },
-      },
-      sources: [],
-    },
-    {
-      code: "NESTED_IMPERSONATION_NOT_ALLOWED",
-      category: "Forbidden",
-      status: 403,
-      title: "Forbidden",
-      cookbookPath: "/reference/problem-recovery-cookbook/#nested-impersonation-not-allowed",
-      recovery: {
-        cause: "The authenticated caller is not allowed to perform the requested action.",
-        userAction: "Request the required permission or choose an allowed action.",
-        operatorAction: "Review policy, role, tenant, entitlement, and impersonation context.",
-        retryability: "not-retryable",
-        redactionPolicy: "safe-message",
-        telemetry: {
-          eventName: "croco.problem.warning",
-          severity: "warning",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts",
-          line: 76,
-          column: 1,
-          kind: "problem-class",
-        },
-      ],
-    },
-    {
       code: "notifications-core/default-provider-conflict",
       category: "InternalServerError",
       status: 500,
@@ -16019,7 +20404,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/notifications-core/src/libs/problems/NotificationProblems.ts",
-          line: 135,
+          line: 146,
           column: 5,
           kind: "problem-constructor",
         },
@@ -16051,7 +20436,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/notifications-core/src/libs/problems/NotificationProblems.ts",
-          line: 224,
+          line: 235,
           column: 5,
           kind: "problem-constructor",
         },
@@ -16082,7 +20467,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/notifications-core/src/libs/problems/NotificationProblems.ts",
-          line: 296,
+          line: 307,
           column: 5,
           kind: "problem-constructor",
         },
@@ -16113,7 +20498,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/notifications-core/src/libs/problems/NotificationProblems.ts",
-          line: 312,
+          line: 323,
           column: 5,
           kind: "problem-constructor",
         },
@@ -16144,7 +20529,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/notifications-core/src/libs/problems/NotificationProblems.ts",
-          line: 279,
+          line: 290,
           column: 5,
           kind: "problem-constructor",
         },
@@ -16175,7 +20560,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/notifications-core/src/libs/problems/NotificationProblems.ts",
-          line: 263,
+          line: 274,
           column: 5,
           kind: "problem-constructor",
         },
@@ -16206,7 +20591,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/notifications-core/src/libs/problems/NotificationProblems.ts",
-          line: 241,
+          line: 252,
           column: 5,
           kind: "problem-constructor",
         },
@@ -16239,7 +20624,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/notifications-core/src/libs/problems/NotificationProblems.ts",
-          line: 64,
+          line: 75,
           column: 5,
           kind: "problem-constructor",
         },
@@ -16272,7 +20657,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/notifications-core/src/libs/problems/NotificationProblems.ts",
-          line: 80,
+          line: 91,
           column: 5,
           kind: "problem-constructor",
         },
@@ -16305,7 +20690,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/notifications-core/src/libs/problems/NotificationProblems.ts",
-          line: 117,
+          line: 128,
           column: 5,
           kind: "problem-constructor",
         },
@@ -16338,7 +20723,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/notifications-core/src/libs/problems/NotificationProblems.ts",
-          line: 96,
+          line: 107,
           column: 5,
           kind: "problem-constructor",
         },
@@ -16371,7 +20756,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/notifications-core/src/libs/problems/NotificationProblems.ts",
-          line: 157,
+          line: 168,
           column: 5,
           kind: "problem-constructor",
         },
@@ -16404,7 +20789,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/notifications-core/src/libs/problems/NotificationProblems.ts",
-          line: 191,
+          line: 202,
           column: 5,
           kind: "problem-constructor",
         },
@@ -16469,7 +20854,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/notifications-core/src/libs/problems/NotificationProblems.ts",
-          line: 175,
+          line: 186,
           column: 5,
           kind: "problem-constructor",
         },
@@ -16502,7 +20887,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/notifications-core/src/libs/problems/NotificationProblems.ts",
-          line: 48,
+          line: 59,
           column: 5,
           kind: "problem-constructor",
         },
@@ -16535,7 +20920,40 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/notifications-core/src/libs/problems/NotificationProblems.ts",
-          line: 208,
+          line: 219,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "notifications-core/task-result-invalid",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#notifications-core-task-result-invalid",
+      recovery: {
+        cause:
+          "A completed notification task contains invalid persisted provider delivery evidence.",
+        userAction:
+          "Do not retry the unchanged delivery or resend automatically; report the execution ID to the service operator.",
+        operatorAction:
+          "Inspect and reconcile the persisted task result against the original provider delivery before repairing the record.",
+        retryability: "not-retryable",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/notifications-core/src/libs/problems/NotificationProblems.ts",
+          line: 48,
           column: 5,
           kind: "problem-constructor",
         },
@@ -16566,7 +20984,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/notifications-core/src/libs/problems/NotificationProblems.ts",
-          line: 328,
+          line: 339,
           column: 5,
           kind: "problem-constructor",
         },
@@ -16597,7 +21015,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/notifications-core/src/libs/problems/NotificationProblems.ts",
-          line: 346,
+          line: 357,
           column: 5,
           kind: "problem-constructor",
         },
@@ -16628,9 +21046,293 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/notifications-core/src/libs/problems/NotificationProblems.ts",
-          line: 365,
+          line: 376,
           column: 5,
           kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "notifications-fcm/authentication",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#notifications-fcm-authentication",
+      recovery: {
+        cause: "Firebase rejected provider credentials or platform authentication.",
+        userAction:
+          "Report the unavailable notification channel; do not retry the unchanged request automatically.",
+        operatorAction:
+          "Repair Firebase permissions or APNs credentials using provider diagnostics; keep credentials out of logs.",
+        retryability: "not-retryable",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/notifications-fcm/src/libs/FcmProblem.ts",
+          line: 19,
+          column: 19,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "notifications-fcm/configuration",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#notifications-fcm-configuration",
+      recovery: {
+        cause: "FCM configuration or explicit credential selection is missing or invalid.",
+        userAction:
+          "Report the unavailable notification channel; retrying unchanged configuration cannot repair it.",
+        operatorAction:
+          "Validate the Firebase project ID and credential configuration, then redeploy before sending again.",
+        retryability: "not-retryable",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/notifications-fcm/src/libs/FcmProblem.ts",
+          line: 15,
+          column: 18,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "notifications-fcm/rate-limit",
+      category: "TooManyRequests",
+      status: 429,
+      title: "Too Many Requests",
+      cookbookPath: "/reference/problem-recovery-cookbook/#notifications-fcm-rate-limit",
+      recovery: {
+        cause: "Firebase rejected the send because a message rate or quota limit was exceeded.",
+        userAction:
+          "Retry only under the application's bounded retry policy after the quota or rate limit recovers.",
+        operatorAction:
+          "Inspect Firebase quota and send rates, apply backoff, and retain the endpoint; FCM does not guarantee idempotency-key deduplication.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/notifications-fcm/src/libs/FcmProblem.ts",
+          line: 35,
+          column: 17,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "notifications-fcm/sender-mismatch",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#notifications-fcm-sender-mismatch",
+      recovery: {
+        cause:
+          "The token belongs to a Firebase sender or project different from the configured credentials.",
+        userAction: "Report the channel configuration mismatch before another send.",
+        operatorAction:
+          "Align the token vault scope, Firebase project, and provider credentials; retain the potentially valid endpoint.",
+        retryability: "not-retryable",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/notifications-fcm/src/libs/FcmProblem.ts",
+          line: 31,
+          column: 22,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "notifications-fcm/timeout",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#notifications-fcm-timeout",
+      recovery: {
+        cause: "The FCM send timed out and provider acceptance may be unknown.",
+        userAction: "Retry only when the application accepts the risk of duplicate delivery.",
+        operatorAction:
+          "Inspect connectivity and apply bounded retry policy; retain the endpoint and account for FCM's lack of idempotency-key deduplication.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/notifications-fcm/src/libs/FcmProblem.ts",
+          line: 39,
+          column: 12,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "notifications-fcm/token-invalid",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#notifications-fcm-token-invalid",
+      recovery: {
+        cause: "Firebase rejected an invalid or unregistered device token.",
+        userAction: "Register a current device token through the application's endpoint lifecycle.",
+        operatorAction:
+          "Persist the terminal delivery event and invalidate the dispatched endpoint version; replay a saved dispatch to reconcile missing events after a store outage.",
+        retryability: "not-retryable",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/notifications-fcm/src/libs/FcmProblem.ts",
+          line: 27,
+          column: 20,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "notifications-fcm/unavailable",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#notifications-fcm-unavailable",
+      recovery: {
+        cause: "Firebase or its network connection was temporarily unavailable.",
+        userAction:
+          "Retry under the application's bounded retry policy when duplicate delivery risk is acceptable.",
+        operatorAction:
+          "Inspect upstream availability and connectivity, apply backoff, and retain the endpoint.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/notifications-fcm/src/libs/FcmProblem.ts",
+          line: 43,
+          column: 16,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "notifications-fcm/upstream",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#notifications-fcm-upstream",
+      recovery: {
+        cause: "FCM returned an unclassified failure whose retry safety is unknown.",
+        userAction: "Report the failed notification for investigation before another send.",
+        operatorAction:
+          "Investigate through sanitized provider diagnostics; do not automatically retry or invalidate the endpoint.",
+        retryability: "not-retryable",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/notifications-fcm/src/libs/FcmProblem.ts",
+          line: 47,
+          column: 13,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "notifications-fcm/validation",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#notifications-fcm-validation",
+      recovery: {
+        cause: "Canonical push content or its mapped Firebase payload is invalid.",
+        userAction: "Correct the message content before sending again.",
+        operatorAction:
+          "Validate reserved data keys, payload size, TTL, and platform limits using sanitized fixtures; retain the endpoint.",
+        retryability: "not-retryable",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/notifications-fcm/src/libs/FcmProblem.ts",
+          line: 23,
+          column: 15,
+          kind: "problem-metadata",
         },
       ],
     },
@@ -16694,7 +21396,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/notifications-resend/src/libs/problems/ResendNotificationProblem.ts",
-          line: 54,
+          line: 58,
           column: 5,
           kind: "problem-constructor",
         },
@@ -16727,7 +21429,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/notifications-resend/src/libs/problems/ResendNotificationProblem.ts",
-          line: 19,
+          line: 20,
           column: 5,
           kind: "problem-constructor",
         },
@@ -16758,7 +21460,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/notifications-resend/src/libs/problems/ResendNotificationProblem.ts",
-          line: 65,
+          line: 74,
           column: 5,
           kind: "problem-constructor",
         },
@@ -16790,7 +21492,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/notifications-resend/src/libs/problems/ResendNotificationProblem.ts",
-          line: 76,
+          line: 90,
           column: 5,
           kind: "problem-constructor",
         },
@@ -16820,7 +21522,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/notifications-resend/src/libs/problems/ResendNotificationProblem.ts",
-          line: 40,
+          line: 42,
           column: 5,
           kind: "problem-constructor",
         },
@@ -16850,7 +21552,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/onboarding-core/src/libs/problems/OnboardingProblems.ts",
-          line: 69,
+          line: 70,
           column: 1,
           kind: "problem-class",
         },
@@ -16880,7 +21582,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/onboarding-core/src/libs/problems/OnboardingProblems.ts",
-          line: 28,
+          line: 29,
           column: 1,
           kind: "problem-class",
         },
@@ -16911,7 +21613,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/onboarding-core/src/libs/problems/OnboardingProblems.ts",
-          line: 47,
+          line: 48,
           column: 1,
           kind: "problem-class",
         },
@@ -16951,6 +21653,248 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       ],
     },
     {
+      code: "onboarding/goal-authorization-denied",
+      category: "Forbidden",
+      status: 403,
+      title: "Forbidden",
+      cookbookPath: "/reference/problem-recovery-cookbook/#onboarding-goal-authorization-denied",
+      recovery: {
+        cause: "The authenticated caller is not allowed to perform the requested action.",
+        userAction: "Request the required permission or choose an allowed action.",
+        operatorAction: "Review policy, role, tenant, entitlement, and impersonation context.",
+        retryability: "not-retryable",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/onboarding-core/src/libs/goals/GoalProblems.ts",
+          line: 65,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "onboarding/goal-conflict",
+      category: "Conflict",
+      status: 409,
+      title: "Conflict",
+      cookbookPath: "/reference/problem-recovery-cookbook/#onboarding-goal-conflict",
+      recovery: {
+        cause: "The request conflicts with current state or an idempotency constraint.",
+        userAction: "Refresh state, resolve the conflict, and retry with the updated intent.",
+        operatorAction: "Inspect concurrent writes, idempotency keys, and uniqueness constraints.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/onboarding-core/src/libs/goals/GoalProblems.ts",
+          line: 54,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "onboarding/goal-context-invalid",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#onboarding-goal-context-invalid",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/onboarding-core/src/libs/goals/GoalProblems.ts",
+          line: 14,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "onboarding/goal-definition-invalid",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#onboarding-goal-definition-invalid",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/onboarding-core/src/libs/goals/GoalProblems.ts",
+          line: 3,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "onboarding/goal-definition-not-found",
+      category: "NotFound",
+      status: 404,
+      title: "Not Found",
+      cookbookPath: "/reference/problem-recovery-cookbook/#onboarding-goal-definition-not-found",
+      recovery: {
+        cause: "The requested resource or route-visible record does not exist.",
+        userAction: "Verify the identifier and refresh the resource list before retrying.",
+        operatorAction:
+          "Confirm tenant scoping, data retention, and backing-store lookup behavior.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/onboarding-core/src/libs/goals/GoalProblems.ts",
+          line: 45,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "onboarding/goal-episode-not-found",
+      category: "NotFound",
+      status: 404,
+      title: "Not Found",
+      cookbookPath: "/reference/problem-recovery-cookbook/#onboarding-goal-episode-not-found",
+      recovery: {
+        cause: "The requested resource or route-visible record does not exist.",
+        userAction: "Verify the identifier and refresh the resource list before retrying.",
+        operatorAction:
+          "Confirm tenant scoping, data retention, and backing-store lookup behavior.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/onboarding-core/src/libs/goals/GoalProblems.ts",
+          line: 36,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "onboarding/goal-receipt-invalid",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#onboarding-goal-receipt-invalid",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/onboarding-core/src/libs/goals/GoalProblems.ts",
+          line: 25,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "onboarding/guide-invalid",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#onboarding-guide-invalid",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/admin-core/src/libs/ActivationGuide.ts",
+          line: 65,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
       code: "onboarding/state-snapshot-unsupported",
       category: "ValidationError",
       status: 422,
@@ -16974,7 +21918,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/onboarding-core/src/libs/problems/OnboardingProblems.ts",
-          line: 99,
+          line: 100,
           column: 1,
           kind: "problem-class",
         },
@@ -17004,7 +21948,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/onboarding-core/src/libs/problems/OnboardingProblems.ts",
-          line: 84,
+          line: 85,
           column: 1,
           kind: "problem-class",
         },
@@ -17035,7 +21979,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/onboarding-core/src/libs/problems/OnboardingProblems.ts",
-          line: 58,
+          line: 59,
           column: 1,
           kind: "problem-class",
         },
@@ -17096,7 +22040,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/openapi-spec/src/libs/emitOpenAPI.ts",
-          line: 106,
+          line: 108,
           column: 5,
           kind: "problem-constructor",
         },
@@ -17130,38 +22074,6 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
           line: 19,
           column: 5,
           kind: "problem-constructor",
-        },
-      ],
-    },
-    {
-      code: "OTLP_ENDPOINT_REQUIRED",
-      category: "InternalServerError",
-      status: 500,
-      title: "Internal Server Error",
-      cookbookPath: "/reference/problem-recovery-cookbook/#otlp-endpoint-required",
-      recovery: {
-        cause: "Croco or an upstream dependency failed after accepting the request.",
-        userAction:
-          "Retry later only when the operation is idempotent or the caller owns retry safety.",
-        operatorAction:
-          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
-        retryability: "conditional",
-        redactionPolicy: "operator-only",
-        telemetry: {
-          eventName: "croco.problem.error",
-          severity: "error",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/telemetry-sdk-node/src/libs/problems/TelemetryProblems.ts",
-          line: 18,
-          column: 1,
-          kind: "problem-class",
         },
       ],
     },
@@ -17325,36 +22237,6 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
         {
           file: "packages/outbox-core/src/libs/problems/OutboxProblems.ts",
           line: 146,
-          column: 5,
-          kind: "problem-constructor",
-        },
-      ],
-    },
-    {
-      code: "OWNERSHIP_TRANSFER_REQUIRED",
-      category: "Forbidden",
-      status: 403,
-      title: "Forbidden",
-      cookbookPath: "/reference/problem-recovery-cookbook/#ownership-transfer-required",
-      recovery: {
-        cause: "The authenticated caller is not allowed to perform the requested action.",
-        userAction: "Request the required permission or choose an allowed action.",
-        operatorAction: "Review policy, role, tenant, entitlement, and impersonation context.",
-        retryability: "not-retryable",
-        redactionPolicy: "safe-message",
-        telemetry: {
-          eventName: "croco.problem.warning",
-          severity: "warning",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/membership-core/src/libs/problems/MembershipProblems.ts",
-          line: 65,
           column: 5,
           kind: "problem-constructor",
         },
@@ -17600,7 +22482,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/problems-core/src/libs/ProblemRegistry.ts",
-          line: 212,
+          line: 224,
           column: 5,
           kind: "problem-constructor",
         },
@@ -17639,6 +22521,560 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       ],
     },
     {
+      code: "promotions-core/amount-invalid",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#promotions-core-amount-invalid",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/promotions-core/src/libs/problems.ts",
+          line: 4,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "promotions-core/budget-exhausted",
+      category: "BusinessRuleViolation",
+      status: 422,
+      title: "Business Rule Violation",
+      cookbookPath: "/reference/problem-recovery-cookbook/#promotions-core-budget-exhausted",
+      recovery: {
+        cause: "The request is syntactically valid but violates a domain rule.",
+        userAction:
+          "Change the workflow state or request values so the business rule is satisfied.",
+        operatorAction: "Review domain policy, entitlement, quota, and lifecycle rule evidence.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/promotions-core/src/libs/problems.ts",
+          line: 122,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "promotions-core/claim-not-found",
+      category: "NotFound",
+      status: 404,
+      title: "Not Found",
+      cookbookPath: "/reference/problem-recovery-cookbook/#promotions-core-claim-not-found",
+      recovery: {
+        cause: "The requested resource or route-visible record does not exist.",
+        userAction: "Verify the identifier and refresh the resource list before retrying.",
+        operatorAction:
+          "Confirm tenant scoping, data retention, and backing-store lookup behavior.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/promotions-core/src/libs/problems.ts",
+          line: 164,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "promotions-core/claim-state-conflict",
+      category: "Conflict",
+      status: 409,
+      title: "Conflict",
+      cookbookPath: "/reference/problem-recovery-cookbook/#promotions-core-claim-state-conflict",
+      recovery: {
+        cause: "The request conflicts with current state or an idempotency constraint.",
+        userAction: "Refresh state, resolve the conflict, and retry with the updated intent.",
+        operatorAction: "Inspect concurrent writes, idempotency keys, and uniqueness constraints.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/promotions-core/src/libs/problems.ts",
+          line: 174,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "promotions-core/currency-mismatch",
+      category: "BusinessRuleViolation",
+      status: 422,
+      title: "Business Rule Violation",
+      cookbookPath: "/reference/problem-recovery-cookbook/#promotions-core-currency-mismatch",
+      recovery: {
+        cause: "The request is syntactically valid but violates a domain rule.",
+        userAction:
+          "Change the workflow state or request values so the business rule is satisfied.",
+        operatorAction: "Review domain policy, entitlement, quota, and lifecycle rule evidence.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/promotions-core/src/libs/problems.ts",
+          line: 202,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "promotions-core/duplicate-claim",
+      category: "Conflict",
+      status: 409,
+      title: "Conflict",
+      cookbookPath: "/reference/problem-recovery-cookbook/#promotions-core-duplicate-claim",
+      recovery: {
+        cause: "The request conflicts with current state or an idempotency constraint.",
+        userAction: "Refresh state, resolve the conflict, and retry with the updated intent.",
+        operatorAction: "Inspect concurrent writes, idempotency keys, and uniqueness constraints.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/promotions-core/src/libs/problems.ts",
+          line: 108,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "promotions-core/fulfillment-failed",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#promotions-core-fulfillment-failed",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/promotions-core/src/libs/problems.ts",
+          line: 54,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "promotions-core/not-eligible",
+      category: "BusinessRuleViolation",
+      status: 422,
+      title: "Business Rule Violation",
+      cookbookPath: "/reference/problem-recovery-cookbook/#promotions-core-not-eligible",
+      recovery: {
+        cause: "The request is syntactically valid but violates a domain rule.",
+        userAction:
+          "Change the workflow state or request values so the business rule is satisfied.",
+        operatorAction: "Review domain policy, entitlement, quota, and lifecycle rule evidence.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/promotions-core/src/libs/problems.ts",
+          line: 24,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "promotions-core/offer-expired",
+      category: "BusinessRuleViolation",
+      status: 422,
+      title: "Business Rule Violation",
+      cookbookPath: "/reference/problem-recovery-cookbook/#promotions-core-offer-expired",
+      recovery: {
+        cause: "The request is syntactically valid but violates a domain rule.",
+        userAction:
+          "Change the workflow state or request values so the business rule is satisfied.",
+        operatorAction: "Review domain policy, entitlement, quota, and lifecycle rule evidence.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/promotions-core/src/libs/problems.ts",
+          line: 98,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "promotions-core/policy-conflict",
+      category: "Conflict",
+      status: 409,
+      title: "Conflict",
+      cookbookPath: "/reference/problem-recovery-cookbook/#promotions-core-policy-conflict",
+      recovery: {
+        cause: "The request conflicts with current state or an idempotency constraint.",
+        userAction: "Refresh state, resolve the conflict, and retry with the updated intent.",
+        operatorAction: "Inspect concurrent writes, idempotency keys, and uniqueness constraints.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/promotions-core/src/libs/problems.ts",
+          line: 64,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "promotions-core/policy-invalid",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#promotions-core-policy-invalid",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/promotions-core/src/libs/problems.ts",
+          line: 14,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "promotions-core/policy-not-found",
+      category: "NotFound",
+      status: 404,
+      title: "Not Found",
+      cookbookPath: "/reference/problem-recovery-cookbook/#promotions-core-policy-not-found",
+      recovery: {
+        cause: "The requested resource or route-visible record does not exist.",
+        userAction: "Verify the identifier and refresh the resource list before retrying.",
+        operatorAction:
+          "Confirm tenant scoping, data retention, and backing-store lookup behavior.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/promotions-core/src/libs/problems.ts",
+          line: 38,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "promotions-core/quote-mismatch",
+      category: "Forbidden",
+      status: 403,
+      title: "Forbidden",
+      cookbookPath: "/reference/problem-recovery-cookbook/#promotions-core-quote-mismatch",
+      recovery: {
+        cause: "The authenticated caller is not allowed to perform the requested action.",
+        userAction: "Request the required permission or choose an allowed action.",
+        operatorAction: "Review policy, role, tenant, entitlement, and impersonation context.",
+        retryability: "not-retryable",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/promotions-core/src/libs/problems.ts",
+          line: 88,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "promotions-core/quote-not-found",
+      category: "NotFound",
+      status: 404,
+      title: "Not Found",
+      cookbookPath: "/reference/problem-recovery-cookbook/#promotions-core-quote-not-found",
+      recovery: {
+        cause: "The requested resource or route-visible record does not exist.",
+        userAction: "Verify the identifier and refresh the resource list before retrying.",
+        operatorAction:
+          "Confirm tenant scoping, data retention, and backing-store lookup behavior.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/promotions-core/src/libs/problems.ts",
+          line: 78,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "promotions-core/stacking-conflict",
+      category: "BusinessRuleViolation",
+      status: 422,
+      title: "Business Rule Violation",
+      cookbookPath: "/reference/problem-recovery-cookbook/#promotions-core-stacking-conflict",
+      recovery: {
+        cause: "The request is syntactically valid but violates a domain rule.",
+        userAction:
+          "Change the workflow state or request values so the business rule is satisfied.",
+        operatorAction: "Review domain policy, entitlement, quota, and lifecycle rule evidence.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/promotions-core/src/libs/problems.ts",
+          line: 150,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "promotions-core/subject-limit-reached",
+      category: "BusinessRuleViolation",
+      status: 422,
+      title: "Business Rule Violation",
+      cookbookPath: "/reference/problem-recovery-cookbook/#promotions-core-subject-limit-reached",
+      recovery: {
+        cause: "The request is syntactically valid but violates a domain rule.",
+        userAction:
+          "Change the workflow state or request values so the business rule is satisfied.",
+        operatorAction: "Review domain policy, entitlement, quota, and lifecycle rule evidence.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/promotions-core/src/libs/problems.ts",
+          line: 136,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "promotions-core/unsupported-benefit",
+      category: "BusinessRuleViolation",
+      status: 422,
+      title: "Business Rule Violation",
+      cookbookPath: "/reference/problem-recovery-cookbook/#promotions-core-unsupported-benefit",
+      recovery: {
+        cause: "The request is syntactically valid but violates a domain rule.",
+        userAction:
+          "Change the workflow state or request values so the business rule is satisfied.",
+        operatorAction: "Review domain policy, entitlement, quota, and lifecycle rule evidence.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/promotions-core/src/libs/problems.ts",
+          line: 188,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "promotions-drizzle/persistence-failure",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#promotions-drizzle-persistence-failure",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/promotions-drizzle/src/libs/PostgresPromotionStore.ts",
+          line: 41,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
       code: "protocol-codegen/controller-project-config",
       category: "ValidationError",
       status: 422,
@@ -17663,7 +23099,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/protocol-codegen/src/libs/ControllerProject.ts",
-          line: 57,
+          line: 60,
           column: 5,
           kind: "problem-constructor",
         },
@@ -17696,7 +23132,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/protocol-codegen/src/libs/ControllerProject.ts",
-          line: 78,
+          line: 81,
           column: 5,
           kind: "problem-constructor",
         },
@@ -17710,9 +23146,12 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       cookbookPath:
         "/reference/problem-recovery-cookbook/#protocols-core-contract-graph-diagnostics",
       recovery: {
-        cause: "The request or generated contract failed schema or semantic validation.",
-        userAction: "Fix the invalid fields and retry with schema-conformant input.",
-        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        cause:
+          "The collected contract graph contains blocking diagnostics, including route-contract validation errors and unsupported Zod majors.",
+        userAction:
+          "Correct the target identified by each diagnostic before generating contracts or starting the application.",
+        operatorAction:
+          "Inspect diagnostic codes, route IDs, and source locations. For contract-schema-unsupported-zod-major, replace the identified schema with a Zod 3 route contract schema.",
         retryability: "not-retryable",
         redactionPolicy: "public",
         telemetry: {
@@ -17727,7 +23166,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/protocols-core/src/libs/ContractGraph.ts",
-          line: 161,
+          line: 164,
           column: 5,
           kind: "problem-constructor",
         },
@@ -18262,7 +23701,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/protocols-trpc/src/libs/TrpcParamResolver.ts",
-          line: 71,
+          line: 72,
           column: 13,
           kind: "problem-factory",
         },
@@ -18294,9 +23733,42 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/protocols-trpc/src/libs/createTrpcRouter.ts",
-          line: 92,
+          line: 99,
           column: 1,
           kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "protocols-trpc/execution-context-missing",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#protocols-trpc-execution-context-missing",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/protocols-trpc/src/libs/createTrpcRouter.ts",
+          line: 224,
+          column: 13,
+          kind: "problem-factory",
         },
       ],
     },
@@ -18327,7 +23799,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/protocols-trpc/src/libs/createTrpcRouter.ts",
-          line: 76,
+          line: 83,
           column: 1,
           kind: "problem-class",
         },
@@ -18360,7 +23832,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/protocols-trpc/src/libs/TrpcExecutionContext.ts",
-          line: 50,
+          line: 93,
           column: 1,
           kind: "problem-class",
         },
@@ -18392,7 +23864,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/protocols-trpc/src/libs/TrpcExecutionContext.ts",
-          line: 41,
+          line: 84,
           column: 1,
           kind: "problem-class",
         },
@@ -18425,87 +23897,26 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/protocols-trpc/src/libs/createTrpcRouter.ts",
-          line: 63,
+          line: 70,
           column: 1,
           kind: "problem-class",
         },
       ],
     },
     {
-      code: "PUBLIC_EMAIL_DOMAIN_NOT_ALLOWED",
-      category: "BadRequest",
-      status: 400,
-      title: "Bad Request",
-      cookbookPath: "/reference/problem-recovery-cookbook/#public-email-domain-not-allowed",
+      code: "ratelimit-core/duplicate-default-policy",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#ratelimit-core-duplicate-default-policy",
       recovery: {
-        cause: "The caller sent malformed input or unsupported request options.",
-        userAction: "Correct the request input and retry after validation passes.",
+        cause: "Unrelated controllers declared the same implicit rate-limit policy name.",
+        userAction:
+          "Assign a distinct explicit @RateLimit policy to each unrelated handler, or explicitly share one policy.",
         operatorAction:
-          "Inspect validation details and request logs; do not retry unchanged input.",
+          "Inspect the named classes and policy, then add explicit policy names before restarting the application.",
         retryability: "not-retryable",
         redactionPolicy: "public",
-        telemetry: {
-          eventName: "croco.problem.info",
-          severity: "info",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/invitation-core/src/libs/problems/DomainPolicyProblems.ts",
-          line: 5,
-          column: 5,
-          kind: "problem-constructor",
-        },
-      ],
-    },
-    {
-      code: "RATE_LIMIT_EXCEEDED",
-      category: "TooManyRequests",
-      status: 429,
-      title: "Too Many Requests",
-      cookbookPath: "/reference/problem-recovery-cookbook/#rate-limit-exceeded",
-      recovery: {
-        cause: "The caller exceeded a rate, quota, or concurrency limit.",
-        userAction: "Wait for the retry window or reduce request volume.",
-        operatorAction: "Check limiter state, quota configuration, and abuse signals.",
-        retryability: "retryable",
-        redactionPolicy: "safe-message",
-        telemetry: {
-          eventName: "croco.problem.warning",
-          severity: "warning",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/ratelimit-core/src/libs/problems/RateLimitExceededProblem.ts",
-          line: 15,
-          column: 5,
-          kind: "problem-constructor",
-        },
-      ],
-    },
-    {
-      code: "RATE_LIMIT_KEY_BUILDER_ERROR",
-      category: "InternalServerError",
-      status: 500,
-      title: "Internal Server Error",
-      cookbookPath: "/reference/problem-recovery-cookbook/#rate-limit-key-builder-error",
-      recovery: {
-        cause: "Croco or an upstream dependency failed after accepting the request.",
-        userAction:
-          "Retry later only when the operation is idempotent or the caller owns retry safety.",
-        operatorAction:
-          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
-        retryability: "conditional",
-        redactionPolicy: "operator-only",
         telemetry: {
           eventName: "croco.problem.error",
           severity: "error",
@@ -18518,72 +23929,9 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/ratelimit-core/src/libs/problems/RateLimitConfigProblems.ts",
-          line: 5,
-          column: 1,
-          kind: "problem-class",
-        },
-      ],
-    },
-    {
-      code: "RATE_LIMIT_REFUND_UNSUPPORTED",
-      category: "InternalServerError",
-      status: 500,
-      title: "Internal Server Error",
-      cookbookPath: "/reference/problem-recovery-cookbook/#rate-limit-refund-unsupported",
-      recovery: {
-        cause: "Croco or an upstream dependency failed after accepting the request.",
-        userAction:
-          "Retry later only when the operation is idempotent or the caller owns retry safety.",
-        operatorAction:
-          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
-        retryability: "conditional",
-        redactionPolicy: "operator-only",
-        telemetry: {
-          eventName: "croco.problem.error",
-          severity: "error",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/ratelimit-core/src/libs/problems/RateLimitConfigProblems.ts",
-          line: 43,
+          line: 62,
           column: 5,
           kind: "problem-constructor",
-        },
-      ],
-    },
-    {
-      code: "RATE_LIMIT_WINDOW_ERROR",
-      category: "BadRequest",
-      status: 400,
-      title: "Bad Request",
-      cookbookPath: "/reference/problem-recovery-cookbook/#rate-limit-window-error",
-      recovery: {
-        cause: "The caller sent malformed input or unsupported request options.",
-        userAction: "Correct the request input and retry after validation passes.",
-        operatorAction:
-          "Inspect validation details and request logs; do not retry unchanged input.",
-        retryability: "not-retryable",
-        redactionPolicy: "public",
-        telemetry: {
-          eventName: "croco.problem.info",
-          severity: "info",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/ratelimit-core/src/libs/problems/RateLimitConfigProblems.ts",
-          line: 15,
-          column: 1,
-          kind: "problem-class",
         },
       ],
     },
@@ -18684,6 +24032,43 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       ],
     },
     {
+      code: "ratelimit-upstash/upstream-failed",
+      category: null,
+      status: null,
+      categoryPolicy: {
+        kind: "runtime-dependent",
+        possibleCategories: ["BadRequest", "InternalServerError", "TooManyRequests"],
+        possibleStatuses: [400, 429, 500],
+      },
+      title: null,
+      cookbookPath: "/reference/problem-recovery-cookbook/#ratelimit-upstash-upstream-failed",
+      recovery: {
+        cause: "The Upstash Redis provider rejected or failed the rate-limit operation.",
+        userAction:
+          "Check the retryable extension before retrying. Correct invalid requests; use bounded backoff for transient provider failures.",
+        operatorAction:
+          "Inspect provider status and sanitized operation metadata. Verify credentials, quotas, and Upstash Redis availability before replaying the operation.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/ratelimit-upstash/src/libs/problems/RateLimitUpstashProblems.ts",
+          line: 34,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
       code: "ratelimit/prune-interval",
       category: "ValidationError",
       status: 422,
@@ -18710,6 +24095,562 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
           line: 27,
           column: 5,
           kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "referral-core/attribution-not-found",
+      category: "NotFound",
+      status: 404,
+      title: "Not Found",
+      cookbookPath: "/reference/problem-recovery-cookbook/#referral-core-attribution-not-found",
+      recovery: {
+        cause: "The requested resource or route-visible record does not exist.",
+        userAction: "Verify the identifier and refresh the resource list before retrying.",
+        operatorAction:
+          "Confirm tenant scoping, data retention, and backing-store lookup behavior.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/referral-core/src/libs/problems.ts",
+          line: 172,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "referral-core/attribution-state-conflict",
+      category: "Conflict",
+      status: 409,
+      title: "Conflict",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#referral-core-attribution-state-conflict",
+      recovery: {
+        cause: "The request conflicts with current state or an idempotency constraint.",
+        userAction: "Refresh state, resolve the conflict, and retry with the updated intent.",
+        operatorAction: "Inspect concurrent writes, idempotency keys, and uniqueness constraints.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/referral-core/src/libs/problems.ts",
+          line: 182,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "referral-core/benefit-failed",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#referral-core-benefit-failed",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/referral-core/src/libs/problems.ts",
+          line: 210,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "referral-core/budget-exhausted",
+      category: "BusinessRuleViolation",
+      status: 422,
+      title: "Business Rule Violation",
+      cookbookPath: "/reference/problem-recovery-cookbook/#referral-core-budget-exhausted",
+      recovery: {
+        cause: "The request is syntactically valid but violates a domain rule.",
+        userAction:
+          "Change the workflow state or request values so the business rule is satisfied.",
+        operatorAction: "Review domain policy, entitlement, quota, and lifecycle rule evidence.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/referral-core/src/libs/problems.ts",
+          line: 158,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "referral-core/duplicate-claim",
+      category: "Conflict",
+      status: 409,
+      title: "Conflict",
+      cookbookPath: "/reference/problem-recovery-cookbook/#referral-core-duplicate-claim",
+      recovery: {
+        cause: "The request conflicts with current state or an idempotency constraint.",
+        userAction: "Refresh state, resolve the conflict, and retry with the updated intent.",
+        operatorAction: "Inspect concurrent writes, idempotency keys, and uniqueness constraints.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/referral-core/src/libs/problems.ts",
+          line: 130,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "referral-core/existing-customer",
+      category: "BusinessRuleViolation",
+      status: 422,
+      title: "Business Rule Violation",
+      cookbookPath: "/reference/problem-recovery-cookbook/#referral-core-existing-customer",
+      recovery: {
+        cause: "The request is syntactically valid but violates a domain rule.",
+        userAction:
+          "Change the workflow state or request values so the business rule is satisfied.",
+        operatorAction: "Review domain policy, entitlement, quota, and lifecycle rule evidence.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/referral-core/src/libs/problems.ts",
+          line: 102,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "referral-core/link-expired",
+      category: "BusinessRuleViolation",
+      status: 422,
+      title: "Business Rule Violation",
+      cookbookPath: "/reference/problem-recovery-cookbook/#referral-core-link-expired",
+      recovery: {
+        cause: "The request is syntactically valid but violates a domain rule.",
+        userAction:
+          "Change the workflow state or request values so the business rule is satisfied.",
+        operatorAction: "Review domain policy, entitlement, quota, and lifecycle rule evidence.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/referral-core/src/libs/problems.ts",
+          line: 64,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "referral-core/link-not-found",
+      category: "NotFound",
+      status: 404,
+      title: "Not Found",
+      cookbookPath: "/reference/problem-recovery-cookbook/#referral-core-link-not-found",
+      recovery: {
+        cause: "The requested resource or route-visible record does not exist.",
+        userAction: "Verify the identifier and refresh the resource list before retrying.",
+        operatorAction:
+          "Confirm tenant scoping, data retention, and backing-store lookup behavior.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/referral-core/src/libs/problems.ts",
+          line: 44,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "referral-core/link-revoked",
+      category: "BusinessRuleViolation",
+      status: 422,
+      title: "Business Rule Violation",
+      cookbookPath: "/reference/problem-recovery-cookbook/#referral-core-link-revoked",
+      recovery: {
+        cause: "The request is syntactically valid but violates a domain rule.",
+        userAction:
+          "Change the workflow state or request values so the business rule is satisfied.",
+        operatorAction: "Review domain policy, entitlement, quota, and lifecycle rule evidence.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/referral-core/src/libs/problems.ts",
+          line: 54,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "referral-core/novelty-unknown",
+      category: "BusinessRuleViolation",
+      status: 422,
+      title: "Business Rule Violation",
+      cookbookPath: "/reference/problem-recovery-cookbook/#referral-core-novelty-unknown",
+      recovery: {
+        cause: "The request is syntactically valid but violates a domain rule.",
+        userAction:
+          "Change the workflow state or request values so the business rule is satisfied.",
+        operatorAction: "Review domain policy, entitlement, quota, and lifecycle rule evidence.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/referral-core/src/libs/problems.ts",
+          line: 116,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "referral-core/other-tenant-link",
+      category: "Forbidden",
+      status: 403,
+      title: "Forbidden",
+      cookbookPath: "/reference/problem-recovery-cookbook/#referral-core-other-tenant-link",
+      recovery: {
+        cause: "The authenticated caller is not allowed to perform the requested action.",
+        userAction: "Request the required permission or choose an allowed action.",
+        operatorAction: "Review policy, role, tenant, entitlement, and impersonation context.",
+        retryability: "not-retryable",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/referral-core/src/libs/problems.ts",
+          line: 88,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "referral-core/program-conflict",
+      category: "Conflict",
+      status: 409,
+      title: "Conflict",
+      cookbookPath: "/reference/problem-recovery-cookbook/#referral-core-program-conflict",
+      recovery: {
+        cause: "The request conflicts with current state or an idempotency constraint.",
+        userAction: "Refresh state, resolve the conflict, and retry with the updated intent.",
+        operatorAction: "Inspect concurrent writes, idempotency keys, and uniqueness constraints.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/referral-core/src/libs/problems.ts",
+          line: 30,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "referral-core/program-invalid",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#referral-core-program-invalid",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/referral-core/src/libs/problems.ts",
+          line: 4,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "referral-core/program-not-found",
+      category: "NotFound",
+      status: 404,
+      title: "Not Found",
+      cookbookPath: "/reference/problem-recovery-cookbook/#referral-core-program-not-found",
+      recovery: {
+        cause: "The requested resource or route-visible record does not exist.",
+        userAction: "Verify the identifier and refresh the resource list before retrying.",
+        operatorAction:
+          "Confirm tenant scoping, data retention, and backing-store lookup behavior.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/referral-core/src/libs/problems.ts",
+          line: 14,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "referral-core/qualification-rejected",
+      category: "BusinessRuleViolation",
+      status: 422,
+      title: "Business Rule Violation",
+      cookbookPath: "/reference/problem-recovery-cookbook/#referral-core-qualification-rejected",
+      recovery: {
+        cause: "The request is syntactically valid but violates a domain rule.",
+        userAction:
+          "Change the workflow state or request values so the business rule is satisfied.",
+        operatorAction: "Review domain policy, entitlement, quota, and lifecycle rule evidence.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/referral-core/src/libs/problems.ts",
+          line: 196,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "referral-core/self-referral",
+      category: "BusinessRuleViolation",
+      status: 422,
+      title: "Business Rule Violation",
+      cookbookPath: "/reference/problem-recovery-cookbook/#referral-core-self-referral",
+      recovery: {
+        cause: "The request is syntactically valid but violates a domain rule.",
+        userAction:
+          "Change the workflow state or request values so the business rule is satisfied.",
+        operatorAction: "Review domain policy, entitlement, quota, and lifecycle rule evidence.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/referral-core/src/libs/problems.ts",
+          line: 74,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "referral-core/subject-limit-reached",
+      category: "BusinessRuleViolation",
+      status: 422,
+      title: "Business Rule Violation",
+      cookbookPath: "/reference/problem-recovery-cookbook/#referral-core-subject-limit-reached",
+      recovery: {
+        cause: "The request is syntactically valid but violates a domain rule.",
+        userAction:
+          "Change the workflow state or request values so the business rule is satisfied.",
+        operatorAction: "Review domain policy, entitlement, quota, and lifecycle rule evidence.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/referral-core/src/libs/problems.ts",
+          line: 144,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "referral-drizzle/persistence-failure",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#referral-drizzle-persistence-failure",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/referral-drizzle/src/libs/PostgresReferralStore.ts",
+          line: 46,
+          column: 1,
+          kind: "problem-class",
         },
       ],
     },
@@ -18945,166 +24886,6 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       ],
     },
     {
-      code: "RESEND_NOTIFICATION_FAILED",
-      category: "InternalServerError",
-      status: 500,
-      title: "Internal Server Error",
-      cookbookPath: "/reference/problem-recovery-cookbook/#resend-notification-failed",
-      recovery: {
-        cause: "Croco or an upstream dependency failed after accepting the request.",
-        userAction:
-          "Retry later only when the operation is idempotent or the caller owns retry safety.",
-        operatorAction:
-          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
-        retryability: "conditional",
-        redactionPolicy: "operator-only",
-        telemetry: {
-          eventName: "croco.problem.error",
-          severity: "error",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/notifications-resend/src/libs/problems/ResendNotificationProblem.ts",
-          line: 97,
-          column: 5,
-          kind: "problem-constructor",
-        },
-      ],
-    },
-    {
-      code: "RETRY_ABORTED",
-      category: "InternalServerError",
-      status: 500,
-      title: "Internal Server Error",
-      cookbookPath: "/reference/problem-recovery-cookbook/#retry-aborted",
-      recovery: {
-        cause: "Croco or an upstream dependency failed after accepting the request.",
-        userAction:
-          "Retry later only when the operation is idempotent or the caller owns retry safety.",
-        operatorAction:
-          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
-        retryability: "conditional",
-        redactionPolicy: "operator-only",
-        telemetry: {
-          eventName: "croco.problem.error",
-          severity: "error",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/retry-core/src/libs/errors/RetryAbortedProblem.ts",
-          line: 6,
-          column: 1,
-          kind: "problem-class",
-        },
-      ],
-    },
-    {
-      code: "RETRY_CIRCUIT_BREAKER_INVALID_STATE",
-      category: "InternalServerError",
-      status: 500,
-      title: "Internal Server Error",
-      cookbookPath: "/reference/problem-recovery-cookbook/#retry-circuit-breaker-invalid-state",
-      recovery: {
-        cause: "Croco or an upstream dependency failed after accepting the request.",
-        userAction:
-          "Retry later only when the operation is idempotent or the caller owns retry safety.",
-        operatorAction:
-          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
-        retryability: "conditional",
-        redactionPolicy: "operator-only",
-        telemetry: {
-          eventName: "croco.problem.error",
-          severity: "error",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/retry-core/src/libs/errors/RetryInfrastructureProblem.ts",
-          line: 12,
-          column: 1,
-          kind: "problem-class",
-        },
-      ],
-    },
-    {
-      code: "RETRY_CIRCUIT_BREAKER_LOCK_FAILED",
-      category: "InternalServerError",
-      status: 500,
-      title: "Internal Server Error",
-      cookbookPath: "/reference/problem-recovery-cookbook/#retry-circuit-breaker-lock-failed",
-      recovery: {
-        cause: "Croco or an upstream dependency failed after accepting the request.",
-        userAction:
-          "Retry later only when the operation is idempotent or the caller owns retry safety.",
-        operatorAction:
-          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
-        retryability: "conditional",
-        redactionPolicy: "operator-only",
-        telemetry: {
-          eventName: "croco.problem.error",
-          severity: "error",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/retry-core/src/libs/errors/RetryInfrastructureProblem.ts",
-          line: 25,
-          column: 1,
-          kind: "problem-class",
-        },
-      ],
-    },
-    {
-      code: "RETRY_EXHAUSTED",
-      category: "InternalServerError",
-      status: 500,
-      title: "Internal Server Error",
-      cookbookPath: "/reference/problem-recovery-cookbook/#retry-exhausted",
-      recovery: {
-        cause: "Croco or an upstream dependency failed after accepting the request.",
-        userAction:
-          "Retry later only when the operation is idempotent or the caller owns retry safety.",
-        operatorAction:
-          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
-        retryability: "conditional",
-        redactionPolicy: "operator-only",
-        telemetry: {
-          eventName: "croco.problem.error",
-          severity: "error",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/retry-core/src/libs/errors/RetryExhaustedProblem.ts",
-          line: 6,
-          column: 1,
-          kind: "problem-class",
-        },
-      ],
-    },
-    {
       code: "retry-core/backoff-cancellation-unsupported",
       category: "ValidationError",
       status: 422,
@@ -19202,36 +24983,6 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       ],
     },
     {
-      code: "ROLE_HIERARCHY_VIOLATION",
-      category: "Forbidden",
-      status: 403,
-      title: "Forbidden",
-      cookbookPath: "/reference/problem-recovery-cookbook/#role-hierarchy-violation",
-      recovery: {
-        cause: "The authenticated caller is not allowed to perform the requested action.",
-        userAction: "Request the required permission or choose an allowed action.",
-        operatorAction: "Review policy, role, tenant, entitlement, and impersonation context.",
-        retryability: "not-retryable",
-        redactionPolicy: "safe-message",
-        telemetry: {
-          eventName: "croco.problem.warning",
-          severity: "warning",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/membership-core/src/libs/problems/MembershipProblems.ts",
-          line: 52,
-          column: 5,
-          kind: "problem-constructor",
-        },
-      ],
-    },
-    {
       code: "rpc-codegen/controller-typescript-diagnostics",
       category: "ValidationError",
       status: 422,
@@ -19286,7 +25037,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/rpc-codegen/src/libs/generate.ts",
-          line: 114,
+          line: 116,
           column: 5,
           kind: "problem-constructor",
         },
@@ -19348,8 +25099,70 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/rpc-codegen/src/libs/generate.ts",
-          line: 1950,
+          line: 1957,
           column: 38,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "rpc-codegen/query-key-input-unsupported",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#rpc-codegen-query-key-input-unsupported",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/rpc-codegen/src/libs/generate.ts",
+          line: 1952,
+          column: 37,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "rpc-codegen/status-mismatch",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#rpc-codegen-status-mismatch",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/rpc-codegen/src/libs/generate.ts",
+          line: 1947,
+          column: 37,
           kind: "problem-metadata",
         },
       ],
@@ -19378,7 +25191,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/rpc-codegen/src/libs/generate.ts",
-          line: 120,
+          line: 122,
           column: 5,
           kind: "problem-constructor",
         },
@@ -19759,16 +25572,105 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       ],
     },
     {
-      code: "SEARCH_CAPABILITY_UNAVAILABLE",
-      category: "NotImplemented",
-      status: 501,
-      title: "Not Implemented",
-      cookbookPath: "/reference/problem-recovery-cookbook/#search-capability-unavailable",
+      code: "saved-intent/admin-denied",
+      category: "Forbidden",
+      status: 403,
+      title: "Forbidden",
+      cookbookPath: "/reference/problem-recovery-cookbook/#saved-intent-admin-denied",
       recovery: {
-        cause: "The requested capability is not supported by this runtime or adapter.",
-        userAction: "Use a supported capability or choose an adapter/runtime that provides it.",
-        operatorAction:
-          "Check runtime capability declarations and provider maturity documentation.",
+        cause: "The authenticated caller is not allowed to perform the requested action.",
+        userAction: "Request the required permission or choose an allowed action.",
+        operatorAction: "Review policy, role, tenant, entitlement, and impersonation context.",
+        retryability: "not-retryable",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/admin-core/src/libs/SavedIntentOperations.ts",
+          line: 38,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "saved-intent/conflict",
+      category: "Conflict",
+      status: 409,
+      title: "Conflict",
+      cookbookPath: "/reference/problem-recovery-cookbook/#saved-intent-conflict",
+      recovery: {
+        cause: "The request conflicts with current state or an idempotency constraint.",
+        userAction: "Refresh state, resolve the conflict, and retry with the updated intent.",
+        operatorAction: "Inspect concurrent writes, idempotency keys, and uniqueness constraints.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/experience-core/src/libs/savedIntent.ts",
+          line: 24,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "saved-intent/denied",
+      category: "Forbidden",
+      status: 403,
+      title: "Forbidden",
+      cookbookPath: "/reference/problem-recovery-cookbook/#saved-intent-denied",
+      recovery: {
+        cause: "The authenticated caller is not allowed to perform the requested action.",
+        userAction: "Request the required permission or choose an allowed action.",
+        operatorAction: "Review policy, role, tenant, entitlement, and impersonation context.",
+        retryability: "not-retryable",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/experience-core/src/libs/savedIntent.ts",
+          line: 29,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "saved-intent/invalid",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#saved-intent-invalid",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
         retryability: "not-retryable",
         redactionPolicy: "public",
         telemetry: {
@@ -19782,42 +25684,10 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       },
       sources: [
         {
-          file: "packages/search-core/src/libs/problems/SearchProblems.ts",
-          line: 135,
+          file: "packages/experience-core/src/libs/savedIntent.ts",
+          line: 19,
           column: 5,
           kind: "problem-constructor",
-        },
-      ],
-    },
-    {
-      code: "SEARCH_DRIZZLE_INVALID_ROW",
-      category: "InternalServerError",
-      status: 500,
-      title: "Internal Server Error",
-      cookbookPath: "/reference/problem-recovery-cookbook/#search-drizzle-invalid-row",
-      recovery: {
-        cause: "Croco or an upstream dependency failed after accepting the request.",
-        userAction:
-          "Retry later only when the operation is idempotent or the caller owns retry safety.",
-        operatorAction:
-          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
-        retryability: "conditional",
-        redactionPolicy: "operator-only",
-        telemetry: {
-          eventName: "croco.problem.error",
-          severity: "error",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/search-drizzle/src/libs/problems/InvalidSearchRowProblem.ts",
-          line: 6,
-          column: 1,
-          kind: "problem-class",
         },
       ],
     },
@@ -20299,66 +26169,6 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       ],
     },
     {
-      code: "SEAT_LIMIT_EXCEEDED",
-      category: "Forbidden",
-      status: 403,
-      title: "Forbidden",
-      cookbookPath: "/reference/problem-recovery-cookbook/#seat-limit-exceeded",
-      recovery: {
-        cause: "The authenticated caller is not allowed to perform the requested action.",
-        userAction: "Request the required permission or choose an allowed action.",
-        operatorAction: "Review policy, role, tenant, entitlement, and impersonation context.",
-        retryability: "not-retryable",
-        redactionPolicy: "safe-message",
-        telemetry: {
-          eventName: "croco.problem.warning",
-          severity: "warning",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/membership-core/src/libs/problems/MembershipProblems.ts",
-          line: 78,
-          column: 5,
-          kind: "problem-constructor",
-        },
-      ],
-    },
-    {
-      code: "SELF_IMPERSONATION_NOT_ALLOWED",
-      category: "Forbidden",
-      status: 403,
-      title: "Forbidden",
-      cookbookPath: "/reference/problem-recovery-cookbook/#self-impersonation-not-allowed",
-      recovery: {
-        cause: "The authenticated caller is not allowed to perform the requested action.",
-        userAction: "Request the required permission or choose an allowed action.",
-        operatorAction: "Review policy, role, tenant, entitlement, and impersonation context.",
-        retryability: "not-retryable",
-        redactionPolicy: "safe-message",
-        telemetry: {
-          eventName: "croco.problem.warning",
-          severity: "warning",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts",
-          line: 49,
-          column: 1,
-          kind: "problem-class",
-        },
-      ],
-    },
-    {
       code: "starter/application-cleanup-failed",
       category: "InternalServerError",
       status: 500,
@@ -20516,353 +26326,6 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       ],
     },
     {
-      code: "STORAGE_DELETE_FAILED",
-      category: "InternalServerError",
-      status: 500,
-      title: "Internal Server Error",
-      cookbookPath: "/reference/problem-recovery-cookbook/#storage-delete-failed",
-      recovery: {
-        cause: "Croco or an upstream dependency failed after accepting the request.",
-        userAction:
-          "Retry later only when the operation is idempotent or the caller owns retry safety.",
-        operatorAction:
-          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
-        retryability: "conditional",
-        redactionPolicy: "operator-only",
-        telemetry: {
-          eventName: "croco.problem.error",
-          severity: "error",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/storage-core/src/libs/problems/DeleteFailedProblem.ts",
-          line: 8,
-          column: 5,
-          kind: "problem-constructor",
-        },
-      ],
-    },
-    {
-      code: "STORAGE_FILE_NOT_FOUND",
-      category: "NotFound",
-      status: 404,
-      title: "Not Found",
-      cookbookPath: "/reference/problem-recovery-cookbook/#storage-file-not-found",
-      recovery: {
-        cause: "The requested resource or route-visible record does not exist.",
-        userAction: "Verify the identifier and refresh the resource list before retrying.",
-        operatorAction:
-          "Confirm tenant scoping, data retention, and backing-store lookup behavior.",
-        retryability: "not-retryable",
-        redactionPolicy: "public",
-        telemetry: {
-          eventName: "croco.problem.info",
-          severity: "info",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/storage-core/src/libs/problems/FileNotFoundProblem.ts",
-          line: 11,
-          column: 5,
-          kind: "problem-constructor",
-        },
-      ],
-    },
-    {
-      code: "STORAGE_INVALID_KEY",
-      category: "BadRequest",
-      status: 400,
-      title: "Bad Request",
-      cookbookPath: "/reference/problem-recovery-cookbook/#storage-invalid-key",
-      recovery: {
-        cause: "The caller sent malformed input or unsupported request options.",
-        userAction: "Correct the request input and retry after validation passes.",
-        operatorAction:
-          "Inspect validation details and request logs; do not retry unchanged input.",
-        retryability: "not-retryable",
-        redactionPolicy: "public",
-        telemetry: {
-          eventName: "croco.problem.info",
-          severity: "info",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/storage-core/src/libs/problems/InvalidKeyProblem.ts",
-          line: 4,
-          column: 1,
-          kind: "problem-class",
-        },
-      ],
-    },
-    {
-      code: "STORAGE_INVALID_NODE_BODY",
-      category: "BadRequest",
-      status: 400,
-      title: "Bad Request",
-      cookbookPath: "/reference/problem-recovery-cookbook/#storage-invalid-node-body",
-      recovery: {
-        cause: "The caller sent malformed input or unsupported request options.",
-        userAction: "Correct the request input and retry after validation passes.",
-        operatorAction:
-          "Inspect validation details and request logs; do not retry unchanged input.",
-        retryability: "not-retryable",
-        redactionPolicy: "public",
-        telemetry: {
-          eventName: "croco.problem.info",
-          severity: "info",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/storage-core/src/libs/problems/InvalidNodeStorageBodyProblem.ts",
-          line: 4,
-          column: 1,
-          kind: "problem-class",
-        },
-      ],
-    },
-    {
-      code: "STORAGE_INVALID_SIGNED_URL_EXPIRY",
-      category: "BadRequest",
-      status: 400,
-      title: "Bad Request",
-      cookbookPath: "/reference/problem-recovery-cookbook/#storage-invalid-signed-url-expiry",
-      recovery: {
-        cause: "The caller sent malformed input or unsupported request options.",
-        userAction: "Correct the request input and retry after validation passes.",
-        operatorAction:
-          "Inspect validation details and request logs; do not retry unchanged input.",
-        retryability: "not-retryable",
-        redactionPolicy: "public",
-        telemetry: {
-          eventName: "croco.problem.info",
-          severity: "info",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/storage-core/src/libs/problems/InvalidSignedUrlExpiryProblem.ts",
-          line: 8,
-          column: 1,
-          kind: "problem-class",
-        },
-      ],
-    },
-    {
-      code: "STORAGE_OPERATION_ABORTED",
-      category: "BadRequest",
-      status: 400,
-      title: "Bad Request",
-      cookbookPath: "/reference/problem-recovery-cookbook/#storage-operation-aborted",
-      recovery: {
-        cause: "The caller sent malformed input or unsupported request options.",
-        userAction: "Correct the request input and retry after validation passes.",
-        operatorAction:
-          "Inspect validation details and request logs; do not retry unchanged input.",
-        retryability: "not-retryable",
-        redactionPolicy: "public",
-        telemetry: {
-          eventName: "croco.problem.info",
-          severity: "info",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/storage-core/src/libs/problems/StorageOperationAbortedProblem.ts",
-          line: 12,
-          column: 5,
-          kind: "problem-constructor",
-        },
-      ],
-    },
-    {
-      code: "STORAGE_R2_EMPTY_BODY",
-      category: "InternalServerError",
-      status: 500,
-      title: "Internal Server Error",
-      cookbookPath: "/reference/problem-recovery-cookbook/#storage-r2-empty-body",
-      recovery: {
-        cause: "Croco or an upstream dependency failed after accepting the request.",
-        userAction:
-          "Retry later only when the operation is idempotent or the caller owns retry safety.",
-        operatorAction:
-          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
-        retryability: "conditional",
-        redactionPolicy: "operator-only",
-        telemetry: {
-          eventName: "croco.problem.error",
-          severity: "error",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/storage-r2/src/libs/problems/EmptyR2BodyProblem.ts",
-          line: 9,
-          column: 5,
-          kind: "problem-constructor",
-        },
-      ],
-    },
-    {
-      code: "STORAGE_R2_MISSING_CONFIG",
-      category: "InternalServerError",
-      status: 500,
-      title: "Internal Server Error",
-      cookbookPath: "/reference/problem-recovery-cookbook/#storage-r2-missing-config",
-      recovery: {
-        cause: "Croco or an upstream dependency failed after accepting the request.",
-        userAction:
-          "Retry later only when the operation is idempotent or the caller owns retry safety.",
-        operatorAction:
-          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
-        retryability: "conditional",
-        redactionPolicy: "operator-only",
-        telemetry: {
-          eventName: "croco.problem.error",
-          severity: "error",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/storage-r2/src/libs/problems/MissingR2ConfigProblem.ts",
-          line: 7,
-          column: 1,
-          kind: "problem-class",
-        },
-      ],
-    },
-    {
-      code: "STORAGE_R2_OBJECT_TOO_LARGE",
-      category: "InternalServerError",
-      status: 500,
-      title: "Internal Server Error",
-      cookbookPath: "/reference/problem-recovery-cookbook/#storage-r2-object-too-large",
-      recovery: {
-        cause: "Croco or an upstream dependency failed after accepting the request.",
-        userAction:
-          "Retry later only when the operation is idempotent or the caller owns retry safety.",
-        operatorAction:
-          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
-        retryability: "conditional",
-        redactionPolicy: "operator-only",
-        telemetry: {
-          eventName: "croco.problem.error",
-          severity: "error",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/storage-r2/src/libs/problems/R2ObjectTooLargeProblem.ts",
-          line: 7,
-          column: 1,
-          kind: "problem-class",
-        },
-      ],
-    },
-    {
-      code: "STORAGE_R2_READINESS_FAILED",
-      category: "InternalServerError",
-      status: 500,
-      title: "Internal Server Error",
-      cookbookPath: "/reference/problem-recovery-cookbook/#storage-r2-readiness-failed",
-      recovery: {
-        cause: "Croco or an upstream dependency failed after accepting the request.",
-        userAction:
-          "Retry later only when the operation is idempotent or the caller owns retry safety.",
-        operatorAction:
-          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
-        retryability: "conditional",
-        redactionPolicy: "operator-only",
-        telemetry: {
-          eventName: "croco.problem.error",
-          severity: "error",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/storage-r2/src/libs/problems/R2ReadinessProblem.ts",
-          line: 13,
-          column: 1,
-          kind: "problem-class",
-        },
-      ],
-    },
-    {
-      code: "STORAGE_UPLOAD_FAILED",
-      category: "InternalServerError",
-      status: 500,
-      title: "Internal Server Error",
-      cookbookPath: "/reference/problem-recovery-cookbook/#storage-upload-failed",
-      recovery: {
-        cause: "Croco or an upstream dependency failed after accepting the request.",
-        userAction:
-          "Retry later only when the operation is idempotent or the caller owns retry safety.",
-        operatorAction:
-          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
-        retryability: "conditional",
-        redactionPolicy: "operator-only",
-        telemetry: {
-          eventName: "croco.problem.error",
-          severity: "error",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/storage-core/src/libs/problems/UploadFailedProblem.ts",
-          line: 11,
-          column: 5,
-          kind: "problem-constructor",
-        },
-      ],
-    },
-    {
       code: "storage-cloudflare/missing-config",
       category: "InternalServerError",
       status: 500,
@@ -21014,7 +26477,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/storage-cloudinary/src/libs/CloudinaryProvider.ts",
-          line: 460,
+          line: 474,
           column: 13,
           kind: "problem-factory",
         },
@@ -21171,76 +26634,11 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/storage-cloudflare/src/libs/CloudflareImagesProvider.ts",
-          line: 590,
+          line: 595,
           column: 15,
           kind: "problem-factory",
         },
       ],
-    },
-    {
-      code: "STRATEGY_UNAVAILABLE",
-      category: "InternalServerError",
-      status: 500,
-      title: "Internal Server Error",
-      cookbookPath: "/reference/problem-recovery-cookbook/#strategy-unavailable",
-      recovery: {
-        cause: "Croco or an upstream dependency failed after accepting the request.",
-        userAction:
-          "Retry later only when the operation is idempotent or the caller owns retry safety.",
-        operatorAction:
-          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
-        retryability: "conditional",
-        redactionPolicy: "operator-only",
-        telemetry: {
-          eventName: "croco.problem.error",
-          severity: "error",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/search-core/src/libs/problems/SearchProblems.ts",
-          line: 114,
-          column: 5,
-          kind: "problem-constructor",
-        },
-      ],
-    },
-    {
-      code: "STRUCTURED_OUTPUT_ERROR",
-      category: "InternalServerError",
-      status: 500,
-      title: "Internal Server Error",
-      cookbookPath: "/reference/problem-recovery-cookbook/#structured-output-error",
-      recovery: {
-        cause: "Croco or an upstream dependency failed after accepting the request.",
-        userAction:
-          "Retry later only when the operation is idempotent or the caller owns retry safety.",
-        operatorAction:
-          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
-        retryability: "conditional",
-        redactionPolicy: "operator-only",
-        telemetry: {
-          eventName: "croco.problem.error",
-          severity: "error",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "deprecated",
-        deprecation: {
-          reason:
-            "The framework-owned LLM abstraction or its generated example contract was retired.",
-          migrationNote:
-            "Remove branches for this code and handle vendor SDK failures explicitly at the application call boundary.",
-          noReplacementReason:
-            "The retired generic LLM capability has no framework-level equivalent.",
-        },
-      },
-      sources: [],
     },
     {
       code: "tasks-core/duplicate-task-registration",
@@ -21298,7 +26696,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/tasks-core/src/libs/problems/TasksProblems.ts",
-          line: 110,
+          line: 115,
           column: 5,
           kind: "problem-constructor",
         },
@@ -21496,81 +26894,24 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       ],
     },
     {
-      code: "TELEMETRY_AUTO_INSTRUMENTATION_INVALID_CONFIG",
-      category: "ValidationError",
-      status: 422,
-      title: "Validation Error",
-      cookbookPath:
-        "/reference/problem-recovery-cookbook/#telemetry-auto-instrumentation-invalid-config",
+      code: "tasks-qstash/publish-failed",
+      category: null,
+      status: null,
+      categoryPolicy: {
+        kind: "runtime-dependent",
+        possibleCategories: ["BadRequest", "InternalServerError", "TooManyRequests"],
+        possibleStatuses: [400, 429, 500],
+      },
+      title: null,
+      cookbookPath: "/reference/problem-recovery-cookbook/#tasks-qstash-publish-failed",
       recovery: {
-        cause: "The request or generated contract failed schema or semantic validation.",
-        userAction: "Fix the invalid fields and retry with schema-conformant input.",
-        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
-        retryability: "not-retryable",
-        redactionPolicy: "public",
-        telemetry: {
-          eventName: "croco.problem.info",
-          severity: "info",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/telemetry-sdk-node/src/libs/problems/TelemetryAutoInstrumentationProblem.ts",
-          line: 6,
-          column: 1,
-          kind: "problem-class",
-        },
-      ],
-    },
-    {
-      code: "TELEMETRY_FORCE_FLUSH_UNSUPPORTED",
-      category: "NotImplemented",
-      status: 501,
-      title: "Not Implemented",
-      cookbookPath: "/reference/problem-recovery-cookbook/#telemetry-force-flush-unsupported",
-      recovery: {
-        cause: "The requested capability is not supported by this runtime or adapter.",
-        userAction: "Use a supported capability or choose an adapter/runtime that provides it.",
-        operatorAction:
-          "Check runtime capability declarations and provider maturity documentation.",
-        retryability: "not-retryable",
-        redactionPolicy: "public",
-        telemetry: {
-          eventName: "croco.problem.info",
-          severity: "info",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/telemetry-sdk-node/src/libs/problems/TelemetryProblems.ts",
-          line: 100,
-          column: 1,
-          kind: "problem-class",
-        },
-      ],
-    },
-    {
-      code: "TELEMETRY_RUNTIME_ERROR",
-      category: "InternalServerError",
-      status: 500,
-      title: "Internal Server Error",
-      cookbookPath: "/reference/problem-recovery-cookbook/#telemetry-runtime-error",
-      recovery: {
-        cause: "Croco or an upstream dependency failed after accepting the request.",
+        cause: "The QStash provider rejected or failed the task publication.",
         userAction:
-          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+          "Check the retryable extension before retrying. Correct invalid requests; use bounded backoff for transient provider failures.",
         operatorAction:
-          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+          "Inspect provider status and sanitized operation metadata. Verify credentials, quotas, and QStash availability before replaying the operation.",
         retryability: "conditional",
-        redactionPolicy: "operator-only",
+        redactionPolicy: "safe-message",
         telemetry: {
           eventName: "croco.problem.error",
           severity: "error",
@@ -21582,70 +26923,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       },
       sources: [
         {
-          file: "packages/telemetry-sdk-node/src/libs/problems/TelemetryProblems.ts",
-          line: 180,
-          column: 1,
-          kind: "problem-class",
-        },
-      ],
-    },
-    {
-      code: "TELEMETRY_SAMPLER_INVALID_CONFIG",
-      category: "BadRequest",
-      status: 400,
-      title: "Bad Request",
-      cookbookPath: "/reference/problem-recovery-cookbook/#telemetry-sampler-invalid-config",
-      recovery: {
-        cause: "The caller sent malformed input or unsupported request options.",
-        userAction: "Correct the request input and retry after validation passes.",
-        operatorAction:
-          "Inspect validation details and request logs; do not retry unchanged input.",
-        retryability: "not-retryable",
-        redactionPolicy: "public",
-        telemetry: {
-          eventName: "croco.problem.info",
-          severity: "info",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/telemetry-sdk-node/src/libs/problems/TelemetryProblems.ts",
-          line: 6,
-          column: 1,
-          kind: "problem-class",
-        },
-      ],
-    },
-    {
-      code: "TELEMETRY_SIGNAL_UNSUPPORTED",
-      category: "BadRequest",
-      status: 400,
-      title: "Bad Request",
-      cookbookPath: "/reference/problem-recovery-cookbook/#telemetry-signal-unsupported",
-      recovery: {
-        cause: "The caller sent malformed input or unsupported request options.",
-        userAction: "Correct the request input and retry after validation passes.",
-        operatorAction:
-          "Inspect validation details and request logs; do not retry unchanged input.",
-        retryability: "not-retryable",
-        redactionPolicy: "public",
-        telemetry: {
-          eventName: "croco.problem.info",
-          severity: "info",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/telemetry-sdk-node/src/libs/problems/TelemetryProblems.ts",
-          line: 82,
+          file: "packages/tasks-qstash/src/libs/problems/QStashTaskProblems.ts",
+          line: 30,
           column: 1,
           kind: "problem-class",
         },
@@ -22837,71 +28116,6 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       ],
     },
     {
-      code: "TOKEN_LIMIT_EXCEEDED",
-      category: "BadRequest",
-      status: 400,
-      title: "Bad Request",
-      cookbookPath: "/reference/problem-recovery-cookbook/#token-limit-exceeded",
-      recovery: {
-        cause: "The caller sent malformed input or unsupported request options.",
-        userAction: "Correct the request input and retry after validation passes.",
-        operatorAction:
-          "Inspect validation details and request logs; do not retry unchanged input.",
-        retryability: "not-retryable",
-        redactionPolicy: "public",
-        telemetry: {
-          eventName: "croco.problem.info",
-          severity: "info",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "deprecated",
-        deprecation: {
-          reason:
-            "The framework-owned LLM abstraction or its generated example contract was retired.",
-          migrationNote:
-            "Remove branches for this code and handle vendor SDK failures explicitly at the application call boundary.",
-          noReplacementReason:
-            "The retired generic LLM capability has no framework-level equivalent.",
-        },
-      },
-      sources: [],
-    },
-    {
-      code: "TOOL_EXECUTION_ERROR",
-      category: "InternalServerError",
-      status: 500,
-      title: "Internal Server Error",
-      cookbookPath: "/reference/problem-recovery-cookbook/#tool-execution-error",
-      recovery: {
-        cause: "Croco or an upstream dependency failed after accepting the request.",
-        userAction:
-          "Retry later only when the operation is idempotent or the caller owns retry safety.",
-        operatorAction:
-          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
-        retryability: "conditional",
-        redactionPolicy: "operator-only",
-        telemetry: {
-          eventName: "croco.problem.error",
-          severity: "error",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "deprecated",
-        deprecation: {
-          reason:
-            "The framework-owned LLM abstraction or its generated example contract was retired.",
-          migrationNote:
-            "Remove branches for this code and handle vendor SDK failures explicitly at the application call boundary.",
-          noReplacementReason:
-            "The retired generic LLM capability has no framework-level equivalent.",
-        },
-      },
-      sources: [],
-    },
-    {
       code: "transports-graphql/body-limit-invalid-configuration",
       category: "InternalServerError",
       status: 500,
@@ -23251,7 +28465,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/transports-http/src/libs/CrocoApp.ts",
-          line: 355,
+          line: 378,
           column: 11,
           kind: "problem-factory",
         },
@@ -23330,11 +28544,12 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       cookbookPath:
         "/reference/problem-recovery-cookbook/#transports-http-duplicate-route-definition",
       recovery: {
-        cause: "Two REST controller methods compile to the same HTTP method and runtime path.",
+        cause:
+          "REST controller routes collide with each other or with an enabled built-in operational GET endpoint.",
         userAction:
-          "Use an application build where every route decorator has a unique HTTP method and path combination.",
+          "Use an application build where controller routes have unique HTTP method and path combinations and GET or ALL routes avoid enabled built-in operational paths.",
         operatorAction:
-          "Inspect the duplicate-route diagnostic for the existing and conflicting controller methods and their route decorator source locations, then rename one route path or change one HTTP method.",
+          "Inspect the duplicate-route diagnostic for the conflicting controller method and the existing controller route or built-in operational endpoint, then rename the controller path or change its HTTP method.",
         retryability: "not-retryable",
         redactionPolicy: "operator-only",
         telemetry: {
@@ -23349,8 +28564,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/transports-http/src/libs/RouteCompiler.ts",
-          line: 120,
-          column: 15,
+          line: 332,
+          column: 10,
           kind: "problem-factory",
         },
       ],
@@ -23581,7 +28796,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/transports-http/src/libs/RouteCompiler.ts",
-          line: 72,
+          line: 75,
           column: 11,
           kind: "problem-factory",
         },
@@ -23715,7 +28930,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/transports-http/src/libs/RouteCompiler.ts",
-          line: 195,
+          line: 205,
           column: 17,
           kind: "problem-factory",
         },
@@ -23780,7 +28995,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/transports-http/src/libs/CrocoApp.ts",
-          line: 90,
+          line: 103,
           column: 55,
           kind: "problem-metadata",
         },
@@ -23972,7 +29187,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/triggers-qstash/src/libs/QStashScheduler.ts",
-          line: 300,
+          line: 352,
           column: 15,
           kind: "problem-factory",
         },
@@ -24004,7 +29219,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/triggers-qstash/src/libs/QStashTriggerHandler.ts",
-          line: 400,
+          line: 406,
           column: 13,
           kind: "problem-metadata",
         },
@@ -24036,7 +29251,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/triggers-qstash/src/libs/QStashTriggerHandler.ts",
-          line: 244,
+          line: 245,
           column: 13,
           kind: "problem-factory",
         },
@@ -24067,7 +29282,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/triggers-qstash/src/libs/QStashScheduler.ts",
-          line: 535,
+          line: 621,
           column: 9,
           kind: "problem-factory",
         },
@@ -24100,38 +29315,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/triggers-qstash/src/libs/QStashTriggerHandler.ts",
-          line: 257,
+          line: 258,
           column: 13,
-          kind: "problem-factory",
-        },
-      ],
-    },
-    {
-      code: "TRPC_ACCESS_DENIED",
-      category: "Forbidden",
-      status: 403,
-      title: "Forbidden",
-      cookbookPath: "/reference/problem-recovery-cookbook/#trpc-access-denied",
-      recovery: {
-        cause: "The authenticated caller is not allowed to perform the requested action.",
-        userAction: "Request the required permission or choose an allowed action.",
-        operatorAction: "Review policy, role, tenant, entitlement, and impersonation context.",
-        retryability: "not-retryable",
-        redactionPolicy: "safe-message",
-        telemetry: {
-          eventName: "croco.problem.warning",
-          severity: "warning",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/protocols-trpc/src/libs/TrpcExecutionPipeline.ts",
-          line: 40,
-          column: 15,
           kind: "problem-factory",
         },
       ],
@@ -24162,7 +29347,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/tx-core/src/libs/problems/TransactionProblems.ts",
-          line: 102,
+          line: 118,
           column: 1,
           kind: "problem-class",
         },
@@ -24361,6 +29546,39 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       ],
     },
     {
+      code: "tx-core/join-timeout-unsupported",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#tx-core-join-timeout-unsupported",
+      recovery: {
+        cause:
+          "The nested operation would join its enclosing transaction, which cannot enforce an independent timeout.",
+        userAction:
+          "Remove every source of the joined timeout, including the per-run timeout and TxManager.defaultTimeout when configured; use a supported savepoint or set the deadline on the enclosing transaction if a timeout is required.",
+        operatorAction:
+          "Check the effective timeout source, nesting strategy, and adapter savepoint support; configure the manager without defaultTimeout for untimed joins.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/tx-core/src/libs/problems/TransactionProblems.ts",
+          line: 102,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
       code: "tx-core/manager-not-registered",
       category: "InternalServerError",
       status: 500,
@@ -24513,7 +29731,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/tx-core/src/libs/problems/TransactionProblems.ts",
-          line: 164,
+          line: 180,
           column: 1,
           kind: "problem-class",
         },
@@ -24545,7 +29763,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/tx-core/src/libs/problems/TransactionProblems.ts",
-          line: 146,
+          line: 162,
           column: 1,
           kind: "problem-class",
         },
@@ -24577,7 +29795,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/tx-core/src/libs/problems/TransactionProblems.ts",
-          line: 129,
+          line: 145,
           column: 1,
           kind: "problem-class",
         },
@@ -24743,36 +29961,6 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       ],
     },
     {
-      code: "UNAUTHORIZED",
-      category: "Unauthorized",
-      status: 401,
-      title: "Unauthorized",
-      cookbookPath: "/reference/problem-recovery-cookbook/#unauthorized",
-      recovery: {
-        cause: "The request did not include valid authentication credentials.",
-        userAction: "Sign in again or provide a valid credential.",
-        operatorAction: "Check authentication configuration, token issuer, and clock skew.",
-        retryability: "not-retryable",
-        redactionPolicy: "safe-message",
-        telemetry: {
-          eventName: "croco.problem.warning",
-          severity: "warning",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/auth-core/src/libs/problems/AuthProblems.ts",
-          line: 4,
-          column: 1,
-          kind: "problem-class",
-        },
-      ],
-    },
-    {
       code: "warehouse-postgres/metrics-row-invalid",
       category: "InternalServerError",
       status: 500,
@@ -24797,55 +29985,22 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/warehouse-postgres/src/metrics/PostgresMetricsStore.ts",
-          line: 331,
+          line: 345,
           column: 9,
           kind: "problem-factory",
         },
       ],
     },
     {
-      code: "WEBHOOK_PROCESSING_FAILED",
-      category: "InternalServerError",
-      status: 500,
-      title: "Internal Server Error",
-      cookbookPath: "/reference/problem-recovery-cookbook/#webhook-processing-failed",
+      code: "warehouse-tooling/generation-failed",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#warehouse-tooling-generation-failed",
       recovery: {
-        cause: "Croco or an upstream dependency failed after accepting the request.",
-        userAction:
-          "Retry later only when the operation is idempotent or the caller owns retry safety.",
-        operatorAction:
-          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
-        retryability: "conditional",
-        redactionPolicy: "operator-only",
-        telemetry: {
-          eventName: "croco.problem.error",
-          severity: "error",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/billing-polar/src/libs/problems/WebhookProcessingProblem.ts",
-          line: 3,
-          column: 1,
-          kind: "problem-class",
-        },
-      ],
-    },
-    {
-      code: "WEBHOOK_VALIDATION_FAILED",
-      category: "BadRequest",
-      status: 400,
-      title: "Bad Request",
-      cookbookPath: "/reference/problem-recovery-cookbook/#webhook-validation-failed",
-      recovery: {
-        cause: "The caller sent malformed input or unsupported request options.",
-        userAction: "Correct the request input and retry after validation passes.",
-        operatorAction:
-          "Inspect validation details and request logs; do not retry unchanged input.",
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
         retryability: "not-retryable",
         redactionPolicy: "public",
         telemetry: {
@@ -24859,8 +30014,38 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       },
       sources: [
         {
-          file: "packages/billing-polar/src/libs/problems/WebhookValidationProblem.ts",
-          line: 3,
+          file: "packages/warehouse-tooling/src/libs/generate.ts",
+          line: 19,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "warehouse-tooling/invalid-config",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#warehouse-tooling-invalid-config",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/warehouse-tooling/src/libs/DataConfigProblem.ts",
+          line: 4,
           column: 1,
           kind: "problem-class",
         },
@@ -25748,6 +30933,39 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       ],
     },
     {
+      code: "workflow-core/workflow-execution-cancelled",
+      category: "Conflict",
+      status: 409,
+      title: "Conflict",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#workflow-core-workflow-execution-cancelled",
+      recovery: {
+        cause: "The parent workflow was cancelled before a dispatch or completion boundary.",
+        userAction:
+          "Inspect the cancelled execution before deliberately starting a new workflow with a fresh idempotency key.",
+        operatorAction:
+          "Reconcile outcomes of already dispatched tasks before starting again; cancellation does not abort or compensate them.",
+        retryability: "not-retryable",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/workflow-core/src/libs/problems/WorkflowProblems.ts",
+          line: 254,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
       code: "workflow-core/workflow-execution-failed",
       category: "InternalServerError",
       status: 500,
@@ -25843,6 +31061,261 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       ],
     },
   ],
+  dynamicCodeFactories: [
+    {
+      className: "CustomerExplorerProblem",
+      source: {
+        file: "packages/admin-core/src/libs/CustomerExplorer.ts",
+        line: 145,
+        column: 1,
+        kind: "problem-class",
+      },
+      reason:
+        "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged.",
+    },
+    {
+      className: "TargetingImpactProblem",
+      source: {
+        file: "packages/admin-core/src/libs/TargetingImpactOperations.ts",
+        line: 31,
+        column: 1,
+        kind: "problem-class",
+      },
+      reason:
+        "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged.",
+    },
+    {
+      className: "DataCommandProblem",
+      source: {
+        file: "packages/cli/src/commands/data.ts",
+        line: 14,
+        column: 1,
+        kind: "problem-class",
+      },
+      reason:
+        "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged.",
+    },
+    {
+      className: "TrialProblem",
+      source: {
+        file: "packages/create-croco-app/templates/addons/trpc-nextjs/apps/web/src/server/product/ProductTrials.ts",
+        line: 37,
+        column: 1,
+        kind: "problem-class",
+      },
+      reason:
+        "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged.",
+    },
+    {
+      className: "EtlEventProblem",
+      source: {
+        file: "packages/etl-events-tx/src/libs/EtlEventProblem.ts",
+        line: 3,
+        column: 1,
+        kind: "problem-class",
+      },
+      reason:
+        "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged.",
+    },
+    {
+      className: "ExecutionProblem",
+      source: {
+        file: "packages/execution-core/src/libs/ExecutionProblem.ts",
+        line: 63,
+        column: 1,
+        kind: "problem-class",
+      },
+      reason:
+        "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged.",
+    },
+    {
+      className: "IdempotencyProblem",
+      source: {
+        file: "packages/idempotency-core/src/libs/problems/IdempotencyProblems.ts",
+        line: 26,
+        column: 1,
+        kind: "problem-class",
+      },
+      reason:
+        "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged.",
+    },
+    {
+      className: "JourneyProblem",
+      source: {
+        file: "packages/lifecycle-core/src/libs/journey/JourneyEngine.ts",
+        line: 18,
+        column: 1,
+        kind: "problem-class",
+      },
+      reason:
+        "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged.",
+    },
+    {
+      className: "MetricExpressionError",
+      source: {
+        file: "packages/metrics-core/src/libs/metric/MetricExpression.ts",
+        line: 99,
+        column: 1,
+        kind: "problem-class",
+      },
+      reason:
+        "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged.",
+    },
+    {
+      className: "MetricReadProblem",
+      source: {
+        file: "packages/metrics-core/src/libs/read/MetricReadService.ts",
+        line: 177,
+        column: 1,
+        kind: "problem-class",
+      },
+      reason:
+        "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged.",
+    },
+    {
+      className: "RecordedEndpointFailureProblem",
+      source: {
+        file: "packages/notifications-core/src/libs/NotificationService.ts",
+        line: 371,
+        column: 1,
+        kind: "problem-class",
+      },
+      reason:
+        "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged.",
+    },
+    {
+      className: "GenericProblem",
+      source: {
+        file: "packages/problems-core/src/libs/ProblemFactory.ts",
+        line: 4,
+        column: 1,
+        kind: "problem-class",
+      },
+      reason:
+        "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged.",
+    },
+    {
+      className: "GraphQLValidationProblem",
+      source: {
+        file: "packages/protocols-graphql/src/libs/errors/GraphQLProblems.ts",
+        line: 3,
+        column: 1,
+        kind: "problem-class",
+      },
+      reason:
+        "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged.",
+    },
+    {
+      className: "GraphQLAuthorizationProblem",
+      source: {
+        file: "packages/protocols-graphql/src/libs/errors/GraphQLProblems.ts",
+        line: 9,
+        column: 1,
+        kind: "problem-class",
+      },
+      reason:
+        "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged.",
+    },
+    {
+      className: "GraphQLAuthenticationProblem",
+      source: {
+        file: "packages/protocols-graphql/src/libs/errors/GraphQLProblems.ts",
+        line: 15,
+        column: 1,
+        kind: "problem-class",
+      },
+      reason:
+        "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged.",
+    },
+    {
+      className: "GraphQLInternalError",
+      source: {
+        file: "packages/protocols-graphql/src/libs/errors/GraphQLProblems.ts",
+        line: 31,
+        column: 1,
+        kind: "problem-class",
+      },
+      reason:
+        "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged.",
+    },
+    {
+      className: "TrpcFilterProblem",
+      source: {
+        file: "packages/protocols-trpc/src/libs/TrpcProblemError.ts",
+        line: 59,
+        column: 1,
+        kind: "problem-class",
+      },
+      reason:
+        "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged.",
+    },
+    {
+      className: "TenantIsolationProblem",
+      source: {
+        file: "packages/tenant-core/src/libs/problems/TenantIsolationProblems.ts",
+        line: 20,
+        column: 1,
+        kind: "problem-class",
+      },
+      reason:
+        "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged.",
+    },
+    {
+      className: "ReplayedScenarioProblem",
+      source: {
+        file: "packages/testing/src/libs/ScenarioRuntime.ts",
+        line: 140,
+        column: 1,
+        kind: "problem-class",
+      },
+      reason:
+        "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged.",
+    },
+    {
+      className: "ContractTestingProblem",
+      source: {
+        file: "packages/testing/src/libs/contract-testing.ts",
+        line: 165,
+        column: 1,
+        kind: "problem-class",
+      },
+      reason:
+        "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged.",
+    },
+    {
+      className: "WarehouseContractError",
+      source: {
+        file: "packages/warehouse-core/src/libs/diagnostics.ts",
+        line: 3,
+        column: 1,
+        kind: "problem-class",
+      },
+      reason:
+        "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged.",
+    },
+    {
+      className: "OutboundWebhookProblem",
+      source: {
+        file: "packages/webhooks-core/src/libs/outbound/OutboundWebhookProblems.ts",
+        line: 18,
+        column: 1,
+        kind: "problem-class",
+      },
+      reason:
+        "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged.",
+    },
+    {
+      className: "WebhookProblem",
+      source: {
+        file: "packages/webhooks-core/src/libs/problems/WebhookProblems.ts",
+        line: 26,
+        column: 1,
+        kind: "problem-class",
+      },
+      reason:
+        "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged.",
+    },
+  ],
 } as const satisfies ProblemCodeRegistry;
 
 export type CrocoProblemRegistry = typeof CROCO_PROBLEM_CODE_REGISTRY;
@@ -25853,7 +31326,13 @@ type CrocoProblemEntryStatus<Entry extends CrocoProblemRegistryEntry> = Entry ex
   readonly statusPolicy: { readonly kind: "runtime-configurable" };
 }
   ? number
-  : Entry["status"];
+  : Entry extends {
+        readonly categoryPolicy: {
+          readonly possibleStatuses: readonly (infer Status extends number)[];
+        };
+      }
+    ? Status
+    : Extract<Entry["status"], number>;
 
 export type CrocoProblemStatus<Code extends CrocoProblemCode = CrocoProblemCode> =
   CrocoProblemEntryStatus<Extract<CrocoProblemRegistryEntry, { readonly code: Code }>>;

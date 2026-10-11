@@ -42,6 +42,7 @@ import {
 } from "../core-coverage-runner.mts";
 import { readTestInventory } from "../test-inventory.mts";
 import { generate } from "../../packages/create-croco-app/src/generator.ts";
+import { renderHandlebars } from "../../packages/create-croco-app/src/helpers/fs.ts";
 import {
   normalizeNonInteractiveOptions,
   parseCliOptions,
@@ -128,6 +129,7 @@ const repoIds = [
   "dependency-boundaries",
   "security-allowlists",
   "generated-secret-placeholders",
+  "package-test-typecheck",
   "compiler-baseline",
   "decorator-signature-spike",
   "strict-contract-typecheck",
@@ -189,6 +191,7 @@ const expectedLaneIds = {
     "architecture-policy",
     "architecture-circular-allowlist",
     "dependency-boundaries",
+    "package-test-typecheck",
     "compiler-baseline",
     "decorator-signature-spike",
     "strict-contract-typecheck",
@@ -304,12 +307,12 @@ describe("verification manifest", () => {
     });
   });
 
-  it("owns all 54 commands exactly once across the closed verification lanes", () => {
+  it("owns all 55 commands exactly once across the closed verification lanes", () => {
     const publishIds = [...repoIds, ...spineOnlyIds, ...publishOnlyIds];
     const ownedIds = Object.values(expectedLaneIds).flat();
 
-    expect(publishIds).toHaveLength(54);
-    expect(new Set(ownedIds).size).toBe(54);
+    expect(publishIds).toHaveLength(55);
+    expect(new Set(ownedIds).size).toBe(55);
     expect([...ownedIds].sort()).toEqual([...publishIds].sort());
     expect(VERIFICATION_LANE_OWNERSHIP).toEqual(
       Object.fromEntries(
@@ -325,7 +328,7 @@ describe("verification manifest", () => {
     expect(
       createHash("sha256").update(JSON.stringify(manifests)).digest("hex"),
       "The pre-split monolithic manifest changed; update this digest only after intentionally verifying the new serialized commands.",
-    ).toBe("149ea9c5e32a7225e7aa029d35e2da906a27ad6bb3d74a74a8e295a4dacadfd2");
+    ).toBe("1b674555abe090e7a6c7edf6adb72c50d510da02c21ea1a04b637f79d397c1b3");
   });
 
   it("classifies every dependency edge and every cross-lane edge for synthesis", () => {
@@ -440,7 +443,9 @@ describe("verification manifest", () => {
         generatedInventoryPaths,
       ).sort(),
     ).toEqual(generatedInventoryPaths);
-    expect(PUBLISH_REQUIRED_GENERATED_SMOKE_CASES).toHaveLength(12);
+    expect(PUBLISH_REQUIRED_GENERATED_SMOKE_CASES).toHaveLength(15);
+    expect(PUBLISH_REQUIRED_GENERATED_SMOKE_CASES).toContain("saas-single-tenant");
+    expect(PUBLISH_REQUIRED_GENERATED_SMOKE_CASES).toContain("trpc-nextjs-vercel-fullstack");
 
     const packedCli = createVerificationManifest("publish").find(
       ({ id }) => id === "cli-packed-e2e",
@@ -816,6 +821,24 @@ describe("verification manifest", () => {
     expect(command?.command).toEqual(expect.arrayContaining(["--owner", owner]));
   });
 
+  it("skips package accountability gates when only apps or examples change", () => {
+    for (const path of ["examples/example/src/index.ts", "apps/web/src/index.ts"]) {
+      const byId = new Map(
+        createVerificationManifest("spine", {
+          base: "origin/trunk",
+          changedFiles: [path],
+          head: "HEAD",
+        }).map((command) => [command.id, command]),
+      );
+
+      for (const id of ["production-ready", "spine-promotion"]) {
+        expect(byId.get(id)?.applicable, `${id}: ${path}`).toBe(false);
+        expect(byId.get(id)?.selectionReason, `${id}: ${path}`).toContain(path);
+      }
+      expect(byId.get("spine-promotion")?.command, path).not.toContain("--package");
+    }
+  });
+
   it("selects package accountability checks for scoped certified, spine, and catalog changes", () => {
     for (const path of [
       "packages/telemetry-api/src/index.ts",
@@ -857,6 +880,70 @@ describe("verification manifest", () => {
       }
     }
   });
+
+  it.each(["tooling/compareStrings.mjs", "tooling/compareStrings.d.mts"])(
+    "selects full verification for shared comparator input %s",
+    (path) => {
+      const byId = new Map(
+        createVerificationManifest("spine", {
+          base: "origin/trunk",
+          changedFiles: [path],
+          head: "HEAD",
+        }).map((command) => [command.id, command]),
+      );
+
+      for (const id of ["build", "typecheck"]) {
+        expect(
+          byId.get(id)?.command.some((argument) => argument.startsWith("--filter=")),
+          id,
+        ).toBe(false);
+      }
+      for (const id of ["test", "integration-test-lane", "published-test-lane"]) {
+        expect(byId.get(id)?.applicable, id).toBe(true);
+        expect(byId.get(id)?.command, id).not.toContain("--owner");
+      }
+      for (const id of [
+        "production-ready",
+        "spine-promotion",
+        "generated-app-smoke",
+        "package-entrypoints-smoke",
+        "package-bins-smoke",
+      ]) {
+        expect(byId.get(id)?.applicable, id).toBe(true);
+      }
+      expect(byId.get("spine-promotion")?.command).not.toContain("--package");
+      expect(byId.get("generated-app-smoke")?.command).toEqual(
+        expect.arrayContaining(["--tier", "spine-blocking"]),
+      );
+    },
+  );
+
+  it.each(["tooling/other.mjs", "tooling/compareStrings.spec.ts", "README.md"])(
+    "does not select shared comparator gates for unrelated root input %s",
+    (path) => {
+      const byId = new Map(
+        createVerificationManifest("spine", {
+          base: "origin/trunk",
+          changedFiles: [path],
+          head: "HEAD",
+        }).map((command) => [command.id, command]),
+      );
+
+      expect(byId.get("build")?.command).toContain("--filter=...[origin/trunk]");
+      for (const id of [
+        "test",
+        "integration-test-lane",
+        "published-test-lane",
+        "production-ready",
+        "spine-promotion",
+        "generated-app-smoke",
+        "package-entrypoints-smoke",
+        "package-bins-smoke",
+      ]) {
+        expect(byId.get(id)?.applicable, id).toBe(false);
+      }
+    },
+  );
 
   it("keeps catalog accountability unscoped when package files change in the same range", () => {
     const byId = new Map(
@@ -981,7 +1068,7 @@ describe("verification manifest", () => {
     expect(requiredPaths).toContain(
       "packages/create-croco-app/templates/base-ddd/libs/shared/utils-env/src/tests/createEnv.spec.ts",
     );
-    expect(requiredPaths).not.toContain(
+    expect(requiredPaths).toContain(
       "packages/create-croco-app/templates/admin-console/apps/api-server/src/tests/AdminConsole.spec.ts",
     );
   });
@@ -1019,6 +1106,32 @@ describe("verification manifest", () => {
     expect(() => selectGeneratedTestPathsForSmokeCases(["unknown-smoke-case"], paths)).toThrow(
       "Unknown generated smoke case: unknown-smoke-case",
     );
+  });
+
+  it("requires every materialized unit test for the Next.js smoke that executes them", () => {
+    const paths = readTestInventory()
+      .inventory.tests.filter(({ lane }) => lane === "generated-app")
+      .map(({ path }) => path);
+
+    expect(selectGeneratedTestPathsForSmokeCases(["trpc-nextjs-vercel-fullstack"], paths)).toEqual([
+      "packages/create-croco-app/templates/addons/trpc-nextjs/apps/web/src/server/tests/LocalSessionProvider.spec.ts",
+      "packages/create-croco-app/templates/addons/trpc-nextjs/apps/web/src/server/tests/ProductTrials.spec.ts",
+      "packages/create-croco-app/templates/base-ddd/libs/shared/utils-env/src/tests/createEnv.spec.ts",
+    ]);
+    expect(selectGeneratedTestPathsForSmokeCases(["trpc-nextjs-docker-frontend"], paths)).toEqual(
+      [],
+    );
+  });
+
+  it("requires both generated unit tests for the Meta Vite web smoke case", () => {
+    const paths = readTestInventory()
+      .inventory.tests.filter(({ lane }) => lane === "generated-app")
+      .map(({ path }) => path);
+
+    expect(selectGeneratedTestPathsForSmokeCases(["meta-vite-web"], paths)).toEqual([
+      "packages/create-croco-app/templates/addons/graphql-standalone/apps/graphql-api/src/formatGraphQLError.spec.ts",
+      "packages/create-croco-app/templates/base-ddd/libs/shared/utils-env/src/tests/createEnv.spec.ts",
+    ]);
   });
 
   it.each(["saas-cloudflare-profile", "saas-lambda-profile"])(
@@ -1097,7 +1210,7 @@ describe("verification manifest", () => {
     ]);
     expect(
       selectGeneratedSmokeCasesForChangedFiles(["packages/auth-better-auth/src/index.ts"]),
-    ).toEqual(["goal-saas-api", "saas-golden-path", "ai-saas-golden-path"]);
+    ).toEqual(["goal-saas-api", "saas-golden-path", "saas-single-tenant", "ai-saas-golden-path"]);
   });
 
   it("selects dynamically injected tenant and UI dependencies", () => {
@@ -1114,15 +1227,83 @@ describe("verification manifest", () => {
 
   it("materializes every generated smoke case independently of dependency selection", async () => {
     const generatedRoot = mkdtempSync(join(tmpdir(), "croco-smoke-dependency-contract-"));
+    const smokeCases = getGeneratedSmokeDependencyCaseInputs();
+    const templatesRoot = join(ROOT_DIR, "packages/create-croco-app/templates");
+    const templateNames = readdirSync(templatesRoot, { withFileTypes: true })
+      .filter((entry) => entry.isDirectory() && entry.name !== "addons")
+      .map(({ name }) => name)
+      .sort();
+    expect([...new Set(smokeCases.flatMap(({ matrixTargets }) => matrixTargets))].sort()).toEqual(
+      templateNames,
+    );
     try {
-      for (const smokeCase of getGeneratedSmokeDependencyCaseInputs()) {
+      for (const smokeCase of smokeCases) {
         const projectDir = join(generatedRoot, smokeCase.name);
         const cliOptions = parseCliOptions(
           projectDir,
           parseGeneratedSmokeRawOptions(smokeCase.args),
         );
-        await generate(projectDir, normalizeNonInteractiveOptions(cliOptions));
+        const options = normalizeNonInteractiveOptions(cliOptions);
+        await generate(projectDir, options);
         assertGeneratedSmokeCaseDependencyMapping(smokeCase.name, projectDir);
+        const expectedOverlays =
+          smokeCase.name === "goal-saas-api"
+            ? ["saas-node-postgres-contracts"]
+            : smokeCase.name === "saas-single-tenant"
+              ? ["saas-node-postgres-contracts", "saas-single-tenant-contracts"]
+              : [];
+        expect(
+          smokeCase.matrixTargets.filter(
+            (target) => target.startsWith("saas-") && target.endsWith("-contracts"),
+          ),
+          smokeCase.name,
+        ).toEqual(expectedOverlays);
+        if (expectedOverlays.length > 0) {
+          expect(options.preset).toBe("saas");
+          expect(options.saasProviderProfile).toBe("saas-node-postgres");
+          expect(options.tenantModel).toBe(
+            smokeCase.name === "saas-single-tenant" ? "single" : "org",
+          );
+          expect(
+            JSON.parse(readFileSync(join(projectDir, "croco-tenant-model.manifest.json"), "utf8"))
+              .currentModel,
+            smokeCase.name,
+          ).toBe(options.tenantModel);
+          for (const artifact of ["contract-graph.snapshot.json", "openapi.json"]) {
+            expect(
+              JSON.parse(readFileSync(join(projectDir, artifact), "utf8")),
+              smokeCase.name,
+            ).toEqual(
+              JSON.parse(
+                renderHandlebars(
+                  join(templatesRoot, "saas-node-postgres-contracts", `${artifact}.hbs`),
+                  {
+                    projectName: options.projectName,
+                  },
+                ),
+              ),
+            );
+          }
+          const projectMapOverlay =
+            smokeCase.name === "saas-single-tenant"
+              ? "saas-single-tenant-contracts"
+              : "saas-node-postgres-contracts";
+          const expectedProjectMap = JSON.parse(
+            renderHandlebars(join(templatesRoot, projectMapOverlay, "croco.project-map.json.hbs"), {
+              projectName: options.projectName,
+              scope: options.scope,
+            }),
+          );
+          const projectMap = JSON.parse(
+            readFileSync(join(projectDir, "croco.project-map.json"), "utf8"),
+          );
+          expect(projectMap.telemetry, smokeCase.name).toEqual(expectedProjectMap.telemetry);
+        }
+        if (smokeCase.name === "ai-saas-golden-path") {
+          expect(options.preset).toBe("ai-saas");
+          expect(options.tenantModel).toBe("single");
+          expect(existsSync(join(projectDir, "contract-graph.snapshot.json"))).toBe(false);
+        }
         const generatedEntries = readTestInventory().inventory.tests.filter(
           ({ lane }) => lane === "generated-app",
         );
@@ -1351,7 +1532,7 @@ describe("verification manifest", () => {
       readFileSync(resolve(__dirname, "../../package.json"), "utf8"),
     ) as { scripts?: Record<string, string> };
 
-    expect(RELEASE_GATE_TEST_PATHS).toHaveLength(54);
+    expect(RELEASE_GATE_TEST_PATHS).toHaveLength(55);
     expect(RELEASE_GATE_TEST_PATHS).toEqual([...RELEASE_GATE_TEST_PATHS].sort());
     expect(RELEASE_GATE_ENTRYPOINT_PATHS).toEqual([...RELEASE_GATE_ENTRYPOINT_PATHS].sort());
     expect(RELEASE_GATE_FIXTURE_PATHS).toEqual([...RELEASE_GATE_FIXTURE_PATHS].sort());
@@ -1501,6 +1682,7 @@ describe("verification manifest", () => {
       "scripts/tests/test-inventory.spec.ts",
       "scripts/tests/test-lane-runner.spec.ts",
       "scripts/tests/turbo-cache-contract.spec.ts",
+      "scripts/tests/package-test-typecheck-check.spec.ts",
     ]);
   });
 
@@ -1673,6 +1855,7 @@ describe("verification manifest", () => {
     expect(byId.get("release-gate-tests")?.concurrencyGroups).toBeUndefined();
     expect(byId.get("typecheck")?.command).not.toContain("--only");
     expect(byId.get("package-entrypoints-smoke")?.timeoutMs).toBe(15 * 60 * 1_000);
+    expect(byId.get("quick-start-lambda-smoke")?.timeoutMs).toBe(15 * 60 * 1_000);
   });
 
   it("routes compatibility aliases through authoritative profiles", () => {

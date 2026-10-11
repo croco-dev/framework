@@ -118,8 +118,20 @@ export class InvalidBillingLifecycleIdempotencyKeyProblem extends Problem {
 export class BillingCheckoutCreationProblem extends Problem {
   readonly code = "billing/checkout-creation-failed";
   readonly category = ProblemCategory.InternalServerError;
-  constructor(billingAccountId: string, detail?: string) {
-    super(detail ?? `Failed to create checkout for tenant ${billingAccountId}: unknown error`);
+  constructor(
+    billingAccountId: string,
+    detail?: string,
+    options?: { cause?: Error; retryable?: boolean },
+  ) {
+    super(
+      undefined,
+      undefined,
+      detail ?? `Failed to create checkout for tenant ${billingAccountId}: unknown error`,
+      {
+        cause: options?.cause,
+        extensions: options?.retryable === undefined ? undefined : { retryable: options.retryable },
+      },
+    );
   }
 }
 

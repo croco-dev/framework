@@ -219,14 +219,16 @@ export class TaskRunner {
     taskId: string,
     payload: unknown,
     options: TaskExecutionOptions = {},
+    onExecutionCreated?: (executionId: string) => void,
   ): Promise<TrackedTaskExecution> {
-    return this.executeTrackedTask(taskId, payload, options);
+    return this.executeTrackedTask(taskId, payload, options, onExecutionCreated);
   }
 
   private async executeTrackedTask(
     taskIdentifier: unknown,
     payload: unknown,
     options: TaskExecutionOptions,
+    onExecutionCreated?: (executionId: string) => void,
   ): Promise<TrackedTaskExecution> {
     if (typeof taskIdentifier !== "string" && !isRuntimeTaskReference(taskIdentifier)) {
       throw new InvalidTaskReferenceProblem(
@@ -283,6 +285,20 @@ export class TaskRunner {
       ...(options.metadata !== undefined ? { metadata: options.metadata } : {}),
     });
 
+    try {
+      onExecutionCreated?.(execution.id);
+    } catch (error) {
+      try {
+        this.logger.error("Failed to observe task execution creation", {
+          executionId: execution.id,
+          callbackError: error,
+        });
+      } catch (loggingError) {
+        recordDiagnosticError(loggingError);
+      }
+      recordDiagnosticError(error);
+    }
+
     if (execution.status === "completed") {
       return { executionId: execution.id, result: execution.result };
     }
@@ -292,13 +308,22 @@ export class TaskRunner {
       execution.status === "cancelled" ||
       execution.status === "timed_out"
     ) {
-      throw new TaskExecutionAlreadySettledProblem(taskId, execution.id, execution.status);
+      throw new TaskExecutionAlreadySettledProblem(
+        taskId,
+        execution.id,
+        execution.status,
+        execution.error?.code,
+      );
     }
 
     const result = await this.runExecution(task.target, task.methodName, execution, taskOptions);
     return { executionId: execution.id, result };
   }
 
+  /**
+   * Resumes a retrying execution or retries a failed or safely resolved timed-out execution.
+   * Indeterminate timeouts require recoverTimeout() before retrying.
+   */
   async retry(executionId: string): Promise<unknown> {
     const execution = await this.executionManager.get(executionId);
     const task = this.registry.get(execution.type);
@@ -312,7 +337,8 @@ export class TaskRunner {
       );
     }
 
-    const retryingExecution = await this.executionManager.retry(executionId);
+    const retryingExecution =
+      execution.status === "retrying" ? execution : await this.executionManager.retry(executionId);
     return this.runExecution(
       task.target,
       task.methodName,

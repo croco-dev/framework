@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { assert, beforeEach, describe, expect, it } from "vitest";
 import {
   InMemoryBillableUsageJournal,
   type BillableUsageClaim,
@@ -95,6 +95,76 @@ describe("InMemoryBillableUsageJournal", () => {
     await expect(
       journal.claimNext({ ownerId: "worker-1", leaseDurationMs: 1_000, now }),
     ).resolves.toMatchObject({ state: "delivering" });
+  });
+
+  it.each(["pending", "delivering", "accepted", "retryable-failed"] as const)(
+    "preserves the %s entry when activation is replayed",
+    async (state) => {
+      const startedAt = new Date("2026-08-01T00:00:00.000Z");
+      await journal.append(EVENT, startedAt);
+      await journal.markDeliverable(EVENT.eventId, startedAt);
+      if (state !== "pending") {
+        const claim = await journal.claimNext({
+          ownerId: "worker-1",
+          leaseDurationMs: 1_000,
+          now: startedAt,
+        });
+        assert.isNotNull(claim);
+        if (state === "accepted") {
+          await journal.markAccepted(claim, new Date(startedAt.getTime() + 100));
+        } else if (state === "retryable-failed") {
+          await journal.markRetryableFailed(
+            claim,
+            { code: "provider/unavailable", message: "try later" },
+            new Date(startedAt.getTime() + 2_000),
+            new Date(startedAt.getTime() + 100),
+          );
+        }
+      }
+      const beforeReplay = await journal.get(EVENT.eventId);
+      const replayAt = new Date(startedAt.getTime() + 200);
+
+      await expect(journal.markDeliverable(EVENT.eventId, replayAt)).resolves.toEqual(beforeReplay);
+      await expect(journal.get(EVENT.eventId)).resolves.toEqual(beforeReplay);
+      if (state !== "pending") {
+        await expect(
+          journal.claimNext({ ownerId: "worker-2", leaseDurationMs: 1_000, now: replayAt }),
+        ).resolves.toBeNull();
+      }
+    },
+  );
+
+  it.each(["before activation", "after delivery"] as const)(
+    "rejects activation of a terminal failure recorded %s",
+    async (stage) => {
+      const startedAt = new Date("2026-08-01T00:00:00.000Z");
+      const failure = { code: "provider/rejected", message: "invalid meter" };
+      await journal.append(EVENT, startedAt);
+      if (stage === "before activation") {
+        await journal.markUndeliverable(EVENT.eventId, failure, startedAt);
+      } else {
+        await journal.markDeliverable(EVENT.eventId, startedAt);
+        const claim = await journal.claimNext({
+          ownerId: "worker-1",
+          leaseDurationMs: 1_000,
+          now: startedAt,
+        });
+        assert.isNotNull(claim);
+        await journal.markTerminalFailed(claim, failure, startedAt);
+      }
+      const beforeReplay = await journal.get(EVENT.eventId);
+
+      await expect(
+        journal.markDeliverable(EVENT.eventId, new Date(startedAt.getTime() + 100)),
+      ).rejects.toMatchObject({ code: "metering/transition-conflict" });
+      await expect(journal.get(EVENT.eventId)).resolves.toEqual(beforeReplay);
+    },
+  );
+
+  it("rejects activation of a missing event", async () => {
+    await expect(journal.markDeliverable("missing-event")).rejects.toMatchObject({
+      code: "metering/transition-conflict",
+    });
   });
 
   it("permits one active owner and fences a stale owner after lease expiry", async () => {

@@ -1,0 +1,41 @@
+{
+  "name": "@croco-example/recurring-missions",
+  "version": "0.0.0",
+  "private": true,
+  "type": "commonjs",
+  "scripts": {
+    "build": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
+    "build:browser": "tsup",
+    "dev": "pnpm build:browser && tsx src/server.ts",
+    "smoke": "tsx src/smoke.ts",
+    "migrate": "tsx src/migrate.ts",
+    "relay": "tsx src/relay.ts"
+  },
+  "dependencies": {
+    "@croco/admin-core": "workspace:*",
+    "@croco/admin-react": "workspace:*",
+    "@croco/events-core": "workspace:*",
+    "@croco/events-tx": "workspace:*",
+    "@croco/frontend-react": "workspace:*",
+    "@croco/gamification-core": "workspace:*",
+    "@croco/gamification-drizzle": "workspace:*",
+    "@croco/problems-core": "workspace:*",
+    "@croco/tx-core": "workspace:*",
+    "@croco/tx-drizzle": "workspace:*",
+    "drizzle-orm": "catalog:",
+    "pg": "8.22.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24",
+    "@types/pg": "8.20.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "reflect-metadata": "^0.2.2",
+    "tsup": "^8.0.0",
+    "tsx": "^4.0.0",
+    "typescript": "^6.0.3"
+  }
+}

@@ -154,15 +154,24 @@ function collectPages<T>(options: {
   const items: T[] = [];
   const pages: InventoryPage[] = [];
   let pageNumber = 1;
+  let expectedTotal: number | undefined;
   while (true) {
     const response = options.load(pageNumber);
     const responseTotal = requiredNumber(response.total_count, `${options.query}.total_count`);
+    if (expectedTotal === undefined) expectedTotal = responseTotal;
+    else if (responseTotal !== expectedTotal)
+      throw new Error(
+        `${options.query} total_count changed from ${expectedTotal} to ${responseTotal}`,
+      );
     const rawItems = pageItems(response, options.key);
+    if (rawItems.length > 100) throw new Error(`${options.query} exceeds the page size`);
     const parsed = rawItems.map((value, index) =>
       options.parse(value, `${options.query}.page${pageNumber}[${index}]`),
     );
     const collectedAfterPage = items.length + parsed.length;
-    if (parsed.length < 100 && collectedAfterPage < responseTotal)
+    if (collectedAfterPage > expectedTotal)
+      throw new Error(`${options.query} pagination exceeds total_count`);
+    if (parsed.length < 100 && collectedAfterPage < expectedTotal)
       throw new Error(`${options.query} pagination ended before total_count was reached`);
     const hasNext = parsed.length === 100;
     pages.push({
@@ -176,11 +185,63 @@ function collectPages<T>(options: {
     });
     items.push(...parsed);
     if (!hasNext) break;
-    if (parsed.length === 0)
-      throw new Error(`${options.query} pagination ended before total_count was reached`);
     pageNumber += 1;
   }
   return { items, pages };
+}
+
+function collectWorkflowRuns(
+  client: CacheableCiCollectionClient,
+  workflow: string,
+  query: "source-runs" | "observer-runs",
+  windowStartedAt: string,
+  cutoffAt: string,
+): { readonly items: readonly WorkflowRun[]; readonly pages: readonly InventoryPage[] } {
+  const runs = new Map<number, WorkflowRun>();
+  const pages: InventoryPage[] = [];
+  const collectRange = (from: number, to: number, subdivided: boolean): void => {
+    const range = `${new Date(from * 1000).toISOString()}..${new Date(to * 1000).toISOString()}`;
+    const rangeQuery = subdivided ? `${query}:created=${range}` : query;
+    const firstPage = client.listWorkflowRuns(workflow, 1, range);
+    const total = requiredNumber(firstPage.total_count, `${rangeQuery}.total_count`);
+    if (total >= 1000) {
+      if (from === to)
+        throw new Error(`${rangeQuery} cannot subdivide a single second with at least 1000 runs`);
+      const midpoint = Math.floor((from + to) / 2);
+      collectRange(from, midpoint, true);
+      collectRange(midpoint + 1, to, true);
+      return;
+    }
+    const result = collectPages({
+      query: rangeQuery,
+      load: (page) => (page === 1 ? firstPage : client.listWorkflowRuns(workflow, page, range)),
+      key: "workflow_runs",
+      parse: parseWorkflowRun,
+      sourceRunIds:
+        query === "source-runs" ? (items) => items.map(({ id }) => String(id)) : undefined,
+    });
+    if (new Set(result.items.map(({ id }) => id)).size !== total)
+      throw new Error(`${rangeQuery} unique run count does not equal total_count`);
+    const seenIds = new Set(runs.keys());
+    pages.push(
+      ...result.pages.map((page) => ({
+        ...page,
+        sourceRunIds: page.sourceRunIds.filter((id) => {
+          const runId = Number(id);
+          if (seenIds.has(runId)) return false;
+          seenIds.add(runId);
+          return true;
+        }),
+      })),
+    );
+    for (const run of result.items) runs.set(run.id, run);
+  };
+  collectRange(
+    Math.ceil(Date.parse(windowStartedAt) / 1000),
+    Math.floor(Date.parse(cutoffAt) / 1000),
+    false,
+  );
+  return { items: [...runs.values()], pages };
 }
 
 function performanceProfile(documents: readonly unknown[]): string {
@@ -259,22 +320,21 @@ export function collectCacheableCiDataset(
   const sourceWorkflow = options.sourceWorkflow ?? "ci.yml";
   const observerWorkflow = options.observerWorkflow ?? "ci-performance-observer.yml";
   const inventoryPages: InventoryPage[] = [];
-  const sourceRunResult = collectPages({
-    query: "source-runs",
-    load: (page) =>
-      client.listWorkflowRuns(sourceWorkflow, page, `${windowStartedAt}..${cutoffAt}`),
-    key: "workflow_runs",
-    parse: parseWorkflowRun,
-    sourceRunIds: (runs) => runs.map(({ id }) => String(id)),
-  });
+  const sourceRunResult = collectWorkflowRuns(
+    client,
+    sourceWorkflow,
+    "source-runs",
+    windowStartedAt,
+    cutoffAt,
+  );
   inventoryPages.push(...sourceRunResult.pages);
-  const observerRunResult = collectPages({
-    query: "observer-runs",
-    load: (page) =>
-      client.listWorkflowRuns(observerWorkflow, page, `${windowStartedAt}..${cutoffAt}`),
-    key: "workflow_runs",
-    parse: parseWorkflowRun,
-  });
+  const observerRunResult = collectWorkflowRuns(
+    client,
+    observerWorkflow,
+    "observer-runs",
+    windowStartedAt,
+    cutoffAt,
+  );
   inventoryPages.push(...observerRunResult.pages);
 
   const observationArtifacts = new Map<string, { runId: number; artifact: Artifact }[]>();

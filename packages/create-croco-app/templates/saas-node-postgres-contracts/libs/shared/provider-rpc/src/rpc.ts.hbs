@@ -1,0 +1,1365 @@
+import { Problem, ProblemCategory } from '@croco/problems-core';
+
+export type RpcProblemDetails<
+  Code extends string = string,
+  Status extends number = number,
+> = {
+  type: string;
+  title: string;
+  status: Status;
+  code: Code;
+  detail?: string;
+  instance?: string;
+} & Record<string, unknown>;
+
+export type RpcDeclaredProblem<
+  Code extends string = string,
+  Category extends string = string,
+  Status extends number = number,
+> = {
+  readonly code: Code;
+  readonly category: Category;
+  readonly status: Status;
+  readonly description?: string;
+  readonly type?: string;
+  readonly cookbookPath?: string;
+};
+
+export type RpcProblemDetailsFor<Problem extends RpcDeclaredProblem> =
+  Problem extends RpcDeclaredProblem
+    ? RpcProblemDetails<Problem['code'], Problem['status']>
+    : never;
+
+export type RpcClientSuccess<T> = {
+  readonly ok: true;
+  readonly data: T;
+  readonly response: Response;
+};
+
+export type RpcClientProblemFailure<Problem extends RpcDeclaredProblem> =
+  Problem extends RpcDeclaredProblem
+    ? {
+        readonly ok: false;
+        readonly kind: 'problem';
+        readonly code: Problem['code'];
+        readonly category: Problem['category'];
+        readonly status: Problem['status'];
+        readonly problem: RpcProblemDetailsFor<Problem>;
+        readonly declaration: Problem;
+        readonly response: Response;
+      }
+    : never;
+
+export type RpcClientExternalFailure =
+  | {
+      readonly ok: false;
+      readonly kind: 'external';
+      readonly error: unknown;
+      readonly response: Response;
+      readonly body?: unknown;
+    }
+  | {
+      readonly ok: false;
+      readonly kind: 'external';
+      readonly error: unknown;
+      readonly response?: undefined;
+      readonly body?: undefined;
+    };
+
+export type RpcClientFailure<Problem extends RpcDeclaredProblem = never> =
+  | ([Problem] extends [never] ? never : RpcClientProblemFailure<Problem>)
+  | RpcClientExternalFailure;
+
+export type RpcClientResult<T, Problem extends RpcDeclaredProblem = never> =
+  | RpcClientSuccess<T>
+  | RpcClientFailure<Problem>;
+
+export type RpcRouteKind = 'query' | 'mutation';
+
+export type RpcRouteTelemetryMetadata = {
+  readonly routeId: string;
+  readonly operationId: string;
+  readonly methodName: string;
+  readonly method: string;
+  readonly path: string;
+};
+
+export type RpcTelemetryEventKind =
+  | 'rpc.request.started'
+  | 'rpc.request.retry'
+  | 'rpc.request.succeeded'
+  | 'rpc.request.problem'
+  | 'rpc.request.external_failure'
+  | 'rpc.request.cancelled'
+  | 'rpc.mutation.started'
+  | 'rpc.mutation.succeeded'
+  | 'rpc.mutation.problem'
+  | 'rpc.mutation.external_failure'
+  | 'rpc.mutation.cancelled';
+
+export type RpcTelemetryProblemSummary = {
+  readonly code: string;
+  readonly status: number;
+  readonly category?: string;
+  readonly type?: string;
+  readonly title?: string;
+};
+
+export type RpcTelemetryRequestContext = RpcRouteTelemetryMetadata & {
+  readonly routeKind: RpcRouteKind;
+  readonly interactionId?: string;
+  readonly correlationId?: string;
+  readonly traceparent?: string;
+  readonly tracestate?: string;
+  readonly requestOrigin?: string;
+  readonly attempt?: number;
+};
+
+export type RpcTelemetryEvent = RpcTelemetryRequestContext & {
+  readonly kind: RpcTelemetryEventKind;
+  readonly timestamp: number;
+  readonly durationMs?: number;
+  readonly status?: number;
+  readonly problem?: RpcTelemetryProblemSummary;
+  readonly errorName?: string;
+  readonly errorMessage?: string;
+};
+
+export type RpcTelemetryRequestOutcome = {
+  readonly kind: 'succeeded' | 'problem' | 'external_failure' | 'cancelled';
+  readonly status?: number;
+  readonly problem?: RpcTelemetryProblemSummary;
+  readonly errorName?: string;
+};
+
+export type RpcTelemetryRequestLifecycle = {
+  readonly headers: Record<string, string>;
+  readonly propagationHeaderNames?: readonly string[];
+  readonly traceparent?: string;
+  readonly tracestate?: string;
+  readonly run?: <T>(operation: () => Promise<T>) => Promise<T>;
+  readonly end: (outcome: RpcTelemetryRequestOutcome) => void;
+};
+
+export type RpcTelemetryBridge = {
+  readonly startRequest?: (
+    context: RpcTelemetryRequestContext,
+  ) => RpcTelemetryRequestLifecycle;
+  readonly createHeaders?: (
+    context: RpcTelemetryRequestContext,
+  ) => Record<string, string> | undefined;
+  readonly record?: (event: RpcTelemetryEvent) => void | Promise<void>;
+};
+
+export type RpcClientFetch = (url: string, init: RequestInit) => Promise<Response>;
+
+export type RpcClientRequestDefaults = Omit<
+  RequestInit,
+  'body' | 'headers' | 'method' | 'signal'
+>;
+
+export type RpcClientRequestOptions = {
+  readonly telemetry?: RpcTelemetryBridge;
+  readonly interactionId?: string;
+  readonly correlationId?: string;
+  readonly traceparent?: string;
+  readonly tracestate?: string;
+  readonly attempt?: number;
+  readonly headers?: HeadersInit;
+  readonly request?: RpcClientRequestDefaults;
+  readonly signal?: AbortSignal;
+};
+
+export type RpcClientConfig = RpcClientRequestOptions & {
+  readonly baseUrl?: string;
+  readonly fetch?: RpcClientFetch;
+};
+
+export type RpcTelemetryRequestState = RpcTelemetryRequestContext & {
+  readonly telemetry: RpcTelemetryBridge;
+  readonly lifecycle?: RpcTelemetryRequestLifecycle;
+  readonly startedAt: number;
+};
+
+export type RpcClientRequest = {
+  readonly url: string;
+  readonly init: RequestInit;
+  readonly fetch: RpcClientFetch;
+  readonly telemetry?: RpcTelemetryRequestState;
+};
+
+export class RpcPathParamInputError extends Problem {
+  readonly code = 'rpc-codegen/path-param-input-unsupported';
+  readonly category = ProblemCategory.ValidationError;
+  readonly routeId: string;
+  readonly param: string;
+
+  constructor(routeId: string, param: string, segment: string) {
+    super(
+      undefined,
+      undefined,
+      `RPC path parameter '${param}' for route '${routeId}' cannot be '${segment}' because URL normalization would change the request path.`,
+      { extensions: { routeId, param } },
+    );
+    this.routeId = routeId;
+    this.param = param;
+  }
+}
+
+export function encodeRpcPathSegment(
+  route: RpcRouteTelemetryMetadata,
+  name: string,
+  value: unknown,
+): string {
+  const segment = String(value);
+
+  if (segment === '' || segment === '.' || segment === '..') {
+    throw new RpcPathParamInputError(route.routeId, name, segment);
+  }
+
+  return encodeURIComponent(segment);
+}
+
+type RpcRequestTarget = {
+  readonly url: string;
+  readonly pathError?: RpcPathParamInputError;
+};
+
+function resolveRpcRequestTarget(
+  route: RpcRouteTelemetryMetadata,
+  url: string | (() => string),
+): RpcRequestTarget {
+  if (typeof url === 'string') {
+    return { url };
+  }
+
+  try {
+    return { url: url() };
+  } catch (error) {
+    if (!(error instanceof RpcPathParamInputError)) {
+      throw error;
+    }
+
+    // Never fetched: the declared route path only supplies the telemetry request origin.
+    return { url: route.path, pathError: error };
+  }
+}
+
+function joinRpcUrl(baseUrl: string, path: string): string {
+  const base = new URL(baseUrl);
+  base.pathname = base.pathname.replace(/\/+$/, '') + '/';
+  return new URL('./' + path.replace(/^\/+/, ''), base).toString();
+}
+
+export function createRpcClientRequest(
+  route: RpcRouteTelemetryMetadata,
+  routeKind: RpcRouteKind,
+  url: string | (() => string),
+  init: RequestInit,
+  options: RpcClientRequestOptions = {},
+  config: RpcClientConfig = {},
+): RpcClientRequest {
+  const effectiveOptions: RpcClientRequestOptions = { ...config, ...options };
+  const target = resolveRpcRequestTarget(route, url);
+  const requestUrl =
+    config.baseUrl === undefined ? target.url : joinRpcUrl(config.baseUrl, target.url);
+  const requestOrigin = getRpcRequestOrigin(requestUrl);
+  const context = createRpcTelemetryRequestContext(
+    route,
+    routeKind,
+    effectiveOptions,
+    requestOrigin,
+  );
+  const lifecycle = startRpcTelemetryRequest(effectiveOptions.telemetry, context);
+  const telemetryHeaders = lifecycle
+    ? lifecycle.headers
+    : createRpcTelemetryHeaders(effectiveOptions.telemetry, context);
+  const propagationHeaders = lifecycle
+    ? selectRpcHeaders(lifecycle.headers, lifecycle.propagationHeaderNames)
+    : undefined;
+  const headers = lifecycle
+    ? mergeRpcHeaders(
+        config.headers,
+        init.headers,
+        telemetryHeaders,
+        options.headers,
+        propagationHeaders,
+      )
+    : mergeRpcHeaders(config.headers, init.headers, telemetryHeaders, options.headers);
+  const requestInit: RequestInit = {
+    ...config.request,
+    ...options.request,
+    ...init,
+    ...(headers ? { headers } : {}),
+    ...(effectiveOptions.signal ? { signal: effectiveOptions.signal } : {}),
+  };
+  const fetchImpl = config.fetch ?? fetch;
+  const request = {
+    url: requestUrl,
+    init: requestInit,
+    fetch: (requestUrl: string, fetchInit: RequestInit) => Promise.resolve().then(() => {
+      if (target.pathError) {
+        throw target.pathError;
+      }
+
+      const execute = () => fetchImpl(requestUrl, fetchInit);
+      return lifecycle?.run ? lifecycle.run(execute) : execute();
+    }),
+  };
+
+  if (!effectiveOptions.telemetry) {
+    return request;
+  }
+
+  const telemetry: RpcTelemetryRequestState = {
+    ...context,
+    ...(lifecycle?.traceparent ? { traceparent: lifecycle.traceparent } : {}),
+    ...(lifecycle?.tracestate ? { tracestate: lifecycle.tracestate } : {}),
+    telemetry: effectiveOptions.telemetry,
+    ...(lifecycle ? { lifecycle } : {}),
+    startedAt: nowRpcTelemetry(),
+  };
+
+  recordRpcTelemetryEvent(telemetry, 'rpc.request.started');
+
+  if ((effectiveOptions.attempt ?? 1) > 1) {
+    recordRpcTelemetryEvent(telemetry, 'rpc.request.retry');
+  }
+
+  if (routeKind === 'mutation') {
+    recordRpcTelemetryEvent(telemetry, 'rpc.mutation.started');
+  }
+
+  return { ...request, telemetry };
+}
+
+export function handleRpcRequestError(
+  error: unknown,
+  telemetry?: RpcTelemetryRequestState,
+): never {
+  const failure = handleRpcRequestResultError(error, telemetry);
+  throw failure.error;
+}
+
+export function handleRpcRequestResultError(
+  error: unknown,
+  telemetry?: RpcTelemetryRequestState,
+): RpcClientExternalFailure {
+  if (isRpcAbortError(error)) {
+    recordRpcTelemetryEvent(telemetry, 'rpc.request.cancelled', describeRpcError(error));
+    recordRpcMutationTelemetryEvent(telemetry, 'rpc.mutation.cancelled', describeRpcError(error));
+  } else {
+    recordRpcTelemetryEvent(telemetry, 'rpc.request.external_failure', describeRpcError(error));
+    recordRpcMutationTelemetryEvent(telemetry, 'rpc.mutation.external_failure', describeRpcError(error));
+  }
+
+  return { ok: false, kind: 'external', error };
+}
+
+function handleRpcResponseResultError(
+  error: unknown,
+  response: Response,
+  telemetry?: RpcTelemetryRequestState,
+): RpcClientExternalFailure {
+  if (isRpcAbortError(error)) {
+    const event = { status: response.status, ...describeRpcError(error) };
+    recordRpcTelemetryEvent(telemetry, 'rpc.request.cancelled', event);
+    recordRpcMutationTelemetryEvent(telemetry, 'rpc.mutation.cancelled', event);
+  } else {
+    recordRpcTelemetryExternal(error, response, telemetry);
+  }
+
+  return { ok: false, kind: 'external', error, response };
+}
+
+function createRpcTelemetryRequestContext(
+  route: RpcRouteTelemetryMetadata,
+  routeKind: RpcRouteKind,
+  options: RpcClientRequestOptions,
+  requestOrigin?: string,
+): RpcTelemetryRequestContext {
+  return {
+    routeId: route.routeId,
+    operationId: route.operationId,
+    methodName: route.methodName,
+    method: route.method,
+    path: route.path,
+    routeKind,
+    ...(options.interactionId ? { interactionId: options.interactionId } : {}),
+    ...(options.correlationId ? { correlationId: options.correlationId } : {}),
+    ...(options.traceparent !== undefined ? { traceparent: options.traceparent } : {}),
+    ...(options.tracestate ? { tracestate: options.tracestate } : {}),
+    ...(requestOrigin ? { requestOrigin } : {}),
+    ...(options.attempt ? { attempt: options.attempt } : {}),
+  };
+}
+
+function getRpcRequestOrigin(url: string): string | undefined {
+  try {
+    const browserHref = (globalThis as { readonly location?: { readonly href?: string } }).location
+      ?.href;
+    return browserHref ? new URL(url, browserHref).origin : new URL(url).origin;
+  } catch {
+    return url.startsWith('//') ? 'croco-unresolved://network-path' : undefined;
+  }
+}
+
+function startRpcTelemetryRequest(
+  telemetry: RpcTelemetryBridge | undefined,
+  context: RpcTelemetryRequestContext,
+): RpcTelemetryRequestLifecycle | undefined {
+  if (!telemetry?.startRequest) {
+    return undefined;
+  }
+
+  try {
+    return telemetry.startRequest(context);
+  } catch {
+    return undefined;
+  }
+}
+
+function createRpcTelemetryHeaders(
+  telemetry: RpcTelemetryBridge | undefined,
+  context: RpcTelemetryRequestContext,
+): Record<string, string> | undefined {
+  try {
+    return telemetry?.createHeaders?.(context);
+  } catch {
+    return undefined;
+  }
+}
+
+function mergeRpcHeaders(
+  ...sources: readonly (HeadersInit | Record<string, string> | undefined)[]
+): Record<string, string> | undefined {
+  const headers: Record<string, string> = {};
+  const headerNames = new Map<string, string>();
+
+  const setHeader = (key: string, value: string): void => {
+    const normalizedKey = key.toLowerCase();
+    const previousKey = headerNames.get(normalizedKey);
+
+    if (previousKey && previousKey !== key) {
+      delete headers[previousKey];
+    }
+
+    headers[key] = value;
+    headerNames.set(normalizedKey, key);
+  };
+
+  for (const source of sources) {
+    if (!source) {
+      continue;
+    }
+
+    if (typeof Headers !== 'undefined' && source instanceof Headers) {
+      source.forEach((value, key) => {
+        setHeader(key, value);
+      });
+      continue;
+    }
+
+    if (Array.isArray(source)) {
+      const tupleHeaders = new Map<string, { readonly name: string; readonly value: string }>();
+
+      for (const [key, value] of source) {
+        const normalizedKey = key.toLowerCase();
+        const previous = tupleHeaders.get(normalizedKey);
+        tupleHeaders.set(normalizedKey, {
+          name: key,
+          value: previous ? previous.value + ', ' + value : value,
+        });
+      }
+
+      for (const { name, value } of tupleHeaders.values()) {
+        setHeader(name, value);
+      }
+      continue;
+    }
+
+    for (const [key, value] of Object.entries(source)) {
+      setHeader(key, String(value));
+    }
+  }
+
+  return Object.keys(headers).length > 0 ? headers : undefined;
+}
+
+function selectRpcHeaders(
+  headers: Record<string, string>,
+  selectedNames: readonly string[] | undefined,
+): Record<string, string> | undefined {
+  if (!selectedNames || selectedNames.length === 0) {
+    return undefined;
+  }
+
+  const names = new Set(selectedNames.map((name) => name.toLowerCase()));
+  const selected = Object.fromEntries(
+    Object.entries(headers).filter(([name]) => names.has(name.toLowerCase())),
+  );
+
+  return Object.keys(selected).length > 0 ? selected : undefined;
+}
+
+function recordRpcTelemetryResult<Problem extends RpcDeclaredProblem>(
+  result: RpcClientResult<unknown, Problem>,
+  telemetry?: RpcTelemetryRequestState,
+): void {
+  if (result.ok) {
+    recordRpcTelemetrySuccess(result.response, telemetry);
+    return;
+  }
+
+  if (result.kind === 'problem') {
+    recordRpcTelemetryProblem(result.problem, result.declaration, result.response, telemetry);
+    return;
+  }
+
+  if (result.response) {
+    recordRpcTelemetryExternal(result.error, result.response, telemetry);
+    return;
+  }
+
+  recordRpcTelemetryEvent(telemetry, 'rpc.request.external_failure', describeRpcError(result.error));
+  recordRpcMutationTelemetryEvent(telemetry, 'rpc.mutation.external_failure', describeRpcError(result.error));
+}
+
+function recordRpcTelemetrySuccess(
+  response: Response,
+  telemetry?: RpcTelemetryRequestState,
+): void {
+  recordRpcTelemetryEvent(telemetry, 'rpc.request.succeeded', { status: response.status });
+  recordRpcMutationTelemetryEvent(telemetry, 'rpc.mutation.succeeded', { status: response.status });
+}
+
+function recordRpcTelemetryProblem<Problem extends RpcDeclaredProblem>(
+  problem: RpcProblemDetails,
+  declaration: Problem | undefined,
+  response: Response,
+  telemetry?: RpcTelemetryRequestState,
+): void {
+  const event = {
+    status: response.status,
+    problem: summarizeRpcProblem(problem, declaration),
+  };
+
+  recordRpcTelemetryEvent(telemetry, 'rpc.request.problem', event);
+  recordRpcMutationTelemetryEvent(telemetry, 'rpc.mutation.problem', event);
+}
+
+function recordRpcTelemetryExternal(
+  error: unknown,
+  response: Response,
+  telemetry?: RpcTelemetryRequestState,
+): void {
+  if (error instanceof RpcClientProblemError) {
+    const problemEvent = {
+      status: response.status,
+      errorName: error.name,
+      problem: summarizeRpcProblem(error.problem, undefined),
+    };
+
+    recordRpcTelemetryEvent(telemetry, 'rpc.request.external_failure', problemEvent);
+    recordRpcMutationTelemetryEvent(telemetry, 'rpc.mutation.external_failure', problemEvent);
+    return;
+  }
+
+  const event = {
+    status: response.status,
+    ...describeRpcError(error),
+  };
+
+  recordRpcTelemetryEvent(telemetry, 'rpc.request.external_failure', event);
+  recordRpcMutationTelemetryEvent(telemetry, 'rpc.mutation.external_failure', event);
+}
+
+function recordRpcMutationTelemetryEvent(
+  telemetry: RpcTelemetryRequestState | undefined,
+  kind: Extract<RpcTelemetryEventKind, `rpc.mutation.${string}`>,
+  fields: Partial<RpcTelemetryEvent> = {},
+): void {
+  if (telemetry?.routeKind !== 'mutation') {
+    return;
+  }
+
+  recordRpcTelemetryEvent(telemetry, kind, fields);
+}
+
+function recordRpcTelemetryEvent(
+  telemetry: RpcTelemetryRequestState | undefined,
+  kind: RpcTelemetryEventKind,
+  fields: Partial<RpcTelemetryEvent> = {},
+): void {
+  if (!telemetry) {
+    return;
+  }
+
+  const durationMs = kind === 'rpc.request.started' || kind === 'rpc.request.retry' || kind === 'rpc.mutation.started'
+    ? undefined
+    : Math.max(0, nowRpcTelemetry() - telemetry.startedAt);
+
+  const event: RpcTelemetryEvent = {
+    routeId: telemetry.routeId,
+    operationId: telemetry.operationId,
+    methodName: telemetry.methodName,
+    method: telemetry.method,
+    path: telemetry.path,
+    routeKind: telemetry.routeKind,
+    ...(telemetry.interactionId ? { interactionId: telemetry.interactionId } : {}),
+    ...(telemetry.correlationId ? { correlationId: telemetry.correlationId } : {}),
+    ...(telemetry.traceparent ? { traceparent: telemetry.traceparent } : {}),
+    ...(telemetry.tracestate ? { tracestate: telemetry.tracestate } : {}),
+    ...(telemetry.attempt ? { attempt: telemetry.attempt } : {}),
+    kind,
+    timestamp: Date.now(),
+    ...(durationMs === undefined ? {} : { durationMs }),
+    ...fields,
+  };
+
+  try {
+    const completion = telemetry.telemetry.record?.(event);
+    if (completion) {
+      void completion.catch(() => undefined);
+    }
+  } catch {
+    // Telemetry sinks must not change the RPC result.
+  } finally {
+    endRpcTelemetryRequest(telemetry, kind, fields);
+  }
+}
+
+function endRpcTelemetryRequest(
+  telemetry: RpcTelemetryRequestState,
+  kind: RpcTelemetryEventKind,
+  fields: Partial<RpcTelemetryEvent>,
+): void {
+  const outcomeKind = getRpcTelemetryOutcomeKind(kind);
+  if (!outcomeKind || !telemetry.lifecycle) {
+    return;
+  }
+
+  try {
+    telemetry.lifecycle.end({
+      kind: outcomeKind,
+      ...(fields.status === undefined ? {} : { status: fields.status }),
+      ...(fields.problem ? { problem: fields.problem } : {}),
+      ...(fields.errorName ? { errorName: fields.errorName } : {}),
+    });
+  } catch {
+    // Instrumentation failures must not change the RPC result.
+  }
+}
+
+function getRpcTelemetryOutcomeKind(
+  kind: RpcTelemetryEventKind,
+): RpcTelemetryRequestOutcome['kind'] | undefined {
+  switch (kind) {
+    case 'rpc.request.succeeded':
+      return 'succeeded';
+    case 'rpc.request.problem':
+      return 'problem';
+    case 'rpc.request.external_failure':
+      return 'external_failure';
+    case 'rpc.request.cancelled':
+      return 'cancelled';
+    default:
+      return undefined;
+  }
+}
+
+function summarizeRpcProblem<Problem extends RpcDeclaredProblem>(
+  problem: RpcProblemDetails,
+  declaration?: Problem,
+): RpcTelemetryProblemSummary {
+  return {
+    code: problem.code,
+    status: problem.status,
+    ...(declaration?.category ? { category: declaration.category } : {}),
+    ...(problem.type ? { type: problem.type } : {}),
+    ...(problem.title ? { title: problem.title } : {}),
+  };
+}
+
+function describeRpcError(error: unknown): Pick<RpcTelemetryEvent, 'errorName'> {
+  if (error instanceof Error) {
+    return {
+      errorName: error.name,
+    };
+  }
+
+  return {
+    errorName: typeof error,
+  };
+}
+
+function isRpcAbortError(error: unknown): boolean {
+  return error instanceof Error && error.name === 'AbortError';
+}
+
+function nowRpcTelemetry(): number {
+  return typeof performance === 'undefined' ? Date.now() : performance.now();
+}
+
+
+export type RpcQueryKeyValue =
+  | string
+  | number
+  | boolean
+  | null
+  | readonly RpcQueryKeyValue[]
+  | { readonly [key: string]: RpcQueryKeyValue };
+
+export type RpcFormFieldControl =
+  | 'text'
+  | 'number'
+  | 'checkbox'
+  | 'select'
+  | 'multi-select'
+  | 'list';
+
+export type RpcFormFieldValueKind =
+  | 'string'
+  | 'number'
+  | 'boolean'
+  | 'enum'
+  | 'array';
+
+export type RpcFormFieldOption = {
+  readonly label: string;
+  readonly value: string | number | boolean | null;
+};
+
+export type RpcFormField<Value = unknown> = {
+  readonly name: string;
+  readonly label: string;
+  readonly control: RpcFormFieldControl;
+  readonly valueKind: RpcFormFieldValueKind;
+  readonly required: boolean;
+  readonly initialValue: Value;
+  readonly options?: readonly RpcFormFieldOption[];
+};
+
+export type RpcFormModel<
+  Values extends Record<string, unknown>,
+  FieldName extends keyof Values & string,
+> = {
+  readonly routeId: string;
+  readonly operationId: string;
+  readonly methodName: string;
+  readonly method: string;
+  readonly path: string;
+  readonly fieldNames: readonly FieldName[];
+  readonly fields: readonly RpcFormField<Values[FieldName]>[];
+  readonly initialValues: Values;
+};
+
+export type RpcValidationProblem<Problem extends RpcDeclaredProblem> = Extract<
+  Problem,
+  { readonly category: 'ValidationError' }
+>;
+
+export type RpcDomainProblem<Problem extends RpcDeclaredProblem> = Exclude<
+  Problem,
+  RpcValidationProblem<Problem>
+>;
+
+export type RpcFormFieldErrors<FieldName extends string> = Partial<
+  Record<FieldName, readonly string[]>
+>;
+
+export type RpcFormFieldProblem<
+  FieldName extends string,
+  Problem extends RpcDeclaredProblem,
+> = [Problem] extends [never]
+  ? never
+  : Problem extends RpcDeclaredProblem
+    ? {
+        readonly kind: 'field-validation';
+        readonly code: Problem['code'];
+        readonly category: Problem['category'];
+        readonly status: Problem['status'];
+        readonly fields: RpcFormFieldErrors<FieldName>;
+        readonly problem: RpcProblemDetailsFor<Problem>;
+        readonly declaration: Problem;
+        readonly response: Response;
+      }
+    : never;
+
+export type RpcFormGlobalProblem<Problem extends RpcDeclaredProblem> = [Problem] extends [never]
+  ? never
+  : Problem extends RpcDeclaredProblem
+    ? {
+        readonly kind: 'global-problem';
+        readonly code: Problem['code'];
+        readonly category: Problem['category'];
+        readonly status: Problem['status'];
+        readonly problem: RpcProblemDetailsFor<Problem>;
+        readonly declaration: Problem;
+        readonly response: Response;
+      }
+    : never;
+
+export type RpcFormProblem<
+  FieldName extends string,
+  Problem extends RpcDeclaredProblem,
+> =
+  | RpcFormFieldProblem<FieldName, RpcValidationProblem<Problem>>
+  | RpcFormGlobalProblem<RpcDomainProblem<Problem>>;
+
+export class RpcClientProblemError extends Error {
+  readonly problem: RpcProblemDetails;
+  readonly response: Response;
+
+  constructor(problem: RpcProblemDetails, response: Response) {
+    super(problem.detail ?? problem.title);
+    this.name = 'RpcClientProblemError';
+    this.problem = problem;
+    this.response = response;
+  }
+}
+
+export class RpcClientResponseError extends Error {
+  readonly response: Response;
+  readonly body?: unknown;
+  readonly cause?: unknown;
+
+  constructor(response: Response, body?: unknown, cause?: unknown) {
+    super(`RPC request failed with HTTP ${response.status}`);
+    this.name = 'RpcClientResponseError';
+    this.response = response;
+    this.body = body;
+    this.cause = cause;
+  }
+}
+
+export class RpcClientStatusMismatchError extends Problem {
+  readonly code = 'rpc-codegen/status-mismatch';
+  readonly category = ProblemCategory.InternalServerError;
+  readonly response: Response;
+  readonly httpStatus: number;
+  readonly problemStatus: number;
+
+  constructor(response: Response, problemStatus: number) {
+    super(
+      undefined,
+      undefined,
+      `RPC Problem status mismatch: HTTP ${response.status}, Problem ${problemStatus}`,
+    );
+    this.response = response;
+    this.httpStatus = response.status;
+    this.problemStatus = problemStatus;
+  }
+}
+
+export class RpcQueryKeyInputError extends Problem {
+  readonly code = 'rpc-codegen/query-key-input-unsupported';
+  readonly category = ProblemCategory.ValidationError;
+  readonly path: string;
+
+  constructor(path: string, detail: string) {
+    super(undefined, undefined, `RPC query key input ${detail}; unsupported value at ${path}.`, {
+      extensions: { path },
+    });
+    this.path = path;
+  }
+}
+
+export async function handleJsonResponse<T = unknown>(
+  response: Response,
+  telemetry?: RpcTelemetryRequestState,
+): Promise<T> {
+  if (!response.ok) {
+    return rejectErrorResponse(response, telemetry);
+  }
+
+  let data: T;
+  try {
+    data = (await response.json()) as T;
+  } catch (cause) {
+    if (isRpcAbortError(cause)) {
+      return handleRpcRequestError(cause, telemetry);
+    }
+
+    if (cause instanceof SyntaxError) {
+      const error = new RpcClientResponseError(response, undefined, cause);
+      recordRpcTelemetryExternal(error, response, telemetry);
+      throw error;
+    }
+
+    recordRpcTelemetryExternal(cause, response, telemetry);
+    throw cause;
+  }
+
+  recordRpcTelemetrySuccess(response, telemetry);
+  return data;
+}
+
+export async function handleJsonResult<
+  T = unknown,
+  Problem extends RpcDeclaredProblem = never,
+>(
+  response: Response,
+  declaredProblems: readonly Problem[] = [],
+  telemetry?: RpcTelemetryRequestState,
+): Promise<RpcClientResult<T, Problem>> {
+  if (!response.ok) {
+    return readErrorResult(response, declaredProblems, telemetry);
+  }
+
+  let data: T;
+  try {
+    data = (await response.json()) as T;
+  } catch (cause) {
+    if (isRpcAbortError(cause)) {
+      return handleRpcRequestResultError(cause, telemetry);
+    }
+
+    return handleRpcResponseResultError(
+      cause instanceof SyntaxError ? new RpcClientResponseError(response, undefined, cause) : cause,
+      response,
+      telemetry,
+    );
+  }
+
+  const result: RpcClientResult<T, Problem> = { ok: true, data, response };
+  recordRpcTelemetryResult(result, telemetry);
+
+  return result;
+}
+
+export async function readOptionalJsonResponse(
+  response: Response,
+  telemetry?: RpcTelemetryRequestState,
+): Promise<unknown | undefined> {
+  if (!response.ok) {
+    return rejectErrorResponse(response, telemetry);
+  }
+
+  if (response.status === 204) {
+    recordRpcTelemetrySuccess(response, telemetry);
+    return undefined;
+  }
+
+  let body: string | undefined;
+  let data: unknown | undefined;
+  try {
+    body = await response.text();
+  } catch (cause) {
+    if (isRpcAbortError(cause)) {
+      return handleRpcRequestError(cause, telemetry);
+    }
+
+    recordRpcTelemetryExternal(cause, response, telemetry);
+    throw cause;
+  }
+
+  try {
+    data = body.length === 0 ? undefined : (JSON.parse(body) as unknown);
+  } catch (cause) {
+    const error = new RpcClientResponseError(response, body, cause);
+    recordRpcTelemetryExternal(error, response, telemetry);
+    throw error;
+  }
+
+  recordRpcTelemetrySuccess(response, telemetry);
+  return data;
+}
+
+export async function readOptionalJsonResult<Problem extends RpcDeclaredProblem = never>(
+  response: Response,
+  declaredProblems: readonly Problem[] = [],
+  telemetry?: RpcTelemetryRequestState,
+): Promise<RpcClientResult<unknown | undefined, Problem>> {
+  if (!response.ok) {
+    return readErrorResult(response, declaredProblems, telemetry);
+  }
+
+  if (response.status === 204) {
+    const result: RpcClientResult<unknown | undefined, Problem> = { ok: true, data: undefined, response };
+    recordRpcTelemetryResult(result, telemetry);
+
+    return result;
+  }
+
+  let body: string;
+
+  try {
+    body = await response.text();
+  } catch (cause) {
+    if (isRpcAbortError(cause)) {
+      return handleRpcRequestResultError(cause, telemetry);
+    }
+
+    return handleRpcResponseResultError(cause, response, telemetry);
+  }
+
+  if (body.length === 0) {
+    const result: RpcClientResult<unknown | undefined, Problem> = { ok: true, data: undefined, response };
+    recordRpcTelemetryResult(result, telemetry);
+
+    return result;
+  }
+
+  let data: unknown;
+
+  try {
+    data = JSON.parse(body) as unknown;
+  } catch (cause) {
+    const error = new RpcClientResponseError(response, body, cause);
+    return handleRpcResponseResultError(error, response, telemetry);
+  }
+
+  const result: RpcClientResult<unknown | undefined, Problem> = { ok: true, data, response };
+  recordRpcTelemetryResult(result, telemetry);
+
+  return result;
+}
+
+export function assertExhaustiveProblem(problem: never): never {
+  const value = problem as { readonly code?: unknown } | undefined;
+  const suffix = typeof value?.code === 'string' ? `: ${value.code}` : '';
+
+  throw new Error(`Unhandled RPC Problem variant${suffix}`);
+}
+
+export function serializeRpcQueryKeyInput(value: unknown): RpcQueryKeyValue {
+  return serializeRpcQueryKeyValue(value, 'input') ?? null;
+}
+
+function serializeRpcQueryKeyValue(value: unknown, path: string): RpcQueryKeyValue | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  if (value === null || typeof value === 'string' || typeof value === 'boolean') {
+    return value;
+  }
+
+  if (typeof value === 'number') {
+    if (Number.isFinite(value)) {
+      return value;
+    }
+
+    throw new RpcQueryKeyInputError(path, 'only supports finite numbers');
+  }
+
+  if (Array.isArray(value)) {
+    return value.flatMap((item, index) => {
+      const result = serializeRpcQueryKeyValue(item, `${path}[${index}]`);
+
+      return result === undefined ? [] : [result];
+    });
+  }
+
+  if (isRpcQueryKeyRecord(value)) {
+    const serialized: Record<string, RpcQueryKeyValue> = {};
+
+    for (const [key, item] of Object.entries(value).sort(compareRpcQueryKeyRecordEntries)) {
+      const result = serializeRpcQueryKeyValue(item, `${path}.${key}`);
+
+      if (result !== undefined) {
+        serialized[key] = result;
+      }
+    }
+
+    return serialized;
+  }
+
+  throw new RpcQueryKeyInputError(path, 'only supports JSON-safe primitives, arrays, and plain objects');
+}
+
+function isRpcQueryKeyRecord(value: unknown): value is Record<string, unknown> {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const prototype = Object.getPrototypeOf(value);
+
+  return (
+    prototype === Object.prototype ||
+    prototype === null ||
+    Object.prototype.hasOwnProperty.call(prototype, 'isPrototypeOf')
+  );
+}
+
+function compareRpcQueryKeyRecordEntries(
+  [left]: [string, unknown],
+  [right]: [string, unknown],
+): number {
+  if (left < right) {
+    return -1;
+  }
+
+  if (left > right) {
+    return 1;
+  }
+
+  return 0;
+}
+
+async function rejectErrorResponse(
+  response: Response,
+  telemetry?: RpcTelemetryRequestState,
+): Promise<never> {
+  let body: unknown;
+
+  try {
+    body = await response.json();
+  } catch (cause) {
+    if (isRpcAbortError(cause)) {
+      return handleRpcRequestError(cause, telemetry);
+    }
+
+    const error = new RpcClientResponseError(response, undefined, cause);
+    recordRpcTelemetryExternal(error, response, telemetry);
+    throw error;
+  }
+
+  if (isRpcProblemDetails(body)) {
+    const statusMismatch = createRpcStatusMismatchError(response, body);
+
+    if (statusMismatch) {
+      recordRpcTelemetryExternal(statusMismatch, response, telemetry);
+      throw statusMismatch;
+    }
+
+    const error = new RpcClientProblemError(body, response);
+    recordRpcTelemetryProblem(body, undefined, response, telemetry);
+    throw error;
+  }
+
+  const error = new RpcClientResponseError(response, body);
+  recordRpcTelemetryExternal(error, response, telemetry);
+  throw error;
+}
+
+async function readErrorResult<Problem extends RpcDeclaredProblem>(
+  response: Response,
+  declaredProblems: readonly Problem[],
+  telemetry?: RpcTelemetryRequestState,
+): Promise<RpcClientFailure<Problem>> {
+  let body: unknown;
+
+  try {
+    body = await response.json();
+  } catch (cause) {
+    if (isRpcAbortError(cause)) {
+      return handleRpcResponseResultError(cause, response, telemetry);
+    }
+
+    const error = new RpcClientResponseError(response, undefined, cause);
+    const result: RpcClientFailure<Problem> = {
+      ok: false,
+      kind: 'external',
+      error,
+      response,
+    };
+    recordRpcTelemetryResult(result, telemetry);
+
+    return result;
+  }
+
+  if (isRpcProblemDetails(body)) {
+    const statusMismatch = createRpcStatusMismatchError(response, body);
+
+    if (statusMismatch) {
+      const result: RpcClientFailure<Problem> = {
+        ok: false,
+        kind: 'external',
+        error: statusMismatch,
+        response,
+        body,
+      };
+      recordRpcTelemetryResult(result, telemetry);
+
+      return result;
+    }
+
+    const declaration = findDeclaredProblem(body, declaredProblems);
+
+    if (declaration) {
+      const result = {
+        ok: false,
+        kind: 'problem',
+        code: declaration.code,
+        category: declaration.category,
+        status: declaration.status,
+        problem: body as RpcProblemDetailsFor<Problem>,
+        declaration,
+        response,
+      } as RpcClientFailure<Problem>;
+      recordRpcTelemetryResult(result, telemetry);
+
+      return result;
+    }
+
+    const error = new RpcClientProblemError(body, response);
+    const result: RpcClientFailure<Problem> = {
+      ok: false,
+      kind: 'external',
+      error,
+      response,
+      body,
+    };
+    recordRpcTelemetryResult(result, telemetry);
+
+    return {
+      ...result,
+    };
+  }
+
+  const result: RpcClientFailure<Problem> = {
+    ok: false,
+    kind: 'external',
+    error: new RpcClientResponseError(response, body),
+    response,
+    body,
+  };
+  recordRpcTelemetryResult(result, telemetry);
+
+  return result;
+}
+
+export function toRpcFormProblem<
+  FieldName extends string,
+  Problem extends RpcDeclaredProblem,
+>(
+  failure: RpcClientProblemFailure<Problem>,
+  fieldNames: readonly FieldName[],
+): RpcFormProblem<FieldName, Problem> {
+  if (failure.category === 'ValidationError') {
+    return {
+      kind: 'field-validation',
+      code: failure.code,
+      category: failure.category,
+      status: failure.status,
+      fields: extractRpcFormFieldErrors(failure.problem, fieldNames),
+      problem: failure.problem,
+      declaration: failure.declaration,
+      response: failure.response,
+    } as RpcFormProblem<FieldName, Problem>;
+  }
+
+  return {
+    kind: 'global-problem',
+    code: failure.code,
+    category: failure.category,
+    status: failure.status,
+    problem: failure.problem,
+    declaration: failure.declaration,
+    response: failure.response,
+  } as RpcFormProblem<FieldName, Problem>;
+}
+
+function extractRpcFormFieldErrors<FieldName extends string>(
+  problem: RpcProblemDetails,
+  fieldNames: readonly FieldName[],
+): RpcFormFieldErrors<FieldName> {
+  const source = getRpcFormFieldErrorSource(problem);
+  const errors: Partial<Record<FieldName, readonly string[]>> = {};
+  const setFieldError = (fieldName: FieldName, messages: readonly string[]): void => {
+    Object.defineProperty(errors, fieldName, {
+      configurable: true,
+      enumerable: true,
+      value: messages,
+      writable: true,
+    });
+  };
+
+  if (!source) {
+    if (!Array.isArray(problem.issues)) {
+      return errors;
+    }
+
+    for (const issue of problem.issues) {
+      if (!isRecord(issue) || typeof issue.path !== 'string' || typeof issue.message !== 'string') {
+        continue;
+      }
+
+      if (!issue.path.startsWith('body.')) {
+        continue;
+      }
+
+      const fieldName = issue.path.slice('body.'.length) as FieldName;
+
+      if (fieldNames.includes(fieldName)) {
+        const previous = Object.prototype.hasOwnProperty.call(errors, fieldName)
+          ? errors[fieldName]
+          : undefined;
+        setFieldError(fieldName, [...(previous ?? []), issue.message]);
+      }
+    }
+
+    return errors;
+  }
+
+  for (const fieldName of fieldNames) {
+    const value = source[fieldName];
+
+    if (typeof value === 'string') {
+      setFieldError(fieldName, [value]);
+      continue;
+    }
+
+    if (Array.isArray(value)) {
+      const messages = value.filter((item): item is string => typeof item === 'string');
+
+      if (messages.length > 0) {
+        setFieldError(fieldName, messages);
+      }
+    }
+  }
+
+  return errors;
+}
+
+function getRpcFormFieldErrorSource(problem: RpcProblemDetails): Record<string, unknown> | undefined {
+  if (isRecord(problem.fields)) {
+    return problem.fields;
+  }
+
+  if (isRecord(problem.fieldErrors)) {
+    return problem.fieldErrors;
+  }
+
+  return undefined;
+}
+
+function findDeclaredProblem<Problem extends RpcDeclaredProblem>(
+  problem: RpcProblemDetails,
+  declaredProblems: readonly Problem[],
+): Problem | undefined {
+  return declaredProblems.find(
+    (declaration) => declaration.code === problem.code && declaration.status === problem.status,
+  );
+}
+
+function createRpcStatusMismatchError(
+  response: Response,
+  problem: RpcProblemDetails,
+): RpcClientStatusMismatchError | undefined {
+  return response.status === problem.status
+    ? undefined
+    : new RpcClientStatusMismatchError(response, problem.status);
+}
+
+function isRpcProblemDetails(value: unknown): value is RpcProblemDetails {
+  if (!isRecord(value)) {
+    return false;
+  }
+
+  return (
+    typeof value.type === 'string' &&
+    typeof value.title === 'string' &&
+    typeof value.status === 'number' &&
+    typeof value.code === 'string' &&
+    (value.detail === undefined || typeof value.detail === 'string') &&
+    (value.instance === undefined || typeof value.instance === 'string')
+  );
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+{{#if scope}}  {{/if}}

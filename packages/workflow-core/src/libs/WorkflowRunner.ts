@@ -6,10 +6,12 @@ import type {
   ReplayExecutionParams,
 } from "@croco/execution-core";
 import { ExecutionProblems } from "@croco/execution-core";
+import { readExplicitRetryability } from "@croco/problems-core";
 import { TaskRunner } from "@croco/tasks-core";
 import { withSpan } from "@croco/telemetry-api";
 import {
   WorkflowDefinitionProblem,
+  WorkflowExecutionCancelledProblem,
   WorkflowExecutionFailedProblem,
   WorkflowExecutionInProgressProblem,
   WorkflowNotFoundProblem,
@@ -75,6 +77,38 @@ function reportFailureRecordError(
   }
 }
 
+function reportRetryabilityInspectionError(
+  span: WorkflowTelemetrySpan,
+  executionId: string,
+  stepExecutionId: string,
+  workflowError: unknown,
+  inspectionError: unknown,
+): void {
+  let attachmentFailed = false;
+  if (typeof workflowError === "object" && workflowError !== null) {
+    try {
+      Object.defineProperty(workflowError, "workflowRetryabilityInspectionError", {
+        configurable: true,
+        enumerable: false,
+        value: inspectionError,
+      });
+    } catch {
+      attachmentFailed = true;
+    }
+  }
+
+  try {
+    span.addEvent("workflow.step.retryability_inspection.failed", {
+      "workflow.execution.id": executionId,
+      "workflow.step.execution.id": stepExecutionId,
+      "workflow.error.message": describeError(inspectionError),
+      ...(attachmentFailed ? { "workflow.retryability_inspection.attachment_failed": true } : {}),
+    });
+  } catch {
+    return;
+  }
+}
+
 function supportsRecordLog(manager: ExecutionManager): manager is LoggableExecutionManager {
   return typeof (manager as { recordLog?: unknown }).recordLog === "function";
 }
@@ -83,8 +117,8 @@ function supportsReplay(manager: ExecutionManager): manager is ReplayableExecuti
   return typeof (manager as { replay?: unknown }).replay === "function";
 }
 
-function createInvocationId(workflowName: string): string {
-  return `${workflowName}:${Date.now()}:${Math.random().toString(36).slice(2)}`;
+function createInvocationId(workflowName: string, now: Date): string {
+  return `${workflowName}:${now.getTime()}:${Math.random().toString(36).slice(2)}`;
 }
 
 function createStepExecutionIdempotencyKey(
@@ -121,10 +155,10 @@ async function resolveExecutionIdempotency(
   };
 }
 
-function toExecutionError(error: unknown) {
+function toExecutionError(error: unknown, retryable: boolean) {
   return {
     message: error instanceof Error ? error.message : String(error),
-    retryable: error instanceof Error && "retryable" in error ? Boolean(error.retryable) : false,
+    retryable,
     code: error instanceof Error && "code" in error ? String(error.code) : undefined,
     stack: error instanceof Error ? error.stack : undefined,
   };
@@ -166,6 +200,7 @@ export class WorkflowRunner {
       executionManager,
       registry.taskRegistry,
     ),
+    private readonly clock: () => Date = () => new Date(),
   ) {}
 
   async execute<TPayload, TSteps extends readonly WorkflowStepResult[]>(
@@ -201,7 +236,9 @@ export class WorkflowRunner {
 
     const resolvedKey = this.resolveIdempotencyKey(workflow, payload);
     const idempotency = await resolveExecutionIdempotency(workflow.name, resolvedKey);
-    const invocationId = idempotency.idempotencyKey ? createInvocationId(workflow.name) : undefined;
+    const invocationId = idempotency.idempotencyKey
+      ? createInvocationId(workflow.name, this.clock())
+      : undefined;
     const execution = await this.executionManager.create({
       type: "workflow",
       payload,
@@ -269,10 +306,18 @@ export class WorkflowRunner {
 
     span.addEvent("workflow.execution.created", executionAttributes);
 
-    const running = await this.executionManager.start(execution.id);
+    let running: Execution;
+    try {
+      running = await this.executionManager.start(execution.id);
+    } catch (error) {
+      const cancelled = await this.inspectCancellation(execution.id, span, error);
+      if (cancelled) return this.rejectCancelledWorkflow(workflow, cancelled, span);
+      throw error;
+    }
     span.setAttribute("workflow.reused", false);
     span.addEvent("workflow.execution.started", getExecutionTelemetryAttributes(workflow, running));
     const steps: WorkflowStepResult[] = [];
+    let stepExecutionId: string | undefined;
 
     await this.recordLog(span, running.id, "info", "Workflow execution started", {
       workflowName: workflow.name,
@@ -280,23 +325,36 @@ export class WorkflowRunner {
 
     try {
       for (const [stepIndex, step] of workflow.steps.entries()) {
+        stepExecutionId = undefined;
+        await this.assertNotCancelled(workflow.name, running.id);
         const stepAttributes = {
           "workflow.name": workflow.name,
           "workflow.execution.id": running.id,
           "workflow.step.name": step.name,
           "workflow.step.task": step.task,
         };
-        span.addEvent("workflow.step.started", stepAttributes);
         await this.recordLog(span, running.id, "info", "Workflow step started", {
           step: step.name,
           task: step.task,
         });
 
+        let input: unknown;
+        try {
+          input = this.resolveStepInput(workflow, running, payload, step, steps);
+        } catch (error) {
+          span.addEvent("workflow.step.failed", {
+            ...stepAttributes,
+            "workflow.error.message": error instanceof Error ? error.message : String(error),
+          });
+          throw error;
+        }
+        await this.assertNotCancelled(workflow.name, running.id);
+        span.addEvent("workflow.step.started", stepAttributes);
         let result: unknown;
         try {
-          result = await this.taskRunner.execute(
+          const tracked = await this.taskRunner.executeTracked(
             step.task,
-            this.resolveStepInput(workflow, running, payload, step, steps),
+            input,
             {
               parentId: running.id,
               idempotencyKey: createStepExecutionIdempotencyKey(running.id, stepIndex, step.name),
@@ -306,7 +364,11 @@ export class WorkflowRunner {
                 workflowStep: step.name,
               },
             },
+            (executionId) => {
+              stepExecutionId = executionId;
+            },
           );
+          result = tracked.result;
         } catch (error) {
           span.addEvent("workflow.step.failed", {
             ...stepAttributes,
@@ -332,6 +394,7 @@ export class WorkflowRunner {
         workflowName: workflow.name,
         steps,
       };
+      await this.assertNotCancelled(workflow.name, running.id);
       const completed = await this.executionManager.complete(running.id, result);
       span.addEvent(
         "workflow.execution.completed",
@@ -349,14 +412,41 @@ export class WorkflowRunner {
         reused: false,
       };
     } catch (error) {
+      const cancelled = await this.inspectCancellation(running.id, span, error);
+      if (cancelled) {
+        return this.rejectCancelledWorkflow(workflow, cancelled, span);
+      }
       await this.recordLog(span, running.id, "error", "Workflow execution failed", {
         workflowName: workflow.name,
         error: error instanceof Error ? error.message : String(error),
       });
       let failed: Execution;
       try {
-        failed = await this.executionManager.fail(running.id, toExecutionError(error));
+        let retryable =
+          idempotency.idempotencyKey !== undefined && readExplicitRetryability(error) === true;
+        if (retryable && stepExecutionId !== undefined) {
+          retryable = false;
+          try {
+            const child = await this.executionManager.get(stepExecutionId);
+            retryable = child.status === "retrying" || child.status === "completed";
+          } catch (inspectionError) {
+            reportRetryabilityInspectionError(
+              span,
+              running.id,
+              stepExecutionId,
+              error,
+              inspectionError,
+            );
+          }
+        }
+        const beforeFailure = await this.inspectCancellation(running.id, span, error);
+        if (beforeFailure) {
+          return this.rejectCancelledWorkflow(workflow, beforeFailure, span);
+        }
+        failed = await this.executionManager.fail(running.id, toExecutionError(error, retryable));
       } catch (failureRecordError) {
+        const afterFailure = await this.inspectCancellation(running.id, span, error);
+        if (afterFailure) return this.rejectCancelledWorkflow(workflow, afterFailure, span);
         reportFailureRecordError(span, running.id, error, failureRecordError);
         throw error;
       }
@@ -365,6 +455,42 @@ export class WorkflowRunner {
         "workflow.error.message": error instanceof Error ? error.message : String(error),
       });
       throw error;
+    }
+  }
+
+  private async inspectCancellation(
+    executionId: string,
+    span: WorkflowTelemetrySpan,
+    workflowError: unknown,
+  ): Promise<Execution | undefined> {
+    try {
+      const execution = await this.executionManager.get(executionId);
+      return execution.status === "cancelled" ? execution : undefined;
+    } catch (inspectionError) {
+      reportFailureRecordError(span, executionId, workflowError, inspectionError);
+      return undefined;
+    }
+  }
+
+  private async rejectCancelledWorkflow(
+    workflow: WorkflowDefinition,
+    execution: Execution,
+    span: WorkflowTelemetrySpan,
+  ): Promise<never> {
+    span.addEvent(
+      "workflow.execution.cancelled",
+      getExecutionTelemetryAttributes(workflow, execution),
+    );
+    await this.recordLog(span, execution.id, "info", "Workflow execution cancelled", {
+      workflowName: workflow.name,
+    });
+    throw new WorkflowExecutionCancelledProblem(workflow.name, execution.id);
+  }
+
+  private async assertNotCancelled(workflowName: string, executionId: string): Promise<void> {
+    const execution = await this.executionManager.get(executionId);
+    if (execution.status === "cancelled") {
+      throw new WorkflowExecutionCancelledProblem(workflowName, executionId);
     }
   }
 

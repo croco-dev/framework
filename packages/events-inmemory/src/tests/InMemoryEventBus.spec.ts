@@ -684,6 +684,134 @@ describe("InMemoryEventBus", () => {
       traceInfoSpy.mockRestore();
     });
 
+    describe.each([false, true])("carried event trace (DLQ: %s)", (withDeadLetterQueue) => {
+      const producerTrace = {
+        traceId: "0123456789abcdef0123456789abcdef",
+        spanId: "0123456789abcdef",
+        traceFlags: 0,
+        isValid: true,
+      };
+      const activeTrace = {
+        traceId: "fedcba9876543210fedcba9876543210",
+        spanId: "fedcba9876543210",
+        traceFlags: 1,
+        isValid: true,
+      };
+
+      beforeEach(() => {
+        eventBus = createTestEventBus({
+          deadLetterQueue: withDeadLetterQueue ? new InMemoryDeadLetterQueue() : undefined,
+        });
+        Container.set(TestHandler, testHandler);
+        eventBus.subscribe({
+          eventName: TestEvent.eventName,
+          handlerClass: TestHandler,
+          handlerId: "test",
+        });
+      });
+
+      it.each([{}, activeTrace])(
+        "preserves the trace carried by the event with active trace %j",
+        async (publisherTrace) => {
+          const traceInfoSpy = vi
+            .spyOn(telemetryApi, "getActiveTraceInfo")
+            .mockReturnValue(publisherTrace);
+          const setSpanContextSpy = vi.spyOn(otelApi.trace, "setSpanContext");
+          try {
+            const event = new TestEvent("carried-trace");
+            event.metadata = { traceContext: { ...producerTrace } };
+            const originalMetadata = event.metadata;
+
+            await eventBus.publish(event);
+            const firstTrace = testHandler.handledEvents[0]?.metadata.traceContext;
+            expect(firstTrace).toEqual(producerTrace);
+            expect(firstTrace).not.toBe(event.metadata.traceContext);
+            if (firstTrace) firstTrace.spanId = "mutated-by-handler";
+            await eventBus.publish(event);
+
+            expect(testHandler.handledEvents[1]?.metadata.traceContext).toEqual(producerTrace);
+            expect(event.metadata).toBe(originalMetadata);
+            expect(event.metadata.traceContext).toEqual(producerTrace);
+            expect(setSpanContextSpy).toHaveBeenCalledTimes(2);
+            expect(setSpanContextSpy).toHaveBeenCalledWith(expect.anything(), {
+              traceId: producerTrace.traceId,
+              spanId: producerTrace.spanId,
+              traceFlags: 0,
+              isRemote: true,
+            });
+          } finally {
+            traceInfoSpy.mockRestore();
+            setSpanContextSpy.mockRestore();
+          }
+        },
+      );
+
+      it("keeps publish span attributes on the active publisher trace", async () => {
+        const traceInfoSpy = vi
+          .spyOn(telemetryApi, "getActiveTraceInfo")
+          .mockReturnValue(activeTrace);
+        const span = { setStatus: vi.fn(), recordException: vi.fn(), end: vi.fn() };
+        const startActiveSpan = vi.fn(
+          async (
+            _name: string,
+            _options: { attributes: Record<string, unknown> },
+            callback: (currentSpan: typeof span) => Promise<void>,
+          ) => callback(span),
+        );
+        Object.defineProperty(eventBus, "tracer", { value: { startActiveSpan } });
+        try {
+          const event = new TestEvent("publisher-trace");
+          event.metadata = { traceContext: { ...producerTrace } };
+          await eventBus.publish(event);
+
+          expect(startActiveSpan).toHaveBeenCalledWith(
+            `event.publish:${TestEvent.eventName}`,
+            {
+              attributes: expect.objectContaining({
+                "trace.id": activeTrace.traceId,
+                "trace.span_id": activeTrace.spanId,
+                "trace.is_valid": true,
+              }),
+            },
+            expect.any(Function),
+          );
+          expect(testHandler.handledEvents[0]?.metadata.traceContext).toEqual(producerTrace);
+        } finally {
+          traceInfoSpy.mockRestore();
+        }
+      });
+
+      it.each([
+        undefined,
+        {},
+        { ...producerTrace, isValid: false },
+        { ...producerTrace, traceId: "" },
+        { ...producerTrace, spanId: "" },
+      ])("uses the active trace when the carried trace is invalid: %j", async (traceContext) => {
+        const traceInfoSpy = vi
+          .spyOn(telemetryApi, "getActiveTraceInfo")
+          .mockReturnValue(activeTrace);
+        const setSpanContextSpy = vi.spyOn(otelApi.trace, "setSpanContext");
+        try {
+          const event = new TestEvent("invalid-carried-trace");
+          event.metadata = { traceContext };
+          await eventBus.publish(event);
+
+          expect(testHandler.handledEvents[0]?.metadata.traceContext).toEqual(activeTrace);
+          expect(event.metadata.traceContext).toBe(traceContext);
+          expect(setSpanContextSpy).toHaveBeenCalledWith(expect.anything(), {
+            traceId: activeTrace.traceId,
+            spanId: activeTrace.spanId,
+            traceFlags: 1,
+            isRemote: true,
+          });
+        } finally {
+          traceInfoSpy.mockRestore();
+          setSpanContextSpy.mockRestore();
+        }
+      });
+    });
+
     it("should restore trace context before starting handler spans", async () => {
       const handler = new TestHandler();
       Container.set(TestHandler, handler);

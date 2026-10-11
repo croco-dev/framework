@@ -1,3 +1,4 @@
+import { compareStrings } from "../../../../tooling/compareStrings.mjs";
 import { createHash } from "node:crypto";
 import * as fs from "node:fs";
 import { createRequire } from "node:module";
@@ -410,7 +411,7 @@ export function compileDiGraph(options: DiCompilerOptions = {}): DiCompilerResul
   }
 
   const sortedProviders = [...providers].sort((left, right) =>
-    left.tokenId.localeCompare(right.tokenId),
+    compareStrings(left.tokenId, right.tokenId),
   );
   const packageProviders = linkedPackages
     .flatMap(({ descriptor }) => descriptor.providers)
@@ -422,7 +423,7 @@ export function compileDiGraph(options: DiCompilerOptions = {}): DiCompilerResul
     ...sortedProviders.map(
       ({ classDeclaration: _, classExpression: __, sourceFile: ___, ...provider }) => provider,
     ),
-  ].sort((left, right) => left.tokenId.localeCompare(right.tokenId));
+  ].sort((left, right) => compareStrings(left.tokenId, right.tokenId));
   for (const provider of manifestProviders) {
     const owner = modules.find((module) => module.providers.includes(provider.tokenId));
     if (provider.stereotype === "module-provider" && owner?.id !== provider.moduleName)
@@ -1311,7 +1312,7 @@ function createGeneratedCode(
       : []),
   ];
   for (const [moduleSpecifier, alias] of [...imports.entries()].sort(([left], [right]) =>
-    left.localeCompare(right),
+    compareStrings(left, right),
   )) {
     lines.push(
       `import * as ${alias} from ${JSON.stringify(toGeneratedImport(moduleSpecifier, outFile))};`,
@@ -1716,10 +1717,10 @@ function createDiagnostic(
 function sortDiagnostics(diagnostics: readonly DiCompilerDiagnostic[]): DiCompilerDiagnostic[] {
   return [...diagnostics].sort(
     (left, right) =>
-      left.file.localeCompare(right.file) ||
+      compareStrings(left.file, right.file) ||
       left.line - right.line ||
       left.column - right.column ||
-      left.code.localeCompare(right.code),
+      compareStrings(left.code, right.code),
   );
 }
 

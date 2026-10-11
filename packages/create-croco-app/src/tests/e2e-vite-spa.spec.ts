@@ -5,6 +5,73 @@ import { generate } from "../generator.js";
 import { getExternalCrocoPackageRange } from "../helpers/croco-ranges.js";
 import type { GeneratorOptions, NormalizedGeneratorOptions } from "../types.js";
 
+async function getFreePort(): Promise<number> {
+  const { createServer } = await import("node:net");
+  return new Promise((resolve, reject) => {
+    const server = createServer();
+    server.on("error", reject);
+    server.listen(0, "127.0.0.1", () => {
+      const address = server.address();
+      if (address === null || typeof address === "string") {
+        reject(new Error("Expected the test port probe to listen on a TCP address."));
+        return;
+      }
+      const { port } = address;
+      server.close((error?: Error) => {
+        if (error) {
+          reject(error);
+          return;
+        }
+        resolve(port);
+      });
+    });
+  });
+}
+
+type GatewayChild = {
+  readonly kill: () => void;
+  readonly exited: Promise<number>;
+};
+
+async function startGateway(env: NodeJS.ProcessEnv): Promise<GatewayChild> {
+  const { spawn } = await import("node:child_process");
+  const gatewayPath = new URL("../../templates/addons/docker/web/gateway.mjs", import.meta.url);
+  const child = spawn(process.execPath, [gatewayPath.pathname], {
+    env: { ...process.env, ...env },
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  child.stdout?.on("data", () => undefined);
+  child.stderr?.on("data", () => undefined);
+  const exited = new Promise<number>((resolve) => {
+    child.on("exit", (code) => resolve(code ?? 1));
+  });
+  return {
+    kill: () => {
+      child.kill("SIGTERM");
+    },
+    exited,
+  };
+}
+
+async function waitForHttpOk(url: string, timeoutMs = 10_000): Promise<void> {
+  const startedAt = Date.now();
+  for (;;) {
+    try {
+      const response = await fetch(url);
+      await response.arrayBuffer();
+      if (response.ok) {
+        return;
+      }
+    } catch {
+      // Server not ready yet; retry below.
+    }
+    if (Date.now() - startedAt > timeoutMs) {
+      throw new Error(`Timed out waiting for ${url}`);
+    }
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+}
+
 describe("E2E Vite SPA: generate()", () => {
   let testDir: string;
 
@@ -174,8 +241,16 @@ describe("E2E Vite SPA: generate()", () => {
     expect(dockerfileContent).toContain(
       "COPY --from=builder --chown=nodejs:nodejs /app/apps/api/dist ./apps/api/dist",
     );
+    expect(dockerfileContent).toContain(
+      "COPY --chown=nodejs:nodejs web/gateway.mjs ./web/gateway.mjs",
+    );
     expect(dockerfileContent).toContain("EXPOSE 3001");
-    expect(dockerfileContent).toContain('CMD ["node", "apps/api/dist/index.js"]');
+    expect(dockerfileContent).toContain("ENV PORT=3001");
+    expect(dockerfileContent).toContain('CMD ["node", "web/gateway.mjs"]');
+
+    expect(existsSync(join(testDir, "web", "gateway.mjs"))).toBe(true);
+    const apiIndexContent = readFileSync(join(testDir, "apps", "api", "src", "index.ts"), "utf8");
+    expect(apiIndexContent).toContain("process.env.PORT");
   });
 
   it("generates vite spa docker file for graphql api artifacts", { timeout: 120_000 }, async () => {
@@ -210,8 +285,110 @@ describe("E2E Vite SPA: generate()", () => {
     expect(dockerfileContent).toContain(
       "COPY --from=builder --chown=nodejs:nodejs /app/apps/graphql-api/dist ./apps/graphql-api/dist",
     );
+    expect(dockerfileContent).toContain(
+      "COPY --chown=nodejs:nodejs web/gateway.mjs ./web/gateway.mjs",
+    );
     expect(dockerfileContent).toContain("EXPOSE 4000");
-    expect(dockerfileContent).toContain('CMD ["node", "apps/graphql-api/dist/index.js"]');
+    expect(dockerfileContent).toContain("ENV PORT=4000");
+    expect(dockerfileContent).toContain('CMD ["node", "web/gateway.mjs"]');
     expect(dockerfileContent).not.toContain("apps/api");
+    expect(existsSync(join(testDir, "web", "gateway.mjs"))).toBe(true);
   });
+
+  it(
+    "serves the SPA and proxies the API through the docker gateway",
+    { timeout: 60_000 },
+    async () => {
+      const { mkdtempSync, mkdirSync, writeFileSync } = await import("node:fs");
+      const { tmpdir } = await import("node:os");
+      const fixtureRoot = mkdtempSync(join(tmpdir(), "croco-2372-gateway-"));
+      let gateway: GatewayChild | undefined;
+
+      try {
+        const spaRoot = join(fixtureRoot, "apps", "web", "dist");
+        mkdirSync(join(spaRoot, "assets"), { recursive: true });
+        writeFileSync(
+          join(spaRoot, "index.html"),
+          "<!doctype html><html><body>spa index</body></html>\n",
+        );
+        writeFileSync(join(spaRoot, "assets", "app.js"), "console.log('spa');\n");
+        writeFileSync(join(spaRoot, "favicon.ico"), "fake-icon-bytes\n");
+
+        const apiDir = join(fixtureRoot, "apps", "api", "dist");
+        mkdirSync(apiDir, { recursive: true });
+        writeFileSync(
+          join(apiDir, "index.js"),
+          [
+            "const http = require('node:http');",
+            "const port = Number(process.env.PORT ?? '3001');",
+            "http.createServer((req, res) => {",
+            "  res.writeHead(200, { 'content-type': 'application/json' });",
+            "  res.end(JSON.stringify({ path: req.url }));",
+            "}).listen(port);",
+            "",
+          ].join("\n"),
+        );
+
+        const publicPort = await getFreePort();
+        const apiPort = await getFreePort();
+        gateway = await startGateway({
+          PORT: String(publicPort),
+          CROCO_API_PORT: String(apiPort),
+          CROCO_API_ENTRY: join(apiDir, "index.js"),
+          CROCO_SPA_ROOT: spaRoot,
+        });
+
+        await waitForHttpOk(`http://127.0.0.1:${publicPort}/`);
+        const indexResponse = await fetch(`http://127.0.0.1:${publicPort}/`);
+        const assetResponse = await fetch(`http://127.0.0.1:${publicPort}/assets/app.js`);
+        const fallbackResponse = await fetch(`http://127.0.0.1:${publicPort}/dashboard`);
+        const apiResponse = await fetch(`http://127.0.0.1:${publicPort}/health.check?batch=1`, {
+          headers: { accept: "application/json" },
+        });
+        const browserApiResponse = await fetch(
+          `http://127.0.0.1:${publicPort}/health.check?batch=1`,
+          { headers: { accept: "text/html" } },
+        );
+        const browserApiBody = await browserApiResponse.json();
+        const missingAssetResponse = await fetch(
+          `http://127.0.0.1:${publicPort}/assets/missing.js`,
+        );
+        const postResponse = await fetch(`http://127.0.0.1:${publicPort}/`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ query: "{ health }" }),
+        });
+        const rootStaticResponse = await fetch(`http://127.0.0.1:${publicPort}/favicon.ico`);
+        const dottedSpaResponse = await fetch(`http://127.0.0.1:${publicPort}/users/john.doe`);
+        const nestedDottedSpaResponse = await fetch(
+          `http://127.0.0.1:${publicPort}/docs/v2.0/notes`,
+        );
+
+        expect(indexResponse.status).toBe(200);
+        expect(await indexResponse.text()).toContain("spa index");
+        expect(assetResponse.status).toBe(200);
+        expect(assetResponse.headers.get("content-type")).toContain("javascript");
+        expect(fallbackResponse.status).toBe(200);
+        expect(await fallbackResponse.text()).toContain("spa index");
+        expect(apiResponse.status).toBe(200);
+        expect(await apiResponse.json()).toEqual(
+          expect.objectContaining({ path: "/health.check?batch=1" }),
+        );
+        expect(browserApiResponse.status).toBe(200);
+        expect(browserApiBody).toEqual(expect.objectContaining({ path: "/health.check?batch=1" }));
+        expect(missingAssetResponse.status).toBe(404);
+        expect(postResponse.status).toBe(200);
+        expect(await postResponse.json()).toEqual(expect.objectContaining({ path: "/" }));
+        expect(rootStaticResponse.status).toBe(200);
+        expect(await rootStaticResponse.text()).toContain("fake-icon-bytes");
+        expect(dottedSpaResponse.status).toBe(200);
+        expect(await dottedSpaResponse.text()).toContain("spa index");
+        expect(nestedDottedSpaResponse.status).toBe(200);
+        expect(await nestedDottedSpaResponse.text()).toContain("spa index");
+      } finally {
+        gateway?.kill();
+        rmSync(fixtureRoot, { recursive: true, force: true });
+      }
+    },
+  );
 });

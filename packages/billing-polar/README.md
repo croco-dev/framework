@@ -220,15 +220,22 @@ invoice, LTV, entitlement 계산에서 제외하고 사용하는 `BillingStore` 
 
 Polar 웹훅은 `eventId`를 멱등성 키로 사용합니다:
 
-- 같은 `eventId`는 한 번만 처리됩니다
-- 동일한 `webhook-id`, timestamp, signature로 재전송된 delivery는 성공 응답을 유지하면서 도메인
-  side effect를 반복하지 않습니다
-- 진행 중인 이벤트는 메모리에서 추적하여 중복 실행 방지
-- 저장소가 같은 `eventId` 예약에 대해 `WebhookAlreadyProcessedProblem`을 throw한 경우에만 이미
-  처리된 delivery로 간주합니다
+- 완료된 `order.paid` delivery의 재전송만 성공으로 응답하고 도메인 side effect를 반복하지 않습니다
+- 처리 중인 `order.paid` delivery는 `WebhookProcessingProblem`(HTTP 500)으로 응답해 재전달을 요청합니다
+- `order.paid` delivery의 30초 lease는 중단된 인스턴스가 남긴 예약을 다시 선점할 수 있게 합니다.
+  처리 시간이 lease를 넘기면 이전 인스턴스는 완료할 수 없으며, 주문 upsert와 안정적인 이벤트 ID의
+  `publishIdempotently`가 재처리 중복을 방지해야 합니다
+- 이전 버전이 남긴 lease 없는 `RESERVED` 예약은 새 버전에서 즉시 다시 선점합니다. 롤링 배포 중에는
+  구버전 인스턴스와 처리가 겹칠 수 있으므로 `BillingStore.saveOrder`는 같은 계정·주문 ID를 upsert하고
+  발행 어댑터는 같은 이벤트 ID를 영속적으로 중복 제거해야 합니다. 구버전의 token 없는 완료·실패
+  호출이 새 lease를 변경할 수도 있으므로, 구버전 인스턴스의 웹훅 처리를 종료한 뒤 새 버전으로
+  트래픽을 전환하세요
+- 동일 프로세스의 진행 중인 이벤트는 메모리에서도 합쳐 처리합니다
+- 그 밖의 delivery에서 저장소가 같은 `eventId` 예약에 대해 `WebhookAlreadyProcessedProblem`을
+  throw한 경우에만 이미 처리된 delivery로 간주합니다
 - 다른 unique constraint, SQLSTATE, 또는 generic duplicate 오류는 성공으로 확인되지 않으며
   재시도 가능한 `WebhookProcessingProblem`으로 유지됩니다
-- 처리 실패 시 `failWebhook`으로 롤백 지원
+- `order.paid` 처리 실패 시 현재 lease token의 claim을 해제해 재시도를 허용합니다
 
 ## 스키마
 

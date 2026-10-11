@@ -13,6 +13,14 @@ title: "IdempotencyStore"
 
 `TResult` = `unknown`
 
+## Properties
+
+### processingLeaseVersion?
+
+> `readonly` `optional` **processingLeaseVersion?**: `1`
+
+Declared by stores that apply leaseMs independently of ttlMs.
+
 ## Methods
 
 ### commit()

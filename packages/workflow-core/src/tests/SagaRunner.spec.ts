@@ -861,6 +861,77 @@ describe("SagaRunner", () => {
     ]);
   });
 
+  it("normalizes a null compensation rejection without aborting the compensation chain", async () => {
+    const effects: string[] = [];
+    const runner = new SagaRunner();
+    const definition: SagaDefinition = {
+      name: "null-compensation-rejection",
+      steps: [
+        {
+          id: "reserve-payment",
+          run: () => ({ paymentId: "pay_123" }),
+          compensate: () => {
+            effects.push("refund-payment");
+            return { refunded: true };
+          },
+        },
+        {
+          id: "reserve-inventory",
+          run: () => ({ reservationId: "res_123" }),
+          compensate: () => {
+            effects.push("release-inventory");
+            throw null;
+          },
+        },
+        {
+          id: "notify-customer",
+          run: () => {
+            throw new ProviderProblem("notification provider unavailable");
+          },
+        },
+      ],
+    };
+
+    const problem = await runner
+      .execute(definition, { orderId: "ord_123" })
+      .catch((error: unknown) => error);
+    const [execution] = await runner.listExecutions({ sagaName: definition.name });
+
+    expect(problem).toBeInstanceOf(SagaExecutionFailedProblem);
+    expect(problem).toHaveProperty(
+      "extensions.originalFailureMessage",
+      "notification provider unavailable",
+    );
+    expect(problem).toHaveProperty("extensions.compensationFailureCount", 1);
+    expect(problem).toHaveProperty("extensions.compensationFailures", [
+      { message: "null", retryable: false },
+    ]);
+    expect(effects).toEqual(["release-inventory", "refund-payment"]);
+    expect(execution.status).toBe("failed");
+    expect(execution.error).toEqual(
+      expect.objectContaining({
+        code: "workflow-core/test-provider-problem",
+        message: "notification provider unavailable",
+      }),
+    );
+    expect(execution.compensationFailures).toEqual([{ message: "null", retryable: false }]);
+    expect(execution.steps).toEqual([
+      expect.objectContaining({
+        id: "reserve-payment",
+        status: "compensated",
+      }),
+      expect.objectContaining({
+        id: "reserve-inventory",
+        status: "compensation_failed",
+        compensationError: { message: "null", retryable: false },
+      }),
+      expect.objectContaining({
+        id: "notify-customer",
+        status: "failed",
+      }),
+    ]);
+  });
+
   it.each([
     ["compensation bookkeeping", "compensating", "failed", undefined],
     [

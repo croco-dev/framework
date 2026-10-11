@@ -5,7 +5,7 @@ prev: false
 title: "createAdminDataTableListResultFromCursorPage"
 ---
 
-> **createAdminDataTableListResultFromCursorPage**\<`TData`\>(`page`, `options?`): [`AdminDataTableListResult`](/api/admin-react/src/type-aliases/admindatatablelistresult/)\<`TData`\>
+> **createAdminDataTableListResultFromCursorPage**\<`TData`\>(`page`, `options`): [`AdminDataTableListResult`](/api/admin-react/src/type-aliases/admindatatablelistresult/)\<`TData`\>
 
 ## Type Parameters
 
@@ -19,9 +19,9 @@ title: "createAdminDataTableListResultFromCursorPage"
 
 [`AdminDataTableCursorPageInput`](/api/admin-react/src/type-aliases/admindatatablecursorpageinput/)\<`TData`\>
 
-### options?
+### options
 
-#### limit?
+#### limit
 
 `number`
 

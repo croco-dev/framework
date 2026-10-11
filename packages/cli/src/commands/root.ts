@@ -95,6 +95,19 @@ function createBoundCrocoCommand(runtime: CrocoCommandRuntime): CommandDef<typeo
     args: {
       ...GLOBAL_OPTIONS,
     },
+    setup({ rawArgs }) {
+      const commandIndex = findRootCommandIndex(rawArgs);
+      if (
+        commandIndex !== undefined &&
+        (rawArgs[commandIndex] === "pipeline" || rawArgs[commandIndex] === "data") &&
+        commandIndex > 0
+      ) {
+        throw createCliError(
+          `${rawArgs[commandIndex] === "data" ? "Data" : "Pipeline"} options must follow the ${rawArgs[commandIndex]} subcommand`,
+          "E_PIPELINE_ARGUMENTS",
+        );
+      }
+    },
     subCommands: {
       make: lazyCommand(
         "make",
@@ -120,6 +133,11 @@ function createBoundCrocoCommand(runtime: CrocoCommandRuntime): CommandDef<typeo
         "contracts",
         "Validate Croco contract graph artifacts",
         async () => (await import("./contracts.js")).contracts as LoadedCommand,
+      ),
+      data: lazyCommand(
+        "data",
+        "Validate and generate offline data artifacts",
+        async () => (await import("./data.js")).data as LoadedCommand,
       ),
       desktop: desktopRemoved,
       "architecture-policy": lazyCommand(
@@ -148,6 +166,11 @@ function createBoundCrocoCommand(runtime: CrocoCommandRuntime): CommandDef<typeo
         "jobs",
         "Inspect and recover Croco background jobs",
         async () => (await import("./jobs.js")).jobs as LoadedCommand,
+      ),
+      pipeline: lazyCommand(
+        "pipeline",
+        "Validate, preview, execute and inspect application data pipelines",
+        async () => (await import("./pipeline.js")).pipeline as LoadedCommand,
       ),
       project: lazyCommand(
         "project",

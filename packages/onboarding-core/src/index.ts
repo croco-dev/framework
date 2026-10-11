@@ -1,5 +1,42 @@
 export { OnboardingManager } from "./libs/OnboardingManager";
 
+export { GoalManager } from "./libs/goals/GoalManager";
+export type {
+  GoalPublicationAuthorizer,
+  GoalReceiptVerifier,
+  GoalSubjectVerifier,
+} from "./libs/goals/GoalManager";
+export { GoalStore, InMemoryGoalStore } from "./libs/goals/GoalStore";
+export { validateGoalDefinition } from "./libs/goals/validateGoalDefinition";
+export {
+  GoalAuthorizationProblem,
+  GoalConflictProblem,
+  GoalContextInvalidProblem,
+  GoalDefinitionInvalidProblem,
+  GoalDefinitionNotFoundProblem,
+  GoalEpisodeNotFoundProblem,
+  GoalReceiptInvalidProblem,
+} from "./libs/goals/GoalProblems";
+export type {
+  ActionReceipt,
+  GoalAchievedEventIntent,
+  GoalAnchor,
+  GoalCorrection,
+  GoalCountMode,
+  GoalDefinition,
+  GoalDefinitionPublication,
+  GoalDeletedObjectPolicy,
+  GoalEpisode,
+  GoalEpisodeKey,
+  GoalEpisodeStatus,
+  GoalEvidence,
+  GoalGuidanceStep,
+  GoalObservationResult,
+  GoalProgress,
+  GoalScope,
+  GoalSubject,
+} from "./libs/goals/types";
+
 export { InMemoryOnboardingStore, OnboardingStore } from "./libs/OnboardingStore";
 
 export {

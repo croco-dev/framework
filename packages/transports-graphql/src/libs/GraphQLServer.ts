@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import { Container, Context as FrameworkContext } from "@croco/framework-context";
+import type { RequestContext } from "@croco/framework-context";
 import { Logger } from "@croco/framework-logger";
 import {
   createProblemResponseDetail,
@@ -10,6 +11,7 @@ import {
 } from "@croco/problems-core";
 import { isProblem, problemToGraphQLError } from "@croco/protocols-graphql";
 import { createYoga, maskError, useExecutionCancellation } from "graphql-yoga";
+import type { Plugin } from "graphql-yoga";
 import {
   GraphQLBodyLimitConfigurationProblem,
   GraphQLRequestBodyAbortedProblem,
@@ -23,6 +25,16 @@ import {
 import type { GraphQLServerOptions } from "./types";
 
 type YogaHandler = (request: Request) => Promise<Response>;
+type GraphQLExecutionContextValue = Record<string, unknown> & {
+  tenantId?: unknown;
+  user?: unknown;
+};
+type GraphQLExecuteFn = (...args: readonly unknown[]) => unknown;
+type GraphQLContextPropagationPlugin = Plugin<
+  Record<string, never>,
+  Record<string, never>,
+  GraphQLExecutionContextValue
+>;
 type NodeRequestAbortScope = {
   readonly aborted: Promise<never>;
   readonly signal: AbortSignal;
@@ -115,7 +127,7 @@ export class GraphQLServer {
       schema: graphqlSchema,
       graphqlEndpoint,
       cors,
-      plugins: [useExecutionCancellation(), ...(plugins ?? [])],
+      plugins: [useExecutionCancellation(), ...(plugins ?? []), createCrocoContextPlugin()],
       logging: CROCO_YOGA_LOGGER,
       maskedErrors: {
         maskError: maskCrocoProblemError,
@@ -141,10 +153,7 @@ export class GraphQLServer {
       throw new GraphQLServerNotInitializedProblem();
     }
     const yoga = this.yogaHandler;
-    return async (request: Request) => {
-      const requestId = randomUUID();
-      return FrameworkContext.run({ requestId }, () => yoga(request));
-    };
+    return async (request: Request) => runInGraphQLRequestContext(() => yoga(request));
   }
 
   async start(port: number): Promise<void> {
@@ -159,9 +168,8 @@ export class GraphQLServer {
       const abortScope = this.createNodeRequestAbortScope(req, res);
 
       const nodeRequest = Promise.resolve().then(() => {
-        const requestId = randomUUID();
         phase = "request-url";
-        return FrameworkContext.run({ requestId }, async () => {
+        return runInGraphQLRequestContext(async () => {
           abortScope.signal.throwIfAborted();
           const host = req.headers.host;
           const baseUrl =
@@ -514,6 +522,75 @@ export class GraphQLServer {
 
     return this.stopPromise;
   }
+}
+
+function runInGraphQLRequestContext<T>(fn: () => Promise<T> | T): Promise<T> | T {
+  const activeContext = FrameworkContext.get();
+  if (activeContext) {
+    return FrameworkContext.run({ ...activeContext }, fn, { inheritScope: true });
+  }
+  return FrameworkContext.run({ requestId: randomUUID() }, fn);
+}
+
+function createCrocoContextPlugin(): GraphQLContextPropagationPlugin {
+  return {
+    onExecute({ executeFn, setExecuteFn }) {
+      const execute: GraphQLExecuteFn = (...args) => Reflect.apply(executeFn, undefined, args);
+      setExecuteFn(((...args: readonly unknown[]) => {
+        const [executionArgs] = args;
+        return FrameworkContext.run(
+          propagateGraphQLContext(readContextValue(executionArgs)),
+          () => Reflect.apply(execute, undefined, args),
+          { inheritScope: true },
+        );
+      }) as typeof executeFn);
+    },
+    onSubscribe({ subscribeFn, setSubscribeFn }) {
+      const subscribe: GraphQLExecuteFn = (...args) => Reflect.apply(subscribeFn, undefined, args);
+      setSubscribeFn(((...args: readonly unknown[]) => {
+        const [subscriptionArgs] = args;
+        return FrameworkContext.run(
+          propagateGraphQLContext(readContextValue(subscriptionArgs)),
+          () => Reflect.apply(subscribe, undefined, args),
+          { inheritScope: true },
+        );
+      }) as typeof subscribeFn);
+    },
+  };
+}
+
+function readContextValue(executionArgs: unknown): unknown {
+  return isRecord(executionArgs) ? executionArgs.contextValue : undefined;
+}
+
+function propagateGraphQLContext(yogaContext: unknown): RequestContext {
+  const base = FrameworkContext.get() ?? { requestId: randomUUID() };
+  const contextValue = isRecord(yogaContext) ? yogaContext : {};
+  const propagated: RequestContext = { ...base };
+  const tenantId = readTenantId(contextValue.tenantId);
+  if (tenantId !== undefined) {
+    propagated.tenantId = tenantId;
+  }
+  const user = readGraphQLUser(contextValue.user);
+  if (user !== undefined) {
+    propagated.user = user;
+  }
+  return propagated;
+}
+
+function readTenantId(value: unknown): string | undefined {
+  return typeof value === "string" && value.length > 0 ? value : undefined;
+}
+
+function readGraphQLUser(value: unknown): RequestContext["user"] | undefined {
+  if (!isRecord(value) || typeof value.id !== "string") {
+    return undefined;
+  }
+  return value as RequestContext["user"];
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function getSetCookieHeaders(headers: Headers): string[] {

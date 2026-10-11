@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 
+import { compareStrings } from "../tooling/compareStrings.mjs";
+
 import { spawnSync } from "node:child_process";
 import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
@@ -276,7 +278,7 @@ export function readExpectedBranchProtectionPolicy(path = DEFAULT_POLICY_PATH): 
 }
 
 function compareStatusChecks(left: RequiredStatusCheck, right: RequiredStatusCheck): number {
-  return left.context.localeCompare(right.context) || left.integrationId - right.integrationId;
+  return compareStrings(left.context, right.context) || left.integrationId - right.integrationId;
 }
 
 export function requiredBranchProtectionChecks(

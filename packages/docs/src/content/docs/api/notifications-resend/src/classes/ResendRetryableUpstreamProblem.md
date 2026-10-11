@@ -15,7 +15,7 @@ Resend 전송 실패와 설정/검증 문제를 표현하는 Problem입니다.
 
 ### Constructor
 
-> **new ResendRetryableUpstreamProblem**(`context`, `detail?`): `ResendRetryableUpstreamProblem`
+> **new ResendRetryableUpstreamProblem**(`context`, `detail?`, `cause?`): `ResendRetryableUpstreamProblem`
 
 #### Parameters
 
@@ -26,6 +26,10 @@ Resend 전송 실패와 설정/검증 문제를 표현하는 Problem입니다.
 ##### detail?
 
 `string` = `"Resend upstream request failed retryably"`
+
+##### cause?
+
+`Error`
 
 #### Returns
 

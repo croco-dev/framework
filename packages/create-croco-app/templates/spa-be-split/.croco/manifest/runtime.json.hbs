@@ -1,0 +1,153 @@
+{
+  "schemaVersion": "croco.manifest.runtime.v1",
+  "source": {
+    "schemaVersion": "croco.project-map.manifest.v1",
+    "artifact": "croco.project-map.json",
+    "packageName": "{{projectName}}",
+    "generatedArtifacts": [
+      {
+        "kind": "framework-manifest",
+        "path": ".croco/build/framework-manifest.json",
+        "commitPolicy": "commit-required"
+      },
+      {
+        "kind": "intent-map",
+        "path": ".croco/build/intent-map.json",
+        "commitPolicy": "commit-required"
+      },
+      {
+        "kind": "route-registration-table",
+        "path": ".croco/build/route-registration-table.json",
+        "commitPolicy": "commit-required"
+      },
+      {
+        "kind": "routes-module",
+        "path": ".croco/build/routes.mjs",
+        "commitPolicy": "commit-required"
+      }
+    ]
+  },
+  "project": {
+    "root": ".",
+    "packageName": "{{projectName}}",
+    "packageManager": "pnpm@12.7.0"
+  },
+  "summary": {
+    "telemetryBoundaries": 12,
+    "diagnostics": 0
+  },
+  "policy": null,
+  "telemetry": {
+    "boundaries": [
+      {
+        "kind": "span-wrapper",
+        "id": "span-wrapper:apps/api-server/src/users.ts:106",
+        "source": {
+          "file": "apps/api-server/src/users.ts",
+          "line": 106,
+          "column": 5
+        }
+      },
+      {
+        "kind": "span-wrapper",
+        "id": "span-wrapper:apps/api-server/src/users.ts:125",
+        "source": {
+          "file": "apps/api-server/src/users.ts",
+          "line": 125,
+          "column": 5
+        }
+      },
+      {
+        "kind": "span-wrapper",
+        "id": "span-wrapper:apps/api-server/src/users.ts:137",
+        "source": {
+          "file": "apps/api-server/src/users.ts",
+          "line": 137,
+          "column": 5
+        }
+      },
+      {
+        "kind": "span-wrapper",
+        "id": "span-wrapper:apps/api-server/src/users.ts:5",
+        "source": {
+          "file": "apps/api-server/src/users.ts",
+          "line": 5,
+          "column": 1
+        }
+      },
+      {
+        "kind": "span-wrapper",
+        "id": "span-wrapper:apps/api-server/src/users.ts:88",
+        "source": {
+          "file": "apps/api-server/src/users.ts",
+          "line": 88,
+          "column": 5
+        }
+      },
+      {
+        "kind": "span-wrapper",
+        "id": "span-wrapper:apps/api-server/src/users.ts:92",
+        "source": {
+          "file": "apps/api-server/src/users.ts",
+          "line": 92,
+          "column": 5
+        }
+      },
+      {
+        "kind": "telemetry-flush",
+        "id": "telemetry-flush:apps/api-server/src/index.ts:22",
+        "source": {
+          "file": "apps/api-server/src/index.ts",
+          "line": 22,
+          "column": 5
+        }
+      },
+      {
+        "kind": "telemetry-flush",
+        "id": "telemetry-flush:apps/api-server/src/lambda.ts:13",
+        "source": {
+          "file": "apps/api-server/src/lambda.ts",
+          "line": 13,
+          "column": 5
+        }
+      },
+      {
+        "kind": "telemetry-runtime",
+        "id": "telemetry-runtime:apps/api-server/src/index.ts:1",
+        "source": {
+          "file": "apps/api-server/src/index.ts",
+          "line": 1,
+          "column": 1
+        }
+      },
+      {
+        "kind": "telemetry-runtime",
+        "id": "telemetry-runtime:apps/api-server/src/index.ts:10",
+        "source": {
+          "file": "apps/api-server/src/index.ts",
+          "line": 10,
+          "column": 1
+        }
+      },
+      {
+        "kind": "telemetry-runtime",
+        "id": "telemetry-runtime:apps/api-server/src/lambda.ts:3",
+        "source": {
+          "file": "apps/api-server/src/lambda.ts",
+          "line": 3,
+          "column": 1
+        }
+      },
+      {
+        "kind": "telemetry-runtime",
+        "id": "telemetry-runtime:apps/api-server/src/lambda.ts:7",
+        "source": {
+          "file": "apps/api-server/src/lambda.ts",
+          "line": 7,
+          "column": 1
+        }
+      }
+    ]
+  },
+  "diagnostics": []
+}

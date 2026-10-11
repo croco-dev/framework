@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { AutoInstrumentationConfig } from "../libs/instrumentation/AutoInstrumentation";
 import { TelemetryDiagnosticsProvider } from "../libs/diagnostics/TelemetryDiagnosticsProvider";
 import { lambdaPreset } from "../libs/presets/lambda";
-import type { TelemetryAutoInstrumentationProblem } from "../libs/problems/TelemetryAutoInstrumentationProblem";
+import { TelemetryAutoInstrumentationProblem } from "../libs/problems/TelemetryAutoInstrumentationProblem";
 import { TelemetryRuntime } from "../runtime";
 
 type NamedInstrumentation = Instrumentation & { instrumentationName: string };
@@ -93,22 +93,81 @@ describe("TelemetryRuntime auto-instrumentation", () => {
     );
   });
 
-  it("uses Lambda defaults from the Lambda preset", async () => {
-    const mocks = installRuntimeMocks();
-    vi.stubEnv("AWS_LAMBDA_FUNCTION_NAME", "orders");
-
-    await runtime.init(
-      lambdaPreset({
+  it.each(["preset", "function-name", "execution-env"])(
+    "uses supported Lambda defaults detected through %s",
+    async (source) => {
+      const mocks = installRuntimeMocks();
+      vi.stubEnv("AWS_LAMBDA_FUNCTION_NAME", source === "function-name" ? "orders" : undefined);
+      vi.stubEnv(
+        "AWS_EXECUTION_ENV",
+        source === "execution-env" ? "AWS_Lambda_nodejs24.x" : undefined,
+      );
+      const config = {
         serviceName: "lambda-service",
-        exporterUrl: "http://collector:4318/v1/traces",
-      }),
-    );
+        trace: {
+          exporterUrl: "http://collector:4318/v1/traces",
+          autoInstrumentation: {},
+        },
+      };
 
-    expect(mocks.getNodeAutoInstrumentations).toHaveBeenCalledTimes(1);
+      await runtime.init(
+        source === "preset"
+          ? lambdaPreset({ serviceName: config.serviceName, exporterUrl: config.trace.exporterUrl })
+          : config,
+      );
+
+      const expectedModules = [
+        "@opentelemetry/instrumentation-http",
+        "@opentelemetry/instrumentation-aws-sdk",
+      ];
+      expect(mocks.getNodeAutoInstrumentations).toHaveBeenCalledTimes(1);
+      expect(runtime.getEnabledAutoInstrumentationModules()).toEqual(expectedModules);
+      const health = await new TelemetryDiagnosticsProvider().getHealth();
+      expect(health.details?.autoInstrumentationModules).toEqual(expectedModules);
+      expect(mocks.getNodeAutoInstrumentations).toHaveBeenCalledWith(
+        expect.objectContaining({
+          "@opentelemetry/instrumentation-aws-lambda": { enabled: false },
+        }),
+      );
+    },
+  );
+
+  it.each(["node", "lambda"])(
+    "rejects explicit aws-lambda selection before SDK construction in %s",
+    async (environment) => {
+      const mocks = installRuntimeMocks();
+      vi.stubEnv("AWS_LAMBDA_FUNCTION_NAME", environment === "lambda" ? "orders" : undefined);
+      vi.stubEnv("AWS_EXECUTION_ENV", undefined);
+
+      await expect(
+        runtime.init({
+          serviceName: "invalid-lambda-service",
+          trace: {
+            exporterUrl: "http://collector:4318/v1/traces",
+            autoInstrumentation: { modules: ["aws-lambda"] },
+          },
+        }),
+      ).rejects.toThrow(TelemetryAutoInstrumentationProblem);
+      expect(mocks.nodeSdkConstructor).not.toHaveBeenCalled();
+      expect(mocks.getNodeAutoInstrumentations).not.toHaveBeenCalled();
+      expect(runtime.isInitialized()).toBe(false);
+    },
+  );
+
+  it("allows aws-lambda exclusion while preserving supported Lambda defaults", async () => {
+    const mocks = installRuntimeMocks();
+    const config = lambdaPreset({
+      serviceName: "lambda-service",
+      exporterUrl: "http://collector:4318/v1/traces",
+    });
+    config.trace = { ...config.trace, autoInstrumentation: { excludeModules: ["aws-lambda"] } };
+
+    await runtime.init(config);
+
+    expect(mocks.nodeSdkConstructor).toHaveBeenCalledTimes(1);
     expect(runtime.getEnabledAutoInstrumentationModules()).toEqual([
       "@opentelemetry/instrumentation-http",
       "@opentelemetry/instrumentation-aws-sdk",
-      "@opentelemetry/instrumentation-aws-lambda",
     ]);
   });
 

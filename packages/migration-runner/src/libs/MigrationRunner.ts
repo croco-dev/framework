@@ -1,6 +1,7 @@
 import type { DatabaseClient } from "./db-types";
 import { MigrationScanner } from "./MigrationScanner";
 import { MigrationStore } from "./MigrationStore";
+import { ConflictingRollbackOptionsProblem } from "./problems/ConflictingRollbackOptionsProblem";
 import { InvalidMigrationTargetProblem } from "./problems/InvalidMigrationTargetProblem";
 import { MigrationTransactionRequiredProblem } from "./problems/MigrationTransactionRequiredProblem";
 import { MissingDownFunctionProblem } from "./problems/MissingDownFunctionProblem";
@@ -172,6 +173,9 @@ export class MigrationRunner {
   }
 
   private assertDownSelection(targetId?: string, count?: number): void {
+    if (targetId !== undefined && count !== undefined) {
+      throw new ConflictingRollbackOptionsProblem();
+    }
     if (targetId !== undefined) {
       assertValidMigrationTarget(targetId);
     } else if (count !== undefined) {

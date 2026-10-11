@@ -108,6 +108,11 @@ reference를 만든 뒤 decorator metadata의 이름이나 handler 등록이 달
 핸들러가 성공한 뒤 완료 상태 저장에 실패한 경우에는 핸들러 실패로 분류하거나 핸들러를 재실행하지 않습니다.
 완료 상태 저장 실패는 실행 저장소의 별도 복구 또는 조정 경계에서 처리해야 합니다.
 
+같은 idempotency key로 `failed`, `cancelled`, `timed_out` 상태의 실행을 다시 요청하면
+`TaskExecutionAlreadySettledProblem`이 발생합니다.
+실행에 저장된 오류 코드가 있으면 `extensions.failureCode`로 전달하므로 호출자는 해당 코드를 기준으로
+복구할 수 있습니다. 저장된 오류 메시지와 stack은 이 Problem에 복원하지 않습니다.
+
 ```typescript
 @Task({
   name: "sync-subscription",

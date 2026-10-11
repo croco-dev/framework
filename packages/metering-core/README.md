@@ -55,6 +55,8 @@ key와 enum 값만 허용되며 provider billing dimension과 자유 형식 appl
 envelope를 다시 append하면 duplicate success이고, 다른 envelope는 transition conflict입니다.
 Append된 pending intent는 local usage commit이 성공해 `markDeliverable()`이 저장되기 전에는 worker가 claim할 수
 없습니다. commit 이후 중단된 호출은 같은 `eventId`를 replay해 activation을 idempotent하게 완료할 수 있습니다.
+worker가 먼저 항목을 claim하거나 provider 전달을 완료한 뒤에도 replay는 journal의 전달 상태를 바꾸지 않고
+`record()`를 완료합니다.
 
 ```ts
 declare const journal: BillableUsageJournal;
@@ -122,6 +124,8 @@ const apiCalls = defineMeter({
 
 @Meter({ meterId: "api.calls", type: "COUNT", quota: 10000 })
 class ApiController {
+  constructor(readonly tenantId: string) {}
+
   @Metered({ meter: apiCalls })
   async listUsers(): Promise<void> {}
 }
@@ -146,6 +150,11 @@ class ApiController {
 - `@Meter`, 클래스에 meter 정의를 선언합니다.
 - `@Metered`, 메서드 호출 시 사용량을 자동 기록합니다.
 - `setMeteringService`, 데코레이터가 사용할 전역 서비스를 등록합니다.
+
+`MeteringService`가 설정되어 있으면 `@Metered`는 인스턴스의 비어 있지 않은 `tenantId`를
+사용합니다. `tenantId`가 없거나 빈 문자열(공백만 있는 문자열 포함)이면 meter 조회와 원본
+메서드 실행 전에 `InvalidUsageEnvelopeProblem`으로 실패합니다. 공유 `"default"` 테넌트로
+대체하지 않습니다.
 
 `@Metered({ meter, logger })`의 logger는 명시적으로 전달합니다. 전역 DI 컨테이너에서
 logger를 조회하지 않습니다. local meter 기록 실패는 logger가 있을 때 보고 후 원본 결과를
@@ -249,7 +258,14 @@ Custom `MeterRepository` adapters must enforce persistent uniqueness on
 overlapping batches, partial writes and process restarts. Declare the contract only after
 implementing this guarantee. `DrizzleMeterRepository` uses its unique index and conflict handling.
 
+Flush saves the selected records but keeps records from the current UTC billing month in Redis, so
+quota checks and `getUsage({ period: "billing_cycle" })` still include them. To persist and remove
+records from a closed month, pass its inclusive range to
+`flushUsageToDB(tenantId, meterId, "billing_cycle", { startDate, endDate })`. Only records older than
+the current UTC billing month are removed after saving. Current-month records are saved again on
+later flushes, so adapters must support idempotent replay of the entire month's batch.
+
 After a save or deletion failure, retry the flush normally. Already persisted records are ignored
-by the repository, and deletion removes only the supplied records. `recordsFlushed` counts records
-successfully processed by the flush, including records persisted by a previous attempt.
+by the repository, and deletion removes only the supplied closed-cycle records. `recordsFlushed`
+counts records successfully processed by the flush, including records persisted by a previous attempt.
 `UsageStorage.deleteUsageRecords` remains optional for storage used without an aggregator.

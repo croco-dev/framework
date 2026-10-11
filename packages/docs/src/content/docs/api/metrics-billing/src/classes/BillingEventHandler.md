@@ -9,7 +9,7 @@ title: "BillingEventHandler"
 
 ## Implements
 
-- [`EventHandler`](/api/events-core/src/interfaces/eventhandler/)\<[`OrderPaidEvent`](/api/billing-core/src/classes/orderpaidevent/) \| [`PlanChangedEvent`](/api/billing-core/src/classes/planchangedevent/) \| [`SubscriptionCanceledEvent`](/api/billing-core/src/classes/subscriptioncanceledevent/)\>
+- [`EventHandler`](/api/events-core/src/interfaces/eventhandler/)\<[`OrderPaidEvent`](/api/billing-core/src/classes/orderpaidevent/) \| [`PlanChangedEvent`](/api/billing-core/src/classes/planchangedevent/) \| [`SubscriptionCanceledEvent`](/api/billing-core/src/classes/subscriptioncanceledevent/) \| [`SubscriptionRevokedEvent`](/api/billing-core/src/classes/subscriptionrevokedevent/)\>
 - [`PlanProvider`](/api/metrics-core/src/interfaces/planprovider/)
 
 ## Constructors

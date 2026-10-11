@@ -38,6 +38,24 @@ jobs:
       - name: Build live test dependency graphs
         run: pnpm build
 
+      - name: Run @croco/admin-postgres live tests
+        continue-on-error: true
+        env:
+          CUSTOMER_EXPLORER_TEST_DATABASE_URL: ${{ secrets.MEMBERSHIP_POSTGRES_URL }}
+        run: >-
+          node --experimental-strip-types scripts/test-lane-runner.mts
+          --lane live --allow-live --owner @croco/admin-postgres
+          --output ci-reports/package-quality/live-test-lanes/admin-postgres.json
+
+      - name: Run @croco/audit-drizzle live tests
+        continue-on-error: true
+        env:
+          AUDIT_POSTGRES_URL: ${{ secrets.MEMBERSHIP_POSTGRES_URL }}
+        run: >-
+          node --experimental-strip-types scripts/test-lane-runner.mts
+          --lane live --allow-live --owner @croco/audit-drizzle
+          --output ci-reports/package-quality/live-test-lanes/audit-drizzle.json
+
       - name: Run @croco/auth-drizzle live tests
         continue-on-error: true
         env:
@@ -63,6 +81,24 @@ jobs:
           node --experimental-strip-types scripts/test-lane-runner.mts
           --lane live --allow-live --owner @croco/billing-polar
           --output ci-reports/package-quality/live-test-lanes/billing-polar.json
+
+      - name: Run @croco/cohort-drizzle live tests
+        continue-on-error: true
+        env:
+          COHORT_TEST_DATABASE_URL: ${{ secrets.MEMBERSHIP_POSTGRES_URL }}
+        run: >-
+          node --experimental-strip-types scripts/test-lane-runner.mts
+          --lane live --allow-live --owner @croco/cohort-drizzle
+          --output ci-reports/package-quality/live-test-lanes/cohort-drizzle.json
+
+      - name: Run @croco/onboarding-drizzle live tests
+        continue-on-error: true
+        env:
+          ONBOARDING_POSTGRES_URL: ${{ secrets.MEMBERSHIP_POSTGRES_URL }}
+        run: >-
+          node --experimental-strip-types scripts/test-lane-runner.mts
+          --lane live --allow-live --owner @croco/onboarding-drizzle
+          --output ci-reports/package-quality/live-test-lanes/onboarding-drizzle.json
 
       - name: Run @croco/credits-drizzle live tests
         continue-on-error: true
@@ -193,13 +229,17 @@ jobs:
         run: >-
           node --experimental-strip-types scripts/test-evidence-reconcile.mts
           --profile scheduled-live
+          --lane-report ci-reports/package-quality/live-test-lanes/admin-postgres.json
+          --lane-report ci-reports/package-quality/live-test-lanes/audit-drizzle.json
           --lane-report ci-reports/package-quality/live-test-lanes/auth-drizzle.json
           --lane-report ci-reports/package-quality/live-test-lanes/billing-polar.json
+          --lane-report ci-reports/package-quality/live-test-lanes/cohort-drizzle.json
           --lane-report ci-reports/package-quality/live-test-lanes/credits-drizzle.json
           --lane-report ci-reports/package-quality/live-test-lanes/execution-drizzle.json
           --lane-report ci-reports/package-quality/live-test-lanes/membership-drizzle.json
           --lane-report ci-reports/package-quality/live-test-lanes/metering-core.json
           --lane-report ci-reports/package-quality/live-test-lanes/metering-drizzle.json
+          --lane-report ci-reports/package-quality/live-test-lanes/onboarding-drizzle.json
           --lane-report ci-reports/package-quality/live-test-lanes/warehouse-postgres.json
           --lane-report ci-reports/package-quality/live-test-lanes/migration-runner.json
           --lane-report ci-reports/package-quality/live-test-lanes/notifications-resend.json

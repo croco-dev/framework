@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 
+import { compareStrings } from "../tooling/compareStrings.mjs";
+
 import { createHash } from "node:crypto";
 import {
   lstatSync,
@@ -366,7 +368,7 @@ function walkRegularFiles(root: string, current = root): readonly string[] {
     );
   }
   return readdirSync(current, { withFileTypes: true })
-    .sort((left, right) => left.name.localeCompare(right.name))
+    .sort((left, right) => compareStrings(left.name, right.name))
     .flatMap((entry) => walkRegularFiles(root, join(current, entry.name)));
 }
 

@@ -4,6 +4,7 @@ export const apiDocCompilerOptions = {
   module: "ESNext",
   moduleResolution: "bundler",
   paths: {
+    "@croco/gamification-core/reward-contracts": ["../gamification-core/src/reward-contracts.ts"],
     "@croco/admin-core/fact-history-validation": ["../admin-core/src/fact-history-validation.ts"],
     "@croco/*": ["../*/src/index.ts"],
   },
@@ -42,6 +43,12 @@ export const apiDocPackages = [
     directory: "admin-ops",
     entryPoint: "src/index.ts",
     moduleName: "admin-ops/src",
+  },
+  {
+    packageName: "@croco/admin-postgres",
+    directory: "admin-postgres",
+    entryPoint: "src/index.ts",
+    moduleName: "admin-postgres/src",
   },
   {
     packageName: "@croco/admin-react",
@@ -122,6 +129,12 @@ export const apiDocPackages = [
     moduleName: "billing-core/src",
   },
   {
+    packageName: "@croco/billing-drizzle",
+    directory: "billing-drizzle",
+    entryPoint: "src/index.ts",
+    moduleName: "billing-drizzle/src",
+  },
+  {
     packageName: "@croco/billing-polar",
     directory: "billing-polar",
     entryPoint: "src/index.ts",
@@ -144,6 +157,18 @@ export const apiDocPackages = [
     directory: "cli",
     entryPoint: "src/index.ts",
     moduleName: "cli/src",
+  },
+  {
+    packageName: "@croco/cohort-core",
+    directory: "cohort-core",
+    entryPoint: "src/index.ts",
+    moduleName: "cohort-core/src",
+  },
+  {
+    packageName: "@croco/cohort-drizzle",
+    directory: "cohort-drizzle",
+    entryPoint: "src/index.ts",
+    moduleName: "cohort-drizzle/src",
   },
   {
     packageName: "create-croco-app",
@@ -200,6 +225,18 @@ export const apiDocPackages = [
     moduleName: "entitlements-drizzle/src",
   },
   {
+    packageName: "@croco/etl-core",
+    directory: "etl-core",
+    entryPoint: "src/index.ts",
+    moduleName: "etl-core/src",
+  },
+  {
+    packageName: "@croco/etl-events-tx",
+    directory: "etl-events-tx",
+    entryPoint: "src/index.ts",
+    moduleName: "etl-events-tx/src",
+  },
+  {
     packageName: "@croco/esbuild-plugin",
     directory: "esbuild-plugin",
     entryPoint: "src/index.ts",
@@ -222,6 +259,18 @@ export const apiDocPackages = [
     directory: "events-tx",
     entryPoint: "src/index.ts",
     moduleName: "events-tx/src",
+  },
+  {
+    packageName: "@croco/experience-core",
+    directory: "experience-core",
+    entryPoint: "src/index.ts",
+    moduleName: "experience-core/src",
+  },
+  {
+    packageName: "@croco/experience-drizzle",
+    directory: "experience-drizzle",
+    entryPoint: "src/index.ts",
+    moduleName: "experience-drizzle/src",
   },
   {
     packageName: "@croco/execution-core",
@@ -252,6 +301,12 @@ export const apiDocPackages = [
     directory: "features-core",
     entryPoint: "src/index.ts",
     moduleName: "features-core/src",
+  },
+  {
+    packageName: "@croco/features-drizzle",
+    directory: "features-drizzle",
+    entryPoint: "src/index.ts",
+    moduleName: "features-drizzle/src",
   },
   {
     packageName: "@croco/features-posthog",
@@ -320,6 +375,18 @@ export const apiDocPackages = [
     moduleName: "frontend-vite/src",
   },
   {
+    packageName: "@croco/gamification-core",
+    directory: "gamification-core",
+    entryPoint: "src/index.ts",
+    moduleName: "gamification-core/src",
+  },
+  {
+    packageName: "@croco/gamification-drizzle",
+    directory: "gamification-drizzle",
+    entryPoint: "src/index.ts",
+    moduleName: "gamification-drizzle/src",
+  },
+  {
     packageName: "@croco/gid-core",
     directory: "gid-core",
     entryPoint: "src/index.ts",
@@ -372,6 +439,12 @@ export const apiDocPackages = [
     directory: "lifecycle-core",
     entryPoint: "src/index.ts",
     moduleName: "lifecycle-core/src",
+  },
+  {
+    packageName: "@croco/lifecycle-drizzle",
+    directory: "lifecycle-drizzle",
+    entryPoint: "src/index.ts",
+    moduleName: "lifecycle-drizzle/src",
   },
   {
     packageName: "@croco/ai-usage",
@@ -438,6 +511,12 @@ export const apiDocPackages = [
     directory: "notifications-core",
     entryPoint: "src/index.ts",
     moduleName: "notifications-core/src",
+  },
+  {
+    packageName: "@croco/notifications-fcm",
+    directory: "notifications-fcm",
+    entryPoint: "src/index.ts",
+    moduleName: "notifications-fcm/src",
   },
   {
     packageName: "@croco/notifications-react-email",
@@ -510,6 +589,30 @@ export const apiDocPackages = [
     directory: "problems-core",
     entryPoint: "src/index.ts",
     moduleName: "problems-core/src",
+  },
+  {
+    packageName: "@croco/promotions-core",
+    directory: "promotions-core",
+    entryPoint: "src/index.ts",
+    moduleName: "promotions-core/src",
+  },
+  {
+    packageName: "@croco/promotions-drizzle",
+    directory: "promotions-drizzle",
+    entryPoint: "src/index.ts",
+    moduleName: "promotions-drizzle/src",
+  },
+  {
+    packageName: "@croco/referral-core",
+    directory: "referral-core",
+    entryPoint: "src/index.ts",
+    moduleName: "referral-core/src",
+  },
+  {
+    packageName: "@croco/referral-drizzle",
+    directory: "referral-drizzle",
+    entryPoint: "src/index.ts",
+    moduleName: "referral-drizzle/src",
   },
   {
     packageName: "@croco/protocol-codegen",
@@ -704,10 +807,22 @@ export const apiDocPackages = [
     moduleName: "ui-astryx/src",
   },
   {
+    packageName: "@croco/warehouse-core",
+    directory: "warehouse-core",
+    entryPoint: "src/index.ts",
+    moduleName: "warehouse-core/src",
+  },
+  {
     packageName: "@croco/warehouse-postgres",
     directory: "warehouse-postgres",
     entryPoint: "src/metrics.ts",
     moduleName: "warehouse-postgres/src/metrics",
+  },
+  {
+    packageName: "@croco/warehouse-tooling",
+    directory: "warehouse-tooling",
+    entryPoint: "src/index.ts",
+    moduleName: "warehouse-tooling/src",
   },
   {
     packageName: "@croco/webhooks-core",

@@ -85,7 +85,7 @@ title: "TaskRunner"
 
 ### executeTracked()
 
-> **executeTracked**(`taskId`, `payload`, `options?`): `Promise`\<`Readonly`\<\{ `executionId`: `string`; `result`: `unknown`; \}\>\>
+> **executeTracked**(`taskId`, `payload`, `options?`, `onExecutionCreated?`): `Promise`\<`Readonly`\<\{ `executionId`: `string`; `result`: `unknown`; \}\>\>
 
 #### Parameters
 
@@ -100,6 +100,10 @@ title: "TaskRunner"
 ##### options?
 
 [`TaskExecutionOptions`](/api/tasks-core/src/type-aliases/taskexecutionoptions/) = `{}`
+
+##### onExecutionCreated?
+
+(`executionId`) => `void`
 
 #### Returns
 
@@ -135,6 +139,9 @@ retry() remains blocked until the attempt-fenced recovery record has been commit
 ### retry()
 
 > **retry**(`executionId`): `Promise`\<`unknown`\>
+
+Resumes a retrying execution or retries a failed or safely resolved timed-out execution.
+Indeterminate timeouts require recoverTimeout() before retrying.
 
 #### Parameters
 

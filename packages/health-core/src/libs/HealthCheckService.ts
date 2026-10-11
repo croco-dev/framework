@@ -246,8 +246,8 @@ export class HealthCheckService {
 
     const timeoutPromise = new Promise<HealthIndicatorResult>((_, reject) => {
       timeoutId = setTimeout(() => {
-        controller.abort();
         reject(new Error(`Health check timeout for ${id ?? getIndicatorName(indicator)}`));
+        controller.abort();
       }, timeout);
     });
 

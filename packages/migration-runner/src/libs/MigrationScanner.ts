@@ -21,6 +21,8 @@ export class MigrationScanner {
 
       if (!stats.isFile()) continue;
 
+      if (entry.endsWith(".d.ts") || entry.endsWith(".d.mts") || entry.endsWith(".d.cts")) continue;
+
       const { ext, name } = parse(entry);
       if (ext !== ".ts" && ext !== ".js") continue;
 

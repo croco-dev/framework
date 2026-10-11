@@ -297,18 +297,19 @@ export class InMemoryBillingStore extends BillingStore {
   }
 
   async saveOrder(order: Order): Promise<void> {
+    const storedOrder = cloneOrder(order);
     const existing = this.orders.get(order.billingAccountId) ?? [];
     const index = existing.findIndex((savedOrder) => savedOrder.id === order.id);
     if (index === -1) {
-      existing.push(order);
+      existing.push(storedOrder);
     } else {
-      existing[index] = order;
+      existing[index] = storedOrder;
     }
     this.orders.set(order.billingAccountId, existing);
   }
 
   async findOrdersByAccount(billingAccountId: string): Promise<Order[]> {
-    return this.orders.get(billingAccountId) ?? [];
+    return (this.orders.get(billingAccountId) ?? []).map(cloneOrder);
   }
 
   async commitSubscriptionWebhook(
@@ -487,6 +488,13 @@ function cloneWebhookEventIntent(intent: BillingWebhookEventIntent): BillingWebh
   return {
     event: structuredClone(intent.event),
     publishedAt: intent.publishedAt ? new Date(intent.publishedAt) : null,
+  };
+}
+
+function cloneOrder(order: Order): Order {
+  return {
+    ...order,
+    paidAt: new Date(order.paidAt),
   };
 }
 

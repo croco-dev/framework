@@ -50,11 +50,14 @@ the reason when a checked example is added; stale coverage exceptions fail the c
 1. Write complete copyable TypeScript as `typescript typecheck`.
 2. Mark intentional pseudo-code as `typescript no-check` and explain the missing runtime context in
    the surrounding prose when it is not obvious.
-3. Run `pnpm docs:examples:check` before opening a documentation PR.
-4. If an existing legacy block is converted to `typecheck` or `no-check`, run
+3. When a `ko` translation adds an English guide's examples, keep the original fence modes
+   unchanged so the translated page passes the same `pnpm docs:examples:check` gate. Update the
+   translation when the English source's examples, fence modes, or recovery semantics change.
+4. Run `pnpm docs:examples:check` before opening a documentation PR.
+5. If an existing legacy block is converted to `typecheck` or `no-check`, run
    `pnpm docs:examples:write` to remove its stale baseline entry, then rerun
    `pnpm docs:examples:check`.
-5. Treat a typecheck failure as API or documentation drift. Fix the example or the exported package
+6. Treat a typecheck failure as API or documentation drift. Fix the example or the exported package
    contract instead of weakening the fence mode.
 
 ## Checked Example

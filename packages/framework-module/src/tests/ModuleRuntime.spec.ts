@@ -1,5 +1,7 @@
 import {
   Component as Service,
+  ContainerResolutionProblem,
+  ServiceNotFoundError,
   GENERATED_DI_GRAPH_VERSION,
   Inject,
   RuntimeContainer as Container,
@@ -24,6 +26,55 @@ import {
 describe("ModuleRuntime", () => {
   beforeEach(() => {
     Container.reset();
+  });
+
+  describe("contribution order validation", () => {
+    const invalidOrders = [Infinity, -Infinity, NaN, 1.5, Number.MAX_SAFE_INTEGER + 1];
+
+    it.each(invalidOrders)("reports invalid order %s during initialization", async (order) => {
+      const runtime = createModuleRuntime();
+      runtime.use({
+        name: "billing",
+        contributions: [{ kind: "admin.nav", id: "billing", order, value: {} }],
+      });
+
+      try {
+        const initialization = runtime.initialize();
+        await expect(initialization).rejects.toBeInstanceOf(InvalidModuleDefinitionProblem);
+        await expect(initialization).rejects.toMatchObject({
+          code: "framework-module/invalid-module-definition",
+          extensions: {
+            moduleName: "billing",
+            kind: "admin.nav",
+            id: "billing",
+            receivedOrder: String(order),
+          },
+        });
+      } finally {
+        await runtime.dispose();
+      }
+    });
+
+    it.each(invalidOrders)("reports invalid order %s during graph inspection", (order) => {
+      const runtime = createModuleRuntime();
+      runtime.use({
+        name: "billing",
+        contributions: [{ kind: "admin.nav", id: "billing", order, value: {} }],
+      });
+
+      expect(() => runtime.createGraphManifest()).toThrow(InvalidModuleDefinitionProblem);
+      expect(() => runtime.createGraphManifest()).toThrow(
+        expect.objectContaining({
+          code: "framework-module/invalid-module-definition",
+          extensions: {
+            moduleName: "billing",
+            kind: "admin.nav",
+            id: "billing",
+            receivedOrder: String(order),
+          },
+        }),
+      );
+    });
   });
 
   it("isolates identical module names and provider tokens across concurrent runtimes", async () => {
@@ -115,6 +166,33 @@ describe("ModuleRuntime", () => {
 
     await expect(runtime.initialize()).rejects.toMatchObject({
       cause: expect.any(ModuleProviderUnavailableProblem),
+    });
+    await runtime.dispose();
+  });
+
+  it("preserves coded DI failures as the cause of unavailable module providers", async () => {
+    const token = new Token<string>("missing-runtime-provider");
+    const runtime = createModuleRuntime();
+    runtime.use({ name: "app", providers: [token] });
+    const context = await runtime.initialize();
+
+    let failure: unknown;
+    try {
+      context.get(token);
+    } catch (error) {
+      failure = error;
+    }
+    expect(failure).toBeInstanceOf(ModuleProviderUnavailableProblem);
+    expect(failure).toMatchObject({
+      cause: expect.any(ServiceNotFoundError),
+    });
+    const cause = (failure as ModuleProviderUnavailableProblem).cause;
+    expect(cause).toBeInstanceOf(ContainerResolutionProblem);
+    expect(cause).toMatchObject({
+      code: "framework-context/di-resolution-failed",
+      reason: "missing-provider",
+      identifier: token,
+      trace: { root: token.toString() },
     });
     await runtime.dispose();
   });

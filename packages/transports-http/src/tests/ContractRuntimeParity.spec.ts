@@ -35,6 +35,7 @@ import {
 import ts from "typescript";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
+import { z as z4 } from "zod/v4";
 import { emitOpenAPIFromContractGraph } from "../../../openapi-spec/src/index";
 import { generateClientFilesFromContractGraph } from "../../../rpc-codegen/src/index";
 import { createApp, type CrocoApp, ErrorHandler, HealthCheckRegistry } from "../index";
@@ -150,6 +151,34 @@ const GENERATED_RPC_TEMP_ROOT = path.join(
   __dirname,
   "../../node_modules/.croco-contract-runtime-parity",
 );
+
+const NullableWidgetResponseSchema = z.object({ id: z.string() }).nullable();
+
+const nullableWidgetRoute = defineRouteContract({
+  id: "contract-parity.nullable-widget",
+  method: HttpMethod.GET,
+  path: "/contract-parity/nullable-widget",
+  response: NullableWidgetResponseSchema,
+});
+
+@Controller("/contract-parity")
+class NullableWidgetController {
+  @Get(nullableWidgetRoute)
+  readNullableWidget(): { id: string } | null {
+    return null;
+  }
+
+  @Get("/nullable-widget-object")
+  @ResponseSchema(NullableWidgetResponseSchema)
+  readNullableWidgetObject(): { id: string } | null {
+    return { id: "widget_nullable" };
+  }
+
+  @Get("/no-output")
+  readNoOutput(): void {
+    return undefined;
+  }
+}
 
 @Controller("/contract-parity")
 class ContractParityController {
@@ -377,6 +406,7 @@ describe("REST contract-to-runtime parity", () => {
     app = createApp({
       controllers: [
         ContractParityController,
+        NullableWidgetController,
         RepeatedParametersController,
         SchemaLessParametersController,
         TransformedResponseController,
@@ -389,6 +419,52 @@ describe("REST contract-to-runtime parity", () => {
     vi.unstubAllGlobals();
     fs.rmSync(GENERATED_RPC_TEMP_ROOT, { recursive: true, force: true });
   });
+
+  it.each(["params", "query", "body", "response"] as const)(
+    "rejects a Zod 4 route-contract %s schema with its source diagnostic",
+    (schemaKind) => {
+      const supportedSchema = z.object({ id: z.string() });
+      const unsupportedSchema = z4.object({ id: z4.string() }) as unknown as typeof supportedSchema;
+      const contract = defineRouteContract({
+        method: HttpMethod.POST,
+        path: "/unsupported-zod/:id",
+        params: supportedSchema,
+        query: supportedSchema,
+        body: supportedSchema,
+        response: supportedSchema,
+        [schemaKind]: unsupportedSchema,
+      });
+
+      @Controller("/unsupported-zod")
+      class UnsupportedZodController {
+        @Post(contract)
+        handle(
+          @Param(contract, "id") _id: string,
+          @Query(contract, "id") _queryId: string,
+          @Body(contract) body: { id: string },
+        ): { id: string } {
+          return body;
+        }
+      }
+
+      expect(() =>
+        createApp({ controllers: [UnsupportedZodController], securityValidation: "off" }).getHono(),
+      ).toThrowError(
+        expect.objectContaining({
+          diagnostics: [
+            expect.objectContaining({
+              code: "contract-schema-unsupported-zod-major",
+              routeId: "UnsupportedZodController.handle",
+              sourceLocation: expect.objectContaining({
+                path: expect.stringContaining("ContractRuntimeParity.spec.ts"),
+              }),
+              message: `Route contract ${schemaKind} uses unsupported Zod major 4 (schema kind: object); Croco route contracts require Zod 3.`,
+            }),
+          ],
+        }),
+      );
+    },
+  );
 
   it.each(["/users", "/api/v1/users"] as const)(
     "mounts contract %s under its controller in the graph and HTTP runtime",
@@ -544,7 +620,7 @@ describe("REST contract-to-runtime parity", () => {
     expect(repeated.status).toBe(422);
     expect(await repeated.json()).toMatchObject({
       code: "protocols-rest/request-validation-failed",
-      issues: [expect.objectContaining({ path: "query.value" })],
+      issues: [expect.objectContaining({ path: "query.tag" })],
     });
 
     const fallbackGraph = buildContractGraph([SchemaLessParametersController]);
@@ -587,7 +663,7 @@ describe("REST contract-to-runtime parity", () => {
     expect(await repeated.json()).toMatchObject({
       code: "protocols-rest/request-validation-failed",
       status: 422,
-      issues: [{ path: "query.value", message: "Expected a single query value" }],
+      issues: [{ path: "query.mode", message: "Expected a single query value" }],
     });
   });
 
@@ -633,7 +709,7 @@ describe("REST contract-to-runtime parity", () => {
     );
     expect(invalidElement.status).toBe(422);
     expect(await invalidElement.json()).toMatchObject({
-      issues: [expect.objectContaining({ path: "query.0" })],
+      issues: [expect.objectContaining({ path: "query.tag.0" })],
     });
 
     const invalidRefinement = await app.fetch(
@@ -643,7 +719,7 @@ describe("REST contract-to-runtime parity", () => {
     );
     expect(invalidRefinement.status).toBe(422);
     expect(await invalidRefinement.json()).toMatchObject({
-      issues: [{ path: "query.value", message: "Expected at least three values" }],
+      issues: [{ path: "query.scope", message: "Expected at least three values" }],
     });
   });
 
@@ -672,7 +748,7 @@ describe("REST contract-to-runtime parity", () => {
     );
     expect(invalidElement.status).toBe(422);
     expect(await invalidElement.json()).toMatchObject({
-      issues: [expect.objectContaining({ path: "headers.0" })],
+      issues: [expect.objectContaining({ path: "headers.x-tag.0" })],
     });
 
     const invalidRefinement = await app.fetch(
@@ -682,7 +758,7 @@ describe("REST contract-to-runtime parity", () => {
     );
     expect(invalidRefinement.status).toBe(422);
     expect(await invalidRefinement.json()).toMatchObject({
-      issues: [{ path: "headers.value", message: "Expected at least three scopes" }],
+      issues: [{ path: "headers.x-scope", message: "Expected at least three scopes" }],
     });
   });
 
@@ -697,7 +773,7 @@ describe("REST contract-to-runtime parity", () => {
       }),
       schemaLocation: "path" as const,
       schemaInput: { id: "invalid" },
-      issuePath: "params.value",
+      issuePath: "params.id",
     },
     {
       name: "query parameter",
@@ -709,7 +785,7 @@ describe("REST contract-to-runtime parity", () => {
       }),
       schemaLocation: "query" as const,
       schemaInput: { mode: "delete" },
-      issuePath: "query.value",
+      issuePath: "query.mode",
     },
     {
       name: "header parameter",
@@ -721,7 +797,7 @@ describe("REST contract-to-runtime parity", () => {
       }),
       schemaLocation: "headers" as const,
       schemaInput: { "x-tenant-id": "x" },
-      issuePath: "headers.value",
+      issuePath: "headers.x-tenant-id",
     },
     {
       name: "body payload",
@@ -851,6 +927,41 @@ describe("REST contract-to-runtime parity", () => {
         },
       ],
     });
+  });
+
+  it("keeps nullable JSON null aligned with the OpenAPI contract", async () => {
+    const nullableGraph = buildContractGraph([NullableWidgetController]);
+    assertContractGraphHasNoErrors(nullableGraph);
+    const spec = emitOpenAPIFromContractGraph(nullableGraph);
+
+    const nullOperation = spec.paths?.["/contract-parity/nullable-widget"]?.get;
+    expect(nullOperation?.responses?.[200]).toMatchObject({
+      content: { "application/json": { schema: expect.anything() } },
+    });
+
+    const nullResponse = await app.fetch(
+      new Request("http://localhost/contract-parity/nullable-widget"),
+    );
+    expect(nullResponse.status).toBe(200);
+    expect(nullResponse.headers.get("content-type")).toContain("application/json");
+    expect(await nullResponse.text()).toBe("null");
+
+    const nullJsonResponse = await app.fetch(
+      new Request("http://localhost/contract-parity/nullable-widget"),
+    );
+    expect(await nullJsonResponse.json()).toBeNull();
+
+    const objectResponse = await app.fetch(
+      new Request("http://localhost/contract-parity/nullable-widget-object"),
+    );
+    expect(objectResponse.status).toBe(200);
+    expect(await objectResponse.json()).toEqual({ id: "widget_nullable" });
+
+    const noOutputResponse = await app.fetch(
+      new Request("http://localhost/contract-parity/no-output"),
+    );
+    expect(noOutputResponse.status).toBe(204);
+    expect(await noOutputResponse.text()).toBe("");
   });
 
   it("keeps generated OpenAPI and RPC artifacts aligned with the validation matrix", async () => {

@@ -174,6 +174,28 @@ describe("SaaS billing golden path", () => {
     expect(runtime.auditLog.list()).toHaveLength(0);
   });
 
+  it.each([
+    ["a null", "null"],
+    ["an empty", ""],
+  ])("returns a validation Problem for %s JSON checkout body", async (_label, body) => {
+    const response = await runtime.app.fetch(
+      new Request("http://localhost/api/checkouts", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body,
+      }),
+    );
+
+    expect(response.status).toBe(422);
+    await testing.assertProblem(response, {
+      code: "golden-path/checkout-validation",
+      detailIncludes: "checkout body must be a JSON object",
+      status: 422,
+    });
+    expect(runtime.repository.list()).toHaveLength(0);
+    expect(runtime.auditLog.list()).toHaveLength(0);
+  });
+
   it("returns a not-found Problem for unknown orders", async () => {
     const response = await testing.get("/api/orders/missing");
 

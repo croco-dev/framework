@@ -10,9 +10,16 @@ import {
   defineGeneratedDiGraph,
   type ILogger,
   LOGGER_TOKEN,
+  Token,
   type RuntimeInspectorSnapshot,
 } from "@croco/framework-context";
 import { Logger } from "@croco/framework-logger";
+import {
+  buildContractGraph,
+  createContractGraphSnapshot,
+  createContractGraphV1,
+  diffContractGraphSnapshots,
+} from "@croco/protocols-core";
 import { Problem, ProblemCategory } from "@croco/problems-core";
 import {
   type ArgumentMetadata,
@@ -20,6 +27,7 @@ import {
   Controller,
   Get,
   Head,
+  HttpExceptionFilter,
   Options,
   Param,
   type ParamMetadata,
@@ -31,6 +39,7 @@ import {
   REST_PARAMS_KEY,
   REST_ROUTES_KEY,
   type RouteMetadata,
+  UseFilters,
 } from "@croco/protocols-rest";
 import {
   createSlidingWindowPolicy,
@@ -510,6 +519,66 @@ describe("CrocoApp", () => {
     expect(Container.has(HealthCheckRegistry)).toBe(true);
   });
 
+  it("should fail bootstrap when the registered logger has a missing dependency", () => {
+    const missing = new Token<ILogger>("bootstrap.logger.required");
+    Container.installGeneratedGraph(
+      defineGeneratedDiGraph({
+        version: GENERATED_DI_GRAPH_VERSION,
+        graphId: "broken-bootstrap-logger",
+        compilerVersion: "test",
+        inputHash: "broken-bootstrap-logger",
+        providers: [
+          {
+            token: LOGGER_TOKEN,
+            tokenId: "test:bootstrap-logger",
+            debugName: "BrokenBootstrapLogger",
+            scope: "singleton",
+            sourceLocation: { file: "CrocoApp.spec.ts", line: 1, column: 1 },
+            dependencies: [{ token: missing, tokenId: "test:bootstrap-logger-required" }],
+            factory: (resolver) => resolver.get(missing),
+          },
+        ],
+        roots: [LOGGER_TOKEN],
+      }),
+    );
+
+    expect(() => createApp({ controllers: [] })).toThrow(
+      expect.objectContaining({
+        code: "framework-context/di-resolution-failed",
+        reason: "missing-provider",
+        detail: expect.stringContaining("bootstrap.logger.required"),
+      }),
+    );
+  });
+
+  it("should fail bootstrap when the registered error handler has a missing dependency", () => {
+    const missing = new Token<ErrorHandler>("bootstrap.error-handler.required");
+    Container.remove(ErrorHandler);
+    Container.registerLazy(ErrorHandler, () => Container.get(missing));
+
+    expect(() => createApp({ controllers: [] })).toThrow(
+      expect.objectContaining({
+        code: "framework-context/di-resolution-failed",
+        reason: "missing-provider",
+        detail: expect.stringContaining("bootstrap.error-handler.required"),
+      }),
+    );
+  });
+
+  it("should fail bootstrap when the registered health registry has a missing dependency", () => {
+    const missing = new Token<HealthCheckRegistry>("bootstrap.health-registry.required");
+    Container.remove(HealthCheckRegistry);
+    Container.registerLazy(HealthCheckRegistry, () => Container.get(missing));
+
+    expect(() => createApp({ controllers: [] })).toThrow(
+      expect.objectContaining({
+        code: "framework-context/di-resolution-failed",
+        reason: "missing-provider",
+        detail: expect.stringContaining("bootstrap.health-registry.required"),
+      }),
+    );
+  });
+
   it("should handle GET request", async () => {
     const app = createApp({ controllers: [TestController] });
 
@@ -577,6 +646,47 @@ describe("CrocoApp", () => {
     expect(emptyResponse.status).toBe(204);
     expect(acceptedResponse.status).toBe(202);
     await expect(acceptedResponse.text()).resolves.toBe("");
+  });
+
+  it("should detect actual HTTP 201 to 202 drift in both contract artifacts", async () => {
+    @Controller("/status-drift")
+    class StatusDriftController {
+      @Post("/")
+      create() {
+        return { ok: true };
+      }
+    }
+
+    const metadata = Reflect.getMetadata(REST_ROUTES_KEY, StatusDriftController) as RouteMetadata[];
+    const route = metadata.find((entry) => entry.methodName === "create");
+    if (!route) {
+      throw new TypeError("Expected StatusDriftController.create metadata.");
+    }
+    route.statusCode = 201;
+    const baselineGraph = buildContractGraph([StatusDriftController]);
+    const baseline = createContractGraphSnapshot(baselineGraph);
+    const baselineV1 = createContractGraphV1(baselineGraph);
+    const before = await createApp({ controllers: [StatusDriftController] }).fetch(
+      new Request("http://localhost/status-drift", { method: "POST" }),
+    );
+
+    route.statusCode = 202;
+    const currentGraph = buildContractGraph([StatusDriftController]);
+    const current = createContractGraphSnapshot(currentGraph);
+    const currentV1 = createContractGraphV1(currentGraph);
+    const after = await createApp({ controllers: [StatusDriftController] }).fetch(
+      new Request("http://localhost/status-drift", { method: "POST" }),
+    );
+
+    expect(before.status).toBe(201);
+    expect(after.status).toBe(202);
+    await expect(before.json()).resolves.toEqual({ ok: true });
+    await expect(after.json()).resolves.toEqual({ ok: true });
+    expect(JSON.stringify(current)).not.toBe(JSON.stringify(baseline));
+    expect(JSON.stringify(currentV1)).not.toBe(JSON.stringify(baselineV1));
+    expect(diffContractGraphSnapshots(baseline, current).breakingChanges).toContainEqual(
+      expect.objectContaining({ code: "contract-success-status-changed", severity: "breaking" }),
+    );
   });
 
   it("should run HTTP middlewares around the controller handler", async () => {
@@ -1342,6 +1452,92 @@ describe("CrocoApp", () => {
       requestId: "node-problem-req-1",
     });
   });
+
+  it.each(["generic error", "server Problem", "client Problem"] as const)(
+    "should report a controller %s only when it produces a server failure",
+    async (failureKind) => {
+      Container.reset();
+      const errorLog = vi.fn();
+      const logger: ILogger = {
+        debug: vi.fn(),
+        info: vi.fn(),
+        warn: vi.fn(),
+        error: errorLog,
+        fatal: vi.fn(),
+        child: () => logger,
+      };
+      Container.set(LOGGER_TOKEN, logger);
+      const cause = new Error("private database connection failure");
+      class ServerProblem extends Problem {
+        constructor() {
+          super(
+            "test/server-failure",
+            ProblemCategory.InternalServerError,
+            "private server detail",
+            {
+              cause,
+              extensions: { privateValue: "private extension" },
+            },
+          );
+        }
+      }
+      const failure =
+        failureKind === "generic error"
+          ? cause
+          : failureKind === "server Problem"
+            ? new ServerProblem()
+            : new TestProblem("Invalid request");
+
+      @Controller("/logging")
+      class LoggingController {
+        @Get("/failure")
+        fail() {
+          throw failure;
+        }
+      }
+      const app = createApp({ controllers: [LoggingController] });
+      const traceId = "4bf92f3577b34da6a3ce929d0e0e4736";
+      const requestId = "controller-failure-req";
+      const response = await app.fetch(
+        new Request("http://localhost/logging/failure", {
+          headers: {
+            traceparent: `00-${traceId}-00f067aa0ba902b7-01`,
+            "x-request-id": requestId,
+          },
+        }),
+      );
+      const body = (await response.json()) as ProblemCorrelationResponse;
+
+      expect(response.headers.get("content-type")).toContain("application/problem+json");
+      expect(body).toMatchObject({ traceId, requestId });
+      if (failureKind === "client Problem") {
+        expect(response.status).toBe(400);
+        expect(body.detail).toBe("Invalid request");
+        expect(errorLog).not.toHaveBeenCalled();
+        return;
+      }
+
+      expect(response.status).toBe(500);
+      expect(body.detail).toBe("An internal error occurred");
+      expect(body).not.toHaveProperty("cause");
+      expect(body).not.toHaveProperty("stack");
+      expect(body).not.toHaveProperty("privateValue");
+      if (failureKind === "generic error") {
+        expect(errorLog).toHaveBeenCalledExactlyOnceWith("Unhandled error:", cause);
+        return;
+      }
+
+      expect(body.instance).toBe("http://localhost/logging/failure");
+      expect(errorLog).toHaveBeenCalledExactlyOnceWith("Server problem:", {
+        problem: expect.any(Problem),
+        traceId: body.traceId,
+        requestId: body.requestId,
+      });
+      const loggedProblem = errorLog.mock.calls[0]?.[1].problem as Problem;
+      expect(loggedProblem.cause).toBe(cause);
+      expect(loggedProblem).toBe(failure);
+    },
+  );
 
   it("should run the Lambda handler flush callback after queued runtime work", async () => {
     const flush = vi.fn().mockResolvedValue(undefined);
@@ -2998,6 +3194,45 @@ describe("CrocoApp", () => {
       },
       awsRequestId: "req-123",
     });
+  });
+
+  @Controller("/reports")
+  class ReportController {
+    @Get("/error")
+    reportError(): string {
+      throw new Error("database pool exhausted");
+    }
+
+    @Get("/thrown-value")
+    reportThrownValue(): string {
+      throw "unexpected";
+    }
+
+    @Get("/filtered")
+    @UseFilters(HttpExceptionFilter)
+    reportFiltered(): string {
+      throw new Error("database pool exhausted");
+    }
+  }
+
+  it("uses the same code for the default ErrorHandler and HttpExceptionFilter fallbacks", async () => {
+    const app = createApp({ controllers: [ReportController] });
+    const filtered = await app.fetch(new Request("http://localhost/reports/filtered"));
+    const filteredBody = (await filtered.json()) as Record<string, unknown>;
+    expect(filteredBody).toMatchObject({ status: 500, code: "INTERNAL_SERVER_ERROR" });
+
+    for (const path of ["/reports/error", "/reports/thrown-value"]) {
+      const response = await app.fetch(new Request(`http://localhost${path}`));
+      const body = (await response.json()) as Record<string, unknown>;
+
+      expect(response.status).toBe(500);
+      expect({ path, code: body.code, hasProblemCode: typeof body.code === "string" }).toEqual({
+        path,
+        code: filteredBody.code,
+        hasProblemCode: true,
+      });
+      expect(body.detail).not.toContain("database pool exhausted");
+    }
   });
 
   it("should expose lambda event and context through exported helpers", async () => {

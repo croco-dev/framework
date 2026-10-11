@@ -1,3 +1,4 @@
+import { Problem } from "@croco/problems-core";
 import { MeteringTransitionProblem } from "./problems/MeteringTransitionProblem";
 import { RedisProblem } from "./problems/RedisProblem";
 import { buildMeteringRedisKey, encodeRedisKeySegment } from "./redisKey";
@@ -83,6 +84,9 @@ return { 1, stored }
 local entryJson = redis.call('GET', KEYS[1])
 if not entryJson then return { 0, 'MISSING', '' } end
 local entry = cjson.decode(entryJson)
+if ARGV[1] == 'deliverable' and entry.deliverableAt and entry.state ~= 'terminal-failed' then
+  return { 1, 'ALREADY_ACTIVATED', entryJson }
+end
 if entry.state ~= 'pending' then return { 0, 'STATUS:' .. tostring(entry.state), entryJson } end
 
 local redisTime = redis.call('TIME')
@@ -409,7 +413,7 @@ return {
     try {
       return await command();
     } catch (error) {
-      if (error instanceof MeteringTransitionProblem || error instanceof RedisProblem) {
+      if (error instanceof Problem) {
         throw error;
       }
       throw new RedisProblem(

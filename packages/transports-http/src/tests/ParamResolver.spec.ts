@@ -410,7 +410,23 @@ describe("ParamResolver", () => {
       read(_value: unknown) {}
     }
 
-    defineNamedParamMetadata(TestController, "read", ParamType.QUERY, z.string().catch("fallback"));
+    Reflect.defineMetadata(
+      REST_PARAMS_KEY,
+      new Map([
+        [
+          "read",
+          [
+            {
+              type: ParamType.QUERY,
+              index: 0,
+              name: "size",
+              pipes: [z.string().catch("fallback")],
+            },
+          ],
+        ],
+      ]),
+      TestController,
+    );
 
     const ctx = createMockHttpContext(vi.fn() as CrocoHttpContext["json"]);
     ctx.query = vi.fn().mockReturnValue(["first", "second"]);
@@ -421,8 +437,47 @@ describe("ParamResolver", () => {
       code: "protocols-rest/request-validation-failed",
       issues: [
         {
-          path: "query.value",
+          path: "query.size",
           message: "Expected a single query value",
+        },
+      ],
+    });
+  });
+
+  it("reports invalid named scalar query values with the parameter name", async () => {
+    class TestController {
+      read(_value: unknown) {}
+    }
+
+    Reflect.defineMetadata(
+      REST_PARAMS_KEY,
+      new Map([
+        [
+          "read",
+          [
+            {
+              type: ParamType.QUERY,
+              index: 0,
+              name: "size",
+              pipes: [z.coerce.number()],
+            },
+          ],
+        ],
+      ]),
+      TestController,
+    );
+
+    const ctx = createMockHttpContext(vi.fn() as CrocoHttpContext["json"]);
+    ctx.query = vi.fn().mockReturnValue("not-a-number");
+
+    await expect(
+      new ParamResolver().resolveParams(ctx, TestController, "read"),
+    ).rejects.toMatchObject({
+      code: "protocols-rest/request-validation-failed",
+      issues: [
+        {
+          path: "query.size",
+          message: expect.any(String),
         },
       ],
     });

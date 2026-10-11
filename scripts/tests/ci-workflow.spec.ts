@@ -969,6 +969,8 @@ describe("CI verification profile contract", () => {
   });
 
   it("runs persistence concurrency against a digest-pinned PostgreSQL service", () => {
+    expect(WORKFLOW).toContain("- 'packages/experience-drizzle/**'");
+    expect(WORKFLOW).toContain("- 'packages/promotions-drizzle/**'");
     expect(REAL_RESOURCE_JOB).toContain(
       "postgres:16.10-alpine@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
     );
@@ -988,6 +990,12 @@ describe("CI verification profile contract", () => {
       "EXECUTION_POSTGRES_URL: postgresql://postgres:postgres@127.0.0.1:5432/croco_membership",
     );
     expect(REAL_RESOURCE_JOB).toContain(
+      "EXPERIENCE_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/croco_membership",
+    );
+    expect(REAL_RESOURCE_JOB).toContain(
+      "PROMOTIONS_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/croco_membership",
+    );
+    expect(REAL_RESOURCE_JOB).toContain(
       "MEMBERSHIP_POSTGRES_URL: postgresql://postgres:postgres@127.0.0.1:5432/croco_membership",
     );
     expect(REAL_RESOURCE_JOB).toContain("pnpm build --filter=@croco/credits-drizzle...");
@@ -1000,18 +1008,58 @@ describe("CI verification profile contract", () => {
     );
     expect(REAL_RESOURCE_JOB).toContain("pnpm build --filter=@croco/metering-drizzle...");
     expect(REAL_RESOURCE_JOB).toContain("pnpm --filter @croco/metering-drizzle test:postgres");
+    expect(REAL_RESOURCE_JOB).toContain("pnpm build --filter=@croco/onboarding-drizzle...");
+    expect(REAL_RESOURCE_JOB).toContain("pnpm --filter @croco/onboarding-drizzle test:live");
     expect(REAL_RESOURCE_JOB).toContain("pnpm --filter @croco/credits-drizzle test:postgres");
     expect(REAL_RESOURCE_JOB).toContain("pnpm build --filter=@croco/analytics-drizzle...");
     expect(REAL_RESOURCE_JOB).toContain("pnpm --filter @croco/analytics-drizzle test:postgres");
+    expect(REAL_RESOURCE_JOB).toContain("pnpm build --filter=@croco/cohort-drizzle...");
+    expect(REAL_RESOURCE_JOB).toContain("pnpm --filter @croco/cohort-drizzle test:live");
     expect(REAL_RESOURCE_JOB).toContain("pnpm build --filter=@croco/engagement-drizzle...");
     expect(REAL_RESOURCE_JOB).toContain("pnpm --filter @croco/engagement-drizzle test:postgres");
     expect(REAL_RESOURCE_JOB).toContain("pnpm build --filter=@croco/entitlements-drizzle...");
     expect(REAL_RESOURCE_JOB).toContain("pnpm --filter @croco/entitlements-drizzle test:postgres");
     expect(REAL_RESOURCE_JOB).toContain("pnpm build --filter=@croco/execution-drizzle...");
     expect(REAL_RESOURCE_JOB).toContain("pnpm --filter @croco/execution-drizzle test:postgres");
+    expect(REAL_RESOURCE_JOB).toContain(
+      "FEATURES_POSTGRES_URL: postgresql://postgres:postgres@127.0.0.1:5432/croco_membership",
+    );
+    expect(REAL_RESOURCE_JOB).toContain("pnpm --filter @croco/features-drizzle test:postgres");
+    expect(REAL_RESOURCE_JOB).toContain(
+      "GAMIFICATION_POSTGRES_URL: postgresql://postgres:postgres@127.0.0.1:5432/croco_membership",
+    );
+    expect(REAL_RESOURCE_JOB).toContain("pnpm build --filter=@croco/gamification-drizzle...");
+    expect(REAL_RESOURCE_JOB).toContain("pnpm --filter @croco/gamification-drizzle test:postgres");
+    expect(WORKFLOW).toContain("              - 'packages/gamification-core/**'");
+    expect(WORKFLOW).toContain("              - 'packages/gamification-drizzle/**'");
+    expect(REAL_RESOURCE_JOB).toContain("pnpm build --filter=@croco/experience-drizzle...");
+    expect(REAL_RESOURCE_JOB).toContain("pnpm --filter @croco/experience-drizzle test:live");
+    expect(REAL_RESOURCE_JOB).toContain("pnpm build --filter=@croco/promotions-drizzle...");
+    expect(REAL_RESOURCE_JOB).toContain("pnpm --filter @croco/promotions-drizzle test:live");
     expect(REAL_RESOURCE_JOB).toContain("pnpm build --filter=@croco/membership-drizzle...");
     expect(REAL_RESOURCE_JOB).toContain(
       "pnpm --filter @croco/membership-drizzle exec vitest run src/tests/DrizzleMembershipStore.postgres.spec.ts",
+    );
+  });
+
+  it("routes mission persistence changes to the real PostgreSQL concurrency suite", () => {
+    const filterStep = workflowJobSteps("changes").find((step) => step.id === "filter");
+    const filterEnv = filterStep?.env as Readonly<Record<string, string>>;
+    const filters = parseDocument(filterEnv.PATH_FILTERS).toJS() as {
+      readonly real_resources: readonly string[];
+    };
+    expect(filters.real_resources).toEqual(
+      expect.arrayContaining(["packages/gamification-core/**", "packages/gamification-drizzle/**"]),
+    );
+
+    const persistenceStep = workflowJobSteps("real-resource-tests").find(
+      (step) => step.name === "Verify persistence concurrency against PostgreSQL",
+    );
+    expect(persistenceStep?.env).toMatchObject({
+      MISSIONS_POSTGRES_URL: "postgresql://postgres:postgres@127.0.0.1:5432/croco_membership",
+    });
+    expect(persistenceStep?.run).toContain(
+      "pnpm build --filter=@croco/gamification-drizzle...\npnpm --filter @croco/gamification-drizzle test:postgres",
     );
   });
 
@@ -1019,6 +1067,11 @@ describe("CI verification profile contract", () => {
     expect(WORKFLOW).toContain("              - 'packages/entitlements-core/**'");
     expect(WORKFLOW).toContain("              - 'packages/entitlements-drizzle/**'");
     expect(WORKFLOW).toContain("              - 'packages/entitlements-drizzle/src/**'");
+  });
+
+  it("routes cohort persistence changes to the real PostgreSQL suite", () => {
+    expect(WORKFLOW).toContain("              - 'packages/cohort-core/**'");
+    expect(WORKFLOW).toContain("              - 'packages/cohort-drizzle/**'");
   });
 
   it("routes credit persistence changes to the real PostgreSQL conformance suite", () => {
@@ -1070,6 +1123,12 @@ describe("CI verification profile contract", () => {
     expect(WORKFLOW).toContain("              - 'packages/warehouse-postgres/**'");
     expect(REAL_RESOURCE_JOB).toContain("pnpm build --filter=@croco/warehouse-postgres...");
     expect(REAL_RESOURCE_JOB).toContain("pnpm --filter @croco/warehouse-postgres test:real");
+  });
+
+  it("runs outbox fact source integration against real PostgreSQL", () => {
+    expect(WORKFLOW).toContain("              - 'packages/etl-events-tx/**'");
+    expect(REAL_RESOURCE_JOB).toContain("pnpm build --filter=@croco/etl-events-tx...");
+    expect(REAL_RESOURCE_JOB).toContain("pnpm --filter @croco/etl-events-tx test:real");
   });
 
   it("runs fresh migration status against real PostgreSQL", () => {

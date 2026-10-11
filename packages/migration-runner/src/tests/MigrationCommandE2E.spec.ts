@@ -1,3 +1,5 @@
+import { writeFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { createProgram, type MigrationCliRuntime } from "../cli";
 import { MigrationRunner } from "../libs/MigrationRunner";
@@ -5,6 +7,47 @@ import { createMigrationFixtures } from "./helpers/createMigrationFixtures";
 import { DeterministicMigrationDatabase } from "./helpers/DeterministicMigrationDatabase";
 
 describe("migration command end-to-end", () => {
+  it("validates migration files without opening a database or running bodies", async () => {
+    const fixtures = createMigrationFixtures([{ id: "20260711000001", name: "create_accounts" }]);
+    const harness = createCommandHarness();
+    const fresh = harness.db.snapshot();
+
+    try {
+      await harness.run(["validate", "--dir", fixtures.path]);
+
+      expect(harness.db.snapshot()).toEqual(fresh);
+      expect(commandSignals(harness)).toEqual({
+        stdout: ["Validated 1 migration(s):", "  ✓ 20260711000001_create_accounts"],
+        stderr: [],
+        exitCodes: [0],
+        lifecycle: ["exit:0"],
+      });
+    } finally {
+      fixtures.cleanup();
+    }
+  });
+
+  it("rejects missing migration functions before opening a database", async () => {
+    const fixtures = createMigrationFixtures([]);
+    const harness = createCommandHarness();
+    writeFileSync(
+      join(fixtures.path, "20260711000001_create_accounts.js"),
+      "exports.up = async () => {};\n",
+    );
+
+    try {
+      await harness.run(["validate", "--dir", fixtures.path]);
+
+      expect(harness.exitCodes).toEqual([1]);
+      expect(harness.stderr).toEqual([
+        "Validation failed: migration-runner/missing-down-function (422 Validation Error): Migration 20260711000001_create_accounts has no down function",
+      ]);
+      expect(harness.lifecycle).toEqual(["exit:1"]);
+    } finally {
+      fixtures.cleanup();
+    }
+  });
+
   it("reports every migration as pending on a fresh backend without creating metadata", async () => {
     const fixtures = createMigrationFixtures([
       { id: "20260711000001", name: "create_accounts" },

@@ -477,6 +477,12 @@
       "runtimes": [],
       "domain": "Admin Ops"
     },
+    "admin-postgres": {
+      "role": "Plugins",
+      "subtype": "provider",
+      "runtimes": ["node"],
+      "domain": "Admin"
+    },
     "admin-react": {
       "role": "Plugins",
       "subtype": "presentation",
@@ -573,6 +579,18 @@
       "runtimes": [],
       "domain": "Cache"
     },
+    "cohort-core": {
+      "role": "Contracts",
+      "subtype": "domain",
+      "runtimes": [],
+      "domain": "Cohorts"
+    },
+    "cohort-drizzle": {
+      "role": "Plugins",
+      "subtype": "provider",
+      "runtimes": ["node", "lambda"],
+      "domain": "Cohorts"
+    },
     "cli": {
       "role": "Tooling",
       "subtype": "cli",
@@ -633,11 +651,35 @@
       "runtimes": ["node", "lambda"],
       "domain": "Engagement"
     },
+    "experience-core": {
+      "role": "Contracts",
+      "subtype": "domain",
+      "runtimes": [],
+      "domain": "Experiences"
+    },
+    "experience-drizzle": {
+      "role": "Plugins",
+      "subtype": "provider",
+      "runtimes": ["node", "lambda"],
+      "domain": "Experiences"
+    },
     "entitlements-core": {
       "role": "Contracts",
       "subtype": "domain",
       "runtimes": [],
       "domain": "Entitlements"
+    },
+    "etl-core": {
+      "role": "Contracts",
+      "subtype": "domain",
+      "runtimes": [],
+      "domain": "ETL"
+    },
+    "etl-events-tx": {
+      "role": "Plugins",
+      "subtype": "integration",
+      "runtimes": ["node"],
+      "domain": "ETL"
     },
     "entitlements-drizzle": {
       "role": "Plugins",
@@ -687,6 +729,12 @@
       "runtimes": [],
       "domain": "Features"
     },
+    "features-drizzle": {
+      "role": "Plugins",
+      "subtype": "provider",
+      "runtimes": ["node", "lambda"],
+      "domain": "Features"
+    },
     "features-posthog": {
       "role": "Plugins",
       "subtype": "integration",
@@ -728,6 +776,18 @@
       "subtype": "integration",
       "runtimes": [],
       "domain": "Framework Routes"
+    },
+    "gamification-core": {
+      "role": "Contracts",
+      "subtype": "domain",
+      "runtimes": [],
+      "domain": "Gamification"
+    },
+    "gamification-drizzle": {
+      "role": "Plugins",
+      "subtype": "provider",
+      "runtimes": ["node", "lambda"],
+      "domain": "Gamification"
     },
     "frontend-cloudflare": {
       "role": "Plugins",
@@ -801,6 +861,12 @@
       "runtimes": ["node", "lambda"],
       "domain": "Invitation"
     },
+    "lifecycle-drizzle": {
+      "role": "Plugins",
+      "subtype": "provider",
+      "runtimes": ["node", "lambda"],
+      "domain": "Lifecycle"
+    },
     "lifecycle-core": {
       "role": "Contracts",
       "subtype": "domain",
@@ -871,6 +937,12 @@
       "role": "Contracts",
       "subtype": "domain",
       "runtimes": [],
+      "domain": "Notifications"
+    },
+    "notifications-fcm": {
+      "role": "Plugins",
+      "subtype": "provider",
+      "runtimes": ["node", "lambda"],
       "domain": "Notifications"
     },
     "notifications-react-email": {
@@ -1137,11 +1209,23 @@
       "runtimes": ["browser", "node"],
       "domain": "Astryx UI"
     },
+    "warehouse-core": {
+      "role": "Contracts",
+      "subtype": "domain",
+      "runtimes": ["browser", "node", "lambda", "cloudflare-workers"],
+      "domain": "Warehouse"
+    },
     "warehouse-postgres": {
       "role": "Plugins",
       "subtype": "provider",
       "runtimes": ["node", "lambda"],
-      "domain": "Metrics"
+      "domain": "Warehouse"
+    },
+    "warehouse-tooling": {
+      "role": "Tooling",
+      "subtype": "build-target",
+      "runtimes": ["node"],
+      "domain": "Warehouse"
     },
     "webhooks-core": {
       "role": "Contracts",
@@ -1154,6 +1238,36 @@
       "subtype": "domain",
       "runtimes": [],
       "domain": "Workflow"
+    },
+    "promotions-core": {
+      "role": "Contracts",
+      "subtype": "domain",
+      "runtimes": [],
+      "domain": "Promotions"
+    },
+    "promotions-drizzle": {
+      "role": "Plugins",
+      "subtype": "provider",
+      "runtimes": ["node", "lambda"],
+      "domain": "Promotions"
+    },
+    "referral-core": {
+      "role": "Contracts",
+      "subtype": "domain",
+      "runtimes": [],
+      "domain": "Referrals"
+    },
+    "referral-drizzle": {
+      "role": "Plugins",
+      "subtype": "provider",
+      "runtimes": ["node", "lambda"],
+      "domain": "Referrals"
+    },
+    "billing-drizzle": {
+      "role": "Plugins",
+      "subtype": "provider",
+      "runtimes": ["node", "lambda"],
+      "domain": "Billing"
     }
   },
   "groups": {
@@ -1196,12 +1310,16 @@
         "auth-core",
         "batch-core",
         "billing-core",
+        "cohort-core",
         "credits-core",
         "customer-health-core",
         "engagement-core",
+        "experience-core",
         "entitlements-core",
+        "etl-core",
         "execution-core",
         "features-core",
+        "gamification-core",
         "governance-core",
         "impersonation-core",
         "invitation-core",
@@ -1217,13 +1335,17 @@
         "storage-core",
         "tasks-core",
         "triggers-core",
-        "workflow-core"
+        "warehouse-core",
+        "workflow-core",
+        "promotions-core",
+        "referral-core"
       ]
     },
     "Provider": {
       "description": "Concrete datastore, SaaS provider, and external service adapters",
       "packages": [
         "access-drizzle",
+        "admin-postgres",
         "analytics-drizzle",
         "audit-drizzle",
         "auth-better-auth",
@@ -1231,16 +1353,22 @@
         "auth-drizzle",
         "batch-qstash",
         "billing-polar",
+        "cohort-drizzle",
         "credits-drizzle",
         "customer-health-drizzle",
         "engagement-drizzle",
+        "experience-drizzle",
+        "lifecycle-drizzle",
         "entitlements-drizzle",
         "execution-drizzle",
+        "features-drizzle",
+        "gamification-drizzle",
         "invitation-drizzle",
         "membership-drizzle",
         "metering-drizzle",
         "metering-upstash",
         "metrics-billing",
+        "notifications-fcm",
         "notifications-resend",
         "onboarding-drizzle",
         "ratelimit-upstash",
@@ -1251,13 +1379,17 @@
         "storage-r2",
         "tasks-qstash",
         "triggers-qstash",
-        "warehouse-postgres"
+        "warehouse-postgres",
+        "promotions-drizzle",
+        "referral-drizzle",
+        "billing-drizzle"
       ]
     },
     "Integration": {
       "description": "Analytics, feature-flag, and observability integrations",
       "packages": [
         "analytics-posthog",
+        "etl-events-tx",
         "features-posthog",
         "integrations-posthog",
         "telemetry-api",
@@ -1317,7 +1449,8 @@
         "esbuild-plugin",
         "migration-runner",
         "testing",
-        "testing-resources"
+        "testing-resources",
+        "warehouse-tooling"
       ]
     }
   },
@@ -1437,22 +1570,41 @@
       "label": "🔴 alpha/WIP",
       "packages": [
         "admin-generated",
+        "admin-postgres",
         "admin-react",
         "analytics-drizzle",
         "auth-better-auth",
         "auth-clerk",
         "batch-qstash",
+        "cohort-core",
+        "cohort-drizzle",
         "credits-core",
         "credits-drizzle",
         "engagement-drizzle",
+        "experience-core",
+        "experience-drizzle",
+        "lifecycle-drizzle",
+        "etl-core",
+        "etl-events-tx",
+        "features-drizzle",
         "frontend-problems",
         "metering-upstash",
+        "notifications-fcm",
         "notifications-react-email",
         "notifications-resend",
         "ratelimit-upstash",
         "storage-cloudflare",
         "tasks-qstash",
-        "triggers-qstash"
+        "triggers-qstash",
+        "warehouse-core",
+        "warehouse-tooling",
+        "promotions-core",
+        "promotions-drizzle",
+        "referral-core",
+        "referral-drizzle",
+        "gamification-core",
+        "gamification-drizzle",
+        "billing-drizzle"
       ]
     },
     "deprecated": {
@@ -1519,6 +1671,18 @@
           "flush lifecycle",
           "disabled-mode skip evidence",
           "safe readiness diagnostics"
+        ]
+      },
+      "etl-events-tx": {
+        "domain": "ETL",
+        "adapter": "Transactional outbox to durable warehouse fact integration",
+        "runtimes": ["node"],
+        "requiredEnv": ["durable outbox, warehouse writer, and quarantine store supplied by app"],
+        "features": [
+          "validated server event envelope",
+          "per-consumer inbox acknowledgement after durable receipt",
+          "durable quarantine for invalid facts",
+          "exact-ID retained replay with unavailable history"
         ]
       },
       "audit-drizzle": {
@@ -1618,6 +1782,18 @@
           "deterministic ledger history"
         ]
       },
+      "cohort-drizzle": {
+        "domain": "Cohorts",
+        "adapter": "PostgreSQL cohort source and publication store",
+        "runtimes": ["node", "lambda"],
+        "requiredEnv": ["PostgreSQL connection supplied by app"],
+        "features": [
+          "registered normalized source mappings",
+          "bounded cohort runs",
+          "checkpointed membership snapshots",
+          "compare-and-set publication"
+        ]
+      },
       "customer-health-drizzle": {
         "domain": "Customer health",
         "adapter": "Drizzle repository",
@@ -1639,6 +1815,29 @@
           "deterministic delivery history"
         ]
       },
+      "experience-drizzle": {
+        "domain": "Experiences",
+        "adapter": "PostgreSQL experience configuration and receipt store",
+        "runtimes": ["node", "lambda"],
+        "requiredEnv": ["PostgreSQL connection supplied by app"],
+        "features": [
+          "revisioned publication and audit",
+          "atomic exposure reservations",
+          "durable display and dismissal receipts"
+        ]
+      },
+      "lifecycle-drizzle": {
+        "domain": "Lifecycle",
+        "adapter": "PostgreSQL Journey episode and action intent store",
+        "runtimes": ["node", "lambda"],
+        "requiredEnv": ["PostgreSQL connection supplied by app"],
+        "features": [
+          "tenant-scoped reentry uniqueness",
+          "atomic episode and action admission",
+          "leased durable wake claims",
+          "pinned definitions and audit receipts"
+        ]
+      },
       "entitlements-drizzle": {
         "domain": "Entitlements",
         "adapter": "Drizzle repository",
@@ -1652,6 +1851,13 @@
         "runtimes": ["node", "lambda"],
         "requiredEnv": ["database connection supplied by app"],
         "features": ["execution state persistence", "retryable failure records"]
+      },
+      "features-drizzle": {
+        "domain": "Features",
+        "adapter": "PostgreSQL policy release store",
+        "runtimes": ["node", "lambda"],
+        "requiredEnv": ["PostgreSQL connection supplied by app"],
+        "features": ["revisioned policy publication", "scoped activation and receipts"]
       },
       "features-posthog": {
         "domain": "Feature flags",
@@ -1800,16 +2006,38 @@
         ]
       },
       "warehouse-postgres": {
-        "domain": "Metrics",
-        "adapter": "PostgreSQL metrics repository",
+        "domain": "Warehouse",
+        "adapter": "PostgreSQL fact warehouse and legacy metrics repository",
         "runtimes": ["node", "lambda"],
         "requiredEnv": ["database connection supplied by app"],
         "features": [
+          "typed fact tables and explicit migrations",
+          "candidate write receipts and snapshot publication",
+          "bounded pinned fact reads and privacy suppression",
           "legacy metrics persistence",
           "plain PostgreSQL schema installation",
           "optional TimescaleDB hypertables",
           "tenant-scoped event idempotency",
           "legacy schema reconciliation"
+        ]
+      },
+      "notifications-fcm": {
+        "domain": "Notifications",
+        "adapter": "Firebase Cloud Messaging push provider",
+        "runtimes": ["node", "lambda"],
+        "requiredEnv": [
+          "Firebase project ID and explicit credentials supplied by app",
+          "token resolver supplied by app for persistent dispatch"
+        ],
+        "features": [
+          "canonical push content",
+          "one endpoint per dispatch",
+          "bounded batch concurrency",
+          "explicit retry and terminal classification",
+          "provider acceptance evidence",
+          "opaque token reference resolution",
+          "redacted Problems and diagnostics",
+          "opt-in live smoke documentation"
         ]
       },
       "notifications-resend": {
@@ -2040,6 +2268,75 @@
           "shared conformance",
           "redacted schedule diagnostics",
           "diagnostic-coded webhook failures"
+        ]
+      },
+      "promotions-drizzle": {
+        "domain": "Promotions",
+        "adapter": "PostgreSQL promotion policy, quote, and claim store",
+        "runtimes": ["node", "lambda"],
+        "requiredEnv": ["PostgreSQL connection supplied by app"],
+        "features": [
+          "atomic budget reservations",
+          "compare-and-set claim transitions",
+          "deterministic idempotency receipts",
+          "indeterminate grant reconciliation"
+        ]
+      },
+      "referral-drizzle": {
+        "domain": "Referrals",
+        "adapter": "PostgreSQL referral program, link-hash, attribution, and benefit-intent store",
+        "runtimes": ["node", "lambda"],
+        "requiredEnv": ["PostgreSQL connection supplied by app"],
+        "features": [
+          "hash-only referral links",
+          "first-valid attribution with held duplicates",
+          "atomic budget reservations",
+          "compare-and-set attribution and benefit transitions"
+        ]
+      },
+      "admin-postgres": {
+        "domain": "Admin",
+        "adapter": "PostgreSQL Customer Explorer repository and timeline source",
+        "runtimes": ["node"],
+        "requiredEnv": ["PostgreSQL connection supplied by app"],
+        "features": [
+          "scoped immutable samples",
+          "atomic audited note revisions",
+          "explicit retention purge",
+          "bounded live source keyset pagination"
+        ]
+      },
+      "gamification-drizzle": {
+        "domain": "Gamification",
+        "adapter": "PostgreSQL recurring mission, cooperative challenge, and achievement reward stores",
+        "runtimes": ["node", "lambda"],
+        "requiredEnv": ["PostgreSQL connection supplied by app"],
+        "features": [
+          "explicit participation intervals",
+          "transactional capped contributions",
+          "durable finalization receipt and completion intent",
+          "privacy erasure",
+          "immutable audited policy versions",
+          "durable selection and family cap reservation",
+          "separate bounded fallback",
+          "append-only achievement points",
+          "unique badge ownership",
+          "same-identity recovery",
+          "immutable mission definitions",
+          "recurring period progress",
+          "atomic evidence and completion receipts"
+        ]
+      },
+      "billing-drizzle": {
+        "domain": "Billing",
+        "adapter": "PostgreSQL billing lifecycle and cancellation session store",
+        "runtimes": ["node", "lambda"],
+        "requiredEnv": ["PostgreSQL connection supplied by app"],
+        "features": [
+          "revision compare-and-set",
+          "durable lifecycle commands",
+          "scoped cancellation sessions",
+          "audited choice policy revisions"
         ]
       }
     }

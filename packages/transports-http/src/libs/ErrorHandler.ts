@@ -5,7 +5,11 @@ import {
   Inject,
   LOGGER_TOKEN,
 } from "@croco/framework-context";
-import { Problem, type ProblemDetails } from "@croco/problems-core";
+import {
+  FALLBACK_INTERNAL_SERVER_ERROR_PROBLEM_CODE,
+  Problem,
+  type ProblemDetails,
+} from "@croco/problems-core";
 import { createHttpProblemDetails, redactHttpProblemDetailsBody } from "@croco/protocols-rest";
 import { HTTP_CONTEXT_KEYS } from "./contextKeys";
 import type { CrocoHttpContext } from "./types";
@@ -29,6 +33,13 @@ export class ErrorHandler {
   constructor(private readonly logger: ILogger) {}
 
   handleError(error: unknown, ctx: CrocoHttpContext): Response {
+    const response = this.createErrorResponse(error, ctx);
+    response.headers.set("Content-Type", "application/problem+json");
+
+    return response;
+  }
+
+  private createErrorResponse(error: unknown, ctx: CrocoHttpContext): Response {
     if (error instanceof Problem) {
       return this.handleProblem(error, ctx);
     }
@@ -42,6 +53,7 @@ export class ErrorHandler {
         type: "about:blank",
         title: "Internal Server Error",
         status: 500,
+        code: FALLBACK_INTERNAL_SERVER_ERROR_PROBLEM_CODE,
         detail: "An unexpected error occurred",
         ...this.createFailureMetadata(ctx),
       },
@@ -51,11 +63,14 @@ export class ErrorHandler {
 
   private handleProblem(problem: Problem, ctx: CrocoHttpContext): Response {
     const body = this.createProblemResponseBody(problem, ctx);
+    if (problem.status >= 500) {
+      this.safelyReportError("Server problem:", {
+        problem,
+        ...this.createFailureMetadata(ctx),
+      });
+    }
     ctx.res.headers["content-type"] = "application/problem+json";
-    const response = ctx.jsonResponse(body, body.status);
-    response.headers.set("Content-Type", "application/problem+json");
-
-    return response;
+    return ctx.jsonResponse(body, body.status);
   }
 
   createProblemResponseBody(problem: Problem, ctx: CrocoHttpContext): ProblemDetails {
@@ -88,13 +103,14 @@ export class ErrorHandler {
   }
 
   private handleGenericError(error: Error, ctx: CrocoHttpContext): Response {
-    this.safelyReportUnhandledError(error);
+    this.safelyReportError("Unhandled error:", error);
 
     return ctx.jsonResponse(
       {
         type: "about:blank",
         title: "Internal Server Error",
         status: 500,
+        code: FALLBACK_INTERNAL_SERVER_ERROR_PROBLEM_CODE,
         detail: "An internal error occurred",
         ...this.createFailureMetadata(ctx),
       },
@@ -102,10 +118,10 @@ export class ErrorHandler {
     );
   }
 
-  private safelyReportUnhandledError(error: Error): void {
+  private safelyReportError(message: string, context: Record<string, unknown> | Error): void {
     let loggingResult: unknown;
     try {
-      loggingResult = this.logger.error("Unhandled error:", error);
+      loggingResult = this.logger.error(message, context);
     } catch {
       return;
     }

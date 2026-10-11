@@ -40,8 +40,8 @@ export class LambdaTimeoutProblem extends Problem {
   readonly category = ProblemCategory.InternalServerError;
 
   // biome-ignore lint/complexity/noUselessConstructor: Problem 클래스의 protected constructor 호출 필요
-  constructor(detail: string) {
-    super("LAMBDA_TIMEOUT_GUARD", ProblemCategory.InternalServerError, detail);
+  constructor(detail: string, options?: { cause?: Error }) {
+    super("LAMBDA_TIMEOUT_GUARD", ProblemCategory.InternalServerError, detail, options);
   }
 }
 

@@ -179,13 +179,198 @@ assertAdminResourceValid(userResource);
 all diagnostics in RFC 7807 extensions so build-time or codegen checks can fail
 without guessing at runtime.
 
+## Policy release authorization
+
+`PolicyReleaseAccess` is resolved by the server from its authenticated identity. Its scope
+includes an explicit tenant ID or `null` for a separately granted app-wide scope. Omitting a
+tenant never grants app-wide access. `assertPolicyReleaseAccess` requires an exact app,
+environment, and tenant match and the requested read, write, review, or publish permission.
+Never accept the access object or actor identity from browser request JSON.
+
+`PolicyReleaseOperations` wraps the same `PolicyReleaseService` used by standalone callers.
+Its bounded `read({ policyId, scope }, access)` reads one latest revision. `edit` accepts one
+registered descriptor ID (`field`) and its value; `review` and `publish` delegate the exact
+expected revision to the service. Every mutation requires `reason`, `expectedRevision`, and
+`idempotencyKey`; the actor comes from server access. `publish` accepts the review hash and
+an optional canonical UTC `effectiveAt` for scheduling. A provider failure propagates.
+
+Snapshots omit sensitive field values and conservatively redact semantic changes when a
+registration contains a sensitive field. Validation exposes code, path, and severity without raw input. Field snapshots retain numeric
+bounds and select options. Publication and schedule receipts are read from the persisted command
+receipt, including after reload. The default
+impact snapshot reports the revision state as fact and missing outcome data explicitly;
+applications may supply separately sourced estimates to the console.
+
+## Contact policy operations
+
+`ContactPolicyOperations` provides standalone server operations for the optional
+engagement contact policy gate. `load`, `save`, and `dryRun` require an explicit
+`{ scope: { app, environment, tenantId }, subject }` target. The server-owned
+`authorize` callback resolves the authenticated actor and `contact-policy.read`
+or `contact-policy.write` permissions for that exact target. Write permission must authorize tenant-wide policy changes; client permissions
+are never authorization evidence.
+
+Register editable rule limit bounds, optional quiet hours, and topic priority
+bounds with `ContactPolicyAdminRegistration`. Edits cannot change topic kinds,
+message registrations, rule targeting, or reservation TTL. Topic exception
+registration remains in application code. `createPolicy(snapshot)` constructs
+the same `ContactPolicy` used by the send gate; dry-run calls its non-consuming
+`evaluate` method and never reserves budget.
+
+Policy settings and write idempotency keys belong to app/environment/tenant.
+The subject selects dry-run and history only; it does not partition configuration.
+Supply a `ContactPolicyAdminStore` with atomic revision comparison, idempotency
+replay/conflict detection, and audit persistence. `save` passes the original edit,
+server actor, reason, expected revision and key into that transaction. Persisted
+configuration revisions become policy versions for subsequent sends. History
+must be scoped to the authorized subject and contain only logical send/campaign
+IDs and decision metadata; it must not contain contact addresses or tokens.
+`historyComplete: false` signals partial evidence rather than a complete count.
+
+Install the send gate with `resolvePolicy(scope)` when operators can edit the
+policy. Resolve the persisted configuration for that app/environment/tenant and
+construct `ContactPolicy` with its config/topics and the shared durable budget
+store. Use the same factory for `ContactPolicyOperations.createPolicy`. The gate
+resolves configuration immediately before each new channel reservation; prior
+reservations retain their recorded policy version. A static gate policy is
+appropriate only when configuration is supplied exclusively in code.
+
+Persisted settings must match the deployed code registration. Call
+`assertContactPolicyRegistration(snapshot, registration)` before constructing a send
+policy from stored settings; `ContactPolicyOperations` applies this guard to reads,
+dry-runs, and saves. The guard preserves permitted limit, priority, and quiet-hour
+overrides, and rejects changed registration versions, rule topology or timing,
+reservation TTL, topic kinds, message memberships, or overrides outside current
+bounds with `admin-core/contact-policy-invalid`. A deployment that changes these
+contracts requires an explicit settings migration or reinitialization. Do not
+reuse the old snapshot or silently substitute defaults after validation fails.
+
+## Experiment operations
+
+`ExperimentOperations` is the server boundary for the registered experiment runtime. Construct `ExperimentAdminAccess` from authentication with an explicit app, environment, tenant (`null` means an explicitly authorized application scope), actor, and permissions. Tenant omission is denied. Read access is required alongside preview, operate, or configure permissions.
+
+The boundary exposes only public definition fields and server-owned sample labels. `preview(target, sampleId, access)` resolves the subject and context on the server, calls the runtime's non-persistent preview, and removes provider metadata. It never accepts client-selected subjects or handlers.
+
+`command` supplies start/pause/stop with a server-resolved actor, reason, idempotency key, and expected state version (`expectedRevision`, initially zero). `configure` creates a new immutable revision; it retains the server registration's identity, salt, allocator, and private handlers. Operators may change the unit, login policy, registered eligibility rule, allocation/weights, hypothesis, observation plan, and UTC period. The runtime validates variant identities and values against the source registration. Existing assignments keep their original revision.
+
+See `examples/experiment-runtime` for a credential-free Console and actual server treatment flow.
+
+## Journey operations
+
+`JourneyOperations` is a server boundary for listing redacted episode evidence,
+previewing registered sample subjects, and pause/resume/stop commands. Supply an
+`authenticate()` function that derives scope, actor and permissions from the server
+session. Request bodies supply no authority: each method verifies tenant, app and
+environment plus `journey.read`, `journey.preview` or `journey.operate`.
+
+Commands require an audit reason, idempotency key and expected revision. The
+adapter calls `JourneyEngine.command`; the engine persists audit and enforces
+revision/idempotency semantics. Errors propagate, including revision conflicts.
+The dry-run adapter resolves a registered sample in the authenticated scope and
+uses an isolated, non-dispatching preview. Returned views exclude raw subjects,
+business objects, action parameters and audit payloads; receipt reason codes are
+allowlisted. `safeResume` is false when admitted or indeterminate actions remain.
+
+### Reminder operations contract
+
+`ReminderOperationsSource` loads reminder rows and occurrence outcomes, and accepts
+operator cancellation only. `assertReminderOperatorCancel` validates scope,
+actor, reason, idempotency key and expected version; the adapter must also enforce
+server authorization and compare-and-swap. `loadReminderOperations` checks
+`reminder.read` before calling the source and preserves source failure evidence.
+
+## Customer Explorer
+
+Timestamp inputs require an explicit ISO timezone and support up to six fractional second digits. Finer precision is rejected rather than rounded; occurrence order, anchor phases and observation windows preserve microseconds.
+
+`CustomerExplorerService` owns deterministic SHA-256 sampling, scoped authorization, per-subject timeline merging, API property minimization, notes and typed observation drafts. Bind `ExplorerAuthorization` to an authenticated server actor; callers cannot supply a trusted actor or permission grant. Scope always includes `appId`, `environment` and `tenantId`; an omitted tenant is invalid.
+
+`SampleQuery` pins the seed, population snapshot, definition revision, anchor window and sample counts (defaults: 10 achievers and 5 prior-step comparisons; maximum 100 of each). These are exploratory UX limits, not a statistical representation claim. Supply an immutable, authorized `ExplorerPopulation` from your existing source snapshot. Anonymous identities must remain separate unless the application supplies authorized identity-link evidence before constructing that population.
+
+A `TimelineSource` reads one subject and one bounded window at a time. Pages default to 50 rows per source and accept at most 200. Events are ordered by occurrence time, source and stable event ID; equal times do not imply causality. Source denied, failed, delayed and partial statuses remain visible even when no records can be displayed. Property names require a server allowlist; contact/credential keys are dropped, email/phone text is masked and object references are omitted. Hosts must use pseudonymous subject/event identifiers and safe categorical event kinds; automatic text masking is not a general PII classifier.
+
+Notes distinguish `fact` and `hypothesis`, preserve server actor/revision audit records, and use repository compare-and-set for edits. New evidence references must exist inside the selected subject's window. Existing references survive source deletion as `unavailable`; source payloads are never cached in a note. Samples and notes have explicit expiry bounded by service policy. `deleteSample` removes its notes and audit records through the selected repository; use its explicit retention purge for expired storage.
+
+`exportDraft` requires a separate export permission and returns an `ExplorerQueryDraft` containing typed source/kind/anchor conditions, the population snapshot and definition revision. It does not export raw records. Integrations without Cohort Builder can download this definition directly. The React workspace uses the same service callbacks. See [the standalone PostgreSQL example](../../examples/customer-explorer/README.md).
+
+## Activation candidate reports
+
+`ActivationCandidateOperations` loads and calculates activation evidence through a trusted
+`authenticate` / `loadInput` composition. It requires app, environment, tenant and subject kind,
+`activation.read` for load/read/export and additionally `activation.report-write` for save.
+Pass the viewed `ActivationReport` to `save(id, candidateId, cohort, expectedReport, signal?)`;
+the service pins its source run and rejects changed evidence before writing. Read/export recompute
+against that immutable run and verify input, definition and saved-report hashes. No subject rows
+are persisted or exported. Existing host storage supplies scoped `read`/`write`; it must enforce
+current access and retain the referenced source run. SHA-256 digests detect inconsistency, not
+malicious replacement by a fully privileged storage operator. Cancellation and permission changes
+remain explicit failures.
+
+### Saved intent operations
+
+`SavedIntentOperations` connects the operator console to the same
+`SavedIntentService` used by customers. Construct access from the verified server
+session and require `saved-intent.read`, `saved-intent.write`, or
+`saved-intent.inspect` as appropriate. The underlying service independently
+checks the principal and exact app/environment/tenant/subject for every action.
+
+`readPolicy` reads a code-declared resource type's effective policy. `updatePolicy`
+requires the expected revision, actor, reason, and idempotency key; it cannot edit
+resolvers, URLs, or the declared resource catalog. `inspect` uses bounded service
+pagination and returns availability, rank, and exclusion reasons. It omits private
+resource IDs, titles, URLs, progress references, and subject data. The server must
+only offer inspection targets the operator can access.
+
+## Targeting impact replay
+
+`TargetingImpactOperations` (`@croco/admin-core/targeting-impact-operations`, server only) validates replay JSON and authorizes each action through
+an injected server session authorizer. App, environment, tenant and subject kind
+are mandatory; request bodies never grant permissions. `replay(input)` and
+`save(input)` return aggregate `TargetingImpactReport` views. `load(scope, inputHash)`
+and `export(scope, inputHash)` authorize before reading and verify saved evidence
+by recomputing its hashes and result. Save is immutable and checks the persisted
+report by reading it back. Exports omit subject rows, historical traits and predicate
+literals.
+
+`replay(input)` and `save(input)` accept historical rows from trusted server code,
+not a browser request body. The host must authenticate the evidence source and
+check subject membership before calling them. Scope authorization controls access;
+hashes and recomputation verify consistency, not the origin or truth of the rows.
+These methods do not check caller-supplied rows against `CampaignStore`.
+To persist a comparison, pass the same authenticated historical input used to
+compute it.
+
+`TargetingImpactReportStore` holds the complete private evidence needed for
+reproducibility. Restrict this server-only store to authorized operators and apply
+application retention and privacy policy. `InMemoryTargetingImpactReportStore` is
+an executable implementation; it does not provide durable process storage.
+
+`replayCampaign` reads an existing complete tenant `CampaignStore` snapshot with
+explicit member, page and page-size bounds. Register `campaignScope` alongside the
+store to bind its app, environment, tenant and `user` subject kind. The adapter
+validates contiguous pages and recipient ownership. Ready members may declare historical `data.policyReplayRow`
+evidence with the metrics replay schema, including its actual historical decision
+time. Ordinary message payloads and mapping failures are counted as missing
+history. The result includes total membership, replayed membership and missing
+membership, and is partial or unavailable when history is absent. A partial report
+covers only validated historical rows; its denominator is not the entire snapshot.
+Queued outcomes never become dispatches, and current traits, costs, touchpoints or
+outcomes are never substituted for missing evidence. No dispatch or campaign
+mutation method is called.
+
+### Retention offer operations
+
+`RetentionOfferOperations` wraps `CancellationService` with a server-resolved actor. `load(scope)` authorizes through the service before reading policy and reporting sessions. `save(scope, edit)` delegates registered choice validation, revision comparison, idempotency and atomic audit persistence to the cancellation service/store. Browser edits contain only entries, reason, expected revision and idempotency key; actor and audit time come from the server.
+
+`summarizeRetentionOffers` groups by policy version, subscription age in whole days at session creation, initial/renewal billing period and the authoritative refund kind, decimal amount and currency. Choice counts, scheduled cancellations, ended subscriptions, confirmed refunds and unresolved provider outcomes remain separate. These session counts are operational results, not causal retention estimates or a conversion denominator.
+
 ## Behavioral retention
 
 `createRetentionWorkbenchSource` executes `@croco/metrics-core` calculations on the server over normalized observations. Register versioned behavior definitions, provide a bounded `RetentionWorkbenchAdapter`, and set `maxEvents` and `maxPageSize`. `load` returns aggregate cards; `drilldown` returns a bounded page with denominator/numerator membership, exclusion reasons, action counts and active days.
 
 The adapter authorizes the exact app/environment/tenant and subject kind before any read. Drilldown additionally requires `retention:drilldown`; requests carrying `savedViewId` require `retention:saved-view:read`. Missing tenants fail validation. `subjectLabel` must return a stable opaque reference or masked label, never raw PII; it runs only after drilldown authorization. Aggregate cards contain no subject IDs or event IDs. Keep this adapter on the server and bind authorization to the authenticated caller.
 
-Readers must return complete normalized input within the requested limit. A result above `maxEvents` fails with `admin-core/retention-row-limit`; silently truncating observations and declaring them complete violates the adapter contract. The source does not decode files, run SQL, create a warehouse connection or store reports. Saved view persistence remains owned by the existing host repository: bind its definition/version, input hash and observation cutoff before calling this source. Passing a saved view ID alone does not persist or verify that binding.
+Readers must return complete normalized input within the requested limit. A result above `maxEvents` fails with `admin-core/retention-row-limit`; silently truncating observations and declaring them complete violates the adapter contract. The source uses normalized input from the shared metrics runtime bindings. Supply `savedViews: RetentionSavedViewStore` to connect the existing host repository. `save(request, id, expectedInputToken)` requires `retention:saved-view:write`, the displayed token and an immutable `request.sourceRef`. The adapter must return the same `dataset.sourceRef` when reading that pinned source. Records preserve the definition, selected windows, input digest and cutoffs, with aggregate cards only. `readSaved(scope, subjectKind, id)` authorizes before repository access, reloads the pinned source and rejects mismatched scope, corrupted aggregate evidence or changed inputs. The host isolates all scope fields and applies its retention/privacy policy; no new database is required.
 
 Source states distinguish `empty`, `provisional`, `insufficient`, `denied`, `error` and `ready`; the client supplies `loading`. Missing observation completeness never publishes a complete value. Typed Croco Problems retain their diagnostic code; untyped provider errors become `admin-core/retention-source-failed` without exposing provider details.
 

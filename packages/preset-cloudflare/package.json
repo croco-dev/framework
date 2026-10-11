@@ -19,11 +19,11 @@
     "types": "./dist/index.d.ts",
     "exports": {
       ".": {
-        "types": "./dist/index.d.ts",
+        "types": "./dist/index.d.mts",
         "import": "./dist/index.mjs"
       },
       "./fetch": {
-        "types": "./dist/fetch.d.ts",
+        "types": "./dist/fetch.d.mts",
         "import": "./dist/fetch.mjs"
       }
     },

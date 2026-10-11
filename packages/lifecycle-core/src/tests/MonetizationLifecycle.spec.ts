@@ -333,6 +333,66 @@ describe("MonetizationThresholdTracker", () => {
     });
   });
 
+  it.each([1_000, 1_001])(
+    "isolates replacement claims from stale owners at lease age %i ms",
+    async (leaseAge) => {
+      let now = new Date("2026-07-20T00:00:00.000Z");
+      const store = new InMemoryMonetizationThresholdStore({
+        claimLeaseDurationMs: 1_000,
+        now: () => now,
+      });
+      const tracker = new MonetizationThresholdTracker(store);
+      const input = { ...thresholdInput(850), thresholds: [0.5, 0.8] };
+      const expired = await tracker.evaluate(input);
+
+      now = new Date(now.getTime() + 999);
+      expect((await tracker.evaluate(input)).signals).toHaveLength(0);
+      now = new Date(now.getTime() + leaseAge - 999);
+      const replacement = await tracker.evaluate(input);
+      expect(replacement.signals).toHaveLength(2);
+      expect(replacement.signals).toEqual(expired.signals);
+
+      await tracker.release(expired);
+      expect(await store.getDiagnostics()).toMatchObject({ pendingCrossingCount: 2 });
+      await expect(tracker.acknowledge(expired)).rejects.toThrow(MonetizationThresholdClaimProblem);
+      expect(await store.getDiagnostics()).toMatchObject({
+        pendingCrossingCount: 2,
+        emittedCrossingCount: 0,
+        expiredClaimCount: 1,
+      });
+      expect(replacement.claimId).not.toBe(expired.claimId);
+      expect((await tracker.evaluate(input)).signals).toHaveLength(0);
+
+      await tracker.acknowledge(replacement);
+      await tracker.release(expired);
+      expect(await store.getDiagnostics()).toMatchObject({
+        pendingCrossingCount: 0,
+        emittedCrossingCount: 2,
+      });
+      expect((await tracker.evaluate(input)).signals).toHaveLength(0);
+    },
+  );
+
+  it("isolates a retry after explicit release from the released owner", async () => {
+    const store = new InMemoryMonetizationThresholdStore();
+    const tracker = new MonetizationThresholdTracker(store);
+    const input = { ...thresholdInput(850), thresholds: [0.5, 0.8] };
+    const released = await tracker.evaluate(input);
+    await tracker.release(released);
+    const replacement = await tracker.evaluate(input);
+
+    expect(replacement.signals).toEqual(released.signals);
+    expect(replacement.signals).toHaveLength(2);
+    await expect(tracker.acknowledge(released)).rejects.toThrow(MonetizationThresholdClaimProblem);
+    await tracker.release(released);
+    expect(await store.getDiagnostics()).toMatchObject({
+      pendingCrossingCount: 2,
+      emittedCrossingCount: 0,
+    });
+    await tracker.acknowledge(replacement);
+    expect((await tracker.evaluate(input)).signals).toHaveLength(0);
+  });
+
   it("keeps an older expired claim retryable after a newer claim is acknowledged", async () => {
     let now = new Date("2026-07-20T00:00:00.000Z");
     const store = new InMemoryMonetizationThresholdStore({

@@ -15,7 +15,7 @@ title: "SubscriptionRevokedEvent"
 
 ### Constructor
 
-> **new SubscriptionRevokedEvent**(`tenantId`, `externalSubscriptionId`): `SubscriptionRevokedEvent`
+> **new SubscriptionRevokedEvent**(`tenantId`, `externalSubscriptionId`, `planVersionRef?`): `SubscriptionRevokedEvent`
 
 #### Parameters
 
@@ -26,6 +26,10 @@ title: "SubscriptionRevokedEvent"
 ##### externalSubscriptionId
 
 `string`
+
+##### planVersionRef?
+
+[`PlanVersionRef`](/api/billing-core/src/type-aliases/planversionref/)
 
 #### Returns
 
@@ -70,6 +74,12 @@ title: "SubscriptionRevokedEvent"
 #### Inherited from
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`metadata`](/api/events-core/src/classes/domainevent/#metadata)
+
+---
+
+### planVersionRef?
+
+> `readonly` `optional` **planVersionRef?**: [`PlanVersionRef`](/api/billing-core/src/type-aliases/planversionref/)
 
 ---
 

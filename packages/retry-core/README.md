@@ -104,6 +104,8 @@ class PaymentService {
 }
 ```
 
+Redis 저장소의 `ttlSeconds`(기본 60초)는 기본 키 보존 기간입니다. OPEN 전이에서는 상태, 마지막 실패 시각, HALF_OPEN 카운터 키를 `ttlSeconds + Math.ceil(openDuration / 1000)`초 동안 보존합니다. `@Retryable`은 `circuitBreaker.timeout`을 같은 보존 기간에 반영하므로 timeout이 기본 TTL보다 길어도 OPEN 기간 중 호출을 차단하며, OPEN 기간이 지난 뒤에도 키가 보존되어 있으면 첫 호출은 HALF_OPEN 시험 호출을 거칩니다. 전체 보존 기간이 지나 키가 만료된 비활성 회로는 CLOSED로 시작합니다. 보존 옵션 없이 저장소를 직접 호출하면 기존 `ttlSeconds`가 적용되며, 실패 카운터와 lock TTL은 바뀌지 않습니다.
+
 기본 저장소와 breaker registry는 decorated method가 로드된 동안 유지됩니다. 기본 저장소의 idle retention은 최소 5분이며, 명시적인 `timeout`에는 첫 HALF_OPEN 전환을 보장하기 위한 5분이 추가됩니다. 비활성 registry 항목은 5분 또는 1,000개 한도에서 제거되지만, 제거 과정은 상태 저장소를 reset하지 않습니다. 프로세스나 런타임 간 OPEN/HALF_OPEN 상태 공유가 필요하면 같은 분산 `stateStore`를 명시적으로 전달해야 합니다. 분산 저장소는 저장된 상태를 공유하며, breaker 인스턴스 내부의 CLOSED 동시 실행 카운터까지 프로세스 간 공유하지는 않습니다.
 
 ### 실패 분류
@@ -111,6 +113,8 @@ class PaymentService {
 기본 정책은 `ProblemCategory.InternalServerError`와 `ProblemCategory.TooManyRequests`를 재시도 가능한 transient 실패로 취급합니다. `BadRequest`, `ValidationError`, `BusinessRuleViolation`, `Conflict`, 인증/인가, not-found 계열은 기본적으로 terminal 실패입니다.
 
 오류가 재시도 분류를 명시하면 기본 정책은 category보다 그 값을 먼저 따릅니다. 최상위 `retryable` boolean, 그다음 `extensions.retryable` boolean을 `@croco/problems-core`의 `readExplicitRetryability()`로 읽습니다. 따라서 `extensions.retryable: false`인 `InternalServerError` Problem은 한 번만 실행되고, `extensions.retryable: true`인 `Conflict` Problem은 남은 시도 안에서 재시도됩니다. `noRetryFor`에 해당하는 오류는 명시 분류와 관계없이 재시도하지 않으며, 명시 분류가 없는 오류에는 기존 `retryFor`와 category 규칙이 그대로 적용됩니다. 명시 `false`는 다른 terminal 실패처럼 원래 오류를 바로 throw하므로 recovery 콜백, `@Recover`, exhausted 리스너, `wrapExhausted`를 거치지 않습니다. 반대로 명시 `true`인 오류는 terminal category라도 시도를 모두 소진한 뒤 recovery 콜백, `@Recover`, exhausted 리스너, `wrapExhausted`로 이어집니다. `Error`가 아닌 값을 throw하면 재시도 엔진이 `Error`로 감싸므로 그 값의 명시 분류는 정책에 전달되지 않습니다.
+
+`@Retryable({ now: () => number })`는 밀리초 시계를 registry와 회로 전이, 기본 in-memory 저장소의 만료 처리에 함께 전달합니다. `CircuitBreaker`와 `InMemoryCircuitBreakerStateStore`를 직접 만들 때도 `now`를 지정할 수 있습니다. 생략하면 시스템 시계를 사용합니다. 외부 `stateStore`를 전달하면 해당 저장소의 시간 관리는 호출자가 소유하며, 같은 회로를 공유하는 breaker는 같은 시간 기준을 사용해야 합니다. Backoff의 sleep 타이머는 이 옵션의 영향을 받지 않습니다.
 
 서킷 브레이커의 기본 실패 집계는 별도로 적용됩니다. Problem의 category가 HTTP 5xx 또는 `TooManyRequests`(429)이거나 일반 오류이면 실패로 집계합니다. 다른 Problem은 원래 오류를 전달하지만 회로를 열지 않으며, HALF_OPEN 시험 호출에서 발생해도 slot을 반납합니다. `CircuitBreaker` 생성 옵션과 `@Retryable({ circuitBreaker })` 설정의 `recordFailure: (error) => boolean`으로 집계 기준을 대체할 수 있습니다. 이 옵션은 재시도 정책을 바꾸지 않습니다.
 

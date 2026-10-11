@@ -1,0 +1,40 @@
+{
+  "name": "@croco-example/user-reminders",
+  "version": "0.0.0",
+  "private": true,
+  "type": "commonjs",
+  "scripts": {
+    "build": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
+    "build:browser": "tsup",
+    "dev": "pnpm build:browser && tsx src/server.ts",
+    "tick": "tsx src/tick.ts",
+    "migrate": "tsx src/server.ts --migrate"
+  },
+  "dependencies": {
+    "@croco/admin-core": "workspace:*",
+    "@croco/admin-react": "workspace:*",
+    "@croco/engagement-core": "workspace:*",
+    "@croco/engagement-drizzle": "workspace:*",
+    "@croco/frontend-react": "workspace:*",
+    "@croco/problems-core": "workspace:*",
+    "@croco/triggers-core": "workspace:*",
+    "@croco/tx-core": "workspace:*",
+    "@croco/tx-drizzle": "workspace:*",
+    "drizzle-orm": "catalog:",
+    "pg": "8.22.0",
+    "react": "19.2.5",
+    "react-dom": "19.2.5",
+    "reflect-metadata": "^0.2.2",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^24",
+    "@types/pg": "8.20.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "tsup": "^8.0.0",
+    "tsx": "^4.0.0",
+    "typescript": "^6.0.3"
+  }
+}

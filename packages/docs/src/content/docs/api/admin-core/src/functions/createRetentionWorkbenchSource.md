@@ -29,6 +29,10 @@ readonly [`BehaviorDefinition`](/api/metrics-core/src/type-aliases/behaviordefin
 
 `number`
 
+#### savedViews?
+
+[`RetentionSavedViewStore`](/api/admin-core/src/interfaces/retentionsavedviewstore/)
+
 ## Returns
 
 `object`
@@ -78,3 +82,47 @@ readonly [`BehaviorDefinition`](/api/metrics-core/src/type-aliases/behaviordefin
 #### Returns
 
 `Promise`\<[`RetentionWorkbenchState`](/api/admin-core/src/type-aliases/retentionworkbenchstate/)\>
+
+### readSaved()
+
+> **readSaved**(`scope`, `subjectKind`, `id`): `Promise`\<[`RetentionSavedView`](/api/admin-core/src/type-aliases/retentionsavedview/) \| `undefined`\>
+
+#### Parameters
+
+##### scope
+
+[`BehaviorScope`](/api/metrics-core/src/type-aliases/behaviorscope/)
+
+##### subjectKind
+
+`string`
+
+##### id
+
+`string`
+
+#### Returns
+
+`Promise`\<[`RetentionSavedView`](/api/admin-core/src/type-aliases/retentionsavedview/) \| `undefined`\>
+
+### save()
+
+> **save**(`request`, `id`, `expectedInputToken`): `Promise`\<[`RetentionSavedView`](/api/admin-core/src/type-aliases/retentionsavedview/)\>
+
+#### Parameters
+
+##### request
+
+[`RetentionWorkbenchRequest`](/api/admin-core/src/type-aliases/retentionworkbenchrequest/)
+
+##### id
+
+`string`
+
+##### expectedInputToken
+
+`string`
+
+#### Returns
+
+`Promise`\<[`RetentionSavedView`](/api/admin-core/src/type-aliases/retentionsavedview/)\>

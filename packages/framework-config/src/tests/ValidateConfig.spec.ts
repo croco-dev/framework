@@ -20,6 +20,16 @@ describe("validateConfig", () => {
     process.env = originalEnv;
   });
 
+  it("preserves multiple-of diagnostic codes", () => {
+    expect(() =>
+      validateConfig(z.object({ PORT: z.coerce.number().multipleOf(2) }), { PORT: "3" }),
+    ).toThrow(
+      expect.objectContaining({
+        detail: "Config validation failed: PORT: not_multiple_of: Invalid value",
+      }),
+    );
+  });
+
   describe("with valid config", () => {
     it("should return validated config when all required fields are present", () => {
       const schema = z.object({
@@ -133,6 +143,7 @@ describe("validateConfig", () => {
         CONFIG: z
           .string()
           .transform((value) => ({ PORT: value }))
+          // @ts-expect-error Deliberately pass a string into the number validator to test error provenance.
           .pipe(z.object({ PORT: z.number() })),
       });
 
@@ -145,7 +156,7 @@ describe("validateConfig", () => {
       const schema = z
         .object({ RAW_PORT: z.string() })
         .transform(({ RAW_PORT }) => ({ PORT: RAW_PORT }))
-        .pipe(z.object({ PORT: z.coerce.number() }));
+        .pipe(z.object({ PORT: z.coerce.number<string>() }));
 
       expect(() => validateConfig(schema, { RAW_PORT: "abc" })).toThrow(
         "PORT: invalid_type: Expected number",
@@ -156,7 +167,7 @@ describe("validateConfig", () => {
       const schema = z
         .object({ RAW_PORT: z.string().optional() })
         .transform(({ RAW_PORT }) => ({ PORT: RAW_PORT ?? "abc" }))
-        .pipe(z.object({ PORT: z.coerce.number() }));
+        .pipe(z.object({ PORT: z.coerce.number<string>() }));
 
       expect(() => validateConfig(schema, {})).toThrow("PORT: invalid_type: Expected number");
     });
@@ -165,7 +176,7 @@ describe("validateConfig", () => {
       const schema = z
         .object({ RAW_PORT: z.string() })
         .transform(({ RAW_PORT }) => ({ PORT: RAW_PORT }))
-        .pipe(z.object({ PORT: z.coerce.number() }))
+        .pipe(z.object({ PORT: z.coerce.number<string>() }))
         .optional();
 
       expect(() => validateConfig(schema, { RAW_PORT: "abc" })).toThrow(
@@ -176,13 +187,15 @@ describe("validateConfig", () => {
     it("should not call a defaulted piped value missing", () => {
       const schema = z
         .object({ PORT: z.string().default("abc") })
-        .pipe(z.object({ PORT: z.coerce.number() }));
+        .pipe(z.object({ PORT: z.coerce.number<string>() }));
 
       expect(() => validateConfig(schema, {})).toThrow("PORT: invalid_type: Expected number");
     });
 
     it("should report an input-stage missing value before a pipe runs", () => {
-      const schema = z.object({ PORT: z.string() }).pipe(z.object({ PORT: z.coerce.number() }));
+      const schema = z
+        .object({ PORT: z.string() })
+        .pipe(z.object({ PORT: z.coerce.number<string>() }));
 
       expect(() => validateConfig(schema, {})).toThrow("PORT: Missing required");
     });
@@ -197,7 +210,7 @@ describe("validateConfig", () => {
       const transformedPort = z
         .object({ RAW_PORT: z.string() })
         .transform(({ RAW_PORT }) => ({ PORT: RAW_PORT }))
-        .pipe(z.object({ PORT: z.coerce.number() }));
+        .pipe(z.object({ PORT: z.coerce.number<string>() }));
       const schema = z.intersection(transformedPort, z.object({ MODE: z.string().optional() }));
 
       expect(() => validateConfig(schema, { RAW_PORT: "abc" })).toThrow(
@@ -226,7 +239,7 @@ describe("validateConfig", () => {
     });
 
     it("should not confuse a reused output validator with an optional input validator", () => {
-      const port = z.coerce.number();
+      const port = z.coerce.number<string>();
       const schema = z
         .object({ PORT: port.optional() })
         .transform(() => ({ PORT: "abc" }))

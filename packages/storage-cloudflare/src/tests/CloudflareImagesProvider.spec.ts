@@ -1,6 +1,7 @@
 import { Container } from "@croco/framework-context";
 import {
   FileNotFoundProblem,
+  InvalidKeyProblem,
   MAX_SIGNED_URL_EXPIRY_SECONDS,
   storageStreamFromBytes,
   StorageOperationAbortedProblem,
@@ -1039,17 +1040,50 @@ describe("CloudflareImagesProvider", () => {
       );
     });
 
-    it("should throw terminal provider Problem when delete fails", async () => {
+    it("should resolve when the image is already missing", async () => {
+      const cancelResponseBody = vi.fn();
+      mockFetch.mockResolvedValueOnce(
+        new Response(new ReadableStream<Uint8Array>({ cancel: cancelResponseBody }), {
+          status: 404,
+        }),
+      );
+
+      await expect(provider.delete("missing-image-id")).resolves.toBeUndefined();
+      expect(cancelResponseBody).toHaveBeenCalledTimes(1);
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+    });
+
+    it("should preserve cancellation while cleaning up a missing delete response", async () => {
+      const controller = new AbortController();
+      mockFetch.mockResolvedValueOnce(
+        new Response(
+          new ReadableStream<Uint8Array>({
+            cancel() {
+              controller.abort("cancelled during response cleanup");
+            },
+          }),
+          { status: 404 },
+        ),
+      );
+
+      await expect(
+        provider.delete("missing-image-id", { signal: controller.signal }),
+      ).rejects.toThrow(StorageOperationAbortedProblem);
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+    });
+
+    it("should preserve the provider Problem when delete is forbidden", async () => {
       const mockResponse = {
         headers: new Headers(),
         ok: false,
+        status: 403,
         text: async () => "Not found",
       };
 
       mockFetch.mockResolvedValueOnce(mockResponse);
 
       await expect(provider.delete("test-image-id")).rejects.toMatchObject({
-        code: "storage-cloudflare/terminal-upstream",
+        code: "storage-cloudflare/validation-failed",
       });
     });
 
@@ -1585,27 +1619,15 @@ describe("CloudflareImagesProvider", () => {
     it.each([".", "..", "folder/../image.jpg", "folder/./image.jpg"])(
       "should reject dot-segment key %s before URL construction",
       async (key) => {
-        expect(() => provider.getPublicUrl(key)).toThrow(CloudflareImagesValidationProblem);
-        await expect(provider.delete(key)).rejects.toMatchObject({
-          code: "storage-cloudflare/validation-failed",
-          extensions: {
-            operation: "delete",
-            upstreamCode: "image-id-dot-segment",
-          },
-        });
+        expect(() => provider.getPublicUrl(key)).toThrow(InvalidKeyProblem);
+        await expect(provider.delete(key)).rejects.toThrow(InvalidKeyProblem);
         expect(mockFetch).not.toHaveBeenCalled();
       },
     );
 
     it("should reject a dot-segment upload key before creating a request", async () => {
-      await expect(provider.put("folder/../image.jpg", Buffer.from("image"))).rejects.toMatchObject(
-        {
-          code: "storage-cloudflare/validation-failed",
-          extensions: {
-            operation: "put",
-            upstreamCode: "image-id-dot-segment",
-          },
-        },
+      await expect(provider.put("folder/../image.jpg", Buffer.from("image"))).rejects.toThrow(
+        InvalidKeyProblem,
       );
       expect(mockFetch).not.toHaveBeenCalled();
     });
@@ -1972,7 +1994,9 @@ function useInMemoryCloudflareImagesBackend(
     }
 
     if (method === "DELETE" && url.includes("/images/v1/")) {
-      images.delete(decodeURIComponent(url.split("/images/v1/")[1] ?? ""));
+      if (!images.delete(decodeURIComponent(url.split("/images/v1/")[1] ?? ""))) {
+        return jsonResponse({ success: false, errors: ["Image not found"] }, 404);
+      }
       return jsonResponse({ success: true, errors: [] });
     }
 

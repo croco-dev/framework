@@ -530,9 +530,9 @@ function isZodType(value: unknown): value is z.ZodType {
     return false;
   }
 
-  const candidate = value as { readonly safeParse?: unknown };
+  const candidate = value as { readonly safeParse?: unknown; readonly _parse?: unknown };
 
-  return typeof candidate.safeParse === "function";
+  return typeof candidate.safeParse === "function" && typeof candidate._parse === "function";
 }
 
 const HTTP_METHODS = new Set<string>(Object.values(HttpMethod));

@@ -117,3 +117,15 @@ pnpm build
 pnpm contract:verify
 pnpm di:verify
 ```
+
+## Cohort Builder demo
+
+The Cohort Builder evaluates a synthetic three-customer fixture on the Vite development server.
+Its registered `plan` and `report.created` conditions distinguish an active trial, a fully observed inactive trial,
+and an unobserved trial. The timestamp is fixed at `2026-09-27T00:00:00Z` for reproducible results.
+Preview samples are limited to 50; editing a condition requires another preview before publication.
+Publication checks the run and expected revision, retains actor/reason/idempotency evidence, and reads the completed
+snapshot through the real `CohortAudienceSource`. All demo state is in memory and resets on restart.
+Run `pnpm dev:web` and use the Cohort Builder on `/`. The `/cohort-demo` endpoints are development middleware,
+not deployment routes. Production integrations must derive tenant and field access from server authentication
+and connect `CohortOperationsAdapter` to persistent normalized sources and publication storage.

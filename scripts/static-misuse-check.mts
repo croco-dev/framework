@@ -36,6 +36,7 @@ type StaticMisuseRule = {
   readonly description: string;
   readonly limitation: string;
   readonly recovery: string;
+  readonly sourceDirs?: readonly string[];
   readonly detectors: readonly LineDetector[];
   readonly syntaxDetectors?: readonly SyntaxDetector[];
   readonly includeFile?: (relativeFile: string) => boolean;
@@ -202,6 +203,24 @@ const rawErrorRuntimeBoundaryRule: StaticMisuseRule = {
   ],
 };
 
+const directErrorSubclassRule: StaticMisuseRule = {
+  id: "direct-error-subclass-boundary",
+  code: "CROCO_STATIC_DIRECT_ERROR_SUBCLASS_BOUNDARY",
+  title: "Production package errors must inherit from Problem or have a reviewed exception",
+  targetDir: "packages",
+  description:
+    "Direct built-in Error subclasses bypass the shared Problem code, category, and recovery contract unless their boundary has a reviewed exception.",
+  limitation:
+    "This syntax-aware rule checks class declarations and expressions with direct built-in Error names, including globalThis properties, in production packages/*/src. It does not resolve aliases, shadowed names, dynamic heritage, or generated source strings.",
+  recovery:
+    "Extend an existing Problem subclass, or add a reviewed exception with package, file, line, excerpt, reason, owner, and expiresOn to scripts/static-misuse-direct-error-subclass-allowlist.json.",
+  detectors: [],
+  syntaxDetectors: [{ detect: detectDirectErrorSubclasses }],
+  includeFile: isProductionPackageSourceFile,
+  allowlistPath: "scripts/static-misuse-direct-error-subclass-allowlist.json",
+  allowInlineIgnore: false,
+};
+
 const emptyCatchRuntimeBoundaryRule: StaticMisuseRule = {
   id: "empty-catch-runtime-boundary",
   code: "CROCO_STATIC_EMPTY_CATCH_RUNTIME_BOUNDARY",
@@ -284,6 +303,100 @@ const restOverloadedContractRouteDecoratorRule: StaticMisuseRule = {
   includeFile: isProductionPackageSourceFile,
 };
 
+const deterministicPackageNames = new Set([
+  "rpc-codegen",
+  "openapi-spec",
+  "protocol-codegen",
+  "protocols-core",
+  "framework-routes",
+  "esbuild-plugin",
+  "admin-generated",
+]);
+
+const deterministicLocaleCompareRule: StaticMisuseRule = {
+  id: "deterministic-locale-compare",
+  code: "CROCO_STATIC_DETERMINISTIC_LOCALE_COMPARE",
+  title: "Generated artifacts must not depend on the default locale",
+  targetDir: ".",
+  sourceDirs: [
+    "scripts",
+    "tooling",
+    ...[...deterministicPackageNames].map((name) => `packages/${name}/src`),
+  ],
+  description:
+    "Generation, contract, and drift-check sources must use locale-independent ordering so artifacts are identical across environments.",
+  limitation:
+    "This syntax-aware rule detects direct localeCompare calls, including literal computed properties and optional calls, with an omitted or explicitly undefined locale. Aliased methods and dynamic property names are not resolved.",
+  recovery:
+    "Use the shared compareStrings helper for deterministic ordering, or record an intentional locale-sensitive exception in scripts/static-misuse-locale-compare-allowlist.json.",
+  detectors: [],
+  syntaxDetectors: [{ detect: detectDefaultLocaleCompare }],
+  includeFile: isDeterministicGenerationSourceFile,
+  allowlistPath: "scripts/static-misuse-locale-compare-allowlist.json",
+  allowInlineIgnore: false,
+};
+
+function isDeterministicGenerationSourceFile(relativeFile: string): boolean {
+  const parts = toPosixPath(relativeFile).split("/");
+  if (
+    parts.includes("tests") ||
+    parts.includes("__tests__") ||
+    /\.(?:spec|test)\.[cm]?[jt]sx?$/.test(relativeFile)
+  ) {
+    return false;
+  }
+  return (
+    parts[0] === "scripts" ||
+    parts[0] === "tooling" ||
+    (isProductionPackageSourceFile(relativeFile) && deterministicPackageNames.has(parts[1]))
+  );
+}
+
+function detectDefaultLocaleCompare({
+  lines,
+  relativeFile,
+  rule,
+  sourceFile,
+}: SyntaxDetectorContext): readonly StaticMisuseDiagnostic[] {
+  const diagnostics: StaticMisuseDiagnostic[] = [];
+  function visit(node: ts.Node): void {
+    if (ts.isCallExpression(node)) {
+      const callee = unwrapExpression(node.expression);
+      const member =
+        callee && ts.isPropertyAccessExpression(callee)
+          ? callee.name.text
+          : callee &&
+              ts.isElementAccessExpression(callee) &&
+              ts.isStringLiteralLike(callee.argumentExpression)
+            ? callee.argumentExpression.text
+            : null;
+      const locale = unwrapExpression(node.arguments[1]);
+      if (
+        member === "localeCompare" &&
+        (!locale ||
+          (ts.isIdentifier(locale) && locale.text === "undefined") ||
+          ts.isVoidExpression(locale))
+      ) {
+        const start = sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile));
+        diagnostics.push({
+          code: rule.code,
+          ruleId: rule.id,
+          file: relativeFile,
+          line: start.line + 1,
+          column: start.character + 1,
+          message:
+            "Default-locale localeCompare makes generated ordering depend on the execution environment.",
+          excerpt: (lines[start.line] ?? "").trim(),
+          action: rule.recovery,
+        });
+      }
+    }
+    ts.forEachChild(node, visit);
+  }
+  visit(sourceFile);
+  return diagnostics;
+}
+
 const STATIC_MISUSE_RULES: readonly StaticMisuseRule[] = [
   repositoryBoundaryRule,
   restGeneratedContractRule,
@@ -291,7 +404,9 @@ const STATIC_MISUSE_RULES: readonly StaticMisuseRule[] = [
   restOverloadedParameterDecoratorRule,
   restOverloadedContractRouteDecoratorRule,
   rawErrorRuntimeBoundaryRule,
+  directErrorSubclassRule,
   emptyCatchRuntimeBoundaryRule,
+  deterministicLocaleCompareRule,
 ];
 
 function matchImportSpecifier(line: string, specifierPattern: RegExp): RegExpMatchArray | null {
@@ -304,6 +419,62 @@ function matchImportSpecifier(line: string, specifierPattern: RegExp): RegExpMat
 
 function matchSchemaLessNamedParamDecorator(line: string): RegExpMatchArray | null {
   return line.match(/@(Param|Query|Header)\s*\(\s*(['"`])[^'"`]+\2\s*\)/);
+}
+
+function detectDirectErrorSubclasses({
+  lines,
+  relativeFile,
+  rule,
+  sourceFile,
+}: SyntaxDetectorContext): readonly StaticMisuseDiagnostic[] {
+  const diagnostics: StaticMisuseDiagnostic[] = [];
+  const builtInErrors = new Set([
+    "Error",
+    "TypeError",
+    "RangeError",
+    "ReferenceError",
+    "SyntaxError",
+    "EvalError",
+    "URIError",
+    "AggregateError",
+  ]);
+
+  function visit(node: ts.Node): void {
+    if (ts.isClassLike(node)) {
+      const heritage = node.heritageClauses?.find(
+        (clause) => clause.token === ts.SyntaxKind.ExtendsKeyword,
+      );
+      for (const base of heritage?.types ?? []) {
+        const expression = unwrapExpression(base.expression);
+        const baseName =
+          expression && ts.isIdentifier(expression)
+            ? expression.text
+            : expression &&
+                ts.isPropertyAccessExpression(expression) &&
+                ts.isIdentifier(expression.expression) &&
+                expression.expression.text === "globalThis"
+              ? expression.name.text
+              : null;
+        if (!baseName || !builtInErrors.has(baseName)) continue;
+
+        const start = sourceFile.getLineAndCharacterOfPosition(base.getStart(sourceFile));
+        diagnostics.push({
+          code: rule.code,
+          ruleId: rule.id,
+          file: relativeFile,
+          line: start.line + 1,
+          column: start.character + 1,
+          message: `Production package class directly extends built-in ${baseName} without a reviewed exception.`,
+          excerpt: (lines[start.line] ?? "").trim(),
+          action: rule.recovery,
+        });
+      }
+    }
+    ts.forEachChild(node, visit);
+  }
+
+  visit(sourceFile);
+  return diagnostics;
 }
 
 function detectEmptyCatchClauses({
@@ -2508,6 +2679,7 @@ function isProductionPackageSourceFile(relativeFile: string): boolean {
     parts.length >= 4 &&
     parts[2] === "src" &&
     !parts.includes("tests") &&
+    !parts.includes("__tests__") &&
     !relativeFile.endsWith(".spec.js") &&
     !relativeFile.endsWith(".test.js") &&
     !relativeFile.endsWith(".spec.jsx") &&
@@ -2670,11 +2842,14 @@ function currentIsoDate(): string {
 function readPackageName(rootDir: string, relativeFile: string): string | null {
   const parts = toPosixPath(relativeFile).split("/");
 
-  if (parts[0] !== "packages" || !parts[1]) {
+  if (parts[0] !== "scripts" && parts[0] !== "tooling" && (parts[0] !== "packages" || !parts[1])) {
     return null;
   }
 
-  const packageJsonPath = join(rootDir, "packages", parts[1], "package.json");
+  const packageJsonPath =
+    parts[0] === "packages"
+      ? join(rootDir, "packages", parts[1], "package.json")
+      : join(rootDir, "package.json");
 
   if (!existsSync(packageJsonPath)) {
     return null;
@@ -2781,7 +2956,7 @@ function loadAllowlist(rootDir: string, rule: StaticMisuseRule): LoadedStaticMis
   }
 
   allowlist.entries.forEach((entry, index) => {
-    const validation = validateAllowlistEntry(rootDir, entry);
+    const validation = validateAllowlistEntry(rootDir, entry, rule);
 
     if (isValidAllowlistEntry(validation)) {
       entries.push(validation.entry);
@@ -2804,6 +2979,7 @@ function loadAllowlist(rootDir: string, rule: StaticMisuseRule): LoadedStaticMis
 function validateAllowlistEntry(
   rootDir: string,
   entry: unknown,
+  rule: StaticMisuseRule,
 ): StaticMisuseAllowlistEntryValidation {
   if (!isRecord(entry)) {
     return { ok: false, reason: "entry must be an object" };
@@ -2846,7 +3022,18 @@ function validateAllowlistEntry(
 
   const relativeFile = toPosixPath(entry.file);
 
-  if (!isProductionPackageSourceFile(relativeFile)) {
+  if (rule.id === deterministicLocaleCompareRule.id) {
+    if (
+      !sourceFilePattern.test(relativeFile) ||
+      !isDeterministicGenerationSourceFile(relativeFile) ||
+      relativeFile.split("/").includes("..")
+    ) {
+      return {
+        ok: false,
+        reason: "file must point at an in-scope deterministic generation source",
+      };
+    }
+  } else if (!isProductionPackageSourceFile(relativeFile)) {
     return { ok: false, reason: "file must point at production packages/*/src source" };
   }
 
@@ -2925,7 +3112,9 @@ function scanRule(rootDir: string, rule: StaticMisuseRule): StaticMisuseRuleResu
   }
 
   const allowlist = loadAllowlist(rootDir, rule);
-  const filePaths = walkSourceFiles(targetDir);
+  const filePaths = rule.sourceDirs
+    ? rule.sourceDirs.flatMap((sourceDir) => walkSourceFiles(join(rootDir, sourceDir)))
+    : walkSourceFiles(targetDir);
   const programFilePaths = filePaths.filter((filePath) => {
     const relativeFile = toPosixPath(relative(rootDir, filePath));
     return !rule.includeFile || rule.includeFile(relativeFile);

@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Cooperative challenge</title>
+    <link rel="icon" href="data:," />
+    <style>
+      body {
+        margin: 0;
+        font:
+          16px/1.6 system-ui,
+          sans-serif;
+        color: #202622;
+        background: #f7f8f5;
+      }
+      main {
+        max-width: 900px;
+        margin: 36px auto;
+        padding: 0 24px 48px;
+      }
+      section {
+        padding: 20px 0;
+        border-top: 1px solid #cbd2c9;
+      }
+      h1,
+      h2,
+      h3 {
+        line-height: 1.2;
+      }
+      label {
+        display: block;
+        margin: 10px 0;
+      }
+      input,
+      select,
+      button {
+        font: inherit;
+        max-width: 100%;
+      }
+      button {
+        padding: 8px 14px;
+        margin: 6px 10px 6px 0;
+        cursor: pointer;
+      }
+      input:not([type="checkbox"]),
+      select {
+        padding: 6px;
+      }
+      button:disabled {
+        cursor: default;
+      }
+      fieldset {
+        min-width: 0;
+        border: 1px solid #cbd2c9;
+      }
+      progress {
+        width: min(100%, 480px);
+        height: 20px;
+      }
+      [role="alert"] {
+        color: #9b2424;
+      }
+      :focus-visible {
+        outline: 3px solid #2c6b45;
+        outline-offset: 3px;
+      }
+    </style>
+  </head>
+  <body>
+    <main id="root"></main>
+    <script src="/dist/browser.global.js"></script>
+  </body>
+</html>

@@ -19,17 +19,26 @@
     "types": "./dist/index.d.ts",
     "exports": {
       ".": {
-        "types": "./dist/index.d.ts",
+        "types": {
+          "import": "./dist/index.d.mts",
+          "require": "./dist/index.d.ts"
+        },
         "import": "./dist/index.mjs",
         "require": "./dist/index.js"
       },
       "./entry": {
-        "types": "./dist/handler.d.ts",
+        "types": {
+          "import": "./dist/handler.d.mts",
+          "require": "./dist/handler.d.ts"
+        },
         "import": "./dist/handler.mjs",
         "require": "./dist/handler.js"
       },
       "./handler": {
-        "types": "./dist/handler.d.ts",
+        "types": {
+          "import": "./dist/handler.d.mts",
+          "require": "./dist/handler.d.ts"
+        },
         "import": "./dist/handler.mjs",
         "require": "./dist/handler.js"
       }

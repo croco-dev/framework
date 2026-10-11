@@ -205,7 +205,7 @@ export class CloudinaryDiagnosticsProvider implements DiagnosticsProvider {
       hasUploadBaseUrl: isNonEmptyString(this.config.uploadBaseUrl),
       acceptedResourceTypes: ["image", "video", "raw"],
       metadataSupport: {
-        contentType: "format-only",
+        contentType: "mapped-formats-only",
         customMetadata: "required",
       },
     };

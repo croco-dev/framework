@@ -1,9 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
+import { Problem, ProblemCategory } from "@croco/problems-core";
 import {
   InMemoryPlanRegistry,
   InMemorySubscriptionQuantityReconciliationStore,
   InvalidSubscriptionQuantityProblem,
   planVersionRef,
+  ProviderCapabilityUnavailableProblem,
   SubscriptionQuantityReconciler,
 } from "../index";
 import type {
@@ -16,6 +18,14 @@ import type {
   SubscriptionQuantitySnapshot,
   SubscriptionQuantitySourceSnapshot,
 } from "../index";
+
+class ClassifiedProviderProblem extends Problem {
+  constructor(category: ProblemCategory, retryable?: boolean) {
+    super("test/classified-provider-failure", category, "Provider failed", {
+      extensions: retryable === undefined ? {} : { retryable },
+    });
+  }
+}
 
 const PLAN_VERSION_REF = planVersionRef("growth@2026-01");
 
@@ -159,6 +169,7 @@ class ConformingQuantityGateway implements LicensedQuantityGateway {
 async function createFixture(
   initialProviderQuantity = 0,
   repairSource?: SubscriptionQuantityRepairSource,
+  maxAttempts = 5,
 ) {
   const registry = new InMemoryPlanRegistry();
   await registry.publishPlanVersion(createPlanVersion());
@@ -172,6 +183,7 @@ async function createFixture(
     store,
     planRegistry: registry,
     repairSource,
+    maxAttempts,
     eventPublisher: {
       publishNow: async (event) => {
         events.push(event.eventName);
@@ -334,6 +346,82 @@ describe("SubscriptionQuantityReconciler", () => {
       providerQuantity: 3,
       lastFailure: undefined,
     });
+  });
+
+  it("excludes an explicitly terminal provider failure from repair", async () => {
+    const { gateway, reconciler, store } = await createFixture();
+    gateway.setFailWith = new ClassifiedProviderProblem(ProblemCategory.InternalServerError, false);
+
+    await expect(reconcile(reconciler)).resolves.toMatchObject({
+      state: "terminal_failed",
+      lastFailure: { retryable: false },
+    });
+    await expect(store.findCurrent("tenant-1", "external-subscription-1")).resolves.toMatchObject({
+      state: "terminal_failed",
+      lastFailure: { retryable: false },
+    });
+    await expect(reconciler.repair(1)).resolves.toMatchObject({ requested: 0 });
+    expect(gateway.setCalls).toHaveLength(1);
+  });
+
+  it("retries an explicitly retryable conflict only up to maxAttempts", async () => {
+    const { gateway, reconciler, store } = await createFixture(0, undefined, 3);
+    gateway.setFailWith = new ClassifiedProviderProblem(ProblemCategory.Conflict, true);
+
+    await expect(reconcile(reconciler)).resolves.toMatchObject({
+      state: "retryable_failed",
+      attemptCount: 1,
+      lastFailure: { retryable: true },
+    });
+    await expect(reconciler.repair(1)).resolves.toMatchObject({ requested: 1, failed: 1 });
+    await expect(store.findCurrent("tenant-1", "external-subscription-1")).resolves.toMatchObject({
+      state: "retryable_failed",
+      attemptCount: 2,
+      lastFailure: { retryable: true },
+    });
+    await expect(reconciler.repair(1)).resolves.toMatchObject({ requested: 1, failed: 1 });
+    await expect(store.findCurrent("tenant-1", "external-subscription-1")).resolves.toMatchObject({
+      state: "terminal_failed",
+      attemptCount: 3,
+      lastFailure: { retryable: true },
+    });
+    await expect(reconciler.repair(1)).resolves.toMatchObject({ requested: 0 });
+    expect(gateway.setCalls).toHaveLength(3);
+  });
+
+  it.each([
+    [ProblemCategory.BadRequest, true, 408],
+    [ProblemCategory.TooManyRequests, true, undefined],
+    [ProblemCategory.InternalServerError, true, undefined],
+    [ProblemCategory.Conflict, false, undefined],
+  ])("preserves the default retry classification for %s", async (category, retryable, status) => {
+    const { gateway, reconciler } = await createFixture();
+    const problem = new ClassifiedProviderProblem(category);
+    if (status !== undefined) {
+      Object.defineProperty(problem, "status", { value: status });
+    }
+    gateway.setFailWith = problem;
+
+    await expect(reconcile(reconciler)).resolves.toMatchObject({
+      state: retryable ? "retryable_failed" : "terminal_failed",
+      lastFailure: { retryable },
+    });
+  });
+
+  it("keeps an unavailable capability unsupported even when retryable is explicit", async () => {
+    const { gateway, reconciler } = await createFixture();
+    const problem = new ProviderCapabilityUnavailableProblem("test", "licensed-quantity");
+    Object.defineProperty(problem, "extensions", {
+      value: { ...problem.extensions, retryable: true },
+    });
+    gateway.setFailWith = problem;
+
+    await expect(reconcile(reconciler)).resolves.toMatchObject({
+      state: "unsupported",
+      lastFailure: { retryable: false },
+    });
+    await expect(reconciler.repair(1)).resolves.toMatchObject({ requested: 0 });
+    expect(gateway.setCalls).toHaveLength(1);
   });
 
   it("discovers a first missed event through a bounded repair source", async () => {

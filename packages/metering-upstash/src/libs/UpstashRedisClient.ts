@@ -2,6 +2,7 @@ import type { RedisClient } from "@croco/metering-core";
 import { Problem } from "@croco/problems-core";
 import { Redis } from "@upstash/redis";
 import {
+  InvalidUpstashMeteringDeserializationProblem,
   MissingUpstashMeteringConfigProblem,
   UpstashMeteringUpstreamProblem,
 } from "./problems/UpstashMeteringProblems";
@@ -79,15 +80,21 @@ export class UpstashRedisClient implements RedisClient {
     keys: string[],
     args: Array<string | number>,
   ): Promise<TResult> {
-    return runUpstashMeteringOperation(
+    const result = await runUpstashMeteringOperation(
       "EVAL",
       () => this.redis.eval(script, keys, args) as Promise<TResult>,
     );
+    if (isPlainObject(result) || (Array.isArray(result) && result.some(isPlainObject))) {
+      throw new InvalidUpstashMeteringDeserializationProblem();
+    }
+    return result;
   }
 }
 
 /**
  * Upstash Redis 인스턴스를 어댑터로 감싸는 헬퍼 함수입니다.
+ * `automaticDeserialization: false`로 생성한 인스턴스가 필요합니다.
+ * EVAL 응답의 객체는 설정 Problem으로 감지하지만 숫자로 역직렬화된 문자열은 감지할 수 없습니다.
  */
 export function createUpstashRedisClient(redis: Redis): UpstashRedisClient {
   return new UpstashRedisClient(redis);
@@ -97,7 +104,15 @@ export function createUpstashRedisClientFromEnv(env: UpstashRedisClientEnv): Ups
   const url = readRequiredEnv(env, "UPSTASH_REDIS_REST_URL");
   const token = readRequiredEnv(env, "UPSTASH_REDIS_REST_TOKEN");
 
-  return new UpstashRedisClient(new Redis({ token, url }));
+  return new UpstashRedisClient(new Redis({ token, url, automaticDeserialization: false }));
+}
+
+function isPlainObject(value: unknown): boolean {
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
+  const prototype: unknown = Object.getPrototypeOf(value);
+  return prototype === Object.prototype || prototype === null;
 }
 
 async function runUpstashMeteringOperation<T>(

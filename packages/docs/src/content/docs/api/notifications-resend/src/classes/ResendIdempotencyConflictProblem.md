@@ -15,7 +15,7 @@ Resend 전송 실패와 설정/검증 문제를 표현하는 Problem입니다.
 
 ### Constructor
 
-> **new ResendIdempotencyConflictProblem**(`context`, `detail?`): `ResendIdempotencyConflictProblem`
+> **new ResendIdempotencyConflictProblem**(`context`, `detail?`, `cause?`): `ResendIdempotencyConflictProblem`
 
 #### Parameters
 
@@ -26,6 +26,10 @@ Resend 전송 실패와 설정/검증 문제를 표현하는 Problem입니다.
 ##### detail?
 
 `string` = `"Resend rejected the idempotency key for this send"`
+
+##### cause?
+
+`Error`
 
 #### Returns
 

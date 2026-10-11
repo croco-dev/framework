@@ -20,9 +20,20 @@
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
+      "types": {
+        "import": "./dist/index.d.mts",
+        "require": "./dist/index.d.ts"
+      },
       "import": "./dist/index.mjs",
       "require": "./dist/index.js"
+    },
+    "./goal-validation": {
+      "types": {
+        "import": "./dist/goal-validation.d.mts",
+        "require": "./dist/goal-validation.d.ts"
+      },
+      "import": "./dist/goal-validation.mjs",
+      "require": "./dist/goal-validation.js"
     }
   },
   "publishConfig": {
@@ -30,16 +41,27 @@
     "types": "./dist/index.d.ts",
     "exports": {
       ".": {
-        "types": "./dist/index.d.ts",
+        "types": {
+          "import": "./dist/index.d.mts",
+          "require": "./dist/index.d.ts"
+        },
         "import": "./dist/index.mjs",
         "require": "./dist/index.js"
+      },
+      "./goal-validation": {
+        "types": {
+          "import": "./dist/goal-validation.d.mts",
+          "require": "./dist/goal-validation.d.ts"
+        },
+        "import": "./dist/goal-validation.mjs",
+        "require": "./dist/goal-validation.js"
       }
     },
     "access": "public"
   },
   "scripts": {
-    "build": "tsup src/index.ts --format esm,cjs --minify --clean --dts",
-    "dev": "tsup src/index.ts --format cjs,esm --dts --watch",
+    "build": "tsup src/index.ts src/goal-validation.ts --format esm,cjs --minify --clean --dts",
+    "dev": "tsup src/index.ts src/goal-validation.ts --format cjs,esm --dts --watch",
     "test": "vitest run",
     "test:evidence": "pnpm run test --maxWorkers=1 --reporter=json --outputFile=.turbo/croco-test-evidence.json",
     "typecheck": "tsc --noEmit",

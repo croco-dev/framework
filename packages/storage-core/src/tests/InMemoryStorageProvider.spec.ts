@@ -331,8 +331,17 @@ describe("InMemoryStorageProvider", () => {
       expect(exists).toBe(false);
     });
 
-    it("존재하지 않는 파일 삭제 시 FileNotFoundProblem throw", async () => {
-      await expect(provider.delete("nonexistent/file.txt")).rejects.toThrow(FileNotFoundProblem);
+    it("존재하지 않는 파일 삭제는 성공하며 없는 상태를 유지", async () => {
+      await expect(provider.delete("nonexistent/file.txt")).resolves.toBeUndefined();
+      await expect(provider.exists("nonexistent/file.txt")).resolves.toBe(false);
+    });
+
+    it("삭제한 파일을 다시 삭제해도 성공", async () => {
+      await provider.put("test/repeated-delete.txt", Buffer.from("Delete me"));
+
+      await expect(provider.delete("test/repeated-delete.txt")).resolves.toBeUndefined();
+      await expect(provider.delete("test/repeated-delete.txt")).resolves.toBeUndefined();
+      await expect(provider.exists("test/repeated-delete.txt")).resolves.toBe(false);
     });
 
     it("유효하지 않은 키로 삭제 시도 시 InvalidKeyProblem throw", async () => {
@@ -365,6 +374,17 @@ describe("InMemoryStorageProvider", () => {
 
     it("유효하지 않은 키로 URL 생성 시도 시 InvalidKeyProblem throw", () => {
       expect(() => provider.getPublicUrl("/invalid")).toThrow(InvalidKeyProblem);
+    });
+
+    it.each([".", "..", "tenant/./file.txt", "tenant/../file.txt", "a/b/../file.txt"])(
+      "dot-segment 키 %s를 URL 생성 전에 거부",
+      (key) => {
+        expect(() => provider.getPublicUrl(key)).toThrow(InvalidKeyProblem);
+      },
+    );
+
+    it.each(["...", ".hidden", "a.b/c"])("일반 점 포함 키 %s는 허용", (key) => {
+      expect(provider.getPublicUrl(key)).toBe(`https://cdn.example.com/${key}`);
     });
 
     it("기본 baseUrl 사용", () => {

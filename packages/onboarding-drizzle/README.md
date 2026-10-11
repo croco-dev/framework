@@ -48,3 +48,22 @@ const state = await store.getState("tenant-1", "user-1", "welcome-tour");
 - `DRIZZLE_TOKEN`, 온보딩 저장소용 DB 토큰입니다.
 - `onboardingStates`, 온보딩 상태 스키마입니다.
 - `addOnboardingLifecycleFields`, 기존 테이블에 nullable lifecycle 필드를 추가하는 migration입니다.
+
+## 목표형 온보딩 저장소
+
+```typescript no-check
+import { addOnboardingGoals, DrizzleGoalStore } from "@croco/onboarding-drizzle";
+
+await addOnboardingGoals(db);
+const goalStore = new DrizzleGoalStore(db, txManager);
+```
+
+`addOnboardingGoals`는 목표 정의 이력, episode, action receipt 테이블을 만듭니다. 먼저 `@croco/events-tx`의
+`transactionalOutboxMessages` 스키마에 해당하는 `croco_outbox_messages` 테이블을 준비해야 합니다. 목표 달성
+전이는 episode 갱신과 outbox append를 같은 `TxManager` 트랜잭션에 저장합니다. 발행은
+`TransactionalOutboxRelay`로 수행하며, 소비자는 event ID로 중복 전송을 처리해야 합니다.
+
+게시한 정의의 revision, actor, reason, idempotency key와 각 episode의 version, timezone, threshold,
+allowed lateness는 저장됩니다. 같은 idempotency key의 동일 게시 요청은 기존 게시 결과를 반환합니다.
+receipt의 event ID는 episode 안에서 고유하며, 원본 object ID와 confirmation evidence ID는 저장하지 않습니다.
+`removeOnboardingGoals`는 목표 테이블을 삭제하는 rollback migration이므로 보존할 데이터가 없을 때만 사용합니다.

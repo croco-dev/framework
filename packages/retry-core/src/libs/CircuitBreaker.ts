@@ -17,6 +17,8 @@ export interface CircuitBreakerOptions {
   openDuration?: number;
   /** Positive safe integer (default: 1). */
   halfOpenRequests?: number;
+  /** Millisecond clock for circuit transitions and default state-store expiry (default: Date.now). */
+  now?: () => number;
   stateStore?: CircuitBreakerStateStore;
   fallback?: CircuitBreakerFallback;
   /** Return true when an error should count toward opening the circuit. */
@@ -43,6 +45,7 @@ type HalfOpenSlot = { lastFailureTime: number | null };
  * 실패율이 높은 의존성 호출을 차단하고 회복 여부를 관리하는 서킷 브레이커입니다.
  */
 export class CircuitBreaker {
+  private readonly now: () => number;
   private readonly circuitId: string;
   private readonly failureThreshold: number;
   private readonly openDuration: number;
@@ -68,11 +71,12 @@ export class CircuitBreaker {
       "positive-safe-integer",
     );
 
+    this.now = options.now ?? (() => Date.now());
     this.circuitId = options.circuitId;
     this.failureThreshold = failureThreshold;
     this.openDuration = openDuration;
     this.halfOpenRequests = halfOpenRequests;
-    this.stateStore = options.stateStore ?? new InMemoryCircuitBreakerStateStore();
+    this.stateStore = options.stateStore ?? new InMemoryCircuitBreakerStateStore({ now: this.now });
     this.fallback = options.fallback;
     this.recordFailure = options.recordFailure ?? defaultRecordFailure;
   }
@@ -107,7 +111,7 @@ export class CircuitBreaker {
         return CircuitState.OPEN;
       }
 
-      if (Date.now() - lastFailureTime < this.openDuration) {
+      if (this.now() - lastFailureTime < this.openDuration) {
         return CircuitState.OPEN;
       }
 
@@ -131,7 +135,7 @@ export class CircuitBreaker {
   private async handleHalfOpen<T>(fn: () => Promise<T>): Promise<T> {
     const slot = await this.tryAcquireHalfOpenSlot();
     if (!slot) {
-      throw new CircuitBreakerOpenProblem(this.circuitId);
+      return this.rejectOpenCircuit();
     }
 
     let result: T;
@@ -234,7 +238,9 @@ export class CircuitBreaker {
         return;
       }
 
-      await this.stateStore.setLastFailureTime(this.circuitId, Date.now());
+      await this.stateStore.setLastFailureTime(this.circuitId, this.now(), {
+        minRetentionMs: this.openDuration,
+      });
       const activeCount = await this.getHalfOpenActiveCount();
       await this.setHalfOpenActiveCount(Math.max(0, activeCount - 1));
       await this.setCircuitState(CircuitState.OPEN);
@@ -295,7 +301,9 @@ export class CircuitBreaker {
 
       await this.setHalfOpenActiveCount(0);
       await this.setHalfOpenSuccessCount(0);
-      await this.stateStore.setLastFailureTime(this.circuitId, Date.now());
+      await this.stateStore.setLastFailureTime(this.circuitId, this.now(), {
+        minRetentionMs: this.openDuration,
+      });
       await this.setCircuitState(CircuitState.OPEN);
     });
   }
@@ -319,6 +327,10 @@ export class CircuitBreaker {
   }
 
   private async setCircuitState(state: CircuitState): Promise<void> {
+    if (state === CircuitState.OPEN) {
+      await this.stateStore.setState(this.circuitId, state, { minRetentionMs: this.openDuration });
+      return;
+    }
     await this.stateStore.setState(this.circuitId, state);
   }
 
@@ -347,7 +359,9 @@ export class CircuitBreaker {
   }
 
   async forceOpen(): Promise<void> {
-    await this.stateStore.setLastFailureTime(this.circuitId, Date.now());
+    await this.stateStore.setLastFailureTime(this.circuitId, this.now(), {
+      minRetentionMs: this.openDuration,
+    });
     await this.setCircuitState(CircuitState.OPEN);
   }
 

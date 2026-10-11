@@ -5,4 +5,4 @@ prev: false
 title: "OnboardingDefinitionInvalidReason"
 ---
 
-> **OnboardingDefinitionInvalidReason** = `"duplicate-step-id"` \| `"unknown-step-dependency"` \| `"unsupported-step-dependency"` \| `"unsupported-feature-flag"`
+> **OnboardingDefinitionInvalidReason** = `"duplicate-step-id"` \| `"unknown-step-dependency"` \| `"unsupported-step-dependency"` \| `"unsupported-feature-flag"` \| `"duplicate-goal-bridge"`

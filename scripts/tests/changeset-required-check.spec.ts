@@ -76,6 +76,91 @@ describe("changeset-required-check.mts", () => {
     );
   });
 
+  describe.each([
+    ["problems-core", "problem-code-registry.ts"],
+    ["public", "client-contract.ts"],
+  ])("generated source in %s", (packageDir, fileName) => {
+    it("requires release metadata and shows the owning package entry", () => {
+      const repo = createTempRepo();
+      writePackage(repo, packageDir, { name: `@croco/${packageDir}`, version: "1.0.0" });
+      git(repo, ["add", "."]);
+      git(repo, ["commit", "-m", "chore: seed generated package"]);
+      checkoutBranch(repo, "fix/generated-without-changeset");
+      const file = `packages/${packageDir}/src/generated/${fileName}`;
+      commitFile(repo, file, "export const codes = ['NEW_PROBLEM'];", "feat: generate contract");
+
+      const result = runScript(repo);
+
+      expect(result.status).toBe(1);
+      expect(result.stdout).toContain(file);
+      expect(result.stdout).toContain(`"@croco/${packageDir}": patch`);
+      expect(result.stdout).toContain(
+        "Generated source is part of the published package; regeneration does not exempt its owning package from release metadata.",
+      );
+    });
+
+    it("passes when a changeset covers the generated source owner", () => {
+      const repo = createTempRepo();
+      writePackage(repo, packageDir, { name: `@croco/${packageDir}`, version: "1.0.0" });
+      git(repo, ["add", "."]);
+      git(repo, ["commit", "-m", "chore: seed generated package"]);
+      checkoutBranch(repo, "fix/generated-with-changeset");
+      commitFile(
+        repo,
+        `packages/${packageDir}/src/generated/${fileName}`,
+        "export const codes = ['NEW_PROBLEM'];",
+        "feat: generate contract",
+      );
+      commitFile(
+        repo,
+        ".changeset/generated.md",
+        `---\n"@croco/${packageDir}": patch\n---\n\nPublish the generated contract.\n`,
+        "chore: cover generated owner",
+      );
+
+      const result = runScript(repo);
+
+      expect(result.status).toBe(0);
+      expect(result.stdout).not.toContain("Generated source is part of the published package");
+    });
+  });
+
+  it.each(["", "Changeset-required no-release reason: Only regenerated the Problem registry."])(
+    "requires registry owner coverage even when the Problem declaration package is covered (%s)",
+    (body) => {
+      const repo = createTempRepo();
+      writePackage(repo, "problems-core", { name: "@croco/problems-core", version: "1.0.0" });
+      git(repo, ["add", "."]);
+      git(repo, ["commit", "-m", "chore: seed registry owner"]);
+      checkoutBranch(repo, "fix/problem-registration");
+      commitFile(
+        repo,
+        "packages/public/src/NewProblem.ts",
+        "export class NewProblem {}",
+        "feat: declare Problem",
+      );
+      commitFile(
+        repo,
+        "packages/problems-core/src/generated/problem-code-registry.ts",
+        "export const codes = ['NEW_PROBLEM'];",
+        "feat: register Problem",
+      );
+      commitFile(
+        repo,
+        ".changeset/problem.md",
+        "---\n'@croco/public': patch\n---\n\nPublish the Problem declaration.\n",
+        "chore: cover declaration",
+      );
+      writeFile(repo, "event.json", JSON.stringify({ pull_request: { body } }));
+
+      const result = runScript(repo, { env: { GITHUB_EVENT_PATH: "event.json" } });
+
+      expect(result.status).toBe(1);
+      expect(result.stdout).toContain('"@croco/problems-core": patch');
+      expect(result.stdout).not.toContain('"@croco/public": patch');
+    },
+  );
+
   it("passes Changesets-supported quoted bump values and YAML comments", () => {
     const repo = createTempRepo();
     checkoutBranch(repo, "feature/quoted-changeset-metadata");
@@ -581,6 +666,63 @@ describe("changeset-required-check.mts", () => {
     expect(result.status).toBe(1);
     expect(result.stdout).toContain("@croco/public");
     expect(result.stdout).toContain("packages/public/templates/addons/AGENTS.md");
+  });
+
+  describe("package build inputs", () => {
+    it.each([
+      "tsup.config.ts",
+      "tsconfig.json",
+      "LICENSE",
+      "schemas/event.schema.json",
+      "scripts/copy-schemas.mjs",
+      "scripts/generate-routes.js",
+      "migrations/0001.sql",
+      "styles.css",
+      "runtime-profiles.json",
+      "drizzle.ts",
+      "custom-build-input.json",
+      "templates/vitest.config.ts",
+    ])("requires release metadata for %s and accepts owning-package coverage", (relativeFile) => {
+      const repo = createTempRepo();
+      checkoutBranch(repo, "fix/build-input");
+      const file = `packages/public/${relativeFile}`;
+      commitFile(repo, file, "changed build input", "fix: change package build input");
+
+      const uncovered = runScript(repo);
+
+      expect(uncovered.status).toBe(1);
+      expect(uncovered.stdout).toContain("@croco/public");
+      expect(uncovered.stdout).toContain(file);
+
+      commitFile(
+        repo,
+        ".changeset/build-input.md",
+        "---\n'@croco/public': patch\n---\n\nUpdate published build inputs.\n",
+        "chore: add changeset",
+      );
+
+      const covered = runScript(repo);
+
+      expect(covered.status).toBe(0);
+      expect(covered.stdout).toContain(
+        "changed changesets cover all affected publishable packages",
+      );
+    });
+
+    it.each([
+      "vitest.config.ts",
+      "vitest.config.mts",
+      "vitest.setup.ts",
+      "vitest.setup.js",
+      "tsconfig.contract-strict.json",
+      "test-fixtures/app/input.json",
+    ])("passes for test-only configuration or fixtures in %s", (relativeFile) => {
+      const repo = createTempRepo();
+      checkoutBranch(repo, "test/configuration");
+      commitFile(repo, `packages/public/${relativeFile}`, "{}", "test: adjust test input");
+
+      expect(runScript(repo).status).toBe(0);
+    });
   });
 
   it("passes for public package docs-only changes", () => {
@@ -1430,6 +1572,27 @@ describe("changeset-required-check.mts", () => {
     expect(result.stdout).toContain("public-api-surface.snapshot.json");
   });
 
+  it.each(["{invalid", null])(
+    "does not suggest a synthetic package entry for an invalid snapshot (%s)",
+    (content) => {
+      const repo = createTempRepo();
+      checkoutBranch(repo, "fix/invalid-public-api-snapshot");
+      if (content === null) {
+        git(repo, ["rm", "public-api-surface.snapshot.json"]);
+        git(repo, ["commit", "-m", "test: remove snapshot"]);
+      } else {
+        commitFile(repo, "public-api-surface.snapshot.json", content, "test: invalidate snapshot");
+      }
+
+      const result = runScript(repo);
+
+      expect(result.status).toBe(1);
+      expect(result.stdout).toContain("public API snapshot (public API snapshot)");
+      expect(result.stdout).not.toContain('"public API snapshot": patch');
+      expect(result.stdout).not.toContain("Changeset frontmatter entry");
+    },
+  );
+
   it("passes when the public API snapshot changes with a release changeset", () => {
     const repo = createTempRepo();
     checkoutBranch(repo, "fix/public-api-snapshot-with-changeset");
@@ -1449,6 +1612,95 @@ describe("changeset-required-check.mts", () => {
     expect(result.stdout).toContain(
       "changeset-required: changed changesets cover all affected publishable packages (passing)",
     );
+  });
+
+  it.each(["legacy", "current", "migration"] as const)(
+    "ignores export-array ordering in %s snapshots alongside a covered source change",
+    (schema) => {
+      const repo = createTempRepo();
+      const writeBase =
+        schema === "current" ? writePublicApiSnapshot : writeLegacyPublicApiSnapshot;
+      writeBase(repo, ["Alpha", "zeta"]);
+      git(repo, ["add", "public-api-surface.snapshot.json"]);
+      git(repo, ["commit", "-m", "chore: seed export ordering"]);
+      checkoutBranch(repo, "feature/reordered-snapshot");
+      const writeNext = schema === "legacy" ? writeLegacyPublicApiSnapshot : writePublicApiSnapshot;
+      writeNext(repo, ["zeta", "Alpha"]);
+      writeFile(repo, "packages/other/src/index.ts", "export const value = 2;");
+      writeFile(
+        repo,
+        ".changeset/other.md",
+        "---\n'@croco/other': patch\n---\n\nUpdate other behavior.\n",
+      );
+      git(repo, ["add", "."]);
+      git(repo, ["commit", "-m", "feat: other change and snapshot reorder"]);
+      expect(runScript(repo).status).toBe(0);
+    },
+  );
+
+  it.each([
+    "type-order",
+    "duplicate",
+    "source",
+    "declaration",
+    "surface",
+    "target",
+    "conditions",
+  ] as const)("preserves %s semantics when comparing reordered export arrays", (change) => {
+    const repo = createTempRepo();
+    writePublicApiSnapshot(repo, ["Alpha", "zeta"]);
+    const snapshot = JSON.parse(
+      readFileSync(join(repo, "public-api-surface.snapshot.json"), "utf8"),
+    ) as {
+      packages: Array<{
+        entrypoints: Array<{
+          runtimeExports: Array<Record<string, unknown>>;
+          typeExports: Array<Record<string, unknown>>;
+          targets: Array<{ conditions: string[]; target: string }>;
+        }>;
+      }>;
+    };
+    const entrypoint = snapshot.packages[0].entrypoints[0];
+    entrypoint.typeExports = [
+      { name: "AlphaType", exportKind: "named", source: "./index.js", declarationKind: "type" },
+      { name: "ZetaType", exportKind: "named", source: "./index.js", declarationKind: "type" },
+    ];
+    entrypoint.targets[0].conditions = ["node", "import"];
+    writeFile(repo, "public-api-surface.snapshot.json", JSON.stringify(snapshot));
+    git(repo, ["add", "."]);
+    git(repo, ["commit", "-m", "chore: seed detailed snapshot"]);
+    checkoutBranch(repo, "fix/snapshot-semantic-comparison");
+    entrypoint.runtimeExports.reverse();
+    entrypoint.typeExports.reverse();
+    switch (change) {
+      case "type-order":
+        break;
+      case "duplicate":
+        entrypoint.runtimeExports.push({ ...entrypoint.runtimeExports[0] });
+        break;
+      case "source":
+        entrypoint.runtimeExports[0].source = "./other.js";
+        break;
+      case "declaration":
+        entrypoint.runtimeExports[0].declarationKind = "function";
+        break;
+      case "surface":
+        entrypoint.typeExports.push(entrypoint.runtimeExports.pop() as Record<string, unknown>);
+        break;
+      case "target":
+        entrypoint.targets[0].target = "./dist/other.js";
+        break;
+      case "conditions":
+        entrypoint.targets[0].conditions.reverse();
+        break;
+    }
+    writeFile(repo, "public-api-surface.snapshot.json", JSON.stringify(snapshot));
+    git(repo, ["add", "."]);
+    git(repo, ["commit", "-m", "fix: adjust snapshot"]);
+    const result = runScript(repo);
+    expect(result.status).toBe(change === "type-order" ? 0 : 1);
+    if (change !== "type-order")
+      expect(result.stdout).toContain("@croco/public (public API snapshot (.))");
   });
 
   it("reads public API snapshots larger than the default subprocess buffer", () => {
@@ -1587,6 +1839,205 @@ describe("changeset-required-check.mts", () => {
     const removedResult = runScript(removedRepo);
     expect(removedResult.status).toBe(1);
     expect(removedResult.stdout).toContain("@croco/public (public API snapshot (.))");
+  });
+
+  describe("export record multiset comparison", () => {
+    type ExportRecord = {
+      name: string;
+      exportKind: string;
+      source: string;
+      declarationKind: string;
+    };
+    type Surface = {
+      kind?: string;
+      runtimeExports: ExportRecord[];
+      typeExports: ExportRecord[];
+      targets?: Array<{ conditions: string[]; target: string }>;
+    };
+    function writeSurface(repo: string, version: number, change: (surface: Surface) => void): void {
+      if (version === 1) writeLegacyPublicApiSnapshot(repo, ["lower", "Upper", "Upper"]);
+      else writePublicApiSnapshot(repo, ["lower", "Upper", "Upper"]);
+      const snapshot = JSON.parse(
+        readFileSync(join(repo, "public-api-surface.snapshot.json"), "utf-8"),
+      ) as {
+        packages: Array<Surface & { entrypoints: Surface[] }>;
+      };
+      const surface = version === 1 ? snapshot.packages[0] : snapshot.packages[0].entrypoints[0];
+      surface.typeExports = ["lowerType", "UpperType"].map((name) => ({
+        name,
+        exportKind: "named",
+        source: "./types.js",
+        declarationKind: "interface",
+      }));
+      if (version === 2)
+        surface.targets = [
+          { conditions: ["node", "import"], target: "./dist/index.js" },
+          { conditions: ["require"], target: "./dist/index.cjs" },
+        ];
+      change(surface);
+      writeFile(repo, "public-api-surface.snapshot.json", `${JSON.stringify(snapshot, null, 2)}\n`);
+      git(repo, ["add", "public-api-surface.snapshot.json"]);
+      git(repo, ["commit", "-m", "test: update export record fixture"]);
+    }
+    function reverseExports(surface: Surface): void {
+      surface.runtimeExports.reverse();
+      surface.typeExports.reverse();
+    }
+
+    it.each([
+      [1, 1],
+      [2, 2],
+      [1, 2],
+    ])(
+      "ignores only runtime/type export ordering for schema %s to %s",
+      (baseVersion, headVersion) => {
+        const repo = createTempRepo();
+        writeSurface(repo, baseVersion, () => {});
+        checkoutBranch(repo, "fix/export-order");
+        writeSurface(repo, headVersion, reverseExports);
+        const result = runScript(repo);
+        expect(result.status, result.stdout).toBe(0);
+        expect(result.stdout).toContain("no publishable package behavior changes detected");
+      },
+    );
+
+    const changes: Array<[string, (surface: Surface) => void]> = [
+      [
+        "runtime name",
+        (surface) => {
+          surface.runtimeExports[0].name = "changed";
+        },
+      ],
+      [
+        "export kind",
+        (surface) => {
+          surface.runtimeExports[0].exportKind = "default";
+        },
+      ],
+      [
+        "declaration kind",
+        (surface) => {
+          surface.typeExports[0].declarationKind = "type";
+        },
+      ],
+      [
+        "source",
+        (surface) => {
+          surface.runtimeExports[0].source = "./changed.js";
+        },
+      ],
+      [
+        "type source",
+        (surface) => {
+          surface.typeExports[0].source = "./changed-types.js";
+        },
+      ],
+      [
+        "runtime deletion",
+        (surface) => {
+          surface.runtimeExports.shift();
+        },
+      ],
+      [
+        "duplicate deletion",
+        (surface) => {
+          surface.runtimeExports.pop();
+        },
+      ],
+      [
+        "type deletion",
+        (surface) => {
+          surface.typeExports.pop();
+        },
+      ],
+    ];
+    describe.each([
+      [1, 1],
+      [2, 2],
+      [1, 2],
+    ])("schema %s to %s", (baseVersion, headVersion) => {
+      it.each(changes)(
+        "retains release significance of %s alongside reordered exports",
+        (_name, change) => {
+          const repo = createTempRepo();
+          writeSurface(repo, baseVersion, () => {});
+          checkoutBranch(repo, "fix/export-change");
+          writeSurface(repo, headVersion, (surface) => {
+            change(surface);
+            reverseExports(surface);
+          });
+          const result = runScript(repo);
+          expect(result.status, result.stdout).toBe(1);
+          expect(result.stdout).toContain("@croco/public (public API snapshot (.))");
+        },
+      );
+    });
+
+    it.each<Array<[string, (surface: Surface) => void]>[number]>([
+      [
+        "condition order",
+        (surface) => {
+          surface.targets![0].conditions.reverse();
+        },
+      ],
+      [
+        "condition value",
+        (surface) => {
+          surface.targets![0].conditions[0] = "browser";
+        },
+      ],
+      [
+        "target order",
+        (surface) => {
+          surface.targets!.reverse();
+        },
+      ],
+      [
+        "target value",
+        (surface) => {
+          surface.targets![0].target = "./dist/changed.js";
+        },
+      ],
+      [
+        "entrypoint kind",
+        (surface) => {
+          surface.kind = "asset";
+        },
+      ],
+    ])("preserves %s significance", (_name, change) => {
+      const repo = createTempRepo();
+      writeSurface(repo, 2, () => {});
+      checkoutBranch(repo, "fix/target-change");
+      writeSurface(repo, 2, (surface) => {
+        change(surface);
+        reverseExports(surface);
+      });
+      const result = runScript(repo);
+      expect(result.status, result.stdout).toBe(1);
+      expect(result.stdout).toContain("@croco/public (public API snapshot (.))");
+    });
+
+    it("requires no extra release for reordered exports beside a covered genuine package change", () => {
+      const repo = createTempRepo();
+      writeSurface(repo, 2, () => {});
+      checkoutBranch(repo, "fix/covered-change-and-export-order");
+      writeSurface(repo, 2, reverseExports);
+      commitFile(
+        repo,
+        "packages/other/src/index.ts",
+        "export const value = 2;",
+        "fix: change other package",
+      );
+      commitFile(
+        repo,
+        ".changeset/other.md",
+        "---\n'@croco/other': patch\n---\n\nFix other package behavior.\n",
+        "chore: cover changed package",
+      );
+      const result = runScript(repo);
+      expect(result.status, result.stdout).toBe(0);
+      expect(result.stdout).toContain("changed changesets cover all affected publishable packages");
+    });
   });
 
   it("treats a root-only schema v1 to v2 conversion as migration metadata", () => {

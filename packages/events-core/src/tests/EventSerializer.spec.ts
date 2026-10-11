@@ -464,6 +464,104 @@ describe("DefaultEventSerializer", () => {
       expect(deserialized.aggregateId).toBe(original.aggregateId);
     });
 
+    it("restores the envelope aggregateId on deserialize when it is not an EventField", () => {
+      abstract class OrderEvent extends DomainEvent {
+        aggregateId = "";
+      }
+
+      class OrderShippedEvent extends OrderEvent {
+        static eventName = "order.shipped";
+
+        @EventField()
+        trackingNumber = "";
+      }
+
+      const orderSerializer = new DefaultEventSerializer(
+        new EventRegistry().register(OrderShippedEvent),
+      );
+      const event = new OrderShippedEvent();
+      event.aggregateId = "order-1";
+      event.trackingNumber = "TRK-1";
+
+      const serialized = orderSerializer.serialize(event);
+      const restored = orderSerializer.deserialize<OrderShippedEvent>(serialized);
+
+      expect({
+        envelope: serialized.aggregateId,
+        trackingNumber: restored.trackingNumber,
+        aggregateId: restored.aggregateId,
+      }).toEqual({ envelope: "order-1", trackingNumber: "TRK-1", aggregateId: "order-1" });
+    });
+
+    it("does not add an aggregateId property when the event class does not declare one", () => {
+      class SimpleEvent extends DomainEvent {
+        static eventName = "simple.event";
+
+        @EventField()
+        value = "";
+      }
+
+      const simpleSerializer = new DefaultEventSerializer(
+        new EventRegistry().register(SimpleEvent),
+      );
+      const deserialized = simpleSerializer.deserialize<SimpleEvent>({
+        eventType: "simple.event",
+        eventId: "evt_simple_1",
+        occurredAt: new Date().toISOString(),
+        aggregateId: "agg-1",
+        payload: { value: "v" },
+      });
+
+      expect(deserialized.value).toBe("v");
+      expect("aggregateId" in deserialized).toBe(false);
+    });
+
+    it("keeps the @EventField aggregateId payload value on deserialize", () => {
+      const aggregateSerializer = new DefaultEventSerializer(
+        new EventRegistry().register(TestEventWithAggregate),
+      );
+      const deserialized = aggregateSerializer.deserialize<TestEventWithAggregate>({
+        eventType: "TestEventWithAggregate",
+        eventId: "evt_agg_payload",
+        occurredAt: new Date().toISOString(),
+        aggregateId: "agg-envelope",
+        payload: { value: "v", aggregateId: "agg-payload" },
+      });
+
+      expect(deserialized.aggregateId).toBe("agg-payload");
+    });
+
+    it("restores the envelope aggregateId for events built with static fromPayload", () => {
+      class FactoryOrderEvent extends DomainEvent {
+        static eventName = "factory.order";
+
+        aggregateId = "";
+
+        @EventField()
+        trackingNumber = "";
+
+        static fromPayload(payload: Record<string, unknown>): FactoryOrderEvent {
+          const event = new FactoryOrderEvent();
+          event.trackingNumber = String(payload.trackingNumber ?? "");
+          return event;
+        }
+      }
+
+      const factorySerializer = new DefaultEventSerializer(
+        new EventRegistry().register(FactoryOrderEvent),
+      );
+      const deserialized = factorySerializer.deserialize<FactoryOrderEvent>({
+        eventType: "factory.order",
+        eventId: "evt_factory_agg",
+        occurredAt: new Date().toISOString(),
+        aggregateId: "order-1",
+        payload: { trackingNumber: "TRK-1" },
+      });
+
+      expect(deserialized.trackingNumber).toBe("TRK-1");
+      expect(deserialized.aggregateId).toBe("order-1");
+    });
+
     it("BUG-04 필드 3개 이상 이벤트의 직렬화 라운드트립에서 생성자 인자 순서를 보장해야 한다", () => {
       const original = new ThreeFieldEvent("alpha", 7, true);
       const serialized = serializer.serialize(original);

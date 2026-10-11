@@ -71,10 +71,12 @@ function validateContinuationLeaseDuration(durationMs: number): void {
  *
  * Allowed transitions:
  * - pending → running | cancelled
- * - running → completed | failed | timed_out | cancelled
+ * - running → completed | failed | timed_out | cancelled | retrying
  * - failed → retrying → running
  * - retrying → failed (max retries exhausted)
  * - timed_out → retrying
+ *
+ * A running execution enters retrying when fail() receives a retryable error and attempts remain.
  *
  * Terminal states (no outgoing transitions):
  * - completed, cancelled, failed (when max retries exhausted)
@@ -705,16 +707,28 @@ export class ExecutionManagerImpl
         scanned += 1;
 
         if (this.isTimedOutAt(execution, now)) {
-          const updated = await this.store.updateIfStatus(execution.id, "running", {
-            status: "timed_out",
-            completedAt: now,
-            error: {
-              message: "Execution timed out with an indeterminate outcome",
-              code: "execution/timeout-indeterminate",
-              retryable: false,
-              indeterminate: true,
-            },
-          });
+          const timedOutError = {
+            message: "Execution timed out with an indeterminate outcome",
+            code: "execution/timeout-indeterminate",
+            retryable: false,
+            indeterminate: true,
+          } as const;
+          const updated = this.supportsAttemptFencing()
+            ? await (this.store as ExecutionStore & ExecutionAttemptStore).updateIfStatusAndAttempt(
+                execution.id,
+                "running",
+                execution.attempts,
+                {
+                  status: "timed_out",
+                  completedAt: now,
+                  error: timedOutError,
+                },
+              )
+            : await this.store.updateIfStatus(execution.id, "running", {
+                status: "timed_out",
+                completedAt: now,
+                error: timedOutError,
+              });
 
           if (updated) {
             timedOut += 1;

@@ -1,3 +1,4 @@
+import { compareStrings } from "../tooling/compareStrings.mjs";
 import { spawnSync } from "node:child_process";
 import {
   copyFileSync,
@@ -59,6 +60,7 @@ type SmokeCommand = {
   readonly args: readonly string[];
   readonly assertFixtureUnchanged?: boolean;
   readonly expectedExitCode?: number;
+  readonly expectedEmptyStdout?: boolean;
   readonly fixtureFiles?: readonly SmokeFixtureFile[];
   readonly packageFixtureFiles?: readonly SmokePackageFixtureFile[];
   readonly expectedPaths?: readonly string[];
@@ -234,7 +236,7 @@ function collectInternalRuntimeGraph(
   visit(rootPackage);
 
   return Array.from(graph.values()).sort((left, right) =>
-    left.packageName.localeCompare(right.packageName),
+    compareStrings(left.packageName, right.packageName),
   );
 }
 
@@ -368,7 +370,7 @@ function binTargetsFromManifest(pkg: PackageJson, packageName: string): BinTarge
   return Object.entries(bin)
     .filter((entry): entry is [string, string] => typeof entry[1] === "string")
     .map(([commandName, target]) => ({ commandName, target }))
-    .sort((left, right) => left.commandName.localeCompare(right.commandName));
+    .sort((left, right) => compareStrings(left.commandName, right.commandName));
 }
 
 function defaultBinCommandName(packageName: string): string {
@@ -439,6 +441,11 @@ function runPackageBinSmoke(
             label: `${packageInfo.packageName}: ${binTarget.commandName} ${smokeCommand.args.join(" ")}`,
           },
         );
+        if (smokeCommand.expectedEmptyStdout && result.stdout !== "") {
+          throw new Error(
+            `${packageInfo.packageName}: ${binTarget.commandName} ${smokeCommand.args.join(" ")} polluted protocol stdout`,
+          );
+        }
         const output = `${result.stdout}\n${result.stderr}`;
         if (!output.includes(smokeCommand.expectedOutput)) {
           throw new Error(
@@ -849,7 +856,7 @@ function smokeCommandEnvironment(
   return environment;
 }
 
-function writeConsumerPackageJson(
+export function writeConsumerPackageJson(
   consumerRoot: string,
   graphPackages: readonly PackedPackageInfo[],
 ): void {
@@ -874,14 +881,12 @@ function writeConsumerPackageJson(
   );
   writeFileSync(
     join(consumerRoot, "pnpm-workspace.yaml"),
-    `${JSON.stringify(
-      {
-        packages: [],
-        overrides,
-      },
-      null,
-      2,
-    )}\n`,
+    `packages: []\noverrides:\n${Object.entries(overrides)
+      .map(
+        ([packageName, tarballPath]) =>
+          `  ${JSON.stringify(packageName)}: ${JSON.stringify(tarballPath)}`,
+      )
+      .join("\n")}\n`,
   );
 }
 
@@ -911,7 +916,7 @@ function internalPeerPackagesFor(graphPackages: readonly PackedPackageInfo[]): P
   }
 
   return Array.from(peerPackages.values()).sort((left, right) =>
-    left.packageName.localeCompare(right.packageName),
+    compareStrings(left.packageName, right.packageName),
   );
 }
 
@@ -920,6 +925,21 @@ function smokeCommandsFor(
   packageInfo: PackedPackageInfo,
 ): readonly SmokeCommand[] {
   switch (binTarget.commandName) {
+    case "croco-agent":
+      return [
+        {
+          args: ["call", "listCapabilities", "{}"],
+          expectedExitCode: 1,
+          expectedEmptyStdout: true,
+          expectedOutput: "CROCO_CLI_AGENT_READ_007",
+        },
+        {
+          args: ["stdio"],
+          expectedExitCode: 1,
+          expectedEmptyStdout: true,
+          expectedOutput: "CROCO_CLI_AGENT_READ_007",
+        },
+      ];
     case "create-croco-app":
       return [
         {

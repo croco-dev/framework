@@ -6,6 +6,7 @@ export const IDEMPOTENCY_DIAGNOSTIC_CODES = {
   invalidKey: "idempotency-core/invalid-key",
   invalidSnapshot: "idempotency-core/invalid-snapshot",
   invalidTtl: "idempotency-core/invalid-ttl",
+  processingLeaseUnsupported: "idempotency-core/processing-lease-unsupported",
   reservationExpired: "idempotency-core/reservation-expired",
   reservationNotFound: "idempotency-core/reservation-not-found",
   reservationState: "idempotency-core/reservation-state",
@@ -90,6 +91,7 @@ export class InvalidIdempotencySnapshotProblem extends IdempotencyProblem {
 export type IdempotencyTtlConstraint = "positive-safe-integer" | "valid-date-range";
 
 export type InvalidIdempotencyTtlProblemOptions = {
+  readonly field?: "ttlMs" | "leaseMs";
   readonly constraint: IdempotencyTtlConstraint;
   readonly receivedValue: number | string;
 };
@@ -100,12 +102,23 @@ export class InvalidIdempotencyTtlProblem extends IdempotencyProblem {
     super({
       code: IDEMPOTENCY_DIAGNOSTIC_CODES.invalidTtl,
       category: ProblemCategory.BadRequest,
-      detail: `Idempotency ttlMs must satisfy ${options.constraint}; received ${String(options.receivedValue)}`,
+      detail: `Idempotency ${options.field ?? "ttlMs"} must satisfy ${options.constraint}; received ${String(options.receivedValue)}`,
       extensions: {
-        field: "ttlMs",
+        field: options.field ?? "ttlMs",
         constraint: options.constraint,
         receivedValue: options.receivedValue,
       },
+    });
+  }
+}
+
+export class IdempotencyProcessingLeaseUnsupportedProblem extends IdempotencyProblem {
+  constructor() {
+    super({
+      code: IDEMPOTENCY_DIAGNOSTIC_CODES.processingLeaseUnsupported,
+      category: ProblemCategory.InternalServerError,
+      detail: "Idempotency store must support independent processing leases",
+      extensions: { requiredCapability: "processingLeaseVersion:1" },
     });
   }
 }

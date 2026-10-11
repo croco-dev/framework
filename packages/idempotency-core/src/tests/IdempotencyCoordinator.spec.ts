@@ -8,6 +8,7 @@ import {
   deriveWebhookIdempotencyKey,
   IdempotencyConflictProblem,
   IdempotencyExecutionIndeterminateProblem,
+  IdempotencyProcessingLeaseUnsupportedProblem,
   IdempotencyCoordinator,
   type IdempotencyCommitOptions,
   type IdempotencyCompletedRecord,
@@ -19,6 +20,7 @@ import {
   InvalidIdempotencyKeyProblem,
   InvalidIdempotencyTtlProblem,
   type IdempotencyAuditEvent,
+  type IdempotencyStore,
 } from "../index";
 
 const INVALID_TTLS = [
@@ -33,6 +35,129 @@ const INVALID_TTLS = [
 ] as const;
 
 describe("IdempotencyCoordinator", () => {
+  it("rejects an explicit lease before using a store that has not adopted it", async () => {
+    const backing = new InMemoryIdempotencyStore<string>();
+    const legacyStore: IdempotencyStore<string> = {
+      reserve: (key, options) =>
+        backing.reserve(key, { ttlMs: options?.ttlMs, metadata: options?.metadata }),
+      commit: (options) => backing.commit(options),
+      replay: (key) => backing.replay(key),
+      fail: (options) => backing.fail(options),
+      expire: (options) => backing.expire(options),
+    };
+    const reserve = vi.spyOn(legacyStore, "reserve");
+    const handler = vi.fn(() => "stored");
+    const key = deriveWebhookIdempotencyKey({ provider: "test", eventId: "legacy-store" });
+    const coordinator = createIdempotencyCoordinator({ store: legacyStore });
+
+    await expect(
+      coordinator.execute({ key, ttlMs: 86_400_000, leaseMs: 900_000 }, handler),
+    ).rejects.toBeInstanceOf(IdempotencyProcessingLeaseUnsupportedProblem);
+    expect(reserve).not.toHaveBeenCalled();
+    expect(handler).not.toHaveBeenCalled();
+    expect(await coordinator.execute({ key, ttlMs: 86_400_000 }, handler)).toMatchObject({
+      outcome: "executed",
+      response: "stored",
+    });
+  });
+
+  it("keeps omitted retention unlimited when an explicit lease is supplied", async () => {
+    let current = Date.parse("2026-01-01T00:00:00.000Z");
+    const store = new InMemoryIdempotencyStore<string>({ now: () => new Date(current) });
+    const coordinator = createIdempotencyCoordinator({ store });
+    const key = deriveWebhookIdempotencyKey({ provider: "test", eventId: "lease-only" });
+    const result = await coordinator.execute({ key, leaseMs: 100 }, () => "stored");
+    expect(result.record.expiresAt).toBeNull();
+    current += 86_400_000;
+    expect((await coordinator.execute({ key, leaseMs: 100 }, () => "unexpected")).outcome).toBe(
+      "replayed",
+    );
+  });
+
+  it("validates retention before execution even with an explicit lease", async () => {
+    const store = new InMemoryIdempotencyStore<string>();
+    const coordinator = createIdempotencyCoordinator({ store });
+    const key = deriveWebhookIdempotencyKey({ provider: "test", eventId: "invalid-retention" });
+    const handler = vi.fn(() => "unexpected");
+    await expect(
+      coordinator.execute({ key, leaseMs: 100, ttlMs: 0 }, handler),
+    ).rejects.toMatchObject({
+      code: "idempotency-core/invalid-ttl",
+      extensions: { field: "ttlMs" },
+    });
+    expect(handler).not.toHaveBeenCalled();
+    expect(store.size).toBe(0);
+  });
+
+  it.each(INVALID_TTLS)("rejects invalid lease %s before executing a handler", async (leaseMs) => {
+    const store = new InMemoryIdempotencyStore<string>({
+      now: () => new Date("2026-01-01T00:00:00.000Z"),
+    });
+    const coordinator = createIdempotencyCoordinator({ store });
+    const key = deriveWebhookIdempotencyKey({ provider: "test", eventId: "invalid-lease" });
+    const handler = vi.fn(() => "unexpected");
+    await expect(
+      coordinator.execute({ key, leaseMs, ttlMs: 10_000 }, handler),
+    ).rejects.toMatchObject({
+      code: "idempotency-core/invalid-ttl",
+      extensions: { field: "leaseMs" },
+    });
+    expect(handler).not.toHaveBeenCalled();
+    expect(store.size).toBe(0);
+  });
+
+  it("separates explicit lease expiry from completed retention", async () => {
+    let current = Date.parse("2026-01-01T00:00:00.000Z");
+    const store = new InMemoryIdempotencyStore<string>({ now: () => new Date(current) });
+    const coordinator = createIdempotencyCoordinator({ store });
+    const key = deriveWebhookIdempotencyKey({ provider: "test", eventId: "lease" });
+    const request = { key, leaseMs: 100, ttlMs: 10_000 };
+    let started!: () => void;
+    const startedPromise = new Promise<void>((resolve) => {
+      started = resolve;
+    });
+    let finish!: (value: string) => void;
+    const abandoned = coordinator.execute(request, () => {
+      started();
+      return new Promise<string>((resolve) => {
+        finish = resolve;
+      });
+    });
+    await startedPromise;
+    current += 99;
+    expect((await coordinator.execute(request, () => "unexpected")).outcome).toBe("in-flight");
+    current += 1;
+    const recovered = await coordinator.execute(request, () => "recovered");
+    expect(recovered.outcome).toBe("executed");
+    finish("stale");
+    await expect(abandoned).rejects.toBeInstanceOf(IdempotencyReservationStateProblem);
+    current += 9_999;
+    expect(await coordinator.execute(request, () => "unexpected")).toMatchObject({
+      outcome: "replayed",
+      response: "recovered",
+    });
+    current += 1;
+    expect((await coordinator.execute(request, () => "fresh")).outcome).toBe("executed");
+  });
+
+  it("retains non-retryable failures for ttlMs independently of leaseMs", async () => {
+    let current = Date.parse("2026-01-01T00:00:00.000Z");
+    const store = new InMemoryIdempotencyStore<string>({ now: () => new Date(current) });
+    const coordinator = createIdempotencyCoordinator({ store });
+    const key = deriveWebhookIdempotencyKey({ provider: "test", eventId: "failed-lease" });
+    const request = { key, leaseMs: 100, ttlMs: 10_000 };
+    const failure = new InvalidIdempotencyKeyProblem("rejected");
+    await expect(
+      coordinator.execute(request, () => {
+        throw failure;
+      }),
+    ).rejects.toBe(failure);
+    current += 9_999;
+    expect((await coordinator.execute(request, () => "unexpected")).outcome).toBe("failed");
+    current += 1;
+    expect((await coordinator.execute(request, () => "fresh")).outcome).toBe("executed");
+  });
+
   it.each(INVALID_TTLS)(
     "rejects hostile ttl %s before handler, audit, or store state changes",
     async (ttlMs) => {

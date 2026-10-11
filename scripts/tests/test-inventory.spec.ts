@@ -639,12 +639,24 @@ describe("classification, CLI, and repository migration", () => {
       ["packages/testing-resources/src/tests/RealResources.spec.ts", "live"],
       ["scripts/tests/provider-certification-check.spec.ts", "fast"],
       ["scripts/tests/package-entrypoint-smoke.spec.ts", "fast"],
+      ["examples/lifecycle-journey/src/tests/TaskRecovery.spec.ts", "fast"],
+      ["examples/lifecycle-journey/src/tests/Journey.integration.spec.ts", "integration"],
     ] as const;
     for (const [path, lane] of cases)
       expect(classifyDiscoveredTest(root, path).lane, path).toBe(lane);
     expect(
       classifyDiscoveredTest(root, "packages/problems-core/src/tests/Problem.spec.ts").qualifiers,
     ).toEqual(["coverage"]);
+  });
+
+  it("maps add-on template tests to their generated app paths", () => {
+    const root = createRepository();
+    expect(
+      classifyDiscoveredTest(
+        root,
+        "packages/create-croco-app/templates/addons/graphql-standalone/apps/graphql-api/src/formatGraphQLError.spec.ts",
+      ).generated?.generatedPath,
+    ).toBe("apps/graphql-api/src/formatGraphQLError.spec.ts");
   });
 
   it("derives every core coverage test qualifier from the shared package ownership", () => {

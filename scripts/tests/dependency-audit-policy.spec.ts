@@ -60,6 +60,23 @@ describe("dependency-audit-policy.mts", () => {
     expect([...new Set(transitiveNanoidVersions)]).toEqual(["3.3.18"]);
   });
 
+  it("resolves the blocking formatter, source map, and GraphQL advisories to patched versions", () => {
+    const lockfile = parseAllDocuments(
+      readFileSync(join(repositoryRoot, "pnpm-lock.yaml"), "utf-8"),
+    )
+      .at(-1)
+      ?.toJS() as { readonly packages: Readonly<Record<string, unknown>> };
+    const packages = Object.keys(lockfile.packages);
+
+    for (const [name, version] of [
+      ["tinypool", "2.1.2"],
+      ["source-map-js", "1.2.2"],
+      ["@graphql-tools/utils", "12.0.3"],
+    ]) {
+      expect(packages.filter((key) => key.startsWith(`${name}@`))).toEqual([`${name}@${version}`]);
+    }
+  });
+
   it("fails high runtime dependency findings without reviewed metadata", () => {
     const repo = createRepo();
     writePackage(repo, "packages/runtime-core/package.json", {

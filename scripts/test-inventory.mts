@@ -1150,14 +1150,15 @@ export function validateGeneratedMaterialization(
 
 function generatedPathForTemplate(path: string): string {
   const prefix = "packages/create-croco-app/templates/";
-  const remainder = path.slice(prefix.length);
-  return remainder.slice(remainder.indexOf("/") + 1);
+  const segments = path.slice(prefix.length).split("/");
+  return segments.slice(segments[0] === "addons" ? 2 : 1).join("/");
 }
 
 export function classifyDiscoveredTest(rootDir: string, path: string): TestInventoryEntry {
   const lower = path.toLowerCase();
   let lane: TestLane = "fast";
   if (path.startsWith("scripts/tests/")) lane = "fast";
+  else if (path === "examples/lifecycle-journey/src/tests/TaskRecovery.spec.ts") lane = "fast";
   else if (path.startsWith("packages/create-croco-app/templates/")) lane = "generated-app";
   else if (
     /(?:^|[/._-])(?:live|provider-certification|provider-e2e)(?:[/._-]|$)/.test(lower) ||

@@ -56,6 +56,7 @@ describe("official Croco Skill", () => {
       "pnpm --filter @croco/billing-polar test",
       "pnpm --filter @croco-example/first-party-plugin-composition... build",
       "pnpm --filter @croco-example/first-party-plugin-composition test",
+      "pnpm --filter @croco-example/first-party-plugin-composition start",
     ]);
   });
 

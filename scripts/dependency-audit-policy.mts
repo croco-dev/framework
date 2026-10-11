@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 
+import { compareStrings } from "../tooling/compareStrings.mjs";
+
 import { spawnSync } from "node:child_process";
 import {
   existsSync,
@@ -695,10 +697,6 @@ function minimumString(left: string | undefined, right: string | undefined): str
     .sort(compareStrings)[0];
 }
 
-function compareStrings(left: string, right: string): number {
-  return left < right ? -1 : left > right ? 1 : 0;
-}
-
 function minimumAuditId(
   left: number | string | undefined,
   right: number | string | undefined,
@@ -1044,7 +1042,7 @@ function runGeneratedTemplateAudit(
     );
     writeFileSync(
       join(tempRoot, "pnpm-workspace.yaml"),
-      "packages:\n  - packages/create-croco-app/templates/**\noverrides:\n  postcss: 8.5.18\n",
+      'packages:\n  - packages/create-croco-app/templates/**\noverrides:\n  postcss: 8.5.18\n  "@graphql-tools/utils@<=12.0.0": 12.0.3\n',
     );
     const installResult = spawnSync("pnpm", ["install", "--lockfile-only", "--ignore-scripts"], {
       cwd: tempRoot,
@@ -1449,7 +1447,7 @@ function uniqueSuppressions(
         .filter((suppression) => isSuppressionId(suppression.id))
         .map((suppression) => [`${suppression.key}:${suppression.id}`, suppression]),
     ).values(),
-  ].sort((left, right) => left.id.localeCompare(right.id) || left.key.localeCompare(right.key));
+  ].sort((left, right) => compareStrings(left.id, right.id) || compareStrings(left.key, right.key));
 }
 
 function findPackageJsonFiles(root: string): readonly string[] {

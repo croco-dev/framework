@@ -33,6 +33,14 @@ Overrides handler failure retryability; audit and commit recovery are unchanged.
 
 ---
 
+### leaseMs?
+
+> `readonly` `optional` **leaseMs?**: `number`
+
+In-flight lease; omitted values preserve the legacy ttlMs lease.
+
+---
+
 ### metadata?
 
 > `readonly` `optional` **metadata?**: `Record`\<`string`, `unknown`\>
