@@ -1461,6 +1461,146 @@ export type CrocoManifestBundleSource = typeof crocoManifestBundleSource;
     );
   });
 
+  describe("generated declaration collisions", () => {
+    function route(methodName: string, overrides: Partial<RouteIR> = {}): RouteIR {
+      return {
+        controllerName: "UserController",
+        methodName,
+        httpMethod: "GET",
+        path: `/users/${methodName}`,
+        routeContract: null,
+        params: [],
+        inputSchema: null,
+        inputSchemas: EMPTY_INPUT_SCHEMAS,
+        outputSchema: null,
+        domain: "user",
+        ...overrides,
+      };
+    }
+
+    it.each(["GetFoo", "get_foo"])(
+      "rejects getFoo/%s normalization before changing generated files",
+      (methodName) => {
+        generateClientFiles([route("existing")], TEMP_DIR);
+        const before = collectDirectoryContents(TEMP_DIR);
+        const routes = [
+          route("getFoo", { outputSchema: z.string() as RouteIR["outputSchema"] }),
+          route(methodName, { outputSchema: z.number() as RouteIR["outputSchema"] }),
+        ];
+
+        for (const action of [
+          () => generateClientFiles(routes, TEMP_DIR),
+          () => checkGeneratedClientFiles(routes, TEMP_DIR),
+        ]) {
+          const error = captureThrownError(action);
+          assertProblem(error);
+          expect(error.code).toBe("rpc-codegen/invalid-contract");
+          expect(error.detail).toContain("GetFooProblem");
+          expect(error.detail).toContain("UserController.getFoo (/users/getFoo)");
+          expect(error.detail).toContain(`UserController.${methodName} (/users/${methodName})`);
+          expect(collectDirectoryContents(TEMP_DIR)).toEqual(before);
+        }
+      },
+    );
+
+    it("rejects cross-suffix form types before creating the output directory", () => {
+      const routes = [
+        route("create", { httpMethod: "POST", inputSchemas: BODY_INPUT_SCHEMAS }),
+        route("createValidation"),
+      ];
+      expect(() => generateClientFiles(routes, path.join(TEMP_DIR, "uncreated"))).toThrow(
+        "CreateValidationProblem",
+      );
+      expect(fs.existsSync(path.join(TEMP_DIR, "uncreated"))).toBe(false);
+    });
+
+    it("rejects normalized result hooks across query and mutation routes", () => {
+      const routes = [route("getFoo"), route("GetFooResult", { httpMethod: "POST" })];
+      expect(() =>
+        generateClientFiles(routes, path.join(TEMP_DIR, "uncreated"), { reactQuery: true }),
+      ).toThrow("useGetFooResult");
+      expect(fs.existsSync(path.join(TEMP_DIR, "uncreated"))).toBe(false);
+    });
+
+    it("rejects hooks that collide with a route problem declaration", () => {
+      const routes = [route("useFoo"), route("fooProblemDeclarations")];
+      expect(() => generateClientFiles(routes, TEMP_DIR, { reactQuery: true })).toThrow(
+        "useFooProblemDeclarations",
+      );
+    });
+
+    it(
+      "typechecks React Query hooks when the matching import is not emitted",
+      () => {
+        generateClientFiles([route("mutation")], TEMP_DIR, { reactQuery: true });
+        const content = fs.readFileSync(path.join(TEMP_DIR, "user.ts"), "utf-8");
+        assertGeneratedReactQueryClientTypechecks(`${content}
+const query = useMutation();
+void query;
+`);
+      },
+      GENERATED_CLIENT_TYPECHECK_TIMEOUT_MS,
+    );
+
+    it.each([
+      { method: "rpcClient", options: {}, symbol: "RpcClientResult" },
+      { method: "query", options: { reactQuery: true }, symbol: "useQuery" },
+      {
+        method: "mutation",
+        options: { reactQuery: true },
+        symbol: "useMutation",
+        httpMethod: "POST",
+      },
+    ])("rejects the imported declaration $symbol", ({ method, options, symbol, httpMethod }) => {
+      expect(() =>
+        generateClientFiles(
+          [route(method, { httpMethod: httpMethod ?? "GET" })],
+          path.join(TEMP_DIR, "uncreated"),
+          options,
+        ),
+      ).toThrow(symbol);
+      expect(fs.existsSync(path.join(TEMP_DIR, "uncreated"))).toBe(false);
+    });
+
+    it(
+      "typechecks noncolliding declarations across domains and absent optional artifacts",
+      () => {
+        generateClientFiles(
+          [
+            route("getFoo", { outputSchema: z.string() as RouteIR["outputSchema"] }),
+            route("GetFoo", {
+              controllerName: "OrderController",
+              domain: "order",
+              outputSchema: z.number() as RouteIR["outputSchema"],
+            }),
+            route("GetFooResult", { httpMethod: "POST" }),
+            route("create"),
+            route("createValidation"),
+            route("query"),
+            route("rpcValidation"),
+          ],
+          TEMP_DIR,
+        );
+        const consumer = `
+import { userRpc, orderRpc } from './index';
+const user: Promise<string> = userRpc.userClient.getFoo();
+const order: Promise<number> = orderRpc.orderClient.GetFoo();
+const result: Promise<unknown> = userRpc.userClient.GetFooResult();
+void user; void order; void result;
+`;
+        fs.writeFileSync(path.join(TEMP_DIR, "consumer.ts"), consumer);
+        assertGeneratedPackageTypechecks([
+          "index.ts",
+          "rpc.ts",
+          "user.ts",
+          "order.ts",
+          "consumer.ts",
+        ]);
+      },
+      GENERATED_CLIENT_TYPECHECK_TIMEOUT_MS,
+    );
+  });
+
   it(
     "should generate a package barrel that typechecks with duplicate route type names",
     () => {

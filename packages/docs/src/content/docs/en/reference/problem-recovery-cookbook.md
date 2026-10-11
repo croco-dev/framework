@@ -16106,7 +16106,7 @@ Sources:
 
 Sources:
 
-- `packages/rpc-codegen/src/libs/generate.ts:1957:38` (problem-metadata)
+- `packages/rpc-codegen/src/libs/generate.ts:2084:38` (problem-metadata)
 
 <a id="rpc-codegen-query-key-input-unsupported"></a>
 
@@ -16124,7 +16124,7 @@ Sources:
 
 Sources:
 
-- `packages/rpc-codegen/src/libs/generate.ts:1952:37` (problem-metadata)
+- `packages/rpc-codegen/src/libs/generate.ts:2079:37` (problem-metadata)
 
 <a id="rpc-codegen-status-mismatch"></a>
 
@@ -16142,7 +16142,7 @@ Sources:
 
 Sources:
 
-- `packages/rpc-codegen/src/libs/generate.ts:1947:37` (problem-metadata)
+- `packages/rpc-codegen/src/libs/generate.ts:2074:37` (problem-metadata)
 
 <a id="rpc-codegen-unsupported-form-schema"></a>
 
