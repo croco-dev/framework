@@ -277,7 +277,8 @@ export function crocoPlugin(config?: CrocoPluginConfig): esbuild.Plugin {
             ],
           };
         }
-        const isServerBuild = build.initialOptions.platform !== "browser";
+        const platform = build.initialOptions.platform ?? "browser";
+        const isServerBuild = platform !== "browser";
         if (
           !normalizedConfig.di.enabled ||
           !isServerBuild ||

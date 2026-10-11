@@ -247,6 +247,29 @@ describe("crocoPlugin", () => {
     expect(contents).not.toContain("generated-di-graph");
   });
 
+  it.each([undefined, "browser"] as const)(
+    "builds a browser entry without server graph artifacts when platform is %s",
+    async (platform) => {
+      const { entry } = createProject();
+      fs.writeFileSync(entry, 'export const greeting = "browser";');
+      const result = await esbuild.build({
+        absWorkingDir: TEMP_DIR,
+        entryPoints: [entry],
+        ...(platform === undefined ? {} : { platform }),
+        bundle: true,
+        write: false,
+        metafile: true,
+        logLevel: "silent",
+        plugins: [crocoPlugin({ reflectMetadata: false })],
+      });
+      expect(result.errors).toEqual([]);
+      expect(fs.existsSync(path.join(TEMP_DIR, ".croco"))).toBe(false);
+      expect(Object.keys(result.metafile?.inputs ?? {})).toEqual(["src/index.ts"]);
+      expect(result.outputFiles?.[0]?.text).toContain("browser");
+      expect(result.outputFiles?.[0]?.text).not.toContain("generatedDiGraph");
+    },
+  );
+
   it("forwards explicit bindings and module ownership to the compiler", () => {
     createProject();
     fs.writeFileSync(
@@ -593,22 +616,25 @@ describe("crocoPlugin", () => {
     expect(Object.keys(result.metafile?.inputs ?? {})).not.toContain(".croco/di.generated.ts");
   });
 
-  it("rejects a server build whose imported modules never bind an application runtime", async () => {
-    const { entry } = createProject();
-    fs.writeFileSync(entry, 'export { value } from "./app";');
-    fs.writeFileSync(path.join(TEMP_DIR, "src", "app.ts"), "export const value = 1;");
-    await expect(
-      esbuild.build({
-        absWorkingDir: TEMP_DIR,
-        entryPoints: [entry],
-        platform: "node",
-        bundle: true,
-        write: false,
-        logLevel: "silent",
-        plugins: [crocoPlugin({ reflectMetadata: false })],
-      }),
-    ).rejects.toThrow("CROCO_DI_COMPILE_001");
-  });
+  it.each(["node", "neutral"] as const)(
+    "rejects a %s build whose imported modules never bind an application runtime",
+    async (platform) => {
+      const { entry } = createProject();
+      fs.writeFileSync(entry, 'export { value } from "./app";');
+      fs.writeFileSync(path.join(TEMP_DIR, "src", "app.ts"), "export const value = 1;");
+      await expect(
+        esbuild.build({
+          absWorkingDir: TEMP_DIR,
+          entryPoints: [entry],
+          platform,
+          bundle: true,
+          write: false,
+          logLevel: "silent",
+          plugins: [crocoPlugin({ reflectMetadata: false })],
+        }),
+      ).rejects.toThrow("CROCO_DI_COMPILE_001");
+    },
+  );
 
   it("rebuilds provider generations without replacing in-flight scopes or publishing failed graphs", async () => {
     const { entry, component } = createProject();
