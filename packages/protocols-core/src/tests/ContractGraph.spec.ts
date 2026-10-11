@@ -2574,6 +2574,20 @@ describe("buildContractGraph", () => {
       { items: [{ id: "1" }] },
     ],
     [
+      "nested object required addition",
+      z.object({ profile: z.object({ id: z.string() }) }),
+      z.object({ profile: z.object({ id: z.string(), name: z.string() }) }),
+      { profile: { id: "1" } },
+    ],
+    [
+      "deep nested array required addition",
+      z.object({ group: z.object({ items: z.array(z.object({ id: z.string() })) }) }),
+      z.object({
+        group: z.object({ items: z.array(z.object({ id: z.string(), name: z.string() })) }),
+      }),
+      { group: { items: [{ id: "1" }] } },
+    ],
+    [
       "optional object required addition",
       z.object({ profile: z.object({ id: z.string() }).optional() }),
       z.object({ profile: z.object({ id: z.string(), name: z.string() }).optional() }),
@@ -2632,6 +2646,26 @@ describe("buildContractGraph", () => {
     expect(
       diffContractGraphSnapshots(snapshot(baseline), snapshot(current)).hasBreakingChanges,
     ).toBe(false);
+  });
+
+  it("preserves independent wrapper and descendant incompatibilities", () => {
+    const baseline = z.object({ profile: z.object({ id: z.string() }).nullable().optional() });
+    const current = z.object({ profile: z.object({ id: z.number() }).optional() });
+    const snapshot = (schema: z.ZodTypeAny) => {
+      @Controller("/users")
+      class UsersController {
+        @Post("/")
+        createUser(@Body(schema) _body: unknown): void {}
+      }
+      return createContractGraphSnapshot(buildContractGraph([UsersController]));
+    };
+    expect(baseline.safeParse({ profile: null }).success).toBe(true);
+    expect(current.safeParse({ profile: null }).success).toBe(false);
+    const diff = diffContractGraphSnapshots(snapshot(baseline), snapshot(current));
+    expect(diff.breakingChanges.map((change) => change.fieldPath)).toEqual([
+      "profile",
+      "profile.id",
+    ]);
   });
 
   it("should classify request field schema changes as breaking", () => {

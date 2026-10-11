@@ -394,11 +394,28 @@ function diffRequestSchema(
     }
   }
 
+  const specificChanges = changes.filter((change) => {
+    if (change.code !== "contract-request-field-schema-incompatible" || !change.fieldPath) {
+      return true;
+    }
+    const prefix = `${change.fieldPath}.`;
+    const sameObjectWrappers = haveSameObjectWrappers(
+      baselineFields.get(change.fieldPath)?.schema ?? null,
+      currentFields.get(change.fieldPath)?.schema ?? null,
+    );
+    return (
+      !sameObjectWrappers ||
+      !changes.some(
+        (nested) => nested.severity === "breaking" && nested.fieldPath?.startsWith(prefix),
+      )
+    );
+  });
+
   if (
-    !changes.some((change) => change.severity === "breaking") &&
+    !specificChanges.some((change) => change.severity === "breaking") &&
     !isRequestSchemaCompatible(baselineSchema, currentSchema)
   ) {
-    changes.push({
+    specificChanges.push({
       code: "contract-request-schema-incompatible",
       severity: "breaking",
       routeId: baseline.routeId,
@@ -408,7 +425,26 @@ function diffRequestSchema(
     });
   }
 
-  return changes;
+  return specificChanges;
+}
+
+function haveSameObjectWrappers(
+  baseline: ContractSchemaSnapshot | null,
+  current: ContractSchemaSnapshot | null,
+): boolean {
+  const baselineSchema = unwrapTransparentSchema(baseline);
+  const currentSchema = unwrapTransparentSchema(current);
+  if (!baselineSchema || !currentSchema) {
+    return false;
+  }
+  if (baselineSchema.kind === "object" && currentSchema.kind === "object") {
+    return true;
+  }
+  const baselineWrapper = getSchemaWrapper(baselineSchema);
+  if (!baselineWrapper || baselineWrapper !== getSchemaWrapper(currentSchema)) {
+    return false;
+  }
+  return haveSameObjectWrappers(baselineSchema.inner ?? null, currentSchema.inner ?? null);
 }
 
 function collectRequestFields(
