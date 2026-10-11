@@ -152,6 +152,34 @@ const GENERATED_RPC_TEMP_ROOT = path.join(
   "../../node_modules/.croco-contract-runtime-parity",
 );
 
+const NullableWidgetResponseSchema = z.object({ id: z.string() }).nullable();
+
+const nullableWidgetRoute = defineRouteContract({
+  id: "contract-parity.nullable-widget",
+  method: HttpMethod.GET,
+  path: "/contract-parity/nullable-widget",
+  response: NullableWidgetResponseSchema,
+});
+
+@Controller("/contract-parity")
+class NullableWidgetController {
+  @Get(nullableWidgetRoute)
+  readNullableWidget(): { id: string } | null {
+    return null;
+  }
+
+  @Get("/nullable-widget-object")
+  @ResponseSchema(NullableWidgetResponseSchema)
+  readNullableWidgetObject(): { id: string } | null {
+    return { id: "widget_nullable" };
+  }
+
+  @Get("/no-output")
+  readNoOutput(): void {
+    return undefined;
+  }
+}
+
 @Controller("/contract-parity")
 class ContractParityController {
   @Post(updateWidgetRoute)
@@ -378,6 +406,7 @@ describe("REST contract-to-runtime parity", () => {
     app = createApp({
       controllers: [
         ContractParityController,
+        NullableWidgetController,
         RepeatedParametersController,
         SchemaLessParametersController,
         TransformedResponseController,
@@ -898,6 +927,41 @@ describe("REST contract-to-runtime parity", () => {
         },
       ],
     });
+  });
+
+  it("keeps nullable JSON null aligned with the OpenAPI contract", async () => {
+    const nullableGraph = buildContractGraph([NullableWidgetController]);
+    assertContractGraphHasNoErrors(nullableGraph);
+    const spec = emitOpenAPIFromContractGraph(nullableGraph);
+
+    const nullOperation = spec.paths?.["/contract-parity/nullable-widget"]?.get;
+    expect(nullOperation?.responses?.[200]).toMatchObject({
+      content: { "application/json": { schema: expect.anything() } },
+    });
+
+    const nullResponse = await app.fetch(
+      new Request("http://localhost/contract-parity/nullable-widget"),
+    );
+    expect(nullResponse.status).toBe(200);
+    expect(nullResponse.headers.get("content-type")).toContain("application/json");
+    expect(await nullResponse.text()).toBe("null");
+
+    const nullJsonResponse = await app.fetch(
+      new Request("http://localhost/contract-parity/nullable-widget"),
+    );
+    expect(await nullJsonResponse.json()).toBeNull();
+
+    const objectResponse = await app.fetch(
+      new Request("http://localhost/contract-parity/nullable-widget-object"),
+    );
+    expect(objectResponse.status).toBe(200);
+    expect(await objectResponse.json()).toEqual({ id: "widget_nullable" });
+
+    const noOutputResponse = await app.fetch(
+      new Request("http://localhost/contract-parity/no-output"),
+    );
+    expect(noOutputResponse.status).toBe(204);
+    expect(await noOutputResponse.text()).toBe("");
   });
 
   it("keeps generated OpenAPI and RPC artifacts aligned with the validation matrix", async () => {

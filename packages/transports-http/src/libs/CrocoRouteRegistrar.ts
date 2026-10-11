@@ -144,7 +144,7 @@ export class CrocoRouteRegistrar {
               });
 
               const result = await route.handler(ctx);
-              const handlerResponse = this.toResponse(ctx, result, route.successStatus);
+              const handlerResponse = this.toResponse(ctx, result, route);
               const resultOutcome = handlerResponse.status >= 400 ? "failed" : "succeeded";
               this.recordInspectionEvent(inspector, {
                 kind: "handler.end",
@@ -380,19 +380,19 @@ export class CrocoRouteRegistrar {
     );
   }
 
-  private toResponse(ctx: HttpContext, result: unknown, successStatus?: number): Response {
+  private toResponse(ctx: HttpContext, result: unknown, route: CompiledRoute): Response {
     if (result instanceof Response) {
       ctx.res.status = result.status;
       ctx.clearBufferedResponseBody();
       return result;
     }
 
-    if (result === undefined || result === null) {
-      ctx.res.status = successStatus ?? 204;
+    if (result === undefined || (result === null && !route.hasResponseBody)) {
+      ctx.res.status = route.successStatus ?? 204;
       return this.toEmptyResponse(ctx, ctx.res.status);
     }
-
-    return ctx.jsonResponse(result, successStatus ?? 200);
+    const successStatus = route.successStatus ?? 200;
+    return ctx.jsonResponse(result, this.isNullBodyStatus(successStatus) ? 200 : successStatus);
   }
 
   private toShortCircuitResponse(ctx: HttpContext): Response {
