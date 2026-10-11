@@ -35,6 +35,7 @@ type ContractGraphV1 = {
       query: ContractSchemaSnapshot | null;
       headers: ContractSchemaSnapshot | null;
     };
+    successStatus?: number;
     outputSchema: ContractSchemaSnapshot | null;
     problems: ContractGraphSnapshotProblemResponse[];
     policies: ContractGraphV1PolicyRef[];
@@ -48,6 +49,13 @@ type ContractGraphV1 = {
 Use `createContractGraphV1(graph)` and `stringifyContractGraphV1(snapshot)` when a deterministic
 JSON artifact is required. Weak or unsupported schemas stay visible as `diagnostics` instead of
 being silently downgraded.
+
+Generated snapshot and V1 routes include the effective `successStatus`: the declared 2xx status,
+or 200 with a response schema and 204 without one. Persisted v1 artifacts may omit this field;
+`parseContractGraphSnapshot` fills the same schema-based default, and semantic diff treats an
+omitted status as equivalent to that explicit default. A changed effective status produces the
+breaking diagnostic `contract-success-status-changed`. The schema-based default describes the
+declared contract; handlers returning an undeclared body still follow the transport response policy.
 
 ## Usage
 
