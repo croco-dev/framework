@@ -372,3 +372,6 @@ export { MissionConsole } from "./libs/MissionConsole";
 export type { MissionConsoleProps } from "./libs/MissionConsole";
 export { RetentionOfferConsole } from "./libs/RetentionOfferConsole";
 export type { RetentionOfferConsoleProps } from "./libs/RetentionOfferConsole";
+
+export { RetentionWorkbench } from "./libs/RetentionWorkbench";
+export type { RetentionWorkbenchProps } from "./libs/RetentionWorkbench";

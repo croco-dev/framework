@@ -233,3 +233,29 @@ export type {
   PolicyDiffResult,
   PolicyReplayReport,
 } from "./libs/replay/PolicyReplay";
+
+export {
+  computePeriodicRetention,
+  computeCohortRetention,
+  computeFrequencyDistribution,
+  InvalidBehaviorMetricProblem,
+  ConflictingBehaviorEventProblem,
+} from "./libs/BehaviorMetrics";
+export type {
+  BehaviorScope,
+  BehaviorDefinition,
+  BehaviorObservation,
+  BehaviorDataset,
+  BehaviorWindow,
+  BehaviorResolvedWindow,
+  BehaviorSourceRef,
+  BehaviorAvailability,
+  BehaviorReason,
+  BehaviorSubjectReason,
+  BehaviorSubjectMembership,
+  BehaviorMetricResult,
+  BehaviorRetentionOptions,
+  BehaviorRetentionResult,
+  BehaviorFrequencyOptions,
+  BehaviorFrequencyResult,
+} from "./libs/BehaviorMetrics";

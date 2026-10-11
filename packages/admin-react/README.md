@@ -624,3 +624,13 @@ save/re-read, export, and failure recovery without a campaign execution engine o
 `RetentionOfferConsole` consumes a `RetentionOfferView` from `RetentionOfferOperations`. It edits registered offer labels, display order and billing-period/refund-group targets, with a required audit reason. `canWrite` disables the editing surface; authenticated server operations enforce authority independently. `onSave` receives `RetentionOfferEdit`, and `onRefresh` loads the latest revision after saves or uncertain outcomes. The built-in direct cancellation action is independent of this offer policy.
 
 The console reports initial and renewal sessions grouped by policy, subscription age at session creation and exact authoritative quote amount/currency. Scheduled cancellation, ended access and confirmed refunds are separate counts. Loading, empty, denied, error and partial-history states are explicit.
+
+## Retention workbench
+
+`RetentionWorkbench` renders the state from `createRetentionWorkbenchSource` in `@croco/admin-core`. Supply `state` and `onSelectMetric(selectionId, inputToken)`; fetch the selected denominator page from the server and pass it as `drilldown`. Use `drilldownState` for loading, denial or failure and `onNextPage` for bounded pagination. All metric formulas execute through metrics-core on the server; the browser only formats returned values.
+
+Cards distinguish periodic retention, first-behavior cohort retention and frequency distributions. They show observed numerator/denominator counts, definition/version, timezone, source names, windows, completion cutoff and deleted-subject policy. Unestablished values remain explicit rather than displaying zero percent. Native buttons support keyboard selection; the denominator table reports inclusion/exclusion reasons without receiving raw behavior rows.
+
+Pass the callback token to the server unchanged, including `onNextPage(selectionId, offset, inputToken)`. Set `drilldownState="stale"` when the source returns `admin-core/retention-stale-input`. Stale pages are hidden, including pages whose token differs from the displayed snapshot. The required `onReload` callback reloads aggregate results and clears the previous drilldown. Provider errors also expose this reload action; access denial remains explicit.
+
+The retention workbench renders periodic window trends and first-behavior cohort cells from server-provided cards. Cell buttons use the same snapshot token as denominator inspection. Multiple registered window selections form the trend/cohort table; frequency buckets remain server-calculated.

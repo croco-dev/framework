@@ -296,6 +296,12 @@
       "owner": "@croco/admin-core"
     },
     {
+      "path": "packages/admin-core/src/tests/RetentionWorkbench.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-core"
+    },
+    {
       "path": "packages/admin-core/src/tests/RewardOperations.spec.ts",
       "lane": "fast",
       "qualifiers": [],
@@ -585,6 +591,12 @@
     },
     {
       "path": "packages/admin-react/src/tests/RetentionOfferConsole.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-react"
+    },
+    {
+      "path": "packages/admin-react/src/tests/RetentionWorkbench.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/admin-react"
@@ -3657,6 +3669,18 @@
     },
     {
       "path": "packages/metrics-core/src/tests/AssignedOutcomeRead.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/metrics-core"
+    },
+    {
+      "path": "packages/metrics-core/src/tests/BehaviorMetrics.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/metrics-core"
+    },
+    {
+      "path": "packages/metrics-core/src/tests/BehaviorSources.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/metrics-core"
