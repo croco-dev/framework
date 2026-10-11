@@ -12,7 +12,7 @@ import {
  * Configuration for User Carrying Capacity calculation.
  */
 export type UserCCConfig = {
-  /** Positive safe integer number of days to look back for calculating average daily inflow/churn */
+  /** Positive safe integer number of local calendar days to look back for average daily inflow/churn */
   lookbackDays: number;
   tenantId: string;
 };
@@ -67,7 +67,8 @@ export class CarryingCapacityCalculator {
    * Calculate User Carrying Capacity.
    *
    * @formula Capacity = Daily New Users / Daily Churn Rate
-   * @formula Daily Churn Rate = (1 - (NRR / 100)) ^ (1/30) (derived from monthly NRR)
+   * @formula Daily Churn Rate = -ln(NRR / 100) / lookbackDays (NRR covers the full lookback period)
+   * @description Days follow local calendar dates, matching the inflow and retention queries, even across DST changes.
    *
    * @param config - Configuration for calculation
    * @returns User CC result, or null if churn rate is 0 (infinite capacity)
@@ -100,7 +101,7 @@ export class CarryingCapacityCalculator {
       throw new InvalidUserCarryingCapacityMetricProblem("nrr", retention.nrr);
     }
 
-    const dailyChurnRate = -Math.log(retention.nrr / 100) / 30;
+    const dailyChurnRate = -Math.log(retention.nrr / 100) / lookbackDays;
 
     if (!Number.isFinite(dailyChurnRate)) {
       throw new InvalidUserCarryingCapacityMetricProblem("dailyChurnRate", dailyChurnRate);
