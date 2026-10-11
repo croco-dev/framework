@@ -14,8 +14,8 @@ import {
   project,
   ratio,
   sum,
-} from "../libs/metric/MetricExpression";
-import type { MetricExpression } from "../libs/metric/MetricExpression";
+} from "../index";
+import type { MetricExpression } from "../index";
 
 const captures = {
   name: "captures",
@@ -276,6 +276,140 @@ describe("MetricExpression", () => {
         window,
       ),
     ).toEqual([{ group: {}, value: "2" }]);
+  });
+
+  it.each([
+    {
+      column: { type: "decimal", scale: 2 },
+      values: ["1", "1.0", "1.00", "2.00"],
+      groups: [
+        ["1", "3"],
+        ["2", "1"],
+      ],
+    },
+    {
+      column: { type: "decimal", scale: 2 },
+      values: ["9007199254740993.1", "9007199254740993.10", "9007199254740993.11"],
+      groups: [
+        ["9007199254740993.1", "2"],
+        ["9007199254740993.11", "1"],
+      ],
+    },
+    {
+      column: { type: "decimal", scale: 2 },
+      values: ["-0.00", "0", "-1.2", "-1.20"],
+      groups: [
+        ["-1.2", "2"],
+        ["0", "2"],
+      ],
+    },
+    {
+      column: { type: "int64" },
+      values: ["-0", "0", "9007199254740992", "9007199254740993"],
+      groups: [
+        ["0", "2"],
+        ["9007199254740992", "1"],
+        ["9007199254740993", "1"],
+      ],
+    },
+    {
+      column: { type: "string" },
+      values: ["1", "1.0", "1.00"],
+      groups: [
+        ["1", "1"],
+        ["1.0", "1"],
+        ["1.00", "1"],
+      ],
+    },
+    {
+      column: { type: "instant" },
+      values: [
+        "2026-01-01T00:00:00.123456Z",
+        "2025-12-31T19:00:00.123456-05:00",
+        "2026-01-01T00:00:00.123457Z",
+      ],
+      groups: [
+        ["2026-01-01T00:00:00.123456Z", "2"],
+        ["2026-01-01T00:00:00.123457Z", "1"],
+      ],
+    },
+    {
+      column: { type: "instant" },
+      values: [
+        "1969-12-31T23:59:59.999999999Z",
+        "1970-01-01T00:59:59.999999999+01:00",
+        "1970-01-01T00:00:00Z",
+      ],
+      groups: [
+        ["1969-12-31T23:59:59.999999999Z", "2"],
+        ["1970-01-01T00:00:00Z", "1"],
+      ],
+    },
+  ] as const)(
+    "groups equivalent $column.type values with canonical output",
+    ({ column, values, groups }) => {
+      const fact = {
+        name: "samples",
+        kind: "transaction",
+        columns: { at: { type: "instant" }, dimension: column },
+      } as const;
+      const base = {
+        version: 1,
+        from: fact,
+        time: project(fact, "at"),
+        unit: "rows",
+        population: "samples",
+      } as const;
+      const dimension = project(fact, "dimension");
+      const metric = defineMetric("grouped_samples", {
+        ...base,
+        measure: count(),
+        groupByRequired: [dimension],
+      });
+      const rows = values.map((dimension) => ({ at: window.from, dimension }));
+      const expected = groups.map(([dimension, value]) => ({ group: { dimension }, value }));
+      expect(evaluateMetric(metric, rows, window)).toEqual(expected);
+      expect(evaluateMetric(metric, [...rows].reverse(), window)).toEqual(expected);
+      expect(
+        evaluateMetric(
+          defineMetric("distinct_samples", { ...base, measure: exactDistinct(dimension) }),
+          rows,
+          window,
+        ),
+      ).toEqual([{ group: {}, value: String(groups.length) }]);
+    },
+  );
+
+  it.each([
+    { column: { type: "int64" }, value: "9223372036854775808", code: "METRIC_INTEGER_OVERFLOW" },
+    { column: { type: "int64" }, value: "1.0", code: "METRIC_INVALID_INTEGER" },
+    { column: { type: "decimal", scale: 2 }, value: "1.001", code: "METRIC_DECIMAL_SCALE" },
+    { column: { type: "decimal", scale: 2 }, value: "1e2", code: "METRIC_INVALID_DECIMAL" },
+    { column: { type: "instant" }, value: "invalid", code: "METRIC_INVALID_INSTANT" },
+    {
+      column: { type: "instant" },
+      value: "2026-01-01T00:00:00.1234567890Z",
+      code: "METRIC_INVALID_INSTANT_PRECISION",
+    },
+    { column: { type: "decimal", scale: 2 }, value: null, code: "METRIC_INVALID_GROUP" },
+  ] as const)("rejects invalid $column.type group values ($code)", ({ column, value, code }) => {
+    const fact = {
+      name: "samples",
+      kind: "transaction",
+      columns: { at: { type: "instant" }, dimension: column },
+    } as const;
+    const metric = defineMetric("invalid_group", {
+      version: 1,
+      from: fact,
+      time: project(fact, "at"),
+      measure: count(),
+      groupByRequired: [project(fact, "dimension")],
+      unit: "rows",
+      population: "samples",
+    });
+    expect(() =>
+      evaluateMetric(metric, [{ at: window.from, dimension: value }], window),
+    ).toThrowError(code);
   });
 
   it("rejects a time reference not declared by the fact", () => {

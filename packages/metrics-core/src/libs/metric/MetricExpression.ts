@@ -626,6 +626,28 @@ function instantNanoseconds(value: string, code: string): bigint {
   return BigInt(seconds) * BigInt(1_000_000) + BigInt((match[2] ?? "").padEnd(9, "0"));
 }
 
+function groupValue(value: string | boolean, column: MetricColumnRef): string | boolean {
+  switch (column.column.type) {
+    case "int64":
+      return integer(value).toString();
+    case "decimal":
+      return formatDecimal(decimal(value, column.column.scale), column.column.scale);
+    case "instant": {
+      requireCondition(typeof value === "string", "METRIC_INVALID_INSTANT");
+      const timestamp = instantNanoseconds(value, "METRIC_INVALID_INSTANT");
+      const nanosecondsPerSecond = BigInt(1_000_000_000);
+      const fraction =
+        ((timestamp % nanosecondsPerSecond) + nanosecondsPerSecond) % nanosecondsPerSecond;
+      const milliseconds = (timestamp - fraction) / BigInt(1_000_000);
+      const seconds = new Date(Number(milliseconds)).toISOString().slice(0, -5);
+      const digits = fraction.toString().padStart(9, "0").replace(/0+$/, "");
+      return `${seconds}${digits ? `.${digits}` : ""}Z`;
+    }
+    default:
+      return value;
+  }
+}
+
 export function evaluateMetric(
   definition: MetricDefinition,
   rows: readonly Readonly<Record<string, unknown>>[],
@@ -666,7 +688,7 @@ export function evaluateMetric(
         typeof value === "string" || typeof value === "boolean",
         "METRIC_INVALID_GROUP",
       );
-      group[column.key] = value;
+      group[column.key] = groupValue(value, column);
     }
     const bucket = definition.bucket
       ? isDate
