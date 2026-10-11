@@ -1,5 +1,6 @@
 import { renderUsage } from "citty";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { z } from "zod";
 
 import {
   type ContractDiagnostic,
@@ -109,6 +110,61 @@ describe("contractsDiff", () => {
 
     expect(exitCode).toBe(1);
   });
+
+  it.each([
+    {
+      name: "root optional request removal",
+      baselineSchema: z.object({ name: z.string() }).optional(),
+      currentSchema: z.object({ name: z.string() }),
+    },
+    {
+      name: "required request array item field addition",
+      baselineSchema: z.array(z.object({ name: z.string() })),
+      currentSchema: z.array(z.object({ name: z.string(), email: z.string() })),
+    },
+  ])(
+    "should report $name as breaking in snapshot JSON",
+    async ({ baselineSchema, currentSchema }) => {
+      const snapshot = (schema: z.ZodType) => {
+        const graph = createGraph(["UsersController.createUser"]);
+        return stringifyContractGraphSnapshot(
+          createContractGraphSnapshot({
+            ...graph,
+            routes: graph.routes.map((route) => ({
+              ...route,
+              inputSchemas: { ...route.inputSchemas, body: schema },
+            })),
+          }),
+        );
+      };
+      const baseline = snapshot(baselineSchema);
+      const current = snapshot(currentSchema);
+      const stdout: string[] = [];
+
+      const exitCode = await runContractsDiff(
+        ["--baseline", "baseline.json", "--current-snapshot", "current.json", "--json"],
+        {
+          io: {
+            cwd: "/workspace/app",
+            readFile: (path) => (path.endsWith("baseline.json") ? baseline : current),
+            stdout: (message) => stdout.push(message),
+          },
+        },
+      );
+
+      expect(exitCode).toBe(1);
+      expect(JSON.parse(stdout.join("\n"))).toMatchObject({
+        hasBreakingChanges: true,
+        breakingChanges: expect.arrayContaining([
+          expect.objectContaining({
+            severity: "breaking",
+            routeId: "UsersController.createUser",
+            location: "body",
+          }),
+        ]),
+      });
+    },
+  );
 
   it("should write the existing JSON diff shape for snapshot comparisons", async () => {
     const writes = new Map<string, string>();
