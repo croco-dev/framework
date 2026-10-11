@@ -1,5 +1,5 @@
 import "reflect-metadata";
-import { mkdtempSync, readFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { ProblemCategory } from "@croco/problems-core";
@@ -91,6 +91,47 @@ const updateUserSchema = z.object({
   name: z.string().optional(),
 });
 describe("admin-generated", () => {
+  it.each([
+    ["null literal", z.literal(null), "null", "null"],
+    ["string literal", z.literal("active"), "'active'", '"active"'],
+    ["number literal", z.literal(0), "0", "0"],
+    ["boolean literal", z.literal(false), "false", "false"],
+    ["null schema", z.null(), "null", "null"],
+  ])("preserves %s in response types and generated files", (_name, schema, expectedType, value) => {
+    @Controller("/notes")
+    class NotesController {
+      @Get("/")
+      @ResponseSchema(schema)
+      scalar(): void {}
+
+      @Get("/:id")
+      @ResponseSchema(z.object({ deletedAt: schema }))
+      object(@Param("id", z.string()) _id: string): void {}
+    }
+
+    const graph = buildContractGraph([NotesController]);
+    expect(graph.diagnostics).toEqual([]);
+    expect(createAdminGeneratedArtifact(graph).diagnostics).toEqual([]);
+    const source = generateAdminResourceSourceFromContractGraph(graph);
+    const scalarType = `export type NotesControllerScalarOutput = ${expectedType};`;
+    const objectType = `export type NotesControllerObjectOutput = { deletedAt: ${expectedType}; };`;
+    expect(source).toContain(scalarType);
+    expect(source).toContain(objectType);
+
+    const outDir = mkdtempSync(join(tmpdir(), "croco-admin-literals-"));
+    try {
+      generateAdminResourceFilesFromContractGraph(graph, outDir);
+      expect(readFileSync(join(outDir, "admin-resources.ts"), "utf-8")).toBe(source);
+      expect(
+        typecheckSource(
+          `${scalarType}\n${objectType}\nconst scalar: NotesControllerScalarOutput = ${value};\nconst object: NotesControllerObjectOutput = { deletedAt: ${value} };`,
+        ),
+      ).toEqual([]);
+    } finally {
+      rmSync(outDir, { recursive: true, force: true });
+    }
+  });
+
   it.each<{ name: string; values: z.EnumLike; expected: string }>([
     {
       name: "numeric",
