@@ -54567,7 +54567,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/rpc-codegen/src/libs/generate.ts",
-          line: 1957,
+          line: 2084,
           column: 38,
           kind: "problem-metadata",
         },
@@ -54597,7 +54597,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/rpc-codegen/src/libs/generate.ts",
-          line: 1952,
+          line: 2079,
           column: 37,
           kind: "problem-metadata",
         },
@@ -54629,7 +54629,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/rpc-codegen/src/libs/generate.ts",
-          line: 1947,
+          line: 2074,
           column: 37,
           kind: "problem-metadata",
         },
