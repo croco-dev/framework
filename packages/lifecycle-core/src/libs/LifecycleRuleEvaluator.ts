@@ -677,7 +677,7 @@ export class LifecycleRuleEvaluator {
       return { suppressed: true, reason: "rule_not_active" };
     }
 
-    const existingRun = await this.runStore.findByIdempotencyKey(idempotencyKey);
+    const existingRun = await this.runStore.findByIdempotencyKey(idempotencyKey, context.now);
     if (existingRun !== null) {
       return { suppressed: true, reason: "idempotency_key_reused" };
     }
@@ -688,6 +688,7 @@ export class LifecycleRuleEvaluator {
         context.tenantId,
         registration.rule.id,
         since,
+        context.now,
       );
       if (latestRun !== null) {
         return { suppressed: true, reason: "cooldown_active" };
