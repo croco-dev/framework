@@ -25047,7 +25047,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/rpc-codegen/src/libs/generate.ts",
-          line: 115,
+          line: 116,
           column: 5,
           kind: "problem-constructor",
         },
@@ -25109,7 +25109,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/rpc-codegen/src/libs/generate.ts",
-          line: 1951,
+          line: 1957,
           column: 38,
           kind: "problem-metadata",
         },
@@ -25139,7 +25139,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/rpc-codegen/src/libs/generate.ts",
-          line: 1946,
+          line: 1952,
           column: 37,
           kind: "problem-metadata",
         },
@@ -25171,7 +25171,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/rpc-codegen/src/libs/generate.ts",
-          line: 1941,
+          line: 1947,
           column: 37,
           kind: "problem-metadata",
         },
@@ -25201,7 +25201,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/rpc-codegen/src/libs/generate.ts",
-          line: 121,
+          line: 122,
           column: 5,
           kind: "problem-constructor",
         },

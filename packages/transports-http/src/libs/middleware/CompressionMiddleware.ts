@@ -48,7 +48,12 @@ export const compressionMiddleware = (options: CompressionOptions = {}): Middlew
     ctx.res.status = response.status;
     ctx.res.headers["content-encoding"] = encoding;
     ctx.res.headers["vary"] = headers.get("Vary") ?? "Accept-Encoding";
-    delete ctx.res.headers["content-length"];
+    for (const key of Object.keys(ctx.res.headers)) {
+      if (key.toLowerCase() === "content-length") {
+        delete ctx.res.headers[key];
+      }
+    }
+    ctx.raw.header("Content-Length", undefined);
 
     return new Response(toResponseBody(compressed), {
       status: response.status,

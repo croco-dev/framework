@@ -223,6 +223,80 @@ describe("ChunkExecutor", () => {
     });
   });
 
+  it.each([false, true])(
+    "records checkpoint restoration failures with retryable=%s before reading or writing",
+    async (retryable) => {
+      const manager = new ExecutionManagerImpl(new TestExecutionStore());
+      const execution = await manager.create({ type: "batch-job", maxAttempts: 2 });
+      await manager.checkpoint(execution.id, "restore-step.cursor", { offset: 2 });
+      const fail = vi.spyOn(manager, "fail");
+      const original = new Error("unsupported saved cursor");
+      const reader = createCheckpointReader([1, 2, 3]);
+      reader.restoreCheckpoint.mockImplementation(() => {
+        throw original;
+      });
+      const writer = { write: vi.fn().mockResolvedValue(undefined) };
+      const classifyFailure = vi.fn(() => ({ retryable, code: "invalid-cursor" }));
+
+      await expect(
+        new ChunkExecutor(manager).execute(
+          execution.id,
+          new Step<number, number>({
+            name: "restore-step",
+            reader,
+            writer,
+            chunkSize: 1,
+            classifyFailure,
+          }),
+        ),
+      ).rejects.toBe(original);
+
+      expect(reader.restoreCheckpoint).toHaveBeenCalledExactlyOnceWith({ offset: 2 });
+      expect(classifyFailure).toHaveBeenCalledExactlyOnceWith(original, {
+        executionId: execution.id,
+        stepName: "restore-step",
+      });
+      expect(fail).toHaveBeenCalledExactlyOnceWith(execution.id, {
+        message: original.message,
+        stack: original.stack,
+        retryable,
+        code: "invalid-cursor",
+      });
+      expect(await manager.get(execution.id)).toMatchObject({
+        status: retryable ? "retrying" : "failed",
+        checkpoints: { "restore-step.cursor": { offset: 2 } },
+      });
+      expect(reader.read).not.toHaveBeenCalled();
+      expect(writer.write).not.toHaveBeenCalled();
+    },
+  );
+
+  it("preserves start failures without classifying or recording a step failure", async () => {
+    const original = new Error("cannot start execution");
+    vi.mocked(executionManager.start).mockRejectedValue(original);
+    const reader = createCheckpointReader([1]);
+    const writer = { write: vi.fn() };
+    const classifyFailure = vi.fn(() => false);
+
+    await expect(
+      executor.execute(
+        "exec-1",
+        new Step<number, number>({
+          name: "restore-step",
+          reader,
+          writer,
+          classifyFailure,
+        }),
+      ),
+    ).rejects.toBe(original);
+
+    expect(classifyFailure).not.toHaveBeenCalled();
+    expect(executionManager.fail).not.toHaveBeenCalled();
+    expect(reader.restoreCheckpoint).not.toHaveBeenCalled();
+    expect(reader.read).not.toHaveBeenCalled();
+    expect(writer.write).not.toHaveBeenCalled();
+  });
+
   it.each([0, 1, 4, 5])(
     "should checkpoint all-filtered input at chunk boundaries and flush the remainder (%i items)",
     async (count) => {

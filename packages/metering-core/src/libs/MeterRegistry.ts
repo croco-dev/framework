@@ -23,6 +23,7 @@ export class MeterRegistry {
    */
   private readonly cache = new Map<string, Map<string, MeterDefinition>>();
   private readonly cacheUpdatedAt = new Map<string, number>();
+  private readonly tenantSnapshotUpdatedAt = new Map<string, number>();
 
   constructor(
     private readonly repository: MeterRepository,
@@ -38,10 +39,14 @@ export class MeterRegistry {
     for (const meter of meters) {
       this.assertJournalConfigured(meter);
     }
-    this.cache.clear();
+    this.clearCache();
 
     for (const meter of meters) {
       this.addToCache(meter);
+    }
+    const updatedAt = Date.now();
+    for (const tenantId of this.cache.keys()) {
+      this.tenantSnapshotUpdatedAt.set(tenantId, updatedAt);
     }
   }
 
@@ -98,7 +103,12 @@ export class MeterRegistry {
    */
   async getByTenant(tenantId: string): Promise<MeterDefinition[]> {
     const tenantCache = this.cache.get(tenantId);
-    if (tenantCache && tenantCache.size > 0 && !this.isCacheStale(tenantId)) {
+    const snapshotUpdatedAt = this.tenantSnapshotUpdatedAt.get(tenantId);
+    if (
+      tenantCache &&
+      snapshotUpdatedAt !== undefined &&
+      Date.now() - snapshotUpdatedAt < this.cacheTtlMs
+    ) {
       return Array.from(tenantCache.values());
     }
 
@@ -111,6 +121,7 @@ export class MeterRegistry {
   clearCache(): void {
     this.cache.clear();
     this.cacheUpdatedAt.clear();
+    this.tenantSnapshotUpdatedAt.clear();
   }
 
   getCachedBillingRequirement(tenantId: string, meterId: string): "local" | "required" | "unknown" {
@@ -148,7 +159,9 @@ export class MeterRegistry {
     }
 
     this.cache.set(tenantId, tenantCache);
-    this.cacheUpdatedAt.set(tenantId, Date.now());
+    const updatedAt = Date.now();
+    this.cacheUpdatedAt.set(tenantId, updatedAt);
+    this.tenantSnapshotUpdatedAt.set(tenantId, updatedAt);
 
     return meters;
   }

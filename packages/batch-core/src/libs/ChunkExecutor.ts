@@ -69,26 +69,25 @@ export class ChunkExecutor {
     assertValidChunkSize(step?.chunkSize);
     const execution = await this.resolveExecution(executionId, options);
 
-    // 2. Restore checkpoint if available
-    const checkpointKey = `${step.name}.cursor`;
-    const processedCountKey = `${step.name}.processedCount`;
-    let restoredCheckpoint = false;
-    if (this.hasCheckpoint(execution, checkpointKey) && isCheckpointable(step.reader)) {
-      step.reader.restoreCheckpoint(execution.checkpoints[checkpointKey]);
-      restoredCheckpoint = true;
-    }
-
-    let items: O[] = [];
-    let chunkInputCount = 0;
-    let processedCount = this.resolveProcessedCount(
-      execution,
-      restoredCheckpoint,
-      processedCountKey,
-    );
-    const totalCount = execution.progress?.total;
-
-    // 3. Read - Process - Write loop
     try {
+      // 2. Restore checkpoint if available
+      const checkpointKey = `${step.name}.cursor`;
+      const processedCountKey = `${step.name}.processedCount`;
+      let restoredCheckpoint = false;
+      if (this.hasCheckpoint(execution, checkpointKey) && isCheckpointable(step.reader)) {
+        step.reader.restoreCheckpoint(execution.checkpoints[checkpointKey]);
+        restoredCheckpoint = true;
+      }
+
+      let items: O[] = [];
+      let chunkInputCount = 0;
+      let processedCount = this.resolveProcessedCount(
+        execution,
+        restoredCheckpoint,
+        processedCountKey,
+      );
+      const totalCount = execution.progress?.total;
+
       while (true) {
         // Read
         const item = await step.reader.read();

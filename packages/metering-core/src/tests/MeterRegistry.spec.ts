@@ -256,6 +256,127 @@ describe("MeterRegistry", () => {
   });
 
   describe("getByTenant", () => {
+    it("should load the complete tenant snapshot after a lazy single-meter lookup", async () => {
+      const apiMeter = createMeter();
+      const meters = [apiMeter, createMeter({ meterId: "storage" })];
+      vi.mocked(mockRepository.findByMeterIdAndTenant).mockResolvedValue(apiMeter);
+      vi.mocked(mockRepository.findByTenant).mockResolvedValue(meters);
+
+      await registry.get("tenant-1", "api_calls");
+
+      await expect(registry.getByTenant("tenant-1")).resolves.toEqual(meters);
+      await expect(registry.getByTenant("tenant-1")).resolves.toEqual(meters);
+      expect(mockRepository.findByTenant).toHaveBeenCalledTimes(1);
+    });
+
+    it("should include existing meters after registering into a cold cache", async () => {
+      const existingMeter = createMeter();
+      const savedMeter = createMeter({ meterId: "storage" });
+      const meters = [existingMeter, savedMeter];
+      vi.mocked(mockRepository.save).mockResolvedValue(savedMeter);
+      vi.mocked(mockRepository.findByTenant).mockResolvedValue(meters);
+
+      await registry.register({ tenantId: "tenant-1", meterId: "storage", type: "COUNT" });
+
+      await expect(registry.getByTenant("tenant-1")).resolves.toEqual(meters);
+      expect(mockRepository.findByTenant).toHaveBeenCalledTimes(1);
+    });
+
+    it("should reuse an empty snapshot until its TTL boundary", async () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date("2026-09-01T00:00:00Z"));
+      vi.mocked(mockRepository.findByTenant).mockResolvedValue([]);
+
+      await expect(registry.getByTenant("tenant-1")).resolves.toEqual([]);
+      vi.advanceTimersByTime(59_999);
+      await expect(registry.getByTenant("tenant-1")).resolves.toEqual([]);
+      expect(mockRepository.findByTenant).toHaveBeenCalledTimes(1);
+
+      vi.advanceTimersByTime(1);
+      await expect(registry.getByTenant("tenant-1")).resolves.toEqual([]);
+      expect(mockRepository.findByTenant).toHaveBeenCalledTimes(2);
+    });
+
+    it.each(["get", "register"] as const)(
+      "should not extend the complete snapshot TTL after a single-meter %s",
+      async (operation) => {
+        vi.useFakeTimers();
+        vi.setSystemTime(new Date("2026-09-01T00:00:00Z"));
+        const initialMeter = createMeter();
+        const addedMeter = createMeter({ meterId: "storage" });
+        const externalMeter = createMeter({ meterId: "external" });
+        vi.mocked(mockRepository.findByTenant)
+          .mockResolvedValueOnce([initialMeter])
+          .mockResolvedValueOnce([initialMeter, addedMeter, externalMeter]);
+        await registry.getByTenant("tenant-1");
+
+        vi.advanceTimersByTime(30_000);
+        if (operation === "get") {
+          vi.mocked(mockRepository.findByMeterIdAndTenant).mockResolvedValue(addedMeter);
+          await registry.get("tenant-1", "storage");
+        } else {
+          vi.mocked(mockRepository.save).mockResolvedValue(addedMeter);
+          await registry.register({ tenantId: "tenant-1", meterId: "storage", type: "COUNT" });
+        }
+        await expect(registry.getByTenant("tenant-1")).resolves.toEqual([initialMeter, addedMeter]);
+        expect(mockRepository.findByTenant).toHaveBeenCalledTimes(1);
+
+        vi.advanceTimersByTime(30_000);
+        await expect(registry.getByTenant("tenant-1")).resolves.toEqual([
+          initialMeter,
+          addedMeter,
+          externalMeter,
+        ]);
+        expect(mockRepository.findByTenant).toHaveBeenCalledTimes(2);
+      },
+    );
+
+    it("should discard snapshot completeness when clearing or reloading the cache", async () => {
+      const meter = createMeter();
+      vi.mocked(mockRepository.findByTenant).mockResolvedValue([meter]);
+      await registry.getByTenant("tenant-1");
+      registry.clearCache();
+      await registry.getByTenant("tenant-1");
+      expect(mockRepository.findByTenant).toHaveBeenCalledTimes(2);
+
+      vi.mocked(mockRepository.findAll).mockResolvedValue([]);
+      await registry.loadAll();
+      await expect(registry.getByTenant("tenant-1")).resolves.toEqual([meter]);
+      expect(mockRepository.findByTenant).toHaveBeenCalledTimes(3);
+    });
+
+    it("should keep completeness isolated by tenant", async () => {
+      const apiMeter = createMeter();
+      const storageMeter = createMeter({ meterId: "storage" });
+      const otherTenantMeter = createMeter({ tenantId: "tenant-2" });
+      vi.mocked(mockRepository.findAll).mockResolvedValue([otherTenantMeter]);
+      await registry.loadAll();
+      vi.mocked(mockRepository.findByMeterIdAndTenant).mockResolvedValue(apiMeter);
+      await registry.get("tenant-1", "api_calls");
+      vi.mocked(mockRepository.findByTenant).mockResolvedValue([apiMeter, storageMeter]);
+
+      await expect(registry.getByTenant("tenant-2")).resolves.toEqual([otherTenantMeter]);
+      await expect(registry.getByTenant("tenant-1")).resolves.toEqual([apiMeter, storageMeter]);
+      expect(mockRepository.findByTenant).toHaveBeenCalledExactlyOnceWith("tenant-1");
+    });
+
+    it("should not mark a rejected tenant refresh as complete", async () => {
+      const meter = createMeter();
+      vi.mocked(mockRepository.findByMeterIdAndTenant).mockResolvedValue(meter);
+      await registry.get("tenant-1", "api_calls");
+      vi.mocked(mockRepository.findByTenant).mockResolvedValue([
+        meter,
+        createMeter({ meterId: "storage", billing: "required" }),
+      ]);
+
+      await expect(registry.getByTenant("tenant-1")).rejects.toMatchObject({
+        code: "metering/billable-usage-journal-required",
+      });
+      vi.mocked(mockRepository.findByTenant).mockResolvedValue([meter]);
+      await expect(registry.getByTenant("tenant-1")).resolves.toEqual([meter]);
+      expect(mockRepository.findByTenant).toHaveBeenCalledTimes(2);
+    });
+
     it("should return all meters for tenant from cache", async () => {
       const meters = [createMeter({ meterId: "meter1" }), createMeter({ meterId: "meter2" })];
       vi.mocked(mockRepository.findAll).mockResolvedValue(meters);

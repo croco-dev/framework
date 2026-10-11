@@ -39,6 +39,49 @@ describe("RedisUsageStorage", () => {
     vi.useRealTimers();
   });
 
+  it.each([
+    ["hour", "2026-09-01T13:00:00.000Z"],
+    ["day", "2026-09-02T00:00:00.000Z"],
+  ] as const)("keeps default %s reads within the current period", async (period, boundary) => {
+    const nextStart = new Date(boundary);
+    const currentLast = new Date(nextStart.getTime() - 1);
+    const values = new Map<string, Array<{ score: number; member: string }>>();
+    vi.mocked(mockRedis.eval).mockImplementation(async (_script, keys, args) => {
+      values.set(keys[0], [
+        ...(values.get(keys[0]) ?? []),
+        { score: Number(args[0]), member: String(args[1]) },
+      ]);
+      return [1];
+    });
+    vi.mocked(mockRedis.zrangebyscore).mockImplementation(async (key, min, max) =>
+      (values.get(key) ?? [])
+        .filter(({ score }) => score >= Number(min) && score <= Number(max))
+        .flatMap(({ member, score }) => [member, String(score)]),
+    );
+    for (const [id, timestamp, value] of [
+      ["current", currentLast, 2],
+      ["next", nextStart, 3],
+    ] as const) {
+      await storage.record({ ...createUsageRecord(id), id, timestamp, value });
+    }
+    const options: UsageQueryOptions = { tenantId: "tenant-1", meterId: "api_calls", period };
+    vi.useFakeTimers();
+    vi.setSystemTime(currentLast);
+    expect(await storage.getUsage(options)).toBe(2);
+    expect((await storage.fetchUsageRecords(options)).map(({ id }) => id)).toEqual(["current"]);
+
+    vi.setSystemTime(nextStart);
+    expect(await storage.getUsage(options)).toBe(3);
+    expect((await storage.fetchUsageRecords(options)).map(({ id }) => id)).toEqual(["next"]);
+
+    const explicit = { ...options, startDate: currentLast, endDate: nextStart };
+    expect(await storage.getUsage(explicit)).toBe(5);
+    expect((await storage.fetchUsageRecords(explicit)).map(({ id }) => id)).toEqual([
+      "current",
+      "next",
+    ]);
+  });
+
   function createScanDeleteRedis(initialKeys: string[]): {
     keyspace: Set<string>;
     redis: RedisClient;

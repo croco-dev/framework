@@ -187,6 +187,19 @@ function diffExistingRoute(
     });
   }
 
+  const baselineStatus = baseline.successStatus ?? (baseline.response ? 200 : 204);
+  const currentStatus = current.successStatus ?? (current.response ? 200 : 204);
+  if (baselineStatus !== currentStatus) {
+    changes.push({
+      code: "contract-success-status-changed",
+      severity: "breaking",
+      routeId: baseline.routeId,
+      operationId: baseline.operationId,
+      location: "response",
+      message: `Route '${baseline.routeId}' success status changed from ${baselineStatus} to ${currentStatus}.`,
+    });
+  }
+
   changes.push(...diffRequestSchemas(baseline, current));
   changes.push(...diffProblemResponses(baseline, current));
   changes.push(...diffEntitlementRequirements(baseline, current));

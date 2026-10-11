@@ -4178,6 +4178,12 @@
       "owner": "@croco/protocols-core"
     },
     {
+      "path": "packages/protocols-core/src/tests/ContractSuccessStatus.spec.ts",
+      "lane": "fast",
+      "qualifiers": ["coverage"],
+      "owner": "@croco/protocols-core"
+    },
+    {
       "path": "packages/protocols-core/src/tests/RoutePath.spec.ts",
       "lane": "fast",
       "qualifiers": ["coverage"],

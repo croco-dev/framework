@@ -92,6 +92,32 @@ describe("contractsDiff", () => {
     ]);
   });
 
+  it("should fail persisted snapshot comparison when the success status changes", async () => {
+    const graph = createGraph(["UsersController.createUser"]);
+    const withStatus = (successStatus: number) =>
+      createContractGraphSnapshot({
+        ...graph,
+        routes: graph.routes.map((route) => ({ ...route, successStatus })),
+      });
+    const baseline = stringifyContractGraphSnapshot(withStatus(201));
+    const current = stringifyContractGraphSnapshot(withStatus(202));
+    const stdout: string[] = [];
+    const exitCode = await runContractsDiff(
+      ["--baseline", "baseline.json", "--current-snapshot", "current.json"],
+      {
+        io: {
+          cwd: "/workspace/app",
+          readFile: (path) => (path.endsWith("baseline.json") ? baseline : current),
+          stdout: (message) => stdout.push(message),
+        },
+      },
+    );
+    expect(exitCode).toBe(1);
+    expect(stdout).toContainEqual(
+      expect.stringContaining("BREAKING contract-success-status-changed"),
+    );
+  });
+
   it("should preserve the breaking exit code for snapshot comparisons", async () => {
     const baseline = stringifyContractGraphSnapshot(
       createContractGraphSnapshot(createGraph(["UsersController.listUsers"])),

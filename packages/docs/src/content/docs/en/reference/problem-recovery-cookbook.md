@@ -15422,7 +15422,7 @@ Sources:
 
 Sources:
 
-- `packages/rpc-codegen/src/libs/generate.ts:115:5` (problem-constructor)
+- `packages/rpc-codegen/src/libs/generate.ts:116:5` (problem-constructor)
 
 <a id="rpc-codegen-no-rest-controllers-found"></a>
 
@@ -15458,7 +15458,7 @@ Sources:
 
 Sources:
 
-- `packages/rpc-codegen/src/libs/generate.ts:1951:38` (problem-metadata)
+- `packages/rpc-codegen/src/libs/generate.ts:1957:38` (problem-metadata)
 
 <a id="rpc-codegen-query-key-input-unsupported"></a>
 
@@ -15476,7 +15476,7 @@ Sources:
 
 Sources:
 
-- `packages/rpc-codegen/src/libs/generate.ts:1946:37` (problem-metadata)
+- `packages/rpc-codegen/src/libs/generate.ts:1952:37` (problem-metadata)
 
 <a id="rpc-codegen-status-mismatch"></a>
 
@@ -15494,7 +15494,7 @@ Sources:
 
 Sources:
 
-- `packages/rpc-codegen/src/libs/generate.ts:1941:37` (problem-metadata)
+- `packages/rpc-codegen/src/libs/generate.ts:1947:37` (problem-metadata)
 
 <a id="rpc-codegen-unsupported-form-schema"></a>
 
@@ -15512,7 +15512,7 @@ Sources:
 
 Sources:
 
-- `packages/rpc-codegen/src/libs/generate.ts:121:5` (problem-constructor)
+- `packages/rpc-codegen/src/libs/generate.ts:122:5` (problem-constructor)
 
 <a id="saas-demo-application-bootstrap-failed"></a>
 

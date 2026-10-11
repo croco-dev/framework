@@ -14,6 +14,12 @@ import {
   type RuntimeInspectorSnapshot,
 } from "@croco/framework-context";
 import { Logger } from "@croco/framework-logger";
+import {
+  buildContractGraph,
+  createContractGraphSnapshot,
+  createContractGraphV1,
+  diffContractGraphSnapshots,
+} from "@croco/protocols-core";
 import { Problem, ProblemCategory } from "@croco/problems-core";
 import {
   type ArgumentMetadata,
@@ -640,6 +646,47 @@ describe("CrocoApp", () => {
     expect(emptyResponse.status).toBe(204);
     expect(acceptedResponse.status).toBe(202);
     await expect(acceptedResponse.text()).resolves.toBe("");
+  });
+
+  it("should detect actual HTTP 201 to 202 drift in both contract artifacts", async () => {
+    @Controller("/status-drift")
+    class StatusDriftController {
+      @Post("/")
+      create() {
+        return { ok: true };
+      }
+    }
+
+    const metadata = Reflect.getMetadata(REST_ROUTES_KEY, StatusDriftController) as RouteMetadata[];
+    const route = metadata.find((entry) => entry.methodName === "create");
+    if (!route) {
+      throw new TypeError("Expected StatusDriftController.create metadata.");
+    }
+    route.statusCode = 201;
+    const baselineGraph = buildContractGraph([StatusDriftController]);
+    const baseline = createContractGraphSnapshot(baselineGraph);
+    const baselineV1 = createContractGraphV1(baselineGraph);
+    const before = await createApp({ controllers: [StatusDriftController] }).fetch(
+      new Request("http://localhost/status-drift", { method: "POST" }),
+    );
+
+    route.statusCode = 202;
+    const currentGraph = buildContractGraph([StatusDriftController]);
+    const current = createContractGraphSnapshot(currentGraph);
+    const currentV1 = createContractGraphV1(currentGraph);
+    const after = await createApp({ controllers: [StatusDriftController] }).fetch(
+      new Request("http://localhost/status-drift", { method: "POST" }),
+    );
+
+    expect(before.status).toBe(201);
+    expect(after.status).toBe(202);
+    await expect(before.json()).resolves.toEqual({ ok: true });
+    await expect(after.json()).resolves.toEqual({ ok: true });
+    expect(JSON.stringify(current)).not.toBe(JSON.stringify(baseline));
+    expect(JSON.stringify(currentV1)).not.toBe(JSON.stringify(baselineV1));
+    expect(diffContractGraphSnapshots(baseline, current).breakingChanges).toContainEqual(
+      expect.objectContaining({ code: "contract-success-status-changed", severity: "breaking" }),
+    );
   });
 
   it("should run HTTP middlewares around the controller handler", async () => {

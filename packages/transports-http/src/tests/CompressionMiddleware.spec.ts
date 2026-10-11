@@ -214,6 +214,88 @@ describe("compressionMiddleware", () => {
     expect(JSON.parse(decoded)).toEqual({ payload: LARGE_PAYLOAD });
   });
 
+  it.each(
+    ["Content-Length", "content-length", "CoNtEnT-LeNgTh"].flatMap((key) =>
+      ["response", "context", "raw", "all"].map((source) => ({ key, source })),
+    ),
+  )("removes stale $key from $source headers after compression", async ({ key, source }) => {
+    const app = createApp({
+      controllers: [CompressionController],
+      middlewares: [
+        compressionMiddleware({ threshold: 64, encodings: ["gzip"] }),
+        async (ctx, next) => {
+          const response = await next();
+          if (!(response instanceof Response)) return response;
+          const length = String((await response.clone().arrayBuffer()).byteLength);
+          if (source === "response" || source === "all") response.headers.set(key, length);
+          if (source === "raw" || source === "all") ctx.raw.header(key, length);
+          if (source === "context" || source === "all") {
+            ctx.res.headers[key] = length;
+            ctx.res.headers["content-length"] = length;
+          }
+          ctx.res.headers["X-Preserved"] = "yes";
+          return response;
+        },
+      ],
+      securityValidation: "off",
+    });
+
+    const response = await app.fetch(
+      new Request("http://localhost/compression/large-json", {
+        headers: { "Accept-Encoding": "gzip" },
+      }),
+    );
+
+    expect(response.headers.get("Content-Encoding")).toBe("gzip");
+    expect(response.headers.get("Content-Length")).toBeNull();
+    expect(response.headers.get("X-Preserved")).toBe("yes");
+    const compressed = Buffer.from(await response.arrayBuffer());
+    expect(JSON.parse(gunzipSync(compressed).toString("utf-8"))).toEqual({
+      payload: LARGE_PAYLOAD,
+    });
+  });
+
+  it.each([
+    { path: "small-json", acceptEncoding: "gzip", encoding: null },
+    { path: "large-json", acceptEncoding: "identity", encoding: null },
+    { path: "stream", acceptEncoding: "gzip", encoding: null },
+    { path: "large-json", acceptEncoding: "gzip", encoding: "gzip" },
+  ])(
+    "preserves content length when compression is skipped: $path/$acceptEncoding/$encoding",
+    async ({ path, acceptEncoding, encoding }) => {
+      let originalBody: ArrayBuffer | undefined;
+      const app = createApp({
+        controllers: [CompressionController],
+        middlewares: [
+          compressionMiddleware({ threshold: 1024, encodings: ["gzip"] }),
+          async (ctx, next) => {
+            const response = await next();
+            if (!(response instanceof Response)) return response;
+            originalBody = await response.clone().arrayBuffer();
+            const length = String(originalBody.byteLength);
+            response.headers.set("Content-Length", length);
+            ctx.raw.header("Content-Length", length);
+            ctx.res.headers["CoNtEnT-LeNgTh"] = length;
+            if (encoding) response.headers.set("Content-Encoding", encoding);
+            return response;
+          },
+        ],
+        securityValidation: "off",
+      });
+
+      const response = await app.fetch(
+        new Request(`http://localhost/compression/${path}`, {
+          headers: { "Accept-Encoding": acceptEncoding },
+        }),
+      );
+
+      expect(response.headers.get("Content-Encoding")).toBe(encoding);
+      const body = await response.arrayBuffer();
+      expect(response.headers.get("Content-Length")).toBe(String(body.byteLength));
+      expect(body).toEqual(originalBody);
+    },
+  );
+
   it("leaves responses below the threshold unchanged", async () => {
     const app = createApp({
       controllers: [CompressionController],
