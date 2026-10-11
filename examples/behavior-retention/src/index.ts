@@ -2,6 +2,7 @@ import {
   computeCohortRetention,
   computeFrequencyDistribution,
   computePeriodicRetention,
+  InvalidBehaviorMetricProblem,
 } from "@croco/metrics-core";
 import { definition, dataset, baseline, returning } from "./fixture.js";
 
@@ -17,13 +18,13 @@ const activeDays = computeFrequencyDistribution(definition, dataset, {
 });
 
 if (periodic.numerator !== 40 || periodic.denominator !== 100 || periodic.value !== 0.4) {
-  throw new Error("Periodic retention did not match the known example");
+  throw new InvalidBehaviorMetricProblem("Periodic retention did not match the known example");
 }
 if (frequency.subjects.find((subject) => subject.subjectId === "new-0")?.count !== 3) {
-  throw new Error("Action count did not preserve three distinct events");
+  throw new InvalidBehaviorMetricProblem("Action count did not preserve three distinct events");
 }
 if (activeDays.subjects.find((subject) => subject.subjectId === "new-0")?.activeDays !== 1) {
-  throw new Error("Active days did not use distinct local days");
+  throw new InvalidBehaviorMetricProblem("Active days did not use distinct local days");
 }
 
 console.log(

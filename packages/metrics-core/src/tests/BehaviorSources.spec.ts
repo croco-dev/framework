@@ -257,4 +257,35 @@ describe("Behavior shared sources", () => {
       ).rejects.toThrow();
     }
   });
+  it("keeps source budgets pinned when a caller mutates the returned registration", async () => {
+    const dataset = await importBehaviorSource(
+      bytes(await fixture()),
+      schema,
+      binding,
+      metadata,
+      300,
+    );
+    const registration = await registerBehaviorQuery({
+      definition,
+      queryId: "bounded",
+      queryVersion: 1,
+      selection: { kind: "periodic", options: { baseline, returning } },
+      scope,
+      sourceRevisions: context.sourceRevisions,
+      limits: { ...limits, maxRows: 1 },
+      requiredFields: ["action"],
+      source: async () => ({ dataset, quality }),
+    });
+    Object.assign(registration.query.limits, { maxRows: 300 });
+    const service = new MetricReadService([registration.definition], [registration.query], {
+      currentContext: () => context,
+      authorize: async () => ({ permissionEpoch: "1", privacyEpoch: "2" }),
+    });
+    await expect(
+      service.runRegisteredQuery("bounded", null, {
+        from: new Date(definition.historyStart).toISOString(),
+        to: new Date(returning.to).toISOString(),
+      }),
+    ).rejects.toThrow();
+  });
 });

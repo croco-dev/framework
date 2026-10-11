@@ -194,7 +194,7 @@ export async function registerBehaviorQuery(options: {
     filter: declaration.selection.kind,
     requiredFields: [...declaration.requiredFields],
     requiresRaw: false,
-    limits: declaration.limits,
+    limits: structuredClone(declaration.limits),
     inputSchema: { parse: parseInput },
     inputKey: (input) => {
       parseInput(input);
