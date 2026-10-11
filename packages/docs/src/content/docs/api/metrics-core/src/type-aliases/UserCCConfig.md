@@ -15,7 +15,7 @@ Configuration for User Carrying Capacity calculation.
 
 > **lookbackDays**: `number`
 
-Positive safe integer number of days to look back for calculating average daily inflow/churn
+Positive safe integer number of local calendar days to look back for average daily inflow/churn
 
 ---
 
