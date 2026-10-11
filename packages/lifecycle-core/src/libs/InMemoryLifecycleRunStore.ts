@@ -156,15 +156,18 @@ export class InMemoryLifecycleRunStore implements LifecycleRunStore {
     return run.completedAt.getTime() + (this.options.receiptTtlMs ?? DEFAULT_RECEIPT_TTL_MS);
   }
 
+  private isExpiredReceipt(run: LifecycleRun, now: number): boolean {
+    return (
+      run.status !== "skipped" &&
+      run.status !== "indeterminate" &&
+      this.receiptExpiresAt(run) <= now
+    );
+  }
+
   private pruneExpiredReceipts(now = (this.options.now ?? (() => new Date()))().getTime()): void {
     for (let index = this.runs.length - 1; index >= 0; index -= 1) {
       const run = this.runs[index];
-      if (
-        run &&
-        run.status !== "skipped" &&
-        run.status !== "indeterminate" &&
-        this.receiptExpiresAt(run) <= now
-      ) {
+      if (run && this.isExpiredReceipt(run, now)) {
         this.runs.splice(index, 1);
       }
     }
@@ -338,10 +341,17 @@ export class InMemoryLifecycleRunStore implements LifecycleRunStore {
     this.runs.push(snapshotRun(run));
   }
 
-  async findByIdempotencyKey(idempotencyKey: string): Promise<LifecycleRun | null> {
+  async findByIdempotencyKey(
+    idempotencyKey: string,
+    evaluatedAt?: Date,
+  ): Promise<LifecycleRun | null> {
     const run =
-      this.runs.find((run) => run.idempotencyKey === idempotencyKey && run.status !== "skipped") ??
-      null;
+      this.runs.find(
+        (run) =>
+          run.idempotencyKey === idempotencyKey &&
+          run.status !== "skipped" &&
+          (evaluatedAt === undefined || !this.isExpiredReceipt(run, evaluatedAt.getTime())),
+      ) ?? null;
     return run ? snapshotRun(run) : null;
   }
 
@@ -349,6 +359,7 @@ export class InMemoryLifecycleRunStore implements LifecycleRunStore {
     tenantId: string,
     ruleId: string,
     since?: Date,
+    evaluatedAt?: Date,
   ): Promise<LifecycleRun | null> {
     const run =
       this.runs
@@ -357,6 +368,7 @@ export class InMemoryLifecycleRunStore implements LifecycleRunStore {
             run.tenantId === tenantId &&
             run.ruleId === ruleId &&
             run.status !== "skipped" &&
+            (evaluatedAt === undefined || !this.isExpiredReceipt(run, evaluatedAt.getTime())) &&
             (since === undefined || run.completedAt >= since),
         )
         .sort(byCompletedAtDesc)[0] ?? null;

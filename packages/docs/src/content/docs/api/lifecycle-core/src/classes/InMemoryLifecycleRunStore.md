@@ -110,13 +110,21 @@ A false result must retain the current claim and run evidence.
 
 ### findByIdempotencyKey()
 
-> **findByIdempotencyKey**(`idempotencyKey`): `Promise`\<[`LifecycleRun`](/api/lifecycle-core/src/type-aliases/lifecyclerun/) \| `null`\>
+> **findByIdempotencyKey**(`idempotencyKey`, `evaluatedAt?`): `Promise`\<[`LifecycleRun`](/api/lifecycle-core/src/type-aliases/lifecyclerun/) \| `null`\>
+
+With evaluatedAt, returns only receipts that claim would retain at that time.
+Without it, returns retained run history. Reads must not prune receipts or reserve claims.
+Indeterminate dispatch evidence never expires through receipt TTL.
 
 #### Parameters
 
 ##### idempotencyKey
 
 `string`
+
+##### evaluatedAt?
+
+`Date`
 
 #### Returns
 
@@ -130,7 +138,9 @@ A false result must retain the current claim and run evidence.
 
 ### findLatestForRule()
 
-> **findLatestForRule**(`tenantId`, `ruleId`, `since?`): `Promise`\<[`LifecycleRun`](/api/lifecycle-core/src/type-aliases/lifecyclerun/) \| `null`\>
+> **findLatestForRule**(`tenantId`, `ruleId`, `since?`, `evaluatedAt?`): `Promise`\<[`LifecycleRun`](/api/lifecycle-core/src/type-aliases/lifecyclerun/) \| `null`\>
+
+Applies the same receipt validity and read-only semantics as findByIdempotencyKey.
 
 #### Parameters
 
@@ -143,6 +153,10 @@ A false result must retain the current claim and run evidence.
 `string`
 
 ##### since?
+
+`Date`
+
+##### evaluatedAt?
 
 `Date`
 
