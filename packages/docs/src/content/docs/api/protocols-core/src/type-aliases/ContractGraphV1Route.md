@@ -90,3 +90,11 @@ REST route contract with schemas, problems, policies, runtime requirements, and 
 ### source
 
 > `readonly` **source**: [`ContractGraphSnapshotRouteContract`](/api/protocols-core/src/type-aliases/contractgraphsnapshotroutecontract/)\[`"sourceLocation"`\] \| `null`
+
+---
+
+### successStatus?
+
+> `readonly` `optional` **successStatus?**: `number`
+
+Missing in historical v1 artifacts: 200 with an output schema, otherwise 204.
