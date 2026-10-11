@@ -28292,7 +28292,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/transports-http/src/libs/RouteCompiler.ts",
-          line: 331,
+          line: 332,
           column: 10,
           kind: "problem-factory",
         },
