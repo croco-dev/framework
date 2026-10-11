@@ -31,6 +31,100 @@ const MIXED_NATIVE_ENUM = {
 } as const;
 
 describe("SchemaDescriptor", () => {
+  it("should normalize string length checks independently of declaration order", () => {
+    const expected = {
+      kind: "string",
+      typeName: "ZodString",
+      jsonSafe: true,
+      minLength: 5,
+      maxLength: 8,
+    };
+    expect(describeZodSchema(z.string().min(3).max(10).min(5).max(8))).toEqual(expected);
+    expect(describeZodSchema(z.string().max(8).min(5).max(10).min(3))).toEqual(expected);
+    expect(describeZodSchema(z.string().length(5))).toEqual({ ...expected, maxLength: 5 });
+    expect(describeZodSchema(z.string().min(0))).toEqual({
+      kind: "string",
+      typeName: "ZodString",
+      jsonSafe: true,
+      minLength: 0,
+    });
+    expect(describeZodSchema(z.string())).toEqual({
+      kind: "string",
+      typeName: "ZodString",
+      jsonSafe: true,
+    });
+    expect(describeZodSchema(z.string().length(5).min(6))).toMatchObject({
+      minLength: 6,
+      maxLength: 5,
+    });
+  });
+
+  it.each([-1, 1.5, Number.NaN, Number.POSITIVE_INFINITY])(
+    "should diagnose unrepresentable string length bound %s",
+    (bound) => {
+      for (const schema of [
+        z.string().min(bound),
+        z.string().max(bound),
+        z.string().length(bound),
+      ]) {
+        const descriptor = describeZodSchema(schema);
+        expect(descriptor).toMatchObject({ kind: "string", jsonSafe: false });
+        expect(getSchemaDescriptorDiagnostics(descriptor)).toEqual([
+          expect.objectContaining({
+            code: CONTRACT_SCHEMA_JSON_UNSAFE_DIAGNOSTIC_CODE,
+            severity: "error",
+          }),
+        ]);
+      }
+    },
+  );
+
+  it("should reject length contracts combined with order-sensitive string mutations", () => {
+    const trimmedBeforeShorterMinimum = z.string().min(5).trim().min(2);
+    const trimmedBeforeLongerMinimum = z.string().min(2).trim().min(5);
+    expect(trimmedBeforeShorterMinimum.safeParse("  Ada  ").success).toBe(true);
+    expect(trimmedBeforeLongerMinimum.safeParse("  Ada  ").success).toBe(false);
+    expect(z.string().max(1).toUpperCase().parse("ß")).toBe("SS");
+    expect(z.string().toUpperCase().max(1).safeParse("ß").success).toBe(false);
+    expect(z.string().max(1).toLowerCase().parse("İ")).toBe("i̇");
+    expect(z.string().toLowerCase().max(1).safeParse("İ").success).toBe(false);
+
+    for (const schema of [
+      trimmedBeforeShorterMinimum,
+      trimmedBeforeLongerMinimum,
+      z.string().min(5).trim(),
+      z.string().trim().min(5),
+      z.string().max(1).toUpperCase(),
+      z.string().toUpperCase().max(1),
+      z.string().max(1).toLowerCase(),
+      z.string().toLowerCase().max(1),
+      z.string().length(1).trim(),
+      z.string().trim().length(1),
+    ]) {
+      const descriptor = describeZodSchema(schema);
+      expect(descriptor).toMatchObject({
+        kind: "string",
+        jsonSafe: false,
+        unsupportedReason:
+          "String length checks combined with trim/toLowerCase/toUpperCase mutations are not supported by generated JSON contracts.",
+      });
+      expect(getSchemaDescriptorDiagnostics(descriptor)).toEqual([
+        expect.objectContaining({
+          code: CONTRACT_SCHEMA_JSON_UNSAFE_DIAGNOSTIC_CODE,
+          severity: "error",
+        }),
+      ]);
+    }
+    expect(describeZodSchema(z.string().trim())).toEqual(describeZodSchema(z.string()));
+  });
+
+  it("should retain string length bounds inside wrappers", () => {
+    expect(describeZodSchema(z.string().min(5).optional().nullable())).toMatchObject({
+      kind: "nullable",
+      inner: { kind: "optional", inner: { minLength: 5 } },
+    });
+  });
+
   it("should describe optional, nullable, default, and refined schemas with one shared tree", () => {
     const descriptor = describeZodSchema(
       z.object({

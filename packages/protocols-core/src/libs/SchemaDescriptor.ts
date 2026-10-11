@@ -30,6 +30,8 @@ export type ContractSchemaDescriptor = {
   readonly jsonSafe: boolean;
   readonly unsupportedReason?: string;
   readonly effectType?: string;
+  readonly minLength?: number;
+  readonly maxLength?: number;
   readonly fields?: readonly ContractSchemaFieldDescriptor[];
   readonly element?: ContractSchemaDescriptor | null;
   readonly inner?: ContractSchemaDescriptor | null;
@@ -49,7 +51,7 @@ export const JSON_SAFE_ZOD_SCHEMA_SUPPORT_MATRIX = [
     typeName: "ZodString",
     kind: "string",
     jsonSafe: "supported",
-    note: "Emitted as a JSON string contract.",
+    note: "Emitted as a JSON string contract with min/max/length checks normalized to minLength/maxLength. Length checks combined with trim/case mutations are unsupported. Other string checks are not represented.",
   },
   {
     typeName: "ZodNumber",
@@ -240,6 +242,7 @@ export const JSON_SAFE_ZOD_SCHEMA_SUPPORT_MATRIX = [
 ] as const satisfies readonly ContractSchemaSupportMatrixEntry[];
 
 type ZodDefinition = {
+  readonly checks?: readonly { readonly kind: string; readonly value?: unknown }[];
   readonly shape?: unknown;
   readonly in?: unknown;
   readonly innerType?: unknown;
@@ -707,7 +710,52 @@ function describeUnknownSchema(schema: unknown, seen: Set<unknown>): ContractSch
   const definition = getZodDefinition(schema);
 
   if (typeName === "ZodString") {
-    return supportedDescriptor("string", typeName);
+    const checks = definition?.checks ?? [];
+    if (
+      checks.some(
+        (check) => check.kind === "min" || check.kind === "max" || check.kind === "length",
+      ) &&
+      checks.some(
+        (check) =>
+          check.kind === "trim" || check.kind === "toLowerCase" || check.kind === "toUpperCase",
+      )
+    ) {
+      return unsupportedDescriptor(
+        "string",
+        typeName,
+        "String length checks combined with trim/toLowerCase/toUpperCase mutations are not supported by generated JSON contracts.",
+      );
+    }
+    let minLength: number | undefined;
+    let maxLength: number | undefined;
+    for (const check of checks) {
+      if (check.kind !== "min" && check.kind !== "max" && check.kind !== "length") {
+        continue;
+      }
+      if (
+        typeof check.value !== "number" ||
+        !Number.isFinite(check.value) ||
+        !Number.isInteger(check.value) ||
+        check.value < 0
+      ) {
+        return unsupportedDescriptor(
+          "string",
+          typeName,
+          "String length bounds must be finite non-negative integers.",
+        );
+      }
+      if (check.kind === "min" || check.kind === "length") {
+        minLength = Math.max(minLength ?? 0, check.value);
+      }
+      if (check.kind === "max" || check.kind === "length") {
+        maxLength = Math.min(maxLength ?? Number.POSITIVE_INFINITY, check.value);
+      }
+    }
+    return {
+      ...supportedDescriptor("string", typeName),
+      ...(minLength !== undefined ? { minLength } : {}),
+      ...(maxLength !== undefined ? { maxLength } : {}),
+    };
   }
 
   if (typeName === "ZodNumber") {

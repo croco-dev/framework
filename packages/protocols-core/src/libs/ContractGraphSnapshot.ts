@@ -710,6 +710,7 @@ function isLegacyContractSchemaSnapshot(
   const valid =
     typeof value["kind"] === "string" &&
     typeof value["typeName"] === "string" &&
+    hasValidStringLengthBounds(value) &&
     value["jsonSafe"] === undefined &&
     value["unsupportedReason"] === undefined &&
     value["effectType"] === undefined &&
@@ -802,6 +803,8 @@ function normalizeLegacyContractSchemaSnapshot(
     ...(element !== undefined ? { element } : {}),
     ...(inner !== undefined ? { inner } : {}),
     ...(options ? { options } : {}),
+    ...(schema.minLength !== undefined ? { minLength: schema.minLength } : {}),
+    ...(schema.maxLength !== undefined ? { maxLength: schema.maxLength } : {}),
     ...(schema.values ? { values: schema.values } : {}),
     ...(schema.value !== undefined ? { value: schema.value } : {}),
   };
@@ -933,6 +936,7 @@ function isContractSchemaSnapshot(
     typeof value["kind"] === "string" &&
     typeof value["typeName"] === "string" &&
     typeof value["jsonSafe"] === "boolean" &&
+    hasValidStringLengthBounds(value) &&
     isOptionalString(value["unsupportedReason"]) &&
     isOptionalString(value["effectType"]) &&
     (value["fields"] === undefined ||
@@ -957,6 +961,16 @@ function isContractSchemaSnapshot(
   ancestors.delete(value);
 
   return valid;
+}
+
+function hasValidStringLengthBounds(value: Record<string, unknown>): boolean {
+  return (["minLength", "maxLength"] as const).every(
+    (key) =>
+      value[key] === undefined ||
+      (value["kind"] === "string" &&
+        value["typeName"] === "ZodString" &&
+        isNonNegativeInteger(value[key])),
+  );
 }
 
 function isContractSchemaFieldSnapshot(
