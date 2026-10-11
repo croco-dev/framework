@@ -1,5 +1,5 @@
 import type { ItemWriter, Step } from "@croco/batch-core";
-import { ExecutionManagerImpl } from "@croco/execution-core";
+import { ExecutionManagerImpl, ExecutionProblems } from "@croco/execution-core";
 import {
   createQStashBatchConformanceSuite,
   type QStashBatchConformanceScenario,
@@ -613,19 +613,107 @@ describe("QStashChunkExecutor continuation execution", () => {
     expect(stage).toHaveBeenCalledTimes(1);
   });
 
-  it("surfaces a non-conflict persistence failure while recording a chunk error", async () => {
+  it("preserves the original chunk error when failure recording rejects", async () => {
     const harness = createHarness();
     const execution = await harness.createExecution();
-    vi.spyOn(harness.manager, "failContinuation").mockRejectedValue(
-      new Error("continuation store unavailable"),
-    );
+    const writerError = new Error("writer failed");
+    const failureRecordError = new Error("continuation store unavailable");
+    vi.spyOn(harness.manager, "failContinuation").mockRejectedValue(failureRecordError);
     const writer = createWriter(async () => {
-      throw new Error("writer failed");
+      throw writerError;
     });
 
     await expect(
       harness.executor.executeChunk(execution.id, createStep(createCheckpointReader([1]), writer)),
-    ).rejects.toThrow("continuation store unavailable");
+    ).rejects.toBe(writerError);
+    expect(Object.getOwnPropertyDescriptor(writerError, "qstashFailureRecordError")).toEqual({
+      configurable: true,
+      enumerable: false,
+      value: failureRecordError,
+      writable: false,
+    });
+  });
+
+  it.each([
+    ["non-extensible", Object.preventExtensions(new Error("writer failed"))],
+    ["primitive", "writer failed"],
+  ] as const)(
+    "reports failure recording errors for %s original failures",
+    async (_errorKind, writerError) => {
+      const harness = createHarness();
+      const execution = await harness.createExecution();
+      const failureRecordError = new Error("continuation store unavailable");
+      const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+      vi.spyOn(harness.manager, "failContinuation").mockRejectedValue(failureRecordError);
+      const writer = createWriter(async () => {
+        throw writerError;
+      });
+
+      try {
+        await expect(
+          harness.executor.executeChunk(
+            execution.id,
+            createStep(createCheckpointReader([1]), writer),
+          ),
+        ).rejects.toBe(writerError);
+
+        expect(consoleError).toHaveBeenCalledWith(
+          "[QStashChunkExecutor] Failed to record batch continuation failure",
+          {
+            executionId: execution.id,
+            failureRecordError,
+          },
+        );
+      } finally {
+        consoleError.mockRestore();
+      }
+    },
+  );
+
+  it("keeps the fencing guard when failure recording loses ownership", async () => {
+    const harness = createHarness();
+    const execution = await harness.createExecution();
+    const writerError = new Error("writer failed");
+    const ownershipError = ExecutionProblems.continuationConflict("lost continuation fence", {
+      currentWorkerId: "another-worker",
+      currentLeaseExpiresAt: new Date("2026-01-01T00:05:00.000Z").toISOString(),
+    });
+    const failContinuation = vi
+      .spyOn(harness.manager, "failContinuation")
+      .mockRejectedValue(ownershipError);
+    const writer = createWriter(async () => {
+      throw writerError;
+    });
+
+    await expect(
+      harness.executor.executeChunk(execution.id, createStep(createCheckpointReader([1]), writer)),
+    ).rejects.toBe(writerError);
+    expect(failContinuation).toHaveBeenCalledTimes(1);
+    expect(writerError).not.toHaveProperty("qstashFailureRecordError");
+  });
+
+  it("records the original processor error in the successful failure path", async () => {
+    const harness = createHarness();
+    const execution = await harness.createExecution();
+    const processorError = new Error("processor rejected sample row");
+    const failContinuation = vi.spyOn(harness.manager, "failContinuation");
+    const reader = createCheckpointReader([1]);
+    const writer = createWriter();
+    const step: QStashStep<number, number> = {
+      ...createStep(reader, writer),
+      processor: {
+        process: async () => {
+          throw processorError;
+        },
+      },
+    };
+
+    await expect(harness.executor.executeChunk(execution.id, step)).rejects.toBe(processorError);
+    expect(failContinuation).toHaveBeenCalledTimes(1);
+    expect(failContinuation.mock.calls[0]?.[2]).toMatchObject({
+      message: "processor rejected sample row",
+    });
+    expect(processorError).not.toHaveProperty("qstashFailureRecordError");
   });
 
   it("rejects a plain writer before acquiring an execution claim", async () => {

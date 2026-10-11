@@ -266,8 +266,19 @@ export interface LifecycleRunStore {
   finalizeDispatch(run: LifecycleFinalizedRun): Promise<LifecycleRunFinalizationResult>;
   /** Persists a run that never crossed the action-dispatch boundary. */
   save(run: LifecycleFinalizedRun): Promise<void>;
-  findByIdempotencyKey(idempotencyKey: string): Promise<LifecycleRun | null>;
-  findLatestForRule(tenantId: string, ruleId: string, since?: Date): Promise<LifecycleRun | null>;
+  /**
+   * With evaluatedAt, returns only receipts that claim would retain at that time.
+   * Without it, returns retained run history. Reads must not prune receipts or reserve claims.
+   * Indeterminate dispatch evidence never expires through receipt TTL.
+   */
+  findByIdempotencyKey(idempotencyKey: string, evaluatedAt?: Date): Promise<LifecycleRun | null>;
+  /** Applies the same receipt validity and read-only semantics as findByIdempotencyKey. */
+  findLatestForRule(
+    tenantId: string,
+    ruleId: string,
+    since?: Date,
+    evaluatedAt?: Date,
+  ): Promise<LifecycleRun | null>;
   list(options?: LifecycleRunListOptions): Promise<readonly LifecycleRun[]>;
 }
 

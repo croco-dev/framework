@@ -953,7 +953,7 @@ function getLiteralValue(schema: unknown): unknown {
     readonly values?: readonly unknown[];
   };
 
-  return definition.value ?? definition.values?.[0];
+  return "value" in definition ? definition.value : definition.values?.[0];
 }
 
 function getEnumValues(schema: unknown): unknown[] {

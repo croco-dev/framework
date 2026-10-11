@@ -55,12 +55,39 @@ class StepCompletionPersistenceError extends Error {
 type SagaOutboxPhase = SagaOutboxRecord["phase"];
 
 function toSagaFailure(error: unknown): SagaFailure {
-  const candidate = error as { readonly code?: unknown; readonly retryable?: unknown };
+  let message: string;
+  try {
+    message = error instanceof Error ? error.message : String(error);
+  } catch {
+    message = "Unknown error";
+  }
+
+  let code: string | undefined;
+  try {
+    if ((typeof error === "object" && error !== null) || typeof error === "function") {
+      const codeValue = (error as { readonly code?: unknown }).code;
+      if (typeof codeValue === "string") {
+        code = codeValue;
+      }
+    }
+  } catch {
+    code = undefined;
+  }
+
+  let stack: string | undefined;
+  try {
+    if (error instanceof Error && typeof error.stack === "string") {
+      stack = error.stack;
+    }
+  } catch {
+    stack = undefined;
+  }
+
   return {
-    message: error instanceof Error ? error.message : String(error),
+    message,
     retryable: isRetryableError(error),
-    ...(typeof candidate.code === "string" ? { code: candidate.code } : {}),
-    ...(error instanceof Error && error.stack !== undefined ? { stack: error.stack } : {}),
+    ...(code === undefined ? {} : { code }),
+    ...(stack === undefined ? {} : { stack }),
   };
 }
 

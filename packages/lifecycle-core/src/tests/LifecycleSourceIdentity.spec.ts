@@ -263,6 +263,68 @@ describe("LifecycleSourceIdentity", () => {
     expect(expired.runs[0]?.id).not.toBe(first.runs[0]?.id);
   });
 
+  it.each([
+    { elapsed: 999, suppressed: true },
+    { elapsed: 1000, suppressed: false },
+    { elapsed: 1001, suppressed: false },
+  ])("aligns receipt preview and dispatch at $elapsed ms", async ({ elapsed, suppressed }) => {
+    const { evaluator, sink, store } = await setup({ receiptTtlMs: 1000 });
+    const first = await evaluator.evaluate(contextFor({ signalId: "evt-ttl" }));
+    const before = await store.list();
+    const context = contextFor({ signalId: "evt-ttl", now: new Date(NOW.getTime() + elapsed) });
+
+    const preview = await evaluator.dryRun({ ruleId: "source-identity-rule", context });
+    expect(preview.suppression).toEqual(
+      suppressed ? { suppressed: true, reason: "idempotency_key_reused" } : { suppressed: false },
+    );
+    expect(sink.getEmissions()).toHaveLength(1);
+    expect(await store.list()).toEqual(before);
+    await expect(store.findByIdempotencyKey(before[0]?.idempotencyKey ?? "")).resolves.toEqual(
+      before[0],
+    );
+
+    const actual = await evaluator.evaluate(context);
+    expect(actual.runs[0]?.status).toBe(suppressed ? "skipped" : "succeeded");
+    expect(actual.runs[0]?.skipReason).toBe(suppressed ? "idempotency_key_reused" : undefined);
+    expect(sink.getEmissions()).toHaveLength(suppressed ? 1 : 2);
+    if (suppressed) {
+      expect(actual.runs[0]?.id).toBe(first.runs[0]?.id);
+    } else {
+      expect(actual.runs[0]?.id).not.toBe(first.runs[0]?.id);
+    }
+  });
+
+  it.each([
+    { elapsed: 999, suppressed: true },
+    { elapsed: 1000, suppressed: false },
+    { elapsed: 1001, suppressed: false },
+  ])(
+    "aligns cooldown preview after receipt retention at $elapsed ms",
+    async ({ elapsed, suppressed }) => {
+      const { evaluator, sink, store } = await setup({
+        receiptTtlMs: 1000,
+        rule: createRule({ cooldown: { durationMs: 2000 } }),
+      });
+      await evaluator.evaluate(contextFor({ signalId: "evt-first" }));
+      const before = await store.list();
+      const context = contextFor({
+        signalId: "evt-second",
+        now: new Date(NOW.getTime() + elapsed),
+      });
+
+      const preview = await evaluator.dryRun({ ruleId: "source-identity-rule", context });
+      expect(preview.suppression).toEqual(
+        suppressed ? { suppressed: true, reason: "cooldown_active" } : { suppressed: false },
+      );
+      expect(sink.getEmissions()).toHaveLength(1);
+      expect(await store.list()).toEqual(before);
+      const actual = await evaluator.evaluate(context);
+      expect(actual.runs[0]?.status).toBe(suppressed ? "skipped" : "succeeded");
+      expect(actual.runs[0]?.skipReason).toBe(suppressed ? "cooldown_active" : undefined);
+      expect(sink.getEmissions()).toHaveLength(suppressed ? 1 : 2);
+    },
+  );
+
   it("migrates persisted receipts issued with the legacy default key", async () => {
     const { evaluator, ruleVersion, store } = await setup();
     const at = NOW;

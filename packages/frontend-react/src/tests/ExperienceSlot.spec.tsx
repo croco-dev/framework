@@ -1,9 +1,9 @@
-import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { createElement as h } from "react";
 import { renderToString } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import { ExperienceSlot } from "../libs/ExperienceSlot";
+import { runExperienceSlotProcess, TEST_TIMEOUT_MS } from "./experienceSlotProcess.cjs";
 import type { ExperienceDecision } from "@croco/experience-core";
 
 const decision: ExperienceDecision = {
@@ -55,12 +55,16 @@ describe("ExperienceSlot", () => {
 });
 
 describe("ExperienceSlot mounted focus", () => {
-  it("preserves modal input focus and restores the opener throughout the display lifecycle", () => {
-    const runner = fileURLToPath(new URL("./experienceSlotBrowser.cjs", import.meta.url));
-    const output = execFileSync(process.execPath, [runner], { encoding: "utf8", timeout: 30000 });
-    expect(JSON.parse(output)).toEqual([
-      { viewport: { width: 1280, height: 720 }, steps: 9 },
-      { viewport: { width: 390, height: 844 }, steps: 9 },
-    ]);
-  }, 30000);
+  it(
+    "preserves modal input focus and restores the opener throughout the display lifecycle",
+    async () => {
+      const runner = fileURLToPath(new URL("./experienceSlotBrowser.cjs", import.meta.url));
+      const output = await runExperienceSlotProcess(runner);
+      expect(JSON.parse(output)).toEqual([
+        { viewport: { width: 1280, height: 720 }, steps: 9 },
+        { viewport: { width: 390, height: 844 }, steps: 9 },
+      ]);
+    },
+    TEST_TIMEOUT_MS,
+  );
 });

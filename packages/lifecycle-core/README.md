@@ -142,6 +142,13 @@ const preview = await evaluator.dryRun({
 
 The result includes the exact rule version and fingerprint, matched state, boolean `conditionEvidence`, payload-free proposed action descriptors, suppression/cooldown decisions, and redacted Problem summaries. Context and action payload values are not returned by default. Keep `when`, `conditionEvidence`, and dynamic action mapping free of side effects because dry-run executes that code.
 
+Receipt suppression uses `context.now` and the same TTL boundary as `claim()`: a finalized receipt
+expires when `completedAt + receiptTtlMs <= context.now`, including for cooldown checks.
+Indeterminate dispatch evidence continues to suppress replay until reconciliation.
+`LifecycleRunStore.findByIdempotencyKey()` and `findLatestForRule()` accept an optional `evaluatedAt`
+for this active-receipt view. Omitting it preserves retained history lookup; neither view prunes
+history, reserves a claim, or consumes cooldown. Actual claims retain their existing expiry pruning.
+
 Pass an `InMemoryLifecycleDryRunStore` (or another `LifecycleDryRunStore`) to the evaluator when recent dry-run audit evidence should be available to `LifecycleDiagnosticsProvider`. Diagnostics can also receive the registry to report active versions, paused rules, unavailable executable registrations, and run fingerprint mismatches.
 
 ## Compatibility

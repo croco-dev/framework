@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ActiveUserProvider, MetricsRepository, MRRMovement } from "..";
-import { CarryingCapacityCalculator } from "../libs/CarryingCapacityCalculator";
+import { CarryingCapacityCalculator } from "..";
 import {
   CarryingCapacityTenantRequiredProblem,
   RetentionMetricsUnavailableProblem,
@@ -33,6 +33,48 @@ describe("CarryingCapacityCalculator", () => {
   });
 
   describe("calculateUserCC", () => {
+    it.each([1, 7, 30, 60])(
+      "should preserve daily churn and capacity across a %s-calendar-day lookback",
+      async (lookbackDays) => {
+        vi.useFakeTimers();
+        vi.setSystemTime(new Date(2026, 2, 15, 12));
+        try {
+          vi.spyOn(mockUserProvider, "getNewUsersCount").mockResolvedValue(100);
+          vi.spyOn(mockUserProvider, "getDailyActiveUsers").mockResolvedValue(1000);
+          vi.spyOn(mockMetricsRepository, "getRetentionMetrics").mockImplementation(
+            async (tenantId, period) => {
+              const fromDay = Date.UTC(
+                period.from.getFullYear(),
+                period.from.getMonth(),
+                period.from.getDate(),
+              );
+              const toDay = Date.UTC(
+                period.to.getFullYear(),
+                period.to.getMonth(),
+                period.to.getDate(),
+              );
+              const calendarDays = (toDay - fromDay) / 86_400_000;
+              expect(tenantId).toBe(TENANT_ID);
+              expect(period.granularity).toBe("day");
+              expect(calendarDays).toBe(lookbackDays);
+              expect(period.from.getHours()).toBe(12);
+              const nrr = 100 * Math.exp(-0.01 * calendarDays);
+              return { logoChurn: 0, revenueChurn: 0, grr: nrr, nrr };
+            },
+          );
+
+          const result = await calculator.calculateUserCC({ lookbackDays, tenantId: TENANT_ID });
+
+          expect(result).toMatchObject({ dailyInflow: 100, current: 1000 });
+          expect(result?.dailyChurnRate).toBeCloseTo(0.01, 10);
+          expect(result?.capacity).toBeCloseTo(10000, 6);
+          expect(mockUserProvider.getNewUsersCount).toHaveBeenCalledTimes(lookbackDays);
+        } finally {
+          vi.useRealTimers();
+        }
+      },
+    );
+
     it.each([0, -1, Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY, 1.5])(
       "should reject invalid lookbackDays %s before reading metrics",
       async (lookbackDays) => {

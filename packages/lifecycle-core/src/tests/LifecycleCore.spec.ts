@@ -50,6 +50,48 @@ function createClaim(
   };
 }
 
+describe("InMemoryLifecycleRunStore receipt views", () => {
+  it.each(["succeeded", "failed", "skipped", "indeterminate"] as const)(
+    "preserves %s history without mutating receipts during active lookup",
+    async (status) => {
+      const store = new InMemoryLifecycleRunStore({ receiptTtlMs: 1000 });
+      const run = createIndeterminateRun("run-ttl", "claim-ttl");
+      if (status === "indeterminate") {
+        await store.claim(createClaim(run.id, run.idempotencyKey), run);
+      } else {
+        await store.save({ ...run, status });
+      }
+      const history = await store.list();
+      const evaluatedAt = new Date(run.completedAt.getTime() + 1000);
+      const since = new Date(run.completedAt.getTime() - 1000);
+      const active = status === "indeterminate" ? run : null;
+
+      await expect(store.findByIdempotencyKey(run.idempotencyKey, evaluatedAt)).resolves.toEqual(
+        active,
+      );
+      await expect(
+        store.findLatestForRule(run.tenantId, run.ruleId, since, evaluatedAt),
+      ).resolves.toEqual(active);
+      await expect(store.list()).resolves.toEqual(history);
+      await expect(store.findByIdempotencyKey(run.idempotencyKey)).resolves.toEqual(
+        status === "skipped" ? null : { ...run, status },
+      );
+      await expect(store.findLatestForRule(run.tenantId, run.ruleId)).resolves.toEqual(
+        status === "skipped" ? null : { ...run, status },
+      );
+      if (status === "indeterminate") {
+        await expect(
+          store.claim(createClaim("next", run.idempotencyKey, evaluatedAt), {
+            ...run,
+            id: "next",
+            completedAt: evaluatedAt,
+          }),
+        ).resolves.toMatchObject({ claimed: false, reason: "idempotency_key_reused" });
+      }
+    },
+  );
+});
+
 describe("InMemoryLifecycleRunStore snapshot ownership", () => {
   it("isolates claim and dispatch inputs before cooldown and abort decisions", async () => {
     const store = new InMemoryLifecycleRunStore();
