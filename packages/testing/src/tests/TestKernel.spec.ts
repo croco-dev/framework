@@ -30,7 +30,7 @@ import {
   TestKernelValidationProblem,
   type TestResource,
 } from "../index";
-import type { TestKernel } from "../index";
+import type { StartedTestResource, TestKernel } from "../index";
 
 class KernelValueService {
   constructor(readonly value: string) {}
@@ -275,6 +275,94 @@ describe("TestKernel", () => {
       "resource:database:dispose",
     ]);
   });
+
+  it.each([false, true])(
+    "preserves resource disposal receivers and reverse order when bootstrap fails: %s",
+    async (bootstrapFails) => {
+      const lifecycle: string[] = [];
+      const connections = [
+        { calls: 0, closed: false },
+        { calls: 0, closed: false },
+      ];
+      const resources = connections.map(
+        (connection, index): TestResource<typeof connection> => ({
+          id: `receiver-${index}`,
+          async start() {
+            return {
+              connection,
+              diagnostics: [],
+              fidelity: {
+                id: `receiver-${index}`,
+                image: "synthetic",
+                isolation: "prefix-per-test",
+                kind: "fake",
+                mode: "commit",
+              },
+              async dispose(this: StartedTestResource<typeof connection>) {
+                await Promise.resolve();
+                this.connection.calls += 1;
+                this.connection.closed = true;
+                lifecycle.push(`receiver-${index}`);
+              },
+            };
+          },
+        }),
+      );
+      const bootstrapFailure = new Error("bootstrap failed");
+      const creation = createTestKernel({
+        bootstrap: () => {
+          if (bootstrapFails) {
+            throw bootstrapFailure;
+          }
+          return bootstrapProductionApp("receivers");
+        },
+        fidelity: "application",
+        resources,
+      });
+
+      if (bootstrapFails) {
+        await expect(creation).rejects.toBe(bootstrapFailure);
+      } else {
+        const kernel = await creation;
+        const firstDisposal = kernel.dispose();
+        expect(kernel.dispose()).toBe(firstDisposal);
+        await firstDisposal;
+        await kernel.dispose();
+      }
+      expect(connections).toEqual([
+        { calls: 1, closed: true },
+        { calls: 1, closed: true },
+      ]);
+      expect(lifecycle).toEqual(["receiver-1", "receiver-0"]);
+    },
+  );
+
+  it.each([false, true])(
+    "preserves the bootstrap disposal receiver when validation fails: %s",
+    async (validationFails) => {
+      const wrapper = {
+        app: bootstrapProductionApp("wrapper-receiver"),
+        calls: 0,
+        async dispose() {
+          await Promise.resolve();
+          this.calls += 1;
+        },
+      };
+      const creation = createTestKernel({
+        bootstrap: () => wrapper,
+        fidelity: "application",
+        ...(validationFails ? { validation: { di: "off" as const } } : {}),
+      });
+
+      if (validationFails) {
+        await expect(creation).rejects.toBeInstanceOf(TestKernelValidationProblem);
+      } else {
+        const kernel = await creation;
+        await Promise.all([kernel.dispose(), kernel.dispose()]);
+      }
+      expect(wrapper.calls).toBe(1);
+    },
+  );
 
   it("boots isolated application runtimes without process-global resets", async () => {
     const createKernel = async (value: string, lifecycle: string[]) => {
@@ -824,18 +912,24 @@ describe("TestKernel", () => {
   it("runs cleanup exactly once and surfaces cleanup failures", async () => {
     let cleanupCalls = 0;
     let fallbackCleanupCalls = 0;
+    const lifecycle: string[] = [];
+    const resource = fakeResource("cleanup", "commit", lifecycle);
+    const wrapper = {
+      app: bootstrapProductionApp("cleanup"),
+      failure: new Error("cleanup failed"),
+      dispose() {
+        cleanupCalls += 1;
+        throw this.failure;
+      },
+    };
     const kernel = await createTestKernel({
-      bootstrap: () => ({
-        app: bootstrapProductionApp("cleanup"),
-        dispose: () => {
-          cleanupCalls += 1;
-          throw new Error("cleanup failed");
-        },
-      }),
+      bootstrap: () => wrapper,
       dispose: () => {
         fallbackCleanupCalls += 1;
+        throw new Error("application cleanup failed");
       },
       fidelity: "application",
+      resources: [resource],
     });
 
     const firstDisposal = kernel.dispose();
@@ -846,6 +940,16 @@ describe("TestKernel", () => {
     await expect(secondDisposal).rejects.toThrow(TestKernelDisposalProblem);
     expect(cleanupCalls).toBe(1);
     expect(fallbackCleanupCalls).toBe(1);
+    await expect(firstDisposal).rejects.toMatchObject({
+      extensions: {
+        failureCount: 2,
+        failures: [
+          expect.objectContaining({ message: "cleanup failed" }),
+          expect.objectContaining({ message: "application cleanup failed" }),
+        ],
+      },
+    });
+    expect(lifecycle).toEqual(["resource:cleanup:start", "resource:cleanup:dispose"]);
   });
 
   it("disposes through await using and rejects access after disposal starts", async () => {

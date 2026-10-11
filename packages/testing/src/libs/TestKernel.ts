@@ -610,7 +610,7 @@ export async function createTestKernel(options: TestKernelOptions): Promise<Test
             fidelity: Object.freeze({ ...started.fidelity }),
           }),
         );
-        resourceCleanups.push(started.dispose);
+        resourceCleanups.push(started.dispose.bind(started));
       }
 
       for (const obligation of options.obligations ?? []) {
@@ -623,7 +623,7 @@ export async function createTestKernel(options: TestKernelOptions): Promise<Test
 
       const result = await options.bootstrap(fidelityContext);
       app = isBootstrapApplication(result) ? result.app : result;
-      bootstrapCleanup = isBootstrapApplication(result) ? result.dispose : undefined;
+      bootstrapCleanup = isBootstrapApplication(result) ? result.dispose?.bind(result) : undefined;
 
       const actualValidation = app.describeBootstrapValidationPolicy();
       const expectedValidation: BootstrapValidationPolicy = {
