@@ -500,6 +500,121 @@ function assertGeneratedClientMethodNames(domainRoutes: DomainRoutes): void {
   }
 }
 
+function assertGeneratedClientSymbols(
+  domainRoutes: DomainRoutes,
+  options: GenerateClientOptions,
+  responseHelpers: ReturnType<typeof getResponseHelpers>,
+): void {
+  const types = new Map<string, string>();
+  const values = new Map<string, string>();
+  const domain = domainRoutes.domain;
+  const clientTypeName = `${toPascalCase(domain)}Client`;
+  types.set(clientTypeName, `the '${domain}' client type`);
+  for (const name of responseHelpers.typeHelpers) {
+    types.set(name, "an import from './rpc'");
+  }
+  for (const name of [
+    ...responseHelpers.valueHelpers,
+    `create${clientTypeName}`,
+    `${domain}Client`,
+    `${domain}ContractRoutes`,
+    getQueryKeysName(domainRoutes),
+  ]) {
+    values.set(name, `the '${domain}' client support`);
+  }
+  if (domainRoutes.routes.some(isMutationRoute)) {
+    values.set(`${domain}InvalidationManifest`, `the '${domain}' invalidation manifest`);
+  }
+  if (domainRoutes.routes.some((route) => route.inputSchemas.query)) {
+    values.set("serializeQueryParams", "the query serializer");
+  }
+  if (domainRoutes.routes.some((route) => route.inputSchemas.headers)) {
+    values.set("serializeHeaders", "the header serializer");
+  }
+  if (options.reactQuery) {
+    for (const [kind, present] of [
+      ["Query", domainRoutes.routes.some(isReactQueryQueryRoute)],
+      ["Mutation", domainRoutes.routes.some((route) => !isReactQueryQueryRoute(route))],
+    ] as const) {
+      if (present) {
+        values.set(`use${kind}`, "an import from '@tanstack/react-query'");
+        types.set(`Use${kind}Options`, "an import from '@tanstack/react-query'");
+        const plural = kind === "Query" ? "Queries" : "Mutations";
+        values.set(`create${toPascalCase(domain)}${plural}`, `the '${domain}' React Query factory`);
+        values.set(`${domain}${plural}`, `the '${domain}' React Query factory`);
+      }
+    }
+  }
+
+  for (const route of domainRoutes.routes) {
+    const typeNames = [
+      getProblemTypeName(route),
+      getProblemDetailsTypeName(route),
+      getResultTypeName(route),
+    ];
+    const valueNames = [getProblemDeclarationsName(route)];
+    if (needsInput(route)) {
+      typeNames.push(getInputTypeName(route));
+    }
+    if (route.outputSchema) {
+      typeNames.push(getOutputTypeName(route));
+    }
+    if (hasBody(route)) {
+      typeNames.push(
+        getFormFieldNameTypeName(route),
+        getFormValuesTypeName(route),
+        getSubmitPayloadTypeName(route),
+        getValidationProblemTypeName(route),
+        getDomainProblemTypeName(route),
+        getFormProblemTypeName(route),
+      );
+      valueNames.push(
+        getFormModelName(route),
+        getBuildFormPayloadName(route),
+        getMapFormProblemName(route),
+      );
+    }
+    if (options.reactQuery) {
+      typeNames.push(
+        ...(isReactQueryQueryRoute(route)
+          ? [
+              getQueryKeyTypeName(route),
+              getResultQueryKeyTypeName(route),
+              getQueryFactoryTypeName(route),
+              getResultQueryFactoryTypeName(route),
+              getQueryOptionsTypeName(route),
+              getResultQueryOptionsTypeName(route),
+            ]
+          : [
+              getMutationVariablesTypeName(route),
+              getMutationFactoryTypeName(route),
+              getResultMutationFactoryTypeName(route),
+              getMutationOptionsTypeName(route),
+              getResultMutationOptionsTypeName(route),
+            ]),
+      );
+      valueNames.push(
+        `use${toPascalCase(route.methodName)}`,
+        `use${toPascalCase(getResultMethodName(route))}`,
+      );
+    }
+    for (const [symbols, names] of [
+      [types, typeNames],
+      [values, valueNames],
+    ] as const) {
+      for (const name of names) {
+        const existing = symbols.get(name);
+        if (existing) {
+          throw new RpcCodegenContractProblem(
+            `Cannot generate RPC client for domain '${domain}': symbol '${name}' would be generated for ${formatRoute(route)}, but ${existing} already declares that symbol. Rename the route method to avoid generated declaration collisions.`,
+          );
+        }
+        symbols.set(name, formatRoute(route));
+      }
+    }
+  }
+}
+
 function assertGeneratedClientPathParams(route: GeneratedClientRoute): void {
   const pathParamNames = new Set(getContractPathParamNames(route.path));
   const declaredParamNames = new Set(
@@ -565,13 +680,15 @@ function generateDomainClient(domainRoutes: DomainRoutes, options: GenerateClien
     .map(generateFormArtifacts)
     .filter((artifact) => artifact.length > 0);
   const types = [...inputTypes, ...outputTypes, ...problemTypes];
-  const responseHelperImports = getResponseHelperImports({
+  const responseHelpers = getResponseHelpers({
     hasOutputRoutes: domainRoutes.routes.some((route) => route.outputSchema),
     hasNoOutputRoutes: domainRoutes.routes.some((route) => !route.outputSchema),
     hasFormRoutes: formArtifacts.length > 0,
     hasPathParamRoutes: domainRoutes.routes.some(hasPathParams),
     hasQueryKeyInputs: domainRoutes.routes.some(needsInput),
   });
+  assertGeneratedClientSymbols(domainRoutes, options, responseHelpers);
+  const responseHelperImports = getResponseHelperImports(responseHelpers);
   const queryHelpers = domainRoutes.routes.some((route) => route.inputSchemas.query)
     ? `function serializeQueryParams(query: Record<string, unknown> | null | undefined): string {
   if (query === undefined || query === null) {
@@ -965,7 +1082,10 @@ export type CrocoManifestBundleSource = typeof crocoManifestBundleSource;
 `;
 }
 
-function getResponseHelperImports(options: ResponseHelperOptions): string {
+function getResponseHelpers(options: ResponseHelperOptions): {
+  readonly valueHelpers: readonly string[];
+  readonly typeHelpers: readonly string[];
+} {
   const valueHelpers: string[] = [
     "createRpcClientRequest",
     "handleRpcRequestError",
@@ -1016,6 +1136,13 @@ function getResponseHelperImports(options: ResponseHelperOptions): string {
     typeHelpers.push("RpcValidationProblem");
   }
 
+  return { valueHelpers, typeHelpers };
+}
+
+function getResponseHelperImports({
+  valueHelpers,
+  typeHelpers,
+}: ReturnType<typeof getResponseHelpers>): string {
   return `import { ${valueHelpers.join(", ")} } from './rpc';
 import type { ${typeHelpers.join(", ")} } from './rpc';\n`;
 }
