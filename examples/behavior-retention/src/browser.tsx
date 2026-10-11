@@ -65,13 +65,16 @@ function App() {
       setMessage("Saved view access failed.");
       return;
     }
-    const record = (await response.json()) as RetentionSavedView | null;
+    const record = (await response.json()) as {
+      view: RetentionSavedView;
+      state: RetentionWorkbenchState;
+    } | null;
     if (!record) {
       setMessage("No saved weekly view.");
       return;
     }
-    setMode(record.request.sourceRef ?? "ready");
-    setState({ kind: "ready", snapshot: record.snapshot });
+    setMode(record.view.request.sourceRef ?? "ready");
+    setState(record.state);
     setDrilldown(undefined);
     setMessage("Saved weekly view opened.");
   }

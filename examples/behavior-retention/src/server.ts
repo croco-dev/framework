@@ -113,9 +113,10 @@ async function main() {
         });
       else if (request.method === "POST" && url.pathname === "/api/save")
         result = await host.save(selection, "weekly", url.searchParams.get("token") ?? "");
-      else if (request.method === "GET" && url.pathname === "/api/saved")
-        result = (await host.readSaved(scope, "user", "weekly")) ?? null;
-      else {
+      else if (request.method === "GET" && url.pathname === "/api/saved") {
+        const view = await host.readSaved(scope, "user", "weekly");
+        result = view ? { view, state: await host.load(view.request) } : null;
+      } else {
         response.writeHead(404).end();
         return;
       }
