@@ -159,6 +159,7 @@
     "@croco/ui-astryx": "workspace:*",
     "@croco/warehouse-core": "workspace:*",
     "@croco/warehouse-postgres": "workspace:*",
+    "@croco/warehouse-tooling": "workspace:*",
     "@croco/webhooks-core": "workspace:*",
     "@croco/workflow-core": "workspace:*",
     "@playwright/test": "1.62.0",

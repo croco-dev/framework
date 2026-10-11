@@ -1,4 +1,8 @@
-import { Problem, ProblemSerializer } from "@croco/problems-core";
+import {
+  FALLBACK_INTERNAL_SERVER_ERROR_PROBLEM_CODE,
+  Problem,
+  ProblemSerializer,
+} from "@croco/problems-core";
 import {
   createHttpProblemDetails,
   redactHttpProblemDetailsBody,
@@ -51,7 +55,7 @@ export class HttpExceptionFilter implements ExceptionFilter<unknown, ExecutionCo
         type: "about:blank",
         title: "Internal Server Error",
         status: 500,
-        code: "INTERNAL_SERVER_ERROR",
+        code: FALLBACK_INTERNAL_SERVER_ERROR_PROBLEM_CODE,
         detail: "An internal error occurred",
       },
     };

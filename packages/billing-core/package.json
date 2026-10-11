@@ -17,12 +17,18 @@
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
+      "types": {
+        "import": "./dist/index.d.mts",
+        "require": "./dist/index.d.ts"
+      },
       "import": "./dist/index.mjs",
       "require": "./dist/index.js"
     },
     "./cancellation": {
-      "types": "./dist/cancellation.d.ts",
+      "types": {
+        "import": "./dist/cancellation.d.mts",
+        "require": "./dist/cancellation.d.ts"
+      },
       "import": "./dist/cancellation.mjs",
       "require": "./dist/cancellation.js"
     }
@@ -32,12 +38,18 @@
     "types": "./dist/index.d.ts",
     "exports": {
       ".": {
-        "types": "./dist/index.d.ts",
+        "types": {
+          "import": "./dist/index.d.mts",
+          "require": "./dist/index.d.ts"
+        },
         "import": "./dist/index.mjs",
         "require": "./dist/index.js"
       },
       "./cancellation": {
-        "types": "./dist/cancellation.d.ts",
+        "types": {
+          "import": "./dist/cancellation.d.mts",
+          "require": "./dist/cancellation.d.ts"
+        },
         "import": "./dist/cancellation.mjs",
         "require": "./dist/cancellation.js"
       }

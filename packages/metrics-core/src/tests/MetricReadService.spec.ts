@@ -1215,3 +1215,35 @@ describe("MetricReadService", () => {
     await pending;
   });
 });
+
+describe("calendar metric windows", () => {
+  it("runs and matches reviewed reports with canonical calendar [from,to) dates", async () => {
+    const calendar = { from: "2026-09-01", to: "2026-09-02" };
+    const calendarResult = { ...result, window: calendar };
+    const run = fixture({ executor: async () => calendarResult });
+    expect(
+      await run.service.runRegisteredQuery("captures_by_currency", { currency: "USD" }, calendar),
+    ).toMatchObject({ status: "verified", source: "executor", result: { window: calendar } });
+    const matched = fixture({ report: report({ result: calendarResult }) });
+    expect(
+      await matched.service.runRegisteredQuery(
+        "captures_by_currency",
+        { currency: "USD" },
+        calendar,
+      ),
+    ).toMatchObject({ status: "verified", source: "report" });
+    expect(matched.executor).not.toHaveBeenCalled();
+  });
+  it.each([
+    { from: "2026-02-30", to: "2026-03-03" },
+    { from: "2026-9-01", to: "2026-09-02" },
+    { from: "2026-09-01", to: "2026-09-02T00:00:00.000Z" },
+    { from: "2026-09-02", to: "2026-09-01" },
+  ])("rejects invalid or mixed calendar window %j before executing", async (invalid) => {
+    const run = fixture();
+    await expect(
+      run.service.runRegisteredQuery("captures_by_currency", { currency: "USD" }, invalid),
+    ).rejects.toMatchObject({ code: "metrics-core/invalid-window" });
+    expect(run.executor).not.toHaveBeenCalled();
+  });
+});

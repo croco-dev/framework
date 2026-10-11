@@ -564,8 +564,8 @@ function normalizeTypesFields(pkg) {
     pkg.publishConfig.types = normalizeDistSpecifier(pkg.publishConfig.types);
   }
 
-  normalizeExportTypes(pkg.exports);
-  normalizeExportTypes(pkg.publishConfig?.exports);
+  normalizeExportTypes(pkg.exports, pkg.type);
+  normalizeExportTypes(pkg.publishConfig?.exports, pkg.type);
   normalizeExportConditionOrder(pkg.exports);
   normalizeExportConditionOrder(pkg.publishConfig?.exports);
 }
@@ -598,7 +598,7 @@ function normalizeExportConditionMap(exportValue) {
   );
 }
 
-function normalizeExportTypes(exportsValue) {
+function normalizeExportTypes(exportsValue, packageType) {
   if (!exportsValue || typeof exportsValue !== "object") {
     return;
   }
@@ -613,7 +613,38 @@ function normalizeExportTypes(exportsValue) {
     } else if (typeof value.types === "string") {
       value.types = normalizeDistSpecifier(value.types);
     }
+
+    if (
+      isDistPath(value.import) &&
+      isDistPath(value.require) &&
+      isDistPath(value.types) &&
+      value.types.endsWith(".d.ts")
+    ) {
+      value.types = modeSpecificTypesFor(value.types, packageType);
+    } else if (
+      flatExportDeclarationExtension(value, packageType) === ".d.mts" &&
+      isDistPath(value.types) &&
+      value.types.endsWith(".d.ts")
+    ) {
+      value.types = `${value.types.slice(0, -".d.ts".length)}.d.mts`;
+    }
   }
+}
+
+function flatExportDeclarationExtension(exportValue, packageType) {
+  return packageType !== "module" &&
+    isDistPath(exportValue.import) &&
+    exportValue.import.endsWith(".mjs") &&
+    !Object.hasOwn(exportValue, "require")
+    ? ".d.mts"
+    : ".d.ts";
+}
+
+function modeSpecificTypesFor(typesTarget, packageType) {
+  const base = typesTarget.slice(0, -".d.ts".length);
+  return packageType === "module"
+    ? { import: typesTarget, require: `${base}.d.cts` }
+    : { import: `${base}.d.mts`, require: typesTarget };
 }
 
 function readWorkspacePackageNames(packageJsonFiles) {
@@ -815,7 +846,10 @@ function directDistPublishedRootExportFor(pkg) {
 
   const normalizedRootExport = {};
   for (const [conditionName, target] of Object.entries(rootExport)) {
-    if (isDistPath(target)) {
+    if (
+      isDistPath(target) ||
+      (conditionName === "types" && isDistPath(target?.import) && isDistPath(target?.require))
+    ) {
       normalizedRootExport[conditionName] = target;
     }
   }
@@ -838,7 +872,7 @@ function publishedRootExportFor(pkg) {
   }
 
   return {
-    types: DIST_INDEX_TYPES,
+    types: modeSpecificTypesFor(DIST_INDEX_TYPES, pkg.type),
     import: DIST_INDEX_MODULE,
     require: DIST_INDEX_MAIN,
   };
@@ -958,7 +992,17 @@ function validatePackage(pkg, pkgPath, rootDir, context = {}) {
   validateNoSrcReferences(pkg.publishConfig, "publishConfig", violations);
   validateNoArrayTypes(pkg, "root", violations);
   validateNoArrayTypes(pkg.publishConfig, "publishConfig", violations);
-  validateExportMap(pkg.publishConfig?.exports, "publishConfig.exports", violations);
+  validateExportMap(pkg.publishConfig?.exports, "publishConfig.exports", violations, pkg.type);
+  if (!DIRECT_DIST_ENTRYPOINT_PACKAGES.has(pkg.name)) {
+    const distExports = Object.fromEntries(
+      Object.entries(pkg.exports ?? {}).filter(
+        ([, target]) =>
+          isDistPath(target?.import) &&
+          (!Object.hasOwn(target, "require") || isDistPath(target.require)),
+      ),
+    );
+    validateExportMap(distExports, "exports", violations, pkg.type);
+  }
   violations.push(
     ...exportConditionSequenceParityDiagnostics(pkg.exports, pkg.publishConfig?.exports),
   );
@@ -1486,7 +1530,7 @@ function validateDirectDistEntrypoints(pkg, violations) {
     "root publishable entrypoints",
     violations,
   );
-  validateExportMap(pkg.exports, "exports", violations);
+  validateExportMap(pkg.exports, "exports", violations, pkg.type);
 }
 
 function validateRootPublishFieldParity(pkg, rootFieldName, publishFieldName, violations) {
@@ -1551,7 +1595,7 @@ function validateNoArrayTypes(value, fieldName, violations) {
   }
 }
 
-function validateExportMap(exportsValue, fieldName, violations) {
+function validateExportMap(exportsValue, fieldName, violations, packageType) {
   if (!exportsValue || typeof exportsValue !== "object") {
     return;
   }
@@ -1569,28 +1613,48 @@ function validateExportMap(exportsValue, fieldName, violations) {
       continue;
     }
 
+    if (
+      Object.hasOwn(exportValue, "import") &&
+      Object.hasOwn(exportValue, "require") &&
+      (!exportValue.types ||
+        typeof exportValue.types !== "object" ||
+        Array.isArray(exportValue.types))
+    ) {
+      violations.push(
+        `${fieldName}["${exportPath}"].types must provide import and require declaration targets`,
+      );
+    }
+
     for (const [condition, target] of Object.entries(exportValue)) {
       if (condition === "types" && target && typeof target === "object" && !Array.isArray(target)) {
         validateModeSpecificTypesTarget(
           target,
           `${fieldName}["${exportPath}"].${condition}`,
           violations,
+          packageType,
         );
         continue;
       }
       validateDistPath(target, `${fieldName}["${exportPath}"].${condition}`, violations, {
-        mustEndWith: condition === "types" ? ".d.ts" : undefined,
+        mustEndWith:
+          condition === "types"
+            ? flatExportDeclarationExtension(exportValue, packageType)
+            : undefined,
       });
     }
   }
 }
 
-function validateModeSpecificTypesTarget(target, fieldName, violations) {
+function validateModeSpecificTypesTarget(target, fieldName, violations, packageType) {
   const importTarget = target.import;
   const requireTarget = target.require;
 
-  validateDistPath(importTarget, `${fieldName}.import`, violations, { mustEndWith: ".d.mts" });
-  validateDistPath(requireTarget, `${fieldName}.require`, violations, { mustEndWith: ".d.ts" });
+  validateDistPath(importTarget, `${fieldName}.import`, violations, {
+    mustEndWith: packageType === "module" ? ".d.ts" : ".d.mts",
+  });
+  validateDistPath(requireTarget, `${fieldName}.require`, violations, {
+    mustEndWith: packageType === "module" ? ".d.cts" : ".d.ts",
+  });
 }
 
 function validateDrizzleOrmCatalogPolicy(pkg, pkgPath, violations) {

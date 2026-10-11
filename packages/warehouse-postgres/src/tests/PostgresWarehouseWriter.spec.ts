@@ -8,6 +8,8 @@ import type {
 } from "@croco/warehouse-core/runtime";
 import { PostgresWarehouseWriter } from "../facts/PostgresWarehouseWriter";
 import {
+  generatePostgresFactSchema,
+  generatePostgresWarehouseSchema,
   factColumnName,
   factTableName,
   installPostgresFactSchema,
@@ -213,6 +215,39 @@ describe("PostgresWarehouseWriter", () => {
     expect(test.query.mock.calls.at(-1)?.[0]).toBe("ROLLBACK");
     expect(await test.writer.reconcileReceipt(test.request)).toBeNull();
   });
+  it("generates deterministic native DDL and the runtime column mapping without a database", async () => {
+    const generated = await generatePostgresFactSchema(descriptor);
+    const reordered = {
+      ...descriptor,
+      columns: Object.fromEntries(Object.entries(descriptor.columns).reverse()),
+    };
+    expect(await generatePostgresFactSchema(reordered)).toEqual(generated);
+    expect(generated.tableName).toBe(factTableName(descriptor));
+    expect(generated.columns).toEqual([
+      { key: "amount", name: "c_0", sqlType: "BIGINT", nullable: false },
+      { key: "at", name: "c_1", sqlType: "TIMESTAMPTZ(3)", nullable: false },
+      { key: "id", name: "c_2", sqlType: "TEXT", nullable: false },
+    ]);
+    expect(generated.sql).toContain("WAREHOUSE_BINDING_CONFLICT");
+    expect(generated.sql).toContain("INSERT INTO public.warehouse_models");
+    expect(generatePostgresWarehouseSchema()).toContain(
+      'CREATE TABLE IF NOT EXISTS "public"."warehouse_models"',
+    );
+    await expect(
+      generatePostgresFactSchema({ ...descriptor, semanticHash: "0".repeat(64) }),
+    ).rejects.toThrow("WAREHOUSE_SEMANTIC_HASH_MISMATCH");
+  });
+
+  it("quotes descriptor text and chooses a non-conflicting SQL block delimiter", async () => {
+    const quoted = await compileFact({
+      ...descriptor,
+      grain: { ...descriptor.grain, description: "it's \\ $warehouse_binding$" },
+    });
+    const generated = await generatePostgresFactSchema(quoted);
+    expect(generated.sql).toContain("it''s");
+    expect(generated.sql).toMatch(/^DO \$warehouse_binding_\$/);
+  });
+
   it("derives bounded SQL identifiers and explicit typed DDL", async () => {
     const statements: string[] = [];
     await installPostgresFactSchema(

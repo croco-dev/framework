@@ -1,6 +1,7 @@
 import type { TokenIdentifier } from "@croco/framework-context";
 import type { StartedTestResource, TestResource, TestResourceDiagnostic } from "@croco/testing";
 import type * as RedisModuleNamespace from "ioredis";
+import type { Redis as RedisClient } from "ioredis";
 import type { StartedTestContainer } from "testcontainers";
 import { loadTestResourceLiveDependency } from "./liveDependencies";
 import { TestResourceLifecycleProblem } from "./problems";
@@ -19,14 +20,6 @@ import {
 } from "./shared";
 
 type RedisModule = typeof RedisModuleNamespace;
-type RedisClientConstructor = RedisModule extends { readonly default: infer TDefault }
-  ? TDefault
-  : RedisModule;
-type RedisClient = RedisClientConstructor extends abstract new (
-  ...arguments_: never[]
-) => infer TClient
-  ? TClient
-  : never;
 
 export type RedisTestConnection = {
   readonly client: RedisClient;

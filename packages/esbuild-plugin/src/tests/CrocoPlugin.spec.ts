@@ -422,6 +422,151 @@ describe("crocoPlugin", () => {
     }
   });
 
+  describe("lexical runtime import bindings", () => {
+    const imports = [
+      {
+        kind: "named",
+        declaration: 'import { createApplicationRuntime } from "@croco/framework-module";',
+        binding: "createApplicationRuntime",
+        namespace: false,
+      },
+      {
+        kind: "aliased",
+        declaration:
+          'import { createApplicationRuntime as createRuntime } from "@croco/framework-module";',
+        binding: "createRuntime",
+        namespace: false,
+      },
+      {
+        kind: "namespace",
+        declaration: 'import * as application from "@croco/framework-module";',
+        binding: "application",
+        namespace: true,
+      },
+    ];
+
+    it.each(imports)(
+      "injects the $kind import without changing shadowed calls",
+      async (fixture) => {
+        const { entry } = createProject();
+        const call = fixture.namespace
+          ? `${fixture.binding}.createApplicationRuntime`
+          : fixture.binding;
+        const localValue = fixture.namespace ? "{ createApplicationRuntime: local }" : "local";
+        const functionDeclaration = fixture.namespace
+          ? `function ${fixture.binding}() {}\n${fixture.binding}.createApplicationRuntime = local;`
+          : `function ${fixture.binding}(...args: unknown[]) { return args; }`;
+        fs.writeFileSync(
+          entry,
+          `
+          ${fixture.declaration}
+          const local = (...args: unknown[]) => args;
+          const results: unknown[] = [];
+          function parameter(${fixture.binding}: ${fixture.namespace ? "{ createApplicationRuntime: typeof local }" : "typeof local"}) {
+            return ${call}("parameter");
+          }
+          results.push(parameter(${localValue}));
+          {
+            const ${fixture.binding} = ${localValue};
+            results.push(${call}("block"));
+          }
+          function declaration() {
+            ${functionDeclaration}
+            return ${call}("function");
+          }
+          results.push(declaration());
+          try { throw ${localValue}; }
+          catch (${fixture.binding}) {
+            results.push(${call}("catch"));
+          }
+          export const shadows = results;
+          export const runtime = ${call}();
+          export const configuredRuntime = ${call}({ name: "configured" });
+        `,
+        );
+        const result = await esbuild.build({
+          absWorkingDir: TEMP_DIR,
+          entryPoints: [entry],
+          platform: "node",
+          format: "cjs",
+          bundle: true,
+          write: false,
+          external: ["@croco/framework-context", "@croco/framework-module"],
+          plugins: [crocoPlugin({ reflectMetadata: false, di: { graphId: "lexical-bindings" } })],
+          tsconfig: path.join(TEMP_DIR, "tsconfig.json"),
+        });
+        const loaded = { exports: {} };
+        const requireStub = (specifier: string): unknown => {
+          if (specifier === "@croco/framework-module") {
+            return { createApplicationRuntime: (...args: unknown[]) => args };
+          }
+          if (specifier === "@croco/framework-context") {
+            return {
+              Component: () => () => undefined,
+              defineGeneratedDiGraph: (graph: unknown) => graph,
+              GENERATED_DI_GRAPH_VERSION: 1,
+            };
+          }
+          throw new Error(`Unexpected bundled dependency: ${specifier}`);
+        };
+        const output = result.outputFiles[0];
+        if (!output) throw new Error("Expected an esbuild bundle");
+        new Function("require", "module", "exports", output.text)(
+          requireStub,
+          loaded,
+          loaded.exports,
+        );
+        const app = loaded.exports as {
+          shadows: unknown[][];
+          runtime: unknown[];
+          configuredRuntime: unknown[];
+        };
+        expect(app.shadows).toEqual([["parameter"], ["block"], ["function"], ["catch"]]);
+        expect(app.runtime).toEqual([
+          undefined,
+          expect.objectContaining({ graphId: "lexical-bindings" }),
+        ]);
+        expect(app.configuredRuntime).toEqual([{ name: "configured" }, app.runtime[1]]);
+      },
+    );
+
+    it.each(imports)(
+      "rejects a shadow-only $kind import as a missing runtime connection",
+      async (fixture) => {
+        const { entry } = createProject();
+        const call = fixture.namespace
+          ? `${fixture.binding}.createApplicationRuntime`
+          : fixture.binding;
+        fs.writeFileSync(
+          entry,
+          `
+          ${fixture.declaration}
+          type Factory = (...args: unknown[]) => unknown;
+          export function shadowOnly(${fixture.binding}: ${fixture.namespace ? "{ createApplicationRuntime: Factory }" : "Factory"}) {
+            return ${call}();
+          }
+        `,
+        );
+        await expect(
+          esbuild.build({
+            absWorkingDir: TEMP_DIR,
+            entryPoints: [entry],
+            platform: "node",
+            format: "cjs",
+            bundle: true,
+            write: false,
+            logLevel: "silent",
+            external: ["@croco/framework-context", "@croco/framework-module"],
+            plugins: [crocoPlugin({ reflectMetadata: false })],
+            tsconfig: path.join(TEMP_DIR, "tsconfig.json"),
+          }),
+        ).rejects.toThrow(
+          "CROCO_DI_COMPILE_001: Server builds with generated providers must bind an app-scoped runtime with createApplicationRuntime(...).",
+        );
+      },
+    );
+  });
+
   it("preserves an explicit graph argument in an imported composition module", async () => {
     const { entry } = createProject();
     fs.writeFileSync(entry, 'export { runtime } from "./app";');

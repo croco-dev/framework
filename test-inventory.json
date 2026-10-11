@@ -1214,6 +1214,12 @@
       "owner": "@croco/cli"
     },
     {
+      "path": "packages/cli/src/tests/Data.spec.ts",
+      "lane": "fast",
+      "qualifiers": ["coverage"],
+      "owner": "@croco/cli"
+    },
+    {
       "path": "packages/cli/src/tests/DesktopRemoved.spec.ts",
       "lane": "fast",
       "qualifiers": ["coverage"],
@@ -1977,6 +1983,12 @@
     },
     {
       "path": "packages/dataloader-core/src/tests/BatchLoader.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/dataloader-core"
+    },
+    {
+      "path": "packages/dataloader-core/src/tests/BatchLoaderCache.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/dataloader-core"
@@ -5216,6 +5228,12 @@
       "owner": "@croco/transports-cloudflare-workers"
     },
     {
+      "path": "packages/transports-graphql/src/tests/GraphQLExecutionMiddleware.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/transports-graphql"
+    },
+    {
       "path": "packages/transports-graphql/src/tests/GraphQLServer.lazy-import.spec.ts",
       "lane": "fast",
       "qualifiers": [],
@@ -5654,8 +5672,26 @@
       "owner": "@croco/warehouse-core"
     },
     {
+      "path": "packages/warehouse-postgres/src/tests/CompilePostgresMetric.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/warehouse-postgres"
+    },
+    {
       "path": "packages/warehouse-postgres/src/tests/Pipeline.integration.spec.ts",
       "lane": "integration",
+      "qualifiers": [],
+      "owner": "@croco/warehouse-postgres"
+    },
+    {
+      "path": "packages/warehouse-postgres/src/tests/PostgresMetricRead.integration.spec.ts",
+      "lane": "integration",
+      "qualifiers": [],
+      "owner": "@croco/warehouse-postgres"
+    },
+    {
+      "path": "packages/warehouse-postgres/src/tests/PostgresMetricRead.spec.ts",
+      "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/warehouse-postgres"
     },
@@ -5700,6 +5736,24 @@
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/warehouse-postgres"
+    },
+    {
+      "path": "packages/warehouse-tooling/src/tests/DataCompiler.integration.spec.ts",
+      "lane": "integration",
+      "qualifiers": [],
+      "owner": "@croco/warehouse-tooling"
+    },
+    {
+      "path": "packages/warehouse-tooling/src/tests/DataCompiler.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/warehouse-tooling"
+    },
+    {
+      "path": "packages/warehouse-tooling/src/tests/Generation.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/warehouse-tooling"
     },
     {
       "path": "packages/webhooks-core/src/tests/OutboundWebhookRuntime.spec.ts",

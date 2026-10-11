@@ -31,12 +31,18 @@
     "types": "./dist/index.d.ts",
     "exports": {
       ".": {
-        "types": "./dist/index.d.ts",
+        "types": {
+          "import": "./dist/index.d.mts",
+          "require": "./dist/index.d.ts"
+        },
         "import": "./dist/index.mjs",
         "require": "./dist/index.js"
       },
       "./postgres": {
-        "types": "./dist/postgres.d.ts",
+        "types": {
+          "import": "./dist/postgres.d.mts",
+          "require": "./dist/postgres.d.ts"
+        },
         "import": "./dist/postgres.mjs",
         "require": "./dist/postgres.js"
       }

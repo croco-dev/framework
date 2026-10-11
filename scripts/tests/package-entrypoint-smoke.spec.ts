@@ -184,6 +184,112 @@ childProcess.spawnSync = (command, args, options) => {
     expect(result.stdout).toContain("✓ @croco/mode-specific-types: esm 1, cjs 1, types 1");
   });
 
+  it.each([false, true])(
+    "checks ESM default import fidelity with mode-specific types=%s",
+    (fixed) => {
+      const root = createTempRoot();
+      writeImportablePackage(root, "default-export", {
+        cjsContent: "exports.default = class Reporter {};\n",
+        esmContent: "export default class Reporter {}\n",
+        declarationContent:
+          "declare class Reporter { report(): void; }\nexport { Reporter as default };\n",
+        exportsValue: {
+          ".": {
+            types: fixed
+              ? { import: "./dist/index.d.mts", require: "./dist/index.d.ts" }
+              : "./dist/index.d.ts",
+            import: "./dist/index.mjs",
+            require: "./dist/index.js",
+          },
+        },
+      });
+
+      const result = runScript(root);
+
+      expect(result.status, result.stderr || result.stdout).toBe(fixed ? 0 : 1);
+      if (!fixed) {
+        expect(result.stderr).toContain("esm types entrypoints");
+        expect(result.stderr).toContain("TS2741");
+      }
+    },
+  );
+
+  it.each([
+    "interface Shape { value: string; }\nexport type { Shape as default };\n",
+    "export default interface Shape { value: string; }\n",
+  ])("accepts type-only default exports without a value import: %s", (declarationContent) => {
+    const root = createTempRoot();
+    writeImportablePackage(root, "type-only-default", {
+      declarationContent,
+      exportsValue: {
+        ".": {
+          types: { import: "./dist/index.d.mts", require: "./dist/index.d.ts" },
+          import: "./dist/index.mjs",
+          require: "./dist/index.js",
+        },
+      },
+    });
+
+    const result = runScript(root);
+
+    expect(result.status, result.stderr || result.stdout).toBe(0);
+  });
+
+  it.each(["flat", "wrong-require", "fixed"] as const)(
+    "checks Node16 CJS consumption of module packages: %s",
+    (condition) => {
+      const root = createTempRoot();
+      writeImportablePackage(root, "module-types", {
+        packageType: "module",
+        exportsValue: {
+          ".": {
+            types:
+              condition === "flat"
+                ? "./dist/index.d.ts"
+                : {
+                    import: "./dist/index.d.ts",
+                    require: condition === "fixed" ? "./dist/index.d.cts" : "./dist/index.d.ts",
+                  },
+            import: "./dist/index.mjs",
+            require: "./dist/index.cjs",
+          },
+        },
+      });
+
+      const result = runScript(root);
+
+      expect(result.status, result.stderr || result.stdout).toBe(condition === "fixed" ? 0 : 1);
+      if (condition !== "fixed") {
+        expect(result.stderr).toContain("cjs types entrypoints");
+        expect(result.stderr).toContain("TS1479");
+      }
+    },
+  );
+
+  it("validates dependencies in the require declaration target", () => {
+    const root = createTempRoot();
+    writeImportablePackage(root, "require-dependency", {
+      exportsValue: {
+        ".": {
+          types: { import: "./dist/index.d.mts", require: "./dist/index.d.ts" },
+          import: "./dist/index.mjs",
+          require: "./dist/index.js",
+        },
+      },
+    });
+    writeFileSync(
+      join(root, "packages/require-dependency/dist/index.d.ts"),
+      'export type { Missing } from "@croco-smoke/missing-types";\n',
+    );
+
+    const result = runScript(root);
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain(
+      'exports["."].types.require imports undeclared type dependency @croco-smoke/missing-types',
+    );
+  });
+
   it("validates CSS exports as static assets without loading them in Node", () => {
     const root = createTempRoot();
     writeImportablePackage(root, "styled", {
@@ -817,6 +923,7 @@ function writeImportablePackage(
     readonly exportsValue?: unknown;
     readonly importTarget?: string;
     readonly packageName?: string;
+    readonly packageType?: "commonjs" | "module";
     readonly peerDependencies?: Record<string, string>;
     readonly peerDependenciesMeta?: Record<string, { readonly optional: boolean }>;
     readonly publishConfig?: Record<string, unknown>;
@@ -834,7 +941,7 @@ function writeImportablePackage(
   const packageName = options.packageName ?? `@croco/${packageDirName}`;
   writeFileSync(join(packageDir, "src", "index.ts"), 'export const value = "ok";\n');
   writeFileSync(
-    join(packageDir, "dist", "index.js"),
+    join(packageDir, "dist", options.packageType === "module" ? "index.cjs" : "index.js"),
     options.cjsContent ?? 'exports.value = "ok";\n',
   );
   writeFileSync(
@@ -846,7 +953,7 @@ function writeImportablePackage(
     options.declarationContent ?? "export declare const value: string;\n",
   );
   writeFileSync(
-    join(packageDir, "dist", "index.d.mts"),
+    join(packageDir, "dist", options.packageType === "module" ? "index.d.cts" : "index.d.mts"),
     options.declarationContent ?? "export declare const value: string;\n",
   );
   writeFileSync(
@@ -861,14 +968,14 @@ function writeImportablePackage(
         version: "0.0.0",
         dependencies: options.dependencies,
         files: ["dist"],
-        type: "commonjs",
+        type: options.packageType ?? "commonjs",
         main: options.sourceMain ?? "./src/index.ts",
         types: options.sourceTypes ?? "./src/index.ts",
         publishConfig:
           options.publishConfig ??
           ({
             access: "public",
-            main: "./dist/index.js",
+            main: options.packageType === "module" ? "./dist/index.cjs" : "./dist/index.js",
             types: options.typesTarget ?? "./dist/index.d.ts",
             exports: options.exportsValue ?? {
               ".": {

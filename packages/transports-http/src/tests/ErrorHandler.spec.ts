@@ -110,6 +110,7 @@ describe("ErrorHandler", () => {
           type: "about:blank",
           title: "Internal Server Error",
           status: 500,
+          code: "INTERNAL_SERVER_ERROR",
           detail: "An internal error occurred",
         },
       },
@@ -121,6 +122,7 @@ describe("ErrorHandler", () => {
           type: "about:blank",
           title: "Internal Server Error",
           status: 500,
+          code: "INTERNAL_SERVER_ERROR",
           detail: "An unexpected error occurred",
         },
       },
@@ -713,6 +715,7 @@ describe("ErrorHandler", () => {
         type: "about:blank",
         title: "Internal Server Error",
         status: 500,
+        code: "INTERNAL_SERVER_ERROR",
         detail: "An internal error occurred",
       });
       expect(throwingLogger.error).toHaveBeenCalledOnce();

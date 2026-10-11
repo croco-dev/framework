@@ -18,22 +18,34 @@
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
+      "types": {
+        "import": "./dist/index.d.mts",
+        "require": "./dist/index.d.ts"
+      },
       "import": "./dist/index.mjs",
       "require": "./dist/index.js"
     },
     "./fact-history-validation": {
-      "types": "./dist/fact-history-validation.d.ts",
+      "types": {
+        "import": "./dist/fact-history-validation.d.mts",
+        "require": "./dist/fact-history-validation.d.ts"
+      },
       "import": "./dist/fact-history-validation.mjs",
       "require": "./dist/fact-history-validation.js"
     },
     "./fact-history-operations": {
-      "types": "./dist/fact-history-operations.d.ts",
+      "types": {
+        "import": "./dist/fact-history-operations.d.mts",
+        "require": "./dist/fact-history-operations.d.ts"
+      },
       "import": "./dist/fact-history-operations.mjs",
       "require": "./dist/fact-history-operations.js"
     },
     "./targeting-impact-operations": {
-      "types": "./dist/targeting-impact-operations.d.ts",
+      "types": {
+        "import": "./dist/targeting-impact-operations.d.mts",
+        "require": "./dist/targeting-impact-operations.d.ts"
+      },
       "import": "./dist/targeting-impact-operations.mjs",
       "require": "./dist/targeting-impact-operations.js"
     }
@@ -43,22 +55,34 @@
     "types": "./dist/index.d.ts",
     "exports": {
       ".": {
-        "types": "./dist/index.d.ts",
+        "types": {
+          "import": "./dist/index.d.mts",
+          "require": "./dist/index.d.ts"
+        },
         "import": "./dist/index.mjs",
         "require": "./dist/index.js"
       },
       "./fact-history-validation": {
-        "types": "./dist/fact-history-validation.d.ts",
+        "types": {
+          "import": "./dist/fact-history-validation.d.mts",
+          "require": "./dist/fact-history-validation.d.ts"
+        },
         "import": "./dist/fact-history-validation.mjs",
         "require": "./dist/fact-history-validation.js"
       },
       "./fact-history-operations": {
-        "types": "./dist/fact-history-operations.d.ts",
+        "types": {
+          "import": "./dist/fact-history-operations.d.mts",
+          "require": "./dist/fact-history-operations.d.ts"
+        },
         "import": "./dist/fact-history-operations.mjs",
         "require": "./dist/fact-history-operations.js"
       },
       "./targeting-impact-operations": {
-        "types": "./dist/targeting-impact-operations.d.ts",
+        "types": {
+          "import": "./dist/targeting-impact-operations.d.mts",
+          "require": "./dist/targeting-impact-operations.d.ts"
+        },
         "import": "./dist/targeting-impact-operations.mjs",
         "require": "./dist/targeting-impact-operations.js"
       }

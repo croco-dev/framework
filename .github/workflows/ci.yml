@@ -820,6 +820,7 @@ jobs:
               - 'packages/ui-astryx/src/**'
               - 'packages/warehouse-core/src/**'
               - 'packages/warehouse-postgres/src/**'
+              - 'packages/warehouse-tooling/src/**'
               - 'packages/webhooks-core/src/**'
               - 'packages/workflow-core/src/**'
               - 'packages/*/package.json'

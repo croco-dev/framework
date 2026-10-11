@@ -138,7 +138,9 @@ export function createControllerProject(
   const outputPaths = new Map(
     emittableSourceFiles.map((sourceFile) => [
       normalizePath(sourceFile.getFilePath()),
-      getEmittedFilePath(sourceRoot, emitDir, sourceFile.getFilePath()),
+      path.basename(sourceFile.getFilePath()) === "package.json"
+        ? path.join(fs.mkdtempSync(path.join(emitDir, "croco-json-")), "package.json")
+        : getEmittedFilePath(sourceRoot, emitDir, sourceFile.getFilePath()),
     ]),
   );
 
@@ -158,7 +160,18 @@ export function createControllerProject(
     emit(): void {
       assertActive(disposed);
       for (const context of emitContexts) {
-        for (const sourceFile of context.sourceFiles) sourceFile.emitSync();
+        for (const sourceFile of context.sourceFiles) {
+          const sourcePath = sourceFile.getFilePath();
+          if (path.basename(sourcePath) === "package.json") {
+            const outputPath = outputPaths.get(normalizePath(sourcePath));
+            if (!outputPath) {
+              throw new ControllerProjectStateProblem(`Missing JSON output path: ${sourcePath}`);
+            }
+            fs.copyFileSync(sourcePath, outputPath);
+          } else {
+            sourceFile.emitSync();
+          }
+        }
         rewriteRuntimeSpecifiers(context, sourceRoot, emitDir, outputPaths);
         writeModuleBoundaries(context, sourceRoot, emitDir);
       }
@@ -221,7 +234,7 @@ function resolveProjectSourceDependencies(project: Project): void {
         if (
           ts.isCallExpression(node) &&
           node.expression.kind === ts.SyntaxKind.ImportKeyword &&
-          node.arguments.length === 1 &&
+          node.arguments.length >= 1 &&
           ts.isStringLiteral(node.arguments[0])
         ) {
           const resolvedPath = ts.resolveModuleName(
@@ -478,7 +491,7 @@ function rewriteRuntimeSpecifiers(
 
   for (const sourceFile of context.sourceFiles) {
     const sourcePath = sourceFile.getFilePath();
-    if (!isEmittableSourcePath(sourcePath)) continue;
+    if (!isEmittableSourcePath(sourcePath) || sourcePath.endsWith(".json")) continue;
     const emittedPath = getEmittedFilePath(sourceRoot, emitDir, sourcePath);
     if (!fs.existsSync(emittedPath)) continue;
     const emittedText = fs.readFileSync(emittedPath, "utf8");
@@ -778,6 +791,7 @@ function writeModuleBoundaries(context: ProjectContext, sourceRoot: string, emit
 
   for (const sourceFile of context.sourceFiles) {
     const sourcePath = sourceFile.getFilePath();
+    if (sourcePath.endsWith(".json")) continue;
     const emittedPath = getEmittedFilePath(sourceRoot, emitDir, sourcePath);
     if (!fs.existsSync(emittedPath)) continue;
     const isEsm = isEsmModuleKind(moduleKind, sourcePath);
@@ -829,7 +843,7 @@ function findModuleResolutionRoot(sourceDirectory: string, fallback: string): st
 
 function isEmittableSourcePath(filePath: string): boolean {
   return (
-    /\.[cm]?tsx?$/.test(filePath) &&
+    /(?:\.[cm]?tsx?|\.json)$/.test(filePath) &&
     !/\.d\.[cm]?ts$/.test(filePath) &&
     !filePath.split(path.sep).includes("node_modules")
   );

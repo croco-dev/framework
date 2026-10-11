@@ -2,6 +2,11 @@ import { createCipheriv, createDecipheriv, createHash, randomBytes } from "node:
 
 import { WarehouseContractError } from "@croco/warehouse-core";
 
+import { compilePostgresMetric, decodePostgresMetricResult } from "./compilePostgresMetric";
+
+import { defineMetric } from "@croco/metrics-core";
+import type { MetricDefinition, MetricEvaluation, MetricWindow } from "@croco/metrics-core";
+
 import { factColumnName, factTableName, quoteIdentifier, scopeKey } from "./schema";
 
 import type { CanonicalRow, FactDescriptor } from "@croco/warehouse-core";
@@ -48,6 +53,22 @@ const OPERATORS: Record<WarehouseFilter["operator"], string> = {
   gte: ">=",
 };
 
+export type PostgresMetricReadRequest = Pick<
+  WarehouseReadRequest,
+  "access" | "snapshotId" | "maxRows" | "maxBytes" | "timeoutMs" | "signal"
+> & {
+  readonly definition: MetricDefinition;
+  readonly window: MetricWindow;
+};
+
+export type PostgresMetricReadResult = {
+  readonly data: readonly MetricEvaluation[];
+  readonly snapshot: WarehouseSnapshot;
+  readonly permissionEpoch: number;
+  readonly privacyEpoch: number;
+  readonly exactness: "exact";
+};
+
 export class PostgresWarehouseReader implements WarehouseReader {
   private activeReads = 0;
   private readonly cursorKey: Buffer;
@@ -76,6 +97,77 @@ export class PostgresWarehouseReader implements WarehouseReader {
     this.activeReads++;
     try {
       return await this.readLocked(request);
+    } finally {
+      this.activeReads--;
+    }
+  }
+
+  async readMetric(request: PostgresMetricReadRequest): Promise<PostgresMetricReadResult> {
+    request = {
+      ...request,
+      definition: defineMetric(request.definition.id, request.definition),
+      window: { ...request.window },
+    };
+    if (this.activeReads >= this.maxConcurrent)
+      throw new WarehouseContractError("WAREHOUSE_READ_CONCURRENCY");
+    this.activeReads++;
+    try {
+      const access = structuredClone(this.resolveAccess());
+      assertAccess(request.access, access, this.descriptor);
+      if (!access.roles.includes("read")) throw new WarehouseContractError("WAREHOUSE_READ_DENIED");
+      if (
+        !Number.isSafeInteger(request.maxRows) ||
+        request.maxRows < 1 ||
+        request.maxRows > 1000 ||
+        !Number.isSafeInteger(request.maxBytes) ||
+        request.maxBytes < 1 ||
+        request.maxBytes > 1_048_576 ||
+        !Number.isSafeInteger(request.timeoutMs) ||
+        request.timeoutMs < 1 ||
+        request.timeoutMs > 30_000 ||
+        request.signal?.aborted
+      )
+        throw new WarehouseContractError("WAREHOUSE_READ_LIMIT");
+      const compiled = compilePostgresMetric(
+        this.descriptor,
+        request.definition,
+        request.window,
+        scopeKey(access.scope),
+        0,
+        request.maxRows,
+        request.maxBytes,
+      );
+      for (const key of compiled.requiredColumns) {
+        if (!access.columns.includes(key))
+          throw new WarehouseContractError("WAREHOUSE_COLUMN_DENIED", key);
+      }
+      return await this.withSnapshot(
+        request,
+        access,
+        async (db, snapshot) => {
+          const query = compilePostgresMetric(
+            this.descriptor,
+            request.definition,
+            request.window,
+            scopeKey(access.scope),
+            snapshot.revision,
+            request.maxRows,
+            request.maxBytes,
+          );
+          const result = await db.query(query.sql, query.params);
+          const data = decodePostgresMetricResult(request.definition, result.rows[0]);
+          if (Buffer.byteLength(JSON.stringify(data)) > request.maxBytes)
+            throw new WarehouseContractError("WAREHOUSE_READ_BYTES");
+          return {
+            data,
+            snapshot,
+            permissionEpoch: access.permissionEpoch,
+            privacyEpoch: access.privacyEpoch,
+            exactness: "exact" as const,
+          };
+        },
+        true,
+      );
     } finally {
       this.activeReads--;
     }
@@ -151,6 +243,18 @@ export class PostgresWarehouseReader implements WarehouseReader {
     )
       throw new WarehouseContractError("WAREHOUSE_CURSOR_STALE");
 
+    return this.withSnapshot(request, access, (db, snapshot) =>
+      this.fetchPage(db, request, access, snapshot, selected, order, cursor, queryHash, scope),
+    );
+  }
+
+  private async withSnapshot<T>(
+    request: Pick<WarehouseReadRequest, "snapshotId" | "timeoutMs" | "signal">,
+    access: WarehouseAccess,
+    execute: (db: WarehousePostgresClient, snapshot: WarehouseSnapshot) => Promise<T>,
+    readOnly = false,
+  ): Promise<T> {
+    const scope = scopeKey(access.scope);
     let db: WarehousePostgresConnection | undefined;
     let released = false;
     let finished = false;
@@ -228,10 +332,10 @@ export class PostgresWarehouseReader implements WarehouseReader {
       backendPid = backend.rows[0]?.pid;
       if (!Number.isSafeInteger(backendPid))
         throw new WarehouseContractError("WAREHOUSE_CONNECTION_UNAVAILABLE");
-      await query("BEGIN");
+      await query(readOnly ? "BEGIN READ ONLY" : "BEGIN");
       await query("SELECT set_config('statement_timeout',$1,true)", [String(request.timeoutMs)]);
       const head = await query<HeadRow>(
-        "SELECT permission_epoch,privacy_epoch FROM warehouse_heads WHERE scope_key=$1 AND model_version=$2 FOR SHARE",
+        `SELECT permission_epoch,privacy_epoch FROM warehouse_heads WHERE scope_key=$1 AND model_version=$2${readOnly ? "" : " FOR SHARE"}`,
         [scope, this.descriptor.semanticHash],
       );
       if (
@@ -255,19 +359,33 @@ export class PostgresWarehouseReader implements WarehouseReader {
         snapshot.data.privacyEpoch !== access.privacyEpoch
       )
         throw new WarehouseContractError("WAREHOUSE_EPOCH_CHANGED");
-      const page = await this.fetchPage(
-        { query },
-        request,
-        access,
-        snapshot.data,
-        selected,
-        order,
-        cursor,
-        queryHash,
-        scope,
-      );
+      const result = await execute({ query }, snapshot.data);
+      assertAccess(access, this.resolveAccess(), this.descriptor);
       await query("COMMIT");
-      return page;
+      if (readOnly) {
+        const current = await query<HeadRow>(
+          "SELECT permission_epoch,privacy_epoch FROM warehouse_heads WHERE scope_key=$1 AND model_version=$2",
+          [scope, this.descriptor.semanticHash],
+        );
+        if (
+          !current.rows[0] ||
+          Number(current.rows[0].permission_epoch) !== access.permissionEpoch ||
+          Number(current.rows[0].privacy_epoch) !== access.privacyEpoch
+        )
+          throw new WarehouseContractError("WAREHOUSE_EPOCH_CHANGED");
+        const retained = await query<SnapshotRow>(
+          "SELECT data,expires_at FROM warehouse_snapshots WHERE id=$1 AND scope_key=$2 AND model_version=$3",
+          [request.snapshotId, scope, this.descriptor.semanticHash],
+        );
+        if (
+          !retained.rows[0] ||
+          (retained.rows[0].expires_at &&
+            new Date(retained.rows[0].expires_at).getTime() <= Date.now())
+        )
+          throw new WarehouseContractError("WAREHOUSE_SNAPSHOT_UNAVAILABLE");
+      }
+      assertAccess(access, this.resolveAccess(), this.descriptor);
+      return result;
     } catch (error) {
       if (db && !released && !stopped) {
         try {

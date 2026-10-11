@@ -36,17 +36,26 @@
     "types": "./dist/index.d.ts",
     "exports": {
       ".": {
-        "types": "./dist/index.d.ts",
+        "types": {
+          "import": "./dist/index.d.mts",
+          "require": "./dist/index.d.ts"
+        },
         "import": "./dist/index.mjs",
         "require": "./dist/index.js"
       },
       "./source": {
-        "types": "./dist/source.d.ts",
+        "types": {
+          "import": "./dist/source.d.mts",
+          "require": "./dist/source.d.ts"
+        },
         "import": "./dist/source.mjs",
         "require": "./dist/source.js"
       },
       "./pipeline": {
-        "types": "./dist/pipeline.d.ts",
+        "types": {
+          "import": "./dist/pipeline.d.mts",
+          "require": "./dist/pipeline.d.ts"
+        },
         "import": "./dist/pipeline.mjs",
         "require": "./dist/pipeline.js"
       }

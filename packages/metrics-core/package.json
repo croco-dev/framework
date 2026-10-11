@@ -17,12 +17,18 @@
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
+      "types": {
+        "import": "./dist/index.d.mts",
+        "require": "./dist/index.d.ts"
+      },
       "import": "./dist/index.mjs",
       "require": "./dist/index.js"
     },
     "./runtime": {
-      "types": "./dist/runtime.d.ts",
+      "types": {
+        "import": "./dist/runtime.d.mts",
+        "require": "./dist/runtime.d.ts"
+      },
       "import": "./dist/runtime.mjs",
       "require": "./dist/runtime.js"
     }
@@ -32,12 +38,18 @@
     "types": "./dist/index.d.ts",
     "exports": {
       ".": {
-        "types": "./dist/index.d.ts",
+        "types": {
+          "import": "./dist/index.d.mts",
+          "require": "./dist/index.d.ts"
+        },
         "import": "./dist/index.mjs",
         "require": "./dist/index.js"
       },
       "./runtime": {
-        "types": "./dist/runtime.d.ts",
+        "types": {
+          "import": "./dist/runtime.d.mts",
+          "require": "./dist/runtime.d.ts"
+        },
         "import": "./dist/runtime.mjs",
         "require": "./dist/runtime.js"
       }

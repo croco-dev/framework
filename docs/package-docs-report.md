@@ -6,7 +6,7 @@
 
 | Metric                         | Count |
 | ------------------------------ | ----: |
-| Public packages                |   136 |
+| Public packages                |   137 |
 | Private packages skipped       |     2 |
 | Missing package README         |     0 |
 | Missing generated API docs     |     0 |
@@ -241,6 +241,7 @@ None.
 | `@croco/ui-astryx`                     | Plugins        | presentation  | Astryx UI               | browser, node                             |
 | `@croco/warehouse-core`                | Contracts      | domain        | Warehouse               | browser, node, lambda, cloudflare-workers |
 | `@croco/warehouse-postgres`            | Plugins        | provider      | Warehouse               | node, lambda                              |
+| `@croco/warehouse-tooling`             | Tooling        | build-target  | Warehouse               | node                                      |
 | `@croco/webhooks-core`                 | Contracts      | domain        | Webhooks                | unclaimed                                 |
 | `@croco/workflow-core`                 | Contracts      | domain        | Workflow                | unclaimed                                 |
 
@@ -257,13 +258,13 @@ None.
 | Host         |        4 |
 | Build Target |        1 |
 | Presentation |        9 |
-| Tooling      |        7 |
+| Tooling      |        8 |
 
 | Maturity            | Packages |
 | ------------------- | -------: |
 | 🟢 production-ready |       23 |
 | 🟡 beta             |       78 |
-| 🔴 alpha/WIP        |       35 |
+| 🔴 alpha/WIP        |       36 |
 | ⚠️ deprecated       |        0 |
 
 ## Extension Matrix

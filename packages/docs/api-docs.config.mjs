@@ -819,6 +819,12 @@ export const apiDocPackages = [
     moduleName: "warehouse-postgres/src/metrics",
   },
   {
+    packageName: "@croco/warehouse-tooling",
+    directory: "warehouse-tooling",
+    entryPoint: "src/index.ts",
+    moduleName: "warehouse-tooling/src",
+  },
+  {
     packageName: "@croco/webhooks-core",
     directory: "webhooks-core",
     entryPoint: "src/index.ts",
