@@ -366,7 +366,7 @@ export class QStashChunkExecutor {
         // A lost fence must never be followed by an unconditional failure mutation.
         return;
       }
-      throw failureError;
+      reportContinuationFailureRecordError(executionId, error, failureError);
     }
   }
 }
@@ -384,6 +384,45 @@ function getProcessedCount(value: unknown): number {
 
 function isContinuationConflict(error: unknown): boolean {
   return error instanceof Problem && error.code === "execution/continuation-conflict";
+}
+
+function attachContinuationFailureRecordError(
+  error: unknown,
+  failureRecordError: unknown,
+): boolean {
+  if (typeof error !== "object" || error === null) {
+    return false;
+  }
+
+  try {
+    Object.defineProperty(error, "qstashFailureRecordError", {
+      configurable: true,
+      enumerable: false,
+      value: failureRecordError,
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function reportContinuationFailureRecordError(
+  executionId: string,
+  error: unknown,
+  failureRecordError: unknown,
+): void {
+  if (attachContinuationFailureRecordError(error, failureRecordError)) {
+    return;
+  }
+
+  try {
+    console.error("[QStashChunkExecutor] Failed to record batch continuation failure", {
+      executionId,
+      failureRecordError,
+    });
+  } catch {
+    return;
+  }
 }
 
 function validateExecutionManager(
