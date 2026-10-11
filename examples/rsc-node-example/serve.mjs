@@ -46,8 +46,13 @@ const httpServer = createServer(async (nodeRequest, nodeResponse) => {
       return;
     }
 
+    // Mirror `parseRscFlightRequest` semantics: a Flight fetch sends
+    // `Accept: text/x-component` alongside other values, so match with
+    // `includes` rather than exact equality (headers may be absent).
+    const accept = nodeRequest.headers["accept"];
     const wantsFlight =
-      nodeRequest.headers["accept"] === "text/x-component" || url.pathname.endsWith(".rsc");
+      (typeof accept === "string" && accept.includes("text/x-component")) ||
+      url.pathname.endsWith(".rsc");
 
     const flightResponse = await rsc.default(new Request(`http://localhost:${port}/`));
 

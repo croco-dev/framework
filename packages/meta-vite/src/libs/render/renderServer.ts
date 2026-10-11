@@ -934,11 +934,15 @@ export class RenderServer {
     );
     void route;
 
+    // Share the reader with cancel(): once getReader() locks htmlStream,
+    // htmlStream.cancel() rejects with TypeError. Cancel through the reader
+    // when it exists; fall back to the stream only before start() ran.
+    let reader: ReadableStreamDefaultReader<Uint8Array> | undefined;
     const body = new ReadableStream<Uint8Array>({
       async start(controller) {
         try {
           controller.enqueue(encoder.encode(prefix));
-          const reader = htmlStream.getReader();
+          reader = htmlStream.getReader();
           try {
             for (;;) {
               const { done, value } = await reader.read();
@@ -966,7 +970,7 @@ export class RenderServer {
         }
       },
       cancel: async (reason) => {
-        await htmlStream.cancel(reason).catch(() => {});
+        await (reader ? reader.cancel(reason) : htmlStream.cancel(reason)).catch(() => {});
       },
     });
 

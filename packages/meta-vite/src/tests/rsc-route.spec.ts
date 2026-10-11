@@ -238,6 +238,36 @@ describe("RSC route rendering (real Flight)", () => {
     ).rejects.toThrow(RscClientReferenceMissingProblem);
   });
 
+  it("propagates client cancellation to the upstream HTML stream reader", async () => {
+    let upstreamCancelled = false;
+    const slowStream = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode("partial-html"));
+      },
+      cancel() {
+        upstreamCancelled = true;
+      },
+    });
+    const server = createRegistryServer(
+      [rscRoute("/rsc-cancel", () => createElement("main", null, "RSC route: cancel"))],
+      async () => flightStream('0:["$","main",null,{"children":"RSC route: cancel"}]\n'),
+    );
+    const htmlViaPrivate = (
+      server as unknown as {
+        createRscHtmlStreamResponse: (
+          route: unknown,
+          head: undefined,
+          stream: ReadableStream<Uint8Array>,
+        ) => Response;
+      }
+    ).createRscHtmlStreamResponse.bind(server);
+
+    const response = htmlViaPrivate({ path: "/rsc-cancel" }, undefined, slowStream);
+    await response.body?.cancel("client-navigated-away");
+
+    expect(upstreamCancelled).toBe(true);
+  });
+
   it("rejects server-only imports at route-level client boundaries", async () => {
     const { readFile } = await import("node:fs/promises");
     const { dirname, join } = await import("node:path");
