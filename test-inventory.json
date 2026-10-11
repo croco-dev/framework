@@ -2876,6 +2876,12 @@
       "owner": "@croco/frontend-react"
     },
     {
+      "path": "packages/frontend-react/src/tests/ExperienceSlotProcess.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/frontend-react"
+    },
+    {
       "path": "packages/frontend-react/src/tests/GoalProgress.spec.ts",
       "lane": "fast",
       "qualifiers": [],
