@@ -3,7 +3,14 @@ import type { RequestContext } from "@croco/framework-context";
 import { Problem, ProblemCategory, ProblemFactory } from "@croco/problems-core";
 import type { RouteContractSourceLocation, RouteIR } from "@croco/protocols-core";
 import { extractRouteIR } from "@croco/protocols-core";
-import { getFilters, getGuards, getInterceptors, type Constructor } from "@croco/protocols-rest";
+import {
+  getFilters,
+  getGuards,
+  getInterceptors,
+  getPipes,
+  type Constructor,
+  type PipeTransform,
+} from "@croco/protocols-rest";
 import {
   type AnyProcedure,
   type AnyRouter,
@@ -170,6 +177,7 @@ function createProcedure(
   const guardProviders = getGuards(controller, route.methodName);
   const filterProviders = getFilters(controller, route.methodName);
   const interceptorProviders = getInterceptors(controller, route.methodName);
+  const pipeProviders = getPipes(controller, route.methodName);
   const createFilters = (): TrpcPipelineConfig["filters"] =>
     filterProviders.map((provider) => instantiateProvider(provider, options));
   const createGuards = (): TrpcPipelineConfig["guards"] =>
@@ -221,7 +229,14 @@ function createProcedure(
 
     return executionPipeline.runInterceptors(
       context,
-      async () => callRoute(controllerInstance, route, input, ctx),
+      async () =>
+        callRoute(
+          controllerInstance,
+          route,
+          input,
+          ctx,
+          pipeProviders.map((provider) => instantiateProvider(provider, options)),
+        ),
       createInterceptors(),
     );
   };
@@ -233,19 +248,41 @@ function createProcedure(
   return procedure.mutation(resolver);
 }
 
-function callRoute(
+async function callRoute(
   controllerInstance: object,
   route: RouteIR,
   input: unknown,
   context: unknown,
-): unknown {
+  pipes: readonly PipeTransform[],
+): Promise<unknown> {
   const handler = Reflect.get(controllerInstance, route.methodName);
 
   if (!isRouteHandler(handler)) {
     throw new TrpcRouteHandlerError(route.methodName);
   }
 
-  return handler.apply(controllerInstance, resolveTrpcRouteParams(route, input, context));
+  const args = resolveTrpcRouteParams(route, input, context);
+  for (const [position, param] of route.params.entries()) {
+    if (
+      param.kind !== "body" &&
+      param.kind !== "path" &&
+      param.kind !== "query" &&
+      param.kind !== "header"
+    ) {
+      continue;
+    }
+
+    const index = param.index ?? position;
+    const metadata = {
+      type: param.kind === "path" ? ("param" as const) : param.kind,
+      ...(param.name ? { name: param.name } : {}),
+    };
+    for (const pipe of pipes) {
+      args[index] = await pipe.transform(args[index], metadata);
+    }
+  }
+
+  return handler.apply(controllerInstance, args);
 }
 
 function getDomainName(route: RouteIR): string {

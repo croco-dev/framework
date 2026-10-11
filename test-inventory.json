@@ -4382,6 +4382,12 @@
       "owner": "@croco/protocols-trpc"
     },
     {
+      "path": "packages/protocols-trpc/src/tests/TrpcPipes.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/protocols-trpc"
+    },
+    {
       "path": "packages/protocols-trpc/src/tests/TrpcRateLimit.spec.ts",
       "lane": "fast",
       "qualifiers": [],
