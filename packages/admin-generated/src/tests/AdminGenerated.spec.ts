@@ -102,7 +102,7 @@ describe("admin-generated", () => {
       }
     }
 
-    it.each(["index.ts", "./index.ts", "nested/../index.ts"])(
+    it.each(["index.ts", "./index.ts", "nested/../index.ts", "INDEX.ts", "./Index.ts"])(
       "rejects barrel collision %s before changing existing files",
       (resourceFileName) => {
         const outDir = mkdtempSync(join(tmpdir(), "croco-admin-collision-"));
