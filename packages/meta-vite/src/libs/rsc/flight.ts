@@ -110,7 +110,10 @@ export function assertRscClientManifestVersion(
     return;
   }
 
-  if (flight.clientManifestVersion !== null && flight.clientManifestVersion !== expectedVersion) {
+  // A Flight request without the header is just as ambiguous as one carrying a
+  // stale value: both mix client and server manifests. `RscClientManifestMismatchProblem`
+  // reports the missing header as `received: "missing"`.
+  if (flight.clientManifestVersion !== expectedVersion) {
     throw new RscClientManifestMismatchProblem(
       route.path,
       expectedVersion,

@@ -2,7 +2,7 @@ import { createElement } from "react";
 import { createFromReadableStream } from "react-server-dom-webpack/client";
 import { describe, expect, it } from "vitest";
 import { RenderServer } from "../libs/render/renderServer";
-import { RscClientReferenceMissingProblem } from "../libs/rsc/flight";
+import { RSC_CLIENT_MANIFEST_VERSION, RscClientReferenceMissingProblem } from "../libs/rsc/flight";
 import { decodeFlightToHtmlStream } from "../libs/rsc/ssrDecode";
 import { defineRoute } from "../libs/routes/defineRoute";
 import { RouteRegistry } from "../libs/routes/routeRegistry";
@@ -66,7 +66,11 @@ describe("RSC route rendering (real Flight)", () => {
       flightStream('0:["$","main",null,{"children":"negotiated"}]\n'),
     );
 
-    const response = await server.handle(new Request("https://example.com/rsc-basic.rsc"));
+    const response = await server.handle(
+      new Request("https://example.com/rsc-basic.rsc", {
+        headers: { "x-croco-rsc-client-manifest": RSC_CLIENT_MANIFEST_VERSION },
+      }),
+    );
     const body = await response.text();
 
     expect(response.status).toBe(200);
@@ -101,6 +105,16 @@ describe("RSC route rendering (real Flight)", () => {
       route: "/rsc-basic",
       code: "meta-vite/rsc-client-manifest-mismatch",
     });
+  });
+
+  it("rejects a Flight request that carries no client manifest header", async () => {
+    const server = createRegistryServer([rscRoute("/rsc-basic")], async () =>
+      flightStream('0:["$","main",null,{"children":"x"}]\n'),
+    );
+
+    const response = await server.handle(new Request("https://example.com/rsc-basic.rsc"));
+
+    expect(response.status).toBe(400);
   });
 
   it("fails explicitly for Flight server references instead of fake success", async () => {

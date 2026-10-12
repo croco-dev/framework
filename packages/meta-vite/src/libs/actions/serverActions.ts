@@ -85,6 +85,11 @@ export class ServerActionNotFoundProblem extends Problem {
   }
 }
 
+/**
+ * A server action name was registered twice. Registration fails fast at
+ * composition time: a silently shared name would route calls to an arbitrary
+ * one of the two handlers.
+ */
 export class ServerActionDuplicateRegistrationProblem extends Problem {
   readonly code = "meta-vite/server-action-duplicate-registration";
   readonly category = ProblemCategory.Conflict;
@@ -160,6 +165,11 @@ export class ServerActionInvalidContentTypeProblem extends Problem {
   }
 }
 
+/**
+ * The request Origin is missing or outside `allowedOrigins`, so the action is
+ * rejected before the handler runs. Cross-site form posts cannot be told apart
+ * from same-site ones without this check.
+ */
 export class ServerActionForbiddenOriginProblem extends Problem {
   readonly code = "meta-vite/server-action-forbidden-origin";
   readonly category = ProblemCategory.Forbidden;

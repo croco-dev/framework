@@ -6,16 +6,21 @@ Real React Flight + server/client boundary path built on `@vitejs/plugin-rsc`
 ## What it proves
 
 - `src/entry.rsc.tsx` — async server component (`SlowFact` Suspense boundary),
-  server-only data (`SERVER_ONLY_VALUE`, never in the client bundle), and an
-  interactive `"use client"` island (`Counter.tsx`).
+  server-only data (`SERVER_ONLY_VALUE`, never in the client bundle), an
+  interactive `"use client"` island (`Counter.tsx`), and a plain refresh button
+  whose click handler lives in the browser entry.
 - `src/entry.ssr.tsx` — decodes Flight with the official
   `@vitejs/plugin-rsc/ssr` `createFromReadableStream`, renders HTML with
   `react-dom/server`.
 - `src/entry.browser.tsx` — hydrates via
-  `@vitejs/plugin-rsc/browser` `createFromFetch`.
+  `@vitejs/plugin-rsc/browser` `createFromFetch` and `hydrateRoot` (the server
+  HTML is already in `#root`); Refresh re-fetches `.rsc` and renders the new
+  Flight node into the same root.
 - `serve.mjs` — one Node production server: HTML vs Flight negotiated on one
   path (`Accept: text/x-component` or `.rsc` suffix); the HTML shell is always
-  decoded from the same Flight bytes the browser fetches.
+  decoded from the same Flight bytes the browser fetches. Both responses are
+  streamed (`Transfer-Encoding: chunked`), so the shell and the first rows
+  arrive before the slow Suspense boundary resolves.
 
 ## Run
 

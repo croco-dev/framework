@@ -14,7 +14,9 @@ export class RscFlightEncodeFailedProblem extends Problem {
       "meta-vite/rsc-flight-encode-failed",
       ProblemCategory.InternalServerError,
       `RSC Flight encoder failed for route '${route}' (exit ${exitCode})`,
-      { extensions: { route, exitCode, detail: detail.slice(0, 500) } },
+      // `detail` is a reserved Problem field and would be rejected here, so the
+      // captured encoder output travels under `encoderOutput`.
+      { extensions: { route, exitCode, encoderOutput: detail.slice(0, 500) } },
     );
   }
 }
@@ -29,6 +31,25 @@ export class RscFlightEncodeTimeoutProblem extends Problem {
       ProblemCategory.InternalServerError,
       `RSC Flight encoder timed out for route '${route}' after ${timeoutMs}ms`,
       { extensions: { route, timeoutMs } },
+    );
+  }
+}
+
+/**
+ * The caller disconnected before the isolated encoder finished, so the child
+ * process is killed and the pending render is abandoned instead of running to
+ * the timeout. No response can be delivered any more.
+ */
+export class RscFlightEncodeAbortedProblem extends Problem {
+  readonly code = "meta-vite/rsc-flight-encode-aborted";
+  readonly category = ProblemCategory.BadRequest;
+
+  constructor(route: string) {
+    super(
+      "meta-vite/rsc-flight-encode-aborted",
+      ProblemCategory.BadRequest,
+      `RSC Flight encoding for route '${route}' was aborted because the client disconnected`,
+      { extensions: { route } },
     );
   }
 }
@@ -100,12 +121,17 @@ export type IsolatedRscEncodeInput = {
   readonly route: RenderRouteIR;
   readonly request: Request;
   readonly context?: RuntimeContext;
+  /**
+   * Overrides the resolved encoder module path. Only used by tests to run a
+   * stubbed encoder without building the package first.
+   */
+  readonly encoderModule?: string;
 };
 
 export async function encodeRscFlightInIsolatedEncoder(
   input: IsolatedRscEncodeInput,
 ): Promise<ReadableStream<Uint8Array>> {
-  const encoderModule = resolveEncoderModule();
+  const encoderModule = input.encoderModule ?? resolveEncoderModule();
   const payload = JSON.stringify({
     routePath: input.route.path,
     componentRef: input.route.componentRef,
@@ -126,6 +152,7 @@ export async function encodeRscFlightInIsolatedEncoder(
   const stderr: Uint8Array[] = [];
   let stdoutBytes = 0;
   let outputLimitError: Error | undefined;
+  const requestSignal = input.request.signal;
   const exit = new Promise<number>((resolve, reject) => {
     const timer = setTimeout(() => {
       child.kill("SIGKILL");
@@ -134,6 +161,19 @@ export async function encodeRscFlightInIsolatedEncoder(
       // code (`rsc-flight-encode-timeout`) carries the route and budget.
       reject(new RscFlightEncodeTimeoutProblem(input.route.path, ENCODE_TIMEOUT_MS));
     }, ENCODE_TIMEOUT_MS);
+
+    // The encoder is a per-request child process. Without forwarding the
+    // caller's abort it keeps rendering (and holding memory) for up to the
+    // full timeout after the client has already gone away.
+    const onAbort = (): void => {
+      child.kill("SIGKILL");
+      reject(new RscFlightEncodeAbortedProblem(input.route.path));
+    };
+    if (requestSignal.aborted) {
+      onAbort();
+      return;
+    }
+    requestSignal.addEventListener("abort", onAbort, { once: true });
 
     child.stdout.on("data", (chunk: Uint8Array) => {
       stdoutBytes += chunk.byteLength;
@@ -153,10 +193,12 @@ export async function encodeRscFlightInIsolatedEncoder(
     });
     child.on("error", (error) => {
       clearTimeout(timer);
+      requestSignal.removeEventListener("abort", onAbort);
       reject(error);
     });
     child.on("close", (code) => {
       clearTimeout(timer);
+      requestSignal.removeEventListener("abort", onAbort);
       if (outputLimitError) {
         reject(outputLimitError);
         return;

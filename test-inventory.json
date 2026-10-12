@@ -3464,6 +3464,12 @@
       "owner": "@croco/meta-vite"
     },
     {
+      "path": "packages/meta-vite/src/tests/rsc-isolated-encode.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/meta-vite"
+    },
+    {
       "path": "packages/meta-vite/src/tests/rsc-route.spec.ts",
       "lane": "fast",
       "qualifiers": [],

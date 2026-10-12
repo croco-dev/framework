@@ -10,11 +10,39 @@
 // browser would fetch, so refresh/hydration cannot mix representations.
 import { createServer } from "node:http";
 import { readFile, readdir } from "node:fs/promises";
-import { dirname, isAbsolute, join, relative } from "node:path";
+import { once } from "node:events";
+import { dirname, join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const port = Number(process.env["PORT"] ?? 4317);
+
+// Forward a web ReadableStream to a Node response without buffering it to the
+// end: the shell and the first rows must be flushed as they are produced.
+// `nodeResponse.write()` returning false means the socket buffer is full, so
+// wait for `drain` instead of queueing the whole payload in memory.
+async function streamBody(stream, nodeResponse) {
+  if (!stream) {
+    nodeResponse.end();
+    return;
+  }
+
+  const reader = stream.getReader();
+
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) {
+        break;
+      }
+      if (!nodeResponse.write(Buffer.from(value))) {
+        await once(nodeResponse, "drain");
+      }
+    }
+  } finally {
+    reader.releaseLock();
+  }
+}
 
 const rsc = await import("./dist/rsc/index.js");
 const ssr = await import("./dist/ssr/index.js");
@@ -39,8 +67,11 @@ const httpServer = createServer(async (nodeRequest, nodeResponse) => {
         // prefix check alone cannot prove the target stays inside assets.
         const assetsRoot = join(here, "dist", "client", "assets");
         const target = join(assetsRoot, decodeURIComponent(url.pathname.slice("/assets/".length)));
+        // `join` normalizes encoded `..` segments, so containment is decided by
+        // the path relative to the assets root staying inside it. `target` is
+        // always absolute (the root is), so it cannot carry that check.
         const rel = relative(assetsRoot, target);
-        if (rel === "" || rel.startsWith("..") || isAbsolute(target)) {
+        if (rel === "" || rel === ".." || rel.startsWith(`..${sep}`)) {
           nodeResponse.writeHead(404);
           nodeResponse.end("Not Found");
           return;
@@ -67,25 +98,35 @@ const httpServer = createServer(async (nodeRequest, nodeResponse) => {
 
     const flightResponse = await rsc.default(new Request(`http://localhost:${port}/`));
 
-    if (wantsFlight || !flightResponse.body) {
-      const text = await flightResponse.text();
-      nodeResponse.writeHead(200, {
-        "content-type": "text/x-component; charset=utf-8",
-      });
-      nodeResponse.end(text);
+    if (wantsFlight) {
+      nodeResponse.writeHead(200, { "content-type": "text/x-component; charset=utf-8" });
+      // Stream the Flight bytes straight through: buffering them first would
+      // hold back the first rows until the slow server component resolves.
+      await streamBody(flightResponse.body, nodeResponse);
+      nodeResponse.end();
       return;
     }
 
     // Pass the encoder's web ReadableStream straight through: the official
     // client decoder requires a web stream with getReader().
     const htmlResponse = await ssr.renderHtml(flightResponse.body);
-    const html = await htmlResponse.text();
     nodeResponse.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+    // Write the document around the streamed body so the shell and the first
+    // HTML rows reach the client before rendering finishes.
+    nodeResponse.write(
+      `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>RSC Node Example</title></head><body><div id="root">`,
+    );
+    await streamBody(htmlResponse.body, nodeResponse);
     nodeResponse.end(
-      `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>RSC Node Example</title></head><body><div id="root">${html}</div><script type="module" src="/assets/${clientEntry}"></script></body></html>`,
+      `</div><script type="module" src="/assets/${clientEntry}"></script></body></html>`,
     );
   } catch (error) {
     console.error(error);
+    if (nodeResponse.headersSent) {
+      // The shell already went out, so only the connection can be torn down.
+      nodeResponse.destroy();
+      return;
+    }
     nodeResponse.writeHead(500);
     nodeResponse.end("Internal Server Error");
   }

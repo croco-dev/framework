@@ -3,6 +3,7 @@ import { renderToString } from "react-dom/server";
 import { createFromReadableStream } from "react-server-dom-webpack/client";
 import { describe, expect, it } from "vitest";
 import { RenderServer } from "../libs/render/renderServer";
+import { RSC_CLIENT_MANIFEST_VERSION } from "../libs/rsc/flight";
 import { defineRoute } from "../libs/routes/defineRoute";
 import { RouteRegistry } from "../libs/routes/routeRegistry";
 import type { PageRouteDefinition } from "../libs/routes/types";
@@ -78,7 +79,11 @@ describe("rsc real Flight path", () => {
       flightStream('0:"negotiated-flight-bytes"\n'),
     );
 
-    const response = await server.handle(new Request("https://example.com/rsc-basic.rsc"));
+    const response = await server.handle(
+      new Request("https://example.com/rsc-basic.rsc", {
+        headers: { "x-croco-rsc-client-manifest": RSC_CLIENT_MANIFEST_VERSION },
+      }),
+    );
     const body = await response.text();
 
     expect(response.status).toBe(200);
@@ -93,6 +98,20 @@ describe("rsc real Flight path", () => {
     const htmlResponse = await server.handle(new Request("https://example.com/rsc-basic"));
     expect(htmlResponse.status).toBe(200);
     expect(htmlResponse.headers.get("content-type")).toContain("text/html");
+  });
+
+  it("rejects a Flight request without the client manifest header instead of mixing builds", async () => {
+    const server = createServer([rscRoute("/rsc-basic")], async () => flightStream(HTML_FLIGHT));
+
+    const response = await server.handle(new Request("https://example.com/rsc-basic.rsc"));
+    const body = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(body).toMatchObject({
+      error: "RSC client manifest mismatch",
+      route: "/rsc-basic",
+      code: "meta-vite/rsc-client-manifest-mismatch",
+    });
   });
 
   it("rejects a mismatched client manifest version instead of mixing representations", async () => {

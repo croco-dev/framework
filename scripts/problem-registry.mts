@@ -3344,6 +3344,89 @@ const recoveryMetadataByCode = {
     redactionPolicy: "safe-message",
     severity: "warning",
   }),
+  "meta-vite/server-action-duplicate-registration": recovery({
+    cause: "Two server actions were registered under the same name.",
+    userAction: "Rename one of the actions or remove the duplicate registration.",
+    operatorAction:
+      "Find every registration carrying the reported action name and keep a single one; the registry refuses ambiguous bindings instead of picking a handler.",
+    retryability: "not-retryable",
+    redactionPolicy: "public",
+    severity: "error",
+  }),
+  "meta-vite/rsc-client-manifest-mismatch": recovery({
+    cause: "The client and server RSC manifest versions do not match.",
+    userAction: "Reload the page so the browser picks up the deployed client bundle.",
+    operatorAction:
+      "Rebuild the client and server bundles from the same manifest and deploy them together; a Flight request without the manifest header is reported as received 'missing'.",
+    retryability: "not-retryable",
+    redactionPolicy: "public",
+    severity: "warning",
+  }),
+  "meta-vite/rsc-client-reference-missing": recovery({
+    cause:
+      "A decoded Flight client reference has no matching browser module loaded in the client manifest.",
+    userAction: "Reload the page so the client bundle that owns the reference is loaded.",
+    operatorAction:
+      "Check the client manifest registration and browser module loading for the reported reference, then rebuild and deploy matching client and server artifacts.",
+    retryability: "not-retryable",
+    redactionPolicy: "public",
+    severity: "warning",
+  }),
+  "meta-vite/rsc-flight-not-acceptable": recovery({
+    cause:
+      "The route is declared as an RSC route but the runtime has no Flight encoder configured.",
+    userAction: "Use a runtime that configures a Flight encoder for RSC routes.",
+    operatorAction:
+      "Register a Flight encoder (encodeFlight) on the render server instead of leaving the route without one.",
+    retryability: "not-retryable",
+    redactionPolicy: "public",
+    severity: "error",
+  }),
+  "meta-vite/rsc-server-reference-unsupported": recovery({
+    cause: "A Flight request carried a server reference this route does not support.",
+    userAction: "Call the registered Server Action endpoint instead of passing a server reference.",
+    operatorAction:
+      "Route the client to the registered action path; unsupported server references fail explicitly rather than rendering silently.",
+    retryability: "not-retryable",
+    redactionPolicy: "public",
+    severity: "warning",
+  }),
+  "meta-vite/rsc-flight-encode-failed": recovery({
+    cause: "The isolated Flight encoder process exited with a non-zero status.",
+    userAction: "Retry the request; if it keeps failing, contact the service operator.",
+    operatorAction:
+      "Read the encoder detail from the problem extensions and the encoder logs. Fix the failing server component, then retry.",
+    retryability: "conditional",
+    redactionPolicy: "operator-only",
+    severity: "error",
+  }),
+  "meta-vite/rsc-flight-encode-timeout": recovery({
+    cause: "The isolated Flight encoder exceeded its render budget for the route.",
+    userAction: "Retry the request; repeated timeouts need an operator fix.",
+    operatorAction:
+      "Inspect the route for unbounded work in server components and the reported timeoutMs before raising the budget.",
+    retryability: "not-retryable",
+    redactionPolicy: "operator-only",
+    severity: "error",
+  }),
+  "meta-vite/rsc-flight-encode-aborted": recovery({
+    cause: "The client disconnected before the isolated Flight encoder finished.",
+    userAction: "Reload the page to request the route again.",
+    operatorAction:
+      "Cancel the encoder child process on abort and check for clients that repeatedly drop connections, which would otherwise leak processes.",
+    retryability: "not-retryable",
+    redactionPolicy: "public",
+    severity: "info",
+  }),
+  "meta-vite/rsc-encoder-entry-invalid-input": recovery({
+    cause: "The encoder entry received an unusable route payload or component reference.",
+    userAction: "Retry the request; a malformed payload needs a client fix.",
+    operatorAction:
+      "Check the reported reason against the route registry and the componentRef format '<module-path>#<exportName>'.",
+    retryability: "not-retryable",
+    redactionPolicy: "public",
+    severity: "error",
+  }),
   BILLING_STATUS_MAPPING_FAILED: recovery({
     cause: "Polar sent a valid subscription status that the billing contract cannot represent.",
     userAction: "Do not retry the unchanged webhook payload.",

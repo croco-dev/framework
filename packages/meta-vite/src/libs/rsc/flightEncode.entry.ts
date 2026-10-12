@@ -79,8 +79,17 @@ async function readRequestBody(signal: AbortSignal): Promise<string> {
   return Buffer.concat(chunks).toString("utf8");
 }
 
-function writeChunk(bytes: Uint8Array): void {
-  process.stdout.write(bytes);
+// The child writes Flight bytes to a pipe. `write()` returning false means the
+// parent has not drained it yet; continuing would queue the whole payload in
+// this process, so wait for `drain` before reading the next chunk instead.
+async function writeChunk(bytes: Uint8Array): Promise<void> {
+  if (process.stdout.write(bytes)) {
+    return;
+  }
+
+  await new Promise<void>((resolve) => {
+    process.stdout.once("drain", resolve);
+  });
 }
 
 async function main(): Promise<void> {
@@ -119,8 +128,14 @@ async function main(): Promise<void> {
     if (done) {
       break;
     }
-    writeChunk(value);
+    await writeChunk(value);
   }
+
+  // Set `exitCode` only after the pipe has been flushed, otherwise the parent
+  // can read a truncated payload and report it as an encoder failure.
+  await new Promise<void>((resolve) => {
+    process.stdout.write("", () => resolve());
+  });
 }
 
 // Only run when executed directly as the isolated encoder child process
@@ -137,6 +152,9 @@ if (invokedDirectly) {
   void main().catch((error: unknown) => {
     const message = error instanceof Error ? (error.stack ?? error.message) : String(error);
     process.stderr.write(`[croco-rsc-encode] ${message}\n`);
+    // Close stdout so the parent reads end-of-stream right away instead of
+    // waiting for the encode timeout on a process that already failed.
+    process.stdout.end();
     process.exitCode = 1;
   });
 }

@@ -1,6 +1,6 @@
 {
   "version": "croco.problem-code-registry.v1",
-  "problemCount": 1033,
+  "problemCount": 1034,
   "problems": [
     {
       "code": "ACCESS_DENIED",
@@ -18730,14 +18730,14 @@
       "title": "Bad Request",
       "cookbookPath": "/reference/problem-recovery-cookbook/#meta-vite-rsc-client-manifest-mismatch",
       "recovery": {
-        "cause": "The caller sent malformed input or unsupported request options.",
-        "userAction": "Correct the request input and retry after validation passes.",
-        "operatorAction": "Inspect validation details and request logs; do not retry unchanged input.",
+        "cause": "The client and server RSC manifest versions do not match.",
+        "userAction": "Reload the page so the browser picks up the deployed client bundle.",
+        "operatorAction": "Rebuild the client and server bundles from the same manifest and deploy them together; a Flight request without the manifest header is reported as received 'missing'.",
         "retryability": "not-retryable",
         "redactionPolicy": "public",
         "telemetry": {
-          "eventName": "croco.problem.info",
-          "severity": "info",
+          "eventName": "croco.problem.warning",
+          "severity": "warning",
           "attributes": ["problem.code", "problem.category", "problem.status"]
         }
       },
@@ -18760,14 +18760,14 @@
       "title": "Bad Request",
       "cookbookPath": "/reference/problem-recovery-cookbook/#meta-vite-rsc-client-reference-missing",
       "recovery": {
-        "cause": "The caller sent malformed input or unsupported request options.",
-        "userAction": "Correct the request input and retry after validation passes.",
-        "operatorAction": "Inspect validation details and request logs; do not retry unchanged input.",
+        "cause": "A decoded Flight client reference has no matching browser module loaded in the client manifest.",
+        "userAction": "Reload the page so the client bundle that owns the reference is loaded.",
+        "operatorAction": "Check the client manifest registration and browser module loading for the reported reference, then rebuild and deploy matching client and server artifacts.",
         "retryability": "not-retryable",
         "redactionPolicy": "public",
         "telemetry": {
-          "eventName": "croco.problem.info",
-          "severity": "info",
+          "eventName": "croco.problem.warning",
+          "severity": "warning",
           "attributes": ["problem.code", "problem.category", "problem.status"]
         }
       },
@@ -18790,14 +18790,14 @@
       "title": "Bad Request",
       "cookbookPath": "/reference/problem-recovery-cookbook/#meta-vite-rsc-encoder-entry-invalid-input",
       "recovery": {
-        "cause": "The caller sent malformed input or unsupported request options.",
-        "userAction": "Correct the request input and retry after validation passes.",
-        "operatorAction": "Inspect validation details and request logs; do not retry unchanged input.",
+        "cause": "The encoder entry received an unusable route payload or component reference.",
+        "userAction": "Retry the request; a malformed payload needs a client fix.",
+        "operatorAction": "Check the reported reason against the route registry and the componentRef format '<module-path>#<exportName>'.",
         "retryability": "not-retryable",
         "redactionPolicy": "public",
         "telemetry": {
-          "eventName": "croco.problem.info",
-          "severity": "info",
+          "eventName": "croco.problem.error",
+          "severity": "error",
           "attributes": ["problem.code", "problem.category", "problem.status"]
         }
       },
@@ -18814,15 +18814,45 @@
       ]
     },
     {
+      "code": "meta-vite/rsc-flight-encode-aborted",
+      "category": "BadRequest",
+      "status": 400,
+      "title": "Bad Request",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#meta-vite-rsc-flight-encode-aborted",
+      "recovery": {
+        "cause": "The client disconnected before the isolated Flight encoder finished.",
+        "userAction": "Reload the page to request the route again.",
+        "operatorAction": "Cancel the encoder child process on abort and check for clients that repeatedly drop connections, which would otherwise leak processes.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "public",
+        "telemetry": {
+          "eventName": "croco.problem.info",
+          "severity": "info",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/meta-vite/src/libs/rsc/isolatedEncode.ts",
+          "line": 43,
+          "column": 1,
+          "kind": "problem-class"
+        }
+      ]
+    },
+    {
       "code": "meta-vite/rsc-flight-encode-failed",
       "category": "InternalServerError",
       "status": 500,
       "title": "Internal Server Error",
       "cookbookPath": "/reference/problem-recovery-cookbook/#meta-vite-rsc-flight-encode-failed",
       "recovery": {
-        "cause": "Croco or an upstream dependency failed after accepting the request.",
-        "userAction": "Retry later only when the operation is idempotent or the caller owns retry safety.",
-        "operatorAction": "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        "cause": "The isolated Flight encoder process exited with a non-zero status.",
+        "userAction": "Retry the request; if it keeps failing, contact the service operator.",
+        "operatorAction": "Read the encoder detail from the problem extensions and the encoder logs. Fix the failing server component, then retry.",
         "retryability": "conditional",
         "redactionPolicy": "operator-only",
         "telemetry": {
@@ -18850,10 +18880,10 @@
       "title": "Internal Server Error",
       "cookbookPath": "/reference/problem-recovery-cookbook/#meta-vite-rsc-flight-encode-timeout",
       "recovery": {
-        "cause": "Croco or an upstream dependency failed after accepting the request.",
-        "userAction": "Retry later only when the operation is idempotent or the caller owns retry safety.",
-        "operatorAction": "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
-        "retryability": "conditional",
+        "cause": "The isolated Flight encoder exceeded its render budget for the route.",
+        "userAction": "Retry the request; repeated timeouts need an operator fix.",
+        "operatorAction": "Inspect the route for unbounded work in server components and the reported timeoutMs before raising the budget.",
+        "retryability": "not-retryable",
         "redactionPolicy": "operator-only",
         "telemetry": {
           "eventName": "croco.problem.error",
@@ -18867,7 +18897,7 @@
       "sources": [
         {
           "file": "packages/meta-vite/src/libs/rsc/isolatedEncode.ts",
-          "line": 22,
+          "line": 24,
           "column": 1,
           "kind": "problem-class"
         }
@@ -18880,14 +18910,14 @@
       "title": "Not Implemented",
       "cookbookPath": "/reference/problem-recovery-cookbook/#meta-vite-rsc-flight-not-acceptable",
       "recovery": {
-        "cause": "The requested capability is not supported by this runtime or adapter.",
-        "userAction": "Use a supported capability or choose an adapter/runtime that provides it.",
-        "operatorAction": "Check runtime capability declarations and provider maturity documentation.",
+        "cause": "The route is declared as an RSC route but the runtime has no Flight encoder configured.",
+        "userAction": "Use a runtime that configures a Flight encoder for RSC routes.",
+        "operatorAction": "Register a Flight encoder (encodeFlight) on the render server instead of leaving the route without one.",
         "retryability": "not-retryable",
         "redactionPolicy": "public",
         "telemetry": {
-          "eventName": "croco.problem.info",
-          "severity": "info",
+          "eventName": "croco.problem.error",
+          "severity": "error",
           "attributes": ["problem.code", "problem.category", "problem.status"]
         }
       },
@@ -18940,14 +18970,14 @@
       "title": "Not Implemented",
       "cookbookPath": "/reference/problem-recovery-cookbook/#meta-vite-rsc-server-reference-unsupported",
       "recovery": {
-        "cause": "The requested capability is not supported by this runtime or adapter.",
-        "userAction": "Use a supported capability or choose an adapter/runtime that provides it.",
-        "operatorAction": "Check runtime capability declarations and provider maturity documentation.",
+        "cause": "A Flight request carried a server reference this route does not support.",
+        "userAction": "Call the registered Server Action endpoint instead of passing a server reference.",
+        "operatorAction": "Route the client to the registered action path; unsupported server references fail explicitly rather than rendering silently.",
         "retryability": "not-retryable",
         "redactionPolicy": "public",
         "telemetry": {
-          "eventName": "croco.problem.info",
-          "severity": "info",
+          "eventName": "croco.problem.warning",
+          "severity": "warning",
           "attributes": ["problem.code", "problem.category", "problem.status"]
         }
       },
@@ -18970,14 +19000,14 @@
       "title": "Conflict",
       "cookbookPath": "/reference/problem-recovery-cookbook/#meta-vite-server-action-duplicate-registration",
       "recovery": {
-        "cause": "The request conflicts with current state or an idempotency constraint.",
-        "userAction": "Refresh state, resolve the conflict, and retry with the updated intent.",
-        "operatorAction": "Inspect concurrent writes, idempotency keys, and uniqueness constraints.",
-        "retryability": "conditional",
-        "redactionPolicy": "safe-message",
+        "cause": "Two server actions were registered under the same name.",
+        "userAction": "Rename one of the actions or remove the duplicate registration.",
+        "operatorAction": "Find every registration carrying the reported action name and keep a single one; the registry refuses ambiguous bindings instead of picking a handler.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "public",
         "telemetry": {
-          "eventName": "croco.problem.warning",
-          "severity": "warning",
+          "eventName": "croco.problem.error",
+          "severity": "error",
           "attributes": ["problem.code", "problem.category", "problem.status"]
         }
       },
@@ -18987,7 +19017,7 @@
       "sources": [
         {
           "file": "packages/meta-vite/src/libs/actions/serverActions.ts",
-          "line": 88,
+          "line": 93,
           "column": 1,
           "kind": "problem-class"
         }
@@ -19017,7 +19047,7 @@
       "sources": [
         {
           "file": "packages/meta-vite/src/libs/actions/serverActions.ts",
-          "line": 163,
+          "line": 173,
           "column": 1,
           "kind": "problem-class"
         }
@@ -19047,7 +19077,7 @@
       "sources": [
         {
           "file": "packages/meta-vite/src/libs/actions/serverActions.ts",
-          "line": 146,
+          "line": 151,
           "column": 1,
           "kind": "problem-class"
         }
@@ -19077,7 +19107,7 @@
       "sources": [
         {
           "file": "packages/meta-vite/src/libs/actions/serverActions.ts",
-          "line": 102,
+          "line": 107,
           "column": 1,
           "kind": "problem-class"
         }
@@ -19107,7 +19137,7 @@
       "sources": [
         {
           "file": "packages/meta-vite/src/libs/actions/serverActions.ts",
-          "line": 130,
+          "line": 135,
           "column": 1,
           "kind": "problem-class"
         }
@@ -19167,7 +19197,7 @@
       "sources": [
         {
           "file": "packages/meta-vite/src/libs/actions/serverActions.ts",
-          "line": 116,
+          "line": 121,
           "column": 1,
           "kind": "problem-class"
         }

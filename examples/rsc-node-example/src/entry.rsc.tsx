@@ -14,6 +14,11 @@ function RscPage() {
     <main>
       <h1>RSC route: hello</h1>
       <p>{SERVER_ONLY_VALUE}</p>
+      {/* Plain markup: the browser entry attaches the click handler that
+          fetches fresh Flight bytes and re-renders the same root. */}
+      <button type="button" data-testid="refresh">
+        Refresh
+      </button>
       <Suspense fallback={<p>loading slow fact…</p>}>
         <SlowFact />
       </Suspense>

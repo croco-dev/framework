@@ -5,7 +5,9 @@ prev: false
 title: "ServerActionDuplicateRegistrationProblem"
 ---
 
-RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다.
+A server action name was registered twice. Registration fails fast at
+composition time: a silently shared name would route calls to an arbitrary
+one of the two handlers.
 
 ## Extends
 

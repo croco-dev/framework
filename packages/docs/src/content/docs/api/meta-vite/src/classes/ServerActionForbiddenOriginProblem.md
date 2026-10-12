@@ -5,7 +5,9 @@ prev: false
 title: "ServerActionForbiddenOriginProblem"
 ---
 
-RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다.
+The request Origin is missing or outside `allowedOrigins`, so the action is
+rejected before the handler runs. Cross-site form posts cannot be told apart
+from same-site ones without this check.
 
 ## Extends
 
