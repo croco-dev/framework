@@ -39,8 +39,8 @@ const httpServer = createServer(async (nodeRequest, nodeResponse) => {
         // prefix check alone cannot prove the target stays inside assets.
         const assetsRoot = join(here, "dist", "client", "assets");
         const target = join(assetsRoot, decodeURIComponent(url.pathname.slice("/assets/".length)));
-        const relative = relative(assetsRoot, target);
-        if (relative === "" || relative.startsWith("..") || isAbsolute(target)) {
+        const rel = relative(assetsRoot, target);
+        if (rel === "" || rel.startsWith("..") || isAbsolute(target)) {
           nodeResponse.writeHead(404);
           nodeResponse.end("Not Found");
           return;

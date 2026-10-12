@@ -22,10 +22,9 @@ function RscPage() {
   );
 }
 
-export default async function handler(request: Request): Promise<Response> {
+export default async function handler(_request: Request): Promise<Response> {
   const stream = renderToReadableStream(<RscPage />);
   return new Response(stream, {
     headers: { "content-type": "text/x-component; charset=utf-8" },
   });
-  void request;
 }
