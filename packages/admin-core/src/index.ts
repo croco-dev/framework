@@ -555,3 +555,21 @@ export type {
   RetentionOfferView,
   RetentionOfferConsoleState,
 } from "./libs/RetentionOfferOperations";
+
+export {
+  createRetentionWorkbenchSource,
+  RetentionWorkbenchProblem,
+} from "./libs/RetentionWorkbench";
+export type {
+  RetentionMetricSelection,
+  RetentionWorkbenchRequest,
+  RetentionMetricCard,
+  RetentionWorkbenchSnapshot,
+  RetentionWorkbenchState,
+  RetentionDrilldownRow,
+  RetentionDrilldownPage,
+  RetentionPermission,
+  RetentionWorkbenchAdapter,
+} from "./libs/RetentionWorkbench";
+
+export type { RetentionSavedView, RetentionSavedViewStore } from "./libs/RetentionWorkbench";

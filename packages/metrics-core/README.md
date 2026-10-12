@@ -258,3 +258,63 @@ Content/frequency/timing changes carry a limitation against simple filter-remova
 interpretation. No output identifies causal uplift, lost revenue, or individual
 counterfactuals. Full report JSON contains source rows: hosts must authorize storage
 and must project/redact exports according to their field permissions.
+
+## Behavior retention and frequency
+
+The pure `computePeriodicRetention`, `computeCohortRetention`, and
+`computeFrequencyDistribution` functions accept normalized observations. They do
+not require a database and do not change the MRR retention calculators.
+
+```ts no-check
+import { computePeriodicRetention } from "@croco/metrics-core";
+
+const result = computePeriodicRetention(definition, dataset, {
+  baseline: { kind: "calendar", from: "2024-02-19T00:00:00Z", to: "2024-02-26T00:00:00Z" },
+  returning: { kind: "calendar", from: "2024-02-26T00:00:00Z", to: "2024-03-04T00:00:00Z" },
+});
+```
+
+- A definition fixes `id`, string `version`, `subjectKind`, IANA `timezone`,
+  registered `actions`, `deletedSubjectPolicy` (`include` or `exclude`), and
+  `historyStart` (the earliest possible behavior, including imported history).
+- A dataset carries matching `definitionId`, `version`, `subjectKind`, and
+  `timezone`, explicit `{ appId, environment, tenantId }` scope, `events`, optional
+  `completeThrough` / `knownHistoryFrom`, and optional `deletedSubjectIds`.
+  Every observation carries the same scope plus `subjectId`, `source`, `eventId`,
+  `occurredAt`, and `action`. Tenant IDs cannot be omitted or mixed.
+- Calendar windows accept explicit offset-qualified instants at local midnight.
+  Their elapsed length can change across daylight saving transitions. Rolling
+  windows use `{ kind: 'rolling', anchor, durationMs, index }`; each window begins
+  at `anchor + durationMs * index`. All windows are half-open `[from, to)`.
+- Periodic retention divides baseline subjects active again in the returning
+  window by baseline subjects. New returning-window subjects cannot inflate it.
+  Cohort retention additionally excludes subjects with earlier registered
+  behavior. It reports insufficient history until `knownHistoryFrom` covers
+  `historyStart`; it never labels unknown first observations as lifetime first use.
+- Missing `completeThrough` or a cutoff before the window end yields
+  `provisional`; incomplete history yields `insufficient`. Both return `value:
+null` with a reason, while preserving observed counts. Complete zero
+  denominators also return `null`. Available values are ratios from zero to one.
+- Frequency measures `count` or distinct local `activeDays` among subjects with
+  registered activity in the window. Buckets expose subject counts and their
+  denominator; the result-level numerator and denominator describe the active
+  population. A zero-frequency population requires a separate subject registry
+  and is not inferred from event rows.
+- Only retransmissions with the same scope, source, event ID, subject, action,
+  and instant are deduplicated. Conflicting identities throw
+  `ConflictingBehaviorEventProblem`; malformed definitions, scope, timestamps,
+  and windows throw `InvalidBehaviorMetricProblem` with a stable `field`.
+- Deletion never silently changes a denominator: `include` preserves subjects;
+  `exclude` records excluded subjects with reason `deleted`. Definitions must
+  change version when their policies change. Results include source references
+  and subject membership with inclusion reasons, action counts, and active days
+  for server-side authorized, bounded drilldown. Do not expose whole datasets or
+  these subject lists directly to untrusted browser clients.
+
+### Shared behavior sources
+
+The `@croco/metrics-core/runtime` entrypoint exports `importBehaviorSource` (the shared `@croco/etl-core/source` CSV/JSONL decoder), `collectBehaviorSource`, `normalizeBehaviorRow`, `readBehaviorWarehouse` and `registerBehaviorQuery`. `BehaviorColumnBinding` maps source columns to the normalized observation contract. Scope columns may be omitted only when trusted source metadata supplies the authorized scope, as with warehouse rows whose scope is owned by `WarehouseAccess`. Imports with mapped scope columns reject cross-tenant rows. Metadata must carry actual completeness/history/deletion evidence; absence remains unknown.
+
+The warehouse binding shares the bounded page runner with activation metrics. It pins snapshot and permission/privacy epochs, bounds rows/bytes/pages, detects repeated cursors and honors cancellation. It does not copy provider SQL. The host pins the catalog snapshot and obtains quality/coverage evidence before supplying metadata.
+
+`registerBehaviorQuery` registers a fixed versioned selection, scope and source revisions with `MetricReadService`. Behavior definition versions remain strings; `queryVersion` is the positive integer registration version. The returned definition hash covers the semantic declaration and limits. The service authorizes fields and budgets, verifies source provenance and returns aggregate results without subject or event identities. Incomplete observation or first-behavior history produces partial evidence; it cannot become a verified result even if the source declares complete quality. Registered read windows must cover the selection and its required history.

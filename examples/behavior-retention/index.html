@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Behavior retention</title>
+    <style>
+      :root {
+        font-family: system-ui, sans-serif;
+        color: #1d3034;
+        background: #f4f7f5;
+      }
+      body {
+        margin: 0;
+      }
+      main {
+        max-width: 1180px;
+        margin: auto;
+        padding: 32px 24px 64px;
+      }
+      header {
+        max-width: 760px;
+        margin-bottom: 24px;
+      }
+      h1 {
+        font-size: 38px;
+        letter-spacing: -1px;
+        margin: 8px 0;
+      }
+      h2 {
+        font-size: 26px;
+      }
+      h3 {
+        font-size: 18px;
+      }
+      .eyebrow {
+        color: #35665c;
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+      }
+      p {
+        line-height: 1.6;
+      }
+      nav {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        flex-wrap: wrap;
+        border-block: 1px solid #ccd8d2;
+        padding: 16px 0;
+      }
+      button,
+      select {
+        font: inherit;
+        padding: 8px 12px;
+        background: #fff;
+        color: #203e37;
+        border: 1px solid #9ab3a8;
+        border-radius: 6px;
+        cursor: pointer;
+      }
+      button:hover {
+        background: #e8f2ed;
+      }
+      button:focus-visible,
+      select:focus-visible,
+      [tabindex]:focus-visible {
+        outline: 3px solid #26776a;
+        outline-offset: 3px;
+      }
+      button:disabled {
+        opacity: 0.5;
+        cursor: default;
+      }
+      article {
+        background: #fff;
+        border: 1px solid #d3ded8;
+        border-radius: 8px;
+        padding: 16px 20px;
+        margin: 20px 0;
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+        font-size: 14px;
+      }
+      th,
+      td {
+        text-align: left;
+        padding: 12px;
+        border-bottom: 1px solid #dae3dd;
+      }
+      th {
+        background: #e8efeb;
+      }
+      meter {
+        width: 120px;
+        margin-right: 12px;
+      }
+      [role="alert"] {
+        color: #8f3026;
+      }
+      section[aria-label="Retention trend"],
+      section[aria-label="Cohort cells"] {
+        margin: 28px 0;
+      }
+      @media (max-width: 600px) {
+        main {
+          padding: 20px 16px;
+        }
+        h1 {
+          font-size: 30px;
+        }
+        article {
+          padding: 12px;
+        }
+        nav button {
+          font-size: 14px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script src="/browser.js"></script>
+  </body>
+</html>

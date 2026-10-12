@@ -49,3 +49,17 @@ export {
   registerActivationQuery,
 } from "./libs/activation/ActivationSources";
 export type { ActivationColumnBinding } from "./libs/activation/ActivationSources";
+
+export {
+  normalizeBehaviorRow,
+  collectBehaviorSource,
+  importBehaviorSource,
+  readBehaviorWarehouse,
+  registerBehaviorQuery,
+} from "./libs/BehaviorSources";
+export type {
+  BehaviorColumnBinding,
+  BehaviorSourceMetadata,
+  BehaviorQuerySelection,
+  BehaviorQueryResult,
+} from "./libs/BehaviorSources";

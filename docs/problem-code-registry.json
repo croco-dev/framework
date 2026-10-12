@@ -1,6 +1,6 @@
 {
   "version": "croco.problem-code-registry.v1",
-  "problemCount": 1023,
+  "problemCount": 1032,
   "problems": [
     {
       "code": "ACCESS_DENIED",
@@ -4813,6 +4813,216 @@
           "line": 79,
           "column": 5,
           "kind": "problem-constructor"
+        }
+      ]
+    },
+    {
+      "code": "admin-core/retention-denied",
+      "category": "Forbidden",
+      "status": 403,
+      "title": "Forbidden",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#admin-core-retention-denied",
+      "recovery": {
+        "cause": "The authenticated caller is not allowed to perform the requested action.",
+        "userAction": "Request the required permission or choose an allowed action.",
+        "operatorAction": "Review policy, role, tenant, entitlement, and impersonation context.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "safe-message",
+        "telemetry": {
+          "eventName": "croco.problem.warning",
+          "severity": "warning",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/admin-core/src/libs/RetentionWorkbench.ts",
+          "line": 112,
+          "column": 11,
+          "kind": "problem-metadata"
+        }
+      ]
+    },
+    {
+      "code": "admin-core/retention-invalid-dataset",
+      "category": "ValidationError",
+      "status": 422,
+      "title": "Validation Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#admin-core-retention-invalid-dataset",
+      "recovery": {
+        "cause": "The request or generated contract failed schema or semantic validation.",
+        "userAction": "Fix the invalid fields and retry with schema-conformant input.",
+        "operatorAction": "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "public",
+        "telemetry": {
+          "eventName": "croco.problem.info",
+          "severity": "info",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/admin-core/src/libs/RetentionWorkbench.ts",
+          "line": 121,
+          "column": 22,
+          "kind": "problem-metadata"
+        }
+      ]
+    },
+    {
+      "code": "admin-core/retention-invalid-request",
+      "category": "ValidationError",
+      "status": 422,
+      "title": "Validation Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#admin-core-retention-invalid-request",
+      "recovery": {
+        "cause": "The request or generated contract failed schema or semantic validation.",
+        "userAction": "Fix the invalid fields and retry with schema-conformant input.",
+        "operatorAction": "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "public",
+        "telemetry": {
+          "eventName": "croco.problem.info",
+          "severity": "info",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/admin-core/src/libs/RetentionWorkbench.ts",
+          "line": 108,
+          "column": 22,
+          "kind": "problem-metadata"
+        }
+      ]
+    },
+    {
+      "code": "admin-core/retention-row-limit",
+      "category": "ValidationError",
+      "status": 422,
+      "title": "Validation Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#admin-core-retention-row-limit",
+      "recovery": {
+        "cause": "The request or generated contract failed schema or semantic validation.",
+        "userAction": "Fix the invalid fields and retry with schema-conformant input.",
+        "operatorAction": "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "public",
+        "telemetry": {
+          "eventName": "croco.problem.info",
+          "severity": "info",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/admin-core/src/libs/RetentionWorkbench.ts",
+          "line": 113,
+          "column": 16,
+          "kind": "problem-metadata"
+        }
+      ]
+    },
+    {
+      "code": "admin-core/retention-scope-mismatch",
+      "category": "ValidationError",
+      "status": 422,
+      "title": "Validation Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#admin-core-retention-scope-mismatch",
+      "recovery": {
+        "cause": "The request or generated contract failed schema or semantic validation.",
+        "userAction": "Fix the invalid fields and retry with schema-conformant input.",
+        "operatorAction": "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "public",
+        "telemetry": {
+          "eventName": "croco.problem.info",
+          "severity": "info",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/admin-core/src/libs/RetentionWorkbench.ts",
+          "line": 117,
+          "column": 21,
+          "kind": "problem-metadata"
+        }
+      ]
+    },
+    {
+      "code": "admin-core/retention-source-failed",
+      "category": "InternalServerError",
+      "status": 500,
+      "title": "Internal Server Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#admin-core-retention-source-failed",
+      "recovery": {
+        "cause": "Croco or an upstream dependency failed after accepting the request.",
+        "userAction": "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        "operatorAction": "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        "retryability": "conditional",
+        "redactionPolicy": "operator-only",
+        "telemetry": {
+          "eventName": "croco.problem.error",
+          "severity": "error",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/admin-core/src/libs/RetentionWorkbench.ts",
+          "line": 129,
+          "column": 20,
+          "kind": "problem-metadata"
+        }
+      ]
+    },
+    {
+      "code": "admin-core/retention-stale-input",
+      "category": "ValidationError",
+      "status": 422,
+      "title": "Validation Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#admin-core-retention-stale-input",
+      "recovery": {
+        "cause": "The request or generated contract failed schema or semantic validation.",
+        "userAction": "Fix the invalid fields and retry with schema-conformant input.",
+        "operatorAction": "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "public",
+        "telemetry": {
+          "eventName": "croco.problem.info",
+          "severity": "info",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/admin-core/src/libs/RetentionWorkbench.ts",
+          "line": 125,
+          "column": 18,
+          "kind": "problem-metadata"
         }
       ]
     },
@@ -19779,6 +19989,36 @@
       ]
     },
     {
+      "code": "metrics-core/conflicting-behavior-event",
+      "category": "ValidationError",
+      "status": 422,
+      "title": "Validation Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#metrics-core-conflicting-behavior-event",
+      "recovery": {
+        "cause": "The request or generated contract failed schema or semantic validation.",
+        "userAction": "Fix the invalid fields and retry with schema-conformant input.",
+        "operatorAction": "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "public",
+        "telemetry": {
+          "eventName": "croco.problem.info",
+          "severity": "info",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/metrics-core/src/libs/BehaviorMetrics.ts",
+          "line": 92,
+          "column": 1,
+          "kind": "problem-class"
+        }
+      ]
+    },
+    {
       "code": "metrics-core/experiment-input-invalid",
       "category": "ValidationError",
       "status": 422,
@@ -19893,6 +20133,36 @@
         {
           "file": "packages/metrics-core/src/libs/activation/ActivationCandidates.ts",
           "line": 81,
+          "column": 1,
+          "kind": "problem-class"
+        }
+      ]
+    },
+    {
+      "code": "metrics-core/invalid-behavior-metric",
+      "category": "ValidationError",
+      "status": 422,
+      "title": "Validation Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#metrics-core-invalid-behavior-metric",
+      "recovery": {
+        "cause": "The request or generated contract failed schema or semantic validation.",
+        "userAction": "Fix the invalid fields and retry with schema-conformant input.",
+        "operatorAction": "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "public",
+        "telemetry": {
+          "eventName": "croco.problem.info",
+          "severity": "info",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/metrics-core/src/libs/BehaviorMetrics.ts",
+          "line": 85,
           "column": 1,
           "kind": "problem-class"
         }
@@ -25027,7 +25297,7 @@
       "sources": [
         {
           "file": "packages/rpc-codegen/src/libs/generate.ts",
-          "line": 1957,
+          "line": 2084,
           "column": 38,
           "kind": "problem-metadata"
         }
@@ -25057,7 +25327,7 @@
       "sources": [
         {
           "file": "packages/rpc-codegen/src/libs/generate.ts",
-          "line": 1952,
+          "line": 2079,
           "column": 37,
           "kind": "problem-metadata"
         }
@@ -25087,7 +25357,7 @@
       "sources": [
         {
           "file": "packages/rpc-codegen/src/libs/generate.ts",
-          "line": 1947,
+          "line": 2074,
           "column": 37,
           "kind": "problem-metadata"
         }
