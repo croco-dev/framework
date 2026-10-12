@@ -73,6 +73,7 @@ const CROCO_YOGA_LOGGER = {
 export class GraphQLServer {
   private yogaHandler: YogaHandler | null = null;
   private server: Server | null = null;
+  private startPromise: Promise<void> | null = null;
   private stopPromise: Promise<void> | null = null;
   private initialized = false;
   private maxBodySizeBytes = DEFAULT_MAX_BODY_SIZE_BYTES;
@@ -156,7 +157,20 @@ export class GraphQLServer {
     return async (request: Request) => runInGraphQLRequestContext(() => yoga(request));
   }
 
-  async start(port: number): Promise<void> {
+  start(port: number): Promise<void> {
+    if (this.stopPromise) return this.stopPromise.then(() => this.start(port));
+    if (this.startPromise) return this.startPromise;
+    if (this.server) return Promise.resolve();
+
+    this.startPromise = Promise.resolve()
+      .then(() => this.startListener(port))
+      .finally(() => {
+        this.startPromise = null;
+      });
+    return this.startPromise;
+  }
+
+  private async startListener(port: number): Promise<void> {
     await this.initialize();
 
     if (!this.yogaHandler) {
@@ -243,6 +257,7 @@ export class GraphQLServer {
       };
       const onError = (error: unknown) => {
         cleanup();
+        if (this.server === server) this.server = null;
         reject(error);
       };
       const onListening = () => {
@@ -503,10 +518,22 @@ export class GraphQLServer {
   stop(): Promise<void> {
     if (this.stopPromise) return this.stopPromise;
 
+    if (!this.startPromise && !this.server) return Promise.resolve();
+
+    const closing = this.startPromise
+      ? this.startPromise.catch(() => undefined).then(() => this.closeListener())
+      : this.closeListener();
+    this.stopPromise = closing.finally(() => {
+      this.stopPromise = null;
+    });
+    return this.stopPromise;
+  }
+
+  private closeListener(): Promise<void> {
     const server = this.server;
     if (!server) return Promise.resolve();
 
-    this.stopPromise = new Promise<void>((resolve, reject) => {
+    return new Promise<void>((resolve, reject) => {
       server.close((error) => {
         if (error) {
           reject(error);
@@ -517,10 +544,7 @@ export class GraphQLServer {
       server.closeAllConnections();
     }).finally(() => {
       if (this.server === server) this.server = null;
-      this.stopPromise = null;
     });
-
-    return this.stopPromise;
   }
 }
 

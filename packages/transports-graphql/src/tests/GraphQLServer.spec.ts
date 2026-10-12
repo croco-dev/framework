@@ -6,8 +6,8 @@ import {
   IncomingMessage,
   request as httpRequest,
   ServerResponse,
+  Server,
 } from "node:http";
-import type { Server } from "node:http";
 import { connect } from "node:net";
 import { Container, Context } from "@croco/framework-context";
 import { Logger } from "@croco/framework-logger";
@@ -32,7 +32,7 @@ import type {
   GraphQLInterceptor,
   GraphQLInterceptorContext,
 } from "@croco/protocols-graphql";
-import { GraphQLError } from "graphql";
+import { buildSchema, GraphQLError } from "graphql";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { GraphQLServer } from "../libs/GraphQLServer";
 import { SchemaCompiler } from "../libs/SchemaCompiler";
@@ -351,6 +351,7 @@ function createLoggerMock(): LoggerMock {
 }
 
 describe("GraphQLServer start", () => {
+  afterEach(() => vi.restoreAllMocks());
   beforeEach(() => {
     Container.reset();
   });
@@ -365,13 +366,15 @@ describe("GraphQLServer start", () => {
       schemaOptions: { resolvers: [UserResolver], autoDiscover: false },
     });
 
+    const listen = vi.spyOn(Server.prototype, "listen");
     try {
       await expect(server.start(address.port)).rejects.toMatchObject({
         code: "EADDRINUSE",
         syscall: "listen",
         port: address.port,
       });
-      const nodeServer = Reflect.get(server, "server") as Server;
+      const nodeServer = listen.mock.contexts[0] as Server;
+      expect(Reflect.get(server, "server")).toBeNull();
       expect(nodeServer.listening).toBe(false);
       expect(nodeServer.listenerCount("error")).toBe(0);
       expect(nodeServer.listeners("listening")).toEqual(createServer().listeners("listening"));
@@ -401,10 +404,161 @@ describe("GraphQLServer start", () => {
     const server = new GraphQLServer({
       schemaOptions: { resolvers: [UserResolver], autoDiscover: false },
     });
+    const listen = vi.spyOn(Server.prototype, "listen");
     await expect(server.start(-1)).rejects.toMatchObject({ code: "ERR_SOCKET_BAD_PORT" });
-    const nodeServer = Reflect.get(server, "server") as Server;
+    const nodeServer = listen.mock.contexts[0] as Server;
+    expect(Reflect.get(server, "server")).toBeNull();
     expect(nodeServer.listenerCount("error")).toBe(0);
     expect(nodeServer.listeners("listening")).toEqual(createServer().listeners("listening"));
+  });
+});
+
+describe("GraphQLServer listener lifecycle", () => {
+  let listeners: Server[];
+  let lifecycleEvents: string[];
+
+  beforeEach(() => {
+    Container.reset();
+    listeners = [];
+    lifecycleEvents = [];
+    const listen = Server.prototype.listen;
+    vi.spyOn(Server.prototype, "listen").mockImplementation(function (
+      this: Server,
+      ...args: Parameters<Server["listen"]>
+    ) {
+      listeners.push(this);
+      lifecycleEvents.push("listen");
+      return Reflect.apply(listen, this, args) as Server;
+    });
+  });
+
+  afterEach(async () => {
+    vi.restoreAllMocks();
+    await Promise.all(
+      listeners
+        .filter((listener) => listener.listening)
+        .map(
+          (listener) =>
+            new Promise<void>((resolve, reject) => {
+              listener.close((error) => (error ? reject(error) : resolve()));
+              listener.closeAllConnections();
+            }),
+        ),
+    );
+  });
+
+  function createGraphQLServer(): GraphQLServer {
+    return new GraphQLServer({
+      schemaOptions: { resolvers: [UserResolver], autoDiscover: false },
+    });
+  }
+
+  it("should retain the first listener on repeated start and close it on stop", async () => {
+    const server = createGraphQLServer();
+    await server.start(0);
+    const firstAddress = listeners[0].address();
+    await server.start(0);
+    expect(listeners).toHaveLength(1);
+    expect(listeners[0].address()).toEqual(firstAddress);
+    await server.stop();
+    expect(listeners.every((listener) => !listener.listening)).toBe(true);
+  });
+
+  it("should join concurrent starts without creating another listener", async () => {
+    const server = createGraphQLServer();
+    await Promise.all([server.start(0), server.start(-1), server.start(0)]);
+    expect(listeners).toHaveLength(1);
+    expect(listeners[0].listening).toBe(true);
+    await server.stop();
+    expect(listeners.every((listener) => !listener.listening)).toBe(true);
+  });
+
+  it.each(["start", "stop"] as const)(
+    "should coordinate %s reentered from a Yoga initialization hook",
+    async (operation) => {
+      let reentered = false;
+      let nested: Promise<void> | undefined;
+      const server = new GraphQLServer({
+        schema: buildSchema("type Query { sample: String }"),
+        plugins: [
+          {
+            onYogaInit() {
+              if (reentered) return;
+              reentered = true;
+              nested = operation === "start" ? server.start(0) : server.stop();
+            },
+          },
+        ],
+      });
+      await server.start(0);
+      expect(reentered).toBe(true);
+      await nested;
+      expect(listeners).toHaveLength(1);
+      expect(listeners[0].listening).toBe(operation === "start");
+      await server.stop();
+      expect(listeners[0].listening).toBe(false);
+    },
+  );
+
+  it("should wait for an in-flight start before completing stop", async () => {
+    const server = createGraphQLServer();
+    const starting = server.start(0);
+    const stopping = server.stop();
+    await Promise.all([starting, stopping]);
+    expect(listeners).toHaveLength(1);
+    expect(listeners[0].listening).toBe(false);
+    await server.start(0);
+    expect(listeners).toHaveLength(2);
+    expect(listeners[1].listening).toBe(true);
+    await server.stop();
+  });
+
+  it("should restart only after a pending stop completes", async () => {
+    const server = createGraphQLServer();
+    await server.start(0);
+    listeners[0].once("close", () => lifecycleEvents.push("close"));
+    const stopping = server.stop();
+    const restarting = server.start(0);
+    await Promise.all([stopping, restarting]);
+    expect(lifecycleEvents).toEqual(["listen", "close", "listen"]);
+    expect(listeners).toHaveLength(2);
+    expect(listeners[0].listening).toBe(false);
+    expect(listeners[1].listening).toBe(true);
+    await server.stop();
+    expect(listeners.every((listener) => !listener.listening)).toBe(true);
+  });
+
+  it("should retry after a synchronous start failure", async () => {
+    const server = createGraphQLServer();
+    await expect(server.start(-1)).rejects.toMatchObject({ code: "ERR_SOCKET_BAD_PORT" });
+    await expect(server.stop()).resolves.toBeUndefined();
+    await server.start(0);
+    expect(listeners[0].listening).toBe(false);
+    expect(listeners[1].listening).toBe(true);
+    await server.stop();
+  });
+
+  it("should share a bind failure then retry after the port becomes available", async () => {
+    const occupied = createServer();
+    occupied.listen(0);
+    await once(occupied, "listening");
+    const address = occupied.address();
+    if (!address || typeof address === "string") throw new Error("Expected TCP address");
+    const server = createGraphQLServer();
+    const starting = server.start(address.port);
+    const joining = server.start(0);
+    const stopping = server.stop();
+    const outcomes = await Promise.allSettled([starting, joining]);
+    expect(outcomes[0]).toMatchObject({ status: "rejected", reason: { code: "EADDRINUSE" } });
+    expect(outcomes[1]).toEqual(outcomes[0]);
+    await expect(stopping).resolves.toBeUndefined();
+    await new Promise<void>((resolve, reject) =>
+      occupied.close((error) => (error ? reject(error) : resolve())),
+    );
+    await server.start(address.port);
+    expect(listeners.at(-1)?.address()).toMatchObject({ port: address.port });
+    await server.stop();
+    expect(listeners.every((listener) => !listener.listening)).toBe(true);
   });
 });
 
