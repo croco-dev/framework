@@ -3335,6 +3335,15 @@ const recoveryMetadataByCategory = {
 } as const satisfies Record<ProblemCategory, ProblemRecoveryMetadata>;
 
 const recoveryMetadataByCode = {
+  "meta-vite/server-action-forbidden-origin": recovery({
+    cause: "The request Origin is not in the server action allowedOrigins list.",
+    userAction: "Send the request from an allowed origin registered in allowedOrigins.",
+    operatorAction:
+      "Verify the request Origin header against the allowedOrigins configuration; requests without a verifiable Origin are rejected when an allowlist is set.",
+    retryability: "not-retryable",
+    redactionPolicy: "safe-message",
+    severity: "warning",
+  }),
   BILLING_STATUS_MAPPING_FAILED: recovery({
     cause: "Polar sent a valid subscription status that the billing contract cannot represent.",
     userAction: "Do not retry the unchanged webhook payload.",

@@ -676,6 +676,90 @@ describe("Server Action HTTP Integration", () => {
     });
   });
 
+  it("rejects requests without an Origin header when allowedOrigins is configured", async () => {
+    createServerAction({
+      name: "origin-guarded",
+      handler: async () => new Response("ok"),
+    });
+
+    const route = createServerActionHandler(undefined, {
+      allowedOrigins: ["https://app.example"],
+    });
+
+    const formData = new FormData();
+    formData.append("email", "test@example.com");
+
+    const response = await route.handler(
+      new Request("http://localhost/api/action/origin-guarded", {
+        method: "POST",
+        body: formData,
+      }),
+    );
+
+    // An absent Origin header proves nothing about the caller: non-browser
+    // clients omit it freely, so allowlisted routes must reject unverifiable
+    // callers instead of treating them as same-origin.
+    expect(response.status).toBe(403);
+    await expect(response.json()).resolves.toMatchObject({
+      ok: false,
+      kind: "forbidden_origin",
+      code: "meta-vite/server-action-forbidden-origin",
+    });
+  });
+
+  it("rejects requests with a non-allowlisted Origin header", async () => {
+    createServerAction({
+      name: "origin-guarded",
+      handler: async () => new Response("ok"),
+    });
+
+    const route = createServerActionHandler(undefined, {
+      allowedOrigins: ["https://app.example"],
+    });
+
+    const formData = new FormData();
+    formData.append("email", "test@example.com");
+
+    const response = await route.handler(
+      new Request("http://localhost/api/action/origin-guarded", {
+        method: "POST",
+        headers: { origin: "https://evil.example" },
+        body: formData,
+      }),
+    );
+
+    expect(response.status).toBe(403);
+    await expect(response.json()).resolves.toMatchObject({
+      ok: false,
+      kind: "forbidden_origin",
+      code: "meta-vite/server-action-forbidden-origin",
+    });
+  });
+
+  it("allows requests with an allowlisted Origin header", async () => {
+    createServerAction({
+      name: "origin-guarded",
+      handler: async () => new Response("ok"),
+    });
+
+    const route = createServerActionHandler(undefined, {
+      allowedOrigins: ["https://app.example"],
+    });
+
+    const formData = new FormData();
+    formData.append("email", "test@example.com");
+
+    const response = await route.handler(
+      new Request("http://localhost/api/action/origin-guarded", {
+        method: "POST",
+        headers: { origin: "https://app.example" },
+        body: formData,
+      }),
+    );
+
+    expect(response.status).toBe(200);
+  });
+
   it("returns Problem result for malformed form bodies with a form content type", async () => {
     createServerAction({
       name: "malformed-post",

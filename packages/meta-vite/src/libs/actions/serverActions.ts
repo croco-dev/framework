@@ -601,9 +601,10 @@ function isAbortError(error: unknown): boolean {
 function isAllowedOrigin(request: Request, allowedOrigins: readonly string[]): boolean {
   const origin = request.headers.get("origin");
   if (!origin) {
-    // Same-origin form posts without an Origin header stay allowed; only an
-    // explicit, non-allowlisted origin is rejected.
-    return true;
+    // An absent Origin header proves nothing about the caller's origin
+    // (non-browser clients omit it freely). When an allowlist is configured,
+    // unverifiable callers are rejected instead of treated as same-origin.
+    return false;
   }
   try {
     const normalized = new URL(origin).origin;

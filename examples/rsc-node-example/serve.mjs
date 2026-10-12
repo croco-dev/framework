@@ -10,7 +10,7 @@
 // browser would fetch, so refresh/hydration cannot mix representations.
 import { createServer } from "node:http";
 import { readFile, readdir } from "node:fs/promises";
-import { dirname, join } from "node:path";
+import { dirname, isAbsolute, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -34,7 +34,18 @@ const httpServer = createServer(async (nodeRequest, nodeResponse) => {
 
     if (url.pathname.startsWith("/assets/")) {
       try {
-        const body = await readFile(join(here, "dist", "client", url.pathname));
+        // Resolve against the client assets root and verify containment:
+        // `%2e%2e`-style encoded segments are not normalized by URL, so a
+        // prefix check alone cannot prove the target stays inside assets.
+        const assetsRoot = join(here, "dist", "client", "assets");
+        const target = join(assetsRoot, decodeURIComponent(url.pathname.slice("/assets/".length)));
+        const relative = relative(assetsRoot, target);
+        if (relative === "" || relative.startsWith("..") || isAbsolute(target)) {
+          nodeResponse.writeHead(404);
+          nodeResponse.end("Not Found");
+          return;
+        }
+        const body = await readFile(target);
         nodeResponse.writeHead(200, {
           "content-type": url.pathname.endsWith(".css") ? "text/css" : "application/javascript",
         });

@@ -142,7 +142,7 @@ describe("rsc real Flight path", () => {
       route: "/rsc-no-encoder",
       code: "meta-vite/rsc-flight-not-acceptable",
     });
-    expect(body).not.toContain("<html");
+    expect(JSON.stringify(body)).not.toContain("<html");
   });
 
   it("keeps private props isolated across refreshes without cross-request mixing", async () => {

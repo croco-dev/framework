@@ -1,6 +1,6 @@
 {
   "version": "croco.problem-code-registry.v1",
-  "problemCount": 1032,
+  "problemCount": 1033,
   "problems": [
     {
       "code": "ACCESS_DENIED",
@@ -18844,6 +18844,36 @@
       ]
     },
     {
+      "code": "meta-vite/rsc-flight-encode-timeout",
+      "category": "InternalServerError",
+      "status": 500,
+      "title": "Internal Server Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#meta-vite-rsc-flight-encode-timeout",
+      "recovery": {
+        "cause": "Croco or an upstream dependency failed after accepting the request.",
+        "userAction": "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        "operatorAction": "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        "retryability": "conditional",
+        "redactionPolicy": "operator-only",
+        "telemetry": {
+          "eventName": "croco.problem.error",
+          "severity": "error",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/meta-vite/src/libs/rsc/isolatedEncode.ts",
+          "line": 22,
+          "column": 1,
+          "kind": "problem-class"
+        }
+      ]
+    },
+    {
       "code": "meta-vite/rsc-flight-not-acceptable",
       "category": "NotImplemented",
       "status": 501,
@@ -18970,9 +19000,9 @@
       "title": "Forbidden",
       "cookbookPath": "/reference/problem-recovery-cookbook/#meta-vite-server-action-forbidden-origin",
       "recovery": {
-        "cause": "The authenticated caller is not allowed to perform the requested action.",
-        "userAction": "Request the required permission or choose an allowed action.",
-        "operatorAction": "Review policy, role, tenant, entitlement, and impersonation context.",
+        "cause": "The request Origin is not in the server action allowedOrigins list.",
+        "userAction": "Send the request from an allowed origin registered in allowedOrigins.",
+        "operatorAction": "Verify the request Origin header against the allowedOrigins configuration; requests without a verifiable Origin are rejected when an allowlist is set.",
         "retryability": "not-retryable",
         "redactionPolicy": "safe-message",
         "telemetry": {

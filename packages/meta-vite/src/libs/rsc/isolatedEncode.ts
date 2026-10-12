@@ -19,6 +19,20 @@ export class RscFlightEncodeFailedProblem extends Problem {
   }
 }
 
+export class RscFlightEncodeTimeoutProblem extends Problem {
+  readonly code = "meta-vite/rsc-flight-encode-timeout";
+  readonly category = ProblemCategory.InternalServerError;
+
+  constructor(route: string, timeoutMs: number) {
+    super(
+      "meta-vite/rsc-flight-encode-timeout",
+      ProblemCategory.InternalServerError,
+      `RSC Flight encoder timed out for route '${route}' after ${timeoutMs}ms`,
+      { extensions: { route, timeoutMs } },
+    );
+  }
+}
+
 const ENCODE_TIMEOUT_MS = 30_000;
 
 // Unbounded stdout/stderr buffering lets a large Flight payload pin memory per
@@ -115,7 +129,10 @@ export async function encodeRscFlightInIsolatedEncoder(
   const exit = new Promise<number>((resolve, reject) => {
     const timer = setTimeout(() => {
       child.kill("SIGKILL");
-      reject(new Error(`RSC Flight encoder timed out for route '${input.route.path}'`));
+      // Reject with a typed Problem so operators can distinguish an encoder
+      // stall from a render failure: both surface as 500, but the timeout
+      // code (`rsc-flight-encode-timeout`) carries the route and budget.
+      reject(new RscFlightEncodeTimeoutProblem(input.route.path, ENCODE_TIMEOUT_MS));
     }, ENCODE_TIMEOUT_MS);
 
     child.stdout.on("data", (chunk: Uint8Array) => {

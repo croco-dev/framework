@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export type CrocoProblemRegistry = {
   readonly version: "croco.problem-code-registry.v1";
-  readonly problemCount: 1032;
+  readonly problemCount: 1033;
   readonly problems: readonly [
     {
       readonly code: "ACCESS_DENIED";
@@ -17655,6 +17655,34 @@ export type CrocoProblemRegistry = {
       ];
     },
     {
+      readonly code: "meta-vite/rsc-flight-encode-timeout";
+      readonly category: "InternalServerError";
+      readonly status: 500;
+      readonly title: "Internal Server Error";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#meta-vite-rsc-flight-encode-timeout";
+      readonly recovery: {
+        readonly cause: "Croco or an upstream dependency failed after accepting the request.";
+        readonly userAction: "Retry later only when the operation is idempotent or the caller owns retry safety.";
+        readonly operatorAction: "Use traces, logs, and upstream diagnostics to isolate the failing boundary.";
+        readonly retryability: "conditional";
+        readonly redactionPolicy: "operator-only";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.error";
+          readonly severity: "error";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/meta-vite/src/libs/rsc/isolatedEncode.ts";
+          readonly line: 22;
+          readonly column: 1;
+          readonly kind: "problem-class";
+        },
+      ];
+    },
+    {
       readonly code: "meta-vite/rsc-flight-not-acceptable";
       readonly category: "NotImplemented";
       readonly status: 501;
@@ -17773,9 +17801,9 @@ export type CrocoProblemRegistry = {
       readonly title: "Forbidden";
       readonly cookbookPath: "/reference/problem-recovery-cookbook/#meta-vite-server-action-forbidden-origin";
       readonly recovery: {
-        readonly cause: "The authenticated caller is not allowed to perform the requested action.";
-        readonly userAction: "Request the required permission or choose an allowed action.";
-        readonly operatorAction: "Review policy, role, tenant, entitlement, and impersonation context.";
+        readonly cause: "The request Origin is not in the server action allowedOrigins list.";
+        readonly userAction: "Send the request from an allowed origin registered in allowedOrigins.";
+        readonly operatorAction: "Verify the request Origin header against the allowedOrigins configuration; requests without a verifiable Origin are rejected when an allowlist is set.";
         readonly retryability: "not-retryable";
         readonly redactionPolicy: "safe-message";
         readonly telemetry: {
@@ -29189,7 +29217,7 @@ export type CrocoProblemRegistry = {
 
 export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 1032,
+  problemCount: 1033,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -48863,6 +48891,38 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       ],
     },
     {
+      code: "meta-vite/rsc-flight-encode-timeout",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#meta-vite-rsc-flight-encode-timeout",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/meta-vite/src/libs/rsc/isolatedEncode.ts",
+          line: 22,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
       code: "meta-vite/rsc-flight-not-acceptable",
       category: "NotImplemented",
       status: 501,
@@ -48995,9 +49055,10 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       cookbookPath:
         "/reference/problem-recovery-cookbook/#meta-vite-server-action-forbidden-origin",
       recovery: {
-        cause: "The authenticated caller is not allowed to perform the requested action.",
-        userAction: "Request the required permission or choose an allowed action.",
-        operatorAction: "Review policy, role, tenant, entitlement, and impersonation context.",
+        cause: "The request Origin is not in the server action allowedOrigins list.",
+        userAction: "Send the request from an allowed origin registered in allowedOrigins.",
+        operatorAction:
+          "Verify the request Origin header against the allowedOrigins configuration; requests without a verifiable Origin are rejected when an allowlist is set.",
         retryability: "not-retryable",
         redactionPolicy: "safe-message",
         telemetry: {
