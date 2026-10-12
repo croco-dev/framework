@@ -612,8 +612,8 @@ export class CrocoLambdaAdapter {
         runtimeContext,
       ) as LambdaExecutionEnv & Record<string, unknown>;
 
-      const response = await runWithLambdaFlushBoundary(
-        () => {
+      return runWithLambdaFlushBoundary(
+        async () => {
           const { method, path, queryString } = validateApiGatewayV2Event(event);
           const url = `https://lambda.local${path}${queryString ? `?${queryString}` : ""}`;
 
@@ -654,22 +654,21 @@ export class CrocoLambdaAdapter {
             body: ["GET", "HEAD"].includes(method) ? null : body,
           });
 
-          return this.dispatcher.fetch(request, executionEnv);
+          const response = await this.dispatcher.fetch(request, executionEnv);
+          const { body: responseBody, isBase64Encoded } = await toLambdaResponseBody(response);
+          const { headers: responseHeaders, cookies } = toLambdaResponseHeaders(response.headers);
+
+          return {
+            statusCode: response.status,
+            headers: responseHeaders,
+            ...(cookies.length > 0 ? { cookies } : {}),
+            body: responseBody,
+            isBase64Encoded,
+          };
         },
         runtimeContext,
         options,
       );
-
-      const { body: responseBody, isBase64Encoded } = await toLambdaResponseBody(response);
-      const { headers: responseHeaders, cookies } = toLambdaResponseHeaders(response.headers);
-
-      return {
-        statusCode: response.status,
-        headers: responseHeaders,
-        ...(cookies.length > 0 ? { cookies } : {}),
-        body: responseBody,
-        isBase64Encoded,
-      };
     };
   }
 
