@@ -243,8 +243,9 @@ forwards API Gateway v2 compatible events.
 - Do not use `AWS_LAMBDA_EXEC_WRAPPER` for Croco telemetry. Initialize `TelemetryRuntime` in module
   scope and connect `forceFlush()` through the Lambda host's `flush` option.
 - Keep expensive clients and the Croco app in module scope so warm invocations reuse them.
-- `Context.getRuntimeContext().waitUntil()` queues work that Croco drains before response conversion;
-  do not use it for unbounded jobs.
+- `Context.getRuntimeContext().waitUntil()` queues work that Croco drains after response conversion
+  and before the handler returns, including work registered while reading the body; do not use it for
+  unbounded jobs.
 - Lambda responses are buffered. Do not claim streaming support for this adapter.
 - In-memory rate limits, caches, and stores are warm-container only. Use provider-backed storage for
   cross-container guarantees.

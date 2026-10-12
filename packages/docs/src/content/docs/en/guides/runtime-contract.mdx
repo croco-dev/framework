@@ -52,7 +52,7 @@ class RuntimeController {
 | `requestId`        | `x-request-id` or generated id   | API Gateway request id or `awsRequestId`                             | `x-request-id` or generated id              |
 | `logger`           | app logger                       | app logger                                                           | app logger                                  |
 | `trace`            | active HTTP server span          | active HTTP server span                                              | `traceparent` when present                  |
-| `waitUntil`        | unsupported                      | queued and drained before response conversion                        | delegates to `ExecutionContext.waitUntil`   |
+| `waitUntil`        | unsupported                      | queued and drained after response conversion, before handler return  | delegates to `ExecutionContext.waitUntil`   |
 | `flush`            | unsupported                      | drains queued work and can run transport-provided telemetry flushing | unsupported                                 |
 | `shutdown`         | unsupported in the request scope | unsupported in the request scope                                     | unsupported in the request scope            |
 
