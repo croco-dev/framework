@@ -153,7 +153,7 @@ describe("GraphQL Node subscription streaming", () => {
         if (mode === "stop") await within(server.stop());
         await within(cleaned.promise);
         expect(executionSignal?.aborted).toBe(true);
-        if (mode !== "disconnect") await expect(within(reader.read())).rejects.toThrow();
+        if (mode !== "disconnect") await within(expect(reader.read()).rejects.toThrow());
       } finally {
         client.abort();
         release.resolve();
@@ -161,6 +161,59 @@ describe("GraphQL Node subscription streaming", () => {
       }
     },
   );
+  it.each(["socket-error", "write-throw"] as const)(
+    "aborts the request signal and cleans the real Yoga iterator on %s",
+    async (mode) => {
+      const cleaned = gate();
+      const next = gate();
+      const release = gate();
+      let executionSignal: AbortSignal | undefined;
+      const server = new GraphQLServer({
+        schema: subscriptionSchema(async function* (signal) {
+          executionSignal = signal;
+          signal.addEventListener("abort", () => release.resolve(), { once: true });
+          try {
+            yield { sample: "live" };
+            await next.promise;
+            yield { sample: "second" };
+            await release.promise;
+          } finally {
+            cleaned.resolve();
+          }
+        }),
+      });
+      const client = new AbortController();
+      await server.start(0);
+      const node = Reflect.get(server, "server") as Server;
+      let nodeResponse: ServerResponse | undefined;
+      node.once("request", (_request, response) => {
+        nodeResponse = response;
+      });
+      try {
+        const response = await within(subscribe(endpoint(server), client.signal));
+        const reader = response.body?.getReader();
+        if (!reader || !nodeResponse) throw new Error("Missing subscription response");
+        await within(readUntil(reader, '"sample":"live"'));
+        if (mode === "socket-error") {
+          nodeResponse.emit("error", new Error("socket failure"));
+        } else {
+          vi.spyOn(nodeResponse, "write").mockImplementationOnce(() => {
+            throw new Error("write failure");
+          });
+        }
+        next.resolve();
+        await within(cleaned.promise);
+        expect(executionSignal?.aborted).toBe(true);
+        await expect(reader.read()).rejects.toThrow();
+      } finally {
+        client.abort();
+        next.resolve();
+        release.resolve();
+        await server.stop();
+      }
+    },
+  );
+
   it("flushes headers before a delayed first chunk and preserves separate cookies", async () => {
     const server = new GraphQLServer({ schema: subscriptionSchema(async function* () {}) });
     await server.initialize();
@@ -281,7 +334,7 @@ describe("GraphQL Node subscription streaming", () => {
         if (mode === "source-error") source?.error(new Error("upstream secret"));
         if (mode === "write-error") nodeResponse?.emit("error", new Error("socket secret"));
         if (mode === "disconnect-during-drain") client.abort();
-        await expect(within(reader.read())).rejects.toThrow();
+        await within(expect(reader.read()).rejects.toThrow());
         if (mode !== "source-error") await within(cancelled.promise);
         await vi.waitFor(() => expect(upstream.body?.locked).toBe(false));
       } finally {

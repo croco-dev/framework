@@ -39,6 +39,7 @@ type GraphQLContextPropagationPlugin = Plugin<
 type NodeRequestAbortScope = {
   readonly aborted: Promise<never>;
   readonly signal: AbortSignal;
+  abort(reason: Error): void;
   dispose(): void;
 };
 type NodeRequestPhase =
@@ -230,7 +231,7 @@ export class GraphQLServer {
 
           phase = "response-body";
           if (response.headers.get("content-type")?.split(";")[0]?.trim() === "text/event-stream") {
-            await this.streamNodeResponse(res, response, abortScope.signal);
+            await this.streamNodeResponse(res, response, abortScope);
             return;
           }
           const responseBody = await response.text();
@@ -399,6 +400,7 @@ export class GraphQLServer {
     return {
       aborted,
       signal: controller.signal,
+      abort,
       dispose: () => {
         if (timeout !== undefined) {
           clearTimeout(timeout);
@@ -461,12 +463,11 @@ export class GraphQLServer {
   private async streamNodeResponse(
     res: ServerResponse,
     response: Response,
-    signal: AbortSignal,
+    abortScope: NodeRequestAbortScope,
   ): Promise<void> {
     const reader = response.body?.getReader();
-    const writeFailure = new AbortController();
-    const streamSignal = AbortSignal.any([signal, writeFailure.signal]);
-    const onError = (error: Error) => writeFailure.abort(error);
+    const streamSignal = abortScope.signal;
+    const onError = () => abortScope.abort(new GraphQLRequestHandlingFailedProblem());
     res.on("error", onError);
 
     try {
@@ -484,6 +485,9 @@ export class GraphQLServer {
       }
       await waitForStreamOperation(this.writeNodeResponse(res, ""), streamSignal);
     } catch (error) {
+      abortScope.abort(
+        error instanceof Problem ? error : new GraphQLRequestHandlingFailedProblem(),
+      );
       if (reader) {
         // Cancellation can wait for user iterator cleanup; it must not delay socket teardown.
         void reader.cancel(error).catch((cancelError: unknown) => {
