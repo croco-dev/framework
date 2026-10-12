@@ -17,9 +17,141 @@ describe("registerController", () => {
     await rm(fixtureDir, { recursive: true, force: true });
   });
 
+  it("registers only on the Croco receiver before becoming byte-stable", async () => {
+    await writeFixture(`
+import { createApp } from '@croco/transports-http';
+import { widget } from './widget';
+widget.addControllers([]);
+const api = createApp();
+api.addControllers([]);
+api.listen(3000);
+`);
+
+    const first = await registerBarController();
+    const content = await readFixture();
+    const second = await registerBarController();
+
+    expect(first.status).toBe("updated");
+    expect(content).toContain("widget.addControllers([]);");
+    expect(content).toContain("api.addControllers([BarController]);");
+    expect(content).toContain("import { BarController } from './domains/bar/BarController';");
+    expect(second.status).toBe("updated-idempotent");
+    expect(await readFixture()).toBe(content);
+  });
+
+  it("checks the controller binding in the verified registration", async () => {
+    await writeFixture(`
+import { createApp } from '@croco/transports-http';
+import { widget } from './widget';
+widget.addControllers([BarController]);
+const api = createApp();
+function register(BarController: unknown) {
+  api.addControllers([]);
+}
+`);
+    const before = await readFixture();
+
+    expect((await registerBarController()).status).toBe("unsupported-pattern");
+    expect(await readFixture()).toBe(before);
+  });
+
+  it("ignores a shadowed addControllers receiver", async () => {
+    await writeFixture(`
+import { createApp as makeApp } from '@croco/transports-http';
+const api = makeApp();
+function registerWidget(api: { addControllers(controllers: unknown[]): void }) {
+  api.addControllers([]);
+}
+api.addControllers([]);
+`);
+
+    expect((await registerBarController()).status).toBe("updated");
+    const content = await readFixture();
+    expect(content).toContain("  api.addControllers([]);");
+    expect(content).toContain("api.addControllers([BarController]);");
+  });
+
+  it("ignores unrelated createApp options when reconciling the registered binding", async () => {
+    await writeFixture(`
+import { createApp } from '@croco/transports-http';
+function configureWidget(createApp: (options: unknown) => unknown, BarController: unknown) {
+  return createApp({ controllers: [BarController] });
+}
+const api = createApp();
+api.addControllers([]);
+`);
+
+    expect((await registerBarController()).status).toBe("updated");
+    const content = await readFixture();
+    expect(content).toContain("return createApp({ controllers: [BarController] });");
+    expect(content).toContain("api.addControllers([BarController]);");
+    expect(content).toContain("import { BarController } from './domains/bar/BarController';");
+    expect((await registerBarController()).status).toBe("updated-idempotent");
+  });
+
+  it("recognizes an aliased Croco factory controllers option", async () => {
+    await writeFixture(`
+import { createApp as makeApp } from '@croco/transports-http';
+export function createCrocoApp() {
+  return makeApp({ controllers: [] });
+}
+`);
+
+    expect((await registerBarController()).status).toBe("updated");
+    expect(await readFixture()).toContain("return makeApp({ controllers: [BarController] });");
+    expect((await registerBarController()).status).toBe("updated-idempotent");
+  });
+
+  it.each([
+    [
+      "an unknown receiver",
+      `import { widget } from './widget';
+widget.addControllers([]);`,
+    ],
+    [
+      "an unrelated factory",
+      `import { createApp } from 'widget';
+const api = createApp();
+api.addControllers([]);`,
+    ],
+    [
+      "a mutable binding",
+      `import { createApp } from '@croco/transports-http';
+let api = createApp();
+api.addControllers([]);`,
+    ],
+    [
+      "two Croco registrations",
+      `import { createApp } from '@croco/transports-http';
+const api = createApp();
+const admin = createApp();
+api.addControllers([]);
+admin.addControllers([]);`,
+    ],
+    [
+      "two calls on one Croco app",
+      `import { createCrocoApp } from './app';
+const api = createCrocoApp();
+api.addControllers([]);
+api.addControllers([]);`,
+    ],
+    [
+      "factory options and a receiver registration",
+      `import { createApp } from '@croco/transports-http';
+const api = createApp({ controllers: [] });
+api.addControllers([]);`,
+    ],
+  ])("preserves the file for %s", async (_description, fixture) => {
+    await writeFixture(fixture);
+    const before = await readFixture();
+
+    expect((await registerBarController()).status).toBe("unsupported-pattern");
+    expect(await readFixture()).toBe(before);
+  });
+
   it("adds a controller to an empty addControllers array", async () => {
     await writeFixture(`
-import { createCrocoApp, createApp } from '@foo/bar';
+import { createCrocoApp, createApp } from './app';
 import { FooController } from './somewhere';
 
 const app = createCrocoApp();
@@ -37,7 +169,7 @@ app.listen({ port: 3000 });
 
   it("adds a controller to an existing addControllers array idempotently", async () => {
     await writeFixture(`
-import { createCrocoApp, createApp } from '@foo/bar';
+import { createCrocoApp, createApp } from './app';
 import { FooController } from './somewhere';
 
 const app = createCrocoApp();
@@ -58,7 +190,7 @@ app.listen({ port: 3000 });
 
   it("repairs a missing import when the controller is already registered", async () => {
     await writeFixture(`
-import { createCrocoApp } from '@foo/bar';
+import { createCrocoApp } from './app';
 
 const app = createCrocoApp();
 app.addControllers([BarController]);
@@ -75,7 +207,7 @@ app.listen({ port: 3000 });
 
   it("keeps a correct import and registration byte-stable", async () => {
     await writeFixture(`
-import { createCrocoApp } from '@foo/bar';
+import { createCrocoApp } from './app';
 import { BarController } from './domains/bar/BarController';
 
 const app = createCrocoApp();
@@ -93,7 +225,7 @@ app.listen({ port: 3000 });
 
   it("keeps a self-aliased correct import byte-stable", async () => {
     await writeFixture(`
-import { createCrocoApp } from '@foo/bar';
+import { createCrocoApp } from './app';
 import { BarController as BarController } from './domains/bar/BarController';
 
 const app = createCrocoApp();
@@ -111,7 +243,7 @@ app.listen({ port: 3000 });
 
   it("adds the required local import when the expected export is only aliased", async () => {
     await writeFixture(`
-import { createCrocoApp } from '@foo/bar';
+import { createCrocoApp } from './app';
 import { BarController as ExistingBarController } from './domains/bar/BarController';
 
 const app = createCrocoApp();
@@ -132,7 +264,7 @@ app.listen({ port: 3000 });
 
   it("reports a conflicting controller binding without changing the file", async () => {
     await writeFixture(`
-import { createCrocoApp } from '@foo/bar';
+import { createCrocoApp } from './app';
 import { BarController } from './domains/legacy/BarController';
 
 const app = createCrocoApp();
@@ -154,7 +286,7 @@ app.listen({ port: 3000 });
 
   it("reports a nested controller binding conflict without changing the file", async () => {
     await writeFixture(`
-import { createCrocoApp } from '@foo/bar';
+import { createCrocoApp } from './app';
 import { BarController } from './domains/bar/BarController';
 
 function bootstrap(BarController: unknown) {
@@ -176,7 +308,7 @@ function bootstrap(BarController: unknown) {
     [
       "a correct import has a wrong-source duplicate",
       `
-import { createCrocoApp } from '@foo/bar';
+import { createCrocoApp } from './app';
 import { BarController } from './domains/bar/BarController';
 import { BarController } from './domains/legacy/BarController';
 
@@ -188,7 +320,7 @@ app.listen({ port: 3000 });
     [
       "the correct import is duplicated",
       `
-import { createCrocoApp } from '@foo/bar';
+import { createCrocoApp } from './app';
 import { BarController } from './domains/bar/BarController';
 import { BarController } from './domains/bar/BarController';
 
@@ -200,7 +332,7 @@ app.listen({ port: 3000 });
     [
       "a correct import has a local declaration duplicate",
       `
-import { createCrocoApp } from '@foo/bar';
+import { createCrocoApp } from './app';
 import { BarController } from './domains/bar/BarController';
 
 const BarController = class {};
@@ -222,7 +354,7 @@ app.listen({ port: 3000 });
 
   it("reports a missing-import repair during dry-run without writing", async () => {
     await writeFixture(`
-import { createCrocoApp } from '@foo/bar';
+import { createCrocoApp } from './app';
 
 const app = createCrocoApp();
 app.addControllers([BarController]);
@@ -239,7 +371,7 @@ app.listen({ port: 3000 });
 
   it("uncomments the template addControllers registration and adds a controller", async () => {
     await writeFixture(`
-import { createCrocoApp, createApp } from '@foo/bar';
+import { createCrocoApp, createApp } from './app';
 import { UserController } from './somewhere';
 
 const app = createCrocoApp();
@@ -474,7 +606,7 @@ app.listen(3000);
 
   it("returns unsupported-pattern without changing spread registration", async () => {
     await writeFixture(`
-import { createCrocoApp, createApp } from '@foo/bar';
+import { createCrocoApp, createApp } from './app';
 import { FooController } from './somewhere';
 
 const app = createCrocoApp();
