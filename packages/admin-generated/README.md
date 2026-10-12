@@ -9,7 +9,7 @@ stable diagnostics instead of guessing.
 `generateAdminResourceFilesFromContractGraph` writes `admin-resources.ts` and an `index.ts` barrel by
 default. `resourceFileName` can select a nested path such as `nested/resources.ts`; parent directories
 are created and the barrel exports the resource module relative to `index.ts`. A resource path that
-normalizes to the output barrel's `index.ts` is rejected with `AdminGeneratedContractProblem` and
+normalizes to the output barrel's `index.ts` (including case variants on every platform) is rejected with `AdminGeneratedContractProblem` and
 diagnostic `admin-generated-output-path-collision` before any directories or files are written.
 
 Every generated operation, action, and client binding includes a normalized `entitlements` array.

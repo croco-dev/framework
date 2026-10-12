@@ -214,7 +214,8 @@ export function generateAdminResourceFilesFromContractGraph(
   const resourcePath = path.join(outDir, resourceFileName);
   const indexPath = path.join(outDir, "index.ts");
 
-  if (path.resolve(resourcePath) === path.resolve(indexPath)) {
+  // Reserve case variants on every host, including case-sensitive filesystems.
+  if (path.resolve(resourcePath).toLowerCase() === path.resolve(indexPath).toLowerCase()) {
     throw new AdminGeneratedContractProblem([
       {
         code: "admin-generated-output-path-collision",
