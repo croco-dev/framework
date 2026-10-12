@@ -5318,6 +5318,12 @@
       "owner": "@croco/transports-graphql"
     },
     {
+      "path": "packages/transports-graphql/src/tests/GraphQLStreaming.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/transports-graphql"
+    },
+    {
       "path": "packages/transports-graphql/src/tests/GraphQLTransportProblems.spec.ts",
       "lane": "fast",
       "qualifiers": [],
