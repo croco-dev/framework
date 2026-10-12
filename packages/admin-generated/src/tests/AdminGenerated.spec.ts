@@ -1,5 +1,6 @@
 import "reflect-metadata";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { ProblemCategory } from "@croco/problems-core";
@@ -91,6 +92,100 @@ const updateUserSchema = z.object({
   name: z.string().optional(),
 });
 describe("admin-generated", () => {
+  describe("resource file paths", () => {
+    @Controller("/files")
+    class FilesController {
+      @Get("/")
+      @ResponseSchema(z.string())
+      list(): string {
+        return "ok";
+      }
+    }
+
+    it.each(["index.ts", "./index.ts", "nested/../index.ts"])(
+      "rejects barrel collision %s before changing existing files",
+      (resourceFileName) => {
+        const outDir = mkdtempSync(join(tmpdir(), "croco-admin-collision-"));
+        try {
+          writeFileSync(join(outDir, "index.ts"), "existing barrel\n");
+          writeFileSync(join(outDir, "admin-resources.ts"), "existing resources\n");
+          let failure: unknown;
+          try {
+            generateAdminResourceFilesFromContractGraph(
+              buildContractGraph([FilesController]),
+              outDir,
+              { resourceFileName },
+            );
+          } catch (error) {
+            failure = error;
+          }
+          expect(failure).toBeInstanceOf(AdminGeneratedContractProblem);
+          expect(failure).toMatchObject({
+            diagnostics: [{ code: "admin-generated-output-path-collision" }],
+          });
+          expect(readFileSync(join(outDir, "index.ts"), "utf8")).toBe("existing barrel\n");
+          expect(readFileSync(join(outDir, "admin-resources.ts"), "utf8")).toBe(
+            "existing resources\n",
+          );
+          const absentDir = join(outDir, "absent");
+          expect(() =>
+            generateAdminResourceFilesFromContractGraph(
+              buildContractGraph([FilesController]),
+              absentDir,
+              { resourceFileName },
+            ),
+          ).toThrow(AdminGeneratedContractProblem);
+          expect(existsSync(absentDir)).toBe(false);
+        } finally {
+          rmSync(outDir, { recursive: true, force: true });
+        }
+      },
+    );
+
+    it.each([
+      [undefined, "./admin-resources", false],
+      ["nested/resources.ts", "./nested/resources", false],
+      ["nested/resources.ts", "./nested/resources", true],
+      ["nested/index.ts", "./nested/index", false],
+      ["nested/../resources.ts", "./resources", false],
+      ["nested/user's-resources.ts", "./nested/user\\'s-resources", false],
+    ] as const)(
+      "exports usable resources through the barrel for %s (module: %s, existing parent: %s)",
+      (resourceFileName, moduleSpecifier, existingParent) => {
+        const outDir = mkdtempSync(join(tmpdir(), "croco-admin-paths-"));
+        try {
+          if (existingParent) mkdirSync(join(outDir, "nested"));
+          const files = generateAdminResourceFilesFromContractGraph(
+            buildContractGraph([FilesController]),
+            outDir,
+            { resourceFileName },
+          );
+          expect(readFileSync(join(outDir, "index.ts"), "utf8")).toBe(
+            `export * from '${moduleSpecifier}';\n`,
+          );
+          for (const file of files) {
+            writeFileSync(
+              file.replace(/\.ts$/, ".js"),
+              ts.transpileModule(readFileSync(file, "utf8"), {
+                compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
+              }).outputText,
+            );
+          }
+          const generated = createRequire(join(outDir, "consumer.js"))("./index.js");
+          expect(generated.adminResources).toMatchObject([
+            { path: "/files", operations: { list: { routeId: "FilesController.list" } } },
+          ]);
+          expect(generated.adminClientBindings.filesControllerList).toMatchObject({
+            routeId: "FilesController.list",
+            path: "/files",
+          });
+        } finally {
+          rmSync(outDir, { recursive: true, force: true });
+        }
+      },
+    );
+  });
+
   it.each([
     ["null literal", z.literal(null), "null", "null"],
     ["string literal", z.literal("active"), "'active'", '"active"'],

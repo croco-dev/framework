@@ -210,13 +210,32 @@ export function generateAdminResourceFilesFromContractGraph(
   outDir: string,
   options: AdminGenerateFilesOptions = {},
 ): string[] {
-  fs.mkdirSync(outDir, { recursive: true });
   const resourceFileName = options.resourceFileName ?? "admin-resources.ts";
   const resourcePath = path.join(outDir, resourceFileName);
   const indexPath = path.join(outDir, "index.ts");
 
-  fs.writeFileSync(resourcePath, generateAdminResourceSourceFromContractGraph(graph));
-  fs.writeFileSync(indexPath, `export * from './${path.basename(resourceFileName, ".ts")}';\n`);
+  if (path.resolve(resourcePath) === path.resolve(indexPath)) {
+    throw new AdminGeneratedContractProblem([
+      {
+        code: "admin-generated-output-path-collision",
+        path: resourceFileName,
+        message: `Cannot generate admin resources at '${resourceFileName}': index.ts is reserved for the barrel. Choose a distinct resource file path.`,
+      },
+    ]);
+  }
+
+  const source = generateAdminResourceSourceFromContractGraph(graph);
+  const relativePath = path
+    .relative(path.dirname(indexPath), resourcePath)
+    .split(path.sep)
+    .join("/");
+  const modulePath = relativePath.endsWith(".ts") ? relativePath.slice(0, -3) : relativePath;
+  const moduleSpecifier = modulePath.startsWith("../") ? modulePath : `./${modulePath}`;
+
+  fs.mkdirSync(outDir, { recursive: true });
+  fs.mkdirSync(path.dirname(resourcePath), { recursive: true });
+  fs.writeFileSync(resourcePath, source);
+  fs.writeFileSync(indexPath, `export * from ${stringValueToTypeScript(moduleSpecifier)};\n`);
 
   return [resourcePath, indexPath];
 }
