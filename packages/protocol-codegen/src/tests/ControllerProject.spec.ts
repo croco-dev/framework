@@ -133,7 +133,7 @@ describe("createControllerProject", () => {
     },
   );
 
-  it.each(["react-jsx", "react-jsxdev"] as const)(
+  it.each(["react-jsx", "react-jsxdev", "preserve", "react-native"] as const)(
     "retains the automatic JSX runtime in %s mode",
     async (jsx) => {
       const root = createTemporaryDirectory();
@@ -186,6 +186,96 @@ describe("createControllerProject", () => {
       }
     },
   );
+
+  it.each([
+    { name: "default React factory", options: {}, jsxValue: "<Marker />" },
+    { name: "missing custom factory", options: { jsxFactory: "missing" }, jsxValue: "<Marker />" },
+    {
+      name: "missing fragment factory",
+      options: { jsxFactory: "element" },
+      jsxValue: "<><Marker /></>",
+    },
+  ])("rejects a $name before emitting JSX-preserving modules", ({ options, jsxValue }) => {
+    const root = createTemporaryDirectory();
+    writeJson(path.join(root, "package.json"), { type: "module" });
+    writeJson(path.join(root, "tsconfig.json"), {
+      compilerOptions: {
+        target: "ES2022",
+        module: "ESNext",
+        moduleResolution: "Bundler",
+        jsx: "preserve",
+        ...options,
+      },
+    });
+    writeFile(
+      path.join(root, "Controller.tsx"),
+      `
+      function element(component: () => string) { return component(); }
+      function Marker() { return 'marker'; }
+      export class Controller { static value = ${jsxValue}; }
+    `,
+    );
+    const session = createControllerProject({ cwd: root, controllers: "Controller.tsx" });
+    try {
+      expect(session.getPreEmitDiagnostics()).toEqual([]);
+      let thrown: unknown;
+      try {
+        session.emit();
+      } catch (error) {
+        thrown = error;
+      }
+      expect(thrown).toMatchObject({
+        extensions: {
+          crocoCode: "CROCO_BUILD_004",
+          tsconfigPath: path.join(root, "tsconfig.json"),
+          recoveryAction: expect.stringContaining("jsxFactory"),
+          diagnostics: expect.any(Array),
+        },
+      });
+      expect(fs.existsSync(path.join(session.emitDir, "Controller.js"))).toBe(false);
+      expect(session.project.getCompilerOptions().jsx).toBe(ts.JsxEmit.Preserve);
+    } finally {
+      session.dispose();
+    }
+  });
+
+  it("imports JSX fragments with configured factory bindings in preserve mode", async () => {
+    const root = createTemporaryDirectory();
+    writeJson(path.join(root, "package.json"), { type: "module" });
+    writeJson(path.join(root, "tsconfig.json"), {
+      compilerOptions: {
+        target: "ES2022",
+        module: "ESNext",
+        moduleResolution: "Bundler",
+        jsx: "preserve",
+        jsxFactory: "element",
+        jsxFragmentFactory: "fragment",
+      },
+    });
+    writeFile(
+      path.join(root, "Controller.tsx"),
+      `
+      const fragment = 'fragment';
+      function element(component: string | (() => string), _props: unknown, ...children: string[]) {
+        return typeof component === 'string' ? component + ':' + children.join(',') : component();
+      }
+      function Marker() { return 'marker'; }
+      export class Controller { static value = <><Marker /></>; }
+    `,
+    );
+    const session = createControllerProject({ cwd: root, controllers: "Controller.tsx" });
+    try {
+      expect(session.getPreEmitDiagnostics()).toEqual([]);
+      session.emit();
+      const [moduleExports] = await session.importControllerModules();
+      expect((moduleExports.Controller as { value: string }).value).toBe("fragment:marker");
+      expect(readNativeControllerValue(path.join(session.emitDir, "Controller.js"))).toBe(
+        "fragment:marker",
+      );
+    } finally {
+      session.dispose();
+    }
+  });
 
   it("imports explicit MTS and CTS outputs in a NodeNext project with jsx preserve", async () => {
     const root = createTemporaryDirectory();

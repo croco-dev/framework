@@ -82,6 +82,32 @@ class ControllerProjectStateProblem extends Problem {
   }
 }
 
+class ControllerProjectJsxRuntimeProblem extends Problem {
+  constructor(tsconfigPath: string | null, diagnostics: readonly Diagnostic[]) {
+    const recoveryAction =
+      "Import the configured JSX factory (React by default), provide jsxFactory and jsxFragmentFactory bindings, or configure jsxImportSource with an installed automatic JSX runtime.";
+    const evidence = diagnostics.map((diagnostic) => ({
+      code: diagnostic.getCode(),
+      sourcePath: diagnostic.getSourceFile()?.getFilePath(),
+      start: diagnostic.getStart(),
+      message: ts.flattenDiagnosticMessageText(diagnostic.compilerObject.messageText, "\n"),
+    }));
+    super(
+      "protocol-codegen/controller-project-jsx-runtime",
+      ProblemCategory.ValidationError,
+      `${CONTROLLER_PROJECT_CONFIG_CODE}: Temporary JSX runtime cannot be emitted. ${evidence.map((item) => `${item.sourcePath}: ${item.message}`).join("\n")} Recovery: ${recoveryAction}`,
+      {
+        extensions: {
+          crocoCode: CONTROLLER_PROJECT_CONFIG_CODE,
+          tsconfigPath,
+          diagnostics: evidence,
+          recoveryAction,
+        },
+      },
+    );
+  }
+}
+
 export function createControllerProject(
   options: CreateControllerProjectOptions,
 ): ControllerProject {
@@ -160,6 +186,10 @@ export function createControllerProject(
     },
     emit(): void {
       assertActive(disposed);
+      for (const [index, context] of emitContexts.entries()) {
+        const analysisContext = analysisContexts[index];
+        validateRuntimeJsx(analysisContext, context, discoveredConfigPath);
+      }
       for (const context of emitContexts) {
         for (const sourceFile of context.sourceFiles) {
           const sourcePath = sourceFile.getFilePath();
@@ -365,7 +395,9 @@ function createEmitCompilerOptions(
     // Analysis keeps the application's JSX mode; temporary modules must run in Node.
     jsx:
       compilerOptions.jsx === ts.JsxEmit.Preserve || compilerOptions.jsx === ts.JsxEmit.ReactNative
-        ? ts.JsxEmit.React
+        ? compilerOptions.jsxImportSource
+          ? ts.JsxEmit.ReactJSX
+          : ts.JsxEmit.React
         : compilerOptions.jsx,
     rootDir,
     outDir,
@@ -377,6 +409,52 @@ function createEmitCompilerOptions(
     incremental: false,
     composite: false,
   };
+}
+
+function validateRuntimeJsx(
+  analysisContext: ProjectContext,
+  emitContext: ProjectContext,
+  tsconfigPath: string | null,
+): void {
+  const jsx = analysisContext.project.getCompilerOptions().jsx;
+  if (jsx !== ts.JsxEmit.Preserve && jsx !== ts.JsxEmit.ReactNative) return;
+
+  const diagnosticKey = (diagnostic: Diagnostic): string =>
+    [
+      diagnostic.getCode(),
+      diagnostic.getSourceFile()?.getFilePath(),
+      diagnostic.getStart(),
+      ts.flattenDiagnosticMessageText(diagnostic.compilerObject.messageText, "\n"),
+    ].join(":");
+  const analysisDiagnostics = new Set(
+    analysisContext.project.getPreEmitDiagnostics().map(diagnosticKey),
+  );
+  const ownedSourcePaths = new Set(
+    emitContext.sourceFiles.map((sourceFile) => sourceFile.getFilePath()),
+  );
+  const runtimeDiagnostics = emitContext.project.getPreEmitDiagnostics().filter((diagnostic) => {
+    const sourceFile = diagnostic.getSourceFile();
+    if (
+      !sourceFile ||
+      !ownedSourcePaths.has(sourceFile.getFilePath()) ||
+      analysisDiagnostics.has(diagnosticKey(diagnostic))
+    ) {
+      return false;
+    }
+    const node = sourceFile.getDescendantAtPos(diagnostic.getStart() ?? 0);
+    return (
+      node &&
+      [node, ...node.getAncestors()].some(
+        (ancestor) =>
+          ts.isJsxElement(ancestor.compilerNode) ||
+          ts.isJsxSelfClosingElement(ancestor.compilerNode) ||
+          ts.isJsxFragment(ancestor.compilerNode),
+      )
+    );
+  });
+  if (runtimeDiagnostics.length > 0) {
+    throw new ControllerProjectJsxRuntimeProblem(tsconfigPath, runtimeDiagnostics);
+  }
 }
 
 function loadTsconfigGraph(tsconfigPath: string, explicit: boolean): LoadedTsconfig {
