@@ -182,5 +182,25 @@ describe.skipIf(!url)("PostgresLearningRepository", () => {
     ).rejects.toMatchObject({ code: "learning-registry/denied" });
     expect((await other.read(scope, draft.id))?.status).toBe("draft");
     expect(await other.history(scope, draft.id, undefined, 20)).toHaveLength(1);
+    await save(registry, { ...draft, revision: 1, status: "reviewed" }, "review");
+    const archive = { ...draft, revision: 2, status: "archived" as const };
+    await expect(
+      save(registry, { ...archive, facts: ["Unreviewed replacement"] }, "archive"),
+    ).rejects.toMatchObject({ code: "learning-registry/transition" });
+    expect((await other.read(scope, draft.id))?.revision).toBe(2);
+    expect((await other.read(scope, draft.id))?.facts).toEqual(draft.facts);
+    expect(await other.history(scope, draft.id, undefined, 20)).toHaveLength(2);
+    // A rejected command leaves no receipt: the corrected command may reuse its key.
+    expect((await save(registry, archive, "archive")).revision).toBe(3);
+    expect((await other.read(scope, draft.id))?.status).toBe("archived");
+    expect(
+      (
+        await save(
+          registry,
+          { ...archive, revision: 3, status: "draft", facts: ["Reopened"] },
+          "reopen",
+        )
+      ).revision,
+    ).toBe(4);
   });
 });

@@ -354,9 +354,14 @@ describe("LearningRegistry", () => {
     await expect(f.save({ ...value, revision: 2, status: "reviewed" })).rejects.toMatchObject({
       code: "learning-registry/transition",
     });
-    await f.save({ ...value, revision: 2, status: "draft" });
+    await expect(
+      f.save({ ...value, revision: 2, status: "archived", facts: ["Unreviewed replacement"] }),
+    ).rejects.toMatchObject({ code: "learning-registry/transition" });
+    expect((await f.service.read(scope, "record", access)).revision).toBe(2);
+    await f.save({ ...value, revision: 2, status: "archived" });
+    await f.save({ ...value, revision: 3, status: "draft", facts: ["Reopened replacement"] });
     expect((await f.service.history(scope, "record", access)).map((r) => r.view.revision)).toEqual([
-      3, 2, 1,
+      4, 3, 2, 1,
     ]);
   });
   it("prevents a draft-only writer from confirming hypotheses or reopening reviewed records", async () => {

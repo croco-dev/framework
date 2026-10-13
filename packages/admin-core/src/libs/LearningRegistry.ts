@@ -406,6 +406,18 @@ export function validateLearningCommit(
       "transition",
       "Reopen a reviewed record as a draft before editing",
     );
+  if (
+    current?.status === "reviewed" &&
+    command.record.status === "archived" &&
+    CONTENT_FIELDS.some(
+      (field) =>
+        field !== "status" && canonical(current[field]) !== canonical(command.record[field]),
+    )
+  )
+    throw new LearningRegistryProblem(
+      "transition",
+      "Archive reviewed content unchanged or reopen it as a draft before editing",
+    );
 }
 function canonical(value: unknown): string {
   if (Array.isArray(value)) return `[${value.map(canonical).join(",")}]`;
