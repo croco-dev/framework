@@ -243,18 +243,15 @@ export function validateLearningEvidence(ref: EvidenceRef): void {
   )
     invalid("Evidence requires source, identity, version and an ordered observation window");
   if (ref.url !== undefined) {
+    if (typeof ref.url !== "string" || ref.url.length > 2048)
+      invalid("Evidence URL requires a string of at most 2048 characters");
     let url: URL;
     try {
       url = new URL(ref.url);
     } catch {
       invalid("Invalid evidence URL");
     }
-    if (
-      ref.url.length > 2048 ||
-      !["https:", "http:"].includes(url.protocol) ||
-      url.username ||
-      url.password
-    )
+    if (!["https:", "http:"].includes(url.protocol) || url.username || url.password)
       invalid("Evidence URL requires HTTP(S) without credentials");
   }
   if (Object.keys(ref.observedWindow).some((key) => !["from", "to"].includes(key)))

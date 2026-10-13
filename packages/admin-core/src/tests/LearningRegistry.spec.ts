@@ -2,6 +2,7 @@ import { describe, expect, expectTypeOf, it } from "vitest";
 import {
   LearningRegistry,
   LearningRegistryProblem,
+  importLearningEvidence,
   learningEvidenceKey,
   learningRecordResource,
   validateLearningCommit,
@@ -435,6 +436,24 @@ describe("LearningRegistry", () => {
     await expect(f.save({ ...record(), facts: ["customer@example.test"] })).rejects.toMatchObject({
       code: "learning-registry/input",
     });
+    for (const url of [
+      ["https://example.test/report"],
+      ["https://example.test/" + "a".repeat(5000)],
+      null,
+      "https://example.test/" + "a".repeat(2049),
+    ]) {
+      const invalidRef = { ...ref, url } as unknown as EvidenceRef;
+      expect(() => importLearningEvidence(JSON.stringify(invalidRef))).toThrow(
+        LearningRegistryProblem,
+      );
+      await expect(f.save({ ...record(), evidenceRefs: [invalidRef] })).rejects.toMatchObject({
+        code: "learning-registry/input",
+      });
+    }
+    const boundaryUrl = "https://example.test/".padEnd(2048, "a");
+    expect(importLearningEvidence(JSON.stringify({ ...ref, url: boundaryUrl })).url).toBe(
+      boundaryUrl,
+    );
     for (const bad of [
       { ...ref, url: "javascript:confirm()" },
       { ...ref, url: "https://user:secret@example.test" },
