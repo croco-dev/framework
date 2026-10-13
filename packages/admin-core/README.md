@@ -379,3 +379,9 @@ Readers must return complete normalized input within the requested limit. A resu
 Source states distinguish `empty`, `provisional`, `insufficient`, `denied`, `error` and `ready`; the client supplies `loading`. Missing observation completeness never publishes a complete value. Typed Croco Problems retain their diagnostic code; untyped provider errors become `admin-core/retention-source-failed` without exposing provider details.
 
 Each loaded snapshot includes `inputToken`, a SHA-256 digest of the definition, selected windows/options, scope, normalized observations, history/completeness cutoffs and deleted subjects. Pass that token in every `drilldown` page request. The source reauthorizes, rereads and rejects changed input with `admin-core/retention-stale-input` before exposing subject labels. Reload the aggregate snapshot to recover; never retry a page against a new token while displaying old counts. Tokens require Web Crypto (`globalThis.crypto.subtle`) on the server, add no store, and grant no authorization. Input row ordering does not change the token.
+
+## Research recruitment
+
+`ResearchOperations` exposes bounded reads and audited actions for a `ResearchService`. Resolve
+`ResearchAccess` from the verified server session and pass it separately from browser action and
+command bodies. All subject, tenant and field permissions remain enforced by the service.

@@ -573,3 +573,6 @@ export type {
 } from "./libs/RetentionWorkbench";
 
 export type { RetentionSavedView, RetentionSavedViewStore } from "./libs/RetentionWorkbench";
+
+export { ResearchOperations } from "./libs/ResearchOperations";
+export type { ResearchAction, ResearchConsoleState } from "./libs/ResearchOperations";

@@ -68,6 +68,12 @@
       "owner": "repo:examples"
     },
     {
+      "path": "examples/research-recruitment/src/tests/Recruitment.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "repo:examples"
+    },
+    {
       "path": "examples/saas-billing-golden-path/src/tests/golden-path.spec.ts",
       "lane": "fast",
       "qualifiers": [],
@@ -285,6 +291,12 @@
     },
     {
       "path": "packages/admin-core/src/tests/ReminderOperations.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-core"
+    },
+    {
+      "path": "packages/admin-core/src/tests/ResearchOperations.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/admin-core"
@@ -585,6 +597,12 @@
     },
     {
       "path": "packages/admin-react/src/tests/ReminderOperationsPanel.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-react"
+    },
+    {
+      "path": "packages/admin-react/src/tests/ResearchRecruitmentConsole.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/admin-react"
@@ -4560,6 +4578,30 @@
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/repository-core"
+    },
+    {
+      "path": "packages/research-core/src/tests/ResearchEngagement.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/research-core"
+    },
+    {
+      "path": "packages/research-core/src/tests/ResearchService.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/research-core"
+    },
+    {
+      "path": "packages/research-drizzle/src/tests/DrizzleResearchStore.postgres.spec.ts",
+      "lane": "live",
+      "qualifiers": [],
+      "owner": "@croco/research-drizzle"
+    },
+    {
+      "path": "packages/research-drizzle/src/tests/DrizzleResearchStore.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/research-drizzle"
     },
     {
       "path": "packages/retry-core/src/tests/BackoffPolicy.spec.ts",

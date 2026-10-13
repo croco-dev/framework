@@ -375,3 +375,6 @@ export type { RetentionOfferConsoleProps } from "./libs/RetentionOfferConsole";
 
 export { RetentionWorkbench } from "./libs/RetentionWorkbench";
 export type { RetentionWorkbenchProps } from "./libs/RetentionWorkbench";
+
+export { ResearchRecruitmentConsole } from "./libs/ResearchRecruitmentConsole";
+export type { ResearchRecruitmentConsoleProps } from "./libs/ResearchRecruitmentConsole";

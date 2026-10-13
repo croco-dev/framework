@@ -634,3 +634,12 @@ Cards distinguish periodic retention, first-behavior cohort retention and freque
 Pass the callback token to the server unchanged, including `onNextPage(selectionId, offset, inputToken)`. Set `drilldownState="stale"` when the source returns `admin-core/retention-stale-input`. Stale pages are hidden, including pages whose token differs from the displayed snapshot. The required `onReload` callback reloads aggregate results and clears the previous drilldown. Provider errors also expose this reload action; access denial remains explicit.
 
 The retention workbench renders periodic window trends and first-behavior cohort cells from server-provided cards. Cell buttons use the same snapshot token as denominator inspection. Multiple registered window selections form the trend/cohort table; frequency buckets remain server-calculated.
+
+## Research recruitment
+
+`ResearchRecruitmentConsole` renders authorized `ResearchConsoleState`, group population,
+invitation/acceptance/participation and shortage counts, replacement selection, contact history,
+consent and private note controls. `onAction` must call server-owned `ResearchOperations` and
+return a fresh authorized page; display permissions never replace server checks. Unknown external
+acceptance requires verified provider reconciliation and retains its quota slot. Loading, empty,
+denied, error and partial/unknown states do not imply nonparticipation or representative insight.

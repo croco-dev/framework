@@ -19,7 +19,8 @@
       "@croco/metrics-core": ["../metrics-core/src/index.ts"],
       "@croco/cohort-core": ["../cohort-core/src/index.ts"],
       "@croco/onboarding-core": ["../onboarding-core/src/index.ts"],
-      "@croco/engagement-core": ["../engagement-core/src/index.ts"]
+      "@croco/engagement-core": ["../engagement-core/src/index.ts"],
+      "@croco/research-core": ["../research-core/src/index.ts"]
     }
   },
   "include": ["src/**/*.ts", "src/**/*.tsx"]
