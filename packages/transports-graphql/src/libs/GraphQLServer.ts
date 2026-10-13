@@ -230,7 +230,10 @@ export class GraphQLServer {
           });
 
           phase = "response-body";
-          if (response.headers.get("content-type")?.split(";")[0]?.trim() === "text/event-stream") {
+          if (
+            response.headers.get("content-type")?.split(";")[0]?.trim().toLowerCase() ===
+            "text/event-stream"
+          ) {
             await this.streamNodeResponse(res, response, abortScope);
             return;
           }

@@ -214,33 +214,36 @@ describe("GraphQL Node subscription streaming", () => {
     },
   );
 
-  it("flushes headers before a delayed first chunk and preserves separate cookies", async () => {
-    const server = new GraphQLServer({ schema: subscriptionSchema(async function* () {}) });
-    await server.initialize();
-    const headers = new Headers({ "content-type": "text/event-stream" });
-    headers.append("set-cookie", "session=one; HttpOnly; Path=/");
-    headers.append("set-cookie", "csrf=two; SameSite=Strict; Path=/");
-    const cancelled = gate();
-    const upstream = new Response(new ReadableStream({ cancel: () => cancelled.resolve() }), {
-      headers,
-    });
-    Reflect.set(server, "yogaHandler", async () => upstream);
-    const client = new AbortController();
-    await server.start(0);
-    try {
-      const response = await within(subscribe(endpoint(server), client.signal));
-      expect(response.headers.getSetCookie()).toEqual([
-        "session=one; HttpOnly; Path=/",
-        "csrf=two; SameSite=Strict; Path=/",
-      ]);
-      client.abort();
-      await within(cancelled.promise);
-      expect(upstream.body?.locked).toBe(false);
-    } finally {
-      client.abort();
-      await server.stop();
-    }
-  });
+  it.each(["text/event-stream", "Text/Event-Stream; charset=utf-8"])(
+    "flushes %s headers before a delayed first chunk and preserves separate cookies",
+    async (contentType) => {
+      const server = new GraphQLServer({ schema: subscriptionSchema(async function* () {}) });
+      await server.initialize();
+      const headers = new Headers({ "content-type": contentType });
+      headers.append("set-cookie", "session=one; HttpOnly; Path=/");
+      headers.append("set-cookie", "csrf=two; SameSite=Strict; Path=/");
+      const cancelled = gate();
+      const upstream = new Response(new ReadableStream({ cancel: () => cancelled.resolve() }), {
+        headers,
+      });
+      Reflect.set(server, "yogaHandler", async () => upstream);
+      const client = new AbortController();
+      await server.start(0);
+      try {
+        const response = await within(subscribe(endpoint(server), client.signal));
+        expect(response.headers.getSetCookie()).toEqual([
+          "session=one; HttpOnly; Path=/",
+          "csrf=two; SameSite=Strict; Path=/",
+        ]);
+        client.abort();
+        await within(cancelled.promise);
+        expect(upstream.body?.locked).toBe(false);
+      } finally {
+        client.abort();
+        await server.stop();
+      }
+    },
+  );
 
   it("waits for Node drain before pulling the next payload", async () => {
     const server = new GraphQLServer({ schema: subscriptionSchema(async function* () {}) });
