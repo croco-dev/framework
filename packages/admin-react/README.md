@@ -643,3 +643,20 @@ consent and private note controls. `onAction` must call server-owned `ResearchOp
 return a fresh authorized page; display permissions never replace server checks. Unknown external
 acceptance requires verified provider reconciliation and retains its quota slot. Loading, empty,
 denied, error and partial/unknown states do not imply nonparticipation or representative insight.
+
+## Growth Model Workbench
+
+`GrowthModelWorkbench` accepts an `initialRequest` and a `GrowthWorkbenchClient` wired to the server's
+`createGrowthModelWorkbenchSource`. Mount a new component when changing authenticated scope or model
+identity. Native labeled editors cover purpose, state evidence and version; structured editors cover
+full definitions, horizon, initial population, per-step inflows, explicit probability-row transfers,
+and backtest cutoff/window/error metric. Calculation always submits the actual inputs to the shared
+server service. Edits invalidate displayed results and stale asynchronous responses cannot restore
+them. Save submits the displayed analysis hash and expected report revision; saved versions can be
+inspected alongside the current result.
+
+Observed populations and transition denominators, user assumptions, calculated fractional projections
+and historical errors are labeled separately. Unknown periods and zero-actual MAPE retain their
+reasons; aggregate input does not claim verified individual membership. Tables scroll within their
+containers and display rounding is never reused in simulation. Explicit loading/empty/partial/denied/
+error states remain distinct. See [the independent local example](../../examples/growth-model/README.md).

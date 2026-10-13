@@ -378,3 +378,6 @@ export type { RetentionWorkbenchProps } from "./libs/RetentionWorkbench";
 
 export { ResearchRecruitmentConsole } from "./libs/ResearchRecruitmentConsole";
 export type { ResearchRecruitmentConsoleProps } from "./libs/ResearchRecruitmentConsole";
+
+export { GrowthModelWorkbench } from "./libs/GrowthModelWorkbench";
+export type { GrowthWorkbenchClient, GrowthModelWorkbenchProps } from "./libs/GrowthModelWorkbench";

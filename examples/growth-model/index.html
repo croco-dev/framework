@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Growth Model Workbench</title>
+    <style>
+      body {
+        margin: 0;
+        background: #f7f8fa;
+        color: #152335;
+        font: 16px/1.5 system-ui;
+      }
+      main {
+        max-width: 1100px;
+        margin: auto;
+        padding: 24px;
+      }
+      h1 {
+        font-size: 32px;
+      }
+      h2 {
+        border-top: 1px solid #ccd3de;
+        padding-top: 24px;
+      }
+      label {
+        display: block;
+        margin: 16px 0;
+      }
+      textarea,
+      input,
+      select,
+      button {
+        font: inherit;
+        border: 1px solid #8b99ac;
+        border-radius: 4px;
+        padding: 8px;
+      }
+      textarea {
+        font:
+          14px/1.4 ui-monospace,
+          monospace;
+        background: white;
+      }
+      button {
+        margin: 4px 8px 4px 0;
+        background: #133e66;
+        color: white;
+        cursor: pointer;
+      }
+      button:disabled {
+        opacity: 0.5;
+        cursor: default;
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+        background: white;
+      }
+      th,
+      td {
+        text-align: left;
+        padding: 8px;
+        border-bottom: 1px solid #d6dce5;
+      }
+      caption {
+        text-align: left;
+        font-weight: 600;
+        padding: 8px 0;
+      }
+      section {
+        min-width: 0;
+      }
+      p {
+        overflow-wrap: anywhere;
+      }
+      :focus-visible {
+        outline: 3px solid #c76712;
+        outline-offset: 3px;
+      }
+      @media (max-width: 600px) {
+        main {
+          padding: 12px;
+        }
+        h1 {
+          font-size: 26px;
+        }
+        button {
+          width: 100%;
+          margin: 4px 0;
+        }
+        input {
+          max-width: 90%;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script src="/browser.js"></script>
+  </body>
+</html>

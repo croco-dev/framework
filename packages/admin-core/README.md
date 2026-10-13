@@ -385,3 +385,28 @@ Each loaded snapshot includes `inputToken`, a SHA-256 digest of the definition, 
 `ResearchOperations` exposes bounded reads and audited actions for a `ResearchService`. Resolve
 `ResearchAccess` from the verified server session and pass it separately from browser action and
 command bodies. All subject, tenant and field permissions remain enforced by the service.
+
+## Growth Model Workbench source
+
+`createGrowthModelWorkbenchSource` accepts a server adapter and explicit `GrowthLimits`. Its `load`
+method reads pinned aggregate history, validates scope/units, estimates transitions, projects an
+editable scenario and backtests against last-value with the same metrics APIs. `calculate` returns
+stable Problems directly; `load` models loading, denied, error, empty, incomplete and ready states.
+Ready reports retain per-period completeness and excluded training steps.
+
+`save(request, id, expectedRevision, displayedAnalysisHash)` reauthorizes read/report permissions,
+recomputes and rejects stale inputs. Its optional `GrowthReportStore` must atomically compare the
+revision and append audit history. The source supplies a host-authenticated actor, previous analysis
+hash and new revision; changing a saved model definition under the same version rejects. The host
+owns global model ID/version uniqueness. `readSaved` reauthorizes report access and rejects corrupt
+hashes or scope mismatches. Historical results remain pinned; a saved report is not automatically
+recomputed or claimed current. Hosts must apply privacy/deletion policy to source and saved-report
+read authority and remove report metadata when required.
+
+Reports store definition/scenario, model/input/analysis SHA-256, source revision, cutoff and aggregate
+results; they do not store subject IDs or original customer logs. Human definition metadata must be
+PII-free. The adapter owns authenticated app/environment/tenant, immutable source evidence and bounded
+reading. Never infer global authority from an absent tenant or return truncated complete data.
+
+See [the synthetic standalone example](../../examples/growth-model/README.md) for a real local file
+audit repository and independent calculations; no database is required for this feature.

@@ -259,3 +259,34 @@ export type {
   BehaviorFrequencyOptions,
   BehaviorFrequencyResult,
 } from "./libs/BehaviorMetrics";
+
+export {
+  GrowthModelProblem,
+  DEFAULT_GROWTH_LIMITS,
+  validateGrowthScope,
+  validateStatePartition,
+  validateGrowthMatrix,
+  validateGrowthDataset,
+  estimateTransitionMatrix,
+  projectGrowthModel,
+  backtestGrowthModel,
+} from "./libs/growth/GrowthModel";
+export {
+  collectGrowthHistory,
+  importGrowthHistory,
+  importGrowthCounts,
+} from "./libs/growth/GrowthSources";
+export type {
+  GrowthScope,
+  GrowthStateDefinition,
+  GrowthModel,
+  GrowthLimits,
+  GrowthPopulation,
+  GrowthTransition,
+  GrowthDataset,
+  GrowthScenario,
+  GrowthEstimate,
+  GrowthProjection,
+  GrowthBacktest,
+} from "./libs/growth/GrowthModel";
+export type { GrowthHistoryMetadata, GrowthHistoryBinding } from "./libs/growth/GrowthSources";
