@@ -101,6 +101,7 @@ export async function collectGrowthHistory(
     return { period: p.index, values, complete: p.complete };
   });
   const transitions: GrowthTransition[] = [];
+  const knownSubjects = new Set<string>();
   for (let i = 0; i < ordered.length - 1; i++) {
     const p = ordered[i],
       q = ordered[i + 1];
@@ -110,19 +111,21 @@ export async function collectGrowthHistory(
     if (!before || !after) fail("history-period");
     const counts = states.map(() => Array<number>(states.length).fill(0)),
       inflows = Array<number>(states.length).fill(0);
-    let missing = 0;
     for (const [subject, state] of before) {
+      knownSubjects.add(subject);
       const next = after.get(subject);
       if (next === undefined) {
-        missing++;
         continue;
       }
       const row = counts[state];
       if (!row) fail("history-state");
       row[next] = (row[next] ?? 0) + 1;
     }
-    for (const [subject, state] of after)
+    for (const [subject, state] of after) {
+      knownSubjects.add(subject);
       if (!before.has(subject)) inflows[state] = (inflows[state] ?? 0) + 1;
+    }
+    const missing = knownSubjects.size - after.size;
     if (missing > 0) {
       diagnostics.push({ period: q.index, reason: "missing-state", count: missing });
       const population = populations[i + 1];

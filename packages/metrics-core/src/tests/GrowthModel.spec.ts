@@ -396,4 +396,52 @@ describe("GrowthModel", () => {
       }),
     ).toThrowError(/origin-counts/);
   });
+  it("retains unresolved subjects across missing periods and recovers only after their state returns", async () => {
+    const metadata = {
+      scope,
+      unit: "users",
+      period: "week",
+      sourceRevision: "gap",
+      periods: Array.from({ length: 5 }, (_, index) => ({ index, complete: true })),
+    };
+    const input = [
+      { subject: "u1", state: "new", period: 0 },
+      { subject: "u2", state: "active", period: 0 },
+      ...[1, 2, 3, 4].map((period) => ({ subject: "u1", state: "new", period })),
+      { subject: "u2", state: "active", period: 4 },
+    ];
+    const result = await collectGrowthHistory(rows(input), model, metadata, {
+      subjectId: "subject",
+      stateId: "state",
+      period: "period",
+    });
+    expect(result.populations.map((p) => p.complete)).toEqual([true, false, false, false, true]);
+    expect(
+      result.diagnostics.filter((d) => d.reason === "missing-state").map((d) => d.period),
+    ).toEqual([1, 2, 3]);
+    expect(result.transitions.every((t) => !t.complete)).toBe(true);
+    expect(() =>
+      estimateTransitionMatrix(
+        { ...model, transitionEstimationWindow: { from: 2, to: 3 } },
+        result,
+      ),
+    ).toThrowError(/unobserved-row/);
+  });
+  it("rejects numeric overflow instead of publishing an infinite MAPE or an unstable JSON report", () => {
+    const tiny = {
+      ...dataset,
+      transitions: dataset.transitions.filter((t) => t.from < 2),
+      populations: dataset.populations.map((p) =>
+        p.period === 3 ? { ...p, values: [Number.MIN_VALUE, 20] } : p,
+      ),
+    };
+    expect(() =>
+      backtestGrowthModel(model, tiny, {
+        trainEnd: 2,
+        testWindow: { from: 3, to: 3 },
+        errorMetric: "MAPE",
+        inflows: { ...scenario.inflows, values: [[0, 0]] },
+      }),
+    ).toThrowError(/backtest-overflow/);
+  });
 });

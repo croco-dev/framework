@@ -446,12 +446,15 @@ export function backtestGrowthModel(
           : options.errorMetric === "MAPE" && observed === 0
             ? "actual-zero"
             : null;
-      const error = (expected: number) =>
-        reason !== null || observed === null
-          ? null
-          : options.errorMetric === "MAE"
+      const error = (expected: number) => {
+        if (reason !== null || observed === null) return null;
+        const value =
+          options.errorMetric === "MAE"
             ? Math.abs(expected - observed)
             : Math.abs(expected - observed) / observed;
+        requireValue(Number.isFinite(value), "backtest-overflow");
+        return value;
+      };
       results.push({
         period: p,
         stateId: state.id,
