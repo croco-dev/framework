@@ -3,6 +3,7 @@ import { createRequire } from "node:module";
 import { mkdir, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { verifyModalLifecycle } from "./verify-modal-lifecycle.mjs";
 const requireDocs = createRequire(new URL("../../../packages/docs/package.json", import.meta.url));
 const { chromium } = requireDocs("@playwright/test");
 const origin = process.env.RESEARCH_BROWSER_ORIGIN ?? "http://127.0.0.1:4321";
@@ -96,6 +97,12 @@ try {
   );
   await dialog.getByLabel("Unclear", { exact: true }).check();
   await dialog.getByLabel("Satisfaction").selectOption("2");
+  assert.equal(
+    await dialog
+      .getByLabel("Optional comment (avoid personal information)")
+      .evaluate((element) => element.maxLength),
+    200,
+  );
   await dialog
     .getByLabel("Optional comment (avoid personal information)")
     .fill("<script>alert(1)</script> =1+2");
@@ -275,6 +282,7 @@ try {
   await screen("latest-denominator-after-delayed-results");
   await page.unroute("**/api/results");
   assert.deepEqual(errors, []);
+  await verifyModalLifecycle(browser, out);
   await writeFile(
     join(out, "evidence.json"),
     JSON.stringify(
@@ -284,6 +292,7 @@ try {
         errors,
         assertions: [
           "preview isolation",
+          "same-mounted modal identity replacement isolates late submit and dismiss",
           "product acknowledged before stalled optional invitation",
           "out-of-order results preserve latest denominator",
           "late acknowledgement cannot close newer invitation",

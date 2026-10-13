@@ -171,6 +171,12 @@ function SurveyForm(props: SurveyCardProps): ReactElement {
 }
 export type SurveyModalProps = SurveyCardProps & { onClose(): void; returnFocusTo?: HTMLElement };
 export function SurveyModal(props: SurveyModalProps): ReactElement {
+  return h(SurveyDialog, {
+    ...props,
+    key: JSON.stringify([props.identity, props.definition.id, props.definition.version]),
+  });
+}
+function SurveyDialog(props: SurveyModalProps): ReactElement {
   const [error, setError] = useState("");
   const mounted = useRef(true);
   const dialog = useRef<HTMLDialogElement>(null);
@@ -189,7 +195,7 @@ export function SurveyModal(props: SurveyModalProps): ReactElement {
     };
   }, []);
   const close = () => {
-    if (!mounted.current) return;
+    if (!mounted.current || !dialog.current?.isConnected) return;
     dialog.current?.close();
     props.onClose();
     returnFocus.current?.focus();

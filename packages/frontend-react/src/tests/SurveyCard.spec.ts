@@ -39,6 +39,6 @@ describe("SurveyCard", () => {
     expect(markup).not.toContain("<script>");
     expect(markup).toContain('type="button"');
     expect(markup).toContain("Skip survey");
-    expect(markup).toContain('maxlength="40"');
+    expect(markup).toMatch(/maxlength="40"/i);
   });
 });
