@@ -108,6 +108,7 @@ type FormFieldSchemaAnalysis = {
   readonly schema: unknown;
   readonly optional: boolean;
   readonly nullable: boolean;
+  readonly hasNullOption: boolean;
   readonly defaultValue?: unknown;
 };
 
@@ -2999,10 +3000,14 @@ function generateFormField(
   const required = !analysis.optional && !analysis.nullable && analysis.defaultValue === undefined;
   const baseValueType = getFormFieldBaseValueType(route, name, analysis.schema);
   const valueType =
-    analysis.optional || analysis.nullable ? `${baseValueType} | null` : baseValueType;
+    analysis.optional && analysis.hasNullOption
+      ? `${baseValueType} | undefined`
+      : analysis.optional || analysis.nullable
+        ? `${baseValueType} | null`
+        : baseValueType;
   const initialValueExpression = getFormFieldInitialValueExpression(route, name, analysis);
   const payloadValueExpression =
-    analysis.optional && !analysis.nullable
+    analysis.optional && !analysis.nullable && !analysis.hasNullOption
       ? `${getFormValuesAccessor(name)} === null ? undefined : ${getFormValuesAccessor(name)}`
       : getFormValuesAccessor(name);
 
@@ -3142,6 +3147,7 @@ function analyzeFormFieldSchema(schema: unknown): FormFieldSchemaAnalysis {
       schema: current,
       optional,
       nullable,
+      hasNullOption: getFormFieldOptions(current).some((option) => option.value === null),
       ...(defaultValue !== undefined ? { defaultValue } : {}),
     };
   }
@@ -3173,6 +3179,10 @@ function getFormFieldInitialValueExpression(
 ): string {
   if (analysis.defaultValue !== undefined) {
     return formLiteralValueToTypeScript(route, name, analysis.defaultValue);
+  }
+
+  if (analysis.optional && analysis.hasNullOption) {
+    return "undefined";
   }
 
   if (analysis.optional || analysis.nullable) {

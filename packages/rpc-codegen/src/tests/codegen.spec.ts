@@ -3612,6 +3612,84 @@ void submitCreateForm;
   );
 
   it(
+    "preserves optional null literal selections separately from untouched form fields",
+    async () => {
+      const body = z.object({
+        priority: z.union([z.literal("normal"), z.literal(null)]).optional(),
+        clear: z.literal(null).optional(),
+        defaultPriority: z.union([z.literal("normal"), z.literal(null)]).default(null),
+        note: z.string().optional(),
+        enabled: z.boolean().optional(),
+        wrapped: z.string().nullable().optional(),
+      });
+      const route: RouteIR = {
+        ...createBasicRoute(),
+        methodName: "update",
+        httpMethod: "PATCH",
+        inputSchema: body as any,
+        inputSchemas: { body: body as any, path: null, query: null, headers: null },
+      };
+      generateClientFiles([route], TEMP_DIR);
+      const source = fs.readFileSync(path.join(TEMP_DIR, "user.ts"), "utf-8");
+      const sentBodies: unknown[] = [];
+      const fetchImpl: GeneratedClientFetch = async (_url, init) => {
+        sentBodies.push(JSON.parse(String(init.body)));
+        return new Response(JSON.stringify({ id: "user-1", name: "Ada" }), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        });
+      };
+      const rpcModule = loadGeneratedRpcModule(fetchImpl);
+      const exported: Record<string, any> = {};
+      vm.runInNewContext(
+        ts.transpileModule(source, {
+          compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
+        }).outputText,
+        {
+          exports: exported,
+          fetch: fetchImpl,
+          URLSearchParams,
+          require: () => rpcModule,
+        },
+      );
+      const initial = exported.updateFormModel.initialValues;
+      const selected = exported.buildUpdateFormPayload({ ...initial, priority: null, clear: null });
+      expect(selected.priority).toBe(null);
+      expect(selected.clear).toBe(null);
+      expect(initial.priority).toBe(undefined);
+      expect(initial.clear).toBe(undefined);
+      expect(initial.defaultPriority).toBe(null);
+      expect(initial.note).toBe(null);
+      expect(initial.wrapped).toBe(null);
+      await exported.userClient.update(selected);
+      await exported.userClient.update(exported.buildUpdateFormPayload(initial));
+      await exported.userClient.update(
+        exported.buildUpdateFormPayload({
+          ...initial,
+          priority: "normal",
+          note: "keep",
+          enabled: false,
+        }),
+      );
+      expect(sentBodies).toEqual([
+        { priority: null, clear: null, defaultPriority: null, wrapped: null },
+        { defaultPriority: null, wrapped: null },
+        { priority: "normal", defaultPriority: null, note: "keep", enabled: false, wrapped: null },
+      ]);
+      expect(body.safeParse(sentBodies[0]).success).toBe(true);
+      assertGeneratedClientTypechecks(`${source}
+const untouched: UpdateFormValues = { ...updateFormModel.initialValues };
+const cleared: UpdateFormValues = { ...untouched, priority: null, clear: null };
+const normal: UpdateFormValues = { ...untouched, priority: 'normal' };
+const payload: UpdateSubmitPayload = buildUpdateFormPayload(cleared);
+void normal;
+void payload;
+`);
+    },
+    GENERATED_CLIENT_TYPECHECK_TIMEOUT_MS,
+  );
+
+  it(
     "should generate context-aware submit payload builders for update body forms",
     () => {
       const routes: RouteIR[] = [
