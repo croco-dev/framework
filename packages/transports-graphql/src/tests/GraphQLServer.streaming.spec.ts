@@ -161,6 +161,48 @@ describe("GraphQL Node subscription streaming", () => {
       }
     },
   );
+  it("stops without waiting for an uncooperative Yoga iterator", async () => {
+    const waiting = gate();
+    const release = gate();
+    const cleaned = gate();
+    const aborted = gate();
+    let executionSignal: AbortSignal | undefined;
+    let iteratorCleaned = false;
+    const server = new GraphQLServer({
+      schema: subscriptionSchema(async function* (signal) {
+        executionSignal = signal;
+        signal.addEventListener("abort", () => aborted.resolve(), { once: true });
+        try {
+          yield { sample: "live" };
+          waiting.resolve();
+          await release.promise;
+        } finally {
+          iteratorCleaned = true;
+          cleaned.resolve();
+        }
+      }),
+    });
+    const client = new AbortController();
+    await server.start(0);
+    try {
+      const response = await within(subscribe(endpoint(server), client.signal));
+      const reader = response.body?.getReader();
+      if (!reader) throw new Error("Missing subscription body");
+      await within(readUntil(reader, '"sample":"live"'));
+      await within(waiting.promise);
+      await within(server.stop());
+      await within(aborted.promise);
+      expect(executionSignal?.aborted).toBe(true);
+      expect(iteratorCleaned).toBe(false);
+      await within(expect(reader.read()).rejects.toThrow());
+    } finally {
+      client.abort();
+      release.resolve();
+      await server.stop();
+      await within(cleaned.promise);
+    }
+  });
+
   it.each(["socket-error", "write-throw"] as const)(
     "aborts the request signal and cleans the real Yoga iterator on %s",
     async (mode) => {
@@ -300,6 +342,7 @@ describe("GraphQL Node subscription streaming", () => {
       const server = new GraphQLServer({ schema: subscriptionSchema(async function* () {}) });
       await server.initialize();
       const cancelled = gate();
+      const cancelComplete = gate();
       let source: ReadableStreamDefaultController<Uint8Array> | undefined;
       const upstream = new Response(
         new ReadableStream<Uint8Array>({
@@ -307,7 +350,10 @@ describe("GraphQL Node subscription streaming", () => {
             source = controller;
             controller.enqueue(new TextEncoder().encode("event: next\ndata: first\n\n"));
           },
-          cancel: () => cancelled.resolve(),
+          cancel: () => {
+            cancelled.resolve();
+            return cancelComplete.promise;
+          },
         }),
         { headers: { "content-type": "text/event-stream" } },
       );
@@ -341,6 +387,7 @@ describe("GraphQL Node subscription streaming", () => {
         if (mode !== "source-error") await within(cancelled.promise);
         await vi.waitFor(() => expect(upstream.body?.locked).toBe(false));
       } finally {
+        cancelComplete.resolve();
         client.abort();
         await server.stop();
       }
