@@ -1,4 +1,5 @@
 import { spawn } from "node:child_process";
+import type { ChildProcess } from "node:child_process";
 import { createRequire } from "node:module";
 import { join } from "node:path";
 import { Problem, ProblemCategory } from "@croco/problems-core";
@@ -128,98 +129,155 @@ export type IsolatedRscEncodeInput = {
   readonly encoderModule?: string;
 };
 
+/**
+ * Runs the official Flight encoder in an isolated `react-server` child and
+ * relays its stdout as it is produced: a Flight render keeps its stream open
+ * until every Suspense boundary resolves, so waiting for the child to exit
+ * before answering would hold back the shell and defeat streaming. The child is
+ * torn down on abort, timeout, output overrun, or a consumer cancel, and those
+ * failures are raised on the returned stream instead of being swallowed.
+ */
 export async function encodeRscFlightInIsolatedEncoder(
   input: IsolatedRscEncodeInput,
 ): Promise<ReadableStream<Uint8Array>> {
   const encoderModule = input.encoderModule ?? resolveEncoderModule();
+  const requestSignal = input.request.signal;
+
+  // A caller that already disconnected never receives a response, so refuse
+  // before spawn instead of paying for a child process nobody reads.
+  if (requestSignal.aborted) {
+    throw new RscFlightEncodeAbortedProblem(input.route.path);
+  }
+
+  // Server components read the request they were rendered for, so forward the
+  // fields a document/Flight request carries and let the child rebuild it.
+  // Guessing them from `route.path` alone would hand components the wrong URL,
+  // query, and cookies.
   const payload = JSON.stringify({
     routePath: input.route.path,
     componentRef: input.route.componentRef,
-  });
-  const child = spawn(process.execPath, ["--conditions=react-server", encoderModule], {
-    env: {
-      ...process.env,
-      ["CROCO_RSC_COMPONENT_PATH"]: input.route.componentRef ?? "",
-      ["NODE_ENV"]: process.env["NODE_ENV"] ?? "production",
+    request: {
+      url: input.request.url,
+      method: input.request.method,
+      headers: Object.fromEntries(input.request.headers),
     },
-    stdio: ["pipe", "pipe", "pipe"],
   });
 
-  child.stdin.write(payload);
-  child.stdin.end();
-
-  const chunks: Uint8Array[] = [];
-  const stderr: Uint8Array[] = [];
-  let stdoutBytes = 0;
-  let outputLimitError: Error | undefined;
-  const requestSignal = input.request.signal;
-  const exit = new Promise<number>((resolve, reject) => {
-    const timer = setTimeout(() => {
-      child.kill("SIGKILL");
-      // Reject with a typed Problem so operators can distinguish an encoder
-      // stall from a render failure: both surface as 500, but the timeout
-      // code (`rsc-flight-encode-timeout`) carries the route and budget.
-      reject(new RscFlightEncodeTimeoutProblem(input.route.path, ENCODE_TIMEOUT_MS));
-    }, ENCODE_TIMEOUT_MS);
-
-    // The encoder is a per-request child process. Without forwarding the
-    // caller's abort it keeps rendering (and holding memory) for up to the
-    // full timeout after the client has already gone away.
-    const onAbort = (): void => {
-      child.kill("SIGKILL");
-      reject(new RscFlightEncodeAbortedProblem(input.route.path));
-    };
-    if (requestSignal.aborted) {
-      onAbort();
-      return;
-    }
-    requestSignal.addEventListener("abort", onAbort, { once: true });
-
-    child.stdout.on("data", (chunk: Uint8Array) => {
-      stdoutBytes += chunk.byteLength;
-      if (stdoutBytes > ENCODE_MAX_OUTPUT_BYTES) {
-        outputLimitError ??= new Error(
-          `RSC Flight encoder output exceeded ${ENCODE_MAX_OUTPUT_BYTES} bytes for route '${input.route.path}'`,
-        );
-        child.kill("SIGKILL");
-        return;
-      }
-      chunks.push(chunk);
-    });
-    child.stderr.on("data", (chunk: Uint8Array) => {
-      if (stderrBytes(stderr) < ENCODE_MAX_OUTPUT_BYTES) {
-        stderr.push(chunk);
-      }
-    });
-    child.on("error", (error) => {
-      clearTimeout(timer);
-      requestSignal.removeEventListener("abort", onAbort);
-      reject(error);
-    });
-    child.on("close", (code) => {
-      clearTimeout(timer);
-      requestSignal.removeEventListener("abort", onAbort);
-      if (outputLimitError) {
-        reject(outputLimitError);
-        return;
-      }
-      resolve(code ?? 1);
-    });
-  });
-
-  const code = await exit;
-  if (code !== 0) {
-    const detail = Buffer.concat(stderr).toString("utf8").slice(0, 500);
-
-    throw new RscFlightEncodeFailedProblem(input.route.path, code, detail);
-  }
-
-  const bytes = Buffer.concat(chunks);
+  let child: ChildProcess | undefined;
+  let settled = false;
 
   return new ReadableStream<Uint8Array>({
     start(controller) {
-      controller.enqueue(bytes);
-      controller.close();
+      const encoder = spawn(process.execPath, ["--conditions=react-server", encoderModule], {
+        env: {
+          ...process.env,
+          ["CROCO_RSC_COMPONENT_PATH"]: input.route.componentRef ?? "",
+          ["NODE_ENV"]: process.env["NODE_ENV"] ?? "production",
+        },
+        stdio: ["pipe", "pipe", "pipe"],
+      });
+      child = encoder;
+
+      const stderr: Uint8Array[] = [];
+      let stdoutBytes = 0;
+      let outputLimitError: Error | undefined;
+
+      const timer = setTimeout(() => {
+        // Reject with a typed Problem so operators can distinguish an encoder
+        // stall from a render failure: both surface as 500, but the timeout
+        // code (`rsc-flight-encode-timeout`) carries the route and budget.
+        fail(new RscFlightEncodeTimeoutProblem(input.route.path, ENCODE_TIMEOUT_MS));
+      }, ENCODE_TIMEOUT_MS);
+
+      // The encoder is a per-request child process. Without forwarding the
+      // caller's abort it keeps rendering (and holding memory) for up to the
+      // full timeout after the client has already gone away.
+      const onAbort = (): void => {
+        fail(new RscFlightEncodeAbortedProblem(input.route.path));
+      };
+      requestSignal.addEventListener("abort", onAbort, { once: true });
+
+      function fail(error: Error): void {
+        if (settled) {
+          return;
+        }
+        settled = true;
+        clearTimeout(timer);
+        requestSignal.removeEventListener("abort", onAbort);
+        encoder.kill("SIGKILL");
+        // desiredSize is null exactly when the stream is already closed,
+        // errored, or cancelled, and error() would throw in that state.
+        if (controller.desiredSize !== null) {
+          controller.error(error);
+        }
+      }
+
+      // The child can exit before it reads the payload; an `error` event on the
+      // stdin pipe without a listener would take the host process down.
+      encoder.stdin.on("error", (error: Error) => {
+        fail(error instanceof Error ? error : new Error(String(error)));
+      });
+      encoder.stdin.write(payload);
+      encoder.stdin.end();
+
+      encoder.stdout.on("data", (chunk: Uint8Array) => {
+        stdoutBytes += chunk.byteLength;
+        if (stdoutBytes > ENCODE_MAX_OUTPUT_BYTES) {
+          outputLimitError ??= new Error(
+            `RSC Flight encoder output exceeded ${ENCODE_MAX_OUTPUT_BYTES} bytes for route '${input.route.path}'`,
+          );
+          fail(outputLimitError);
+          return;
+        }
+
+        if (controller.desiredSize === null) {
+          // The consumer cancelled the stream, so stop producing bytes nobody
+          // reads instead of failing on a terminal controller.
+          encoder.kill("SIGKILL");
+          return;
+        }
+        controller.enqueue(chunk);
+      });
+      encoder.stderr.on("data", (chunk: Uint8Array) => {
+        if (stderrBytes(stderr) < ENCODE_MAX_OUTPUT_BYTES) {
+          stderr.push(chunk);
+        }
+      });
+      encoder.on("error", (error) => {
+        fail(error instanceof Error ? error : new Error(String(error)));
+      });
+      encoder.on("close", (code) => {
+        clearTimeout(timer);
+        requestSignal.removeEventListener("abort", onAbort);
+        if (settled) {
+          return;
+        }
+        settled = true;
+
+        if (outputLimitError) {
+          if (controller.desiredSize !== null) {
+            controller.error(outputLimitError);
+          }
+          return;
+        }
+
+        if (code !== 0) {
+          const detail = Buffer.concat(stderr).toString("utf8").slice(0, 500);
+          // A killed child reports no exit code; treat it as a failure exit so
+          // the operator sees the route and captured output rather than null.
+          const failure = new RscFlightEncodeFailedProblem(input.route.path, code ?? 1, detail);
+          if (controller.desiredSize !== null) {
+            controller.error(failure);
+          }
+          return;
+        }
+
+        controller.close();
+      });
+    },
+    cancel() {
+      settled = true;
+      child?.kill("SIGKILL");
     },
   });
 }

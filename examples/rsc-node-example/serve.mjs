@@ -29,17 +29,31 @@ async function streamBody(stream, nodeResponse) {
 
   const reader = stream.getReader();
 
+  // The client can disappear mid-stream. Cancelling the reader here propagates
+  // upstream, so the Flight render behind it stops instead of producing bytes
+  // for a response nobody reads.
+  const onClose = () => {
+    void reader.cancel().catch(() => {});
+  };
+  nodeResponse.on("close", onClose);
+
   try {
     for (;;) {
+      if (nodeResponse.destroyed || nodeResponse.writableEnded) {
+        break;
+      }
       const { done, value } = await reader.read();
       if (done) {
         break;
       }
       if (!nodeResponse.write(Buffer.from(value))) {
-        await once(nodeResponse, "drain");
+        // A closed response never emits `drain`, so wait for either event
+        // instead of hanging on a socket that is already gone.
+        await Promise.race([once(nodeResponse, "drain"), once(nodeResponse, "close")]);
       }
     }
   } finally {
+    nodeResponse.off("close", onClose);
     reader.releaseLock();
   }
 }

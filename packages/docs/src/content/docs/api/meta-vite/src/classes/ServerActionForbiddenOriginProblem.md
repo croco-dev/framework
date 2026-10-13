@@ -6,8 +6,7 @@ title: "ServerActionForbiddenOriginProblem"
 ---
 
 The request Origin is missing or outside `allowedOrigins`, so the action is
-rejected before the handler runs. Cross-site form posts cannot be told apart
-from same-site ones without this check.
+rejected before the handler runs.
 
 ## Extends
 

@@ -92,10 +92,50 @@ async function writeChunk(bytes: Uint8Array): Promise<void> {
   });
 }
 
+// Fields of the caller's request that a server component may read. RSC routes
+// answer document and Flight requests, whose meaning lives in the URL and
+// headers; a body is not forwarded because no RSC route consumes one.
+type ForwardedRequest = {
+  readonly url: string;
+  readonly method: string;
+  readonly headers: Record<string, string>;
+};
+
+function toForwardedRequest(value: unknown): ForwardedRequest {
+  if (typeof value !== "object" || value === null) {
+    throw new RscEncoderEntryInputProblem("rsc encode entry requires a request object");
+  }
+
+  const { url, method, headers } = value as Partial<ForwardedRequest>;
+
+  if (typeof url !== "string" || url.length === 0) {
+    throw new RscEncoderEntryInputProblem("rsc encode entry requires request.url");
+  }
+
+  if (typeof method !== "string" || method.length === 0) {
+    throw new RscEncoderEntryInputProblem("rsc encode entry requires request.method");
+  }
+
+  const forwardedHeaders =
+    typeof headers === "object" && headers !== null
+      ? Object.fromEntries(
+          Object.entries(headers as Record<string, unknown>).filter(
+            (entry): entry is [string, string] => typeof entry[1] === "string",
+          ),
+        )
+      : {};
+
+  return { url, method, headers: forwardedHeaders };
+}
+
 async function main(): Promise<void> {
   const controller = new AbortController();
   const bodyText = await readRequestBody(controller.signal);
-  const body = JSON.parse(bodyText) as { routePath: string; componentRef?: string };
+  const body = JSON.parse(bodyText) as {
+    routePath: string;
+    componentRef?: string;
+    request?: unknown;
+  };
   const routePath = body.routePath;
 
   if (!routePath || typeof routePath !== "string") {
@@ -109,7 +149,13 @@ async function main(): Promise<void> {
   const { path: modulePath, exportName } = resolveRscComponentRef(body.componentRef ?? loaderPath);
 
   const module = (await import(modulePath)) as RouteModule;
-  const request = new Request(`https://rsc-encode.local${routePath}`);
+  // Rebuild the caller's request from the forwarded fields: components that read
+  // the URL, query, or cookies must see the request that triggered the render.
+  const forwarded = toForwardedRequest(body.request);
+  const request = new Request(forwarded.url, {
+    method: forwarded.method,
+    headers: forwarded.headers,
+  });
   const component = module[exportName];
 
   if (typeof component !== "function") {

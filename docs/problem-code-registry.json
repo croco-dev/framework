@@ -18837,7 +18837,7 @@
       "sources": [
         {
           "file": "packages/meta-vite/src/libs/rsc/isolatedEncode.ts",
-          "line": 43,
+          "line": 44,
           "column": 1,
           "kind": "problem-class"
         }
@@ -18867,7 +18867,7 @@
       "sources": [
         {
           "file": "packages/meta-vite/src/libs/rsc/isolatedEncode.ts",
-          "line": 8,
+          "line": 9,
           "column": 1,
           "kind": "problem-class"
         }
@@ -18897,7 +18897,7 @@
       "sources": [
         {
           "file": "packages/meta-vite/src/libs/rsc/isolatedEncode.ts",
-          "line": 24,
+          "line": 25,
           "column": 1,
           "kind": "problem-class"
         }
@@ -19047,7 +19047,7 @@
       "sources": [
         {
           "file": "packages/meta-vite/src/libs/actions/serverActions.ts",
-          "line": 173,
+          "line": 172,
           "column": 1,
           "kind": "problem-class"
         }
