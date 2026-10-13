@@ -28,3 +28,34 @@ export type {
   ResearchGroupProgress,
   ResearchPage,
 } from "./libs/ResearchContracts";
+export { SurveyManager } from "./libs/SurveyManager";
+export {
+  validateSurveyDefinition,
+  validateSurveyAnswers,
+  validateSurveyScope,
+  surveyCsvCell,
+} from "./libs/validation";
+export {
+  SurveyInvalidProblem,
+  SurveyConflictProblem,
+  SurveyDeniedProblem,
+  SurveyExpiredProblem,
+  SurveyUnavailableProblem,
+} from "./libs/SurveyProblems";
+export type {
+  SurveyScope,
+  SurveySubject,
+  SurveyQuestion,
+  SurveyDefinition,
+  SurveyAnswers,
+  SurveyPublication,
+  SurveyInvitation,
+  SurveyResponse,
+  SurveyPermission,
+  SurveyAuthority,
+  SurveyTokenCodec,
+  SurveyStore,
+  SurveySession,
+  SurveyRecord,
+  SurveyTargeting,
+} from "./libs/types";

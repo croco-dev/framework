@@ -43,12 +43,13 @@
   "scripts": {
     "build": "tsup src/index.ts --format esm,cjs --minify --clean --dts",
     "lint": "oxlint .",
-    "test": "vitest run src/tests/DrizzleResearchStore.spec.ts",
+    "test": "vitest run --exclude src/tests/*.postgres.spec.ts",
     "test:evidence": "pnpm run test --maxWorkers=1 --reporter=json --outputFile=.turbo/croco-test-evidence.json",
     "test:live": "vitest run src/tests/*.postgres.spec.ts --no-file-parallelism",
     "test:postgres": "vitest run src/tests/*.postgres.spec.ts --no-file-parallelism",
     "typecheck": "tsc --noEmit",
-    "docs:api:model": "node --experimental-strip-types ../docs/scripts/generate-package-api-model.mts"
+    "docs:api:model": "node --experimental-strip-types ../docs/scripts/generate-package-api-model.mts",
+    "dev": "tsup src/index.ts --format esm,cjs --dts --watch"
   },
   "dependencies": {
     "@croco/problems-core": "workspace:*",
@@ -60,9 +61,12 @@
     "pg": "8.22.0",
     "tsup": "^8.4.0",
     "typescript": "^5.7.2",
-    "vitest": "4.1.8"
+    "vitest": "4.1.8",
+    "@croco/testing": "workspace:*",
+    "reflect-metadata": "^0.2.2"
   },
   "peerDependencies": {
     "drizzle-orm": "catalog:"
-  }
+  },
+  "description": "PostgreSQL research recruitment and micro survey persistence"
 }

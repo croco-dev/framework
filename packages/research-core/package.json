@@ -43,10 +43,11 @@
   "scripts": {
     "build": "tsup src/index.ts --format esm,cjs --minify --clean --dts",
     "lint": "oxlint .",
-    "test": "vitest run src/tests/ResearchService.spec.ts src/tests/ResearchEngagement.spec.ts",
+    "test": "vitest run",
     "test:evidence": "pnpm run test --maxWorkers=1 --reporter=json --outputFile=.turbo/croco-test-evidence.json",
     "typecheck": "tsc --noEmit",
-    "docs:api:model": "node --experimental-strip-types ../docs/scripts/generate-package-api-model.mts"
+    "docs:api:model": "node --experimental-strip-types ../docs/scripts/generate-package-api-model.mts",
+    "dev": "tsup src/index.ts --format esm,cjs --dts --watch"
   },
   "dependencies": {
     "@croco/engagement-core": "workspace:*",
@@ -56,9 +57,11 @@
     "tsup": "^8.4.0",
     "typescript": "^5.7.2",
     "vitest": "4.1.8",
-    "zod": "^3.23.8"
+    "zod": "^3.23.8",
+    "reflect-metadata": "^0.2.2"
   },
   "peerDependencies": {
     "zod": "^3.23.8"
-  }
+  },
+  "description": "Research recruitment and optional micro surveys"
 }
