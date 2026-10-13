@@ -290,10 +290,12 @@ export function createGrowthModelWorkbenchSource(input: {
       request = structuredClone(request);
       requireValue(
         input.reports !== undefined &&
+          request != null &&
           typeof id === "string" &&
           id.trim().length > 0 &&
           id.length <= 200 &&
           Number.isSafeInteger(expectedRevision) &&
+          expectedRevision < Number.MAX_SAFE_INTEGER &&
           expectedRevision >= 0,
       );
       await grant(request.scope, ["growth:read", "growth:report:read", "growth:report:write"]);

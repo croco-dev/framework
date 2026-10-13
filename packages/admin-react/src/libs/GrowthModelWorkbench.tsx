@@ -320,7 +320,7 @@ export function GrowthModelWorkbench({ client, initialRequest }: GrowthModelWork
     )
       definition = candidate;
   } catch {
-    /* Invalid JSON is reported by the calculate action; retain the editable text. */
+    definition = undefined;
   }
   function changeDefinition(value: GrowthWorkbenchRequest["model"]) {
     edit(setModelText, JSON.stringify(value, null, 2));

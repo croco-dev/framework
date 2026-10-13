@@ -475,14 +475,21 @@ export function backtestGrowthModel(
   const unavailable = results.some((r) => r.reason !== null);
   const mean = (key: "modelError" | "baselineError") =>
     unavailable ? null : results.reduce((sum, r) => sum + (r[key] ?? 0) / results.length, 0);
+  const meanModelError = mean("modelError");
+  const meanBaselineError = mean("baselineError");
+  requireValue(
+    (meanModelError === null || Number.isFinite(meanModelError)) &&
+      (meanBaselineError === null || Number.isFinite(meanBaselineError)),
+    "backtest-overflow",
+  );
   return {
     trainEnd: options.trainEnd,
     testWindow: { from: options.testWindow.from, to: options.testWindow.to },
     baselineMethod: "last-value",
     errorMetric: options.errorMetric,
     errorUnit: options.errorMetric === "MAE" ? model.unit : "fraction",
-    meanModelError: mean("modelError"),
-    meanBaselineError: mean("baselineError"),
+    meanModelError,
+    meanBaselineError,
     summaryReason: unavailable ? "undefined-cell-errors" : null,
     results,
   };

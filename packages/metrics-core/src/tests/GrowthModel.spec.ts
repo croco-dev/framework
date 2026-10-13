@@ -445,6 +445,35 @@ describe("GrowthModel", () => {
       }),
     ).toThrowError(/backtest-overflow/);
   });
+  it("does not publish a nonfinite mean when every individual MAPE error is finite", () => {
+    const single: GrowthModel = {
+      ...model,
+      stateDefinitions: [{ id: "only", label: "Only", evidence: "Declared population" }],
+      transitionEstimationWindow: { from: 0, to: 1 },
+    };
+    const extreme: GrowthDataset = {
+      ...dataset,
+      stateIds: ["only"],
+      populations: [
+        { period: 0, values: [10], complete: true },
+        { period: 1, values: [10], complete: true },
+        ...Array.from({ length: 17 }, (_, i) => ({
+          period: i + 2,
+          values: [10 / Number.MAX_VALUE],
+          complete: true,
+        })),
+      ],
+      transitions: [{ from: 0, counts: [[10]], inflows: [0], complete: true }],
+    };
+    expect(() =>
+      backtestGrowthModel(single, extreme, {
+        trainEnd: 1,
+        testWindow: { from: 2, to: 18 },
+        errorMetric: "MAPE",
+        inflows: { ...scenario.inflows, values: Array.from({ length: 17 }, () => [0]) },
+      }),
+    ).toThrowError(/backtest-overflow/);
+  });
   it("rejects sparse vectors, periods and definitions rather than calculating missing cells", () => {
     const sparse = Array<number>(2);
     sparse[0] = 0;

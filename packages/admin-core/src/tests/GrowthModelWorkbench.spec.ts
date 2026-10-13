@@ -101,6 +101,36 @@ function host(
   return { source, read, authorize };
 }
 describe("GrowthModelWorkbench source", () => {
+  it("returns a stable Problem when a save request is missing", async () => {
+    const { source } = host({
+      store: {
+        read: async () => undefined,
+        append: async () => undefined,
+      },
+    });
+    await expect(
+      source.save(undefined as unknown as GrowthWorkbenchRequest, "report", 0, "hash"),
+    ).rejects.toMatchObject({ reason: "invalid-request" });
+  });
+  it("rejects an unsafe next revision without overwriting a valid historical report", async () => {
+    let record: GrowthReportRecord | undefined;
+    const { source } = host({
+      store: {
+        read: async () => record,
+        append: async (_scope, next) => {
+          record = next;
+        },
+      },
+    });
+    const report = await source.calculate(request);
+    record = await source.save(request, "report", 0, report.analysisHash);
+    record.revision = Number.MAX_SAFE_INTEGER;
+    const before = structuredClone(record);
+    await expect(
+      source.save(request, "report", Number.MAX_SAFE_INTEGER, report.analysisHash),
+    ).rejects.toMatchObject({ reason: "invalid-request" });
+    expect(record).toEqual(before);
+  });
   it("calculates from bounded observed inputs, hashes reproducibly and returns only aggregates", async () => {
     const { source, read } = host();
     const a = await source.calculate(request),
