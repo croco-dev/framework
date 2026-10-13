@@ -25297,7 +25297,7 @@
       "sources": [
         {
           "file": "packages/rpc-codegen/src/libs/generate.ts",
-          "line": 116,
+          "line": 117,
           "column": 5,
           "kind": "problem-constructor"
         }
@@ -25357,7 +25357,7 @@
       "sources": [
         {
           "file": "packages/rpc-codegen/src/libs/generate.ts",
-          "line": 2084,
+          "line": 2085,
           "column": 38,
           "kind": "problem-metadata"
         }
@@ -25387,7 +25387,7 @@
       "sources": [
         {
           "file": "packages/rpc-codegen/src/libs/generate.ts",
-          "line": 2079,
+          "line": 2080,
           "column": 37,
           "kind": "problem-metadata"
         }
@@ -25417,7 +25417,7 @@
       "sources": [
         {
           "file": "packages/rpc-codegen/src/libs/generate.ts",
-          "line": 2074,
+          "line": 2075,
           "column": 37,
           "kind": "problem-metadata"
         }
@@ -25447,7 +25447,7 @@
       "sources": [
         {
           "file": "packages/rpc-codegen/src/libs/generate.ts",
-          "line": 122,
+          "line": 123,
           "column": 5,
           "kind": "problem-constructor"
         }

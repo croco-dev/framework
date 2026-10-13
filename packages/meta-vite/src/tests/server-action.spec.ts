@@ -134,6 +134,96 @@ describe("Server Actions", () => {
     });
   });
 
+  it("awaits async refinement before invoking the handler once", async () => {
+    const registry = createServerActionRegistry();
+    let releaseValidation = (_valid: boolean) => {};
+    const validation = new Promise<boolean>((resolve) => {
+      releaseValidation = resolve;
+    });
+    let signalValidation = () => {};
+    const enteredValidation = new Promise<void>((resolve) => {
+      signalValidation = resolve;
+    });
+    const received: unknown[] = [];
+    registry.register({
+      name: "async-title",
+      schema: z.object({
+        title: z.string().refine(() => {
+          signalValidation();
+          return validation;
+        }, "Title required"),
+      }),
+      handler: (data) => {
+        received.push(data);
+        return createServerActionSuccess(data);
+      },
+    });
+
+    const responsePromise = registry.dispatch("async-title", { title: "Hello" });
+    // Observe rejection immediately so the pre-fix negative control has no unhandled rejection.
+    const responseAssertion = expect(responsePromise).resolves.toBeInstanceOf(Response);
+    await enteredValidation;
+    expect(received).toEqual([]);
+    releaseValidation(true);
+    await responseAssertion;
+
+    const response = await responsePromise;
+    expect(response.status).toBe(200);
+    expect(received).toEqual([{ title: "Hello" }]);
+    await expect(response.json()).resolves.toEqual({ ok: true, data: { title: "Hello" } });
+  });
+
+  it("preserves async field and form errors without invoking the handler", async () => {
+    const registry = createServerActionRegistry();
+    const received: unknown[] = [];
+    registry.register({
+      name: "async-invalid-form",
+      schema: z.object({ title: z.string() }).superRefine(async (_data, context) => {
+        await Promise.resolve();
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["title"],
+          message: "Title required",
+        });
+        context.addIssue({ code: z.ZodIssueCode.custom, message: "Form rejected" });
+      }),
+      handler: (data) => {
+        received.push(data);
+        return createServerActionSuccess(data);
+      },
+    });
+
+    const response = await registry.dispatch("async-invalid-form", { title: "" });
+    expect(response.status).toBe(422);
+    expect(response.headers.get("Content-Type")).toBe("application/problem+json");
+    await expect(response.json()).resolves.toMatchObject({
+      ok: false,
+      kind: "validation",
+      code: "meta-vite/server-action-validation-failed",
+      fields: { title: ["Title required"] },
+      formErrors: ["Form rejected"],
+    });
+    expect(received).toEqual([]);
+  });
+
+  it("passes synchronously transformed data to the handler", async () => {
+    const registry = createServerActionRegistry();
+    const received: unknown[] = [];
+    registry.register({
+      name: "transformed-title",
+      schema: z.object({ title: z.string().transform((value) => value.trim().toUpperCase()) }),
+      handler: (data) => {
+        received.push(data);
+        return createServerActionSuccess(data);
+      },
+    });
+
+    const response = await registry.dispatch("transformed-title", { title: "  Hello  " });
+    expect(response.status).toBe(200);
+    expect(received).toEqual([{ title: "HELLO" }]);
+    await expect(response.json()).resolves.toEqual({ ok: true, data: { title: "HELLO" } });
+  });
+
   it("preserves field and form validation errors in the Problem response", async () => {
     const schema = z.object({ email: z.string() }).superRefine((_data, context) => {
       context.addIssue({
@@ -848,5 +938,49 @@ describe("Server Action HTTP Integration", () => {
 
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toEqual({ scope: "scoped", name: "Scoped" });
+  });
+
+  it.each([
+    { title: "Hello", status: 200 },
+    { title: "", status: 422 },
+  ])("awaits async refinement for HTTP form title '$title'", async ({ title, status }) => {
+    const registry = createServerActionRegistry();
+    const received: unknown[] = [];
+    registry.register({
+      name: "async-http-title",
+      schema: z.object({
+        title: z.string().refine(async (value) => value.length > 0, "Title required"),
+      }),
+      handler: (data) => {
+        received.push(data);
+        return createServerActionSuccess(data);
+      },
+    });
+    const handler = createMetaFetchHandler({
+      apiRoutes: [createServerActionHandler(registry)],
+    });
+    const formData = new FormData();
+    formData.append("title", title);
+
+    const response = await handler(
+      new Request("http://localhost/api/action/async-http-title", {
+        method: "POST",
+        body: formData,
+      }),
+    );
+    expect(response.status).toBe(status);
+    if (status === 200) {
+      expect(received).toEqual([{ title: "Hello" }]);
+      await expect(response.json()).resolves.toEqual({ ok: true, data: { title: "Hello" } });
+    } else {
+      expect(received).toEqual([]);
+      await expect(response.json()).resolves.toMatchObject({
+        ok: false,
+        kind: "validation",
+        code: "meta-vite/server-action-validation-failed",
+        fields: { title: ["Title required"] },
+        formErrors: [],
+      });
+    }
   });
 });

@@ -53,7 +53,10 @@ export async function registerController(
       : activeResult;
 
   if (updateResult === "unsupported-pattern") {
-    return unsupportedResult(options, "Controller registration uses unsupported array syntax.");
+    return unsupportedResult(
+      options,
+      "Controller registration requires one verified Croco call with supported array syntax.",
+    );
   }
 
   const finalResult =
@@ -113,44 +116,53 @@ export async function registerController(
   };
 }
 
-function addToActiveRegistration(sourceFile: SourceFile, className: string): UpdateResult {
-  for (const call of sourceFile.getDescendantsOfKind(SyntaxKind.CallExpression)) {
+function findActiveRegistration(sourceFile: SourceFile): CallExpression | "ambiguous" | undefined {
+  const candidates = sourceFile.getDescendantsOfKind(SyntaxKind.CallExpression).filter((call) => {
     const expression = call.getExpression();
     if (Node.isPropertyAccessExpression(expression) && expression.getName() === "addControllers") {
-      return addToCallArray(call, className);
+      const receiver = expression.getExpression();
+      return (
+        Node.isIdentifier(receiver) &&
+        receiver
+          .getSymbol()
+          ?.getDeclarations()
+          .some(
+            (declaration) =>
+              Node.isVariableDeclaration(declaration) && isSupportedCrocoAppVariable(declaration),
+          ) === true
+      );
     }
 
-    if (
-      Node.isIdentifier(expression) &&
-      expression.getText() === "createApp" &&
-      isSupportedCrocoAppFactory(expression)
-    ) {
-      const result = addToCreateAppControllers(call, className);
-      if (result !== "not-found") return result;
-    }
-  }
+    if (!Node.isIdentifier(expression) || !isSupportedCrocoAppFactory(expression)) return false;
+    const options = call.getArguments()[0];
+    return (
+      Node.isObjectLiteralExpression(options) && options.getProperty("controllers") !== undefined
+    );
+  });
 
-  return "not-found";
+  return candidates.length > 1 ? "ambiguous" : candidates[0];
+}
+
+function addToActiveRegistration(sourceFile: SourceFile, className: string): UpdateResult {
+  const call = findActiveRegistration(sourceFile);
+  if (call === "ambiguous") return "unsupported-pattern";
+  if (!call) return "not-found";
+
+  return Node.isPropertyAccessExpression(call.getExpression())
+    ? addToCallArray(call, className)
+    : addToCreateAppControllers(call, className);
 }
 
 function findRegisteredControllerIdentifier(
   sourceFile: SourceFile,
   className: string,
 ): Identifier | undefined {
-  for (const call of sourceFile.getDescendantsOfKind(SyntaxKind.CallExpression)) {
-    const expression = call.getExpression();
-    if (Node.isPropertyAccessExpression(expression) && expression.getName() === "addControllers") {
-      const identifier = findIdentifierInCallArray(call, className);
-      if (identifier) return identifier;
-    }
+  const call = findActiveRegistration(sourceFile);
+  if (!call || call === "ambiguous") return undefined;
 
-    if (Node.isIdentifier(expression) && expression.getText() === "createApp") {
-      const identifier = findIdentifierInCreateAppControllers(call, className);
-      if (identifier) return identifier;
-    }
-  }
-
-  return undefined;
+  return Node.isPropertyAccessExpression(call.getExpression())
+    ? findIdentifierInCallArray(call, className)
+    : findIdentifierInCreateAppControllers(call, className);
 }
 
 function findIdentifierInCallArray(

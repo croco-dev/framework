@@ -7,6 +7,14 @@ import type { LambdaContext, LambdaEvent } from "../libs/types";
 
 const DEADLINE_CODE = "transports-http/lambda-wait-until-deadline-exceeded";
 
+function createCompletionGate() {
+  let resolve = () => {};
+  const promise = new Promise<void>((complete) => {
+    resolve = complete;
+  });
+  return { promise, resolve };
+}
+
 function createLambdaContext(remainingTimeInMillis = 5_000): LambdaContext {
   return {
     callbackWaitsForEmptyEventLoop: false,
@@ -300,6 +308,135 @@ describe("CrocoLambdaAdapter waitUntil draining", () => {
   afterEach(() => {
     vi.useRealTimers();
     vi.restoreAllMocks();
+  });
+
+  it("joins work registered during response body pull before flushing and returning", async () => {
+    const background = createCompletionGate();
+    const bodyStarted = createCompletionGate();
+    const markers: string[] = [];
+    const flush = vi.fn(() => {
+      markers.push("flush");
+    });
+    const adapter = new CrocoLambdaAdapter({
+      fetch(_request, env) {
+        const runtime = getRuntimeContextInitFromEnv(env);
+        return new Response(
+          new ReadableStream<Uint8Array>(
+            {
+              pull(controller) {
+                runtime?.waitUntil?.(
+                  background.promise.then(() => {
+                    markers.push("background");
+                    runtime.waitUntil?.(
+                      Promise.resolve().then(() => {
+                        markers.push("nested");
+                      }),
+                    );
+                  }),
+                );
+                controller.enqueue(new Uint8Array([0, 255, 128, 42]));
+                controller.close();
+                bodyStarted.resolve();
+              },
+            },
+            { highWaterMark: 0 },
+          ),
+          { status: 201, headers: { "content-type": "image/png", "set-cookie": "session=test" } },
+        );
+      },
+    });
+    let returned = false;
+    const invocation = adapter
+      .createHandler({ flush })(createLambdaEvent(), createLambdaContext())
+      .then((response) => {
+        returned = true;
+        return response;
+      });
+
+    await bodyStarted.promise;
+    try {
+      expect(returned).toBe(false);
+      expect(flush).not.toHaveBeenCalled();
+    } finally {
+      background.resolve();
+      await invocation;
+    }
+    const response = await invocation;
+    expect(markers).toEqual(["background", "nested", "flush"]);
+    expect(response).toMatchObject({
+      statusCode: 201,
+      body: "AP+AKg==",
+      isBase64Encoded: true,
+      headers: { "content-type": "image/png" },
+      cookies: ["session=test"],
+    });
+  });
+
+  it("drains body-registered work after a response body read fails", async () => {
+    const bodyError = new Error("body read failed");
+    const background = createCompletionGate();
+    const bodyStarted = createCompletionGate();
+    const markers: string[] = [];
+    const flush = vi.fn(() => {
+      markers.push("flush");
+    });
+    const adapter = new CrocoLambdaAdapter({
+      fetch(_request, env) {
+        return new Response(
+          new ReadableStream(
+            {
+              pull(controller) {
+                getRuntimeContextInitFromEnv(env)?.waitUntil?.(
+                  background.promise.then(() => {
+                    markers.push("background");
+                  }),
+                );
+                controller.error(bodyError);
+                bodyStarted.resolve();
+              },
+            },
+            { highWaterMark: 0 },
+          ),
+        );
+      },
+    });
+    const invocation = adapter.createHandler({ flush })(createLambdaEvent(), createLambdaContext());
+    const rejected = expect(invocation).rejects.toBe(bodyError);
+    await bodyStarted.promise;
+    background.resolve();
+    await rejected;
+    expect(markers).toEqual(["background", "flush"]);
+    expect(flush).toHaveBeenCalledOnce();
+  });
+
+  it("preserves response body, runtime deadline, and external flush failures", async () => {
+    const bodyError = new Error("body read failed");
+    const externalFlushError = new Error("external flush failed");
+    const flush = vi.fn().mockRejectedValue(externalFlushError);
+    const adapter = new CrocoLambdaAdapter({
+      fetch(_request, env) {
+        return new Response(
+          new ReadableStream(
+            {
+              pull(controller) {
+                getRuntimeContextInitFromEnv(env)?.waitUntil?.(new Promise(() => {}));
+                controller.error(bodyError);
+              },
+            },
+            { highWaterMark: 0 },
+          ),
+        );
+      },
+    });
+
+    await expect(
+      adapter.createHandler({ flush })(createLambdaEvent(), createLambdaContext(0)),
+    ).rejects.toMatchObject({
+      name: "LambdaFlushBoundaryError",
+      originalError: bodyError,
+      flushErrors: [expect.objectContaining({ code: DEADLINE_CODE }), externalFlushError],
+    });
+    expect(flush).toHaveBeenCalledOnce();
   });
 
   it("drains transitively registered work before resolving the response", async () => {

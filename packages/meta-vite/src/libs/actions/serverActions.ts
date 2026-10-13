@@ -279,7 +279,7 @@ export class ServerActionRegistry {
     let data: unknown = raw;
 
     if (config.schema) {
-      const parsed = config.schema.safeParse(raw);
+      const parsed = await config.schema.safeParseAsync(raw);
       if (!parsed.success) {
         const flattened = parsed.error.flatten();
         return createServerActionProblemResponse(
