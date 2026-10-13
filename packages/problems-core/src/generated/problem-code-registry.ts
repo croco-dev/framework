@@ -21674,9 +21674,9 @@ export type CrocoProblemRegistry = {
       readonly title: "Validation Error";
       readonly cookbookPath: "/reference/problem-recovery-cookbook/#protocol-codegen-controller-project-jsx-runtime";
       readonly recovery: {
-        readonly cause: "The request or generated contract failed schema or semantic validation.";
-        readonly userAction: "Fix the invalid fields and retry with schema-conformant input.";
-        readonly operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.";
+        readonly cause: "Temporary JSX emission introduced diagnostics for the configured JSX factory or automatic runtime.";
+        readonly userAction: "Import the configured JSX factory (React by default), provide jsxFactory and jsxFragmentFactory bindings, or configure jsxImportSource with an installed automatic JSX runtime, then rerun code generation.";
+        readonly operatorAction: "Inspect the source diagnostics and tsconfig reported before module output; correct the JSX runtime configuration and verify the selected runtime dependency.";
         readonly retryability: "not-retryable";
         readonly redactionPolicy: "public";
         readonly telemetry: {
@@ -53133,9 +53133,12 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       cookbookPath:
         "/reference/problem-recovery-cookbook/#protocol-codegen-controller-project-jsx-runtime",
       recovery: {
-        cause: "The request or generated contract failed schema or semantic validation.",
-        userAction: "Fix the invalid fields and retry with schema-conformant input.",
-        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        cause:
+          "Temporary JSX emission introduced diagnostics for the configured JSX factory or automatic runtime.",
+        userAction:
+          "Import the configured JSX factory (React by default), provide jsxFactory and jsxFragmentFactory bindings, or configure jsxImportSource with an installed automatic JSX runtime, then rerun code generation.",
+        operatorAction:
+          "Inspect the source diagnostics and tsconfig reported before module output; correct the JSX runtime configuration and verify the selected runtime dependency.",
         retryability: "not-retryable",
         redactionPolicy: "public",
         telemetry: {

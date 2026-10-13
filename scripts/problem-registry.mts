@@ -3433,6 +3433,17 @@ const recoveryMetadataByCode = {
     redactionPolicy: "public",
     severity: "info",
   }),
+  "protocol-codegen/controller-project-jsx-runtime": recovery({
+    cause:
+      "Temporary JSX emission introduced diagnostics for the configured JSX factory or automatic runtime.",
+    userAction:
+      "Import the configured JSX factory (React by default), provide jsxFactory and jsxFragmentFactory bindings, or configure jsxImportSource with an installed automatic JSX runtime, then rerun code generation.",
+    operatorAction:
+      "Inspect the source diagnostics and tsconfig reported before module output; correct the JSX runtime configuration and verify the selected runtime dependency.",
+    retryability: "not-retryable",
+    redactionPolicy: "public",
+    severity: "info",
+  }),
   "analytics-core/analysis-input-budget-exceeded": recovery({
     cause:
       "The serialized question, allowed definitions and choices exceeded the input byte budget.",

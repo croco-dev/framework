@@ -15155,9 +15155,9 @@ Sources:
 - Retryability: `not-retryable`
 - Redaction policy: `public`
 - Lifecycle: `active`
-- Cause: The request or generated contract failed schema or semantic validation.
-- User action: Fix the invalid fields and retry with schema-conformant input.
-- Operator action: Inspect schema diagnostics, generated contracts, and validation metadata.
+- Cause: Temporary JSX emission introduced diagnostics for the configured JSX factory or automatic runtime.
+- User action: Import the configured JSX factory (React by default), provide jsxFactory and jsxFragmentFactory bindings, or configure jsxImportSource with an installed automatic JSX runtime, then rerun code generation.
+- Operator action: Inspect the source diagnostics and tsconfig reported before module output; correct the JSX runtime configuration and verify the selected runtime dependency.
 - Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
 
 Sources:

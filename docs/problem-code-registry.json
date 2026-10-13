@@ -23145,9 +23145,9 @@
       "title": "Validation Error",
       "cookbookPath": "/reference/problem-recovery-cookbook/#protocol-codegen-controller-project-jsx-runtime",
       "recovery": {
-        "cause": "The request or generated contract failed schema or semantic validation.",
-        "userAction": "Fix the invalid fields and retry with schema-conformant input.",
-        "operatorAction": "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        "cause": "Temporary JSX emission introduced diagnostics for the configured JSX factory or automatic runtime.",
+        "userAction": "Import the configured JSX factory (React by default), provide jsxFactory and jsxFragmentFactory bindings, or configure jsxImportSource with an installed automatic JSX runtime, then rerun code generation.",
+        "operatorAction": "Inspect the source diagnostics and tsconfig reported before module output; correct the JSX runtime configuration and verify the selected runtime dependency.",
         "retryability": "not-retryable",
         "redactionPolicy": "public",
         "telemetry": {
