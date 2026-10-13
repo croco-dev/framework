@@ -133,6 +133,44 @@ describe("contractsDiff", () => {
     }
   });
 
+  it.each([{ args: ["--cwd="] }, { args: ["--cwd", ""] }, { args: ["--cwd"] }])(
+    "should reject empty cwd %j before reading or writing files",
+    async ({ args: cwdArgs }) => {
+      const snapshot = stringifyContractGraphSnapshot(createContractGraphSnapshot(createGraph([])));
+      const readFile = vi.fn(() => snapshot);
+      const writeFile = vi.fn();
+      const loadContractGraph = vi.fn();
+      const stderr: string[] = [];
+
+      expect(
+        await runContractsDiff(
+          [
+            "--baseline",
+            "baseline.json",
+            "--current-snapshot",
+            "current.json",
+            "--out",
+            "diff.json",
+            ...cwdArgs,
+          ],
+          {
+            loadContractGraph,
+            io: {
+              readFile,
+              writeFile,
+              stdout: () => {},
+              stderr: (message) => stderr.push(message),
+            },
+          },
+        ),
+      ).toBe(1);
+      expect(stderr).toContain("Missing working directory. Pass --cwd <path>.");
+      expect(readFile).not.toHaveBeenCalled();
+      expect(writeFile).not.toHaveBeenCalled();
+      expect(loadContractGraph).not.toHaveBeenCalled();
+    },
+  );
+
   it.each([["src/**/*.ts"], ["--controllers", "src/**/*.ts"]])(
     "should resolve controller input %j against a relative --cwd",
     async (...controllerArgs) => {

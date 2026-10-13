@@ -154,6 +154,16 @@ export function parseContractsDiffArgs(args: readonly string[]): ContractsDiffPa
     return { kind: "help" };
   }
 
+  if (
+    args.some((arg) => arg === "--cwd" || arg.startsWith("--cwd=")) &&
+    !getFlagValue(args, "--cwd")
+  ) {
+    return {
+      kind: "invalid",
+      message: "Missing working directory. Pass --cwd <path>.",
+    };
+  }
+
   const baseline = getFlagValue(args, "--baseline");
   const controllers = getFlagValue(args, "--controllers") ?? getFirstPosition(args);
   const currentSnapshot = getFlagValue(args, "--current-snapshot");
