@@ -201,6 +201,20 @@ describe("isolated RSC encoder lifecycle", () => {
     });
   }, 10_000);
 
+  it("rejects an uninstalled encoder entry before spawning a child", async () => {
+    await expect(
+      encodeRscFlightInIsolatedEncoder({
+        route: rscRoute("/rsc-missing-entry"),
+        request: new Request("https://example.com/rsc-missing-entry"),
+        encoderModule: join(tmpdir(), "croco-rsc-encoder-not-installed", "encoder.mjs"),
+      }),
+    ).rejects.toMatchObject({
+      code: "meta-vite/rsc-flight-encode-failed",
+      status: 500,
+      extensions: { route: "/rsc-missing-entry", exitCode: null },
+    });
+  });
+
   it("stops the encoder when the consumer cancels the response stream", async () => {
     const stream = await encodeRscFlightInIsolatedEncoder({
       route: rscRoute("/rsc-cancelled"),

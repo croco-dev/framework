@@ -17648,7 +17648,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/meta-vite/src/libs/rsc/isolatedEncode.ts";
-          readonly line: 44;
+          readonly line: 52;
           readonly column: 1;
           readonly kind: "problem-class";
         },
@@ -17676,7 +17676,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/meta-vite/src/libs/rsc/isolatedEncode.ts";
-          readonly line: 9;
+          readonly line: 10;
           readonly column: 1;
           readonly kind: "problem-class";
         },
@@ -17704,7 +17704,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/meta-vite/src/libs/rsc/isolatedEncode.ts";
-          readonly line: 25;
+          readonly line: 33;
           readonly column: 1;
           readonly kind: "problem-class";
         },
@@ -48912,7 +48912,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/meta-vite/src/libs/rsc/isolatedEncode.ts",
-          line: 44,
+          line: 52,
           column: 1,
           kind: "problem-class",
         },
@@ -48943,7 +48943,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/meta-vite/src/libs/rsc/isolatedEncode.ts",
-          line: 9,
+          line: 10,
           column: 1,
           kind: "problem-class",
         },
@@ -48974,7 +48974,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/meta-vite/src/libs/rsc/isolatedEncode.ts",
-          line: 25,
+          line: 33,
           column: 1,
           kind: "problem-class",
         },

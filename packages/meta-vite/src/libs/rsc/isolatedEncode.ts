@@ -1,5 +1,6 @@
 import { spawn } from "node:child_process";
 import type { ChildProcess } from "node:child_process";
+import { existsSync } from "node:fs";
 import { createRequire } from "node:module";
 import { join } from "node:path";
 import { Problem, ProblemCategory } from "@croco/problems-core";
@@ -10,11 +11,18 @@ export class RscFlightEncodeFailedProblem extends Problem {
   readonly code = "meta-vite/rsc-flight-encode-failed";
   readonly category = ProblemCategory.InternalServerError;
 
-  constructor(route: string, exitCode: number, detail: string) {
+  /**
+   * `exitCode` is null when the encoder never ran — the entry point is not
+   * installed, which is a packaging failure rather than a render failure, so it
+   * must stay distinguishable from a child that exited with a real code.
+   */
+  constructor(route: string, exitCode: number | null, detail: string) {
     super(
       "meta-vite/rsc-flight-encode-failed",
       ProblemCategory.InternalServerError,
-      `RSC Flight encoder failed for route '${route}' (exit ${exitCode})`,
+      `RSC Flight encoder failed for route '${route}'${
+        exitCode === null ? "" : ` (exit ${exitCode})`
+      }`,
       // `detail` is a reserved Problem field and would be rejected here, so the
       // captured encoder output travels under `encoderOutput`.
       { extensions: { route, exitCode, encoderOutput: detail.slice(0, 500) } },
@@ -149,6 +157,17 @@ export async function encodeRscFlightInIsolatedEncoder(
     throw new RscFlightEncodeAbortedProblem(input.route.path);
   }
 
+  // Once the stream is returned, a spawn failure can only reach the caller as a
+  // broken body on an already-committed 200. Refuse the request that cannot be
+  // answered while the Failure can still be turned into a response status.
+  if (!existsSync(encoderModule)) {
+    throw new RscFlightEncodeFailedProblem(
+      input.route.path,
+      null,
+      `encoder entry not found at '${encoderModule}'`,
+    );
+  }
+
   // Server components read the request they were rendered for, so forward the
   // fields a document/Flight request carries and let the child rebuild it.
   // Guessing them from `route.path` alone would hand components the wrong URL,
@@ -263,8 +282,8 @@ export async function encodeRscFlightInIsolatedEncoder(
 
         if (code !== 0) {
           const detail = Buffer.concat(stderr).toString("utf8").slice(0, 500);
-          // A killed child reports no exit code; treat it as a failure exit so
-          // the operator sees the route and captured output rather than null.
+          // A killed child reports no exit code; 1 keeps it distinct from the
+          // `null` that marks an encoder which never started.
           const failure = new RscFlightEncodeFailedProblem(input.route.path, code ?? 1, detail);
           if (controller.desiredSize !== null) {
             controller.error(failure);

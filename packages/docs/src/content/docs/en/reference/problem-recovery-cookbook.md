@@ -12580,7 +12580,7 @@ Sources:
 
 Sources:
 
-- `packages/meta-vite/src/libs/rsc/isolatedEncode.ts:44:1` (problem-class)
+- `packages/meta-vite/src/libs/rsc/isolatedEncode.ts:52:1` (problem-class)
 
 <a id="meta-vite-rsc-flight-encode-failed"></a>
 
@@ -12598,7 +12598,7 @@ Sources:
 
 Sources:
 
-- `packages/meta-vite/src/libs/rsc/isolatedEncode.ts:9:1` (problem-class)
+- `packages/meta-vite/src/libs/rsc/isolatedEncode.ts:10:1` (problem-class)
 
 <a id="meta-vite-rsc-flight-encode-timeout"></a>
 
@@ -12616,7 +12616,7 @@ Sources:
 
 Sources:
 
-- `packages/meta-vite/src/libs/rsc/isolatedEncode.ts:25:1` (problem-class)
+- `packages/meta-vite/src/libs/rsc/isolatedEncode.ts:33:1` (problem-class)
 
 <a id="meta-vite-rsc-flight-not-acceptable"></a>
 
