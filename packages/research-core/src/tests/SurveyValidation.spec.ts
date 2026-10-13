@@ -44,6 +44,36 @@ const definition: SurveyDefinition = {
   ],
 };
 describe("survey validation", () => {
+  const optionalDefinition: SurveyDefinition = {
+    ...definition,
+    questions: definition.questions.map((question) => ({ ...question, required: false })),
+  };
+  it.each<SurveyAnswers>([
+    { choice: [] },
+    { choice: "" },
+    { multi: "" },
+    { score: [] },
+    { score: "" },
+    { text: [] },
+  ])("rejects wrong empty representations for optional answers %j", (answers) => {
+    expect(() => validateSurveyAnswers(optionalDefinition, answers)).toThrow(SurveyInvalidProblem);
+  });
+  it.each<SurveyAnswers>([{}, { text: "", multi: [] }])(
+    "accepts typed optional emptiness %j",
+    (answers) => {
+      expect(() => validateSurveyAnswers(optionalDefinition, answers)).not.toThrow();
+    },
+  );
+  it.each<SurveyAnswers>([
+    { choice: "useful", score: 2, multi: [], text: "Feedback" },
+    { choice: "useful", score: 2, multi: ["chart"], text: "" },
+  ])("still rejects correctly typed empty required answers %j", (answers) => {
+    const requiredDefinition: SurveyDefinition = {
+      ...definition,
+      questions: definition.questions.map((question) => ({ ...question, required: true })),
+    };
+    expect(() => validateSurveyAnswers(requiredDefinition, answers)).toThrow(SurveyInvalidProblem);
+  });
   it("accepts asymmetric answers and exact text/scale boundaries", () => {
     expect(() =>
       validateSurveyAnswers(definition, {

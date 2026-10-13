@@ -97,7 +97,7 @@ export function validateSurveyAnswers(d: SurveyDefinition, answers: SurveyAnswer
     throw new SurveyInvalidProblem("unknown question");
   for (const q of d.questions) {
     const value = Object.hasOwn(answers, q.id) ? answers[q.id] : undefined;
-    if (value === undefined || value === "" || (Array.isArray(value) && value.length === 0)) {
+    if (value === undefined) {
       if (q.required) throw new SurveyInvalidProblem(`required: ${q.id}`);
       continue;
     }
@@ -113,6 +113,7 @@ export function validateSurveyAnswers(d: SurveyDefinition, answers: SurveyAnswer
           value.some((v) => typeof v !== "string" || !q.options.some((o) => o.id === v))
         )
           throw new SurveyInvalidProblem(`choices: ${q.id}`);
+        if (q.required && value.length === 0) throw new SurveyInvalidProblem(`required: ${q.id}`);
         break;
       case "scale":
         if (
@@ -126,6 +127,7 @@ export function validateSurveyAnswers(d: SurveyDefinition, answers: SurveyAnswer
       case "text":
         if (typeof value !== "string" || value.length > q.maxLength)
           throw new SurveyInvalidProblem(`text: ${q.id}`);
+        if (q.required && value.length === 0) throw new SurveyInvalidProblem(`required: ${q.id}`);
         break;
     }
   }

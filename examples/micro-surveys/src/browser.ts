@@ -3,7 +3,12 @@ import { createRoot } from "react-dom/client";
 import { SurveyCard, SurveyModal } from "@croco/frontend-react/surveys";
 import { SurveyEditor, SurveyPreview, SurveyResults } from "@croco/admin-react/surveys";
 import { SurveyInvalidProblem } from "@croco/research-core";
-import type { SurveyDefinition, SurveyResponse, SurveyPublication } from "@croco/research-core";
+import type {
+  SurveyDefinition,
+  SurveyResponse,
+  SurveyPublication,
+  SurveyAnswers,
+} from "@croco/research-core";
 import type { SurveyAdminAccess, SurveyPublishRequest } from "@croco/admin-core/survey-operations";
 import type { SurveyResultsData, SurveyResultsState } from "@croco/admin-react/surveys";
 
@@ -17,28 +22,85 @@ async function api<T>(path: string, role: "customer" | "operator", input?: unkno
   if (!res.ok) throw new SurveyInvalidProblem(data.message ?? "Request failed");
   return data as T;
 }
+type Invitation = { token: string; invitationId: string; definition: SurveyDefinition };
+function InvitedSurvey(props: {
+  invitation: Invitation;
+  modal: boolean;
+  returnFocusTo?: HTMLElement;
+  onClose: () => void;
+  onExposed: () => Promise<void>;
+  onSubmit: (answers: SurveyAnswers) => Promise<void>;
+  onDismiss: () => Promise<void>;
+}) {
+  const [failure, setFailure] = useState("");
+  const callbacks = useRef(props);
+  callbacks.current = props;
+  const token = props.invitation.token;
+  const [receipt] = useState(() => {
+    let resolve!: () => void;
+    let reject!: (reason: unknown) => void;
+    const ready = new Promise<void>((accept, decline) => {
+      resolve = accept;
+      reject = decline;
+    });
+    // A failed exposure is also reported when no submit or dismiss is waiting.
+    void ready.catch(() => undefined);
+    return { ready, resolve, reject };
+  });
+  useEffect(() => {
+    let active = true;
+    // This effect runs after the survey has mounted; an invitation alone is not an exposure.
+    void api("/api/expose", "customer", { token }).then(
+      () => {
+        receipt.resolve();
+        if (active) void callbacks.current.onExposed();
+      },
+      (error: unknown) => {
+        receipt.reject(error);
+        if (active) {
+          setFailure("Survey unavailable. Your report is saved.");
+          callbacks.current.returnFocusTo?.focus();
+        }
+      },
+    );
+    return () => {
+      active = false;
+    };
+  }, [token, receipt]);
+  if (failure) return h("p", { role: "alert" }, failure);
+  return h(props.modal ? SurveyModal : SurveyCard, {
+    definition: props.invitation.definition,
+    identity: props.invitation.invitationId,
+    returnFocusTo: props.returnFocusTo,
+    onClose: props.onClose,
+    onSubmit: async (answers) => {
+      await receipt.ready;
+      await props.onSubmit(answers);
+    },
+    onDismiss: async () => {
+      await receipt.ready;
+      await props.onDismiss();
+    },
+  });
+}
 function App() {
   const saveButton = useRef<HTMLButtonElement>(null);
   const [boot, setBoot] = useState<{ publication: SurveyPublication; access: SurveyAdminAccess }>();
   const [name, setName] = useState("First report");
   const [product, setProduct] = useState("");
-  const [invitation, setInvitation] = useState<{
-    token: string;
-    invitationId: string;
-    definition: SurveyDefinition;
-  }>();
+  const [invitation, setInvitation] = useState<Invitation>();
   const [surveyMessage, setSurveyMessage] = useState("");
   const [modal, setModal] = useState(false);
   const [preview, setPreview] = useState(false);
   const [pending, setPending] = useState(false);
   const [state, setState] = useState<SurveyResultsState>({ kind: "loading" });
-  const [denominator, setDenominator] = useState<"invitation" | "exposure">("invitation");
+  const denominator = useRef<"invitation" | "exposure">("invitation");
   const [rows, setRows] = useState<readonly SurveyResponse[]>([]);
-  const [after, setAfter] = useState("");
+  const after = useRef("");
   const [fixture, setFixture] = useState("ready");
   const [csv, setCsv] = useState("");
   const refreshSequence = useRef(0);
-  async function refresh(kind = denominator, cursor = after) {
+  async function refresh(kind = denominator.current, cursor = after.current) {
     const sequence = ++refreshSequence.current;
     try {
       const [data, responses] = await Promise.all([
@@ -78,8 +140,6 @@ function App() {
         });
         if (sequence !== saveSequence.current) return;
         if (candidate) {
-          await api("/api/expose", "customer", { token: candidate.token });
-          if (sequence !== saveSequence.current) return;
           setInvitation(candidate);
         }
       } catch {
@@ -158,9 +218,11 @@ function App() {
         ),
       ),
       invitation &&
-        h(modal ? SurveyModal : SurveyCard, {
-          definition: invitation.definition,
-          identity: invitation.invitationId,
+        h(InvitedSurvey, {
+          key: invitation.invitationId,
+          invitation,
+          modal,
+          onExposed: () => refresh(),
           onClose: () =>
             setInvitation((current) =>
               current?.invitationId === invitation.invitationId ? undefined : current,
@@ -224,7 +286,7 @@ function App() {
       h(SurveyResults, {
         state: displayed,
         onDenominatorChange: (value) => {
-          setDenominator(value);
+          denominator.current = value;
           void refresh(value);
         },
         onDelete: (r, reason) => change(r, reason, "delete"),
@@ -233,8 +295,8 @@ function App() {
           rows.length === 20
             ? () => {
                 const cursor = rows[rows.length - 1]?.id ?? "";
-                setAfter(cursor);
-                void refresh(denominator, cursor);
+                after.current = cursor;
+                void refresh(denominator.current, cursor);
               }
             : undefined,
       }),

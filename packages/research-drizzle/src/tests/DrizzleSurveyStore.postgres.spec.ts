@@ -8,8 +8,14 @@ import {
   SurveyDeniedProblem,
   SurveyExpiredProblem,
   SurveyUnavailableProblem,
+  SurveyInvalidProblem,
 } from "@croco/research-core";
-import type { SurveyScope, SurveyDefinition, SurveyAuthority } from "@croco/research-core";
+import type {
+  SurveyScope,
+  SurveyDefinition,
+  SurveyAuthority,
+  SurveyAnswers,
+} from "@croco/research-core";
 import { DrizzleSurveyStore, surveyTokenCodec, addMicroSurveys } from "../index";
 const url = process.env.RESEARCH_POSTGRES_URL;
 const scope: SurveyScope = { tenantId: "tenant-a", appId: "reports", environmentId: "test" };
@@ -396,6 +402,68 @@ describe.skipIf(!url)("PostgreSQL micro surveys", () => {
       (await first.query("select payload from research_records where kind='response'")).rows[0]
         .payload.answers,
     ).toEqual({});
+  });
+  it("rejects wrong empty optional answer types before persisting any response", async () => {
+    const optional: SurveyDefinition = {
+      ...d,
+      version: "v2",
+      questions: [
+        ...d.questions.map((question) => ({ ...question, required: false })),
+        { id: "score", title: "Score", kind: "scale", required: false, min: 1, max: 5 },
+        {
+          id: "features",
+          title: "Features",
+          kind: "multi",
+          required: false,
+          options: [
+            { id: "chart", label: "Chart" },
+            { id: "export", label: "Export" },
+          ],
+        },
+      ],
+    };
+    await manager.publish({
+      ...admin,
+      definition: optional,
+      expectedRevision: 1,
+      reason: "Optional question types",
+      idempotencyKey: "optional-types",
+    });
+    const invitation = await invite();
+    await manager.expose(tokenInput(invitation.token));
+    const invalid: SurveyAnswers[] = [
+      { text: [] },
+      { score: [] },
+      { score: "" },
+      { result: [] },
+      { result: "" },
+      { features: "" },
+    ];
+    for (const [index, answers] of invalid.entries()) {
+      await expect(
+        manager.submitResponse({
+          ...tokenInput(invitation.token),
+          answers,
+          idempotencyKey: `invalid-optional-${index}`,
+        }),
+      ).rejects.toBeInstanceOf(SurveyInvalidProblem);
+    }
+    expect(
+      (
+        await first.query(
+          "select count(*)::int as count from research_records where kind='response'",
+        )
+      ).rows[0].count,
+    ).toBe(0);
+    expect(
+      (await manager.results({ ...admin, familyId: d.id, denominator: "exposure" })).submitted,
+    ).toBe(0);
+    const valid = await manager.submitResponse({
+      ...tokenInput(invitation.token),
+      answers: { text: "", features: [] },
+      idempotencyKey: "typed-empty",
+    });
+    expect(valid.answers).toEqual({ text: "", features: [] });
   });
   it("propagates unavailable storage instead of empty results", async () => {
     const pool = new Pool({ connectionString: url, options: "-c search_path=missing_surveys" });

@@ -281,6 +281,59 @@ try {
   );
   await screen("latest-denominator-after-delayed-results");
   await page.unroute("**/api/results");
+  // Display precedes exposure acknowledgement, including a replacement invitation.
+  const exposureDefinition = JSON.parse(
+    await page.getByLabel("Survey definition", { exact: true }).inputValue(),
+  );
+  exposureDefinition.version = "v5";
+  exposureDefinition.frequencyPolicy.maxInvitations = 7;
+  await page
+    .getByLabel("Survey definition", { exact: true })
+    .fill(JSON.stringify(exposureDefinition));
+  await page.getByLabel("Publication reason").fill("Synthetic exposure ordering verification");
+  await page.getByRole("button", { name: "Publish survey", exact: true }).click();
+  await page.getByText("Current publication revision: 5").waitFor();
+  let releaseExposure;
+  let exposureEntered;
+  let firstExposureToken;
+  const exposureBlocked = new Promise((resolve) => {
+    releaseExposure = resolve;
+  });
+  const exposureStarted = new Promise((resolve) => {
+    exposureEntered = resolve;
+  });
+  await page.route("**/api/expose", async (route) => {
+    if (!firstExposureToken) {
+      firstExposureToken = route.request().postDataJSON().token;
+      exposureEntered();
+      await exposureBlocked;
+    }
+    await route.continue();
+  });
+  await page.getByRole("button", { name: "Save report", exact: true }).click();
+  await exposureStarted;
+  assert.equal(
+    await page.getByRole("dialog").count(),
+    1,
+    "A survey must be visible before its exposure is recorded",
+  );
+  await page.getByRole("dialog").getByRole("button", { name: "Return to product" }).click();
+  await page.getByRole("button", { name: "Save report", exact: true }).click();
+  await page.getByRole("dialog").waitFor();
+  const oldExposure = page.waitForResponse(
+    (res) =>
+      res.url().endsWith("/api/expose") &&
+      res.request().postDataJSON().token === firstExposureToken,
+  );
+  releaseExposure();
+  await oldExposure;
+  await page.waitForFunction(() => document.querySelector("dialog")?.open === true);
+  await screen("display-before-delayed-exposure-acknowledgement");
+  await page.getByRole("dialog").getByRole("button", { name: "Skip survey" }).click();
+  await page.getByRole("dialog").waitFor({ state: "detached" });
+  assert.equal((await counters()).exposures, expected.exposures + 2);
+  assert.equal(await page.getByLabel("Response-rate denominator").inputValue(), "exposure");
+  await page.unroute("**/api/expose");
   assert.deepEqual(errors, []);
   await verifyModalLifecycle(browser, out);
   await writeFile(
@@ -298,6 +351,7 @@ try {
           "late acknowledgement cannot close newer invitation",
           "skip does not block completed product action",
           "actual exposure",
+          "display precedes delayed exposure acknowledgement",
           "submit keyboard flow",
           "modal focus containment",
           "cross-version frequency",
