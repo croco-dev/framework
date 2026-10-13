@@ -72,13 +72,10 @@ describe("ResearchService", () => {
     const stored = await f.store.read(scope, study.id);
     expect(stored.history).toHaveLength(49997);
     expect(stored.revision).toBe(49997);
-    expect(stored.invitations.find((value) => value.subject === subject)).toMatchObject(
-      {
-        state: "selected",
-        contactCount: 0,
-      },
-      20000,
-    );
+    expect(stored.invitations.find((value) => value.subject === subject)).toMatchObject({
+      state: "selected",
+      contactCount: 0,
+    });
     expect(f.send).not.toHaveBeenCalled();
     await f.service.writeNote(scope, study.id, subject, null, access, command(49997, "delete"));
     expect((await f.store.read(scope, study.id)).notes).toEqual([]);
@@ -110,14 +107,14 @@ describe("ResearchService", () => {
     let release = () => {};
     const reached = new Promise<void>((resolve) => {
       started = resolve;
-    }, 20000);
+    });
     const result = new Promise<{ status: "queued"; executionIds: string[] }>((resolve) => {
       release = () => resolve({ status: "queued", executionIds: ["execution"] });
-    }, 20000);
+    });
     f.send.mockImplementation(async () => {
       started();
       return result;
-    }, 20000);
+    });
     const dispatch = f.service.invite(scope, study.id, subject, access, command(49996, "invite"));
     await reached;
     await expect(
@@ -140,13 +137,10 @@ describe("ResearchService", () => {
     const stored = await f.store.read(scope, study.id);
     expect(stored.history).toHaveLength(50000);
     expect(stored.notes).toEqual([]);
-    expect(stored.invitations.find((value) => value.subject === subject)).toMatchObject(
-      {
-        state: "invited",
-        executionIds: ["execution"],
-      },
-      20000,
-    );
+    expect(stored.invitations.find((value) => value.subject === subject)).toMatchObject({
+      state: "invited",
+      executionIds: ["execution"],
+    });
   }, 20000);
   it("keeps cleanup and audited reconciliation available after interrupted dispatch at capacity", async () => {
     const { f, subject } = await selectedWithNote();
@@ -169,12 +163,9 @@ describe("ResearchService", () => {
     const stored = await f.store.read(scope, study.id);
     expect(stored.history).toHaveLength(50000);
     expect(stored.notes).toEqual([]);
-    expect(stored.invitations.find((value) => value.subject === subject)).toMatchObject(
-      {
-        state: "suppressed",
-      },
-      20000,
-    );
+    expect(stored.invitations.find((value) => value.subject === subject)).toMatchObject({
+      state: "suppressed",
+    });
     expect(f.send).toHaveBeenCalledTimes(1);
   }, 20000);
   it.each(["queued", "failed"])(
@@ -186,17 +177,17 @@ describe("ResearchService", () => {
       let release = () => {};
       const reached = new Promise<void>((resolve) => {
         started = resolve;
-      }, 20000);
+      });
       const completed = new Promise<void>((resolve) => {
         release = resolve;
-      }, 20000);
+      });
       f.send.mockImplementation(async () => {
         started();
         await completed;
         if (outcome === "failed")
           throw new ResearchConflictProblem("Synthetic late provider failure");
         return { status: "queued", executionIds: ["execution"] };
-      }, 20000);
+      });
       const dispatch = f.service.invite(scope, study.id, subject, access, command(49996, "invite"));
       await reached;
       await f.service.writeNote(scope, study.id, subject, null, access, command(49997, "delete"));
@@ -212,13 +203,10 @@ describe("ResearchService", () => {
       await dispatch;
       const stored = await f.store.read(scope, study.id);
       expect(stored.history).toHaveLength(50000);
-      expect(stored.invitations.find((value) => value.subject === subject)).toMatchObject(
-        {
-          state: "suppressed",
-          executionIds: [],
-        },
-        20000,
-      );
+      expect(stored.invitations.find((value) => value.subject === subject)).toMatchObject({
+        state: "suppressed",
+        executionIds: [],
+      });
       expect(
         stored.invitations.find((value) => value.subject === subject)?.failureCode,
       ).toBeUndefined();
@@ -239,21 +227,16 @@ describe("ResearchService", () => {
         access,
         command(2, "note"),
       );
-      await f.store.transact(
-        scope,
-        study.id,
-        async (record) => {
-          const audit = record.history[0];
-          const mutation = record.mutations[0];
-          for (let revision = record.revision + 1; revision <= 49999; revision++) {
-            const key = `prior-command-${revision}`;
-            record.history.push({ ...audit, revision, idempotencyKey: key });
-            record.mutations.push({ ...mutation, key });
-          }
-          record.revision = 49999;
-        },
-        20000,
-      );
+      await f.store.transact(scope, study.id, async (record) => {
+        const audit = record.history[0];
+        const mutation = record.mutations[0];
+        for (let revision = record.revision + 1; revision <= 49999; revision++) {
+          const key = `prior-command-${revision}`;
+          record.history.push({ ...audit, revision, idempotencyKey: key });
+          record.mutations.push({ ...mutation, key });
+        }
+        record.revision = 49999;
+      });
       if (cleanup === "expiration purge") f.setNow(new Date("2026-10-21T00:00:00Z"));
       await expect(
         f.service.publishStudy(scope, study, access, command(49999, "ordinary-write")),
@@ -267,32 +250,24 @@ describe("ResearchService", () => {
       const stored = await f.store.read(scope, study.id);
       expect(stored.notes).toEqual([]);
       expect(stored.history).toHaveLength(50000);
-      expect(stored.history.at(-1)).toMatchObject(
-        {
-          operation: cleanup === "explicit deletion" ? "note" : "purge-notes",
-        },
-        20000,
-      );
+      expect(stored.history.at(-1)).toMatchObject({
+        operation: cleanup === "explicit deletion" ? "note" : "purge-notes",
+      });
     },
     20000,
   );
   it("rejects a private note when its future deletion cannot fit in the audit budget", async () => {
     const f = await setup();
-    await f.store.transact(
-      scope,
-      study.id,
-      async (record) => {
-        const audit = record.history[0];
-        const mutation = record.mutations[0];
-        for (let revision = record.revision + 1; revision <= 49999; revision++) {
-          const key = `prior-command-${revision}`;
-          record.history.push({ ...audit, revision, idempotencyKey: key });
-          record.mutations.push({ ...mutation, key });
-        }
-        record.revision = 49999;
-      },
-      20000,
-    );
+    await f.store.transact(scope, study.id, async (record) => {
+      const audit = record.history[0];
+      const mutation = record.mutations[0];
+      for (let revision = record.revision + 1; revision <= 49999; revision++) {
+        const key = `prior-command-${revision}`;
+        record.history.push({ ...audit, revision, idempotencyKey: key });
+        record.mutations.push({ ...mutation, key });
+      }
+      record.revision = 49999;
+    });
     await expect(
       f.service.writeNote(
         scope,
