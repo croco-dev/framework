@@ -55,6 +55,10 @@ already admitted contact; the console never reports cancellation success. Partic
 withdrawal prevents subsequent actual participation confirmation. The EngagementService
 checks current recipient preferences at its own dispatch boundary.
 
+Contact-only opt-out after acceptance preserves granted participation consent and the accepted
+slot. Completed participation is a historical fact: ordinary decline/withdraw responses cannot
+erase it or return its slot. Later consent withdrawal is recorded separately without changing that fact.
+
 A second durable claim marks acceptance unknown before external dispatch. Only one caller
 owns that send. A retry reuses the admission and never sends again. Process death before/after
 external acceptance leaves admitted/unknown state holding its slot; `reconcileInvitation`

@@ -80,6 +80,8 @@ describe("Research engagement integration", () => {
     const serialized = JSON.stringify(dispatch.mock.calls);
     expect(serialized).toContain("research-invite");
     expect(serialized).toContain("tenant");
+    const calls = JSON.parse(serialized) as [unknown, { idempotencyKey: string }][];
+    expect(calls[0][1].idempotencyKey.split(":").map(decodeURIComponent)[5]).toBe(second.id);
     await service.invite(scope, study.id, second.subject, access, command(5, "invite-second"));
     expect(dispatch).toHaveBeenCalledTimes(1);
   });

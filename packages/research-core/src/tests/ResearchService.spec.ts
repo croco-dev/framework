@@ -37,6 +37,93 @@ async function setup(f = fixture(), rows = candidates()) {
   return f;
 }
 describe("ResearchService", () => {
+  it("preserves accepted participation after a contact-only opt-out", async () => {
+    const f = await setup();
+    await f.service.selectCandidates(scope, study.id, access, command(2, "select"));
+    const subject = (await f.store.read(scope, study.id)).invitations[0].subject;
+    await f.service.invite(scope, study.id, subject, access, command(3, "invite"));
+    await f.service.recordConsent(
+      scope,
+      study.id,
+      subject,
+      { contact: true, participation: true },
+      access,
+      command(5, "consent"),
+    );
+    await f.service.recordResponse(
+      scope,
+      study.id,
+      subject,
+      "accepted",
+      access,
+      command(6, "accept"),
+    );
+    await f.service.recordConsent(
+      scope,
+      study.id,
+      subject,
+      { contact: false, participation: true },
+      access,
+      command(7, "contact-opt-out"),
+    );
+    expect((await f.store.read(scope, study.id)).invitations[0].state).toBe("accepted");
+    expect((await f.service.inspect(scope, study.id, access)).groups[0]).toMatchObject({
+      accepted: 1,
+      held: 2,
+    });
+    await f.service.markParticipated(scope, study.id, subject, access, command(8, "participated"));
+    expect((await f.service.inspect(scope, study.id, access)).groups[0].participated).toBe(1);
+  });
+  it("rejects ordinary responses after completed participation and preserves consent withdrawal separately", async () => {
+    const f = await setup();
+    await f.service.selectCandidates(scope, study.id, access, command(2, "select"));
+    const subject = (await f.store.read(scope, study.id)).invitations[0].subject;
+    await f.service.invite(scope, study.id, subject, access, command(3, "invite"));
+    await f.service.recordConsent(
+      scope,
+      study.id,
+      subject,
+      { contact: true, participation: true },
+      access,
+      command(5, "consent"),
+    );
+    await f.service.recordResponse(
+      scope,
+      study.id,
+      subject,
+      "accepted",
+      access,
+      command(6, "accept"),
+    );
+    await f.service.markParticipated(scope, study.id, subject, access, command(7, "participated"));
+    const recruiter = new ResearchService(
+      f.store,
+      { authorize: async (_access, permission) => permission !== "research.participate" },
+      { send: f.send },
+      [study.bookingUrl],
+    );
+    for (const response of ["declined", "withdrawn"] as const) {
+      await expect(
+        recruiter.recordResponse(scope, study.id, subject, response, access, command(8, response)),
+      ).rejects.toThrow(ResearchConflictProblem);
+    }
+    await recruiter.recordConsent(
+      scope,
+      study.id,
+      subject,
+      { contact: false, participation: false },
+      access,
+      command(8, "withdraw-consent"),
+    );
+    expect((await recruiter.inspect(scope, study.id, access)).groups[0]).toMatchObject({
+      participated: 1,
+      held: 2,
+    });
+    expect((await f.store.read(scope, study.id)).invitations[0]).toMatchObject({
+      state: "participated",
+      participationConsent: false,
+    });
+  });
   it("requires write authority in addition to private-note field permission", async () => {
     const f = await setup();
     await f.service.writeNote(

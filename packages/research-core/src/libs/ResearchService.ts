@@ -337,7 +337,7 @@ export class ResearchService {
         });
         if (invitation) {
           invitation.participationConsent = consent.participation;
-          if ((!consent.contact || !consent.participation) && invitation.state === "accepted")
+          if (!consent.participation && invitation.state === "accepted")
             invitation.state = "withdrawn";
           if (!consent.contact && invitation.state === "selected") invitation.state = "withdrawn";
         }
@@ -369,10 +369,7 @@ export class ResearchService {
           throw new ResearchConflictProblem(
             "Acceptance requires participation consent and a confirmed invitation",
           );
-        if (
-          response !== "accepted" &&
-          !["selected", "invited", "accepted", "participated"].includes(value.state)
-        )
+        if (response !== "accepted" && !["selected", "invited", "accepted"].includes(value.state))
           throw new ResearchConflictProblem(
             "Unknown or terminal invitation cannot release a slot without reconciliation",
           );
