@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, expectTypeOf, it } from "vitest";
 import {
   LearningRegistry,
   LearningRegistryProblem,
@@ -13,6 +13,7 @@ import type {
   EvidenceRef,
   LearningAccess,
   LearningCommit,
+  LearningEvidenceResult,
   LearningField,
   LearningPolicy,
   LearningRecord,
@@ -388,6 +389,49 @@ describe("LearningRegistry", () => {
   });
   it("rejects raw source bodies, sensitive imports, unapproved URL schemes and oversized data before persistence", async () => {
     const f = fixture();
+    expectTypeOf<Extract<LearningEvidenceResult, { state: "available" }>>().toEqualTypeOf<
+      Readonly<{ state: "available"; version: string }>
+    >();
+    for (const from of [
+      "2026-02-31T00:00:00Z",
+      "2026-04-31T00:00:00+09:00",
+      "2026-01-01T24:00:00Z",
+    ]) {
+      await expect(
+        f.save({
+          ...record(),
+          evidenceRefs: [{ ...ref, observedWindow: { from, to: "2026-12-01T00:00:00Z" } }],
+        }),
+      ).rejects.toMatchObject({ code: "learning-registry/input" });
+    }
+    await expect(
+      f.save({
+        ...record(),
+        evidenceRefs: [
+          {
+            ...ref,
+            observedWindow: {
+              from: "2026-01-01T00:00:00.000002Z",
+              to: "2026-01-01T00:00:00.000001Z",
+            },
+          },
+        ],
+      }),
+    ).rejects.toMatchObject({ code: "learning-registry/input" });
+    expect(() =>
+      validateLearningRecord({
+        ...record("leap-window"),
+        evidenceRefs: [
+          {
+            ...ref,
+            observedWindow: {
+              from: "2024-02-29T00:00:00.000001+09:00",
+              to: "2024-02-28T15:00:00.000002Z",
+            },
+          },
+        ],
+      }),
+    ).not.toThrow();
     await expect(f.save({ ...record(), facts: ["customer@example.test"] })).rejects.toMatchObject({
       code: "learning-registry/input",
     });

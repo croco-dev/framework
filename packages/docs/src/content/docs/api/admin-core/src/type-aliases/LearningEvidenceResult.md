@@ -5,4 +5,4 @@ prev: false
 title: "LearningEvidenceResult"
 ---
 
-> **LearningEvidenceResult** = `Readonly`\<\{ `state`: `Exclude`\<[`EvidenceAccessState`](/api/admin-core/src/type-aliases/evidenceaccessstate/), `"version-mismatch"` \| `"unregistered"`\>; `version?`: `string`; \}\>
+> **LearningEvidenceResult** = `Readonly`\<\{ `state`: `"available"`; `version`: `string`; \} \| \{ `state`: `"deleted"` \| `"denied"` \| `"failed"`; `version?`: `string`; \}\>

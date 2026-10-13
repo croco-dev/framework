@@ -202,5 +202,33 @@ describe.skipIf(!url)("PostgresLearningRepository", () => {
         )
       ).revision,
     ).toBe(4);
+    const pageScope = { ...scope, tenantId: "page-index" };
+    await first.query(
+      `INSERT INTO croco_learning_records SELECT $1,$2,$3,'row-'||lpad(n::text,6,'0'),1,
+       jsonb_set($4::jsonb,'{id}',to_jsonb('row-'||lpad(n::text,6,'0')))
+       FROM generate_series(1,2048) n`,
+      [
+        pageScope.appId,
+        pageScope.environment,
+        pageScope.tenantId,
+        JSON.stringify({ ...record, scope: pageScope, revision: 1 }),
+      ],
+    );
+    await first.query("ANALYZE croco_learning_records");
+    const plan = await first.query(
+      `EXPLAIN (FORMAT JSON) SELECT payload FROM croco_learning_records
+       WHERE app_id=$1 AND environment=$2 AND tenant_id=$3 AND id COLLATE "C">$4 COLLATE "C"
+       ORDER BY id COLLATE "C" LIMIT 5`,
+      [pageScope.appId, pageScope.environment, pageScope.tenantId, "row-001000"],
+    );
+    expect(JSON.stringify(plan.rows)).toContain("croco_learning_records_page");
+    expect(JSON.stringify(plan.rows)).not.toContain('"Node Type":"Sort"');
+    expect((await other.page(pageScope, "row-001000", 5)).map((row) => row.id)).toEqual([
+      "row-001001",
+      "row-001002",
+      "row-001003",
+      "row-001004",
+      "row-001005",
+    ]);
   });
 });

@@ -118,10 +118,10 @@ export interface LearningRepository {
     limit: number,
   ): Promise<readonly LearningRevision[]>;
 }
-export type LearningEvidenceResult = Readonly<{
-  state: Exclude<EvidenceAccessState, "version-mismatch" | "unregistered">;
-  version?: string;
-}>;
+export type LearningEvidenceResult = Readonly<
+  | { state: "available"; version: string }
+  | { state: "deleted" | "denied" | "failed"; version?: string }
+>;
 export interface LearningEvidenceSource {
   readonly id: string;
   /** Reauthorize against current source privacy, including retained snapshots. No default URL fetch. */
@@ -196,12 +196,21 @@ function required(value: unknown): value is string {
 function texts(value: unknown): value is readonly string[] {
   return Array.isArray(value) && value.length <= 50 && value.every((v) => text(v) && v.trim());
 }
-function instant(value: unknown): value is string {
-  return (
-    typeof value === "string" &&
-    /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?(?:Z|[+-]\d{2}:\d{2})$/.test(value) &&
-    Number.isFinite(Date.parse(value))
+function instant(value: unknown): bigint | undefined {
+  if (typeof value !== "string") return undefined;
+  const match = /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})(?:\.(\d{1,6}))?(Z|[+-]\d{2}:\d{2})$/.exec(
+    value,
   );
+  if (!match) return undefined;
+  const local = Date.parse(`${match[1]}Z`);
+  const milliseconds = Date.parse(`${match[1]}${match[3]}`);
+  if (
+    !Number.isFinite(local) ||
+    !Number.isFinite(milliseconds) ||
+    new Date(local).toISOString().slice(0, 19) !== match[1]
+  )
+    return undefined;
+  return BigInt(milliseconds) * BigInt(1000000) + BigInt((match[2] ?? "").padEnd(9, "0"));
 }
 export function learningEvidenceKey(ref: EvidenceRef): string {
   return JSON.stringify([ref.source, ref.id, ref.version]);
@@ -220,15 +229,17 @@ export function importLearningEvidence(json: string): EvidenceRef {
   return structuredClone(ref);
 }
 export function validateLearningEvidence(ref: EvidenceRef): void {
+  const from = instant(ref?.observedWindow?.from);
+  const to = instant(ref?.observedWindow?.to);
   if (
     !ref ||
     !required(ref.source) ||
     !required(ref.id) ||
     !required(ref.version) ||
     !ref.observedWindow ||
-    !instant(ref.observedWindow.from) ||
-    !instant(ref.observedWindow.to) ||
-    Date.parse(ref.observedWindow.from) > Date.parse(ref.observedWindow.to)
+    from === undefined ||
+    to === undefined ||
+    from > to
   )
     invalid("Evidence requires source, identity, version and an ordered observation window");
   if (ref.url !== undefined) {

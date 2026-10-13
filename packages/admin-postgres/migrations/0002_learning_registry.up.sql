@@ -4,6 +4,9 @@ CREATE TABLE croco_learning_records (
   id text NOT NULL, revision bigint NOT NULL CHECK (revision > 0), payload jsonb NOT NULL,
   PRIMARY KEY (app_id, environment, tenant_id, id)
 );
+-- Match page()'s deterministic ordering independently of the database default collation.
+CREATE INDEX croco_learning_records_page
+  ON croco_learning_records (app_id, environment, tenant_id, (id COLLATE "C"));
 CREATE TABLE croco_learning_history (
   app_id text NOT NULL, environment text NOT NULL, tenant_id text NOT NULL,
   id text NOT NULL, revision bigint NOT NULL, payload jsonb NOT NULL,

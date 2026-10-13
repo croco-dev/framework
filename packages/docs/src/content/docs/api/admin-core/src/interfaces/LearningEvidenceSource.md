@@ -15,7 +15,7 @@ title: "LearningEvidenceSource"
 
 ### resolve()
 
-> **resolve**(`reference`, `access`): `Promise`\<`Readonly`\<\{ `state`: `"available"` \| `"denied"` \| `"failed"` \| `"deleted"`; `version?`: `string`; \}\>\>
+> **resolve**(`reference`, `access`): `Promise`\<[`LearningEvidenceResult`](/api/admin-core/src/type-aliases/learningevidenceresult/)\>
 
 Reauthorize against current source privacy, including retained snapshots. No default URL fetch.
 
@@ -31,4 +31,4 @@ Reauthorize against current source privacy, including retained snapshots. No def
 
 #### Returns
 
-`Promise`\<`Readonly`\<\{ `state`: `"available"` \| `"denied"` \| `"failed"` \| `"deleted"`; `version?`: `string`; \}\>\>
+`Promise`\<[`LearningEvidenceResult`](/api/admin-core/src/type-aliases/learningevidenceresult/)\>
