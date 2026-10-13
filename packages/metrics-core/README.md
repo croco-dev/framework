@@ -330,7 +330,8 @@ State names are application-owned; no NAU/EAU/RAU partition is imposed.
 `collectGrowthHistory` consumes a bounded async normalized row reader; `importGrowthHistory` shares the
 ETL CSV/JSONL decoder with an explicit numeric period schema. Declare every contiguous period and its
 completeness. Duplicate subject/period rows reject; a subject missing in the next period produces a
-`missing-state` diagnostic, marks that population unknown and excludes the transition. Model exits
+`missing-state` diagnostic, marks that population unknown and excludes the transition. Continued
+absence stays unknown until the subject's state is observed again. Model exits
 explicitly as business states. New subjects are measured inflows. No subject rows appear in the
 returned aggregate dataset. `importGrowthCounts` validates a dense count matrix and population totals
 and explicitly reports `aggregate-only` partition validation. A counts DTO cannot verify individual
@@ -348,9 +349,10 @@ backtest inflows must be decided before the cutoff; source evidence and that hum
 proof of causal effects. Future transition counts never enter training. Incomplete actual populations
 stay null with a reason. MAE means average absolute cell error in the population unit; MAPE is a
 fraction. Zero actual MAPE retains null cell errors and `actual-zero`, and makes the mean undefined
-rather than silently dropping cells. There is no infinite-horizon market-size estimate.
+rather than silently dropping cells. Numeric error overflow rejects with `backtest-overflow`
+instead of publishing Infinity. There is no infinite-horizon market-size estimate.
 
-Invalid definitions, units, probabilities, empty training rows and exceeded configured budgets throw
+Invalid definitions, missing array cells, units, probabilities, empty training rows and exceeded configured budgets throw
 `GrowthModelProblem` (`metrics-core/invalid-growth-model`) with a precise `field`. Bounds are input
 controls, not promised performance. See [the independent executable example](../../examples/growth-model/README.md)
 for full input contracts and UI composition. Existing user CC and revenue calculations are unchanged.

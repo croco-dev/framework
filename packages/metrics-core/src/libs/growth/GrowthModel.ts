@@ -118,7 +118,10 @@ function amount(value: number): boolean {
   return Number.isFinite(value) && value >= 0 && value <= Number.MAX_SAFE_INTEGER;
 }
 function vector(values: readonly number[], n: number, field: string) {
-  requireValue(Array.isArray(values) && values.length === n && values.every(amount), field);
+  requireValue(
+    Array.isArray(values) && values.length === n && Array.from(values).every(amount),
+    field,
+  );
 }
 function limits(input: GrowthLimits) {
   requireValue(
@@ -147,7 +150,9 @@ export function validateStatePartition(
     Array.isArray(model.stateDefinitions) &&
       model.stateDefinitions.length > 0 &&
       model.stateDefinitions.length <= bounds.maxStates &&
-      model.stateDefinitions.every((s) => s != null && [s.id, s.label, s.evidence].every(text)),
+      Array.from(model.stateDefinitions).every(
+        (s) => s != null && [s.id, s.label, s.evidence].every(text),
+      ),
     "stateDefinitions",
   );
   requireValue(
@@ -157,7 +162,7 @@ export function validateStatePartition(
   requireValue(
     Array.isArray(model.assumptions) &&
       model.assumptions.length <= 100 &&
-      model.assumptions.every(text),
+      Array.from(model.assumptions).every(text),
     "assumptions",
   );
   const window = model.transitionEstimationWindow;
@@ -237,10 +242,10 @@ export function validateGrowthDataset(
       Array.isArray(transition.counts) && transition.counts.length === n,
       "counts-dimension",
     );
-    transition.counts.forEach((row: readonly number[]) => {
+    for (const row of transition.counts) {
       vector(row, n, "counts");
       requireValue(row.every(Number.isSafeInteger), "integer-counts");
-    });
+    }
     vector(transition.inflows, n, "inflows");
     const start = populations.get(transition.from),
       end = populations.get(transition.from + 1);
@@ -271,7 +276,7 @@ export function validateGrowthDataset(
   requireValue(
     Array.isArray(data.diagnostics) &&
       data.diagnostics.length <= bounds.maxRows &&
-      data.diagnostics.every(
+      Array.from(data.diagnostics).every(
         (d) =>
           d != null &&
           index(d.period) &&
@@ -353,12 +358,12 @@ export function projectGrowthModel(
       scenario.inflows.values.length === scenario.horizon,
     "inflow-unit-or-horizon",
   );
-  scenario.inflows.values.forEach((v) => vector(v, n, "inflow"));
+  for (const values of scenario.inflows.values) vector(values, n, "inflow");
   const effective = matrix.map((row) => [...row]);
   requireValue(
     Array.isArray(scenario.matrixOverrides) &&
       scenario.matrixOverrides.length <= n &&
-      scenario.matrixOverrides.every((o) => o != null) &&
+      Array.from(scenario.matrixOverrides).every((o) => o != null) &&
       new Set(scenario.matrixOverrides.map((o) => o.stateId)).size ===
         scenario.matrixOverrides.length,
     "overrides",

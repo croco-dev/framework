@@ -420,6 +420,7 @@ describe("GrowthModel", () => {
       result.diagnostics.filter((d) => d.reason === "missing-state").map((d) => d.period),
     ).toEqual([1, 2, 3]);
     expect(result.transitions.every((t) => !t.complete)).toBe(true);
+    expect(result.transitions[3]?.inflows).toEqual([0, 0]);
     expect(() =>
       estimateTransitionMatrix(
         { ...model, transitionEstimationWindow: { from: 2, to: 3 } },
@@ -443,5 +444,35 @@ describe("GrowthModel", () => {
         inflows: { ...scenario.inflows, values: [[0, 0]] },
       }),
     ).toThrowError(/backtest-overflow/);
+  });
+  it("rejects sparse vectors, periods and definitions rather than calculating missing cells", () => {
+    const sparse = Array<number>(2);
+    sparse[0] = 0;
+    const matrix = [
+      [0.8, 0.2],
+      [0.1, 0.9],
+    ];
+    expect(() =>
+      projectGrowthModel(model, matrix, {
+        ...scenario,
+        inflows: { ...scenario.inflows, values: [sparse, [0, 0]] },
+      }),
+    ).toThrow(GrowthModelProblem);
+    const probability = Array<number>(2);
+    probability[0] = 1;
+    expect(() => validateGrowthMatrix([probability, [0, 1]], 2)).toThrow(GrowthModelProblem);
+    const periods = scenario.inflows.values.slice();
+    delete periods[1];
+    expect(() =>
+      projectGrowthModel(model, matrix, {
+        ...scenario,
+        inflows: { ...scenario.inflows, values: periods },
+      }),
+    ).toThrow(GrowthModelProblem);
+    const definitions = model.stateDefinitions.slice();
+    delete definitions[1];
+    expect(() => validateStatePartition({ ...model, stateDefinitions: definitions })).toThrow(
+      GrowthModelProblem,
+    );
   });
 });

@@ -55,7 +55,7 @@ export async function collectGrowthHistory(
     !Array.isArray(metadata.periods) ||
     metadata.periods.length < 1 ||
     metadata.periods.length > bounds.maxRows ||
-    metadata.periods.some(
+    Array.from(metadata.periods).some(
       (p) =>
         p == null ||
         !Number.isSafeInteger(p.index) ||
@@ -122,8 +122,8 @@ export async function collectGrowthHistory(
       row[next] = (row[next] ?? 0) + 1;
     }
     for (const [subject, state] of after) {
+      if (!knownSubjects.has(subject)) inflows[state] = (inflows[state] ?? 0) + 1;
       knownSubjects.add(subject);
-      if (!before.has(subject)) inflows[state] = (inflows[state] ?? 0) + 1;
     }
     const missing = knownSubjects.size - after.size;
     if (missing > 0) {
