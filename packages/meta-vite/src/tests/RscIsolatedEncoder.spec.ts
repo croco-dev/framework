@@ -6,7 +6,6 @@ import {
   encodeRscFlightInIsolatedEncoder,
   RscFlightEncodeAbortedProblem,
 } from "../libs/rsc/isolatedEncode";
-import { defineRoute } from "../libs/routes/defineRoute";
 import type { RenderRouteIR } from "../libs/routes/types";
 
 const STUBBED_ENCODER = `// Stays alive without unresolved top-level await: the only way this child
@@ -48,11 +47,14 @@ describe("isolated RSC encoder lifecycle", () => {
   }
 
   function rscRoute(path: string): RenderRouteIR {
-    return defineRoute({
+    // The isolated encoder only reads `path` and `componentRef`; the loader is
+    // never invoked because these tests run a stubbed encoder module.
+    return {
       path,
       mode: "rsc",
-      component: () => null,
-    });
+      componentRef: `src/routes${path}.rsc.tsx#default`,
+      componentLoader: async () => ({ default: () => null }),
+    };
   }
 
   it("kills the encoder child and rejects when the client disconnects", async () => {
