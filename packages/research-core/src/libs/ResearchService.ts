@@ -82,9 +82,6 @@ export class ResearchService {
       const at = this.clock().toISOString();
       const beforeStates = new Map(record.invitations.map((value) => [value.subject, value.state]));
       await apply(record, at);
-      // Preserve one audit record per retained note for its eventual physical deletion.
-      if (record.history.length + record.notes.length >= 50000)
-        throw new ResearchInvalidProblem("Study audit capacity reached");
       record.revision++;
       record.history.push({
         actor: access.actor,
@@ -107,6 +104,7 @@ export class ResearchService {
           : {}),
         ...(subject ? { subject } : {}),
       });
+      assertAuditCapacity(record);
       record.mutations.push({ key: command.idempotencyKey, fingerprint });
       return record.revision;
     });
@@ -265,13 +263,16 @@ export class ResearchService {
         subject,
         transitions: [{ subject, state: "unknown" }],
       });
+      assertAuditCapacity(current);
       return true;
     });
     if (!claimed) return (await this.store.read(scope, id)).revision;
     try {
       const result = await this.sender.send(scope, requireStudy(record), invitation);
-      return this.store.transact(scope, id, async (current) => {
+      return await this.store.transact(scope, id, async (current) => {
         const value = requireInvitation(current, subject);
+        // Reconciliation already consumed the reserved completion record.
+        if (value.state !== "unknown") return current.revision;
         if (result.status === "queued") {
           value.executionIds = [...result.executionIds];
           if (value.state === "unknown") value.state = "invited";
@@ -291,12 +292,17 @@ export class ResearchService {
           transitions: [{ subject, state: value.state }],
           subject,
         });
+        assertAuditCapacity(current);
         return current.revision;
       });
     } catch {
-      await this.store.transact(scope, id, async (current) => {
-        requireInvitation(current, subject).failureCode = "research/dispatch-unknown";
+      const unknown = await this.store.transact(scope, id, async (current) => {
+        const value = requireInvitation(current, subject);
+        if (value.state !== "unknown") return false;
+        value.failureCode = "research/dispatch-unknown";
+        return true;
       });
+      if (!unknown) return (await this.store.read(scope, id)).revision;
       throw new ResearchConflictProblem(
         "Dispatch acceptance is unknown; reconcile provider evidence before releasing the slot",
       );
@@ -577,6 +583,17 @@ export class ResearchService {
       ...(offset + limit < record.candidates.length ? { nextOffset: offset + limit } : {}),
     });
   }
+}
+function assertAuditCapacity(record: ResearchRecord): void {
+  // Admission reserves both claim and completion; an unknown send keeps its completion
+  // record until dispatch or authenticated reconciliation completes it.
+  const dispatchReserve = record.invitations.reduce(
+    (total, invitation) =>
+      total + (invitation.state === "admitted" ? 2 : invitation.state === "unknown" ? 1 : 0),
+    0,
+  );
+  if (record.history.length + record.notes.length + dispatchReserve > 50000)
+    throw new ResearchInvalidProblem("Study audit capacity reached");
 }
 function text(value: string, field: string): void {
   if (typeof value !== "string" || !value.trim() || value.length > 2000)

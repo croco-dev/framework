@@ -36,7 +36,196 @@ async function setup(f = fixture(), rows = candidates()) {
   await f.service.importCandidates(scope, study.id, rows, access, command(1, "import"));
   return f;
 }
+async function seedAuditHistory(f: ReturnType<typeof fixture>, count: number) {
+  await f.store.transact(scope, study.id, async (record) => {
+    const audit = record.history[0];
+    const mutation = record.mutations[0];
+    for (let revision = record.revision + 1; revision <= count; revision++) {
+      const key = `prior-command-${revision}`;
+      record.history.push({ ...audit, revision, idempotencyKey: key });
+      record.mutations.push({ ...mutation, key });
+    }
+    record.revision = count;
+  });
+}
+async function selectedWithNote() {
+  const f = await setup();
+  await f.service.selectCandidates(scope, study.id, access, command(2, "select"));
+  const subject = (await f.store.read(scope, study.id)).invitations[0].subject;
+  await f.service.writeNote(
+    scope,
+    study.id,
+    subject,
+    "Private retained note",
+    access,
+    command(3, "note"),
+  );
+  return { f, subject };
+}
 describe("ResearchService", () => {
+  it("rejects admission before consuming note deletion or dispatch completion capacity", async () => {
+    const { f, subject } = await selectedWithNote();
+    await seedAuditHistory(f, 49997);
+    await expect(
+      f.service.invite(scope, study.id, subject, access, command(49997, "invite")),
+    ).rejects.toThrow(ResearchInvalidProblem);
+    const stored = await f.store.read(scope, study.id);
+    expect(stored.history).toHaveLength(49997);
+    expect(stored.revision).toBe(49997);
+    expect(stored.invitations.find((value) => value.subject === subject)).toMatchObject(
+      {
+        state: "selected",
+        contactCount: 0,
+      },
+      20000,
+    );
+    expect(f.send).not.toHaveBeenCalled();
+    await f.service.writeNote(scope, study.id, subject, null, access, command(49997, "delete"));
+    expect((await f.store.read(scope, study.id)).notes).toEqual([]);
+  }, 20000);
+  it.each(["explicit deletion", "expiration purge"])(
+    "preserves note %s after a successful dispatch at audit capacity",
+    async (cleanup) => {
+      const { f, subject } = await selectedWithNote();
+      await seedAuditHistory(f, 49996);
+      await f.service.invite(scope, study.id, subject, access, command(49996, "invite"));
+      expect(f.send).toHaveBeenCalledTimes(1);
+      expect((await f.store.read(scope, study.id)).history).toHaveLength(49999);
+      if (cleanup === "explicit deletion")
+        await f.service.writeNote(scope, study.id, subject, null, access, command(49998, "delete"));
+      else {
+        f.setNow(new Date("2026-10-21T00:00:00Z"));
+        await f.service.purgeExpiredNotes(scope, study.id, access, command(49998, "purge"));
+      }
+      const stored = await f.store.read(scope, study.id);
+      expect(stored.history).toHaveLength(50000);
+      expect(stored.notes).toEqual([]);
+    },
+    20000,
+  );
+  it("protects a pending dispatch completion from concurrent writes and note creation", async () => {
+    const { f, subject } = await selectedWithNote();
+    await seedAuditHistory(f, 49996);
+    let started = () => {};
+    let release = () => {};
+    const reached = new Promise<void>((resolve) => {
+      started = resolve;
+    }, 20000);
+    const result = new Promise<{ status: "queued"; executionIds: string[] }>((resolve) => {
+      release = () => resolve({ status: "queued", executionIds: ["execution"] });
+    }, 20000);
+    f.send.mockImplementation(async () => {
+      started();
+      return result;
+    }, 20000);
+    const dispatch = f.service.invite(scope, study.id, subject, access, command(49996, "invite"));
+    await reached;
+    await expect(
+      f.service.publishStudy(scope, study, access, command(49997, "concurrent-write")),
+    ).rejects.toThrow(ResearchInvalidProblem);
+    const other = candidates().find((value) => value.subject !== subject);
+    await expect(
+      f.service.writeNote(
+        scope,
+        study.id,
+        other?.subject ?? "",
+        "Another note",
+        access,
+        command(49997, "concurrent-note"),
+      ),
+    ).rejects.toThrow(ResearchInvalidProblem);
+    await f.service.writeNote(scope, study.id, subject, null, access, command(49997, "delete"));
+    release();
+    await dispatch;
+    const stored = await f.store.read(scope, study.id);
+    expect(stored.history).toHaveLength(50000);
+    expect(stored.notes).toEqual([]);
+    expect(stored.invitations.find((value) => value.subject === subject)).toMatchObject(
+      {
+        state: "invited",
+        executionIds: ["execution"],
+      },
+      20000,
+    );
+  }, 20000);
+  it("keeps cleanup and audited reconciliation available after interrupted dispatch at capacity", async () => {
+    const { f, subject } = await selectedWithNote();
+    await seedAuditHistory(f, 49996);
+    f.send.mockRejectedValue(new ResearchConflictProblem("Synthetic interrupted provider"));
+    await expect(
+      f.service.invite(scope, study.id, subject, access, command(49996, "invite")),
+    ).rejects.toThrow(ResearchConflictProblem);
+    f.setNow(new Date("2026-10-21T00:00:00Z"));
+    await f.service.purgeExpiredNotes(scope, study.id, access, command(49997, "purge"));
+    await f.service.reconcileInvitation(
+      scope,
+      study.id,
+      subject,
+      "suppressed",
+      access,
+      command(49998, "reconcile"),
+    );
+    await f.service.invite(scope, study.id, subject, access, command(49996, "invite"));
+    const stored = await f.store.read(scope, study.id);
+    expect(stored.history).toHaveLength(50000);
+    expect(stored.notes).toEqual([]);
+    expect(stored.invitations.find((value) => value.subject === subject)).toMatchObject(
+      {
+        state: "suppressed",
+      },
+      20000,
+    );
+    expect(f.send).toHaveBeenCalledTimes(1);
+  }, 20000);
+  it.each(["queued", "failed"])(
+    "preserves reconciliation when the late provider result is %s",
+    async (outcome) => {
+      const { f, subject } = await selectedWithNote();
+      await seedAuditHistory(f, 49996);
+      let started = () => {};
+      let release = () => {};
+      const reached = new Promise<void>((resolve) => {
+        started = resolve;
+      }, 20000);
+      const completed = new Promise<void>((resolve) => {
+        release = resolve;
+      }, 20000);
+      f.send.mockImplementation(async () => {
+        started();
+        await completed;
+        if (outcome === "failed")
+          throw new ResearchConflictProblem("Synthetic late provider failure");
+        return { status: "queued", executionIds: ["execution"] };
+      }, 20000);
+      const dispatch = f.service.invite(scope, study.id, subject, access, command(49996, "invite"));
+      await reached;
+      await f.service.writeNote(scope, study.id, subject, null, access, command(49997, "delete"));
+      await f.service.reconcileInvitation(
+        scope,
+        study.id,
+        subject,
+        "suppressed",
+        access,
+        command(49998, "reconcile"),
+      );
+      release();
+      await dispatch;
+      const stored = await f.store.read(scope, study.id);
+      expect(stored.history).toHaveLength(50000);
+      expect(stored.invitations.find((value) => value.subject === subject)).toMatchObject(
+        {
+          state: "suppressed",
+          executionIds: [],
+        },
+        20000,
+      );
+      expect(
+        stored.invitations.find((value) => value.subject === subject)?.failureCode,
+      ).toBeUndefined();
+      expect(f.send).toHaveBeenCalledTimes(1);
+    },
+    20000,
+  );
   it.each(["explicit deletion", "expiration purge"])(
     "reserves audit capacity for private-note %s",
     async (cleanup) => {
@@ -50,16 +239,21 @@ describe("ResearchService", () => {
         access,
         command(2, "note"),
       );
-      await f.store.transact(scope, study.id, async (record) => {
-        const audit = record.history[0];
-        const mutation = record.mutations[0];
-        for (let revision = record.revision + 1; revision <= 49999; revision++) {
-          const key = `prior-command-${revision}`;
-          record.history.push({ ...audit, revision, idempotencyKey: key });
-          record.mutations.push({ ...mutation, key });
-        }
-        record.revision = 49999;
-      });
+      await f.store.transact(
+        scope,
+        study.id,
+        async (record) => {
+          const audit = record.history[0];
+          const mutation = record.mutations[0];
+          for (let revision = record.revision + 1; revision <= 49999; revision++) {
+            const key = `prior-command-${revision}`;
+            record.history.push({ ...audit, revision, idempotencyKey: key });
+            record.mutations.push({ ...mutation, key });
+          }
+          record.revision = 49999;
+        },
+        20000,
+      );
       if (cleanup === "expiration purge") f.setNow(new Date("2026-10-21T00:00:00Z"));
       await expect(
         f.service.publishStudy(scope, study, access, command(49999, "ordinary-write")),
@@ -73,23 +267,32 @@ describe("ResearchService", () => {
       const stored = await f.store.read(scope, study.id);
       expect(stored.notes).toEqual([]);
       expect(stored.history).toHaveLength(50000);
-      expect(stored.history.at(-1)).toMatchObject({
-        operation: cleanup === "explicit deletion" ? "note" : "purge-notes",
-      });
+      expect(stored.history.at(-1)).toMatchObject(
+        {
+          operation: cleanup === "explicit deletion" ? "note" : "purge-notes",
+        },
+        20000,
+      );
     },
+    20000,
   );
   it("rejects a private note when its future deletion cannot fit in the audit budget", async () => {
     const f = await setup();
-    await f.store.transact(scope, study.id, async (record) => {
-      const audit = record.history[0];
-      const mutation = record.mutations[0];
-      for (let revision = record.revision + 1; revision <= 49999; revision++) {
-        const key = `prior-command-${revision}`;
-        record.history.push({ ...audit, revision, idempotencyKey: key });
-        record.mutations.push({ ...mutation, key });
-      }
-      record.revision = 49999;
-    });
+    await f.store.transact(
+      scope,
+      study.id,
+      async (record) => {
+        const audit = record.history[0];
+        const mutation = record.mutations[0];
+        for (let revision = record.revision + 1; revision <= 49999; revision++) {
+          const key = `prior-command-${revision}`;
+          record.history.push({ ...audit, revision, idempotencyKey: key });
+          record.mutations.push({ ...mutation, key });
+        }
+        record.revision = 49999;
+      },
+      20000,
+    );
     await expect(
       f.service.writeNote(
         scope,
@@ -102,7 +305,7 @@ describe("ResearchService", () => {
     ).rejects.toThrow(ResearchInvalidProblem);
     expect((await f.store.read(scope, study.id)).notes).toEqual([]);
     expect((await f.store.read(scope, study.id)).revision).toBe(49999);
-  });
+  }, 20000);
   it("preserves accepted participation after a contact-only opt-out", async () => {
     const f = await setup();
     await f.service.selectCandidates(scope, study.id, access, command(2, "select"));
