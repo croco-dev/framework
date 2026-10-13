@@ -235,6 +235,18 @@ mkdirSync(output, { recursive: true });
 
     await second.getByRole("button", { name: `Copy ${id} as new draft`, exact: true }).click();
     await second
+      .getByRole("alert")
+      .getByText("learning-registry/denied", { exact: true })
+      .waitFor();
+    assert.match(await second.locator("legend").first().textContent(), /revision 5$/);
+    await second.getByLabel("Evidence 1 version", { exact: true }).fill("v1");
+    await second
+      .getByLabel("Change reason", { exact: true })
+      .fill("Restore the current report version");
+    await second.getByRole("button", { name: "Save record", exact: true }).click();
+    await second.getByText("Saved revision 6. Learning is recorded.", { exact: true }).waitFor();
+    await second.getByRole("button", { name: `Copy ${id} as new draft`, exact: true }).click();
+    await second
       .getByRole("button", { name: "Read revision history", exact: true })
       .waitFor({ state: "visible" });
     await second
@@ -248,7 +260,20 @@ mkdirSync(output, { recursive: true });
 
     // State and privacy-epoch checks render the production component in an isolated browser fixture.
     const component = resolve(__dirname, "../libs/LearningWorkspace.ts");
-    const contents = `import React from 'react';import{createRoot}from'react-dom/client';import{LearningWorkspace}from ${JSON.stringify(component)};const root=createRoot(document.getElementById('root'));const scope={appId:'app',environment:'test',tenantId:'one'};const draft={id:'draft',scope,revision:0,question:'Initial question',desiredOutcome:'',facts:[],hypotheses:[],evidenceRefs:[],nextActions:[],owner:'operator',status:'draft',tags:{action:[],target:[],metric:[]}};window.renderState=(kind,epoch='1')=>root.render(React.createElement(LearningWorkspace,{scope:window.reorderScope?{tenantId:scope.tenantId,environment:scope.environment,appId:scope.appId}:scope,accessRevision:epoch,state:kind==='ready'?{kind,draft}:{kind,message:'Access unavailable'},canWrite:true,canExport:true,onSave:async()=>{},onRead:async()=>{},onSearch:async()=>window.deferSearch?await new Promise(resolve=>{window.resolveSearch=resolve}):({rows:[],nextAfter:'page-cursor'}),onHistory:async()=>[],onExport:async()=>{},onCopyDraft:async()=>draft}));`;
+    const contents = `import React from 'react';import{createRoot}from'react-dom/client';import{LearningWorkspace}from ${JSON.stringify(component)};const root=createRoot(document.getElementById('root'));const scope={appId:'app',environment:'test',tenantId:'one'};const draft={id:'draft',scope,revision:0,question:'Initial question',desiredOutcome:'',facts:[],hypotheses:[],evidenceRefs:[],nextActions:[],owner:'operator',status:'draft',tags:{action:[],target:[],metric:[]}};window.renderState=(kind,epoch='1')=>root.render(React.createElement(LearningWorkspace,{scope:window.reorderScope?{tenantId:scope.tenantId,environment:scope.environment,appId:scope.appId}:scope,accessRevision:epoch,state:kind==='ready'?{kind,draft}:{kind,message:'Access unavailable'},canWrite:true,canExport:true,onSave:async()=>{},onRead:async()=>{},onSearch:async()=>window.deferSearch?await new Promise(resolve=>{window.resolveSearch=resolve}):({rows:[],nextAfter:'page-cursor'}),onHistory:async()=>[],onExport:async()=>{},onCopyDraft:async()=>draft}));
+window.renderRecords=(redacted=false)=>{
+ window.historyCalls=[];window.savedCommands=[];
+ const reference={source:'reports',id:'synthetic',version:'v1',observedWindow:{from:'2026-01-01T00:00:00Z',to:'2026-01-02T00:00:00Z'},url:'https://example.test/synthetic',snapshot:{schemaVersion:1,metrics:[{metricId:'conversion',value:0.1,sampleSize:10}]}};
+ const a={...draft,id:'A',revision:30,question:'Question A',evidenceRefs:redacted?[reference]:[]};
+ const b={...draft,id:'B',revision:40,question:'Question B'};
+ const view=(record,partial=false)=>({id:record.id,scope,revision:record.revision,content:{...record,evidenceRefs:partial?[{source:'reports',id:'synthetic',version:'v1',observedWindow:reference.observedWindow}]:record.evidenceRefs},evidence:[],hasLearning:false,isComplete:!partial});
+ root.render(React.createElement(LearningWorkspace,{scope,accessRevision:redacted?'redacted':'records',state:{kind:'ready',draft:a},canWrite:true,canExport:true,
+ onSave:async command=>{window.savedCommands.push(command);return view({...command.record,revision:command.expectedRevision+1},redacted)},
+ onRead:async id=>view(id==='A'?a:b,redacted),onSearch:async()=>({rows:[view(b)]}),
+ onHistory:async(id,before)=>{window.historyCalls.push([id,before??null]);const record=id==='A'?a:b;return [{view:view({...record,revision:before?before-1:record.revision}),actor:'actor-'+id,reason:'reason-'+id,at:'2026-01-01'}]},
+ onExport:async()=>view(a),onCopyDraft:async()=>a}));
+};
+`;
     const bundle = await build({
       stdin: { contents, resolveDir: resolve(__dirname, ".."), loader: "tsx" },
       bundle: true,
@@ -259,7 +284,10 @@ mkdirSync(output, { recursive: true });
     });
     const states = await browser.newPage({ viewport: { width: 390, height: 844 } });
     watch(states);
-    await states.setContent('<div id="root"></div>');
+    await states.route("**/fixture", (route) =>
+      route.fulfill({ contentType: "text/html", body: '<div id="root"></div>' }),
+    );
+    await states.goto("http://127.0.0.1:4325/fixture");
     await states.addScriptTag({ content: bundle.outputFiles[0].text });
     for (const kind of ["loading", "denied", "error", "ready"]) {
       await states.evaluate((kind) => window.renderState(kind), kind);
@@ -312,8 +340,84 @@ mkdirSync(output, { recursive: true });
       await states.getByLabel("Question", { exact: true }).inputValue(),
       "Initial question",
     );
+    // Different identities must never share history or its pagination cursor.
+    await states.evaluate(() => window.renderRecords());
+    await states.waitForFunction(
+      () => document.querySelector("legend")?.textContent === "Record A · revision 30",
+    );
+    await states.getByRole("button", { name: "Read revision history", exact: true }).click();
+    await states
+      .getByLabel("Revision history", { exact: true })
+      .locator("li")
+      .filter({ hasText: "Revision 30 · actor-A · reason-A" })
+      .waitFor();
+    await states.getByRole("button", { name: "Search", exact: true }).click();
+    await states.getByRole("button", { name: "Inspect B", exact: true }).click();
+    await states.getByRole("button", { name: "Replace draft with latest", exact: true }).click();
+    assert.equal(await states.getByLabel("Question", { exact: true }).inputValue(), "Question B");
+    assert.equal(await states.getByLabel("Revision history", { exact: true }).count(), 0);
+    assert.equal(
+      await states.getByRole("button", { name: "Earlier revisions", exact: true }).count(),
+      0,
+    );
+    await states.getByRole("button", { name: "Read revision history", exact: true }).click();
+    await states
+      .getByLabel("Revision history", { exact: true })
+      .locator("li")
+      .filter({ hasText: "Revision 40 · actor-B · reason-B" })
+      .waitFor();
+    await states.getByRole("button", { name: "Earlier revisions", exact: true }).click();
+    await states
+      .getByLabel("Revision history", { exact: true })
+      .locator("li")
+      .filter({ hasText: "Revision 39 · actor-B · reason-B" })
+      .waitFor();
+    assert.deepEqual(await states.evaluate(() => window.historyCalls), [
+      ["A", null],
+      ["B", null],
+      ["B", 40],
+    ]);
+    // Source-redacted views cannot replace full documents; successful redacted responses keep submitted data.
+    await states.evaluate(() => window.renderRecords(true));
+    await states.waitForFunction(
+      () => document.querySelector("legend")?.textContent === "Record A · revision 30",
+    );
+    await states
+      .getByRole("button", { name: "Load latest without replacing draft", exact: true })
+      .click();
+    await states
+      .getByText("Some stored content is unavailable. This view cannot replace the draft.", {
+        exact: true,
+      })
+      .waitFor();
+    assert.equal(
+      await states.getByRole("button", { name: "Replace draft with latest", exact: true }).count(),
+      0,
+    );
+    await states.getByLabel("Question", { exact: true }).fill("Unrelated question edit");
+    await states.getByLabel("Change reason", { exact: true }).fill("Keep stored evidence");
+    await states.getByRole("button", { name: "Save record", exact: true }).click();
+    await states
+      .getByText("Saved revision 31. No learning has been recorded.", { exact: true })
+      .waitFor();
+    await states.getByLabel("Change reason", { exact: true }).fill("Retry another edit");
+    await states.getByRole("button", { name: "Save record", exact: true }).click();
+    await states
+      .getByText("Saved revision 32. No learning has been recorded.", { exact: true })
+      .waitFor();
+    const commands = await states.evaluate(() => window.savedCommands);
+    assert.deepEqual(
+      commands.map((command) => command.expectedRevision),
+      [30, 31],
+    );
+    for (const command of commands) {
+      assert.equal(command.record.evidenceRefs[0].url, "https://example.test/synthetic");
+      assert.equal(command.record.evidenceRefs[0].snapshot.metrics[0].sampleSize, 10);
+    }
+    await snapshot(states, "redacted-view-retained-draft");
     assert.deepEqual(errors, [
       "Failed to load resource: the server responded with a status of 409 (Conflict)",
+      "Failed to load resource: the server responded with a status of 403 (Forbidden)",
     ]);
     console.log(
       JSON.stringify({

@@ -688,3 +688,7 @@ With that local example running, `node packages/admin-react/src/tests/learningWo
 (from repository root) exercises two editors, conflict recovery, inconclusive state, history, search,
 export, copy, keyboard order, permission epoch reset and desktop/mobile overflow. Screenshots default
 to `/tmp/croco-learning-2825-browser`, outside the checkout.
+
+The workspace only replaces a draft with an `isComplete` view. A successful save whose response
+is source-redacted keeps the submitted content and advances its revision. Switching records clears
+revision history and its cursor, so audit pages always belong to the current document.

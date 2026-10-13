@@ -16640,7 +16640,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/admin-core/src/libs/LearningRegistry.ts";
-          readonly line: 141;
+          readonly line: 143;
           readonly column: 11;
           readonly kind: "problem-metadata";
         },
@@ -16668,7 +16668,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/admin-core/src/libs/LearningRegistry.ts";
-          readonly line: 147;
+          readonly line: 149;
           readonly column: 27;
           readonly kind: "problem-metadata";
         },
@@ -16696,7 +16696,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/admin-core/src/libs/LearningRegistry.ts";
-          readonly line: 140;
+          readonly line: 142;
           readonly column: 10;
           readonly kind: "problem-metadata";
         },
@@ -16724,7 +16724,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/admin-core/src/libs/LearningRegistry.ts";
-          readonly line: 142;
+          readonly line: 144;
           readonly column: 16;
           readonly kind: "problem-metadata";
         },
@@ -16752,7 +16752,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/admin-core/src/libs/LearningRegistry.ts";
-          readonly line: 143;
+          readonly line: 145;
           readonly column: 24;
           readonly kind: "problem-metadata";
         },
@@ -16780,7 +16780,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/admin-core/src/libs/LearningRegistry.ts";
-          readonly line: 170;
+          readonly line: 172;
           readonly column: 5;
           readonly kind: "problem-constructor";
         },
@@ -16808,7 +16808,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/admin-core/src/libs/LearningRegistry.ts";
-          readonly line: 151;
+          readonly line: 153;
           readonly column: 15;
           readonly kind: "problem-metadata";
         },
@@ -47994,7 +47994,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/admin-core/src/libs/LearningRegistry.ts",
-          line: 141,
+          line: 143,
           column: 11,
           kind: "problem-metadata",
         },
@@ -48024,7 +48024,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/admin-core/src/libs/LearningRegistry.ts",
-          line: 147,
+          line: 149,
           column: 27,
           kind: "problem-metadata",
         },
@@ -48054,7 +48054,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/admin-core/src/libs/LearningRegistry.ts",
-          line: 140,
+          line: 142,
           column: 10,
           kind: "problem-metadata",
         },
@@ -48085,7 +48085,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/admin-core/src/libs/LearningRegistry.ts",
-          line: 142,
+          line: 144,
           column: 16,
           kind: "problem-metadata",
         },
@@ -48115,7 +48115,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/admin-core/src/libs/LearningRegistry.ts",
-          line: 143,
+          line: 145,
           column: 24,
           kind: "problem-metadata",
         },
@@ -48147,7 +48147,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/admin-core/src/libs/LearningRegistry.ts",
-          line: 170,
+          line: 172,
           column: 5,
           kind: "problem-constructor",
         },
@@ -48177,7 +48177,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/admin-core/src/libs/LearningRegistry.ts",
-          line: 151,
+          line: 153,
           column: 15,
           kind: "problem-metadata",
         },

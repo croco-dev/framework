@@ -17797,7 +17797,7 @@
       "sources": [
         {
           "file": "packages/admin-core/src/libs/LearningRegistry.ts",
-          "line": 141,
+          "line": 143,
           "column": 11,
           "kind": "problem-metadata"
         }
@@ -17827,7 +17827,7 @@
       "sources": [
         {
           "file": "packages/admin-core/src/libs/LearningRegistry.ts",
-          "line": 147,
+          "line": 149,
           "column": 27,
           "kind": "problem-metadata"
         }
@@ -17857,7 +17857,7 @@
       "sources": [
         {
           "file": "packages/admin-core/src/libs/LearningRegistry.ts",
-          "line": 140,
+          "line": 142,
           "column": 10,
           "kind": "problem-metadata"
         }
@@ -17887,7 +17887,7 @@
       "sources": [
         {
           "file": "packages/admin-core/src/libs/LearningRegistry.ts",
-          "line": 142,
+          "line": 144,
           "column": 16,
           "kind": "problem-metadata"
         }
@@ -17917,7 +17917,7 @@
       "sources": [
         {
           "file": "packages/admin-core/src/libs/LearningRegistry.ts",
-          "line": 143,
+          "line": 145,
           "column": 24,
           "kind": "problem-metadata"
         }
@@ -17947,7 +17947,7 @@
       "sources": [
         {
           "file": "packages/admin-core/src/libs/LearningRegistry.ts",
-          "line": 170,
+          "line": 172,
           "column": 5,
           "kind": "problem-constructor"
         }
@@ -17977,7 +17977,7 @@
       "sources": [
         {
           "file": "packages/admin-core/src/libs/LearningRegistry.ts",
-          "line": 151,
+          "line": 153,
           "column": 15,
           "kind": "problem-metadata"
         }

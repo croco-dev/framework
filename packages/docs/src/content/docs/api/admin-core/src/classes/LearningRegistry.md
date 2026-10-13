@@ -65,7 +65,7 @@ readonly [`LearningEvidenceSource`](/api/admin-core/src/interfaces/learningevide
 
 ### export()
 
-> **export**(`scope`, `id`, `access`, `permission?`): `Promise`\<`Readonly`\<\{ `content`: `Partial`\<[`LearningContent`](/api/admin-core/src/type-aliases/learningcontent/)\>; `evidence`: readonly `Readonly`\<\{ `accessState`: [`EvidenceAccessState`](/api/admin-core/src/type-aliases/evidenceaccessstate/); `reference`: [`EvidenceRef`](/api/admin-core/src/type-aliases/evidenceref/); \}\>[]; `hasLearning`: `boolean`; `id`: `string`; `revision`: `number`; `scope`: [`LearningScope`](/api/admin-core/src/type-aliases/learningscope/); \}\>\>
+> **export**(`scope`, `id`, `access`, `permission?`): `Promise`\<`Readonly`\<\{ `content`: `Partial`\<[`LearningContent`](/api/admin-core/src/type-aliases/learningcontent/)\>; `evidence`: readonly `Readonly`\<\{ `accessState`: [`EvidenceAccessState`](/api/admin-core/src/type-aliases/evidenceaccessstate/); `reference`: [`EvidenceRef`](/api/admin-core/src/type-aliases/evidenceref/); \}\>[]; `hasLearning`: `boolean`; `id`: `string`; `isComplete`: `boolean`; `revision`: `number`; `scope`: [`LearningScope`](/api/admin-core/src/type-aliases/learningscope/); \}\>\>
 
 No cached source bodies or customer logs. Consumers must reauthorize retained exports.
 
@@ -89,7 +89,7 @@ No cached source bodies or customer logs. Consumers must reauthorize retained ex
 
 #### Returns
 
-`Promise`\<`Readonly`\<\{ `content`: `Partial`\<[`LearningContent`](/api/admin-core/src/type-aliases/learningcontent/)\>; `evidence`: readonly `Readonly`\<\{ `accessState`: [`EvidenceAccessState`](/api/admin-core/src/type-aliases/evidenceaccessstate/); `reference`: [`EvidenceRef`](/api/admin-core/src/type-aliases/evidenceref/); \}\>[]; `hasLearning`: `boolean`; `id`: `string`; `revision`: `number`; `scope`: [`LearningScope`](/api/admin-core/src/type-aliases/learningscope/); \}\>\>
+`Promise`\<`Readonly`\<\{ `content`: `Partial`\<[`LearningContent`](/api/admin-core/src/type-aliases/learningcontent/)\>; `evidence`: readonly `Readonly`\<\{ `accessState`: [`EvidenceAccessState`](/api/admin-core/src/type-aliases/evidenceaccessstate/); `reference`: [`EvidenceRef`](/api/admin-core/src/type-aliases/evidenceref/); \}\>[]; `hasLearning`: `boolean`; `id`: `string`; `isComplete`: `boolean`; `revision`: `number`; `scope`: [`LearningScope`](/api/admin-core/src/type-aliases/learningscope/); \}\>\>
 
 ---
 
@@ -123,7 +123,7 @@ No cached source bodies or customer logs. Consumers must reauthorize retained ex
 
 ### read()
 
-> **read**(`scope`, `id`, `access`): `Promise`\<`Readonly`\<\{ `content`: `Partial`\<[`LearningContent`](/api/admin-core/src/type-aliases/learningcontent/)\>; `evidence`: readonly `Readonly`\<\{ `accessState`: [`EvidenceAccessState`](/api/admin-core/src/type-aliases/evidenceaccessstate/); `reference`: [`EvidenceRef`](/api/admin-core/src/type-aliases/evidenceref/); \}\>[]; `hasLearning`: `boolean`; `id`: `string`; `revision`: `number`; `scope`: [`LearningScope`](/api/admin-core/src/type-aliases/learningscope/); \}\>\>
+> **read**(`scope`, `id`, `access`): `Promise`\<`Readonly`\<\{ `content`: `Partial`\<[`LearningContent`](/api/admin-core/src/type-aliases/learningcontent/)\>; `evidence`: readonly `Readonly`\<\{ `accessState`: [`EvidenceAccessState`](/api/admin-core/src/type-aliases/evidenceaccessstate/); `reference`: [`EvidenceRef`](/api/admin-core/src/type-aliases/evidenceref/); \}\>[]; `hasLearning`: `boolean`; `id`: `string`; `isComplete`: `boolean`; `revision`: `number`; `scope`: [`LearningScope`](/api/admin-core/src/type-aliases/learningscope/); \}\>\>
 
 #### Parameters
 
@@ -141,13 +141,13 @@ No cached source bodies or customer logs. Consumers must reauthorize retained ex
 
 #### Returns
 
-`Promise`\<`Readonly`\<\{ `content`: `Partial`\<[`LearningContent`](/api/admin-core/src/type-aliases/learningcontent/)\>; `evidence`: readonly `Readonly`\<\{ `accessState`: [`EvidenceAccessState`](/api/admin-core/src/type-aliases/evidenceaccessstate/); `reference`: [`EvidenceRef`](/api/admin-core/src/type-aliases/evidenceref/); \}\>[]; `hasLearning`: `boolean`; `id`: `string`; `revision`: `number`; `scope`: [`LearningScope`](/api/admin-core/src/type-aliases/learningscope/); \}\>\>
+`Promise`\<`Readonly`\<\{ `content`: `Partial`\<[`LearningContent`](/api/admin-core/src/type-aliases/learningcontent/)\>; `evidence`: readonly `Readonly`\<\{ `accessState`: [`EvidenceAccessState`](/api/admin-core/src/type-aliases/evidenceaccessstate/); `reference`: [`EvidenceRef`](/api/admin-core/src/type-aliases/evidenceref/); \}\>[]; `hasLearning`: `boolean`; `id`: `string`; `isComplete`: `boolean`; `revision`: `number`; `scope`: [`LearningScope`](/api/admin-core/src/type-aliases/learningscope/); \}\>\>
 
 ---
 
 ### save()
 
-> **save**(`input`, `access`): `Promise`\<`Readonly`\<\{ `content`: `Partial`\<[`LearningContent`](/api/admin-core/src/type-aliases/learningcontent/)\>; `evidence`: readonly `Readonly`\<\{ `accessState`: [`EvidenceAccessState`](/api/admin-core/src/type-aliases/evidenceaccessstate/); `reference`: [`EvidenceRef`](/api/admin-core/src/type-aliases/evidenceref/); \}\>[]; `hasLearning`: `boolean`; `id`: `string`; `revision`: `number`; `scope`: [`LearningScope`](/api/admin-core/src/type-aliases/learningscope/); \}\>\>
+> **save**(`input`, `access`): `Promise`\<`Readonly`\<\{ `content`: `Partial`\<[`LearningContent`](/api/admin-core/src/type-aliases/learningcontent/)\>; `evidence`: readonly `Readonly`\<\{ `accessState`: [`EvidenceAccessState`](/api/admin-core/src/type-aliases/evidenceaccessstate/); `reference`: [`EvidenceRef`](/api/admin-core/src/type-aliases/evidenceref/); \}\>[]; `hasLearning`: `boolean`; `id`: `string`; `isComplete`: `boolean`; `revision`: `number`; `scope`: [`LearningScope`](/api/admin-core/src/type-aliases/learningscope/); \}\>\>
 
 #### Parameters
 
@@ -161,13 +161,13 @@ No cached source bodies or customer logs. Consumers must reauthorize retained ex
 
 #### Returns
 
-`Promise`\<`Readonly`\<\{ `content`: `Partial`\<[`LearningContent`](/api/admin-core/src/type-aliases/learningcontent/)\>; `evidence`: readonly `Readonly`\<\{ `accessState`: [`EvidenceAccessState`](/api/admin-core/src/type-aliases/evidenceaccessstate/); `reference`: [`EvidenceRef`](/api/admin-core/src/type-aliases/evidenceref/); \}\>[]; `hasLearning`: `boolean`; `id`: `string`; `revision`: `number`; `scope`: [`LearningScope`](/api/admin-core/src/type-aliases/learningscope/); \}\>\>
+`Promise`\<`Readonly`\<\{ `content`: `Partial`\<[`LearningContent`](/api/admin-core/src/type-aliases/learningcontent/)\>; `evidence`: readonly `Readonly`\<\{ `accessState`: [`EvidenceAccessState`](/api/admin-core/src/type-aliases/evidenceaccessstate/); `reference`: [`EvidenceRef`](/api/admin-core/src/type-aliases/evidenceref/); \}\>[]; `hasLearning`: `boolean`; `id`: `string`; `isComplete`: `boolean`; `revision`: `number`; `scope`: [`LearningScope`](/api/admin-core/src/type-aliases/learningscope/); \}\>\>
 
 ---
 
 ### search()
 
-> **search**(`scope`, `query`, `access`): `Promise`\<`Readonly`\<\{ `nextAfter?`: `string`; `rows`: readonly `Readonly`\<\{ `content`: `Partial`\<[`LearningContent`](/api/admin-core/src/type-aliases/learningcontent/)\>; `evidence`: readonly `Readonly`\<\{ `accessState`: [`EvidenceAccessState`](/api/admin-core/src/type-aliases/evidenceaccessstate/); `reference`: [`EvidenceRef`](/api/admin-core/src/type-aliases/evidenceref/); \}\>[]; `hasLearning`: `boolean`; `id`: `string`; `revision`: `number`; `scope`: [`LearningScope`](/api/admin-core/src/type-aliases/learningscope/); \}\>[]; \}\>\>
+> **search**(`scope`, `query`, `access`): `Promise`\<`Readonly`\<\{ `nextAfter?`: `string`; `rows`: readonly `Readonly`\<\{ `content`: `Partial`\<[`LearningContent`](/api/admin-core/src/type-aliases/learningcontent/)\>; `evidence`: readonly `Readonly`\<\{ `accessState`: [`EvidenceAccessState`](/api/admin-core/src/type-aliases/evidenceaccessstate/); `reference`: [`EvidenceRef`](/api/admin-core/src/type-aliases/evidenceref/); \}\>[]; `hasLearning`: `boolean`; `id`: `string`; `isComplete`: `boolean`; `revision`: `number`; `scope`: [`LearningScope`](/api/admin-core/src/type-aliases/learningscope/); \}\>[]; \}\>\>
 
 #### Parameters
 
@@ -185,4 +185,4 @@ No cached source bodies or customer logs. Consumers must reauthorize retained ex
 
 #### Returns
 
-`Promise`\<`Readonly`\<\{ `nextAfter?`: `string`; `rows`: readonly `Readonly`\<\{ `content`: `Partial`\<[`LearningContent`](/api/admin-core/src/type-aliases/learningcontent/)\>; `evidence`: readonly `Readonly`\<\{ `accessState`: [`EvidenceAccessState`](/api/admin-core/src/type-aliases/evidenceaccessstate/); `reference`: [`EvidenceRef`](/api/admin-core/src/type-aliases/evidenceref/); \}\>[]; `hasLearning`: `boolean`; `id`: `string`; `revision`: `number`; `scope`: [`LearningScope`](/api/admin-core/src/type-aliases/learningscope/); \}\>[]; \}\>\>
+`Promise`\<`Readonly`\<\{ `nextAfter?`: `string`; `rows`: readonly `Readonly`\<\{ `content`: `Partial`\<[`LearningContent`](/api/admin-core/src/type-aliases/learningcontent/)\>; `evidence`: readonly `Readonly`\<\{ `accessState`: [`EvidenceAccessState`](/api/admin-core/src/type-aliases/evidenceaccessstate/); `reference`: [`EvidenceRef`](/api/admin-core/src/type-aliases/evidenceref/); \}\>[]; `hasLearning`: `boolean`; `id`: `string`; `isComplete`: `boolean`; `revision`: `number`; `scope`: [`LearningScope`](/api/admin-core/src/type-aliases/learningscope/); \}\>[]; \}\>\>

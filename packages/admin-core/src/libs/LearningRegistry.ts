@@ -132,6 +132,8 @@ export type LearningView = Readonly<{
   scope: LearningScope;
   revision: number;
   content: Partial<LearningContent>;
+  /** False when field policy or source availability hides stored content. Never use a partial view as a replacement document. */
+  isComplete: boolean;
   evidence: readonly Readonly<{ reference: EvidenceRef; accessState: EvidenceAccessState }>[];
   hasLearning: boolean;
 }>;
@@ -515,6 +517,12 @@ export class LearningRegistry {
       scope: record.scope,
       revision: record.revision,
       content,
+      isComplete:
+        CONTENT_FIELDS.every((field) => fields.includes(field)) &&
+        evidence.every(
+          (item, index) =>
+            item.accessState === "available" || (!refs[index]?.snapshot && !refs[index]?.url),
+        ),
       evidence,
       hasLearning: Boolean(
         content.facts?.length || content.hypotheses?.some((h) => h.state !== "new"),
@@ -532,11 +540,11 @@ export class LearningRegistry {
     if (!input?.record) invalid("Learning mutation required");
     const command = structuredClone(input);
     const fields = await this.authorize(command.record.scope, access, "write");
-    await this.authorize(command.record.scope, access, "read");
-    if (!CONTENT_FIELDS.every((field) => fields.includes(field)))
+    const readFields = await this.authorize(command.record.scope, access, "read");
+    if (!CONTENT_FIELDS.every((field) => fields.includes(field) && readFields.includes(field)))
       throw new LearningRegistryProblem(
         "denied",
-        "Full-record writes require permission for every content field",
+        "Full-record writes require read and write permission for every content field",
       );
     validateLearningRecord(command.record);
     await this.policy.assertSafe(command.record, access, command.reason);
@@ -622,10 +630,8 @@ export class LearningRegistry {
     access: LearningAccess,
   ): Promise<LearningRecord> {
     const view = await this.export(scope, id, access);
-    if (
-      !CONTENT_FIELDS.every((field) => Object.hasOwn(view.content, field) || field === "decision")
-    )
-      throw new LearningRegistryProblem("denied", "Copy requires all content fields");
+    if (!view.isComplete)
+      throw new LearningRegistryProblem("denied", "Copy requires complete authorized content");
     if (!required(newId) || newId === id) invalid("Copy requires a distinct identity");
     return { ...(view.content as LearningContent), scope, id: newId, revision: 0, status: "draft" };
   }

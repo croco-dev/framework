@@ -45,6 +45,7 @@ function message(error: unknown): string {
   return "Learning operation failed. The local draft is retained.";
 }
 function editable(view: LearningView): LearningRecord | undefined {
+  if (!view.isComplete) return undefined;
   const fields = [
     "question",
     "desiredOutcome",
@@ -180,6 +181,10 @@ function Workspace({
       if (saved) {
         setDraft(saved);
         setBaseline(saved.revision);
+      } else {
+        // A successful save can return a source-redacted view. Retain the submitted document.
+        setDraft({ ...payload.record, revision: view.revision });
+        setBaseline(view.revision);
       }
       setEvidence(view.evidence);
       setLatest(undefined);
@@ -479,13 +484,20 @@ function Workspace({
                       setDraft(value);
                       setBaseline(value.revision);
                       setLatest(undefined);
+                      setHistory([]);
+                      setReason("");
+                      setImportText("");
                       attempt.current = undefined;
                     }
                   },
                 },
                 "Replace draft with latest",
               )
-            : null,
+            : h(
+                "p",
+                { role: "status" },
+                "Some stored content is unavailable. This view cannot replace the draft.",
+              ),
         )
       : null,
     h(

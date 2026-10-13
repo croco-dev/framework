@@ -252,6 +252,10 @@ describe("LearningRegistry", () => {
       f.permissions.state = state === "version-mismatch" ? "available" : state;
       f.permissions.version = state === "version-mismatch" ? "v2" : "v1";
       const current = await f.service.read(scope, "record", access);
+      expect(current.isComplete).toBe(false);
+      await expect(f.service.copyDraft(scope, "record", "copy", access)).rejects.toMatchObject({
+        code: "learning-registry/denied",
+      });
       expect(current.evidence[0]?.accessState).toBe(state);
       expect(current.content.hypotheses?.[0]?.state).toBe("supported");
       expect(JSON.stringify(current)).not.toContain("https://example.test");
@@ -264,6 +268,25 @@ describe("LearningRegistry", () => {
       );
     }
     expect((await f.repository.read(scope, "record"))?.evidenceRefs[0]?.version).toBe("v1");
+    f.permissions.state = "available";
+    f.permissions.version = "v1";
+    const recovered = await f.service.read(scope, "record", access);
+    expect(recovered.isComplete).toBe(true);
+    expect(recovered.content.evidenceRefs?.[0]?.snapshot).toEqual(ref.snapshot);
+  });
+  it("rejects full replacement when even the optional decision is hidden by read policy", async () => {
+    const f = fixture();
+    await f.save(record());
+    f.permissions.visible = fields.filter((field) => field !== "decision");
+    const view = await f.service.read(scope, "record", access);
+    expect(view.isComplete).toBe(false);
+    await expect(f.service.copyDraft(scope, "record", "copy", access)).rejects.toMatchObject({
+      code: "learning-registry/denied",
+    });
+    await expect(f.save({ ...record(), revision: 1, decision: undefined })).rejects.toMatchObject({
+      code: "learning-registry/denied",
+    });
+    expect((await f.repository.read(scope, "record"))?.decision).toEqual(record().decision);
   });
   it("applies scope and current field permissions to search, history, export and receipt replay", async () => {
     const f = fixture();

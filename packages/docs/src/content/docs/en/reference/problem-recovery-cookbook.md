@@ -11820,7 +11820,7 @@ Sources:
 
 Sources:
 
-- `packages/admin-core/src/libs/LearningRegistry.ts:141:11` (problem-metadata)
+- `packages/admin-core/src/libs/LearningRegistry.ts:143:11` (problem-metadata)
 
 <a id="learning-registry-idempotency-conflict"></a>
 
@@ -11838,7 +11838,7 @@ Sources:
 
 Sources:
 
-- `packages/admin-core/src/libs/LearningRegistry.ts:147:27` (problem-metadata)
+- `packages/admin-core/src/libs/LearningRegistry.ts:149:27` (problem-metadata)
 
 <a id="learning-registry-input"></a>
 
@@ -11856,7 +11856,7 @@ Sources:
 
 Sources:
 
-- `packages/admin-core/src/libs/LearningRegistry.ts:140:10` (problem-metadata)
+- `packages/admin-core/src/libs/LearningRegistry.ts:142:10` (problem-metadata)
 
 <a id="learning-registry-not-found"></a>
 
@@ -11874,7 +11874,7 @@ Sources:
 
 Sources:
 
-- `packages/admin-core/src/libs/LearningRegistry.ts:142:16` (problem-metadata)
+- `packages/admin-core/src/libs/LearningRegistry.ts:144:16` (problem-metadata)
 
 <a id="learning-registry-revision-conflict"></a>
 
@@ -11892,7 +11892,7 @@ Sources:
 
 Sources:
 
-- `packages/admin-core/src/libs/LearningRegistry.ts:143:24` (problem-metadata)
+- `packages/admin-core/src/libs/LearningRegistry.ts:145:24` (problem-metadata)
 
 <a id="learning-registry-storage-failed"></a>
 
@@ -11910,7 +11910,7 @@ Sources:
 
 Sources:
 
-- `packages/admin-core/src/libs/LearningRegistry.ts:170:5` (problem-constructor)
+- `packages/admin-core/src/libs/LearningRegistry.ts:172:5` (problem-constructor)
 
 <a id="learning-registry-transition"></a>
 
@@ -11928,7 +11928,7 @@ Sources:
 
 Sources:
 
-- `packages/admin-core/src/libs/LearningRegistry.ts:151:15` (problem-metadata)
+- `packages/admin-core/src/libs/LearningRegistry.ts:153:15` (problem-metadata)
 
 <a id="lifecycle-core-action-adapter-failed"></a>
 

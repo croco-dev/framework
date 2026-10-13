@@ -470,3 +470,7 @@ confirm hypothesis states, review/archive a record or reopen a reviewed record. 
 `allowStateChange` from policy; the repository validates it against the locked current record inside
 the CAS transaction. A drafting assistant can receive write permission without transition or
 share/export permission. Embedded note instructions never confer any permission.
+
+`LearningView.isComplete` is false when field permissions or evidence availability hide stored
+content. Partial views are for inspection and export, not replacement edits or copying. Full-record
+writes require both read and write permission for every content field, including the optional decision.
