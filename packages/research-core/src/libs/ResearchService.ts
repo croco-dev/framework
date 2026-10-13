@@ -82,6 +82,9 @@ export class ResearchService {
       const at = this.clock().toISOString();
       const beforeStates = new Map(record.invitations.map((value) => [value.subject, value.state]));
       await apply(record, at);
+      // Preserve one audit record per retained note for its eventual physical deletion.
+      if (record.history.length + record.notes.length >= 50000)
+        throw new ResearchInvalidProblem("Study audit capacity reached");
       record.revision++;
       record.history.push({
         actor: access.actor,

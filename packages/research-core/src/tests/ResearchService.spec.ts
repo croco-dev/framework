@@ -37,6 +37,72 @@ async function setup(f = fixture(), rows = candidates()) {
   return f;
 }
 describe("ResearchService", () => {
+  it.each(["explicit deletion", "expiration purge"])(
+    "reserves audit capacity for private-note %s",
+    async (cleanup) => {
+      const f = await setup();
+      const subject = candidates()[0].subject;
+      await f.service.writeNote(
+        scope,
+        study.id,
+        subject,
+        "Private retained note",
+        access,
+        command(2, "note"),
+      );
+      await f.store.transact(scope, study.id, async (record) => {
+        const audit = record.history[0];
+        const mutation = record.mutations[0];
+        for (let revision = record.revision + 1; revision <= 49999; revision++) {
+          const key = `prior-command-${revision}`;
+          record.history.push({ ...audit, revision, idempotencyKey: key });
+          record.mutations.push({ ...mutation, key });
+        }
+        record.revision = 49999;
+      });
+      if (cleanup === "expiration purge") f.setNow(new Date("2026-10-21T00:00:00Z"));
+      await expect(
+        f.service.publishStudy(scope, study, access, command(49999, "ordinary-write")),
+      ).rejects.toThrow(ResearchInvalidProblem);
+      expect((await f.store.read(scope, study.id)).revision).toBe(49999);
+      if (cleanup === "explicit deletion") {
+        await f.service.writeNote(scope, study.id, subject, null, access, command(49999, "delete"));
+      } else {
+        await f.service.purgeExpiredNotes(scope, study.id, access, command(49999, "purge"));
+      }
+      const stored = await f.store.read(scope, study.id);
+      expect(stored.notes).toEqual([]);
+      expect(stored.history).toHaveLength(50000);
+      expect(stored.history.at(-1)).toMatchObject({
+        operation: cleanup === "explicit deletion" ? "note" : "purge-notes",
+      });
+    },
+  );
+  it("rejects a private note when its future deletion cannot fit in the audit budget", async () => {
+    const f = await setup();
+    await f.store.transact(scope, study.id, async (record) => {
+      const audit = record.history[0];
+      const mutation = record.mutations[0];
+      for (let revision = record.revision + 1; revision <= 49999; revision++) {
+        const key = `prior-command-${revision}`;
+        record.history.push({ ...audit, revision, idempotencyKey: key });
+        record.mutations.push({ ...mutation, key });
+      }
+      record.revision = 49999;
+    });
+    await expect(
+      f.service.writeNote(
+        scope,
+        study.id,
+        candidates()[0].subject,
+        "Private note",
+        access,
+        command(49999, "note-without-reserve"),
+      ),
+    ).rejects.toThrow(ResearchInvalidProblem);
+    expect((await f.store.read(scope, study.id)).notes).toEqual([]);
+    expect((await f.store.read(scope, study.id)).revision).toBe(49999);
+  });
   it("preserves accepted participation after a contact-only opt-out", async () => {
     const f = await setup();
     await f.service.selectCandidates(scope, study.id, access, command(2, "select"));

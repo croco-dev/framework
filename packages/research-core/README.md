@@ -72,8 +72,10 @@ events. Counts describe recruitment, not representativeness or insight quality. 
 subject read permission. Notes require an additional field permission, expire after the published
 1–365 day retention period, and are physically removed by audited `purgeExpiredNotes` or explicit
 `writeNote(..., null, ...)`. Deploy a host-owned purge job using the existing scheduler; expiration
-hides text immediately even before purge. Audit capacity is 50,000 commands per study; reaching
-it rejects writes instead of silently evicting idempotency or contact evidence.
+hides text immediately even before purge. Audit capacity is 50,000 commands per study. One
+record per retained note is reserved for physical deletion; ordinary writes stop before consuming
+that reserve. Capacity exhaustion rejects writes instead of silently evicting idempotency or
+contact evidence.
 
 ## Dependencies and verification
 
