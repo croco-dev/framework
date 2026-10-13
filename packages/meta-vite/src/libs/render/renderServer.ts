@@ -1,6 +1,7 @@
 import { Suspense, createElement } from "react";
 import type { ComponentType, ReactNode } from "react";
 import { renderToReadableStream, renderToString } from "react-dom/server";
+import { encodePagePath } from "../routes/encodePagePath";
 import type { HeadMetadata } from "../routes/head";
 import type { ShellDecision, ShellSettleSummary } from "../routes/shell";
 import type { RenderRouteComponentProps, RenderRouteIR } from "../routes/types";
@@ -802,7 +803,7 @@ export class RenderServer {
   private findRoute(request: Request): RenderRouteIR | undefined {
     const { pathname } = new URL(request.url);
 
-    return this.routes.find((route) => route.path === pathname);
+    return this.routes.find((route) => encodePagePath(route.path) === pathname);
   }
 
   private createComponentProps(

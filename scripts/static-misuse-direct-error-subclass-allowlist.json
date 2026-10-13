@@ -177,7 +177,7 @@
     {
       "package": "@croco/meta-vite",
       "file": "packages/meta-vite/src/libs/routes/routeRegistry.ts",
-      "line": 13,
+      "line": 14,
       "excerpt": "export class RouteConflictError extends Error {",
       "reason": "Existing route-registration conflict boundary is retained; migration is outside the DI failure scope of #2926.",
       "owner": "framework-error-handling",
@@ -276,7 +276,7 @@
     {
       "package": "@croco/meta-vite",
       "file": "packages/meta-vite/src/libs/routes/routeRegistry.ts",
-      "line": 23,
+      "line": 24,
       "excerpt": "export class ShellRouteDefinitionError extends Error {",
       "reason": "SSR shell route definition boundary exposes the meta-vite/shell-route-ssr-only diagnostic code; definition-time rejection before header commit.",
       "owner": "framework-error-handling",
