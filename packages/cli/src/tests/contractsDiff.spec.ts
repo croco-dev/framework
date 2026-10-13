@@ -82,6 +82,57 @@ describe("contractsDiff", () => {
     }
   });
 
+  it.each([
+    ["leaf assignment", ["contracts", "diff", "--cwd=$cwd"]],
+    ["root assignment", ["--cwd=$cwd", "contracts", "diff"]],
+    ["root separate value", ["--cwd", "$cwd", "contracts", "diff"]],
+    ["parent assignment", ["contracts", "--cwd=$cwd", "diff"]],
+    ["parent separate value", ["contracts", "--cwd", "$cwd", "diff"]],
+  ])("should resolve snapshot and report paths with %s cwd", async (_name, prefix) => {
+    const dir = mkdtempSync(join(tmpdir(), "croco-contracts-cwd-assignment-"));
+    const processCwd = process.cwd();
+    const io = { stdout: () => {}, stderr: () => {} };
+    try {
+      writeFileSync(
+        join(dir, "baseline.json"),
+        stringifyContractGraphSnapshot(
+          createContractGraphSnapshot(createGraph(["UsersController.listUsers"])),
+        ),
+      );
+      writeFileSync(
+        join(dir, "current.json"),
+        stringifyContractGraphSnapshot(
+          createContractGraphSnapshot(
+            createGraph(["UsersController.listUsers", "UsersController.createUser"]),
+          ),
+        ),
+      );
+      expect(
+        await runCroco(
+          [
+            ...prefix.map((arg) => arg.replace("$cwd", dir)),
+            "--baseline",
+            "baseline.json",
+            "--current-snapshot",
+            "current.json",
+            "--out",
+            "reports/diff.json",
+          ],
+          io,
+        ),
+      ).toEqual({ exitCode: 0 });
+      expect(JSON.parse(readFileSync(join(dir, "reports/diff.json"), "utf8"))).toMatchObject({
+        baselineRouteCount: 1,
+        currentRouteCount: 2,
+        nonBreakingChangeCount: 1,
+        hasBreakingChanges: false,
+      });
+      expect(process.cwd()).toBe(processCwd);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   it.each([["src/**/*.ts"], ["--controllers", "src/**/*.ts"]])(
     "should resolve controller input %j against a relative --cwd",
     async (...controllerArgs) => {

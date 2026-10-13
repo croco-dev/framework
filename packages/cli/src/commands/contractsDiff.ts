@@ -316,10 +316,17 @@ function resolvePath(path: string, cwd: string): string {
 }
 
 function getFlagValue(args: readonly string[], flag: string): string | null {
-  const index = args.indexOf(flag);
-  const value = index >= 0 ? args[index + 1] : undefined;
-
-  return value && !value.startsWith("--") ? value : null;
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index];
+    if (arg?.startsWith(`${flag}=`)) {
+      return arg.slice(flag.length + 1) || null;
+    }
+    if (arg === flag) {
+      const value = args[index + 1];
+      return value && !value.startsWith("--") ? value : null;
+    }
+  }
+  return null;
 }
 
 function getFirstPosition(args: readonly string[]): string | null {
