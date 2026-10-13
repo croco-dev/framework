@@ -30,11 +30,12 @@ query; arbitrary URLs on the same origin are not approved.
    authenticated `research.participate` authority and an audited explicit command. A callback
    must be authenticated by the host before invoking the same method.
 
+All writes require `research.write`; note and participation operations additionally require their
+field/action permission. Permission to read a private note does not grant write authority.
+
 Every command includes expected revision, unique idempotency key, actor from authenticated
 access, reason and source. Idempotency fingerprints contain SHA-256 digests, not response/note
 contents. Do not put sensitive response text into audit reasons or identity fields. Conflicting
-All writes require `research.write`; note and participation operations additionally require their
-field/action permission. Permission to read a private note does not grant write authority.
 imports, stale revisions, duplicate groups, malformed quota policies, unsupported booking links
 and unauthorized commands produce stable `research/invalid`, `research/conflict`, or
 `research/denied` Problems.
