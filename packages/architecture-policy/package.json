@@ -35,12 +35,12 @@
     "docs:api:model": "node --experimental-strip-types ../docs/scripts/generate-package-api-model.mts"
   },
   "dependencies": {
-    "@croco/problems-core": "workspace:*"
+    "@croco/problems-core": "workspace:*",
+    "typescript": "5.9.3"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",
     "tsup": "8.5.1",
-    "typescript": "5.9.3",
     "vitest": "4.1.8"
   }
 }

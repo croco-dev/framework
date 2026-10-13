@@ -1,7 +1,7 @@
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
+import ts from "typescript";
 import { Problem, ProblemCategory } from "@croco/problems-core";
-
 export const ARCHITECTURE_POLICY_SCHEMA_VERSION = "croco.architecture-policy/v1";
 
 export class ArchitecturePolicyManifestShapeProblem extends Problem {
@@ -547,39 +547,37 @@ function collectSourceImports(
   return files.flatMap((filePath) => {
     const relativeFile = toPosixPath(relative(policy.rootDir, filePath));
     const sourcePackage = findSourcePackage(packages, relativeFile);
-    const lines = readFileSync(filePath, "utf-8").split(/\r?\n/);
-    let inBlockComment = false;
+    const source = ts.createSourceFile(
+      filePath,
+      readFileSync(filePath, "utf-8"),
+      ts.ScriptTarget.Latest,
+    );
+    const lines = source.text.split(/\r?\n/);
 
-    return lines.flatMap((line, lineIndex) => {
-      const stripped = stripCommentsFromLine(line, inBlockComment);
-      inBlockComment = stripped.inBlockComment;
-      const imports = extractImportSpecifiers(stripped.source);
+    return extractImportSpecifiers(source).map((entry) => {
+      const targetFile = entry.specifier.startsWith(".")
+        ? toPosixPath(relative(policy.rootDir, resolve(dirname(filePath), entry.specifier)))
+        : null;
+      const targetPackage = targetFile === null ? null : findSourcePackage(packages, targetFile);
+      const imported =
+        targetPackage && targetPackage !== sourcePackage && targetFile !== null
+          ? {
+              packageName: targetPackage.name,
+              subpath: toPosixPath(relative(targetPackage.relativeDir, targetFile)),
+            }
+          : splitPackageSpecifier(entry.specifier);
 
-      return imports.map((entry) => {
-        const targetFile = entry.specifier.startsWith(".")
-          ? toPosixPath(relative(policy.rootDir, resolve(dirname(filePath), entry.specifier)))
-          : null;
-        const targetPackage = targetFile === null ? null : findSourcePackage(packages, targetFile);
-        const imported =
-          targetPackage && targetPackage !== sourcePackage && targetFile !== null
-            ? {
-                packageName: targetPackage.name,
-                subpath: toPosixPath(relative(targetPackage.relativeDir, targetFile)),
-              }
-            : splitPackageSpecifier(entry.specifier);
-
-        return {
-          sourceKind: "source",
-          file: relativeFile,
-          line: lineIndex + 1,
-          column: entry.column,
-          excerpt: line.trim(),
-          specifier: entry.specifier,
-          importedPackageName: imported.packageName,
-          importedSubpath: imported.subpath,
-          sourcePackage,
-        } satisfies ImportRecord;
-      });
+      return {
+        sourceKind: "source",
+        file: relativeFile,
+        line: entry.line,
+        column: entry.column,
+        excerpt: lines[entry.line - 1]?.trim() ?? "",
+        specifier: entry.specifier,
+        importedPackageName: imported.packageName,
+        importedSubpath: imported.subpath,
+        sourcePackage,
+      } satisfies ImportRecord;
     });
   });
 }
@@ -1018,68 +1016,41 @@ function splitPackageSpecifier(specifier: string): {
 }
 
 function extractImportSpecifiers(
-  line: string,
-): readonly { readonly specifier: string; readonly column: number }[] {
-  const pattern =
-    /\b(?:import|export)\s+(?:type\s+)?(?:[^'"`]*?\s+from\s+)?['"`]([^'"`]+)['"`]|\bfrom\s+['"`]([^'"`]+)['"`]|\bimport\s*\(\s*['"`]([^'"`]+)['"`]\s*\)|\brequire\s*\(\s*['"`]([^'"`]+)['"`]\s*\)/g;
-  const specifiers: { specifier: string; column: number }[] = [];
+  source: ts.SourceFile,
+): readonly { readonly specifier: string; readonly line: number; readonly column: number }[] {
+  const specifiers: { specifier: string; line: number; column: number }[] = [];
 
-  for (const match of line.matchAll(pattern)) {
-    const specifier = match[1] ?? match[2] ?? match[3] ?? match[4];
-    if (!specifier) {
-      continue;
+  function record(node: ts.Node | undefined): void {
+    if (!node || !(ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node))) {
+      return;
     }
-    const quoteIndex = line.indexOf(specifier, match.index ?? 0);
+    const location = source.getLineAndCharacterOfPosition(node.getStart(source) + 1);
     specifiers.push({
-      specifier,
-      column: quoteIndex >= 0 ? quoteIndex + 1 : (match.index ?? 0) + 1,
+      specifier: node.text,
+      line: location.line + 1,
+      column: location.character + 1,
     });
   }
 
-  return specifiers;
-}
-
-function stripCommentsFromLine(
-  line: string,
-  startsInBlockComment: boolean,
-): { readonly source: string; readonly inBlockComment: boolean } {
-  let source = "";
-  let index = 0;
-  let inBlockComment = startsInBlockComment;
-
-  while (index < line.length) {
-    if (inBlockComment) {
-      const endIndex = line.indexOf("*/", index);
-      if (endIndex === -1) {
-        return { source, inBlockComment: true };
-      }
-      index = endIndex + 2;
-      inBlockComment = false;
-      continue;
-    }
-
-    const lineCommentIndex = line.indexOf("//", index);
-    const blockCommentIndex = line.indexOf("/*", index);
-
-    if (
-      lineCommentIndex !== -1 &&
-      (blockCommentIndex === -1 || lineCommentIndex < blockCommentIndex)
+  function visit(node: ts.Node): void {
+    if (ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) {
+      record(node.moduleSpecifier);
+    } else if (ts.isExternalModuleReference(node)) {
+      record(node.expression);
+    } else if (ts.isImportTypeNode(node) && ts.isLiteralTypeNode(node.argument)) {
+      record(node.argument.literal);
+    } else if (
+      ts.isCallExpression(node) &&
+      (node.expression.kind === ts.SyntaxKind.ImportKeyword ||
+        (ts.isIdentifier(node.expression) && node.expression.text === "require"))
     ) {
-      source += line.slice(index, lineCommentIndex);
-      return { source, inBlockComment: false };
+      record(node.arguments[0]);
     }
-
-    if (blockCommentIndex === -1) {
-      source += line.slice(index);
-      return { source, inBlockComment: false };
-    }
-
-    source += line.slice(index, blockCommentIndex);
-    index = blockCommentIndex + 2;
-    inBlockComment = true;
+    ts.forEachChild(node, visit);
   }
 
-  return { source, inBlockComment };
+  visit(source);
+  return specifiers;
 }
 
 function findSourcePackage(
