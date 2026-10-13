@@ -31,6 +31,8 @@ async function getFreePort(): Promise<number> {
 type GatewayChild = {
   readonly kill: () => void;
   readonly exited: Promise<number>;
+  readonly diagnostics: () => string;
+  readonly hasExited: () => boolean;
 };
 
 async function startGateway(env: NodeJS.ProcessEnv): Promise<GatewayChild> {
@@ -40,35 +42,62 @@ async function startGateway(env: NodeJS.ProcessEnv): Promise<GatewayChild> {
     env: { ...process.env, ...env },
     stdio: ["ignore", "pipe", "pipe"],
   });
-  child.stdout?.on("data", () => undefined);
-  child.stderr?.on("data", () => undefined);
+  let output = "";
+  let exitDescription: string | undefined;
+  const capture = (chunk: Buffer) => {
+    output = (output + chunk.toString()).slice(-16_384);
+  };
+  child.stdout?.on("data", capture);
+  child.stderr?.on("data", capture);
+  child.on("error", (error) => {
+    exitDescription = `spawn error: ${error.message}`;
+  });
   const exited = new Promise<number>((resolve) => {
-    child.on("exit", (code) => resolve(code ?? 1));
+    child.on("close", (code, signal) => {
+      exitDescription ??= `exit code ${code}, signal ${signal}`;
+      resolve(code ?? 1);
+    });
   });
   return {
     kill: () => {
       child.kill("SIGTERM");
     },
     exited,
+    diagnostics: () => `${exitDescription ?? "still running"}\n${output}`,
+    hasExited: () => exitDescription !== undefined,
   };
 }
 
-async function waitForHttpOk(url: string, timeoutMs = 10_000): Promise<void> {
-  const startedAt = Date.now();
+async function waitForHttpOk(
+  url: string,
+  gateway: GatewayChild,
+  timeoutMs = 10_000,
+): Promise<void> {
+  const deadline = Date.now() + timeoutMs;
+  let lastResponse = "No response";
   for (;;) {
+    if (gateway.hasExited()) {
+      throw new Error(`Gateway exited while waiting for ${url}: ${gateway.diagnostics()}`);
+    }
+    const remainingMs = deadline - Date.now();
+    if (remainingMs <= 0) {
+      throw new Error(`Timed out waiting for ${url}: ${lastResponse}\n${gateway.diagnostics()}`);
+    }
     try {
-      const response = await fetch(url);
-      await response.arrayBuffer();
-      if (response.ok) {
+      const response = await fetch(url, {
+        signal: AbortSignal.timeout(Math.min(remainingMs, 1000)),
+      });
+      const body = await response.text();
+      lastResponse = `HTTP ${response.status}: ${body.slice(0, 1024)}`;
+      if (response.status === 200 && !gateway.hasExited()) {
         return;
       }
-    } catch {
-      // Server not ready yet; retry below.
+    } catch (error) {
+      lastResponse = String(error);
     }
-    if (Date.now() - startedAt > timeoutMs) {
-      throw new Error(`Timed out waiting for ${url}`);
-    }
-    await new Promise((resolve) => setTimeout(resolve, 100));
+    await new Promise((resolve) =>
+      setTimeout(resolve, Math.min(100, Math.max(0, deadline - Date.now()))),
+    );
   }
 }
 
@@ -295,6 +324,40 @@ describe("E2E Vite SPA: generate()", () => {
     expect(existsSync(join(testDir, "web", "gateway.mjs"))).toBe(true);
   });
 
+  it("reports API child failure output while waiting for readiness", async () => {
+    const { mkdtempSync, writeFileSync } = await import("node:fs");
+    const { tmpdir } = await import("node:os");
+    const fixtureRoot = mkdtempSync(join(tmpdir(), "croco-gateway-failure-"));
+    let gateway: GatewayChild | undefined;
+    try {
+      const apiEntry = join(fixtureRoot, "api.cjs");
+      writeFileSync(
+        apiEntry,
+        "console.log('fixture boot'); console.error('fixture startup failure'); process.exit(23);\n",
+      );
+      const publicPort = await getFreePort();
+      gateway = await startGateway({
+        PORT: String(publicPort),
+        CROCO_API_PORT: String(await getFreePort()),
+        CROCO_API_ENTRY: apiEntry,
+        CROCO_SPA_ROOT: fixtureRoot,
+      });
+      const failure = await waitForHttpOk(
+        `http://127.0.0.1:${publicPort}/health.check`,
+        gateway,
+      ).catch((error: unknown) => error);
+      expect(failure).toBeInstanceOf(Error);
+      expect(String(failure)).toContain("Gateway exited");
+      expect(String(failure)).toContain("exit code 23");
+      expect(String(failure)).toContain("fixture boot");
+      expect(String(failure)).toContain("fixture startup failure");
+    } finally {
+      gateway?.kill();
+      await gateway?.exited;
+      rmSync(fixtureRoot, { recursive: true, force: true });
+    }
+  });
+
   it(
     "serves the SPA and proxies the API through the docker gateway",
     { timeout: 60_000 },
@@ -314,17 +377,24 @@ describe("E2E Vite SPA: generate()", () => {
         writeFileSync(join(spaRoot, "assets", "app.js"), "console.log('spa');\n");
         writeFileSync(join(spaRoot, "favicon.ico"), "fake-icon-bytes\n");
 
+        const apiStartSignal = join(fixtureRoot, "start-api");
         const apiDir = join(fixtureRoot, "apps", "api", "dist");
         mkdirSync(apiDir, { recursive: true });
         writeFileSync(
           join(apiDir, "index.js"),
           [
             "const http = require('node:http');",
+            "const fs = require('node:fs');",
             "const port = Number(process.env.PORT ?? '3001');",
-            "http.createServer((req, res) => {",
+            "const server = http.createServer((req, res) => {",
             "  res.writeHead(200, { 'content-type': 'application/json' });",
             "  res.end(JSON.stringify({ path: req.url }));",
-            "}).listen(port);",
+            "});",
+            "const start = setInterval(() => {",
+            "  if (!fs.existsSync(process.env.CROCO_TEST_API_START)) return;",
+            "  clearInterval(start);",
+            "  server.listen(port);",
+            "}, 25);",
             "",
           ].join("\n"),
         );
@@ -336,9 +406,16 @@ describe("E2E Vite SPA: generate()", () => {
           CROCO_API_PORT: String(apiPort),
           CROCO_API_ENTRY: join(apiDir, "index.js"),
           CROCO_SPA_ROOT: spaRoot,
+          CROCO_TEST_API_START: apiStartSignal,
         });
 
-        await waitForHttpOk(`http://127.0.0.1:${publicPort}/`);
+        await waitForHttpOk(`http://127.0.0.1:${publicPort}/`, gateway);
+        // Static readiness does not imply API readiness. Hold the child until this is proved.
+        const earlyApiResponse = await fetch(`http://127.0.0.1:${publicPort}/health.check`);
+        expect(earlyApiResponse.status).toBe(502);
+        expect(await earlyApiResponse.text()).toBe("API unavailable");
+        writeFileSync(apiStartSignal, "start");
+        await waitForHttpOk(`http://127.0.0.1:${publicPort}/health.check?batch=1`, gateway);
         const indexResponse = await fetch(`http://127.0.0.1:${publicPort}/`);
         const assetResponse = await fetch(`http://127.0.0.1:${publicPort}/assets/app.js`);
         const fallbackResponse = await fetch(`http://127.0.0.1:${publicPort}/dashboard`);
@@ -387,6 +464,7 @@ describe("E2E Vite SPA: generate()", () => {
         expect(await nestedDottedSpaResponse.text()).toContain("spa index");
       } finally {
         gateway?.kill();
+        await gateway?.exited;
         rmSync(fixtureRoot, { recursive: true, force: true });
       }
     },
