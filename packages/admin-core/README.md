@@ -410,3 +410,63 @@ reading. Never infer global authority from an absent tenant or return truncated 
 
 See [the synthetic standalone example](../../examples/growth-model/README.md) for a real local file
 audit repository and independent calculations; no database is required for this feature.
+
+## Learning Registry
+
+`LearningRegistry` preserves questions, observations, hypotheses, evidence references, decisions and
+next actions separately. A deployment decision alone yields `hasLearning: false`. Hypothesis states
+include `inconclusive` and `unknown`; no cause or limitation text is required for that outcome. `supported` and
+`refuted` require referenced evidence identities and explicit interpretation limits, and never mean
+that causality has been established. Record review state (`draft/reviewed/archived`) is independent.
+Reopen reviewed or archived records as drafts before revising them. Every write creates a revision.
+
+```typescript typecheck
+import { LearningRegistry, type LearningPolicy, type LearningRepository } from "@croco/admin-core";
+
+declare const repository: LearningRepository;
+declare const policy: LearningPolicy;
+const learning = new LearningRegistry(repository, policy);
+```
+
+The host supplies a verified `LearningAccess` (app, environment, nonempty tenant, actor and principal)
+and a `LearningPolicy`. `authorize` enforces read/write/export/share independently. `fields` is
+rechecked for every read, search match, history entry, export and receipt replay. Full-record writes
+require every content field. `assertSafe` must reject sensitive customer content in both the document
+and audit reason before persistence. The synthetic example demonstrates a limited email and metric
+allowlist policy; it is not a production PII classifier. No customer logs are automatically imported.
+
+`save` requires `expectedRevision`, a reason and an idempotency key. A repeated identical command
+returns its original revision; reuse with different content returns
+`learning-registry/idempotency-conflict`. Competing commands return
+`learning-registry/revision-conflict`, allowing a UI to retain its draft and read the latest version.
+The repository atomically commits CAS, the complete version, audit metadata and the receipt.
+Do not implement this contract as sequential nontransactional writes.
+
+Evidence is an opaque source/id/version/window reference with an optional HTTP(S) URL. Readers are
+registered explicitly; URLs are never fetched by default. Each reader must enforce current source
+privacy using the supplied server access. Reads expose available/deleted/denied/failed/version-mismatch/
+unregistered independently. Reader exceptions are failures, not deletions. Historical conclusions
+are not rewritten when sources change. URLs and imported aggregates disappear from current views,
+history and exports when the source is unavailable or its version differs.
+
+`importLearningEvidence` accepts at most 16 KiB of JSON containing a validated reference and optional
+`schemaVersion: 1` aggregate metrics (`metricId`, finite `value`, nonnegative integer `sampleSize`).
+Unknown fields, raw customer rows and arbitrary snapshot text reject. The host's safety policy also
+checks approved metric identities and privacy. Records are bounded to 64 KiB and 50 items per collection.
+
+`search` scans bounded candidate pages and matches only authorized text/tags; `nextAfter` can be present
+on an empty matching page. `history` returns 20 newest revisions and accepts `before` for older ones.
+`copyDraft` uses current export permission and a distinct identity; saving the copy never overwrites
+the original. `export`/`share` return a newly authorized view, not a persistent public URL. A host must
+not cache these views or serve retained exports without reauthorization; previously downloaded
+information cannot be recalled. Notes and evidence text are data and trigger no external actions.
+
+`learningRecordResource` is a normal admin resource descriptor with the existing permission and audit
+contracts. Register it with the host's existing admin registry; no parallel resource registry is needed.
+The service works without React, Experiment, Explorer or LLM execution.
+
+`transition` is a separate server permission. Draft creation/editing does not confer authority to
+confirm hypothesis states, review/archive a record or reopen a reviewed record. The server derives
+`allowStateChange` from policy; the repository validates it against the locked current record inside
+the CAS transaction. A drafting assistant can receive write permission without transition or
+share/export permission. Embedded note instructions never confer any permission.

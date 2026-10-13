@@ -589,3 +589,39 @@ export type {
   GrowthReportStore,
   GrowthWorkbenchAdapter,
 } from "./libs/GrowthModelWorkbench";
+
+export {
+  LearningRegistry,
+  LearningRegistryProblem,
+  learningRecordResource,
+  learningEvidenceKey,
+  validateLearningRecord,
+  validateLearningEvidence,
+  validateLearningCommit,
+} from "./libs/LearningRegistry";
+export type {
+  LearningScope,
+  HypothesisStatus,
+  EvidenceAccessState,
+  EvidenceRef,
+  DecisionRef,
+  LearningHypothesis,
+  LearningContent,
+  LearningRecord,
+  LearningPermission,
+  LearningAccess,
+  LearningField,
+  LearningPolicy,
+  LearningMutation,
+  LearningCommit,
+  LearningRevision,
+  LearningQuery,
+  LearningRepository,
+  LearningEvidenceResult,
+  LearningEvidenceSource,
+  LearningView,
+  LearningProblemCode,
+} from "./libs/LearningRegistry";
+export type { LearningResultSnapshot } from "./libs/LearningRegistry";
+export { importLearningEvidence } from "./libs/LearningRegistry";
+export { LearningStorageProblem } from "./libs/LearningRegistry";

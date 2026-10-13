@@ -13,5 +13,9 @@ export default defineConfig({
       "migrations/0001_customer_explorer.up.sql",
       "dist/migrations/0001_customer_explorer.up.sql",
     );
+    copyFileSync(
+      "migrations/0002_learning_registry.up.sql",
+      "dist/migrations/0002_learning_registry.up.sql",
+    );
   },
 });

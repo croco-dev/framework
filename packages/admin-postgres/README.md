@@ -31,3 +31,26 @@ pagination tests. The live suite creates and removes its own schema.
 [Standalone PostgreSQL example](../../examples/customer-explorer/README.md) demonstrates source
 mapping, authorization, migration setup and durable note rereads. Local synthetic verification does
 not establish provider certification or production identity policy.
+
+## Learning Registry persistence
+
+`PostgresLearningRepository` implements `LearningRepository` from `@croco/admin-core` using the same
+structural `ExplorerPgDatabase` pool interface. Apply the packaged
+`dist/migrations/0002_learning_registry.up.sql` through the host's existing migration owner before use.
+It is independent of the Customer Explorer migration and never runs DDL during construction or reads.
+
+The additive tables store current records, full revision/audit history and command receipts. Scoped
+transaction advisory locks serialize receipt identity and record CAS, including initially absent
+records. CAS, history, audit and receipt share a PostgreSQL transaction; any insert failure rolls all
+of them back. Identical retries return their original receipt; conflicting payloads and stale commands
+have distinct Croco Problems. A storage failure never returns a reviewed success. Receipts and history
+survive reconnection and host restart. Keep the tables when reverting code; dropping them permanently
+removes saved records and retry protection and requires a separate retention decision.
+
+Search and history SQL always bind app/environment/tenant and bounded pages. The service applies
+current field policy before returning or matching any content. Hosts own authenticated sessions,
+current privacy policy, evidence readers, database credentials and retention; the provider does not
+claim production identity or provider certification from local synthetic tests.
+
+The existing `test:live` command also exercises the Learning Registry migration, two-connection CAS,
+exact retries, conflicting retries, atomic rollback and reconnection in its own temporary schema.
