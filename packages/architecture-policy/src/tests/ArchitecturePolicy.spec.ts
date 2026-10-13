@@ -409,6 +409,31 @@ describe("architecture policy engine", () => {
     ]);
   });
 
+  it.each(["\r", "\u2028", "\u2029"])(
+    "preserves original excerpts after line terminator %j",
+    (terminator) => {
+      const repo = createTempRepo();
+      writePackage(repo, "packages/repository-core", "@croco/repository-core");
+      const importedLine = "import '@croco/tx-drizzle';";
+      writeFile(
+        repo,
+        "packages/repository-core/src/index.ts",
+        `const include = 'src/*';${terminator}${importedLine}`,
+      );
+
+      const report = checkArchitecturePolicy({ rootDir: repo, manifest: crocoManifest() });
+      expect(report.importCount).toBe(1);
+      expect(report.diagnostics).toEqual([
+        expect.objectContaining({
+          importSpecifier: "@croco/tx-drizzle",
+          line: 2,
+          column: 9,
+          excerpt: importedLine,
+        }),
+      ]);
+    },
+  );
+
   it("flags forbidden package manifest dependencies", () => {
     const repo = createTempRepo();
     writePackage(repo, "packages/repository-core", "@croco/repository-core", {

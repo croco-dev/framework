@@ -552,7 +552,7 @@ function collectSourceImports(
       readFileSync(filePath, "utf-8"),
       ts.ScriptTarget.Latest,
     );
-    const lines = source.text.split(/\r?\n/);
+    const lineStarts = source.getLineStarts();
 
     return extractImportSpecifiers(source).map((entry) => {
       const targetFile = entry.specifier.startsWith(".")
@@ -572,7 +572,7 @@ function collectSourceImports(
         file: relativeFile,
         line: entry.line,
         column: entry.column,
-        excerpt: lines[entry.line - 1]?.trim() ?? "",
+        excerpt: source.text.slice(lineStarts[entry.line - 1], lineStarts[entry.line]).trim(),
         specifier: entry.specifier,
         importedPackageName: imported.packageName,
         importedSubpath: imported.subpath,
