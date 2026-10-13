@@ -108,6 +108,10 @@ export async function runContractsDiff(
 ): Promise<number> {
   const parsed = parseContractsDiffArgs(args);
   const io = { ...createDefaultIo(), ...options.io };
+  const cwd = getFlagValue(args, "--cwd");
+  if (cwd) {
+    io.cwd = resolvePath(cwd, io.cwd);
+  }
 
   if (parsed.kind === "help") {
     printContractsDiffHelp(io);
@@ -195,6 +199,7 @@ function printContractsDiffHelp(io: ContractsDiffIo): void {
   io.stdout(`Usage: croco contracts diff --baseline <snapshot.json> (--current-snapshot <snapshot.json> | --controllers <glob>) [--json] [--out <path>]
 
 Options:
+  --cwd <path>          Working directory for input and output paths
   --baseline <path>     Stable ContractGraph snapshot JSON to compare against
   --current-snapshot <path>
                         Current ContractGraph snapshot JSON to compare
@@ -278,7 +283,7 @@ async function loadCurrentControllerSnapshot(
   }
 
   const loadContractGraph = loader ?? loadContractGraphFromRpcCodegen;
-  const graph = await loadContractGraph(options.controllers, {
+  const graph = await loadContractGraph(resolvePath(options.controllers, io.cwd), {
     strictSchemas: options.strictSchemas,
   });
   const errors = getContractGraphErrors(graph);
@@ -318,7 +323,13 @@ function getFlagValue(args: readonly string[], flag: string): string | null {
 }
 
 function getFirstPosition(args: readonly string[]): string | null {
-  const valueFlags = new Set(["--baseline", "--controllers", "--current-snapshot", "--out"]);
+  const valueFlags = new Set([
+    "--baseline",
+    "--controllers",
+    "--current-snapshot",
+    "--out",
+    "--cwd",
+  ]);
 
   for (let index = 0; index < args.length; index += 1) {
     const arg = args[index];
