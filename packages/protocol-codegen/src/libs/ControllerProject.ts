@@ -82,6 +82,32 @@ class ControllerProjectStateProblem extends Problem {
   }
 }
 
+class ControllerProjectJsxRuntimeProblem extends Problem {
+  constructor(tsconfigPath: string | null, diagnostics: readonly Diagnostic[]) {
+    const recoveryAction =
+      "Import the configured JSX factory (React by default), provide jsxFactory and jsxFragmentFactory bindings, or configure jsxImportSource with an installed automatic JSX runtime.";
+    const evidence = diagnostics.map((diagnostic) => ({
+      code: diagnostic.getCode(),
+      sourcePath: diagnostic.getSourceFile()?.getFilePath(),
+      start: diagnostic.getStart(),
+      message: ts.flattenDiagnosticMessageText(diagnostic.compilerObject.messageText, "\n"),
+    }));
+    super(
+      "protocol-codegen/controller-project-jsx-runtime",
+      ProblemCategory.ValidationError,
+      `${CONTROLLER_PROJECT_CONFIG_CODE}: Temporary JSX runtime cannot be emitted. ${evidence.map((item) => `${item.sourcePath}: ${item.message}`).join("\n")} Recovery: ${recoveryAction}`,
+      {
+        extensions: {
+          crocoCode: CONTROLLER_PROJECT_CONFIG_CODE,
+          tsconfigPath,
+          diagnostics: evidence,
+          recoveryAction,
+        },
+      },
+    );
+  }
+}
+
 export function createControllerProject(
   options: CreateControllerProjectOptions,
 ): ControllerProject {
@@ -135,14 +161,15 @@ export function createControllerProject(
   const emitContexts = analysisContexts.map((context) =>
     createEmitContext(context, sourceRoot, emitDir),
   );
-  const outputPaths = new Map(
-    emittableSourceFiles.map((sourceFile) => [
-      normalizePath(sourceFile.getFilePath()),
-      path.basename(sourceFile.getFilePath()) === "package.json"
-        ? path.join(fs.mkdtempSync(path.join(emitDir, "croco-json-")), "package.json")
-        : getEmittedFilePath(sourceRoot, emitDir, sourceFile.getFilePath()),
-    ]),
-  );
+  const outputPaths = new Map<string, string>();
+  for (const sourceFile of emittableSourceFiles) {
+    if (path.basename(sourceFile.getFilePath()) === "package.json") {
+      outputPaths.set(
+        normalizePath(sourceFile.getFilePath()),
+        path.join(fs.mkdtempSync(path.join(emitDir, "croco-json-")), "package.json"),
+      );
+    }
+  }
 
   let disposed = false;
   let emitted = false;
@@ -159,6 +186,10 @@ export function createControllerProject(
     },
     emit(): void {
       assertActive(disposed);
+      for (const [index, context] of emitContexts.entries()) {
+        const analysisContext = analysisContexts[index];
+        validateRuntimeJsx(analysisContext, context, discoveredConfigPath);
+      }
       for (const context of emitContexts) {
         for (const sourceFile of context.sourceFiles) {
           const sourcePath = sourceFile.getFilePath();
@@ -169,11 +200,22 @@ export function createControllerProject(
             }
             fs.copyFileSync(sourcePath, outputPath);
           } else {
-            sourceFile.emitSync();
+            context.project.getProgram().emitSync({
+              targetSourceFile: sourceFile,
+              writeFile(filePath, text, writeByteOrderMark) {
+                fs.mkdirSync(path.dirname(filePath), { recursive: true });
+                fs.writeFileSync(filePath, writeByteOrderMark ? `\uFEFF${text}` : text);
+                if (/\.(?:[cm]?js|json)$/.test(filePath)) {
+                  outputPaths.set(normalizePath(sourcePath), filePath);
+                }
+              },
+            });
           }
         }
-        rewriteRuntimeSpecifiers(context, sourceRoot, emitDir, outputPaths);
-        writeModuleBoundaries(context, sourceRoot, emitDir);
+      }
+      for (const context of emitContexts) {
+        rewriteRuntimeSpecifiers(context, outputPaths);
+        writeModuleBoundaries(context, outputPaths);
       }
       emitted = true;
     },
@@ -189,7 +231,7 @@ export function createControllerProject(
           `Source file is not an explicitly matched controller: ${sourceFile.getFilePath()}`,
         );
       }
-      const emittedPath = getEmittedFilePath(sourceRoot, emitDir, sourceFile.getFilePath());
+      const emittedPath = getEmittedFilePath(outputPaths, sourceFile.getFilePath());
       return (await import(pathToFileURL(emittedPath).href)) as ControllerModule;
     },
     async importControllerModules(): Promise<readonly ControllerModule[]> {
@@ -350,6 +392,13 @@ function createEmitCompilerOptions(
   delete compilerOptions.isolatedDeclarations;
   return {
     ...compilerOptions,
+    // Analysis keeps the application's JSX mode; temporary modules must run in Node.
+    jsx:
+      compilerOptions.jsx === ts.JsxEmit.Preserve || compilerOptions.jsx === ts.JsxEmit.ReactNative
+        ? compilerOptions.jsxImportSource
+          ? ts.JsxEmit.ReactJSX
+          : ts.JsxEmit.React
+        : compilerOptions.jsx,
     rootDir,
     outDir,
     noEmit: false,
@@ -360,6 +409,52 @@ function createEmitCompilerOptions(
     incremental: false,
     composite: false,
   };
+}
+
+function validateRuntimeJsx(
+  analysisContext: ProjectContext,
+  emitContext: ProjectContext,
+  tsconfigPath: string | null,
+): void {
+  const jsx = analysisContext.project.getCompilerOptions().jsx;
+  if (jsx !== ts.JsxEmit.Preserve && jsx !== ts.JsxEmit.ReactNative) return;
+
+  const diagnosticKey = (diagnostic: Diagnostic): string =>
+    [
+      diagnostic.getCode(),
+      diagnostic.getSourceFile()?.getFilePath(),
+      diagnostic.getStart(),
+      ts.flattenDiagnosticMessageText(diagnostic.compilerObject.messageText, "\n"),
+    ].join(":");
+  const analysisDiagnostics = new Set(
+    analysisContext.project.getPreEmitDiagnostics().map(diagnosticKey),
+  );
+  const ownedSourcePaths = new Set(
+    emitContext.sourceFiles.map((sourceFile) => sourceFile.getFilePath()),
+  );
+  const runtimeDiagnostics = emitContext.project.getPreEmitDiagnostics().filter((diagnostic) => {
+    const sourceFile = diagnostic.getSourceFile();
+    if (
+      !sourceFile ||
+      !ownedSourcePaths.has(sourceFile.getFilePath()) ||
+      analysisDiagnostics.has(diagnosticKey(diagnostic))
+    ) {
+      return false;
+    }
+    const node = sourceFile.getDescendantAtPos(diagnostic.getStart() ?? 0);
+    return (
+      node &&
+      [node, ...node.getAncestors()].some(
+        (ancestor) =>
+          ts.isJsxElement(ancestor.compilerNode) ||
+          ts.isJsxSelfClosingElement(ancestor.compilerNode) ||
+          ts.isJsxFragment(ancestor.compilerNode),
+      )
+    );
+  });
+  if (runtimeDiagnostics.length > 0) {
+    throw new ControllerProjectJsxRuntimeProblem(tsconfigPath, runtimeDiagnostics);
+  }
 }
 
 function loadTsconfigGraph(tsconfigPath: string, explicit: boolean): LoadedTsconfig {
@@ -477,8 +572,6 @@ function isPathInside(parent: string, child: string): boolean {
 
 function rewriteRuntimeSpecifiers(
   context: ProjectContext,
-  sourceRoot: string,
-  emitDir: string,
   outputPaths: ReadonlyMap<string, string>,
 ): void {
   const compilerOptions = context.project.getCompilerOptions();
@@ -492,7 +585,7 @@ function rewriteRuntimeSpecifiers(
   for (const sourceFile of context.sourceFiles) {
     const sourcePath = sourceFile.getFilePath();
     if (!isEmittableSourcePath(sourcePath) || sourcePath.endsWith(".json")) continue;
-    const emittedPath = getEmittedFilePath(sourceRoot, emitDir, sourcePath);
+    const emittedPath = getEmittedFilePath(outputPaths, sourcePath);
     if (!fs.existsSync(emittedPath)) continue;
     const emittedText = fs.readFileSync(emittedPath, "utf8");
     const syntaxTree = ts.createSourceFile(emittedPath, emittedText, ts.ScriptTarget.Latest, true);
@@ -786,13 +879,16 @@ function isEsmModuleKind(moduleKind: ts.ModuleKind | undefined, sourcePath: stri
   );
 }
 
-function writeModuleBoundaries(context: ProjectContext, sourceRoot: string, emitDir: string): void {
+function writeModuleBoundaries(
+  context: ProjectContext,
+  outputPaths: ReadonlyMap<string, string>,
+): void {
   const moduleKind = context.project.getCompilerOptions().module;
 
   for (const sourceFile of context.sourceFiles) {
     const sourcePath = sourceFile.getFilePath();
     if (sourcePath.endsWith(".json")) continue;
-    const emittedPath = getEmittedFilePath(sourceRoot, emitDir, sourcePath);
+    const emittedPath = getEmittedFilePath(outputPaths, sourcePath);
     if (!fs.existsSync(emittedPath)) continue;
     const isEsm = isEsmModuleKind(moduleKind, sourcePath);
     fs.writeFileSync(
@@ -822,13 +918,12 @@ function sourceUsesEsmBoundary(sourcePath: string): boolean {
   }
 }
 
-function getEmittedFilePath(sourceRoot: string, emitDir: string, sourcePath: string): string {
-  const relativePath = path
-    .relative(sourceRoot, sourcePath)
-    .replace(/\.mts$/, ".mjs")
-    .replace(/\.cts$/, ".cjs")
-    .replace(/\.tsx?$/, ".js");
-  return path.join(emitDir, relativePath);
+function getEmittedFilePath(outputPaths: ReadonlyMap<string, string>, sourcePath: string): string {
+  const outputPath = outputPaths.get(normalizePath(sourcePath));
+  if (!outputPath) {
+    throw new ControllerProjectStateProblem(`Missing runtime output path: ${sourcePath}`);
+  }
+  return outputPath;
 }
 
 function findModuleResolutionRoot(sourceDirectory: string, fallback: string): string {

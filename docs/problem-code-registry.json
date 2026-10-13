@@ -1,6 +1,6 @@
 {
   "version": "croco.problem-code-registry.v1",
-  "problemCount": 1023,
+  "problemCount": 1024,
   "problems": [
     {
       "code": "ACCESS_DENIED",
@@ -23133,6 +23133,36 @@
         {
           "file": "packages/protocol-codegen/src/libs/ControllerProject.ts",
           "line": 60,
+          "column": 5,
+          "kind": "problem-constructor"
+        }
+      ]
+    },
+    {
+      "code": "protocol-codegen/controller-project-jsx-runtime",
+      "category": "ValidationError",
+      "status": 422,
+      "title": "Validation Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#protocol-codegen-controller-project-jsx-runtime",
+      "recovery": {
+        "cause": "Temporary JSX emission introduced diagnostics for the configured JSX factory or automatic runtime.",
+        "userAction": "Import the configured JSX factory (React by default), provide jsxFactory and jsxFragmentFactory bindings, or configure jsxImportSource with an installed automatic JSX runtime, then rerun code generation.",
+        "operatorAction": "Inspect the source diagnostics and tsconfig reported before module output; correct the JSX runtime configuration and verify the selected runtime dependency.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "public",
+        "telemetry": {
+          "eventName": "croco.problem.info",
+          "severity": "info",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/protocol-codegen/src/libs/ControllerProject.ts",
+          "line": 95,
           "column": 5,
           "kind": "problem-constructor"
         }
