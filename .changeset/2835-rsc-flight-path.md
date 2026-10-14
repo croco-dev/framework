@@ -63,3 +63,18 @@ Three corrections to the Flight response path that this review round surfaced:
 - The meta-tag fallback returns the attribute value the HTML parser already
   decoded, instead of decoding it a second time and mangling a version whose
   own text contains an entity-looking sequence.
+
+A later round on the same path:
+
+- Flight responses declare `Vary: Accept, x-croco-rsc-client-manifest`, so a
+  shared cache cannot serve a Flight body to a document request or reuse one
+  build's payload for another.
+- The browser entry checks the response status before decoding, so a stale
+  document answered with a Problem body reports the mismatch instead of
+  failing inside the Flight decoder and leaving the page silently stale.
+- A late Flight stream failure — an encoder timeout or an output cap reached
+  after the shell row — now releases the reader and is reported to the operator
+  instead of silently ending the response.
+- `RscManifestElement` is exported so the document handshake's `getAttribute`
+  member is named and documented as a method rather than flattened into a
+  property.
