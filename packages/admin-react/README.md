@@ -660,3 +660,35 @@ and historical errors are labeled separately. Unknown periods and zero-actual MA
 reasons; aggregate input does not claim verified individual membership. Tables scroll within their
 containers and display rounding is never reused in simulation. Explicit loading/empty/partial/denied/
 error states remain distinct. See [the independent local example](../../examples/growth-model/README.md).
+
+## Learning workspace
+
+`LearningWorkspace` edits the same `LearningRegistry` documents used by standalone APIs. It separates
+facts, hypotheses (including inconclusive), interpretation limits, evidence references, decisions,
+next actions and action/target/metric tags. It supports bounded search, history, aggregate JSON import,
+copying to a distinct draft and an authorized export. It performs no experiment execution and exposes
+a local experiment-draft action only when the host actually supplies that callback.
+
+Bind callbacks to authenticated server service endpoints. `canWrite` and `canExport` describe UI
+availability; they grant no server permission. Provide a complete, currently authorized initial draft
+only when all fields are readable; otherwise provide denied/error state. The host must refresh
+`accessRevision` whenever authentication, field policy or source privacy changes, and replace the
+initial document with a freshly authorized view. That epoch clears old drafts, inspection, history,
+exports and in-flight responses. Never retain a full document across a tenant or permission change.
+
+Save retries reuse the command key for the same document and reason. A revision conflict retains the
+local draft; “Load latest without replacing draft” displays the current saved version independently.
+Only an explicit “Replace draft with latest” discards local edits. The UI uses the server's evidence
+availability and storage result. Import validation runs in the browser for feedback and again on the
+server before persistence.
+
+[Standalone learning example](../../examples/customer-explorer/README.md#standalone-learning-workspace)
+uses the real PostgreSQL adapter without constructing an Experiment or Customer Explorer service.
+With that local example running, `node packages/admin-react/src/tests/learningWorkspaceBrowser.cjs`
+(from repository root) exercises two editors, conflict recovery, inconclusive state, history, search,
+export, copy, keyboard order, permission epoch reset and desktop/mobile overflow. Screenshots default
+to `/tmp/croco-learning-2825-browser`, outside the checkout.
+
+The workspace only replaces a draft with an `isComplete` view. A successful save whose response
+is source-redacted keeps the submitted content and advances its revision. Switching records clears
+revision history and its cursor, so audit pages always belong to the current document.

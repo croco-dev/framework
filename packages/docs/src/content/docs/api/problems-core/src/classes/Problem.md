@@ -33,6 +33,8 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`FactHistoryInputProblem`](/api/admin-core/src/classes/facthistoryinputproblem/)
 - [`GrowthWorkbenchProblem`](/api/admin-core/src/classes/growthworkbenchproblem/)
 - [`JourneyAdminProblem`](/api/admin-core/src/classes/journeyadminproblem/)
+- [`LearningRegistryProblem`](/api/admin-core/src/classes/learningregistryproblem/)
+- [`LearningStorageProblem`](/api/admin-core/src/classes/learningstorageproblem/)
 - [`MissionConsoleInvalidProblem`](/api/admin-core/src/classes/missionconsoleinvalidproblem/)
 - [`NetOutcomeProblem`](/api/admin-core/src/classes/netoutcomeproblem/)
 - [`OfferConsoleValidationProblem`](/api/admin-core/src/classes/offerconsolevalidationproblem/)

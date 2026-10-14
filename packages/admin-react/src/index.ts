@@ -381,3 +381,6 @@ export type { ResearchRecruitmentConsoleProps } from "./libs/ResearchRecruitment
 
 export { GrowthModelWorkbench } from "./libs/GrowthModelWorkbench";
 export type { GrowthWorkbenchClient, GrowthModelWorkbenchProps } from "./libs/GrowthModelWorkbench";
+
+export { LearningWorkspace } from "./libs/LearningWorkspace";
+export type { LearningWorkspaceProps, LearningWorkspaceState } from "./libs/LearningWorkspace";

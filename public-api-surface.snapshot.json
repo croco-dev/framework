@@ -528,6 +528,24 @@
               "declarationKind": "class"
             },
             {
+              "name": "LearningRegistry",
+              "exportKind": "named",
+              "source": "./libs/LearningRegistry",
+              "declarationKind": "class"
+            },
+            {
+              "name": "LearningRegistryProblem",
+              "exportKind": "named",
+              "source": "./libs/LearningRegistry",
+              "declarationKind": "class"
+            },
+            {
+              "name": "LearningStorageProblem",
+              "exportKind": "named",
+              "source": "./libs/LearningRegistry",
+              "declarationKind": "class"
+            },
+            {
               "name": "MissionConsoleInvalidProblem",
               "exportKind": "named",
               "source": "./libs/MissionConsole",
@@ -1062,6 +1080,24 @@
               "declarationKind": "function"
             },
             {
+              "name": "importLearningEvidence",
+              "exportKind": "named",
+              "source": "./libs/LearningRegistry",
+              "declarationKind": "function"
+            },
+            {
+              "name": "learningEvidenceKey",
+              "exportKind": "named",
+              "source": "./libs/LearningRegistry",
+              "declarationKind": "function"
+            },
+            {
+              "name": "learningRecordResource",
+              "exportKind": "named",
+              "source": "./libs/LearningRegistry",
+              "declarationKind": "const"
+            },
+            {
               "name": "loadChallengeOperations",
               "exportKind": "named",
               "source": "./libs/ChallengeOperations",
@@ -1214,6 +1250,24 @@
               "name": "validateFactHistoryCorrection",
               "exportKind": "named",
               "source": "@croco/admin-core/fact-history-validation"
+            },
+            {
+              "name": "validateLearningCommit",
+              "exportKind": "named",
+              "source": "./libs/LearningRegistry",
+              "declarationKind": "function"
+            },
+            {
+              "name": "validateLearningEvidence",
+              "exportKind": "named",
+              "source": "./libs/LearningRegistry",
+              "declarationKind": "function"
+            },
+            {
+              "name": "validateLearningRecord",
+              "exportKind": "named",
+              "source": "./libs/LearningRegistry",
+              "declarationKind": "function"
             },
             {
               "name": "validateOfferPolicyEditor",
@@ -1660,6 +1714,11 @@
               "source": "./libs/CustomerExplorer"
             },
             {
+              "name": "DecisionRef",
+              "exportKind": "named",
+              "source": "./libs/LearningRegistry"
+            },
+            {
               "name": "EngagementAudienceDescriptorRow",
               "exportKind": "named",
               "source": "./libs/EngagementOperations"
@@ -1913,6 +1972,16 @@
               "name": "EventCatalogState",
               "exportKind": "named",
               "source": "./libs/EventCatalog"
+            },
+            {
+              "name": "EvidenceAccessState",
+              "exportKind": "named",
+              "source": "./libs/LearningRegistry"
+            },
+            {
+              "name": "EvidenceRef",
+              "exportKind": "named",
+              "source": "./libs/LearningRegistry"
             },
             {
               "name": "ExperienceAdminAccess",
@@ -2205,6 +2274,11 @@
               "source": "./libs/GrowthModelWorkbench"
             },
             {
+              "name": "HypothesisStatus",
+              "exportKind": "named",
+              "source": "./libs/LearningRegistry"
+            },
+            {
               "name": "JourneyAdminAccess",
               "exportKind": "named",
               "source": "./libs/JourneyOperations"
@@ -2238,6 +2312,96 @@
               "name": "JourneyOperationsOptions",
               "exportKind": "named",
               "source": "./libs/JourneyOperations"
+            },
+            {
+              "name": "LearningAccess",
+              "exportKind": "named",
+              "source": "./libs/LearningRegistry"
+            },
+            {
+              "name": "LearningCommit",
+              "exportKind": "named",
+              "source": "./libs/LearningRegistry"
+            },
+            {
+              "name": "LearningContent",
+              "exportKind": "named",
+              "source": "./libs/LearningRegistry"
+            },
+            {
+              "name": "LearningEvidenceResult",
+              "exportKind": "named",
+              "source": "./libs/LearningRegistry"
+            },
+            {
+              "name": "LearningEvidenceSource",
+              "exportKind": "named",
+              "source": "./libs/LearningRegistry"
+            },
+            {
+              "name": "LearningField",
+              "exportKind": "named",
+              "source": "./libs/LearningRegistry"
+            },
+            {
+              "name": "LearningHypothesis",
+              "exportKind": "named",
+              "source": "./libs/LearningRegistry"
+            },
+            {
+              "name": "LearningMutation",
+              "exportKind": "named",
+              "source": "./libs/LearningRegistry"
+            },
+            {
+              "name": "LearningPermission",
+              "exportKind": "named",
+              "source": "./libs/LearningRegistry"
+            },
+            {
+              "name": "LearningPolicy",
+              "exportKind": "named",
+              "source": "./libs/LearningRegistry"
+            },
+            {
+              "name": "LearningProblemCode",
+              "exportKind": "named",
+              "source": "./libs/LearningRegistry"
+            },
+            {
+              "name": "LearningQuery",
+              "exportKind": "named",
+              "source": "./libs/LearningRegistry"
+            },
+            {
+              "name": "LearningRecord",
+              "exportKind": "named",
+              "source": "./libs/LearningRegistry"
+            },
+            {
+              "name": "LearningRepository",
+              "exportKind": "named",
+              "source": "./libs/LearningRegistry"
+            },
+            {
+              "name": "LearningResultSnapshot",
+              "exportKind": "named",
+              "source": "./libs/LearningRegistry"
+            },
+            {
+              "name": "LearningRevision",
+              "exportKind": "named",
+              "source": "./libs/LearningRegistry"
+            },
+            {
+              "name": "LearningScope",
+              "exportKind": "named",
+              "source": "./libs/LearningRegistry"
+            },
+            {
+              "name": "LearningView",
+              "exportKind": "named",
+              "source": "./libs/LearningRegistry"
             },
             {
               "name": "LoadCreditOperationsInput",
@@ -3665,6 +3829,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "PostgresLearningRepository",
+              "exportKind": "named",
+              "source": "./libs/LearningRepository",
+              "declarationKind": "class"
+            },
+            {
               "name": "PostgresTimelineSource",
               "exportKind": "named",
               "source": "./libs/CustomerExplorerAdapters",
@@ -3901,6 +4071,12 @@
               "name": "JourneyConsole",
               "exportKind": "named",
               "source": "./libs/JourneyConsole",
+              "declarationKind": "function"
+            },
+            {
+              "name": "LearningWorkspace",
+              "exportKind": "named",
+              "source": "./libs/LearningWorkspace",
               "declarationKind": "function"
             },
             {
@@ -4947,6 +5123,16 @@
               "name": "JourneyConsoleProps",
               "exportKind": "named",
               "source": "./libs/JourneyConsole"
+            },
+            {
+              "name": "LearningWorkspaceProps",
+              "exportKind": "named",
+              "source": "./libs/LearningWorkspace"
+            },
+            {
+              "name": "LearningWorkspaceState",
+              "exportKind": "named",
+              "source": "./libs/LearningWorkspace"
             },
             {
               "name": "LifecycleAutomationConsoleProps",

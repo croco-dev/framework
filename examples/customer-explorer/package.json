@@ -9,7 +9,9 @@
     "dev": "pnpm build:browser && tsx src/server.ts",
     "build:browser": "tsup",
     "smoke": "tsx src/smoke.ts",
-    "setup": "tsx src/setup.ts"
+    "setup": "tsx src/setup.ts",
+    "dev:learning": "pnpm build:browser && tsx src/learningServer.ts",
+    "setup:learning": "tsx src/learningSetup.ts"
   },
   "dependencies": {
     "@croco/admin-core": "workspace:*",
