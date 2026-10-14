@@ -104,6 +104,9 @@ describe("API documentation pipeline", () => {
     expect(new Set(apiDocPackages.map(({ packageName }) => packageName)).size).toBe(139);
     expect(new Set(apiDocPackages.map(({ directory }) => directory)).size).toBe(139);
     expect(new Set(apiDocPackages.map(({ moduleName }) => moduleName)).size).toBe(139);
+    expect(apiDocPackages.map(({ packageName }) => packageName)).toEqual(
+      expect.arrayContaining(["@croco/research-core", "@croco/research-drizzle"]),
+    );
     expect(apiDocModelEntryPoints).toEqual(
       apiDocPackages.map(({ directory }) => `../${directory}/.turbo/docs-api/model.json`),
     );

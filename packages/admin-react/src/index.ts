@@ -384,3 +384,10 @@ export type { GrowthWorkbenchClient, GrowthModelWorkbenchProps } from "./libs/Gr
 
 export { LearningWorkspace } from "./libs/LearningWorkspace";
 export type { LearningWorkspaceProps, LearningWorkspaceState } from "./libs/LearningWorkspace";
+export { SurveyEditor, SurveyPreview, SurveyResults } from "./libs/SurveyConsole";
+export type {
+  SurveyEditorProps,
+  SurveyResultsProps,
+  SurveyResultsData,
+  SurveyResultsState,
+} from "./libs/SurveyConsole";

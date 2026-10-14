@@ -1280,6 +1280,18 @@
               "exportKind": "named",
               "source": "./libs/ReferralConsole",
               "declarationKind": "function"
+            },
+            {
+              "name": "validateSurveyAdminAccess",
+              "exportKind": "named",
+              "source": "./libs/surveyOperations",
+              "declarationKind": "function"
+            },
+            {
+              "name": "validateSurveyPublishRequest",
+              "exportKind": "named",
+              "source": "./libs/surveyOperations",
+              "declarationKind": "function"
             }
           ],
           "typeExports": [
@@ -2809,6 +2821,16 @@
               "source": "./libs/SavedIntentOperations"
             },
             {
+              "name": "SurveyAdminAccess",
+              "exportKind": "named",
+              "source": "./libs/surveyOperations"
+            },
+            {
+              "name": "SurveyPublishRequest",
+              "exportKind": "named",
+              "source": "./libs/surveyOperations"
+            },
+            {
               "name": "TargetingImpactAction",
               "exportKind": "named",
               "source": "./libs/TargetingImpactOperations"
@@ -3125,6 +3147,55 @@
             }
           ],
           "typeExports": []
+        },
+        {
+          "exportPath": "./survey-operations",
+          "kind": "code",
+          "targets": [
+            {
+              "conditions": ["types", "import"],
+              "target": "./dist/survey-operations.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
+              "target": "./dist/survey-operations.d.ts"
+            },
+            {
+              "conditions": ["import"],
+              "target": "./dist/survey-operations.mjs"
+            },
+            {
+              "conditions": ["require"],
+              "target": "./dist/survey-operations.js"
+            }
+          ],
+          "sourceEntrypoint": "packages/admin-core/src/survey-operations.ts",
+          "runtimeExports": [
+            {
+              "name": "validateSurveyAdminAccess",
+              "exportKind": "named",
+              "source": "./libs/surveyOperations",
+              "declarationKind": "function"
+            },
+            {
+              "name": "validateSurveyPublishRequest",
+              "exportKind": "named",
+              "source": "./libs/surveyOperations",
+              "declarationKind": "function"
+            }
+          ],
+          "typeExports": [
+            {
+              "name": "SurveyAdminAccess",
+              "exportKind": "named",
+              "source": "./libs/surveyOperations"
+            },
+            {
+              "name": "SurveyPublishRequest",
+              "exportKind": "named",
+              "source": "./libs/surveyOperations"
+            }
+          ]
         },
         {
           "exportPath": "./targeting-impact-operations",
@@ -4203,6 +4274,24 @@
               "name": "SavedIntentConsole",
               "exportKind": "named",
               "source": "./libs/SavedIntentConsole",
+              "declarationKind": "function"
+            },
+            {
+              "name": "SurveyEditor",
+              "exportKind": "named",
+              "source": "./libs/SurveyConsole",
+              "declarationKind": "function"
+            },
+            {
+              "name": "SurveyPreview",
+              "exportKind": "named",
+              "source": "./libs/SurveyConsole",
+              "declarationKind": "function"
+            },
+            {
+              "name": "SurveyResults",
+              "exportKind": "named",
+              "source": "./libs/SurveyConsole",
               "declarationKind": "function"
             },
             {
@@ -5535,6 +5624,26 @@
               "source": "./libs/SavedIntentConsole"
             },
             {
+              "name": "SurveyEditorProps",
+              "exportKind": "named",
+              "source": "./libs/SurveyConsole"
+            },
+            {
+              "name": "SurveyResultsData",
+              "exportKind": "named",
+              "source": "./libs/SurveyConsole"
+            },
+            {
+              "name": "SurveyResultsProps",
+              "exportKind": "named",
+              "source": "./libs/SurveyConsole"
+            },
+            {
+              "name": "SurveyResultsState",
+              "exportKind": "named",
+              "source": "./libs/SurveyConsole"
+            },
+            {
               "name": "TargetingImpactInspectorProps",
               "exportKind": "named",
               "source": "./libs/TargetingImpactInspector"
@@ -5684,6 +5793,71 @@
               "name": "ExperimentConsoleState",
               "exportKind": "named",
               "source": "./libs/ExperimentConsole"
+            }
+          ]
+        },
+        {
+          "exportPath": "./surveys",
+          "kind": "code",
+          "targets": [
+            {
+              "conditions": ["types", "import"],
+              "target": "./dist/surveys.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
+              "target": "./dist/surveys.d.ts"
+            },
+            {
+              "conditions": ["import"],
+              "target": "./dist/surveys.mjs"
+            },
+            {
+              "conditions": ["require"],
+              "target": "./dist/surveys.js"
+            }
+          ],
+          "sourceEntrypoint": "packages/admin-react/src/surveys.ts",
+          "runtimeExports": [
+            {
+              "name": "SurveyEditor",
+              "exportKind": "named",
+              "source": "./libs/SurveyConsole",
+              "declarationKind": "function"
+            },
+            {
+              "name": "SurveyPreview",
+              "exportKind": "named",
+              "source": "./libs/SurveyConsole",
+              "declarationKind": "function"
+            },
+            {
+              "name": "SurveyResults",
+              "exportKind": "named",
+              "source": "./libs/SurveyConsole",
+              "declarationKind": "function"
+            }
+          ],
+          "typeExports": [
+            {
+              "name": "SurveyEditorProps",
+              "exportKind": "named",
+              "source": "./libs/SurveyConsole"
+            },
+            {
+              "name": "SurveyResultsData",
+              "exportKind": "named",
+              "source": "./libs/SurveyConsole"
+            },
+            {
+              "name": "SurveyResultsProps",
+              "exportKind": "named",
+              "source": "./libs/SurveyConsole"
+            },
+            {
+              "name": "SurveyResultsState",
+              "exportKind": "named",
+              "source": "./libs/SurveyConsole"
             }
           ]
         }
@@ -21857,6 +22031,18 @@
               "declarationKind": "function"
             },
             {
+              "name": "SurveyCard",
+              "exportKind": "named",
+              "source": "./libs/SurveyCard",
+              "declarationKind": "function"
+            },
+            {
+              "name": "SurveyModal",
+              "exportKind": "named",
+              "source": "./libs/SurveyCard",
+              "declarationKind": "function"
+            },
+            {
               "name": "createAuthBridgeMissingProviderProblemDetails",
               "exportKind": "named",
               "source": "./libs/authBridge",
@@ -22383,6 +22569,16 @@
               "name": "SnoozeControlProps",
               "exportKind": "named",
               "source": "./libs/ReminderSettingsForm"
+            },
+            {
+              "name": "SurveyCardProps",
+              "exportKind": "named",
+              "source": "./libs/SurveyCard"
+            },
+            {
+              "name": "SurveyModalProps",
+              "exportKind": "named",
+              "source": "./libs/SurveyCard"
             }
           ]
         },
@@ -22426,6 +22622,55 @@
               "name": "ExperienceSlotProps",
               "exportKind": "named",
               "source": "./libs/ExperienceSlot"
+            }
+          ]
+        },
+        {
+          "exportPath": "./surveys",
+          "kind": "code",
+          "targets": [
+            {
+              "conditions": ["types", "import"],
+              "target": "./dist/surveys.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
+              "target": "./dist/surveys.d.ts"
+            },
+            {
+              "conditions": ["import"],
+              "target": "./dist/surveys.mjs"
+            },
+            {
+              "conditions": ["require"],
+              "target": "./dist/surveys.js"
+            }
+          ],
+          "sourceEntrypoint": "packages/frontend-react/src/surveys.ts",
+          "runtimeExports": [
+            {
+              "name": "SurveyCard",
+              "exportKind": "named",
+              "source": "./libs/SurveyCard",
+              "declarationKind": "function"
+            },
+            {
+              "name": "SurveyModal",
+              "exportKind": "named",
+              "source": "./libs/SurveyCard",
+              "declarationKind": "function"
+            }
+          ],
+          "typeExports": [
+            {
+              "name": "SurveyCardProps",
+              "exportKind": "named",
+              "source": "./libs/SurveyCard"
+            },
+            {
+              "name": "SurveyModalProps",
+              "exportKind": "named",
+              "source": "./libs/SurveyCard"
             }
           ]
         }
@@ -36982,6 +37227,42 @@
               "declarationKind": "class"
             },
             {
+              "name": "SurveyConflictProblem",
+              "exportKind": "named",
+              "source": "./libs/SurveyProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "SurveyDeniedProblem",
+              "exportKind": "named",
+              "source": "./libs/SurveyProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "SurveyExpiredProblem",
+              "exportKind": "named",
+              "source": "./libs/SurveyProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "SurveyInvalidProblem",
+              "exportKind": "named",
+              "source": "./libs/SurveyProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "SurveyManager",
+              "exportKind": "named",
+              "source": "./libs/SurveyManager",
+              "declarationKind": "class"
+            },
+            {
+              "name": "SurveyUnavailableProblem",
+              "exportKind": "named",
+              "source": "./libs/SurveyProblems",
+              "declarationKind": "class"
+            },
+            {
               "name": "createResearchEngagementSender",
               "exportKind": "named",
               "source": "./libs/ResearchEngagement",
@@ -36997,6 +37278,30 @@
               "name": "researchIdentity",
               "exportKind": "named",
               "source": "./libs/ResearchContracts",
+              "declarationKind": "function"
+            },
+            {
+              "name": "surveyCsvCell",
+              "exportKind": "named",
+              "source": "./libs/validation",
+              "declarationKind": "function"
+            },
+            {
+              "name": "validateSurveyAnswers",
+              "exportKind": "named",
+              "source": "./libs/validation",
+              "declarationKind": "function"
+            },
+            {
+              "name": "validateSurveyDefinition",
+              "exportKind": "named",
+              "source": "./libs/validation",
+              "declarationKind": "function"
+            },
+            {
+              "name": "validateSurveyScope",
+              "exportKind": "named",
+              "source": "./libs/validation",
               "declarationKind": "function"
             }
           ],
@@ -37085,6 +37390,81 @@
               "name": "StudyDefinition",
               "exportKind": "named",
               "source": "./libs/ResearchContracts"
+            },
+            {
+              "name": "SurveyAnswers",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "SurveyAuthority",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "SurveyDefinition",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "SurveyInvitation",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "SurveyPermission",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "SurveyPublication",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "SurveyQuestion",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "SurveyRecord",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "SurveyResponse",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "SurveyScope",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "SurveySession",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "SurveyStore",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "SurveySubject",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "SurveyTargeting",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "SurveyTokenCodec",
+              "exportKind": "named",
+              "source": "./libs/types"
             }
           ]
         }
@@ -37124,6 +37504,18 @@
               "declarationKind": "class"
             },
             {
+              "name": "DrizzleSurveyStore",
+              "exportKind": "named",
+              "source": "./libs/DrizzleSurveyStore",
+              "declarationKind": "class"
+            },
+            {
+              "name": "addMicroSurveys",
+              "exportKind": "named",
+              "source": "./migrations/addMicroSurveys",
+              "declarationKind": "function"
+            },
+            {
               "name": "createResearchSchema",
               "exportKind": "named",
               "source": "./migrations/researchSchema",
@@ -37134,6 +37526,12 @@
               "exportKind": "named",
               "source": "./libs/DrizzleResearchStore",
               "declarationKind": "const"
+            },
+            {
+              "name": "surveyTokenCodec",
+              "exportKind": "named",
+              "source": "./libs/DrizzleSurveyStore",
+              "declarationKind": "const"
             }
           ],
           "typeExports": [
@@ -37141,6 +37539,11 @@
               "name": "DrizzleResearchClient",
               "exportKind": "named",
               "source": "./libs/DrizzleResearchStore"
+            },
+            {
+              "name": "DrizzleSurveyClient",
+              "exportKind": "named",
+              "source": "./libs/DrizzleSurveyStore"
             },
             {
               "name": "ResearchMigrationClient",

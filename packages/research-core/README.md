@@ -92,3 +92,35 @@ pnpm --filter @croco/research-core typecheck
 
 The synthetic executable Console is in `examples/research-recruitment`. It uses real research
 operations and the actual EngagementService with a local non-contacting dispatcher.
+
+## Optional micro surveys
+
+Versioned, optional micro surveys for a completed product event. A survey never owns the original save, cancellation, refund, or support operation. Complete that operation before requesting a survey invitation. Collection failure is a separate failure.
+
+## Contracts
+
+`SurveyDefinition` supports single choice, multiple choice, integer scale, and bounded text. Each publication has a new immutable version and an actor, reason, expected revision, and idempotency key. Question order and choices belong to that version. The survey `id` is the family and frequency identity: changing the version does not reset its invitation history. Changing an explicit frequency policy requires a new audited publication; copying a definition to a new family is an operator decision, not a wording edit.
+
+`SurveyManager` requires a transactional `SurveyStore`, a server `SurveyAuthority`, a cryptographic `SurveyTokenCodec`, code-registered eligibility predicates, trigger names, and a server clock. `publish`, `evaluateEligibility`, `createInvitation`, `expose`, `submitResponse`, and `dismiss` validate server-side state. A manual trigger uses the literal `manual`. The application calls these operations from its existing product event handler; no new event bus or ExperienceSlot, Cohort, Goal, or survey SaaS is required.
+
+The scope always includes tenant, application, and environment. A missing tenant is invalid. `verifySubject` must independently authenticate the member or stable anonymous identity used to claim an invitation; it must not trust an identity in a request body. Member invitations require the same verified member on every use. Anonymous invitations are bearer capabilities scoped to their original anonymous identity. Logging in never links or merges that identity. The application must not log request bodies containing tokens. Tokens expire at the earlier of one day after issuance and the publication's end. Revoked targeting is checked again at use.
+
+An invitation is separate from an exposure. Call `expose` after the survey is visibly mounted, then wait for that acknowledgement before submitting or dismissing. Do not record exposure for an invitation that was never displayed. Skipping produces a dismissal, never a response. Submission requires an actual recorded exposure. Repeated identical submit keys replay the current response; changed payloads conflict. Edits require `allowEdits` and the exact current response revision, leave the preceding revision, and cannot resurrect deleted responses. A retained response's first submission time anchors retention.
+
+Omit an optional question's key when it is unanswered. Optional text may contain an empty string and optional multi-choice may contain an empty array; neither representation is accepted for another question type. Single-choice values must name a declared option, and scale values must be integers in range. Required text and multi-choice cannot be empty.
+
+## Operations and privacy
+
+`results` requires read permission and explicitly chooses invitation or exposure as its denominator. It returns invitations, exposures, unexposed, unanswered, dismissed, submitted, and a nullable response rate. Zero denominator means unavailable. Infrastructure failure throws a stable Problem rather than returning zeros. Selected respondents do not establish population-wide sentiment or causality.
+
+`rawResponses` separately requires raw permission and uses an exclusive ID cursor with a maximum page size of 100. It returns current responses, never historical revisions. It strips and durably erases expired raw answers and classifications, including history for each visited invitation. Schedule bounded pagination through this operation with an authorized retention principal to physically clear all expired records even when operators do not open results. No scheduler is installed. Retention is at most one year. Publication must choose a shorter purpose-appropriate duration when necessary.
+
+`changeResponse` requires delete or classify permission, an actor, reason, current revision, and operation idempotency key. Classification additionally requires raw permission and remains separate from the customer's answers. An identical administrative retry replays its current receipt without repeating a mutation; a changed payload or a superseded receipt conflicts. Classification cannot revive expired raw data. Delete scrubs every raw revision and classification while preserving submission counts and an audit receipt. Definitions, invitation identity metadata and audit metadata are retained by the application's separately declared metadata policy; raw-answer retention does not promise deletion of that metadata.
+
+The default example asks about product satisfaction and explicitly discourages personal information. React renders text as escaped content. `surveyCsvCell` quotes CSV cells, doubles embedded quotes, and prefixes formula-like or tab/newline-prefixed values. Export each untrusted value through it; do not concatenate user input into a spreadsheet formula.
+
+## Standalone example and validation
+
+[Micro surveys](../../examples/micro-surveys/README.md) connects the real PostgreSQL service, SurveyCard/Modal, editor, isolated preview, and bounded results/operations in one local application.
+
+Run `pnpm --filter @croco/research-core test` and `pnpm --filter @croco/research-core typecheck`. This package is alpha; provider certification and production deployment are not established by these checks.

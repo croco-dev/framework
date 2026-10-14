@@ -12,6 +12,10 @@ export default defineConfig({
         currentDir,
         "../admin-core/src/fact-history-validation.ts",
       ),
+      "@croco/admin-core/survey-operations": resolve(
+        currentDir,
+        "../admin-core/src/survey-operations.ts",
+      ),
       "@croco/admin-core": resolve(currentDir, "../admin-core/src/index.ts"),
       "@croco/analytics-core": resolve(currentDir, "../analytics-core/src/index.ts"),
       "@croco/lifecycle-core": resolve(currentDir, "../lifecycle-core/src/index.ts"),

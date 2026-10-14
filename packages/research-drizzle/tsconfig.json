@@ -6,6 +6,7 @@
       "@croco/research-core": ["../research-core/src/index.ts"],
       "@croco/engagement-core": ["../engagement-core/src/index.ts"],
       "@croco/problems-core": ["../problems-core/src/index.ts"]
-    }
+    },
+    "outDir": "./dist"
   }
 }
