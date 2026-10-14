@@ -808,7 +808,10 @@ function runPublicEntrypointRule(
       return [];
     }
 
-    if (!matchesAnyPattern(entry.importedPackageName, rule.includePackages ?? ["*"])) {
+    if (
+      rule.includePackages &&
+      !matchesAnyPattern(entry.importedPackageName, rule.includePackages)
+    ) {
       return [];
     }
 
