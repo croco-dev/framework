@@ -658,6 +658,8 @@ jobs:
               - 'packages/customer-health-drizzle/**'
               - 'packages/engagement-core/**'
               - 'packages/engagement-drizzle/**'
+              - 'packages/research-core/**'
+              - 'packages/research-drizzle/**'
               - 'packages/entitlements-core/**'
               - 'packages/entitlements-drizzle/**'
               - 'packages/etl-core/**'
@@ -794,6 +796,8 @@ jobs:
               - 'packages/referral-core/src/**'
               - 'packages/referral-drizzle/src/**'
               - 'packages/repository-core/src/**'
+              - 'packages/research-core/src/**'
+              - 'packages/research-drizzle/src/**'
               - 'packages/retry-core/src/**'
               - 'packages/rpc-codegen/src/**'
               - 'packages/search-core/src/**'
@@ -1516,6 +1520,7 @@ jobs:
           COHORT_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/croco_membership
           CREDITS_POSTGRES_URL: postgresql://postgres:postgres@127.0.0.1:5432/croco_membership
           CUSTOMER_HEALTH_POSTGRES_URL: postgresql://postgres:postgres@127.0.0.1:5432/croco_membership
+          RESEARCH_POSTGRES_URL: postgresql://postgres:postgres@127.0.0.1:5432/croco_membership
           ENGAGEMENT_POSTGRES_URL: postgresql://postgres:postgres@127.0.0.1:5432/croco_membership
           ENTITLEMENTS_POSTGRES_URL: postgresql://postgres:postgres@127.0.0.1:5432/croco_membership
           EXECUTION_POSTGRES_URL: postgresql://postgres:postgres@127.0.0.1:5432/croco_membership
@@ -1539,6 +1544,8 @@ jobs:
           pnpm --filter @croco/customer-health-drizzle test:postgres
           pnpm build --filter=@croco/engagement-drizzle...
           pnpm --filter @croco/engagement-drizzle test:postgres
+          pnpm build --filter=@croco/research-drizzle...
+          pnpm --filter @croco/research-drizzle test:postgres
           pnpm build --filter=@croco/entitlements-drizzle...
           pnpm --filter @croco/entitlements-drizzle test:postgres
           pnpm build --filter=@croco/membership-drizzle...

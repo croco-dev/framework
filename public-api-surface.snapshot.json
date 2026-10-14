@@ -612,6 +612,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "ResearchOperations",
+              "exportKind": "named",
+              "source": "./libs/ResearchOperations",
+              "declarationKind": "class"
+            },
+            {
               "name": "RetentionOfferOperations",
               "exportKind": "named",
               "source": "./libs/RetentionOfferOperations",
@@ -2477,6 +2483,16 @@
               "source": "@croco/metrics-core"
             },
             {
+              "name": "ResearchAction",
+              "exportKind": "named",
+              "source": "./libs/ResearchOperations"
+            },
+            {
+              "name": "ResearchConsoleState",
+              "exportKind": "named",
+              "source": "./libs/ResearchOperations"
+            },
+            {
               "name": "RetentionDrilldownPage",
               "exportKind": "named",
               "source": "./libs/RetentionWorkbench"
@@ -3936,6 +3952,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "ResearchRecruitmentConsole",
+              "exportKind": "named",
+              "source": "./libs/ResearchRecruitmentConsole",
+              "declarationKind": "function"
+            },
+            {
               "name": "RetentionOfferConsole",
               "exportKind": "named",
               "source": "./libs/RetentionOfferConsole",
@@ -5242,6 +5264,11 @@
               "name": "ReminderOperationsPanelProps",
               "exportKind": "named",
               "source": "./libs/ReminderOperationsPanel"
+            },
+            {
+              "name": "ResearchRecruitmentConsoleProps",
+              "exportKind": "named",
+              "source": "./libs/ResearchRecruitmentConsole"
             },
             {
               "name": "RetentionOfferConsoleProps",
@@ -36505,6 +36532,239 @@
               "name": "KeyedRepositoryResult",
               "exportKind": "named",
               "source": "./libs/ReadRepository"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "packageName": "@croco/research-core",
+      "relativeDir": "packages/research-core",
+      "entrypoints": [
+        {
+          "exportPath": ".",
+          "kind": "code",
+          "targets": [
+            {
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
+              "target": "./dist/index.d.ts"
+            },
+            {
+              "conditions": ["import"],
+              "target": "./dist/index.mjs"
+            },
+            {
+              "conditions": ["require"],
+              "target": "./dist/index.js"
+            }
+          ],
+          "sourceEntrypoint": "packages/research-core/src/index.ts",
+          "runtimeExports": [
+            {
+              "name": "InMemoryResearchStore",
+              "exportKind": "named",
+              "source": "./libs/InMemoryResearchStore",
+              "declarationKind": "class"
+            },
+            {
+              "name": "ResearchConflictProblem",
+              "exportKind": "named",
+              "source": "./libs/ResearchContracts",
+              "declarationKind": "class"
+            },
+            {
+              "name": "ResearchDeniedProblem",
+              "exportKind": "named",
+              "source": "./libs/ResearchContracts",
+              "declarationKind": "class"
+            },
+            {
+              "name": "ResearchInvalidProblem",
+              "exportKind": "named",
+              "source": "./libs/ResearchContracts",
+              "declarationKind": "class"
+            },
+            {
+              "name": "ResearchPersistenceProblem",
+              "exportKind": "named",
+              "source": "./libs/ResearchContracts",
+              "declarationKind": "class"
+            },
+            {
+              "name": "ResearchService",
+              "exportKind": "named",
+              "source": "./libs/ResearchService",
+              "declarationKind": "class"
+            },
+            {
+              "name": "createResearchEngagementSender",
+              "exportKind": "named",
+              "source": "./libs/ResearchEngagement",
+              "declarationKind": "function"
+            },
+            {
+              "name": "emptyResearchRecord",
+              "exportKind": "named",
+              "source": "./libs/ResearchContracts",
+              "declarationKind": "function"
+            },
+            {
+              "name": "researchIdentity",
+              "exportKind": "named",
+              "source": "./libs/ResearchContracts",
+              "declarationKind": "function"
+            }
+          ],
+          "typeExports": [
+            {
+              "name": "Candidate",
+              "exportKind": "named",
+              "source": "./libs/ResearchContracts"
+            },
+            {
+              "name": "Invitation",
+              "exportKind": "named",
+              "source": "./libs/ResearchContracts"
+            },
+            {
+              "name": "InvitationState",
+              "exportKind": "named",
+              "source": "./libs/ResearchContracts"
+            },
+            {
+              "name": "ResearchAccess",
+              "exportKind": "named",
+              "source": "./libs/ResearchContracts"
+            },
+            {
+              "name": "ResearchAudit",
+              "exportKind": "named",
+              "source": "./libs/ResearchContracts"
+            },
+            {
+              "name": "ResearchAuthorizer",
+              "exportKind": "named",
+              "source": "./libs/ResearchContracts"
+            },
+            {
+              "name": "ResearchCommand",
+              "exportKind": "named",
+              "source": "./libs/ResearchContracts"
+            },
+            {
+              "name": "ResearchDispatchResult",
+              "exportKind": "named",
+              "source": "./libs/ResearchContracts"
+            },
+            {
+              "name": "ResearchGroupProgress",
+              "exportKind": "named",
+              "source": "./libs/ResearchContracts"
+            },
+            {
+              "name": "ResearchNote",
+              "exportKind": "named",
+              "source": "./libs/ResearchContracts"
+            },
+            {
+              "name": "ResearchPage",
+              "exportKind": "named",
+              "source": "./libs/ResearchContracts"
+            },
+            {
+              "name": "ResearchPermission",
+              "exportKind": "named",
+              "source": "./libs/ResearchContracts"
+            },
+            {
+              "name": "ResearchRecord",
+              "exportKind": "named",
+              "source": "./libs/ResearchContracts"
+            },
+            {
+              "name": "ResearchScope",
+              "exportKind": "named",
+              "source": "./libs/ResearchContracts"
+            },
+            {
+              "name": "ResearchSender",
+              "exportKind": "named",
+              "source": "./libs/ResearchContracts"
+            },
+            {
+              "name": "ResearchStore",
+              "exportKind": "named",
+              "source": "./libs/ResearchContracts"
+            },
+            {
+              "name": "StudyDefinition",
+              "exportKind": "named",
+              "source": "./libs/ResearchContracts"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "packageName": "@croco/research-drizzle",
+      "relativeDir": "packages/research-drizzle",
+      "entrypoints": [
+        {
+          "exportPath": ".",
+          "kind": "code",
+          "targets": [
+            {
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
+              "target": "./dist/index.d.ts"
+            },
+            {
+              "conditions": ["import"],
+              "target": "./dist/index.mjs"
+            },
+            {
+              "conditions": ["require"],
+              "target": "./dist/index.js"
+            }
+          ],
+          "sourceEntrypoint": "packages/research-drizzle/src/index.ts",
+          "runtimeExports": [
+            {
+              "name": "DrizzleResearchStore",
+              "exportKind": "named",
+              "source": "./libs/DrizzleResearchStore",
+              "declarationKind": "class"
+            },
+            {
+              "name": "createResearchSchema",
+              "exportKind": "named",
+              "source": "./migrations/researchSchema",
+              "declarationKind": "function"
+            },
+            {
+              "name": "researchStudies",
+              "exportKind": "named",
+              "source": "./libs/DrizzleResearchStore",
+              "declarationKind": "const"
+            }
+          ],
+          "typeExports": [
+            {
+              "name": "DrizzleResearchClient",
+              "exportKind": "named",
+              "source": "./libs/DrizzleResearchStore"
+            },
+            {
+              "name": "ResearchMigrationClient",
+              "exportKind": "named",
+              "source": "./migrations/researchSchema"
             }
           ]
         }
