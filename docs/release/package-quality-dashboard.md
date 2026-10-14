@@ -48,6 +48,21 @@ Promote an advisory gate to a blocking trunk gate only when:
 3. New packages either participate in the gate or carry an explicit documented exemption.
 4. The recovery action is local and deterministic for contributors.
 
+## Dependency Audit Process Evidence
+
+The publish dependency policy invokes the pinned pnpm 12 native executable for workspace,
+production and generated-template audit inputs. Each invocation reports its label, 120-second
+process timeout, elapsed duration, exit status and termination signal. These are process-level
+observations; transport stages, request timing and CPU activity inside pnpm are not instrumented.
+
+Node `NODE_OPTIONS` preloads do not instrument native pnpm. The policy therefore injects no
+transport diagnostic or gzip recovery preload and makes no automatic recovery attempt for a
+malformed gzip response. Caller environment settings are preserved. Audit error JSON, missing
+output and process errors still fail closed with `DependencyAuditPolicyProblem`; valid advisory
+JSON remains evidence even when pnpm exits nonzero because vulnerabilities were found.
+Resolve an unavailable or malformed registry response before retrying the publish gate. This
+change does not suppress advisories or relax severity, classification or exception policy.
+
 ## Compatibility Train Policy
 
 `pnpm package-quality:report` embeds the compatibility train summary in

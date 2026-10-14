@@ -121,8 +121,6 @@ export const RELEASE_GATE_SUPPORT_PATHS = [
   "scripts/package-manifest-contracts.mjs",
   "scripts/package-roles.mts",
   "scripts/peer-dependency-range-policy.mjs",
-  "scripts/pnpm-audit-diagnostics.cjs",
-  "scripts/pnpm-audit-gzip-recovery.cjs",
   "scripts/release-gate-maintenance.mts",
   "scripts/release-spine-evidence.mts",
   "scripts/release-workflow-only.mjs",
