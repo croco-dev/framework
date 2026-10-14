@@ -150,15 +150,7 @@ type PnpmAuditRunner = (
 const defaultRootDir = dirname(dirname(fileURLToPath(import.meta.url)));
 const defaultMetadataPath = "scripts/security-allowlist-metadata.json";
 const defaultReportPath = "ci-reports/security/dependency-audit-policy.md";
-const pnpmAuditGzipRecoveryPath = join(
-  dirname(fileURLToPath(import.meta.url)),
-  "pnpm-audit-gzip-recovery.cjs",
-);
 const pnpmAuditTimeoutMs = 120_000;
-const pnpmAuditDiagnosticsPath = join(
-  dirname(fileURLToPath(import.meta.url)),
-  "pnpm-audit-diagnostics.cjs",
-);
 const unclassifiedDiagnosticCode = "DEPENDENCY_AUDIT_EVIDENCE_UNCLASSIFIED";
 const unclassifiedPath = "<unclassified>";
 const blockingClasses = new Set<FindingClass>([
@@ -329,22 +321,14 @@ export function runPnpmAudit(
   runner: PnpmAuditRunner = spawnSync,
 ): AuditJson {
   const args = ["audit", "--audit-level", "high", ...extraArgs, "--json"];
-  const result = runPnpmAuditAttempt(rootDir, args, label, false, runner);
-  const stdoutText = readPnpmAuditOutput(label, result);
-  if (!isMissingGzipContentEncodingError(stdoutText)) {
-    return parseAuditJson(stdoutText, label);
-  }
-
-  const recoveryLabel = `${label} gzip recovery`;
-  const recoveryResult = runPnpmAuditAttempt(rootDir, args, recoveryLabel, true, runner);
-  return parseAuditJson(readPnpmAuditOutput(recoveryLabel, recoveryResult), label);
+  const result = runPnpmAuditAttempt(rootDir, args, label, runner);
+  return parseAuditJson(readPnpmAuditOutput(label, result), label);
 }
 
 function runPnpmAuditAttempt(
   rootDir: string,
   args: string[],
   label: string,
-  gzipRecovery: boolean,
   runner: PnpmAuditRunner,
 ): PnpmAuditCommandResult {
   stdout.write(`dependency-audit-policy: ${label} started timeoutMs=${pnpmAuditTimeoutMs}\n`);
@@ -352,17 +336,12 @@ function runPnpmAuditAttempt(
   const result = runner("pnpm", args, {
     cwd: rootDir,
     encoding: "utf-8",
-    env: pnpmAuditEnv(gzipRecovery),
+    env: { ...env },
     timeout: pnpmAuditTimeoutMs,
   });
   stdout.write(
     `dependency-audit-policy: ${label} completed elapsedMs=${Math.round(performance.now() - startedAt)} status=${result.status ?? "null"} signal=${result.signal ?? "null"}\n`,
   );
-  for (const line of result.stderr.split("\n")) {
-    if (line.startsWith("dependency-audit-transport ")) {
-      stdout.write(`${line}\n`);
-    }
-  }
   return result;
 }
 
@@ -381,36 +360,6 @@ function readPnpmAuditOutput(label: string, result: PnpmAuditCommandResult): str
     );
   }
   return stdoutText;
-}
-
-function isMissingGzipContentEncodingError(source: string): boolean {
-  try {
-    const parsed = JSON.parse(source) as unknown;
-    if (!isRecord(parsed) || !isRecord(parsed.error)) {
-      return false;
-    }
-    const code = stringValue(parsed.error.code);
-    const message = stringValue(parsed.error.message);
-    const includesGzipMagic = message.includes("\u001f") || message.includes("\\u001f");
-    return (
-      (code === "ERR_PNPM_AUDIT_BAD_RESPONSE" || code === "pnpm") &&
-      message.includes("Unexpected token") &&
-      includesGzipMagic &&
-      message.includes("not valid JSON")
-    );
-  } catch {
-    return false;
-  }
-}
-
-function pnpmAuditEnv(gzipRecovery: boolean): NodeJS.ProcessEnv {
-  const preloads = [pnpmAuditDiagnosticsPath, ...(gzipRecovery ? [pnpmAuditGzipRecoveryPath] : [])];
-  const requireOptions = preloads.map((path) => `--require=${JSON.stringify(path)}`).join(" ");
-  const nodeOptions = env.NODE_OPTIONS?.trim();
-  return {
-    ...env,
-    NODE_OPTIONS: nodeOptions ? `${nodeOptions} ${requireOptions}` : requireOptions,
-  };
 }
 
 function parseAuditJson(source: string, label: string): AuditJson {
