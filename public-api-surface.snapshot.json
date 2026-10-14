@@ -27168,6 +27168,11 @@
               "source": "./libs/rsc/flight"
             },
             {
+              "name": "RscManifestElement",
+              "exportKind": "named",
+              "source": "./libs/rsc/flight"
+            },
+            {
               "name": "RscRenderOptions",
               "exportKind": "named",
               "source": "./libs/rsc/flight"

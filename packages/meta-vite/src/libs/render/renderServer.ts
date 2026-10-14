@@ -1046,7 +1046,22 @@ export class RenderServer {
         controller.enqueue(first.value);
       },
       async pull(controller) {
-        const { done, value } = await reader.read();
+        let result: ReadableStreamReadResult<Uint8Array>;
+
+        try {
+          result = await reader.read();
+        } catch (error) {
+          // A failure after the first row (an encoder timeout, an output cap
+          // overrun) reaches the operator here and nowhere else: the status is
+          // already committed, so the only remaining evidence is the stream
+          // error handed to the consumer.
+          reader.releaseLock();
+          reportShellFailure("RSC Flight stream failed", { route: route.path, error }, route.path);
+          controller.error(error);
+          return;
+        }
+
+        const { done, value } = result;
 
         if (controller.desiredSize === null) {
           return;

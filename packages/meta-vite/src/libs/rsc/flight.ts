@@ -194,13 +194,22 @@ export function resolveRscClientManifestVersion(options: RscRenderOptions): stri
 }
 
 /**
+ * The element lookup `createRscBrowserFlightHeaders` needs. Declared
+ * structurally so the browser path can be tested without a DOM
+ * implementation.
+ */
+export type RscManifestElement = {
+  getAttribute(name: string): string | null;
+};
+
+/**
  * The document lookups `createRscBrowserFlightHeaders` needs. Declared
  * structurally so the browser path can be tested without a DOM
  * implementation.
  */
 export type RscManifestDocument = {
   getElementById(id: string): { textContent: string | null } | null;
-  querySelector(selector: string): { getAttribute(name: string): string | null } | null;
+  querySelector(selector: string): RscManifestElement | null;
   location?: { pathname: string };
 };
 

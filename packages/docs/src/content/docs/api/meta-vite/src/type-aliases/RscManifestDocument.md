@@ -41,7 +41,7 @@ implementation.
 
 ### querySelector()
 
-> **querySelector**(`selector`): \{ `getAttribute`: `string` \| `null`; \} \| `null`
+> **querySelector**(`selector`): [`RscManifestElement`](/api/meta-vite/src/type-aliases/rscmanifestelement/) \| `null`
 
 #### Parameters
 
@@ -51,4 +51,4 @@ implementation.
 
 #### Returns
 
-\{ `getAttribute`: `string` \| `null`; \} \| `null`
+[`RscManifestElement`](/api/meta-vite/src/type-aliases/rscmanifestelement/) \| `null`

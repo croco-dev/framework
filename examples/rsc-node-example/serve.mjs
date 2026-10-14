@@ -153,6 +153,11 @@ const httpServer = createServer(async (nodeRequest, nodeResponse) => {
         "content-type": "text/x-component; charset=utf-8",
         "x-croco-rsc-flight-version": clientBuild.flightVersion,
         "x-croco-rsc-client-manifest": clientManifestVersion,
+        // The same URL answers HTML and Flight, and a Flight answer is only
+        // valid for the client build named in its manifest header. Without
+        // these, a shared cache could hand a Flight body to a document
+        // request, or a payload from an older build to a newer one.
+        vary: "Accept, x-croco-rsc-client-manifest",
       });
       // Stream the Flight bytes straight through: buffering them first would
       // hold back the first rows until the slow server component resolves.

@@ -16,9 +16,18 @@ async function loadFlightNode() {
   // the server refuses a Flight request that echoes a different one, so a
   // browser running an older build fails here instead of rendering a tree it
   // cannot resolve. Refusing is `createRscBrowserFlightHeaders`'s job.
-  return (await createFromFetch(
-    fetch(`${location.pathname}.rsc`, { headers: createRscBrowserFlightHeaders() }),
-  )) as never;
+  const response = await fetch(`${location.pathname}.rsc`, {
+    headers: createRscBrowserFlightHeaders(),
+  });
+
+  if (!response.ok) {
+    // A stale document is answered with a JSON Problem, not Flight rows, so it
+    // must never reach the decoder: it would throw an unrelated parse error
+    // and leave the click handler with a rejected promise.
+    throw new Error(`Flight request failed (${response.status})`);
+  }
+
+  return (await createFromFetch(Promise.resolve(response))) as never;
 }
 
 async function refresh() {
@@ -26,8 +35,18 @@ async function refresh() {
     return;
   }
   // Render the newly decoded Flight node into the same root so a refresh
-  // actually reaches the screen instead of dropping the payload.
-  root.render(await loadFlightNode());
+  // actually reaches the screen instead of dropping the payload. A failure
+  // (a stale manifest, or a transport error) has to be visible: dropping the
+  // rejected promise would leave the page silently stale.
+  try {
+    root.render(await loadFlightNode());
+  } catch (error) {
+    const outlet = document.getElementById("root");
+    if (outlet) {
+      outlet.setAttribute("data-rsc-refresh-error", "stale-manifest");
+    }
+    console.error("Flight refresh failed", error);
+  }
 }
 
 async function hydrate() {

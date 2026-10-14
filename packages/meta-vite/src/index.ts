@@ -236,6 +236,7 @@ export type {
   RscFlightEncoder,
   RscFlightRequest,
   RscManifestDocument,
+  RscManifestElement,
   RscRenderOptions,
 } from "./libs/rsc/flight";
 export type {
