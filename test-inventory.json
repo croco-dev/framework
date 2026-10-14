@@ -44,6 +44,12 @@
       "owner": "repo:examples"
     },
     {
+      "path": "examples/growth-model/src/tests/GrowthModel.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "repo:examples"
+    },
+    {
       "path": "examples/lifecycle-journey/src/tests/TaskRecovery.spec.ts",
       "lane": "fast",
       "qualifiers": [],
@@ -249,6 +255,12 @@
     },
     {
       "path": "packages/admin-core/src/tests/FactHistoryOperations.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-core"
+    },
+    {
+      "path": "packages/admin-core/src/tests/GrowthModelWorkbench.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/admin-core"
@@ -519,6 +531,12 @@
     },
     {
       "path": "packages/admin-react/src/tests/GrowthAnalysisPanel.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-react"
+    },
+    {
+      "path": "packages/admin-react/src/tests/GrowthModelWorkbench.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/admin-react"
@@ -3723,6 +3741,12 @@
     },
     {
       "path": "packages/metrics-core/src/tests/GrowthCalculator.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/metrics-core"
+    },
+    {
+      "path": "packages/metrics-core/src/tests/GrowthModel.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/metrics-core"

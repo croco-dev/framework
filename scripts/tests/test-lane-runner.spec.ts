@@ -1080,6 +1080,7 @@ describe("test lane runner", () => {
       "@croco-example/experiment-runtime",
       "@croco-example/first-party-plugin-composition",
       "@croco-example/growth-analysis",
+      "@croco-example/growth-model",
       "@croco-example/lifecycle-journey",
       "@croco-example/promotion-offers",
       "@croco-example/referral-program",

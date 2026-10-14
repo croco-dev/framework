@@ -576,3 +576,16 @@ export type { RetentionSavedView, RetentionSavedViewStore } from "./libs/Retenti
 
 export { ResearchOperations } from "./libs/ResearchOperations";
 export type { ResearchAction, ResearchConsoleState } from "./libs/ResearchOperations";
+
+export {
+  createGrowthModelWorkbenchSource,
+  GrowthWorkbenchProblem,
+} from "./libs/GrowthModelWorkbench";
+export type {
+  GrowthWorkbenchRequest,
+  GrowthWorkbenchReport,
+  GrowthWorkbenchState,
+  GrowthReportRecord,
+  GrowthReportStore,
+  GrowthWorkbenchAdapter,
+} from "./libs/GrowthModelWorkbench";

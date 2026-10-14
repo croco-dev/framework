@@ -510,6 +510,12 @@
               "source": "@croco/admin-core/fact-history-validation"
             },
             {
+              "name": "GrowthWorkbenchProblem",
+              "exportKind": "named",
+              "source": "./libs/GrowthModelWorkbench",
+              "declarationKind": "class"
+            },
+            {
               "name": "JourneyAdminProblem",
               "exportKind": "named",
               "source": "./libs/JourneyOperations",
@@ -879,6 +885,12 @@
               "name": "createExperimentReviewUnitPage",
               "exportKind": "named",
               "source": "./libs/ExperimentReviewConsole",
+              "declarationKind": "function"
+            },
+            {
+              "name": "createGrowthModelWorkbenchSource",
+              "exportKind": "named",
+              "source": "./libs/GrowthModelWorkbench",
               "declarationKind": "function"
             },
             {
@@ -2161,6 +2173,36 @@
               "name": "FactHistoryState",
               "exportKind": "named",
               "source": "./libs/FactHistoryValidation"
+            },
+            {
+              "name": "GrowthReportRecord",
+              "exportKind": "named",
+              "source": "./libs/GrowthModelWorkbench"
+            },
+            {
+              "name": "GrowthReportStore",
+              "exportKind": "named",
+              "source": "./libs/GrowthModelWorkbench"
+            },
+            {
+              "name": "GrowthWorkbenchAdapter",
+              "exportKind": "named",
+              "source": "./libs/GrowthModelWorkbench"
+            },
+            {
+              "name": "GrowthWorkbenchReport",
+              "exportKind": "named",
+              "source": "./libs/GrowthModelWorkbench"
+            },
+            {
+              "name": "GrowthWorkbenchRequest",
+              "exportKind": "named",
+              "source": "./libs/GrowthModelWorkbench"
+            },
+            {
+              "name": "GrowthWorkbenchState",
+              "exportKind": "named",
+              "source": "./libs/GrowthModelWorkbench"
             },
             {
               "name": "JourneyAdminAccess",
@@ -3844,6 +3886,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "GrowthModelWorkbench",
+              "exportKind": "named",
+              "source": "./libs/GrowthModelWorkbench",
+              "declarationKind": "function"
+            },
+            {
               "name": "ImpersonationBanner",
               "exportKind": "named",
               "source": "./libs/components",
@@ -4884,6 +4932,16 @@
               "name": "GrowthAnalysisPanelProps",
               "exportKind": "named",
               "source": "./libs/GrowthAnalysisPanel"
+            },
+            {
+              "name": "GrowthModelWorkbenchProps",
+              "exportKind": "named",
+              "source": "./libs/GrowthModelWorkbench"
+            },
+            {
+              "name": "GrowthWorkbenchClient",
+              "exportKind": "named",
+              "source": "./libs/GrowthModelWorkbench"
             },
             {
               "name": "JourneyConsoleProps",
@@ -28065,6 +28123,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "DEFAULT_GROWTH_LIMITS",
+              "exportKind": "named",
+              "source": "./libs/growth/GrowthModel",
+              "declarationKind": "const"
+            },
+            {
               "name": "ExperimentInputProblem",
               "exportKind": "named",
               "source": "./libs/experiment/ExperimentReview",
@@ -28086,6 +28150,12 @@
               "name": "GrowthCalculator",
               "exportKind": "named",
               "source": "./libs/GrowthCalculator",
+              "declarationKind": "class"
+            },
+            {
+              "name": "GrowthModelProblem",
+              "exportKind": "named",
+              "source": "./libs/growth/GrowthModel",
               "declarationKind": "class"
             },
             {
@@ -28203,6 +28273,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "backtestGrowthModel",
+              "exportKind": "named",
+              "source": "./libs/growth/GrowthModel",
+              "declarationKind": "function"
+            },
+            {
               "name": "calculateActivationCandidates",
               "exportKind": "named",
               "source": "./libs/activation/ActivationCandidates",
@@ -28218,6 +28294,12 @@
               "name": "chiSquarePValue",
               "exportKind": "named",
               "source": "./libs/experiment/ExperimentReview",
+              "declarationKind": "function"
+            },
+            {
+              "name": "collectGrowthHistory",
+              "exportKind": "named",
+              "source": "./libs/growth/GrowthSources",
               "declarationKind": "function"
             },
             {
@@ -28281,6 +28363,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "estimateTransitionMatrix",
+              "exportKind": "named",
+              "source": "./libs/growth/GrowthModel",
+              "declarationKind": "function"
+            },
+            {
               "name": "evaluateMetric",
               "exportKind": "named",
               "source": "./libs/metric/MetricExpression",
@@ -28311,6 +28399,18 @@
               "declarationKind": "function"
             },
             {
+              "name": "importGrowthCounts",
+              "exportKind": "named",
+              "source": "./libs/growth/GrowthSources",
+              "declarationKind": "function"
+            },
+            {
+              "name": "importGrowthHistory",
+              "exportKind": "named",
+              "source": "./libs/growth/GrowthSources",
+              "declarationKind": "function"
+            },
+            {
               "name": "importPolicyReplayReport",
               "exportKind": "named",
               "source": "./libs/replay/PolicyReplay",
@@ -28332,6 +28432,12 @@
               "name": "project",
               "exportKind": "named",
               "source": "./libs/metric/MetricExpression",
+              "declarationKind": "function"
+            },
+            {
+              "name": "projectGrowthModel",
+              "exportKind": "named",
+              "source": "./libs/growth/GrowthModel",
               "declarationKind": "function"
             },
             {
@@ -28371,9 +28477,33 @@
               "declarationKind": "function"
             },
             {
+              "name": "validateGrowthDataset",
+              "exportKind": "named",
+              "source": "./libs/growth/GrowthModel",
+              "declarationKind": "function"
+            },
+            {
+              "name": "validateGrowthMatrix",
+              "exportKind": "named",
+              "source": "./libs/growth/GrowthModel",
+              "declarationKind": "function"
+            },
+            {
+              "name": "validateGrowthScope",
+              "exportKind": "named",
+              "source": "./libs/growth/GrowthModel",
+              "declarationKind": "function"
+            },
+            {
               "name": "validatePolicyReplayInput",
               "exportKind": "named",
               "source": "./libs/replay/PolicyReplay",
+              "declarationKind": "function"
+            },
+            {
+              "name": "validateStatePartition",
+              "exportKind": "named",
+              "source": "./libs/growth/GrowthModel",
               "declarationKind": "function"
             }
           ],
@@ -28679,9 +28809,74 @@
               "source": "./libs/experiment/ExperimentReview"
             },
             {
+              "name": "GrowthBacktest",
+              "exportKind": "named",
+              "source": "./libs/growth/GrowthModel"
+            },
+            {
+              "name": "GrowthDataset",
+              "exportKind": "named",
+              "source": "./libs/growth/GrowthModel"
+            },
+            {
+              "name": "GrowthEstimate",
+              "exportKind": "named",
+              "source": "./libs/growth/GrowthModel"
+            },
+            {
+              "name": "GrowthHistoryBinding",
+              "exportKind": "named",
+              "source": "./libs/growth/GrowthSources"
+            },
+            {
+              "name": "GrowthHistoryMetadata",
+              "exportKind": "named",
+              "source": "./libs/growth/GrowthSources"
+            },
+            {
+              "name": "GrowthLimits",
+              "exportKind": "named",
+              "source": "./libs/growth/GrowthModel"
+            },
+            {
               "name": "GrowthMetrics",
               "exportKind": "named",
               "source": "./types"
+            },
+            {
+              "name": "GrowthModel",
+              "exportKind": "named",
+              "source": "./libs/growth/GrowthModel"
+            },
+            {
+              "name": "GrowthPopulation",
+              "exportKind": "named",
+              "source": "./libs/growth/GrowthModel"
+            },
+            {
+              "name": "GrowthProjection",
+              "exportKind": "named",
+              "source": "./libs/growth/GrowthModel"
+            },
+            {
+              "name": "GrowthScenario",
+              "exportKind": "named",
+              "source": "./libs/growth/GrowthModel"
+            },
+            {
+              "name": "GrowthScope",
+              "exportKind": "named",
+              "source": "./libs/growth/GrowthModel"
+            },
+            {
+              "name": "GrowthStateDefinition",
+              "exportKind": "named",
+              "source": "./libs/growth/GrowthModel"
+            },
+            {
+              "name": "GrowthTransition",
+              "exportKind": "named",
+              "source": "./libs/growth/GrowthModel"
             },
             {
               "name": "LogoChurnInput",
