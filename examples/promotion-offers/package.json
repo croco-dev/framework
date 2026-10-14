@@ -22,8 +22,8 @@
     "@croco/promotions-drizzle": "workspace:*",
     "drizzle-orm": "catalog:",
     "pg": "8.22.0",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react": "19.2.6",
+    "react-dom": "19.2.6"
   },
   "devDependencies": {
     "@types/node": "^24",

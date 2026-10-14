@@ -1,3 +1,7 @@
+// The browser bundle imports the Flight negotiation contract from the
+// browser entrypoint: the package root is a server entry (Node builtins), so
+// only this subpath can be bundled for the client.
+import { createRscBrowserFlightHeaders } from "@croco/meta-vite/rsc/browser";
 import { hydrateRoot } from "react-dom/client";
 import type { Root } from "react-dom/client";
 import { createFromFetch } from "@vitejs/plugin-rsc/browser";
@@ -8,7 +12,13 @@ import { createFromFetch } from "@vitejs/plugin-rsc/browser";
 let root: Root | undefined;
 
 async function loadFlightNode() {
-  return (await createFromFetch(fetch(`${location.pathname}.rsc`))) as never;
+  // The document carries the client manifest version it was rendered with;
+  // the server refuses a Flight request that echoes a different one, so a
+  // browser running an older build fails here instead of rendering a tree it
+  // cannot resolve. Refusing is `createRscBrowserFlightHeaders`'s job.
+  return (await createFromFetch(
+    fetch(`${location.pathname}.rsc`, { headers: createRscBrowserFlightHeaders() }),
+  )) as never;
 }
 
 async function refresh() {

@@ -3370,7 +3370,9 @@ const recoveryMetadataByCode = {
       "Check the client manifest registration and browser module loading for the reported reference, then rebuild and deploy matching client and server artifacts.",
     retryability: "not-retryable",
     redactionPolicy: "public",
-    severity: "warning",
+    // BadRequest: the same category default as a malformed request, not the
+    // deploy-level warning its sibling `rsc-client-manifest-mismatch` carries.
+    severity: "info",
   }),
   "meta-vite/rsc-flight-not-acceptable": recovery({
     cause:
@@ -3402,9 +3404,10 @@ const recoveryMetadataByCode = {
   }),
   "meta-vite/rsc-flight-encode-timeout": recovery({
     cause: "The isolated Flight encoder exceeded its render budget for the route.",
-    userAction: "Retry the request; repeated timeouts need an operator fix.",
+    userAction:
+      "Do not retry unchanged: the route will time out again until the operator fixes it.",
     operatorAction:
-      "Inspect the route for unbounded work in server components and the reported timeoutMs before raising the budget.",
+      "Inspect the reported route and timeoutMs for unbounded work in server components, resolve it, then retry the request. Raise the encode budget only after the route itself is bounded.",
     retryability: "not-retryable",
     redactionPolicy: "operator-only",
     severity: "error",
@@ -3425,6 +3428,15 @@ const recoveryMetadataByCode = {
       "Check the reported reason against the route registry and the componentRef format '<module-path>#<exportName>'.",
     retryability: "not-retryable",
     redactionPolicy: "public",
+    severity: "error",
+  }),
+  "meta-vite/rsc-client-build-id-invalid": recovery({
+    cause: "The configured RSC client build id contains characters a header value cannot carry.",
+    userAction: "Do not retry unchanged: the server configuration has to be fixed first.",
+    operatorAction:
+      "Replace the client build id passed to the render options with the build id the plugin recorded in croco-rsc-client-build.json (letters, digits, dot, underscore, dash).",
+    retryability: "not-retryable",
+    redactionPolicy: "operator-only",
     severity: "error",
   }),
   BILLING_STATUS_MAPPING_FAILED: recovery({

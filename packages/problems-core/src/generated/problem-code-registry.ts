@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export type CrocoProblemRegistry = {
   readonly version: "croco.problem-code-registry.v1";
-  readonly problemCount: 1034;
+  readonly problemCount: 1035;
   readonly problems: readonly [
     {
       readonly code: "ACCESS_DENIED";
@@ -17543,6 +17543,34 @@ export type CrocoProblemRegistry = {
       ];
     },
     {
+      readonly code: "meta-vite/rsc-client-build-id-invalid";
+      readonly category: "BadRequest";
+      readonly status: 400;
+      readonly title: "Bad Request";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#meta-vite-rsc-client-build-id-invalid";
+      readonly recovery: {
+        readonly cause: "The configured RSC client build id contains characters a header value cannot carry.";
+        readonly userAction: "Do not retry unchanged: the server configuration has to be fixed first.";
+        readonly operatorAction: "Replace the client build id passed to the render options with the build id the plugin recorded in croco-rsc-client-build.json (letters, digits, dot, underscore, dash).";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "operator-only";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.error";
+          readonly severity: "error";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/meta-vite/src/libs/rsc/flight.ts";
+          readonly line: 43;
+          readonly column: 1;
+          readonly kind: "problem-class";
+        },
+      ];
+    },
+    {
       readonly code: "meta-vite/rsc-client-manifest-mismatch";
       readonly category: "BadRequest";
       readonly status: 400;
@@ -17564,7 +17592,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/meta-vite/src/libs/rsc/flight.ts";
-          readonly line: 26;
+          readonly line: 71;
           readonly column: 1;
           readonly kind: "problem-class";
         },
@@ -17583,8 +17611,8 @@ export type CrocoProblemRegistry = {
         readonly retryability: "not-retryable";
         readonly redactionPolicy: "public";
         readonly telemetry: {
-          readonly eventName: "croco.problem.warning";
-          readonly severity: "warning";
+          readonly eventName: "croco.problem.info";
+          readonly severity: "info";
           readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
         };
       };
@@ -17592,7 +17620,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/meta-vite/src/libs/rsc/flight.ts";
-          readonly line: 55;
+          readonly line: 100;
           readonly column: 1;
           readonly kind: "problem-class";
         },
@@ -17690,8 +17718,8 @@ export type CrocoProblemRegistry = {
       readonly cookbookPath: "/reference/problem-recovery-cookbook/#meta-vite-rsc-flight-encode-timeout";
       readonly recovery: {
         readonly cause: "The isolated Flight encoder exceeded its render budget for the route.";
-        readonly userAction: "Retry the request; repeated timeouts need an operator fix.";
-        readonly operatorAction: "Inspect the route for unbounded work in server components and the reported timeoutMs before raising the budget.";
+        readonly userAction: "Do not retry unchanged: the route will time out again until the operator fixes it.";
+        readonly operatorAction: "Inspect the reported route and timeoutMs for unbounded work in server components, resolve it, then retry the request. Raise the encode budget only after the route itself is bounded.";
         readonly retryability: "not-retryable";
         readonly redactionPolicy: "operator-only";
         readonly telemetry: {
@@ -17732,7 +17760,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/meta-vite/src/libs/rsc/flight.ts";
-          readonly line: 12;
+          readonly line: 57;
           readonly column: 1;
           readonly kind: "problem-class";
         },
@@ -17760,7 +17788,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/meta-vite/src/libs/vite/crocoMetaVitePlugin.ts";
-          readonly line: 15;
+          readonly line: 21;
           readonly column: 1;
           readonly kind: "problem-class";
         },
@@ -17788,7 +17816,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/meta-vite/src/libs/rsc/flight.ts";
-          readonly line: 40;
+          readonly line: 85;
           readonly column: 1;
           readonly kind: "problem-class";
         },
@@ -29245,7 +29273,7 @@ export type CrocoProblemRegistry = {
 
 export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 1034,
+  problemCount: 1035,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -48793,6 +48821,38 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       ],
     },
     {
+      code: "meta-vite/rsc-client-build-id-invalid",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath: "/reference/problem-recovery-cookbook/#meta-vite-rsc-client-build-id-invalid",
+      recovery: {
+        cause:
+          "The configured RSC client build id contains characters a header value cannot carry.",
+        userAction: "Do not retry unchanged: the server configuration has to be fixed first.",
+        operatorAction:
+          "Replace the client build id passed to the render options with the build id the plugin recorded in croco-rsc-client-build.json (letters, digits, dot, underscore, dash).",
+        retryability: "not-retryable",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/meta-vite/src/libs/rsc/flight.ts",
+          line: 43,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
       code: "meta-vite/rsc-client-manifest-mismatch",
       category: "BadRequest",
       status: 400,
@@ -48817,7 +48877,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/meta-vite/src/libs/rsc/flight.ts",
-          line: 26,
+          line: 71,
           column: 1,
           kind: "problem-class",
         },
@@ -48838,8 +48898,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
         retryability: "not-retryable",
         redactionPolicy: "public",
         telemetry: {
-          eventName: "croco.problem.warning",
-          severity: "warning",
+          eventName: "croco.problem.info",
+          severity: "info",
           attributes: ["problem.code", "problem.category", "problem.status"],
         },
       },
@@ -48849,7 +48909,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/meta-vite/src/libs/rsc/flight.ts",
-          line: 55,
+          line: 100,
           column: 1,
           kind: "problem-class",
         },
@@ -48957,9 +49017,10 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       cookbookPath: "/reference/problem-recovery-cookbook/#meta-vite-rsc-flight-encode-timeout",
       recovery: {
         cause: "The isolated Flight encoder exceeded its render budget for the route.",
-        userAction: "Retry the request; repeated timeouts need an operator fix.",
+        userAction:
+          "Do not retry unchanged: the route will time out again until the operator fixes it.",
         operatorAction:
-          "Inspect the route for unbounded work in server components and the reported timeoutMs before raising the budget.",
+          "Inspect the reported route and timeoutMs for unbounded work in server components, resolve it, then retry the request. Raise the encode budget only after the route itself is bounded.",
         retryability: "not-retryable",
         redactionPolicy: "operator-only",
         telemetry: {
@@ -49006,7 +49067,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/meta-vite/src/libs/rsc/flight.ts",
-          line: 12,
+          line: 57,
           column: 1,
           kind: "problem-class",
         },
@@ -49037,7 +49098,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/meta-vite/src/libs/vite/crocoMetaVitePlugin.ts",
-          line: 15,
+          line: 21,
           column: 1,
           kind: "problem-class",
         },
@@ -49070,7 +49131,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/meta-vite/src/libs/rsc/flight.ts",
-          line: 40,
+          line: 85,
           column: 1,
           kind: "problem-class",
         },

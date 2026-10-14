@@ -206,24 +206,38 @@ export type {
 // requires the `react-server` condition and would break plain-Node consumers
 // of `dist/index.mjs`. They remain reachable through the `./rsc/encoder`
 // subpath (`dist/libs/rsc/flightEncode.entry.*`), which runs isolated.
+// The version handshake a browser performs is reachable through the
+// `./rsc/browser` subpath: this entrypoint pulls in the render and build
+// modules, so a client bundle must not import it from the package root.
 export {
   assertRscClientManifestVersion,
   assertRscServerReferenceUnsupported,
+  composeRscClientManifestVersion,
+  createRscBrowserFlightHeaders,
   createRscComponentProps,
   createRscFlightHeaders,
   createRscHtmlShell,
   isRscRoute,
   parseRscFlightRequest,
+  readRscClientManifestVersion,
   resolveRscClientManifestVersion,
+  RSC_CLIENT_BUILD_FILE,
   RSC_CLIENT_MANIFEST_VERSION,
   RSC_FLIGHT_CONTENT_TYPE,
   RSC_FLIGHT_VERSION,
+  RSC_MANIFEST_ELEMENT_ID,
+  RscClientBuildIdProblem,
   RscClientManifestMismatchProblem,
   RscClientReferenceMissingProblem,
   RscFlightNotAcceptableProblem,
   RscServerReferenceNotSupportedProblem,
 } from "./libs/rsc/flight";
-export type { RscFlightEncoder, RscFlightRequest, RscRenderOptions } from "./libs/rsc/flight";
+export type {
+  RscFlightEncoder,
+  RscFlightRequest,
+  RscManifestDocument,
+  RscRenderOptions,
+} from "./libs/rsc/flight";
 export type {
   RscClientManifestLike,
   RscSsrCodec,

@@ -90,9 +90,9 @@ describe("published @croco/meta-vite contract", () => {
         writeConsumerPackageJson(consumerRoot, tarballs);
         installMetaViteConsumer(consumerRoot, tarballs, [
           tarballs.frameworkContext,
-          "react@^19.0.0",
-          "react-dom@^19.0.0",
-          "react-server-dom-webpack@19.2.5",
+          "react@19.2.6",
+          "react-dom@19.2.6",
+          "react-server-dom-webpack@19.2.6",
           "vite@6.4.3",
           "zod@^3.23.8",
         ]);
@@ -175,7 +175,7 @@ describe("published @croco/meta-vite contract", () => {
 
         expect(packedManifest.peerDependencies?.zod).toBe("^3.23.8");
         expect(packedManifest.peerDependencies?.ioredis).toBe("5.10.1");
-        expect(packedManifest.peerDependencies?.["react-dom"]).toBe("^19.0.0");
+        expect(packedManifest.peerDependencies?.["react-dom"]).toBe("^19.2.6");
         expect(packedManifest.peerDependencies?.vite).toBe("^6.4.3");
         expect(packedManifest.peerDependenciesMeta?.ioredis?.optional).toBe(true);
         expect(packedManifest.peerDependenciesMeta?.["react-dom"]).toBeUndefined();
@@ -203,6 +203,14 @@ describe("published @croco/meta-vite contract", () => {
           import: "./dist/libs/rsc/flightEncode.entry.mjs",
           require: "./dist/libs/rsc/flightEncode.entry.js",
         });
+        expect(packedManifest.exports?.["./rsc/browser"]).toEqual({
+          types: {
+            import: "./dist/libs/rsc/flightBrowser.entry.d.mts",
+            require: "./dist/libs/rsc/flightBrowser.entry.d.ts",
+          },
+          import: "./dist/libs/rsc/flightBrowser.entry.mjs",
+          require: "./dist/libs/rsc/flightBrowser.entry.js",
+        });
         expect(packedDiagnosticsManifest.dependencies?.["@croco/health-core"]).toBeUndefined();
         expect(packedDiagnosticsManifest.peerDependencies?.["@croco/health-core"]).toBeUndefined();
         expect(packedDiagnosticsDeclarations).not.toContain("@croco/health-core");
@@ -211,7 +219,7 @@ describe("published @croco/meta-vite contract", () => {
         installMetaViteConsumer(rootConsumerRoot, tarballs, [
           "@types/node@^22",
           "@types/react@^19",
-          "react@^19.0.0",
+          "react@19.2.6",
           "vite@6.4.3",
           "zod@^3.23.8",
         ]);
@@ -246,7 +254,7 @@ describe("published @croco/meta-vite contract", () => {
           "@types/node@^22",
           "@types/react@^19",
           "ioredis@5.10.1",
-          "react@^19.0.0",
+          "react@19.2.6",
           "vite@6.4.3",
           "zod@^3.23.8",
         ]);

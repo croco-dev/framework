@@ -26334,6 +26334,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "RSC_CLIENT_BUILD_FILE",
+              "exportKind": "named",
+              "source": "./libs/rsc/flight",
+              "declarationKind": "const"
+            },
+            {
               "name": "RSC_CLIENT_MANIFEST_VERSION",
               "exportKind": "named",
               "source": "./libs/rsc/flight",
@@ -26347,6 +26353,12 @@
             },
             {
               "name": "RSC_FLIGHT_VERSION",
+              "exportKind": "named",
+              "source": "./libs/rsc/flight",
+              "declarationKind": "const"
+            },
+            {
+              "name": "RSC_MANIFEST_ELEMENT_ID",
               "exportKind": "named",
               "source": "./libs/rsc/flight",
               "declarationKind": "const"
@@ -26367,6 +26379,12 @@
               "name": "RouteRegistry",
               "exportKind": "named",
               "source": "./libs/routes/routeRegistry",
+              "declarationKind": "class"
+            },
+            {
+              "name": "RscClientBuildIdProblem",
+              "exportKind": "named",
+              "source": "./libs/rsc/flight",
               "declarationKind": "class"
             },
             {
@@ -26526,6 +26544,12 @@
               "declarationKind": "const"
             },
             {
+              "name": "composeRscClientManifestVersion",
+              "exportKind": "named",
+              "source": "./libs/rsc/flight",
+              "declarationKind": "function"
+            },
+            {
               "name": "createCloudflareComposedHandler",
               "exportKind": "named",
               "source": "./libs/providers/cloudflare",
@@ -26631,6 +26655,12 @@
               "name": "createPrivateInput",
               "exportKind": "named",
               "source": "./libs/isr/personalizedFragments",
+              "declarationKind": "function"
+            },
+            {
+              "name": "createRscBrowserFlightHeaders",
+              "exportKind": "named",
+              "source": "./libs/rsc/flight",
               "declarationKind": "function"
             },
             {
@@ -26757,6 +26787,12 @@
               "name": "prerenderSsgRoutes",
               "exportKind": "named",
               "source": "./libs/build/ssgPrerender",
+              "declarationKind": "function"
+            },
+            {
+              "name": "readRscClientManifestVersion",
+              "exportKind": "named",
+              "source": "./libs/rsc/flight",
               "declarationKind": "function"
             },
             {
@@ -27127,6 +27163,11 @@
               "source": "./libs/rsc/flight"
             },
             {
+              "name": "RscManifestDocument",
+              "exportKind": "named",
+              "source": "./libs/rsc/flight"
+            },
+            {
               "name": "RscRenderOptions",
               "exportKind": "named",
               "source": "./libs/rsc/flight"
@@ -27295,6 +27336,68 @@
             }
           ],
           "typeExports": []
+        },
+        {
+          "exportPath": "./rsc/browser",
+          "kind": "code",
+          "targets": [
+            {
+              "conditions": ["types", "import"],
+              "target": "./dist/libs/rsc/flightBrowser.entry.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
+              "target": "./dist/libs/rsc/flightBrowser.entry.d.ts"
+            },
+            {
+              "conditions": ["import"],
+              "target": "./dist/libs/rsc/flightBrowser.entry.mjs"
+            },
+            {
+              "conditions": ["require"],
+              "target": "./dist/libs/rsc/flightBrowser.entry.js"
+            }
+          ],
+          "sourceEntrypoint": "packages/meta-vite/src/libs/rsc/flightBrowser.entry.ts",
+          "runtimeExports": [
+            {
+              "name": "RSC_CLIENT_MANIFEST_VERSION",
+              "exportKind": "named",
+              "source": "./flight",
+              "declarationKind": "const"
+            },
+            {
+              "name": "RSC_FLIGHT_CONTENT_TYPE",
+              "exportKind": "named",
+              "source": "./flight",
+              "declarationKind": "const"
+            },
+            {
+              "name": "RSC_MANIFEST_ELEMENT_ID",
+              "exportKind": "named",
+              "source": "./flight",
+              "declarationKind": "const"
+            },
+            {
+              "name": "createRscBrowserFlightHeaders",
+              "exportKind": "named",
+              "source": "./flight",
+              "declarationKind": "function"
+            },
+            {
+              "name": "readRscClientManifestVersion",
+              "exportKind": "named",
+              "source": "./flight",
+              "declarationKind": "function"
+            }
+          ],
+          "typeExports": [
+            {
+              "name": "RscManifestDocument",
+              "exportKind": "named",
+              "source": "./flight"
+            }
+          ]
         },
         {
           "exportPath": "./rsc/encoder",

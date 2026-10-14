@@ -70,6 +70,22 @@ if (!clientEntry) {
   throw new Error("client bundle index-*.js not found in dist/client/assets");
 }
 
+// `crocoMetaVitePlugin` records which client build this `dist` is: the manifest
+// version the browser has to echo back on Flight requests. It changes on every
+// client rebuild, so a browser holding an older document cannot decode the
+// payload the current build serves.
+const clientBuild = JSON.parse(
+  await readFile(join(here, "dist", "client", "croco-rsc-client-build.json"), "utf8"),
+);
+const clientManifestVersion = clientBuild.clientManifestVersion;
+if (typeof clientManifestVersion !== "string" || clientManifestVersion.length === 0) {
+  throw new Error("dist/client/croco-rsc-client-build.json has no clientManifestVersion");
+}
+const documentManifest = JSON.stringify({
+  flightVersion: clientBuild.flightVersion,
+  clientManifestVersion,
+}).replace(/</g, "\\u003c");
+
 const httpServer = createServer(async (nodeRequest, nodeResponse) => {
   try {
     const url = new URL(nodeRequest.url ?? "/", `http://localhost:${port}`);
@@ -110,10 +126,34 @@ const httpServer = createServer(async (nodeRequest, nodeResponse) => {
       (typeof accept === "string" && accept.includes("text/x-component")) ||
       url.pathname.endsWith(".rsc");
 
+    if (wantsFlight) {
+      // The browser echoes the manifest version the rendered document carried
+      // (see `createRscBrowserFlightHeaders` in `entry.browser.tsx`). A request
+      // that carries a different one — or none at all — would decode payloads
+      // its client bundle cannot reference, so it fails with the same Problem
+      // payload the framework's render server produces.
+      const receivedVersion = nodeRequest.headers["x-croco-rsc-client-manifest"];
+      if (receivedVersion !== clientManifestVersion) {
+        nodeResponse.writeHead(400, { "content-type": "application/json; charset=utf-8" });
+        nodeResponse.end(
+          JSON.stringify({
+            error: "RSC client manifest mismatch",
+            route: url.pathname,
+            code: "meta-vite/rsc-client-manifest-mismatch",
+          }),
+        );
+        return;
+      }
+    }
+
     const flightResponse = await rsc.default(new Request(`http://localhost:${port}/`));
 
     if (wantsFlight) {
-      nodeResponse.writeHead(200, { "content-type": "text/x-component; charset=utf-8" });
+      nodeResponse.writeHead(200, {
+        "content-type": "text/x-component; charset=utf-8",
+        "x-croco-rsc-flight-version": clientBuild.flightVersion,
+        "x-croco-rsc-client-manifest": clientManifestVersion,
+      });
       // Stream the Flight bytes straight through: buffering them first would
       // hold back the first rows until the slow server component resolves.
       await streamBody(flightResponse.body, nodeResponse);
@@ -124,15 +164,24 @@ const httpServer = createServer(async (nodeRequest, nodeResponse) => {
     // Pass the encoder's web ReadableStream straight through: the official
     // client decoder requires a web stream with getReader().
     const htmlResponse = await ssr.renderHtml(flightResponse.body);
-    nodeResponse.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+    nodeResponse.writeHead(200, {
+      "content-type": "text/html; charset=utf-8",
+      vary: "Accept",
+    });
     // Write the document around the streamed body so the shell and the first
-    // HTML rows reach the client before rendering finishes.
+    // HTML rows reach the client before rendering finishes. The manifest block
+    // is what the browser reads its Flight headers from, so it is written with
+    // the document rather than hardcoded into the client bundle.
     nodeResponse.write(
-      `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>RSC Node Example</title></head><body><div id="root">`,
+      `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>RSC Node Example</title>` +
+        `<meta name="croco:rsc-flight-version" content="${clientBuild.flightVersion}">` +
+        `<meta name="croco:rsc-client-manifest" content="${clientManifestVersion}"></head><body>` +
+        `<div id="root">`,
     );
     await streamBody(htmlResponse.body, nodeResponse);
     nodeResponse.end(
-      `</div><script type="module" src="/assets/${clientEntry}"></script></body></html>`,
+      `</div><script type="application/json" id="croco-rsc-manifest">${documentManifest}</script>` +
+        `<script type="module" src="/assets/${clientEntry}"></script></body></html>`,
     );
   } catch (error) {
     console.error(error);

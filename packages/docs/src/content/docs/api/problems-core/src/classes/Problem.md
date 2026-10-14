@@ -420,6 +420,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`MetaViteUnsupportedCapabilityProblem`](/api/meta-vite/src/classes/metaviteunsupportedcapabilityproblem/)
 - [`MissingRscPeerProblem`](/api/meta-vite/src/classes/missingrscpeerproblem/)
 - [`PersonalizedFragmentProblem`](/api/meta-vite/src/classes/personalizedfragmentproblem/)
+- [`RscClientBuildIdProblem`](/api/meta-vite/src/classes/rscclientbuildidproblem/)
 - [`RscClientManifestMismatchProblem`](/api/meta-vite/src/classes/rscclientmanifestmismatchproblem/)
 - [`RscClientReferenceMissingProblem`](/api/meta-vite/src/classes/rscclientreferencemissingproblem/)
 - [`RscFlightNotAcceptableProblem`](/api/meta-vite/src/classes/rscflightnotacceptableproblem/)

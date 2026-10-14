@@ -1,6 +1,12 @@
+import { createHash } from "node:crypto";
 import { createRequire } from "node:module";
 import { Problem, ProblemCategory } from "@croco/problems-core";
 import type { EnvironmentOptions, Plugin, UserConfig } from "vite";
+import {
+  RSC_CLIENT_BUILD_FILE,
+  RSC_FLIGHT_VERSION,
+  composeRscClientManifestVersion,
+} from "../rsc/flight";
 
 export type CrocoMetaVitePluginOptions = {
   /**
@@ -26,6 +32,20 @@ export class MissingRscPeerProblem extends Problem {
 }
 
 export type EnvironmentName = "client" | "ssr" | "rsc";
+
+/**
+ * The emitted build outputs the client digest reads. Declared structurally:
+ * `vite`'s plugin type does not re-export the rollup `OutputBundle` type, and
+ * the digest only needs these fields.
+ */
+type ClientBuildBundle = {
+  readonly [fileName: string]: {
+    readonly type: "chunk" | "asset";
+    readonly fileName: string;
+    readonly code?: string;
+    readonly source?: string | Uint8Array;
+  };
+};
 
 type VirtualModuleKind = "routes" | "entry";
 type EnvironmentState = {
@@ -79,6 +99,35 @@ export function crocoMetaVitePlugin(options: CrocoMetaVitePluginOptions = {}): P
 
     config(): UserConfig {
       return { environments: createEnvironmentConfigs(environmentNames) };
+    },
+
+    generateBundle(_options, bundle) {
+      // The client build is the only artifact a browser runs, so it is the only
+      // one that can identify what the browser may ask the server for. The
+      // emitted file lets a host read the current client build id at request
+      // time instead of guessing a constant.
+      if (options.rsc !== true || this.environment?.name !== "client") {
+        return;
+      }
+
+      const clientBuildId = createClientBuildId(bundle);
+      if (clientBuildId === null) {
+        return;
+      }
+
+      this.emitFile({
+        type: "asset",
+        fileName: RSC_CLIENT_BUILD_FILE,
+        source: `${JSON.stringify(
+          {
+            flightVersion: RSC_FLIGHT_VERSION,
+            clientBuildId,
+            clientManifestVersion: composeRscClientManifestVersion(clientBuildId),
+          },
+          null,
+          2,
+        )}\n`,
+      });
     },
 
     configEnvironment(name: string) {
@@ -198,4 +247,31 @@ function assertRscPeerAvailable(): void {
     const reason = error instanceof Error ? error.message : String(error);
     throw new MissingRscPeerProblem(reason);
   }
+}
+
+function createClientBuildId(bundle: ClientBuildBundle): string | null {
+  const digest = createHash("sha256");
+  const outputs = Object.entries(bundle)
+    // Names are sorted so the digest does not depend on the order Rollup
+    // happened to emit the outputs in.
+    .sort(([left], [right]) => (left < right ? -1 : left > right ? 1 : 0));
+  let outputCount = 0;
+
+  for (const [fileName, output] of outputs) {
+    if (fileName === RSC_CLIENT_BUILD_FILE) {
+      continue;
+    }
+
+    outputCount += 1;
+    digest.update(fileName);
+    digest.update("\0");
+    if (output.type === "chunk") {
+      digest.update(output.code ?? "");
+    } else {
+      digest.update(output.source ?? "");
+    }
+    digest.update("\0");
+  }
+
+  return outputCount === 0 ? null : digest.digest("hex").slice(0, 16);
 }

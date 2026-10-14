@@ -3,10 +3,18 @@ import { renderToString } from "react-dom/server";
 import { createFromReadableStream } from "react-server-dom-webpack/client";
 import { describe, expect, it } from "vitest";
 import { RenderServer } from "../libs/render/renderServer";
-import { RSC_CLIENT_MANIFEST_VERSION } from "../libs/rsc/flight";
+import {
+  RSC_CLIENT_MANIFEST_VERSION,
+  RSC_MANIFEST_ELEMENT_ID,
+  composeRscClientManifestVersion,
+  createRscBrowserFlightHeaders,
+  createRscHtmlShell,
+  readRscClientManifestVersion,
+} from "../libs/rsc/flight";
 import { defineRoute } from "../libs/routes/defineRoute";
 import { RouteRegistry } from "../libs/routes/routeRegistry";
 import type { PageRouteDefinition } from "../libs/routes/types";
+import type { RscRenderOptions } from "../libs/rsc/flight";
 
 function flightStream(text: string): ReadableStream<Uint8Array> {
   const bytes = new TextEncoder().encode(text);
@@ -22,6 +30,7 @@ function flightStream(text: string): ReadableStream<Uint8Array> {
 function createServer(
   routes: PageRouteDefinition[],
   encodeFlight?: (routePath: string) => Promise<ReadableStream<Uint8Array>>,
+  rscOptions: RscRenderOptions = {},
 ): RenderServer {
   const registry = new RouteRegistry();
 
@@ -29,11 +38,14 @@ function createServer(
     registry.register(defineRoute(route));
   }
 
+  const compiled = registry.compile();
+
   if (!encodeFlight) {
-    return new RenderServer(registry.compile());
+    return new RenderServer(compiled, rscOptions);
   }
 
-  return new RenderServer(registry.compile(), {
+  return new RenderServer(compiled, {
+    ...rscOptions,
     encodeFlight: async (route) => encodeFlight(route.path),
   });
 }
@@ -214,3 +226,141 @@ describe("rsc real Flight path", () => {
     expect(body).not.toContain("private encoder exploded");
   });
 });
+
+describe("rsc client manifest version round trip", () => {
+  it("refuses a Flight request from a different client build", async () => {
+    const server = createServer([rscRoute("/rsc-basic")], async () => flightStream(HTML_FLIGHT), {
+      clientBuildId: "9f31c0d4a2b7e15c",
+    });
+    const currentVersion = composeRscClientManifestVersion("9f31c0d4a2b7e15c");
+
+    const accepted = await server.handle(
+      new Request("https://example.com/rsc-basic.rsc", {
+        headers: { "x-croco-rsc-client-manifest": currentVersion },
+      }),
+    );
+    expect(accepted.status).toBe(200);
+
+    // A browser still running the previous build must not decode this payload.
+    const stale = await server.handle(
+      new Request("https://example.com/rsc-basic.rsc", {
+        headers: { "x-croco-rsc-client-manifest": RSC_CLIENT_MANIFEST_VERSION },
+      }),
+    );
+    expect(stale.status).toBe(400);
+    expect(await stale.json()).toMatchObject({ code: "meta-vite/rsc-client-manifest-mismatch" });
+
+    const other = await server.handle(
+      new Request("https://example.com/rsc-basic.rsc", {
+        headers: {
+          "x-croco-rsc-client-manifest": composeRscClientManifestVersion("0f8e1d2c3b4a5968"),
+        },
+      }),
+    );
+    expect(other.status).toBe(400);
+  });
+
+  it("rejects a build id that cannot travel as a header value", () => {
+    expect(() => composeRscClientManifestVersion("build 42")).toThrow(
+      /letters, digits, dot, underscore, and dash/,
+    );
+    expect(() => composeRscClientManifestVersion("bad\nid")).toThrow(
+      /letters, digits, dot, underscore, and dash/,
+    );
+    expect(composeRscClientManifestVersion("9f31c0d4a2b7e15c")).toBe(
+      "croco.meta-vite.rsc-client-manifest.v1.9f31c0d4a2b7e15c",
+    );
+  });
+
+  it("keeps the manifest JSON block from closing its own script element", () => {
+    const hostileVersion =
+      "croco.meta-vite.rsc-client-manifest.v1.</script><script>alert(1)</script>";
+    const shell = createRscHtmlShell(undefined, "<main>body</main>", hostileVersion);
+    const block = shell.match(new RegExp(`id="${RSC_MANIFEST_ELEMENT_ID}">([\\s\\S]*?)</script>`));
+
+    expect(block).not.toBeNull();
+    expect(block?.[1]).not.toContain("<");
+    expect(block?.[1]).toContain("\\u003c");
+  });
+
+  it("echoes the version the rendered document carries, not a constant", () => {
+    const version = composeRscClientManifestVersion("9f31c0d4a2b7e15c");
+    const headers = createRscBrowserFlightHeaders(createStubDocument({ version }));
+
+    expect(headers).toEqual({
+      accept: "text/x-component",
+      "x-croco-rsc-client-manifest": version,
+    });
+  });
+
+  it("falls back to the meta tag when the JSON block is missing or damaged", () => {
+    const version = composeRscClientManifestVersion("9f31c0d4a2b7e15c");
+    const metaOnly = createStubDocument({ version, manifestBlock: false });
+    const damaged = createStubDocument({
+      version,
+      manifestBlock: true,
+      manifestContent: "{ not json",
+    });
+
+    expect(createRscBrowserFlightHeaders(metaOnly)).toMatchObject({
+      "x-croco-rsc-client-manifest": version,
+    });
+    expect(createRscBrowserFlightHeaders(damaged)).toMatchObject({
+      "x-croco-rsc-client-manifest": version,
+    });
+  });
+
+  it("reports a document without any manifest version instead of sending a guess", () => {
+    expect(() => createRscBrowserFlightHeaders(createStubDocument({}))).toThrow(
+      /mismatched client manifest version/,
+    );
+  });
+});
+
+describe("rsc browser entrypoint", () => {
+  it("hands the browser the same handshake the server entry owns", async () => {
+    const browserEntry = await import("../libs/rsc/flightBrowser.entry");
+
+    // A client bundle must not import the package root: that entry pulls in
+    // Node builtins. Identity proves the subpath re-exports the one
+    // implementation instead of restating the contract.
+    expect(browserEntry.createRscBrowserFlightHeaders).toBe(createRscBrowserFlightHeaders);
+    expect(browserEntry.readRscClientManifestVersion).toBe(readRscClientManifestVersion);
+    expect(browserEntry.RSC_MANIFEST_ELEMENT_ID).toBe(RSC_MANIFEST_ELEMENT_ID);
+    expect(browserEntry.RSC_CLIENT_MANIFEST_VERSION).toBe(RSC_CLIENT_MANIFEST_VERSION);
+    expect(browserEntry.RSC_FLIGHT_CONTENT_TYPE).toBe("text/x-component");
+  });
+
+  it("loads in a plain Node context without reaching the server modules", async () => {
+    const browserEntry = await import("../libs/rsc/flightBrowser.entry");
+
+    expect(
+      createRscBrowserFlightHeaders(createStubDocument({ version: RSC_CLIENT_MANIFEST_VERSION })),
+    ).toEqual({
+      accept: browserEntry.RSC_FLIGHT_CONTENT_TYPE,
+      "x-croco-rsc-client-manifest": RSC_CLIENT_MANIFEST_VERSION,
+    });
+  });
+});
+
+function createStubDocument(input: {
+  readonly version?: string;
+  readonly manifestBlock?: boolean;
+  readonly manifestContent?: string;
+}): Parameters<typeof createRscBrowserFlightHeaders>[0] {
+  const version = input.version ?? "";
+  const manifestContent =
+    input.manifestContent ?? JSON.stringify({ clientManifestVersion: version });
+
+  return {
+    getElementById: (id: string) =>
+      input.manifestBlock === false || id !== RSC_MANIFEST_ELEMENT_ID
+        ? null
+        : { textContent: manifestContent },
+    querySelector: (selector: string) =>
+      selector !== 'meta[name="croco:rsc-client-manifest"]' || version.length === 0
+        ? null
+        : { getAttribute: () => version.replace(/</g, "&lt;") },
+    location: { pathname: "/rsc-basic" },
+  };
+}

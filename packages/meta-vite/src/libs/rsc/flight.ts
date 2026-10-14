@@ -9,6 +9,51 @@ export const RSC_FLIGHT_VERSION = "croco.meta-vite.rsc-flight.v1" as const;
 
 export const RSC_CLIENT_MANIFEST_VERSION = "croco.meta-vite.rsc-client-manifest.v1" as const;
 
+/**
+ * Element id of the JSON block `createRscHtmlShell` writes, carrying the
+ * manifest version the document was rendered with.
+ */
+export const RSC_MANIFEST_ELEMENT_ID = "croco-rsc-manifest" as const;
+
+/**
+ * Name of the file `crocoMetaVitePlugin` writes into the client build output.
+ * It records the client build id so a server can learn which client build it
+ * serves without re-deriving a hash itself.
+ */
+export const RSC_CLIENT_BUILD_FILE = "croco-rsc-client-build.json" as const;
+
+/**
+ * Client manifest version for one client build. The protocol constant alone
+ * only separates framework generations: a browser holding HTML that was
+ * rendered for an older client bundle would still be accepted, then decode
+ * payloads whose references it cannot resolve. Appending the build id makes
+ * that mismatch explicit instead of surfacing as a broken tree.
+ */
+export function composeRscClientManifestVersion(clientBuildId: string): string {
+  // The value travels as an HTTP header, so it is restricted to token-safe
+  // characters; anything else could not be echoed back and would only fail
+  // later inside `Headers.set`.
+  if (!/^[A-Za-z0-9._-]+$/.test(clientBuildId)) {
+    throw new RscClientBuildIdProblem(clientBuildId);
+  }
+
+  return `${RSC_CLIENT_MANIFEST_VERSION}.${clientBuildId}`;
+}
+
+export class RscClientBuildIdProblem extends Problem {
+  readonly code = "meta-vite/rsc-client-build-id-invalid";
+  readonly category = ProblemCategory.BadRequest;
+
+  constructor(clientBuildId: string) {
+    super(
+      "meta-vite/rsc-client-build-id-invalid",
+      ProblemCategory.BadRequest,
+      "The RSC client build id may only contain letters, digits, dot, underscore, and dash",
+      { extensions: { clientBuildId } },
+    );
+  }
+}
+
 export class RscFlightNotAcceptableProblem extends Problem {
   readonly code = "meta-vite/rsc-flight-not-acceptable";
   readonly category = ProblemCategory.NotImplemented;
@@ -81,6 +126,12 @@ export type RscFlightRequest = {
 export type RscRenderOptions = {
   readonly encodeFlight?: RscFlightEncoder;
   readonly clientManifestVersion?: string;
+  /**
+   * Identifier of the client build this server renders for. When given, the
+   * negotiated manifest version is `composeRscClientManifestVersion(buildId)`
+   * instead of the bare protocol constant.
+   */
+  readonly clientBuildId?: string;
 };
 
 export function parseRscFlightRequest(request: Request): RscFlightRequest {
@@ -132,7 +183,82 @@ export function assertRscServerReferenceUnsupported(
 }
 
 export function resolveRscClientManifestVersion(options: RscRenderOptions): string {
-  return options.clientManifestVersion ?? RSC_CLIENT_MANIFEST_VERSION;
+  // An explicit version wins: an app that composes its own build identifier
+  // (or pins a protocol generation) must not have it recomputed.
+  return (
+    options.clientManifestVersion ??
+    (options.clientBuildId
+      ? composeRscClientManifestVersion(options.clientBuildId)
+      : RSC_CLIENT_MANIFEST_VERSION)
+  );
+}
+
+/**
+ * The document lookups `createRscBrowserFlightHeaders` needs. Declared
+ * structurally so the browser path can be tested without a DOM
+ * implementation.
+ */
+export type RscManifestDocument = {
+  getElementById(id: string): { textContent: string | null } | null;
+  querySelector(selector: string): { getAttribute(name: string): string | null } | null;
+  location?: { pathname: string };
+};
+
+/**
+ * Headers a browser sends when it fetches a Flight node for the document it is
+ * already running. The server embeds the version its HTML was rendered for, so
+ * the browser echoes that value instead of guessing: requesting without it is
+ * rejected exactly like a mismatched value.
+ */
+export function createRscBrowserFlightHeaders(doc?: RscManifestDocument): HeadersInit {
+  const documentRef = doc ?? (typeof document === "undefined" ? undefined : document);
+  const route = documentRef?.location?.pathname ?? "<document>";
+  const manifestVersion = documentRef ? readRscClientManifestVersion(documentRef) : null;
+
+  if (manifestVersion === null) {
+    // Without the value the document carries there is nothing to send back,
+    // and the server would reject the request as `received: "missing"`.
+    throw new RscClientManifestMismatchProblem(route, RSC_CLIENT_MANIFEST_VERSION, null);
+  }
+
+  return {
+    accept: RSC_FLIGHT_CONTENT_TYPE,
+    ["x-croco-rsc-client-manifest"]: manifestVersion,
+  };
+}
+
+/**
+ * Reads the client manifest version the server rendered the current document
+ * with. The JSON block is authoritative because `createRscHtmlShell` writes it
+ * verbatim; the meta tag is the fallback for hosts that render only that.
+ */
+export function readRscClientManifestVersion(doc: RscManifestDocument): string | null {
+  const manifestElement = doc.getElementById(RSC_MANIFEST_ELEMENT_ID);
+  if (manifestElement?.textContent) {
+    let manifestVersion: unknown;
+    try {
+      manifestVersion = (
+        JSON.parse(manifestElement.textContent) as { clientManifestVersion?: unknown }
+      ).clientManifestVersion;
+    } catch {
+      // A damaged block is not a reason to fail the refresh: the meta tag the
+      // same document carries is read instead.
+      return readMetaManifestVersion(doc);
+    }
+
+    if (typeof manifestVersion === "string" && manifestVersion.length > 0) {
+      return manifestVersion;
+    }
+  }
+
+  return readMetaManifestVersion(doc);
+}
+
+function readMetaManifestVersion(doc: RscManifestDocument): string | null {
+  const meta = doc.querySelector('meta[name="croco:rsc-client-manifest"]');
+  const content = meta?.getAttribute("content");
+
+  return content && content.length > 0 ? unescapeRscHtml(content) : null;
 }
 
 export function createRscFlightHeaders(manifestVersion: string): Headers {
@@ -172,7 +298,7 @@ export function createRscHtmlShell(
   </head>
   <body>
     <div id="root">${html}</div>
-    <script type="application/json" id="croco-rsc-manifest">${JSON.stringify({
+    <script type="application/json" id="${RSC_MANIFEST_ELEMENT_ID}">${serializeRscManifestJson({
       flightVersion: RSC_FLIGHT_VERSION,
       clientManifestVersion: manifestVersion,
     })}</script>
@@ -191,6 +317,14 @@ export function createRscComponentProps(
   return { request, context };
 }
 
+function serializeRscManifestJson(value: unknown): string {
+  // `JSON.stringify` escapes quotes and control characters but leaves `<`
+  // alone, so a manifest version containing `</script>` would close the
+  // element early and let the rest of the page be read as JSON. Escaping `<`
+  // keeps the payload inside the script element.
+  return JSON.stringify(value).replace(/</g, "\\u003c");
+}
+
 function escapeRscHtml(text: string): string {
   return text
     .replace(/&/g, "&amp;")
@@ -198,4 +332,16 @@ function escapeRscHtml(text: string): string {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#x27;");
+}
+
+function unescapeRscHtml(text: string): string {
+  // Only the meta-tag fallback needs this: the JSON block is written raw and
+  // the browser reads it back verbatim. `&amp;` is reversed last so an
+  // escaped `&lt;` in the original does not turn into another entity.
+  return text
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#x27;/g, "'")
+    .replace(/&amp;/g, "&");
 }
