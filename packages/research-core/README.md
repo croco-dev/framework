@@ -95,7 +95,6 @@ operations and the actual EngagementService with a local non-contacting dispatch
 
 ## Optional micro surveys
 
-
 Versioned, optional micro surveys for a completed product event. A survey never owns the original save, cancellation, refund, or support operation. Complete that operation before requesting a survey invitation. Collection failure is a separate failure.
 
 ## Contracts

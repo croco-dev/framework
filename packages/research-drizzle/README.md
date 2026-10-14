@@ -45,7 +45,6 @@ Dependencies: `@croco/research-core`, `@croco/problems-core`, and `drizzle-orm`.
 
 ## Optional micro surveys
 
-
 PostgreSQL persistence for `@croco/research-core` micro surveys using Drizzle's node-postgres database. This provider is alpha and has no production certification claim.
 
 `DrizzleSurveyStore` implements `SurveyStore`. It creates a PostgreSQL transaction for each operation and holds a transaction-scoped advisory lock keyed by tenant, application, and environment. Scope-wide serialization preserves publication revisions, invitation frequency claims across versions, exposure/dismissal transitions, and one current response per invitation across processes and connections. This favors a simple, provable concurrency contract over high survey write throughput; long eligibility predicates delay other survey work in the same scope. Keep predicates bounded and avoid network calls under the transaction.
