@@ -1,6 +1,7 @@
 {
   "name": "@croco/research-drizzle",
   "version": "0.0.1",
+  "description": "PostgreSQL research recruitment and micro survey persistence",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
@@ -43,7 +44,7 @@
   "scripts": {
     "build": "tsup src/index.ts --format esm,cjs --minify --clean --dts",
     "lint": "oxlint .",
-    "test": "vitest run --exclude src/tests/*.postgres.spec.ts",
+    "test": "vitest run --exclude '**/*.postgres.spec.ts'",
     "test:evidence": "pnpm run test --maxWorkers=1 --reporter=json --outputFile=.turbo/croco-test-evidence.json",
     "test:live": "vitest run src/tests/*.postgres.spec.ts --no-file-parallelism",
     "test:postgres": "vitest run src/tests/*.postgres.spec.ts --no-file-parallelism",
@@ -57,16 +58,15 @@
     "drizzle-orm": "catalog:"
   },
   "devDependencies": {
+    "@croco/testing": "workspace:*",
     "@types/pg": "8.20.0",
     "pg": "8.22.0",
+    "reflect-metadata": "^0.2.2",
     "tsup": "^8.4.0",
     "typescript": "^5.7.2",
-    "vitest": "4.1.8",
-    "@croco/testing": "workspace:*",
-    "reflect-metadata": "^0.2.2"
+    "vitest": "4.1.8"
   },
   "peerDependencies": {
     "drizzle-orm": "catalog:"
-  },
-  "description": "PostgreSQL research recruitment and micro survey persistence"
+  }
 }

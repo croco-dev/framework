@@ -15,19 +15,6 @@ export const apiDocCompilerOptions = {
 
 export const apiDocPackages = [
   {
-    packageName: "@croco/research-core",
-    directory: "research-core",
-    entryPoint: "src/index.ts",
-    moduleName: "research-core/src",
-  },
-  {
-    packageName: "@croco/research-drizzle",
-    directory: "research-drizzle",
-    entryPoint: "src/index.ts",
-    moduleName: "research-drizzle/src",
-  },
-
-  {
     packageName: "@croco/access-core",
     directory: "access-core",
     entryPoint: "src/index.ts",

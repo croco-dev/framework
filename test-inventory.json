@@ -344,6 +344,12 @@
       "owner": "@croco/admin-core"
     },
     {
+      "path": "packages/admin-core/src/tests/SurveyOperations.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-core"
+    },
+    {
       "path": "packages/admin-core/src/tests/TargetingImpactOperations.spec.ts",
       "lane": "fast",
       "qualifiers": [],
@@ -663,6 +669,12 @@
     },
     {
       "path": "packages/admin-react/src/tests/SavedIntentConsole.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-react"
+    },
+    {
+      "path": "packages/admin-react/src/tests/SurveyConsole.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/admin-react"
@@ -3014,6 +3026,12 @@
       "owner": "@croco/frontend-react"
     },
     {
+      "path": "packages/frontend-react/src/tests/SurveyCard.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/frontend-react"
+    },
+    {
       "path": "packages/frontend-react/src/tests/authBridge.spec.ts",
       "lane": "fast",
       "qualifiers": [],
@@ -4640,6 +4658,12 @@
       "owner": "@croco/research-core"
     },
     {
+      "path": "packages/research-core/src/tests/SurveyValidation.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/research-core"
+    },
+    {
       "path": "packages/research-drizzle/src/tests/DrizzleResearchStore.postgres.spec.ts",
       "lane": "live",
       "qualifiers": [],
@@ -4647,6 +4671,18 @@
     },
     {
       "path": "packages/research-drizzle/src/tests/DrizzleResearchStore.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/research-drizzle"
+    },
+    {
+      "path": "packages/research-drizzle/src/tests/DrizzleSurveyStore.postgres.spec.ts",
+      "lane": "live",
+      "qualifiers": [],
+      "owner": "@croco/research-drizzle"
+    },
+    {
+      "path": "packages/research-drizzle/src/tests/SurveyToken.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/research-drizzle"

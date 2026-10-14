@@ -14,11 +14,6 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 ## Extended by
 
 - [`ProblemRegistryValidationProblem`](/api/problems-core/src/classes/problemregistryvalidationproblem/)
-- [`SurveyConflictProblem`](/api/research-core/src/classes/surveyconflictproblem/)
-- [`SurveyDeniedProblem`](/api/research-core/src/classes/surveydeniedproblem/)
-- [`SurveyExpiredProblem`](/api/research-core/src/classes/surveyexpiredproblem/)
-- [`SurveyInvalidProblem`](/api/research-core/src/classes/surveyinvalidproblem/)
-- [`SurveyUnavailableProblem`](/api/research-core/src/classes/surveyunavailableproblem/)
 - [`BadRequestProblem`](/api/access-core/src/classes/badrequestproblem/)
 - [`ForbiddenProblem`](/api/access-core/src/classes/forbiddenproblem/)
 - [`ActivationAdminProblem`](/api/admin-core/src/classes/activationadminproblem/)
@@ -604,6 +599,11 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`ResearchDeniedProblem`](/api/research-core/src/classes/researchdeniedproblem/)
 - [`ResearchInvalidProblem`](/api/research-core/src/classes/researchinvalidproblem/)
 - [`ResearchPersistenceProblem`](/api/research-core/src/classes/researchpersistenceproblem/)
+- [`SurveyConflictProblem`](/api/research-core/src/classes/surveyconflictproblem/)
+- [`SurveyDeniedProblem`](/api/research-core/src/classes/surveydeniedproblem/)
+- [`SurveyExpiredProblem`](/api/research-core/src/classes/surveyexpiredproblem/)
+- [`SurveyInvalidProblem`](/api/research-core/src/classes/surveyinvalidproblem/)
+- [`SurveyUnavailableProblem`](/api/research-core/src/classes/surveyunavailableproblem/)
 - [`CircuitBreakerOpenProblem`](/api/retry-core/src/classes/circuitbreakeropenproblem/)
 - [`CircuitBreakerUnexpectedStateProblem`](/api/retry-core/src/classes/circuitbreakerunexpectedstateproblem/)
 - [`DuplicateRecoverHandlerProblem`](/api/retry-core/src/classes/duplicaterecoverhandlerproblem/)

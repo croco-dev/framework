@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export type CrocoProblemRegistry = {
   readonly version: "croco.problem-code-registry.v1";
-  readonly problemCount: 1042;
+  readonly problemCount: 1047;
   readonly problems: readonly [
     {
       readonly code: "ACCESS_DENIED";
@@ -23777,6 +23777,146 @@ export type CrocoProblemRegistry = {
       ];
     },
     {
+      readonly code: "research/survey-conflict";
+      readonly category: "Conflict";
+      readonly status: 409;
+      readonly title: "Conflict";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#research-survey-conflict";
+      readonly recovery: {
+        readonly cause: "The request conflicts with current state or an idempotency constraint.";
+        readonly userAction: "Refresh state, resolve the conflict, and retry with the updated intent.";
+        readonly operatorAction: "Inspect concurrent writes, idempotency keys, and uniqueness constraints.";
+        readonly retryability: "conditional";
+        readonly redactionPolicy: "safe-message";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.warning";
+          readonly severity: "warning";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/research-core/src/libs/SurveyProblems.ts";
+          readonly line: 10;
+          readonly column: 1;
+          readonly kind: "problem-class";
+        },
+      ];
+    },
+    {
+      readonly code: "research/survey-denied";
+      readonly category: "Forbidden";
+      readonly status: 403;
+      readonly title: "Forbidden";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#research-survey-denied";
+      readonly recovery: {
+        readonly cause: "The authenticated caller is not allowed to perform the requested action.";
+        readonly userAction: "Request the required permission or choose an allowed action.";
+        readonly operatorAction: "Review policy, role, tenant, entitlement, and impersonation context.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "safe-message";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.warning";
+          readonly severity: "warning";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/research-core/src/libs/SurveyProblems.ts";
+          readonly line: 19;
+          readonly column: 1;
+          readonly kind: "problem-class";
+        },
+      ];
+    },
+    {
+      readonly code: "research/survey-expired";
+      readonly category: "ValidationError";
+      readonly status: 422;
+      readonly title: "Validation Error";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#research-survey-expired";
+      readonly recovery: {
+        readonly cause: "The request or generated contract failed schema or semantic validation.";
+        readonly userAction: "Fix the invalid fields and retry with schema-conformant input.";
+        readonly operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "public";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.info";
+          readonly severity: "info";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/research-core/src/libs/SurveyProblems.ts";
+          readonly line: 26;
+          readonly column: 1;
+          readonly kind: "problem-class";
+        },
+      ];
+    },
+    {
+      readonly code: "research/survey-invalid";
+      readonly category: "ValidationError";
+      readonly status: 422;
+      readonly title: "Validation Error";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#research-survey-invalid";
+      readonly recovery: {
+        readonly cause: "The request or generated contract failed schema or semantic validation.";
+        readonly userAction: "Fix the invalid fields and retry with schema-conformant input.";
+        readonly operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "public";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.info";
+          readonly severity: "info";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/research-core/src/libs/SurveyProblems.ts";
+          readonly line: 3;
+          readonly column: 1;
+          readonly kind: "problem-class";
+        },
+      ];
+    },
+    {
+      readonly code: "research/survey-unavailable";
+      readonly category: "InternalServerError";
+      readonly status: 500;
+      readonly title: "Internal Server Error";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#research-survey-unavailable";
+      readonly recovery: {
+        readonly cause: "Croco or an upstream dependency failed after accepting the request.";
+        readonly userAction: "Retry later only when the operation is idempotent or the caller owns retry safety.";
+        readonly operatorAction: "Use traces, logs, and upstream diagnostics to isolate the failing boundary.";
+        readonly retryability: "conditional";
+        readonly redactionPolicy: "operator-only";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.error";
+          readonly severity: "error";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/research-core/src/libs/SurveyProblems.ts";
+          readonly line: 33;
+          readonly column: 1;
+          readonly kind: "problem-class";
+        },
+      ];
+    },
+    {
       readonly code: "retry-core/backoff-cancellation-unsupported";
       readonly category: "ValidationError";
       readonly status: 422;
@@ -29469,7 +29609,7 @@ export type CrocoProblemRegistry = {
 
 export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 1042,
+  problemCount: 1047,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -55988,6 +56128,158 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
           line: 169,
           column: 5,
           kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "research/survey-conflict",
+      category: "Conflict",
+      status: 409,
+      title: "Conflict",
+      cookbookPath: "/reference/problem-recovery-cookbook/#research-survey-conflict",
+      recovery: {
+        cause: "The request conflicts with current state or an idempotency constraint.",
+        userAction: "Refresh state, resolve the conflict, and retry with the updated intent.",
+        operatorAction: "Inspect concurrent writes, idempotency keys, and uniqueness constraints.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/research-core/src/libs/SurveyProblems.ts",
+          line: 10,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "research/survey-denied",
+      category: "Forbidden",
+      status: 403,
+      title: "Forbidden",
+      cookbookPath: "/reference/problem-recovery-cookbook/#research-survey-denied",
+      recovery: {
+        cause: "The authenticated caller is not allowed to perform the requested action.",
+        userAction: "Request the required permission or choose an allowed action.",
+        operatorAction: "Review policy, role, tenant, entitlement, and impersonation context.",
+        retryability: "not-retryable",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/research-core/src/libs/SurveyProblems.ts",
+          line: 19,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "research/survey-expired",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#research-survey-expired",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/research-core/src/libs/SurveyProblems.ts",
+          line: 26,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "research/survey-invalid",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#research-survey-invalid",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/research-core/src/libs/SurveyProblems.ts",
+          line: 3,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "research/survey-unavailable",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#research-survey-unavailable",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/research-core/src/libs/SurveyProblems.ts",
+          line: 33,
+          column: 1,
+          kind: "problem-class",
         },
       ],
     },
