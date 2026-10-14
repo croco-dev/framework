@@ -35,7 +35,13 @@ registry, replacing the per-category defaults for these RSC and Server Action
 codes. `meta-vite/rsc-flight-context-unsupported` is new: the isolated encoder
 renders in a child process over a JSON pipe, so a route that would need host
 context values cannot be served and is refused instead of rendering them as
-`undefined`.
+`undefined`. It carries recovery metadata that states this and marks it
+`not-retryable`.
+
+A 5xx Problem answered from the render server now returns its code and a fixed
+title instead of its message: the encoder's messages carry route, platform, and
+timeout detail that the registry holds `operator-only`, so that detail goes to
+the log while the response stays redacted.
 
 `@croco/frontend-react` takes a patch: its development `react` and `react-dom`
 versions move to the pinned 19.2.6 so the workspace hoists a single React

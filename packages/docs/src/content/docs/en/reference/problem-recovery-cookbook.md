@@ -643,7 +643,7 @@ This cookbook documents 1036 public Croco Problem codes. The deterministic JSON 
 | [`meta-vite/rsc-client-manifest-mismatch`](#meta-vite-rsc-client-manifest-mismatch)                                                   | BadRequest                                                          |           400 | not-retryable | public        | active     |       1 |
 | [`meta-vite/rsc-client-reference-missing`](#meta-vite-rsc-client-reference-missing)                                                   | BadRequest                                                          |           400 | not-retryable | public        | active     |       1 |
 | [`meta-vite/rsc-encoder-entry-invalid-input`](#meta-vite-rsc-encoder-entry-invalid-input)                                             | BadRequest                                                          |           400 | not-retryable | public        | active     |       1 |
-| [`meta-vite/rsc-flight-context-unsupported`](#meta-vite-rsc-flight-context-unsupported)                                               | InternalServerError                                                 |           500 | conditional   | operator-only | active     |       1 |
+| [`meta-vite/rsc-flight-context-unsupported`](#meta-vite-rsc-flight-context-unsupported)                                               | InternalServerError                                                 |           500 | not-retryable | operator-only | active     |       1 |
 | [`meta-vite/rsc-flight-encode-aborted`](#meta-vite-rsc-flight-encode-aborted)                                                         | BadRequest                                                          |           400 | not-retryable | public        | active     |       1 |
 | [`meta-vite/rsc-flight-encode-failed`](#meta-vite-rsc-flight-encode-failed)                                                           | InternalServerError                                                 |           500 | conditional   | operator-only | active     |       1 |
 | [`meta-vite/rsc-flight-encode-timeout`](#meta-vite-rsc-flight-encode-timeout)                                                         | InternalServerError                                                 |           500 | not-retryable | operator-only | active     |       1 |
@@ -12590,12 +12590,12 @@ Sources:
 
 - Category: `InternalServerError`
 - HTTP status: `500` Internal Server Error
-- Retryability: `conditional`
+- Retryability: `not-retryable`
 - Redaction policy: `operator-only`
 - Lifecycle: `active`
-- Cause: Croco or an upstream dependency failed after accepting the request.
-- User action: Retry later only when the operation is idempotent or the caller owns retry safety.
-- Operator action: Use traces, logs, and upstream diagnostics to isolate the failing boundary.
+- Cause: The route needs runtime context values that the isolated Flight encoder cannot carry into its child process.
+- User action: Remove the runtime context from this request and retry, or serve the route without an isolated encoder.
+- Operator action: Either drop the context values the route reads and render from the request alone, or supply an encoder that renders in-process. Retrying with the same context fails again: the values cannot cross the child-process boundary.
 - Telemetry: `croco.problem.error` (error) with `problem.code`, `problem.category`, `problem.status`
 
 Sources:

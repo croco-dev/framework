@@ -17661,10 +17661,10 @@ export type CrocoProblemRegistry = {
       readonly title: "Internal Server Error";
       readonly cookbookPath: "/reference/problem-recovery-cookbook/#meta-vite-rsc-flight-context-unsupported";
       readonly recovery: {
-        readonly cause: "Croco or an upstream dependency failed after accepting the request.";
-        readonly userAction: "Retry later only when the operation is idempotent or the caller owns retry safety.";
-        readonly operatorAction: "Use traces, logs, and upstream diagnostics to isolate the failing boundary.";
-        readonly retryability: "conditional";
+        readonly cause: "The route needs runtime context values that the isolated Flight encoder cannot carry into its child process.";
+        readonly userAction: "Remove the runtime context from this request and retry, or serve the route without an isolated encoder.";
+        readonly operatorAction: "Either drop the context values the route reads and render from the request alone, or supply an encoder that renders in-process. Retrying with the same context fails again: the values cannot cross the child-process boundary.";
+        readonly retryability: "not-retryable";
         readonly redactionPolicy: "operator-only";
         readonly telemetry: {
           readonly eventName: "croco.problem.error";
@@ -48984,12 +48984,13 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       cookbookPath:
         "/reference/problem-recovery-cookbook/#meta-vite-rsc-flight-context-unsupported",
       recovery: {
-        cause: "Croco or an upstream dependency failed after accepting the request.",
+        cause:
+          "The route needs runtime context values that the isolated Flight encoder cannot carry into its child process.",
         userAction:
-          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+          "Remove the runtime context from this request and retry, or serve the route without an isolated encoder.",
         operatorAction:
-          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
-        retryability: "conditional",
+          "Either drop the context values the route reads and render from the request alone, or supply an encoder that renders in-process. Retrying with the same context fails again: the values cannot cross the child-process boundary.",
+        retryability: "not-retryable",
         redactionPolicy: "operator-only",
         telemetry: {
           eventName: "croco.problem.error",

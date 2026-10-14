@@ -15,7 +15,10 @@ import { defineRoute } from "../libs/routes/defineRoute";
 import { RouteRegistry } from "../libs/routes/routeRegistry";
 import type { PageRouteDefinition } from "../libs/routes/types";
 import type { RscRenderOptions } from "../libs/rsc/flight";
-import { RscFlightEncodeFailedProblem } from "../libs/rsc/isolatedEncode";
+import {
+  RscFlightEncodeFailedProblem,
+  RscFlightEncodeTimeoutProblem,
+} from "../libs/rsc/isolatedEncode";
 
 function flightStream(text: string): ReadableStream<Uint8Array> {
   const bytes = new TextEncoder().encode(text);
@@ -240,11 +243,34 @@ describe("rsc real Flight path", () => {
     });
   });
 
+  it("reports a 5xx encoder Problem without leaking its operating detail", async () => {
+    // The registry keeps the encoder's messages `operator-only`, so the body
+    // carries the code and a fixed title; the detail goes to the log.
+    const failure = new RscFlightEncodeTimeoutProblem("/rsc-slow", 30_000);
+    const server = createServer([rscRoute("/rsc-slow")], async () => failingFlightStream(failure));
+
+    const response = await server.handle(
+      new Request("https://example.com/rsc-slow.rsc", {
+        headers: { "x-croco-rsc-client-manifest": RSC_CLIENT_MANIFEST_VERSION },
+      }),
+    );
+    const body = await response.text();
+
+    expect(response.status).toBe(500);
+    expect(body).toBe(
+      JSON.stringify({
+        error: "RSC rendering failed",
+        route: "/rsc-slow",
+        code: "meta-vite/rsc-flight-encode-timeout",
+      }),
+    );
+    expect(body).not.toContain("timed out");
+  });
+
   it("still delivers every Flight row after the first, unbuffered", async () => {
     const server = createServer([rscRoute("/rsc-rows")], async () =>
       multiRowStream('0:"shell"\n', '1:"boundary"\n'),
     );
-
     const response = await server.handle(
       new Request("https://example.com/rsc-rows.rsc", {
         headers: { "x-croco-rsc-client-manifest": RSC_CLIENT_MANIFEST_VERSION },

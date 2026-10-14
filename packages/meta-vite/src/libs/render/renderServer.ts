@@ -917,6 +917,22 @@ export class RenderServer {
     // they must keep their code: reporting them as a generic render failure
     // would hide which encoder stage failed and its captured output.
     if (error instanceof Problem) {
+      // A 5xx Problem's message carries operating detail (route, platform,
+      // timeoutMs), which the registry keeps `operator-only` for these codes.
+      // Send the code plus a fixed title and leave the detail in the log.
+      if (error.status >= 500) {
+        reportShellFailure("RSC rendering failed", { route: routePath, error }, routePath);
+
+        return new Response(
+          JSON.stringify({
+            error: "RSC rendering failed",
+            route: routePath,
+            code: error.code,
+          }),
+          { status: error.status, headers: JSON_HEADERS },
+        );
+      }
+
       return new Response(
         JSON.stringify({
           error: error.message,

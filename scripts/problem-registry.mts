@@ -3413,6 +3413,17 @@ const recoveryMetadataByCode = {
     redactionPolicy: "operator-only",
     severity: "error",
   }),
+  "meta-vite/rsc-flight-context-unsupported": recovery({
+    cause:
+      "The route needs runtime context values that the isolated Flight encoder cannot carry into its child process.",
+    userAction:
+      "Remove the runtime context from this request and retry, or serve the route without an isolated encoder.",
+    operatorAction:
+      "Either drop the context values the route reads and render from the request alone, or supply an encoder that renders in-process. Retrying with the same context fails again: the values cannot cross the child-process boundary.",
+    retryability: "not-retryable",
+    redactionPolicy: "operator-only",
+    severity: "error",
+  }),
   "meta-vite/rsc-flight-encode-aborted": recovery({
     cause: "The client disconnected before the isolated Flight encoder finished.",
     userAction: "Reload the page to request the route again.",

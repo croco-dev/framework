@@ -18850,10 +18850,10 @@
       "title": "Internal Server Error",
       "cookbookPath": "/reference/problem-recovery-cookbook/#meta-vite-rsc-flight-context-unsupported",
       "recovery": {
-        "cause": "Croco or an upstream dependency failed after accepting the request.",
-        "userAction": "Retry later only when the operation is idempotent or the caller owns retry safety.",
-        "operatorAction": "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
-        "retryability": "conditional",
+        "cause": "The route needs runtime context values that the isolated Flight encoder cannot carry into its child process.",
+        "userAction": "Remove the runtime context from this request and retry, or serve the route without an isolated encoder.",
+        "operatorAction": "Either drop the context values the route reads and render from the request alone, or supply an encoder that renders in-process. Retrying with the same context fails again: the values cannot cross the child-process boundary.",
+        "retryability": "not-retryable",
         "redactionPolicy": "operator-only",
         "telemetry": {
           "eventName": "croco.problem.error",
