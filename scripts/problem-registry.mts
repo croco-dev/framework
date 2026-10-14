@@ -3365,7 +3365,8 @@ const recoveryMetadataByCode = {
   "meta-vite/rsc-client-reference-missing": recovery({
     cause:
       "A decoded Flight client reference has no matching browser module loaded in the client manifest.",
-    userAction: "Reload the page so the client bundle that owns the reference is loaded.",
+    userAction:
+      "Report the missing reference; reloading or retrying the same request repeats the failure until the client bundle that owns it is deployed.",
     operatorAction:
       "Check the client manifest registration and browser module loading for the reported reference, then rebuild and deploy matching client and server artifacts.",
     retryability: "not-retryable",

@@ -1,5 +1,6 @@
 import { Suspense, createElement } from "react";
 import type { ComponentType, ReactNode } from "react";
+import { Problem } from "@croco/problems-core";
 import { renderToReadableStream, renderToString } from "react-dom/server";
 import {
   RscClientManifestMismatchProblem,
@@ -13,7 +14,10 @@ import {
   parseRscFlightRequest,
   resolveRscClientManifestVersion,
 } from "../rsc/flight";
-import { encodeRscFlightInIsolatedEncoder } from "../rsc/isolatedEncode";
+import {
+  encodeRscFlightInIsolatedEncoder,
+  RscFlightEncodeFailedProblem,
+} from "../rsc/isolatedEncode";
 import type { RscFlightEncoder, RscRenderOptions } from "../rsc/flight";
 import type { RscSsrCodec } from "../rsc/ssrDecode";
 import { decodeFlightToHtmlStream } from "../rsc/ssrDecode";
@@ -821,10 +825,7 @@ export class RenderServer {
       const flight = await encoder(route, request, context);
 
       if (flightRequest.wantsFlight) {
-        return new Response(flight, {
-          status: 200,
-          headers: createRscFlightHeaders(this.rscClientManifestVersion),
-        });
+        return this.createRscFlightResponse(route, flight);
       }
 
       const codec = await this.loadRscSsrCodec();
@@ -912,6 +913,20 @@ export class RenderServer {
       );
     }
 
+    // The encoder's own Problems arrive on the stream the preflight reads, so
+    // they must keep their code: reporting them as a generic render failure
+    // would hide which encoder stage failed and its captured output.
+    if (error instanceof Problem) {
+      return new Response(
+        JSON.stringify({
+          error: error.message,
+          route: routePath,
+          code: error.code,
+        }),
+        { status: error.status, headers: JSON_HEADERS },
+      );
+    }
+
     const detail = error instanceof Error ? "An internal server error occurred" : String(error);
 
     return new Response(
@@ -936,38 +951,34 @@ export class RenderServer {
 
     // Share the reader with cancel(): once getReader() locks htmlStream,
     // htmlStream.cancel() rejects with TypeError. Cancel through the reader
-    // when it exists; fall back to the stream only before start() ran.
+    // when it exists; fall back to the stream only before pull() ran.
     let reader: ReadableStreamDefaultReader<Uint8Array> | undefined;
     const body = new ReadableStream<Uint8Array>({
-      async start(controller) {
-        try {
-          controller.enqueue(encoder.encode(prefix));
-          reader = htmlStream.getReader();
-          try {
-            for (;;) {
-              const { done, value } = await reader.read();
-              if (done) {
-                break;
-              }
-              controller.enqueue(value);
-            }
-          } catch (error) {
-            await reader.cancel(error).catch(() => {});
-            controller.error(error);
-            return;
-          } finally {
-            reader.releaseLock();
-          }
+      start(controller) {
+        controller.enqueue(encoder.encode(prefix));
+      },
+      // Reading on demand instead of in a start() loop: the loop drained the
+      // whole stream into the queue, so a slow client held the entire HTML
+      // response in memory per in-flight request.
+      async pull(controller) {
+        reader ??= htmlStream.getReader();
+        const { done, value } = await reader.read();
+
+        if (controller.desiredSize === null) {
+          // The consumer cancelled while this read was in flight; the source
+          // reader stays locked so cancel() can still tear it down.
+          return;
+        }
+
+        if (done) {
+          reader.releaseLock();
+          reader = undefined;
           controller.enqueue(encoder.encode(suffix));
           controller.close();
-        } catch (error) {
-          // controller.error() throws when the controller is already
-          // closed/errored. desiredSize is null exactly in that terminal
-          // state, so guard explicitly instead of swallowing the signal.
-          if (controller.desiredSize !== null) {
-            controller.error(error);
-          }
+          return;
         }
+
+        controller.enqueue(value);
       },
       cancel: async (reason) => {
         await (reader ? reader.cancel(reason) : htmlStream.cancel(reason)).catch(() => {});
@@ -975,6 +986,73 @@ export class RenderServer {
     });
 
     return new Response(body, { status: 200, headers: HTML_HEADERS });
+  }
+
+  /**
+   * Relays the encoder's Flight rows, but only after the first row proved the
+   * encoder can render at all. A server component that fails to import makes
+   * the stream error *after* it was handed back, and an already-committed 200
+   * would deliver a broken Flight body with a success status instead of a
+   * diagnostic the caller can act on. Reading one row costs nothing: it is
+   * the shell row the response would send first anyway, and every later row
+   * still streams.
+   */
+  private async createRscFlightResponse(
+    route: RenderRouteIR,
+    flight: ReadableStream<Uint8Array>,
+  ): Promise<Response> {
+    const reader = flight.getReader();
+
+    let first: ReadableStreamReadResult<Uint8Array>;
+    try {
+      first = await reader.read();
+    } catch (error) {
+      reader.releaseLock();
+
+      return this.createRscErrorResponse(error, route.path);
+    }
+
+    if (first.done) {
+      reader.releaseLock();
+
+      return this.createRscErrorResponse(
+        new RscFlightEncodeFailedProblem(
+          route.path,
+          null,
+          "encoder produced no Flight rows before closing its output",
+        ),
+        route.path,
+      );
+    }
+
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(first.value);
+      },
+      async pull(controller) {
+        const { done, value } = await reader.read();
+
+        if (controller.desiredSize === null) {
+          return;
+        }
+
+        if (done) {
+          reader.releaseLock();
+          controller.close();
+          return;
+        }
+
+        controller.enqueue(value);
+      },
+      cancel: async (reason) => {
+        await reader.cancel(reason).catch(() => {});
+      },
+    });
+
+    return new Response(body, {
+      status: 200,
+      headers: createRscFlightHeaders(this.rscClientManifestVersion),
+    });
   }
 
   private htmlShell(headMetadata: HeadMetadata | undefined, bodyHtml: string): string {
@@ -1038,13 +1116,13 @@ async function defaultRscFlightEncoder(
   request: Request,
   context?: RuntimeContext,
 ): Promise<ReadableStream<Uint8Array>> {
-  void request;
-  void context;
-
   if (!route.componentRef) {
     throw new RscFlightNotAcceptableProblem(route.path);
   }
 
+  // `context` is forwarded so the isolated encoder can refuse it explicitly: a
+  // host context cannot cross the child-process boundary, and dropping it
+  // silently would render components against missing host values.
   return encodeRscFlightInIsolatedEncoder({ route, request, context });
 }
 

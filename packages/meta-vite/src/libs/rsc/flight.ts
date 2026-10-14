@@ -258,7 +258,11 @@ function readMetaManifestVersion(doc: RscManifestDocument): string | null {
   const meta = doc.querySelector('meta[name="croco:rsc-client-manifest"]');
   const content = meta?.getAttribute("content");
 
-  return content && content.length > 0 ? unescapeRscHtml(content) : null;
+  // The HTML parser already decodes character references in an attribute
+  // value, so `getAttribute` hands back the version the server wrote.
+  // Unescaping here would decode a second time and break any version whose
+  // text still contains an entity-looking sequence.
+  return content && content.length > 0 ? content : null;
 }
 
 export function createRscFlightHeaders(manifestVersion: string): Headers {
@@ -332,16 +336,4 @@ function escapeRscHtml(text: string): string {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#x27;");
-}
-
-function unescapeRscHtml(text: string): string {
-  // Only the meta-tag fallback needs this: the JSON block is written raw and
-  // the browser reads it back verbatim. `&amp;` is reversed last so an
-  // escaped `&lt;` in the original does not turn into another entity.
-  return text
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&#x27;/g, "'")
-    .replace(/&amp;/g, "&");
 }

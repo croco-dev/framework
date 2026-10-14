@@ -63,9 +63,12 @@ encoded by a React development build cannot be decoded by a production client
 ## Client-manifest check
 
 ```bash
-curl -i http://localhost:4317/index.rsc | grep 'x-croco-rsc-client-manifest'   # echoed version
+VERSION=$(node -p "require('./dist/client/croco-rsc-client-build.json').clientManifestVersion")
+curl -i -H "x-croco-rsc-client-manifest: $VERSION" http://localhost:4317/index.rsc | grep 'x-croco-rsc-client-manifest'   # echoed version
 curl -i -X GET -H 'x-croco-rsc-client-manifest: stale' http://localhost:4317/index.rsc | head -n 1
 # HTTP/1.1 400 — {"error":"RSC client manifest mismatch",...}
+curl -i http://localhost:4317/index.rsc | head -n 1
+# HTTP/1.1 400 — a request without the header is refused the same way
 ```
 
 ## Secret-leak check

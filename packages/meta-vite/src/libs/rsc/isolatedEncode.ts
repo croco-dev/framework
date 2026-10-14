@@ -30,6 +30,27 @@ export class RscFlightEncodeFailedProblem extends Problem {
   }
 }
 
+/**
+ * The isolated encoder renders in a child process over a JSON pipe, while a
+ * `RuntimeContext` carries live host values (`env` records, a Cloudflare
+ * `executionContext`, a Lambda context) that cannot cross that boundary.
+ * Silently dropping them would hand a server component an `undefined` host
+ * value — a wrong answer that renders fine — so the render is refused instead.
+ */
+export class RscFlightContextUnsupportedProblem extends Problem {
+  readonly code = "meta-vite/rsc-flight-context-unsupported";
+  readonly category = ProblemCategory.InternalServerError;
+
+  constructor(route: string, platform: string) {
+    super(
+      "meta-vite/rsc-flight-context-unsupported",
+      ProblemCategory.InternalServerError,
+      `RSC route '${route}' cannot render with a runtime context: the isolated Flight encoder runs in a child process and cannot carry platform '${platform}' values`,
+      { extensions: { route, platform } },
+    );
+  }
+}
+
 export class RscFlightEncodeTimeoutProblem extends Problem {
   readonly code = "meta-vite/rsc-flight-encode-timeout";
   readonly category = ProblemCategory.InternalServerError;
@@ -148,6 +169,13 @@ export type IsolatedRscEncodeInput = {
 export async function encodeRscFlightInIsolatedEncoder(
   input: IsolatedRscEncodeInput,
 ): Promise<ReadableStream<Uint8Array>> {
+  // The child renders over a JSON pipe, so a runtime context cannot travel
+  // with the request. Refuse before spawning: a component reading a host value
+  // would otherwise render `undefined` and look successful.
+  if (input.context) {
+    throw new RscFlightContextUnsupportedProblem(input.route.path, input.context.platform);
+  }
+
   const encoderModule = input.encoderModule ?? resolveEncoderModule();
   const requestSignal = input.request.signal;
 

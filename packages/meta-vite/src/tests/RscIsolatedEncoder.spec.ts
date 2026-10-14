@@ -122,6 +122,23 @@ describe("isolated RSC encoder lifecycle", () => {
     return { text, arrivals };
   }
 
+  it("refuses a runtime context it cannot carry into the child process", async () => {
+    // A server component reading a host value renders `undefined` if the
+    // context is dropped on the floor, so refuse before spawning instead.
+    await expect(
+      encodeRscFlightInIsolatedEncoder({
+        route: rscRoute("/rsc-context"),
+        request: new Request("https://example.com/rsc-context"),
+        encoderModule: await stubbedEncoderModule(),
+        context: { platform: "cloudflare", env: { SECRET: "value" } },
+      }),
+    ).rejects.toMatchObject({
+      code: "meta-vite/rsc-flight-context-unsupported",
+      status: 500,
+      extensions: { route: "/rsc-context", platform: "cloudflare" },
+    });
+  });
+
   it("delivers encoder rows before the child process exits", async () => {
     const stream = await encodeRscFlightInIsolatedEncoder({
       route: rscRoute("/rsc-streaming"),

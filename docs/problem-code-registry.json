@@ -1,6 +1,6 @@
 {
   "version": "croco.problem-code-registry.v1",
-  "problemCount": 1035,
+  "problemCount": 1036,
   "problems": [
     {
       "code": "ACCESS_DENIED",
@@ -18791,7 +18791,7 @@
       "cookbookPath": "/reference/problem-recovery-cookbook/#meta-vite-rsc-client-reference-missing",
       "recovery": {
         "cause": "A decoded Flight client reference has no matching browser module loaded in the client manifest.",
-        "userAction": "Reload the page so the client bundle that owns the reference is loaded.",
+        "userAction": "Report the missing reference; reloading or retrying the same request repeats the failure until the client bundle that owns it is deployed.",
         "operatorAction": "Check the client manifest registration and browser module loading for the reported reference, then rebuild and deploy matching client and server artifacts.",
         "retryability": "not-retryable",
         "redactionPolicy": "public",
@@ -18844,6 +18844,36 @@
       ]
     },
     {
+      "code": "meta-vite/rsc-flight-context-unsupported",
+      "category": "InternalServerError",
+      "status": 500,
+      "title": "Internal Server Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#meta-vite-rsc-flight-context-unsupported",
+      "recovery": {
+        "cause": "Croco or an upstream dependency failed after accepting the request.",
+        "userAction": "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        "operatorAction": "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        "retryability": "conditional",
+        "redactionPolicy": "operator-only",
+        "telemetry": {
+          "eventName": "croco.problem.error",
+          "severity": "error",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/meta-vite/src/libs/rsc/isolatedEncode.ts",
+          "line": 40,
+          "column": 1,
+          "kind": "problem-class"
+        }
+      ]
+    },
+    {
       "code": "meta-vite/rsc-flight-encode-aborted",
       "category": "BadRequest",
       "status": 400,
@@ -18867,7 +18897,7 @@
       "sources": [
         {
           "file": "packages/meta-vite/src/libs/rsc/isolatedEncode.ts",
-          "line": 52,
+          "line": 73,
           "column": 1,
           "kind": "problem-class"
         }
@@ -18927,7 +18957,7 @@
       "sources": [
         {
           "file": "packages/meta-vite/src/libs/rsc/isolatedEncode.ts",
-          "line": 33,
+          "line": 54,
           "column": 1,
           "kind": "problem-class"
         }

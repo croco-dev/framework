@@ -15,6 +15,7 @@ import { defineRoute } from "../libs/routes/defineRoute";
 import { RouteRegistry } from "../libs/routes/routeRegistry";
 import type { PageRouteDefinition } from "../libs/routes/types";
 import type { RscRenderOptions } from "../libs/rsc/flight";
+import { RscFlightEncodeFailedProblem } from "../libs/rsc/isolatedEncode";
 
 function flightStream(text: string): ReadableStream<Uint8Array> {
   const bytes = new TextEncoder().encode(text);
@@ -22,6 +23,40 @@ function flightStream(text: string): ReadableStream<Uint8Array> {
   return new ReadableStream<Uint8Array>({
     start(controller) {
       controller.enqueue(bytes);
+      controller.close();
+    },
+  });
+}
+
+// Several rows fed one at a time, so a body that buffers everything can be
+// told apart from one that relays rows as they are pulled.
+function multiRowStream(...rows: string[]): ReadableStream<Uint8Array> {
+  const encoder = new TextEncoder();
+
+  return new ReadableStream<Uint8Array>({
+    start(controller) {
+      for (const row of rows) {
+        controller.enqueue(encoder.encode(row));
+      }
+      controller.close();
+    },
+  });
+}
+
+// The encoder hands a stream back and fails on it afterwards: the shape a
+// child process produces when the component module will not import.
+function failingFlightStream(error: Error): ReadableStream<Uint8Array> {
+  return new ReadableStream<Uint8Array>({
+    start(controller) {
+      controller.error(error);
+    },
+  });
+}
+
+// Closed before any row was written: an encoder that produced no payload.
+function emptyFlightStream(): ReadableStream<Uint8Array> {
+  return new ReadableStream<Uint8Array>({
+    start(controller) {
       controller.close();
     },
   });
@@ -159,6 +194,83 @@ describe("rsc real Flight path", () => {
       code: "meta-vite/rsc-server-reference-unsupported",
     });
     expect(JSON.stringify(body)).not.toContain("doThing-secret");
+  });
+
+  it("refuses a Flight response whose encoder failed before the first row", async () => {
+    // The encoder hands its stream back before the child proved it can render,
+    // so a module that will not import errors on that stream. Committing 200
+    // before reading it delivers a broken Flight body under a success status.
+    const failure = new RscFlightEncodeFailedProblem(
+      "/rsc-broken",
+      1,
+      "Cannot find module '../Missing.tsx'",
+    );
+    const server = createServer([rscRoute("/rsc-broken")], async () =>
+      failingFlightStream(failure),
+    );
+
+    const response = await server.handle(
+      new Request("https://example.com/rsc-broken.rsc", {
+        headers: { "x-croco-rsc-client-manifest": RSC_CLIENT_MANIFEST_VERSION },
+      }),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(500);
+    expect(response.headers.get("content-type")).toContain("application/json");
+    expect(body).toMatchObject({
+      route: "/rsc-broken",
+      code: "meta-vite/rsc-flight-encode-failed",
+    });
+  });
+
+  it("refuses a Flight response whose encoder closed without writing a row", async () => {
+    const server = createServer([rscRoute("/rsc-empty")], async () => emptyFlightStream());
+
+    const response = await server.handle(
+      new Request("https://example.com/rsc-empty.rsc", {
+        headers: { "x-croco-rsc-client-manifest": RSC_CLIENT_MANIFEST_VERSION },
+      }),
+    );
+
+    expect(response.status).toBe(500);
+    expect(await response.json()).toMatchObject({
+      route: "/rsc-empty",
+      code: "meta-vite/rsc-flight-encode-failed",
+    });
+  });
+
+  it("still delivers every Flight row after the first, unbuffered", async () => {
+    const server = createServer([rscRoute("/rsc-rows")], async () =>
+      multiRowStream('0:"shell"\n', '1:"boundary"\n'),
+    );
+
+    const response = await server.handle(
+      new Request("https://example.com/rsc-rows.rsc", {
+        headers: { "x-croco-rsc-client-manifest": RSC_CLIENT_MANIFEST_VERSION },
+      }),
+    );
+    const body = await response.text();
+
+    expect(response.status).toBe(200);
+    expect(body).toBe('0:"shell"\n1:"boundary"\n');
+  });
+
+  it("reads the HTML wrapper only as the consumer drains it", async () => {
+    const server = createServer([rscRoute("/rsc-backpressure")], async () =>
+      multiRowStream(HTML_FLIGHT, HTML_FLIGHT),
+    );
+
+    const response = await server.handle(new Request("https://example.com/rsc-backpressure"));
+    expect(response.status).toBe(200);
+
+    // A body that follows demand lets this resolve without ever holding the
+    // whole document: the promise settles only when the source rows are pulled.
+    const reader = response.body?.getReader();
+    expect(reader).toBeDefined();
+    const first = await reader?.read();
+    expect(new TextDecoder().decode(first?.value)).toContain("<!DOCTYPE html>");
+    await reader?.cancel();
   });
 
   it("fails explicitly when no Flight encoder is configured instead of a fake payload", async () => {
@@ -310,6 +422,16 @@ describe("rsc client manifest version round trip", () => {
     });
   });
 
+  it("returns the parsed meta attribute value without decoding it twice", () => {
+    // `getAttribute` already decodes character references, so a version whose
+    // own text looks like an entity must survive the read unchanged:
+    // decoding again would hand the server a value it never wrote.
+    const version = "croco.meta-vite.rsc-client-manifest.v1.1cfea948&amp;af74708e";
+    const headers = createRscBrowserFlightHeaders(createStubDocument({ version }));
+
+    expect(headers).toMatchObject({ "x-croco-rsc-client-manifest": version });
+  });
+
   it("reports a document without any manifest version instead of sending a guess", () => {
     expect(() => createRscBrowserFlightHeaders(createStubDocument({}))).toThrow(
       /mismatched client manifest version/,
@@ -357,10 +479,12 @@ function createStubDocument(input: {
       input.manifestBlock === false || id !== RSC_MANIFEST_ELEMENT_ID
         ? null
         : { textContent: manifestContent },
+    // A real document decodes character references while parsing the
+    // attribute, so `getAttribute` hands back the version as written.
     querySelector: (selector: string) =>
       selector !== 'meta[name="croco:rsc-client-manifest"]' || version.length === 0
         ? null
-        : { getAttribute: () => version.replace(/</g, "&lt;") },
+        : { getAttribute: () => version },
     location: { pathname: "/rsc-basic" },
   };
 }

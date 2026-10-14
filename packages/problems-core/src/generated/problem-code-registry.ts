@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export type CrocoProblemRegistry = {
   readonly version: "croco.problem-code-registry.v1";
-  readonly problemCount: 1035;
+  readonly problemCount: 1036;
   readonly problems: readonly [
     {
       readonly code: "ACCESS_DENIED";
@@ -17606,7 +17606,7 @@ export type CrocoProblemRegistry = {
       readonly cookbookPath: "/reference/problem-recovery-cookbook/#meta-vite-rsc-client-reference-missing";
       readonly recovery: {
         readonly cause: "A decoded Flight client reference has no matching browser module loaded in the client manifest.";
-        readonly userAction: "Reload the page so the client bundle that owns the reference is loaded.";
+        readonly userAction: "Report the missing reference; reloading or retrying the same request repeats the failure until the client bundle that owns it is deployed.";
         readonly operatorAction: "Check the client manifest registration and browser module loading for the reported reference, then rebuild and deploy matching client and server artifacts.";
         readonly retryability: "not-retryable";
         readonly redactionPolicy: "public";
@@ -17655,6 +17655,34 @@ export type CrocoProblemRegistry = {
       ];
     },
     {
+      readonly code: "meta-vite/rsc-flight-context-unsupported";
+      readonly category: "InternalServerError";
+      readonly status: 500;
+      readonly title: "Internal Server Error";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#meta-vite-rsc-flight-context-unsupported";
+      readonly recovery: {
+        readonly cause: "Croco or an upstream dependency failed after accepting the request.";
+        readonly userAction: "Retry later only when the operation is idempotent or the caller owns retry safety.";
+        readonly operatorAction: "Use traces, logs, and upstream diagnostics to isolate the failing boundary.";
+        readonly retryability: "conditional";
+        readonly redactionPolicy: "operator-only";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.error";
+          readonly severity: "error";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/meta-vite/src/libs/rsc/isolatedEncode.ts";
+          readonly line: 40;
+          readonly column: 1;
+          readonly kind: "problem-class";
+        },
+      ];
+    },
+    {
       readonly code: "meta-vite/rsc-flight-encode-aborted";
       readonly category: "BadRequest";
       readonly status: 400;
@@ -17676,7 +17704,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/meta-vite/src/libs/rsc/isolatedEncode.ts";
-          readonly line: 52;
+          readonly line: 73;
           readonly column: 1;
           readonly kind: "problem-class";
         },
@@ -17732,7 +17760,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/meta-vite/src/libs/rsc/isolatedEncode.ts";
-          readonly line: 33;
+          readonly line: 54;
           readonly column: 1;
           readonly kind: "problem-class";
         },
@@ -29273,7 +29301,7 @@ export type CrocoProblemRegistry = {
 
 export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 1035,
+  problemCount: 1036,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -48892,7 +48920,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       recovery: {
         cause:
           "A decoded Flight client reference has no matching browser module loaded in the client manifest.",
-        userAction: "Reload the page so the client bundle that owns the reference is loaded.",
+        userAction:
+          "Report the missing reference; reloading or retrying the same request repeats the failure until the client bundle that owns it is deployed.",
         operatorAction:
           "Check the client manifest registration and browser module loading for the reported reference, then rebuild and deploy matching client and server artifacts.",
         retryability: "not-retryable",
@@ -48948,6 +48977,39 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       ],
     },
     {
+      code: "meta-vite/rsc-flight-context-unsupported",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#meta-vite-rsc-flight-context-unsupported",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/meta-vite/src/libs/rsc/isolatedEncode.ts",
+          line: 40,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
       code: "meta-vite/rsc-flight-encode-aborted",
       category: "BadRequest",
       status: 400,
@@ -48972,7 +49034,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/meta-vite/src/libs/rsc/isolatedEncode.ts",
-          line: 52,
+          line: 73,
           column: 1,
           kind: "problem-class",
         },
@@ -49035,7 +49097,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/meta-vite/src/libs/rsc/isolatedEncode.ts",
-          line: 33,
+          line: 54,
           column: 1,
           kind: "problem-class",
         },

@@ -32,10 +32,28 @@ Problem codes `meta-vite/rsc-client-manifest-mismatch`,
 `meta-vite/server-action-duplicate-registration` and
 `meta-vite/server-action-forbidden-origin` get recovery metadata in the problem
 registry, replacing the per-category defaults for these RSC and Server Action
-codes.
+codes. `meta-vite/rsc-flight-context-unsupported` is new: the isolated encoder
+renders in a child process over a JSON pipe, so a route that would need host
+context values cannot be served and is refused instead of rendering them as
+`undefined`.
 
 `@croco/frontend-react` takes a patch: its development `react` and `react-dom`
 versions move to the pinned 19.2.6 so the workspace hoists a single React
 resolution against the new peers. `@croco/meta-vite` also records
 `"./package.json"` in its workspace exports map, which keeps the isolated
 encoder's package-manifest fallback resolvable now that the map exists.
+
+Three corrections to the Flight response path that this review round surfaced:
+
+- The Flight response no longer commits `200` before the encoder proved it can
+  render. A server component that fails to import errors on the stream after
+  it was handed back, so previously a client received a success status carrying
+  a broken body. The first row is read while the status can still change, then
+  relayed with the rest; an encoder that closes without writing a row is
+  refused too.
+- The HTML wrapper is read on consumer demand instead of being drained into the
+  internal queue by a `start()` loop, so a slow client no longer holds a whole
+  document in memory per in-flight request.
+- The meta-tag fallback returns the attribute value the HTML parser already
+  decoded, instead of decoding it a second time and mangling a version whose
+  own text contains an entity-looking sequence.
