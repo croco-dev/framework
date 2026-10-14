@@ -1,3 +1,6 @@
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { renderUsage } from "citty";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
@@ -10,6 +13,7 @@ import {
 } from "@croco/protocols-core";
 
 import { contractsDiff, runContractsDiff } from "../commands/contractsDiff.js";
+import { runCroco } from "../commands/root.js";
 
 describe("contractsDiff", () => {
   beforeEach(() => {});
@@ -23,6 +27,197 @@ describe("contractsDiff", () => {
     expect(usage).toContain("mutually exclusive");
     expect(usage).toContain("CONTROLLERGLOB");
   });
+
+  it("should accept --cwd in root snapshot comparisons and resolve relative input and output paths", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "croco-contracts-cwd-"));
+    const processCwd = process.cwd();
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    const io = {
+      stdout: (message: string) => stdout.push(message),
+      stderr: (message: string) => stderr.push(message),
+    };
+    try {
+      const baseline = stringifyContractGraphSnapshot(
+        createContractGraphSnapshot(createGraph(["UsersController.listUsers"])),
+      );
+      const current = stringifyContractGraphSnapshot(
+        createContractGraphSnapshot(
+          createGraph(["UsersController.listUsers", "UsersController.createUser"]),
+        ),
+      );
+      const snapshot = join(dir, "baseline.json");
+      writeFileSync(snapshot, baseline);
+      writeFileSync(join(dir, "current.json"), current);
+      const common = ["contracts", "diff", "--baseline", snapshot, "--current-snapshot", snapshot];
+      expect(await runCroco(common, io)).toEqual({ exitCode: 0 });
+      expect(await runCroco([...common, "--cwd", dir], io)).toEqual({ exitCode: 0 });
+      expect(
+        await runCroco(
+          [
+            "contracts",
+            "diff",
+            "--cwd",
+            dir,
+            "--baseline",
+            "baseline.json",
+            "--current-snapshot",
+            "current.json",
+            "--out",
+            "reports/diff.json",
+          ],
+          io,
+        ),
+      ).toEqual({ exitCode: 0 });
+      expect(JSON.parse(readFileSync(join(dir, "reports/diff.json"), "utf8"))).toMatchObject({
+        baselineRouteCount: 1,
+        currentRouteCount: 2,
+        nonBreakingChangeCount: 1,
+        hasBreakingChanges: false,
+      });
+      expect(stderr).toEqual([]);
+      expect(process.cwd()).toBe(processCwd);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it.each([
+    ["leaf assignment", ["contracts", "diff", "--cwd=$cwd"]],
+    ["root assignment", ["--cwd=$cwd", "contracts", "diff"]],
+    ["root separate value", ["--cwd", "$cwd", "contracts", "diff"]],
+    ["parent assignment", ["contracts", "--cwd=$cwd", "diff"]],
+    ["parent separate value", ["contracts", "--cwd", "$cwd", "diff"]],
+  ])("should resolve snapshot and report paths with %s cwd", async (_name, prefix) => {
+    const dir = mkdtempSync(join(tmpdir(), "croco-contracts-cwd-assignment-"));
+    const processCwd = process.cwd();
+    const io = { stdout: () => {}, stderr: () => {} };
+    try {
+      writeFileSync(
+        join(dir, "baseline.json"),
+        stringifyContractGraphSnapshot(
+          createContractGraphSnapshot(createGraph(["UsersController.listUsers"])),
+        ),
+      );
+      writeFileSync(
+        join(dir, "current.json"),
+        stringifyContractGraphSnapshot(
+          createContractGraphSnapshot(
+            createGraph(["UsersController.listUsers", "UsersController.createUser"]),
+          ),
+        ),
+      );
+      expect(
+        await runCroco(
+          [
+            ...prefix.map((arg) => arg.replace("$cwd", dir)),
+            "--baseline",
+            "baseline.json",
+            "--current-snapshot",
+            "current.json",
+            "--out",
+            "reports/diff.json",
+          ],
+          io,
+        ),
+      ).toEqual({ exitCode: 0 });
+      expect(JSON.parse(readFileSync(join(dir, "reports/diff.json"), "utf8"))).toMatchObject({
+        baselineRouteCount: 1,
+        currentRouteCount: 2,
+        nonBreakingChangeCount: 1,
+        hasBreakingChanges: false,
+      });
+      expect(process.cwd()).toBe(processCwd);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it.each([{ args: ["--cwd="] }, { args: ["--cwd", ""] }, { args: ["--cwd"] }])(
+    "should reject empty cwd %j before reading or writing files",
+    async ({ args: cwdArgs }) => {
+      const snapshot = stringifyContractGraphSnapshot(createContractGraphSnapshot(createGraph([])));
+      const readFile = vi.fn(() => snapshot);
+      const writeFile = vi.fn();
+      const loadContractGraph = vi.fn();
+      const stderr: string[] = [];
+
+      expect(
+        await runContractsDiff(
+          [
+            "--baseline",
+            "baseline.json",
+            "--current-snapshot",
+            "current.json",
+            "--out",
+            "diff.json",
+            ...cwdArgs,
+          ],
+          {
+            loadContractGraph,
+            io: {
+              readFile,
+              writeFile,
+              stdout: () => {},
+              stderr: (message) => stderr.push(message),
+            },
+          },
+        ),
+      ).toBe(1);
+      expect(stderr).toContain("Missing working directory. Pass --cwd <path>.");
+      expect(readFile).not.toHaveBeenCalled();
+      expect(writeFile).not.toHaveBeenCalled();
+      expect(loadContractGraph).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each([["src/**/*.ts"], ["--controllers", "src/**/*.ts"]])(
+    "should resolve controller input %j against a relative --cwd",
+    async (...controllerArgs) => {
+      const snapshot = stringifyContractGraphSnapshot(
+        createContractGraphSnapshot(createGraph(["UsersController.listUsers"])),
+      );
+      const loadContractGraph = vi.fn(async () => createGraph(["UsersController.listUsers"]));
+      const readFile = vi.fn(() => snapshot);
+      const exitCode = await runContractsDiff(
+        ["--cwd", "app", "--baseline", "baseline.json", ...controllerArgs],
+        {
+          loadContractGraph,
+          io: { cwd: "/workspace", readFile, stdout: () => {}, stderr: () => {} },
+        },
+      );
+      expect(exitCode).toBe(0);
+      expect(readFile).toHaveBeenCalledWith("/workspace/app/baseline.json");
+      expect(loadContractGraph).toHaveBeenCalledWith("/workspace/app/src/**/*.ts", {
+        strictSchemas: false,
+      });
+    },
+  );
+
+  it.each([["src/**/*.ts"], ["--controllers", "src/**/*.ts"]])(
+    "should still reject controller input %j alongside a snapshot with --cwd",
+    async (...controllerArgs) => {
+      const stderr: string[] = [];
+      const readFile = vi.fn();
+      const exitCode = await runContractsDiff(
+        [
+          "--cwd",
+          "/workspace/app",
+          "--baseline",
+          "baseline.json",
+          "--current-snapshot",
+          "current.json",
+          ...controllerArgs,
+        ],
+        {
+          io: { readFile, stdout: () => {}, stderr: (message) => stderr.push(message) },
+        },
+      );
+      expect(exitCode).toBe(1);
+      expect(stderr).toContainEqual(expect.stringContaining("mutually exclusive"));
+      expect(readFile).not.toHaveBeenCalled();
+    },
+  );
 
   it("should pass with non-breaking additive route changes", async () => {
     const stdout: string[] = [];
