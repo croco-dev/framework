@@ -3335,6 +3335,14 @@ const recoveryMetadataByCategory = {
 } as const satisfies Record<ProblemCategory, ProblemRecoveryMetadata>;
 
 const recoveryMetadataByCode = {
+  "research/survey-expired": recovery({
+    cause: "The survey invitation expired before the response was submitted.",
+    userAction: "Request a new survey invitation before retrying.",
+    operatorAction: "Inspect the invitation expiry timestamp and invitation lifecycle.",
+    retryability: "not-retryable",
+    redactionPolicy: "public",
+    severity: "info",
+  }),
   BILLING_STATUS_MAPPING_FAILED: recovery({
     cause: "Polar sent a valid subscription status that the billing contract cannot represent.",
     userAction: "Do not retry the unchanged webhook payload.",

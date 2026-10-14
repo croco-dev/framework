@@ -23839,9 +23839,9 @@ export type CrocoProblemRegistry = {
       readonly title: "Validation Error";
       readonly cookbookPath: "/reference/problem-recovery-cookbook/#research-survey-expired";
       readonly recovery: {
-        readonly cause: "The request or generated contract failed schema or semantic validation.";
-        readonly userAction: "Fix the invalid fields and retry with schema-conformant input.";
-        readonly operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.";
+        readonly cause: "The survey invitation expired before the response was submitted.";
+        readonly userAction: "Request a new survey invitation before retrying.";
+        readonly operatorAction: "Inspect the invitation expiry timestamp and invitation lifecycle.";
         readonly retryability: "not-retryable";
         readonly redactionPolicy: "public";
         readonly telemetry: {
@@ -56198,9 +56198,9 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       title: "Validation Error",
       cookbookPath: "/reference/problem-recovery-cookbook/#research-survey-expired",
       recovery: {
-        cause: "The request or generated contract failed schema or semantic validation.",
-        userAction: "Fix the invalid fields and retry with schema-conformant input.",
-        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        cause: "The survey invitation expired before the response was submitted.",
+        userAction: "Request a new survey invitation before retrying.",
+        operatorAction: "Inspect the invitation expiry timestamp and invitation lifecycle.",
         retryability: "not-retryable",
         redactionPolicy: "public",
         telemetry: {

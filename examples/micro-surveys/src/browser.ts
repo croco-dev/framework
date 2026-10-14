@@ -86,6 +86,7 @@ function InvitedSurvey(props: {
 function App() {
   const saveButton = useRef<HTMLButtonElement>(null);
   const [boot, setBoot] = useState<{ publication: SurveyPublication; access: SurveyAdminAccess }>();
+  const [bootstrapError, setBootstrapError] = useState("");
   const [name, setName] = useState("First report");
   const [product, setProduct] = useState("");
   const [invitation, setInvitation] = useState<Invitation>();
@@ -119,7 +120,11 @@ function App() {
     void api<{ publication: SurveyPublication; access: SurveyAdminAccess }>(
       "/api/bootstrap",
       "operator",
-    ).then(setBoot);
+    )
+      .then(setBoot)
+      .catch((error: unknown) =>
+        setBootstrapError(error instanceof Error ? error.message : "Survey editor unavailable"),
+      );
     void refresh();
   }, []);
   const saveSequence = useRef(0);
@@ -250,6 +255,7 @@ function App() {
           },
         }),
       h("p", { role: "status" }, surveyMessage),
+      bootstrapError && h("p", { role: "alert" }, bootstrapError),
       boot &&
         h(SurveyEditor, {
           access: boot.access,

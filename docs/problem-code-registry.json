@@ -25460,9 +25460,9 @@
       "title": "Validation Error",
       "cookbookPath": "/reference/problem-recovery-cookbook/#research-survey-expired",
       "recovery": {
-        "cause": "The request or generated contract failed schema or semantic validation.",
-        "userAction": "Fix the invalid fields and retry with schema-conformant input.",
-        "operatorAction": "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        "cause": "The survey invitation expired before the response was submitted.",
+        "userAction": "Request a new survey invitation before retrying.",
+        "operatorAction": "Inspect the invitation expiry timestamp and invitation lifecycle.",
         "retryability": "not-retryable",
         "redactionPolicy": "public",
         "telemetry": {

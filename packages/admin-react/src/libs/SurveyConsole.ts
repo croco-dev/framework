@@ -237,6 +237,8 @@ function ResponseRow(props: {
   async function act(remove: boolean) {
     try {
       if (!reason.trim()) throw new SurveyInvalidProblem("Reason is required");
+      if (!remove && !classification.trim())
+        throw new SurveyInvalidProblem("Classification is required");
       setBusy(true);
       if (remove) await props.onDelete?.(r, reason);
       else await props.onClassify?.(r, classification, reason);

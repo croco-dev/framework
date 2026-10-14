@@ -28,18 +28,47 @@ const api = async (path, input, role = "operator") => {
   return result.json();
 };
 const counters = () => api("/api/results", { denominator: "invitation" });
-async function screen(name) {
+async function screen(name, target = page) {
   const path = join(out, `${name}.png`);
-  await page.screenshot({ path, fullPage: true });
+  await target.screenshot({ path, fullPage: true });
   evidence.push({
     name,
     path,
-    viewport: page.viewportSize(),
-    overflow: await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth),
+    viewport: target.viewportSize(),
+    overflow: await target.evaluate(() => document.documentElement.scrollWidth > window.innerWidth),
   });
   assert.equal(evidence[evidence.length - 1].overflow, false);
 }
 try {
+  const failedBootstrap = await browser.newPage();
+  const bootstrapErrors = [];
+  failedBootstrap.on("pageerror", (error) => bootstrapErrors.push(error.message));
+  await failedBootstrap.route("**/api/bootstrap", (route) =>
+    route.fulfill({
+      status: 503,
+      contentType: "application/json",
+      body: JSON.stringify({ message: "Bootstrap unavailable" }),
+    }),
+  );
+  try {
+    await failedBootstrap.goto(origin);
+    await failedBootstrap
+      .getByRole("alert")
+      .filter({ hasText: "Bootstrap unavailable" })
+      .waitFor({ timeout: 5000 });
+    assert.equal(
+      await failedBootstrap.getByRole("button", { name: "Save report", exact: true }).isEnabled(),
+      true,
+    );
+    await screen("bootstrap-unavailable-product-ready", failedBootstrap);
+    assert.deepEqual(
+      bootstrapErrors,
+      [],
+      "Bootstrap failures must be handled without an unhandled rejection",
+    );
+  } finally {
+    await failedBootstrap.close();
+  }
   await page.goto(origin);
   await page.getByRole("heading", { name: "Survey editor", exact: true }).waitFor();
   const before = await counters();
@@ -129,6 +158,24 @@ try {
   assert.equal(await page.locator("script").count(), 1, "Raw text must not create script elements");
   const response = page.getByRole("article", { name: "Response revision 1" });
   await response.getByLabel("Operation reason").fill("Synthetic human review");
+  let classificationRequests = 0;
+  await page.route("**/api/change", async (route) => {
+    classificationRequests++;
+    await route.continue();
+  });
+  await response.getByLabel("Human classification", { exact: true }).fill("   ");
+  await response.getByRole("button", { name: "Save classification" }).click();
+  await response
+    .getByText("Invalid survey input: Classification is required", { exact: true })
+    .waitFor();
+  assert.equal(
+    classificationRequests,
+    0,
+    "Blank classification must not invoke its callback or send an API request",
+  );
+  assert.deepEqual(await api("/api/raw", {}), raw);
+  await screen("blank-classification-no-request");
+  await page.unroute("**/api/change");
   await response.getByLabel("Human classification", { exact: true }).fill("Usability feedback");
   await response.getByRole("button", { name: "Save classification" }).click();
   await page.getByText("Human classification: Usability feedback").waitFor();
@@ -357,6 +404,8 @@ try {
           "cross-version frequency",
           "raw text escape",
           "human classification separation",
+          "blank classification rejected before callback",
+          "bootstrap failure visible without blocking product action",
           "deletion preserves denominator",
           "raw permission",
           "responsive overflow",

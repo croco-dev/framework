@@ -998,6 +998,27 @@ class Missing extends Base { constructor() { super("literal"); } }`,
     }
   });
 
+  it("requires a new invitation after survey expiry instead of retrying the expired token", () => {
+    const repo = createTempRepo();
+    writeFile(
+      repo,
+      "packages/research-core/src/libs/SurveyProblems.ts",
+      readFileSync(
+        join(process.cwd(), "packages/research-core/src/libs/SurveyProblems.ts"),
+        "utf-8",
+      ),
+    );
+    const registry = createProblemCodeRegistry(discoverProblemCodes(repo));
+    const expired = registry.problems.find(({ code }) => code === "research/survey-expired");
+    expect(expired?.recovery).toMatchObject({
+      retryability: "not-retryable",
+      redactionPolicy: "public",
+      telemetry: { severity: "info" },
+    });
+    expect(expired?.recovery.cause).toMatch(/survey invitation expired/i);
+    expect(expired?.recovery.userAction).toMatch(/new survey invitation/i);
+  });
+
   it("publishes profile-selection recovery for SaaS profile mismatches", () => {
     const repo = createTempRepo();
     writeFile(
