@@ -389,7 +389,8 @@ export class SurveyManager {
     }
     await this.store.transaction(input.scope, async (s) => {
       const r = await s.get("response", input.invitationId);
-      if (!r || r.kind !== "response") throw new SurveyConflictProblem("response missing");
+      if (!r || r.kind !== "response" || r.id !== r.value.invitationId)
+        throw new SurveyConflictProblem("current response missing");
       const auditId = JSON.stringify([input.operation, r.id, input.idempotencyKey]);
       const done = await s.get("audit", auditId);
       if (done) {

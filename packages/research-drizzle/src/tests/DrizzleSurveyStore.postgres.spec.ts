@@ -289,6 +289,63 @@ describe.skipIf(!url)("PostgreSQL micro surveys", () => {
       }),
     ).rejects.toThrow();
   });
+  it("rejects historical response IDs before deletion or classification", async () => {
+    const i = await invite();
+    await manager.expose(tokenInput(i.token));
+    await manager.submitResponse({
+      ...tokenInput(i.token),
+      answers: { result: "unclear", text: "Original private feedback" },
+      idempotencyKey: "original",
+    });
+    await manager.submitResponse({
+      ...tokenInput(i.token),
+      answers: { result: "useful", text: "Current private feedback" },
+      expectedRevision: 1,
+      idempotencyKey: "edited",
+    });
+    const before = await first.query(
+      "select kind,id,payload from research_records where kind in ('response','audit') order by kind,id",
+    );
+    for (const operation of ["delete", "classify"] as const) {
+      await expect(
+        manager.changeResponse({
+          ...admin,
+          invitationId: JSON.stringify([i.invitationId, 1]),
+          operation,
+          classification: operation === "classify" ? "Historical note" : undefined,
+          expectedRevision: 1,
+          reason: "Privacy review",
+          idempotencyKey: `historical-${operation}`,
+        }),
+      ).rejects.toBeInstanceOf(SurveyConflictProblem);
+      const after = await first.query(
+        "select kind,id,payload from research_records where kind in ('response','audit') order by kind,id",
+      );
+      expect(after.rows).toEqual(before.rows);
+    }
+    expect((await manager.rawResponses({ ...admin, familyId: d.id, limit: 1 }))[0]).toMatchObject({
+      revision: 2,
+      answers: { result: "useful", text: "Current private feedback" },
+    });
+    await manager.changeResponse({
+      ...admin,
+      invitationId: i.invitationId,
+      operation: "delete",
+      expectedRevision: 2,
+      reason: "Privacy request",
+      idempotencyKey: "current-delete",
+    });
+    const erased = await first.query("select payload from research_records where kind='response'");
+    expect(erased.rows).toHaveLength(2);
+    expect(
+      erased.rows.every(
+        (row) => Object.keys(row.payload.answers).length === 0 && row.payload.deletedAt,
+      ),
+    ).toBe(true);
+    expect(
+      (await manager.results({ ...admin, familyId: d.id, denominator: "invitation" })).submitted,
+    ).toBe(1);
+  });
   it("separates classification and erases all raw revisions while preserving counts", async () => {
     const i = await invite();
     await manager.expose(tokenInput(i.token));
