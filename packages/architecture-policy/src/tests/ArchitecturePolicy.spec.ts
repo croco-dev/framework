@@ -731,6 +731,70 @@ describe("architecture policy engine", () => {
     ]);
   });
 
+  it.each([
+    {
+      name: "omitted filter",
+      includePackages: undefined,
+      privateImports: ["@fixture/scoped/internal", "plain-lib/internal"],
+    },
+    {
+      name: "explicit unscoped glob",
+      includePackages: ["*"],
+      privateImports: ["plain-lib/internal"],
+    },
+    {
+      name: "explicit scoped glob",
+      includePackages: ["@fixture/*"],
+      privateImports: ["@fixture/scoped/internal"],
+    },
+    { name: "explicit empty filter", includePackages: [], privateImports: [] },
+  ])("checks public entrypoints with $name", ({ includePackages, privateImports }) => {
+    const repo = createTempRepo();
+    writePackage(repo, "packages/app", "@fixture/app");
+    for (const [directory, name] of [
+      ["scoped", "@fixture/scoped"],
+      ["plain", "plain-lib"],
+    ]) {
+      writePackage(repo, `packages/${directory}`, name, {
+        exports: { ".": "./dist/index.js", "./public": "./dist/public.js" },
+      });
+    }
+    writeFile(
+      repo,
+      "packages/app/src/index.ts",
+      [
+        'import "@fixture/scoped/public";',
+        'import "@fixture/scoped/internal";',
+        'import "plain-lib/public";',
+        'import "plain-lib/internal";',
+      ].join("\n"),
+    );
+
+    const report = checkArchitecturePolicy({
+      rootDir: repo,
+      manifest: {
+        schemaVersion: ARCHITECTURE_POLICY_SCHEMA_VERSION,
+        rules: {
+          publicEntrypoints: {
+            id: "public",
+            ...(includePackages === undefined ? {} : { includePackages }),
+          },
+        },
+      },
+    });
+
+    expect(report.status).toBe(privateImports.length > 0 ? "fail" : "pass");
+    expect(report.diagnostics).toEqual(
+      privateImports.map((importSpecifier) =>
+        expect.objectContaining({
+          code: "architecture-policy/private-entrypoint-import",
+          ruleId: "public",
+          importSpecifier,
+        }),
+      ),
+    );
+  });
+
   it("sorts diagnostics by file and source location", () => {
     const repo = createTempRepo();
     writePackage(repo, "packages/repository-core", "@croco/repository-core");
