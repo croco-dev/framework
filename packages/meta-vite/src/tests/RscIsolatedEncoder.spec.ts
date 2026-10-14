@@ -1,12 +1,19 @@
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { existsSync } from "node:fs";
+import { mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
+import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 import {
   encodeRscFlightInIsolatedEncoder,
   RscFlightEncodeAbortedProblem,
 } from "../libs/rsc/isolatedEncode";
 import type { RenderRouteIR } from "../libs/routes/types";
+
+// `src/tests` lives two directory levels below the package root, which owns the
+// manifest the workspace exports map resolves.
+const packageRoot = dirname(dirname(dirname(fileURLToPath(import.meta.url))));
 
 // Stays alive without unresolved top-level await: the only way this child ends
 // early is the caller's abort signal, which is what these tests cover.
@@ -228,4 +235,41 @@ describe("isolated RSC encoder lifecycle", () => {
     // torn down rather than left rendering until the encode timeout.
     await expect(collect(stream)).resolves.toBe("");
   }, 10_000);
+});
+
+// A workspace consumer resolves the encoder through the package's own exports
+// map, so an `exports` entry that omits the manifest makes every deep path
+// unresolvable and pushes the spawn onto a cwd-dependent heuristic. This
+// keeps the documented chain intact.
+describe("workspace encoder module resolution", () => {
+  const consumerRoots: string[] = [];
+
+  afterEach(async () => {
+    await Promise.all(
+      consumerRoots
+        .splice(0)
+        .map((dir) => rm(dir, { recursive: true, force: true, maxRetries: 3, retryDelay: 20 })),
+    );
+  });
+
+  it("resolves the encoder entry from the installed package manifest", async () => {
+    const consumerRoot = await mkdtemp(join(tmpdir(), "croco-rsc-encoder-consumer-"));
+    consumerRoots.push(consumerRoot);
+    await writeFile(
+      join(consumerRoot, "package.json"),
+      `${JSON.stringify({ name: "croco-rsc-encoder-consumer", private: true }, null, 2)}\n`,
+      "utf8",
+    );
+    // A workspace consumer sees the package through `node_modules`, so the
+    // exports map that governs resolution is the workspace manifest's.
+    await mkdir(join(consumerRoot, "node_modules", "@croco"), { recursive: true });
+    await symlink(packageRoot, join(consumerRoot, "node_modules", "@croco", "meta-vite"), "dir");
+
+    const anchor = createRequire(join(consumerRoot, "package.json"));
+    const manifestPath = anchor.resolve("@croco/meta-vite/package.json");
+    const entryPath = join(dirname(manifestPath), "dist", "libs", "rsc", "flightEncode.entry.js");
+
+    expect(entryPath.startsWith(packageRoot)).toBe(true);
+    expect(existsSync(entryPath)).toBe(true);
+  });
 });

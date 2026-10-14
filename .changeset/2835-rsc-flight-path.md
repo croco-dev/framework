@@ -1,6 +1,7 @@
 ---
 "@croco/meta-vite": minor
 "@croco/problems-core": patch
+"@croco/frontend-react": patch
 ---
 
 Implement real React Flight RSC path (#2835): official `@vitejs/plugin-rsc`
@@ -32,3 +33,9 @@ Problem codes `meta-vite/rsc-client-manifest-mismatch`,
 `meta-vite/server-action-forbidden-origin` get recovery metadata in the problem
 registry, replacing the per-category defaults for these RSC and Server Action
 codes.
+
+`@croco/frontend-react` takes a patch: its development `react` and `react-dom`
+versions move to the pinned 19.2.6 so the workspace hoists a single React
+resolution against the new peers. `@croco/meta-vite` also records
+`"./package.json"` in its workspace exports map, which keeps the isolated
+encoder's package-manifest fallback resolvable now that the map exists.
