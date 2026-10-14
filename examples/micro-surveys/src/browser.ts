@@ -100,6 +100,8 @@ function App() {
   const after = useRef("");
   const [fixture, setFixture] = useState("ready");
   const [csv, setCsv] = useState("");
+  const [exportError, setExportError] = useState("");
+  const [exporting, setExporting] = useState(false);
   const refreshSequence = useRef(0);
   async function refresh(kind = denominator.current, cursor = after.current) {
     const sequence = ++refreshSequence.current;
@@ -309,13 +311,25 @@ function App() {
       h(
         "button",
         {
+          type: "button",
+          disabled: exporting,
           onClick: async () => {
-            const result = await api<{ csv: string }>("/api/export", "operator", {});
-            setCsv(result.csv);
+            setCsv("");
+            setExportError("");
+            setExporting(true);
+            try {
+              const result = await api<{ csv: string }>("/api/export", "operator", {});
+              setCsv(result.csv);
+            } catch (error) {
+              setExportError(error instanceof Error ? error.message : "Export unavailable");
+            } finally {
+              setExporting(false);
+            }
           },
         },
         "Export first 100 responses",
       ),
+      exportError && h("p", { role: "alert" }, exportError),
       csv && h("pre", { "aria-label": "Escaped CSV" }, csv),
     ),
   );

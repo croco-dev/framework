@@ -69,6 +69,44 @@ try {
   } finally {
     await failedBootstrap.close();
   }
+  const failedExport = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+  const exportErrors = [];
+  failedExport.on("pageerror", (error) => exportErrors.push(error.message));
+  try {
+    await failedExport.goto(origin);
+    await failedExport.getByRole("heading", { name: "Survey editor", exact: true }).waitFor();
+    const exportButton = failedExport.getByRole("button", {
+      name: "Export first 100 responses",
+      exact: true,
+    });
+    await exportButton.click();
+    const csvOutput = failedExport.locator('pre[aria-label="Escaped CSV"]');
+    await csvOutput.waitFor();
+    assert.ok((await csvOutput.textContent()).length > 0);
+    await failedExport.route("**/api/export", (route) =>
+      route.fulfill({
+        status: 503,
+        contentType: "application/json",
+        body: JSON.stringify({ message: "Export unavailable" }),
+      }),
+    );
+    await exportButton.click();
+    await failedExport
+      .getByRole("alert")
+      .filter({ hasText: "Export unavailable" })
+      .waitFor({ timeout: 5000 });
+    assert.equal(await csvOutput.count(), 0, "A failed export must not retain stale CSV output");
+    assert.deepEqual(exportErrors, [], "Export failures must not become unhandled rejections");
+    await screen("export-unavailable-no-stale-csv", failedExport);
+    assert.equal(await exportButton.isEnabled(), true);
+    await failedExport.unroute("**/api/export");
+    await exportButton.click();
+    await csvOutput.waitFor();
+    assert.equal(await failedExport.getByRole("alert").count(), 0);
+    assert.deepEqual(exportErrors, []);
+  } finally {
+    await failedExport.close();
+  }
   await page.goto(origin);
   await page.getByRole("heading", { name: "Survey editor", exact: true }).waitFor();
   const before = await counters();
@@ -404,6 +442,7 @@ try {
           "cross-version frequency",
           "raw text escape",
           "human classification separation",
+          "export failure visible without stale CSV or unhandled rejection",
           "blank classification rejected before callback",
           "bootstrap failure visible without blocking product action",
           "deletion preserves denominator",
