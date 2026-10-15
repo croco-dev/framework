@@ -2534,6 +2534,45 @@ describe("buildContractGraph", () => {
     );
   });
 
+  it.each([
+    ["bare optional", z.string().optional(), false],
+    ["readonly optional", z.string().optional().readonly(), false],
+    ["optional readonly", z.string().readonly().optional(), false],
+    ["branded optional", z.string().optional().brand<"Label">(), false],
+    ["nullable optional", z.string().optional().nullable(), false],
+    ["optional nullable", z.string().nullable().optional(), false],
+    ["nested wrappers", z.string().optional().readonly().brand<"Label">().nullable(), false],
+    ["wrapped default", z.string().default("fallback").readonly().nullable(), false],
+    ["required readonly", z.string().readonly(), true],
+    ["required branded nullable", z.string().nullable().brand<"Label">().readonly(), true],
+  ])("should preserve input presence for %s in descriptors and diffs", (_name, field, required) => {
+    const schema = z.object({ label: field });
+    const snapshot = (body: z.ZodTypeAny) => {
+      @Controller("/labels")
+      class LabelsController {
+        @Post("/")
+        create(@Body(body) _body: unknown): void {}
+      }
+      return createContractGraphSnapshot(buildContractGraph([LabelsController]));
+    };
+    const current = snapshot(schema);
+    expect(schema.safeParse({}).success).toBe(!required);
+    expect(current.routes[0]?.request.body?.fields).toEqual([
+      expect.objectContaining({ name: "label", required }),
+    ]);
+    const diff = diffContractGraphSnapshots(snapshot(z.object({})), current);
+    expect(diff.hasBreakingChanges).toBe(required);
+    expect(diff.changes).toEqual([
+      expect.objectContaining({
+        code: required
+          ? "contract-request-required-field-added"
+          : "contract-request-optional-field-added",
+        fieldPath: "label",
+        severity: required ? "breaking" : "non-breaking",
+      }),
+    ]);
+  });
+
   it("should classify required request expansion as breaking and optional fields as non-breaking", () => {
     const BaselineController = (() => {
       @Controller("/users")
