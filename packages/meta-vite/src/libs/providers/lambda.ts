@@ -107,8 +107,8 @@ function convertApiGatewayEventToRequest(event: unknown): Request {
   }
   const body = evt.body as string | undefined;
   const isBase64 = evt.isBase64Encoded as boolean | undefined;
-  const baseUrl = headers["x-forwarded-proto"] === "https" ? "https://" : "http://";
-  const host = headers.host ?? "lambda.local";
+  const baseUrl = requestHeaders.get("x-forwarded-proto") === "https" ? "https://" : "http://";
+  const host = requestHeaders.get("host") ?? "lambda.local";
 
   let requestBody: BodyInit | undefined;
   if (body && isBase64) {
