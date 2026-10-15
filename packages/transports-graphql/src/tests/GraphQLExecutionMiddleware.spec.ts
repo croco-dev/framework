@@ -55,6 +55,39 @@ describe("GraphQL execution metadata inheritance", () => {
 
   afterEach(() => Container.reset());
 
+  it("reapplies a resolver transformation when an outer interceptor retries", async () => {
+    class RetryOnce implements GraphQLInterceptor {
+      async intercept(_context: GraphQLInterceptorContext, next: { handle(): Promise<unknown> }) {
+        try {
+          return await next.handle();
+        } catch {
+          return next.handle();
+        }
+      }
+    }
+    Container.set(RetryOnce, new RetryOnce());
+    let attempts = 0;
+
+    @Resolver()
+    class RetryResolver {
+      @Query(() => String)
+      @UseInterceptors(RetryOnce, Uppercase)
+      retried() {
+        attempts++;
+        if (attempts === 1) {
+          throw new Error("temporary resolver failure");
+        }
+        return "recovered";
+      }
+    }
+
+    expect(await execute([RetryResolver], "{ retried }")).toEqual({
+      data: { retried: "RECOVERED" },
+    });
+    expect(attempts).toBe(2);
+    expect(calls).toEqual(["uppercase", "uppercase"]);
+  });
+
   it("executes the interceptor once for both the base and child schemas", async () => {
     @Resolver()
     class BaseResolver {
