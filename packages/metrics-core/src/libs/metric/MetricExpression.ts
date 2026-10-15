@@ -200,14 +200,17 @@ export function dateBucket(
   granularity: "day" | "month",
   zone: string,
 ): { readonly granularity: "day" | "month"; readonly zone: string } {
+  resolvedZone(zone);
+  return { granularity, zone };
+}
+
+function resolvedZone(zone: string): string {
+  requireCondition(!/^(?:[+-]|(?:GMT|UTC)[+-]|Etc\/GMT)/i.test(zone), "METRIC_INVALID_ZONE", zone);
   try {
-    const resolved = new Intl.DateTimeFormat("en-US", { timeZone: zone }).resolvedOptions()
-      .timeZone;
-    requireCondition(resolved === zone && !zone.startsWith("Etc/GMT"), "METRIC_INVALID_ZONE", zone);
+    return new Intl.DateTimeFormat("en-US", { timeZone: zone }).resolvedOptions().timeZone;
   } catch {
     throw new MetricExpressionError("METRIC_INVALID_ZONE", zone);
   }
-  return { granularity, zone };
 }
 
 function allColumns(expression: MetricExpression): MetricColumnRef[] {
@@ -359,7 +362,10 @@ export function defineMetric<const C extends Readonly<Record<string, MetricColum
   }
   if (options.bucket) dateBucket(options.bucket.granularity, options.bucket.zone);
   if (options.bucket && options.time.column.type === "date") {
-    requireCondition(options.bucket.zone === options.time.column.zone, "METRIC_ZONE_MISMATCH");
+    requireCondition(
+      resolvedZone(options.bucket.zone) === resolvedZone(options.time.column.zone),
+      "METRIC_ZONE_MISMATCH",
+    );
   }
   const declaration = {
     id,

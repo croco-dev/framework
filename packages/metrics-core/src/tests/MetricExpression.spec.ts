@@ -11,6 +11,7 @@ import {
   exactDistinct,
   max,
   min,
+  MetricExpressionError,
   project,
   ratio,
   sum,
@@ -428,6 +429,106 @@ describe("MetricExpression", () => {
         population: "events",
       }),
     ).toThrowError("METRIC_FOREIGN_COLUMN");
+  });
+
+  it.each([
+    ["Asia/Kolkata", "Asia/Calcutta", "2026-03-31T18:30:00.000Z"],
+    ["Europe/Kyiv", "Europe/Kiev", "2026-03-31T21:00:00.000Z"],
+    ["Etc/UTC", "UTC", "2026-04-01T00:00:00.000Z"],
+  ])("uses the same day and month boundaries for %s and %s", (zone, alias, boundary) => {
+    for (const granularity of ["day", "month"] as const) {
+      for (const name of [zone, alias]) {
+        const bucket = dateBucket(granularity, name);
+        expect(bucket).toEqual({ granularity, zone: name });
+        const metric = defineMetric("alias_clicks", {
+          version: 1,
+          from: events,
+          measure: sum(project(events, "clicks")),
+          time: project(events, "at"),
+          unit: "clicks",
+          population: "events",
+          bucket,
+        });
+        expect(
+          evaluateMetric(
+            metric,
+            [
+              { at: new Date(Date.parse(boundary) - 1).toISOString(), clicks: "3" },
+              { at: boundary, clicks: "7" },
+            ],
+            window,
+          ),
+        ).toEqual([
+          { group: {}, bucket: granularity === "day" ? "2026-03-31" : "2026-03", value: "3" },
+          { group: {}, bucket: granularity === "day" ? "2026-04-01" : "2026-04", value: "7" },
+        ]);
+      }
+    }
+  });
+
+  it.each([
+    ["Asia/Kolkata", "Asia/Calcutta"],
+    ["Asia/Calcutta", "Asia/Kolkata"],
+    ["Europe/Kyiv", "Europe/Kiev"],
+    ["Europe/Kiev", "Europe/Kyiv"],
+    ["Etc/UTC", "UTC"],
+    ["UTC", "Etc/UTC"],
+  ])("matches date column zone %s with bucket zone %s", (zone, bucketZone) => {
+    const daily = {
+      name: "daily",
+      kind: "transaction",
+      columns: { date: { type: "date", zone }, value: { type: "int64" } },
+    } as const;
+    // A literal bucket exercises defineMetric's validation even without dateBucket().
+    const metric = defineMetric("alias_dates", {
+      version: 1,
+      from: daily,
+      measure: sum(project(daily, "value")),
+      time: project(daily, "date"),
+      unit: "events",
+      population: "daily rows",
+      bucket: { granularity: "month", zone: bucketZone },
+    });
+    expect(
+      evaluateMetric(
+        metric,
+        [
+          { date: "2026-03-31", value: "3" },
+          { date: "2026-04-01", value: "7" },
+        ],
+        { from: "2026-03-01", to: "2026-05-01" },
+      ),
+    ).toEqual([
+      { group: {}, bucket: "2026-03", value: "3" },
+      { group: {}, bucket: "2026-04", value: "7" },
+    ]);
+  });
+
+  it.each(["UTC+9", "+09:00", "Etc/GMT-9", "etc/gmt-9", "Invalid/Zone", ""])(
+    "rejects unsupported zone %s with a typed error",
+    (zone) => {
+      expect(() => dateBucket("day", zone)).toThrowError(MetricExpressionError);
+      expect(() => dateBucket("day", zone)).toThrowError("METRIC_INVALID_ZONE");
+    },
+  );
+
+  it("rejects distinct date zones even when their current offsets agree", () => {
+    const daily = {
+      name: "daily",
+      kind: "transaction",
+      columns: { date: { type: "date", zone: "America/New_York" } },
+    } as const;
+    expect(() =>
+      defineMetric("different_zones", {
+        version: 1,
+        from: daily,
+        measure: count(),
+        time: project(daily, "date"),
+        unit: "rows",
+        population: "daily rows",
+        bucket: dateBucket("day", "America/Lima"),
+      }),
+    ).toThrowError("METRIC_ZONE_MISMATCH");
   });
 
   it("uses an explicit IANA zone for DST calendar buckets", () => {
