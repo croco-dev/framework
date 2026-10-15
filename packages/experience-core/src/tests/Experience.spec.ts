@@ -123,6 +123,157 @@ describe("Experience", () => {
       expect(again.exposureHandle.exposureId).not.toBe(evaluated.exposureHandle.exposureId);
   });
 
+  it("pins selected copy across provider edits and new revisions", async () => {
+    const store = new TestStore();
+    vi.spyOn(store, "reserve").mockImplementation(async ({ receipt }) => {
+      store.receipts.set(receipt.decision.decisionId, structuredClone(receipt));
+      return true;
+    });
+    const content = {
+      locale: "en",
+      title: "Original title",
+      body: "Original body",
+      actionUrl: "/first",
+    };
+    store.configs = [{ ...config, content }];
+    const input = {
+      placement,
+      scope,
+      subject: { kind: "user", id: "u1" },
+      context: { plan: "paid" },
+      store,
+      now,
+    };
+    const first = await evaluatePlacement(input);
+    expect(first.reason).toBe("selected");
+    if (first.reason !== "selected") return;
+    const original = structuredClone(first.decision);
+
+    content.title = "Revised title";
+    content.body = "Revised body";
+    content.actionUrl = "/second";
+    store.configs = [{ ...config, revision: 2, content }];
+    const second = await evaluatePlacement(input);
+    expect(second.reason).toBe("selected");
+    if (second.reason !== "selected") return;
+    expect(second.decision.decisionId).not.toBe(first.decision.decisionId);
+    expect(second.decision.policyVersion).toBe(2);
+    expect(second.decision.content).toEqual({
+      locale: "en",
+      title: "Revised title",
+      body: "Revised body",
+      actionUrl: "/second",
+    });
+    content.locale = "fr";
+    content.title = "Later title";
+    content.body = "Later body";
+    delete (content as { actionUrl?: string }).actionUrl;
+    expect(first.decision).toEqual(original);
+    expect(first.decision.policyVersion).toBe(1);
+    expect(first.decision.content).toEqual({
+      locale: "en",
+      title: "Original title",
+      body: "Original body",
+      actionUrl: "/first",
+    });
+    for (const selected of [first, second]) {
+      expect((await store.readDecision(scope, selected.decision.decisionId))?.decision).toEqual(
+        selected.decision,
+      );
+    }
+  });
+
+  it("detaches decision identity and nested cohort references before reservation", async () => {
+    const selectedScope = { ...scope };
+    const subject = { kind: "user", id: "u1" };
+    const snapshotScope = { ...scope };
+    const sourceSnapshotRefs = ["source-original"];
+    const snapshot: CohortSnapshot = {
+      snapshotId: "snapshot-1",
+      scope: snapshotScope,
+      subjectKind: "user",
+      definitionId: "buyers",
+      definitionVersion: 1,
+      schemaVersion: 1,
+      sourceSnapshotRefs,
+      asOf: "2026-09-27T00:00:00.000Z",
+      generatedAt: "2026-09-27T01:00:00.000Z",
+      validUntil: "2026-09-29T00:00:00.000Z",
+      contentHash: cohortContentHash(["u1"]),
+      publicationRevision: 1,
+      privacyVersion: "p1",
+      membershipRef: "members-1",
+    };
+    const cohortReader = new PublishedCohortReader(
+      { read: async () => ({ snapshot, subjectIds: ["u1"], withdrawn: false }) },
+      { currentVersion: async () => "p1", isAllowed: async () => true },
+    );
+    const content = { locale: "en", title: "Selected title", body: "Selected body" };
+    const store = new TestStore();
+    store.configs = [{ ...config, content, targeting: { cohortSnapshotId: "snapshot-1" } }];
+    vi.spyOn(store, "reserve").mockImplementation(async ({ receipt }) => {
+      store.receipts.set(receipt.decision.decisionId, structuredClone(receipt));
+      content.title = "Provider edit during reservation";
+      selectedScope.tenantId = "changed-tenant";
+      subject.id = "changed-subject";
+      snapshotScope.appId = "changed-app";
+      sourceSnapshotRefs.push("source-later");
+      return true;
+    });
+    const selected = await evaluatePlacement({
+      placement,
+      scope: selectedScope,
+      subject,
+      context: { plan: "paid" },
+      store,
+      now,
+      cohortReader,
+    });
+    expect(selected.reason).toBe("selected");
+    if (selected.reason !== "selected") return;
+    expect(selected.decision.content.title).toBe("Selected title");
+    expect(selected.decision.scope).toEqual(scope);
+    expect(selected.decision.subject).toEqual({ kind: "user", id: "u1" });
+    expect(selected.decision.sourceSnapshotRef?.scope).toEqual(scope);
+    expect(selected.decision.sourceSnapshotRef?.sourceSnapshotRefs).toEqual(["source-original"]);
+    expect((await store.readDecision(scope, selected.decision.decisionId))?.decision).toEqual(
+      selected.decision,
+    );
+  });
+
+  it("keeps no-match, reservation rejection, and provider failure distinct", async () => {
+    const store = new TestStore();
+    const input = {
+      placement,
+      scope,
+      subject: { kind: "user", id: "u1" },
+      context: { plan: "paid" },
+      store,
+      now,
+    };
+    expect(await evaluatePlacement(input)).toEqual({
+      reason: "no_match",
+      detail: "no_candidate",
+      decision: null,
+    });
+    store.configs = [config];
+    const reserve = vi.spyOn(store, "reserve").mockResolvedValue(false);
+    expect(await evaluatePlacement(input)).toEqual({
+      reason: "no_match",
+      detail: "reservation_rejected",
+      decision: null,
+    });
+    const failure = new Error("Reservation provider unavailable");
+    reserve.mockRejectedValue(failure);
+    const onUnavailable = vi.fn();
+    expect(await evaluatePlacement({ ...input, onUnavailable })).toEqual({
+      reason: "unavailable",
+      decision: null,
+    });
+    expect(onUnavailable).toHaveBeenCalledExactlyOnceWith(failure);
+    expect(store.receipts.size).toBe(0);
+  });
+
   it("skips an invalid stored candidate but reports unavailable when no valid candidate serves", async () => {
     const store = new TestStore();
     const invalid = {
