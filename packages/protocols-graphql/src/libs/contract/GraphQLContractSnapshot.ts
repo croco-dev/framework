@@ -241,7 +241,7 @@ function toResolverMethodSnapshot(
 
   return {
     methodName,
-    guards: readReferenceMetadata(GRAPHQL_GUARDS_KEY, prototype, methodName),
+    guards: readReferenceMetadata(GRAPHQL_GUARDS_KEY, prototype, methodName).sort(compareStrings),
     interceptors: readReferenceMetadata(GRAPHQL_INTERCEPTORS_KEY, prototype, methodName),
     roles: readStringMetadata(GRAPHQL_ROLES_KEY, prototype, methodName),
     problems: readProblemResponses(prototype, methodName),
@@ -255,7 +255,7 @@ function readReferenceMetadata(key: symbol, target: object, methodName: string):
     return [];
   }
 
-  return value.map(toReferenceName).sort(compareStrings);
+  return value.map(toReferenceName);
 }
 
 function readStringMetadata(key: symbol, target: object, methodName: string): string[] {

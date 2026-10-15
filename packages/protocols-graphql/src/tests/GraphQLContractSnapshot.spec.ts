@@ -111,6 +111,49 @@ describe("GraphQL contract snapshots", () => {
     );
   });
 
+  it("preserves repeated interceptor positions while normalizing independent resolver order", async () => {
+    class ZuluInterceptor extends AuditInterceptor {}
+    class AlphaInterceptor extends AuditInterceptor {}
+
+    @GraphQLResolver()
+    class ZuluResolver {
+      @Query(() => String)
+      @UseInterceptors(ZuluInterceptor, AlphaInterceptor, ZuluInterceptor)
+      zulu(): string {
+        return "zulu";
+      }
+    }
+
+    @GraphQLResolver()
+    class AlphaResolver {
+      @Query(() => String)
+      alpha(): string {
+        return "alpha";
+      }
+    }
+
+    const schema = await buildContractSchema([ZuluResolver, AlphaResolver]);
+    const snapshot = createGraphQLContractSnapshot(schema, {
+      resolvers: [ZuluResolver, AlphaResolver],
+    });
+    const reordered = createGraphQLContractSnapshot(schema, {
+      resolvers: [AlphaResolver, ZuluResolver],
+    });
+    expect(snapshot.resolvers.map((resolver) => resolver.resolverName)).toEqual([
+      "AlphaResolver",
+      "ZuluResolver",
+    ]);
+    expect(snapshot.resolvers[1]?.methods[0]?.interceptors).toEqual([
+      "ZuluInterceptor",
+      "AlphaInterceptor",
+      "ZuluInterceptor",
+    ]);
+    expect(stringifyGraphQLContractSnapshot(reordered)).toBe(
+      stringifyGraphQLContractSnapshot(snapshot),
+    );
+    expect(diffGraphQLContractSnapshots(snapshot, reordered).changes).toEqual([]);
+  });
+
   it("classifies added and removed resolver operations in snapshot diffs", async () => {
     @GraphQLResolver()
     class HealthResolver {

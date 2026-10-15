@@ -2,6 +2,10 @@ import "reflect-metadata";
 import { createRequire } from "node:module";
 import { Container } from "@croco/framework-context";
 import {
+  createGraphQLContractSnapshot,
+  diffGraphQLContractSnapshots,
+  stringifyGraphQLContractSnapshot,
+  GraphQLResolver,
   Field,
   FieldResolver,
   InterfaceType,
@@ -534,5 +538,89 @@ describe("GraphQL execution metadata inheritance", () => {
       break;
     }
     expect(calls).toEqual(["subscribe", "uppercase"]);
+  });
+});
+
+describe("GraphQL interceptor contract order", () => {
+  beforeEach(() => Container.reset());
+  afterEach(() => Container.reset());
+
+  it("reports response-changing interceptor reordering and regenerates identical snapshots", async () => {
+    class Add implements GraphQLInterceptor {
+      async intercept(_context: GraphQLInterceptorContext, next: { handle(): Promise<unknown> }) {
+        return Number(await next.handle()) + 1;
+      }
+    }
+
+    class Double implements GraphQLInterceptor {
+      async intercept(_context: GraphQLInterceptorContext, next: { handle(): Promise<unknown> }) {
+        return Number(await next.handle()) * 2;
+      }
+    }
+
+    Container.set(Add, new Add());
+    Container.set(Double, new Double());
+
+    const makeResolver = (
+      interceptors: [typeof Add, typeof Double] | [typeof Double, typeof Add],
+    ) => {
+      @GraphQLResolver()
+      class SampleResolver {
+        @Query(() => Number)
+        @UseInterceptors(...interceptors)
+        sample(): number {
+          return 3;
+        }
+      }
+      return SampleResolver;
+    };
+
+    const First = makeResolver([Add, Double]);
+    const Second = makeResolver([Double, Add]);
+    const firstSchema = await SchemaCompiler.compileSchema({
+      resolvers: [First],
+      autoDiscover: false,
+    });
+    const secondSchema = await SchemaCompiler.compileSchema({
+      resolvers: [Second],
+      autoDiscover: false,
+    });
+    expect(await graphql({ schema: firstSchema, source: "{ sample }" })).toEqual({
+      data: { sample: 7 },
+    });
+    expect(await graphql({ schema: secondSchema, source: "{ sample }" })).toEqual({
+      data: { sample: 8 },
+    });
+
+    const before = createGraphQLContractSnapshot(firstSchema, { resolvers: [First] });
+    const after = createGraphQLContractSnapshot(secondSchema, { resolvers: [Second] });
+    expect(before.sdl).toBe(after.sdl);
+    expect(before.resolvers[0]?.methods[0]?.interceptors).toEqual(["Add", "Double"]);
+    expect(after.resolvers[0]?.methods[0]?.interceptors).toEqual(["Double", "Add"]);
+    for (const [baseline, current] of [
+      [before, after],
+      [after, before],
+    ] as const) {
+      expect(diffGraphQLContractSnapshots(baseline, current).changes).toEqual([
+        expect.objectContaining({
+          code: "graphql-resolver-interceptors-changed",
+          severity: "breaking",
+          resolverName: "SampleResolver",
+          methodName: "sample",
+          fieldPath: "interceptors",
+        }),
+      ]);
+    }
+
+    const regenerated = makeResolver([Double, Add]);
+    const regeneratedSchema = await SchemaCompiler.compileSchema({
+      resolvers: [regenerated],
+      autoDiscover: false,
+    });
+    const repeated = createGraphQLContractSnapshot(regeneratedSchema, { resolvers: [regenerated] });
+    expect(stringifyGraphQLContractSnapshot(repeated)).toBe(
+      stringifyGraphQLContractSnapshot(after),
+    );
+    expect(diffGraphQLContractSnapshots(after, repeated).changes).toEqual([]);
   });
 });
