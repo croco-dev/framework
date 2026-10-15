@@ -3,7 +3,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { GuardInterceptor } from "../libs/interceptors/GuardInterceptor";
 import { InterceptorChain } from "../libs/interceptors/InterceptorChain";
 import { LoggingInterceptor } from "../libs/interceptors/LoggingInterceptor";
-import type { GraphQLCallHandler, GraphQLInterceptorContext } from "../libs/types/InterceptorTypes";
+import type {
+  GraphQLCallHandler,
+  GraphQLInterceptor,
+  GraphQLInterceptorContext,
+} from "../libs/types/InterceptorTypes";
 
 const createMockContext = (): GraphQLInterceptorContext => ({
   root: {},
@@ -64,6 +68,64 @@ describe("InterceptorChain", () => {
 
     expect(result).toBe("result");
     expect(order).toEqual([1, 2, 3, 4]);
+  });
+
+  it("should rerun downstream transformations after a failed handler attempt", async () => {
+    const retry: GraphQLInterceptor = {
+      async intercept(_context, next) {
+        try {
+          return await next.handle();
+        } catch {
+          return next.handle();
+        }
+      },
+    };
+    const transform = vi.fn(
+      async (_context: GraphQLInterceptorContext, next: GraphQLCallHandler) => {
+        return `${await next.handle()}-transformed`;
+      },
+    );
+    const finalHandler = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("temporary"))
+      .mockResolvedValueOnce("recovered");
+
+    const result = await InterceptorChain.execute(
+      [retry, { intercept: transform }],
+      createMockContext(),
+      finalHandler,
+    );
+
+    expect(result).toBe("recovered-transformed");
+    expect(transform).toHaveBeenCalledTimes(2);
+    expect(finalHandler).toHaveBeenCalledTimes(2);
+  });
+
+  it("should run the full downstream chain for each sequential continuation call", async () => {
+    const repeat: GraphQLInterceptor = {
+      async intercept(_context, next) {
+        const first = await next.handle();
+        const second = await next.handle();
+        return [first, second];
+      },
+    };
+    const prefix: GraphQLInterceptor = {
+      async intercept(_context, next) {
+        return `outer(${await next.handle()})`;
+      },
+    };
+    const suffix: GraphQLInterceptor = {
+      async intercept(_context, next) {
+        return `${await next.handle()}-inner`;
+      },
+    };
+    const finalHandler = vi.fn().mockResolvedValueOnce("first").mockResolvedValueOnce("second");
+    const chain = new InterceptorChain([repeat, prefix, suffix]);
+
+    const result = await chain.execute(createMockContext(), finalHandler);
+
+    expect(result).toEqual(["outer(first-inner)", "outer(second-inner)"]);
+    expect(finalHandler).toHaveBeenCalledTimes(2);
   });
 
   it("should execute static method", async () => {

@@ -12,24 +12,21 @@ export class InterceptorChain {
   }
 
   async execute<T>(context: GraphQLInterceptorContext, finalHandler: () => Promise<T>): Promise<T> {
-    let index = 0;
-
-    const next = async (): Promise<T> => {
+    const dispatch = async (index: number): Promise<T> => {
       if (index >= this.interceptors.length) {
         return finalHandler();
       }
 
       const interceptor = this.interceptors[index];
-      index++;
 
       const callHandler: GraphQLCallHandler<T> = {
-        handle: next,
+        handle: () => dispatch(index + 1),
       };
 
       return interceptor.intercept(context, callHandler) as Promise<T>;
     };
 
-    return next();
+    return dispatch(0);
   }
 
   static async execute<T>(
