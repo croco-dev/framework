@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export type CrocoProblemRegistry = {
   readonly version: "croco.problem-code-registry.v1";
-  readonly problemCount: 1047;
+  readonly problemCount: 1060;
   readonly problems: readonly [
     {
       readonly code: "ACCESS_DENIED";
@@ -17907,6 +17907,370 @@ export type CrocoProblemRegistry = {
       ];
     },
     {
+      readonly code: "meta-vite/rsc-client-build-id-invalid";
+      readonly category: "BadRequest";
+      readonly status: 400;
+      readonly title: "Bad Request";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#meta-vite-rsc-client-build-id-invalid";
+      readonly recovery: {
+        readonly cause: "The configured RSC client build id contains characters a header value cannot carry.";
+        readonly userAction: "Do not retry unchanged: the server configuration has to be fixed first.";
+        readonly operatorAction: "Replace the client build id passed to the render options with the build id the plugin recorded in croco-rsc-client-build.json (letters, digits, dot, underscore, dash).";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "operator-only";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.error";
+          readonly severity: "error";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/meta-vite/src/libs/rsc/flight.ts";
+          readonly line: 51;
+          readonly column: 1;
+          readonly kind: "problem-class";
+        },
+      ];
+    },
+    {
+      readonly code: "meta-vite/rsc-client-manifest-mismatch";
+      readonly category: "BadRequest";
+      readonly status: 400;
+      readonly title: "Bad Request";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#meta-vite-rsc-client-manifest-mismatch";
+      readonly recovery: {
+        readonly cause: "The client and server RSC manifest versions do not match.";
+        readonly userAction: "Reload the page so the browser picks up the deployed client bundle.";
+        readonly operatorAction: "Rebuild the client and server bundles from the same manifest and deploy them together; a Flight request without the manifest header is reported as received 'missing'.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "public";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.warning";
+          readonly severity: "warning";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/meta-vite/src/libs/rsc/flight.ts";
+          readonly line: 79;
+          readonly column: 1;
+          readonly kind: "problem-class";
+        },
+      ];
+    },
+    {
+      readonly code: "meta-vite/rsc-client-reference-missing";
+      readonly category: "BadRequest";
+      readonly status: 400;
+      readonly title: "Bad Request";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#meta-vite-rsc-client-reference-missing";
+      readonly recovery: {
+        readonly cause: "A decoded Flight client reference has no matching browser module loaded in the client manifest.";
+        readonly userAction: "Report the missing reference; reloading or retrying the same request repeats the failure until the client bundle that owns it is deployed.";
+        readonly operatorAction: "Check the client manifest registration and browser module loading for the reported reference, then rebuild and deploy matching client and server artifacts.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "public";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.info";
+          readonly severity: "info";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/meta-vite/src/libs/rsc/flight.ts";
+          readonly line: 108;
+          readonly column: 1;
+          readonly kind: "problem-class";
+        },
+      ];
+    },
+    {
+      readonly code: "meta-vite/rsc-encoder-entry-invalid-input";
+      readonly category: "BadRequest";
+      readonly status: 400;
+      readonly title: "Bad Request";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#meta-vite-rsc-encoder-entry-invalid-input";
+      readonly recovery: {
+        readonly cause: "The encoder entry received an unusable route payload or component reference.";
+        readonly userAction: "Retry the request; a malformed payload needs a client fix.";
+        readonly operatorAction: "Check the reported reason against the route registry and the componentRef format '<module-path>#<exportName>'.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "public";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.error";
+          readonly severity: "error";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/meta-vite/src/libs/rsc/flightEncode.entry.ts";
+          readonly line: 28;
+          readonly column: 1;
+          readonly kind: "problem-class";
+        },
+      ];
+    },
+    {
+      readonly code: "meta-vite/rsc-flight-context-unsupported";
+      readonly category: "InternalServerError";
+      readonly status: 500;
+      readonly title: "Internal Server Error";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#meta-vite-rsc-flight-context-unsupported";
+      readonly recovery: {
+        readonly cause: "The route needs runtime context values that the isolated Flight encoder cannot carry into its child process.";
+        readonly userAction: "Remove the runtime context from this request and retry, or serve the route without an isolated encoder.";
+        readonly operatorAction: "Either drop the context values the route reads and render from the request alone, or supply an encoder that renders in-process. Retrying with the same context fails again: the values cannot cross the child-process boundary.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "operator-only";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.error";
+          readonly severity: "error";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/meta-vite/src/libs/rsc/isolatedEncode.ts";
+          readonly line: 40;
+          readonly column: 1;
+          readonly kind: "problem-class";
+        },
+      ];
+    },
+    {
+      readonly code: "meta-vite/rsc-flight-encode-aborted";
+      readonly category: "BadRequest";
+      readonly status: 400;
+      readonly title: "Bad Request";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#meta-vite-rsc-flight-encode-aborted";
+      readonly recovery: {
+        readonly cause: "The client disconnected before the isolated Flight encoder finished.";
+        readonly userAction: "Reload the page to request the route again.";
+        readonly operatorAction: "Cancel the encoder child process on abort and check for clients that repeatedly drop connections, which would otherwise leak processes.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "public";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.info";
+          readonly severity: "info";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/meta-vite/src/libs/rsc/isolatedEncode.ts";
+          readonly line: 73;
+          readonly column: 1;
+          readonly kind: "problem-class";
+        },
+      ];
+    },
+    {
+      readonly code: "meta-vite/rsc-flight-encode-failed";
+      readonly category: "InternalServerError";
+      readonly status: 500;
+      readonly title: "Internal Server Error";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#meta-vite-rsc-flight-encode-failed";
+      readonly recovery: {
+        readonly cause: "The isolated Flight encoder process exited with a non-zero status.";
+        readonly userAction: "Retry the request; if it keeps failing, contact the service operator.";
+        readonly operatorAction: "Read the encoder detail from the problem extensions and the encoder logs. Fix the failing server component, then retry.";
+        readonly retryability: "conditional";
+        readonly redactionPolicy: "operator-only";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.error";
+          readonly severity: "error";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/meta-vite/src/libs/rsc/isolatedEncode.ts";
+          readonly line: 10;
+          readonly column: 1;
+          readonly kind: "problem-class";
+        },
+      ];
+    },
+    {
+      readonly code: "meta-vite/rsc-flight-encode-timeout";
+      readonly category: "InternalServerError";
+      readonly status: 500;
+      readonly title: "Internal Server Error";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#meta-vite-rsc-flight-encode-timeout";
+      readonly recovery: {
+        readonly cause: "The isolated Flight encoder exceeded its render budget for the route.";
+        readonly userAction: "Do not retry unchanged: the route will time out again until the operator fixes it.";
+        readonly operatorAction: "Inspect the reported route and timeoutMs for unbounded work in server components, resolve it, then retry the request. Raise the encode budget only after the route itself is bounded.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "operator-only";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.error";
+          readonly severity: "error";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/meta-vite/src/libs/rsc/isolatedEncode.ts";
+          readonly line: 54;
+          readonly column: 1;
+          readonly kind: "problem-class";
+        },
+      ];
+    },
+    {
+      readonly code: "meta-vite/rsc-flight-not-acceptable";
+      readonly category: "NotImplemented";
+      readonly status: 501;
+      readonly title: "Not Implemented";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#meta-vite-rsc-flight-not-acceptable";
+      readonly recovery: {
+        readonly cause: "The route is declared as an RSC route but the runtime has no Flight encoder configured.";
+        readonly userAction: "Use a runtime that configures a Flight encoder for RSC routes.";
+        readonly operatorAction: "Register a Flight encoder (encodeFlight) on the render server instead of leaving the route without one.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "public";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.error";
+          readonly severity: "error";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/meta-vite/src/libs/rsc/flight.ts";
+          readonly line: 65;
+          readonly column: 1;
+          readonly kind: "problem-class";
+        },
+      ];
+    },
+    {
+      readonly code: "meta-vite/rsc-peer-missing";
+      readonly category: "NotImplemented";
+      readonly status: 501;
+      readonly title: "Not Implemented";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#meta-vite-rsc-peer-missing";
+      readonly recovery: {
+        readonly cause: "The requested capability is not supported by this runtime or adapter.";
+        readonly userAction: "Use a supported capability or choose an adapter/runtime that provides it.";
+        readonly operatorAction: "Check runtime capability declarations and provider maturity documentation.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "public";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.info";
+          readonly severity: "info";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/meta-vite/src/libs/vite/crocoMetaVitePlugin.ts";
+          readonly line: 22;
+          readonly column: 1;
+          readonly kind: "problem-class";
+        },
+      ];
+    },
+    {
+      readonly code: "meta-vite/rsc-server-reference-unsupported";
+      readonly category: "NotImplemented";
+      readonly status: 501;
+      readonly title: "Not Implemented";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#meta-vite-rsc-server-reference-unsupported";
+      readonly recovery: {
+        readonly cause: "A Flight request carried a server reference this route does not support.";
+        readonly userAction: "Call the registered Server Action endpoint instead of passing a server reference.";
+        readonly operatorAction: "Route the client to the registered action path; unsupported server references fail explicitly rather than rendering silently.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "public";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.warning";
+          readonly severity: "warning";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/meta-vite/src/libs/rsc/flight.ts";
+          readonly line: 93;
+          readonly column: 1;
+          readonly kind: "problem-class";
+        },
+      ];
+    },
+    {
+      readonly code: "meta-vite/server-action-duplicate-registration";
+      readonly category: "Conflict";
+      readonly status: 409;
+      readonly title: "Conflict";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#meta-vite-server-action-duplicate-registration";
+      readonly recovery: {
+        readonly cause: "Two server actions were registered under the same name.";
+        readonly userAction: "Rename one of the actions or remove the duplicate registration.";
+        readonly operatorAction: "Find every registration carrying the reported action name and keep a single one; the registry refuses ambiguous bindings instead of picking a handler.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "public";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.error";
+          readonly severity: "error";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/meta-vite/src/libs/actions/serverActions.ts";
+          readonly line: 93;
+          readonly column: 1;
+          readonly kind: "problem-class";
+        },
+      ];
+    },
+    {
+      readonly code: "meta-vite/server-action-forbidden-origin";
+      readonly category: "Forbidden";
+      readonly status: 403;
+      readonly title: "Forbidden";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#meta-vite-server-action-forbidden-origin";
+      readonly recovery: {
+        readonly cause: "The request Origin is not in the server action allowedOrigins list.";
+        readonly userAction: "Send the request from an allowed origin registered in allowedOrigins.";
+        readonly operatorAction: "Verify the request Origin header against the allowedOrigins configuration; requests without a verifiable Origin are rejected when an allowlist is set.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "safe-message";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.warning";
+          readonly severity: "warning";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/meta-vite/src/libs/actions/serverActions.ts";
+          readonly line: 172;
+          readonly column: 1;
+          readonly kind: "problem-class";
+        },
+      ];
+    },
+    {
       readonly code: "meta-vite/server-action-invalid-content-type";
       readonly category: "UnsupportedMediaType";
       readonly status: 415;
@@ -17928,7 +18292,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/meta-vite/src/libs/actions/serverActions.ts";
-          readonly line: 131;
+          readonly line: 151;
           readonly column: 1;
           readonly kind: "problem-class";
         },
@@ -17956,7 +18320,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/meta-vite/src/libs/actions/serverActions.ts";
-          readonly line: 87;
+          readonly line: 107;
           readonly column: 1;
           readonly kind: "problem-class";
         },
@@ -17984,7 +18348,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/meta-vite/src/libs/actions/serverActions.ts";
-          readonly line: 115;
+          readonly line: 135;
           readonly column: 1;
           readonly kind: "problem-class";
         },
@@ -18012,7 +18376,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/meta-vite/src/libs/actions/serverActions.ts";
-          readonly line: 73;
+          readonly line: 74;
           readonly column: 1;
           readonly kind: "problem-class";
         },
@@ -18040,7 +18404,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/meta-vite/src/libs/actions/serverActions.ts";
-          readonly line: 101;
+          readonly line: 121;
           readonly column: 1;
           readonly kind: "problem-class";
         },
@@ -29609,7 +29973,7 @@ export type CrocoProblemRegistry = {
 
 export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 1047,
+  problemCount: 1060,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -49552,6 +49916,422 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       ],
     },
     {
+      code: "meta-vite/rsc-client-build-id-invalid",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath: "/reference/problem-recovery-cookbook/#meta-vite-rsc-client-build-id-invalid",
+      recovery: {
+        cause:
+          "The configured RSC client build id contains characters a header value cannot carry.",
+        userAction: "Do not retry unchanged: the server configuration has to be fixed first.",
+        operatorAction:
+          "Replace the client build id passed to the render options with the build id the plugin recorded in croco-rsc-client-build.json (letters, digits, dot, underscore, dash).",
+        retryability: "not-retryable",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/meta-vite/src/libs/rsc/flight.ts",
+          line: 51,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "meta-vite/rsc-client-manifest-mismatch",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath: "/reference/problem-recovery-cookbook/#meta-vite-rsc-client-manifest-mismatch",
+      recovery: {
+        cause: "The client and server RSC manifest versions do not match.",
+        userAction: "Reload the page so the browser picks up the deployed client bundle.",
+        operatorAction:
+          "Rebuild the client and server bundles from the same manifest and deploy them together; a Flight request without the manifest header is reported as received 'missing'.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/meta-vite/src/libs/rsc/flight.ts",
+          line: 79,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "meta-vite/rsc-client-reference-missing",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath: "/reference/problem-recovery-cookbook/#meta-vite-rsc-client-reference-missing",
+      recovery: {
+        cause:
+          "A decoded Flight client reference has no matching browser module loaded in the client manifest.",
+        userAction:
+          "Report the missing reference; reloading or retrying the same request repeats the failure until the client bundle that owns it is deployed.",
+        operatorAction:
+          "Check the client manifest registration and browser module loading for the reported reference, then rebuild and deploy matching client and server artifacts.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/meta-vite/src/libs/rsc/flight.ts",
+          line: 108,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "meta-vite/rsc-encoder-entry-invalid-input",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#meta-vite-rsc-encoder-entry-invalid-input",
+      recovery: {
+        cause: "The encoder entry received an unusable route payload or component reference.",
+        userAction: "Retry the request; a malformed payload needs a client fix.",
+        operatorAction:
+          "Check the reported reason against the route registry and the componentRef format '<module-path>#<exportName>'.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/meta-vite/src/libs/rsc/flightEncode.entry.ts",
+          line: 28,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "meta-vite/rsc-flight-context-unsupported",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#meta-vite-rsc-flight-context-unsupported",
+      recovery: {
+        cause:
+          "The route needs runtime context values that the isolated Flight encoder cannot carry into its child process.",
+        userAction:
+          "Remove the runtime context from this request and retry, or serve the route without an isolated encoder.",
+        operatorAction:
+          "Either drop the context values the route reads and render from the request alone, or supply an encoder that renders in-process. Retrying with the same context fails again: the values cannot cross the child-process boundary.",
+        retryability: "not-retryable",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/meta-vite/src/libs/rsc/isolatedEncode.ts",
+          line: 40,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "meta-vite/rsc-flight-encode-aborted",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath: "/reference/problem-recovery-cookbook/#meta-vite-rsc-flight-encode-aborted",
+      recovery: {
+        cause: "The client disconnected before the isolated Flight encoder finished.",
+        userAction: "Reload the page to request the route again.",
+        operatorAction:
+          "Cancel the encoder child process on abort and check for clients that repeatedly drop connections, which would otherwise leak processes.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/meta-vite/src/libs/rsc/isolatedEncode.ts",
+          line: 73,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "meta-vite/rsc-flight-encode-failed",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#meta-vite-rsc-flight-encode-failed",
+      recovery: {
+        cause: "The isolated Flight encoder process exited with a non-zero status.",
+        userAction: "Retry the request; if it keeps failing, contact the service operator.",
+        operatorAction:
+          "Read the encoder detail from the problem extensions and the encoder logs. Fix the failing server component, then retry.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/meta-vite/src/libs/rsc/isolatedEncode.ts",
+          line: 10,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "meta-vite/rsc-flight-encode-timeout",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#meta-vite-rsc-flight-encode-timeout",
+      recovery: {
+        cause: "The isolated Flight encoder exceeded its render budget for the route.",
+        userAction:
+          "Do not retry unchanged: the route will time out again until the operator fixes it.",
+        operatorAction:
+          "Inspect the reported route and timeoutMs for unbounded work in server components, resolve it, then retry the request. Raise the encode budget only after the route itself is bounded.",
+        retryability: "not-retryable",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/meta-vite/src/libs/rsc/isolatedEncode.ts",
+          line: 54,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "meta-vite/rsc-flight-not-acceptable",
+      category: "NotImplemented",
+      status: 501,
+      title: "Not Implemented",
+      cookbookPath: "/reference/problem-recovery-cookbook/#meta-vite-rsc-flight-not-acceptable",
+      recovery: {
+        cause:
+          "The route is declared as an RSC route but the runtime has no Flight encoder configured.",
+        userAction: "Use a runtime that configures a Flight encoder for RSC routes.",
+        operatorAction:
+          "Register a Flight encoder (encodeFlight) on the render server instead of leaving the route without one.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/meta-vite/src/libs/rsc/flight.ts",
+          line: 65,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "meta-vite/rsc-peer-missing",
+      category: "NotImplemented",
+      status: 501,
+      title: "Not Implemented",
+      cookbookPath: "/reference/problem-recovery-cookbook/#meta-vite-rsc-peer-missing",
+      recovery: {
+        cause: "The requested capability is not supported by this runtime or adapter.",
+        userAction: "Use a supported capability or choose an adapter/runtime that provides it.",
+        operatorAction:
+          "Check runtime capability declarations and provider maturity documentation.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/meta-vite/src/libs/vite/crocoMetaVitePlugin.ts",
+          line: 22,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "meta-vite/rsc-server-reference-unsupported",
+      category: "NotImplemented",
+      status: 501,
+      title: "Not Implemented",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#meta-vite-rsc-server-reference-unsupported",
+      recovery: {
+        cause: "A Flight request carried a server reference this route does not support.",
+        userAction:
+          "Call the registered Server Action endpoint instead of passing a server reference.",
+        operatorAction:
+          "Route the client to the registered action path; unsupported server references fail explicitly rather than rendering silently.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/meta-vite/src/libs/rsc/flight.ts",
+          line: 93,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "meta-vite/server-action-duplicate-registration",
+      category: "Conflict",
+      status: 409,
+      title: "Conflict",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#meta-vite-server-action-duplicate-registration",
+      recovery: {
+        cause: "Two server actions were registered under the same name.",
+        userAction: "Rename one of the actions or remove the duplicate registration.",
+        operatorAction:
+          "Find every registration carrying the reported action name and keep a single one; the registry refuses ambiguous bindings instead of picking a handler.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/meta-vite/src/libs/actions/serverActions.ts",
+          line: 93,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "meta-vite/server-action-forbidden-origin",
+      category: "Forbidden",
+      status: 403,
+      title: "Forbidden",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#meta-vite-server-action-forbidden-origin",
+      recovery: {
+        cause: "The request Origin is not in the server action allowedOrigins list.",
+        userAction: "Send the request from an allowed origin registered in allowedOrigins.",
+        operatorAction:
+          "Verify the request Origin header against the allowedOrigins configuration; requests without a verifiable Origin are rejected when an allowlist is set.",
+        retryability: "not-retryable",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/meta-vite/src/libs/actions/serverActions.ts",
+          line: 172,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
       code: "meta-vite/server-action-invalid-content-type",
       category: "UnsupportedMediaType",
       status: 415,
@@ -49576,7 +50356,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/meta-vite/src/libs/actions/serverActions.ts",
-          line: 131,
+          line: 151,
           column: 1,
           kind: "problem-class",
         },
@@ -49607,7 +50387,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/meta-vite/src/libs/actions/serverActions.ts",
-          line: 87,
+          line: 107,
           column: 1,
           kind: "problem-class",
         },
@@ -49638,7 +50418,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/meta-vite/src/libs/actions/serverActions.ts",
-          line: 115,
+          line: 135,
           column: 1,
           kind: "problem-class",
         },
@@ -49669,7 +50449,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/meta-vite/src/libs/actions/serverActions.ts",
-          line: 73,
+          line: 74,
           column: 1,
           kind: "problem-class",
         },
@@ -49700,7 +50480,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/meta-vite/src/libs/actions/serverActions.ts",
-          line: 101,
+          line: 121,
           column: 1,
           kind: "problem-class",
         },
