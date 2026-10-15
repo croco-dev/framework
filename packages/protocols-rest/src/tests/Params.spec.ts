@@ -73,10 +73,19 @@ describe("Param decorators", () => {
       expect.objectContaining({ index: 1, name: "notify", type: ParamType.QUERY }),
       expect.objectContaining({ index: 0, name: "id", type: ParamType.PARAM }),
     ]);
-    expect(params.every((param) => param.pipes?.length === 1)).toBe(true);
+    expect(params.find((param) => param.type === ParamType.BODY)?.pipes).toHaveLength(1);
+    expect(params.find((param) => param.type === ParamType.PARAM)?.contractSchema).toBe(
+      updateUser.params,
+    );
+    expect(params.find((param) => param.type === ParamType.QUERY)?.contractSchema).toBe(
+      updateUser.query,
+    );
   });
 
   it.each([
+    ["plain", z.object({ id: z.string() })],
+    ["strict", z.object({ id: z.string() }).strict()],
+    ["catchall", z.object({ id: z.string() }).catchall(z.string())],
     ["refine", z.object({ id: z.string() }).refine(({ id }) => id.length > 0)],
     ["superRefine", z.object({ id: z.string() }).superRefine(() => undefined)],
     ["transform", z.object({ id: z.string() }).transform(({ id }) => ({ id: id.length }))],
