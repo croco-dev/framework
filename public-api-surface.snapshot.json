@@ -510,6 +510,12 @@
               "source": "@croco/admin-core/fact-history-validation"
             },
             {
+              "name": "GrowthWorkbenchProblem",
+              "exportKind": "named",
+              "source": "./libs/GrowthModelWorkbench",
+              "declarationKind": "class"
+            },
+            {
               "name": "JourneyAdminProblem",
               "exportKind": "named",
               "source": "./libs/JourneyOperations",
@@ -519,6 +525,24 @@
               "name": "JourneyOperations",
               "exportKind": "named",
               "source": "./libs/JourneyOperations",
+              "declarationKind": "class"
+            },
+            {
+              "name": "LearningRegistry",
+              "exportKind": "named",
+              "source": "./libs/LearningRegistry",
+              "declarationKind": "class"
+            },
+            {
+              "name": "LearningRegistryProblem",
+              "exportKind": "named",
+              "source": "./libs/LearningRegistry",
+              "declarationKind": "class"
+            },
+            {
+              "name": "LearningStorageProblem",
+              "exportKind": "named",
+              "source": "./libs/LearningRegistry",
               "declarationKind": "class"
             },
             {
@@ -609,6 +633,12 @@
               "name": "ReminderOperationsProblem",
               "exportKind": "named",
               "source": "./libs/ReminderOperations",
+              "declarationKind": "class"
+            },
+            {
+              "name": "ResearchOperations",
+              "exportKind": "named",
+              "source": "./libs/ResearchOperations",
               "declarationKind": "class"
             },
             {
@@ -876,6 +906,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "createGrowthModelWorkbenchSource",
+              "exportKind": "named",
+              "source": "./libs/GrowthModelWorkbench",
+              "declarationKind": "function"
+            },
+            {
               "name": "createInMemoryTenantBusinessSource",
               "exportKind": "named",
               "source": "./libs/TenantWorkspace",
@@ -1044,6 +1080,24 @@
               "declarationKind": "function"
             },
             {
+              "name": "importLearningEvidence",
+              "exportKind": "named",
+              "source": "./libs/LearningRegistry",
+              "declarationKind": "function"
+            },
+            {
+              "name": "learningEvidenceKey",
+              "exportKind": "named",
+              "source": "./libs/LearningRegistry",
+              "declarationKind": "function"
+            },
+            {
+              "name": "learningRecordResource",
+              "exportKind": "named",
+              "source": "./libs/LearningRegistry",
+              "declarationKind": "const"
+            },
+            {
               "name": "loadChallengeOperations",
               "exportKind": "named",
               "source": "./libs/ChallengeOperations",
@@ -1198,6 +1252,24 @@
               "source": "@croco/admin-core/fact-history-validation"
             },
             {
+              "name": "validateLearningCommit",
+              "exportKind": "named",
+              "source": "./libs/LearningRegistry",
+              "declarationKind": "function"
+            },
+            {
+              "name": "validateLearningEvidence",
+              "exportKind": "named",
+              "source": "./libs/LearningRegistry",
+              "declarationKind": "function"
+            },
+            {
+              "name": "validateLearningRecord",
+              "exportKind": "named",
+              "source": "./libs/LearningRegistry",
+              "declarationKind": "function"
+            },
+            {
               "name": "validateOfferPolicyEditor",
               "exportKind": "named",
               "source": "./libs/OfferConsole",
@@ -1207,6 +1279,18 @@
               "name": "validateReferralProgramEditor",
               "exportKind": "named",
               "source": "./libs/ReferralConsole",
+              "declarationKind": "function"
+            },
+            {
+              "name": "validateSurveyAdminAccess",
+              "exportKind": "named",
+              "source": "./libs/surveyOperations",
+              "declarationKind": "function"
+            },
+            {
+              "name": "validateSurveyPublishRequest",
+              "exportKind": "named",
+              "source": "./libs/surveyOperations",
               "declarationKind": "function"
             }
           ],
@@ -1642,6 +1726,11 @@
               "source": "./libs/CustomerExplorer"
             },
             {
+              "name": "DecisionRef",
+              "exportKind": "named",
+              "source": "./libs/LearningRegistry"
+            },
+            {
               "name": "EngagementAudienceDescriptorRow",
               "exportKind": "named",
               "source": "./libs/EngagementOperations"
@@ -1895,6 +1984,16 @@
               "name": "EventCatalogState",
               "exportKind": "named",
               "source": "./libs/EventCatalog"
+            },
+            {
+              "name": "EvidenceAccessState",
+              "exportKind": "named",
+              "source": "./libs/LearningRegistry"
+            },
+            {
+              "name": "EvidenceRef",
+              "exportKind": "named",
+              "source": "./libs/LearningRegistry"
             },
             {
               "name": "ExperienceAdminAccess",
@@ -2157,6 +2256,41 @@
               "source": "./libs/FactHistoryValidation"
             },
             {
+              "name": "GrowthReportRecord",
+              "exportKind": "named",
+              "source": "./libs/GrowthModelWorkbench"
+            },
+            {
+              "name": "GrowthReportStore",
+              "exportKind": "named",
+              "source": "./libs/GrowthModelWorkbench"
+            },
+            {
+              "name": "GrowthWorkbenchAdapter",
+              "exportKind": "named",
+              "source": "./libs/GrowthModelWorkbench"
+            },
+            {
+              "name": "GrowthWorkbenchReport",
+              "exportKind": "named",
+              "source": "./libs/GrowthModelWorkbench"
+            },
+            {
+              "name": "GrowthWorkbenchRequest",
+              "exportKind": "named",
+              "source": "./libs/GrowthModelWorkbench"
+            },
+            {
+              "name": "GrowthWorkbenchState",
+              "exportKind": "named",
+              "source": "./libs/GrowthModelWorkbench"
+            },
+            {
+              "name": "HypothesisStatus",
+              "exportKind": "named",
+              "source": "./libs/LearningRegistry"
+            },
+            {
               "name": "JourneyAdminAccess",
               "exportKind": "named",
               "source": "./libs/JourneyOperations"
@@ -2190,6 +2324,96 @@
               "name": "JourneyOperationsOptions",
               "exportKind": "named",
               "source": "./libs/JourneyOperations"
+            },
+            {
+              "name": "LearningAccess",
+              "exportKind": "named",
+              "source": "./libs/LearningRegistry"
+            },
+            {
+              "name": "LearningCommit",
+              "exportKind": "named",
+              "source": "./libs/LearningRegistry"
+            },
+            {
+              "name": "LearningContent",
+              "exportKind": "named",
+              "source": "./libs/LearningRegistry"
+            },
+            {
+              "name": "LearningEvidenceResult",
+              "exportKind": "named",
+              "source": "./libs/LearningRegistry"
+            },
+            {
+              "name": "LearningEvidenceSource",
+              "exportKind": "named",
+              "source": "./libs/LearningRegistry"
+            },
+            {
+              "name": "LearningField",
+              "exportKind": "named",
+              "source": "./libs/LearningRegistry"
+            },
+            {
+              "name": "LearningHypothesis",
+              "exportKind": "named",
+              "source": "./libs/LearningRegistry"
+            },
+            {
+              "name": "LearningMutation",
+              "exportKind": "named",
+              "source": "./libs/LearningRegistry"
+            },
+            {
+              "name": "LearningPermission",
+              "exportKind": "named",
+              "source": "./libs/LearningRegistry"
+            },
+            {
+              "name": "LearningPolicy",
+              "exportKind": "named",
+              "source": "./libs/LearningRegistry"
+            },
+            {
+              "name": "LearningProblemCode",
+              "exportKind": "named",
+              "source": "./libs/LearningRegistry"
+            },
+            {
+              "name": "LearningQuery",
+              "exportKind": "named",
+              "source": "./libs/LearningRegistry"
+            },
+            {
+              "name": "LearningRecord",
+              "exportKind": "named",
+              "source": "./libs/LearningRegistry"
+            },
+            {
+              "name": "LearningRepository",
+              "exportKind": "named",
+              "source": "./libs/LearningRegistry"
+            },
+            {
+              "name": "LearningResultSnapshot",
+              "exportKind": "named",
+              "source": "./libs/LearningRegistry"
+            },
+            {
+              "name": "LearningRevision",
+              "exportKind": "named",
+              "source": "./libs/LearningRegistry"
+            },
+            {
+              "name": "LearningScope",
+              "exportKind": "named",
+              "source": "./libs/LearningRegistry"
+            },
+            {
+              "name": "LearningView",
+              "exportKind": "named",
+              "source": "./libs/LearningRegistry"
             },
             {
               "name": "LoadCreditOperationsInput",
@@ -2477,6 +2701,16 @@
               "source": "@croco/metrics-core"
             },
             {
+              "name": "ResearchAction",
+              "exportKind": "named",
+              "source": "./libs/ResearchOperations"
+            },
+            {
+              "name": "ResearchConsoleState",
+              "exportKind": "named",
+              "source": "./libs/ResearchOperations"
+            },
+            {
               "name": "RetentionDrilldownPage",
               "exportKind": "named",
               "source": "./libs/RetentionWorkbench"
@@ -2585,6 +2819,16 @@
               "name": "SavedIntentInspection",
               "exportKind": "named",
               "source": "./libs/SavedIntentOperations"
+            },
+            {
+              "name": "SurveyAdminAccess",
+              "exportKind": "named",
+              "source": "./libs/surveyOperations"
+            },
+            {
+              "name": "SurveyPublishRequest",
+              "exportKind": "named",
+              "source": "./libs/surveyOperations"
             },
             {
               "name": "TargetingImpactAction",
@@ -2903,6 +3147,55 @@
             }
           ],
           "typeExports": []
+        },
+        {
+          "exportPath": "./survey-operations",
+          "kind": "code",
+          "targets": [
+            {
+              "conditions": ["types", "import"],
+              "target": "./dist/survey-operations.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
+              "target": "./dist/survey-operations.d.ts"
+            },
+            {
+              "conditions": ["import"],
+              "target": "./dist/survey-operations.mjs"
+            },
+            {
+              "conditions": ["require"],
+              "target": "./dist/survey-operations.js"
+            }
+          ],
+          "sourceEntrypoint": "packages/admin-core/src/survey-operations.ts",
+          "runtimeExports": [
+            {
+              "name": "validateSurveyAdminAccess",
+              "exportKind": "named",
+              "source": "./libs/surveyOperations",
+              "declarationKind": "function"
+            },
+            {
+              "name": "validateSurveyPublishRequest",
+              "exportKind": "named",
+              "source": "./libs/surveyOperations",
+              "declarationKind": "function"
+            }
+          ],
+          "typeExports": [
+            {
+              "name": "SurveyAdminAccess",
+              "exportKind": "named",
+              "source": "./libs/surveyOperations"
+            },
+            {
+              "name": "SurveyPublishRequest",
+              "exportKind": "named",
+              "source": "./libs/surveyOperations"
+            }
+          ]
         },
         {
           "exportPath": "./targeting-impact-operations",
@@ -3607,6 +3900,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "PostgresLearningRepository",
+              "exportKind": "named",
+              "source": "./libs/LearningRepository",
+              "declarationKind": "class"
+            },
+            {
               "name": "PostgresTimelineSource",
               "exportKind": "named",
               "source": "./libs/CustomerExplorerAdapters",
@@ -3828,6 +4127,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "GrowthModelWorkbench",
+              "exportKind": "named",
+              "source": "./libs/GrowthModelWorkbench",
+              "declarationKind": "function"
+            },
+            {
               "name": "ImpersonationBanner",
               "exportKind": "named",
               "source": "./libs/components",
@@ -3837,6 +4142,12 @@
               "name": "JourneyConsole",
               "exportKind": "named",
               "source": "./libs/JourneyConsole",
+              "declarationKind": "function"
+            },
+            {
+              "name": "LearningWorkspace",
+              "exportKind": "named",
+              "source": "./libs/LearningWorkspace",
               "declarationKind": "function"
             },
             {
@@ -3936,6 +4247,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "ResearchRecruitmentConsole",
+              "exportKind": "named",
+              "source": "./libs/ResearchRecruitmentConsole",
+              "declarationKind": "function"
+            },
+            {
               "name": "RetentionOfferConsole",
               "exportKind": "named",
               "source": "./libs/RetentionOfferConsole",
@@ -3957,6 +4274,24 @@
               "name": "SavedIntentConsole",
               "exportKind": "named",
               "source": "./libs/SavedIntentConsole",
+              "declarationKind": "function"
+            },
+            {
+              "name": "SurveyEditor",
+              "exportKind": "named",
+              "source": "./libs/SurveyConsole",
+              "declarationKind": "function"
+            },
+            {
+              "name": "SurveyPreview",
+              "exportKind": "named",
+              "source": "./libs/SurveyConsole",
+              "declarationKind": "function"
+            },
+            {
+              "name": "SurveyResults",
+              "exportKind": "named",
+              "source": "./libs/SurveyConsole",
               "declarationKind": "function"
             },
             {
@@ -4864,9 +5199,29 @@
               "source": "./libs/GrowthAnalysisPanel"
             },
             {
+              "name": "GrowthModelWorkbenchProps",
+              "exportKind": "named",
+              "source": "./libs/GrowthModelWorkbench"
+            },
+            {
+              "name": "GrowthWorkbenchClient",
+              "exportKind": "named",
+              "source": "./libs/GrowthModelWorkbench"
+            },
+            {
               "name": "JourneyConsoleProps",
               "exportKind": "named",
               "source": "./libs/JourneyConsole"
+            },
+            {
+              "name": "LearningWorkspaceProps",
+              "exportKind": "named",
+              "source": "./libs/LearningWorkspace"
+            },
+            {
+              "name": "LearningWorkspaceState",
+              "exportKind": "named",
+              "source": "./libs/LearningWorkspace"
             },
             {
               "name": "LifecycleAutomationConsoleProps",
@@ -5244,6 +5599,11 @@
               "source": "./libs/ReminderOperationsPanel"
             },
             {
+              "name": "ResearchRecruitmentConsoleProps",
+              "exportKind": "named",
+              "source": "./libs/ResearchRecruitmentConsole"
+            },
+            {
               "name": "RetentionOfferConsoleProps",
               "exportKind": "named",
               "source": "./libs/RetentionOfferConsole"
@@ -5262,6 +5622,26 @@
               "name": "SavedIntentConsoleProps",
               "exportKind": "named",
               "source": "./libs/SavedIntentConsole"
+            },
+            {
+              "name": "SurveyEditorProps",
+              "exportKind": "named",
+              "source": "./libs/SurveyConsole"
+            },
+            {
+              "name": "SurveyResultsData",
+              "exportKind": "named",
+              "source": "./libs/SurveyConsole"
+            },
+            {
+              "name": "SurveyResultsProps",
+              "exportKind": "named",
+              "source": "./libs/SurveyConsole"
+            },
+            {
+              "name": "SurveyResultsState",
+              "exportKind": "named",
+              "source": "./libs/SurveyConsole"
             },
             {
               "name": "TargetingImpactInspectorProps",
@@ -5413,6 +5793,71 @@
               "name": "ExperimentConsoleState",
               "exportKind": "named",
               "source": "./libs/ExperimentConsole"
+            }
+          ]
+        },
+        {
+          "exportPath": "./surveys",
+          "kind": "code",
+          "targets": [
+            {
+              "conditions": ["types", "import"],
+              "target": "./dist/surveys.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
+              "target": "./dist/surveys.d.ts"
+            },
+            {
+              "conditions": ["import"],
+              "target": "./dist/surveys.mjs"
+            },
+            {
+              "conditions": ["require"],
+              "target": "./dist/surveys.js"
+            }
+          ],
+          "sourceEntrypoint": "packages/admin-react/src/surveys.ts",
+          "runtimeExports": [
+            {
+              "name": "SurveyEditor",
+              "exportKind": "named",
+              "source": "./libs/SurveyConsole",
+              "declarationKind": "function"
+            },
+            {
+              "name": "SurveyPreview",
+              "exportKind": "named",
+              "source": "./libs/SurveyConsole",
+              "declarationKind": "function"
+            },
+            {
+              "name": "SurveyResults",
+              "exportKind": "named",
+              "source": "./libs/SurveyConsole",
+              "declarationKind": "function"
+            }
+          ],
+          "typeExports": [
+            {
+              "name": "SurveyEditorProps",
+              "exportKind": "named",
+              "source": "./libs/SurveyConsole"
+            },
+            {
+              "name": "SurveyResultsData",
+              "exportKind": "named",
+              "source": "./libs/SurveyConsole"
+            },
+            {
+              "name": "SurveyResultsProps",
+              "exportKind": "named",
+              "source": "./libs/SurveyConsole"
+            },
+            {
+              "name": "SurveyResultsState",
+              "exportKind": "named",
+              "source": "./libs/SurveyConsole"
             }
           ]
         }
@@ -21586,6 +22031,18 @@
               "declarationKind": "function"
             },
             {
+              "name": "SurveyCard",
+              "exportKind": "named",
+              "source": "./libs/SurveyCard",
+              "declarationKind": "function"
+            },
+            {
+              "name": "SurveyModal",
+              "exportKind": "named",
+              "source": "./libs/SurveyCard",
+              "declarationKind": "function"
+            },
+            {
               "name": "createAuthBridgeMissingProviderProblemDetails",
               "exportKind": "named",
               "source": "./libs/authBridge",
@@ -22112,6 +22569,16 @@
               "name": "SnoozeControlProps",
               "exportKind": "named",
               "source": "./libs/ReminderSettingsForm"
+            },
+            {
+              "name": "SurveyCardProps",
+              "exportKind": "named",
+              "source": "./libs/SurveyCard"
+            },
+            {
+              "name": "SurveyModalProps",
+              "exportKind": "named",
+              "source": "./libs/SurveyCard"
             }
           ]
         },
@@ -22155,6 +22622,55 @@
               "name": "ExperienceSlotProps",
               "exportKind": "named",
               "source": "./libs/ExperienceSlot"
+            }
+          ]
+        },
+        {
+          "exportPath": "./surveys",
+          "kind": "code",
+          "targets": [
+            {
+              "conditions": ["types", "import"],
+              "target": "./dist/surveys.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
+              "target": "./dist/surveys.d.ts"
+            },
+            {
+              "conditions": ["import"],
+              "target": "./dist/surveys.mjs"
+            },
+            {
+              "conditions": ["require"],
+              "target": "./dist/surveys.js"
+            }
+          ],
+          "sourceEntrypoint": "packages/frontend-react/src/surveys.ts",
+          "runtimeExports": [
+            {
+              "name": "SurveyCard",
+              "exportKind": "named",
+              "source": "./libs/SurveyCard",
+              "declarationKind": "function"
+            },
+            {
+              "name": "SurveyModal",
+              "exportKind": "named",
+              "source": "./libs/SurveyCard",
+              "declarationKind": "function"
+            }
+          ],
+          "typeExports": [
+            {
+              "name": "SurveyCardProps",
+              "exportKind": "named",
+              "source": "./libs/SurveyCard"
+            },
+            {
+              "name": "SurveyModalProps",
+              "exportKind": "named",
+              "source": "./libs/SurveyCard"
             }
           ]
         }
@@ -28349,6 +28865,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "DEFAULT_GROWTH_LIMITS",
+              "exportKind": "named",
+              "source": "./libs/growth/GrowthModel",
+              "declarationKind": "const"
+            },
+            {
               "name": "ExperimentInputProblem",
               "exportKind": "named",
               "source": "./libs/experiment/ExperimentReview",
@@ -28370,6 +28892,12 @@
               "name": "GrowthCalculator",
               "exportKind": "named",
               "source": "./libs/GrowthCalculator",
+              "declarationKind": "class"
+            },
+            {
+              "name": "GrowthModelProblem",
+              "exportKind": "named",
+              "source": "./libs/growth/GrowthModel",
               "declarationKind": "class"
             },
             {
@@ -28487,6 +29015,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "backtestGrowthModel",
+              "exportKind": "named",
+              "source": "./libs/growth/GrowthModel",
+              "declarationKind": "function"
+            },
+            {
               "name": "calculateActivationCandidates",
               "exportKind": "named",
               "source": "./libs/activation/ActivationCandidates",
@@ -28502,6 +29036,12 @@
               "name": "chiSquarePValue",
               "exportKind": "named",
               "source": "./libs/experiment/ExperimentReview",
+              "declarationKind": "function"
+            },
+            {
+              "name": "collectGrowthHistory",
+              "exportKind": "named",
+              "source": "./libs/growth/GrowthSources",
               "declarationKind": "function"
             },
             {
@@ -28565,6 +29105,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "estimateTransitionMatrix",
+              "exportKind": "named",
+              "source": "./libs/growth/GrowthModel",
+              "declarationKind": "function"
+            },
+            {
               "name": "evaluateMetric",
               "exportKind": "named",
               "source": "./libs/metric/MetricExpression",
@@ -28595,6 +29141,18 @@
               "declarationKind": "function"
             },
             {
+              "name": "importGrowthCounts",
+              "exportKind": "named",
+              "source": "./libs/growth/GrowthSources",
+              "declarationKind": "function"
+            },
+            {
+              "name": "importGrowthHistory",
+              "exportKind": "named",
+              "source": "./libs/growth/GrowthSources",
+              "declarationKind": "function"
+            },
+            {
               "name": "importPolicyReplayReport",
               "exportKind": "named",
               "source": "./libs/replay/PolicyReplay",
@@ -28616,6 +29174,12 @@
               "name": "project",
               "exportKind": "named",
               "source": "./libs/metric/MetricExpression",
+              "declarationKind": "function"
+            },
+            {
+              "name": "projectGrowthModel",
+              "exportKind": "named",
+              "source": "./libs/growth/GrowthModel",
               "declarationKind": "function"
             },
             {
@@ -28655,9 +29219,33 @@
               "declarationKind": "function"
             },
             {
+              "name": "validateGrowthDataset",
+              "exportKind": "named",
+              "source": "./libs/growth/GrowthModel",
+              "declarationKind": "function"
+            },
+            {
+              "name": "validateGrowthMatrix",
+              "exportKind": "named",
+              "source": "./libs/growth/GrowthModel",
+              "declarationKind": "function"
+            },
+            {
+              "name": "validateGrowthScope",
+              "exportKind": "named",
+              "source": "./libs/growth/GrowthModel",
+              "declarationKind": "function"
+            },
+            {
               "name": "validatePolicyReplayInput",
               "exportKind": "named",
               "source": "./libs/replay/PolicyReplay",
+              "declarationKind": "function"
+            },
+            {
+              "name": "validateStatePartition",
+              "exportKind": "named",
+              "source": "./libs/growth/GrowthModel",
               "declarationKind": "function"
             }
           ],
@@ -28963,9 +29551,74 @@
               "source": "./libs/experiment/ExperimentReview"
             },
             {
+              "name": "GrowthBacktest",
+              "exportKind": "named",
+              "source": "./libs/growth/GrowthModel"
+            },
+            {
+              "name": "GrowthDataset",
+              "exportKind": "named",
+              "source": "./libs/growth/GrowthModel"
+            },
+            {
+              "name": "GrowthEstimate",
+              "exportKind": "named",
+              "source": "./libs/growth/GrowthModel"
+            },
+            {
+              "name": "GrowthHistoryBinding",
+              "exportKind": "named",
+              "source": "./libs/growth/GrowthSources"
+            },
+            {
+              "name": "GrowthHistoryMetadata",
+              "exportKind": "named",
+              "source": "./libs/growth/GrowthSources"
+            },
+            {
+              "name": "GrowthLimits",
+              "exportKind": "named",
+              "source": "./libs/growth/GrowthModel"
+            },
+            {
               "name": "GrowthMetrics",
               "exportKind": "named",
               "source": "./types"
+            },
+            {
+              "name": "GrowthModel",
+              "exportKind": "named",
+              "source": "./libs/growth/GrowthModel"
+            },
+            {
+              "name": "GrowthPopulation",
+              "exportKind": "named",
+              "source": "./libs/growth/GrowthModel"
+            },
+            {
+              "name": "GrowthProjection",
+              "exportKind": "named",
+              "source": "./libs/growth/GrowthModel"
+            },
+            {
+              "name": "GrowthScenario",
+              "exportKind": "named",
+              "source": "./libs/growth/GrowthModel"
+            },
+            {
+              "name": "GrowthScope",
+              "exportKind": "named",
+              "source": "./libs/growth/GrowthModel"
+            },
+            {
+              "name": "GrowthStateDefinition",
+              "exportKind": "named",
+              "source": "./libs/growth/GrowthModel"
+            },
+            {
+              "name": "GrowthTransition",
+              "exportKind": "named",
+              "source": "./libs/growth/GrowthModel"
             },
             {
               "name": "LogoChurnInput",
@@ -36816,6 +37469,397 @@
               "name": "KeyedRepositoryResult",
               "exportKind": "named",
               "source": "./libs/ReadRepository"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "packageName": "@croco/research-core",
+      "relativeDir": "packages/research-core",
+      "entrypoints": [
+        {
+          "exportPath": ".",
+          "kind": "code",
+          "targets": [
+            {
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
+              "target": "./dist/index.d.ts"
+            },
+            {
+              "conditions": ["import"],
+              "target": "./dist/index.mjs"
+            },
+            {
+              "conditions": ["require"],
+              "target": "./dist/index.js"
+            }
+          ],
+          "sourceEntrypoint": "packages/research-core/src/index.ts",
+          "runtimeExports": [
+            {
+              "name": "InMemoryResearchStore",
+              "exportKind": "named",
+              "source": "./libs/InMemoryResearchStore",
+              "declarationKind": "class"
+            },
+            {
+              "name": "ResearchConflictProblem",
+              "exportKind": "named",
+              "source": "./libs/ResearchContracts",
+              "declarationKind": "class"
+            },
+            {
+              "name": "ResearchDeniedProblem",
+              "exportKind": "named",
+              "source": "./libs/ResearchContracts",
+              "declarationKind": "class"
+            },
+            {
+              "name": "ResearchInvalidProblem",
+              "exportKind": "named",
+              "source": "./libs/ResearchContracts",
+              "declarationKind": "class"
+            },
+            {
+              "name": "ResearchPersistenceProblem",
+              "exportKind": "named",
+              "source": "./libs/ResearchContracts",
+              "declarationKind": "class"
+            },
+            {
+              "name": "ResearchService",
+              "exportKind": "named",
+              "source": "./libs/ResearchService",
+              "declarationKind": "class"
+            },
+            {
+              "name": "SurveyConflictProblem",
+              "exportKind": "named",
+              "source": "./libs/SurveyProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "SurveyDeniedProblem",
+              "exportKind": "named",
+              "source": "./libs/SurveyProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "SurveyExpiredProblem",
+              "exportKind": "named",
+              "source": "./libs/SurveyProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "SurveyInvalidProblem",
+              "exportKind": "named",
+              "source": "./libs/SurveyProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "SurveyManager",
+              "exportKind": "named",
+              "source": "./libs/SurveyManager",
+              "declarationKind": "class"
+            },
+            {
+              "name": "SurveyUnavailableProblem",
+              "exportKind": "named",
+              "source": "./libs/SurveyProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "createResearchEngagementSender",
+              "exportKind": "named",
+              "source": "./libs/ResearchEngagement",
+              "declarationKind": "function"
+            },
+            {
+              "name": "emptyResearchRecord",
+              "exportKind": "named",
+              "source": "./libs/ResearchContracts",
+              "declarationKind": "function"
+            },
+            {
+              "name": "researchIdentity",
+              "exportKind": "named",
+              "source": "./libs/ResearchContracts",
+              "declarationKind": "function"
+            },
+            {
+              "name": "surveyCsvCell",
+              "exportKind": "named",
+              "source": "./libs/validation",
+              "declarationKind": "function"
+            },
+            {
+              "name": "validateSurveyAnswers",
+              "exportKind": "named",
+              "source": "./libs/validation",
+              "declarationKind": "function"
+            },
+            {
+              "name": "validateSurveyDefinition",
+              "exportKind": "named",
+              "source": "./libs/validation",
+              "declarationKind": "function"
+            },
+            {
+              "name": "validateSurveyScope",
+              "exportKind": "named",
+              "source": "./libs/validation",
+              "declarationKind": "function"
+            }
+          ],
+          "typeExports": [
+            {
+              "name": "Candidate",
+              "exportKind": "named",
+              "source": "./libs/ResearchContracts"
+            },
+            {
+              "name": "Invitation",
+              "exportKind": "named",
+              "source": "./libs/ResearchContracts"
+            },
+            {
+              "name": "InvitationState",
+              "exportKind": "named",
+              "source": "./libs/ResearchContracts"
+            },
+            {
+              "name": "ResearchAccess",
+              "exportKind": "named",
+              "source": "./libs/ResearchContracts"
+            },
+            {
+              "name": "ResearchAudit",
+              "exportKind": "named",
+              "source": "./libs/ResearchContracts"
+            },
+            {
+              "name": "ResearchAuthorizer",
+              "exportKind": "named",
+              "source": "./libs/ResearchContracts"
+            },
+            {
+              "name": "ResearchCommand",
+              "exportKind": "named",
+              "source": "./libs/ResearchContracts"
+            },
+            {
+              "name": "ResearchDispatchResult",
+              "exportKind": "named",
+              "source": "./libs/ResearchContracts"
+            },
+            {
+              "name": "ResearchGroupProgress",
+              "exportKind": "named",
+              "source": "./libs/ResearchContracts"
+            },
+            {
+              "name": "ResearchNote",
+              "exportKind": "named",
+              "source": "./libs/ResearchContracts"
+            },
+            {
+              "name": "ResearchPage",
+              "exportKind": "named",
+              "source": "./libs/ResearchContracts"
+            },
+            {
+              "name": "ResearchPermission",
+              "exportKind": "named",
+              "source": "./libs/ResearchContracts"
+            },
+            {
+              "name": "ResearchRecord",
+              "exportKind": "named",
+              "source": "./libs/ResearchContracts"
+            },
+            {
+              "name": "ResearchScope",
+              "exportKind": "named",
+              "source": "./libs/ResearchContracts"
+            },
+            {
+              "name": "ResearchSender",
+              "exportKind": "named",
+              "source": "./libs/ResearchContracts"
+            },
+            {
+              "name": "ResearchStore",
+              "exportKind": "named",
+              "source": "./libs/ResearchContracts"
+            },
+            {
+              "name": "StudyDefinition",
+              "exportKind": "named",
+              "source": "./libs/ResearchContracts"
+            },
+            {
+              "name": "SurveyAnswers",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "SurveyAuthority",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "SurveyDefinition",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "SurveyInvitation",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "SurveyPermission",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "SurveyPublication",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "SurveyQuestion",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "SurveyRecord",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "SurveyResponse",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "SurveyScope",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "SurveySession",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "SurveyStore",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "SurveySubject",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "SurveyTargeting",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "SurveyTokenCodec",
+              "exportKind": "named",
+              "source": "./libs/types"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "packageName": "@croco/research-drizzle",
+      "relativeDir": "packages/research-drizzle",
+      "entrypoints": [
+        {
+          "exportPath": ".",
+          "kind": "code",
+          "targets": [
+            {
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
+              "target": "./dist/index.d.ts"
+            },
+            {
+              "conditions": ["import"],
+              "target": "./dist/index.mjs"
+            },
+            {
+              "conditions": ["require"],
+              "target": "./dist/index.js"
+            }
+          ],
+          "sourceEntrypoint": "packages/research-drizzle/src/index.ts",
+          "runtimeExports": [
+            {
+              "name": "DrizzleResearchStore",
+              "exportKind": "named",
+              "source": "./libs/DrizzleResearchStore",
+              "declarationKind": "class"
+            },
+            {
+              "name": "DrizzleSurveyStore",
+              "exportKind": "named",
+              "source": "./libs/DrizzleSurveyStore",
+              "declarationKind": "class"
+            },
+            {
+              "name": "addMicroSurveys",
+              "exportKind": "named",
+              "source": "./migrations/addMicroSurveys",
+              "declarationKind": "function"
+            },
+            {
+              "name": "createResearchSchema",
+              "exportKind": "named",
+              "source": "./migrations/researchSchema",
+              "declarationKind": "function"
+            },
+            {
+              "name": "researchStudies",
+              "exportKind": "named",
+              "source": "./libs/DrizzleResearchStore",
+              "declarationKind": "const"
+            },
+            {
+              "name": "surveyTokenCodec",
+              "exportKind": "named",
+              "source": "./libs/DrizzleSurveyStore",
+              "declarationKind": "const"
+            }
+          ],
+          "typeExports": [
+            {
+              "name": "DrizzleResearchClient",
+              "exportKind": "named",
+              "source": "./libs/DrizzleResearchStore"
+            },
+            {
+              "name": "DrizzleSurveyClient",
+              "exportKind": "named",
+              "source": "./libs/DrizzleSurveyStore"
+            },
+            {
+              "name": "ResearchMigrationClient",
+              "exportKind": "named",
+              "source": "./migrations/researchSchema"
             }
           ]
         }

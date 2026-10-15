@@ -21,6 +21,7 @@ import {
 import type { RscFlightEncoder, RscRenderOptions } from "../rsc/flight";
 import type { RscSsrCodec } from "../rsc/ssrDecode";
 import { decodeFlightToHtmlStream } from "../rsc/ssrDecode";
+import { encodePagePath } from "../routes/encodePagePath";
 import type { HeadMetadata } from "../routes/head";
 import type { ShellDecision, ShellSettleSummary } from "../routes/shell";
 import type { RenderRouteComponentProps, RenderRouteIR } from "../routes/types";
@@ -856,7 +857,9 @@ export class RenderServer {
       return this.routes.find((route) => route.path === base);
     }
 
-    return undefined;
+    // The request URL carries the percent-encoded spelling of a Unicode path,
+    // so match on the encoded form rather than the raw route path.
+    return this.routes.find((route) => encodePagePath(route.path) === pathname);
   }
 
   private createComponentProps(

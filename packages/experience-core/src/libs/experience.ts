@@ -374,14 +374,22 @@ export async function evaluatePlacement(
         placementId: input.placement.id,
         configId: config.id,
         policyVersion: config.revision,
-        scope: input.scope,
-        subject: input.subject,
+        scope: { ...input.scope },
+        subject: { ...input.subject },
         renderer: config.renderer,
-        content: config.content,
+        content: { ...config.content },
         selectedAt,
         expiresAt,
         reason: "matched",
-        ...(match.sourceSnapshotRef ? { sourceSnapshotRef: match.sourceSnapshotRef } : {}),
+        ...(match.sourceSnapshotRef
+          ? {
+              sourceSnapshotRef: {
+                ...match.sourceSnapshotRef,
+                scope: { ...match.sourceSnapshotRef.scope },
+                sourceSnapshotRefs: [...match.sourceSnapshotRef.sourceSnapshotRefs],
+              },
+            }
+          : {}),
       };
       const handle: ExposureHandle = {
         decisionId,

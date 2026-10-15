@@ -58,6 +58,17 @@ class AccountResolver {
 }
 ```
 
+GraphQL contract snapshots preserve interceptor declaration order, including repeated
+providers. Reordering interceptors is reported as breaking metadata drift even when
+SDL is unchanged. Independent resolver and operation entries remain sorted so the
+same declarations regenerate byte-identical snapshots.
+
+The snapshot shape and `croco.graphql-contract.snapshot.v2` version remain compatible.
+Older snapshots sorted interceptor names and cannot recover the original order.
+Regenerate and review existing baselines with this version before accepting further
+contract changes; an initial interceptor-order diff can reflect the corrected
+snapshot representation rather than a runtime change.
+
 ## AuthGuard Conformance
 
 `GraphQLAuthGuard` reads `context.headers.authorization` as a Bearer token and writes the

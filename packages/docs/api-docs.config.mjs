@@ -663,6 +663,18 @@ export const apiDocPackages = [
     moduleName: "repository-core/src",
   },
   {
+    packageName: "@croco/research-core",
+    directory: "research-core",
+    entryPoint: "src/index.ts",
+    moduleName: "research-core/src",
+  },
+  {
+    packageName: "@croco/research-drizzle",
+    directory: "research-drizzle",
+    entryPoint: "src/index.ts",
+    moduleName: "research-drizzle/src",
+  },
+  {
     packageName: "@croco/retry-core",
     directory: "retry-core",
     entryPoint: "src/index.ts",

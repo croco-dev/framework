@@ -100,10 +100,13 @@ describe("API documentation pipeline", () => {
   });
 
   it("keeps one canonical, ordered package-model catalog", () => {
-    expect(apiDocPackages).toHaveLength(137);
-    expect(new Set(apiDocPackages.map(({ packageName }) => packageName)).size).toBe(137);
-    expect(new Set(apiDocPackages.map(({ directory }) => directory)).size).toBe(137);
-    expect(new Set(apiDocPackages.map(({ moduleName }) => moduleName)).size).toBe(137);
+    expect(apiDocPackages).toHaveLength(139);
+    expect(new Set(apiDocPackages.map(({ packageName }) => packageName)).size).toBe(139);
+    expect(new Set(apiDocPackages.map(({ directory }) => directory)).size).toBe(139);
+    expect(new Set(apiDocPackages.map(({ moduleName }) => moduleName)).size).toBe(139);
+    expect(apiDocPackages.map(({ packageName }) => packageName)).toEqual(
+      expect.arrayContaining(["@croco/research-core", "@croco/research-drizzle"]),
+    );
     expect(apiDocModelEntryPoints).toEqual(
       apiDocPackages.map(({ directory }) => `../${directory}/.turbo/docs-api/model.json`),
     );

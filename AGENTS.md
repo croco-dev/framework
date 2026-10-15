@@ -84,7 +84,7 @@ formatter는 Oxfmt, linter는 Oxlint를 사용한다. 아래 요약보다 `.oxfm
 - Constants: SCREAMING_SNAKE_CASE (REST_CONTROLLER_KEY)
 - Functions/methods: camelCase
 - Files: 클래스는 PascalCase (Component.ts), 유틸리티는 camelCase
-- Test files: `src/tests/[ClassName].spec.ts` (필수 규칙)
+- Test files: 클래스 테스트는 `src/tests/[ClassName].spec.ts`, 함수·객체 테스트는 대상이 드러나는 `src/tests/[SubjectName].spec.ts` (필수 규칙)
 
 ## Decorator Pattern
 

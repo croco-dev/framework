@@ -34,6 +34,77 @@ describe("lambda adapter", () => {
     await expect(response.json()).resolves.toEqual({ name: "croco" });
   });
 
+  describe.each(["standalone", "composed API", "composed page"] as const)(
+    "%s origin",
+    (adapter) => {
+      it.each([
+        {
+          name: "v1 canonical-case headers",
+          event: {
+            version: "1.0",
+            httpMethod: "GET",
+            path: "/products",
+            headers: { Host: "shop.example.test", "X-Forwarded-Proto": "https" },
+          },
+          expectedUrl: "https://shop.example.test/products",
+        },
+        {
+          name: "v2 lowercase headers",
+          event: createHttpApiEvent({
+            rawPath: "/products",
+            headers: { host: "shop.example.test", "x-forwarded-proto": "https" },
+          }),
+          expectedUrl: "https://shop.example.test/products",
+        },
+        {
+          name: "missing headers",
+          event: { httpMethod: "GET", path: "/products" },
+          expectedUrl: "http://lambda.local/products",
+        },
+        {
+          name: "missing protocol",
+          event: { path: "/products", headers: { Host: "shop.example.test:8080" } },
+          expectedUrl: "http://shop.example.test:8080/products",
+        },
+        {
+          name: "missing host",
+          event: { path: "/products", headers: { "X-Forwarded-Proto": "https" } },
+          expectedUrl: "https://lambda.local/products",
+        },
+        {
+          name: "explicit HTTP protocol",
+          event: {
+            path: "/products",
+            headers: { Host: "shop.example.test", "X-Forwarded-Proto": "http" },
+          },
+          expectedUrl: "http://shop.example.test/products",
+        },
+      ])("restores the request URL with $name", async ({ event, expectedUrl }) => {
+        const echo: CrocoFetchHandler = async (request) => new Response(request.url);
+        const handler =
+          adapter === "standalone"
+            ? createLambdaHandler(echo)
+            : createLambdaComposedHandler({
+                apiHandlers:
+                  adapter === "composed API"
+                    ? [
+                        {
+                          match: (request) => request.url === expectedUrl,
+                          handle: async (request) => echo(request),
+                        },
+                      ]
+                    : [],
+                pageHandler:
+                  adapter === "composed API" ? async () => new Response("unmatched") : echo,
+              });
+
+        const response = await handler(event, {});
+
+        await expect(response.text()).resolves.toBe(expectedUrl);
+      });
+    },
+  );
+
   it("returns API handler response before page fallback", async () => {
     const apiHandler = {
       match: (request: Request) => new URL(request.url).pathname === "/api/hello",

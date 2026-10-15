@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Micro surveys</title>
+    <style>
+      body {
+        font: 16px system-ui;
+        margin: 1rem auto;
+        max-width: 72rem;
+        padding: 1rem;
+        color: #1e293b;
+        background: #f8fafc;
+      }
+      main {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 2rem;
+      }
+      section {
+        background: white;
+        padding: 1rem;
+        border: 1px solid #cbd5e1;
+        border-radius: 0.5rem;
+        min-width: 0;
+      }
+      button,
+      input,
+      select,
+      textarea {
+        font: inherit;
+        max-width: 100%;
+        box-sizing: border-box;
+      }
+      button {
+        padding: 0.5rem;
+        margin: 0.3rem 0;
+      }
+      label {
+        display: block;
+      }
+      pre {
+        white-space: pre-wrap;
+      }
+      dl > div {
+        display: flex;
+        justify-content: space-between;
+        gap: 1rem;
+      }
+      @media (max-width: 800px) {
+        main {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Optional product surveys</h1>
+    <p>
+      Local synthetic data. Customer and operator views share the same PostgreSQL survey service.
+    </p>
+    <div id="root"></div>
+    <script src="/browser.js"></script>
+  </body>
+</html>

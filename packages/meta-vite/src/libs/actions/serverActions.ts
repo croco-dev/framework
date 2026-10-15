@@ -310,7 +310,7 @@ function toServerActionContract(
 ): ServerActionContractIR {
   return {
     name: config.name,
-    path: `/api/action/${config.name}`,
+    path: `/api/action/${encodeURIComponent(config.name)}`,
     method: "POST",
     input: { schema: config.schema ? "declared" : "none" },
     output: normalizeServerActionOutputContract(config.output),
@@ -576,7 +576,15 @@ export function createServerActionHandler(
         );
       }
 
-      const actionName = segments[3];
+      let actionName: string;
+      try {
+        actionName = decodeURIComponent(segments[3]);
+      } catch {
+        return createServerActionProblemResponse(
+          new ServerActionInvalidPathProblem(pathname),
+          "invalid_path",
+        );
+      }
       const contentType = request.headers.get("content-type");
       if (!isFormContentType(contentType)) {
         return createServerActionProblemResponse(

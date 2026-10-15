@@ -1,3 +1,4 @@
+import { encodePagePath } from "./encodePagePath";
 import { validatePageRoute } from "./validatePageRoute";
 import { validateApiRoute } from "./validateApiRoute";
 
@@ -106,7 +107,7 @@ export class RouteRegistry {
 
   private hasRegisteredRoute(path: string, method?: string): boolean {
     if (method === undefined) {
-      return this.definitions.some((route) => route.path === path);
+      return this.definitions.some((route) => encodePagePath(route.path) === encodePagePath(path));
     }
 
     return this.apiDefinitions.some((route) => route.path === path && route.method === method);

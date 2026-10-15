@@ -1268,6 +1268,18 @@
       "subtype": "provider",
       "runtimes": ["node", "lambda"],
       "domain": "Billing"
+    },
+    "research-core": {
+      "role": "Contracts",
+      "subtype": "domain",
+      "runtimes": [],
+      "domain": "Research"
+    },
+    "research-drizzle": {
+      "role": "Plugins",
+      "subtype": "provider",
+      "runtimes": ["node", "lambda"],
+      "domain": "Research"
     }
   },
   "groups": {
@@ -1338,7 +1350,8 @@
         "warehouse-core",
         "workflow-core",
         "promotions-core",
-        "referral-core"
+        "referral-core",
+        "research-core"
       ]
     },
     "Provider": {
@@ -1382,7 +1395,8 @@
         "warehouse-postgres",
         "promotions-drizzle",
         "referral-drizzle",
-        "billing-drizzle"
+        "billing-drizzle",
+        "research-drizzle"
       ]
     },
     "Integration": {
@@ -1604,7 +1618,9 @@
         "referral-drizzle",
         "gamification-core",
         "gamification-drizzle",
-        "billing-drizzle"
+        "billing-drizzle",
+        "research-core",
+        "research-drizzle"
       ]
     },
     "deprecated": {
@@ -2337,6 +2353,18 @@
           "durable lifecycle commands",
           "scoped cancellation sessions",
           "audited choice policy revisions"
+        ]
+      },
+      "research-drizzle": {
+        "domain": "Research",
+        "adapter": "Transactional Drizzle research study store",
+        "runtimes": ["node", "lambda"],
+        "requiredEnv": ["PostgreSQL connection supplied by app"],
+        "features": [
+          "atomic group quota and dispatch admission",
+          "scoped study/candidate/consent/invitation persistence",
+          "status history and idempotency",
+          "private note deletion and retention"
         ]
       }
     }

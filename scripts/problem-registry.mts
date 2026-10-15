@@ -3451,6 +3451,14 @@ const recoveryMetadataByCode = {
     redactionPolicy: "operator-only",
     severity: "error",
   }),
+  "research/survey-expired": recovery({
+    cause: "The survey invitation expired before the response was submitted.",
+    userAction: "Request a new survey invitation before retrying.",
+    operatorAction: "Inspect the invitation expiry timestamp and invitation lifecycle.",
+    retryability: "not-retryable",
+    redactionPolicy: "public",
+    severity: "info",
+  }),
   BILLING_STATUS_MAPPING_FAILED: recovery({
     cause: "Polar sent a valid subscription status that the billing contract cannot represent.",
     userAction: "Do not retry the unchanged webhook payload.",
@@ -3545,6 +3553,17 @@ const recoveryMetadataByCode = {
       "Correct the target identified by each diagnostic before generating contracts or starting the application.",
     operatorAction:
       "Inspect diagnostic codes, route IDs, and source locations. For contract-schema-unsupported-zod-major, replace the identified schema with a Zod 3 route contract schema.",
+    retryability: "not-retryable",
+    redactionPolicy: "public",
+    severity: "info",
+  }),
+  "protocol-codegen/controller-project-jsx-runtime": recovery({
+    cause:
+      "Temporary JSX emission introduced diagnostics for the configured JSX factory or automatic runtime.",
+    userAction:
+      "Import the configured JSX factory (React by default), provide jsxFactory and jsxFragmentFactory bindings, or configure jsxImportSource with an installed automatic JSX runtime, then rerun code generation.",
+    operatorAction:
+      "Inspect the source diagnostics and tsconfig reported before module output; correct the JSX runtime configuration and verify the selected runtime dependency.",
     retryability: "not-retryable",
     redactionPolicy: "public",
     severity: "info",

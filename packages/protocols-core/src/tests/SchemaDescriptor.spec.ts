@@ -1,6 +1,6 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import {
   acceptsZodArrayInput,
@@ -31,6 +31,42 @@ const MIXED_NATIVE_ENUM = {
 } as const;
 
 describe("SchemaDescriptor", () => {
+  it("should inspect wrapped input presence without executing defaults or effects", () => {
+    const defaultValue = vi.fn(() => "fallback");
+    const transform = vi.fn((value: string | undefined) => value ?? "transformed");
+    const refinement = vi.fn(() => true);
+    const descriptor = describeZodSchema(
+      z.object({
+        defaulted: z.string().default(defaultValue).brand<"Label">().readonly(),
+        transformed: z.string().optional().transform(transform).readonly(),
+        refined: z.string().optional().refine(refinement).nullable().readonly(),
+      }),
+    );
+    expect(descriptor?.fields?.map(({ name, required }) => ({ name, required }))).toEqual([
+      { name: "defaulted", required: false },
+      { name: "refined", required: false },
+      { name: "transformed", required: false },
+    ]);
+    expect(descriptor?.fields?.find((field) => field.name === "transformed")?.schema).toMatchObject(
+      {
+        kind: "readonly",
+        jsonSafe: false,
+        inner: { kind: "effects", effectType: "transform", inner: { kind: "optional" } },
+      },
+    );
+    expect(getSchemaDescriptorDiagnostics(descriptor)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: CONTRACT_SCHEMA_JSON_UNSAFE_DIAGNOSTIC_CODE,
+          severity: "error",
+        }),
+      ]),
+    );
+    expect(defaultValue).not.toHaveBeenCalled();
+    expect(transform).not.toHaveBeenCalled();
+    expect(refinement).not.toHaveBeenCalled();
+  });
+
   it("should normalize string length checks independently of declaration order", () => {
     const expected = {
       kind: "string",

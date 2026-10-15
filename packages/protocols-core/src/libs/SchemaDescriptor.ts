@@ -1108,6 +1108,13 @@ function isOptionalInputSchema(schema: unknown): boolean {
     return isOptionalInputSchema(definition?.schema ?? definition?.innerType);
   }
 
+  if (typeName === "ZodNullable" || typeName === "ZodBranded" || typeName === "ZodReadonly") {
+    const definition = getZodDefinition(schema);
+    const inner = typeName === "ZodBranded" ? definition?.type : definition?.innerType;
+
+    return isOptionalInputSchema(inner);
+  }
+
   return false;
 }
 

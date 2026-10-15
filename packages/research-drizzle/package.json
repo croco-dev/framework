@@ -1,0 +1,72 @@
+{
+  "name": "@croco/research-drizzle",
+  "version": "0.0.1",
+  "description": "PostgreSQL research recruitment and micro survey persistence",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/croco-dev/framework.git",
+    "directory": "packages/research-drizzle"
+  },
+  "files": [
+    "dist"
+  ],
+  "type": "commonjs",
+  "sideEffects": false,
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": {
+        "import": "./dist/index.d.mts",
+        "require": "./dist/index.d.ts"
+      },
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    }
+  },
+  "publishConfig": {
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+      ".": {
+        "types": {
+          "import": "./dist/index.d.mts",
+          "require": "./dist/index.d.ts"
+        },
+        "import": "./dist/index.mjs",
+        "require": "./dist/index.js"
+      }
+    },
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsup src/index.ts --format esm,cjs --minify --clean --dts",
+    "lint": "oxlint .",
+    "test": "vitest run src/tests/DrizzleResearchStore.spec.ts src/tests/SurveyToken.spec.ts",
+    "test:evidence": "pnpm run test --maxWorkers=1 --reporter=json --outputFile=.turbo/croco-test-evidence.json",
+    "test:live": "vitest run src/tests/*.postgres.spec.ts --no-file-parallelism",
+    "test:postgres": "vitest run src/tests/*.postgres.spec.ts --no-file-parallelism",
+    "typecheck": "tsc --noEmit",
+    "docs:api:model": "node --experimental-strip-types ../docs/scripts/generate-package-api-model.mts",
+    "dev": "tsup src/index.ts --format esm,cjs --dts --watch"
+  },
+  "dependencies": {
+    "@croco/problems-core": "workspace:*",
+    "@croco/research-core": "workspace:*",
+    "drizzle-orm": "catalog:"
+  },
+  "devDependencies": {
+    "@croco/testing": "workspace:*",
+    "@types/pg": "8.20.0",
+    "pg": "8.22.0",
+    "reflect-metadata": "^0.2.2",
+    "tsup": "^8.4.0",
+    "typescript": "^5.7.2",
+    "vitest": "4.1.8"
+  },
+  "peerDependencies": {
+    "drizzle-orm": "catalog:"
+  }
+}

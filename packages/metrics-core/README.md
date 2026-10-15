@@ -318,3 +318,41 @@ The `@croco/metrics-core/runtime` entrypoint exports `importBehaviorSource` (the
 The warehouse binding shares the bounded page runner with activation metrics. It pins snapshot and permission/privacy epochs, bounds rows/bytes/pages, detects repeated cursors and honors cancellation. It does not copy provider SQL. The host pins the catalog snapshot and obtains quality/coverage evidence before supplying metadata.
 
 `registerBehaviorQuery` registers a fixed versioned selection, scope and source revisions with `MetricReadService`. Behavior definition versions remain strings; `queryVersion` is the positive integer registration version. The returned definition hash covers the semantic declaration and limits. The service authorizes fields and budgets, verifies source provenance and returns aggregate results without subject or event identities. Incomplete observation or first-behavior history produces partial evidence; it cannot become a verified result even if the source declares complete quality. Registered read windows must cover the selection and its required history.
+
+## State-transition growth models
+
+`validateStatePartition`, `estimateTransitionMatrix`, `projectGrowthModel` and
+`backtestGrowthModel` are independent pure APIs. `projectGrowthModel` is named separately from the
+existing metric-expression `project` builder. A `GrowthModel` declares business state IDs, labels and
+evidence, purpose, assumptions, version, unit, cadence, definition cutoff and a training window.
+State names are application-owned; no NAU/EAU/RAU partition is imposed.
+
+`collectGrowthHistory` consumes a bounded async normalized row reader; `importGrowthHistory` shares the
+ETL CSV/JSONL decoder with an explicit numeric period schema. Declare every contiguous period and its
+completeness. Duplicate subject/period rows reject; a subject missing in the next period produces a
+`missing-state` diagnostic, marks that population unknown and excludes the transition. Continued
+absence stays unknown until the subject's state is observed again. Model exits
+explicitly as business states. New subjects are measured inflows. No subject rows appear in the
+returned aggregate dataset. `importGrowthCounts` validates a dense count matrix and population totals
+and explicitly reports `aggregate-only` partition validation. A counts DTO cannot verify individual
+membership. All readers must be bound to the declared app/environment/tenant and source revision.
+
+Training pools fully observed transitions whose destination population is at or before the declared
+training end. Excluded periods and each origin denominator are returned. Empty origins reject rather
+than becoming self loops. Projection uses row vectors and a finite configured horizon; every inflow
+has the model unit. Explicit replacement rows retain their correction rationale and must sum to one
+within `1e-9`, with no negative, NaN or infinite values. Computation never consumes UI-rounded values.
+
+Backtesting fixes the training end, requires the definition cutoff at or before it, and compares a
+first-order projection with last-value on every state/test period. State definitions and assumed
+backtest inflows must be decided before the cutoff; source evidence and that human assertion are not
+proof of causal effects. Future transition counts never enter training. Incomplete actual populations
+stay null with a reason. MAE means average absolute cell error in the population unit; MAPE is a
+fraction. Zero actual MAPE retains null cell errors and `actual-zero`, and makes the mean undefined
+rather than silently dropping cells. Numeric error overflow rejects with `backtest-overflow`
+instead of publishing Infinity. There is no infinite-horizon market-size estimate.
+
+Invalid definitions, missing array cells, units, probabilities, empty training rows and exceeded configured budgets throw
+`GrowthModelProblem` (`metrics-core/invalid-growth-model`) with a precise `field`. Bounds are input
+controls, not promised performance. See [the independent executable example](../../examples/growth-model/README.md)
+for full input contracts and UI composition. Existing user CC and revenue calculations are unchanged.

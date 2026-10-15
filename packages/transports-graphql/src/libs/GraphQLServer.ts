@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { once } from "node:events";
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import { Container, Context as FrameworkContext } from "@croco/framework-context";
 import type { RequestContext } from "@croco/framework-context";
@@ -38,6 +39,7 @@ type GraphQLContextPropagationPlugin = Plugin<
 type NodeRequestAbortScope = {
   readonly aborted: Promise<never>;
   readonly signal: AbortSignal;
+  abort(reason: Error): void;
   dispose(): void;
 };
 type NodeRequestPhase =
@@ -228,6 +230,13 @@ export class GraphQLServer {
           });
 
           phase = "response-body";
+          if (
+            response.headers.get("content-type")?.split(";")[0]?.trim().toLowerCase() ===
+            "text/event-stream"
+          ) {
+            await this.streamNodeResponse(res, response, abortScope);
+            return;
+          }
           const responseBody = await response.text();
           abortScope.signal.throwIfAborted();
           phase = "response-write";
@@ -394,6 +403,7 @@ export class GraphQLServer {
     return {
       aborted,
       signal: controller.signal,
+      abort,
       dispose: () => {
         if (timeout !== undefined) {
           clearTimeout(timeout);
@@ -450,6 +460,47 @@ export class GraphQLServer {
       if (bodyTooLarge) {
         req.destroy();
       }
+    }
+  }
+
+  private async streamNodeResponse(
+    res: ServerResponse,
+    response: Response,
+    abortScope: NodeRequestAbortScope,
+  ): Promise<void> {
+    const reader = response.body?.getReader();
+    const streamSignal = abortScope.signal;
+    const onError = () => abortScope.abort(new GraphQLRequestHandlingFailedProblem());
+    res.on("error", onError);
+
+    try {
+      streamSignal.throwIfAborted();
+      res.flushHeaders();
+      if (reader) {
+        while (true) {
+          const chunk = await waitForStreamOperation(reader.read(), streamSignal);
+          streamSignal.throwIfAborted();
+          if (chunk.done) break;
+          if (!res.write(chunk.value)) {
+            await once(res, "drain", { signal: streamSignal });
+          }
+        }
+      }
+      await waitForStreamOperation(this.writeNodeResponse(res, ""), streamSignal);
+    } catch (error) {
+      abortScope.abort(
+        error instanceof Problem ? error : new GraphQLRequestHandlingFailedProblem(),
+      );
+      if (reader) {
+        // Cancellation can wait for user iterator cleanup; it must not delay socket teardown.
+        void reader.cancel(error).catch((cancelError: unknown) => {
+          this.recordNodeRequestFailure(cancelError, "response-body");
+        });
+      }
+      throw streamSignal.aborted ? streamSignal.reason : error;
+    } finally {
+      res.off("error", onError);
+      reader?.releaseLock();
     }
   }
 
@@ -546,6 +597,20 @@ export class GraphQLServer {
       if (this.server === server) this.server = null;
     });
   }
+}
+
+function waitForStreamOperation<T>(operation: Promise<T>, signal: AbortSignal): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const onAbort = () => {
+      signal.removeEventListener("abort", onAbort);
+      reject(signal.reason);
+    };
+    signal.addEventListener("abort", onAbort, { once: true });
+    if (signal.aborted) onAbort();
+    void operation
+      .then(resolve, reject)
+      .finally(() => signal.removeEventListener("abort", onAbort));
+  });
 }
 
 function runInGraphQLRequestContext<T>(fn: () => Promise<T> | T): Promise<T> | T {

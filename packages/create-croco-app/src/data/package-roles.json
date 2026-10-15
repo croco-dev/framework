@@ -107,6 +107,8 @@
   "@croco/referral-core": "contracts",
   "@croco/referral-drizzle": "plugins",
   "@croco/repository-core": "contracts",
+  "@croco/research-core": "contracts",
+  "@croco/research-drizzle": "plugins",
   "@croco/retry-core": "contracts",
   "@croco/rpc-codegen": "tooling",
   "@croco/search-core": "contracts",

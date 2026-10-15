@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export type CrocoProblemRegistry = {
   readonly version: "croco.problem-code-registry.v1";
-  readonly problemCount: 1036;
+  readonly problemCount: 1047;
   readonly problems: readonly [
     {
       readonly code: "ACCESS_DENIED";
@@ -4398,6 +4398,174 @@ export type CrocoProblemRegistry = {
           readonly line: 80;
           readonly column: 5;
           readonly kind: "problem-constructor";
+        },
+      ];
+    },
+    {
+      readonly code: "admin-core/growth-denied";
+      readonly category: "Forbidden";
+      readonly status: 403;
+      readonly title: "Forbidden";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#admin-core-growth-denied";
+      readonly recovery: {
+        readonly cause: "The authenticated caller is not allowed to perform the requested action.";
+        readonly userAction: "Request the required permission or choose an allowed action.";
+        readonly operatorAction: "Review policy, role, tenant, entitlement, and impersonation context.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "safe-message";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.warning";
+          readonly severity: "warning";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/admin-core/src/libs/GrowthModelWorkbench.ts";
+          readonly line: 79;
+          readonly column: 11;
+          readonly kind: "problem-metadata";
+        },
+      ];
+    },
+    {
+      readonly code: "admin-core/growth-invalid-request";
+      readonly category: "ValidationError";
+      readonly status: 422;
+      readonly title: "Validation Error";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#admin-core-growth-invalid-request";
+      readonly recovery: {
+        readonly cause: "The request or generated contract failed schema or semantic validation.";
+        readonly userAction: "Fix the invalid fields and retry with schema-conformant input.";
+        readonly operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "public";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.info";
+          readonly severity: "info";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/admin-core/src/libs/GrowthModelWorkbench.ts";
+          readonly line: 80;
+          readonly column: 22;
+          readonly kind: "problem-metadata";
+        },
+      ];
+    },
+    {
+      readonly code: "admin-core/growth-revision-conflict";
+      readonly category: "ValidationError";
+      readonly status: 422;
+      readonly title: "Validation Error";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#admin-core-growth-revision-conflict";
+      readonly recovery: {
+        readonly cause: "The request or generated contract failed schema or semantic validation.";
+        readonly userAction: "Fix the invalid fields and retry with schema-conformant input.";
+        readonly operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "public";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.info";
+          readonly severity: "info";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/admin-core/src/libs/GrowthModelWorkbench.ts";
+          readonly line: 92;
+          readonly column: 24;
+          readonly kind: "problem-metadata";
+        },
+      ];
+    },
+    {
+      readonly code: "admin-core/growth-scope-mismatch";
+      readonly category: "ValidationError";
+      readonly status: 422;
+      readonly title: "Validation Error";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#admin-core-growth-scope-mismatch";
+      readonly recovery: {
+        readonly cause: "The request or generated contract failed schema or semantic validation.";
+        readonly userAction: "Fix the invalid fields and retry with schema-conformant input.";
+        readonly operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "public";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.info";
+          readonly severity: "info";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/admin-core/src/libs/GrowthModelWorkbench.ts";
+          readonly line: 84;
+          readonly column: 21;
+          readonly kind: "problem-metadata";
+        },
+      ];
+    },
+    {
+      readonly code: "admin-core/growth-source-failed";
+      readonly category: "InternalServerError";
+      readonly status: 500;
+      readonly title: "Internal Server Error";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#admin-core-growth-source-failed";
+      readonly recovery: {
+        readonly cause: "Croco or an upstream dependency failed after accepting the request.";
+        readonly userAction: "Retry later only when the operation is idempotent or the caller owns retry safety.";
+        readonly operatorAction: "Use traces, logs, and upstream diagnostics to isolate the failing boundary.";
+        readonly retryability: "conditional";
+        readonly redactionPolicy: "operator-only";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.error";
+          readonly severity: "error";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/admin-core/src/libs/GrowthModelWorkbench.ts";
+          readonly line: 96;
+          readonly column: 20;
+          readonly kind: "problem-metadata";
+        },
+      ];
+    },
+    {
+      readonly code: "admin-core/growth-stale-input";
+      readonly category: "ValidationError";
+      readonly status: 422;
+      readonly title: "Validation Error";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#admin-core-growth-stale-input";
+      readonly recovery: {
+        readonly cause: "The request or generated contract failed schema or semantic validation.";
+        readonly userAction: "Fix the invalid fields and retry with schema-conformant input.";
+        readonly operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "public";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.info";
+          readonly severity: "info";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/admin-core/src/libs/GrowthModelWorkbench.ts";
+          readonly line: 88;
+          readonly column: 18;
+          readonly kind: "problem-metadata";
         },
       ];
     },
@@ -16451,6 +16619,202 @@ export type CrocoProblemRegistry = {
       ];
     },
     {
+      readonly code: "learning-registry/denied";
+      readonly category: "Forbidden";
+      readonly status: 403;
+      readonly title: "Forbidden";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#learning-registry-denied";
+      readonly recovery: {
+        readonly cause: "The authenticated caller is not allowed to perform the requested action.";
+        readonly userAction: "Request the required permission or choose an allowed action.";
+        readonly operatorAction: "Review policy, role, tenant, entitlement, and impersonation context.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "safe-message";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.warning";
+          readonly severity: "warning";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/admin-core/src/libs/LearningRegistry.ts";
+          readonly line: 143;
+          readonly column: 11;
+          readonly kind: "problem-metadata";
+        },
+      ];
+    },
+    {
+      readonly code: "learning-registry/idempotency-conflict";
+      readonly category: "Conflict";
+      readonly status: 409;
+      readonly title: "Conflict";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#learning-registry-idempotency-conflict";
+      readonly recovery: {
+        readonly cause: "The request conflicts with current state or an idempotency constraint.";
+        readonly userAction: "Refresh state, resolve the conflict, and retry with the updated intent.";
+        readonly operatorAction: "Inspect concurrent writes, idempotency keys, and uniqueness constraints.";
+        readonly retryability: "conditional";
+        readonly redactionPolicy: "safe-message";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.warning";
+          readonly severity: "warning";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/admin-core/src/libs/LearningRegistry.ts";
+          readonly line: 149;
+          readonly column: 27;
+          readonly kind: "problem-metadata";
+        },
+      ];
+    },
+    {
+      readonly code: "learning-registry/input";
+      readonly category: "ValidationError";
+      readonly status: 422;
+      readonly title: "Validation Error";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#learning-registry-input";
+      readonly recovery: {
+        readonly cause: "The request or generated contract failed schema or semantic validation.";
+        readonly userAction: "Fix the invalid fields and retry with schema-conformant input.";
+        readonly operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "public";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.info";
+          readonly severity: "info";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/admin-core/src/libs/LearningRegistry.ts";
+          readonly line: 142;
+          readonly column: 10;
+          readonly kind: "problem-metadata";
+        },
+      ];
+    },
+    {
+      readonly code: "learning-registry/not-found";
+      readonly category: "NotFound";
+      readonly status: 404;
+      readonly title: "Not Found";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#learning-registry-not-found";
+      readonly recovery: {
+        readonly cause: "The requested resource or route-visible record does not exist.";
+        readonly userAction: "Verify the identifier and refresh the resource list before retrying.";
+        readonly operatorAction: "Confirm tenant scoping, data retention, and backing-store lookup behavior.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "public";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.info";
+          readonly severity: "info";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/admin-core/src/libs/LearningRegistry.ts";
+          readonly line: 144;
+          readonly column: 16;
+          readonly kind: "problem-metadata";
+        },
+      ];
+    },
+    {
+      readonly code: "learning-registry/revision-conflict";
+      readonly category: "Conflict";
+      readonly status: 409;
+      readonly title: "Conflict";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#learning-registry-revision-conflict";
+      readonly recovery: {
+        readonly cause: "The request conflicts with current state or an idempotency constraint.";
+        readonly userAction: "Refresh state, resolve the conflict, and retry with the updated intent.";
+        readonly operatorAction: "Inspect concurrent writes, idempotency keys, and uniqueness constraints.";
+        readonly retryability: "conditional";
+        readonly redactionPolicy: "safe-message";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.warning";
+          readonly severity: "warning";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/admin-core/src/libs/LearningRegistry.ts";
+          readonly line: 145;
+          readonly column: 24;
+          readonly kind: "problem-metadata";
+        },
+      ];
+    },
+    {
+      readonly code: "learning-registry/storage-failed";
+      readonly category: "InternalServerError";
+      readonly status: 500;
+      readonly title: "Internal Server Error";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#learning-registry-storage-failed";
+      readonly recovery: {
+        readonly cause: "Croco or an upstream dependency failed after accepting the request.";
+        readonly userAction: "Retry later only when the operation is idempotent or the caller owns retry safety.";
+        readonly operatorAction: "Use traces, logs, and upstream diagnostics to isolate the failing boundary.";
+        readonly retryability: "conditional";
+        readonly redactionPolicy: "operator-only";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.error";
+          readonly severity: "error";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/admin-core/src/libs/LearningRegistry.ts";
+          readonly line: 172;
+          readonly column: 5;
+          readonly kind: "problem-constructor";
+        },
+      ];
+    },
+    {
+      readonly code: "learning-registry/transition";
+      readonly category: "ValidationError";
+      readonly status: 422;
+      readonly title: "Validation Error";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#learning-registry-transition";
+      readonly recovery: {
+        readonly cause: "The request or generated contract failed schema or semantic validation.";
+        readonly userAction: "Fix the invalid fields and retry with schema-conformant input.";
+        readonly operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "public";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.info";
+          readonly severity: "info";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/admin-core/src/libs/LearningRegistry.ts";
+          readonly line: 153;
+          readonly column: 15;
+          readonly kind: "problem-metadata";
+        },
+      ];
+    },
+    {
       readonly code: "lifecycle-core/action-adapter-failed";
       readonly category: "InternalServerError";
       readonly status: 500;
@@ -17543,370 +17907,6 @@ export type CrocoProblemRegistry = {
       ];
     },
     {
-      readonly code: "meta-vite/rsc-client-build-id-invalid";
-      readonly category: "BadRequest";
-      readonly status: 400;
-      readonly title: "Bad Request";
-      readonly cookbookPath: "/reference/problem-recovery-cookbook/#meta-vite-rsc-client-build-id-invalid";
-      readonly recovery: {
-        readonly cause: "The configured RSC client build id contains characters a header value cannot carry.";
-        readonly userAction: "Do not retry unchanged: the server configuration has to be fixed first.";
-        readonly operatorAction: "Replace the client build id passed to the render options with the build id the plugin recorded in croco-rsc-client-build.json (letters, digits, dot, underscore, dash).";
-        readonly retryability: "not-retryable";
-        readonly redactionPolicy: "operator-only";
-        readonly telemetry: {
-          readonly eventName: "croco.problem.error";
-          readonly severity: "error";
-          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
-        };
-      };
-      readonly lifecycle: { readonly status: "active" };
-      readonly sources: readonly [
-        {
-          readonly file: "packages/meta-vite/src/libs/rsc/flight.ts";
-          readonly line: 51;
-          readonly column: 1;
-          readonly kind: "problem-class";
-        },
-      ];
-    },
-    {
-      readonly code: "meta-vite/rsc-client-manifest-mismatch";
-      readonly category: "BadRequest";
-      readonly status: 400;
-      readonly title: "Bad Request";
-      readonly cookbookPath: "/reference/problem-recovery-cookbook/#meta-vite-rsc-client-manifest-mismatch";
-      readonly recovery: {
-        readonly cause: "The client and server RSC manifest versions do not match.";
-        readonly userAction: "Reload the page so the browser picks up the deployed client bundle.";
-        readonly operatorAction: "Rebuild the client and server bundles from the same manifest and deploy them together; a Flight request without the manifest header is reported as received 'missing'.";
-        readonly retryability: "not-retryable";
-        readonly redactionPolicy: "public";
-        readonly telemetry: {
-          readonly eventName: "croco.problem.warning";
-          readonly severity: "warning";
-          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
-        };
-      };
-      readonly lifecycle: { readonly status: "active" };
-      readonly sources: readonly [
-        {
-          readonly file: "packages/meta-vite/src/libs/rsc/flight.ts";
-          readonly line: 79;
-          readonly column: 1;
-          readonly kind: "problem-class";
-        },
-      ];
-    },
-    {
-      readonly code: "meta-vite/rsc-client-reference-missing";
-      readonly category: "BadRequest";
-      readonly status: 400;
-      readonly title: "Bad Request";
-      readonly cookbookPath: "/reference/problem-recovery-cookbook/#meta-vite-rsc-client-reference-missing";
-      readonly recovery: {
-        readonly cause: "A decoded Flight client reference has no matching browser module loaded in the client manifest.";
-        readonly userAction: "Report the missing reference; reloading or retrying the same request repeats the failure until the client bundle that owns it is deployed.";
-        readonly operatorAction: "Check the client manifest registration and browser module loading for the reported reference, then rebuild and deploy matching client and server artifacts.";
-        readonly retryability: "not-retryable";
-        readonly redactionPolicy: "public";
-        readonly telemetry: {
-          readonly eventName: "croco.problem.info";
-          readonly severity: "info";
-          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
-        };
-      };
-      readonly lifecycle: { readonly status: "active" };
-      readonly sources: readonly [
-        {
-          readonly file: "packages/meta-vite/src/libs/rsc/flight.ts";
-          readonly line: 108;
-          readonly column: 1;
-          readonly kind: "problem-class";
-        },
-      ];
-    },
-    {
-      readonly code: "meta-vite/rsc-encoder-entry-invalid-input";
-      readonly category: "BadRequest";
-      readonly status: 400;
-      readonly title: "Bad Request";
-      readonly cookbookPath: "/reference/problem-recovery-cookbook/#meta-vite-rsc-encoder-entry-invalid-input";
-      readonly recovery: {
-        readonly cause: "The encoder entry received an unusable route payload or component reference.";
-        readonly userAction: "Retry the request; a malformed payload needs a client fix.";
-        readonly operatorAction: "Check the reported reason against the route registry and the componentRef format '<module-path>#<exportName>'.";
-        readonly retryability: "not-retryable";
-        readonly redactionPolicy: "public";
-        readonly telemetry: {
-          readonly eventName: "croco.problem.error";
-          readonly severity: "error";
-          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
-        };
-      };
-      readonly lifecycle: { readonly status: "active" };
-      readonly sources: readonly [
-        {
-          readonly file: "packages/meta-vite/src/libs/rsc/flightEncode.entry.ts";
-          readonly line: 28;
-          readonly column: 1;
-          readonly kind: "problem-class";
-        },
-      ];
-    },
-    {
-      readonly code: "meta-vite/rsc-flight-context-unsupported";
-      readonly category: "InternalServerError";
-      readonly status: 500;
-      readonly title: "Internal Server Error";
-      readonly cookbookPath: "/reference/problem-recovery-cookbook/#meta-vite-rsc-flight-context-unsupported";
-      readonly recovery: {
-        readonly cause: "The route needs runtime context values that the isolated Flight encoder cannot carry into its child process.";
-        readonly userAction: "Remove the runtime context from this request and retry, or serve the route without an isolated encoder.";
-        readonly operatorAction: "Either drop the context values the route reads and render from the request alone, or supply an encoder that renders in-process. Retrying with the same context fails again: the values cannot cross the child-process boundary.";
-        readonly retryability: "not-retryable";
-        readonly redactionPolicy: "operator-only";
-        readonly telemetry: {
-          readonly eventName: "croco.problem.error";
-          readonly severity: "error";
-          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
-        };
-      };
-      readonly lifecycle: { readonly status: "active" };
-      readonly sources: readonly [
-        {
-          readonly file: "packages/meta-vite/src/libs/rsc/isolatedEncode.ts";
-          readonly line: 40;
-          readonly column: 1;
-          readonly kind: "problem-class";
-        },
-      ];
-    },
-    {
-      readonly code: "meta-vite/rsc-flight-encode-aborted";
-      readonly category: "BadRequest";
-      readonly status: 400;
-      readonly title: "Bad Request";
-      readonly cookbookPath: "/reference/problem-recovery-cookbook/#meta-vite-rsc-flight-encode-aborted";
-      readonly recovery: {
-        readonly cause: "The client disconnected before the isolated Flight encoder finished.";
-        readonly userAction: "Reload the page to request the route again.";
-        readonly operatorAction: "Cancel the encoder child process on abort and check for clients that repeatedly drop connections, which would otherwise leak processes.";
-        readonly retryability: "not-retryable";
-        readonly redactionPolicy: "public";
-        readonly telemetry: {
-          readonly eventName: "croco.problem.info";
-          readonly severity: "info";
-          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
-        };
-      };
-      readonly lifecycle: { readonly status: "active" };
-      readonly sources: readonly [
-        {
-          readonly file: "packages/meta-vite/src/libs/rsc/isolatedEncode.ts";
-          readonly line: 73;
-          readonly column: 1;
-          readonly kind: "problem-class";
-        },
-      ];
-    },
-    {
-      readonly code: "meta-vite/rsc-flight-encode-failed";
-      readonly category: "InternalServerError";
-      readonly status: 500;
-      readonly title: "Internal Server Error";
-      readonly cookbookPath: "/reference/problem-recovery-cookbook/#meta-vite-rsc-flight-encode-failed";
-      readonly recovery: {
-        readonly cause: "The isolated Flight encoder process exited with a non-zero status.";
-        readonly userAction: "Retry the request; if it keeps failing, contact the service operator.";
-        readonly operatorAction: "Read the encoder detail from the problem extensions and the encoder logs. Fix the failing server component, then retry.";
-        readonly retryability: "conditional";
-        readonly redactionPolicy: "operator-only";
-        readonly telemetry: {
-          readonly eventName: "croco.problem.error";
-          readonly severity: "error";
-          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
-        };
-      };
-      readonly lifecycle: { readonly status: "active" };
-      readonly sources: readonly [
-        {
-          readonly file: "packages/meta-vite/src/libs/rsc/isolatedEncode.ts";
-          readonly line: 10;
-          readonly column: 1;
-          readonly kind: "problem-class";
-        },
-      ];
-    },
-    {
-      readonly code: "meta-vite/rsc-flight-encode-timeout";
-      readonly category: "InternalServerError";
-      readonly status: 500;
-      readonly title: "Internal Server Error";
-      readonly cookbookPath: "/reference/problem-recovery-cookbook/#meta-vite-rsc-flight-encode-timeout";
-      readonly recovery: {
-        readonly cause: "The isolated Flight encoder exceeded its render budget for the route.";
-        readonly userAction: "Do not retry unchanged: the route will time out again until the operator fixes it.";
-        readonly operatorAction: "Inspect the reported route and timeoutMs for unbounded work in server components, resolve it, then retry the request. Raise the encode budget only after the route itself is bounded.";
-        readonly retryability: "not-retryable";
-        readonly redactionPolicy: "operator-only";
-        readonly telemetry: {
-          readonly eventName: "croco.problem.error";
-          readonly severity: "error";
-          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
-        };
-      };
-      readonly lifecycle: { readonly status: "active" };
-      readonly sources: readonly [
-        {
-          readonly file: "packages/meta-vite/src/libs/rsc/isolatedEncode.ts";
-          readonly line: 54;
-          readonly column: 1;
-          readonly kind: "problem-class";
-        },
-      ];
-    },
-    {
-      readonly code: "meta-vite/rsc-flight-not-acceptable";
-      readonly category: "NotImplemented";
-      readonly status: 501;
-      readonly title: "Not Implemented";
-      readonly cookbookPath: "/reference/problem-recovery-cookbook/#meta-vite-rsc-flight-not-acceptable";
-      readonly recovery: {
-        readonly cause: "The route is declared as an RSC route but the runtime has no Flight encoder configured.";
-        readonly userAction: "Use a runtime that configures a Flight encoder for RSC routes.";
-        readonly operatorAction: "Register a Flight encoder (encodeFlight) on the render server instead of leaving the route without one.";
-        readonly retryability: "not-retryable";
-        readonly redactionPolicy: "public";
-        readonly telemetry: {
-          readonly eventName: "croco.problem.error";
-          readonly severity: "error";
-          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
-        };
-      };
-      readonly lifecycle: { readonly status: "active" };
-      readonly sources: readonly [
-        {
-          readonly file: "packages/meta-vite/src/libs/rsc/flight.ts";
-          readonly line: 65;
-          readonly column: 1;
-          readonly kind: "problem-class";
-        },
-      ];
-    },
-    {
-      readonly code: "meta-vite/rsc-peer-missing";
-      readonly category: "NotImplemented";
-      readonly status: 501;
-      readonly title: "Not Implemented";
-      readonly cookbookPath: "/reference/problem-recovery-cookbook/#meta-vite-rsc-peer-missing";
-      readonly recovery: {
-        readonly cause: "The requested capability is not supported by this runtime or adapter.";
-        readonly userAction: "Use a supported capability or choose an adapter/runtime that provides it.";
-        readonly operatorAction: "Check runtime capability declarations and provider maturity documentation.";
-        readonly retryability: "not-retryable";
-        readonly redactionPolicy: "public";
-        readonly telemetry: {
-          readonly eventName: "croco.problem.info";
-          readonly severity: "info";
-          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
-        };
-      };
-      readonly lifecycle: { readonly status: "active" };
-      readonly sources: readonly [
-        {
-          readonly file: "packages/meta-vite/src/libs/vite/crocoMetaVitePlugin.ts";
-          readonly line: 22;
-          readonly column: 1;
-          readonly kind: "problem-class";
-        },
-      ];
-    },
-    {
-      readonly code: "meta-vite/rsc-server-reference-unsupported";
-      readonly category: "NotImplemented";
-      readonly status: 501;
-      readonly title: "Not Implemented";
-      readonly cookbookPath: "/reference/problem-recovery-cookbook/#meta-vite-rsc-server-reference-unsupported";
-      readonly recovery: {
-        readonly cause: "A Flight request carried a server reference this route does not support.";
-        readonly userAction: "Call the registered Server Action endpoint instead of passing a server reference.";
-        readonly operatorAction: "Route the client to the registered action path; unsupported server references fail explicitly rather than rendering silently.";
-        readonly retryability: "not-retryable";
-        readonly redactionPolicy: "public";
-        readonly telemetry: {
-          readonly eventName: "croco.problem.warning";
-          readonly severity: "warning";
-          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
-        };
-      };
-      readonly lifecycle: { readonly status: "active" };
-      readonly sources: readonly [
-        {
-          readonly file: "packages/meta-vite/src/libs/rsc/flight.ts";
-          readonly line: 93;
-          readonly column: 1;
-          readonly kind: "problem-class";
-        },
-      ];
-    },
-    {
-      readonly code: "meta-vite/server-action-duplicate-registration";
-      readonly category: "Conflict";
-      readonly status: 409;
-      readonly title: "Conflict";
-      readonly cookbookPath: "/reference/problem-recovery-cookbook/#meta-vite-server-action-duplicate-registration";
-      readonly recovery: {
-        readonly cause: "Two server actions were registered under the same name.";
-        readonly userAction: "Rename one of the actions or remove the duplicate registration.";
-        readonly operatorAction: "Find every registration carrying the reported action name and keep a single one; the registry refuses ambiguous bindings instead of picking a handler.";
-        readonly retryability: "not-retryable";
-        readonly redactionPolicy: "public";
-        readonly telemetry: {
-          readonly eventName: "croco.problem.error";
-          readonly severity: "error";
-          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
-        };
-      };
-      readonly lifecycle: { readonly status: "active" };
-      readonly sources: readonly [
-        {
-          readonly file: "packages/meta-vite/src/libs/actions/serverActions.ts";
-          readonly line: 93;
-          readonly column: 1;
-          readonly kind: "problem-class";
-        },
-      ];
-    },
-    {
-      readonly code: "meta-vite/server-action-forbidden-origin";
-      readonly category: "Forbidden";
-      readonly status: 403;
-      readonly title: "Forbidden";
-      readonly cookbookPath: "/reference/problem-recovery-cookbook/#meta-vite-server-action-forbidden-origin";
-      readonly recovery: {
-        readonly cause: "The request Origin is not in the server action allowedOrigins list.";
-        readonly userAction: "Send the request from an allowed origin registered in allowedOrigins.";
-        readonly operatorAction: "Verify the request Origin header against the allowedOrigins configuration; requests without a verifiable Origin are rejected when an allowlist is set.";
-        readonly retryability: "not-retryable";
-        readonly redactionPolicy: "safe-message";
-        readonly telemetry: {
-          readonly eventName: "croco.problem.warning";
-          readonly severity: "warning";
-          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
-        };
-      };
-      readonly lifecycle: { readonly status: "active" };
-      readonly sources: readonly [
-        {
-          readonly file: "packages/meta-vite/src/libs/actions/serverActions.ts";
-          readonly line: 172;
-          readonly column: 1;
-          readonly kind: "problem-class";
-        },
-      ];
-    },
-    {
       readonly code: "meta-vite/server-action-invalid-content-type";
       readonly category: "UnsupportedMediaType";
       readonly status: 415;
@@ -17928,7 +17928,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/meta-vite/src/libs/actions/serverActions.ts";
-          readonly line: 151;
+          readonly line: 131;
           readonly column: 1;
           readonly kind: "problem-class";
         },
@@ -17956,7 +17956,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/meta-vite/src/libs/actions/serverActions.ts";
-          readonly line: 107;
+          readonly line: 87;
           readonly column: 1;
           readonly kind: "problem-class";
         },
@@ -17984,7 +17984,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/meta-vite/src/libs/actions/serverActions.ts";
-          readonly line: 135;
+          readonly line: 115;
           readonly column: 1;
           readonly kind: "problem-class";
         },
@@ -18012,7 +18012,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/meta-vite/src/libs/actions/serverActions.ts";
-          readonly line: 74;
+          readonly line: 73;
           readonly column: 1;
           readonly kind: "problem-class";
         },
@@ -18040,7 +18040,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/meta-vite/src/libs/actions/serverActions.ts";
-          readonly line: 121;
+          readonly line: 101;
           readonly column: 1;
           readonly kind: "problem-class";
         },
@@ -19032,6 +19032,34 @@ export type CrocoProblemRegistry = {
           readonly line: 19;
           readonly column: 1;
           readonly kind: "problem-class";
+        },
+      ];
+    },
+    {
+      readonly code: "metrics-core/invalid-growth-model";
+      readonly category: "ValidationError";
+      readonly status: 422;
+      readonly title: "Validation Error";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#metrics-core-invalid-growth-model";
+      readonly recovery: {
+        readonly cause: "The request or generated contract failed schema or semantic validation.";
+        readonly userAction: "Fix the invalid fields and retry with schema-conformant input.";
+        readonly operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "public";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.info";
+          readonly severity: "info";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/metrics-core/src/libs/growth/GrowthModel.ts";
+          readonly line: 101;
+          readonly column: 5;
+          readonly kind: "problem-constructor";
         },
       ];
     },
@@ -22032,6 +22060,34 @@ export type CrocoProblemRegistry = {
       ];
     },
     {
+      readonly code: "protocol-codegen/controller-project-jsx-runtime";
+      readonly category: "ValidationError";
+      readonly status: 422;
+      readonly title: "Validation Error";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#protocol-codegen-controller-project-jsx-runtime";
+      readonly recovery: {
+        readonly cause: "Temporary JSX emission introduced diagnostics for the configured JSX factory or automatic runtime.";
+        readonly userAction: "Import the configured JSX factory (React by default), provide jsxFactory and jsxFragmentFactory bindings, or configure jsxImportSource with an installed automatic JSX runtime, then rerun code generation.";
+        readonly operatorAction: "Inspect the source diagnostics and tsconfig reported before module output; correct the JSX runtime configuration and verify the selected runtime dependency.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "public";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.info";
+          readonly severity: "info";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/protocol-codegen/src/libs/ControllerProject.ts";
+          readonly line: 95;
+          readonly column: 5;
+          readonly kind: "problem-constructor";
+        },
+      ];
+    },
+    {
       readonly code: "protocol-codegen/controller-project-state";
       readonly category: "InternalServerError";
       readonly status: 500;
@@ -23603,6 +23659,258 @@ export type CrocoProblemRegistry = {
         {
           readonly file: "packages/repository-core/src/libs/problems/BatchLoadProblems.ts";
           readonly line: 28;
+          readonly column: 1;
+          readonly kind: "problem-class";
+        },
+      ];
+    },
+    {
+      readonly code: "research/conflict";
+      readonly category: "Conflict";
+      readonly status: 409;
+      readonly title: "Conflict";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#research-conflict";
+      readonly recovery: {
+        readonly cause: "The request conflicts with current state or an idempotency constraint.";
+        readonly userAction: "Refresh state, resolve the conflict, and retry with the updated intent.";
+        readonly operatorAction: "Inspect concurrent writes, idempotency keys, and uniqueness constraints.";
+        readonly retryability: "conditional";
+        readonly redactionPolicy: "safe-message";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.warning";
+          readonly severity: "warning";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/research-core/src/libs/ResearchContracts.ts";
+          readonly line: 159;
+          readonly column: 5;
+          readonly kind: "problem-constructor";
+        },
+      ];
+    },
+    {
+      readonly code: "research/denied";
+      readonly category: "Forbidden";
+      readonly status: 403;
+      readonly title: "Forbidden";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#research-denied";
+      readonly recovery: {
+        readonly cause: "The authenticated caller is not allowed to perform the requested action.";
+        readonly userAction: "Request the required permission or choose an allowed action.";
+        readonly operatorAction: "Review policy, role, tenant, entitlement, and impersonation context.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "safe-message";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.warning";
+          readonly severity: "warning";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/research-core/src/libs/ResearchContracts.ts";
+          readonly line: 164;
+          readonly column: 5;
+          readonly kind: "problem-constructor";
+        },
+      ];
+    },
+    {
+      readonly code: "research/invalid";
+      readonly category: "BadRequest";
+      readonly status: 400;
+      readonly title: "Bad Request";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#research-invalid";
+      readonly recovery: {
+        readonly cause: "The caller sent malformed input or unsupported request options.";
+        readonly userAction: "Correct the request input and retry after validation passes.";
+        readonly operatorAction: "Inspect validation details and request logs; do not retry unchanged input.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "public";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.info";
+          readonly severity: "info";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/research-core/src/libs/ResearchContracts.ts";
+          readonly line: 154;
+          readonly column: 5;
+          readonly kind: "problem-constructor";
+        },
+      ];
+    },
+    {
+      readonly code: "research/persistence";
+      readonly category: "InternalServerError";
+      readonly status: 500;
+      readonly title: "Internal Server Error";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#research-persistence";
+      readonly recovery: {
+        readonly cause: "Croco or an upstream dependency failed after accepting the request.";
+        readonly userAction: "Retry later only when the operation is idempotent or the caller owns retry safety.";
+        readonly operatorAction: "Use traces, logs, and upstream diagnostics to isolate the failing boundary.";
+        readonly retryability: "conditional";
+        readonly redactionPolicy: "operator-only";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.error";
+          readonly severity: "error";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/research-core/src/libs/ResearchContracts.ts";
+          readonly line: 169;
+          readonly column: 5;
+          readonly kind: "problem-constructor";
+        },
+      ];
+    },
+    {
+      readonly code: "research/survey-conflict";
+      readonly category: "Conflict";
+      readonly status: 409;
+      readonly title: "Conflict";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#research-survey-conflict";
+      readonly recovery: {
+        readonly cause: "The request conflicts with current state or an idempotency constraint.";
+        readonly userAction: "Refresh state, resolve the conflict, and retry with the updated intent.";
+        readonly operatorAction: "Inspect concurrent writes, idempotency keys, and uniqueness constraints.";
+        readonly retryability: "conditional";
+        readonly redactionPolicy: "safe-message";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.warning";
+          readonly severity: "warning";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/research-core/src/libs/SurveyProblems.ts";
+          readonly line: 10;
+          readonly column: 1;
+          readonly kind: "problem-class";
+        },
+      ];
+    },
+    {
+      readonly code: "research/survey-denied";
+      readonly category: "Forbidden";
+      readonly status: 403;
+      readonly title: "Forbidden";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#research-survey-denied";
+      readonly recovery: {
+        readonly cause: "The authenticated caller is not allowed to perform the requested action.";
+        readonly userAction: "Request the required permission or choose an allowed action.";
+        readonly operatorAction: "Review policy, role, tenant, entitlement, and impersonation context.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "safe-message";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.warning";
+          readonly severity: "warning";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/research-core/src/libs/SurveyProblems.ts";
+          readonly line: 19;
+          readonly column: 1;
+          readonly kind: "problem-class";
+        },
+      ];
+    },
+    {
+      readonly code: "research/survey-expired";
+      readonly category: "ValidationError";
+      readonly status: 422;
+      readonly title: "Validation Error";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#research-survey-expired";
+      readonly recovery: {
+        readonly cause: "The survey invitation expired before the response was submitted.";
+        readonly userAction: "Request a new survey invitation before retrying.";
+        readonly operatorAction: "Inspect the invitation expiry timestamp and invitation lifecycle.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "public";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.info";
+          readonly severity: "info";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/research-core/src/libs/SurveyProblems.ts";
+          readonly line: 26;
+          readonly column: 1;
+          readonly kind: "problem-class";
+        },
+      ];
+    },
+    {
+      readonly code: "research/survey-invalid";
+      readonly category: "ValidationError";
+      readonly status: 422;
+      readonly title: "Validation Error";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#research-survey-invalid";
+      readonly recovery: {
+        readonly cause: "The request or generated contract failed schema or semantic validation.";
+        readonly userAction: "Fix the invalid fields and retry with schema-conformant input.";
+        readonly operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "public";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.info";
+          readonly severity: "info";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/research-core/src/libs/SurveyProblems.ts";
+          readonly line: 3;
+          readonly column: 1;
+          readonly kind: "problem-class";
+        },
+      ];
+    },
+    {
+      readonly code: "research/survey-unavailable";
+      readonly category: "InternalServerError";
+      readonly status: 500;
+      readonly title: "Internal Server Error";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#research-survey-unavailable";
+      readonly recovery: {
+        readonly cause: "Croco or an upstream dependency failed after accepting the request.";
+        readonly userAction: "Retry later only when the operation is idempotent or the caller owns retry safety.";
+        readonly operatorAction: "Use traces, logs, and upstream diagnostics to isolate the failing boundary.";
+        readonly retryability: "conditional";
+        readonly redactionPolicy: "operator-only";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.error";
+          readonly severity: "error";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/research-core/src/libs/SurveyProblems.ts";
+          readonly line: 33;
           readonly column: 1;
           readonly kind: "problem-class";
         },
@@ -29301,7 +29609,7 @@ export type CrocoProblemRegistry = {
 
 export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 1036,
+  problemCount: 1047,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -34170,6 +34478,188 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
           line: 80,
           column: 5,
           kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "admin-core/growth-denied",
+      category: "Forbidden",
+      status: 403,
+      title: "Forbidden",
+      cookbookPath: "/reference/problem-recovery-cookbook/#admin-core-growth-denied",
+      recovery: {
+        cause: "The authenticated caller is not allowed to perform the requested action.",
+        userAction: "Request the required permission or choose an allowed action.",
+        operatorAction: "Review policy, role, tenant, entitlement, and impersonation context.",
+        retryability: "not-retryable",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/admin-core/src/libs/GrowthModelWorkbench.ts",
+          line: 79,
+          column: 11,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "admin-core/growth-invalid-request",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#admin-core-growth-invalid-request",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/admin-core/src/libs/GrowthModelWorkbench.ts",
+          line: 80,
+          column: 22,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "admin-core/growth-revision-conflict",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#admin-core-growth-revision-conflict",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/admin-core/src/libs/GrowthModelWorkbench.ts",
+          line: 92,
+          column: 24,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "admin-core/growth-scope-mismatch",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#admin-core-growth-scope-mismatch",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/admin-core/src/libs/GrowthModelWorkbench.ts",
+          line: 84,
+          column: 21,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "admin-core/growth-source-failed",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#admin-core-growth-source-failed",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/admin-core/src/libs/GrowthModelWorkbench.ts",
+          line: 96,
+          column: 20,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "admin-core/growth-stale-input",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#admin-core-growth-stale-input",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/admin-core/src/libs/GrowthModelWorkbench.ts",
+          line: 88,
+          column: 18,
+          kind: "problem-metadata",
         },
       ],
     },
@@ -47621,6 +48111,219 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       ],
     },
     {
+      code: "learning-registry/denied",
+      category: "Forbidden",
+      status: 403,
+      title: "Forbidden",
+      cookbookPath: "/reference/problem-recovery-cookbook/#learning-registry-denied",
+      recovery: {
+        cause: "The authenticated caller is not allowed to perform the requested action.",
+        userAction: "Request the required permission or choose an allowed action.",
+        operatorAction: "Review policy, role, tenant, entitlement, and impersonation context.",
+        retryability: "not-retryable",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/admin-core/src/libs/LearningRegistry.ts",
+          line: 143,
+          column: 11,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "learning-registry/idempotency-conflict",
+      category: "Conflict",
+      status: 409,
+      title: "Conflict",
+      cookbookPath: "/reference/problem-recovery-cookbook/#learning-registry-idempotency-conflict",
+      recovery: {
+        cause: "The request conflicts with current state or an idempotency constraint.",
+        userAction: "Refresh state, resolve the conflict, and retry with the updated intent.",
+        operatorAction: "Inspect concurrent writes, idempotency keys, and uniqueness constraints.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/admin-core/src/libs/LearningRegistry.ts",
+          line: 149,
+          column: 27,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "learning-registry/input",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#learning-registry-input",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/admin-core/src/libs/LearningRegistry.ts",
+          line: 142,
+          column: 10,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "learning-registry/not-found",
+      category: "NotFound",
+      status: 404,
+      title: "Not Found",
+      cookbookPath: "/reference/problem-recovery-cookbook/#learning-registry-not-found",
+      recovery: {
+        cause: "The requested resource or route-visible record does not exist.",
+        userAction: "Verify the identifier and refresh the resource list before retrying.",
+        operatorAction:
+          "Confirm tenant scoping, data retention, and backing-store lookup behavior.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/admin-core/src/libs/LearningRegistry.ts",
+          line: 144,
+          column: 16,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "learning-registry/revision-conflict",
+      category: "Conflict",
+      status: 409,
+      title: "Conflict",
+      cookbookPath: "/reference/problem-recovery-cookbook/#learning-registry-revision-conflict",
+      recovery: {
+        cause: "The request conflicts with current state or an idempotency constraint.",
+        userAction: "Refresh state, resolve the conflict, and retry with the updated intent.",
+        operatorAction: "Inspect concurrent writes, idempotency keys, and uniqueness constraints.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/admin-core/src/libs/LearningRegistry.ts",
+          line: 145,
+          column: 24,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "learning-registry/storage-failed",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#learning-registry-storage-failed",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/admin-core/src/libs/LearningRegistry.ts",
+          line: 172,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "learning-registry/transition",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#learning-registry-transition",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/admin-core/src/libs/LearningRegistry.ts",
+          line: 153,
+          column: 15,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
       code: "lifecycle-core/action-adapter-failed",
       category: "InternalServerError",
       status: 500,
@@ -48849,422 +49552,6 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       ],
     },
     {
-      code: "meta-vite/rsc-client-build-id-invalid",
-      category: "BadRequest",
-      status: 400,
-      title: "Bad Request",
-      cookbookPath: "/reference/problem-recovery-cookbook/#meta-vite-rsc-client-build-id-invalid",
-      recovery: {
-        cause:
-          "The configured RSC client build id contains characters a header value cannot carry.",
-        userAction: "Do not retry unchanged: the server configuration has to be fixed first.",
-        operatorAction:
-          "Replace the client build id passed to the render options with the build id the plugin recorded in croco-rsc-client-build.json (letters, digits, dot, underscore, dash).",
-        retryability: "not-retryable",
-        redactionPolicy: "operator-only",
-        telemetry: {
-          eventName: "croco.problem.error",
-          severity: "error",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/meta-vite/src/libs/rsc/flight.ts",
-          line: 51,
-          column: 1,
-          kind: "problem-class",
-        },
-      ],
-    },
-    {
-      code: "meta-vite/rsc-client-manifest-mismatch",
-      category: "BadRequest",
-      status: 400,
-      title: "Bad Request",
-      cookbookPath: "/reference/problem-recovery-cookbook/#meta-vite-rsc-client-manifest-mismatch",
-      recovery: {
-        cause: "The client and server RSC manifest versions do not match.",
-        userAction: "Reload the page so the browser picks up the deployed client bundle.",
-        operatorAction:
-          "Rebuild the client and server bundles from the same manifest and deploy them together; a Flight request without the manifest header is reported as received 'missing'.",
-        retryability: "not-retryable",
-        redactionPolicy: "public",
-        telemetry: {
-          eventName: "croco.problem.warning",
-          severity: "warning",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/meta-vite/src/libs/rsc/flight.ts",
-          line: 79,
-          column: 1,
-          kind: "problem-class",
-        },
-      ],
-    },
-    {
-      code: "meta-vite/rsc-client-reference-missing",
-      category: "BadRequest",
-      status: 400,
-      title: "Bad Request",
-      cookbookPath: "/reference/problem-recovery-cookbook/#meta-vite-rsc-client-reference-missing",
-      recovery: {
-        cause:
-          "A decoded Flight client reference has no matching browser module loaded in the client manifest.",
-        userAction:
-          "Report the missing reference; reloading or retrying the same request repeats the failure until the client bundle that owns it is deployed.",
-        operatorAction:
-          "Check the client manifest registration and browser module loading for the reported reference, then rebuild and deploy matching client and server artifacts.",
-        retryability: "not-retryable",
-        redactionPolicy: "public",
-        telemetry: {
-          eventName: "croco.problem.info",
-          severity: "info",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/meta-vite/src/libs/rsc/flight.ts",
-          line: 108,
-          column: 1,
-          kind: "problem-class",
-        },
-      ],
-    },
-    {
-      code: "meta-vite/rsc-encoder-entry-invalid-input",
-      category: "BadRequest",
-      status: 400,
-      title: "Bad Request",
-      cookbookPath:
-        "/reference/problem-recovery-cookbook/#meta-vite-rsc-encoder-entry-invalid-input",
-      recovery: {
-        cause: "The encoder entry received an unusable route payload or component reference.",
-        userAction: "Retry the request; a malformed payload needs a client fix.",
-        operatorAction:
-          "Check the reported reason against the route registry and the componentRef format '<module-path>#<exportName>'.",
-        retryability: "not-retryable",
-        redactionPolicy: "public",
-        telemetry: {
-          eventName: "croco.problem.error",
-          severity: "error",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/meta-vite/src/libs/rsc/flightEncode.entry.ts",
-          line: 28,
-          column: 1,
-          kind: "problem-class",
-        },
-      ],
-    },
-    {
-      code: "meta-vite/rsc-flight-context-unsupported",
-      category: "InternalServerError",
-      status: 500,
-      title: "Internal Server Error",
-      cookbookPath:
-        "/reference/problem-recovery-cookbook/#meta-vite-rsc-flight-context-unsupported",
-      recovery: {
-        cause:
-          "The route needs runtime context values that the isolated Flight encoder cannot carry into its child process.",
-        userAction:
-          "Remove the runtime context from this request and retry, or serve the route without an isolated encoder.",
-        operatorAction:
-          "Either drop the context values the route reads and render from the request alone, or supply an encoder that renders in-process. Retrying with the same context fails again: the values cannot cross the child-process boundary.",
-        retryability: "not-retryable",
-        redactionPolicy: "operator-only",
-        telemetry: {
-          eventName: "croco.problem.error",
-          severity: "error",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/meta-vite/src/libs/rsc/isolatedEncode.ts",
-          line: 40,
-          column: 1,
-          kind: "problem-class",
-        },
-      ],
-    },
-    {
-      code: "meta-vite/rsc-flight-encode-aborted",
-      category: "BadRequest",
-      status: 400,
-      title: "Bad Request",
-      cookbookPath: "/reference/problem-recovery-cookbook/#meta-vite-rsc-flight-encode-aborted",
-      recovery: {
-        cause: "The client disconnected before the isolated Flight encoder finished.",
-        userAction: "Reload the page to request the route again.",
-        operatorAction:
-          "Cancel the encoder child process on abort and check for clients that repeatedly drop connections, which would otherwise leak processes.",
-        retryability: "not-retryable",
-        redactionPolicy: "public",
-        telemetry: {
-          eventName: "croco.problem.info",
-          severity: "info",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/meta-vite/src/libs/rsc/isolatedEncode.ts",
-          line: 73,
-          column: 1,
-          kind: "problem-class",
-        },
-      ],
-    },
-    {
-      code: "meta-vite/rsc-flight-encode-failed",
-      category: "InternalServerError",
-      status: 500,
-      title: "Internal Server Error",
-      cookbookPath: "/reference/problem-recovery-cookbook/#meta-vite-rsc-flight-encode-failed",
-      recovery: {
-        cause: "The isolated Flight encoder process exited with a non-zero status.",
-        userAction: "Retry the request; if it keeps failing, contact the service operator.",
-        operatorAction:
-          "Read the encoder detail from the problem extensions and the encoder logs. Fix the failing server component, then retry.",
-        retryability: "conditional",
-        redactionPolicy: "operator-only",
-        telemetry: {
-          eventName: "croco.problem.error",
-          severity: "error",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/meta-vite/src/libs/rsc/isolatedEncode.ts",
-          line: 10,
-          column: 1,
-          kind: "problem-class",
-        },
-      ],
-    },
-    {
-      code: "meta-vite/rsc-flight-encode-timeout",
-      category: "InternalServerError",
-      status: 500,
-      title: "Internal Server Error",
-      cookbookPath: "/reference/problem-recovery-cookbook/#meta-vite-rsc-flight-encode-timeout",
-      recovery: {
-        cause: "The isolated Flight encoder exceeded its render budget for the route.",
-        userAction:
-          "Do not retry unchanged: the route will time out again until the operator fixes it.",
-        operatorAction:
-          "Inspect the reported route and timeoutMs for unbounded work in server components, resolve it, then retry the request. Raise the encode budget only after the route itself is bounded.",
-        retryability: "not-retryable",
-        redactionPolicy: "operator-only",
-        telemetry: {
-          eventName: "croco.problem.error",
-          severity: "error",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/meta-vite/src/libs/rsc/isolatedEncode.ts",
-          line: 54,
-          column: 1,
-          kind: "problem-class",
-        },
-      ],
-    },
-    {
-      code: "meta-vite/rsc-flight-not-acceptable",
-      category: "NotImplemented",
-      status: 501,
-      title: "Not Implemented",
-      cookbookPath: "/reference/problem-recovery-cookbook/#meta-vite-rsc-flight-not-acceptable",
-      recovery: {
-        cause:
-          "The route is declared as an RSC route but the runtime has no Flight encoder configured.",
-        userAction: "Use a runtime that configures a Flight encoder for RSC routes.",
-        operatorAction:
-          "Register a Flight encoder (encodeFlight) on the render server instead of leaving the route without one.",
-        retryability: "not-retryable",
-        redactionPolicy: "public",
-        telemetry: {
-          eventName: "croco.problem.error",
-          severity: "error",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/meta-vite/src/libs/rsc/flight.ts",
-          line: 65,
-          column: 1,
-          kind: "problem-class",
-        },
-      ],
-    },
-    {
-      code: "meta-vite/rsc-peer-missing",
-      category: "NotImplemented",
-      status: 501,
-      title: "Not Implemented",
-      cookbookPath: "/reference/problem-recovery-cookbook/#meta-vite-rsc-peer-missing",
-      recovery: {
-        cause: "The requested capability is not supported by this runtime or adapter.",
-        userAction: "Use a supported capability or choose an adapter/runtime that provides it.",
-        operatorAction:
-          "Check runtime capability declarations and provider maturity documentation.",
-        retryability: "not-retryable",
-        redactionPolicy: "public",
-        telemetry: {
-          eventName: "croco.problem.info",
-          severity: "info",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/meta-vite/src/libs/vite/crocoMetaVitePlugin.ts",
-          line: 22,
-          column: 1,
-          kind: "problem-class",
-        },
-      ],
-    },
-    {
-      code: "meta-vite/rsc-server-reference-unsupported",
-      category: "NotImplemented",
-      status: 501,
-      title: "Not Implemented",
-      cookbookPath:
-        "/reference/problem-recovery-cookbook/#meta-vite-rsc-server-reference-unsupported",
-      recovery: {
-        cause: "A Flight request carried a server reference this route does not support.",
-        userAction:
-          "Call the registered Server Action endpoint instead of passing a server reference.",
-        operatorAction:
-          "Route the client to the registered action path; unsupported server references fail explicitly rather than rendering silently.",
-        retryability: "not-retryable",
-        redactionPolicy: "public",
-        telemetry: {
-          eventName: "croco.problem.warning",
-          severity: "warning",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/meta-vite/src/libs/rsc/flight.ts",
-          line: 93,
-          column: 1,
-          kind: "problem-class",
-        },
-      ],
-    },
-    {
-      code: "meta-vite/server-action-duplicate-registration",
-      category: "Conflict",
-      status: 409,
-      title: "Conflict",
-      cookbookPath:
-        "/reference/problem-recovery-cookbook/#meta-vite-server-action-duplicate-registration",
-      recovery: {
-        cause: "Two server actions were registered under the same name.",
-        userAction: "Rename one of the actions or remove the duplicate registration.",
-        operatorAction:
-          "Find every registration carrying the reported action name and keep a single one; the registry refuses ambiguous bindings instead of picking a handler.",
-        retryability: "not-retryable",
-        redactionPolicy: "public",
-        telemetry: {
-          eventName: "croco.problem.error",
-          severity: "error",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/meta-vite/src/libs/actions/serverActions.ts",
-          line: 93,
-          column: 1,
-          kind: "problem-class",
-        },
-      ],
-    },
-    {
-      code: "meta-vite/server-action-forbidden-origin",
-      category: "Forbidden",
-      status: 403,
-      title: "Forbidden",
-      cookbookPath:
-        "/reference/problem-recovery-cookbook/#meta-vite-server-action-forbidden-origin",
-      recovery: {
-        cause: "The request Origin is not in the server action allowedOrigins list.",
-        userAction: "Send the request from an allowed origin registered in allowedOrigins.",
-        operatorAction:
-          "Verify the request Origin header against the allowedOrigins configuration; requests without a verifiable Origin are rejected when an allowlist is set.",
-        retryability: "not-retryable",
-        redactionPolicy: "safe-message",
-        telemetry: {
-          eventName: "croco.problem.warning",
-          severity: "warning",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/meta-vite/src/libs/actions/serverActions.ts",
-          line: 172,
-          column: 1,
-          kind: "problem-class",
-        },
-      ],
-    },
-    {
       code: "meta-vite/server-action-invalid-content-type",
       category: "UnsupportedMediaType",
       status: 415,
@@ -49289,7 +49576,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/meta-vite/src/libs/actions/serverActions.ts",
-          line: 151,
+          line: 131,
           column: 1,
           kind: "problem-class",
         },
@@ -49320,7 +49607,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/meta-vite/src/libs/actions/serverActions.ts",
-          line: 107,
+          line: 87,
           column: 1,
           kind: "problem-class",
         },
@@ -49351,7 +49638,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/meta-vite/src/libs/actions/serverActions.ts",
-          line: 135,
+          line: 115,
           column: 1,
           kind: "problem-class",
         },
@@ -49382,7 +49669,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/meta-vite/src/libs/actions/serverActions.ts",
-          line: 74,
+          line: 73,
           column: 1,
           kind: "problem-class",
         },
@@ -49413,7 +49700,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/meta-vite/src/libs/actions/serverActions.ts",
-          line: 121,
+          line: 101,
           column: 1,
           kind: "problem-class",
         },
@@ -50526,6 +50813,36 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
           line: 19,
           column: 1,
           kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "metrics-core/invalid-growth-model",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#metrics-core-invalid-growth-model",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/metrics-core/src/libs/growth/GrowthModel.ts",
+          line: 101,
+          column: 5,
+          kind: "problem-constructor",
         },
       ],
     },
@@ -53878,6 +54195,40 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       ],
     },
     {
+      code: "protocol-codegen/controller-project-jsx-runtime",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#protocol-codegen-controller-project-jsx-runtime",
+      recovery: {
+        cause:
+          "Temporary JSX emission introduced diagnostics for the configured JSX factory or automatic runtime.",
+        userAction:
+          "Import the configured JSX factory (React by default), provide jsxFactory and jsxFragmentFactory bindings, or configure jsxImportSource with an installed automatic JSX runtime, then rerun code generation.",
+        operatorAction:
+          "Inspect the source diagnostics and tsconfig reported before module output; correct the JSX runtime configuration and verify the selected runtime dependency.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/protocol-codegen/src/libs/ControllerProject.ts",
+          line: 95,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
       code: "protocol-codegen/controller-project-state",
       category: "InternalServerError",
       status: 500,
@@ -55652,6 +56003,281 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
         {
           file: "packages/repository-core/src/libs/problems/BatchLoadProblems.ts",
           line: 28,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "research/conflict",
+      category: "Conflict",
+      status: 409,
+      title: "Conflict",
+      cookbookPath: "/reference/problem-recovery-cookbook/#research-conflict",
+      recovery: {
+        cause: "The request conflicts with current state or an idempotency constraint.",
+        userAction: "Refresh state, resolve the conflict, and retry with the updated intent.",
+        operatorAction: "Inspect concurrent writes, idempotency keys, and uniqueness constraints.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/research-core/src/libs/ResearchContracts.ts",
+          line: 159,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "research/denied",
+      category: "Forbidden",
+      status: 403,
+      title: "Forbidden",
+      cookbookPath: "/reference/problem-recovery-cookbook/#research-denied",
+      recovery: {
+        cause: "The authenticated caller is not allowed to perform the requested action.",
+        userAction: "Request the required permission or choose an allowed action.",
+        operatorAction: "Review policy, role, tenant, entitlement, and impersonation context.",
+        retryability: "not-retryable",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/research-core/src/libs/ResearchContracts.ts",
+          line: 164,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "research/invalid",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath: "/reference/problem-recovery-cookbook/#research-invalid",
+      recovery: {
+        cause: "The caller sent malformed input or unsupported request options.",
+        userAction: "Correct the request input and retry after validation passes.",
+        operatorAction:
+          "Inspect validation details and request logs; do not retry unchanged input.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/research-core/src/libs/ResearchContracts.ts",
+          line: 154,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "research/persistence",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#research-persistence",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/research-core/src/libs/ResearchContracts.ts",
+          line: 169,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "research/survey-conflict",
+      category: "Conflict",
+      status: 409,
+      title: "Conflict",
+      cookbookPath: "/reference/problem-recovery-cookbook/#research-survey-conflict",
+      recovery: {
+        cause: "The request conflicts with current state or an idempotency constraint.",
+        userAction: "Refresh state, resolve the conflict, and retry with the updated intent.",
+        operatorAction: "Inspect concurrent writes, idempotency keys, and uniqueness constraints.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/research-core/src/libs/SurveyProblems.ts",
+          line: 10,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "research/survey-denied",
+      category: "Forbidden",
+      status: 403,
+      title: "Forbidden",
+      cookbookPath: "/reference/problem-recovery-cookbook/#research-survey-denied",
+      recovery: {
+        cause: "The authenticated caller is not allowed to perform the requested action.",
+        userAction: "Request the required permission or choose an allowed action.",
+        operatorAction: "Review policy, role, tenant, entitlement, and impersonation context.",
+        retryability: "not-retryable",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/research-core/src/libs/SurveyProblems.ts",
+          line: 19,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "research/survey-expired",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#research-survey-expired",
+      recovery: {
+        cause: "The survey invitation expired before the response was submitted.",
+        userAction: "Request a new survey invitation before retrying.",
+        operatorAction: "Inspect the invitation expiry timestamp and invitation lifecycle.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/research-core/src/libs/SurveyProblems.ts",
+          line: 26,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "research/survey-invalid",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#research-survey-invalid",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/research-core/src/libs/SurveyProblems.ts",
+          line: 3,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "research/survey-unavailable",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#research-survey-unavailable",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/research-core/src/libs/SurveyProblems.ts",
+          line: 33,
           column: 1,
           kind: "problem-class",
         },

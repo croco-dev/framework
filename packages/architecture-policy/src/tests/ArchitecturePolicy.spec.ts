@@ -261,6 +261,179 @@ describe("architecture policy engine", () => {
     ]);
   });
 
+  it("ignores dependency examples in strings, templates, regexes and comments", () => {
+    const repo = createTempRepo();
+    writePackage(repo, "packages/repository-core", "@croco/repository-core");
+    writeFile(
+      repo,
+      "packages/repository-core/src/index.ts",
+      [
+        "const tutorial = `import { x } from '@croco/tx-drizzle';`,",
+        "  multiline = `",
+        "export { x } from '@croco/tx-drizzle';",
+        "require('@croco/tx-drizzle');",
+        "`;",
+        "const quoted = \"import('drizzle-orm')\";",
+        "const pattern = /require('drizzle-orm')/;",
+        "// import '@croco/tx-drizzle';",
+        "/* export { x } from '@croco/tx-drizzle';",
+        "import('drizzle-orm'); */",
+        "const metadata = { from: '@croco/tx-drizzle' };",
+        "loader.require('@croco/tx-drizzle');",
+      ].join("\n"),
+    );
+
+    const report = checkArchitecturePolicy({ rootDir: repo, manifest: crocoManifest() });
+    expect(report.status).toBe("pass");
+    expect(report.importCount).toBe(0);
+    expect(report.diagnostics).toEqual([]);
+  });
+
+  it("does not hide the next import after a glob string", () => {
+    const repo = createTempRepo();
+    writePackage(repo, "packages/repository-core", "@croco/repository-core");
+    writeFile(
+      repo,
+      "packages/repository-core/src/index.ts",
+      "const include = 'src/*';\nimport { x } from '@croco/tx-drizzle';\n",
+    );
+
+    const report = checkArchitecturePolicy({ rootDir: repo, manifest: crocoManifest() });
+    expect(report.status).toBe("fail");
+    expect(report.importCount).toBe(1);
+    expect(report.diagnostics).toEqual([
+      expect.objectContaining({ importSpecifier: "@croco/tx-drizzle", line: 2, column: 20 }),
+    ]);
+  });
+
+  it("ignores computed module specifiers while collecting nested literal imports", () => {
+    const repo = createTempRepo();
+    writePackage(repo, "packages/repository-core", "@croco/repository-core");
+    writeFile(
+      repo,
+      "packages/repository-core/src/index.ts",
+      [
+        "const dynamic = import(`@croco/${name}`);",
+        "const required = require('@croco/' + name);",
+        "const nested = import(resolve(import('@croco/tx-drizzle')));",
+      ].join("\n"),
+    );
+
+    const report = checkArchitecturePolicy({ rootDir: repo, manifest: crocoManifest() });
+    expect(report.importCount).toBe(1);
+    expect(report.diagnostics).toEqual([
+      expect.objectContaining({ importSpecifier: "@croco/tx-drizzle", line: 3, column: 39 }),
+    ]);
+  });
+
+  it("detects actual dependencies after comment-like strings at original locations", () => {
+    const repo = createTempRepo();
+    writePackage(repo, "packages/repository-core", "@croco/repository-core");
+    writeFile(
+      repo,
+      "packages/repository-core/src/index.ts",
+      [
+        "const include = 'src/*';",
+        'const url = "https://example.test";',
+        "/* prefix */ import '@croco/tx-drizzle';",
+        "export {",
+        "  value",
+        "} from '@croco/tx-drizzle';",
+        "const dynamic = import(",
+        "  /* specifier */ '@croco/tx-drizzle'",
+        ");",
+        "const required = require(",
+        "  'drizzle-orm'",
+        ");",
+        "const template = `result: ${import('@croco/tx-drizzle')}`;",
+        "const literal = require(`drizzle-orm`);",
+        "import alias = require('@croco/tx-drizzle');",
+        "type Row = import('drizzle-orm').Row;",
+      ].join("\r\n"),
+    );
+
+    const report = checkArchitecturePolicy({ rootDir: repo, manifest: crocoManifest() });
+    expect(report.status).toBe("fail");
+    expect(report.importCount).toBe(8);
+    expect(
+      report.diagnostics.map(({ line, column, importSpecifier, excerpt }) => ({
+        line,
+        column,
+        importSpecifier,
+        excerpt,
+      })),
+    ).toEqual([
+      {
+        line: 3,
+        column: 22,
+        importSpecifier: "@croco/tx-drizzle",
+        excerpt: "/* prefix */ import '@croco/tx-drizzle';",
+      },
+      {
+        line: 6,
+        column: 9,
+        importSpecifier: "@croco/tx-drizzle",
+        excerpt: "} from '@croco/tx-drizzle';",
+      },
+      {
+        line: 8,
+        column: 20,
+        importSpecifier: "@croco/tx-drizzle",
+        excerpt: "/* specifier */ '@croco/tx-drizzle'",
+      },
+      { line: 11, column: 4, importSpecifier: "drizzle-orm", excerpt: "'drizzle-orm'" },
+      {
+        line: 13,
+        column: 37,
+        importSpecifier: "@croco/tx-drizzle",
+        excerpt: "const template = `result: ${import('@croco/tx-drizzle')}`;",
+      },
+      {
+        line: 14,
+        column: 26,
+        importSpecifier: "drizzle-orm",
+        excerpt: "const literal = require(`drizzle-orm`);",
+      },
+      {
+        line: 15,
+        column: 25,
+        importSpecifier: "@croco/tx-drizzle",
+        excerpt: "import alias = require('@croco/tx-drizzle');",
+      },
+      {
+        line: 16,
+        column: 20,
+        importSpecifier: "drizzle-orm",
+        excerpt: "type Row = import('drizzle-orm').Row;",
+      },
+    ]);
+  });
+
+  it.each(["\r", "\u2028", "\u2029"])(
+    "preserves original excerpts after line terminator %j",
+    (terminator) => {
+      const repo = createTempRepo();
+      writePackage(repo, "packages/repository-core", "@croco/repository-core");
+      const importedLine = "import '@croco/tx-drizzle';";
+      writeFile(
+        repo,
+        "packages/repository-core/src/index.ts",
+        `const include = 'src/*';${terminator}${importedLine}`,
+      );
+
+      const report = checkArchitecturePolicy({ rootDir: repo, manifest: crocoManifest() });
+      expect(report.importCount).toBe(1);
+      expect(report.diagnostics).toEqual([
+        expect.objectContaining({
+          importSpecifier: "@croco/tx-drizzle",
+          line: 2,
+          column: 9,
+          excerpt: importedLine,
+        }),
+      ]);
+    },
+  );
+
   it("flags forbidden package manifest dependencies", () => {
     const repo = createTempRepo();
     writePackage(repo, "packages/repository-core", "@croco/repository-core", {
@@ -556,6 +729,70 @@ describe("architecture policy engine", () => {
         importSpecifier: "@test/feature/src/private",
       }),
     ]);
+  });
+
+  it.each([
+    {
+      name: "omitted filter",
+      includePackages: undefined,
+      privateImports: ["@fixture/scoped/internal", "plain-lib/internal"],
+    },
+    {
+      name: "explicit unscoped glob",
+      includePackages: ["*"],
+      privateImports: ["plain-lib/internal"],
+    },
+    {
+      name: "explicit scoped glob",
+      includePackages: ["@fixture/*"],
+      privateImports: ["@fixture/scoped/internal"],
+    },
+    { name: "explicit empty filter", includePackages: [], privateImports: [] },
+  ])("checks public entrypoints with $name", ({ includePackages, privateImports }) => {
+    const repo = createTempRepo();
+    writePackage(repo, "packages/app", "@fixture/app");
+    for (const [directory, name] of [
+      ["scoped", "@fixture/scoped"],
+      ["plain", "plain-lib"],
+    ]) {
+      writePackage(repo, `packages/${directory}`, name, {
+        exports: { ".": "./dist/index.js", "./public": "./dist/public.js" },
+      });
+    }
+    writeFile(
+      repo,
+      "packages/app/src/index.ts",
+      [
+        'import "@fixture/scoped/public";',
+        'import "@fixture/scoped/internal";',
+        'import "plain-lib/public";',
+        'import "plain-lib/internal";',
+      ].join("\n"),
+    );
+
+    const report = checkArchitecturePolicy({
+      rootDir: repo,
+      manifest: {
+        schemaVersion: ARCHITECTURE_POLICY_SCHEMA_VERSION,
+        rules: {
+          publicEntrypoints: {
+            id: "public",
+            ...(includePackages === undefined ? {} : { includePackages }),
+          },
+        },
+      },
+    });
+
+    expect(report.status).toBe(privateImports.length > 0 ? "fail" : "pass");
+    expect(report.diagnostics).toEqual(
+      privateImports.map((importSpecifier) =>
+        expect.objectContaining({
+          code: "architecture-policy/private-entrypoint-import",
+          ruleId: "public",
+          importSpecifier,
+        }),
+      ),
+    );
   });
 
   it("sorts diagnostics by file and source location", () => {
