@@ -377,6 +377,7 @@ export class PlanReleaseService {
     const current = await this.requireTransition(command, "published", "superseded");
     const replacement = await this.requireRelease(command.replacementRef);
     if (
+      replacement.ref === current.ref ||
       replacement.state !== "published" ||
       replacement.definition.planId !== current.definition.planId
     ) {
