@@ -814,11 +814,11 @@ describe("wrapped contract parameter binding", () => {
   it("parses a shared plain contract once per source and preserves transformed path bindings", async () => {
     const transform = vi.fn((value: string) => `${value}!`);
     const schema = z
-      .object({ value: z.string().transform(transform), count: z.coerce.number().default(6) })
+      .object({ value: z.string().transform(transform), count: z.coerce.number() })
       .strict();
     const contract = defineRouteContract({
       method: HttpMethod.GET,
-      path: "/plain/:value",
+      path: "/plain/:value/:count",
       params: schema,
       query: schema,
     });
@@ -833,15 +833,15 @@ describe("wrapped contract parameter binding", () => {
     const resolver = new ParamResolver();
     await expect(
       resolver.resolveParams(
-        context({ value: "query", count: "8" }, { value: "path" }),
+        context({ value: "query", count: "8" }, { value: "path", count: "4" }),
         PlainController,
         "read",
       ),
-    ).resolves.toEqual(["path!", 6, "query!", 8]);
+    ).resolves.toEqual(["path!", 4, "query!", 8]);
     expect(transform.mock.calls.map(([value]) => value)).toEqual(["path", "query"]);
     await expect(
       resolver.resolveParams(
-        context({ value: "query" }, { value: "path", extra: "invalid" }),
+        context({ value: "query", count: "8" }, { value: "path", count: "4", extra: "invalid" }),
         PlainController,
         "read",
       ),
