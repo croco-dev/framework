@@ -3344,6 +3344,12 @@
       "owner": "@croco/meta-vite"
     },
     {
+      "path": "packages/meta-vite/src/tests/RscHtmlStreamFailure.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/meta-vite"
+    },
+    {
       "path": "packages/meta-vite/src/tests/RscIsolatedEncoder.spec.ts",
       "lane": "fast",
       "qualifiers": [],
@@ -3513,6 +3519,12 @@
     },
     {
       "path": "packages/meta-vite/src/tests/vite-environments.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/meta-vite"
+    },
+    {
+      "path": "packages/meta-vite/src/tests/vite-rsc-peer.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/meta-vite"

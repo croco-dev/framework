@@ -18747,7 +18747,7 @@
       "sources": [
         {
           "file": "packages/meta-vite/src/libs/rsc/flight.ts",
-          "line": 43,
+          "line": 51,
           "column": 1,
           "kind": "problem-class"
         }
@@ -18777,7 +18777,7 @@
       "sources": [
         {
           "file": "packages/meta-vite/src/libs/rsc/flight.ts",
-          "line": 71,
+          "line": 79,
           "column": 1,
           "kind": "problem-class"
         }
@@ -18807,7 +18807,7 @@
       "sources": [
         {
           "file": "packages/meta-vite/src/libs/rsc/flight.ts",
-          "line": 100,
+          "line": 108,
           "column": 1,
           "kind": "problem-class"
         }
@@ -18987,7 +18987,7 @@
       "sources": [
         {
           "file": "packages/meta-vite/src/libs/rsc/flight.ts",
-          "line": 57,
+          "line": 65,
           "column": 1,
           "kind": "problem-class"
         }
@@ -19017,7 +19017,7 @@
       "sources": [
         {
           "file": "packages/meta-vite/src/libs/vite/crocoMetaVitePlugin.ts",
-          "line": 21,
+          "line": 22,
           "column": 1,
           "kind": "problem-class"
         }
@@ -19047,7 +19047,7 @@
       "sources": [
         {
           "file": "packages/meta-vite/src/libs/rsc/flight.ts",
-          "line": 85,
+          "line": 93,
           "column": 1,
           "kind": "problem-class"
         }

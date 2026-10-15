@@ -284,6 +284,14 @@ export async function encodeRscFlightInIsolatedEncoder(
           return;
         }
         controller.enqueue(chunk);
+
+        // `enqueue` alone does not stop the source: a slow consumer leaves the
+        // queue full while the child keeps writing, so one slow request can
+        // hold the whole payload in this process. Pausing stdout applies the
+        // consumer's backpressure to the child; `pull` resumes it.
+        if ((controller.desiredSize ?? 1) <= 0) {
+          encoder.stdout.pause();
+        }
       });
       encoder.stderr.on("data", (chunk: Uint8Array) => {
         if (stderrBytes(stderr) < ENCODE_MAX_OUTPUT_BYTES) {
@@ -321,6 +329,11 @@ export async function encodeRscFlightInIsolatedEncoder(
 
         controller.close();
       });
+    },
+    // The consumer asked for more rows, so let the paused stdout flow again:
+    // the child was only held back because this stream's queue was full.
+    pull() {
+      child?.stdout?.resume();
     },
     cancel() {
       settled = true;

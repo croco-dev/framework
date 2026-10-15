@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { createRequire } from "node:module";
+import { join, resolve } from "node:path";
 import { Problem, ProblemCategory } from "@croco/problems-core";
 import type { EnvironmentOptions, Plugin, UserConfig } from "vite";
 import {
@@ -83,6 +84,11 @@ export function crocoMetaVitePlugin(options: CrocoMetaVitePluginOptions = {}): P
     environmentStates.set(name, state);
     return state;
   };
+
+  // Vite's `config` hook runs before `configEnvironment` and carries the
+  // project root the user configured, so the peer check can resolve from the
+  // project rather than from wherever the process was started.
+  let projectRoot: string | undefined;
   const resolveVirtualModule = (reference: VirtualModuleReference): string | null => {
     if (!isEnabledEnvironment(reference.environmentName)) {
       return null;
@@ -97,7 +103,10 @@ export function crocoMetaVitePlugin(options: CrocoMetaVitePluginOptions = {}): P
     name: "croco:meta-vite",
     enforce: "pre",
 
-    config(): UserConfig {
+    config(userConfig: UserConfig): UserConfig {
+      // Vite resolves a relative `root` against its own cwd, so join it the
+      // same way rather than trusting the raw string.
+      projectRoot = resolve(process.cwd(), userConfig.root ?? ".");
       return { environments: createEnvironmentConfigs(environmentNames) };
     },
 
@@ -140,7 +149,7 @@ export function crocoMetaVitePlugin(options: CrocoMetaVitePluginOptions = {}): P
       // explicit diagnostic when the optional `@vitejs/plugin-rsc` peer is
       // missing — never silently fall back to a non-Flight implementation.
       if (name === "rsc") {
-        assertRscPeerAvailable();
+        assertRscPeerAvailable(projectRoot);
       }
       return { ...ENVIRONMENT_CONFIGS[name] };
     },
@@ -233,20 +242,37 @@ function isVirtualModuleKind(kind: string | undefined): kind is VirtualModuleKin
   return kind === "routes" || kind === "entry";
 }
 
-function assertRscPeerAvailable(): void {
+function assertRscPeerAvailable(projectRoot: string | undefined): void {
   // `@vitejs/plugin-rsc` is an optional peer of `@croco/meta-vite`: it is
   // required only for the `rsc` Vite environment. `createRequire` keeps the
   // check synchronous (Vite's `configEnvironment` contract) and out of the
   // SSR/client bundle, while the lockfile pins the supported version.
   // NOTE: the tsup bundle rewrites `import.meta.url` to an empty shim, so
-  // resolve from the consumer root (`process.cwd()` = Vite project root)
-  // instead of the plugin module URL.
-  try {
-    createRequire(`${process.cwd()}/package.json`).resolve("@vitejs/plugin-rsc");
-  } catch (error: unknown) {
-    const reason = error instanceof Error ? error.message : String(error);
-    throw new MissingRscPeerProblem(reason);
+  // resolve from an anchor rather than the plugin module URL. The anchor is
+  // the Vite project root when known: Vite 6 can run with a cwd that differs
+  // from the project (for example a monorepo invoking a nested build), and the
+  // peer is installed in the project, not in the invoking cwd.
+  const anchors = [projectRoot, process.cwd()].filter(
+    (anchor): anchor is string => typeof anchor === "string" && anchor.length > 0,
+  );
+
+  // An anchor that cannot resolve keeps its reason so the Problem can report
+  // which install was consulted and why it did not answer.
+  let failureReason: string | undefined;
+
+  for (const anchor of anchors) {
+    try {
+      createRequire(join(anchor, "package.json")).resolve("@vitejs/plugin-rsc");
+      return;
+    } catch (error: unknown) {
+      failureReason ??= error instanceof Error ? error.message : String(error);
+    }
   }
+
+  throw new MissingRscPeerProblem(
+    failureReason ??
+      `Could not resolve '@vitejs/plugin-rsc' from the Vite project root (${anchors.join(", ")})`,
+  );
 }
 
 function createClientBuildId(bundle: ClientBuildBundle): string | null {

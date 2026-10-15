@@ -17564,7 +17564,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/meta-vite/src/libs/rsc/flight.ts";
-          readonly line: 43;
+          readonly line: 51;
           readonly column: 1;
           readonly kind: "problem-class";
         },
@@ -17592,7 +17592,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/meta-vite/src/libs/rsc/flight.ts";
-          readonly line: 71;
+          readonly line: 79;
           readonly column: 1;
           readonly kind: "problem-class";
         },
@@ -17620,7 +17620,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/meta-vite/src/libs/rsc/flight.ts";
-          readonly line: 100;
+          readonly line: 108;
           readonly column: 1;
           readonly kind: "problem-class";
         },
@@ -17788,7 +17788,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/meta-vite/src/libs/rsc/flight.ts";
-          readonly line: 57;
+          readonly line: 65;
           readonly column: 1;
           readonly kind: "problem-class";
         },
@@ -17816,7 +17816,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/meta-vite/src/libs/vite/crocoMetaVitePlugin.ts";
-          readonly line: 21;
+          readonly line: 22;
           readonly column: 1;
           readonly kind: "problem-class";
         },
@@ -17844,7 +17844,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/meta-vite/src/libs/rsc/flight.ts";
-          readonly line: 85;
+          readonly line: 93;
           readonly column: 1;
           readonly kind: "problem-class";
         },
@@ -48874,7 +48874,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/meta-vite/src/libs/rsc/flight.ts",
-          line: 43,
+          line: 51,
           column: 1,
           kind: "problem-class",
         },
@@ -48905,7 +48905,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/meta-vite/src/libs/rsc/flight.ts",
-          line: 71,
+          line: 79,
           column: 1,
           kind: "problem-class",
         },
@@ -48938,7 +48938,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/meta-vite/src/libs/rsc/flight.ts",
-          line: 100,
+          line: 108,
           column: 1,
           kind: "problem-class",
         },
@@ -49130,7 +49130,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/meta-vite/src/libs/rsc/flight.ts",
-          line: 57,
+          line: 65,
           column: 1,
           kind: "problem-class",
         },
@@ -49161,7 +49161,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/meta-vite/src/libs/vite/crocoMetaVitePlugin.ts",
-          line: 21,
+          line: 22,
           column: 1,
           kind: "problem-class",
         },
@@ -49194,7 +49194,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/meta-vite/src/libs/rsc/flight.ts",
-          line: 85,
+          line: 93,
           column: 1,
           kind: "problem-class",
         },

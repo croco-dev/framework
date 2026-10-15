@@ -978,7 +978,22 @@ export class RenderServer {
       // response in memory per in-flight request.
       async pull(controller) {
         reader ??= htmlStream.getReader();
-        const { done, value } = await reader.read();
+
+        let result: ReadableStreamReadResult<Uint8Array>;
+        try {
+          result = await reader.read();
+        } catch (error) {
+          // The prefix has already been sent, so the status is committed and
+          // the response errors. Report it anyway: a Suspense boundary failing
+          // after the shell is the only signal the operator gets.
+          reader.releaseLock();
+          reader = undefined;
+          reportShellFailure("RSC HTML stream failed", { route: route.path, error }, route.path);
+          controller.error(error);
+          return;
+        }
+
+        const { done, value } = result;
 
         if (controller.desiredSize === null) {
           // The consumer cancelled while this read was in flight; the source
@@ -1001,7 +1016,12 @@ export class RenderServer {
       },
     });
 
-    return new Response(body, { status: 200, headers: HTML_HEADERS });
+    // This route answers HTML or Flight from one path, so a cache has to know
+    // the answer depends on what was asked for.
+    const negotiatedHeaders = new Headers(HTML_HEADERS);
+    negotiatedHeaders.set("vary", "Accept");
+
+    return new Response(body, { status: 200, headers: negotiatedHeaders });
   }
 
   /**

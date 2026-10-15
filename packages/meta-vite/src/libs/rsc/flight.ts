@@ -10,6 +10,14 @@ export const RSC_FLIGHT_VERSION = "croco.meta-vite.rsc-flight.v1" as const;
 export const RSC_CLIENT_MANIFEST_VERSION = "croco.meta-vite.rsc-client-manifest.v1" as const;
 
 /**
+ * Request header a client echoes the manifest version of the document it is
+ * running in. Negotiation is refused when the value is missing or belongs to a
+ * different client build, and the Flight response varies on it so a shared
+ * cache cannot reuse one build's payload for another.
+ */
+export const RSC_CLIENT_MANIFEST_HEADER = "x-croco-rsc-client-manifest" as const;
+
+/**
  * Element id of the JSON block `createRscHtmlShell` writes, carrying the
  * manifest version the document was rendered with.
  */
@@ -143,7 +151,7 @@ export function parseRscFlightRequest(request: Request): RscFlightRequest {
       url.pathname.endsWith(".rsc") ||
       accept.includes(RSC_FLIGHT_CONTENT_TYPE) ||
       url.searchParams.get("flight") === "1",
-    clientManifestVersion: request.headers.get("x-croco-rsc-client-manifest"),
+    clientManifestVersion: request.headers.get(RSC_CLIENT_MANIFEST_HEADER),
     serverReference: url.searchParams.get("serverReference"),
   };
 }
@@ -232,7 +240,7 @@ export function createRscBrowserFlightHeaders(doc?: RscManifestDocument): Header
 
   return {
     accept: RSC_FLIGHT_CONTENT_TYPE,
-    ["x-croco-rsc-client-manifest"]: manifestVersion,
+    [RSC_CLIENT_MANIFEST_HEADER]: manifestVersion,
   };
 }
 
@@ -279,8 +287,13 @@ export function createRscFlightHeaders(manifestVersion: string): Headers {
 
   headers.set("content-type", `${RSC_FLIGHT_CONTENT_TYPE}; charset=utf-8`);
   headers.set("x-croco-rsc-flight-version", RSC_FLIGHT_VERSION);
-  headers.set("x-croco-rsc-client-manifest", manifestVersion);
-  headers.set("vary", "Accept");
+  headers.set(RSC_CLIENT_MANIFEST_HEADER, manifestVersion);
+  // The payload is only decodable by the client build the manifest version
+  // names, and the same URL answers HTML or Flight. Both conditions vary, so a
+  // shared cache must key on both: without them it can serve a Flight body to
+  // a document request or reuse one build's payload for another build, which
+  // is exactly the mismatch this handshake refuses.
+  headers.set("vary", `Accept, ${RSC_CLIENT_MANIFEST_HEADER}`);
 
   return headers;
 }

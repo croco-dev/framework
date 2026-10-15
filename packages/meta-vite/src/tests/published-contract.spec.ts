@@ -215,6 +215,22 @@ describe("published @croco/meta-vite contract", () => {
         expect(packedDiagnosticsManifest.peerDependencies?.["@croco/health-core"]).toBeUndefined();
         expect(packedDiagnosticsDeclarations).not.toContain("@croco/health-core");
 
+        // Every file the exports map points at has to reach the tarball: a
+        // subpath whose entry is missing resolves in the manifest but fails at
+        // import time, which the consumers below would report as an unrelated
+        // module error.
+        const packedArtifacts = new Set(
+          run("tar", ["-tf", tarballs.metaVite], rootDir)
+            .stdout.split("\n")
+            .map((line) => line.trim())
+            .filter((line) => line.length > 0),
+        );
+        const referencedArtifacts = collectReferencedArtifacts(packedManifest.exports ?? {});
+        expect(referencedArtifacts.length).toBeGreaterThan(0);
+        for (const artifact of referencedArtifacts) {
+          expect(packedArtifacts.has(`package${artifact.replace("./", "/")}`)).toBe(true);
+        }
+
         writeConsumerPackageJson(rootConsumerRoot, tarballs);
         installMetaViteConsumer(rootConsumerRoot, tarballs, [
           "@types/node@^22",
@@ -341,6 +357,33 @@ function packPackages(packRoot: string): PackageTarballs {
     presentationPreset: findTarball(packRoot, "croco-presentation-preset-"),
     problemsCore: findTarball(packRoot, "croco-problems-core-"),
   };
+}
+
+// Flattens an exports map (including its nested `types` conditions) into the
+// list of dist paths it references.
+function collectReferencedArtifacts(exportsMap: Record<string, unknown>): readonly string[] {
+  const artifacts = new Set<string>();
+
+  const visit = (value: unknown): void => {
+    if (typeof value === "string") {
+      if (value.startsWith("./dist/")) {
+        artifacts.add(value);
+      }
+      return;
+    }
+
+    if (value && typeof value === "object") {
+      for (const nested of Object.values(value)) {
+        visit(nested);
+      }
+    }
+  };
+
+  for (const target of Object.values(exportsMap)) {
+    visit(target);
+  }
+
+  return [...artifacts].sort();
 }
 
 function ensureBuilt(): void {

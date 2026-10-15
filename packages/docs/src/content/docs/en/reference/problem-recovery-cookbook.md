@@ -12528,7 +12528,7 @@ Sources:
 
 Sources:
 
-- `packages/meta-vite/src/libs/rsc/flight.ts:43:1` (problem-class)
+- `packages/meta-vite/src/libs/rsc/flight.ts:51:1` (problem-class)
 
 <a id="meta-vite-rsc-client-manifest-mismatch"></a>
 
@@ -12546,7 +12546,7 @@ Sources:
 
 Sources:
 
-- `packages/meta-vite/src/libs/rsc/flight.ts:71:1` (problem-class)
+- `packages/meta-vite/src/libs/rsc/flight.ts:79:1` (problem-class)
 
 <a id="meta-vite-rsc-client-reference-missing"></a>
 
@@ -12564,7 +12564,7 @@ Sources:
 
 Sources:
 
-- `packages/meta-vite/src/libs/rsc/flight.ts:100:1` (problem-class)
+- `packages/meta-vite/src/libs/rsc/flight.ts:108:1` (problem-class)
 
 <a id="meta-vite-rsc-encoder-entry-invalid-input"></a>
 
@@ -12672,7 +12672,7 @@ Sources:
 
 Sources:
 
-- `packages/meta-vite/src/libs/rsc/flight.ts:57:1` (problem-class)
+- `packages/meta-vite/src/libs/rsc/flight.ts:65:1` (problem-class)
 
 <a id="meta-vite-rsc-peer-missing"></a>
 
@@ -12690,7 +12690,7 @@ Sources:
 
 Sources:
 
-- `packages/meta-vite/src/libs/vite/crocoMetaVitePlugin.ts:21:1` (problem-class)
+- `packages/meta-vite/src/libs/vite/crocoMetaVitePlugin.ts:22:1` (problem-class)
 
 <a id="meta-vite-rsc-server-reference-unsupported"></a>
 
@@ -12708,7 +12708,7 @@ Sources:
 
 Sources:
 
-- `packages/meta-vite/src/libs/rsc/flight.ts:85:1` (problem-class)
+- `packages/meta-vite/src/libs/rsc/flight.ts:93:1` (problem-class)
 
 <a id="meta-vite-server-action-duplicate-registration"></a>
 

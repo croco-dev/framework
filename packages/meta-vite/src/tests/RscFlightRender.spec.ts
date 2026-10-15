@@ -56,6 +56,17 @@ function failingFlightStream(error: Error): ReadableStream<Uint8Array> {
   });
 }
 
+// Keeps reading until the stream errors or ends: a wrapper can enqueue a
+// trailing row after the underlying stream has already failed.
+async function readUntilRejected(reader: ReadableStreamDefaultReader<Uint8Array>): Promise<void> {
+  for (;;) {
+    const { done } = await reader.read();
+    if (done) {
+      return;
+    }
+  }
+}
+
 // Closed before any row was written: an encoder that produced no payload.
 function emptyFlightStream(): ReadableStream<Uint8Array> {
   return new ReadableStream<Uint8Array>({
@@ -280,6 +291,25 @@ describe("rsc real Flight path", () => {
 
     expect(response.status).toBe(200);
     expect(body).toBe('0:"shell"\n1:"boundary"\n');
+  });
+
+  it("varies the Flight response on both the representation and the manifest", async () => {
+    const server = createServer([rscRoute("/rsc-vary")], async () =>
+      flightStream('0:"vary-check"\n'),
+    );
+
+    const flight = await server.handle(
+      new Request("https://example.com/rsc-vary.rsc", {
+        headers: { "x-croco-rsc-client-manifest": RSC_CLIENT_MANIFEST_VERSION },
+      }),
+    );
+    const html = await server.handle(new Request("https://example.com/rsc-vary"));
+
+    // The same URL answers both, and a Flight payload is only decodable by the
+    // client build its manifest version names. A cache keyed on neither can
+    // serve the wrong representation, or one build's payload for another.
+    expect(flight.headers.get("vary")).toBe("Accept, x-croco-rsc-client-manifest");
+    expect(html.headers.get("vary")).toBe("Accept");
   });
 
   it("reads the HTML wrapper only as the consumer drains it", async () => {
