@@ -468,6 +468,15 @@ export function CreateUserForm() {
 }
 ```
 
+Numeric `AdminFormField` inputs emit `undefined` when cleared, including fields marked
+`required: true`; an explicit `"0"` emits numeric `0`, and other nonempty values use numeric
+conversion. Model editable numeric draft values as `number | undefined` (or an optional
+numeric property), even when the submitted schema requires a number. Controlled re-renders
+keep `undefined` visually empty. `required` enables native browser constraint validation;
+`submitAdminForm` does not validate values itself. The application's submit handler must
+validate required values for programmatic submissions and return `validation_failed` when
+an empty value is not allowed.
+
 `validation_failed` submit results render field errors beside their fields.
 `domain_problem`, `permission_denied`, and `external_failure` render as global
 Problems with explicit recovery actions, so custom visual components can reuse

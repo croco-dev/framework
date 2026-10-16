@@ -907,7 +907,7 @@ function readAdminFormInputValue<TValues extends object, TName extends AdminForm
   }
 
   if (field.inputType === "number") {
-    return Number(rawValue) as TValues[TName];
+    return (rawValue === "" ? undefined : Number(rawValue)) as TValues[TName];
   }
 
   return rawValue as TValues[TName];
