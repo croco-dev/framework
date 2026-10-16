@@ -35,18 +35,18 @@
       "file": "packages/onboarding-core/src/libs/OnboardingManager.ts",
       "line": 219,
       "excerpt": "} catch {",
-      "reason": "Analytics delivery is best-effort after onboarding state has already been persisted.",
+      "reason": "Reviewed 2026-10-16: analytics capture runs after completeStep persists state. OnboardingManager.spec.ts verifies throwing capture cannot reject committed completion, prevent later analytics events, or emit duplicate completion on retry; the manager has no independent diagnostic sink.",
       "owner": "framework-error-handling",
-      "expiresOn": "2026-10-15"
+      "expiresOn": "2027-01-12"
     },
     {
       "package": "@croco/testing",
       "file": "packages/testing/src/libs/testing.ts",
       "line": 243,
       "excerpt": "} catch {",
-      "reason": "Best-effort test logger failure must not hide the original after-commit hook failure.",
+      "reason": "Reviewed 2026-10-16: the optional error logger must not replace a committed after-hook failure or stop later hooks. testing.spec.ts verifies a throwing logger preserves the original Problem as the aggregate cause, committed=true, and subsequent hook execution; logging recursively has no safe independent sink.",
       "owner": "framework-error-handling",
-      "expiresOn": "2026-10-15"
+      "expiresOn": "2027-01-15"
     },
     {
       "package": "@croco/transports-graphql",
