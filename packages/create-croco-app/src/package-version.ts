@@ -12,7 +12,10 @@ export function getPackageVersion(): string {
   const manifest = readPackageManifest();
 
   if (typeof manifest.version !== "string" || manifest.version.length === 0) {
-    throw new Error("Missing package version in package.json");
+    throw ProblemFactory.internalServerError(
+      "create-croco-app/missing-package-version",
+      "Missing package version in package.json",
+    );
   }
 
   return manifest.version;

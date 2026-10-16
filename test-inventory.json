@@ -1598,6 +1598,12 @@
       "owner": "create-croco-app"
     },
     {
+      "path": "packages/create-croco-app/src/tests/ManifestNormalizer.spec.ts",
+      "lane": "fast",
+      "qualifiers": ["coverage"],
+      "owner": "create-croco-app"
+    },
+    {
       "path": "packages/create-croco-app/src/tests/NextTemplateSecurity.spec.ts",
       "lane": "fast",
       "qualifiers": ["coverage"],
@@ -1605,6 +1611,12 @@
     },
     {
       "path": "packages/create-croco-app/src/tests/NodeRuntime.spec.ts",
+      "lane": "fast",
+      "qualifiers": ["coverage"],
+      "owner": "create-croco-app"
+    },
+    {
+      "path": "packages/create-croco-app/src/tests/PackageVersion.spec.ts",
       "lane": "fast",
       "qualifiers": ["coverage"],
       "owner": "create-croco-app"

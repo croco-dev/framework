@@ -855,6 +855,37 @@ describe("@croco/testing", () => {
     });
   });
 
+  it("preserves the original hook failure and later hooks when the error logger throws", async () => {
+    const transactionContext = createTestingTransactionContext();
+    const logger = new MockTestLogger();
+    const original = ProblemFactory.internalServerError(
+      "testing/original-hook-failure",
+      "original",
+    );
+    logger.error.mockImplementation(() => {
+      throw new Error("logger failed");
+    });
+    resetCrocoTestingContext({ logger, transactionContext });
+    let laterHookRan = false;
+
+    await expect(
+      transactionContext.runInTransaction(async () => {
+        transactionContext.onAfterCommit(() => {
+          throw original;
+        });
+        transactionContext.onAfterCommit(() => {
+          laterHookRan = true;
+        });
+      }),
+    ).rejects.toMatchObject({
+      code: "testing/after-commit-hooks-failed",
+      cause: original,
+      extensions: expect.objectContaining({ committed: true, failureCount: 1 }),
+    });
+    expect(laterHookRan).toBe(true);
+    expect(transactionContext.isInTransaction()).toBe(false);
+  });
+
   it("isolates testing transaction hooks between overlapping transactions", async () => {
     const transactionContext = createTestingTransactionContext();
     const firstRegistered = createDeferred();
