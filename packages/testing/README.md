@@ -305,6 +305,11 @@ diagnostic, audit, event, task, and telemetry multiplicity. Each successful run 
 `croco.scenario-report/v1` artifact whose scenario ID, seed, initial virtual time, and serialized
 failure timeline can be passed to `replayScenarioRuntime()`.
 
+Each planned Problem injection counts once per occurrence, including repeated injections of the same
+Problem object. Rethrowing that injected object is propagation and does not add another occurrence,
+even across concurrent boundaries or native Promise transformations. Use distinct Problem objects
+for separate application failures that share a code.
+
 ### Operational failure evidence
 
 `createOperationalFailureDrillMatrix()` is the additive contract for generated-app and release

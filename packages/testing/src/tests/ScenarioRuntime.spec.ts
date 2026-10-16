@@ -194,6 +194,243 @@ describe("ScenarioRuntime", () => {
     expect(second).toEqual(first);
   });
 
+  it("counts concurrent nested injected Problems once per occurrence", async () => {
+    const a = ProblemFactory.internalServerError("sample/a", "A");
+    const b = ProblemFactory.internalServerError("sample/b", "B");
+    const scenario = createScenarioRuntime({ scenarioId: "overlap", seed: "fixed" })
+      .at("a", "provider", retryableFailure(a))
+      .at("b", "provider", retryableFailure(b))
+      .expectProblem("sample/a", 1)
+      .expectProblem("sample/b", 1);
+
+    const report = await scenario.run(async (runtime) => {
+      const results = await Promise.allSettled([
+        runtime.execute("outer-a", "task", () => runtime.execute("a", "provider", () => 1)),
+        runtime.execute("outer-b", "task", () => runtime.execute("b", "provider", () => 2)),
+      ]);
+      expect(results).toEqual([
+        { status: "rejected", reason: a },
+        { status: "rejected", reason: b },
+      ]);
+    });
+
+    expect(report.problems.map(({ code }) => code)).toEqual(["sample/a", "sample/b"]);
+    expect(
+      report.timeline.filter(({ kind }) => kind === "failure").map(({ name }) => name),
+    ).toEqual(["a", "b"]);
+  });
+
+  it.each([
+    ["direct", false],
+    ["async", false],
+    ["all", false],
+    ["chain", false],
+    ["direct", true],
+    ["async", true],
+    ["all", true],
+    ["chain", true],
+  ] as const)(
+    "recognizes a delayed injected Promise forwarded through %s (nested: %s)",
+    async (forwarding, nested) => {
+      const problem = ProblemFactory.internalServerError("sample/forwarded", "Forwarded");
+      const scenario = createScenarioRuntime({ scenarioId: "forwarded-promise" })
+        .at("injected", "provider", loseResponse(problem))
+        .expectProblem("sample/forwarded");
+      const report = await scenario.run((runtime) => {
+        const operation = async () => {
+          const pending = runtime.execute("injected", "provider", async () => 1);
+          const chained = forwarding === "chain" ? pending.then((value) => value) : pending;
+          await runtime.execute("wrapper", "task", () => {
+            if (forwarding === "all") {
+              return Promise.all([pending, Promise.resolve("other")]).then(([value]) => value);
+            }
+            if (forwarding === "async") return (async () => await pending)();
+            return chained;
+          });
+        };
+        return nested ? runtime.execute("outer", "task", operation) : operation();
+      });
+      expect(report.problems.map(({ code }) => code)).toEqual(["sample/forwarded"]);
+    },
+  );
+
+  it.each(["sync", "async"] as const)(
+    "treats a nested %s rethrow as propagation after prior injections",
+    async (mode) => {
+      const a = ProblemFactory.internalServerError("sample/nested-a", "A");
+      const b = ProblemFactory.internalServerError("sample/nested-b", "B");
+      const scenario = createScenarioRuntime({ scenarioId: "nested-rethrow" })
+        .at("a", "provider", retryableFailure(a))
+        .at("b", "provider", retryableFailure(b))
+        .expectProblem(a.code)
+        .expectProblem(b.code);
+      const report = await scenario.run((runtime) =>
+        runtime.execute("outer", "task", async () => {
+          await expect(runtime.execute("a", "provider", () => 1)).rejects.toBe(a);
+          await expect(runtime.execute("b", "provider", () => 2)).rejects.toBe(b);
+          const actual =
+            mode === "sync"
+              ? () => {
+                  throw a;
+                }
+              : async () => {
+                  throw a;
+                };
+          await expect(runtime.execute("real", "provider", actual)).rejects.toBe(a);
+        }),
+      );
+      expect(report.problems.map(({ code }) => code)).toEqual([a.code, b.code]);
+    },
+  );
+
+  it.each(["resolve", "all", "race"] as const)(
+    "preserves propagation after native Promise.%s conversion",
+    async (conversion) => {
+      const problem = ProblemFactory.internalServerError("sample/native", "Native");
+      const scenario = createScenarioRuntime({ scenarioId: "native-promise" })
+        .at("injected", "provider", retryableFailure(problem))
+        .expectProblem(problem.code);
+      const report = await scenario.run(async (runtime) => {
+        const injected = runtime.execute("injected", "provider", () => 1);
+        const pending =
+          conversion === "resolve"
+            ? Promise.resolve(injected)
+            : conversion === "all"
+              ? Promise.all([injected, Promise.resolve("other")])
+              : Promise.race([injected, Promise.resolve("other")]);
+        await runtime.execute("wrapper", "task", async () => await pending);
+      });
+      expect(report.problems.map(({ code }) => code)).toEqual([problem.code]);
+    },
+  );
+
+  it("carries an injection introduced by a Promise continuation into its consumer", async () => {
+    const problem = ProblemFactory.internalServerError("sample/chained", "Chained");
+    const scenario = createScenarioRuntime({ scenarioId: "chained-injection" })
+      .at("injected", "provider", retryableFailure(problem))
+      .expectProblem(problem.code);
+    const report = await scenario.run(async (runtime) => {
+      const pending = runtime
+        .execute("initial", "task", () => 1)
+        .then(() => runtime.execute("injected", "provider", () => 2));
+      await runtime.execute("wrapper", "task", async () => await pending);
+    });
+    expect(report.problems.map(({ code }) => code)).toEqual([problem.code]);
+  });
+
+  it.each(["sync", "async"] as const)(
+    "accepts an uncaught %s rethrow of the same injected object",
+    async (mode) => {
+      const problem = ProblemFactory.internalServerError("sample/unhandled", "Unhandled");
+      const scenario = createScenarioRuntime({ scenarioId: "uncaught-rethrow" })
+        .at("injected", "provider", retryableFailure(problem))
+        .expectProblem(problem.code);
+      await expect(
+        scenario.run(async (runtime) => {
+          await expect(runtime.execute("injected", "provider", () => 1)).rejects.toBe(problem);
+          const actual =
+            mode === "sync"
+              ? () => {
+                  throw problem;
+                }
+              : async () => {
+                  throw problem;
+                };
+          await runtime.execute("real", "provider", actual);
+        }),
+      ).resolves.toMatchObject({ status: "passed", problems: [{ code: problem.code }] });
+    },
+  );
+
+  it("records an earlier injected error once when rethrown after handling another injection", async () => {
+    const a = ProblemFactory.internalServerError("sample/rethrow-a", "A");
+    const b = ProblemFactory.internalServerError("sample/rethrow-b", "B");
+    const scenario = createScenarioRuntime({ scenarioId: "rethrow-earlier" })
+      .at("a", "provider", retryableFailure(a))
+      .at("b", "provider", retryableFailure(b))
+      .expectProblem(a.code)
+      .expectProblem(b.code);
+    const report = await scenario.run((runtime) =>
+      runtime.execute("outer", "task", async () => {
+        await expect(runtime.execute("a", "provider", () => 1)).rejects.toBe(a);
+        await expect(runtime.execute("b", "provider", () => 2)).rejects.toBe(b);
+        throw a;
+      }),
+    );
+    expect(report.problems.map(({ code }) => code)).toEqual([a.code, b.code]);
+  });
+
+  it("preserves multiplicity when concurrent siblings inject the same Problem object", async () => {
+    const problem = ProblemFactory.internalServerError("sample/shared", "Shared");
+    const scenario = createScenarioRuntime({ scenarioId: "shared-siblings" })
+      .at("shared", "provider", retryableFailure(problem, 2))
+      .expectProblem("sample/shared", 2);
+
+    const report = await scenario.run((runtime) =>
+      runtime.execute("outer", "task", async () => {
+        await Promise.allSettled([
+          runtime.execute("left", "task", () => runtime.execute("shared", "provider", () => 1)),
+          runtime.execute("right", "task", () => runtime.execute("shared", "provider", () => 2)),
+        ]);
+      }),
+    );
+    expect(report.problems.map(({ code }) => code)).toEqual(["sample/shared", "sample/shared"]);
+  });
+
+  it("counts distinct real same-code failures independently", async () => {
+    const first = ProblemFactory.internalServerError("sample/real", "First");
+    const second = ProblemFactory.internalServerError("sample/real", "Second");
+    const scenario = createScenarioRuntime({ scenarioId: "real-siblings" }).expectProblem(
+      "sample/real",
+      2,
+    );
+    const report = await scenario.run(async (runtime) => {
+      await Promise.allSettled(
+        [first, second].map((problem, index) =>
+          runtime.execute(`real-${index}`, "provider", () => {
+            throw problem;
+          }),
+        ),
+      );
+    });
+    expect(report.problems.map(({ detail }) => detail)).toEqual(["First", "Second"]);
+  });
+
+  it("recognizes an uncaught injection after another concurrent boundary completes", async () => {
+    const a = ProblemFactory.internalServerError("sample/slow", "Slow");
+    const b = ProblemFactory.internalServerError("sample/fast", "Fast");
+    const scenario = createScenarioRuntime({ scenarioId: "delayed-propagation" })
+      .at("slow", "provider", loseResponse(a))
+      .at("fast", "provider", retryableFailure(b))
+      .expectProblem("sample/slow")
+      .expectProblem("sample/fast");
+    const report = await scenario.run((runtime) =>
+      runtime.execute("outer", "task", () =>
+        runtime.execute("slow", "provider", async () => {
+          await expect(runtime.execute("fast", "provider", () => 1)).rejects.toBe(b);
+        }),
+      ),
+    );
+    expect(report.problems.map(({ code }) => code)).toEqual(["sample/fast", "sample/slow"]);
+  });
+
+  it("counts a later rethrow of the same object as the original injection", async () => {
+    const problem = ProblemFactory.internalServerError("sample/reused", "Reused");
+    const scenario = createScenarioRuntime({ scenarioId: "reused-object" })
+      .at("injected", "provider", retryableFailure(problem))
+      .expectProblem("sample/reused");
+
+    const report = await scenario.run(async (runtime) => {
+      await expect(runtime.execute("injected", "provider", () => 1)).rejects.toBe(problem);
+      await expect(
+        runtime.execute("real", "provider", () => {
+          throw problem;
+        }),
+      ).rejects.toBe(problem);
+    });
+    expect(report.problems.map(({ code }) => code)).toEqual(["sample/reused"]);
+  });
+
   it("reserves a lost-response occurrence before awaiting concurrent operations", async () => {
     let releaseFirst: (() => void) | undefined;
     const firstOperation = new Promise<void>((resolve) => {
