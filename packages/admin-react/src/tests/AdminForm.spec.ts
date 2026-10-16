@@ -1,8 +1,9 @@
-import { createElement } from "react";
+import { Children, createElement, isValidElement } from "react";
+import type { ChangeEvent, ReactElement, ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 
-import { AdminForm } from "../libs/components";
+import { AdminForm, AdminFormField } from "../libs/components";
 import {
   createAdminFormState,
   createCoreProblemDetails,
@@ -384,5 +385,98 @@ describe("AdminForm", () => {
 
     expect(emailInputIds).toHaveLength(2);
     expect(new Set(emailInputIds).size).toBe(2);
+  });
+});
+
+type NumberFormValues = { quantity: number | undefined };
+
+function createNumberFormContract(required: boolean): AdminFormContract<NumberFormValues> {
+  return {
+    id: "quantity-form",
+    title: "Edit quantity",
+    intent: "update",
+    fields: [{ name: "quantity", label: "Quantity", inputType: "number", required }],
+    initialValues: { quantity: 42 },
+    audit: { eventName: "quantity.updated", subjectType: "tenant", subjectId: "tenant-1" },
+    submit: ({ values }) =>
+      required && values.quantity === undefined
+        ? {
+            kind: "validation_failed",
+            fieldErrors: {
+              quantity: [{ code: "quantity.required", message: "Quantity is required" }],
+            },
+          }
+        : { kind: "success" },
+  };
+}
+
+function numberFieldInput(
+  contract: AdminFormContract<NumberFormValues>,
+  state: AdminFormState<NumberFormValues>,
+  onFieldChange?: (name: "quantity", value: number | undefined) => void,
+): ReactElement<{
+  onChange: (event: ChangeEvent<HTMLInputElement>) => void;
+  value: string;
+  required: boolean;
+}> {
+  const field = AdminFormField<NumberFormValues>({
+    field: contract.fields[0],
+    value: state.values.quantity,
+    errors: state.fieldErrors.quantity ?? [],
+    onFieldChange,
+  });
+  const input = Children.toArray((field.props as { children: ReactNode }).children).find(
+    (child) => isValidElement(child) && child.type === "input",
+  );
+  if (!isValidElement(input)) throw new Error("Quantity input missing");
+  return input as ReturnType<typeof numberFieldInput>;
+}
+
+describe("AdminForm numeric input", () => {
+  it.each([false, true])(
+    "preserves an empty number through state and submit (required=%s)",
+    async (required) => {
+      const contract = createNumberFormContract(required);
+      let state = createAdminFormState(contract);
+      numberFieldInput(contract, state, (name, value) => {
+        state = updateAdminFormField(state, name, value);
+      }).props.onChange({ currentTarget: { value: "" } } as ChangeEvent<HTMLInputElement>);
+
+      expect(state.values.quantity).toBeUndefined();
+      const input = numberFieldInput(contract, state);
+      expect(input.props.value).toBe("");
+      expect(input.props.required).toBe(required);
+      state = await submitAdminForm(contract, state);
+      expect(state.kind).toBe(required ? "failed" : "succeeded");
+      if (required) {
+        expect(state.fieldErrors.quantity).toEqual([
+          { code: "quantity.required", message: "Quantity is required" },
+        ]);
+        const markup = renderToStaticMarkup(createElement(AdminForm<NumberFormValues>, { state }));
+        expect(markup).toContain('aria-invalid="true"');
+        expect(markup).toContain("Quantity is required");
+      }
+    },
+  );
+
+  it.each([
+    ["0", 0],
+    ["17", 17],
+    ["-8", -8],
+    ["3.25", 3.25],
+  ])("converts explicit %s to numeric %s after clearing", (rawValue, expected) => {
+    const contract = createNumberFormContract(false);
+    let state = createAdminFormState(contract);
+    const onFieldChange = (name: "quantity", value: number | undefined) => {
+      state = updateAdminFormField(state, name, value);
+    };
+    numberFieldInput(contract, state, onFieldChange).props.onChange({
+      currentTarget: { value: "" },
+    } as ChangeEvent<HTMLInputElement>);
+    numberFieldInput(contract, state, onFieldChange).props.onChange({
+      currentTarget: { value: rawValue },
+    } as ChangeEvent<HTMLInputElement>);
+    expect(state.values.quantity).toBe(expected);
+    expect(numberFieldInput(contract, state).props.value).toBe(rawValue);
   });
 });
