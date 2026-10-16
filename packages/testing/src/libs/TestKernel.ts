@@ -780,8 +780,26 @@ async function dispatchLambdaRequest(
 ): Promise<Response> {
   const url = new URL(request.url);
   const headers = Object.fromEntries(request.headers.entries());
-  const body =
-    request.method === "GET" || request.method === "HEAD" ? undefined : await request.text();
+  const bytes =
+    request.method === "GET" || request.method === "HEAD"
+      ? undefined
+      : Buffer.from(await request.arrayBuffer());
+  const contentType = headers["content-type"]?.split(";", 1)[0]?.trim().toLowerCase() ?? "";
+  const contentEncoding = headers["content-encoding"]?.trim().toLowerCase() ?? "";
+  const isTextContent =
+    contentType === "" ||
+    contentType.startsWith("text/") ||
+    contentType.includes("json") ||
+    contentType.includes("xml") ||
+    contentType.includes("javascript") ||
+    contentType === "application/x-www-form-urlencoded";
+  const text = bytes?.toString("utf8");
+  const isBase64Encoded =
+    bytes !== undefined &&
+    (!isTextContent ||
+      (contentEncoding !== "" && contentEncoding !== "identity") ||
+      !Buffer.from(text ?? "", "utf8").equals(bytes));
+  const body = isBase64Encoded ? bytes?.toString("base64") : text;
   const event: LambdaEvent = {
     version: "2.0",
     routeKey: `${request.method} ${url.pathname}`,
@@ -806,7 +824,7 @@ async function dispatchLambdaRequest(
       time: controls.clock.now.toUTCString(),
       timeEpoch: controls.clock.now.getTime(),
     },
-    isBase64Encoded: false,
+    isBase64Encoded,
     ...(body === undefined ? {} : { body }),
   };
   const lambdaResponse = await handler(event, createLambdaContext(controls.ids));

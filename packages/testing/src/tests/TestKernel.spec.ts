@@ -8,12 +8,13 @@ import {
   Token,
 } from "@croco/framework-context";
 import { createApplicationRuntime } from "@croco/framework-module";
-import { Controller, Get } from "@croco/protocols-rest";
+import { Controller, Get, Post } from "@croco/protocols-rest";
 import { Problem, ProblemCategory } from "@croco/problems-core";
 import {
   createApp,
   declareSecurityMiddlewareCapabilities,
   type MiddlewareFunction,
+  type LambdaEvent,
 } from "@croco/transports-http";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
@@ -95,6 +96,14 @@ class KernelController {
       requestId: Context.getRequestId(),
       value: Container.get(KernelValueService).value,
     };
+  }
+}
+
+@Controller("/upload")
+class BodyFidelityController {
+  @Post("/")
+  upload() {
+    return {};
   }
 }
 
@@ -634,6 +643,107 @@ describe("TestKernel", () => {
       await kernel.dispose();
     },
   );
+
+  describe.each(["node", "lambda"] as const)("%s request body fidelity", (adapter) => {
+    it.each([
+      {
+        name: "binary",
+        contentType: "application/octet-stream",
+        body: new Uint8Array([255, 0, 254]),
+        base64: true,
+      },
+      {
+        name: "ASCII binary",
+        contentType: "application/octet-stream",
+        body: new Uint8Array([65, 0, 66]),
+        base64: true,
+      },
+      { name: "JSON", contentType: "application/json", body: '{"value":"한글"}', base64: false },
+      { name: "text", contentType: "text/plain; charset=utf-8", body: "hello 한글", base64: false },
+      { name: "empty", contentType: "text/plain", body: "", base64: false },
+      { name: "absent", contentType: "text/plain", body: undefined, base64: false },
+      {
+        name: "invalid UTF-8 text",
+        contentType: "text/plain",
+        body: new Uint8Array([255, 0, 254]),
+        base64: true,
+      },
+      {
+        name: "encoded text",
+        contentType: "text/plain",
+        body: new Uint8Array([31, 139, 0, 255]),
+        contentEncoding: "gzip",
+        base64: true,
+      },
+      {
+        name: "UTF-8-compatible encoded text",
+        contentType: "text/plain",
+        body: new Uint8Array([65, 66]),
+        contentEncoding: "br",
+        base64: true,
+      },
+      {
+        name: "UTF-8 BOM",
+        contentType: "text/plain",
+        body: new Uint8Array([239, 187, 191, 65]),
+        base64: false,
+      },
+    ])(
+      "preserves $name bytes and content headers",
+      async ({ contentType, body, contentEncoding, base64 }) => {
+        let event: LambdaEvent | undefined;
+        const app = createApp({
+          controllers: [BodyFidelityController],
+          diValidation: "enforce",
+          securityValidation: "enforce",
+          middlewares: [
+            productionSecurityMiddleware,
+            async (ctx) => {
+              return ctx.jsonResponse({
+                bytes: [...new Uint8Array(await ctx.raw.req.raw.arrayBuffer())],
+                contentType: ctx.header("content-type"),
+                contentEncoding: ctx.header("content-encoding") ?? null,
+              });
+            },
+          ],
+        });
+        const handler = app.lambdaHandler();
+        vi.spyOn(app, "lambdaHandler").mockReturnValue(async (input, context) => {
+          event = input;
+          return handler(input, context);
+        });
+        const kernel = await createTestKernel({
+          adapter,
+          bootstrap: () => app,
+          fidelity: "adapter",
+        });
+        try {
+          const response = await kernel.request("/upload", {
+            method: "POST",
+            headers: {
+              "content-type": contentType,
+              ...(contentEncoding ? { "content-encoding": contentEncoding } : {}),
+            },
+            body,
+          });
+          const expected =
+            typeof body === "string" ? [...new TextEncoder().encode(body)] : [...(body ?? [])];
+          expect(response.status).toBe(200);
+          await expect(response.json()).resolves.toEqual({
+            bytes: expected,
+            contentType,
+            contentEncoding: contentEncoding ?? null,
+          });
+          if (adapter === "lambda") {
+            expect(event?.isBase64Encoded).toBe(base64);
+            if (typeof body === "string") expect(event?.body).toBe(body);
+          }
+        } finally {
+          await kernel.dispose();
+        }
+      },
+    );
+  });
 
   it("isolates providers, events, transactions, request state, and evidence across concurrent kernels", async () => {
     const [first, second] = await Promise.all([
