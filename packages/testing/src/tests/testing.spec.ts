@@ -1,4 +1,6 @@
 import "reflect-metadata";
+import { AsyncLocalStorage } from "node:async_hooks";
+import { queryObjects } from "node:v8";
 import { context, ROOT_CONTEXT, trace } from "@opentelemetry/api";
 import { CurrentApiKey, CurrentPrincipal, User } from "@croco/auth-core";
 import type {
@@ -1211,6 +1213,23 @@ describe("@croco/testing", () => {
       otherTrace.getTracer("other-api").startSpan("after-other-cleanup").end();
       expect(second.spans.map((span) => span.name)).toEqual(["after-other-cleanup"]);
       expect(first.spans.map((span) => span.name)).toEqual(["before-other-cleanup"]);
+    });
+
+    it("does not retain disabled context stores across reinstall cycles", () => {
+      installTestingTelemetryCapture();
+      trace.disable();
+      context.disable();
+      const baseline = queryObjects(AsyncLocalStorage, { format: "count" });
+
+      for (let index = 0; index < 10; index += 1) {
+        const capture = installTestingTelemetryCapture();
+        trace.getTracer("reinstall-retention").startSpan(`cycle-${index}`).end();
+        expect(capture.spans.map((span) => span.name)).toEqual([`cycle-${index}`]);
+        trace.disable();
+        context.disable();
+      }
+
+      expect(queryObjects(AsyncLocalStorage, { format: "count" })).toBeLessThanOrEqual(baseline);
     });
 
     it.each([false, true])(

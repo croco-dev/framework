@@ -104,15 +104,21 @@ export function installTestingTelemetryCapture(): TestingTelemetryCapture {
 
 class TestingContextManager implements ContextManager {
   private readonly storage = new AsyncLocalStorage<OtelContext>();
+  private registrationProbe: OtelContext | undefined;
 
   isRegistered(): boolean {
-    // Probe through the public context API without inspecting its private global registry.
+    // Do not reactivate a disabled AsyncLocalStorage just to check global ownership.
     const probe = ROOT_CONTEXT.setValue(CONTEXT_REGISTRATION_KEY, this);
-    return this.storage.run(probe, () => context.active() === probe);
+    this.registrationProbe = probe;
+    try {
+      return context.active() === probe;
+    } finally {
+      this.registrationProbe = undefined;
+    }
   }
 
   active(): OtelContext {
-    return this.storage.getStore() ?? ROOT_CONTEXT;
+    return this.registrationProbe ?? this.storage.getStore() ?? ROOT_CONTEXT;
   }
 
   with<A extends unknown[], F extends (...args: A) => ReturnType<F>>(
