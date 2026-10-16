@@ -136,7 +136,8 @@ class TestingTracerProvider implements TracerProvider {
 
 class TestingTracer implements Tracer {
   startSpan(name: string, options: SpanOptions = {}, parentContext = context.active()): Span {
-    const parentSpanContext = trace.getSpanContext(parentContext);
+    const effectiveParentContext = options.root ? ROOT_CONTEXT : parentContext;
+    const parentSpanContext = trace.getSpanContext(effectiveParentContext);
     const record: CapturedSpan = {
       attributes: options.attributes ? { ...options.attributes } : {},
       events: [],
