@@ -3410,6 +3410,12 @@
       "owner": "@croco/meta-vite"
     },
     {
+      "path": "packages/meta-vite/src/tests/RenderServerHead.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/meta-vite"
+    },
+    {
       "path": "packages/meta-vite/src/tests/UnicodeRouteDispatch.spec.ts",
       "lane": "fast",
       "qualifiers": [],

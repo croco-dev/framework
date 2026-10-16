@@ -207,6 +207,9 @@ export class RenderServer {
           ...(head.description
             ? [createElement("meta", { name: "description", content: head.description })]
             : []),
+          ...(head.ogTitle
+            ? [createElement("meta", { property: "og:title", content: head.ogTitle })]
+            : []),
           ...(head.canonical
             ? [createElement("link", { rel: "canonical", href: head.canonical })]
             : []),
@@ -846,6 +849,9 @@ export class RenderServer {
     let metaTags = "";
     if (headMetadata?.description) {
       metaTags += `\n    <meta name="description" content="${this.escapeHtml(headMetadata.description)}">`;
+    }
+    if (headMetadata?.ogTitle) {
+      metaTags += `\n    <meta property="og:title" content="${this.escapeHtml(headMetadata.ogTitle)}">`;
     }
     if (headMetadata?.canonical) {
       metaTags += `\n    <link rel="canonical" href="${this.escapeHtml(headMetadata.canonical)}">`;
