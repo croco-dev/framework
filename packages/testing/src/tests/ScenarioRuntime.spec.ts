@@ -255,14 +255,14 @@ describe("ScenarioRuntime", () => {
   );
 
   it.each(["sync", "async"] as const)(
-    "counts a new nested %s throw after prior injections",
+    "treats a nested %s rethrow as propagation after prior injections",
     async (mode) => {
-      const a = ProblemFactory.internalServerError("sample/new-a", "A");
-      const b = ProblemFactory.internalServerError("sample/new-b", "B");
-      const scenario = createScenarioRuntime({ scenarioId: "new-nested-occurrence" })
+      const a = ProblemFactory.internalServerError("sample/nested-a", "A");
+      const b = ProblemFactory.internalServerError("sample/nested-b", "B");
+      const scenario = createScenarioRuntime({ scenarioId: "nested-rethrow" })
         .at("a", "provider", retryableFailure(a))
         .at("b", "provider", retryableFailure(b))
-        .expectProblem(a.code, 2)
+        .expectProblem(a.code)
         .expectProblem(b.code);
       const report = await scenario.run((runtime) =>
         runtime.execute("outer", "task", async () => {
@@ -279,7 +279,28 @@ describe("ScenarioRuntime", () => {
           await expect(runtime.execute("real", "provider", actual)).rejects.toBe(a);
         }),
       );
-      expect(report.problems.map(({ code }) => code)).toEqual([a.code, b.code, a.code]);
+      expect(report.problems.map(({ code }) => code)).toEqual([a.code, b.code]);
+    },
+  );
+
+  it.each(["resolve", "all", "race"] as const)(
+    "preserves propagation after native Promise.%s conversion",
+    async (conversion) => {
+      const problem = ProblemFactory.internalServerError("sample/native", "Native");
+      const scenario = createScenarioRuntime({ scenarioId: "native-promise" })
+        .at("injected", "provider", retryableFailure(problem))
+        .expectProblem(problem.code);
+      const report = await scenario.run(async (runtime) => {
+        const injected = runtime.execute("injected", "provider", () => 1);
+        const pending =
+          conversion === "resolve"
+            ? Promise.resolve(injected)
+            : conversion === "all"
+              ? Promise.all([injected, Promise.resolve("other")])
+              : Promise.resolve(injected);
+        await runtime.execute("wrapper", "task", async () => await pending);
+      });
+      expect(report.problems.map(({ code }) => code)).toEqual([problem.code]);
     },
   );
 
@@ -298,12 +319,12 @@ describe("ScenarioRuntime", () => {
   });
 
   it.each(["sync", "async"] as const)(
-    "rejects an unhandled new %s occurrence of an injected object",
+    "accepts an uncaught %s rethrow of the same injected object",
     async (mode) => {
       const problem = ProblemFactory.internalServerError("sample/unhandled", "Unhandled");
-      const scenario = createScenarioRuntime({ scenarioId: "unhandled-new-occurrence" })
+      const scenario = createScenarioRuntime({ scenarioId: "uncaught-rethrow" })
         .at("injected", "provider", retryableFailure(problem))
-        .expectProblem(problem.code, 2);
+        .expectProblem(problem.code);
       await expect(
         scenario.run(async (runtime) => {
           await expect(runtime.execute("injected", "provider", () => 1)).rejects.toBe(problem);
@@ -317,7 +338,7 @@ describe("ScenarioRuntime", () => {
                 };
           await runtime.execute("real", "provider", actual);
         }),
-      ).rejects.toBe(problem);
+      ).resolves.toMatchObject({ status: "passed", problems: [{ code: problem.code }] });
     },
   );
 
@@ -393,11 +414,11 @@ describe("ScenarioRuntime", () => {
     expect(report.problems.map(({ code }) => code)).toEqual(["sample/fast", "sample/slow"]);
   });
 
-  it("does not treat a later real throw of the same object as an injected propagation", async () => {
+  it("counts a later rethrow of the same object as the original injection", async () => {
     const problem = ProblemFactory.internalServerError("sample/reused", "Reused");
     const scenario = createScenarioRuntime({ scenarioId: "reused-object" })
       .at("injected", "provider", retryableFailure(problem))
-      .expectProblem("sample/reused", 2);
+      .expectProblem("sample/reused");
 
     const report = await scenario.run(async (runtime) => {
       await expect(runtime.execute("injected", "provider", () => 1)).rejects.toBe(problem);
@@ -407,7 +428,7 @@ describe("ScenarioRuntime", () => {
         }),
       ).rejects.toBe(problem);
     });
-    expect(report.problems).toHaveLength(2);
+    expect(report.problems.map(({ code }) => code)).toEqual(["sample/reused"]);
   });
 
   it("reserves a lost-response occurrence before awaiting concurrent operations", async () => {

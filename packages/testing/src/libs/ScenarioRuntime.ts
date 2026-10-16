@@ -1,5 +1,3 @@
-import { AsyncLocalStorage } from "node:async_hooks";
-
 import { Problem, ProblemCategory, type ProblemDetails } from "@croco/problems-core";
 
 import { redactTestEvidence } from "./test-evidence.mjs";
@@ -170,52 +168,6 @@ class ReplayedScenarioProblem extends Problem {
   }
 }
 
-/** Carries injection evidence to the context consuming a rejection, including await and Promise.all. */
-class ScenarioExecutionPromise<T> extends Promise<T> {
-  static override get [Symbol.species](): PromiseConstructor {
-    return Promise;
-  }
-
-  constructor(
-    promise: Promise<T>,
-    private readonly execution: AsyncLocalStorage<Set<Problem>>,
-    private readonly injectedProblems: Set<Problem>,
-  ) {
-    super((resolve, reject) => {
-      promise.then(resolve, reject);
-    });
-  }
-
-  override then<TResult1 = T, TResult2 = never>(
-    onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | null,
-    onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null,
-  ): Promise<TResult1 | TResult2> {
-    const consumer = this.execution.getStore();
-    const chained = new Set<Problem>();
-    const result = super.then<TResult1, TResult2>(
-      typeof onfulfilled === "function"
-        ? (value) => this.execution.run(chained, async () => await onfulfilled(value))
-        : undefined,
-      (error: unknown) => {
-        if (error instanceof Problem) {
-          if (this.injectedProblems.has(error)) {
-            consumer?.add(error);
-            chained.add(error);
-          } else {
-            // A fresh boundary rejection replaces any earlier propagation of this same object.
-            consumer?.delete(error);
-          }
-        }
-        return this.execution.run(chained, async () => {
-          if (typeof onrejected === "function") return await onrejected(error);
-          throw error;
-        });
-      },
-    );
-    return new ScenarioExecutionPromise(result, this.execution, chained);
-  }
-}
-
 export function duplicateDelivery(deliveries = 2): ScenarioDuplicateDelivery {
   assertPositiveSafeInteger(deliveries, "duplicate delivery count");
   return { deliveries, kind: "duplicate-delivery" };
@@ -258,7 +210,8 @@ export class ScenarioRuntime {
   private readonly expectations: ScenarioExpectation[] = [];
   private readonly expectedProblems: { readonly code: string; readonly count: number }[] = [];
   private readonly initialTime: string;
-  private readonly execution = new AsyncLocalStorage<Set<Problem>>();
+  // Rethrowing the same injected object is propagation; each planned occurrence is still recorded.
+  private readonly injectedProblems = new WeakSet<Problem>();
   private hasRun = false;
   private readonly planned: PlannedFailure[] = [];
   private readonly problems: ProblemDetails[] = [];
@@ -321,44 +274,40 @@ export class ScenarioRuntime {
     this.recordTimeline("time", `advance:${durationMs}`);
   }
 
-  execute<T>(
+  async execute<T>(
     point: string,
     boundary: ScenarioBoundary,
     operation: () => T | Promise<T>,
   ): Promise<T> {
-    const propagating = new Set<Problem>();
-    const result = this.execution.run(propagating, async () => {
-      assertNonEmpty(point, "boundary point");
-      this.recordTimeline("boundary", point, { boundary });
-      const planned = this.findPlannedFailure(point, boundary);
-      if (!planned) {
-        return await this.executeOperation(operation);
-      }
+    assertNonEmpty(point, "boundary point");
+    this.recordTimeline("boundary", point, { boundary });
+    const planned = this.findPlannedFailure(point, boundary);
+    if (!planned) {
+      return await this.executeOperation(operation);
+    }
 
-      if (planned.failure.kind === "duplicate-delivery") {
-        this.planned.shift();
-        this.recordTimeline("failure", point, { boundary, failure: planned.failure.kind });
-        let result: T | undefined;
-        for (let delivery = 0; delivery < planned.failure.deliveries; delivery += 1) {
-          result = await this.executeOperation(operation);
-        }
-        return result as T;
-      }
-
-      this.consumePlannedFailure(planned);
-      if (planned.failure.kind === "lost-response") {
-        await this.executeOperation(operation);
-      }
-      if (planned.failure.virtualTimeAdvance !== undefined) {
-        await this.advanceBy(planned.failure.virtualTimeAdvance);
-      }
-
+    if (planned.failure.kind === "duplicate-delivery") {
+      this.planned.shift();
       this.recordTimeline("failure", point, { boundary, failure: planned.failure.kind });
-      this.recordProblem(planned.failure.problem);
-      propagating.add(planned.failure.problem);
-      throw planned.failure.problem;
-    });
-    return new ScenarioExecutionPromise(result, this.execution, propagating);
+      let result: T | undefined;
+      for (let delivery = 0; delivery < planned.failure.deliveries; delivery += 1) {
+        result = await this.executeOperation(operation);
+      }
+      return result as T;
+    }
+
+    this.consumePlannedFailure(planned);
+    if (planned.failure.kind === "lost-response") {
+      await this.executeOperation(operation);
+    }
+    if (planned.failure.virtualTimeAdvance !== undefined) {
+      await this.advanceBy(planned.failure.virtualTimeAdvance);
+    }
+
+    this.recordTimeline("failure", point, { boundary, failure: planned.failure.kind });
+    this.recordProblem(planned.failure.problem);
+    this.injectedProblems.add(planned.failure.problem);
+    throw planned.failure.problem;
   }
 
   async run(run: (scenario: ScenarioRuntime) => void | Promise<void>): Promise<ScenarioReport> {
@@ -368,11 +317,8 @@ export class ScenarioRuntime {
       );
     }
     this.hasRun = true;
-    const propagating = new Set<Problem>();
     try {
-      await this.execution.run(propagating, async () => {
-        await run(this);
-      });
+      await run(this);
     } catch (error) {
       if (error instanceof ScenarioContractProblem) {
         throw error;
@@ -384,7 +330,7 @@ export class ScenarioRuntime {
         );
       }
       if (
-        !propagating.has(error) ||
+        !this.injectedProblems.has(error) ||
         !this.expectedProblems.some(({ code }) => code === error.code)
       ) {
         throw error;
@@ -411,7 +357,7 @@ export class ScenarioRuntime {
           error instanceof Error ? error : undefined,
         );
       }
-      if (!this.execution.getStore()?.has(error)) {
+      if (!this.injectedProblems.has(error)) {
         try {
           this.recordProblem(error);
         } catch (recordingError) {

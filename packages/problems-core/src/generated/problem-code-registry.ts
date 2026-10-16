@@ -26439,7 +26439,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/testing/src/libs/ScenarioRuntime.ts";
-          readonly line: 133;
+          readonly line: 131;
           readonly column: 5;
           readonly kind: "problem-constructor";
         },
@@ -29558,7 +29558,7 @@ export type CrocoProblemRegistry = {
       readonly className: "ReplayedScenarioProblem";
       readonly source: {
         readonly file: "packages/testing/src/libs/ScenarioRuntime.ts";
-        readonly line: 142;
+        readonly line: 140;
         readonly column: 1;
         readonly kind: "problem-class";
       };
@@ -59123,7 +59123,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/testing/src/libs/ScenarioRuntime.ts",
-          line: 133,
+          line: 131,
           column: 5,
           kind: "problem-constructor",
         },
@@ -62673,7 +62673,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       className: "ReplayedScenarioProblem",
       source: {
         file: "packages/testing/src/libs/ScenarioRuntime.ts",
-        line: 142,
+        line: 140,
         column: 1,
         kind: "problem-class",
       },
