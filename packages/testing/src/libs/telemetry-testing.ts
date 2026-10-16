@@ -1,11 +1,13 @@
 import {
   type Attributes,
   context,
+  createContextKey,
   type Context as OtelContext,
   type ContextManager,
   type Exception,
   type Link,
   ROOT_CONTEXT,
+  ProxyTracerProvider,
   type Span,
   type SpanContext,
   type SpanOptions,
@@ -41,8 +43,9 @@ export type CapturedSpan = {
   readonly traceId: string;
 };
 
-let providerInstalled = false;
-let contextManagerInstalled = false;
+let testingProvider: TestingTracerProvider | undefined;
+let testingContextManager: TestingContextManager | undefined;
+const CONTEXT_REGISTRATION_KEY = createContextKey("croco.testing.context-manager");
 const captureStorage = new AsyncLocalStorage<TestingTelemetryCapture>();
 let defaultCapture: TestingTelemetryCapture | undefined;
 let fallbackCapture: TestingTelemetryCapture | undefined;
@@ -75,17 +78,23 @@ export class TestingTelemetryCapture {
 export function installTestingTelemetryCapture(): TestingTelemetryCapture {
   const capture = new TestingTelemetryCapture();
 
-  if (!contextManagerInstalled) {
-    context.setGlobalContextManager(new TestingContextManager());
-    contextManagerInstalled = true;
-  }
+  const globalProvider = trace.getTracerProvider();
+  const providerIdentity =
+    globalProvider instanceof ProxyTracerProvider ? globalProvider.getDelegate() : globalProvider;
 
-  if (!providerInstalled) {
-    const installed = trace.setGlobalTracerProvider(new TestingTracerProvider());
-    if (!installed) {
+  if (!testingProvider || providerIdentity !== testingProvider) {
+    const provider = new TestingTracerProvider();
+    if (!trace.setGlobalTracerProvider(provider)) {
       throw new TelemetryProviderAlreadyInstalledProblem();
     }
-    providerInstalled = true;
+    testingProvider = provider;
+  }
+
+  if (!testingContextManager?.isRegistered()) {
+    const manager = new TestingContextManager();
+    if (context.setGlobalContextManager(manager)) {
+      testingContextManager = manager;
+    }
   }
 
   defaultCapture = capture;
@@ -94,6 +103,12 @@ export function installTestingTelemetryCapture(): TestingTelemetryCapture {
 
 class TestingContextManager implements ContextManager {
   private readonly storage = new AsyncLocalStorage<OtelContext>();
+
+  isRegistered(): boolean {
+    // Probe through the public context API without inspecting its private global registry.
+    const probe = ROOT_CONTEXT.setValue(CONTEXT_REGISTRATION_KEY, this);
+    return this.storage.run(probe, () => context.active() === probe);
+  }
 
   active(): OtelContext {
     return this.storage.getStore() ?? ROOT_CONTEXT;

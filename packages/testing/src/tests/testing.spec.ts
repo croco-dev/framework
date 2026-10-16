@@ -32,7 +32,8 @@ import { RateLimitStore } from "@croco/ratelimit-core";
 import { InMemoryStorageProvider } from "@croco/storage-core";
 import { recordEvent, withSpan } from "@croco/telemetry-api";
 import { createGracefulShutdownController } from "@croco/transports-http";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { context, ProxyTracerProvider, trace } from "@opentelemetry/api";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   assertDrizzleProblem,
   assertOpenAPIRoute,
@@ -1156,6 +1157,66 @@ describe("@croco/testing", () => {
     expect(secondCapture.spans[0]?.events).toEqual([
       { attributes: { capture: "second" }, name: "testing.capture" },
     ]);
+  });
+
+  describe("telemetry capture registration", () => {
+    beforeEach(() => {
+      trace.disable();
+      context.disable();
+    });
+
+    afterEach(() => {
+      trace.disable();
+      context.disable();
+    });
+
+    it.each(["trace", "context", "both"])(
+      "restores capture and async parent context after %s cleanup",
+      async (cleanup) => {
+        const first = installTestingTelemetryCapture();
+        trace.getTracer("before-cleanup").startSpan("before-cleanup").end();
+        expect(first.spans.map((span) => span.name)).toEqual(["before-cleanup"]);
+
+        if (cleanup !== "context") trace.disable();
+        if (cleanup !== "trace") context.disable();
+
+        const second = installTestingTelemetryCapture();
+        const tracer = trace.getTracer("after-cleanup");
+        await tracer.startActiveSpan("parent", async (parent) => {
+          await Promise.resolve();
+          tracer.startSpan("child").end();
+          parent.end();
+        });
+
+        expect(second.spans.map((span) => span.name)).toEqual(["parent", "child"]);
+        expect(second.spans[1]).toMatchObject({
+          parentSpanId: second.spans[0]?.spanId,
+          traceId: second.spans[0]?.traceId,
+          ended: true,
+        });
+        expect(second.spans[0]?.ended).toBe(true);
+        expect(first.spans.map((span) => span.name)).toEqual(["before-cleanup"]);
+      },
+    );
+
+    it.each([false, true])(
+      "rejects a foreign provider (previous capture: %s)",
+      (previousCapture) => {
+        if (previousCapture) {
+          installTestingTelemetryCapture();
+          trace.disable();
+          context.disable();
+        }
+        const externalProvider = new ProxyTracerProvider();
+        expect(trace.setGlobalTracerProvider(externalProvider)).toBe(true);
+        const registeredProvider = trace.getTracerProvider();
+
+        expect(() => installTestingTelemetryCapture()).toThrow(
+          "another OpenTelemetry tracer provider is already registered",
+        );
+        expect(trace.getTracerProvider()).toBe(registeredProvider);
+      },
+    );
   });
 
   describe("storage provider conformance", () => {

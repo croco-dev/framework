@@ -212,8 +212,10 @@ events, status, and recorded exceptions in memory.
 
 `installTestingTelemetryCapture` installs an OpenTelemetry tracer provider for the current process.
 Call it before initializing a real telemetry SDK in the same test process. Repeated calls are
-supported for isolated captures, including overlapping `capture.run()` blocks, but OpenTelemetry
-does not expose a safe provider reset API after a different provider has already been installed.
+supported for isolated captures, including overlapping `capture.run()` blocks. After test cleanup calls
+`trace.disable()` or `context.disable()`, the next install restores the testing registrations. An
+existing external tracer provider is never replaced: installation fails explicitly instead. A registered
+external context manager remains in use.
 
 ## Executable Test Evidence
 
