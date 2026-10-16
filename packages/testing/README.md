@@ -139,6 +139,13 @@ an in-memory rate-limit store. Task timeout runners accept the same clock throug
 `(callback, delayMs) => context.clock.schedule(callback, delayMs, "task-timeout")`.
 `TestClock.schedule()` is for Croco-owned scheduler boundaries; `advanceBy()` and `drain()` run
 only that queued work deterministically.
+Async scheduled callbacks may await `clock.sleep()`, including nested sleeps: `drain()` advances
+the queue while tracking callback completion. Promise continuations settle between virtual callbacks
+before the next timestamp is chosen. This uses a Node event-loop turn without replacing global timers.
+`advanceBy()` never executes work beyond its target time; a callback sleeping past that target remains
+in progress until a later advance or drain. Callback failures reject the driving operation, and one
+10,000-callback budget covers the entire operation, including sleep resolvers. Work not yet executed
+remains queued after a failure or budget exhaustion. External promises must still settle externally.
 
 Environment overrides are immutable per-kernel snapshots. They do not mutate `process.env`, which
 makes concurrent kernels safe and leaves the ambient environment unchanged. `network: "deny"` is

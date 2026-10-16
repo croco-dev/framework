@@ -1,3 +1,4 @@
+import { setImmediate as yieldToMicrotasks } from "node:timers/promises";
 import { Problem, ProblemCategory } from "@croco/problems-core";
 import type { BackoffDependencies } from "@croco/retry-core";
 
@@ -39,10 +40,6 @@ type ScheduledEntry = {
 
 const MAX_DRAIN_CALLBACKS = 10_000;
 const MAX_DATE_TIME_MS = 8_640_000_000_000_000;
-
-type DrainBudget = {
-  callbackCount: number;
-};
 
 export class TestKernelOutboundCallProblem extends Problem {
   constructor(host: string) {
@@ -92,6 +89,9 @@ export class TestClock {
   private currentTimeMs: number;
   private scheduledSequence = 0;
   private readonly scheduled = new Map<string, ScheduledEntry>();
+  private readonly running = new Set<Promise<void>>();
+  private readonly failures: unknown[] = [];
+  private readonly workListeners = new Set<() => void>();
 
   constructor(initial: Date | string = "2026-01-01T00:00:00.000Z") {
     const time = new Date(initial).getTime();
@@ -126,6 +126,7 @@ export class TestClock {
       sequence,
       source,
     });
+    for (const listener of this.workListeners) listener();
     return () => this.scheduled.delete(id);
   }
 
@@ -142,30 +143,53 @@ export class TestClock {
   }
 
   async drain(): Promise<void> {
-    const budget: DrainBudget = { callbackCount: 0 };
-    while (this.scheduled.size > 0) {
-      const next = this.nextScheduled();
-      if (!next) return;
-      await this.drainUntil(next.dueAtMs, budget);
-    }
+    await this.drainUntil(Infinity);
   }
 
-  private async drainUntil(
-    targetTime: number,
-    budget: DrainBudget = { callbackCount: 0 },
-  ): Promise<void> {
+  private async drainUntil(targetTime: number): Promise<void> {
+    let callbackCount = 0;
     while (true) {
+      if (this.failures.length > 0) throw this.failures.shift();
       const next = this.nextScheduled();
-      if (!next || next.dueAtMs > targetTime) return;
+      if (!next || next.dueAtMs > targetTime) {
+        // A bounded advance leaves sleeps beyond its horizon for a later advance.
+        if (this.running.size === 0 || next) return;
+        let notify = () => {};
+        const scheduled = new Promise<void>((resolve) => {
+          notify = resolve;
+          this.workListeners.add(notify);
+        });
+        try {
+          await Promise.race([...this.running, scheduled]);
+        } finally {
+          this.workListeners.delete(notify);
+        }
+        continue;
+      }
 
-      budget.callbackCount += 1;
-      if (budget.callbackCount > MAX_DRAIN_CALLBACKS) {
+      callbackCount += 1;
+      if (callbackCount > MAX_DRAIN_CALLBACKS) {
         throw new TestRuntimeDrainProblem(MAX_DRAIN_CALLBACKS);
       }
 
       this.scheduled.delete(next.id);
       this.currentTimeMs = next.dueAtMs;
-      await next.callback();
+      const result = next.callback();
+      if (result) {
+        const completion = Promise.resolve(result).then(
+          () => {
+            this.running.delete(completion);
+          },
+          (reason: unknown) => {
+            this.running.delete(completion);
+            this.failures.push(reason);
+          },
+        );
+        this.running.add(completion);
+      }
+      // Flush callback continuations before selecting the next virtual timestamp.
+      // One Promise.resolve() turn cannot flush nested async/await chains.
+      await yieldToMicrotasks();
     }
   }
 
