@@ -96,6 +96,25 @@ describe("pluralize", () => {
 });
 
 describe("validate", () => {
+  it.each(["_2fa", "-2fa", "__-2fa", "_123", "___", "---"])(
+    "should reject %s when normalization cannot produce an identifier",
+    (name) => {
+      expect(validate(name)).toBe(false);
+    },
+  );
+
+  it.each([
+    ["user-profile", "UserProfile", "user-profile", "userProfile"],
+    ["User", "User", "user", "user"],
+    ["XMLParser", "XMLParser", "xml-parser", "xmlParser"],
+    ["_user2", "User2", "user-2", "user2"],
+  ])("should preserve supported naming for %s", (name, pascal, kebab, camel) => {
+    expect(validate(name)).toBe(true);
+    expect(normalize(name, "pascal")).toBe(pascal);
+    expect(normalize(name, "kebab")).toBe(kebab);
+    expect(normalize(name, "camel")).toBe(camel);
+  });
+
   it("should return true for valid names", () => {
     expect(validate("user_name")).toBe(true);
   });
