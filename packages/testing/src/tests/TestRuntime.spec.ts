@@ -201,6 +201,32 @@ describe("TestRuntime", () => {
     expect(clock.pendingWork).toEqual([]);
   });
 
+  it("settles nested continuations after waking with newly scheduled work", async () => {
+    const clock = fixedClock("2026-01-01T00:00:00.000Z");
+    let release = () => {};
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const events: string[] = [];
+    clock.schedule(async () => {
+      await gate;
+      clock.schedule(() => {
+        events.push(`late:${clock.now.getTime()}`);
+      }, 10);
+      for (let index = 0; index < 8; index += 1) await Promise.resolve();
+      clock.schedule(() => {
+        events.push(`early:${clock.now.getTime()}`);
+      }, 0);
+    }, 0);
+    const draining = clock.drain();
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    release();
+    await draining;
+
+    expect(events).toEqual(["early:1767225600000", "late:1767225600010"]);
+    expect(clock.pendingWork).toEqual([]);
+  });
+
   it("applies one callback budget across an async sleep loop and can drain after it stops", async () => {
     const clock = fixedClock("2026-01-01T00:00:00.000Z");
     let repeat = true;

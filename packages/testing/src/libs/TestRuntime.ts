@@ -1,4 +1,4 @@
-import { setImmediate as yieldToMicrotasks } from "node:timers/promises";
+import { nextTick } from "node:process";
 import { Problem, ProblemCategory } from "@croco/problems-core";
 import type { BackoffDependencies } from "@croco/retry-core";
 
@@ -164,6 +164,7 @@ export class TestClock {
         } finally {
           this.workListeners.delete(notify);
         }
+        await this.settleContinuations();
         continue;
       }
 
@@ -187,10 +188,15 @@ export class TestClock {
         );
         this.running.add(completion);
       }
-      // Flush callback continuations before selecting the next virtual timestamp.
-      // One Promise.resolve() turn cannot flush nested async/await chains.
-      await yieldToMicrotasks();
+      await this.settleContinuations();
     }
+  }
+
+  private async settleContinuations(): Promise<void> {
+    // Schedule nextTick from a microtask so Node drains the current Promise queue
+    // (including nested async/await) before choosing another virtual timestamp.
+    await Promise.resolve();
+    await new Promise<void>((resolve) => nextTick(resolve));
   }
 
   private nextScheduled(): ScheduledEntry | undefined {
