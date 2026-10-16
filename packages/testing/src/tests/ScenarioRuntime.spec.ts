@@ -220,6 +220,38 @@ describe("ScenarioRuntime", () => {
     ).toEqual(["a", "b"]);
   });
 
+  it("recognizes an injected Promise returned through a later sibling boundary", async () => {
+    const problem = ProblemFactory.internalServerError("sample/forwarded", "Forwarded");
+    const scenario = createScenarioRuntime({ scenarioId: "forwarded-promise" })
+      .at("injected", "provider", retryableFailure(problem))
+      .expectProblem("sample/forwarded");
+    const report = await scenario.run((runtime) =>
+      runtime.execute("outer", "task", async () => {
+        const pending = runtime.execute("injected", "provider", () => 1);
+        await runtime.execute("wrapper", "task", () => pending);
+      }),
+    );
+    expect(report.problems.map(({ code }) => code)).toEqual(["sample/forwarded"]);
+  });
+
+  it("records an earlier injected error once when rethrown after handling another injection", async () => {
+    const a = ProblemFactory.internalServerError("sample/rethrow-a", "A");
+    const b = ProblemFactory.internalServerError("sample/rethrow-b", "B");
+    const scenario = createScenarioRuntime({ scenarioId: "rethrow-earlier" })
+      .at("a", "provider", retryableFailure(a))
+      .at("b", "provider", retryableFailure(b))
+      .expectProblem(a.code)
+      .expectProblem(b.code);
+    const report = await scenario.run((runtime) =>
+      runtime.execute("outer", "task", async () => {
+        await expect(runtime.execute("a", "provider", () => 1)).rejects.toBe(a);
+        await expect(runtime.execute("b", "provider", () => 2)).rejects.toBe(b);
+        throw a;
+      }),
+    );
+    expect(report.problems.map(({ code }) => code)).toEqual([a.code, b.code]);
+  });
+
   it("preserves multiplicity when concurrent siblings inject the same Problem object", async () => {
     const problem = ProblemFactory.internalServerError("sample/shared", "Shared");
     const scenario = createScenarioRuntime({ scenarioId: "shared-siblings" })

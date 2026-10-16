@@ -213,6 +213,7 @@ export class ScenarioRuntime {
   private readonly expectedProblems: { readonly code: string; readonly count: number }[] = [];
   private readonly initialTime: string;
   private readonly execution = new AsyncLocalStorage<Set<Problem>>();
+  private readonly executionResults = new WeakMap<Promise<unknown>, Set<Problem>>();
   private hasRun = false;
   private readonly planned: PlannedFailure[] = [];
   private readonly problems: ProblemDetails[] = [];
@@ -275,15 +276,15 @@ export class ScenarioRuntime {
     this.recordTimeline("time", `advance:${durationMs}`);
   }
 
-  async execute<T>(
+  execute<T>(
     point: string,
     boundary: ScenarioBoundary,
     operation: () => T | Promise<T>,
   ): Promise<T> {
-    assertNonEmpty(point, "boundary point");
     const parent = this.execution.getStore();
     const propagating = new Set<Problem>();
-    return this.execution.run(propagating, async () => {
+    const result = this.execution.run(propagating, async () => {
+      assertNonEmpty(point, "boundary point");
       try {
         this.recordTimeline("boundary", point, { boundary });
         const planned = this.findPlannedFailure(point, boundary);
@@ -321,6 +322,8 @@ export class ScenarioRuntime {
         throw error;
       }
     });
+    this.executionResults.set(result, propagating);
+    return result;
   }
 
   async run(run: (scenario: ScenarioRuntime) => void | Promise<void>): Promise<ScenarioReport> {
@@ -362,8 +365,10 @@ export class ScenarioRuntime {
   }
 
   private async executeOperation<T>(operation: () => T | Promise<T>): Promise<T> {
+    let result: T | Promise<T> | undefined;
     try {
-      return await operation();
+      result = operation();
+      return await result;
     } catch (error) {
       if (!(error instanceof Problem)) {
         throw new ScenarioContractProblem(
@@ -371,7 +376,13 @@ export class ScenarioRuntime {
           error instanceof Error ? error : undefined,
         );
       }
-      if (!this.execution.getStore()?.has(error)) {
+      const propagating = this.execution.getStore();
+      const returnedInjection =
+        result instanceof Promise && this.executionResults.get(result)?.has(error);
+      if (returnedInjection) {
+        propagating?.add(error);
+      }
+      if (!propagating?.has(error)) {
         try {
           this.recordProblem(error);
         } catch (recordingError) {
