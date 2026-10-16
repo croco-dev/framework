@@ -2435,7 +2435,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/metrics-core/src/libs/metric/MetricExpression.ts";
-          readonly line: 212;
+          readonly line: 213;
           readonly column: 11;
           readonly kind: "problem-constructor";
         },
@@ -2463,7 +2463,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/metrics-core/src/libs/metric/MetricExpression.ts";
-          readonly line: 236;
+          readonly line: 237;
           readonly column: 11;
           readonly kind: "problem-constructor";
         },
@@ -32349,7 +32349,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/metrics-core/src/libs/metric/MetricExpression.ts",
-          line: 212,
+          line: 213,
           column: 11,
           kind: "problem-constructor",
         },
@@ -32379,7 +32379,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/metrics-core/src/libs/metric/MetricExpression.ts",
-          line: 236,
+          line: 237,
           column: 11,
           kind: "problem-constructor",
         },

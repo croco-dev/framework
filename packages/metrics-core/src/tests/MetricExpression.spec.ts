@@ -512,6 +512,32 @@ describe("MetricExpression", () => {
     },
   );
 
+  it.each([undefined, null, { toString: () => "UTC" }])(
+    "rejects non-string zone %s instead of using an implicit zone",
+    (zone) => {
+      expect(() => dateBucket("day", zone as unknown as string)).toThrowError(
+        MetricExpressionError,
+      );
+      expect(() => dateBucket("day", zone as unknown as string)).toThrowError(
+        "METRIC_INVALID_ZONE",
+      );
+    },
+  );
+
+  it("rejects a missing literal bucket zone before metric evaluation", () => {
+    expect(() =>
+      defineMetric("missing_zone", {
+        version: 1,
+        from: events,
+        measure: count(),
+        time: project(events, "at"),
+        unit: "rows",
+        population: "events",
+        bucket: { granularity: "day", zone: undefined as unknown as string },
+      }),
+    ).toThrowError("METRIC_INVALID_ZONE");
+  });
+
   it("rejects distinct date zones even when their current offsets agree", () => {
     const daily = {
       name: "daily",

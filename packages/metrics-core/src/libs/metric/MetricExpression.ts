@@ -205,6 +205,7 @@ export function dateBucket(
 }
 
 function resolvedZone(zone: string): string {
+  requireCondition(typeof zone === "string" && zone.length > 0, "METRIC_INVALID_ZONE");
   requireCondition(!/^(?:[+-]|(?:GMT|UTC)[+-]|Etc\/GMT)/i.test(zone), "METRIC_INVALID_ZONE", zone);
   try {
     return new Intl.DateTimeFormat("en-US", { timeZone: zone }).resolvedOptions().timeZone;
