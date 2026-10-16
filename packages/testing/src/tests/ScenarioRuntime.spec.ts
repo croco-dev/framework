@@ -297,7 +297,7 @@ describe("ScenarioRuntime", () => {
             ? Promise.resolve(injected)
             : conversion === "all"
               ? Promise.all([injected, Promise.resolve("other")])
-              : Promise.resolve(injected);
+              : Promise.race([injected, Promise.resolve("other")]);
         await runtime.execute("wrapper", "task", async () => await pending);
       });
       expect(report.problems.map(({ code }) => code)).toEqual([problem.code]);
