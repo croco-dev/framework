@@ -1199,6 +1199,20 @@ describe("@croco/testing", () => {
       },
     );
 
+    it("restores the shared provider after another API instance disables tracing", () => {
+      // Duplicate API loads have separate local proxies but share the global OTel registration.
+      const otherTrace: typeof trace = Reflect.construct(trace.constructor, []);
+      const first = installTestingTelemetryCapture();
+      otherTrace.getTracer("other-api").startSpan("before-other-cleanup").end();
+      expect(first.spans.map((span) => span.name)).toEqual(["before-other-cleanup"]);
+
+      otherTrace.disable();
+      const second = installTestingTelemetryCapture();
+      otherTrace.getTracer("other-api").startSpan("after-other-cleanup").end();
+      expect(second.spans.map((span) => span.name)).toEqual(["after-other-cleanup"]);
+      expect(first.spans.map((span) => span.name)).toEqual(["before-other-cleanup"]);
+    });
+
     it.each([false, true])(
       "rejects a foreign provider (previous capture: %s)",
       (previousCapture) => {

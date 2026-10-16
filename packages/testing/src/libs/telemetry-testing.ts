@@ -78,17 +78,18 @@ export class TestingTelemetryCapture {
 export function installTestingTelemetryCapture(): TestingTelemetryCapture {
   const capture = new TestingTelemetryCapture();
 
-  const globalProvider = trace.getTracerProvider();
-  const providerIdentity =
-    globalProvider instanceof ProxyTracerProvider ? globalProvider.getDelegate() : globalProvider;
-
-  if (!testingProvider || providerIdentity !== testingProvider) {
-    const provider = new TestingTracerProvider();
-    if (!trace.setGlobalTracerProvider(provider)) {
+  const provider = testingProvider ?? new TestingTracerProvider();
+  // Another API instance can unregister the global while leaving our local proxy delegate intact.
+  // Attempt registration before consulting ownership so that stale proxy state cannot hide cleanup.
+  if (!trace.setGlobalTracerProvider(provider)) {
+    const globalProvider = trace.getTracerProvider();
+    const providerIdentity =
+      globalProvider instanceof ProxyTracerProvider ? globalProvider.getDelegate() : globalProvider;
+    if (providerIdentity !== provider) {
       throw new TelemetryProviderAlreadyInstalledProblem();
     }
-    testingProvider = provider;
   }
+  testingProvider = provider;
 
   if (!testingContextManager?.isRegistered()) {
     const manager = new TestingContextManager();
