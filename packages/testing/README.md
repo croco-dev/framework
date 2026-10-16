@@ -143,7 +143,9 @@ Async scheduled callbacks may await `clock.sleep()`, including nested sleeps: `d
 the queue while tracking callback completion. Promise continuations settle between virtual callbacks
 before the next timestamp is chosen. This uses a Node microtask checkpoint without replacing global timers.
 `advanceBy()` never executes work beyond its target time; a callback sleeping past that target remains
-in progress until a later advance or drain. Callback failures reject the driving operation, and one
+in progress until a later advance or drain. A bounded advance also returns while a callback waits for
+an external promise; only `drain()` waits for every running callback to finish. Callback failures reject
+the driving operation, and one
 10,000-callback budget covers the entire operation, including sleep resolvers. Work not yet executed
 remains queued after a failure or budget exhaustion. External promises must still settle externally.
 

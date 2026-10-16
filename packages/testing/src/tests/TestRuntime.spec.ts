@@ -142,6 +142,47 @@ describe("TestRuntime", () => {
     expect(clock.pendingWork).toEqual([]);
   });
 
+  it.each(["fresh", "after-failure"] as const)(
+    "finishes bounded advancement without waiting for external work: %s",
+    async (state) => {
+      const clock = fixedClock("2026-01-01T00:00:00.000Z");
+      let release = () => {};
+      const gate = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      const events: string[] = [];
+      clock.schedule(async () => {
+        await gate;
+        await clock.sleep(2);
+        events.push(clock.now.toISOString());
+      }, 0);
+      if (state === "after-failure") {
+        const problem = new TestRuntimeConfigurationProblem("duration", "-1", "non-negative");
+        clock.schedule(() => {
+          throw problem;
+        }, 0);
+        await expect(clock.drain()).rejects.toBe(problem);
+      }
+
+      let advanced = false;
+      const advancing = clock.advanceBy(5).then(() => {
+        advanced = true;
+      });
+      try {
+        await new Promise<void>((resolve) => setImmediate(resolve));
+        expect(advanced).toBe(true);
+        expect(clock.now.toISOString()).toBe("2026-01-01T00:00:00.005Z");
+        expect(events).toEqual([]);
+      } finally {
+        release();
+        await advancing;
+      }
+      await clock.drain();
+      expect(events).toEqual(["2026-01-01T00:00:00.007Z"]);
+      expect(clock.pendingWork).toEqual([]);
+    },
+  );
+
   it.each(["sync", "async"] as const)(
     "propagates %s callback failures without consuming later work",
     async (kind) => {

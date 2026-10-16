@@ -154,6 +154,7 @@ export class TestClock {
       if (!next || next.dueAtMs > targetTime) {
         // A bounded advance leaves sleeps beyond its horizon for a later advance.
         if (this.running.size === 0 || next) return;
+        if (Number.isFinite(targetTime)) return;
         let notify = () => {};
         const scheduled = new Promise<void>((resolve) => {
           notify = resolve;
