@@ -140,8 +140,8 @@ an in-memory rate-limit store. Task timeout runners accept the same clock throug
 `TestClock.schedule()` is for Croco-owned scheduler boundaries; `advanceBy()` and `drain()` run
 only that queued work deterministically.
 Async scheduled callbacks may await `clock.sleep()`, including nested sleeps: `drain()` advances
-the queue while tracking callback completion. Promise continuations settle between virtual callbacks
-before the next timestamp is chosen. This uses a Node microtask checkpoint without replacing global timers.
+the queue while tracking callback completion. Promise continuations settle before each driving operation
+and between virtual callbacks, before the next timestamp is chosen. This uses a Node microtask checkpoint without replacing global timers.
 `advanceBy()` never executes work beyond its target time; a callback sleeping past that target remains
 in progress until a later advance or drain. A bounded advance also returns while a callback waits for
 an external promise; only `drain()` waits for every running callback to finish. Callback failures reject

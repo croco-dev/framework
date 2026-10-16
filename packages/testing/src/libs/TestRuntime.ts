@@ -148,13 +148,14 @@ export class TestClock {
 
   private async drainUntil(targetTime: number): Promise<void> {
     let callbackCount = 0;
+    // Resume settled external work before choosing the first virtual timestamp.
+    await this.settleContinuations();
     while (true) {
       if (this.failures.length > 0) throw this.failures.shift();
       const next = this.nextScheduled();
       if (!next || next.dueAtMs > targetTime) {
         // A bounded advance leaves sleeps beyond its horizon for a later advance.
-        if (this.running.size === 0 || next) return;
-        if (Number.isFinite(targetTime)) return;
+        if (this.running.size === 0 || Number.isFinite(targetTime)) return;
         let notify = () => {};
         const scheduled = new Promise<void>((resolve) => {
           notify = resolve;
