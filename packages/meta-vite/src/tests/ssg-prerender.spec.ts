@@ -38,6 +38,48 @@ describe("prerenderSsgRoutes", () => {
     ]);
   });
 
+  it.each([
+    ["/docs", "/docs/"],
+    ["/docs/", "/docs"],
+  ])("rejects colliding output paths for %s and %s before rendering", async (first, second) => {
+    const registry = new RouteRegistry();
+    const component = vi.fn(() => createElement("main", null, "No slash"));
+    const trailingComponent = vi.fn(() => createElement("main", null, "Trailing slash"));
+    registry.register({ path: "/about", mode: "ssg", component });
+    registry.register({ path: first, mode: "ssg", component });
+    registry.register({ path: second, mode: "ssg", component: trailingComponent });
+
+    const result = prerenderSsgRoutes(registry.compile());
+
+    await expect(result).rejects.toMatchObject({
+      code: "CROCO_META_VITE_SSG_OUTPUT_CONFLICT",
+      detail: expect.stringContaining(first),
+      extensions: { outputPath: "docs/index.html", routes: [first, second] },
+    });
+    await expect(result).rejects.toThrow(/docs\/index\.html/);
+    await expect(result).rejects.toThrow(second);
+    expect(component).not.toHaveBeenCalled();
+    expect(trailingComponent).not.toHaveBeenCalled();
+  });
+
+  it("preserves distinct output paths and ignores non-SSG aliases", async () => {
+    const registry = new RouteRegistry();
+    for (const [path, text, mode] of [
+      ["/", "Home", "ssg"],
+      ["/docs", "Docs", "ssg"],
+      ["/about/", "About", "ssg"],
+      ["/docs/", "Dynamic docs", "ssr"],
+    ] as const) {
+      registry.register({ path, mode, component: () => createElement("main", null, text) });
+    }
+
+    await expect(prerenderSsgRoutes(registry.compile())).resolves.toEqual([
+      { path: "index.html", format: "esm", type: "asset", html: "<main>Home</main>" },
+      { path: "docs/index.html", format: "esm", type: "asset", html: "<main>Docs</main>" },
+      { path: "about/index.html", format: "esm", type: "asset", html: "<main>About</main>" },
+    ]);
+  });
+
   it("returns OutputContract-compatible static artifacts", async () => {
     const route = createSsgRoute("/about", "<main>Static About</main>");
     const artifacts = await prerenderSsgRoutes([route], async () => "<main>Static About</main>");
