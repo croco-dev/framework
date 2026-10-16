@@ -220,19 +220,26 @@ describe("ScenarioRuntime", () => {
     ).toEqual(["a", "b"]);
   });
 
-  it("recognizes an injected Promise returned through a later sibling boundary", async () => {
-    const problem = ProblemFactory.internalServerError("sample/forwarded", "Forwarded");
-    const scenario = createScenarioRuntime({ scenarioId: "forwarded-promise" })
-      .at("injected", "provider", retryableFailure(problem))
-      .expectProblem("sample/forwarded");
-    const report = await scenario.run((runtime) =>
-      runtime.execute("outer", "task", async () => {
-        const pending = runtime.execute("injected", "provider", () => 1);
-        await runtime.execute("wrapper", "task", () => pending);
-      }),
-    );
-    expect(report.problems.map(({ code }) => code)).toEqual(["sample/forwarded"]);
-  });
+  it.each(["direct", "async", "all"] as const)(
+    "recognizes a delayed injected Promise forwarded through %s",
+    async (forwarding) => {
+      const problem = ProblemFactory.internalServerError("sample/forwarded", "Forwarded");
+      const scenario = createScenarioRuntime({ scenarioId: "forwarded-promise" })
+        .at("injected", "provider", loseResponse(problem))
+        .expectProblem("sample/forwarded");
+      const report = await scenario.run((runtime) =>
+        runtime.execute("outer", "task", async () => {
+          const pending = runtime.execute("injected", "provider", async () => 1);
+          await runtime.execute("wrapper", "task", () => {
+            if (forwarding === "direct") return pending;
+            if (forwarding === "all") return Promise.all([pending]);
+            return (async () => await pending)();
+          });
+        }),
+      );
+      expect(report.problems.map(({ code }) => code)).toEqual(["sample/forwarded"]);
+    },
+  );
 
   it("records an earlier injected error once when rethrown after handling another injection", async () => {
     const a = ProblemFactory.internalServerError("sample/rethrow-a", "A");
