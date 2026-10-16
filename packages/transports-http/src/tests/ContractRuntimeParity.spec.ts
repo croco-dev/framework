@@ -38,6 +38,7 @@ import { z } from "zod";
 import { z as z4 } from "zod/v4";
 import { emitOpenAPIFromContractGraph } from "../../../openapi-spec/src/index";
 import { generateClientFilesFromContractGraph } from "../../../rpc-codegen/src/index";
+import { createTrpcRouter } from "../../../protocols-trpc/src/index";
 import { createApp, type CrocoApp, ErrorHandler, HealthCheckRegistry } from "../index";
 
 const WidgetPathSchema = z.object({
@@ -418,6 +419,132 @@ describe("REST contract-to-runtime parity", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
     fs.rmSync(GENERATED_RPC_TEMP_ROOT, { recursive: true, force: true });
+  });
+
+  it("rejects unknown strict query keys in both HTTP and tRPC", async () => {
+    const contract = defineRouteContract({
+      method: HttpMethod.GET,
+      path: "/strict-query",
+      query: z.object({ name: z.string() }).strict(),
+      response: z.string(),
+    });
+    @Controller("")
+    class StrictQueryController {
+      @Get(contract)
+      read(@Query(contract, "name") name: string) {
+        return name;
+      }
+    }
+    assertContractGraphHasNoErrors(buildContractGraph([StrictQueryController]));
+    const app = createApp({ controllers: [StrictQueryController], securityValidation: "off" });
+    const caller = createTrpcRouter([StrictQueryController]).createCaller({}) as unknown as {
+      strictQuery: { read(input: { query: Record<string, string> }): Promise<string> };
+    };
+    const accepted = await app.fetch(new Request("http://localhost/strict-query?name=Ada"));
+    expect(accepted.status).toBe(200);
+    expect(await accepted.json()).toBe("Ada");
+    await expect(caller.strictQuery.read({ query: { name: "Ada" } })).resolves.toBe("Ada");
+    await expect(
+      caller.strictQuery.read({ query: { name: "Ada", typo: "extra" } }),
+    ).rejects.toMatchObject({ code: "BAD_REQUEST" });
+    const rejected = await app.fetch(
+      new Request("http://localhost/strict-query?name=Ada&typo=extra"),
+    );
+    expect(rejected.status).toBe(422);
+    expect(await rejected.json()).toMatchObject({
+      code: "protocols-rest/request-validation-failed",
+      issues: [{ path: "query.value", message: expect.stringContaining("typo") }],
+    });
+  });
+
+  it("validates catchall query keys before binding known fields", async () => {
+    const catchall = vi.fn((value: string) => Number(value));
+    const contract = defineRouteContract({
+      method: HttpMethod.GET,
+      path: "/catchall-query",
+      query: z
+        .object({ name: z.string(), page: z.coerce.number().default(3) })
+        .catchall(z.string().regex(/^\d+$/).transform(catchall)),
+    });
+    @Controller("")
+    class CatchallController {
+      @Get(contract)
+      read(@Query(contract, "name") name: string, @Query(contract, "page") page: number) {
+        return { name, page };
+      }
+    }
+    const app = createApp({ controllers: [CatchallController], securityValidation: "off" });
+    const accepted = await app.fetch(
+      new Request("http://localhost/catchall-query?name=Ada&extra=17"),
+    );
+    expect(accepted.status).toBe(200);
+    expect(await accepted.json()).toEqual({ name: "Ada", page: 3 });
+    expect(catchall).toHaveBeenCalledExactlyOnceWith("17", expect.anything());
+    const rejected = await app.fetch(
+      new Request("http://localhost/catchall-query?name=Ada&extra=invalid"),
+    );
+    expect(rejected.status).toBe(422);
+    expect(await rejected.json()).toMatchObject({
+      code: "protocols-rest/request-validation-failed",
+      issues: [{ path: "query.extra", message: "Invalid" }],
+    });
+    expect(catchall).toHaveBeenCalledTimes(1);
+  });
+
+  it("parses defaults, coercion and field transforms once for multiple contract bindings", async () => {
+    const fieldTransform = vi.fn((value: string) => `${value}!`);
+    const refinement = vi.fn(({ page }: { page: number }) => page > 0);
+    const contract = defineRouteContract({
+      method: HttpMethod.GET,
+      path: "/parsed-query",
+      query: z
+        .object({ name: z.string().transform(fieldTransform), page: z.coerce.number().default(3) })
+        .refine(refinement, { path: ["page"], message: "page must be positive" }),
+    });
+    @Controller("")
+    class ParsedQueryController {
+      @Get(contract)
+      read(
+        @Query(contract, "name") name: string,
+        @Query(contract, "page") page: number,
+        @Query(contract, "name") repeatedName: string,
+      ) {
+        return { name, page, repeatedName };
+      }
+
+      @Get("/loose-query")
+      loose(@Query("page", z.coerce.number().default(5)) page: number) {
+        return { page };
+      }
+    }
+    const app = createApp({ controllers: [ParsedQueryController], securityValidation: "off" });
+    for (const [suffix, page] of [
+      ["", 3],
+      ["&page=7", 7],
+    ] as const) {
+      fieldTransform.mockClear();
+      refinement.mockClear();
+      const response = await app.fetch(
+        new Request(`http://localhost/parsed-query?name=Ada${suffix}`),
+      );
+      expect(response.status).toBe(200);
+      expect(await response.json()).toEqual({ name: "Ada!", page, repeatedName: "Ada!" });
+      expect(fieldTransform).toHaveBeenCalledExactlyOnceWith("Ada", expect.anything());
+      expect(refinement).toHaveBeenCalledExactlyOnceWith({ name: "Ada!", page });
+    }
+    const rejected = await app.fetch(new Request("http://localhost/parsed-query?name=Ada&page=0"));
+    expect(rejected.status).toBe(422);
+    expect(await rejected.json()).toMatchObject({
+      issues: [{ path: "query.page", message: "page must be positive" }],
+    });
+    for (const [suffix, page] of [
+      ["?extra=ignored", 5],
+      ["?page=9&extra=ignored", 9],
+    ] as const) {
+      const response = await app.fetch(new Request(`http://localhost/loose-query${suffix}`));
+      expect(response.status).toBe(200);
+      expect(await response.json()).toEqual({ page });
+    }
   });
 
   it.each(["params", "query", "body", "response"] as const)(

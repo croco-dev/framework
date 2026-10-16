@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export type CrocoProblemRegistry = {
   readonly version: "croco.problem-code-registry.v1";
-  readonly problemCount: 1060;
+  readonly problemCount: 1062;
   readonly problems: readonly [
     {
       readonly code: "ACCESS_DENIED";
@@ -9276,7 +9276,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/create-croco-app/src/package-version.ts";
-          readonly line: 29;
+          readonly line: 32;
           readonly column: 11;
           readonly kind: "problem-factory";
         },
@@ -9423,6 +9423,34 @@ export type CrocoProblemRegistry = {
       ];
     },
     {
+      readonly code: "create-croco-app/missing-package-version";
+      readonly category: "InternalServerError";
+      readonly status: 500;
+      readonly title: "Internal Server Error";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#create-croco-app-missing-package-version";
+      readonly recovery: {
+        readonly cause: "Croco or an upstream dependency failed after accepting the request.";
+        readonly userAction: "Retry later only when the operation is idempotent or the caller owns retry safety.";
+        readonly operatorAction: "Use traces, logs, and upstream diagnostics to isolate the failing boundary.";
+        readonly retryability: "conditional";
+        readonly redactionPolicy: "operator-only";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.error";
+          readonly severity: "error";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/create-croco-app/src/package-version.ts";
+          readonly line: 15;
+          readonly column: 11;
+          readonly kind: "problem-factory";
+        },
+      ];
+    },
+    {
       readonly code: "create-croco-app/pnpm-unavailable";
       readonly category: "InternalServerError";
       readonly status: 500;
@@ -9447,6 +9475,34 @@ export type CrocoProblemRegistry = {
           readonly line: 28;
           readonly column: 1;
           readonly kind: "problem-class";
+        },
+      ];
+    },
+    {
+      readonly code: "create-croco-app/published-dependency-range-missing";
+      readonly category: "InternalServerError";
+      readonly status: 500;
+      readonly title: "Internal Server Error";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#create-croco-app-published-dependency-range-missing";
+      readonly recovery: {
+        readonly cause: "Croco or an upstream dependency failed after accepting the request.";
+        readonly userAction: "Retry later only when the operation is idempotent or the caller owns retry safety.";
+        readonly operatorAction: "Use traces, logs, and upstream diagnostics to isolate the failing boundary.";
+        readonly retryability: "conditional";
+        readonly redactionPolicy: "operator-only";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.error";
+          readonly severity: "error";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/create-croco-app/src/helpers/manifest-normalizer.ts";
+          readonly line: 71;
+          readonly column: 15;
+          readonly kind: "problem-factory";
         },
       ];
     },
@@ -29973,7 +30029,7 @@ export type CrocoProblemRegistry = {
 
 export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 1060,
+  problemCount: 1062,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -40274,7 +40330,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/create-croco-app/src/package-version.ts",
-          line: 29,
+          line: 32,
           column: 11,
           kind: "problem-factory",
         },
@@ -40437,6 +40493,39 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       ],
     },
     {
+      code: "create-croco-app/missing-package-version",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#create-croco-app-missing-package-version",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/create-croco-app/src/package-version.ts",
+          line: 15,
+          column: 11,
+          kind: "problem-factory",
+        },
+      ],
+    },
+    {
       code: "create-croco-app/pnpm-unavailable",
       category: "InternalServerError",
       status: 500,
@@ -40465,6 +40554,39 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
           line: 28,
           column: 1,
           kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "create-croco-app/published-dependency-range-missing",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#create-croco-app-published-dependency-range-missing",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/create-croco-app/src/helpers/manifest-normalizer.ts",
+          line: 71,
+          column: 15,
+          kind: "problem-factory",
         },
       ],
     },

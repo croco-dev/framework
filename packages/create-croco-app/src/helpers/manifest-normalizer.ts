@@ -1,5 +1,6 @@
 import { readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { ProblemFactory } from "@croco/problems-core";
 import { getExternalCrocoPackageRange } from "./croco-ranges.js";
 
 const DEPENDENCY_FIELDS = [
@@ -67,7 +68,11 @@ function rewriteManifest(manifest: ParsedManifest, generatedPackageNames: Set<st
 
       const publishedRange = getExternalCrocoPackageRange(packageName);
       if (publishedRange === undefined) {
-        throw new Error(`No published range configured for generated dependency ${packageName}`);
+        throw ProblemFactory.internalServerError(
+          "create-croco-app/published-dependency-range-missing",
+          `No published range configured for generated dependency ${packageName}`,
+          { extensions: { packageName } },
+        );
       }
 
       dependencies[packageName] = publishedRange;

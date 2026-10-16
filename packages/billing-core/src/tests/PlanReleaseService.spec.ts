@@ -390,6 +390,37 @@ describe("PlanReleaseService", () => {
     await expect(service.publishNow(command)).resolves.toMatchObject({ state: "published" });
   });
 
+  it("rejects self replacement without changing the published release or emitting an event", async () => {
+    const { service, store, events } = createHarness();
+    const reviewed = await reviewDraft(service);
+    const published = await service.publishNow({
+      ref: reviewed.ref,
+      expectedRevision: reviewed.revision,
+      actor: ACTOR,
+      reason: "publish original",
+      idempotencyKey: "publish-original",
+    });
+    const savedBefore = await store.get(published.ref);
+    const eventsBefore = structuredClone(events);
+    const pendingBefore = await store.listPendingEvents(published.ref);
+
+    await expect(
+      service.supersede({
+        ref: published.ref,
+        expectedRevision: published.revision,
+        replacementRef: published.ref,
+        actor: ACTOR,
+        reason: "invalid self replacement",
+      }),
+    ).rejects.toMatchObject({
+      code: "billing/invalid-plan-release-transition",
+    });
+
+    await expect(store.get(published.ref)).resolves.toEqual(savedBefore);
+    expect(events).toEqual(eventsBefore);
+    await expect(store.listPendingEvents(published.ref)).resolves.toEqual(pendingBefore);
+  });
+
   it("supersedes a published version only with a published replacement in the same family", async () => {
     const { service } = createHarness();
     const originalReview = await reviewDraft(service);

@@ -3,7 +3,6 @@ import type { z } from "zod";
 import { ParamType, REST_PARAMS_KEY } from "../constants";
 import { captureRestDecoratorSourceLocation } from "../sourceLocation";
 import type { ParamMetadata } from "../types";
-import { getRouteParameterObject } from "../internal/routeParameterSchema";
 import type { RouteParameterSchema } from "../internal/routeParameterSchema";
 import {
   hasRouteBodyContract,
@@ -139,8 +138,5 @@ function createContractParamDecorator(
   schema: RouteParameterSchema,
   name: string,
 ): ParameterDecorator {
-  const inputObject = getRouteParameterObject(schema);
-  return schema === inputObject
-    ? createParamDecorator(type)(name, inputObject.shape[name])
-    : createParamDecorator(type)(name, undefined, schema);
+  return createParamDecorator(type)(name, undefined, schema);
 }

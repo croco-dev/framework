@@ -1,6 +1,6 @@
 {
   "version": "croco.problem-code-registry.v1",
-  "problemCount": 1060,
+  "problemCount": 1062,
   "problems": [
     {
       "code": "ACCESS_DENIED",
@@ -9913,7 +9913,7 @@
       "sources": [
         {
           "file": "packages/create-croco-app/src/package-version.ts",
-          "line": 29,
+          "line": 32,
           "column": 11,
           "kind": "problem-factory"
         }
@@ -10070,6 +10070,36 @@
       ]
     },
     {
+      "code": "create-croco-app/missing-package-version",
+      "category": "InternalServerError",
+      "status": 500,
+      "title": "Internal Server Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#create-croco-app-missing-package-version",
+      "recovery": {
+        "cause": "Croco or an upstream dependency failed after accepting the request.",
+        "userAction": "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        "operatorAction": "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        "retryability": "conditional",
+        "redactionPolicy": "operator-only",
+        "telemetry": {
+          "eventName": "croco.problem.error",
+          "severity": "error",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/create-croco-app/src/package-version.ts",
+          "line": 15,
+          "column": 11,
+          "kind": "problem-factory"
+        }
+      ]
+    },
+    {
       "code": "create-croco-app/pnpm-unavailable",
       "category": "InternalServerError",
       "status": 500,
@@ -10096,6 +10126,36 @@
           "line": 28,
           "column": 1,
           "kind": "problem-class"
+        }
+      ]
+    },
+    {
+      "code": "create-croco-app/published-dependency-range-missing",
+      "category": "InternalServerError",
+      "status": 500,
+      "title": "Internal Server Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#create-croco-app-published-dependency-range-missing",
+      "recovery": {
+        "cause": "Croco or an upstream dependency failed after accepting the request.",
+        "userAction": "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        "operatorAction": "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        "retryability": "conditional",
+        "redactionPolicy": "operator-only",
+        "telemetry": {
+          "eventName": "croco.problem.error",
+          "severity": "error",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/create-croco-app/src/helpers/manifest-normalizer.ts",
+          "line": 71,
+          "column": 15,
+          "kind": "problem-factory"
         }
       ]
     },

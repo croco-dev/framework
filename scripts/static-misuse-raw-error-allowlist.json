@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "baselineEntryCount": 39,
+  "baselineEntryCount": 37,
   "description": "Reviewed baseline for CROCO_STATIC_RAW_ERROR_RUNTIME_BOUNDARY. New production raw built-in Error throws must be converted or added with owner and unexpired expiresOn metadata.",
   "entries": [
     {
@@ -38,24 +38,6 @@
       "reason": "Reviewed pre-existing internal runtime assertion; future user-facing failures in this file must use Problem-shaped or diagnostic-coded errors.",
       "owner": "framework-error-handling",
       "expiresOn": "2026-10-29"
-    },
-    {
-      "package": "create-croco-app",
-      "file": "packages/create-croco-app/src/helpers/manifest-normalizer.ts",
-      "line": 70,
-      "excerpt": "throw new Error(`No published range configured for generated dependency ${packageName}`);",
-      "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
-      "owner": "framework-error-handling",
-      "expiresOn": "2026-10-15"
-    },
-    {
-      "package": "create-croco-app",
-      "file": "packages/create-croco-app/src/package-version.ts",
-      "line": 15,
-      "excerpt": "throw new Error(\"Missing package version in package.json\");",
-      "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
-      "owner": "framework-error-handling",
-      "expiresOn": "2026-10-15"
     },
     {
       "package": "@croco/diagnostics-core",
