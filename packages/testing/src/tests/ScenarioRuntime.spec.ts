@@ -220,24 +220,104 @@ describe("ScenarioRuntime", () => {
     ).toEqual(["a", "b"]);
   });
 
-  it.each(["direct", "async", "all"] as const)(
-    "recognizes a delayed injected Promise forwarded through %s",
-    async (forwarding) => {
+  it.each([
+    ["direct", false],
+    ["async", false],
+    ["all", false],
+    ["chain", false],
+    ["direct", true],
+    ["async", true],
+    ["all", true],
+    ["chain", true],
+  ] as const)(
+    "recognizes a delayed injected Promise forwarded through %s (nested: %s)",
+    async (forwarding, nested) => {
       const problem = ProblemFactory.internalServerError("sample/forwarded", "Forwarded");
       const scenario = createScenarioRuntime({ scenarioId: "forwarded-promise" })
         .at("injected", "provider", loseResponse(problem))
         .expectProblem("sample/forwarded");
+      const report = await scenario.run((runtime) => {
+        const operation = async () => {
+          const pending = runtime.execute("injected", "provider", async () => 1);
+          const chained = forwarding === "chain" ? pending.then((value) => value) : pending;
+          await runtime.execute("wrapper", "task", () => {
+            if (forwarding === "all") {
+              return Promise.all([pending, Promise.resolve("other")]).then(([value]) => value);
+            }
+            if (forwarding === "async") return (async () => await pending)();
+            return chained;
+          });
+        };
+        return nested ? runtime.execute("outer", "task", operation) : operation();
+      });
+      expect(report.problems.map(({ code }) => code)).toEqual(["sample/forwarded"]);
+    },
+  );
+
+  it.each(["sync", "async"] as const)(
+    "counts a new nested %s throw after prior injections",
+    async (mode) => {
+      const a = ProblemFactory.internalServerError("sample/new-a", "A");
+      const b = ProblemFactory.internalServerError("sample/new-b", "B");
+      const scenario = createScenarioRuntime({ scenarioId: "new-nested-occurrence" })
+        .at("a", "provider", retryableFailure(a))
+        .at("b", "provider", retryableFailure(b))
+        .expectProblem(a.code, 2)
+        .expectProblem(b.code);
       const report = await scenario.run((runtime) =>
         runtime.execute("outer", "task", async () => {
-          const pending = runtime.execute("injected", "provider", async () => 1);
-          await runtime.execute("wrapper", "task", () => {
-            if (forwarding === "direct") return pending;
-            if (forwarding === "all") return Promise.all([pending]);
-            return (async () => await pending)();
-          });
+          await expect(runtime.execute("a", "provider", () => 1)).rejects.toBe(a);
+          await expect(runtime.execute("b", "provider", () => 2)).rejects.toBe(b);
+          const actual =
+            mode === "sync"
+              ? () => {
+                  throw a;
+                }
+              : async () => {
+                  throw a;
+                };
+          await expect(runtime.execute("real", "provider", actual)).rejects.toBe(a);
         }),
       );
-      expect(report.problems.map(({ code }) => code)).toEqual(["sample/forwarded"]);
+      expect(report.problems.map(({ code }) => code)).toEqual([a.code, b.code, a.code]);
+    },
+  );
+
+  it("carries an injection introduced by a Promise continuation into its consumer", async () => {
+    const problem = ProblemFactory.internalServerError("sample/chained", "Chained");
+    const scenario = createScenarioRuntime({ scenarioId: "chained-injection" })
+      .at("injected", "provider", retryableFailure(problem))
+      .expectProblem(problem.code);
+    const report = await scenario.run(async (runtime) => {
+      const pending = runtime
+        .execute("initial", "task", () => 1)
+        .then(() => runtime.execute("injected", "provider", () => 2));
+      await runtime.execute("wrapper", "task", async () => await pending);
+    });
+    expect(report.problems.map(({ code }) => code)).toEqual([problem.code]);
+  });
+
+  it.each(["sync", "async"] as const)(
+    "rejects an unhandled new %s occurrence of an injected object",
+    async (mode) => {
+      const problem = ProblemFactory.internalServerError("sample/unhandled", "Unhandled");
+      const scenario = createScenarioRuntime({ scenarioId: "unhandled-new-occurrence" })
+        .at("injected", "provider", retryableFailure(problem))
+        .expectProblem(problem.code, 2);
+      await expect(
+        scenario.run(async (runtime) => {
+          await expect(runtime.execute("injected", "provider", () => 1)).rejects.toBe(problem);
+          const actual =
+            mode === "sync"
+              ? () => {
+                  throw problem;
+                }
+              : async () => {
+                  throw problem;
+                };
+          await runtime.execute("real", "provider", actual);
+        }),
+      ).rejects.toBe(problem);
     },
   );
 

@@ -170,11 +170,51 @@ class ReplayedScenarioProblem extends Problem {
   }
 }
 
-type ScenarioExecution = {
-  readonly boundary: boolean;
-  readonly injectedProblems: Set<Problem>;
-  readonly parent?: ScenarioExecution;
-};
+/** Carries injection evidence to the context consuming a rejection, including await and Promise.all. */
+class ScenarioExecutionPromise<T> extends Promise<T> {
+  static override get [Symbol.species](): PromiseConstructor {
+    return Promise;
+  }
+
+  constructor(
+    promise: Promise<T>,
+    private readonly execution: AsyncLocalStorage<Set<Problem>>,
+    private readonly injectedProblems: Set<Problem>,
+  ) {
+    super((resolve, reject) => {
+      promise.then(resolve, reject);
+    });
+  }
+
+  override then<TResult1 = T, TResult2 = never>(
+    onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | null,
+    onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null,
+  ): Promise<TResult1 | TResult2> {
+    const consumer = this.execution.getStore();
+    const chained = new Set<Problem>();
+    const result = super.then<TResult1, TResult2>(
+      typeof onfulfilled === "function"
+        ? (value) => this.execution.run(chained, async () => await onfulfilled(value))
+        : undefined,
+      (error: unknown) => {
+        if (error instanceof Problem) {
+          if (this.injectedProblems.has(error)) {
+            consumer?.add(error);
+            chained.add(error);
+          } else {
+            // A fresh boundary rejection replaces any earlier propagation of this same object.
+            consumer?.delete(error);
+          }
+        }
+        return this.execution.run(chained, async () => {
+          if (typeof onrejected === "function") return await onrejected(error);
+          throw error;
+        });
+      },
+    );
+    return new ScenarioExecutionPromise(result, this.execution, chained);
+  }
+}
 
 export function duplicateDelivery(deliveries = 2): ScenarioDuplicateDelivery {
   assertPositiveSafeInteger(deliveries, "duplicate delivery count");
@@ -218,8 +258,7 @@ export class ScenarioRuntime {
   private readonly expectations: ScenarioExpectation[] = [];
   private readonly expectedProblems: { readonly code: string; readonly count: number }[] = [];
   private readonly initialTime: string;
-  private readonly execution = new AsyncLocalStorage<ScenarioExecution>();
-  private readonly executionResults = new WeakMap<Promise<unknown>, Set<Problem>>();
+  private readonly execution = new AsyncLocalStorage<Set<Problem>>();
   private hasRun = false;
   private readonly planned: PlannedFailure[] = [];
   private readonly problems: ProblemDetails[] = [];
@@ -287,52 +326,39 @@ export class ScenarioRuntime {
     boundary: ScenarioBoundary,
     operation: () => T | Promise<T>,
   ): Promise<T> {
-    const parent = this.execution.getStore();
     const propagating = new Set<Problem>();
-    const result = this.execution.run(
-      { boundary: true, injectedProblems: propagating, parent },
-      async () => {
-        assertNonEmpty(point, "boundary point");
-        try {
-          this.recordTimeline("boundary", point, { boundary });
-          const planned = this.findPlannedFailure(point, boundary);
-          if (!planned) {
-            return await this.executeOperation(operation);
-          }
+    const result = this.execution.run(propagating, async () => {
+      assertNonEmpty(point, "boundary point");
+      this.recordTimeline("boundary", point, { boundary });
+      const planned = this.findPlannedFailure(point, boundary);
+      if (!planned) {
+        return await this.executeOperation(operation);
+      }
 
-          if (planned.failure.kind === "duplicate-delivery") {
-            this.planned.shift();
-            this.recordTimeline("failure", point, { boundary, failure: planned.failure.kind });
-            let result: T | undefined;
-            for (let delivery = 0; delivery < planned.failure.deliveries; delivery += 1) {
-              result = await this.executeOperation(operation);
-            }
-            return result as T;
-          }
-
-          this.consumePlannedFailure(planned);
-          if (planned.failure.kind === "lost-response") {
-            await this.executeOperation(operation);
-          }
-          if (planned.failure.virtualTimeAdvance !== undefined) {
-            await this.advanceBy(planned.failure.virtualTimeAdvance);
-          }
-
-          this.recordTimeline("failure", point, { boundary, failure: planned.failure.kind });
-          this.recordProblem(planned.failure.problem);
-          propagating.add(planned.failure.problem);
-          throw planned.failure.problem;
-        } catch (error) {
-          // Only the failure escaping this boundary propagates to its caller.
-          if (error instanceof Problem && propagating.has(error)) {
-            parent?.injectedProblems.add(error);
-          }
-          throw error;
+      if (planned.failure.kind === "duplicate-delivery") {
+        this.planned.shift();
+        this.recordTimeline("failure", point, { boundary, failure: planned.failure.kind });
+        let result: T | undefined;
+        for (let delivery = 0; delivery < planned.failure.deliveries; delivery += 1) {
+          result = await this.executeOperation(operation);
         }
-      },
-    );
-    this.executionResults.set(result, propagating);
-    return result;
+        return result as T;
+      }
+
+      this.consumePlannedFailure(planned);
+      if (planned.failure.kind === "lost-response") {
+        await this.executeOperation(operation);
+      }
+      if (planned.failure.virtualTimeAdvance !== undefined) {
+        await this.advanceBy(planned.failure.virtualTimeAdvance);
+      }
+
+      this.recordTimeline("failure", point, { boundary, failure: planned.failure.kind });
+      this.recordProblem(planned.failure.problem);
+      propagating.add(planned.failure.problem);
+      throw planned.failure.problem;
+    });
+    return new ScenarioExecutionPromise(result, this.execution, propagating);
   }
 
   async run(run: (scenario: ScenarioRuntime) => void | Promise<void>): Promise<ScenarioReport> {
@@ -344,7 +370,9 @@ export class ScenarioRuntime {
     this.hasRun = true;
     const propagating = new Set<Problem>();
     try {
-      await this.execution.run({ boundary: false, injectedProblems: propagating }, () => run(this));
+      await this.execution.run(propagating, async () => {
+        await run(this);
+      });
     } catch (error) {
       if (error instanceof ScenarioContractProblem) {
         throw error;
@@ -374,10 +402,8 @@ export class ScenarioRuntime {
   }
 
   private async executeOperation<T>(operation: () => T | Promise<T>): Promise<T> {
-    let result: T | Promise<T> | undefined;
     try {
-      result = operation();
-      return await result;
+      return await operation();
     } catch (error) {
       if (!(error instanceof Problem)) {
         throw new ScenarioContractProblem(
@@ -385,18 +411,7 @@ export class ScenarioRuntime {
           error instanceof Error ? error : undefined,
         );
       }
-      const current = this.execution.getStore();
-      let source = current;
-      while (source?.boundary && !source.injectedProblems.has(error)) {
-        source = source.parent;
-      }
-      const ancestorInjection = source?.boundary && source.injectedProblems.has(error);
-      const returnedInjection =
-        result instanceof Promise && this.executionResults.get(result)?.has(error);
-      if (ancestorInjection || returnedInjection) {
-        current?.injectedProblems.add(error);
-      }
-      if (!current?.injectedProblems.has(error)) {
+      if (!this.execution.getStore()?.has(error)) {
         try {
           this.recordProblem(error);
         } catch (recordingError) {
