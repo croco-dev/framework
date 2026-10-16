@@ -18621,7 +18621,7 @@ Sources:
 
 Sources:
 
-- `packages/testing/src/libs/TestRuntime.ts:49:5` (problem-constructor)
+- `packages/testing/src/libs/TestRuntime.ts:46:5` (problem-constructor)
 
 <a id="testing-test-kernel-resource-fidelity"></a>
 
@@ -18711,7 +18711,7 @@ Sources:
 
 Sources:
 
-- `packages/testing/src/libs/TestRuntime.ts:65:5` (problem-constructor)
+- `packages/testing/src/libs/TestRuntime.ts:62:5` (problem-constructor)
 
 <a id="testing-test-runtime-drain-limit"></a>
 
@@ -18729,7 +18729,7 @@ Sources:
 
 Sources:
 
-- `packages/testing/src/libs/TestRuntime.ts:76:5` (problem-constructor)
+- `packages/testing/src/libs/TestRuntime.ts:73:5` (problem-constructor)
 
 <a id="testing-transaction-context-not-active"></a>
 

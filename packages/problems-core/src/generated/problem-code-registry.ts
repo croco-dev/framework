@@ -27027,7 +27027,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/testing/src/libs/TestRuntime.ts";
-          readonly line: 49;
+          readonly line: 46;
           readonly column: 5;
           readonly kind: "problem-constructor";
         },
@@ -27167,7 +27167,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/testing/src/libs/TestRuntime.ts";
-          readonly line: 65;
+          readonly line: 62;
           readonly column: 5;
           readonly kind: "problem-constructor";
         },
@@ -27195,7 +27195,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/testing/src/libs/TestRuntime.ts";
-          readonly line: 76;
+          readonly line: 73;
           readonly column: 5;
           readonly kind: "problem-constructor";
         },
@@ -60245,7 +60245,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/testing/src/libs/TestRuntime.ts",
-          line: 49,
+          line: 46,
           column: 5,
           kind: "problem-constructor",
         },
@@ -60404,7 +60404,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/testing/src/libs/TestRuntime.ts",
-          line: 65,
+          line: 62,
           column: 5,
           kind: "problem-constructor",
         },
@@ -60436,7 +60436,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/testing/src/libs/TestRuntime.ts",
-          line: 76,
+          line: 73,
           column: 5,
           kind: "problem-constructor",
         },
