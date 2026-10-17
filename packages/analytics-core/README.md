@@ -360,6 +360,11 @@ repeating settlement does not repeat inference. Unknown acceptance requires an e
 acknowledgement that the prior worker stopped. At the attempt limit, `retry` accepts this
 acknowledgement only to release the uncertain concurrency slot: `classify` still rejects another
 attempt, and the original unknown usage, receipts and budget reservation remain intact.
+Admission counts durable operational receipts, including those whose source results were purged.
+An authorized operator can acknowledge an unknown receipt, or an expired running receipt after
+confirming the worker stopped, using its persisted item/receipt IDs and current run revision.
+This remains available after source deletion or result expiry and returns no classification data;
+it does not recreate purged results, refund reservations or bypass source checks on classification.
 
 See [the independent example](../../examples/enrichment-review/README.md) for native SDK mapping,
 PostgreSQL migration/CAS, batch checkpoints, review UI, budget assumptions and recovery limitations.

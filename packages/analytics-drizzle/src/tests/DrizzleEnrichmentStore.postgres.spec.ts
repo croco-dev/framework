@@ -64,6 +64,7 @@ describe.skipIf(!connectionString)("PostgreSQL enrichment receipts and CAS", () 
       modelRef: "fixture",
       usage: { kind: "known" as const, inputTokens: 44, outputTokens: 9 },
     })),
+    sourceAvailable = async (_sourceRef: string) => true,
   ) {
     const settle = vi.fn(async (_receipt: EnrichmentReceipt) => {});
     const clock = { offset: 0 };
@@ -74,7 +75,7 @@ describe.skipIf(!connectionString)("PostgreSQL enrichment receipts and CAS", () 
       authorize: async () => true,
       currentActor: async () => "operator",
       authorizationRevision: async () => "auth-1",
-      sourceAvailable: async () => true,
+      sourceAvailable: async (_scope, sourceRef) => sourceAvailable(sourceRef),
       prepareInput: (input) => ({ text: input.text, context: input.context }),
       settle,
       now: () => Date.now() + clock.offset,
@@ -162,6 +163,45 @@ describe.skipIf(!connectionString)("PostgreSQL enrichment receipts and CAS", () 
     });
     expect((await other.load(scope, "one"))?.receipts[0].candidate.delivery).toBe("delivered");
     expect(f.model).toHaveBeenCalledTimes(1);
+  });
+  it("preserves a purged uncertain claim and its acknowledgement across reopened connections", async () => {
+    let deleted = false;
+    const available = async (sourceRef: string) => !deleted || sourceRef !== "source-a";
+    const f = fixture(store, undefined, available);
+    f.model.mockRejectedValueOnce(new Error("unknown acceptance"));
+    await enqueue(f.service);
+    await expect(f.service.classify(scope, "one", "a", "intent", "v1")).rejects.toMatchObject({
+      code: "analytics-core/enrichment-acceptance-unknown",
+    });
+    const initial = await store.load(scope, "one");
+    if (!initial) throw new Error("missing fixture run");
+    const receiptId = initial.receipts[0].candidate.receiptId;
+    deleted = true;
+    await f.service.purge(scope, "one");
+    const restarted = fixture(other, f.model, available);
+    await expect(
+      restarted.service.classify(scope, "one", "b", "intent", "v1"),
+    ).rejects.toMatchObject({
+      code: "analytics-core/enrichment-concurrency-limit",
+    });
+    await restarted.service.retry(scope, "one", "a", receiptId, true, {
+      actor: "operator",
+      reason: "Confirmed deleted source worker stopped",
+      idempotencyKey: "stopped",
+      expectedRevision: (await restarted.service.read(scope, "one")).revision,
+    });
+    const reopened = fixture(store, f.model, available);
+    expect(await reopened.service.classify(scope, "one", "b", "intent", "v1")).toMatchObject({
+      state: "classified",
+    });
+    const stored = await store.load(scope, "one");
+    expect(stored?.items[0]).toMatchObject({ input: { text: null, context: {} }, candidates: [] });
+    expect(stored?.receipts[0].candidate).toMatchObject({
+      retryAuthorized: true,
+      usage: { kind: "unknown" },
+    });
+    expect(stored?.receipts[0].candidate).not.toHaveProperty("labelId");
+    expect(f.model).toHaveBeenCalledTimes(2);
   });
   it("keeps an actual killed worker claim and never calls the model just because its lease expired", async () => {
     const f = fixture();

@@ -674,13 +674,11 @@ export class EnrichmentService {
         )
           fail("budget-exhausted");
         // An expired lease still occupies a slot: its SDK may be alive in another process.
-        const active = current.items
-          .flatMap((entry) => entry.candidates)
-          .filter(
-            (entry) =>
-              entry.state === "running" ||
-              (entry.reason === "acceptance-unknown" && !entry.retryAuthorized),
-          ).length;
+        const active = current.receipts.filter(
+          ({ candidate: entry }) =>
+            entry.state === "running" ||
+            (entry.reason === "acceptance-unknown" && !entry.retryAuthorized),
+        ).length;
         if (active >= current.limits.maxConcurrency) fail("concurrency-limit");
         current.requests++;
         current.reservedTokens += current.limits.tokensPerRequest;
@@ -1063,33 +1061,48 @@ export class EnrichmentService {
   ): Promise<void> {
     await this.allow(scope, "classify", command.actor);
     const snapshot = await this.load(scope, runId);
-    await this.live(
-      scope,
-      snapshot,
-      snapshot.items.find((item) => item.input.itemId === itemId) ?? fail("not-found"),
-    );
+    const prior =
+      snapshot.receipts.find(
+        (entry) => entry.itemId === itemId && entry.candidate.receiptId === receiptId,
+      )?.candidate ?? fail("conflict");
+    // Reconcile operational claims even after source deletion or result retention. This
+    // acknowledgement returns no result and never recreates a purged candidate.
+    if (prior.reason !== "acceptance-unknown" && prior.state !== "running")
+      await this.live(
+        scope,
+        snapshot,
+        snapshot.items.find((item) => item.input.itemId === itemId) ?? fail("not-found"),
+      );
     await this.mutate(scope, runId, (run) => {
       if (!this.command(run, command, "retry", [itemId, receiptId, acknowledgeDuplicateBilling]))
         return;
       const row = run.items.find((item) => item.input.itemId === itemId) ?? fail("not-found");
       const index = row.candidates.findIndex((item) => item.receiptId === receiptId);
-      if (index < 0) fail("conflict");
-      const candidate = row.candidates[index];
-      if (index !== row.candidates.length - 1 && candidate.reason !== "acceptance-unknown")
-        fail("conflict");
+      const receipt =
+        run.receipts.find(
+          (entry) => entry.itemId === itemId && entry.candidate.receiptId === receiptId,
+        ) ?? fail("conflict");
+      const candidate = receipt.candidate;
+      const uncertain = candidate.reason === "acceptance-unknown" || candidate.state === "running";
+      if (index !== row.candidates.length - 1 && !uncertain) fail("conflict");
       if (
         candidate.state === "classified" ||
-        candidate.state === "running" ||
+        (candidate.state === "running" && (candidate.leaseUntil ?? Infinity) > this.now()) ||
         candidate.retryAuthorized
       )
         fail("retry-unavailable");
-      if (candidate.reason === "acceptance-unknown" && !acknowledgeDuplicateBilling)
+      if (uncertain && !acknowledgeDuplicateBilling)
         fail("duplicate-billing-acknowledgement-required");
-      if (candidate.attempt >= run.limits.maxAttempts && candidate.reason !== "acceptance-unknown")
-        fail("attempt-limit");
+      if (candidate.attempt >= run.limits.maxAttempts && !uncertain) fail("attempt-limit");
       // The trusted operator confirms that the old worker has stopped. At the final attempt
       // this only releases the uncertain slot; classify still rejects an additional attempt.
-      row.candidates[index] = { ...candidate, retryAuthorized: true };
+      const acknowledged: EnrichmentCandidate = {
+        ...candidate,
+        ...(candidate.state === "running" ? { state: "failed", reason: "acceptance-unknown" } : {}),
+        retryAuthorized: true,
+      };
+      receipt.candidate = acknowledged;
+      if (index >= 0) row.candidates[index] = { ...row.candidates[index], ...acknowledged };
     });
   }
   /** Retries only pending event/usage intents; model calls are never part of settlement. */
