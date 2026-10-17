@@ -113,8 +113,10 @@ class TestingContextManager implements ContextManager {
       return target;
     }
 
-    const bound = ((...args: unknown[]) =>
-      this.with(ctx, target as (...args: unknown[]) => T, undefined, ...args)) as T;
+    const withContext = this.with.bind(this);
+    const bound = function (this: unknown, ...args: unknown[]) {
+      return withContext(ctx, target as (...args: unknown[]) => unknown, this, ...args);
+    } as T;
     return bound;
   }
 

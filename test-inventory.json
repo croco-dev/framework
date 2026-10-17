@@ -5414,6 +5414,12 @@
       "owner": "@croco/testing"
     },
     {
+      "path": "packages/testing/src/tests/TestingContextManager.spec.ts",
+      "lane": "fast",
+      "qualifiers": ["coverage"],
+      "owner": "@croco/testing"
+    },
+    {
       "path": "packages/testing/src/tests/testing.spec.ts",
       "lane": "fast",
       "qualifiers": ["coverage"],
