@@ -12,6 +12,20 @@ const oxlintPath = fileURLToPath(
 
 const cases = [
   {
+    name: "constructor decorator aliases retain their enclosing method scope",
+    declarations:
+      "class Factory { create() { const NAME = 'id', ALIAS = NAME; return class Nested { constructor(@Param(ALIAS) private ALIAS: string) {} }; } }",
+    parameters: "",
+    errors: 1,
+  },
+  {
+    name: "method parameters do not shadow decorator arguments",
+    declarations: "const ID = 'id', Q = `q`, H = ID;",
+    parameters:
+      "@Param(ID) ID: string, @Query(Q) Q: string, @Header(H) H: string, @Body(undefined) undefined: unknown",
+    errors: 4,
+  },
+  {
     name: "quoted names",
     declarations: "",
     parameters: "@Param('id') id: string, @Query('q') q: string, @Header('h') h: string",

@@ -30,9 +30,9 @@ const unwrapArgument = (node: Node | undefined): Node | undefined => {
   return node;
 };
 
-const findVariable = (context: Rule.RuleContext, node: Node, name: string) => {
-  let scope: ReturnType<typeof context.sourceCode.getScope> | null =
-    context.sourceCode.getScope(node);
+type Scope = ReturnType<Rule.RuleContext["sourceCode"]["getScope"]>;
+
+const findVariable = (scope: Scope | null, name: string) => {
   while (scope) {
     const variable = scope.set.get(name);
     if (variable) return variable;
@@ -44,6 +44,7 @@ const findVariable = (context: Rule.RuleContext, node: Node, name: string) => {
 const isStaticString = (
   context: Rule.RuleContext,
   argument: Node | undefined,
+  scope?: Scope | null,
   visited = new Set<Node>(),
 ): boolean => {
   const node = unwrapArgument(argument);
@@ -54,7 +55,10 @@ const isStaticString = (
   if (node.type === "TemplateLiteral") return node.expressions.length === 0;
   if (node.type !== "Identifier") return false;
 
-  const variable = findVariable(context, node, node.name);
+  const variable = findVariable(
+    scope === undefined ? context.sourceCode.getScope(node) : scope,
+    node.name,
+  );
   const definition = variable?.defs.length === 1 ? variable.defs[0] : undefined;
   if (
     definition?.type !== "Variable" ||
@@ -64,17 +68,17 @@ const isStaticString = (
   ) {
     return false;
   }
-  return isStaticString(context, definition.node.init ?? undefined, visited);
+  return isStaticString(context, definition.node.init ?? undefined, undefined, visited);
 };
 
-const isMissingSchema = (context: Rule.RuleContext, argument: Node | undefined): boolean => {
+const isMissingSchema = (argument: Node | undefined, scope: Scope | null): boolean => {
   const node = unwrapArgument(argument);
   if (!node) return true;
   if (node.type === "UnaryExpression" && node.operator === "void") return true;
   return (
     node.type === "Identifier" &&
     node.name === "undefined" &&
-    !findVariable(context, node, node.name)?.defs.length
+    !findVariable(scope, node.name)?.defs.length
   );
 };
 
@@ -113,6 +117,13 @@ const rule: Rule.RuleModule = {
           return;
         }
 
+        // Parameter decorators execute outside their method's parameter scope.
+        const ownScope = context.sourceCode.getScope(node);
+        const scope =
+          ownScope.type === "function" &&
+          (ownScope.block as Node & { readonly parent?: Node }).parent?.type === "MethodDefinition"
+            ? ownScope.upper
+            : ownScope;
         const importedDecoratorName = binding.importedName;
 
         if (importedDecoratorName === "All") {
@@ -125,7 +136,7 @@ const rule: Rule.RuleModule = {
 
         if (
           importedDecoratorName === "Body" &&
-          isMissingSchema(context, node.expression.arguments[0])
+          isMissingSchema(node.expression.arguments[0], scope)
         ) {
           context.report({
             node,
@@ -136,8 +147,8 @@ const rule: Rule.RuleModule = {
 
         if (
           NAMED_PARAMETER_DECORATORS.has(importedDecoratorName) &&
-          isStaticString(context, node.expression.arguments[0]) &&
-          isMissingSchema(context, node.expression.arguments[1])
+          isStaticString(context, node.expression.arguments[0], scope) &&
+          isMissingSchema(node.expression.arguments[1], scope)
         ) {
           context.report({
             node,
