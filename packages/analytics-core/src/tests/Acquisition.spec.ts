@@ -539,3 +539,63 @@ it("does not silently reuse an exported report reference after new evidence arri
     code: "analytics/acquisition/conflict",
   });
 });
+
+it("does not let runtime link extras replace server authorization claims", async () => {
+  const f = fixture();
+  await f.record("victim-visit", 8);
+  const authorize = vi.fn((request) => {
+    if (request.action === "link" && request.anonymousRef !== "owned-session")
+      throw new AcquisitionProblem("denied");
+  });
+  const service = new AcquisitionService(f.store, {
+    ...f.options,
+    policy: { ...f.options.policy, authorize },
+  });
+  const forged = {
+    scope,
+    id: "forged-login",
+    anonymousRef: anon.ref,
+    subjectRef: user.ref,
+    provenance: "login",
+    action: "read",
+    actor: "spoofed-actor",
+    identity: { kind: "subject", ref: "spoofed-subject" },
+  };
+  await expect(service.linkKnownSubject(forged)).rejects.toMatchObject({
+    code: "analytics/acquisition/denied",
+  });
+  expect(authorize).toHaveBeenCalledWith({
+    action: "link",
+    actor: "operator",
+    scope,
+    identity: user,
+    anonymousRef: anon.ref,
+    provenance: "login",
+  });
+  expect(f.states.get(JSON.stringify(scope))?.links).toEqual([]);
+});
+
+it("erases reports exported before anonymous history was linked to a deleted subject", async () => {
+  const f = fixture();
+  await f.service.define(scope, definition);
+  await f.record("anonymous-visit", 8);
+  await f.service.compare({
+    ...f.query,
+    conversion: { ...f.query.conversion, identity: anon },
+    definitions: [{ id: "first", revision: 1 }],
+    reportId: "anonymous-report",
+  });
+  await f.service.linkKnownSubject({
+    scope,
+    id: "login",
+    anonymousRef: anon.ref,
+    subjectRef: user.ref,
+    provenance: "login",
+  });
+  await f.service.deleteIdentity(scope, user);
+  const state = f.states.get(JSON.stringify(scope));
+  expect(state?.touchpoints).toEqual([]);
+  expect(state?.links).toEqual([]);
+  expect(state?.reports).toEqual([]);
+  expect(state?.deleted).toEqual(expect.arrayContaining([user, anon]));
+});
