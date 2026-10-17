@@ -74,6 +74,48 @@ describe("generateController", () => {
     expect(content).not.toContain("RouteContext");
   });
 
+  it.each(["_2fa", "-2fa", "__-2fa", "_123", "___", "---"])(
+    "should reject %s before creating a controller directory",
+    async (name) => {
+      const cwd = await createWorkspace();
+      try {
+        await expect(generateController(name, { cwd })).rejects.toMatchObject({
+          code: "CROCO_CLI_NAME_INVALID",
+        });
+        await expect(fs.access(path.join(cwd, "apps", "api-server", "src"))).rejects.toMatchObject({
+          code: "ENOENT",
+        });
+      } finally {
+        await fs.rm(cwd, { recursive: true, force: true });
+      }
+    },
+  );
+
+  it.each([
+    ["user-profile", "UserProfile", "user-profile"],
+    ["User", "User", "user"],
+    ["XMLParser", "XMLParser", "xml-parser"],
+  ])("should preserve controller naming for %s", async (name, className, routeName) => {
+    const cwd = await createWorkspace();
+    try {
+      const result = await generateController(name, { cwd });
+      const target = path.join(
+        cwd,
+        "apps",
+        "api-server",
+        "src",
+        "controllers",
+        `${className}Controller.ts`,
+      );
+      expect(result).toMatchObject({ status: "created", name: className, path: target });
+      const content = await fs.readFile(target, "utf-8");
+      expect(content).toContain(`export class ${className}Controller {`);
+      expect(content).toContain(`@Controller("/${routeName}")`);
+    } finally {
+      await fs.rm(cwd, { recursive: true, force: true });
+    }
+  });
+
   it("should throw for invalid names", async () => {
     const cwd = await createWorkspace();
 
