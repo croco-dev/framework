@@ -25,7 +25,8 @@ export type GenerationArtifact = {
     | "tenant-model-schema"
     | "runtime-policy"
     | "architecture-policy"
-    | "agent-skill";
+    | "agent-skill"
+    | "infrastructure-profile";
   readonly path: string;
 };
 
@@ -112,6 +113,13 @@ function createGenerationArtifacts(options: GeneratorOptions): GenerationArtifac
     { kind: "node-runtime", path: ".nvmrc" },
     { kind: "runtime-capability", path: "croco-runtime-capability.manifest.json" },
   ];
+
+  if (options.backendDeploy === "kubernetes") {
+    artifacts.push({
+      kind: "infrastructure-profile",
+      path: "croco-infrastructure-profile.manifest.json",
+    });
+  }
 
   if (options.goal) {
     artifacts.push({ kind: "application-intent", path: "croco.app.json" });

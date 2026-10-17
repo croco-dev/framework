@@ -245,6 +245,27 @@ export async function runPrompts(cliArgs: NormalizedGeneratorOptions): Promise<G
       process.exit(0);
     }
 
+    const backendDeploy =
+      preset === "production-app"
+        ? (cliArgs.backendDeploy ??
+          (await p.select({
+            message: "Backend deployment profile:",
+            initialValue: "default",
+            options: [
+              { value: "default", label: "Default Node / Lambda artifacts" },
+              {
+                value: "kubernetes",
+                label: "Kubernetes Node API",
+                hint: "Local verification; live cluster uncertified",
+              },
+            ],
+          })))
+        : undefined;
+    if (p.isCancel(backendDeploy)) {
+      p.cancel("Operation cancelled");
+      process.exit(0);
+    }
+
     const agentRules =
       cliArgs.agentRules ??
       (await p.confirm({
@@ -282,6 +303,7 @@ export async function runPrompts(cliArgs: NormalizedGeneratorOptions): Promise<G
         preset === "saas" || preset === "ai-saas"
           ? (tenantModel as GeneratorOptions["tenantModel"])
           : undefined,
+      ...(backendDeploy === "kubernetes" ? { backendDeploy: "kubernetes" as const } : {}),
       webApps: [],
       apiHosting: "standalone",
       db: [],

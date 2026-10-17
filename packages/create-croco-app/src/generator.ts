@@ -54,6 +54,7 @@ import {
   renderSaasEnvExample,
   renderSaasSecretsChecklist,
 } from "./saas-provider-profiles.js";
+import { installKubernetes, writeKubernetesProfileManifest } from "./installers/kubernetes.js";
 import { TEMPLATES_DIR } from "./template-path.js";
 import {
   createStagingDirectory,
@@ -155,6 +156,9 @@ async function generateProject(
     mergeInto(join(TEMPLATES_DIR, "spa-be-split"), targetDir, vars);
     if (options.preset === "admin-console") {
       mergeInto(join(TEMPLATES_DIR, "admin-console"), targetDir, vars);
+    }
+    if (options.backendDeploy === "kubernetes") {
+      installKubernetes(targetDir, vars);
     }
     sortScaffoldProjectMap(targetDir);
     if (options.agentRules) {
@@ -655,6 +659,10 @@ async function finalize(
     );
   }
 
+  if (options.backendDeploy === "kubernetes") {
+    writeKubernetesProfileManifest(targetDir);
+  }
+
   // Step 10: git init
   if (options.initGit) {
     execSync("git init", { cwd: targetDir, stdio: "ignore" });
@@ -744,7 +752,10 @@ function createGeneratedRuntimeComposition(
       host: { platform: "node", lifecycle: "process", packageName: "@croco/preset-node" },
       transports,
       buildTarget: {
-        name: "node-application",
+        name: options.backendDeploy === "kubernetes" ? "node-container" : "node-application",
+        ...(options.backendDeploy === "kubernetes"
+          ? { constraints: ["container-image", "kubernetes"] }
+          : {}),
         format: "cjs",
         outputDirectory: "apps/api-server/dist",
       },

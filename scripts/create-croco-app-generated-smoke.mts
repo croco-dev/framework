@@ -1688,6 +1688,34 @@ const smokeCaseDefinitionsWithoutLint: readonly Omit<SmokeCase, "tier" | "adviso
     ],
   },
   {
+    name: "kubernetes-node-api",
+    args: [
+      "--preset",
+      "production-app",
+      "--backend-deploy",
+      "kubernetes",
+      "--scope",
+      "@smoke",
+      "--no-install",
+      "--no-git",
+    ],
+    runtimeTarget: "node",
+    matrixTargets: ["spa-be-split", "addons/kubernetes"],
+    validations: [
+      { label: "typecheck", args: ["typecheck"] },
+      { label: "build", args: ["build"] },
+      { label: "test", packagePath: ["apps", "api-server"], args: ["test"] },
+      { label: "lock local smoke overrides", args: ["k8s:lock"] },
+      {
+        label: "profile drift",
+        readOnly: true,
+        recovery: "Review profile changes and run pnpm k8s:lock",
+        args: ["k8s:check"],
+      },
+      { label: "built Kubernetes Node Host smoke", args: ["k8s:smoke"] },
+    ],
+  },
+  {
     name: "production-app-starter",
     args: ["--preset", "production-app", "--scope", "@smoke", "--no-install", "--no-git"],
     runtimeTarget: "node+browser",
@@ -2377,6 +2405,7 @@ export function prepareGeneratedSmokeDependencyOverrides(
       "goal-saas-api",
       "saas-single-tenant",
       "production-app-starter",
+      "kubernetes-node-api",
       "admin-console-starter",
     ].includes(smokeCaseName)
   ) {

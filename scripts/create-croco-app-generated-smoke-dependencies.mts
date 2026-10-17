@@ -91,6 +91,7 @@ const CASE_TEMPLATE_ROOTS = {
   "meta-vite-web": ["base-ddd", "addons/graphql-standalone", "addons/web-meta-vite"],
   "meta-vite-fullstack-workers": ["base-ddd", "addons/web-meta-vite-fullstack"],
   "production-app-starter": ["spa-be-split"],
+  "kubernetes-node-api": ["spa-be-split", "addons/kubernetes"],
   "admin-console-starter": ["spa-be-split", "admin-console"],
   "saas-golden-path": ["saas"],
   "saas-single-tenant": ["saas", "saas-node-postgres-contracts", "saas-single-tenant-contracts"],
@@ -131,6 +132,7 @@ const CASE_TEST_PATH_PREFIXES = {
   ],
   "meta-vite-fullstack-workers": ["base-ddd/libs/shared/utils-env/"],
   "production-app-starter": ["spa-be-split/apps/", "spa-be-split/tests/journeys/"],
+  "kubernetes-node-api": ["spa-be-split/apps/api-server/"],
   "admin-console-starter": [
     "spa-be-split/apps/",
     "admin-console/apps/",

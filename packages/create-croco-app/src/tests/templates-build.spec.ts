@@ -255,12 +255,24 @@ function checkSpaBeSplitStructure() {
     ["apps", "api-server", "src", "app.ts"],
     /globalFilters:\s*\[HttpExceptionFilter\]/,
   );
-  checkFileContains("spa-be-split", ["apps", "api-server", "src", "index.ts"], /createCrocoApp/);
-  checkFileContains("spa-be-split", ["apps", "api-server", "src", "index.ts"], /TelemetryRuntime/);
-  checkFileContains("spa-be-split", ["apps", "api-server", "src", "index.ts"], /createNodeHost/);
   checkFileContains(
     "spa-be-split",
-    ["apps", "api-server", "src", "index.ts"],
+    ["apps", "api-server", "src", "node-application.ts"],
+    /createCrocoApp/,
+  );
+  checkFileContains(
+    "spa-be-split",
+    ["apps", "api-server", "src", "node-application.ts"],
+    /TelemetryRuntime/,
+  );
+  checkFileContains(
+    "spa-be-split",
+    ["apps", "api-server", "src", "node-application.ts"],
+    /createNodeHost/,
+  );
+  checkFileContains(
+    "spa-be-split",
+    ["apps", "api-server", "src", "node-application.ts"],
     /forceFlush\(\)[\s\S]*shutdown\(\)[\s\S]*disposeApplicationRuntime\(\)/,
   );
   checkFileContains(

@@ -15,6 +15,13 @@ describe("GeneratorOptions", () => {
     expectTypeOf<GeneratorTenantModelName>().toEqualTypeOf<TenantModelName>();
   });
 
+  it("restricts Kubernetes to the explicit production-app branch", () => {
+    type Production = Extract<GeneratorOptions, { preset: "production-app"; goal?: never }>;
+    type Ddd = Extract<GeneratorOptions, { preset: "ddd-api" }>;
+    expectTypeOf<Production["backendDeploy"]>().toEqualTypeOf<"kubernetes" | undefined>();
+    expectTypeOf<Ddd["backendDeploy"]>().toEqualTypeOf<"docker" | "lambda" | undefined>();
+  });
+
   it("accepts only fields owned by each resolved preset branch", () => {
     const apiOptions: GeneratorOptions = {
       projectName: "api",
