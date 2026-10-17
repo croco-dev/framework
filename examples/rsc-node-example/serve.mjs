@@ -48,8 +48,20 @@ async function streamBody(stream, nodeResponse) {
       }
       if (!nodeResponse.write(Buffer.from(value))) {
         // A closed response never emits `drain`, so wait for either event
-        // instead of hanging on a socket that is already gone.
-        await Promise.race([once(nodeResponse, "drain"), once(nodeResponse, "close")]);
+        // instead of hanging on a socket that is already gone. The shared
+        // signal is aborted as soon as the race settles, so whichever
+        // listener lost is removed instead of accumulating per write.
+        const wait = new AbortController();
+        const drain = once(nodeResponse, "drain", { signal: wait.signal });
+        const close = once(nodeResponse, "close", { signal: wait.signal });
+
+        try {
+          await Promise.race([drain, close]);
+        } finally {
+          wait.abort();
+          drain.catch(() => {});
+          close.catch(() => {});
+        }
       }
     }
   } finally {
