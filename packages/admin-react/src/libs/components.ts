@@ -882,7 +882,10 @@ function renderAdminFormInput<TValues extends object>({
     ...commonProps,
     onChange,
     type: field.inputType ?? "text",
-    value: stringifyAdminFormInputValue(value),
+    value:
+      field.inputType === "date" && value instanceof Date
+        ? stringifyAdminFormDateValue(value)
+        : stringifyAdminFormInputValue(value),
   });
 }
 
@@ -906,11 +909,32 @@ function readAdminFormInputValue<TValues extends object, TName extends AdminForm
     }
   }
 
+  if (
+    field.inputType === "date" &&
+    field.dateValueType === "date" &&
+    "valueAsDate" in event.currentTarget
+  ) {
+    return (event.currentTarget.valueAsDate ?? undefined) as TValues[TName];
+  }
+
   if (field.inputType === "number") {
     return (rawValue === "" ? undefined : Number(rawValue)) as TValues[TName];
   }
 
   return rawValue as TValues[TName];
+}
+
+function stringifyAdminFormDateValue(value: Date): string {
+  const year = value.getUTCFullYear();
+  if (Number.isNaN(value.getTime()) || year <= 0) {
+    return "";
+  }
+
+  return [
+    String(year).padStart(4, "0"),
+    String(value.getUTCMonth() + 1).padStart(2, "0"),
+    String(value.getUTCDate()).padStart(2, "0"),
+  ].join("-");
 }
 
 function stringifyAdminFormInputValue(value: unknown): string {

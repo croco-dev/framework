@@ -481,6 +481,29 @@ keep `undefined` visually empty. `required` enables native browser constraint va
 validate required values for programmatic submissions and return `validation_failed` when
 an empty value is not allowed.
 
+Date inputs use a declared representation, rather than inferring it from the current value:
+
+```typescript typecheck
+import type { AdminFormFieldContract } from "@croco/admin-react";
+
+type ScheduleDraft = { start: Date | undefined; day: string };
+const dateFields = [
+  { name: "start", label: "Start", inputType: "date", dateValueType: "date" },
+  { name: "day", label: "Day", inputType: "date" },
+] satisfies readonly AdminFormFieldContract<ScheduleDraft>[];
+```
+
+`dateValueType: "date"` displays the UTC calendar date of a valid `Date` and emits a
+`Date` at UTC midnight after selection. Editing discards the original time of day;
+this is a calendar-date editor, not a local-time or timestamp editor. Clearing emits
+`undefined`, including required fields, so Date draft types must include `undefined`.
+Invalid Date drafts display as empty. An initially empty draft still emits Date values
+when a date is selected. String date fields default to `dateValueType: "string"` and
+retain `YYYY-MM-DD` strings (or `""` when cleared). Type checking rejects ambiguous Date
+date fields and mismatched representations. As with numeric fields, programmatic submit
+handlers must validate required values; the native `required` constraint applies to browser
+submissions.
+
 `validation_failed` submit results render field errors beside their fields.
 `domain_problem`, `permission_denied`, and `external_failure` render as global
 Problems with explicit recovery actions, so custom visual components can reuse

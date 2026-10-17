@@ -13,6 +13,8 @@ import {
 import type {
   AdminFormContract,
   AdminFormFieldErrors,
+  AdminFormFieldContract,
+  AdminFormFieldChangeHandler,
   AdminFormState,
   AdminFormSubmitContext,
 } from "../libs/types";
@@ -539,4 +541,139 @@ describe("AdminForm numeric input", () => {
     expect(state.values.quantity).toBe(expected);
     expect(numberFieldInput(contract, state).props.value).toBe(rawValue);
   });
+});
+
+type DateFormValues = { start: Date | undefined; day: string };
+
+function createDateFormContract(): AdminFormContract<DateFormValues> {
+  return {
+    id: "dates-form",
+    title: "Edit dates",
+    intent: "update",
+    fields: [
+      { name: "start", label: "Start", inputType: "date", dateValueType: "date", required: true },
+      { name: "day", label: "Day", inputType: "date" },
+    ],
+    initialValues: { start: new Date("2026-10-02T23:45:00.000Z"), day: "2026-10-03" },
+    audit: { eventName: "dates.updated", subjectType: "tenant", subjectId: "tenant-1" },
+    submit: ({ values }) => ({ kind: "success", data: values }),
+  };
+}
+
+function dateFieldInput(
+  contract: AdminFormContract<DateFormValues>,
+  state: AdminFormState<DateFormValues>,
+  name: keyof DateFormValues,
+  onFieldChange?: AdminFormFieldChangeHandler<DateFormValues>,
+): ReactElement<{ onChange: (event: ChangeEvent<HTMLInputElement>) => void; value: string }> {
+  const field = contract.fields.find((candidate) => candidate.name === name);
+  if (!field) throw new Error("Date field missing");
+  const element = AdminFormField<DateFormValues>({
+    field,
+    value: state.values[name],
+    errors: [],
+    onFieldChange,
+  });
+  const input = Children.toArray((element.props as { children: ReactNode }).children).find(
+    (child) => isValidElement(child) && child.type === "input",
+  );
+  if (!isValidElement(input)) throw new Error("Date input missing");
+  return input as ReturnType<typeof dateFieldInput>;
+}
+
+describe("AdminForm date inputs", () => {
+  it("renders Date values using the UTC calendar date and preserves string dates", () => {
+    const contract = createDateFormContract();
+    const state = createAdminFormState(contract);
+    expect(dateFieldInput(contract, state, "start").props.value).toBe("2026-10-02");
+    expect(dateFieldInput(contract, state, "day").props.value).toBe("2026-10-03");
+  });
+
+  it("keeps the declared date representation through clear, re-entry and submit", async () => {
+    const contract = createDateFormContract();
+    let state = createAdminFormState(contract);
+    const onFieldChange: AdminFormFieldChangeHandler<DateFormValues> = (name, value) => {
+      state = updateAdminFormField(state, name, value);
+    };
+    const fill = (name: keyof DateFormValues, value: string) => {
+      dateFieldInput(contract, state, name, onFieldChange).props.onChange({
+        currentTarget: {
+          value,
+          valueAsDate: value === "" ? null : new Date(`${value}T00:00:00.000Z`),
+        },
+      } as ChangeEvent<HTMLInputElement>);
+    };
+    fill("start", "");
+    fill("day", "");
+    expect(state.values.start).toBeUndefined();
+    expect(state.values.day).toBe("");
+    expect(dateFieldInput(contract, state, "start").props.value).toBe("");
+    fill("start", "2028-02-29");
+    fill("day", "2027-07-15");
+    expect(state.values.start).toBeInstanceOf(Date);
+    expect(state.values.start?.toISOString()).toBe("2028-02-29T00:00:00.000Z");
+    expect(state.values.day).toBe("2027-07-15");
+    const submitted = await submitAdminForm(contract, state);
+    expect(submitted.submitResult).toEqual({
+      start: new Date("2028-02-29T00:00:00.000Z"),
+      day: "2027-07-15",
+    });
+  });
+
+  it.each([
+    ["0099-04-05T00:00:00.000Z", "0099-04-05"],
+    ["+010000-06-07T00:00:00.000Z", "10000-06-07"],
+  ])("renders %s as the HTML calendar date %s", (iso, expected) => {
+    const contract = createDateFormContract();
+    const state = updateAdminFormField(createAdminFormState(contract), "start", new Date(iso));
+    expect(dateFieldInput(contract, state, "start").props.value).toBe(expected);
+  });
+
+  it("uses the declared Date representation even when the initial draft is empty", async () => {
+    const contract = createDateFormContract();
+    const emptyContract = {
+      ...contract,
+      initialValues: { ...contract.initialValues, start: undefined },
+    };
+    let state = createAdminFormState(emptyContract);
+    dateFieldInput(emptyContract, state, "start", (name, value) => {
+      state = updateAdminFormField(state, name, value);
+    }).props.onChange({
+      currentTarget: { value: "2026-11-12", valueAsDate: new Date("2026-11-12T00:00:00.000Z") },
+    } as ChangeEvent<HTMLInputElement>);
+    const submitted = await submitAdminForm(emptyContract, state);
+    expect(submitted.values.start).toBeInstanceOf(Date);
+    expect(submitted.values.start?.toISOString()).toBe("2026-11-12T00:00:00.000Z");
+  });
+
+  it("renders invalid Date draft values as empty instead of throwing", () => {
+    const contract = createDateFormContract();
+    const state = updateAdminFormField(createAdminFormState(contract), "start", new Date(NaN));
+    expect(dateFieldInput(contract, state, "start").props.value).toBe("");
+  });
+});
+
+it("requires an explicit Date representation and an empty draft type for date fields", () => {
+  // @ts-expect-error Date fields must declare their date representation
+  const ambiguous: AdminFormFieldContract<DateFormValues> = {
+    name: "start",
+    label: "Start",
+    inputType: "date",
+  };
+  const nonemptyField = {
+    name: "start",
+    label: "Start",
+    inputType: "date",
+    dateValueType: "date",
+  } as const;
+  // @ts-expect-error Date inputs can be cleared, so their draft type must include undefined
+  const nonempty: AdminFormFieldContract<{ start: Date }> = nonemptyField;
+  // @ts-expect-error string fields cannot emit Date values
+  const mismatched: AdminFormFieldContract<DateFormValues> = {
+    name: "day",
+    label: "Day",
+    inputType: "date",
+    dateValueType: "date",
+  };
+  expect([ambiguous.name, nonempty.name, mismatched.name]).toEqual(["start", "start", "day"]);
 });
