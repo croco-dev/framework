@@ -309,6 +309,65 @@ describe("doc-examples-check.mts", () => {
     scriptTestTimeout,
   );
 
+  it.each(["docs/a b.md", "docs/a_b.md", "docs/한글.md", "docs/예제.md"])(
+    "reports type errors in %s without another document replacing its block",
+    (invalidPath) => {
+      const root = createTempRoot();
+      writeValidDocs(root);
+      for (const file of ["docs/a b.md", "docs/a_b.md", "docs/한글.md", "docs/예제.md"]) {
+        const value = file === invalidPath ? '"wrong"' : "1";
+        writeFileSync(
+          join(root, file),
+          ["# Example", "", "```ts typecheck", `const value: number = ${value};`, "```", ""].join(
+            "\n",
+          ),
+        );
+      }
+
+      const result = runScript(root, "--check");
+
+      expect(result.status).toBe(1);
+      expect(result.stdout).toContain(
+        `${invalidPath}:4: Type 'string' is not assignable to type 'number'`,
+      );
+      expect(result.stdout.match(/Type 'string' is not assignable to type 'number'/g)).toHaveLength(
+        1,
+      );
+    },
+    scriptTestTimeout,
+  );
+
+  it(
+    "checks every block in colliding document names while preserving relative imports",
+    () => {
+      const root = createTempRoot();
+      writeValidDocs(root);
+      writeFileSync(join(root, "docs", "value.ts"), "export const value = 7;\n");
+      for (const file of ["a b.md", "a_b.md", "한글.md", "예제.md"]) {
+        writeFileSync(
+          join(root, "docs", file),
+          [
+            "```ts typecheck",
+            'import { value } from "./value";',
+            "const result: number = value;",
+            "```",
+            "",
+            "```ts typecheck",
+            "const label: string = 'second block';",
+            "```",
+            "",
+          ].join("\n"),
+        );
+      }
+
+      const result = runScript(root, "--check");
+
+      expect(result.status).toBe(0);
+      expect(result.stdout).toContain("checked 9 TypeScript documentation examples");
+    },
+    scriptTestTimeout,
+  );
+
   it(
     "resolves extensionless imports in workspace package source",
     () => {
