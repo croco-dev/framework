@@ -288,7 +288,7 @@ export function validateAcquisitionContext(
 }
 export function resolveAcquisitionDestination(ref: string, policy: AcquisitionUrlPolicy): string {
   validateUrlPolicy(policy);
-  if (!Object.hasOwn(policy.destinations, ref)) invalid();
+  if (typeof ref !== "string" || !Object.hasOwn(policy.destinations, ref)) invalid();
   return new URL(policy.destinations[ref], policy.origin).href;
 }
 /** Inclusive [conversion-window, conversion], stable ID tie-break, observed sources only. */

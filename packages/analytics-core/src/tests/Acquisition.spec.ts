@@ -619,3 +619,10 @@ it.each([
     expect(error).toMatchObject({ code: "analytics/acquisition/invalid" });
   }
 });
+
+it.each([["home"], { toString: "home" }, null])(
+  "rejects malformed destination references with a stable Problem: %j",
+  (ref) => {
+    expect(() => resolveAcquisitionDestination(ref as string, urls)).toThrow(AcquisitionProblem);
+  },
+);
