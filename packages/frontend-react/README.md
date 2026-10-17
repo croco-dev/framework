@@ -390,3 +390,27 @@ customer components and operator policy editing.
 `CancellationFlow` renders an independent subscription cancellation surface. Supply a server-created `CancellationSession` in `state: { kind: "ready", session }`, route `onDecide` to authenticated `CancellationService.decide`, and use `onRefresh` to reconcile the existing command or load fresh authoritative terms. Wire `onDisplayed` to `markDisplayed` for display evidence. Client validation uses the same `@croco/billing-core/cancellation` validator as the server; server authorization and current-state admission remain required.
 
 The direct cancellation confirmation precedes optional reasons and retention choices. Skipping a reason and declining offers return keyboard focus to that button. Declined offers stay hidden across session refreshes in the mounted flow. Unsupported choices are disabled. Expired/conflicting terms require a refresh; an unknown submission outcome locks further decisions until refresh. Command acceptance, scheduled cancellation, ended access and refund confirmation are shown separately. The host must return the authoritative session after decisions and reconciliation and must never create a replacement command to recover an unknown result.
+
+## ExperimentRegion
+
+`ExperimentRegion` renders a browser-safe frozen delivery decision from
+`@croco/features-core` without allocating or choosing a variant in the browser. Supply the same
+admitted decision for SSR and hydration, a `renderVariant` function, fallback UI, and a `report`
+callback that sends only the opaque receipt, display instance id and occurrence time to your server.
+The server authenticates the request and calls `ExperimentDeliveryBridge.expose`.
+
+A mounted display reports only after at least 50% intersection while the document is visible.
+Server rendering, prefetch, a hidden region and an aborted admission do not count as exposure.
+The same mounted display retains its instance id for retransmission; remount for a distinct display.
+Observation failure calls `onObservationError`, keeps the delivered UI, and never replays a business
+command. A later visibility event can retry with the same display id. No IntersectionObserver means
+no automatic exposure, rather than assuming a mount was visible.
+
+The host owns `scopeKey` and `activeScopeKey`, opaque session generations. Change the active key
+monotonically on login/logout/tenant change, without reusing a former generation. An obsolete
+snapshot immediately renders fallback and cancels in-flight admission. Feed speculative navigation
+decisions with an `admit(receipt, signal)` callback; only a server response preserving delivery,
+region, revisions, variant and value can become visible. Every reused cached decision needs fresh
+server admission. Already admitted initial hydration preserves the server UI and does not imply a
+new admission on every rerender. See the experiment-runtime delivery example for the complete
+private SSR/Node Flight → hydration → interaction → exposure path.

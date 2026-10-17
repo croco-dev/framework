@@ -101,3 +101,5 @@ export * from "./libs/problems/PolicyProblems";
 export * from "./libs/Experiment";
 export * from "./libs/ExperimentRuntime";
 export * from "./libs/InMemoryExperimentStore";
+
+export * from "./libs/ExperimentDelivery";

@@ -158,3 +158,6 @@ export { CancellationFlow } from "./libs/CancellationFlow";
 export type { CancellationFlowState, CancellationFlowProps } from "./libs/CancellationFlow";
 export { SurveyCard, SurveyModal } from "./libs/SurveyCard";
 export type { SurveyCardProps, SurveyModalProps } from "./libs/SurveyCard";
+
+export { ExperimentRegion, ExperimentDeliveryClientProblem } from "./libs/ExperimentRegion";
+export type { ExperimentRegionProps, ExperimentRegionDecision } from "./libs/ExperimentRegion";
