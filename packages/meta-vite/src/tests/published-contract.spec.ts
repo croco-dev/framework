@@ -70,6 +70,9 @@ const buildTargets: readonly BuildTarget[] = [
       join(packageDir, "dist", "libs", "isr", "adapters", "index.js"),
       join(packageDir, "dist", "libs", "isr", "adapters", "index.mjs"),
       join(packageDir, "dist", "libs", "isr", "adapters", "index.d.ts"),
+      join(packageDir, "dist", "libs", "rsc", "flightEncode.entry.js"),
+      join(packageDir, "dist", "libs", "rsc", "flightEncode.entry.mjs"),
+      join(packageDir, "dist", "libs", "rsc", "flightEncode.entry.d.ts"),
       join(packageDir, "dist", "libs", "isr", "adapters", "index.d.mts"),
     ],
   },
@@ -87,8 +90,9 @@ describe("published @croco/meta-vite contract", () => {
         writeConsumerPackageJson(consumerRoot, tarballs);
         installMetaViteConsumer(consumerRoot, tarballs, [
           tarballs.frameworkContext,
-          "react@^19.0.0",
-          "react-dom@^19.0.0",
+          "react@19.2.6",
+          "react-dom@19.2.6",
+          "react-server-dom-webpack@19.2.6",
           "vite@6.4.3",
           "zod@^3.23.8",
         ]);
@@ -171,7 +175,7 @@ describe("published @croco/meta-vite contract", () => {
 
         expect(packedManifest.peerDependencies?.zod).toBe("^3.23.8");
         expect(packedManifest.peerDependencies?.ioredis).toBe("5.10.1");
-        expect(packedManifest.peerDependencies?.["react-dom"]).toBe("^19.0.0");
+        expect(packedManifest.peerDependencies?.["react-dom"]).toBe("^19.2.6");
         expect(packedManifest.peerDependencies?.vite).toBe("^6.4.3");
         expect(packedManifest.peerDependenciesMeta?.ioredis?.optional).toBe(true);
         expect(packedManifest.peerDependenciesMeta?.["react-dom"]).toBeUndefined();
@@ -191,15 +195,47 @@ describe("published @croco/meta-vite contract", () => {
           import: "./dist/libs/isr/adapters/index.mjs",
           require: "./dist/libs/isr/adapters/index.js",
         });
+        expect(packedManifest.exports?.["./rsc/encoder"]).toEqual({
+          types: {
+            import: "./dist/libs/rsc/flightEncode.entry.d.mts",
+            require: "./dist/libs/rsc/flightEncode.entry.d.ts",
+          },
+          import: "./dist/libs/rsc/flightEncode.entry.mjs",
+          require: "./dist/libs/rsc/flightEncode.entry.js",
+        });
+        expect(packedManifest.exports?.["./rsc/browser"]).toEqual({
+          types: {
+            import: "./dist/libs/rsc/flightBrowser.entry.d.mts",
+            require: "./dist/libs/rsc/flightBrowser.entry.d.ts",
+          },
+          import: "./dist/libs/rsc/flightBrowser.entry.mjs",
+          require: "./dist/libs/rsc/flightBrowser.entry.js",
+        });
         expect(packedDiagnosticsManifest.dependencies?.["@croco/health-core"]).toBeUndefined();
         expect(packedDiagnosticsManifest.peerDependencies?.["@croco/health-core"]).toBeUndefined();
         expect(packedDiagnosticsDeclarations).not.toContain("@croco/health-core");
+
+        // Every file the exports map points at has to reach the tarball: a
+        // subpath whose entry is missing resolves in the manifest but fails at
+        // import time, which the consumers below would report as an unrelated
+        // module error.
+        const packedArtifacts = new Set(
+          run("tar", ["-tf", tarballs.metaVite], rootDir)
+            .stdout.split("\n")
+            .map((line) => line.trim())
+            .filter((line) => line.length > 0),
+        );
+        const referencedArtifacts = collectReferencedArtifacts(packedManifest.exports ?? {});
+        expect(referencedArtifacts.length).toBeGreaterThan(0);
+        for (const artifact of referencedArtifacts) {
+          expect(packedArtifacts.has(`package${artifact.replace("./", "/")}`)).toBe(true);
+        }
 
         writeConsumerPackageJson(rootConsumerRoot, tarballs);
         installMetaViteConsumer(rootConsumerRoot, tarballs, [
           "@types/node@^22",
           "@types/react@^19",
-          "react@^19.0.0",
+          "react@19.2.6",
           "vite@6.4.3",
           "zod@^3.23.8",
         ]);
@@ -234,7 +270,7 @@ describe("published @croco/meta-vite contract", () => {
           "@types/node@^22",
           "@types/react@^19",
           "ioredis@5.10.1",
-          "react@^19.0.0",
+          "react@19.2.6",
           "vite@6.4.3",
           "zod@^3.23.8",
         ]);
@@ -321,6 +357,33 @@ function packPackages(packRoot: string): PackageTarballs {
     presentationPreset: findTarball(packRoot, "croco-presentation-preset-"),
     problemsCore: findTarball(packRoot, "croco-problems-core-"),
   };
+}
+
+// Flattens an exports map (including its nested `types` conditions) into the
+// list of dist paths it references.
+function collectReferencedArtifacts(exportsMap: Record<string, unknown>): readonly string[] {
+  const artifacts = new Set<string>();
+
+  const visit = (value: unknown): void => {
+    if (typeof value === "string") {
+      if (value.startsWith("./dist/")) {
+        artifacts.add(value);
+      }
+      return;
+    }
+
+    if (value && typeof value === "object") {
+      for (const nested of Object.values(value)) {
+        visit(nested);
+      }
+    }
+  };
+
+  for (const target of Object.values(exportsMap)) {
+    visit(target);
+  }
+
+  return [...artifacts].sort();
 }
 
 function ensureBuilt(): void {

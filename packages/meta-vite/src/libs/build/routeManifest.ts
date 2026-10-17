@@ -256,7 +256,10 @@ function getPageRuntimeCapabilities(route: PageRouteIR): readonly MetaViteRuntim
     case "isr":
       return ["fetch", "react-ssr", "isr-cache"];
     case "rsc":
-      return ["fetch", "react-ssr"];
+      // Real React Flight: official `@vitejs/plugin-rsc` encoder
+      // (`react-server-dom-webpack/server.node`) in an isolated `react-server`
+      // child process → official client-decoder SSR decode in `RenderServer`.
+      return ["fetch", "react-server-components"];
     default: {
       const unsupportedMode: never = route.mode;
       throw new PageRouteValidationError(

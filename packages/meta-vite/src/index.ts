@@ -34,7 +34,9 @@ export {
   dispatchServerAction,
   resetServerActions,
   ServerActionInvalidContentTypeProblem,
+  ServerActionDuplicateRegistrationProblem,
   ServerActionInvalidPathProblem,
+  ServerActionForbiddenOriginProblem,
   ServerActionMalformedBodyProblem,
   ServerActionNotFoundProblem,
   ServerActionRegistry,
@@ -197,5 +199,53 @@ export type {
   RenderRouteComponentProps,
   RenderRouteIR,
 } from "./libs/routes/types";
+// RSC Flight path (official `@vitejs/plugin-rsc` + `react-server-dom-webpack`).
+// NOTE: `RscFlightEncodeFailedProblem` (isolated child-process encoder) and
+// `RscEncoderEntryInputProblem` (encoder entry) intentionally stay out of the
+// main entrypoint: they import `react-server-dom-webpack/server.node`, which
+// requires the `react-server` condition and would break plain-Node consumers
+// of `dist/index.mjs`. They remain reachable through the `./rsc/encoder`
+// subpath (`dist/libs/rsc/flightEncode.entry.*`), which runs isolated.
+// The version handshake a browser performs is reachable through the
+// `./rsc/browser` subpath: this entrypoint pulls in the render and build
+// modules, so a client bundle must not import it from the package root.
+export {
+  assertRscClientManifestVersion,
+  assertRscServerReferenceUnsupported,
+  composeRscClientManifestVersion,
+  createRscBrowserFlightHeaders,
+  createRscComponentProps,
+  createRscFlightHeaders,
+  createRscHtmlShell,
+  isRscRoute,
+  parseRscFlightRequest,
+  readRscClientManifestVersion,
+  resolveRscClientManifestVersion,
+  RSC_CLIENT_BUILD_FILE,
+  RSC_CLIENT_MANIFEST_VERSION,
+  RSC_FLIGHT_CONTENT_TYPE,
+  RSC_FLIGHT_VERSION,
+  RSC_MANIFEST_ELEMENT_ID,
+  RscClientBuildIdProblem,
+  RscClientManifestMismatchProblem,
+  RscClientReferenceMissingProblem,
+  RscFlightNotAcceptableProblem,
+  RscServerReferenceNotSupportedProblem,
+} from "./libs/rsc/flight";
+export type {
+  RscFlightEncoder,
+  RscFlightRequest,
+  RscManifestDocument,
+  RscManifestElement,
+  RscRenderOptions,
+} from "./libs/rsc/flight";
+export type {
+  RscClientManifestLike,
+  RscSsrCodec,
+  RscSsrDecodeOptions,
+  RscSsrDecodeResult,
+} from "./libs/rsc/ssrDecode";
+export { decodeFlightToHtmlStream } from "./libs/rsc/ssrDecode";
 // Vite plugin
-export { crocoMetaVitePlugin } from "./libs/vite/crocoMetaVitePlugin";
+export type { CrocoMetaVitePluginOptions, EnvironmentName } from "./libs/vite/crocoMetaVitePlugin";
+export { crocoMetaVitePlugin, MissingRscPeerProblem } from "./libs/vite/crocoMetaVitePlugin";

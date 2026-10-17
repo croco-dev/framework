@@ -9,13 +9,17 @@ title: "RenderServer"
 
 ### Constructor
 
-> **new RenderServer**(`routes`): `RenderServer`
+> **new RenderServer**(`routes`, `rscOptions?`): `RenderServer`
 
 #### Parameters
 
 ##### routes
 
 [`RenderRouteIR`](/api/meta-vite/src/type-aliases/renderrouteir/)[]
+
+##### rscOptions?
+
+[`RscRenderOptions`](/api/meta-vite/src/type-aliases/rscrenderoptions/) = `{}`
 
 #### Returns
 

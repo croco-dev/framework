@@ -163,16 +163,23 @@ describe("RenderServer", () => {
   );
 
   it("does not log SSR failures for successful, unmatched, or RSC requests", async () => {
-    const server = new RenderServer([
-      createRoute("/ok", () => createElement("main", null, "OK")),
+    const server = new RenderServer(
+      [
+        createRoute("/ok", () => createElement("main", null, "OK")),
+        {
+          path: "/rsc-failure",
+          mode: "rsc",
+          componentLoader: async () => {
+            throw new Error("RSC failure");
+          },
+        },
+      ],
       {
-        path: "/rsc-failure",
-        mode: "rsc",
-        componentLoader: async () => {
+        encodeFlight: async () => {
           throw new Error("RSC failure");
         },
       },
-    ]);
+    );
 
     expect((await server.handle(new Request("https://example.com/ok"))).status).toBe(200);
     expect((await server.handle(new Request("https://example.com/missing"))).status).toBe(404);
@@ -180,6 +187,23 @@ describe("RenderServer", () => {
     expect(rscResponse.status).toBe(500);
     expect(rscResponse.headers.get("content-type")).toBe("application/json; charset=utf-8");
     expect(console.error).not.toHaveBeenCalled();
+  });
+
+  it("returns 501 without an encoder when the route has no componentRef", async () => {
+    const server = new RenderServer([
+      {
+        path: "/rsc-no-ref",
+        mode: "rsc",
+        componentLoader: async () => ({ default: () => createElement("main", null, "x") }),
+      },
+    ]);
+
+    const response = await server.handle(new Request("https://example.com/rsc-no-ref"));
+    expect(response.status).toBe(501);
+    expect(await response.json()).toMatchObject({
+      error: "RSC request not supported",
+      code: "meta-vite/rsc-flight-not-acceptable",
+    });
   });
 
   it("returns rendered HTML for a matched route", async () => {

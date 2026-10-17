@@ -28,18 +28,40 @@ const deliveries: Array<{
 ];
 
 describe.each(deliveries)("RenderServer head metadata: $name", ({ mode, regions, platform }) => {
-  async function render(metadata: HeadMetadata): Promise<string> {
-    const server = new RenderServer([
-      {
-        path: "/head",
-        mode,
-        ...(regions ? { regions } : {}),
-        componentLoader: async () => ({
-          default: () => createElement("main", null, "Page content"),
-        }),
-        head: () => metadata,
+  function flightStream(text: string): ReadableStream<Uint8Array> {
+    const bytes = new TextEncoder().encode(text);
+
+    return new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(bytes);
+        controller.close();
       },
-    ]);
+    });
+  }
+
+  async function render(metadata: HeadMetadata): Promise<string> {
+    const server = new RenderServer(
+      [
+        {
+          path: "/head",
+          mode,
+          ...(regions ? { regions } : {}),
+          componentLoader: async () => ({
+            default: () => createElement("main", null, "Page content"),
+          }),
+          head: () => metadata,
+        },
+      ],
+      // The RSC delivery renders its shell by decoding an encoded Flight
+      // stream; a route with neither componentRef nor an encoder fails with
+      // 501 by contract, so the shell path is exercised through an encoder.
+      mode === "rsc"
+        ? {
+            encodeFlight: async () =>
+              flightStream('0:["$","main",null,{"children":"Page content"}]\n'),
+          }
+        : {},
+    );
     const response = await server.handle(new Request("https://example.test/head"), { platform });
     expect(response.status).toBe(200);
     expect(response.headers.get("content-type")).toContain("text/html");

@@ -3335,6 +3335,122 @@ const recoveryMetadataByCategory = {
 } as const satisfies Record<ProblemCategory, ProblemRecoveryMetadata>;
 
 const recoveryMetadataByCode = {
+  "meta-vite/server-action-forbidden-origin": recovery({
+    cause: "The request Origin is not in the server action allowedOrigins list.",
+    userAction: "Send the request from an allowed origin registered in allowedOrigins.",
+    operatorAction:
+      "Verify the request Origin header against the allowedOrigins configuration; requests without a verifiable Origin are rejected when an allowlist is set.",
+    retryability: "not-retryable",
+    redactionPolicy: "safe-message",
+    severity: "warning",
+  }),
+  "meta-vite/server-action-duplicate-registration": recovery({
+    cause: "Two server actions were registered under the same name.",
+    userAction: "Rename one of the actions or remove the duplicate registration.",
+    operatorAction:
+      "Find every registration carrying the reported action name and keep a single one; the registry refuses ambiguous bindings instead of picking a handler.",
+    retryability: "not-retryable",
+    redactionPolicy: "public",
+    severity: "error",
+  }),
+  "meta-vite/rsc-client-manifest-mismatch": recovery({
+    cause: "The client and server RSC manifest versions do not match.",
+    userAction: "Reload the page so the browser picks up the deployed client bundle.",
+    operatorAction:
+      "Rebuild the client and server bundles from the same manifest and deploy them together; a Flight request without the manifest header is reported as received 'missing'.",
+    retryability: "not-retryable",
+    redactionPolicy: "public",
+    severity: "warning",
+  }),
+  "meta-vite/rsc-client-reference-missing": recovery({
+    cause:
+      "A decoded Flight client reference has no matching browser module loaded in the client manifest.",
+    userAction:
+      "Report the missing reference; reloading or retrying the same request repeats the failure until the client bundle that owns it is deployed.",
+    operatorAction:
+      "Check the client manifest registration and browser module loading for the reported reference, then rebuild and deploy matching client and server artifacts.",
+    retryability: "not-retryable",
+    redactionPolicy: "public",
+    // BadRequest: the same category default as a malformed request, not the
+    // deploy-level warning its sibling `rsc-client-manifest-mismatch` carries.
+    severity: "info",
+  }),
+  "meta-vite/rsc-flight-not-acceptable": recovery({
+    cause:
+      "The route is declared as an RSC route but the runtime has no Flight encoder configured.",
+    userAction: "Use a runtime that configures a Flight encoder for RSC routes.",
+    operatorAction:
+      "Register a Flight encoder (encodeFlight) on the render server instead of leaving the route without one.",
+    retryability: "not-retryable",
+    redactionPolicy: "public",
+    severity: "error",
+  }),
+  "meta-vite/rsc-server-reference-unsupported": recovery({
+    cause: "A Flight request carried a server reference this route does not support.",
+    userAction: "Call the registered Server Action endpoint instead of passing a server reference.",
+    operatorAction:
+      "Route the client to the registered action path; unsupported server references fail explicitly rather than rendering silently.",
+    retryability: "not-retryable",
+    redactionPolicy: "public",
+    severity: "warning",
+  }),
+  "meta-vite/rsc-flight-encode-failed": recovery({
+    cause: "The isolated Flight encoder process exited with a non-zero status.",
+    userAction: "Retry the request; if it keeps failing, contact the service operator.",
+    operatorAction:
+      "Read the encoder detail from the problem extensions and the encoder logs. Fix the failing server component, then retry.",
+    retryability: "conditional",
+    redactionPolicy: "operator-only",
+    severity: "error",
+  }),
+  "meta-vite/rsc-flight-encode-timeout": recovery({
+    cause: "The isolated Flight encoder exceeded its render budget for the route.",
+    userAction:
+      "Do not retry unchanged: the route will time out again until the operator fixes it.",
+    operatorAction:
+      "Inspect the reported route and timeoutMs for unbounded work in server components, resolve it, then retry the request. Raise the encode budget only after the route itself is bounded.",
+    retryability: "not-retryable",
+    redactionPolicy: "operator-only",
+    severity: "error",
+  }),
+  "meta-vite/rsc-flight-context-unsupported": recovery({
+    cause:
+      "The route needs runtime context values that the isolated Flight encoder cannot carry into its child process.",
+    userAction:
+      "Remove the runtime context from this request and retry, or serve the route without an isolated encoder.",
+    operatorAction:
+      "Either drop the context values the route reads and render from the request alone, or supply an encoder that renders in-process. Retrying with the same context fails again: the values cannot cross the child-process boundary.",
+    retryability: "not-retryable",
+    redactionPolicy: "operator-only",
+    severity: "error",
+  }),
+  "meta-vite/rsc-flight-encode-aborted": recovery({
+    cause: "The client disconnected before the isolated Flight encoder finished.",
+    userAction: "Reload the page to request the route again.",
+    operatorAction:
+      "Cancel the encoder child process on abort and check for clients that repeatedly drop connections, which would otherwise leak processes.",
+    retryability: "not-retryable",
+    redactionPolicy: "public",
+    severity: "info",
+  }),
+  "meta-vite/rsc-encoder-entry-invalid-input": recovery({
+    cause: "The encoder entry received an unusable route payload or component reference.",
+    userAction: "Retry the request; a malformed payload needs a client fix.",
+    operatorAction:
+      "Check the reported reason against the route registry and the componentRef format '<module-path>#<exportName>'.",
+    retryability: "not-retryable",
+    redactionPolicy: "public",
+    severity: "error",
+  }),
+  "meta-vite/rsc-client-build-id-invalid": recovery({
+    cause: "The configured RSC client build id contains characters a header value cannot carry.",
+    userAction: "Do not retry unchanged: the server configuration has to be fixed first.",
+    operatorAction:
+      "Replace the client build id passed to the render options with the build id the plugin recorded in croco-rsc-client-build.json (letters, digits, dot, underscore, dash).",
+    retryability: "not-retryable",
+    redactionPolicy: "operator-only",
+    severity: "error",
+  }),
   "research/survey-expired": recovery({
     cause: "The survey invitation expired before the response was submitted.",
     userAction: "Request a new survey invitation before retrying.",

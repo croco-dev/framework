@@ -1,6 +1,26 @@
 import { Suspense, createElement } from "react";
 import type { ComponentType, ReactNode } from "react";
+import { Problem } from "@croco/problems-core";
 import { renderToReadableStream, renderToString } from "react-dom/server";
+import {
+  RscClientManifestMismatchProblem,
+  RscClientReferenceMissingProblem,
+  RscFlightNotAcceptableProblem,
+  RscServerReferenceNotSupportedProblem,
+  assertRscClientManifestVersion,
+  assertRscServerReferenceUnsupported,
+  createRscFlightHeaders,
+  createRscHtmlShell,
+  parseRscFlightRequest,
+  resolveRscClientManifestVersion,
+} from "../rsc/flight";
+import {
+  encodeRscFlightInIsolatedEncoder,
+  RscFlightEncodeFailedProblem,
+} from "../rsc/isolatedEncode";
+import type { RscFlightEncoder, RscRenderOptions } from "../rsc/flight";
+import type { RscSsrCodec } from "../rsc/ssrDecode";
+import { decodeFlightToHtmlStream } from "../rsc/ssrDecode";
 import { encodePagePath } from "../routes/encodePagePath";
 import type { HeadMetadata } from "../routes/head";
 import type { ShellDecision, ShellSettleSummary } from "../routes/shell";
@@ -37,7 +57,25 @@ const FALLBACK_HEAD_500: HeadMetadata = {
 };
 
 export class RenderServer {
-  constructor(private readonly routes: RenderRouteIR[]) {}
+  constructor(
+    private readonly routes: RenderRouteIR[],
+    private readonly rscOptions: RscRenderOptions = {},
+  ) {
+    this.rscEncoder = rscOptions.encodeFlight;
+    this.rscClientManifestVersion = resolveRscClientManifestVersion(rscOptions);
+  }
+
+  private readonly rscEncoder: RscFlightEncoder | undefined;
+  private readonly rscClientManifestVersion: string;
+  private rscSsrCodecPromise: Promise<RscSsrCodec> | undefined;
+
+  private loadRscSsrCodec(): Promise<RscSsrCodec> {
+    this.rscSsrCodecPromise ??= import("../rsc/ssrCodec").then((codec) =>
+      codec.createRscSsrCodec(),
+    );
+
+    return this.rscSsrCodecPromise;
+  }
 
   async handle(request: Request, context?: RuntimeContext): Promise<Response> {
     const route = this.findRoute(request);
@@ -783,21 +821,24 @@ export class RenderServer {
     context?: RuntimeContext,
   ): Promise<Response> {
     try {
-      const module = await route.componentLoader();
-      const props = this.createComponentProps(request, context);
-      const html = renderToString(createElement(module.default, props));
-      const flightPayload = JSON.stringify({
-        nodeType: "rsc-flight",
-        path: route.path,
-        content: html,
-      }).replace(/</g, "\\u003c");
+      const flightRequest = parseRscFlightRequest(request);
+      assertRscClientManifestVersion(route, flightRequest, this.rscClientManifestVersion);
+      assertRscServerReferenceUnsupported(route, flightRequest);
+
+      const encoder = this.rscEncoder ?? defaultRscFlightEncoder;
+      const flight = await encoder(route, request, context);
+
+      if (flightRequest.wantsFlight) {
+        return this.createRscFlightResponse(route, flight);
+      }
+
+      const codec = await this.loadRscSsrCodec();
+      const { htmlStream } = await decodeFlightToHtmlStream(codec, flight, {
+        routePath: route.path,
+      });
       const headMetadata = route.head?.();
 
-      return this.createHtmlResponse(
-        `${html}<script type="text/x-component">${flightPayload}</script>`,
-        200,
-        headMetadata,
-      );
+      return this.createRscHtmlStreamResponse(route, headMetadata, htmlStream);
     } catch (error) {
       return this.createRscErrorResponse(error, route.path);
     }
@@ -805,7 +846,22 @@ export class RenderServer {
 
   private findRoute(request: Request): RenderRouteIR | undefined {
     const { pathname } = new URL(request.url);
+    const direct = this.routes.find((route) => route.path === pathname);
 
+    if (direct) {
+      return direct;
+    }
+
+    // Client navigation/refresh path: the same route serves both HTML and
+    // Flight (`/page.rsc`), so strip the suffix before matching.
+    if (pathname.endsWith(".rsc")) {
+      const base = pathname.slice(0, -".rsc".length) || "/";
+
+      return this.routes.find((route) => route.path === base);
+    }
+
+    // The request URL carries the percent-encoded spelling of a Unicode path,
+    // so match on the encoded form rather than the raw route path.
     return this.routes.find((route) => encodePagePath(route.path) === pathname);
   }
 
@@ -832,6 +888,67 @@ export class RenderServer {
   }
 
   private createRscErrorResponse(error: unknown, routePath: string): Response {
+    if (
+      error instanceof RscClientManifestMismatchProblem ||
+      error instanceof RscClientReferenceMissingProblem
+    ) {
+      return new Response(
+        JSON.stringify({
+          error:
+            error.code === "meta-vite/rsc-client-manifest-mismatch"
+              ? "RSC client manifest mismatch"
+              : "RSC client reference missing",
+          route: routePath,
+          code: error.code,
+        }),
+        { status: error.status, headers: JSON_HEADERS },
+      );
+    }
+
+    if (
+      error instanceof RscFlightNotAcceptableProblem ||
+      error instanceof RscServerReferenceNotSupportedProblem
+    ) {
+      return new Response(
+        JSON.stringify({
+          error: "RSC request not supported",
+          route: routePath,
+          code: error.code,
+        }),
+        { status: error.status, headers: JSON_HEADERS },
+      );
+    }
+
+    // The encoder's own Problems arrive on the stream the preflight reads, so
+    // they must keep their code: reporting them as a generic render failure
+    // would hide which encoder stage failed and its captured output.
+    if (error instanceof Problem) {
+      // A 5xx Problem's message carries operating detail (route, platform,
+      // timeoutMs), which the registry keeps `operator-only` for these codes.
+      // Send the code plus a fixed title and leave the detail in the log.
+      if (error.status >= 500) {
+        reportShellFailure("RSC rendering failed", { route: routePath, error }, routePath);
+
+        return new Response(
+          JSON.stringify({
+            error: "RSC rendering failed",
+            route: routePath,
+            code: error.code,
+          }),
+          { status: error.status, headers: JSON_HEADERS },
+        );
+      }
+
+      return new Response(
+        JSON.stringify({
+          error: error.message,
+          route: routePath,
+          code: error.code,
+        }),
+        { status: error.status, headers: JSON_HEADERS },
+      );
+    }
+
     const detail = error instanceof Error ? "An internal server error occurred" : String(error);
 
     return new Response(
@@ -841,6 +958,158 @@ export class RenderServer {
         headers: JSON_HEADERS,
       },
     );
+  }
+
+  private createRscHtmlStreamResponse(
+    route: RenderRouteIR,
+    headMetadata: HeadMetadata | undefined,
+    htmlStream: ReadableStream<Uint8Array>,
+  ): Response {
+    const encoder = new TextEncoder();
+    const { prefix, suffix } = splitRscHtmlShell(
+      createRscHtmlShell(headMetadata, "", this.rscClientManifestVersion),
+    );
+    void route;
+
+    // Share the reader with cancel(): once getReader() locks htmlStream,
+    // htmlStream.cancel() rejects with TypeError. Cancel through the reader
+    // when it exists; fall back to the stream only before pull() ran.
+    let reader: ReadableStreamDefaultReader<Uint8Array> | undefined;
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(encoder.encode(prefix));
+      },
+      // Reading on demand instead of in a start() loop: the loop drained the
+      // whole stream into the queue, so a slow client held the entire HTML
+      // response in memory per in-flight request.
+      async pull(controller) {
+        reader ??= htmlStream.getReader();
+
+        let result: ReadableStreamReadResult<Uint8Array>;
+        try {
+          result = await reader.read();
+        } catch (error) {
+          // The prefix has already been sent, so the status is committed and
+          // the response errors. Report it anyway: a Suspense boundary failing
+          // after the shell is the only signal the operator gets.
+          reader.releaseLock();
+          reader = undefined;
+          reportShellFailure("RSC HTML stream failed", { route: route.path, error }, route.path);
+          controller.error(error);
+          return;
+        }
+
+        const { done, value } = result;
+
+        if (controller.desiredSize === null) {
+          // The consumer cancelled while this read was in flight; the source
+          // reader stays locked so cancel() can still tear it down.
+          return;
+        }
+
+        if (done) {
+          reader.releaseLock();
+          reader = undefined;
+          controller.enqueue(encoder.encode(suffix));
+          controller.close();
+          return;
+        }
+
+        controller.enqueue(value);
+      },
+      cancel: async (reason) => {
+        await (reader ? reader.cancel(reason) : htmlStream.cancel(reason)).catch(() => {});
+      },
+    });
+
+    // This route answers HTML or Flight from one path, so a cache has to know
+    // the answer depends on what was asked for.
+    const negotiatedHeaders = new Headers(HTML_HEADERS);
+    negotiatedHeaders.set("vary", "Accept");
+
+    return new Response(body, { status: 200, headers: negotiatedHeaders });
+  }
+
+  /**
+   * Relays the encoder's Flight rows, but only after the first row proved the
+   * encoder can render at all. A server component that fails to import makes
+   * the stream error *after* it was handed back, and an already-committed 200
+   * would deliver a broken Flight body with a success status instead of a
+   * diagnostic the caller can act on. Reading one row costs nothing: it is
+   * the shell row the response would send first anyway, and every later row
+   * still streams.
+   */
+  private async createRscFlightResponse(
+    route: RenderRouteIR,
+    flight: ReadableStream<Uint8Array>,
+  ): Promise<Response> {
+    const reader = flight.getReader();
+
+    let first: ReadableStreamReadResult<Uint8Array>;
+    try {
+      first = await reader.read();
+    } catch (error) {
+      reader.releaseLock();
+
+      return this.createRscErrorResponse(error, route.path);
+    }
+
+    if (first.done) {
+      reader.releaseLock();
+
+      return this.createRscErrorResponse(
+        new RscFlightEncodeFailedProblem(
+          route.path,
+          null,
+          "encoder produced no Flight rows before closing its output",
+        ),
+        route.path,
+      );
+    }
+
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(first.value);
+      },
+      async pull(controller) {
+        let result: ReadableStreamReadResult<Uint8Array>;
+
+        try {
+          result = await reader.read();
+        } catch (error) {
+          // A failure after the first row (an encoder timeout, an output cap
+          // overrun) reaches the operator here and nowhere else: the status is
+          // already committed, so the only remaining evidence is the stream
+          // error handed to the consumer.
+          reader.releaseLock();
+          reportShellFailure("RSC Flight stream failed", { route: route.path, error }, route.path);
+          controller.error(error);
+          return;
+        }
+
+        const { done, value } = result;
+
+        if (controller.desiredSize === null) {
+          return;
+        }
+
+        if (done) {
+          reader.releaseLock();
+          controller.close();
+          return;
+        }
+
+        controller.enqueue(value);
+      },
+      cancel: async (reason) => {
+        await reader.cancel(reason).catch(() => {});
+      },
+    });
+
+    return new Response(body, {
+      status: 200,
+      headers: createRscFlightHeaders(this.rscClientManifestVersion),
+    });
   }
 
   private htmlShell(headMetadata: HeadMetadata | undefined, bodyHtml: string): string {
@@ -878,6 +1147,43 @@ export class RenderServer {
       .replace(/"/g, "&quot;")
       .replace(/'/g, "&#x27;");
   }
+}
+
+function splitRscHtmlShell(shell: string): { prefix: string; suffix: string } {
+  const marker = '<div id="root"></div>';
+  const index = shell.indexOf(marker);
+
+  if (index === -1) {
+    return { prefix: `${shell}\n`, suffix: "" };
+  }
+
+  const contentStart = index + '<div id="root">'.length;
+  const endMarker = "</div>";
+  const end = shell.indexOf(endMarker, contentStart);
+
+  if (end === -1) {
+    return { prefix: shell.slice(0, contentStart), suffix: "" };
+  }
+
+  return {
+    prefix: shell.slice(0, contentStart),
+    suffix: `${endMarker}${shell.slice(end + endMarker.length)}`,
+  };
+}
+
+async function defaultRscFlightEncoder(
+  route: RenderRouteIR,
+  request: Request,
+  context?: RuntimeContext,
+): Promise<ReadableStream<Uint8Array>> {
+  if (!route.componentRef) {
+    throw new RscFlightNotAcceptableProblem(route.path);
+  }
+
+  // `context` is forwarded so the isolated encoder can refuse it explicitly: a
+  // host context cannot cross the child-process boundary, and dropping it
+  // silently would render components against missing host values.
+  return encodeRscFlightInIsolatedEncoder({ route, request, context });
 }
 
 function reportBestEffortStreamTeardown(): void {
