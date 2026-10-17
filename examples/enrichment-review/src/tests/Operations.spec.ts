@@ -91,8 +91,13 @@ describe("authorized enrichment HTTP and batch integration", () => {
     const executions = new ExecutionManagerImpl(new MemoryExecutionStore());
     const execution = await executions.create({
       type: "enrichment",
-      payload: { runId: "demo", scopeKey: enrichmentScopeKey(scope) },
-      maxAttempts: 1,
+      payload: {
+        runId: "demo",
+        scopeKey: enrichmentScopeKey(scope),
+        itemIds: inputs.map((input) => input.itemId),
+        version: "v1",
+      },
+      maxAttempts: 2,
     });
     await expect(
       classifyBatch(
@@ -107,22 +112,20 @@ describe("authorized enrichment HTTP and batch integration", () => {
     ).rejects.toMatchObject({ code: "analytics-core/enrichment-provider-failed" });
     const completed = await executions.get(execution.id);
     expect(completed.checkpoints?.["enrichment.cursor"]).toBe(5);
-    expect(completed.status).toBe("failed");
+    expect(completed.status).toBe("retrying");
     expect((await f.operations.read("demo")).status).toBe("partial");
-    const nextExecution = await executions.create({
-      type: "enrichment",
-      payload: { runId: "demo", scopeKey: enrichmentScopeKey(scope) },
-      maxAttempts: 1,
-    });
-    await classifyBatch(
-      executions,
-      nextExecution.id,
-      f.service,
-      scope,
-      "demo",
-      inputs.map((input) => input.itemId),
-      "v1",
-    );
+    const ids = inputs.map((input) => input.itemId);
+    for (const [selectedIds, version] of [
+      [ids, "v2"],
+      [[...ids].reverse(), "v1"],
+    ] as const) {
+      await expect(
+        classifyBatch(executions, execution.id, f.service, scope, "demo", selectedIds, version),
+      ).rejects.toMatchObject({ code: "analytics-core/enrichment-invalid-input" });
+      expect((await executions.get(execution.id)).checkpoints?.["enrichment.cursor"]).toBe(5);
+    }
+    await classifyBatch(executions, execution.id, f.service, scope, "demo", ids, "v1");
+    expect((await executions.get(execution.id)).status).toBe("completed");
     expect((await f.operations.read("demo")).requests).toBe(4);
   });
   it("blocks an exhausted request budget at HTTP and still permits an authorized raw-source manual review", async () => {

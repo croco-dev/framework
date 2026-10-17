@@ -694,12 +694,20 @@ export class EnrichmentService {
     const timer = setTimeout(abort, run.limits.timeoutMs);
     let final: EnrichmentCandidate;
     let cause: unknown;
+    let dispatched = false;
     try {
       // The persisted claim precedes transmission. No automatic SDK retries are permitted.
       if (signal?.aborted) controller.abort();
       if (controller.signal.aborted) fail("cancelled");
       await this.live(scope, run, item);
       await this.allow(scope, "classify");
+      if (
+        (await this.options.currentActor(scope)) !== actor ||
+        (await this.options.authorizationRevision(scope)) !== authorityRevision
+      )
+        fail("authority-changed");
+      if (this.now() >= run.resultExpiresAt) fail("result-expired");
+      if (this.now() >= run.rawExpiresAt) fail("raw-expired");
       if (controller.signal.aborted) fail("cancelled");
       const cancellation = new Promise<never>((_resolve, reject) =>
         controller.signal.addEventListener(
@@ -708,6 +716,7 @@ export class EnrichmentService {
           { once: true },
         ),
       );
+      dispatched = true;
       const response = await Promise.race([
         this.options.classifyText({
           ...prepared,
@@ -775,7 +784,14 @@ export class EnrichmentService {
       }
     } catch (error) {
       cause = error;
-      final = { ...candidate, state: "failed", reason: "acceptance-unknown" };
+      final = dispatched
+        ? { ...candidate, state: "failed", reason: "acceptance-unknown" }
+        : {
+            ...candidate,
+            state: "failed",
+            reason: "not-transmitted",
+            usage: { kind: "known", inputTokens: 0, outputTokens: 0 },
+          };
     } finally {
       clearTimeout(timer);
       signal?.removeEventListener("abort", abort);
@@ -805,11 +821,13 @@ export class EnrichmentService {
       (await this.options.authorizationRevision(scope)) !== authorityRevision
     )
       fail("authority-changed");
-    if (cause && final.state === "failed")
+    if (cause && final.state === "failed") {
+      if (!dispatched && cause instanceof EnrichmentProblem) throw cause;
       throw new EnrichmentProblem(
         final.reason === "failed" ? "provider-failed" : "acceptance-unknown",
         cause,
       );
+    }
     return final;
   }
   private async live(
@@ -822,6 +840,7 @@ export class EnrichmentService {
       !(await this.options.sourceAvailable(scope, item.input.sourceRef, item.input.inputRevision))
     )
       fail("source-unavailable");
+    if (this.now() >= run.resultExpiresAt) fail("result-expired");
   }
   async read(
     scope: EnrichmentScope,
@@ -984,7 +1003,8 @@ export class EnrichmentService {
     const definition = this.definition(definitionId, version);
     const current = await this.load(scope, runId);
     for (const item of current.items) await this.live(scope, current, item);
-    return this.mutate(scope, runId, (run) => {
+    const exported = await this.mutate(scope, runId, (run) => {
+      if (this.now() >= run.resultExpiresAt) fail("result-expired");
       const fresh = this.command(run, command, "export", [definitionId, version]);
       if (!fresh) {
         const prior =
@@ -1012,6 +1032,12 @@ export class EnrichmentService {
       run.audit[index] = { ...run.audit[index], exported };
       return exported;
     });
+    // CAS or source/authorization checks may wait across the retention deadline.
+    const latest = await this.load(scope, runId);
+    for (const item of latest.items) await this.live(scope, latest, item);
+    await this.allow(scope, "export", command.actor);
+    if (this.now() >= latest.resultExpiresAt) fail("result-expired");
+    return exported;
   }
   /** Explicit retry approval. Acceptance uncertainty requires acknowledgement of possible duplicate billing. */
   async retry(

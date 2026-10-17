@@ -24,7 +24,13 @@ export async function classifyBatch(
     !("runId" in payload) ||
     payload.runId !== runId ||
     !("scopeKey" in payload) ||
-    payload.scopeKey !== enrichmentScopeKey(scope)
+    payload.scopeKey !== enrichmentScopeKey(scope) ||
+    !("version" in payload) ||
+    payload.version !== version ||
+    !("itemIds" in payload) ||
+    !Array.isArray(payload.itemIds) ||
+    payload.itemIds.length !== itemIds.length ||
+    payload.itemIds.some((id, index) => id !== itemIds[index])
   )
     throw new EnrichmentProblem("invalid-input");
   let cursor = 0;

@@ -571,4 +571,93 @@ describe("EnrichmentService", () => {
       ),
     ).resolves.toMatchObject({ runId: "revised" });
   });
+  it("does not transmit raw input when a durable claim crosses raw retention", async () => {
+    const model = vi.fn(async () => answer);
+    const f = await fixture({ model, inputs: [input("a", "retention controlled original")] });
+    const cas = f.store.compareAndSet.bind(f.store);
+    vi.spyOn(f.store, "compareAndSet").mockImplementation(async (run, revision) => {
+      const saved = await cas(run, revision);
+      if (run.items[0].candidates.some((candidate) => candidate.state === "running"))
+        f.state.now = 1200;
+      return saved;
+    });
+    await expect(f.classify()).rejects.toMatchObject({
+      code: "analytics-core/enrichment-raw-expired",
+    });
+    expect(model).not.toHaveBeenCalled();
+    const page = await f.service.read(scope, "run");
+    expect(page.items[0]).toMatchObject({
+      original: null,
+      candidates: [
+        {
+          state: "failed",
+          reason: "not-transmitted",
+          usage: { kind: "known", inputTokens: 0, outputTokens: 0 },
+        },
+      ],
+    });
+  });
+  it.each(["load", "commit", "replay"])(
+    "does not release expired exports after an asynchronous %s boundary",
+    async (boundary) => {
+      const f = await fixture();
+      await f.classify();
+      await f.service.review(
+        scope,
+        "run",
+        "a",
+        "intent",
+        "v1",
+        "help",
+        "Human checked the source",
+        await f.command("review"),
+      );
+      const command = await f.command("export");
+      if (boundary === "replay")
+        await f.service.exportLabels(scope, "run", "intent", "v1", command);
+      if (boundary === "commit") {
+        const cas = f.store.compareAndSet.bind(f.store);
+        vi.spyOn(f.store, "compareAndSet").mockImplementation(async (run, revision) => {
+          const saved = await cas(run, revision);
+          f.state.now = 6000;
+          return saved;
+        });
+      } else {
+        const load = f.store.load.bind(f.store);
+        let reads = 0;
+        vi.spyOn(f.store, "load").mockImplementation(async (scope, runId) => {
+          const run = await load(scope, runId);
+          if (++reads === 2) f.state.now = 6000;
+          return run;
+        });
+      }
+      await expect(
+        f.service.exportLabels(scope, "run", "intent", "v1", command),
+      ).rejects.toMatchObject({ code: "analytics-core/enrichment-result-expired" });
+    },
+  );
+
+  it.each(["actor", "authority"] as const)(
+    "does not dispatch after the claim changes %s",
+    async (field) => {
+      const model = vi.fn(async () => answer);
+      const f = await fixture({ model, inputs: [input("a", "protected original")] });
+      const cas = f.store.compareAndSet.bind(f.store);
+      vi.spyOn(f.store, "compareAndSet").mockImplementation(async (run, revision) => {
+        const saved = await cas(run, revision);
+        if (run.items[0].candidates.some((candidate) => candidate.state === "running"))
+          f.state[field] = "changed";
+        return saved;
+      });
+      await expect(f.classify()).rejects.toMatchObject({
+        code: "analytics-core/enrichment-authority-changed",
+      });
+      expect(model).not.toHaveBeenCalled();
+      expect((await f.service.read(scope, "run")).items[0].candidates[0]).toMatchObject({
+        state: "failed",
+        reason: "not-transmitted",
+        usage: { kind: "known", inputTokens: 0, outputTokens: 0 },
+      });
+    },
+  );
 });

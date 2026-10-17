@@ -85,6 +85,8 @@ results. Minimal source/content hashes, audit command fingerprints, actor/reason
 text-free operational usage receipts have separate operational retention owned by the application;
 they are not claimed to be anonymous data. A purge does not erase unsettled usage obligations.
 
+Batch execution payloads bind the scoped run, ordered item IDs and definition version. Reusing a checkpoint with a different order or version is rejected; start a new execution for a different workload. Raw retention and authority are rechecked immediately before SDK dispatch, and result retention is rechecked before export is returned. A request blocked before transmission records known zero usage; uncertain provider acceptance retains unknown usage and its budget reservation.
+
 The additive `createEnrichment` migration is idempotent and independent of Fact History. Rollback
 can stop using this new feature while retaining its receipts. Destructive table removal is a
 separate operator decision after retention and settlement; there is no boot migration, automatic
