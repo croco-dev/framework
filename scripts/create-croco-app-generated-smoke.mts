@@ -1712,7 +1712,6 @@ const smokeCaseDefinitionsWithoutLint: readonly Omit<SmokeCase, "tier" | "adviso
       { label: "build", args: ["build"] },
       { label: "Chromium install", args: ["test:browser:install"] },
       { label: "test", args: ["test"] },
-      { label: "lock local smoke overrides", args: ["k8s:lock"] },
       {
         label: "profile drift",
         readOnly: true,

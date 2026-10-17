@@ -106,6 +106,19 @@ describe("Kubernetes Node API profile", () => {
         encoding: "utf8",
       });
     expect(check().status).toBe(0);
+    const ownedPaths = manifest.files.map((file: { path: string }) => file.path);
+    expect(ownedPaths).toContain("apps/api-server/src/node-application.ts");
+    expect(ownedPaths).not.toContain("apps/api-server/src/users.ts");
+    expect(ownedPaths).not.toContain("apps/console-web/src/App.tsx");
+    for (const path of [
+      "apps/api-server/src/users.ts",
+      "apps/console-web/src/App.tsx",
+      "package.json",
+    ]) {
+      const source = join(target, path);
+      writeFileSync(source, `${readFileSync(source, "utf8")}\n`);
+    }
+    expect(check().status).toBe(0);
     // Mutable settings have one authority: the referenced artifact, not copied metadata.
     expect(manifest.build).toEqual({
       dockerfile: "apps/api-server/Dockerfile",
@@ -129,6 +142,27 @@ describe("Kubernetes Node API profile", () => {
       }).status,
     ).toBe(0);
     expect(check().status).toBe(0);
+    rmSync(resourcePath);
+    const missing = check();
+    expect(missing.status).not.toBe(0);
+    expect(missing.stderr).toContain("Profile file missing: kubernetes/resources.yaml");
+    const beforeAdoption = readFileSync(
+      join(target, "croco-infrastructure-profile.manifest.json"),
+      "utf8",
+    );
+    const adoption = spawnSync(
+      process.execPath,
+      ["scripts/check-kubernetes-profile.mjs", "--write"],
+      {
+        cwd: target,
+        encoding: "utf8",
+      },
+    );
+    expect(adoption.status).not.toBe(0);
+    expect(adoption.stderr).toContain("Profile file missing: kubernetes/resources.yaml");
+    expect(readFileSync(join(target, "croco-infrastructure-profile.manifest.json"), "utf8")).toBe(
+      beforeAdoption,
+    );
   });
 
   it.each([
@@ -139,7 +173,15 @@ describe("Kubernetes Node API profile", () => {
     "saas",
     "blank",
   ] as const)("rejects unsupported %s compositions before writing", (preset) => {
-    expect(() => normalizeNonInteractiveOptions({ ...input, preset, api: "graphql" })).toThrow();
+    expect(() => normalizeNonInteractiveOptions({ ...input, preset })).toThrow(
+      "Kubernetes requires --preset production-app",
+    );
+  });
+
+  it("rejects goal compositions before writing", () => {
+    expect(() => normalizeNonInteractiveOptions({ ...input, goal: "spa-backend-split" })).toThrow(
+      "--preset, --backend-deploy cannot be combined with --goal spa-backend-split",
+    );
   });
 
   it("retains the existing production-app default without claiming Kubernetes compatibility", async () => {

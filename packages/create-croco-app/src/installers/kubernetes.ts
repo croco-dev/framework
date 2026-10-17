@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { copyFileSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { copyFileSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { mergeInto } from "../helpers/fs.js";
 import { getPackageVersion } from "../package-version.js";
@@ -56,12 +56,18 @@ export function installKubernetes(targetDir: string, context: Record<string, unk
 }
 
 export function writeKubernetesProfileManifest(targetDir: string): void {
-  const generatedPaths = (directory: string, prefix = ""): string[] =>
-    readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
-      const path = prefix ? `${prefix}/${entry.name}` : entry.name;
-      return entry.isDirectory() ? generatedPaths(join(directory, entry.name), path) : [path];
-    });
-  const files = generatedPaths(targetDir)
+  const files = [
+    ".dockerignore",
+    "apps/api-server/Dockerfile",
+    "apps/api-server/tsup.config.ts",
+    "apps/api-server/src/kubernetes.ts",
+    "apps/api-server/src/node-application.ts",
+    "croco-runtime-capability.manifest.json",
+    "kubernetes/README.md",
+    "kubernetes/resources.yaml",
+    "scripts/check-kubernetes-profile.mjs",
+    "scripts/smoke-kubernetes.mjs",
+  ]
     .sort()
     .map((path) => ({
       path,

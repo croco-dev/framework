@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 const root = new URL("../", import.meta.url);
@@ -12,6 +12,10 @@ const adopt = process.argv.slice(2).includes("--write");
 for (const file of manifest.files) {
   const path = new URL(file.path, root);
   assert.ok(fileURLToPath(path).startsWith(fileURLToPath(root)), "Profile path escapes project");
+  assert.ok(
+    existsSync(path),
+    `Profile file missing: ${file.path}. Restore it before checking or adoption.`,
+  );
   const actual = createHash("sha256").update(readFileSync(path)).digest("hex");
   if (adopt) file.sha256 = actual;
   else

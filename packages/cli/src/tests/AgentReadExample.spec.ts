@@ -12,7 +12,12 @@ describe("agent read example", () => {
     const parent = await mkdtemp(join(tmpdir(), "croco-agent-parent-"));
     const child = await mkdtemp(join(tmpdir(), "croco-agent-child-"));
     const env = { ...process.env };
-    for (const name of ["GIT_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE", "GIT_COMMON_DIR"]) {
+    const localVariables = execFileSync("git", ["rev-parse", "--local-env-vars"], {
+      encoding: "utf8",
+    })
+      .trim()
+      .split(/\r?\n/);
+    for (const name of localVariables) {
       delete env[name];
     }
     const git = (cwd: string, args: string[]) =>
