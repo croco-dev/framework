@@ -311,6 +311,9 @@ export function createRscHtmlShell(
   if (headMetadata?.description) {
     metaTags += `\n    <meta name="description" content="${escapeRscHtml(headMetadata.description)}">`;
   }
+  if (headMetadata?.ogTitle) {
+    metaTags += `\n    <meta property="og:title" content="${escapeRscHtml(headMetadata.ogTitle)}">`;
+  }
   if (headMetadata?.canonical) {
     metaTags += `\n    <link rel="canonical" href="${escapeRscHtml(headMetadata.canonical)}">`;
   }
