@@ -902,7 +902,7 @@ function toExternalFailureProblem(error: unknown): ProblemDetails {
     try {
       return error.toJSON();
     } catch {
-      // A Problem that cannot be serialized still needs an explicit form failure.
+      return createExternalFailureProblem(error);
     }
   } else if (isProblemDetails(error)) {
     return error;
@@ -912,6 +912,10 @@ function toExternalFailureProblem(error: unknown): ProblemDetails {
     return error.problem;
   }
 
+  return createExternalFailureProblem(error);
+}
+
+function createExternalFailureProblem(error: unknown): ProblemDetails {
   return createCoreProblemDetails({
     code: "admin-form/external-failure",
     detail:
