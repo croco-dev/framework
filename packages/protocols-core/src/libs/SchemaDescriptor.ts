@@ -242,6 +242,7 @@ export const JSON_SAFE_ZOD_SCHEMA_SUPPORT_MATRIX = [
 ] as const satisfies readonly ContractSchemaSupportMatrixEntry[];
 
 type ZodDefinition = {
+  readonly typeName?: unknown;
   readonly checks?: readonly { readonly kind: string; readonly value?: unknown }[];
   readonly shape?: unknown;
   readonly in?: unknown;
@@ -1141,7 +1142,9 @@ function getSchemaTypeName(schema: unknown): string {
     return typeof schema;
   }
 
-  return schema.constructor.name;
+  // Zod 3 stores its kind independently of constructor names, which bundlers rewrite.
+  const typeName = getZodDefinition(schema)?.typeName;
+  return typeof typeName === "string" ? typeName : schema.constructor.name;
 }
 
 function getZodDefinition(schema: unknown): ZodDefinition | undefined {
