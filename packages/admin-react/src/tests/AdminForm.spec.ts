@@ -3,6 +3,10 @@ import type { ChangeEvent, ReactElement, ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 
+import { Problem, ProblemCategory } from "@croco/problems-core";
+
+import { ProblemClientError } from "../../../frontend-problems/src/index";
+
 import { AdminForm, AdminFormField } from "../libs/components";
 import {
   createAdminFormState,
@@ -276,6 +280,102 @@ describe("AdminForm", () => {
     expect(markup).toContain("admin/permission-denied");
     expect(markup).toContain('data-recovery-action-id="request-access"');
     expect(markup).toContain('disabled=""');
+  });
+
+  it.each(["client", "plain", "server"] as const)(
+    "preserves the original %s Problem and its recovery extensions",
+    async (kind) => {
+      const problem = {
+        type: "about:blank",
+        code: "widget/name-taken",
+        status: 409,
+        title: "Widget name already used",
+        detail: "Please choose another name",
+        conflictingField: "name",
+      };
+      class NameTakenProblem extends Problem {
+        constructor() {
+          super(problem.code, ProblemCategory.Conflict, problem.detail, {
+            extensions: { conflictingField: "name" },
+          });
+        }
+
+        override get title(): string {
+          return "Widget name already used";
+        }
+      }
+      const error =
+        kind === "client"
+          ? new ProblemClientError(problem, new Response(null, { status: 409 }))
+          : kind === "server"
+            ? new NameTakenProblem()
+            : problem;
+      const contract = createUserFormContract({
+        submit: async () => {
+          throw error;
+        },
+      });
+
+      const state = await submitAdminForm(contract, createAdminFormState(contract));
+
+      expect(state.kind).toBe("failed");
+      expect(state.problem).toEqual(problem);
+      expect(state.recoveryActions).toEqual(contract.recoveryActions);
+      expect(renderForm(state)).toContain("Widget name already used");
+      expect(renderForm(state)).not.toContain("Bad Gateway");
+    },
+  );
+
+  it.each([
+    null,
+    { code: "widget/name-taken", status: "409", title: "Invalid", type: "about:blank" },
+  ])(
+    "keeps malformed client Problem envelopes as explicit external failures (%s)",
+    async (problem) => {
+      const error = Object.assign(new Error("Unrecognized client failure"), { problem });
+      const contract = createUserFormContract({
+        submit: async () => {
+          throw error;
+        },
+      });
+
+      const state = await submitAdminForm(contract, createAdminFormState(contract));
+
+      expect(state.problemKind).toBe("external");
+      expect(state.problem).toMatchObject({
+        code: "admin-form/external-failure",
+        status: 502,
+        title: "Bad Gateway",
+        detail: "Unrecognized client failure",
+        source: "external",
+      });
+    },
+  );
+
+  it("keeps a Problem serialization failure inside the form failure state", async () => {
+    class UnserializableProblem extends Problem {
+      constructor() {
+        super("widget/invalid", ProblemCategory.Conflict, "Invalid Problem extensions");
+      }
+
+      override toJSON(): never {
+        throw new Error("Serialization failed");
+      }
+    }
+    const contract = createUserFormContract({
+      submit: async () => {
+        throw new UnserializableProblem();
+      },
+    });
+
+    const state = await submitAdminForm(contract, createAdminFormState(contract));
+
+    expect(state.kind).toBe("failed");
+    expect(state.problem).toMatchObject({
+      code: "admin-form/external-failure",
+      status: 502,
+      detail: "Invalid Problem extensions",
+    });
   });
 
   it("distinguishes external failures and keeps retry recovery explicit", async () => {
