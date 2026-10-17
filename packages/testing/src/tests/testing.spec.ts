@@ -1,7 +1,7 @@
 import "reflect-metadata";
 import { AsyncLocalStorage } from "node:async_hooks";
 import { queryObjects } from "node:v8";
-import { context, ROOT_CONTEXT, trace } from "@opentelemetry/api";
+import { context, ProxyTracerProvider, ROOT_CONTEXT, trace } from "@opentelemetry/api";
 import { CurrentApiKey, CurrentPrincipal, User } from "@croco/auth-core";
 import type {
   BillingGateway,
@@ -34,7 +34,6 @@ import { RateLimitStore } from "@croco/ratelimit-core";
 import { InMemoryStorageProvider } from "@croco/storage-core";
 import { recordEvent, withSpan } from "@croco/telemetry-api";
 import { createGracefulShutdownController } from "@croco/transports-http";
-import { context, ProxyTracerProvider, trace } from "@opentelemetry/api";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   assertDrizzleProblem,
