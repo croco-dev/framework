@@ -1,3 +1,4 @@
+import { spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
@@ -729,6 +730,131 @@ describe("architecture policy engine", () => {
         importSpecifier: "@test/feature/src/private",
       }),
     ]);
+  });
+
+  it.each([
+    { name: "exact null", exports: { "./private": null }, subpath: "private", allowed: false },
+    {
+      name: "exact exclusion",
+      exports: { "./*": "./public.js", "./private": null },
+      subpath: "private",
+      allowed: false,
+    },
+    {
+      name: "pattern exclusion",
+      exports: { "./*": "./public.js", "./private/*": null },
+      subpath: "private/deep/item",
+      allowed: false,
+    },
+    {
+      name: "longer pattern prefix",
+      exports: { "./private/*": null, "./private/open/*": "./public.js" },
+      subpath: "private/open/item",
+      allowed: true,
+    },
+    {
+      name: "longer pattern suffix",
+      exports: { "./*": "./public.js", "./*.private": null },
+      subpath: "item.private",
+      allowed: false,
+    },
+    {
+      name: "exact public override",
+      exports: { "./private/*": null, "./private/open": "./public.js" },
+      subpath: "private/open",
+      allowed: true,
+    },
+    {
+      name: "conditional public",
+      exports: { "./public": { import: "./public.js", default: "./public.js" } },
+      subpath: "public",
+      allowed: true,
+    },
+    {
+      name: "default null before public condition",
+      exports: { "./private": { default: null, import: "./public.js" } },
+      subpath: "private",
+      allowed: false,
+    },
+    {
+      name: "nested unmatched default condition",
+      exports: { "./public": { default: { browser: null }, import: "./public.js" } },
+      subpath: "public",
+      allowed: true,
+    },
+    {
+      name: "nested empty default condition",
+      exports: { "./public": { default: {}, import: "./public.js" } },
+      subpath: "public",
+      allowed: true,
+    },
+    {
+      name: "unmatched array default",
+      exports: { "./public": { default: [{ browser: null }], import: "./public.js" } },
+      subpath: "public",
+      allowed: true,
+    },
+    {
+      name: "null array default stops fallback",
+      exports: { "./private": { default: [{ browser: null }, null], import: "./public.js" } },
+      subpath: "private",
+      allowed: false,
+    },
+    {
+      name: "conditional null",
+      exports: { "./private": { default: null } },
+      subpath: "private",
+      allowed: false,
+    },
+    {
+      name: "array fallback",
+      exports: { "./public": [null, "./public.js"] },
+      subpath: "public",
+      allowed: true,
+    },
+    { name: "null array", exports: { "./private": [null] }, subpath: "private", allowed: false },
+    {
+      name: "public wildcard",
+      exports: { "./*": "./public.js" },
+      subpath: "nested/public",
+      allowed: true,
+    },
+  ])("matches Node resolution for $name", ({ exports, subpath, allowed }) => {
+    const repo = createTempRepo();
+    const specifier = `@test/feature/${subpath}`;
+    writePackage(repo, "packages/app", "@test/app");
+    writePackage(repo, "packages/feature", "@test/feature", { exports });
+    writeFile(repo, "packages/app/src/index.ts", `import '${specifier}';\n`);
+    writeFile(
+      repo,
+      "node_modules/@test/feature/package.json",
+      JSON.stringify({ name: "@test/feature", exports }),
+    );
+    writeFile(repo, "node_modules/@test/feature/public.js", "export {};\n");
+    writeFile(repo, "consumer.mjs", `import '${specifier}';\n`);
+    const node = spawnSync(process.execPath, [join(repo, "consumer.mjs")], { encoding: "utf8" });
+    expect(node.error).toBeUndefined();
+    expect(node.status).toBe(allowed ? 0 : 1);
+    if (!allowed) expect(node.stderr).toContain("ERR_PACKAGE_PATH_NOT_EXPORTED");
+
+    const report = checkArchitecturePolicy({
+      rootDir: repo,
+      manifest: {
+        schemaVersion: ARCHITECTURE_POLICY_SCHEMA_VERSION,
+        rules: { publicEntrypoints: { id: "public", includePackages: ["@test/*"] } },
+      },
+    });
+    expect(report.status).toBe(allowed ? "pass" : "fail");
+    expect(report.diagnostics).toEqual(
+      allowed
+        ? []
+        : [
+            expect.objectContaining({
+              code: "architecture-policy/private-entrypoint-import",
+              importSpecifier: specifier,
+            }),
+          ],
+    );
   });
 
   it.each([
