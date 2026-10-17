@@ -1681,7 +1681,7 @@
       },
       "analytics-drizzle": {
         "domain": "Analytics",
-        "adapter": "Transactional PostgreSQL fact history store",
+        "adapter": "Transactional PostgreSQL fact history and enrichment store",
         "runtimes": ["node", "lambda"],
         "requiredEnv": ["PostgreSQL connection supplied by app"],
         "features": [
@@ -1689,7 +1689,9 @@
           "atomic multi-projection append",
           "effective and known time reads",
           "revision compare-and-set",
-          "subject deletion tombstones"
+          "subject deletion tombstones",
+          "bounded enrichment run compare-and-set",
+          "durable classification results and usage receipts"
         ]
       },
       "analytics-posthog": {

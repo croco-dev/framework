@@ -629,3 +629,5 @@ export { validateSurveyPublishRequest, validateSurveyAdminAccess } from "./libs/
 export type { SurveyAdminAccess, SurveyPublishRequest } from "./libs/surveyOperations";
 
 export { createPublicPageOperations } from "./libs/PublicPageOperations";
+
+export { EnrichmentOperations } from "./libs/EnrichmentOperations";

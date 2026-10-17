@@ -14,6 +14,18 @@
       "owner": "repo:examples"
     },
     {
+      "path": "examples/enrichment-review/src/tests/OpenAIClassifier.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "repo:examples"
+    },
+    {
+      "path": "examples/enrichment-review/src/tests/Operations.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "repo:examples"
+    },
+    {
       "path": "examples/experiment-runtime/src/tests/CohortEligibility.spec.ts",
       "lane": "fast",
       "qualifiers": [],
@@ -794,6 +806,12 @@
       "owner": "@croco/analytics-core"
     },
     {
+      "path": "packages/analytics-core/src/tests/EnrichmentService.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/analytics-core"
+    },
+    {
       "path": "packages/analytics-core/src/tests/EventPublisher.spec.ts",
       "lane": "fast",
       "qualifiers": [],
@@ -816,6 +834,12 @@
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/analytics-core"
+    },
+    {
+      "path": "packages/analytics-drizzle/src/tests/DrizzleEnrichmentStore.postgres.spec.ts",
+      "lane": "live",
+      "qualifiers": [],
+      "owner": "@croco/analytics-drizzle"
     },
     {
       "path": "packages/analytics-drizzle/src/tests/DrizzleFactHistoryStore.postgres.spec.ts",
