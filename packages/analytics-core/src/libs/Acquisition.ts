@@ -406,7 +406,8 @@ export class AcquisitionService {
       scope,
       actor: this.options.actor,
       identity: subject,
-      ...extra,
+      anonymousRef: extra?.anonymousRef,
+      provenance: extra?.provenance,
     });
   }
   async recordTouchpoint(
@@ -491,7 +492,15 @@ export class AcquisitionService {
     const value = structuredClone(input);
     for (const key of ["id", "anonymousRef", "subjectRef", "provenance"] as const)
       token(value[key]);
-    await this.authorize("link", value.scope, { kind: "subject", ref: value.subjectRef }, value);
+    await this.authorize(
+      "link",
+      value.scope,
+      { kind: "subject", ref: value.subjectRef },
+      {
+        anonymousRef: value.anonymousRef,
+        provenance: value.provenance,
+      },
+    );
     // App policy must authenticate BOTH the subject and ownership of the anonymous session.
     return this.store.transact(value.scope, (state) => {
       const now = this.options.clock().toISOString();
@@ -692,13 +701,14 @@ export class AcquisitionService {
         subject,
         ...linked.map((link) => ({ kind: "anonymous" as const, ref: link.anonymousRef })),
       ];
-      state.touchpoints = state.touchpoints.filter(
-        (row) => !ids.has(row.id) && !identities.some((entry) => sameIdentity(entry, row.identity)),
-      );
+      for (const row of state.touchpoints)
+        if (identities.some((entry) => sameIdentity(entry, row.identity))) ids.add(row.id);
+      state.touchpoints = state.touchpoints.filter((row) => !ids.has(row.id));
       state.links = state.links.filter((link) => !linked.includes(link));
       state.reports = state.reports.filter(
         (report) =>
-          !sameIdentity(report.identity, subject) &&
+          !identities.some((entry) => sameIdentity(entry, report.identity)) &&
+          !report.touchpointRefs.some((id) => ids.has(id)) &&
           !linked.some(
             (link) => report.identity.kind === "subject" && report.identity.ref === link.subjectRef,
           ),

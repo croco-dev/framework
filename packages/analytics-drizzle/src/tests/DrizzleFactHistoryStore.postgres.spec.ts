@@ -350,6 +350,11 @@ describe.skipIf(!connectionString)("PostgreSQL acquisition", () => {
       limit: 100,
     };
     expect((await a.compare(query)).touchpoints).toEqual([]);
+    await a.compare({
+      ...query,
+      conversion: { ...query.conversion, identity: acquisitionPoint.identity },
+      reportId: "anonymous-report",
+    });
     await b.linkKnownSubject({
       scope,
       id: "login",
