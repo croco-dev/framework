@@ -328,7 +328,7 @@ describe("verification manifest", () => {
     expect(
       createHash("sha256").update(JSON.stringify(manifests)).digest("hex"),
       "The pre-split monolithic manifest changed; update this digest only after intentionally verifying the new serialized commands.",
-    ).toBe("1b674555abe090e7a6c7edf6adb72c50d510da02c21ea1a04b637f79d397c1b3");
+    ).toBe("f85d50e83acf4c79523976a004d784fcd5785b82db643540cbfef93fbfc1dc8f");
   });
 
   it("classifies every dependency edge and every cross-lane edge for synthesis", () => {
@@ -1699,13 +1699,34 @@ describe("verification manifest", () => {
       "Fix the verification runtime build prerequisites",
       "--",
       "pnpm",
-      "--filter",
-      "@croco/architecture-policy...",
-      "--filter",
-      "@croco/tenant-core...",
+      "turbo",
+      "run",
       "build",
+      "--filter=@croco/architecture-policy...",
+      "--filter=@croco/tenant-core...",
+      "--filter=@croco/docs^...",
     ]);
   });
+
+  it.each([
+    ["repo", "docs/typechecked-examples.md"],
+    ["spine", "packages/storage-cloudinary/src/index.ts"],
+  ] as const)(
+    "prepares all documented export artifacts for scoped %s verification",
+    (profile, changedFile) => {
+      const manifest = createVerificationManifest(profile, {
+        base: "a".repeat(40),
+        head: "b".repeat(40),
+        changedFiles: [changedFile],
+      });
+      expect(manifest.find(({ id }) => id === "architecture-policy-runtime")?.command).toEqual(
+        expect.arrayContaining(["--filter=@croco/docs^...", "build"]),
+      );
+      expect(manifest.find(({ id }) => id === "docs-examples")?.dependsOn).toEqual([
+        "architecture-policy-runtime",
+      ]);
+    },
+  );
 
   it("rejects duplicate IDs and composite root aliases", () => {
     const command = createVerificationManifest("repo").find(
@@ -1767,6 +1788,7 @@ describe("verification manifest", () => {
       "architecture-policy": ["architecture-policy-runtime"],
       "benchmark-thresholds": ["verification-contract-tests"],
       build: ["architecture-policy-runtime"],
+      "docs-examples": ["architecture-policy-runtime"],
       "package-entrypoints-smoke": ["build", "typecheck", "generated-app-smoke"],
       "package-bins-smoke": ["build"],
       "generated-app-smoke": ["build"],
@@ -1817,7 +1839,11 @@ describe("verification manifest", () => {
         "spine-promotion",
       ]),
     );
+    expect(
+      createVerificationManifest("repo").find(({ id }) => id === "docs-examples")?.dependsOn,
+    ).toEqual(["architecture-policy-runtime"]);
     for (const id of [
+      "docs-examples",
       "package-bins-smoke",
       "test",
       "generated-app-smoke",

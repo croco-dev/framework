@@ -53,7 +53,13 @@ the reason when a checked example is added; stale coverage exceptions fail the c
 3. When a `ko` translation adds an English guide's examples, keep the original fence modes
    unchanged so the translated page passes the same `pnpm docs:examples:check` gate. Update the
    translation when the English source's examples, fence modes, or recovery semantics change.
-4. Run `pnpm docs:examples:check` before opening a documentation PR.
+4. Run `pnpm build` and then `pnpm docs:examples:check` before opening a documentation PR.
+   Packages with `exports` use TypeScript Bundler resolution with the applicable `types`/`import`
+   conditions, including nested targets, patterns and private exclusions. The checker follows the
+   actual public target; it never substitutes `src/<subpath>.ts`. Exports pointing to `dist` require
+   their build artifacts. Packages without `exports` retain the workspace `src/index.ts` root mapping.
+   All verification profiles prepare the docs package dependency build closure before this check,
+   even when the main build selects only changed packages. The standalone docs command stays read-only.
 5. If an existing legacy block is converted to `typecheck` or `no-check`, run
    `pnpm docs:examples:write` to remove its stale baseline entry, then rerun
    `pnpm docs:examples:check`.

@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -64,6 +64,247 @@ describe("doc-examples-check.mts", () => {
       expect(result.status).toBe(1);
       expect(result.stdout).toContain("documentation example drift detected");
       expect(result.stdout).toContain("Type 'string' is not assignable to type 'number'");
+    },
+    scriptTestTimeout,
+  );
+
+  it.each([
+    ["direct", "./src/features/main.ts"],
+    ["barrel", "./src/features/index.ts"],
+    ["canonical", "./src/feature.ts"],
+    [
+      "conditional",
+      {
+        require: "./src/wrong.ts",
+        types: { import: "./src/features/main.ts", require: "./src/wrong.ts" },
+      },
+    ],
+  ])(
+    "matches consumer export resolution for %s targets",
+    (_name, target) => {
+      const root = createTempRoot();
+      const packageDir = join(root, "packages", "alpha");
+      writeJson(join(packageDir, "package.json"), {
+        name: "@croco/alpha",
+        type: "module",
+        exports: { ".": "./src/index.ts", "./feature": target },
+      });
+      writeOperationalSource(
+        root,
+        "packages/alpha/src/feature.ts",
+        `export const feature: ${_name === "canonical" ? "number = 123" : 'string = "private"'};`,
+      );
+      writeOperationalSource(
+        root,
+        "packages/alpha/src/wrong.ts",
+        'export const feature: string = "require";',
+      );
+      writeOperationalSource(
+        root,
+        "packages/alpha/src/features/main.ts",
+        "export const feature: number = 123;",
+      );
+      writeOperationalSource(
+        root,
+        "packages/alpha/src/features/index.ts",
+        'export { feature } from "./main";',
+      );
+      mkdirSync(join(root, "node_modules", "@croco"), { recursive: true });
+      symlinkSync(packageDir, join(root, "node_modules", "@croco", "alpha"), "dir");
+      writeJson(join(root, "tsconfig.json"), {
+        compilerOptions: {
+          module: "esnext",
+          moduleResolution: "bundler",
+          strict: true,
+          noEmit: true,
+          types: [],
+          skipLibCheck: true,
+        },
+        files: ["consumer.ts"],
+      });
+      for (const type of ["string", "number"]) {
+        const code = `import { feature } from "@croco/alpha/feature";\nconst result: ${type} = feature;`;
+        writeOperationalSource(root, "consumer.ts", code);
+        writeDocs(root, ["```ts typecheck", code, "```"]);
+        const consumer = spawnSync(
+          process.execPath,
+          [
+            resolve(__dirname, "../../node_modules/typescript/bin/tsc"),
+            "-p",
+            join(root, "tsconfig.json"),
+          ],
+          { encoding: "utf-8" },
+        );
+        const docs = runScript(root, "--check");
+        expect(consumer.status, consumer.stdout + consumer.stderr).toBe(type === "number" ? 0 : 2);
+        expect(docs.status, docs.stdout + docs.stderr).toBe(type === "number" ? 0 : 1);
+      }
+    },
+    scriptTestTimeout,
+  );
+
+  it.each(["import", "require"] as const)(
+    "matches consumer resolution-mode %s conditions for valid and invalid assignments",
+    (mode) => {
+      const root = createTempRoot();
+      const packageDir = join(root, "packages", "alpha");
+      writeJson(join(packageDir, "package.json"), {
+        name: "@croco/alpha",
+        exports: {
+          ".": { types: { import: "./types/import.d.ts", require: "./types/require.d.ts" } },
+        },
+      });
+      writeOperationalSource(
+        root,
+        "packages/alpha/types/import.d.ts",
+        "export type Value = number;",
+      );
+      writeOperationalSource(
+        root,
+        "packages/alpha/types/require.d.ts",
+        "export type Value = string;",
+      );
+      mkdirSync(join(root, "node_modules", "@croco"), { recursive: true });
+      symlinkSync(packageDir, join(root, "node_modules", "@croco", "alpha"), "dir");
+      writeJson(join(root, "tsconfig.json"), {
+        compilerOptions: {
+          module: "esnext",
+          moduleResolution: "bundler",
+          strict: true,
+          noEmit: true,
+          types: [],
+          skipLibCheck: true,
+        },
+        files: ["consumer.ts"],
+      });
+      for (const type of ["string", "number"]) {
+        const code = `import type { Value } from "@croco/alpha" with { "resolution-mode": "${mode}" };\nconst result: Value = ${type === "number" ? "123" : '"require"'};`;
+        writeOperationalSource(root, "consumer.ts", code);
+        writeDocs(root, ["```ts typecheck", code, "```"]);
+        const consumer = spawnSync(
+          process.execPath,
+          [
+            resolve(__dirname, "../../node_modules/typescript/bin/tsc"),
+            "-p",
+            join(root, "tsconfig.json"),
+          ],
+          { encoding: "utf-8" },
+        );
+        const docs = runScript(root, "--check");
+        const valid = type === (mode === "require" ? "string" : "number");
+        expect(consumer.status, consumer.stdout + consumer.stderr).toBe(valid ? 0 : 2);
+        expect(docs.status, docs.stdout + docs.stderr).toBe(valid ? 0 : 1);
+      }
+    },
+    scriptTestTimeout,
+  );
+
+  it(
+    "honors root targets, export patterns and private export exclusions",
+    () => {
+      const root = createTempRoot();
+      writeJson(join(root, "packages/alpha/package.json"), {
+        name: "@croco/alpha",
+        exports: {
+          ".": "./src/public.ts",
+          "./features/*": "./src/features/*.ts",
+          "./features/private": null,
+        },
+      });
+      writeOperationalSource(
+        root,
+        "packages/alpha/src/public.ts",
+        "export const value: string = 'public';",
+      );
+      writeOperationalSource(
+        root,
+        "packages/alpha/src/features/one.ts",
+        "export const feature: number = 123;",
+      );
+      writeOperationalSource(
+        root,
+        "packages/alpha/src/features/private.ts",
+        "export const secret = 456;",
+      );
+      writeDocs(root, [
+        "```ts typecheck",
+        'import { value } from "@croco/alpha";',
+        'import { feature } from "@croco/alpha/features/one";',
+        "const text: string = value;",
+        "const count: number = feature;",
+        "```",
+      ]);
+      expect(runScript(root, "--check").status).toBe(0);
+      writeDocs(root, [
+        "```ts typecheck",
+        'import { secret } from "@croco/alpha/features/private";',
+        "```",
+      ]);
+      const denied = runScript(root, "--check");
+      expect(denied.status).toBe(1);
+      expect(denied.stdout).toContain("Cannot find module '@croco/alpha/features/private'");
+    },
+    scriptTestTimeout,
+  );
+
+  it(
+    "reports a build prerequisite instead of substituting source for missing export artifacts",
+    () => {
+      const root = createTempRoot();
+      writeJson(join(root, "packages/alpha/package.json"), {
+        name: "@croco/alpha",
+        exports: { ".": { types: "./dist/index.d.ts", import: "./dist/index.js" } },
+      });
+      writeValidDocs(root);
+      const result = runScript(root, "--check");
+      expect(result.status).toBe(1);
+      expect(result.stdout).toContain("pnpm build");
+      expect(result.stdout).toContain("@croco/alpha");
+      writeOperationalSource(
+        root,
+        "packages/alpha/dist/index.d.ts",
+        "export declare const value: number;",
+      );
+      expect(runScript(root, "--check").status).toBe(0);
+    },
+    scriptTestTimeout,
+  );
+
+  it(
+    "does not promote skipped declaration imports into documentation failures or build hints",
+    () => {
+      const root = createTempRoot();
+      writeJson(join(root, "packages/alpha/package.json"), {
+        name: "@croco/alpha",
+        exports: { ".": "./src/public.d.ts" },
+      });
+      writeOperationalSource(
+        root,
+        "packages/alpha/src/public.d.ts",
+        'import type { Unused } from "@croco/beta"; export type Value = string;',
+      );
+      writePackage(root, "beta", {
+        name: "@croco/beta",
+        exports: { ".": { types: "./dist/index.d.ts" } },
+      });
+      writeDocs(root, [
+        "```ts typecheck",
+        'import type { Value } from "@croco/alpha";',
+        'const value: Value = "visible";',
+        "```",
+      ]);
+      const passing = runScript(root, "--check");
+      expect(passing.status, passing.stdout + passing.stderr).toBe(0);
+      writeDocs(root, [
+        "```ts typecheck",
+        'import type { Value } from "@croco/alpha";',
+        "const value: Value = 123;",
+        "```",
+      ]);
+      const failing = runScript(root, "--check");
+      expect(failing.status).toBe(1);
+      expect(failing.stdout).toContain("Type 'number' is not assignable to type 'string'");
+      expect(failing.stdout).not.toContain("Cannot resolve public export '@croco/beta'");
     },
     scriptTestTimeout,
   );
