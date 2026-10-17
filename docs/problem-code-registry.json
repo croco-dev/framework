@@ -1,6 +1,6 @@
 {
   "version": "croco.problem-code-registry.v1",
-  "problemCount": 1062,
+  "problemCount": 1063,
   "problems": [
     {
       "code": "ACCESS_DENIED",
@@ -897,6 +897,36 @@
         {
           "file": "packages/meta-vite/src/libs/routes/validateApiRoute.ts",
           "line": 5,
+          "column": 1,
+          "kind": "problem-class"
+        }
+      ]
+    },
+    {
+      "code": "CROCO_META_VITE_SSG_OUTPUT_CONFLICT",
+      "category": "Conflict",
+      "status": 409,
+      "title": "Conflict",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#croco-meta-vite-ssg-output-conflict",
+      "recovery": {
+        "cause": "Multiple SSG routes map to the same static HTML output path.",
+        "userAction": "Remove or rename a conflicting SSG route before rebuilding.",
+        "operatorAction": "Inspect extensions.routes and extensions.outputPath; keep each SSG output path unique.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "public",
+        "telemetry": {
+          "eventName": "croco.problem.error",
+          "severity": "error",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/meta-vite/src/libs/build/ssgPrerender.ts",
+          "line": 8,
           "column": 1,
           "kind": "problem-class"
         }

@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export type CrocoProblemRegistry = {
   readonly version: "croco.problem-code-registry.v1";
-  readonly problemCount: 1062;
+  readonly problemCount: 1063;
   readonly problems: readonly [
     {
       readonly code: "ACCESS_DENIED";
@@ -840,6 +840,34 @@ export type CrocoProblemRegistry = {
         {
           readonly file: "packages/meta-vite/src/libs/routes/validateApiRoute.ts";
           readonly line: 5;
+          readonly column: 1;
+          readonly kind: "problem-class";
+        },
+      ];
+    },
+    {
+      readonly code: "CROCO_META_VITE_SSG_OUTPUT_CONFLICT";
+      readonly category: "Conflict";
+      readonly status: 409;
+      readonly title: "Conflict";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#croco-meta-vite-ssg-output-conflict";
+      readonly recovery: {
+        readonly cause: "Multiple SSG routes map to the same static HTML output path.";
+        readonly userAction: "Remove or rename a conflicting SSG route before rebuilding.";
+        readonly operatorAction: "Inspect extensions.routes and extensions.outputPath; keep each SSG output path unique.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "public";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.error";
+          readonly severity: "error";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/meta-vite/src/libs/build/ssgPrerender.ts";
+          readonly line: 8;
           readonly column: 1;
           readonly kind: "problem-class";
         },
@@ -30029,7 +30057,7 @@ export type CrocoProblemRegistry = {
 
 export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 1062,
+  problemCount: 1063,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -30952,6 +30980,37 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
         {
           file: "packages/meta-vite/src/libs/routes/validateApiRoute.ts",
           line: 5,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "CROCO_META_VITE_SSG_OUTPUT_CONFLICT",
+      category: "Conflict",
+      status: 409,
+      title: "Conflict",
+      cookbookPath: "/reference/problem-recovery-cookbook/#croco-meta-vite-ssg-output-conflict",
+      recovery: {
+        cause: "Multiple SSG routes map to the same static HTML output path.",
+        userAction: "Remove or rename a conflicting SSG route before rebuilding.",
+        operatorAction:
+          "Inspect extensions.routes and extensions.outputPath; keep each SSG output path unique.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/meta-vite/src/libs/build/ssgPrerender.ts",
+          line: 8,
           column: 1,
           kind: "problem-class",
         },

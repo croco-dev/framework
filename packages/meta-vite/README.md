@@ -469,6 +469,12 @@ should now read the Problem result shape: `ok === false`, `kind`, RFC 7807 field
 | `prerenderSsgRoutes`  | function | Filter and pre-render all `mode: 'ssg'` routes at build time.        |
 | `renderRouteToString` | function | Default render function: loads component and calls `renderToString`. |
 
+SSG maps `/` to `index.html` and other paths to `<path>/index.html`, trimming leading and trailing
+slashes. Routes such as `/docs` and `/docs/` remain distinct URLs, but cannot both be prerendered
+into the same output directory. `prerenderSsgRoutes` rejects duplicate static output paths before
+rendering any component with `CROCO_META_VITE_SSG_OUTPUT_CONFLICT`; the diagnostic includes both
+original route paths and the conflicting output path. Non-SSG routes are excluded from this check.
+
 ### Route Manifest
 
 | Export                                    | Type     | Description                                                                                             |

@@ -3335,6 +3335,15 @@ const recoveryMetadataByCategory = {
 } as const satisfies Record<ProblemCategory, ProblemRecoveryMetadata>;
 
 const recoveryMetadataByCode = {
+  CROCO_META_VITE_SSG_OUTPUT_CONFLICT: recovery({
+    cause: "Multiple SSG routes map to the same static HTML output path.",
+    userAction: "Remove or rename a conflicting SSG route before rebuilding.",
+    operatorAction:
+      "Inspect extensions.routes and extensions.outputPath; keep each SSG output path unique.",
+    retryability: "not-retryable",
+    redactionPolicy: "public",
+    severity: "error",
+  }),
   "meta-vite/server-action-forbidden-origin": recovery({
     cause: "The request Origin is not in the server action allowedOrigins list.",
     userAction: "Send the request from an allowed origin registered in allowedOrigins.",
