@@ -471,12 +471,24 @@ export type AdminFormFieldContract<
 > = {
   readonly name: TName;
   readonly label: string;
-  readonly inputType?: AdminFormFieldType;
   readonly description?: string;
   readonly required?: boolean;
   readonly schemaPath?: string;
   readonly options?: readonly AdminFormFieldOption<TValues[TName]>[];
-};
+} & (
+  | { readonly inputType?: Exclude<AdminFormFieldType, "date">; readonly dateValueType?: never }
+  | {
+      [Name in TName]: [NonNullable<TValues[Name]>] extends [never]
+        ? never
+        : NonNullable<TValues[Name]> extends Date
+          ? undefined extends TValues[Name]
+            ? { readonly name: Name; readonly inputType: "date"; readonly dateValueType: "date" }
+            : never
+          : NonNullable<TValues[Name]> extends string
+            ? { readonly name: Name; readonly inputType: "date"; readonly dateValueType?: "string" }
+            : never;
+    }[TName]
+);
 
 export type AdminFormFieldError = {
   readonly code: string;
