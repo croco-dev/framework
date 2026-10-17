@@ -76,6 +76,21 @@ describe("Kubernetes Node API profile", () => {
     expect(readFileSync(join(target, "apps/api-server/Dockerfile"), "utf8")).toContain(
       'CMD ["node", "apps/api-server/dist/kubernetes.js"]',
     );
+    const projectMap = JSON.parse(readFileSync(join(target, "croco.project-map.json"), "utf8"));
+    for (const command of ["k8s:check", "k8s:lock", "k8s:smoke"]) {
+      expect(projectMap.entrypoints).toContainEqual({
+        kind: "package-script",
+        id: `node-api#${command}`,
+        packageName: "node-api",
+        command,
+        source: { file: "package.json", symbol: `scripts.${command}` },
+      });
+      expect(
+        projectMap.packageGraph.packages.find(
+          (pkg: { path: string }) => pkg.path === "package.json",
+        ).scripts,
+      ).toContain(command);
+    }
     const manifest = JSON.parse(
       readFileSync(join(target, "croco-infrastructure-profile.manifest.json"), "utf8"),
     );

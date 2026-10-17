@@ -1702,6 +1702,12 @@ const smokeCaseDefinitionsWithoutLint: readonly Omit<SmokeCase, "tier" | "adviso
     runtimeTarget: "node",
     matrixTargets: ["spa-be-split", "addons/kubernetes"],
     validations: [
+      {
+        label: "install-immediate contract verify",
+        readOnly: true,
+        recovery: "pnpm codegen",
+        args: ["contract:verify"],
+      },
       { label: "typecheck", args: ["typecheck"] },
       { label: "build", args: ["build"] },
       { label: "Chromium install", args: ["test:browser:install"] },

@@ -36,6 +36,23 @@ export function installKubernetes(targetDir: string, context: Record<string, unk
   pkg.scripts["k8s:smoke"] = "node scripts/smoke-kubernetes.mjs";
   pkg.scripts["k8s:lock"] = "node scripts/check-kubernetes-profile.mjs --write";
   writeFileSync(packagePath, `${JSON.stringify(pkg, null, 2)}\n`);
+  const mapPath = join(targetDir, "croco.project-map.json");
+  const projectMap = JSON.parse(readFileSync(mapPath, "utf8"));
+  const commands = ["k8s:check", "k8s:lock", "k8s:smoke"];
+  for (const workspacePackage of projectMap.packageGraph.packages) {
+    if (workspacePackage.path === "package.json")
+      workspacePackage.scripts = Object.keys(pkg.scripts).sort();
+  }
+  projectMap.entrypoints.push(
+    ...commands.map((command) => ({
+      kind: "package-script",
+      id: `${pkg.name}#${command}`,
+      packageName: pkg.name,
+      command,
+      source: { file: "package.json", symbol: `scripts.${command}` },
+    })),
+  );
+  writeFileSync(mapPath, `${JSON.stringify(projectMap, null, 2)}\n`);
 }
 
 export function writeKubernetesProfileManifest(targetDir: string): void {
