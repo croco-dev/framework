@@ -1,4 +1,5 @@
 import type { EntitlementCheckResult } from "@croco/entitlements-core";
+import { Problem } from "@croco/problems-core";
 import type { ProblemDetails } from "@croco/problems-core";
 
 import type {
@@ -897,10 +898,24 @@ function problemKindFromSubmitResult(kind: AdminFormProblemResultKind): AdminFor
 }
 
 function toExternalFailureProblem(error: unknown): ProblemDetails {
-  if (isProblemDetails(error)) {
+  if (error instanceof Problem) {
+    try {
+      return error.toJSON();
+    } catch {
+      return createExternalFailureProblem(error);
+    }
+  } else if (isProblemDetails(error)) {
     return error;
   }
 
+  if (error instanceof Error && "problem" in error && isProblemDetails(error.problem)) {
+    return error.problem;
+  }
+
+  return createExternalFailureProblem(error);
+}
+
+function createExternalFailureProblem(error: unknown): ProblemDetails {
   return createCoreProblemDetails({
     code: "admin-form/external-failure",
     detail:
