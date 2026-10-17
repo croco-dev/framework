@@ -9,3 +9,14 @@ A scope row lock serializes appends, corrections, reads, and deletion across con
 The migration creates only additive `analytics_fact_*` tables and an index on scope, subject, definition, generation, recorded time and effective start. `dropFactHistory(db)` destructively removes these tables for rollback or disposable database teardown. Existing customer tables require no migration. There is no automatic current-value backfill or connection to a warehouse profile.
 
 Run `ANALYTICS_POSTGRES_URL=postgres://... pnpm --filter @croco/analytics-drizzle test:postgres` against a disposable database. Tests use two independent pools and verify concurrency, rollback/restart, correction CAS, collisions, generations, tenant isolation and deletion.
+
+## Enrichment run persistence
+
+`DrizzleEnrichmentStore` implements server-only `EnrichmentStore` with PostgreSQL atomic creation
+and revision CAS. Explicitly run `createEnrichment(db)` before accepting work; service startup
+performs no DDL. The additive table is independent of Fact History. Bounded run documents preserve
+item/version claims, budget reservations, review/audit state and text-free usage/event receipts.
+
+`ANALYTICS_POSTGRES_URL=... pnpm --filter @croco/analytics-drizzle test:postgres` exercises both
+Fact History and Enrichment on a disposable PostgreSQL database. See
+[enrichment-review](../../examples/enrichment-review/README.md) for retention and recovery ownership.

@@ -273,3 +273,27 @@ policy to the source and projections as part of their deletion lifecycle.
 The app provides authenticated scope binding, PII rejection/masking, bounded registrations, model limits, aggregate-field projection, and idempotent usage receipts. The model sees definition metadata and choices, never raw customer rows; it can only return existing choice IDs. Confirmation and current authorization are required before reading results. See [the standalone example](../../examples/growth-analysis/README.md) for local reports, the native SDK HTTP fixture, cancellation, unavailable states, and settlement recovery limits.
 
 `ProposeAnalysisPlan` implementations must honor the supplied `AbortSignal` and settle promptly after cancellation or timeout. The service retains the concurrency slot until that promise settles. A provider that ignores cancellation and never settles keeps its slot occupied; correct or replace that provider before accepting more inference work. A deadline does not release a slot while its provider work remains unresolved.
+
+## Reviewed text enrichment
+
+The server-only `@croco/analytics-core/enrichment` entry exports `defineClassification` and
+`EnrichmentService` (`enqueueBatch`, `classify`, `review`, `exportLabels`, `retry`, `settle`, `purge`).
+An exact normalized dictionary precedes the optional injected `ClassifyText` function; otherwise
+classification is explicitly unknown. All candidates require human review before export.
+
+Supply an `EnrichmentStore`, current principal/authorization revision, action authorization,
+source availability, mandatory PII block/mask policy and an idempotent usage/event receipt sink.
+Budgets and concurrency are bounded per run. Candidates, human overrides, raw/result retention,
+and operational receipts are separate. A model response is persisted before sink delivery, so
+repeating settlement does not repeat inference. Unknown acceptance requires an explicit operator
+acknowledgement that the prior worker stopped. At the attempt limit, `retry` accepts this
+acknowledgement only to release the uncertain concurrency slot: `classify` still rejects another
+attempt, and the original unknown usage, receipts and budget reservation remain intact.
+Admission counts durable operational receipts, including those whose source results were purged.
+An authorized operator can acknowledge an unknown receipt, or an expired running receipt after
+confirming the worker stopped, using its persisted item/receipt IDs and current run revision.
+This remains available after source deletion or result expiry and returns no classification data;
+it does not recreate purged results, refund reservations or bypass source checks on classification.
+
+See [the independent example](../../examples/enrichment-review/README.md) for native SDK mapping,
+PostgreSQL migration/CAS, batch checkpoints, review UI, budget assumptions and recovery limitations.

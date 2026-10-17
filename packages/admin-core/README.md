@@ -474,3 +474,11 @@ share/export permission. Embedded note instructions never confer any permission.
 `LearningView.isComplete` is false when field permissions or evidence availability hide stored
 content. Partial views are for inspection and export, not replacement edits or copying. Full-record
 writes require both read and write permission for every content field, including the optional decision.
+
+## Enrichment review operations
+
+`EnrichmentOperations` binds a server `EnrichmentService` to a current authenticated
+app/environment/tenant and actor. Only code-registered definition versions are selectable.
+Browser payloads do not select a principal, model, handler or tenant. Review/export/retry commands
+carry revision, reason and idempotency key; service authorization and source access remain required.
+See [the standalone example](../../examples/enrichment-review/README.md).

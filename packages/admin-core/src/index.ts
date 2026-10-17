@@ -627,3 +627,4 @@ export { importLearningEvidence } from "./libs/LearningRegistry";
 export { LearningStorageProblem } from "./libs/LearningRegistry";
 export { validateSurveyPublishRequest, validateSurveyAdminAccess } from "./libs/surveyOperations";
 export type { SurveyAdminAccess, SurveyPublishRequest } from "./libs/surveyOperations";
+export { EnrichmentOperations } from "./libs/EnrichmentOperations";
