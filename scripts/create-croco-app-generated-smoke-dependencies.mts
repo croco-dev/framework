@@ -132,7 +132,7 @@ const CASE_TEST_PATH_PREFIXES = {
   ],
   "meta-vite-fullstack-workers": ["base-ddd/libs/shared/utils-env/"],
   "production-app-starter": ["spa-be-split/apps/", "spa-be-split/tests/journeys/"],
-  "kubernetes-node-api": ["spa-be-split/apps/api-server/"],
+  "kubernetes-node-api": ["spa-be-split/apps/"],
   "admin-console-starter": [
     "spa-be-split/apps/",
     "admin-console/apps/",
