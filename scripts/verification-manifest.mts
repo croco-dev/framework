@@ -1528,7 +1528,10 @@ function withSchedulingContract(
   command: EvidenceCommand,
   profile: VerificationProfile,
 ): EvidenceCommand {
-  const dependencies = VERIFICATION_DEPENDENCIES[command.id];
+  const dependencies =
+    profile === "repo" && command.id === "docs-examples"
+      ? undefined
+      : VERIFICATION_DEPENDENCIES[command.id];
   const dependsOn =
     profile === "publish" && command.id === "build"
       ? [...(dependencies ?? []), "release-metadata"]

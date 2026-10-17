@@ -328,7 +328,7 @@ describe("verification manifest", () => {
     expect(
       createHash("sha256").update(JSON.stringify(manifests)).digest("hex"),
       "The pre-split monolithic manifest changed; update this digest only after intentionally verifying the new serialized commands.",
-    ).toBe("1b674555abe090e7a6c7edf6adb72c50d510da02c21ea1a04b637f79d397c1b3");
+    ).toBe("d18edff62f56397104af80ff3130178f2483a66b02d9dbac53ec6004de2c849a");
   });
 
   it("classifies every dependency edge and every cross-lane edge for synthesis", () => {
@@ -1818,7 +1818,11 @@ describe("verification manifest", () => {
         "spine-promotion",
       ]),
     );
+    expect(
+      createVerificationManifest("repo").find(({ id }) => id === "docs-examples")?.dependsOn,
+    ).toBeUndefined();
     for (const id of [
+      "docs-examples",
       "package-bins-smoke",
       "test",
       "generated-app-smoke",
