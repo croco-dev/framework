@@ -206,6 +206,50 @@ describe("Problem UI primitives", () => {
     expect(recoveredCode).toBe("orders/not-found");
   });
 
+  it.each([false, true])("restricts recovery actions before custom rendering: %s", (custom) => {
+    const recover = vi.fn();
+    const actions: readonly ProblemRecoveryAction[] = [
+      {
+        id: "offline",
+        label: "Offline only",
+        problemCodes: ["orders/offline"],
+        onRecover: recover,
+      },
+      { id: "common", label: "Common", onRecover: recover },
+      {
+        id: "matching",
+        label: "Matching",
+        problemCodes: ["orders/offline", problem.code],
+        onRecover: recover,
+      },
+      { id: "empty", label: "Empty restriction", problemCodes: [], onRecover: recover },
+    ];
+    const renderRecoveryAction = vi.fn((action: ProblemRecoveryAction, details: ProblemDetails) =>
+      createElement("button", { onClick: () => action.onRecover?.(details) }, action.label),
+    );
+    const html = renderToStaticMarkup(
+      createElement(ProblemPanel, {
+        problem,
+        recoveryActions: actions,
+        renderRecoveryAction: custom ? renderRecoveryAction : undefined,
+      }),
+    );
+
+    expect(html).not.toContain("Offline only");
+    expect(html).not.toContain("Empty restriction");
+    expect(html).toContain("Common");
+    expect(html).toContain("Matching");
+    if (custom) {
+      expect(renderRecoveryAction.mock.calls.map(([action]) => action.id)).toEqual([
+        "common",
+        "matching",
+      ]);
+      expect(renderRecoveryAction.mock.calls.every(([, details]) => details === problem)).toBe(
+        true,
+      );
+    }
+  });
+
   it("adapts Problems to provider-neutral toast payloads", () => {
     const payload = createProblemToastPayload(problem, [
       { id: "support", kind: "contactSupport", label: "Contact support" },
