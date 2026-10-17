@@ -47,26 +47,37 @@ export async function createExampleFiles(root) {
   })) {
     await writeFile(resolve(root, name), `${JSON.stringify(value, null, 2)}\n`);
   }
-  execFileSync("git", ["init", "--quiet", root]);
-  execFileSync("git", ["-C", root, "add", "frontend-actions.json"]);
-  execFileSync("git", [
-    "-C",
-    root,
-    "-c",
-    "user.name=Croco local fixture",
-    "-c",
-    "user.email=fixture@example.invalid",
-    "-c",
-    "commit.gpgsign=false",
-    "-c",
-    "core.hooksPath=/dev/null",
-    "commit",
-    "--quiet",
-    "--allow-empty",
-    "-m",
-    "Generate frontend action fixture",
-  ]);
-  const commit = execFileSync("git", ["-C", root, "rev-parse", "HEAD"], { encoding: "utf8" });
+  const env = { ...process.env };
+  const localVariables = execFileSync("git", ["rev-parse", "--local-env-vars"], {
+    encoding: "utf8",
+  })
+    .trim()
+    .split(/\r?\n/);
+  for (const name of localVariables) delete env[name];
+  execFileSync("git", ["init", "--quiet", root], { env });
+  execFileSync("git", ["-C", root, "add", "frontend-actions.json"], { env });
+  execFileSync(
+    "git",
+    [
+      "-C",
+      root,
+      "-c",
+      "user.name=Croco local fixture",
+      "-c",
+      "user.email=fixture@example.invalid",
+      "-c",
+      "commit.gpgsign=false",
+      "-c",
+      "core.hooksPath=/dev/null",
+      "commit",
+      "--quiet",
+      "--allow-empty",
+      "-m",
+      "Generate frontend action fixture",
+    ],
+    { env },
+  );
+  const commit = execFileSync("git", ["-C", root, "rev-parse", "HEAD"], { env, encoding: "utf8" });
   await writeFile(resolve(root, "source-commit.txt"), commit);
 }
 

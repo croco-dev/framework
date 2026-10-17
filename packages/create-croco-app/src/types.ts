@@ -16,7 +16,7 @@ export type GeneratorPreset =
 
 export type GeneratorApi = "graphql" | "trpc";
 export type GeneratorApiHosting = "standalone" | "nextjs";
-export type GeneratorBackendDeploy = "docker" | "lambda";
+export type GeneratorBackendDeploy = "docker" | "lambda" | "kubernetes";
 export type GeneratorFrontendDeploy =
   | "opennext"
   | "vercel"
@@ -87,7 +87,7 @@ type DddApiGeneratorOptions = ResolvedGeneratorOptions &
     webApps: [];
     api: GeneratorApi;
     apiHosting: "standalone";
-    backendDeploy?: GeneratorBackendDeploy;
+    backendDeploy?: Exclude<GeneratorBackendDeploy, "kubernetes">;
     frontendDeploy?: never;
     ui?: never;
   };
@@ -95,7 +95,7 @@ type DddApiGeneratorOptions = ResolvedGeneratorOptions &
 type DddFullstackApiHostingOptions =
   | {
       apiHosting: "standalone";
-      backendDeploy?: GeneratorBackendDeploy;
+      backendDeploy?: Exclude<GeneratorBackendDeploy, "kubernetes">;
     }
   | {
       apiHosting: "nextjs";
@@ -128,7 +128,7 @@ type ExplicitVikeGeneratorOptions = ResolvedGeneratorOptions &
     preset: "ddd-vike-fullstack";
     api?: never;
     apiHosting: "standalone";
-    backendDeploy?: GeneratorBackendDeploy;
+    backendDeploy?: Exclude<GeneratorBackendDeploy, "kubernetes">;
     frontendDeploy: "cloudflare-meta-vite";
     ui?: never;
   };
@@ -148,7 +148,8 @@ type WorkerGoalGeneratorOptions = ResolvedGeneratorOptions &
 
 type ProductionAppGeneratorOptions = ResolvedGeneratorOptions &
   NonSaasOptions &
-  NoApiOptions & {
+  Omit<NoApiOptions, "backendDeploy"> & {
+    backendDeploy?: "kubernetes";
     goal?: never;
     preset: "production-app";
     webApps: [];

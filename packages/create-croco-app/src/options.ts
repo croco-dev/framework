@@ -147,6 +147,7 @@ export function validateCliOptions(cliOptions: NormalizedGeneratorOptions): void
     readChoice("db", db, DATABASES);
   }
 
+  assertKubernetesOptions(cliOptions);
   assertUiPresetCompatibility(cliOptions);
 
   if (isSaasPreset(cliOptions.preset)) {
@@ -198,6 +199,7 @@ export function validateResolvedOptions(options: NormalizedGeneratorOptions): Ge
     readChoice("db", database, DATABASES);
   }
 
+  assertKubernetesOptions(options);
   assertUiCompatibility(options);
 
   if (!isSaasPreset(options.preset) && options.saasProviderProfile) {
@@ -384,6 +386,7 @@ export function normalizeNonInteractiveOptions(
       preset,
       webApps: [],
       apiHosting: "standalone",
+      ...(cliOptions.backendDeploy ? { backendDeploy: cliOptions.backendDeploy } : {}),
       db: [],
       agentRules: cliOptions.agentRules ?? true,
       installDeps: cliOptions.installDeps ?? true,
@@ -535,7 +538,12 @@ function assertProductionOptions(
       "--api-hosting",
     );
   }
-  if (options.backendDeploy) throwUnsupportedPresetOption("--backend-deploy", preset);
+  if (
+    options.backendDeploy &&
+    !(preset === "production-app" && options.backendDeploy === "kubernetes")
+  ) {
+    throwUnsupportedPresetOption("--backend-deploy", preset);
+  }
   if (options.frontendDeploy) throwUnsupportedPresetOption("--frontend-deploy", preset);
   if (options.webApps && options.webApps.length > 0) {
     throwUnsupportedPresetOption("--web-apps", preset);
@@ -771,4 +779,17 @@ function optionFromMessage(message: string): string | undefined {
   if (message.includes("Package scope")) return "--scope";
 
   return undefined;
+}
+
+function assertKubernetesOptions(options: NormalizedGeneratorOptions): void {
+  if (
+    options.backendDeploy === "kubernetes" &&
+    (options.preset !== "production-app" || options.goal)
+  ) {
+    throwInvalidCliOption(
+      "Kubernetes requires --preset production-app",
+      "Use --preset production-app --backend-deploy kubernetes without --goal; other compositions are unsupported.",
+      "--backend-deploy",
+    );
+  }
 }

@@ -128,3 +128,30 @@ pnpm --filter create-croco-app test
 pnpm --filter create-croco-app typecheck
 pnpm create-croco-app:smoke
 ```
+
+## Kubernetes Node API
+
+```sh
+npx create-croco-app my-api --preset production-app --backend-deploy kubernetes --scope @myorg --no-install --no-git
+cd my-api
+pnpm install
+```
+
+This opt-in backend profile keeps the existing Node Host, REST transport and compiled DI.
+It generates a Docker artifact, Kubernetes Deployment/Service/ConfigMap and an optional
+out-of-band Secret reference. It does not install a database, Redis, queue, ingress or Helm.
+Other presets and `--goal` combinations explicitly reject this deployment option.
+The existing production-app SPA remains separate from this API deployment.
+
+The generated `kubernetes/README.md` describes resource review, schema validation and live
+cluster acceptance. `pnpm k8s:check` checks owned-file drift; `pnpm k8s:lock` adopts reviewed
+changes and invalidates prior verification claims. After build, `pnpm k8s:smoke` exercises
+actual Node HTTP readiness 200→503, in-flight completion and listener close without a cluster.
+The runtime capability manifest describes Node, while the infrastructure profile manifest
+owns resource/build/configuration hashes and generator version.
+
+This minimal profile is **not cluster-certified**. The sample repository and rate limiter
+are in memory, so the Deployment uses one replica and Recreate; restart loses sample data.
+Compose durable providers and verify their readiness before deploying a stateful service.
+Typed external-provider binding integration remains tracked in #3547. No full SaaS or
+live Kubernetes support is implied by local schema, build or Host smoke results.
