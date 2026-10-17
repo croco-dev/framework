@@ -479,7 +479,9 @@ an empty value is not allowed.
 
 Date inputs use a declared representation, rather than inferring it from the current value:
 
-```typescript
+```typescript typecheck
+import type { AdminFormFieldContract } from "@croco/admin-react";
+
 type ScheduleDraft = { start: Date | undefined; day: string };
 const dateFields = [
   { name: "start", label: "Start", inputType: "date", dateValueType: "date" },
