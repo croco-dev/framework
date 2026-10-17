@@ -328,7 +328,7 @@ describe("verification manifest", () => {
     expect(
       createHash("sha256").update(JSON.stringify(manifests)).digest("hex"),
       "The pre-split monolithic manifest changed; update this digest only after intentionally verifying the new serialized commands.",
-    ).toBe("c79c958e41b75cf9293f43de6e2a48e5347ba84c76ed867e30a0a03c90ad4b6b");
+    ).toBe("f85d50e83acf4c79523976a004d784fcd5785b82db643540cbfef93fbfc1dc8f");
   });
 
   it("classifies every dependency edge and every cross-lane edge for synthesis", () => {
@@ -1699,13 +1699,12 @@ describe("verification manifest", () => {
       "Fix the verification runtime build prerequisites",
       "--",
       "pnpm",
-      "--filter",
-      "@croco/architecture-policy...",
-      "--filter",
-      "@croco/tenant-core...",
-      "--filter",
-      "@croco/docs^...",
+      "turbo",
+      "run",
       "build",
+      "--filter=@croco/architecture-policy...",
+      "--filter=@croco/tenant-core...",
+      "--filter=@croco/docs^...",
     ]);
   });
 
@@ -1721,7 +1720,7 @@ describe("verification manifest", () => {
         changedFiles: [changedFile],
       });
       expect(manifest.find(({ id }) => id === "architecture-policy-runtime")?.command).toEqual(
-        expect.arrayContaining(["--filter", "@croco/docs^...", "build"]),
+        expect.arrayContaining(["--filter=@croco/docs^...", "build"]),
       );
       expect(manifest.find(({ id }) => id === "docs-examples")?.dependsOn).toEqual([
         "architecture-policy-runtime",
