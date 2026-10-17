@@ -728,3 +728,18 @@ to `/tmp/croco-learning-2825-browser`, outside the checkout.
 The workspace only replaces a draft with an `isComplete` view. A successful save whose response
 is source-redacted keeps the submitted content and advances its revision. Switching records clears
 revision history and its cursor, so audit pages always belong to the current document.
+
+## Enrichment Review Console
+
+`EnrichmentReviewConsole` displays original availability, dictionary/model candidates, finite
+labels, unknown/failure states, catalog/model/prompt/normalization versions, measured/estimated/unknown
+usage, manual overrides and candidate differences. Approval requires an audit reason and evidence;
+unreviewed batches cannot be exported by the server. Failed unchanged commands retain their
+idempotency key. Delivery retries do not repeat inference, while an uncertain model retry requires
+an explicit acknowledgement of possible duplicate billing.
+
+Bind callbacks to `EnrichmentOperations` and change `scopeKey` with authenticated tenant or permission
+revision. That epoch discards old drafts, results, exports and pending responses. Loading/denied/error
+states hide originals. Server policy, not the presentation booleans, enforces read/review/export rights.
+The [synthetic standalone example](../../examples/enrichment-review/README.md) uses PostgreSQL and
+finite feature operations without Survey, Cohort or warehouse dependencies.

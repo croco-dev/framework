@@ -391,3 +391,9 @@ export type {
   SurveyResultsData,
   SurveyResultsState,
 } from "./libs/SurveyConsole";
+export { EnrichmentReviewConsole } from "./libs/EnrichmentReviewConsole";
+export type {
+  EnrichmentConsoleState,
+  EnrichmentConsoleCommand,
+  EnrichmentReviewConsoleProps,
+} from "./libs/EnrichmentReviewConsole";

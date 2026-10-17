@@ -1,0 +1,44 @@
+{
+  "name": "@croco-example/enrichment-review",
+  "version": "0.0.0",
+  "private": true,
+  "type": "commonjs",
+  "scripts": {
+    "build": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "build:browser": "tsup",
+    "dev": "pnpm build:browser && tsx src/server.ts",
+    "start": "tsx src/server.ts",
+    "test:evidence": "pnpm run test --maxWorkers=1 --reporter=json --outputFile=.turbo/croco-test-evidence.json",
+    "setup": "tsx src/setup.ts",
+    "test:browser": "node scripts/verify-browser.mjs"
+  },
+  "dependencies": {
+    "@croco/admin-core": "workspace:*",
+    "@croco/admin-react": "workspace:*",
+    "@croco/analytics-core": "workspace:*",
+    "@croco/analytics-drizzle": "workspace:*",
+    "@croco/batch-core": "workspace:*",
+    "@croco/events-core": "workspace:*",
+    "@croco/events-inmemory": "workspace:*",
+    "@croco/execution-core": "workspace:*",
+    "@croco/metering-core": "workspace:*",
+    "@croco/problems-core": "workspace:*",
+    "drizzle-orm": "catalog:",
+    "openai": "7.25.0",
+    "pg": "8.22.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24",
+    "@types/pg": "8.20.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "tsup": "^8.0.0",
+    "tsx": "^4.0.0",
+    "typescript": "^6.0.3",
+    "vitest": "4.1.8"
+  }
+}
