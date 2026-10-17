@@ -113,8 +113,10 @@ class TestingContextManager implements ContextManager {
       return target;
     }
 
-    const bound = ((...args: unknown[]) =>
-      this.with(ctx, target as (...args: unknown[]) => T, undefined, ...args)) as T;
+    const withContext = this.with.bind(this);
+    const bound = function (this: unknown, ...args: unknown[]) {
+      return withContext(ctx, target as (...args: unknown[]) => unknown, this, ...args);
+    } as T;
     return bound;
   }
 
@@ -136,7 +138,8 @@ class TestingTracerProvider implements TracerProvider {
 
 class TestingTracer implements Tracer {
   startSpan(name: string, options: SpanOptions = {}, parentContext = context.active()): Span {
-    const parentSpanContext = trace.getSpanContext(parentContext);
+    const effectiveParentContext = options.root ? ROOT_CONTEXT : parentContext;
+    const parentSpanContext = trace.getSpanContext(effectiveParentContext);
     const record: CapturedSpan = {
       attributes: options.attributes ? { ...options.attributes } : {},
       events: [],

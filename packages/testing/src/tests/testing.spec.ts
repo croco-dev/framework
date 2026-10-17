@@ -1,4 +1,5 @@
 import "reflect-metadata";
+import { context, ROOT_CONTEXT, trace } from "@opentelemetry/api";
 import { CurrentApiKey, CurrentPrincipal, User } from "@croco/auth-core";
 import type {
   BillingGateway,
@@ -1056,6 +1057,67 @@ describe("@croco/testing", () => {
       name: "testing.operation",
     });
   });
+
+  describe.each(["startSpan", "startActiveSpan"] as const)(
+    "telemetry %s parent selection",
+    (method) => {
+      it.each([
+        { root: true, parentSource: "active" },
+        { root: false, parentSource: "active" },
+        { root: undefined, parentSource: "active" },
+        { root: true, parentSource: "explicit" },
+        { root: false, parentSource: "explicit" },
+        { root: undefined, parentSource: "explicit" },
+      ] as const)("honors root=$root with an $parentSource parent", ({ root, parentSource }) => {
+        const capture = installTestingTelemetryCapture();
+        const tracer = trace.getTracer("testing.parent-selection");
+        const explicitParent = tracer.startSpan("explicit-parent");
+        const explicitContext = trace.setSpan(ROOT_CONTEXT, explicitParent);
+
+        tracer.startActiveSpan("active-parent", (activeParent) => {
+          const parent = parentSource === "explicit" ? explicitParent : activeParent;
+          const parentContext = parentSource === "explicit" ? explicitContext : undefined;
+          const options = root === undefined ? {} : { root };
+
+          if (method === "startSpan") {
+            tracer.startSpan("subject", options, parentContext).end();
+          } else {
+            tracer.startActiveSpan(
+              "subject",
+              options,
+              parentContext ?? context.active(),
+              (span) => {
+                expect(trace.getActiveSpan()).toBe(span);
+                tracer.startSpan("descendant").end();
+                span.end();
+              },
+            );
+          }
+
+          expect(trace.getActiveSpan()).toBe(activeParent);
+          const subject = capture.spans.find((span) => span.name === "subject");
+          expect(subject).toBeDefined();
+          expect(subject?.ended).toBe(true);
+          if (root) {
+            expect(subject?.parentSpanId).toBeUndefined();
+            expect(subject?.traceId).not.toBe(activeParent.spanContext().traceId);
+            expect(subject?.traceId).not.toBe(explicitParent.spanContext().traceId);
+          } else {
+            expect(subject?.parentSpanId).toBe(parent.spanContext().spanId);
+            expect(subject?.traceId).toBe(parent.spanContext().traceId);
+          }
+          if (method === "startActiveSpan") {
+            expect(capture.spans.find((span) => span.name === "descendant")).toMatchObject({
+              parentSpanId: subject?.spanId,
+              traceId: subject?.traceId,
+            });
+          }
+          activeParent.end();
+        });
+        explicitParent.end();
+      });
+    },
+  );
 
   it("isolates overlapping telemetry capture runs", async () => {
     const firstCapture = installTestingTelemetryCapture();

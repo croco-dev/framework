@@ -191,7 +191,7 @@ function isVowel(char: string): boolean {
 export function validate(input: string): boolean {
   if (!input || input.length === 0) return false;
   if (/^[0-9]/.test(input)) return false;
-  return /^[a-zA-Z0-9_-]+$/.test(input);
+  return /^[a-zA-Z0-9_-]+$/.test(input) && /^[a-zA-Z]/.test(toPascalCase(input));
 }
 
 export function normalize(input: string, kind: "pascal" | "kebab" | "camel"): string {

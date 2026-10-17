@@ -210,11 +210,11 @@ export class ScenarioRuntime {
   private readonly expectations: ScenarioExpectation[] = [];
   private readonly expectedProblems: { readonly code: string; readonly count: number }[] = [];
   private readonly initialTime: string;
-  private executionDepth = 0;
+  // Rethrowing the same injected object is propagation; each planned occurrence is still recorded.
+  private readonly injectedProblems = new WeakSet<Problem>();
   private hasRun = false;
   private readonly planned: PlannedFailure[] = [];
   private readonly problems: ProblemDetails[] = [];
-  private propagatingInjectedProblem: Problem | undefined;
   private readonly replayTimeline: ScenarioReplayFailure[] = [];
   private readonly timeline: ScenarioTimelineEntry[] = [];
 
@@ -280,42 +280,34 @@ export class ScenarioRuntime {
     operation: () => T | Promise<T>,
   ): Promise<T> {
     assertNonEmpty(point, "boundary point");
-    if (this.executionDepth === 0) {
-      this.propagatingInjectedProblem = undefined;
+    this.recordTimeline("boundary", point, { boundary });
+    const planned = this.findPlannedFailure(point, boundary);
+    if (!planned) {
+      return await this.executeOperation(operation);
     }
-    this.executionDepth += 1;
-    try {
-      this.recordTimeline("boundary", point, { boundary });
-      const planned = this.findPlannedFailure(point, boundary);
-      if (!planned) {
-        return await this.executeOperation(operation);
-      }
 
-      if (planned.failure.kind === "duplicate-delivery") {
-        this.planned.shift();
-        this.recordTimeline("failure", point, { boundary, failure: planned.failure.kind });
-        let result: T | undefined;
-        for (let delivery = 0; delivery < planned.failure.deliveries; delivery += 1) {
-          result = await this.executeOperation(operation);
-        }
-        return result as T;
-      }
-
-      this.consumePlannedFailure(planned);
-      if (planned.failure.kind === "lost-response") {
-        await this.executeOperation(operation);
-      }
-      if (planned.failure.virtualTimeAdvance !== undefined) {
-        await this.advanceBy(planned.failure.virtualTimeAdvance);
-      }
-
+    if (planned.failure.kind === "duplicate-delivery") {
+      this.planned.shift();
       this.recordTimeline("failure", point, { boundary, failure: planned.failure.kind });
-      this.recordProblem(planned.failure.problem);
-      this.propagatingInjectedProblem = planned.failure.problem;
-      throw planned.failure.problem;
-    } finally {
-      this.executionDepth -= 1;
+      let result: T | undefined;
+      for (let delivery = 0; delivery < planned.failure.deliveries; delivery += 1) {
+        result = await this.executeOperation(operation);
+      }
+      return result as T;
     }
+
+    this.consumePlannedFailure(planned);
+    if (planned.failure.kind === "lost-response") {
+      await this.executeOperation(operation);
+    }
+    if (planned.failure.virtualTimeAdvance !== undefined) {
+      await this.advanceBy(planned.failure.virtualTimeAdvance);
+    }
+
+    this.recordTimeline("failure", point, { boundary, failure: planned.failure.kind });
+    this.recordProblem(planned.failure.problem);
+    this.injectedProblems.add(planned.failure.problem);
+    throw planned.failure.problem;
   }
 
   async run(run: (scenario: ScenarioRuntime) => void | Promise<void>): Promise<ScenarioReport> {
@@ -338,7 +330,7 @@ export class ScenarioRuntime {
         );
       }
       if (
-        error !== this.propagatingInjectedProblem ||
+        !this.injectedProblems.has(error) ||
         !this.expectedProblems.some(({ code }) => code === error.code)
       ) {
         throw error;
@@ -365,7 +357,7 @@ export class ScenarioRuntime {
           error instanceof Error ? error : undefined,
         );
       }
-      if (error !== this.propagatingInjectedProblem) {
+      if (!this.injectedProblems.has(error)) {
         try {
           this.recordProblem(error);
         } catch (recordingError) {
