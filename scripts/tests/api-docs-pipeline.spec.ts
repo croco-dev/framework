@@ -127,6 +127,72 @@ describe("API documentation pipeline", () => {
     );
   });
 
+  it.each([
+    ["admin-core", "EnrichmentOperations", "read", "EnrichmentPage"],
+    ["analytics-drizzle", "DrizzleEnrichmentStore", "load", "EnrichmentRun"],
+  ])(
+    "preserves %s enrichment return types without dependency build artifacts",
+    (directory, className, methodName, resultName) => {
+      const root = mkdtempSync(join(tmpdir(), "croco-enrichment-api-"));
+      TEMP_ROOTS.push(root);
+      const output = join(root, "model.json");
+      const script = String.raw`
+        import { createRequire } from "node:module";
+        import { pathToFileURL } from "node:url";
+        const docsRequire = createRequire(${JSON.stringify(join(REPOSITORY_ROOT, "packages/docs/package.json"))});
+        const typedocPath = docsRequire.resolve("typedoc");
+        const { Application } = await import(pathToFileURL(typedocPath).href);
+        const ts = createRequire(typedocPath)("typescript");
+        const fileExists = ts.sys.fileExists;
+        ts.sys.fileExists = (path) =>
+          !path.replaceAll("\\", "/").includes("/analytics-core/dist/") && fileExists(path);
+        const { apiDocCompilerOptions } = await import(${JSON.stringify(join(REPOSITORY_ROOT, "packages/docs/api-docs.config.mjs"))});
+        const app = await Application.bootstrap({
+          entryPoints: [${JSON.stringify(join(REPOSITORY_ROOT, "packages", directory, "src/index.ts"))}],
+          compilerOptions: apiDocCompilerOptions,
+          disableSources: true,
+          excludeInternal: true,
+          excludePrivate: true,
+          excludeProtected: true,
+          excludeReferences: true,
+          readme: "none",
+          skipErrorChecking: true,
+        }, []);
+        const project = await app.convert();
+        if (!project || app.logger.hasErrors()) throw new Error("API model conversion failed");
+        await app.generateJson(project, ${JSON.stringify(output)});
+      `;
+      const result = spawnSync(process.execPath, ["--input-type=module"], {
+        cwd: join(REPOSITORY_ROOT, "packages", directory),
+        input: script,
+        encoding: "utf8",
+      });
+      expect(result.status, result.stdout + result.stderr).toBe(0);
+      const model = JSON.parse(readFileSync(output, "utf8")) as {
+        children: {
+          name: string;
+          children: { name: string; signatures: { type: { typeArguments: unknown[] } }[] }[];
+        }[];
+      };
+      const method = model.children
+        .find(({ name }) => name === className)
+        ?.children.find(({ name }) => name === methodName);
+      const argument = method?.signatures[0].type.typeArguments[0];
+      if (directory === "admin-core") {
+        expect(argument).toMatchObject({ type: "reference", name: resultName });
+      } else {
+        expect(argument).toMatchObject({
+          type: "union",
+          types: expect.arrayContaining([
+            expect.objectContaining({ type: "reference", name: resultName }),
+            { type: "literal", value: null },
+          ]),
+        });
+      }
+    },
+    60000,
+  );
+
   it("gives every documented package a cacheable model task and docs dependency edge", () => {
     const docsManifest = readManifest(join(REPOSITORY_ROOT, "packages", "docs", "package.json"));
     expect(docsManifest.scripts?.["docs:api:render"]).toBe(`${DOCS_WRAPPER} --api-render`);
