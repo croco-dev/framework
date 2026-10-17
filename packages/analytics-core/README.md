@@ -282,18 +282,21 @@ explicit login linking, immutable audited definitions, bounded comparison/export
 and retention over an `AcquisitionStore`. See [the runnable first-party example](../../examples/acquisition).
 
 ```typescript typecheck
-import { parseAcquisitionContext } from '@croco/analytics-core/acquisition';
+import { parseAcquisitionContext } from "@croco/analytics-core/acquisition";
 
 const urls = {
-  origin: 'https://shop.example',
-  destinations: { home: '/', pricing: '/pricing' },
-  campaigns: { utm_source: ['newsletter'] },
-  referrerOrigins: ['https://search.example'],
+  origin: "https://shop.example",
+  destinations: { home: "/", pricing: "/pricing" },
+  campaigns: { utm_source: ["newsletter"] },
+  referrerOrigins: ["https://search.example"],
 };
-const context = parseAcquisitionContext({
-  url: 'https://shop.example/?utm_source=newsletter&token=discarded',
-  referrerAvailable: false,
-}, urls);
+const context = parseAcquisitionContext(
+  {
+    url: "https://shop.example/?utm_source=newsletter&token=discarded",
+    referrerAvailable: false,
+  },
+  urls,
+);
 // { landingRef: 'home', campaign: { utm_source: 'newsletter' }, referrer: { status: 'unavailable' } }
 ```
 
