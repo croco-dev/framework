@@ -329,6 +329,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`ModuleRuntimeStaleContextProblem`](/api/framework-module/src/classes/moduleruntimestalecontextproblem/)
 - [`ProblemFetchUnavailableError`](/api/frontend-problems/src/classes/problemfetchunavailableerror/)
 - [`ProblemStatusMismatchError`](/api/frontend-problems/src/classes/problemstatusmismatcherror/)
+- [`ExperimentDeliveryClientProblem`](/api/frontend-react/src/classes/experimentdeliveryclientproblem/)
 - [`PageDataUnavailableProblem`](/api/frontend-react/src/classes/pagedataunavailableproblem/)
 - [`MissingCloudflareVitePluginProblem`](/api/frontend-vite/src/classes/missingcloudflarevitepluginproblem/)
 - [`ChallengeAccessDeniedProblem`](/api/gamification-core/src/classes/challengeaccessdeniedproblem/)

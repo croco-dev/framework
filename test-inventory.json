@@ -14,6 +14,12 @@
       "owner": "repo:examples"
     },
     {
+      "path": "examples/experiment-runtime/src/tests/DeliveryCohort.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "repo:examples"
+    },
+    {
       "path": "examples/first-party-plugin-composition/src/tests/FirstPartyPluginComposition.spec.ts",
       "lane": "fast",
       "qualifiers": [],
@@ -2648,6 +2654,12 @@
       "owner": "@croco/experience-drizzle"
     },
     {
+      "path": "packages/features-core/src/tests/ExperimentDelivery.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/features-core"
+    },
+    {
       "path": "packages/features-core/src/tests/ExperimentRuntime.spec.ts",
       "lane": "fast",
       "qualifiers": [],
@@ -2985,6 +2997,12 @@
     },
     {
       "path": "packages/frontend-react/src/tests/ExperienceSlotProcess.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/frontend-react"
+    },
+    {
+      "path": "packages/frontend-react/src/tests/ExperimentRegion.spec.tsx",
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/frontend-react"

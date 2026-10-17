@@ -140,3 +140,55 @@ leases and command receipts. The existing `FeatureManager` flag API remains avai
 When registering multiple schema versions, the most recently registered version is the
 current version for new drafts. Historical resolution uses each immutable revision’s
 recorded schema version.
+
+## Render delivery bridge
+
+`ExperimentDeliveryBridge` binds only registered render regions to an immutable server assignment.
+It accepts either the real `ExperimentRuntime` (`assign`, `admitDisplay`, `recordExposure`) or an
+application-owned verified assignment reader. `prepare(..., "speculative")` creates no exposure;
+`admit(receipt, currentServerIdentity)` rechecks authorization, current eligibility and experiment
+state without evaluating the allocator/provider again. It issues a new opaque admitted receipt for
+the same delivery and variant. A fallback has no variant or reportable receipt.
+
+Use `render(regions, identity, request, renderCallback)` around the actual `RenderServer` request.
+Its callback receives the frozen public decisions and its response is `private, no-store`, including
+Flight. The host must overwrite any transport used to pass these decisions to server components;
+never accept a browser-supplied decision, subject, actor, target or policy revision as authority.
+`examples/experiment-runtime/src/deliveryServer.ts` demonstrates this with an internal request
+header and a request-local RenderServer; no receipt is installed in a process-global renderer.
+HTML and the browser bootstrap consume the same decision; Node RSC HTML is decoded from official
+Flight carrying that decision. Other hosts and client-reference manifests are unverified here.
+
+`experimentRegionFragment(decision)` returns a public cache projection and key based on the region,
+policy revision, experiment revision, status, variant and value. Cache only that projection or
+markup derived solely from it. Keep `deliveryId`, receipts and the browser bootstrap outside shared
+fragments. This bridge does not enable public response caching or replace representation/deployment
+manifest negotiation. Fallback and control have distinct keys and measurement semantics.
+
+`expose` takes an admitted receipt, a display instance id and its occurrence time. The server resolves
+the original assignment; a client cannot choose a variant. Retransmitting the same delivery/region/
+display instance deduplicates in the assignment reader's exposure sink; a new display instance is a
+new exposure. Late reports remain historical after pause/expiry/source rollback. Pause and expiry
+block new admission, without claiming an already delivered UI or completed command was withdrawn.
+The host verifies the current identity on every request and changes the browser session generation
+on login/logout/tenant transitions. Every cached navigation must go through `admit` before use;
+receipt possession alone does not authorize a new display.
+
+Reuse `PublishedCohortReader` via the existing `cohortExperimentEligibility` example for snapshot
+schema/hash/scope/publication/expiry/current privacy validation. Serving reads published data, not
+warehouse/GSC/LLM sources. A compatible rollback is a new trusted publication, never a rewrite of
+assignment history; the publication owner validates compatibility and current suppression. The
+bridge neither publishes snapshots nor decides current prices, eligibility to buy, access or balances.
+
+Reader calls have a hard deadline; timeout/abort yields fallback during preparation and rejects
+consumption. A reader may finish its underlying assignment after timeout but cannot create a bridge
+receipt for it. `inspect` receives region, status, reason, phase and decision cost, without subjects
+or source traits. Inspector failure does not change rendering and increments `getInspectionFailureCount()`. Exposure events distinguish recorded/failed observations without changing the assignment. Exposure sink failure is returned to
+the caller and must be handled as an observation failure, independently of completed business
+commands; never retry a purchase because measurement failed.
+
+`InMemoryExperimentDeliveryStore` is a single-process reference receipt store, with no restart,
+replica or retention guarantee. Production hosts supply private shared persistence with unique tokens,
+immutable receipt records and a retention policy that permits their late-report window. Keep public
+variant values free of secrets and sensitive traits. These source/fixture guarantees do not establish
+provider certification, production deployment or npm publication.

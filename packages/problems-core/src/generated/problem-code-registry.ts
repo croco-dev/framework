@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export type CrocoProblemRegistry = {
   readonly version: "croco.problem-code-registry.v1";
-  readonly problemCount: 1063;
+  readonly problemCount: 1064;
   readonly problems: readonly [
     {
       readonly code: "ACCESS_DENIED";
@@ -15443,6 +15443,34 @@ export type CrocoProblemRegistry = {
       ];
     },
     {
+      readonly code: "frontend-react/experiment-delivery-failed";
+      readonly category: "InternalServerError";
+      readonly status: 500;
+      readonly title: "Internal Server Error";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#frontend-react-experiment-delivery-failed";
+      readonly recovery: {
+        readonly cause: "Delivery admission changed the frozen decision, or the private receipt transport failed.";
+        readonly userAction: "Keep fallback on failed admission; preserve an already delivered screen when exposure reporting fails.";
+        readonly operatorAction: "Inspect the authenticated admission response and receipt endpoint. Retry only observation with the same display identity after recovery; never replay a completed purchase or benefit command.";
+        readonly retryability: "conditional";
+        readonly redactionPolicy: "safe-message";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.error";
+          readonly severity: "error";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/frontend-react/src/libs/ExperimentRegion.ts";
+          readonly line: 6;
+          readonly column: 1;
+          readonly kind: "problem-class";
+        },
+      ];
+    },
+    {
       readonly code: "frontend-react/page-data-unavailable";
       readonly category: "InternalServerError";
       readonly status: 500;
@@ -30057,7 +30085,7 @@ export type CrocoProblemRegistry = {
 
 export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 1063,
+  problemCount: 1064,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -47261,6 +47289,40 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
         {
           file: "packages/frontend-problems/src/index.ts",
           line: 226,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "frontend-react/experiment-delivery-failed",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#frontend-react-experiment-delivery-failed",
+      recovery: {
+        cause:
+          "Delivery admission changed the frozen decision, or the private receipt transport failed.",
+        userAction:
+          "Keep fallback on failed admission; preserve an already delivered screen when exposure reporting fails.",
+        operatorAction:
+          "Inspect the authenticated admission response and receipt endpoint. Retry only observation with the same display identity after recovery; never replay a completed purchase or benefit command.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/frontend-react/src/libs/ExperimentRegion.ts",
+          line: 6,
           column: 1,
           kind: "problem-class",
         },

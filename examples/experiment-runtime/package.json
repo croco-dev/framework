@@ -9,16 +9,20 @@
     "build:browser": "tsup",
     "dev": "pnpm build:browser && tsx src/server.ts",
     "test": "vitest run",
-    "test:evidence": "pnpm run test --maxWorkers=1 --reporter=json --outputFile=.turbo/croco-test-evidence.json"
+    "test:evidence": "pnpm run test --maxWorkers=1 --reporter=json --outputFile=.turbo/croco-test-evidence.json",
+    "delivery:build": "tsup --config tsup.delivery.config.ts",
+    "delivery:serve": "tsx src/deliveryServer.ts"
   },
   "dependencies": {
     "@croco/admin-core": "workspace:*",
     "@croco/admin-react": "workspace:*",
     "@croco/cohort-core": "workspace:*",
     "@croco/features-core": "workspace:*",
+    "@croco/frontend-react": "workspace:*",
+    "@croco/meta-vite": "workspace:*",
     "@croco/problems-core": "workspace:*",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react": "19.2.6",
+    "react-dom": "19.2.6"
   },
   "devDependencies": {
     "@types/node": "^24",
