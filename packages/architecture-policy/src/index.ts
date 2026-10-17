@@ -169,7 +169,7 @@ type PackageInfo = {
   readonly group: string | null;
   readonly packageJsonPath: string;
   readonly packageJson: Record<string, unknown>;
-  readonly exportSubpaths: readonly string[];
+  readonly exportSubpaths: Readonly<Record<string, unknown>>;
 };
 
 type ImportRecord = {
@@ -523,19 +523,17 @@ function readJsonFile(path: string): unknown {
   }
 }
 
-function readPackageExportSubpaths(packageJson: Record<string, unknown>): readonly string[] {
+function readPackageExportSubpaths(
+  packageJson: Record<string, unknown>,
+): Readonly<Record<string, unknown>> {
   const publishConfig = isRecord(packageJson.publishConfig) ? packageJson.publishConfig : undefined;
   const exportsField = publishConfig?.exports ?? packageJson.exports;
 
-  if (typeof exportsField === "string") {
-    return ["."];
+  if (isRecord(exportsField) && Object.keys(exportsField).some((key) => key.startsWith("."))) {
+    return exportsField;
   }
 
-  if (!isRecord(exportsField)) {
-    return ["."];
-  }
-
-  return Object.keys(exportsField).sort();
+  return { ".": exportsField };
 }
 
 function collectSourceImports(
@@ -1097,18 +1095,38 @@ function findJsonPropertyLocation(
 
 function isExportedSubpath(pkg: PackageInfo, subpath: string): boolean {
   const exportKey = `./${subpath}`;
+  if (Object.hasOwn(pkg.exportSubpaths, exportKey)) {
+    return hasPublicExportTarget(pkg.exportSubpaths[exportKey]);
+  }
 
-  return pkg.exportSubpaths.some((candidate) => {
-    if (candidate === exportKey) {
-      return true;
+  // Node selects the longest prefix before *, then the longest complete key.
+  // Only the selected target applies: a null exclusion cannot fall back to a broader key.
+  const patterns = Object.keys(pkg.exportSubpaths)
+    .filter((candidate) => {
+      const star = candidate.indexOf("*");
+      return (
+        star !== -1 &&
+        candidate.indexOf("*", star + 1) === -1 &&
+        exportKey.startsWith(candidate.slice(0, star)) &&
+        exportKey.endsWith(candidate.slice(star + 1)) &&
+        exportKey.length >= candidate.length
+      );
+    })
+    .sort((left, right) => right.indexOf("*") - left.indexOf("*") || right.length - left.length);
+  const selected = patterns[0];
+  return selected !== undefined && hasPublicExportTarget(pkg.exportSubpaths[selected]);
+}
+
+function hasPublicExportTarget(target: unknown): boolean {
+  if (typeof target === "string") return true;
+  if (Array.isArray(target)) return target.some(hasPublicExportTarget);
+  if (isRecord(target)) {
+    for (const [condition, value] of Object.entries(target)) {
+      if (hasPublicExportTarget(value)) return true;
+      if (condition === "default") return false;
     }
-
-    if (!candidate.includes("*")) {
-      return false;
-    }
-
-    return matchesPattern(exportKey, candidate);
-  });
+  }
+  return false;
 }
 
 function isEntrypointImportIgnored(
