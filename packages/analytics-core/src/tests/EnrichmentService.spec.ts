@@ -99,6 +99,7 @@ async function fixture(
     definitions?: readonly ClassificationDefinition[];
     inputs?: ReturnType<typeof input>[];
     limits?: ClassificationLimits;
+    retention?: { rawMs: number; resultMs: number };
   } = {},
 ) {
   const store = new MemoryStore();
@@ -117,17 +118,23 @@ async function fixture(
     authorize: async () => state.allowed,
     currentActor: async () => state.actor,
     authorizationRevision: async () => state.authority,
-    sourceAvailable: async () => state.available,
+    sourceAvailable: async (_scope: EnrichmentScope, _sourceRef: string) => state.available,
     prepareInput: (entry: EnrichmentInput) =>
       entry.text.includes("@") ? null : { text: entry.text, context: entry.context },
     settle,
     now: () => state.now,
   };
   const service = new EnrichmentService(policy);
-  await service.enqueueBatch(scope, "run", options.inputs ?? [input()], options.limits ?? limits, {
-    rawMs: 1000,
-    resultMs: 5000,
-  });
+  await service.enqueueBatch(
+    scope,
+    "run",
+    options.inputs ?? [input()],
+    options.limits ?? limits,
+    options.retention ?? {
+      rawMs: 1000,
+      resultMs: 5000,
+    },
+  );
   const classify = (id = "a", version = "v1") =>
     service.classify(scope, "run", id, "intent", version);
   const command = async (key: string) => ({
@@ -385,6 +392,83 @@ describe("EnrichmentService", () => {
     });
     expect(model).toHaveBeenCalledTimes(2);
   });
+  it.each(["running", "acceptance-unknown"] as const)(
+    "keeps a purged %s receipt in admission until explicit stopped-worker acknowledgement",
+    async (outcome) => {
+      let started: (() => void) | undefined;
+      let finish: ((value: typeof answer) => void) | undefined;
+      const invoked = new Promise<void>((resolve) => {
+        started = resolve;
+      });
+      const model = vi
+        .fn<ClassifyText>()
+        .mockImplementationOnce(async () => {
+          started?.();
+          if (outcome === "acceptance-unknown") throw new Error("unknown acceptance");
+          return new Promise<typeof answer>((resolve) => {
+            finish = resolve;
+          });
+        })
+        .mockResolvedValue(answer);
+      const f = await fixture({
+        model,
+        inputs: [input("a", "first"), input("b", "second")],
+        retention: { rawMs: 20000, resultMs: 30000 },
+      });
+      let deleted = false;
+      f.policy.sourceAvailable = async (_scope, sourceRef) => !deleted || sourceRef !== "source-a";
+      const service = new EnrichmentService(f.policy);
+      const pending = service.classify(scope, "run", "a", "intent", "v1");
+      const terminal = pending.catch((error: unknown) => error);
+      await invoked;
+      if (outcome === "acceptance-unknown") await terminal;
+      const initial = await f.store.load(scope, "run");
+      if (!initial) throw new Error("missing fixture run");
+      const receiptId = initial.receipts[0].candidate.receiptId;
+      deleted = true;
+      await service.purge(scope, "run");
+      const classifyB = () => service.classify(scope, "run", "b", "intent", "v1");
+      await expect(classifyB()).rejects.toMatchObject({
+        code: "analytics-core/enrichment-concurrency-limit",
+      });
+      expect(model).toHaveBeenCalledTimes(1);
+      if (outcome === "running") {
+        await expect(
+          service.retry(scope, "run", "a", receiptId, true, await f.command("too-early")),
+        ).rejects.toMatchObject({ code: "analytics-core/enrichment-retry-unavailable" });
+        // The lease alone must never release the claim; the operator must confirm the worker stopped.
+        f.state.now += limits.timeoutMs + 5001;
+        await expect(classifyB()).rejects.toMatchObject({
+          code: "analytics-core/enrichment-concurrency-limit",
+        });
+      }
+      await expect(
+        service.retry(scope, "run", "a", receiptId, false, await f.command("no-ack")),
+      ).rejects.toMatchObject({
+        code: "analytics-core/enrichment-duplicate-billing-acknowledgement-required",
+      });
+      const command = await f.command("stopped-purged-worker");
+      await service.retry(scope, "run", "a", receiptId, true, command);
+      await service.retry(scope, "run", "a", receiptId, true, command);
+      if (outcome === "running") {
+        finish?.(answer);
+        expect(await terminal).toMatchObject({ code: "analytics-core/enrichment-conflict" });
+      }
+      expect(await classifyB()).toMatchObject({ state: "classified" });
+      const stored = await f.store.load(scope, "run");
+      expect(stored?.items[0]).toMatchObject({
+        input: { text: null, context: {} },
+        candidates: [],
+      });
+      expect(stored?.receipts[0].candidate).toMatchObject({
+        retryAuthorized: true,
+        reason: "acceptance-unknown",
+      });
+      expect(stored?.receipts[0].candidate).not.toHaveProperty("labelId");
+      expect(stored?.requests).toBe(2);
+      expect(model).toHaveBeenCalledTimes(2);
+    },
+  );
   it("can acknowledge an older uncertain receipt after a dictionary version is recorded", async () => {
     const model = vi
       .fn<ClassifyText>()
