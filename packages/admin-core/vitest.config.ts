@@ -7,6 +7,10 @@ const currentDir = fileURLToPath(new URL(".", import.meta.url));
 export default defineConfig({
   resolve: {
     alias: {
+      "@croco/analytics-core/acquisition": resolve(
+        currentDir,
+        "../analytics-core/src/acquisition.ts",
+      ),
       "@croco/research-core": resolve(currentDir, "../research-core/src/index.ts"),
       "@croco/metrics-core/runtime": resolve(currentDir, "../metrics-core/src/runtime.ts"),
       "@croco/metrics-core": resolve(currentDir, "../metrics-core/src/index.ts"),

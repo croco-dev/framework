@@ -728,3 +728,9 @@ to `/tmp/croco-learning-2825-browser`, outside the checkout.
 The workspace only replaces a draft with an `isComplete` view. A successful save whose response
 is source-redacted keeps the submitted content and advances its revision. Switching records clears
 revision history and its cursor, so audit pages always belong to the current document.
+
+`AcquisitionInspector` from `@croco/admin-react/acquisition` displays shared-engine model windows,
+versions, credits, selected touchpoint IDs, retained observed sources and separate self-report/referral
+claims. Its state contract includes loading/empty/partial/denied/error/ready. It accepts only authorized,
+masked results, performs no independent attribution, and offers an explicit keyboard-accessible refresh.
+See [the standalone acquisition example](../../examples/acquisition).

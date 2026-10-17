@@ -9,3 +9,23 @@ A scope row lock serializes appends, corrections, reads, and deletion across con
 The migration creates only additive `analytics_fact_*` tables and an index on scope, subject, definition, generation, recorded time and effective start. `dropFactHistory(db)` destructively removes these tables for rollback or disposable database teardown. Existing customer tables require no migration. There is no automatic current-value backfill or connection to a warehouse profile.
 
 Run `ANALYTICS_POSTGRES_URL=postgres://... pnpm --filter @croco/analytics-drizzle test:postgres` against a disposable database. Tests use two independent pools and verify concurrency, rollback/restart, correction CAS, collisions, generations, tenant isolation and deletion.
+
+## Acquisition persistence
+
+`createAcquisition(db)` explicitly applies the additive PostgreSQL migration before traffic.
+`new DrizzleAcquisitionStore(db)` implements the acquisition store contract without boot DDL. Each
+scope mutation locks its revision row and atomically persists touchpoints, identity-link receipts,
+immutable audited definitions, report references and deletion tombstones. The record primary key
+includes scope, kind, source and touchpoint ID; exact receipts replay and conflicting payloads fail.
+A stable touchpoint ID is also unique across sources within a scope so report references are unambiguous.
+
+This adapter deliberately bounds a scope to 10,000 total records and comparison reads to 1,000 matching
+rows. It loads and rewrites the bounded scope under one lock; it targets small first-party workloads,
+not a high-volume event warehouse. Overflow raises `analytics/acquisition/limit` and never silently
+truncates history. Definitions and tombstones count toward this bound. Applications needing a different
+capacity/storage model can implement `AcquisitionStore` with the same atomic rollback and scope isolation
+semantics. Neither dropping a table nor lowering retention is an automatic recovery action.
+
+Run `ANALYTICS_POSTGRES_URL=<disposable-database> pnpm --filter @croco/analytics-drizzle test:postgres`
+for two-client concurrency, replay/collision, migration idempotence, restart persistence, transaction
+rollback and linked erasure evidence. See [the acquisition example](../../examples/acquisition).

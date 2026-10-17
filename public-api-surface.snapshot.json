@@ -3073,6 +3073,45 @@
           ]
         },
         {
+          "exportPath": "./acquisition",
+          "kind": "code",
+          "targets": [
+            {
+              "conditions": ["types", "import"],
+              "target": "./dist/acquisition.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
+              "target": "./dist/acquisition.d.ts"
+            },
+            {
+              "conditions": ["import"],
+              "target": "./dist/acquisition.mjs"
+            },
+            {
+              "conditions": ["require"],
+              "target": "./dist/acquisition.js"
+            }
+          ],
+          "sourceEntrypoint": "packages/admin-core/src/acquisition.ts",
+          "runtimeExports": [
+            {
+              "name": "createAcquisitionOperations",
+              "exportKind": "declaration",
+              "source": "./libs/AcquisitionOperations",
+              "declarationKind": "function"
+            }
+          ],
+          "typeExports": [
+            {
+              "name": "AcquisitionInspectorState",
+              "exportKind": "declaration",
+              "source": "./libs/AcquisitionOperations",
+              "declarationKind": "type"
+            }
+          ]
+        },
+        {
           "exportPath": "./fact-history-operations",
           "kind": "code",
           "targets": [
@@ -5711,6 +5750,45 @@
           ]
         },
         {
+          "exportPath": "./acquisition",
+          "kind": "code",
+          "targets": [
+            {
+              "conditions": ["types", "import"],
+              "target": "./dist/acquisition.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
+              "target": "./dist/acquisition.d.ts"
+            },
+            {
+              "conditions": ["import"],
+              "target": "./dist/acquisition.mjs"
+            },
+            {
+              "conditions": ["require"],
+              "target": "./dist/acquisition.js"
+            }
+          ],
+          "sourceEntrypoint": "packages/admin-react/src/acquisition.ts",
+          "runtimeExports": [
+            {
+              "name": "AcquisitionInspector",
+              "exportKind": "declaration",
+              "source": "./libs/AcquisitionInspector",
+              "declarationKind": "function"
+            }
+          ],
+          "typeExports": [
+            {
+              "name": "AcquisitionInspectorProps",
+              "exportKind": "declaration",
+              "source": "./libs/AcquisitionInspector",
+              "declarationKind": "type"
+            }
+          ]
+        },
+        {
           "exportPath": "./experience-console",
           "kind": "code",
           "targets": [
@@ -6430,6 +6508,153 @@
           ]
         },
         {
+          "exportPath": "./acquisition",
+          "kind": "code",
+          "targets": [
+            {
+              "conditions": ["types", "import"],
+              "target": "./dist/acquisition.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
+              "target": "./dist/acquisition.d.ts"
+            },
+            {
+              "conditions": ["import"],
+              "target": "./dist/acquisition.mjs"
+            },
+            {
+              "conditions": ["require"],
+              "target": "./dist/acquisition.js"
+            }
+          ],
+          "sourceEntrypoint": "packages/analytics-core/src/acquisition.ts",
+          "runtimeExports": [
+            {
+              "name": "AcquisitionProblem",
+              "exportKind": "declaration",
+              "source": "./libs/Acquisition",
+              "declarationKind": "class"
+            },
+            {
+              "name": "AcquisitionService",
+              "exportKind": "declaration",
+              "source": "./libs/Acquisition",
+              "declarationKind": "class"
+            },
+            {
+              "name": "emptyAcquisitionState",
+              "exportKind": "declaration",
+              "source": "./libs/Acquisition",
+              "declarationKind": "function"
+            },
+            {
+              "name": "parseAcquisitionContext",
+              "exportKind": "declaration",
+              "source": "./libs/Acquisition",
+              "declarationKind": "function"
+            },
+            {
+              "name": "resolveAcquisitionDestination",
+              "exportKind": "declaration",
+              "source": "./libs/Acquisition",
+              "declarationKind": "function"
+            },
+            {
+              "name": "resolveAttribution",
+              "exportKind": "declaration",
+              "source": "./libs/Acquisition",
+              "declarationKind": "function"
+            },
+            {
+              "name": "validateAcquisitionContext",
+              "exportKind": "declaration",
+              "source": "./libs/Acquisition",
+              "declarationKind": "function"
+            }
+          ],
+          "typeExports": [
+            {
+              "name": "AcquisitionAttribution",
+              "exportKind": "declaration",
+              "source": "./libs/Acquisition",
+              "declarationKind": "type"
+            },
+            {
+              "name": "AcquisitionComparison",
+              "exportKind": "declaration",
+              "source": "./libs/Acquisition",
+              "declarationKind": "type"
+            },
+            {
+              "name": "AcquisitionContext",
+              "exportKind": "declaration",
+              "source": "./libs/Acquisition",
+              "declarationKind": "type"
+            },
+            {
+              "name": "AcquisitionConversion",
+              "exportKind": "declaration",
+              "source": "./libs/Acquisition",
+              "declarationKind": "type"
+            },
+            {
+              "name": "AcquisitionDefinition",
+              "exportKind": "declaration",
+              "source": "./libs/Acquisition",
+              "declarationKind": "type"
+            },
+            {
+              "name": "AcquisitionIdentity",
+              "exportKind": "declaration",
+              "source": "./libs/Acquisition",
+              "declarationKind": "type"
+            },
+            {
+              "name": "AcquisitionLink",
+              "exportKind": "declaration",
+              "source": "./libs/Acquisition",
+              "declarationKind": "type"
+            },
+            {
+              "name": "AcquisitionPolicy",
+              "exportKind": "declaration",
+              "source": "./libs/Acquisition",
+              "declarationKind": "type"
+            },
+            {
+              "name": "AcquisitionScope",
+              "exportKind": "declaration",
+              "source": "./libs/Acquisition",
+              "declarationKind": "type"
+            },
+            {
+              "name": "AcquisitionState",
+              "exportKind": "declaration",
+              "source": "./libs/Acquisition",
+              "declarationKind": "type"
+            },
+            {
+              "name": "AcquisitionStore",
+              "exportKind": "declaration",
+              "source": "./libs/Acquisition",
+              "declarationKind": "interface"
+            },
+            {
+              "name": "AcquisitionTouchpoint",
+              "exportKind": "declaration",
+              "source": "./libs/Acquisition",
+              "declarationKind": "type"
+            },
+            {
+              "name": "AcquisitionUrlPolicy",
+              "exportKind": "declaration",
+              "source": "./libs/Acquisition",
+              "declarationKind": "type"
+            }
+          ]
+        },
+        {
           "exportPath": "./runtime",
           "kind": "code",
           "targets": [
@@ -6524,10 +6749,22 @@
           "sourceEntrypoint": "packages/analytics-drizzle/src/index.ts",
           "runtimeExports": [
             {
+              "name": "DrizzleAcquisitionStore",
+              "exportKind": "named",
+              "source": "./libs/DrizzleAcquisitionStore",
+              "declarationKind": "class"
+            },
+            {
               "name": "DrizzleFactHistoryStore",
               "exportKind": "named",
               "source": "./libs/DrizzleFactHistoryStore",
               "declarationKind": "class"
+            },
+            {
+              "name": "createAcquisition",
+              "exportKind": "named",
+              "source": "./migrations/createAcquisition",
+              "declarationKind": "function"
             },
             {
               "name": "createFactHistory",
@@ -22579,6 +22816,51 @@
               "name": "SurveyModalProps",
               "exportKind": "named",
               "source": "./libs/SurveyCard"
+            }
+          ]
+        },
+        {
+          "exportPath": "./acquisition",
+          "kind": "code",
+          "targets": [
+            {
+              "conditions": ["types", "import"],
+              "target": "./dist/acquisition.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
+              "target": "./dist/acquisition.d.ts"
+            },
+            {
+              "conditions": ["import"],
+              "target": "./dist/acquisition.mjs"
+            },
+            {
+              "conditions": ["require"],
+              "target": "./dist/acquisition.js"
+            }
+          ],
+          "sourceEntrypoint": "packages/frontend-react/src/acquisition.ts",
+          "runtimeExports": [
+            {
+              "name": "AcquisitionCollectorProblem",
+              "exportKind": "declaration",
+              "source": "./libs/acquisitionCollector",
+              "declarationKind": "class"
+            },
+            {
+              "name": "collectAcquisitionContext",
+              "exportKind": "declaration",
+              "source": "./libs/acquisitionCollector",
+              "declarationKind": "function"
+            }
+          ],
+          "typeExports": [
+            {
+              "name": "AcquisitionBrowserLocation",
+              "exportKind": "declaration",
+              "source": "./libs/acquisitionCollector",
+              "declarationKind": "type"
             }
           ]
         },
