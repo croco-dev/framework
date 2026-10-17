@@ -856,15 +856,18 @@ function renderAdminFormInput<TValues extends object>({
       {
         ...commonProps,
         onChange,
-        value: stringifyAdminFormInputValue(value),
+        value: adminFormSelectOptionId(
+          value,
+          field.options?.findIndex((option) => Object.is(option.value, value)) ?? -1,
+        ),
       },
-      field.options?.map((option) =>
+      field.options?.map((option, index) =>
         createElement(
           "option",
           {
             disabled: option.disabled,
-            key: stringifyAdminFormInputValue(option.value),
-            value: stringifyAdminFormInputValue(option.value),
+            key: index,
+            value: adminFormSelectOptionId(option.value, index),
           },
           option.label,
         ),
@@ -904,7 +907,7 @@ function readAdminFormInputValue<TValues extends object, TName extends AdminForm
 
   if (field.inputType === "select") {
     const matchingOption = field.options?.find(
-      (option) => stringifyAdminFormInputValue(option.value) === rawValue,
+      (option, index) => adminFormSelectOptionId(option.value, index) === rawValue,
     );
 
     if (matchingOption) {
@@ -938,6 +941,15 @@ function stringifyAdminFormDateValue(value: Date): string {
     String(value.getUTCMonth() + 1).padStart(2, "0"),
     String(value.getUTCDate()).padStart(2, "0"),
   ].join("-");
+}
+
+function adminFormSelectOptionId(value: unknown, index: number): string {
+  // Only the first option can be the native required-select placeholder.
+  if (index <= 0 && (value === "" || value === null || value === undefined)) {
+    return "";
+  }
+
+  return String(index);
 }
 
 function stringifyAdminFormInputValue(value: unknown): string {
