@@ -132,7 +132,9 @@ pnpm create-croco-app:smoke
 ## Kubernetes Node API
 
 ```sh
-npx create-croco-app my-api --preset production-app --backend-deploy kubernetes --scope @myorg
+npx create-croco-app my-api --preset production-app --backend-deploy kubernetes --scope @myorg --no-install --no-git
+cd my-api
+pnpm install
 ```
 
 This opt-in backend profile keeps the existing Node Host, REST transport and compiled DI.
