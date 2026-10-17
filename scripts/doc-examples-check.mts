@@ -3,6 +3,7 @@
 import { compareStrings } from "../tooling/compareStrings.mjs";
 
 import * as ts from "typescript";
+import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, extname, join, relative, resolve } from "node:path";
 import { argv, exit, stdout } from "node:process";
@@ -1076,12 +1077,18 @@ function generateVirtualFiles(
     const fileName = join(
       rootDir,
       dirname(block.file),
-      `.croco-doc-example.${sanitizeFileName(block.file)}.${block.typeScriptBlockIndex}.${extension}`,
+      `.croco-doc-example.${createHash("sha256").update(block.file).digest("hex")}.${block.typeScriptBlockIndex}.${extension}`,
     );
     const source = [`// Source: ${formatBlock(block)}`, "", block.code, "", "export {};", ""].join(
       "\n",
     );
     const normalizedFileName = normalizePath(fileName);
+    const existingBlock = blocksByFile.get(normalizedFileName);
+    if (existingBlock) {
+      throw new Error(
+        `Virtual documentation file collision: ${formatBlock(existingBlock)} and ${formatBlock(block)}`,
+      );
+    }
 
     files.set(normalizedFileName, source);
     blocksByFile.set(normalizedFileName, block);
@@ -1164,8 +1171,4 @@ function normalizeRelativePath(rootDir: string, filePath: string): string {
 
 function normalizePath(path: string): string {
   return path.replace(/\\/g, "/");
-}
-
-function sanitizeFileName(file: string): string {
-  return file.replace(/[^a-zA-Z0-9.-]+/g, "_");
 }
