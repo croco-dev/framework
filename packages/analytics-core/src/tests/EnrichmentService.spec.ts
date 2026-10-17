@@ -660,4 +660,67 @@ describe("EnrichmentService", () => {
       });
     },
   );
+  it.each([1200, 6000])(
+    "redacts the whole page when a later source check crosses retention at %s",
+    async (expiresAt) => {
+      const f = await fixture({ inputs: [input("a"), input("b")] });
+      for (const id of ["a", "b"]) {
+        await f.classify(id);
+        await f.service.review(
+          scope,
+          "run",
+          id,
+          "intent",
+          "v1",
+          "help",
+          "Checked source",
+          await f.command(`review-${id}`),
+        );
+      }
+      let reads = 0;
+      const service = new EnrichmentService({
+        ...f.policy,
+        sourceAvailable: async () => {
+          if (++reads === 2) f.state.now = expiresAt;
+          return true;
+        },
+      });
+      const page = await service.read(scope, "run");
+      expect(page.items.map((item) => item.original)).toEqual([null, null]);
+      expect(page.items.map((item) => item.availability)).toEqual(
+        expiresAt === 1200 ? ["raw-expired", "raw-expired"] : ["result-expired", "result-expired"],
+      );
+      if (expiresAt === 6000) {
+        expect(page.status).toBe("partial");
+        for (const item of page.items) {
+          expect(item.candidates).toEqual([]);
+          expect(item.reviewHistory).toEqual([]);
+          expect(item.review).toBeUndefined();
+        }
+      } else {
+        expect(page.items.map((item) => item.review?.labelId)).toEqual(["help", "help"]);
+      }
+    },
+  );
+  it.each(["cached", "completed"])(
+    "does not return %s candidates after authorization checks cross result retention",
+    async (path) => {
+      const f = await fixture({
+        model: async () => answer,
+        inputs: [input("a", "purchase a course")],
+      });
+      if (path === "cached") await f.classify();
+      let reads = 0;
+      const service = new EnrichmentService({
+        ...f.policy,
+        authorizationRevision: async () => {
+          if (++reads === (path === "cached" ? 1 : 3)) f.state.now = 6000;
+          return f.state.authority;
+        },
+      });
+      await expect(service.classify(scope, "run", "a", "intent", "v1")).rejects.toMatchObject({
+        code: "analytics-core/enrichment-result-expired",
+      });
+    },
+  );
 });

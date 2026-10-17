@@ -584,8 +584,10 @@ export class EnrichmentService {
             if (receipt) receipt.candidate = this.receiptCandidate(failed);
           }
         });
+        await this.live(scope, run, item);
         return { ...existing, state: "failed", reason: "acceptance-unknown", delivery: "pending" };
       }
+      await this.live(scope, run, item);
       return existing;
     }
     if (this.now() >= run.rawExpiresAt) fail("raw-expired");
@@ -821,6 +823,7 @@ export class EnrichmentService {
       (await this.options.authorizationRevision(scope)) !== authorityRevision
     )
       fail("authority-changed");
+    if (this.now() >= run.resultExpiresAt) fail("result-expired");
     if (cause && final.state === "failed") {
       if (!dispatched && cause instanceof EnrichmentProblem) throw cause;
       throw new EnrichmentProblem(
@@ -858,32 +861,34 @@ export class EnrichmentService {
     )
       fail("invalid-page");
     const run = await this.load(scope, runId);
-    const items: EnrichmentItem[] = [];
+    const sources: { row: EnrichmentRun["items"][number]; available: boolean }[] = [];
     for (const row of run.items.slice(offset, offset + limit)) {
       const available = await this.options.sourceAvailable(
         scope,
         row.input.sourceRef,
         row.input.inputRevision,
       );
-      const resultExpired = this.now() >= run.resultExpiresAt;
-      const rawExpired = this.now() >= run.rawExpiresAt;
-      items.push({
-        itemId: row.input.itemId,
-        inputRevision: row.input.inputRevision,
-        sourceRef: row.input.sourceRef,
-        availability: !available
-          ? "deleted"
-          : resultExpired
-            ? "result-expired"
-            : rawExpired
-              ? "raw-expired"
-              : "available",
-        original: available && !rawExpired && !resultExpired ? row.input.text : null,
-        candidates: available && !resultExpired ? row.candidates : [],
-        reviewHistory: available && !resultExpired ? row.reviews.slice(-20) : [],
-        ...(available && !resultExpired && row.review ? { review: row.review } : {}),
-      });
+      sources.push({ row, available });
     }
+    // Project the entire page after all asynchronous source checks finish.
+    const resultExpired = this.now() >= run.resultExpiresAt;
+    const rawExpired = this.now() >= run.rawExpiresAt;
+    const items: EnrichmentItem[] = sources.map(({ row, available }) => ({
+      itemId: row.input.itemId,
+      inputRevision: row.input.inputRevision,
+      sourceRef: row.input.sourceRef,
+      availability: !available
+        ? "deleted"
+        : resultExpired
+          ? "result-expired"
+          : rawExpired
+            ? "raw-expired"
+            : "available",
+      original: available && !rawExpired && !resultExpired ? row.input.text : null,
+      candidates: available && !resultExpired ? row.candidates : [],
+      reviewHistory: available && !resultExpired ? row.reviews.slice(-20) : [],
+      ...(available && !resultExpired && row.review ? { review: row.review } : {}),
+    }));
     const status = items.some(
       (item) => item.availability === "deleted" || item.availability === "result-expired",
     )
