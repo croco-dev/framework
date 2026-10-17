@@ -281,7 +281,7 @@ and `resolveAttribution` are pure functions; `AcquisitionService` supplies autho
 explicit login linking, immutable audited definitions, bounded comparison/export references, deletion
 and retention over an `AcquisitionStore`. See [the runnable first-party example](../../examples/acquisition).
 
-```ts
+```typescript typecheck
 import { parseAcquisitionContext } from '@croco/analytics-core/acquisition';
 
 const urls = {
