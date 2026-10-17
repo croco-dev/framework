@@ -59,8 +59,16 @@ controllers in `.oxlintrc.json`.
 The rule fails on:
 
 - `@All(...)`
-- `@Body()` without a schema argument
-- `@Param("name")`, `@Query("name")`, or `@Header("name")` without a schema argument
+- `@Body()` without a schema, including explicit `undefined` or `void` arguments
+- Named `@Param`, `@Query`, or `@Header` calls without a schema, including explicit `undefined` or `void`
+  schema arguments. Names may be quoted strings, templates without substitutions, or local `const`
+  bindings initialized from those expressions (including constant aliases and TypeScript assertions).
+
+This is a syntax-and-scope check, not a type-aware schema validator. It preserves schema expressions,
+contract-object overloads and `@Query()` whole-object binding. Imported values, mutable bindings,
+computed expressions and templates with substitutions are not resolved as names; type-aware contract
+validation must check those inputs. A locally shadowed `undefined` binding is also left to type-aware
+validation.
 
 Generated templates should instead pass the route contract schema:
 
