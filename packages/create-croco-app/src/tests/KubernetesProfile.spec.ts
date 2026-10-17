@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, rmSync, appendFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -91,7 +91,20 @@ describe("Kubernetes Node API profile", () => {
         encoding: "utf8",
       });
     expect(check().status).toBe(0);
-    appendFileSync(join(target, "kubernetes/resources.yaml"), "\n# reviewed local edit\n");
+    // Mutable settings have one authority: the referenced artifact, not copied metadata.
+    expect(manifest.build).toEqual({
+      dockerfile: "apps/api-server/Dockerfile",
+      buildConfig: "apps/api-server/tsup.config.ts",
+    });
+    expect(manifest.configuration).toEqual({ resourceFile: "kubernetes/resources.yaml" });
+    const resourcePath = join(target, manifest.configuration.resourceFile);
+    writeFileSync(
+      resourcePath,
+      readFileSync(resourcePath, "utf8").replace(
+        "croco-api:local",
+        "registry.example.com/api@sha256:reviewed",
+      ),
+    );
     const drift = check();
     expect(drift.status).not.toBe(0);
     expect(drift.stderr).toContain("Profile drift: kubernetes/resources.yaml");

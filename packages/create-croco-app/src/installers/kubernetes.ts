@@ -61,22 +61,17 @@ export function writeKubernetesProfileManifest(targetDir: string): void {
         generator: { name: "create-croco-app", version: getPackageVersion() },
         ownership: "generated-until-reviewed-adoption",
         runtimeCapabilityManifest: "croco-runtime-capability.manifest.json",
+        // Record canonical artifact locations, not copies of mutable deployment settings.
+        // Reviewed adoption updates their hashes, so image/port/budget edits have one authority.
         build: {
           dockerfile: "apps/api-server/Dockerfile",
-          entrypoint: "apps/api-server/dist/kubernetes.js",
-          image: "croco-api:local",
+          buildConfig: "apps/api-server/tsup.config.ts",
         },
-        configuration: {
-          resourceFile: "kubernetes/resources.yaml",
-          configMap: "croco-api-config",
-          secretRef: "croco-api-secrets",
-          port: 3000,
-        },
+        configuration: { resourceFile: "kubernetes/resources.yaml" },
         termination: {
-          drainTimeoutMs: 20000,
-          propagationDelayMs: 5000,
-          hostCloseTimeoutMs: 30000,
-          podGraceSeconds: 120,
+          applicationLifecycleSource: "apps/api-server/src/kubernetes.ts",
+          nodeLifecycleSource: "apps/api-server/src/node-application.ts",
+          resourceFile: "kubernetes/resources.yaml",
         },
         verification: {
           schema: "not-run",

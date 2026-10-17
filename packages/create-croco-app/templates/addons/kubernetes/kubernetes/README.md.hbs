@@ -8,7 +8,8 @@ Helm and a controller are unnecessary for these three native resources.
 This is a minimal **uncertified** profile. Offline schema validation and a loopback Node
 Host smoke are separate from live cluster deployment. Neither Docker Compose nor a
 successful build proves cluster support. `croco-infrastructure-profile.manifest.json`
-records ownership, generator version, runtime/build/configuration and file hashes;
+records ownership, generator version, canonical runtime/build/configuration/lifecycle
+file locations and hashes; mutable image/port/budget values live only in those files;
 its initial `not-run`/`not-verified` fields are not test results. `pnpm k8s:check`
 checks drift only. After reviewing intentional changes, `pnpm k8s:lock` records new
 hashes and clears verification claims. Do not copy certification results between clusters.
