@@ -121,6 +121,15 @@ try {
   });
   assert.equal(forged.status(), 422);
   assert.equal((await forged.json()).code, "analytics/acquisition/invalid");
+  for (const landingRef of [["home"], { toString: "home" }]) {
+    const malformed = await request("/api/collect", {
+      landingRef,
+      campaign: {},
+      referrer: { status: "absent" },
+    });
+    assert.equal(malformed.status(), 422);
+    assert.equal((await malformed.json()).code, "analytics/acquisition/invalid");
+  }
   const redirect = await request("/api/collect", {
     landingRef: "//evil.test",
     campaign: {},
