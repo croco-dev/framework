@@ -64,6 +64,7 @@ function Console(props: EnrichmentReviewConsoleProps) {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [exported, setExported] = useState<string | null>(null);
+  const [offset, setOffset] = useState(0);
   const alive = useRef(true);
   const epoch = useRef(0);
   const commandKeys = useRef(new Map<string, string>());
@@ -79,6 +80,7 @@ function Console(props: EnrichmentReviewConsoleProps) {
     setExported(null);
     setError("");
     setBusy(false);
+    setOffset(0);
   }, [props.state]);
   const definition = props.definitions.find((entry) => entry.version === version);
   function command(payload: unknown): EnrichmentConsoleCommand {
@@ -87,14 +89,21 @@ function Console(props: EnrichmentReviewConsoleProps) {
     commandKeys.current.set(fingerprint, key);
     return { reason, expectedRevision: page?.revision ?? -1, idempotencyKey: key };
   }
-  async function perform(operation: () => Promise<EnrichmentPage | void>) {
+  async function perform(operation: () => Promise<EnrichmentPage | void>, loadedOffset?: number) {
     const current = ++epoch.current;
     setBusy(true);
     setError("");
     setExported(null);
     try {
-      const result = await operation();
-      if (alive.current && current === epoch.current && result) setPage(result);
+      let result = await operation();
+      if (!alive.current || current !== epoch.current) return;
+      // Mutation responses use the server's first page. Keep the operator on the page
+      // containing the item they acted on, with a fresh authorized bounded read.
+      if (result && loadedOffset === undefined && offset !== 0) result = await props.onLoad(offset);
+      if (alive.current && current === epoch.current && result) {
+        setPage(result);
+        if (loadedOffset !== undefined) setOffset(loadedOffset);
+      }
     } catch {
       if (alive.current && current === epoch.current)
         setError(
@@ -155,7 +164,7 @@ function Console(props: EnrichmentReviewConsoleProps) {
           type="button"
           disabled={busy}
           onClick={() => {
-            void perform(() => props.onLoad(0));
+            void perform(() => props.onLoad(offset), offset);
           }}
         >
           Reload
@@ -252,6 +261,8 @@ function Console(props: EnrichmentReviewConsoleProps) {
                   Failed calls are not retried automatically. Acceptance may be unknown; an
                   authorized server retry requires an audit reason and acknowledgement of possible
                   duplicate billing.
+                  {candidate.reason === "acceptance-unknown" &&
+                    " After confirming the old worker stopped, acknowledgement releases its slot even when the attempt limit prevents another call."}
                 </p>
               )}
             </div>
@@ -309,7 +320,8 @@ function Console(props: EnrichmentReviewConsoleProps) {
           type="button"
           disabled={busy}
           onClick={() => {
-            void perform(() => props.onLoad(page.nextOffset ?? 0));
+            const nextOffset = page.nextOffset ?? 0;
+            void perform(() => props.onLoad(nextOffset), nextOffset);
           }}
         >
           Next page
@@ -323,11 +335,11 @@ function Console(props: EnrichmentReviewConsoleProps) {
             void perform(async () => {
               const current = epoch.current;
               const result = await props.onExport({ ...command(["export", version]), version });
-              const refreshed = await props.onLoad(0);
+              const refreshed = await props.onLoad(offset);
               if (alive.current && current === epoch.current)
                 setExported(JSON.stringify(result, null, 2));
               return refreshed;
-            });
+            }, offset);
           }}
         >
           Export reviewed labels

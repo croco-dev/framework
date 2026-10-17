@@ -17,7 +17,10 @@ each row, enter an audit reason and review evidence, select the reviewed label, 
 Export stays blocked until all items have a human review. Authorized reviewers can also label a current original directly when a request budget prevents generating a candidate; that review records a null candidate reference and the selected definition version. Selecting v2 creates another candidate
 without erasing the human override. Retry event/usage delivery resends only pending intents.
 Unknown provider acceptance requires an explicit bounded retry approval and duplicate-billing
-acknowledgement; confirm the previous worker has stopped first.
+acknowledgement; confirm the previous worker has stopped first. At the final allowed attempt,
+the same acknowledgement releases its uncertain concurrency slot without allowing another
+attempt for that item. Its unknown usage and reserved budget remain recorded; other items can
+then continue within the original run limits.
 
 The HTTP host has one fixed synthetic principal and scope; it binds to loopback and checks Host,
 Origin and cross-site requests. It is a demonstration, not deployable authentication. A real host
@@ -60,7 +63,7 @@ including input, instructions/schema overhead and maximum output. It must be con
 application code; it is not measured usage or a guaranteed provider invoice ceiling. Known output
 or total usage above the reservation fails explicitly. Reservations remain charged for unknown and
 estimated usage. Unknown acceptance blocks further model work until an operator approves a bounded
-retry; changing a run ID must not be used to bypass admission policy. Providers without idempotency
+retry or acknowledges the stopped worker after its final attempt; changing a run ID must not be used to bypass admission policy. Providers without idempotency
 can bill twice after an acknowledged retry. SDK retries are disabled.
 
 Results and a text-free, label-free event/usage intent are persisted together before sink delivery.

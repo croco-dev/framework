@@ -80,6 +80,7 @@ export type EnrichmentCandidate = {
   readonly occurredAt: string;
   readonly delivery: "pending" | "delivered";
   readonly leaseUntil?: number;
+  /** Operator confirmed the prior worker stopped. This never overrides maxAttempts. */
   readonly retryAuthorized?: boolean;
 };
 export type EnrichmentReview = {

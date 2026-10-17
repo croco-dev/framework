@@ -1,4 +1,4 @@
-import { EnrichmentService } from "@croco/analytics-core/enrichment";
+import { EnrichmentProblem, EnrichmentService } from "@croco/analytics-core/enrichment";
 import { InMemoryEventBus } from "@croco/events-inmemory";
 import { EnrichmentCandidateRecorded } from "./EnrichmentCandidateRecorded";
 import { EnrichmentOperations } from "@croco/admin-core";
@@ -82,15 +82,19 @@ export const inputs = [
     context: { locale: "en" },
   },
 ];
-export const deterministicClassifier: ClassifyText = async (request) => ({
-  json: JSON.stringify({ labelId: request.text.includes("buy") ? "purchase" : null }),
-  completion: request.text === "Simulate provider failure" ? "failed" : "complete",
-  ...(request.text === "Simulate provider failure"
-    ? { cause: new Error("Synthetic server-only failure detail") }
-    : {}),
-  modelRef: request.modelRef,
-  usage: { kind: "estimated", inputTokens: 80, outputTokens: 12 },
-});
+export const deterministicClassifier: ClassifyText = async (request) => {
+  if (request.context.syntheticAcceptance === "unknown")
+    throw new EnrichmentProblem("local-provider-unavailable");
+  return {
+    json: JSON.stringify({ labelId: request.text.includes("buy") ? "purchase" : null }),
+    completion: request.text === "Simulate provider failure" ? "failed" : "complete",
+    ...(request.text === "Simulate provider failure"
+      ? { cause: new Error("Synthetic server-only failure detail") }
+      : {}),
+    modelRef: request.modelRef,
+    usage: { kind: "estimated", inputTokens: 80, outputTokens: 12 },
+  };
+};
 export function createFixture(
   store: EnrichmentStore,
   model: ClassifyText = deterministicClassifier,

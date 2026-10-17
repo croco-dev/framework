@@ -356,7 +356,10 @@ Supply an `EnrichmentStore`, current principal/authorization revision, action au
 source availability, mandatory PII block/mask policy and an idempotent usage/event receipt sink.
 Budgets and concurrency are bounded per run. Candidates, human overrides, raw/result retention,
 and operational receipts are separate. A model response is persisted before sink delivery, so
-repeating settlement does not repeat inference. Unknown acceptance requires explicit retry approval.
+repeating settlement does not repeat inference. Unknown acceptance requires an explicit operator
+acknowledgement that the prior worker stopped. At the attempt limit, `retry` accepts this
+acknowledgement only to release the uncertain concurrency slot: `classify` still rejects another
+attempt, and the original unknown usage, receipts and budget reservation remain intact.
 
 See [the independent example](../../examples/enrichment-review/README.md) for native SDK mapping,
 PostgreSQL migration/CAS, batch checkpoints, review UI, budget assumptions and recovery limitations.

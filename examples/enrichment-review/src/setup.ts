@@ -16,6 +16,11 @@ async function setup() {
       Array.from({ length: 26 }, (_, index) => ({
         ...inputs[index % inputs.length],
         itemId: `sample-${String(index).padStart(2, "0")}`,
+        ...(index === 23
+          ? {
+              context: { ...inputs[index % inputs.length].context, syntheticAcceptance: "unknown" },
+            }
+          : {}),
       })),
       { ...limits, maxRequests: 64, maxReservedTokens: 131072 },
       { rawMs: 86400000, resultMs: 604800000 },

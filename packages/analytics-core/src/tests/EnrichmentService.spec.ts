@@ -338,6 +338,90 @@ describe("EnrichmentService", () => {
     expect(await f.classify()).toMatchObject({ state: "classified", attempt: 2 });
     expect((await f.service.read(scope, "run")).reservedTokens).toBe(4000);
   });
+  it("releases an exhausted uncertain slot only after stopped-worker acknowledgement without permitting another attempt", async () => {
+    const model = vi
+      .fn<ClassifyText>()
+      .mockRejectedValueOnce(new Error("unknown acceptance"))
+      .mockResolvedValue(answer);
+    const f = await fixture({
+      model,
+      inputs: [input("a", "first text"), input("b", "second text")],
+      limits: { ...limits, maxAttempts: 1 },
+    });
+    await expect(f.classify()).rejects.toMatchObject({
+      code: "analytics-core/enrichment-acceptance-unknown",
+    });
+    const failed = await f.classify();
+    await expect(f.classify("b")).rejects.toMatchObject({
+      code: "analytics-core/enrichment-concurrency-limit",
+    });
+    await expect(
+      f.service.retry(
+        scope,
+        "run",
+        "a",
+        failed.receiptId,
+        false,
+        await f.command("unacknowledged"),
+      ),
+    ).rejects.toMatchObject({
+      code: "analytics-core/enrichment-duplicate-billing-acknowledgement-required",
+    });
+    const acknowledgement = await f.command("stopped-worker");
+    await f.service.retry(scope, "run", "a", failed.receiptId, true, acknowledgement);
+    expect(model).toHaveBeenCalledTimes(1);
+    await expect(f.classify()).rejects.toMatchObject({
+      code: "analytics-core/enrichment-attempt-limit",
+    });
+    expect(await f.classify("b")).toMatchObject({ state: "classified", attempt: 1 });
+    await f.service.retry(scope, "run", "a", failed.receiptId, true, acknowledgement);
+    const page = await f.service.read(scope, "run");
+    expect(page).toMatchObject({ requests: 2, reservedTokens: 4000 });
+    expect(page.items[0].candidates[0]).toMatchObject({
+      state: "failed",
+      reason: "acceptance-unknown",
+      retryAuthorized: true,
+      usage: { kind: "unknown" },
+    });
+    expect(model).toHaveBeenCalledTimes(2);
+  });
+  it("can acknowledge an older uncertain receipt after a dictionary version is recorded", async () => {
+    const model = vi
+      .fn<ClassifyText>()
+      .mockRejectedValueOnce(new Error("unknown acceptance"))
+      .mockResolvedValue(answer);
+    const f = await fixture({
+      model,
+      inputs: [input("a", "first text"), input("b", "second text")],
+      limits: { ...limits, maxAttempts: 1 },
+      definitions: [
+        withModel,
+        {
+          ...withModel,
+          version: "v2",
+          referenceCatalog: [{ text: "first text", labelId: "help" }],
+        },
+      ],
+    });
+    await expect(f.classify()).rejects.toMatchObject({
+      code: "analytics-core/enrichment-acceptance-unknown",
+    });
+    const failed = await f.classify();
+    expect(await f.classify("a", "v2")).toMatchObject({
+      state: "classified",
+      method: "dictionary",
+    });
+    await f.service.retry(
+      scope,
+      "run",
+      "a",
+      failed.receiptId,
+      true,
+      await f.command("stopped-old-worker"),
+    );
+    expect(await f.classify("b")).toMatchObject({ state: "classified", method: "model" });
+    expect(model).toHaveBeenCalledTimes(2);
+  });
   it.each(["truncated", "refused", "failed"] as const)(
     "keeps %s as a non-success candidate with measured usage",
     async (completion) => {

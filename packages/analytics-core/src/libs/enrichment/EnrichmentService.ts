@@ -1052,7 +1052,7 @@ export class EnrichmentService {
     if (this.now() >= latest.resultExpiresAt) fail("result-expired");
     return exported;
   }
-  /** Explicit retry approval. Acceptance uncertainty requires acknowledgement of possible duplicate billing. */
+  /** Explicit stopped-worker acknowledgement; retries remain subject to the original attempt limit. */
   async retry(
     scope: EnrichmentScope,
     runId: string,
@@ -1073,17 +1073,22 @@ export class EnrichmentService {
         return;
       const row = run.items.find((item) => item.input.itemId === itemId) ?? fail("not-found");
       const index = row.candidates.findIndex((item) => item.receiptId === receiptId);
-      if (index < 0 || index !== row.candidates.length - 1) fail("conflict");
+      if (index < 0) fail("conflict");
       const candidate = row.candidates[index];
+      if (index !== row.candidates.length - 1 && candidate.reason !== "acceptance-unknown")
+        fail("conflict");
       if (
         candidate.state === "classified" ||
         candidate.state === "running" ||
         candidate.retryAuthorized
       )
         fail("retry-unavailable");
-      if (candidate.attempt >= run.limits.maxAttempts) fail("attempt-limit");
       if (candidate.reason === "acceptance-unknown" && !acknowledgeDuplicateBilling)
         fail("duplicate-billing-acknowledgement-required");
+      if (candidate.attempt >= run.limits.maxAttempts && candidate.reason !== "acceptance-unknown")
+        fail("attempt-limit");
+      // The trusted operator confirms that the old worker has stopped. At the final attempt
+      // this only releases the uncertain slot; classify still rejects an additional attempt.
       row.candidates[index] = { ...candidate, retryAuthorized: true };
     });
   }
