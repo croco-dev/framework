@@ -9,6 +9,7 @@ import {
   validateAcquisitionContext,
 } from "../acquisition";
 import type {
+  AcquisitionContext,
   AcquisitionDefinition,
   AcquisitionState,
   AcquisitionStore,
@@ -598,4 +599,23 @@ it("erases reports exported before anonymous history was linked to a deleted sub
   expect(state?.links).toEqual([]);
   expect(state?.reports).toEqual([]);
   expect(state?.deleted).toEqual(expect.arrayContaining([user, anon]));
+});
+
+it.each([
+  { ...context, landingRef: ["home"] },
+  { ...context, landingRef: { toString: "home" } },
+  { ...context, campaign: [] },
+  { ...context, campaign: "" },
+  { ...context, referrer: [] },
+  [],
+  null,
+])("rejects malformed JSON context shapes with a stable Problem: %j", (value) => {
+  expect(() => validateAcquisitionContext(value as AcquisitionContext, urls)).toThrow(
+    AcquisitionProblem,
+  );
+  try {
+    validateAcquisitionContext(value as AcquisitionContext, urls);
+  } catch (error) {
+    expect(error).toMatchObject({ code: "analytics/acquisition/invalid" });
+  }
 });

@@ -243,6 +243,11 @@ export function parseAcquisitionContext(
   }
   return { landingRef: destination[0], campaign, referrer };
 }
+function isPlainRecord(value: unknown): value is Record<string, unknown> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const prototype = Object.getPrototypeOf(value);
+  return prototype === Object.prototype || prototype === null;
+}
 /** Validates the sanitized browser payload again on the server. */
 export function validateAcquisitionContext(
   value: AcquisitionContext,
@@ -250,10 +255,11 @@ export function validateAcquisitionContext(
 ): AcquisitionContext {
   validateUrlPolicy(policy);
   if (
-    !value ||
+    !isPlainRecord(value) ||
+    typeof value.landingRef !== "string" ||
     !Object.hasOwn(policy.destinations, value.landingRef) ||
-    !value.campaign ||
-    !value.referrer
+    !isPlainRecord(value.campaign) ||
+    !isPlainRecord(value.referrer)
   )
     invalid();
   if (!["observed", "absent", "unavailable"].includes(value.referrer.status)) invalid();
