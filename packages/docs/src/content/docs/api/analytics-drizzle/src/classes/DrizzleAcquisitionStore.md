@@ -45,7 +45,7 @@ Large installations should shard application scopes or implement the same store 
 
 ##### scope
 
-`FactScope`
+[`FactScope`](/api/analytics-core/src/type-aliases/factscope/)
 
 ##### operation
 
