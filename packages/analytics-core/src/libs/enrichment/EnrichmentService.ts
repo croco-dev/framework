@@ -561,6 +561,19 @@ export class EnrichmentService {
       authorityRevision,
       actor,
     ]);
+    // Every candidate release shares the same current-policy boundary, including CAS losers.
+    const release = async (candidate: EnrichmentCandidate): Promise<EnrichmentCandidate> => {
+      await this.live(scope, run, item);
+      await this.allow(scope, "classify");
+      await this.allow(scope, "read");
+      if (
+        (await this.options.currentActor(scope)) !== actor ||
+        (await this.options.authorizationRevision(scope)) !== authorityRevision
+      )
+        fail("authority-changed");
+      if (this.now() >= run.resultExpiresAt) fail("result-expired");
+      return candidate;
+    };
     const existing = item.candidates.filter((candidate) => candidate.cacheKey === key).at(-1);
     if (existing && !existing.retryAuthorized) {
       if (existing.state === "running" && (existing.leaseUntil ?? Infinity) <= this.now()) {
@@ -584,11 +597,14 @@ export class EnrichmentService {
             if (receipt) receipt.candidate = this.receiptCandidate(failed);
           }
         });
-        await this.live(scope, run, item);
-        return { ...existing, state: "failed", reason: "acceptance-unknown", delivery: "pending" };
+        return release({
+          ...existing,
+          state: "failed",
+          reason: "acceptance-unknown",
+          delivery: "pending",
+        });
       }
-      await this.live(scope, run, item);
-      return existing;
+      return release(existing);
     }
     if (this.now() >= run.rawExpiresAt) fail("raw-expired");
     const text = item.input.text ?? fail("raw-expired");
@@ -689,7 +705,7 @@ export class EnrichmentService {
       !definition.modelPolicy ||
       !this.options.classifyText
     )
-      return acquired;
+      return release(acquired);
     const controller = new AbortController();
     const abort = (): void => controller.abort();
     signal?.addEventListener("abort", abort, { once: true });
@@ -815,15 +831,7 @@ export class EnrichmentService {
       }
       if (index >= 0) row.candidates[index] = final;
     });
-    await this.live(scope, run, item);
-    await this.allow(scope, "classify");
-    await this.allow(scope, "read");
-    if (
-      (await this.options.currentActor(scope)) !== actor ||
-      (await this.options.authorizationRevision(scope)) !== authorityRevision
-    )
-      fail("authority-changed");
-    if (this.now() >= run.resultExpiresAt) fail("result-expired");
+    const released = await release(final);
     if (cause && final.state === "failed") {
       if (!dispatched && cause instanceof EnrichmentProblem) throw cause;
       throw new EnrichmentProblem(
@@ -831,7 +839,7 @@ export class EnrichmentService {
         cause,
       );
     }
-    return final;
+    return released;
   }
   private async live(
     scope: EnrichmentScope,

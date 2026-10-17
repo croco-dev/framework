@@ -723,4 +723,51 @@ describe("EnrichmentService", () => {
       });
     },
   );
+  it.each(["dictionary", "no-classifier"])(
+    "rejects expired newly acquired %s results",
+    async (path) => {
+      const f = await fixture({
+        inputs: [input("a", path === "dictionary" ? "Where is my order?" : "unmatched original")],
+      });
+      const cas = f.store.compareAndSet.bind(f.store);
+      vi.spyOn(f.store, "compareAndSet").mockImplementation(async (run, revision) => {
+        const saved = await cas(run, revision);
+        f.state.now = 6000;
+        return saved;
+      });
+      await expect(f.classify()).rejects.toMatchObject({
+        code: "analytics-core/enrichment-result-expired",
+      });
+    },
+  );
+  it("revalidates a duplicate candidate returned after CAS contention crosses retention", async () => {
+    const f = await fixture();
+    let entered!: () => void;
+    let unblock!: () => void;
+    const waiting = new Promise<void>((resolve) => {
+      entered = resolve;
+    });
+    const blocked = new Promise<void>((resolve) => {
+      unblock = resolve;
+    });
+    const cas = f.store.compareAndSet.bind(f.store);
+    let first = true;
+    vi.spyOn(f.store, "compareAndSet").mockImplementation(async (run, revision) => {
+      if (first) {
+        first = false;
+        entered();
+        await blocked;
+      }
+      return cas(run, revision);
+    });
+    const delayed = f.classify();
+    await waiting;
+    expect(await f.classify()).toMatchObject({ state: "classified", labelId: "help" });
+    f.state.now = 6000;
+    const rejected = expect(delayed).rejects.toMatchObject({
+      code: "analytics-core/enrichment-result-expired",
+    });
+    unblock();
+    await rejected;
+  });
 });
