@@ -13,9 +13,11 @@ title: "RscRenderOptions"
 
 > `readonly` `optional` **clientBuildId?**: `string`
 
-Identifier of the client build this server renders for. When given, the
-negotiated manifest version is `composeRscClientManifestVersion(buildId)`
-instead of the bare protocol constant.
+Identifier of the client build this server renders for. Used only when
+`clientManifestVersion` is not given: the negotiated manifest version
+becomes `composeRscClientManifestVersion(buildId)` instead of the bare
+protocol constant. When both options are set, the explicit
+`clientManifestVersion` wins.
 
 ---
 
