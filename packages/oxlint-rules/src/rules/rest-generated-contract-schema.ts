@@ -1,5 +1,5 @@
 import type { Rule } from "eslint";
-import type { CallExpression, Expression, Literal, Node } from "estree";
+import type { CallExpression, Expression, Node } from "estree";
 import { resolveDecoratorBinding } from "./decorator-binding.ts";
 
 const REST_PROTOCOLS_MODULE = "@croco/protocols-rest";
@@ -16,8 +16,70 @@ const isDecoratorCall = (
   return expression.type === "CallExpression";
 };
 
-const isStringLiteral = (node: Node | undefined): node is Literal & { value: string } => {
-  return node?.type === "Literal" && typeof node.value === "string";
+// Oxlint preserves TypeScript wrappers around otherwise static arguments.
+const unwrapArgument = (node: Node | undefined): Node | undefined => {
+  const wrapped = node as (Node & { readonly expression: Node }) | undefined;
+  if (
+    wrapped &&
+    ["TSAsExpression", "TSSatisfiesExpression", "TSTypeAssertion", "TSNonNullExpression"].includes(
+      wrapped.type,
+    )
+  ) {
+    return unwrapArgument(wrapped.expression);
+  }
+  return node;
+};
+
+type Scope = ReturnType<Rule.RuleContext["sourceCode"]["getScope"]>;
+
+const findVariable = (scope: Scope | null, name: string) => {
+  while (scope) {
+    const variable = scope.set.get(name);
+    if (variable) return variable;
+    scope = scope.upper;
+  }
+  return undefined;
+};
+
+const isStaticString = (
+  context: Rule.RuleContext,
+  argument: Node | undefined,
+  scope?: Scope | null,
+  visited = new Set<Node>(),
+): boolean => {
+  const node = unwrapArgument(argument);
+  if (!node || visited.has(node)) return false;
+  visited.add(node);
+
+  if (node.type === "Literal") return typeof node.value === "string";
+  if (node.type === "TemplateLiteral") return node.expressions.length === 0;
+  if (node.type !== "Identifier") return false;
+
+  const variable = findVariable(
+    scope === undefined ? context.sourceCode.getScope(node) : scope,
+    node.name,
+  );
+  const definition = variable?.defs.length === 1 ? variable.defs[0] : undefined;
+  if (
+    definition?.type !== "Variable" ||
+    definition.parent?.kind !== "const" ||
+    definition.node.type !== "VariableDeclarator" ||
+    definition.node.id.type !== "Identifier"
+  ) {
+    return false;
+  }
+  return isStaticString(context, definition.node.init ?? undefined, undefined, visited);
+};
+
+const isMissingSchema = (argument: Node | undefined, scope: Scope | null): boolean => {
+  const node = unwrapArgument(argument);
+  if (!node) return true;
+  if (node.type === "UnaryExpression" && node.operator === "void") return true;
+  return (
+    node.type === "Identifier" &&
+    node.name === "undefined" &&
+    !findVariable(scope, node.name)?.defs.length
+  );
 };
 
 const rule: Rule.RuleModule = {
@@ -55,6 +117,13 @@ const rule: Rule.RuleModule = {
           return;
         }
 
+        // Parameter decorators execute outside their method's parameter scope.
+        const ownScope = context.sourceCode.getScope(node);
+        const scope =
+          ownScope.type === "function" &&
+          (ownScope.block as Node & { readonly parent?: Node }).parent?.type === "MethodDefinition"
+            ? ownScope.upper
+            : ownScope;
         const importedDecoratorName = binding.importedName;
 
         if (importedDecoratorName === "All") {
@@ -65,7 +134,10 @@ const rule: Rule.RuleModule = {
           return;
         }
 
-        if (importedDecoratorName === "Body" && node.expression.arguments.length === 0) {
+        if (
+          importedDecoratorName === "Body" &&
+          isMissingSchema(node.expression.arguments[0], scope)
+        ) {
           context.report({
             node,
             messageId: "bodySchema",
@@ -75,8 +147,8 @@ const rule: Rule.RuleModule = {
 
         if (
           NAMED_PARAMETER_DECORATORS.has(importedDecoratorName) &&
-          isStringLiteral(node.expression.arguments[0]) &&
-          node.expression.arguments.length === 1
+          isStaticString(context, node.expression.arguments[0], scope) &&
+          isMissingSchema(node.expression.arguments[1], scope)
         ) {
           context.report({
             node,
