@@ -136,6 +136,75 @@ describe("useAdminForm", () => {
     reactHookHarness.hookSlots.length = 0;
   });
 
+  it("refreshes field metadata without clearing edits and still resets replacement forms", () => {
+    const original = createUserFormContract(async () => ({ kind: "success" }));
+    const contract: typeof original = {
+      ...original,
+      fields: [{ name: "email", label: "Choice", inputType: "select", options: [] }],
+    };
+    const form = renderUserForm(contract);
+    form.setFieldValue("email", "edited@example.com");
+    const updated: typeof contract = {
+      ...contract,
+      fields: [
+        {
+          ...contract.fields[0],
+          label: "Loaded choice",
+          description: "Choose a loaded option",
+          options: [
+            { label: "Aster", value: "aster" },
+            { label: "Birch", value: "birch", disabled: true },
+          ],
+        },
+      ],
+    };
+    const refreshed = renderUserForm(updated);
+    expect(refreshed.state.fields).toEqual(updated.fields);
+    expect(refreshed.state).toMatchObject({
+      values: { email: "edited@example.com" },
+      dirtyFields: ["email"],
+      kind: "dirty",
+    });
+    const replacement = { ...updated, id: "replacement" };
+    renderUserForm(replacement);
+    expect(renderUserForm(replacement).state).toMatchObject({
+      contractId: "replacement",
+      values: contract.initialValues,
+      dirtyFields: [],
+      kind: "idle",
+    });
+  });
+
+  it("submits current metadata and lets an in-flight submit finish across metadata refreshes", async () => {
+    const deferred = createDeferred<AdminFormSubmitSuccess<UserFormResult>>();
+    const submit = vi.fn(() => deferred.promise);
+    const contract = createUserFormContract(submit);
+    renderUserForm(contract);
+    const updated = {
+      ...contract,
+      fields: [{ ...contract.fields[0], label: "Updated email" }] as typeof contract.fields,
+    };
+    const form = renderUserForm(updated);
+    const submission = form.submit();
+    expect(submit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        previousState: expect.objectContaining({ fields: updated.fields }),
+      }),
+    );
+    const refreshed = {
+      ...updated,
+      fields: [{ ...updated.fields[0], description: "New hint" }] as typeof contract.fields,
+    };
+    expect(renderUserForm(refreshed).state.kind).toBe("submitting");
+    deferred.resolve({ kind: "success", data: { id: "user-1" } });
+    await submission;
+    expect(renderUserForm(refreshed).state).toMatchObject({
+      kind: "succeeded",
+      submitResult: { id: "user-1" },
+      fields: refreshed.fields,
+    });
+  });
+
   it("preserves a field edit made while a submit is in flight", async () => {
     const deferred = createDeferred<AdminFormSubmitResult<UserFormValues, UserFormResult>>();
     const submit = vi.fn(() => deferred.promise);

@@ -468,6 +468,10 @@ export function CreateUserForm() {
 }
 ```
 
+`useAdminForm` reads field labels, descriptions, and select options from the current contract on each render.
+Refreshing those fields for the same form preserves edited values and lifecycle state; changing the form id
+retains the existing reset behavior.
+
 Numeric `AdminFormField` inputs emit `undefined` when cleared, including fields marked
 `required: true`; an explicit `"0"` emits numeric `0`, and other nonempty values use numeric
 conversion. Model editable numeric draft values as `number | undefined` (or an optional

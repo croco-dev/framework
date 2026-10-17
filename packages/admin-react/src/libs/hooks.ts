@@ -84,7 +84,7 @@ export function useAdminForm<TValues extends object, TResult = unknown>(
       }
 
       submitInFlightGenerationRef.current = formGeneration;
-      const currentState = stateRef.current;
+      const currentState = { ...stateRef.current, fields: contract.fields };
       const shouldRetry = retry ?? currentState.kind === "failed";
       const submittingState = startAdminFormSubmit(currentState, { retry: shouldRetry });
 
@@ -118,7 +118,8 @@ export function useAdminForm<TValues extends object, TResult = unknown>(
     reset,
     retry,
     setFieldValue,
-    state,
+    // Field presentation follows the current contract; values and lifecycle keep their reset policy.
+    state: state.fields === contract.fields ? state : { ...state, fields: contract.fields },
     submit,
   };
 }
