@@ -213,6 +213,39 @@ describe("AdminForm", () => {
     expect(markup).toContain('data-recovery-action-id="fix-email"');
   });
 
+  it.each([
+    {},
+    { email: [] },
+    { displayName: [{ code: "name.invalid", message: "Invalid name" }] },
+  ])(
+    "renders the validation Problem when no configured field has an error: %j",
+    async (fieldErrors) => {
+      const problem = createCoreProblemDetails({
+        code: "validation/invalid-range",
+        detail: "End date must follow start date",
+        source: "validation",
+        status: 400,
+        title: "Invalid date range",
+      });
+      const contract = createUserFormContract({
+        fields: [{ name: "email", label: "Email", inputType: "email" }],
+        submit: async () => ({ kind: "validation_failed", fieldErrors, problem }),
+      });
+      const state = await submitAdminForm(
+        contract,
+        createAdminFormState(contract, { generatedAt }),
+      );
+      const markup = renderForm(state);
+
+      expect(state.kind).toBe("failed");
+      expect(state.problemKind).toBe("validation");
+      expect(state.problem).toBe(problem);
+      expect(markup).toContain('data-testid="admin-form-global-problem"');
+      expect(markup).toContain("Invalid date range");
+      expect(markup).toContain("End date must follow start date");
+    },
+  );
+
   it("renders domain Problems globally without turning them into field validation errors", async () => {
     const domainProblem = createCoreProblemDetails({
       code: "admin/user-already-exists",

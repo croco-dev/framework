@@ -350,6 +350,9 @@ export function AdminForm<TValues extends object, TResult = unknown>({
   state,
 }: AdminFormProps<TValues, TResult>): ReactElement {
   const submitDisabled = isAdminFormSubmitDisabled(state);
+  const hasFieldErrors = state.fields.some(
+    (field) => (state.fieldErrors[field.name]?.length ?? 0) > 0,
+  );
   const formInstanceId = useId();
   const fieldIdPrefix = `admin-form-${sanitizeAdminFormId(state.contractId)}-${sanitizeAdminFormId(
     formInstanceId,
@@ -372,7 +375,7 @@ export function AdminForm<TValues extends object, TResult = unknown>({
       },
     },
     createElement("h2", null, state.title),
-    state.problem && state.problemKind !== "validation"
+    state.problem && (state.problemKind !== "validation" || !hasFieldErrors)
       ? createElement(AdminFormGlobalProblem, { problem: state.problem })
       : null,
     state.fields.map((field) => {
