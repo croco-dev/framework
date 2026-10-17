@@ -3,9 +3,10 @@ import { spawn } from "node:child_process";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { EnrichmentService } from "@croco/analytics-core/enrichment";
+import { EnrichmentProblem, EnrichmentService } from "@croco/analytics-core/enrichment";
 import { DrizzleEnrichmentStore, createEnrichment } from "../index";
 import type {
+  ClassificationDefinition,
   EnrichmentStore,
   EnrichmentRun,
   EnrichmentReceipt,
@@ -65,12 +66,13 @@ describe.skipIf(!connectionString)("PostgreSQL enrichment receipts and CAS", () 
       usage: { kind: "known" as const, inputTokens: 44, outputTokens: 9 },
     })),
     sourceAvailable = async (_sourceRef: string) => true,
+    definitions: readonly ClassificationDefinition[] = [definition],
   ) {
     const settle = vi.fn(async (_receipt: EnrichmentReceipt) => {});
     const clock = { offset: 0 };
     const service = new EnrichmentService({
       store: target,
-      definitions: [definition],
+      definitions,
       classifyText: model,
       authorize: async () => true,
       currentActor: async () => "operator",
@@ -106,6 +108,60 @@ describe.skipIf(!connectionString)("PostgreSQL enrichment receipts and CAS", () 
       { rawMs: 60000, resultMs: 120000 },
     );
   }
+  it.each(["source-deleted", "result-expired"])(
+    "keeps a PostgreSQL purge erased when a delayed dictionary claim retries after %s",
+    async (reason) => {
+      let release = () => {};
+      let reached = () => {};
+      const held = new Promise<void>((resolve) => {
+        reached = resolve;
+      });
+      const resumed = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      let intercepted = false;
+      const claiming: EnrichmentStore = {
+        create: (run) => store.create(run),
+        load: (scope, id) => store.load(scope, id),
+        compareAndSet: async (run, revision) => {
+          if (!intercepted && run.items[0].candidates.length > 0) {
+            intercepted = true;
+            reached();
+            await resumed;
+          }
+          return store.compareAndSet(run, revision);
+        },
+      };
+      let deleted = false;
+      const available = async (sourceRef: string) => !deleted || sourceRef !== "source-a";
+      const definitions = [
+        {
+          ...definition,
+          referenceCatalog: [{ text: "purchase request", labelId: "buy" }],
+        },
+      ];
+      const writer = fixture(claiming, undefined, available, definitions);
+      const eraser = fixture(other, writer.model, available, definitions);
+      await enqueue(writer.service);
+      const pending = writer.service
+        .classify(scope, "one", "a", "intent", "v1")
+        .catch((error: unknown) => error);
+      await held;
+      try {
+        if (reason === "source-deleted") deleted = true;
+        else writer.clock.offset = eraser.clock.offset = 130000;
+        await eraser.service.purge(scope, "one");
+      } finally {
+        release();
+      }
+      expect(await pending).toBeInstanceOf(EnrichmentProblem);
+      expect((await eraser.service.read(scope, "one")).items[0].candidates).toEqual([]);
+      const stored = await other.load(scope, "one");
+      expect(stored?.items[0].input.text).toBeNull();
+      expect(stored?.items[0].candidates).toEqual([]);
+      expect(writer.model).not.toHaveBeenCalled();
+    },
+  );
   it("applies its additive migration twice and keeps data after reopening the adapter", async () => {
     const f = fixture();
     await enqueue(f.service);
