@@ -34,7 +34,7 @@
     "lint": "oxlint .",
     "test": "vitest run src/tests/Migration.spec.ts src/tests/PersistenceFailure.spec.ts",
     "test:evidence": "pnpm run test --maxWorkers=1 --reporter=json --outputFile=.turbo/croco-test-evidence.json",
-    "test:postgres": "vitest run src/tests/DrizzleFactHistoryStore.postgres.spec.ts src/tests/DrizzleEnrichmentStore.postgres.spec.ts",
+    "test:postgres": "pnpm --workspace-root build --filter=@croco/analytics-drizzle... && vitest run src/tests/DrizzleFactHistoryStore.postgres.spec.ts src/tests/DrizzleEnrichmentStore.postgres.spec.ts",
     "typecheck": "tsc --noEmit",
     "docs:api:model": "node --experimental-strip-types ../docs/scripts/generate-package-api-model.mts"
   },

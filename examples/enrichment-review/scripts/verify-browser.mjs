@@ -18,7 +18,10 @@ try {
   page.on("pageerror", (error) => errors.push(error.message));
   page.on("console", (message) => {
     if (message.type() === "error") {
-      if (message.location().url === `${base}/api` && message.text().includes("status of 500"))
+      if (
+        [`${base}/api`, `${base}/api?run=large&`].includes(message.location().url) &&
+        message.text().includes("status of 500")
+      )
         expectedNetworkErrors.push(message.text());
       else errors.push(message.text());
     }
@@ -171,16 +174,79 @@ try {
   await page.getByRole("button", { name: "Next page", exact: true }).click();
   await page.getByRole("button", { name: "Next page", exact: true }).waitFor({ state: "hidden" });
   assert.equal(await page.locator("article").count(), 6);
+  await page
+    .locator("article")
+    .first()
+    .getByRole("button", { name: "Classify with v1", exact: true })
+    .click();
+  await page.getByText("Operation in progress…").waitFor({ state: "hidden" });
+  assert.equal(
+    await page.locator("article").count(),
+    6,
+    "classification must preserve the second page",
+  );
+  await page.getByRole("button", { name: "Retry event and usage delivery", exact: true }).click();
+  await page.getByText("Operation in progress…").waitFor({ state: "hidden" });
+  assert.equal(
+    await page.locator("article").count(),
+    6,
+    "settlement must preserve the second page",
+  );
+  const failingItem = page.locator("article").nth(3);
+  assert.equal(await failingItem.getByRole("heading").innerText(), "sample-23 · r1");
+  await page
+    .getByLabel("Audit reason", { exact: true })
+    .fill("Confirmed the synthetic worker stopped");
+  await page.getByRole("checkbox").check();
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    await failingItem.getByRole("button", { name: "Classify with v1", exact: true }).click();
+    await page.getByRole("alert").waitFor();
+    const reloaded = page.waitForResponse(
+      (response) =>
+        response.url() === `${base}/api?run=large&offset=20` &&
+        response.request().method() === "GET",
+    );
+    await page.getByRole("button", { name: "Reload", exact: true }).click();
+    await reloaded;
+    await page.getByRole("alert").waitFor({ state: "hidden" });
+    await failingItem.getByText(new RegExp(`acceptance-unknown.*Attempt ${attempt}`)).waitFor();
+    assert.equal(await page.locator("article").count(), 6, "reload must preserve the second page");
+    await page
+      .getByLabel("Audit reason", { exact: true })
+      .fill("Confirmed the synthetic worker stopped");
+    await page.getByRole("checkbox").check();
+    const acknowledged = page.waitForResponse(
+      (response) =>
+        response.url() === `${base}/api?run=large&offset=20` &&
+        response.request().method() === "GET",
+    );
+    await failingItem
+      .getByRole("button", { name: "Authorize bounded retry", exact: true })
+      .last()
+      .click();
+    await acknowledged;
+    await page.getByText("Operation in progress…").waitFor({ state: "hidden" });
+    assert.equal(
+      await page.locator("article").count(),
+      6,
+      "acknowledgement must preserve the second page",
+    );
+  }
+  // The exhausted item's acknowledged unknown calls must not strand another model item.
+  const remaining = page.locator("article").last();
+  await remaining.getByRole("button", { name: "Classify with v1", exact: true }).click();
+  await remaining.getByText(/model · classified · Candidate: purchase/).waitFor();
+  assert.equal(await page.locator("article").count(), 6);
   assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
   await page.screenshot({ path: `${output}/mobile-bounded-page.png`, fullPage: true });
   assert.deepEqual(errors, []);
-  assert.equal(expectedNetworkErrors.length, 1);
+  assert.equal(expectedNetworkErrors.length, 3);
   console.log(
     JSON.stringify({
       surface: base,
       viewports: ["1280x900", "390x844"],
       assertions:
-        "dictionary/model/unknown, manual override and version diff, review-gated export, bounded callbacks, keyboard, failed callback recovery, loading/empty/denied/error, no horizontal overflow or console/page errors",
+        "dictionary/model/unknown, manual override and version diff, review-gated export, second-page classify/settle/retry/reload, exhausted unknown acceptance acknowledged without blocking another model item, keyboard, failed callback recovery, loading/empty/denied/error, no horizontal overflow or unexpected console/page errors",
       screenshots: output,
     }),
   );

@@ -8,13 +8,19 @@
       "owner": "repo:examples"
     },
     {
-      "path": "examples/enrichment-review/src/tests/OpenAIClassifier.spec.ts",
+      "path": "examples/enrichment-review/src/tests/Database.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "repo:examples"
     },
     {
-      "path": "examples/enrichment-review/src/tests/Operations.spec.ts",
+      "path": "examples/enrichment-review/src/tests/DemoServerAndBatch.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "repo:examples"
+    },
+    {
+      "path": "examples/enrichment-review/src/tests/OpenAIClassifier.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "repo:examples"

@@ -5,9 +5,19 @@ import { EnrichmentProblem } from "@croco/analytics-core/enrichment";
 
 export function database() {
   const connectionString = process.env.ENRICHMENT_POSTGRES_URL;
+  let url: URL | undefined;
+  try {
+    url = connectionString ? new URL(connectionString) : undefined;
+  } catch (cause) {
+    throw new EnrichmentProblem("local-database-required", cause);
+  }
   if (
     !connectionString ||
-    !["127.0.0.1", "localhost", "[::1]"].includes(new URL(connectionString).hostname)
+    !url ||
+    !["postgres:", "postgresql:"].includes(url.protocol) ||
+    !["127.0.0.1", "localhost", "[::1]"].includes(url.hostname) ||
+    url.searchParams.has("host") ||
+    url.searchParams.has("hostaddr")
   )
     throw new EnrichmentProblem("local-database-required");
   const pool = new Pool({ connectionString, max: 4 });
