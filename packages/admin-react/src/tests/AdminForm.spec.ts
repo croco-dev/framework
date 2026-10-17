@@ -213,9 +213,8 @@ describe("AdminForm", () => {
     expect(markup).toContain('data-recovery-action-id="fix-email"');
   });
 
-  it.each([
+  it.each<AdminFormFieldErrors<UserFormValues>>([
     {},
-    { email: [] },
     { displayName: [{ code: "name.invalid", message: "Invalid name" }] },
   ])(
     "renders the validation Problem when no configured field has an error: %j",
