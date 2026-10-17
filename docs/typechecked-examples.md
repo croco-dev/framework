@@ -58,8 +58,8 @@ the reason when a checked example is added; stale coverage exceptions fail the c
    conditions, including nested targets, patterns and private exclusions. The checker follows the
    actual public target; it never substitutes `src/<subpath>.ts`. Exports pointing to `dist` require
    their build artifacts. Packages without `exports` retain the workspace `src/index.ts` root mapping.
-   The spine and publish verification profiles schedule the build before documentation checks;
-   the lightweight repository profile requires artifacts from the preceding `pnpm build`.
+   All verification profiles prepare the docs package dependency build closure before this check,
+   even when the main build selects only changed packages. The standalone docs command stays read-only.
 5. If an existing legacy block is converted to `typecheck` or `no-check`, run
    `pnpm docs:examples:write` to remove its stale baseline entry, then rerun
    `pnpm docs:examples:check`.
