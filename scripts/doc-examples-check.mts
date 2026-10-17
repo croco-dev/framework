@@ -939,7 +939,7 @@ function typecheckBlocks(rootDir: string, blocks: readonly MarkdownCodeBlock[]):
   // Let TypeScript interpret exports (including ordered/nested conditions, patterns and null
   // exclusions) in each package's own scope. Never infer a source filename from a subpath.
   const resolutionCache = ts.createModuleResolutionCache(rootDir, normalizePath, compilerOptions);
-  const prerequisites = new Set<string>();
+  const prerequisites = new Map<string, string>();
   host.resolveModuleNameLiterals = (literals, containingFile, _redirect, _options, sourceFile) =>
     literals.map((literal) => {
       const pkg = packages.find(
@@ -956,7 +956,8 @@ function typecheckBlocks(rootDir: string, blocks: readonly MarkdownCodeBlock[]):
         ts.getModeForUsageLocation(sourceFile, literal, compilerOptions),
       );
       if (pkg?.hasExports && !result.resolvedModule) {
-        prerequisites.add(
+        prerequisites.set(
+          `${normalizePath(containingFile)}:${literal.getStart(sourceFile)}`,
           `Cannot resolve public export '${literal.text}' from ${normalizeRelativePath(rootDir, join(pkg.directory, "package.json"))}. ` +
             "Check its exports target and active types/import conditions; if it references build artifacts, run pnpm build before checking documentation.",
         );
@@ -971,10 +972,22 @@ function typecheckBlocks(rootDir: string, blocks: readonly MarkdownCodeBlock[]):
 
   const diagnostics = ts
     .getPreEmitDiagnostics(program)
-    .filter((diagnostic) => diagnostic.category === ts.DiagnosticCategory.Error)
-    .map((diagnostic) => formatDiagnostic(diagnostic, generated.blocksByFile));
-
-  return [...diagnostics, ...prerequisites];
+    .filter((diagnostic) => diagnostic.category === ts.DiagnosticCategory.Error);
+  // Resolution also visits declarations ignored by skipLibCheck. A build hint supplements
+  // an actual import error; it must not turn an ignored declaration into a new failure.
+  const reportedPrerequisites = new Set(
+    diagnostics.flatMap((diagnostic) => {
+      if (!diagnostic.file || diagnostic.start === undefined) return [];
+      const hint = prerequisites.get(
+        `${normalizePath(diagnostic.file.fileName)}:${diagnostic.start}`,
+      );
+      return hint ? [hint] : [];
+    }),
+  );
+  return [
+    ...diagnostics.map((diagnostic) => formatDiagnostic(diagnostic, generated.blocksByFile)),
+    ...reportedPrerequisites,
+  ];
 }
 
 function createCompilerOptions(

@@ -271,6 +271,45 @@ describe("doc-examples-check.mts", () => {
   );
 
   it(
+    "does not promote skipped declaration imports into documentation failures or build hints",
+    () => {
+      const root = createTempRoot();
+      writeJson(join(root, "packages/alpha/package.json"), {
+        name: "@croco/alpha",
+        exports: { ".": "./src/public.d.ts" },
+      });
+      writeOperationalSource(
+        root,
+        "packages/alpha/src/public.d.ts",
+        'import type { Unused } from "@croco/beta"; export type Value = string;',
+      );
+      writePackage(root, "beta", {
+        name: "@croco/beta",
+        exports: { ".": { types: "./dist/index.d.ts" } },
+      });
+      writeDocs(root, [
+        "```ts typecheck",
+        'import type { Value } from "@croco/alpha";',
+        'const value: Value = "visible";',
+        "```",
+      ]);
+      const passing = runScript(root, "--check");
+      expect(passing.status, passing.stdout + passing.stderr).toBe(0);
+      writeDocs(root, [
+        "```ts typecheck",
+        'import type { Value } from "@croco/alpha";',
+        "const value: Value = 123;",
+        "```",
+      ]);
+      const failing = runScript(root, "--check");
+      expect(failing.status).toBe(1);
+      expect(failing.stdout).toContain("Type 'number' is not assignable to type 'string'");
+      expect(failing.stdout).not.toContain("Cannot resolve public export '@croco/beta'");
+    },
+    scriptTestTimeout,
+  );
+
+  it(
     "resolves extensionless imports in workspace package source",
     () => {
       const root = createTempRoot();
