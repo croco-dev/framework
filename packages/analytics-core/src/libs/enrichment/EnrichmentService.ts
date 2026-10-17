@@ -664,6 +664,9 @@ export class EnrichmentService {
       const duplicate = row.candidates.filter((entry) => entry.cacheKey === key).at(-1);
       if (duplicate && (!duplicate.retryAuthorized || duplicate.receiptId !== existing?.receiptId))
         return duplicate;
+      // A CAS retry must not restore derived data erased by a concurrent purge.
+      if (this.now() >= current.resultExpiresAt) fail("result-expired");
+      if (row.input.text === null) fail("raw-expired");
       if (candidate.attempt > current.limits.maxAttempts) fail("attempt-limit");
       if (row.candidates.length >= 8) fail("version-limit");
       if (useModel) {

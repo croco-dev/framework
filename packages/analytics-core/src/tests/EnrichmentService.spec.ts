@@ -147,6 +147,45 @@ async function fixture(
 }
 
 describe("EnrichmentService", () => {
+  it.each(["source-deleted", "result-expired"])(
+    "does not restore purged labels when a dictionary claim retries after %s",
+    async (reason) => {
+      const f = await fixture();
+      let release = () => {};
+      let reached = () => {};
+      const held = new Promise<void>((resolve) => {
+        reached = resolve;
+      });
+      const resumed = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      const compareAndSet = f.store.compareAndSet.bind(f.store);
+      let intercepted = false;
+      f.store.compareAndSet = async (run, revision) => {
+        if (!intercepted && run.items[0].candidates.length > 0) {
+          intercepted = true;
+          reached();
+          await resumed;
+        }
+        return compareAndSet(run, revision);
+      };
+      const pending = f.classify().catch((error: unknown) => error);
+      await held;
+      try {
+        if (reason === "source-deleted") f.state.available = false;
+        else f.state.now = 6000;
+        await new EnrichmentService(f.policy).purge(scope, "run");
+      } finally {
+        release();
+      }
+      expect(await pending).toBeInstanceOf(EnrichmentProblem);
+      const visible = await f.service.read(scope, "run");
+      expect(visible.items[0].candidates).toEqual([]);
+      const stored = await f.store.load(scope, "run");
+      expect(stored?.items[0].input.text).toBeNull();
+      expect(stored?.items[0].candidates).toEqual([]);
+    },
+  );
   it("uses exact normalized dictionary matches and leaves an unmatched value unknown without a model", async () => {
     const f = await fixture({
       inputs: [input("a", "  WHERE IS MY ORDER? "), input("b", "buy a course")],
