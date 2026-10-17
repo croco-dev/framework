@@ -677,3 +677,90 @@ it("requires an explicit Date representation and an empty draft type for date fi
   };
   expect([ambiguous.name, nonempty.name, mismatched.name]).toEqual(["start", "start", "day"]);
 });
+
+describe("AdminForm typed select", () => {
+  type Values = { choice: string | number | null | undefined };
+  const cases: { initial: Values["choice"]; values: Values["choice"][]; labels: string[] }[] = [
+    { initial: "1", values: [1, "1", 2], labels: ["Number one", "Text one", "Two"] },
+    { initial: "B", values: ["A", "B"], labels: ["Alpha", "Beta"] },
+    { initial: "", values: ["", 0, "0"], labels: ["Choose", "Number zero", "Text zero"] },
+    {
+      initial: null,
+      values: [null, "", undefined, "A"],
+      labels: ["Choose", "Empty", "Undefined", "Alpha"],
+    },
+    { initial: undefined, values: [undefined, "A"], labels: ["Choose", "Alpha"] },
+  ];
+
+  it.each(cases)(
+    "preserves initial selection, changes and submitted types for $initial",
+    async ({ initial, values, labels }) => {
+      const submit = vi.fn(({ values: submitted }: AdminFormSubmitContext<Values>) => ({
+        kind: "success" as const,
+        data: submitted.choice,
+      }));
+      const contract: AdminFormContract<Values> = {
+        id: "typed-select",
+        title: "Choose value",
+        intent: "update",
+        initialValues: { choice: initial },
+        fields: [
+          {
+            name: "choice",
+            label: "Choice",
+            inputType: "select",
+            required: true,
+            options: values.map((value, index) => ({ value, label: labels[index] })),
+          },
+        ],
+        audit: { eventName: "choice.updated", subjectType: "tenant", subjectId: "synthetic" },
+        submit,
+      };
+      let state = createAdminFormState(contract);
+      const renderSelect = () => {
+        const field = AdminFormField<Values>({
+          field: contract.fields[0],
+          value: state.values.choice,
+          errors: [],
+          onFieldChange: (name, value) => {
+            state = updateAdminFormField(state, name, value);
+          },
+        });
+        const select = Children.toArray((field.props as { children: ReactNode }).children).find(
+          (child) => isValidElement(child) && child.type === "select",
+        );
+        if (!isValidElement(select)) throw new Error("Choice select missing");
+        return select as ReactElement<{
+          value: string;
+          onChange: (event: ChangeEvent<HTMLSelectElement>) => void;
+          children: ReactNode;
+        }>;
+      };
+      const initialMarkup = renderToStaticMarkup(renderSelect());
+      if (initial === "" || initial === null || initial === undefined)
+        expect(initialMarkup).toContain('value="" selected=""');
+      expect(
+        [...initialMarkup.matchAll(/selected="">([^<]*)<\/option>/g)].map((match) => match[1]),
+      ).toEqual([labels[values.indexOf(initial)]]);
+      // Visit both colliding values repeatedly; read each identifier from its rendered option.
+      for (const index of [...values.keys(), ...values.keys()].reverse()) {
+        const select = renderSelect();
+        const options = Children.toArray(select.props.children) as ReactElement<{
+          value: string;
+        }>[];
+        expect(new Set(options.map((option) => option.props.value)).size).toBe(values.length);
+        select.props.onChange({
+          currentTarget: { value: options[index].props.value },
+        } as ChangeEvent<HTMLSelectElement>);
+        expect(state.values.choice).toBe(values[index]);
+        expect(renderToStaticMarkup(renderSelect())).toContain(
+          `selected="">${labels[index]}</option>`,
+        );
+        state = await submitAdminForm(contract, state);
+        expect(submit).toHaveBeenLastCalledWith(
+          expect.objectContaining({ values: { choice: values[index] } }),
+        );
+      }
+    },
+  );
+});
