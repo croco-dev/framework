@@ -371,6 +371,66 @@ describe("AdminForm", () => {
     );
   });
 
+  it.each([
+    ["first.name", "first-name", "first_name", "first-name-errors"],
+    ["이름", "주소", "--", ""],
+    ["first_2e_name", "first.name", "first-name-description"],
+  ])(
+    "keeps label, description and error ids distinct for field names %j",
+    (firstName, ...otherNames) => {
+      const names = [firstName, ...otherNames];
+      const field = (name: string, index: number) => ({
+        name,
+        label: `Field ${index}`,
+        description: `Description ${index}`,
+      });
+      const contract: AdminFormContract<Record<string, string>> = {
+        ...createUserFormContract(),
+        fields: [field(firstName, 0), ...otherNames.map((name, index) => field(name, index + 1))],
+        initialValues: Object.fromEntries(names.map((name, index) => [name, `Value ${index}`])),
+        submit: async () => ({ kind: "success" }),
+      };
+      const state: AdminFormState<Record<string, string>> = {
+        ...createAdminFormState(contract, { generatedAt }),
+        fieldErrors: Object.fromEntries(
+          names.map((name, index) => [
+            name,
+            [
+              {
+                code: `invalid.${index}`,
+                message: `Error ${index}`,
+              },
+            ] as const,
+          ]),
+        ),
+      };
+      const markup = renderToStaticMarkup(
+        createElement(AdminForm<Record<string, string>>, { state }),
+      );
+      const ids = [...markup.matchAll(/\bid="([^"]*)"/g)].map((match) => match[1]);
+      const inputs = [...markup.matchAll(/<input\b[^>]*>/g)].map((match) => match[0]);
+      const labels = [...markup.matchAll(/<label for="([^"]*)"/g)].map((match) => match[1]);
+      const descriptions = [...markup.matchAll(/<p id="([^"]*)"/g)].map((match) => match[1]);
+      const errors = [...markup.matchAll(/<ul data-field-error-for="[^"]*" id="([^"]*)"/g)].map(
+        (match) => match[1],
+      );
+
+      expect(new Set(ids).size).toBe(ids.length);
+      expect(inputs).toHaveLength(names.length);
+      expect(labels).toHaveLength(names.length);
+      expect(descriptions).toHaveLength(names.length);
+      expect(errors).toHaveLength(names.length);
+      inputs.forEach((input, index) => {
+        expect(input.match(/\bid="([^"]*)"/)?.[1]).toBe(labels[index]);
+        expect(input.match(/aria-describedby="([^"]*)"/)?.[1].split(" ")).toEqual([
+          descriptions[index],
+          errors[index],
+        ]);
+        expect(input).toContain('aria-invalid="true"');
+      });
+    },
+  );
+
   it("generates distinct default field ids when multiple forms share field names", () => {
     const state = createAdminFormState(createUserFormContract(), { generatedAt });
     const markup = renderToStaticMarkup(

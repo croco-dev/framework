@@ -424,7 +424,7 @@ export function AdminFormField<TValues extends object>({
   readonly onFieldChange?: AdminFormProps<TValues>["onFieldChange"];
   readonly value: TValues[AdminFormFieldName<TValues>];
 }): ReactElement {
-  const fieldId = `${fieldIdPrefix ?? "admin-form"}-field-${sanitizeAdminFormId(field.name)}`;
+  const fieldId = `${fieldIdPrefix ?? "admin-form"}-field-${encodeAdminFormFieldName(field.name)}`;
   const errorId = `${fieldId}-errors`;
   const descriptionId = field.description ? `${fieldId}-description` : undefined;
   const describedById = [descriptionId, errors.length > 0 ? errorId : undefined]
@@ -923,6 +923,11 @@ function stringifyAdminFormInputValue(value: unknown): string {
   }
 
   return String(value);
+}
+
+function encodeAdminFormFieldName(value: string): string {
+  // Escape the delimiter too, so literal escape sequences cannot alias encoded names.
+  return value.replace(/[^A-Za-z0-9]/g, (character) => `_${character.charCodeAt(0).toString(16)}_`);
 }
 
 function sanitizeAdminFormId(value: string): string {
