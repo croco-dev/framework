@@ -1,5 +1,7 @@
 import "reflect-metadata";
-import { context, ROOT_CONTEXT, trace } from "@opentelemetry/api";
+import { AsyncLocalStorage } from "node:async_hooks";
+import { queryObjects } from "node:v8";
+import { context, ProxyTracerProvider, ROOT_CONTEXT, trace } from "@opentelemetry/api";
 import { CurrentApiKey, CurrentPrincipal, User } from "@croco/auth-core";
 import type {
   BillingGateway,
@@ -32,7 +34,7 @@ import { RateLimitStore } from "@croco/ratelimit-core";
 import { InMemoryStorageProvider } from "@croco/storage-core";
 import { recordEvent, withSpan } from "@croco/telemetry-api";
 import { createGracefulShutdownController } from "@croco/transports-http";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   assertDrizzleProblem,
   assertOpenAPIRoute,
@@ -1156,6 +1158,97 @@ describe("@croco/testing", () => {
     expect(secondCapture.spans[0]?.events).toEqual([
       { attributes: { capture: "second" }, name: "testing.capture" },
     ]);
+  });
+
+  describe("telemetry capture registration", () => {
+    beforeEach(() => {
+      trace.disable();
+      context.disable();
+    });
+
+    afterEach(() => {
+      trace.disable();
+      context.disable();
+    });
+
+    it.each(["trace", "context", "both"])(
+      "restores capture and async parent context after %s cleanup",
+      async (cleanup) => {
+        const first = installTestingTelemetryCapture();
+        trace.getTracer("before-cleanup").startSpan("before-cleanup").end();
+        expect(first.spans.map((span) => span.name)).toEqual(["before-cleanup"]);
+
+        if (cleanup !== "context") trace.disable();
+        if (cleanup !== "trace") context.disable();
+
+        const second = installTestingTelemetryCapture();
+        const tracer = trace.getTracer("after-cleanup");
+        await tracer.startActiveSpan("parent", async (parent) => {
+          await Promise.resolve();
+          tracer.startSpan("child").end();
+          parent.end();
+        });
+
+        expect(second.spans.map((span) => span.name)).toEqual(["parent", "child"]);
+        expect(second.spans[1]).toMatchObject({
+          parentSpanId: second.spans[0]?.spanId,
+          traceId: second.spans[0]?.traceId,
+          ended: true,
+        });
+        expect(second.spans[0]?.ended).toBe(true);
+        expect(first.spans.map((span) => span.name)).toEqual(["before-cleanup"]);
+      },
+    );
+
+    it("restores the shared provider after another API instance disables tracing", () => {
+      // Duplicate API loads have separate local proxies but share the global OTel registration.
+      const otherTrace: typeof trace = Reflect.construct(trace.constructor, []);
+      const first = installTestingTelemetryCapture();
+      otherTrace.getTracer("other-api").startSpan("before-other-cleanup").end();
+      expect(first.spans.map((span) => span.name)).toEqual(["before-other-cleanup"]);
+
+      otherTrace.disable();
+      const second = installTestingTelemetryCapture();
+      otherTrace.getTracer("other-api").startSpan("after-other-cleanup").end();
+      expect(second.spans.map((span) => span.name)).toEqual(["after-other-cleanup"]);
+      expect(first.spans.map((span) => span.name)).toEqual(["before-other-cleanup"]);
+    });
+
+    it("does not retain disabled context stores across reinstall cycles", () => {
+      installTestingTelemetryCapture();
+      trace.disable();
+      context.disable();
+      const baseline = queryObjects(AsyncLocalStorage, { format: "count" });
+
+      for (let index = 0; index < 10; index += 1) {
+        const capture = installTestingTelemetryCapture();
+        trace.getTracer("reinstall-retention").startSpan(`cycle-${index}`).end();
+        expect(capture.spans.map((span) => span.name)).toEqual([`cycle-${index}`]);
+        trace.disable();
+        context.disable();
+      }
+
+      expect(queryObjects(AsyncLocalStorage, { format: "count" })).toBeLessThanOrEqual(baseline);
+    });
+
+    it.each([false, true])(
+      "rejects a foreign provider (previous capture: %s)",
+      (previousCapture) => {
+        if (previousCapture) {
+          installTestingTelemetryCapture();
+          trace.disable();
+          context.disable();
+        }
+        const externalProvider = new ProxyTracerProvider();
+        expect(trace.setGlobalTracerProvider(externalProvider)).toBe(true);
+        const registeredProvider = trace.getTracerProvider();
+
+        expect(() => installTestingTelemetryCapture()).toThrow(
+          "another OpenTelemetry tracer provider is already registered",
+        );
+        expect(trace.getTracerProvider()).toBe(registeredProvider);
+      },
+    );
   });
 
   describe("storage provider conformance", () => {

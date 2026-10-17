@@ -26915,7 +26915,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/testing/src/libs/telemetry-testing.ts";
-          readonly line: 54;
+          readonly line: 57;
           readonly column: 5;
           readonly kind: "problem-constructor";
         },
@@ -60117,7 +60117,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/testing/src/libs/telemetry-testing.ts",
-          line: 54,
+          line: 57,
           column: 5,
           kind: "problem-constructor",
         },

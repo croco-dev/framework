@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, relative } from "node:path";
 import { renderUsage } from "citty";
@@ -10,6 +10,11 @@ import { createCrocoCommand } from "../commands/root.js";
 import { CLI_DIAGNOSTIC_CODES, CLI_LEGACY_DIAGNOSTIC_CODES } from "../libs/diagnosticCodes.js";
 
 const tempRepos: string[] = [];
+const workspacePackageManager = (
+  JSON.parse(readFileSync(new URL("../../../../package.json", import.meta.url), "utf8")) as {
+    packageManager: string;
+  }
+).packageManager;
 
 describe("doctor", () => {
   afterEach(() => {
@@ -3981,7 +3986,7 @@ function writeRootPackage(repo: string, manifest: Record<string, unknown> = {}):
   writeJson(repo, "package.json", {
     name: "croco-doctor-test",
     private: true,
-    packageManager: "pnpm@11.9.0",
+    packageManager: workspacePackageManager,
     ...manifest,
   });
 
