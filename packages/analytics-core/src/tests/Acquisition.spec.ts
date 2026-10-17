@@ -609,7 +609,7 @@ it.each([
   { ...context, referrer: [] },
   [],
   null,
-])("rejects malformed JSON context shapes with a stable Problem: %j", (value) => {
+])("rejects malformed JSON context shapes with a stable Problem: %j", (value: unknown) => {
   expect(() => validateAcquisitionContext(value as AcquisitionContext, urls)).toThrow(
     AcquisitionProblem,
   );
@@ -622,7 +622,7 @@ it.each([
 
 it.each([["home"], { toString: "home" }, null])(
   "rejects malformed destination references with a stable Problem: %j",
-  (ref) => {
+  (ref: unknown) => {
     expect(() => resolveAcquisitionDestination(ref as string, urls)).toThrow(AcquisitionProblem);
   },
 );
