@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export type CrocoProblemRegistry = {
   readonly version: "croco.problem-code-registry.v1";
-  readonly problemCount: 1063;
+  readonly problemCount: 1070;
   readonly problems: readonly [
     {
       readonly code: "ACCESS_DENIED";
@@ -5910,6 +5910,174 @@ export type CrocoProblemRegistry = {
           readonly line: 60;
           readonly column: 1;
           readonly kind: "problem-class";
+        },
+      ];
+    },
+    {
+      readonly code: "analytics/acquisition/conflict";
+      readonly category: "Conflict";
+      readonly status: 409;
+      readonly title: "Conflict";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#analytics-acquisition-conflict";
+      readonly recovery: {
+        readonly cause: "The request conflicts with current state or an idempotency constraint.";
+        readonly userAction: "Refresh state, resolve the conflict, and retry with the updated intent.";
+        readonly operatorAction: "Inspect concurrent writes, idempotency keys, and uniqueness constraints.";
+        readonly retryability: "conditional";
+        readonly redactionPolicy: "safe-message";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.warning";
+          readonly severity: "warning";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/analytics-core/src/libs/Acquisition.ts";
+          readonly line: 117;
+          readonly column: 13;
+          readonly kind: "problem-metadata";
+        },
+      ];
+    },
+    {
+      readonly code: "analytics/acquisition/deleted";
+      readonly category: "Gone";
+      readonly status: 410;
+      readonly title: "Gone";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#analytics-acquisition-deleted";
+      readonly recovery: {
+        readonly cause: "The requested resource is no longer available through this API surface.";
+        readonly userAction: "Stop using the stale reference and follow the replacement flow when available.";
+        readonly operatorAction: "Verify lifecycle, migration, deprecation, and retention state.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "public";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.info";
+          readonly severity: "info";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/analytics-core/src/libs/Acquisition.ts";
+          readonly line: 118;
+          readonly column: 12;
+          readonly kind: "problem-metadata";
+        },
+      ];
+    },
+    {
+      readonly code: "analytics/acquisition/denied";
+      readonly category: "Forbidden";
+      readonly status: 403;
+      readonly title: "Forbidden";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#analytics-acquisition-denied";
+      readonly recovery: {
+        readonly cause: "The authenticated caller is not allowed to perform the requested action.";
+        readonly userAction: "Request the required permission or choose an allowed action.";
+        readonly operatorAction: "Review policy, role, tenant, entitlement, and impersonation context.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "safe-message";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.warning";
+          readonly severity: "warning";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/analytics-core/src/libs/Acquisition.ts";
+          readonly line: 116;
+          readonly column: 11;
+          readonly kind: "problem-metadata";
+        },
+      ];
+    },
+    {
+      readonly code: "analytics/acquisition/invalid";
+      readonly category: "ValidationError";
+      readonly status: 422;
+      readonly title: "Validation Error";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#analytics-acquisition-invalid";
+      readonly recovery: {
+        readonly cause: "The request or generated contract failed schema or semantic validation.";
+        readonly userAction: "Fix the invalid fields and retry with schema-conformant input.";
+        readonly operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "public";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.info";
+          readonly severity: "info";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/analytics-core/src/libs/Acquisition.ts";
+          readonly line: 115;
+          readonly column: 12;
+          readonly kind: "problem-metadata";
+        },
+      ];
+    },
+    {
+      readonly code: "analytics/acquisition/limit";
+      readonly category: "ValidationError";
+      readonly status: 422;
+      readonly title: "Validation Error";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#analytics-acquisition-limit";
+      readonly recovery: {
+        readonly cause: "The request or generated contract failed schema or semantic validation.";
+        readonly userAction: "Fix the invalid fields and retry with schema-conformant input.";
+        readonly operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "public";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.info";
+          readonly severity: "info";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/analytics-core/src/libs/Acquisition.ts";
+          readonly line: 119;
+          readonly column: 10;
+          readonly kind: "problem-metadata";
+        },
+      ];
+    },
+    {
+      readonly code: "analytics/acquisition/persistence";
+      readonly category: "InternalServerError";
+      readonly status: 500;
+      readonly title: "Internal Server Error";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#analytics-acquisition-persistence";
+      readonly recovery: {
+        readonly cause: "Croco or an upstream dependency failed after accepting the request.";
+        readonly userAction: "Retry later only when the operation is idempotent or the caller owns retry safety.";
+        readonly operatorAction: "Use traces, logs, and upstream diagnostics to isolate the failing boundary.";
+        readonly retryability: "conditional";
+        readonly redactionPolicy: "operator-only";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.error";
+          readonly severity: "error";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/analytics-core/src/libs/Acquisition.ts";
+          readonly line: 120;
+          readonly column: 16;
+          readonly kind: "problem-metadata";
         },
       ];
     },
@@ -15495,6 +15663,34 @@ export type CrocoProblemRegistry = {
           readonly line: 14;
           readonly column: 5;
           readonly kind: "problem-constructor";
+        },
+      ];
+    },
+    {
+      readonly code: "frontend/acquisition/invalid-path";
+      readonly category: "ValidationError";
+      readonly status: 422;
+      readonly title: "Validation Error";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#frontend-acquisition-invalid-path";
+      readonly recovery: {
+        readonly cause: "The request or generated contract failed schema or semantic validation.";
+        readonly userAction: "Fix the invalid fields and retry with schema-conformant input.";
+        readonly operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "public";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.info";
+          readonly severity: "info";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/frontend-react/src/libs/acquisitionCollector.ts";
+          readonly line: 3;
+          readonly column: 1;
+          readonly kind: "problem-class";
         },
       ];
     },
@@ -30057,7 +30253,7 @@ export type CrocoProblemRegistry = {
 
 export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 1063,
+  problemCount: 1070,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -36614,6 +36810,189 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
           line: 60,
           column: 1,
           kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "analytics/acquisition/conflict",
+      category: "Conflict",
+      status: 409,
+      title: "Conflict",
+      cookbookPath: "/reference/problem-recovery-cookbook/#analytics-acquisition-conflict",
+      recovery: {
+        cause: "The request conflicts with current state or an idempotency constraint.",
+        userAction: "Refresh state, resolve the conflict, and retry with the updated intent.",
+        operatorAction: "Inspect concurrent writes, idempotency keys, and uniqueness constraints.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/analytics-core/src/libs/Acquisition.ts",
+          line: 117,
+          column: 13,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "analytics/acquisition/deleted",
+      category: "Gone",
+      status: 410,
+      title: "Gone",
+      cookbookPath: "/reference/problem-recovery-cookbook/#analytics-acquisition-deleted",
+      recovery: {
+        cause: "The requested resource is no longer available through this API surface.",
+        userAction:
+          "Stop using the stale reference and follow the replacement flow when available.",
+        operatorAction: "Verify lifecycle, migration, deprecation, and retention state.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/analytics-core/src/libs/Acquisition.ts",
+          line: 118,
+          column: 12,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "analytics/acquisition/denied",
+      category: "Forbidden",
+      status: 403,
+      title: "Forbidden",
+      cookbookPath: "/reference/problem-recovery-cookbook/#analytics-acquisition-denied",
+      recovery: {
+        cause: "The authenticated caller is not allowed to perform the requested action.",
+        userAction: "Request the required permission or choose an allowed action.",
+        operatorAction: "Review policy, role, tenant, entitlement, and impersonation context.",
+        retryability: "not-retryable",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/analytics-core/src/libs/Acquisition.ts",
+          line: 116,
+          column: 11,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "analytics/acquisition/invalid",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#analytics-acquisition-invalid",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/analytics-core/src/libs/Acquisition.ts",
+          line: 115,
+          column: 12,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "analytics/acquisition/limit",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#analytics-acquisition-limit",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/analytics-core/src/libs/Acquisition.ts",
+          line: 119,
+          column: 10,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "analytics/acquisition/persistence",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#analytics-acquisition-persistence",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/analytics-core/src/libs/Acquisition.ts",
+          line: 120,
+          column: 16,
+          kind: "problem-metadata",
         },
       ],
     },
@@ -47327,6 +47706,36 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
           line: 14,
           column: 5,
           kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "frontend/acquisition/invalid-path",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#frontend-acquisition-invalid-path",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/frontend-react/src/libs/acquisitionCollector.ts",
+          line: 3,
+          column: 1,
+          kind: "problem-class",
         },
       ],
     },

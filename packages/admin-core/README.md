@@ -474,3 +474,9 @@ share/export permission. Embedded note instructions never confer any permission.
 `LearningView.isComplete` is false when field permissions or evidence availability hide stored
 content. Partial views are for inspection and export, not replacement edits or copying. Full-record
 writes require both read and write permission for every content field, including the optional decision.
+
+`@croco/admin-core/acquisition` exposes `createAcquisitionOperations(service, serverScope)` and
+`AcquisitionInspectorState`. Operations consume the same authorized attribution service and return
+ready/empty/denied/partial states; storage failures propagate for the host to render as error. The scope
+is supplied by the server, and caller payloads cannot replace it. Partial means the evidence bound was
+exceeded; it contains no credits from truncated data.

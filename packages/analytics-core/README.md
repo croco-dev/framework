@@ -273,3 +273,74 @@ policy to the source and projections as part of their deletion lifecycle.
 The app provides authenticated scope binding, PII rejection/masking, bounded registrations, model limits, aggregate-field projection, and idempotent usage receipts. The model sees definition metadata and choices, never raw customer rows; it can only return existing choice IDs. Confirmation and current authorization are required before reading results. See [the standalone example](../../examples/growth-analysis/README.md) for local reports, the native SDK HTTP fixture, cancellation, unavailable states, and settlement recovery limits.
 
 `ProposeAnalysisPlan` implementations must honor the supplied `AbortSignal` and settle promptly after cancellation or timeout. The service retains the concurrency slot until that promise settles. A provider that ignores cancellation and never settles keeps its slot occupied; correct or replace that provider before accepting more inference work. A deadline does not release a slot while its provider work remains unresolved.
+
+## Acquisition observations and attribution
+
+Import the standalone surface from `@croco/analytics-core/acquisition`. `parseAcquisitionContext`
+and `resolveAttribution` are pure functions; `AcquisitionService` supplies authorized recording,
+explicit login linking, immutable audited definitions, bounded comparison/export references, deletion
+and retention over an `AcquisitionStore`. See [the runnable first-party example](../../examples/acquisition).
+
+```typescript typecheck
+import { parseAcquisitionContext } from "@croco/analytics-core/acquisition";
+
+const urls = {
+  origin: "https://shop.example",
+  destinations: { home: "/", pricing: "/pricing" },
+  campaigns: { utm_source: ["newsletter"] },
+  referrerOrigins: ["https://search.example"],
+};
+const context = parseAcquisitionContext(
+  {
+    url: "https://shop.example/?utm_source=newsletter&token=discarded",
+    referrerAvailable: false,
+  },
+  urls,
+);
+// { landingRef: 'home', campaign: { utm_source: 'newsletter' }, referrer: { status: 'unavailable' } }
+```
+
+Only registered landing paths, campaign codes and referrer origins survive. Campaign values undergo
+NFKC normalization, trimming and lowercasing before exact allowlist matching. Duplicate campaign keys
+are ignored. Arbitrary paths, credentials, fragments, unknown query keys and raw referrer paths never
+enter persisted context or public diagnostics. `validateAcquisitionContext` repeats validation on the
+server and discards extra fields; client UTM values are observations and grant no permission or benefit.
+`resolveAcquisitionDestination` accepts a registered reference, never a caller-provided URL.
+
+First-touch and last-observed-touch v1 include both endpoints of
+`[conversion.occurredAt - windowMs, conversion.occurredAt]`, exclude future and expired rows, and use
+ascending stable IDs to resolve equal timestamps. A campaign/referrer observation receives credit 1;
+unknown/direct receives credit 0 and `unattributed`, while still retaining the selected touchpoint.
+Last-observed includes subsequent direct/unattributed visits. No last-non-direct fallback is implicit.
+Missing UTM or referrer never establishes organic uplift. Source referrer `absent` differs from
+`unavailable`. Results conservatively report partial retained coverage, even if an individual row
+claims a complete collection interval; first retained touch is never a lifetime-first claim.
+
+Scopes explicitly require app, environment and tenantId (`null` is one untenanted scope, never all
+tenants). The application-supplied policy is mandatory for record, link, read, export, define, delete
+and purge; policy exceptions fail the operation. The configured actor is server-owned. Authentication,
+consent and anonymous-session ownership must be established by this policy, never by campaign values.
+`linkKnownSubject` records actor/provenance/time and a snapshot of the anonymous touchpoint IDs accepted
+at login. It preserves each row's original identity and never includes later anonymous visits. A session
+cannot be remapped to another subject; logout/principal changes must rotate its opaque anonymous ref.
+
+`define` accepts consecutive revisions with actor/reason codes and an idempotency key. Different
+payloads sharing a receipt or revision conflict. Reports identify their exact conversion and immutable
+definition references. `compare` reads at most 1,000 rows and 10 definitions; overflow raises a stable
+Problem rather than attributing truncated history. Referral claims and self-reported codes are optional,
+separate rows; conflicting responses stay visible and neither changes the observed channel nor increases
+the distinct conversion count. A comparison contains one distinct conversion across all model views.
+
+`policy.mask` receives cloned rows for authorized output, after calculation. It must preserve stable
+row IDs referenced by results and redact identifying/source fields according to application policy.
+Store failures propagate and never become normal unattributed results. Deletion atomically removes
+subject and explicitly linked anonymous rows, mapping receipts and affected report references; opaque
+identity tombstones reject stale retries. Expired rows cannot be compared; `purgeExpired` physically
+removes them, prunes link references and clears derived report references. Applications schedule purges
+and define metadata/tombstone retention separately; a new anonymous session must never reuse a deleted ID.
+
+Timestamps use canonical UTC ISO strings with milliseconds (`Date.toISOString()`). Export report IDs
+bind the conversion, definition versions and exact retained evidence references; new or expired evidence
+requires a new report ID instead of silently changing a prior receipt. Differences between referral claims
+and self-reported answers are independent declarations. Conflict indicates multiple values within the same
+source kind, rather than disagreement between those two kinds.
