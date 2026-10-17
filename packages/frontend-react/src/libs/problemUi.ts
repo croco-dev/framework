@@ -89,18 +89,22 @@ export function ProblemRecoveryActions({
   return createElement(
     "ul",
     { "data-testid": "croco-problem-actions" },
-    actions.map((action) =>
-      createElement(
-        "li",
-        {
-          "data-recovery-action-kind": action.kind,
-          key: action.id,
-        },
-        renderRecoveryAction
-          ? wrapNode(renderRecoveryAction(action, problem))
-          : createDefaultRecoveryAction(action, problem),
+    actions
+      .filter(
+        (action) => action.problemCodes === undefined || action.problemCodes.includes(problem.code),
+      )
+      .map((action) =>
+        createElement(
+          "li",
+          {
+            "data-recovery-action-kind": action.kind,
+            key: action.id,
+          },
+          renderRecoveryAction
+            ? wrapNode(renderRecoveryAction(action, problem))
+            : createDefaultRecoveryAction(action, problem),
+        ),
       ),
-    ),
   );
 }
 
