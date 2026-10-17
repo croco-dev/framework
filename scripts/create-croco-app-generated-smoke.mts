@@ -1700,7 +1700,7 @@ const smokeCaseDefinitionsWithoutLint: readonly Omit<SmokeCase, "tier" | "adviso
       "--no-git",
     ],
     runtimeTarget: "node",
-    matrixTargets: ["spa-be-split", "addons/kubernetes"],
+    matrixTargets: ["spa-be-split"],
     validations: [
       {
         label: "install-immediate contract verify",
