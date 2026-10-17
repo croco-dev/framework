@@ -933,21 +933,54 @@ function writeBaseline(rootDir: string, unmarkedBlocks: readonly MarkdownCodeBlo
 
 function typecheckBlocks(rootDir: string, blocks: readonly MarkdownCodeBlock[]): string[] {
   const generated = generateVirtualFiles(rootDir, blocks);
-  const compilerOptions = createCompilerOptions(rootDir);
+  const packages = readWorkspacePackages(rootDir);
+  const compilerOptions = createCompilerOptions(rootDir, packages);
   const host = createVirtualCompilerHost(compilerOptions, generated.files);
+  // Let TypeScript interpret exports (including ordered/nested conditions, patterns and null
+  // exclusions) in each package's own scope. Never infer a source filename from a subpath.
+  const resolutionCache = ts.createModuleResolutionCache(rootDir, normalizePath, compilerOptions);
+  const prerequisites = new Set<string>();
+  host.resolveModuleNameLiterals = (literals, containingFile) =>
+    literals.map((literal) => {
+      const pkg = packages.find(
+        (candidate) =>
+          literal.text === candidate.name || literal.text.startsWith(`${candidate.name}/`),
+      );
+      const result = ts.resolveModuleName(
+        literal.text,
+        pkg?.hasExports ? join(pkg.directory, ".croco-doc-resolution.mts") : containingFile,
+        compilerOptions,
+        host,
+        resolutionCache,
+        undefined,
+        ts.ModuleKind.ESNext,
+      );
+      if (pkg?.hasExports && !result.resolvedModule) {
+        prerequisites.add(
+          `Cannot resolve public export '${literal.text}' from ${normalizeRelativePath(rootDir, join(pkg.directory, "package.json"))}. ` +
+            "Check its exports target and active types/import conditions; if it references build artifacts, run pnpm build before checking documentation.",
+        );
+      }
+      return result;
+    });
   const program = ts.createProgram({
     rootNames: Array.from(generated.files.keys()),
     options: compilerOptions,
     host,
   });
 
-  return ts
+  const diagnostics = ts
     .getPreEmitDiagnostics(program)
     .filter((diagnostic) => diagnostic.category === ts.DiagnosticCategory.Error)
     .map((diagnostic) => formatDiagnostic(diagnostic, generated.blocksByFile));
+
+  return [...diagnostics, ...prerequisites];
 }
 
-function createCompilerOptions(rootDir: string): ts.CompilerOptions {
+function createCompilerOptions(
+  rootDir: string,
+  packages: readonly WorkspacePackage[],
+): ts.CompilerOptions {
   const typeRoots = [
     join(rootDir, "node_modules", "@types"),
     join(scriptRootDir, "node_modules", "@types"),
@@ -965,7 +998,12 @@ function createCompilerOptions(rootDir: string): ts.CompilerOptions {
     noEmit: true,
     noUnusedLocals: false,
     noUnusedParameters: false,
-    paths: createPackagePaths(rootDir),
+    // Legacy packages have no exports map; preserve their existing source-root contract.
+    paths: Object.fromEntries(
+      packages
+        .filter((pkg) => !pkg.hasExports && existsSync(join(pkg.directory, "src", "index.ts")))
+        .map((pkg) => [pkg.name, [normalizePath(join(pkg.directory, "src", "index.ts"))]]),
+    ),
     resolveJsonModule: true,
     skipDefaultLibCheck: true,
     skipLibCheck: true,
@@ -981,47 +1019,33 @@ function createCompilerOptions(rootDir: string): ts.CompilerOptions {
   return options;
 }
 
-function createPackagePaths(rootDir: string): ts.MapLike<string[]> {
-  const packagesDir = join(rootDir, "packages");
-  const paths: ts.MapLike<string[]> = {};
+type WorkspacePackage = {
+  readonly name: string;
+  readonly directory: string;
+  readonly hasExports: boolean;
+};
 
-  if (!existsSync(packagesDir)) {
-    return paths;
-  }
+function readWorkspacePackages(rootDir: string): WorkspacePackage[] {
+  const packagesDir = join(rootDir, "packages");
+  const packages: WorkspacePackage[] = [];
+  if (!existsSync(packagesDir)) return packages;
 
   for (const entry of readdirSync(packagesDir, { withFileTypes: true }).sort((left, right) =>
     compareStrings(left.name, right.name),
   )) {
-    if (!entry.isDirectory()) {
-      continue;
-    }
-
-    const packageDir = join(packagesDir, entry.name);
-    const packageJsonPath = join(packageDir, "package.json");
-    const sourceIndexPath = join(packageDir, "src", "index.ts");
-
-    if (!existsSync(packageJsonPath) || !existsSync(sourceIndexPath)) {
-      continue;
-    }
-
+    if (!entry.isDirectory()) continue;
+    const directory = join(packagesDir, entry.name);
+    const packageJsonPath = join(directory, "package.json");
+    if (!existsSync(packageJsonPath)) continue;
     const packageJson = JSON.parse(readFileSync(packageJsonPath, "utf-8")) as unknown;
-    if (!isRecord(packageJson) || typeof packageJson.name !== "string") {
-      continue;
-    }
-
-    paths[packageJson.name] = [normalizePath(sourceIndexPath)];
-    if (isRecord(packageJson.exports)) {
-      for (const subpath of Object.keys(packageJson.exports)) {
-        if (!subpath.startsWith("./") || subpath.includes("*")) continue;
-        const sourcePath = join(packageDir, "src", `${subpath.slice(2)}.ts`);
-        if (existsSync(sourcePath)) {
-          paths[`${packageJson.name}/${subpath.slice(2)}`] = [normalizePath(sourcePath)];
-        }
-      }
-    }
+    if (!isRecord(packageJson) || typeof packageJson.name !== "string") continue;
+    packages.push({
+      name: packageJson.name,
+      directory,
+      hasExports: packageJson.exports !== undefined,
+    });
   }
-
-  return paths;
+  return packages;
 }
 
 function generateVirtualFiles(

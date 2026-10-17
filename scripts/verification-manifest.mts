@@ -1377,6 +1377,7 @@ const VERIFICATION_DEPENDENCIES: Readonly<Record<string, readonly string[]>> = {
   "architecture-policy": ["architecture-policy-runtime"],
   "benchmark-thresholds": ["verification-contract-tests"],
   build: ["architecture-policy-runtime"],
+  "docs-examples": ["build"],
   "quick-start-lambda-smoke": ["build"],
   "first-success": ["build"],
   "package-entrypoints-smoke": ["build", "typecheck", "generated-app-smoke"],
@@ -1411,6 +1412,7 @@ type VerificationDependencyEdge =
   | "benchmark-thresholds->verification-contract-tests"
   | "build->architecture-policy-runtime"
   | "build->release-metadata"
+  | "docs-examples->build"
   | "quick-start-lambda-smoke->build"
   | "first-success->build"
   | "package-entrypoints-smoke->build"
@@ -1456,6 +1458,7 @@ export const VERIFICATION_DEPENDENCY_CLASSIFICATION = {
   "architecture-policy->architecture-policy-runtime": ["physical-local"],
   "benchmark-thresholds->verification-contract-tests": ["physical-local"],
   "build->architecture-policy-runtime": ["physical-local"],
+  "docs-examples->build": ["physical-local"],
   "build->release-metadata": ["physical-local", "logical-synthesis"],
   "quick-start-lambda-smoke->build": ["physical-local"],
   "first-success->build": ["physical-local"],
@@ -1502,6 +1505,7 @@ export const VERIFICATION_DEPENDENCY_CLASSIFICATION = {
 >;
 
 const WORKSPACE_ARTIFACT_CONCURRENCY_GROUP = new Set([
+  "docs-examples",
   "typecheck",
   "test",
   "package-bins-smoke",

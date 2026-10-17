@@ -1767,6 +1767,7 @@ describe("verification manifest", () => {
       "architecture-policy": ["architecture-policy-runtime"],
       "benchmark-thresholds": ["verification-contract-tests"],
       build: ["architecture-policy-runtime"],
+      "docs-examples": ["build"],
       "package-entrypoints-smoke": ["build", "typecheck", "generated-app-smoke"],
       "package-bins-smoke": ["build"],
       "generated-app-smoke": ["build"],
