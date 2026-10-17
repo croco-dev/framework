@@ -391,6 +391,14 @@ customer components and operator policy editing.
 
 The direct cancellation confirmation precedes optional reasons and retention choices. Skipping a reason and declining offers return keyboard focus to that button. Declined offers stay hidden across session refreshes in the mounted flow. Unsupported choices are disabled. Expired/conflicting terms require a refresh; an unknown submission outcome locks further decisions until refresh. Command acceptance, scheduled cancellation, ended access and refund confirmation are shown separately. The host must return the authoritative session after decisions and reconciliation and must never create a replacement command to recover an unknown result.
 
+`collectAcquisitionContext` from `@croco/frontend-react/acquisition` is an opt-in first-party helper.
+Pass the pure analytics parser, an application-approved clean path, an address replacement callback and
+a server POST callback. With collection disabled it reads or transmits nothing. When enabled it clears
+the address query and fragment before sending sanitized context, including when parsing fails. It does
+not create persistent browser IDs or fingerprint devices. The server must revalidate input and derive
+scope/identity from authenticated state. Rotate the server anonymous session on logout or principal
+changes, and disable raw URL logging/caching in upstream infrastructure before serving the page.
+
 ## ExperimentRegion
 
 `ExperimentRegion` renders a browser-safe frozen delivery decision from

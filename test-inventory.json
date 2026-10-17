@@ -2,6 +2,12 @@
   "version": 1,
   "tests": [
     {
+      "path": "examples/acquisition/src/tests/Config.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "repo:examples"
+    },
+    {
       "path": "examples/cancellation-flow/src/tests/RequestValidation.spec.ts",
       "lane": "fast",
       "qualifiers": [],
@@ -174,6 +180,18 @@
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/access-drizzle"
+    },
+    {
+      "path": "packages/admin-core/src/tests/AcquisitionEntrypoints.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-core"
+    },
+    {
+      "path": "packages/admin-core/src/tests/AcquisitionOperations.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-core"
     },
     {
       "path": "packages/admin-core/src/tests/ActivationCandidateOperations.spec.ts",
@@ -432,6 +450,12 @@
       "lane": "live",
       "qualifiers": [],
       "owner": "@croco/admin-postgres"
+    },
+    {
+      "path": "packages/admin-react/src/tests/AcquisitionInspector.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-react"
     },
     {
       "path": "packages/admin-react/src/tests/ActivationCandidateExplorer.spec.ts",
@@ -744,6 +768,12 @@
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/ai-usage"
+    },
+    {
+      "path": "packages/analytics-core/src/tests/Acquisition.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/analytics-core"
     },
     {
       "path": "packages/analytics-core/src/tests/AnalyticsManager.spec.ts",
@@ -2982,6 +3012,12 @@
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/frontend-problems"
+    },
+    {
+      "path": "packages/frontend-react/src/tests/AcquisitionCollector.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/frontend-react"
     },
     {
       "path": "packages/frontend-react/src/tests/CancellationFlow.spec.ts",
