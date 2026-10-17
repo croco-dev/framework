@@ -73,6 +73,314 @@ describe("TestRuntime", () => {
     expect(events).toEqual(Array.from({ length: 12 }, (_, index) => String(index)));
   });
 
+  it("drains async callbacks awaiting nested sleeps on the same clock", async () => {
+    const clock = fixedClock("2026-01-01T00:00:00.000Z");
+    const events: string[] = [];
+    clock.schedule(async () => {
+      events.push("entered");
+      await clock.sleep(10);
+      events.push(`first:${clock.now.getTime()}`);
+      await clock.sleep(7);
+      events.push(`finished:${clock.now.getTime()}`);
+    }, 0);
+
+    await clock.drain();
+
+    expect(events).toEqual(["entered", "first:1767225600010", "finished:1767225600017"]);
+    expect(clock.now.toISOString()).toBe("2026-01-01T00:00:00.017Z");
+    expect(clock.pendingWork).toEqual([]);
+  });
+
+  it("orders overlapping callbacks and nested promise continuations by virtual time", async () => {
+    const clock = fixedClock("2026-01-01T00:00:00.000Z");
+    const events: string[] = [];
+    const pause = async () => {
+      for (let index = 0; index < 8; index += 1) await Promise.resolve();
+      await clock.sleep(4);
+    };
+    clock.schedule(async () => {
+      events.push("first:start");
+      await pause();
+      events.push(`first:end:${clock.now.getTime()}`);
+    }, 0);
+    clock.schedule(async () => {
+      events.push("second:start");
+      await clock.sleep(9);
+      events.push(`second:end:${clock.now.getTime()}`);
+    }, 2);
+
+    await clock.drain();
+
+    expect(events).toEqual([
+      "first:start",
+      "second:start",
+      "first:end:1767225600004",
+      "second:end:1767225600011",
+    ]);
+    expect(clock.pendingWork).toEqual([]);
+  });
+
+  it("keeps async sleeps beyond an advance horizon pending until the next advance", async () => {
+    const clock = fixedClock("2026-01-01T00:00:00.000Z");
+    const events: string[] = [];
+    clock.schedule(async () => {
+      events.push("entered");
+      await clock.sleep(10);
+      events.push("finished");
+    }, 0);
+
+    await clock.advanceBy(5);
+    expect(events).toEqual(["entered"]);
+    expect(clock.now.toISOString()).toBe("2026-01-01T00:00:00.005Z");
+    expect(clock.pendingWork).toMatchObject([
+      { dueAt: "2026-01-01T00:00:00.010Z", source: "sleep" },
+    ]);
+
+    await clock.advanceBy(5);
+    expect(events).toEqual(["entered", "finished"]);
+    expect(clock.now.toISOString()).toBe("2026-01-01T00:00:00.010Z");
+    expect(clock.pendingWork).toEqual([]);
+  });
+
+  it.each(["fresh", "after-failure"] as const)(
+    "finishes bounded advancement without waiting for external work: %s",
+    async (state) => {
+      const clock = fixedClock("2026-01-01T00:00:00.000Z");
+      let release = () => {};
+      const gate = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      const events: string[] = [];
+      clock.schedule(async () => {
+        await gate;
+        await clock.sleep(2);
+        events.push(clock.now.toISOString());
+      }, 0);
+      if (state === "after-failure") {
+        const problem = new TestRuntimeConfigurationProblem("duration", "-1", "non-negative");
+        clock.schedule(() => {
+          throw problem;
+        }, 0);
+        await expect(clock.drain()).rejects.toBe(problem);
+      }
+
+      let advanced = false;
+      const advancing = clock.advanceBy(5).then(() => {
+        advanced = true;
+      });
+      try {
+        await new Promise<void>((resolve) => setImmediate(resolve));
+        expect(advanced).toBe(true);
+        expect(clock.now.toISOString()).toBe("2026-01-01T00:00:00.005Z");
+        expect(events).toEqual([]);
+      } finally {
+        release();
+        await advancing;
+      }
+      await clock.drain();
+      expect(events).toEqual(["2026-01-01T00:00:00.007Z"]);
+      expect(clock.pendingWork).toEqual([]);
+    },
+  );
+
+  it.each([false, true])("runs resumed sleeps with future queued work: %s", async (later) => {
+    const clock = fixedClock("2026-01-01T00:00:00.000Z");
+    let release = () => {};
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const events: string[] = [];
+    clock.schedule(async () => {
+      await gate;
+      await clock.sleep(2);
+      events.push(clock.now.toISOString());
+    }, 0);
+
+    if (later) {
+      clock.schedule(
+        () => {
+          events.push("later");
+        },
+        10,
+        "later",
+      );
+    }
+    await clock.advanceBy(0);
+    release();
+    await clock.advanceBy(5);
+
+    expect(events).toEqual(["2026-01-01T00:00:00.002Z"]);
+    expect(clock.now.toISOString()).toBe("2026-01-01T00:00:00.005Z");
+    expect(clock.pendingWork).toMatchObject(
+      later ? [{ dueAt: "2026-01-01T00:00:00.010Z", source: "later" }] : [],
+    );
+    await clock.drain();
+    expect(events).toEqual(
+      later ? ["2026-01-01T00:00:00.002Z", "later"] : ["2026-01-01T00:00:00.002Z"],
+    );
+  });
+
+  it("propagates externally resumed failures before finishing a bounded advance", async () => {
+    const clock = fixedClock("2026-01-01T00:00:00.000Z");
+    const problem = new TestRuntimeConfigurationProblem("duration", "-1", "non-negative");
+    let release = () => {};
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let later = false;
+    clock.schedule(async () => {
+      await gate;
+      throw problem;
+    }, 0);
+    clock.schedule(
+      () => {
+        later = true;
+      },
+      8,
+      "later",
+    );
+
+    await clock.advanceBy(0);
+    release();
+    await expect(clock.advanceBy(5)).rejects.toBe(problem);
+
+    expect(later).toBe(false);
+    expect(clock.pendingWork).toMatchObject([{ source: "later" }]);
+    await clock.drain();
+    expect(later).toBe(true);
+  });
+
+  it("settles resumed callbacks before choosing the next drain timestamp", async () => {
+    const clock = fixedClock("2026-01-01T00:00:00.000Z");
+    let release = () => {};
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const events: string[] = [];
+    clock.schedule(async () => {
+      await gate;
+      await clock.sleep(2);
+      events.push(clock.now.toISOString());
+    }, 0);
+    clock.schedule(() => {
+      events.push(clock.now.toISOString());
+    }, 10);
+
+    await clock.advanceBy(0);
+    release();
+    await clock.drain();
+
+    expect(events).toEqual(["2026-01-01T00:00:00.002Z", "2026-01-01T00:00:00.010Z"]);
+    expect(clock.now.toISOString()).toBe("2026-01-01T00:00:00.010Z");
+    expect(clock.pendingWork).toEqual([]);
+  });
+
+  it.each(["sync", "async"] as const)(
+    "propagates %s callback failures without consuming later work",
+    async (kind) => {
+      const clock = fixedClock("2026-01-01T00:00:00.000Z");
+      const problem = new TestRuntimeConfigurationProblem("duration", "-1", "non-negative");
+      const fail = () => {
+        throw problem;
+      };
+      clock.schedule(
+        kind === "sync"
+          ? fail
+          : async () => {
+              await clock.sleep(3);
+              throw problem;
+            },
+        0,
+      );
+      const later: string[] = [];
+      clock.schedule(
+        () => {
+          later.push("ran");
+        },
+        8,
+        "later",
+      );
+
+      await expect(clock.drain()).rejects.toBe(problem);
+      expect(later).toEqual([]);
+      expect(clock.pendingWork).toMatchObject([{ source: "later" }]);
+      await clock.drain();
+      expect(later).toEqual(["ran"]);
+      expect(clock.pendingWork).toEqual([]);
+    },
+  );
+
+  it("waits for callback completion and notices work scheduled after an external promise", async () => {
+    const clock = fixedClock("2026-01-01T00:00:00.000Z");
+    let release = () => {};
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let finished = false;
+    clock.schedule(async () => {
+      await gate;
+      await clock.sleep(6);
+      finished = true;
+    }, 0);
+    const draining = clock.drain();
+    // A separate host turn makes the callback wait with an empty scheduler queue.
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    expect(finished).toBe(false);
+    release();
+    await draining;
+
+    expect(finished).toBe(true);
+    expect(clock.now.toISOString()).toBe("2026-01-01T00:00:00.006Z");
+    expect(clock.pendingWork).toEqual([]);
+  });
+
+  it("settles nested continuations after waking with newly scheduled work", async () => {
+    const clock = fixedClock("2026-01-01T00:00:00.000Z");
+    let release = () => {};
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const events: string[] = [];
+    clock.schedule(async () => {
+      await gate;
+      clock.schedule(() => {
+        events.push(`late:${clock.now.getTime()}`);
+      }, 10);
+      for (let index = 0; index < 8; index += 1) await Promise.resolve();
+      clock.schedule(() => {
+        events.push(`early:${clock.now.getTime()}`);
+      }, 0);
+    }, 0);
+    const draining = clock.drain();
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    release();
+    await draining;
+
+    expect(events).toEqual(["early:1767225600000", "late:1767225600010"]);
+    expect(clock.pendingWork).toEqual([]);
+  });
+
+  it("applies one callback budget across an async sleep loop and can drain after it stops", async () => {
+    const clock = fixedClock("2026-01-01T00:00:00.000Z");
+    let repeat = true;
+    let finished = false;
+    clock.schedule(async () => {
+      while (repeat) await clock.sleep(1, "loop-sleep");
+      finished = true;
+    }, 0);
+
+    await expect(clock.drain()).rejects.toMatchObject({
+      code: "testing/test-runtime-drain-limit",
+      extensions: { limit: 10_000 },
+    });
+    expect(finished).toBe(false);
+    expect(clock.pendingWork).toMatchObject([{ source: "loop-sleep" }]);
+    repeat = false;
+    await clock.drain();
+    expect(finished).toBe(true);
+    expect(clock.pendingWork).toEqual([]);
+  });
+
   it("reports non-terminating same-time rescheduling with a stable Problem", async () => {
     const clock = fixedClock("2026-01-01T00:00:00.000Z");
     const reschedule = () => {
