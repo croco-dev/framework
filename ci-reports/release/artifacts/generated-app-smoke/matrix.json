@@ -1,0 +1,1390 @@
+{
+  "schemaVersion": "croco.generated-app-smoke/v2",
+  "generatedAt": "2026-10-17T19:53:12.594Z",
+  "status": "pending",
+  "release": {
+    "blockingTier": "spine-blocking",
+    "status": "passed"
+  },
+  "tiers": [
+    {
+      "tier": "spine-blocking",
+      "status": "passed"
+    },
+    {
+      "tier": "ecosystem-advisory",
+      "status": "pending"
+    }
+  ],
+  "gates": [
+    {
+      "label": "create-croco-app CLI bootstrap",
+      "status": "passed",
+      "durationMs": 1026
+    },
+    {
+      "label": "strict contract typecheck",
+      "status": "passed",
+      "durationMs": 66949
+    },
+    {
+      "label": "static misuse check",
+      "status": "passed",
+      "durationMs": 15425
+    },
+    {
+      "label": "generated template oxlint",
+      "status": "passed",
+      "durationMs": 833
+    },
+    {
+      "label": "generated secret placeholder policy",
+      "status": "passed",
+      "durationMs": 1027
+    },
+    {
+      "label": "workspace package build",
+      "status": "passed",
+      "durationMs": 863
+    }
+  ],
+  "cases": [
+    {
+      "name": "goal-saas-api",
+      "tier": "spine-blocking",
+      "status": "passed",
+      "durationMs": 523725,
+      "steps": [
+        {
+          "label": "generate",
+          "status": "passed",
+          "durationMs": 211
+        },
+        {
+          "label": "build and pack local workspace packages",
+          "status": "passed",
+          "durationMs": 6536
+        },
+        {
+          "label": "install",
+          "status": "passed",
+          "durationMs": 1834
+        },
+        {
+          "label": "frozen install",
+          "status": "passed",
+          "durationMs": 131
+        },
+        {
+          "label": "lint",
+          "status": "passed",
+          "durationMs": 226
+        },
+        {
+          "label": "install-immediate contract verify",
+          "status": "passed",
+          "durationMs": 55400
+        },
+        {
+          "label": "test",
+          "status": "passed",
+          "durationMs": 123446
+        },
+        {
+          "label": "build",
+          "status": "passed",
+          "durationMs": 13777
+        },
+        {
+          "label": "manifest",
+          "status": "passed",
+          "durationMs": 1
+        },
+        {
+          "label": "runtime capability manifest",
+          "status": "passed",
+          "durationMs": 1
+        },
+        {
+          "label": "contract:snapshot",
+          "status": "passed",
+          "durationMs": 9086
+        },
+        {
+          "label": "codegen",
+          "status": "passed",
+          "durationMs": 36022
+        },
+        {
+          "label": "contract:verify",
+          "status": "passed",
+          "durationMs": 55180
+        },
+        {
+          "label": "doctor",
+          "status": "passed",
+          "durationMs": 288
+        },
+        {
+          "label": "typecheck",
+          "status": "passed",
+          "durationMs": 8670
+        },
+        {
+          "label": "test",
+          "status": "passed",
+          "durationMs": 135305
+        },
+        {
+          "label": "demo:smoke",
+          "status": "passed",
+          "durationMs": 52201
+        },
+        {
+          "label": "failure-drill:smoke",
+          "status": "passed",
+          "durationMs": 25356
+        }
+      ]
+    },
+    {
+      "name": "goal-spa-backend-split",
+      "tier": "spine-blocking",
+      "status": "passed",
+      "durationMs": 76898,
+      "steps": [
+        {
+          "label": "generate",
+          "status": "passed",
+          "durationMs": 195
+        },
+        {
+          "label": "build and pack local workspace packages",
+          "status": "passed",
+          "durationMs": 282
+        },
+        {
+          "label": "install",
+          "status": "passed",
+          "durationMs": 3121
+        },
+        {
+          "label": "frozen install",
+          "status": "passed",
+          "durationMs": 133
+        },
+        {
+          "label": "lint",
+          "status": "passed",
+          "durationMs": 161
+        },
+        {
+          "label": "manifest",
+          "status": "passed",
+          "durationMs": 1
+        },
+        {
+          "label": "runtime capability manifest",
+          "status": "passed",
+          "durationMs": 2
+        },
+        {
+          "label": "dev:smoke",
+          "status": "passed",
+          "durationMs": 3438
+        },
+        {
+          "label": "Chromium install",
+          "status": "passed",
+          "durationMs": 663
+        },
+        {
+          "label": "test",
+          "status": "passed",
+          "durationMs": 8054
+        },
+        {
+          "label": "typecheck",
+          "status": "passed",
+          "durationMs": 10100
+        },
+        {
+          "label": "build",
+          "status": "passed",
+          "durationMs": 4939
+        },
+        {
+          "label": "built Node host smoke",
+          "status": "passed",
+          "durationMs": 399
+        },
+        {
+          "label": "contract:snapshot",
+          "status": "passed",
+          "durationMs": 3327
+        },
+        {
+          "label": "codegen",
+          "status": "passed",
+          "durationMs": 17702
+        },
+        {
+          "label": "contract:verify",
+          "status": "passed",
+          "durationMs": 24337
+        }
+      ]
+    },
+    {
+      "name": "goal-worker",
+      "tier": "spine-blocking",
+      "status": "passed",
+      "durationMs": 14074,
+      "steps": [
+        {
+          "label": "generate",
+          "status": "passed",
+          "durationMs": 152
+        },
+        {
+          "label": "build and pack local workspace packages",
+          "status": "passed",
+          "durationMs": 1313
+        },
+        {
+          "label": "install",
+          "status": "passed",
+          "durationMs": 1825
+        },
+        {
+          "label": "frozen install",
+          "status": "passed",
+          "durationMs": 124
+        },
+        {
+          "label": "lint",
+          "status": "passed",
+          "durationMs": 145
+        },
+        {
+          "label": "manifest",
+          "status": "passed",
+          "durationMs": 2
+        },
+        {
+          "label": "runtime capability manifest",
+          "status": "passed",
+          "durationMs": 1
+        },
+        {
+          "label": "typecheck",
+          "status": "passed",
+          "durationMs": 4102
+        },
+        {
+          "label": "build",
+          "status": "passed",
+          "durationMs": 5404
+        },
+        {
+          "label": "ssr-worker:presentation:smoke",
+          "status": "passed",
+          "durationMs": 981
+        }
+      ]
+    },
+    {
+      "name": "goal-internal-tool",
+      "tier": "spine-blocking",
+      "status": "passed",
+      "durationMs": 131815,
+      "steps": [
+        {
+          "label": "generate",
+          "status": "passed",
+          "durationMs": 232
+        },
+        {
+          "label": "build and pack local workspace packages",
+          "status": "passed",
+          "durationMs": 1701
+        },
+        {
+          "label": "install",
+          "status": "passed",
+          "durationMs": 1147
+        },
+        {
+          "label": "frozen install",
+          "status": "passed",
+          "durationMs": 139
+        },
+        {
+          "label": "lint",
+          "status": "passed",
+          "durationMs": 192
+        },
+        {
+          "label": "manifest",
+          "status": "passed",
+          "durationMs": 2
+        },
+        {
+          "label": "runtime capability manifest",
+          "status": "passed",
+          "durationMs": 1
+        },
+        {
+          "label": "admin:smoke",
+          "status": "passed",
+          "durationMs": 15528
+        },
+        {
+          "label": "Chromium install",
+          "status": "passed",
+          "durationMs": 650
+        },
+        {
+          "label": "test",
+          "status": "passed",
+          "durationMs": 8676
+        },
+        {
+          "label": "typecheck",
+          "status": "passed",
+          "durationMs": 23362
+        },
+        {
+          "label": "build",
+          "status": "passed",
+          "durationMs": 16727
+        },
+        {
+          "label": "contract:snapshot",
+          "status": "passed",
+          "durationMs": 4747
+        },
+        {
+          "label": "codegen",
+          "status": "passed",
+          "durationMs": 24862
+        },
+        {
+          "label": "contract:verify",
+          "status": "passed",
+          "durationMs": 33799
+        }
+      ]
+    },
+    {
+      "name": "graphql-lambda-api",
+      "tier": "spine-blocking",
+      "status": "passed",
+      "durationMs": 21703,
+      "steps": [
+        {
+          "label": "generate",
+          "status": "passed",
+          "durationMs": 151
+        },
+        {
+          "label": "build and pack local workspace packages",
+          "status": "passed",
+          "durationMs": 876
+        },
+        {
+          "label": "install",
+          "status": "passed",
+          "durationMs": 1027
+        },
+        {
+          "label": "frozen install",
+          "status": "passed",
+          "durationMs": 126
+        },
+        {
+          "label": "lint",
+          "status": "passed",
+          "durationMs": 147
+        },
+        {
+          "label": "runtime capability manifest",
+          "status": "passed",
+          "durationMs": 1
+        },
+        {
+          "label": "GraphQL contract check",
+          "status": "passed",
+          "durationMs": 614
+        },
+        {
+          "label": "GraphQL contract snapshot",
+          "status": "passed",
+          "durationMs": 535
+        },
+        {
+          "label": "typecheck",
+          "status": "passed",
+          "durationMs": 5641
+        },
+        {
+          "label": "protected GraphQL route smoke",
+          "status": "passed",
+          "durationMs": 885
+        },
+        {
+          "label": "build",
+          "status": "passed",
+          "durationMs": 4988
+        },
+        {
+          "label": "test",
+          "status": "passed",
+          "durationMs": 5134
+        },
+        {
+          "label": "GraphQL contract drift canaries",
+          "status": "passed",
+          "durationMs": 1544
+        }
+      ]
+    },
+    {
+      "name": "trpc-lambda-api",
+      "tier": "spine-blocking",
+      "status": "passed",
+      "durationMs": 8937,
+      "steps": [
+        {
+          "label": "generate",
+          "status": "passed",
+          "durationMs": 154
+        },
+        {
+          "label": "build and pack local workspace packages",
+          "status": "passed",
+          "durationMs": 2
+        },
+        {
+          "label": "install",
+          "status": "passed",
+          "durationMs": 393
+        },
+        {
+          "label": "frozen install",
+          "status": "passed",
+          "durationMs": 109
+        },
+        {
+          "label": "lint",
+          "status": "passed",
+          "durationMs": 141
+        },
+        {
+          "label": "typecheck",
+          "status": "passed",
+          "durationMs": 3558
+        },
+        {
+          "label": "build",
+          "status": "passed",
+          "durationMs": 4557
+        }
+      ]
+    },
+    {
+      "name": "graphql-vite-spa-docker",
+      "tier": "spine-blocking",
+      "status": "passed",
+      "durationMs": 5508,
+      "steps": [
+        {
+          "label": "generate",
+          "status": "passed",
+          "durationMs": 152
+        },
+        {
+          "label": "build and pack local workspace packages",
+          "status": "passed",
+          "durationMs": 2
+        },
+        {
+          "label": "install",
+          "status": "passed",
+          "durationMs": 744
+        },
+        {
+          "label": "frozen install",
+          "status": "passed",
+          "durationMs": 133
+        },
+        {
+          "label": "lint",
+          "status": "passed",
+          "durationMs": 148
+        },
+        {
+          "label": "GraphQL contract check",
+          "status": "passed",
+          "durationMs": 596
+        },
+        {
+          "label": "GraphQL contract snapshot",
+          "status": "passed",
+          "durationMs": 513
+        },
+        {
+          "label": "apps/web vite config load",
+          "status": "passed",
+          "durationMs": 265
+        },
+        {
+          "label": "apps/web browser build output",
+          "status": "passed",
+          "durationMs": 1354
+        },
+        {
+          "label": "vite SPA Dockerfile",
+          "status": "passed",
+          "durationMs": 1
+        },
+        {
+          "label": "GraphQL contract drift canaries",
+          "status": "passed",
+          "durationMs": 1570
+        }
+      ]
+    },
+    {
+      "name": "meta-vite-fullstack-workers",
+      "tier": "spine-blocking",
+      "status": "passed",
+      "durationMs": 7515,
+      "steps": [
+        {
+          "label": "generate",
+          "status": "passed",
+          "durationMs": 153
+        },
+        {
+          "label": "build and pack local workspace packages",
+          "status": "passed",
+          "durationMs": 2
+        },
+        {
+          "label": "install",
+          "status": "passed",
+          "durationMs": 691
+        },
+        {
+          "label": "frozen install",
+          "status": "passed",
+          "durationMs": 127
+        },
+        {
+          "label": "lint",
+          "status": "passed",
+          "durationMs": 143
+        },
+        {
+          "label": "api-worker typecheck",
+          "status": "passed",
+          "durationMs": 1085
+        },
+        {
+          "label": "api-worker wrangler build",
+          "status": "passed",
+          "durationMs": 884
+        },
+        {
+          "label": "api-worker secure fetch smoke",
+          "status": "passed",
+          "durationMs": 597
+        },
+        {
+          "label": "ssr-worker vite config load",
+          "status": "passed",
+          "durationMs": 295
+        },
+        {
+          "label": "ssr-worker meta-vite build output",
+          "status": "passed",
+          "durationMs": 2089
+        },
+        {
+          "label": "ssr-worker presentation smoke",
+          "status": "passed",
+          "durationMs": 980
+        },
+        {
+          "label": "test",
+          "status": "passed",
+          "durationMs": 435
+        }
+      ]
+    },
+    {
+      "name": "production-app-starter",
+      "tier": "spine-blocking",
+      "status": "passed",
+      "durationMs": 170165,
+      "steps": [
+        {
+          "label": "generate",
+          "status": "passed",
+          "durationMs": 192
+        },
+        {
+          "label": "build and pack local workspace packages",
+          "status": "passed",
+          "durationMs": 2
+        },
+        {
+          "label": "install",
+          "status": "passed",
+          "durationMs": 934
+        },
+        {
+          "label": "frozen install",
+          "status": "passed",
+          "durationMs": 131
+        },
+        {
+          "label": "lint",
+          "status": "passed",
+          "durationMs": 158
+        },
+        {
+          "label": "install-immediate contract verify",
+          "status": "passed",
+          "durationMs": 24549
+        },
+        {
+          "label": "dev smoke",
+          "status": "passed",
+          "durationMs": 3472
+        },
+        {
+          "label": "browser testing contract",
+          "status": "passed",
+          "durationMs": 8
+        },
+        {
+          "label": "Chromium install",
+          "status": "passed",
+          "durationMs": 655
+        },
+        {
+          "label": "test",
+          "status": "passed",
+          "durationMs": 7960
+        },
+        {
+          "label": "typecheck",
+          "status": "passed",
+          "durationMs": 10042
+        },
+        {
+          "label": "build",
+          "status": "passed",
+          "durationMs": 4961
+        },
+        {
+          "label": "built Node host smoke",
+          "status": "passed",
+          "durationMs": 403
+        },
+        {
+          "label": "browser journeys",
+          "status": "passed",
+          "durationMs": 7428
+        },
+        {
+          "label": "Contract snapshot",
+          "status": "passed",
+          "durationMs": 3308
+        },
+        {
+          "label": "Contract coverage",
+          "status": "passed",
+          "durationMs": 3292
+        },
+        {
+          "label": "Contract diff",
+          "status": "passed",
+          "durationMs": 3340
+        },
+        {
+          "label": "OpenAPI contract",
+          "status": "passed",
+          "durationMs": 6603
+        },
+        {
+          "label": "RPC client",
+          "status": "passed",
+          "durationMs": 7871
+        },
+        {
+          "label": "Project Map generation",
+          "status": "passed",
+          "durationMs": 3330
+        },
+        {
+          "label": "Contract verify",
+          "status": "passed",
+          "durationMs": 24307
+        },
+        {
+          "label": "DI graph generation",
+          "status": "passed",
+          "durationMs": 3694
+        },
+        {
+          "label": "DI graph verify",
+          "status": "passed",
+          "durationMs": 4098
+        },
+        {
+          "label": "stale Project Map canary",
+          "status": "passed",
+          "durationMs": 9917
+        },
+        {
+          "label": "stale OpenAPI canary",
+          "status": "passed",
+          "durationMs": 16336
+        },
+        {
+          "label": "stale RPC client canary",
+          "status": "passed",
+          "durationMs": 23110
+        }
+      ]
+    },
+    {
+      "name": "saas-golden-path",
+      "tier": "spine-blocking",
+      "status": "passed",
+      "durationMs": 432552,
+      "steps": [
+        {
+          "label": "generate",
+          "status": "passed",
+          "durationMs": 168
+        },
+        {
+          "label": "build and pack local workspace packages",
+          "status": "passed",
+          "durationMs": 2
+        },
+        {
+          "label": "install",
+          "status": "passed",
+          "durationMs": 919
+        },
+        {
+          "label": "frozen install",
+          "status": "passed",
+          "durationMs": 134
+        },
+        {
+          "label": "lint",
+          "status": "passed",
+          "durationMs": 219
+        },
+        {
+          "label": "provider profile manifest",
+          "status": "passed",
+          "durationMs": 8706
+        },
+        {
+          "label": "real-provider missing env diagnostic",
+          "status": "passed",
+          "durationMs": 6911
+        },
+        {
+          "label": "real-provider constructor bootstrap",
+          "status": "passed",
+          "durationMs": 7051
+        },
+        {
+          "label": "usage dashboard generator",
+          "status": "passed",
+          "durationMs": 3420
+        },
+        {
+          "label": "typecheck",
+          "status": "passed",
+          "durationMs": 8490
+        },
+        {
+          "label": "build",
+          "status": "passed",
+          "durationMs": 13812
+        },
+        {
+          "label": "Contract snapshot",
+          "status": "passed",
+          "durationMs": 9329
+        },
+        {
+          "label": "Contract codegen",
+          "status": "passed",
+          "durationMs": 36803
+        },
+        {
+          "label": "test",
+          "status": "passed",
+          "durationMs": 135571
+        },
+        {
+          "label": "Contract verify",
+          "status": "passed",
+          "durationMs": 56348
+        },
+        {
+          "label": "DI graph generation",
+          "status": "passed",
+          "durationMs": 7813
+        },
+        {
+          "label": "DI graph verify",
+          "status": "passed",
+          "durationMs": 10004
+        },
+        {
+          "label": "demo seed",
+          "status": "passed",
+          "durationMs": 13816
+        },
+        {
+          "label": "demo flow",
+          "status": "passed",
+          "durationMs": 52104
+        },
+        {
+          "label": "failure drill smoke",
+          "status": "passed",
+          "durationMs": 25753
+        },
+        {
+          "label": "scenario output",
+          "status": "passed",
+          "durationMs": 16756
+        },
+        {
+          "label": "unbound billable meter contract canary",
+          "status": "passed",
+          "durationMs": 9226
+        },
+        {
+          "label": "checkout-only usage plan contract canary",
+          "status": "passed",
+          "durationMs": 9143
+        }
+      ]
+    },
+    {
+      "name": "saas-single-tenant",
+      "tier": "spine-blocking",
+      "status": "passed",
+      "durationMs": 376172,
+      "steps": [
+        {
+          "label": "generate",
+          "status": "passed",
+          "durationMs": 219
+        },
+        {
+          "label": "build and pack local workspace packages",
+          "status": "passed",
+          "durationMs": 2
+        },
+        {
+          "label": "install",
+          "status": "passed",
+          "durationMs": 905
+        },
+        {
+          "label": "frozen install",
+          "status": "passed",
+          "durationMs": 135
+        },
+        {
+          "label": "lint",
+          "status": "passed",
+          "durationMs": 227
+        },
+        {
+          "label": "install-immediate contract verify",
+          "status": "passed",
+          "durationMs": 55356
+        },
+        {
+          "label": "provider profile manifest",
+          "status": "passed",
+          "durationMs": 8632
+        },
+        {
+          "label": "runtime capability manifest",
+          "status": "passed",
+          "durationMs": 2
+        },
+        {
+          "label": "build",
+          "status": "passed",
+          "durationMs": 13813
+        },
+        {
+          "label": "typecheck",
+          "status": "passed",
+          "durationMs": 8665
+        },
+        {
+          "label": "test",
+          "status": "passed",
+          "durationMs": 135453
+        },
+        {
+          "label": "contract:snapshot",
+          "status": "passed",
+          "durationMs": 9178
+        },
+        {
+          "label": "codegen",
+          "status": "passed",
+          "durationMs": 36364
+        },
+        {
+          "label": "contract:verify",
+          "status": "passed",
+          "durationMs": 55233
+        },
+        {
+          "label": "demo:smoke",
+          "status": "passed",
+          "durationMs": 51946
+        }
+      ]
+    },
+    {
+      "name": "rest-spa-contracts",
+      "tier": "spine-blocking",
+      "status": "passed",
+      "durationMs": 59370,
+      "steps": [
+        {
+          "label": "build and pack local workspace packages",
+          "status": "passed",
+          "durationMs": 2
+        },
+        {
+          "label": "install",
+          "status": "passed",
+          "durationMs": 885
+        },
+        {
+          "label": "contract check",
+          "status": "passed",
+          "durationMs": 3371
+        },
+        {
+          "label": "contract snapshot",
+          "status": "passed",
+          "durationMs": 3323
+        },
+        {
+          "label": "contract codegen",
+          "status": "passed",
+          "durationMs": 17841
+        },
+        {
+          "label": "contract verify",
+          "status": "passed",
+          "durationMs": 24044
+        },
+        {
+          "label": "strict Problem declaration canary",
+          "status": "passed",
+          "durationMs": 3308
+        },
+        {
+          "label": "strict OpenAPI schema canary",
+          "status": "passed",
+          "durationMs": 3253
+        },
+        {
+          "label": "strict RPC schema canary",
+          "status": "passed",
+          "durationMs": 3275
+        }
+      ]
+    },
+    {
+      "name": "blank-basic",
+      "tier": "ecosystem-advisory",
+      "advisory": {
+        "owner": "create-croco-app blank template owner",
+        "recoveryAction": "CROCO_GENERATED_SMOKE_CASES=blank-basic pnpm create-croco-app:smoke; restore blank template typecheck coverage."
+      },
+      "status": "pending"
+    },
+    {
+      "name": "graphql-standalone-api",
+      "tier": "ecosystem-advisory",
+      "advisory": {
+        "owner": "Presentation standalone GraphQL owner",
+        "recoveryAction": "CROCO_GENERATED_SMOKE_CASES=graphql-standalone-api pnpm create-croco-app:smoke; inspect GraphQL contract, protected route, and standalone build coverage."
+      },
+      "status": "pending"
+    },
+    {
+      "name": "graphql-standalone-nextjs-opennext",
+      "tier": "ecosystem-advisory",
+      "advisory": {
+        "owner": "Presentation standalone GraphQL Next.js owner",
+        "recoveryAction": "CROCO_GENERATED_SMOKE_CASES=graphql-standalone-nextjs-opennext pnpm create-croco-app:smoke; inspect generated web typecheck and build failures."
+      },
+      "status": "pending"
+    },
+    {
+      "name": "trpc-standalone-nextjs-opennext",
+      "tier": "ecosystem-advisory",
+      "advisory": {
+        "owner": "Presentation standalone tRPC Next.js owner",
+        "recoveryAction": "CROCO_GENERATED_SMOKE_CASES=trpc-standalone-nextjs-opennext pnpm create-croco-app:smoke; inspect generated web typecheck and build failures."
+      },
+      "status": "pending"
+    },
+    {
+      "name": "trpc-nextjs-vercel-fullstack",
+      "tier": "ecosystem-advisory",
+      "advisory": {
+        "owner": "Presentation Next.js tRPC owner",
+        "recoveryAction": "CROCO_GENERATED_SMOKE_CASES=trpc-nextjs-vercel-fullstack pnpm create-croco-app:smoke; inspect the ddd-fullstack Next.js tRPC build."
+      },
+      "status": "passed",
+      "durationMs": 43655,
+      "steps": [
+        {
+          "label": "generate",
+          "status": "passed",
+          "durationMs": 159
+        },
+        {
+          "label": "build and pack local workspace packages",
+          "status": "passed",
+          "durationMs": 2
+        },
+        {
+          "label": "install",
+          "status": "passed",
+          "durationMs": 1584
+        },
+        {
+          "label": "frozen install",
+          "status": "passed",
+          "durationMs": 116
+        },
+        {
+          "label": "lint",
+          "status": "passed",
+          "durationMs": 158
+        },
+        {
+          "label": "test",
+          "status": "passed",
+          "durationMs": 2379
+        },
+        {
+          "label": "product typecheck",
+          "status": "passed",
+          "durationMs": 5558
+        },
+        {
+          "label": "build",
+          "status": "passed",
+          "durationMs": 27123
+        },
+        {
+          "label": "local product HTTP smoke",
+          "status": "passed",
+          "durationMs": 6549
+        }
+      ]
+    },
+    {
+      "name": "graphql-nextjs-opennext",
+      "tier": "ecosystem-advisory",
+      "advisory": {
+        "owner": "Presentation GraphQL OpenNext owner",
+        "recoveryAction": "CROCO_GENERATED_SMOKE_CASES=graphql-nextjs-opennext pnpm create-croco-app:smoke; inspect GraphQL contract scripts and OpenNext files."
+      },
+      "status": "pending"
+    },
+    {
+      "name": "trpc-nextjs-docker-frontend",
+      "tier": "ecosystem-advisory",
+      "advisory": {
+        "owner": "Presentation Docker frontend owner",
+        "recoveryAction": "CROCO_GENERATED_SMOKE_CASES=trpc-nextjs-docker-frontend pnpm create-croco-app:smoke; restore web Dockerfile generation."
+      },
+      "status": "pending"
+    },
+    {
+      "name": "graphql-vite-spa-astryx",
+      "tier": "ecosystem-advisory",
+      "advisory": {
+        "owner": "Astryx presentation profile owner",
+        "recoveryAction": "CROCO_GENERATED_SMOKE_CASES=graphql-vite-spa-astryx pnpm create-croco-app:smoke; inspect the generated UI metadata, Astryx dependency isolation, Vite build, and Croco-aware render smoke."
+      },
+      "status": "pending"
+    },
+    {
+      "name": "meta-vite-web",
+      "tier": "ecosystem-advisory",
+      "advisory": {
+        "owner": "Meta Vite presentation owner",
+        "recoveryAction": "CROCO_GENERATED_SMOKE_CASES=meta-vite-web pnpm create-croco-app:smoke; inspect the meta-vite build and presentation smoke."
+      },
+      "status": "pending"
+    },
+    {
+      "name": "admin-console-starter",
+      "tier": "ecosystem-advisory",
+      "advisory": {
+        "owner": "Admin console generated app owner",
+        "recoveryAction": "CROCO_GENERATED_SMOKE_CASES=admin-console-starter pnpm create-croco-app:smoke; inspect admin smoke, contracts, and the DI graph."
+      },
+      "status": "passed",
+      "durationMs": 263929,
+      "steps": [
+        {
+          "label": "generate",
+          "status": "passed",
+          "durationMs": 228
+        },
+        {
+          "label": "build and pack local workspace packages",
+          "status": "passed",
+          "durationMs": 2
+        },
+        {
+          "label": "install",
+          "status": "passed",
+          "durationMs": 990
+        },
+        {
+          "label": "frozen install",
+          "status": "passed",
+          "durationMs": 142
+        },
+        {
+          "label": "lint",
+          "status": "passed",
+          "durationMs": 216
+        },
+        {
+          "label": "install-immediate contract verify",
+          "status": "passed",
+          "durationMs": 34322
+        },
+        {
+          "label": "admin smoke",
+          "status": "passed",
+          "durationMs": 15553
+        },
+        {
+          "label": "browser testing contract",
+          "status": "passed",
+          "durationMs": 6
+        },
+        {
+          "label": "Chromium install",
+          "status": "passed",
+          "durationMs": 644
+        },
+        {
+          "label": "test",
+          "status": "passed",
+          "durationMs": 8671
+        },
+        {
+          "label": "typecheck",
+          "status": "passed",
+          "durationMs": 23508
+        },
+        {
+          "label": "build",
+          "status": "passed",
+          "durationMs": 16616
+        },
+        {
+          "label": "built Node host smoke",
+          "status": "passed",
+          "durationMs": 446
+        },
+        {
+          "label": "browser journeys",
+          "status": "passed",
+          "durationMs": 8810
+        },
+        {
+          "label": "Contract snapshot",
+          "status": "passed",
+          "durationMs": 4772
+        },
+        {
+          "label": "Contract codegen",
+          "status": "passed",
+          "durationMs": 24591
+        },
+        {
+          "label": "Contract verify",
+          "status": "passed",
+          "durationMs": 34052
+        },
+        {
+          "label": "Admin RPC client",
+          "status": "passed",
+          "durationMs": 10634
+        },
+        {
+          "label": "DI graph generation",
+          "status": "passed",
+          "durationMs": 4031
+        },
+        {
+          "label": "DI graph verify",
+          "status": "passed",
+          "durationMs": 5426
+        },
+        {
+          "label": "stale Project Map canary",
+          "status": "passed",
+          "durationMs": 13972
+        },
+        {
+          "label": "stale OpenAPI canary",
+          "status": "passed",
+          "durationMs": 23485
+        },
+        {
+          "label": "stale RPC client canary",
+          "status": "passed",
+          "durationMs": 32754
+        }
+      ]
+    },
+    {
+      "name": "saas-cloudflare-profile",
+      "tier": "ecosystem-advisory",
+      "advisory": {
+        "owner": "SaaS Cloudflare profile owner",
+        "recoveryAction": "CROCO_GENERATED_SMOKE_CASES=saas-cloudflare-profile pnpm create-croco-app:smoke; inspect the provider profile and Workers runtime capability manifest."
+      },
+      "status": "pending"
+    },
+    {
+      "name": "saas-lambda-profile",
+      "tier": "ecosystem-advisory",
+      "advisory": {
+        "owner": "SaaS Lambda profile owner",
+        "recoveryAction": "CROCO_GENERATED_SMOKE_CASES=saas-lambda-profile pnpm create-croco-app:smoke; inspect the provider profile and Lambda runtime capability manifest."
+      },
+      "status": "pending"
+    },
+    {
+      "name": "ai-saas-golden-path",
+      "tier": "ecosystem-advisory",
+      "advisory": {
+        "owner": "AI SaaS generated app owner",
+        "recoveryAction": "CROCO_GENERATED_SMOKE_CASES=ai-saas-golden-path pnpm create-croco-app:smoke; inspect the AI full demo flow and contracts."
+      },
+      "status": "passed",
+      "durationMs": 402457,
+      "steps": [
+        {
+          "label": "generate",
+          "status": "passed",
+          "durationMs": 174
+        },
+        {
+          "label": "build and pack local workspace packages",
+          "status": "passed",
+          "durationMs": 2
+        },
+        {
+          "label": "install",
+          "status": "passed",
+          "durationMs": 1065
+        },
+        {
+          "label": "frozen install",
+          "status": "passed",
+          "durationMs": 131
+        },
+        {
+          "label": "lint",
+          "status": "passed",
+          "durationMs": 237
+        },
+        {
+          "label": "build",
+          "status": "passed",
+          "durationMs": 15118
+        },
+        {
+          "label": "typecheck",
+          "status": "passed",
+          "durationMs": 9045
+        },
+        {
+          "label": "Contract snapshot",
+          "status": "passed",
+          "durationMs": 9848
+        },
+        {
+          "label": "Contract codegen",
+          "status": "passed",
+          "durationMs": 39307
+        },
+        {
+          "label": "test",
+          "status": "passed",
+          "durationMs": 152135
+        },
+        {
+          "label": "Contract verify",
+          "status": "passed",
+          "durationMs": 59757
+        },
+        {
+          "label": "DI graph generation",
+          "status": "passed",
+          "durationMs": 8331
+        },
+        {
+          "label": "DI graph verify",
+          "status": "passed",
+          "durationMs": 10548
+        },
+        {
+          "label": "AI demo flow",
+          "status": "passed",
+          "durationMs": 7461
+        },
+        {
+          "label": "full demo flow",
+          "status": "passed",
+          "durationMs": 62717
+        },
+        {
+          "label": "failure drill smoke",
+          "status": "passed",
+          "durationMs": 26537
+        }
+      ]
+    }
+  ]
+}
