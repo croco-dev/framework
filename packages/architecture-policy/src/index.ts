@@ -1096,7 +1096,7 @@ function findJsonPropertyLocation(
 function isExportedSubpath(pkg: PackageInfo, subpath: string): boolean {
   const exportKey = `./${subpath}`;
   if (Object.hasOwn(pkg.exportSubpaths, exportKey)) {
-    return hasPublicExportTarget(pkg.exportSubpaths[exportKey]);
+    return publicExportTargetStatus(pkg.exportSubpaths[exportKey]) === "public";
   }
 
   // Node selects the longest prefix before *, then the longest complete key.
@@ -1114,19 +1114,31 @@ function isExportedSubpath(pkg: PackageInfo, subpath: string): boolean {
     })
     .sort((left, right) => right.indexOf("*") - left.indexOf("*") || right.length - left.length);
   const selected = patterns[0];
-  return selected !== undefined && hasPublicExportTarget(pkg.exportSubpaths[selected]);
+  return (
+    selected !== undefined && publicExportTargetStatus(pkg.exportSubpaths[selected]) === "public"
+  );
 }
 
-function hasPublicExportTarget(target: unknown): boolean {
-  if (typeof target === "string") return true;
-  if (Array.isArray(target)) return target.some(hasPublicExportTarget);
+function publicExportTargetStatus(target: unknown): "public" | "blocked" | "unmatched" {
+  if (typeof target === "string") return "public";
+  if (Array.isArray(target)) {
+    let status: "blocked" | "unmatched" = target.length === 0 ? "blocked" : "unmatched";
+    for (const value of target) {
+      const candidate = publicExportTargetStatus(value);
+      if (candidate === "public") return "public";
+      if (candidate === "blocked") status = "blocked";
+    }
+    return status;
+  }
   if (isRecord(target)) {
     for (const [condition, value] of Object.entries(target)) {
-      if (hasPublicExportTarget(value)) return true;
-      if (condition === "default") return false;
+      const status = publicExportTargetStatus(value);
+      if (status === "public") return "public";
+      if (condition === "default" && status !== "unmatched") return status;
     }
+    return "unmatched";
   }
-  return false;
+  return "blocked";
 }
 
 function isEntrypointImportIgnored(

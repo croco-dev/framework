@@ -777,6 +777,30 @@ describe("architecture policy engine", () => {
       allowed: false,
     },
     {
+      name: "nested unmatched default condition",
+      exports: { "./public": { default: { browser: null }, import: "./public.js" } },
+      subpath: "public",
+      allowed: true,
+    },
+    {
+      name: "nested empty default condition",
+      exports: { "./public": { default: {}, import: "./public.js" } },
+      subpath: "public",
+      allowed: true,
+    },
+    {
+      name: "unmatched array default",
+      exports: { "./public": { default: [{ browser: null }], import: "./public.js" } },
+      subpath: "public",
+      allowed: true,
+    },
+    {
+      name: "null array default stops fallback",
+      exports: { "./private": { default: [{ browser: null }, null], import: "./public.js" } },
+      subpath: "private",
+      allowed: false,
+    },
+    {
       name: "conditional null",
       exports: { "./private": { default: null } },
       subpath: "private",
