@@ -940,7 +940,7 @@ function typecheckBlocks(rootDir: string, blocks: readonly MarkdownCodeBlock[]):
   // exclusions) in each package's own scope. Never infer a source filename from a subpath.
   const resolutionCache = ts.createModuleResolutionCache(rootDir, normalizePath, compilerOptions);
   const prerequisites = new Set<string>();
-  host.resolveModuleNameLiterals = (literals, containingFile) =>
+  host.resolveModuleNameLiterals = (literals, containingFile, _redirect, _options, sourceFile) =>
     literals.map((literal) => {
       const pkg = packages.find(
         (candidate) =>
@@ -953,7 +953,7 @@ function typecheckBlocks(rootDir: string, blocks: readonly MarkdownCodeBlock[]):
         host,
         resolutionCache,
         undefined,
-        ts.ModuleKind.ESNext,
+        ts.getModeForUsageLocation(sourceFile, literal, compilerOptions),
       );
       if (pkg?.hasExports && !result.resolvedModule) {
         prerequisites.add(

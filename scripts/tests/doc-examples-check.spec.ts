@@ -143,6 +143,62 @@ describe("doc-examples-check.mts", () => {
     scriptTestTimeout,
   );
 
+  it.each(["import", "require"] as const)(
+    "matches consumer resolution-mode %s conditions for valid and invalid assignments",
+    (mode) => {
+      const root = createTempRoot();
+      const packageDir = join(root, "packages", "alpha");
+      writeJson(join(packageDir, "package.json"), {
+        name: "@croco/alpha",
+        exports: {
+          ".": { types: { import: "./types/import.d.ts", require: "./types/require.d.ts" } },
+        },
+      });
+      writeOperationalSource(
+        root,
+        "packages/alpha/types/import.d.ts",
+        "export type Value = number;",
+      );
+      writeOperationalSource(
+        root,
+        "packages/alpha/types/require.d.ts",
+        "export type Value = string;",
+      );
+      mkdirSync(join(root, "node_modules", "@croco"), { recursive: true });
+      symlinkSync(packageDir, join(root, "node_modules", "@croco", "alpha"), "dir");
+      writeJson(join(root, "tsconfig.json"), {
+        compilerOptions: {
+          module: "esnext",
+          moduleResolution: "bundler",
+          strict: true,
+          noEmit: true,
+          types: [],
+          skipLibCheck: true,
+        },
+        files: ["consumer.ts"],
+      });
+      for (const type of ["string", "number"]) {
+        const code = `import type { Value } from "@croco/alpha" with { "resolution-mode": "${mode}" };\nconst result: Value = ${type === "number" ? "123" : '"require"'};`;
+        writeOperationalSource(root, "consumer.ts", code);
+        writeDocs(root, ["```ts typecheck", code, "```"]);
+        const consumer = spawnSync(
+          process.execPath,
+          [
+            resolve(__dirname, "../../node_modules/typescript/bin/tsc"),
+            "-p",
+            join(root, "tsconfig.json"),
+          ],
+          { encoding: "utf-8" },
+        );
+        const docs = runScript(root, "--check");
+        const valid = type === (mode === "require" ? "string" : "number");
+        expect(consumer.status, consumer.stdout + consumer.stderr).toBe(valid ? 0 : 2);
+        expect(docs.status, docs.stdout + docs.stderr).toBe(valid ? 0 : 1);
+      }
+    },
+    scriptTestTimeout,
+  );
+
   it(
     "honors root targets, export patterns and private export exclusions",
     () => {
