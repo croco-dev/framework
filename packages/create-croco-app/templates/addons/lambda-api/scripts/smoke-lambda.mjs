@@ -76,16 +76,16 @@ let entered = 0;
 const running = await createLambdaApplication({
   extraMiddlewares: [
     async (ctx, next) => {
-      if (ctx.req.path !== "/fixture/session") return next();
-      if (ctx.req.header("authorization") !== "Bearer local-fixture")
-        return ctx.json({ code: "FIXTURE_UNAUTHENTICATED" }, 401);
+      if (ctx.req.path !== "/users") return next();
+      if (ctx.header("authorization") !== "Bearer local-fixture")
+        return ctx.jsonResponse({ code: "FIXTURE_UNAUTHENTICATED" }, 401);
       const requestId = Context.getRequestId();
       entered += 1;
       if (entered === 2) release();
       await overlap;
       assert.equal(Context.getRequestId(), requestId);
-      ctx.header("set-cookie", "fixture=rotated; HttpOnly; Secure; SameSite=Lax");
-      return ctx.json({ requestId, cookie: ctx.req.header("cookie") });
+      ctx.res.headers["set-cookie"] = "fixture=rotated; HttpOnly; Secure; SameSite=Lax";
+      return ctx.jsonResponse({ requestId, cookie: ctx.header("cookie") });
     },
   ],
 });
@@ -97,10 +97,10 @@ telemetry.forceFlush = async () => {
   return forceFlush();
 };
 try {
-  const denied = await running.handler(event("/fixture/session", "denied"), context("denied"));
+  const denied = await running.handler(event("/users", "denied"), context("denied"));
   assert.equal(denied.statusCode, 401);
   const requests = ["session-a", "session-b"].map((id) => {
-    const input = event("/fixture/session", id, { authorization: "Bearer local-fixture" });
+    const input = event("/users", id, { authorization: "Bearer local-fixture" });
     input.cookies = [`session=${id}`];
     return running.handler(input, context(id));
   });
@@ -124,12 +124,14 @@ try {
     assert.deepEqual(response.cookies, ["fixture=rotated; HttpOnly; Secure; SameSite=Lax"]);
   }
   assert.equal(flushed, 3);
+  const flushFailure = new Error("local fixture flush failure");
   telemetry.forceFlush = async () => {
-    throw new Error("local fixture flush failure");
+    throw flushFailure;
   };
-  await assert.rejects(running.handler(event("/users", "flush-failed"), context("flush-failed")), {
-    code: "transports-http/lambda-flush-boundary-failed",
-  });
+  await assert.rejects(
+    running.handler(event("/users", "flush-failed"), context("flush-failed")),
+    (error) => error === flushFailure,
+  );
 } finally {
   release();
   telemetry.forceFlush = forceFlush;

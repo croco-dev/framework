@@ -9,5 +9,5 @@ function pnpm(args) {
 }
 pnpm(['--filter', '{{scope}}/api-server', 'build']);
 rmSync(new URL('../.lambda-package/', import.meta.url), { recursive: true, force: true });
-pnpm(['--filter', '{{scope}}/api-server', 'deploy', '--prod', '--legacy', '.lambda-package']);
+pnpm(['--filter', '{{scope}}/api-server', 'deploy', '--prod', '.lambda-package']);
 console.log('Lambda deployment directory prepared. Run lambda:smoke and lambda:check before SAM packaging.');
