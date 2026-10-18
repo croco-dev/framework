@@ -1056,7 +1056,7 @@
     "ratelimit-upstash": {
       "role": "Plugins",
       "subtype": "provider",
-      "runtimes": ["node", "lambda"],
+      "runtimes": ["node", "lambda", "cloudflare-workers"],
       "domain": "Rate limiting"
     },
     "repository-core": {
@@ -2108,7 +2108,7 @@
       "ratelimit-upstash": {
         "domain": "Rate limiting",
         "adapter": "Upstash Redis rate-limit store",
-        "runtimes": ["node", "lambda"],
+        "runtimes": ["node", "lambda", "cloudflare-workers"],
         "requiredEnv": ["UPSTASH_REDIS_REST_URL", "UPSTASH_REDIS_REST_TOKEN"],
         "features": [
           "sliding window",

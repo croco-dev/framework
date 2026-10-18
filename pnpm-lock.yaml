@@ -5318,6 +5318,21 @@ importers:
       '@croco/testing':
         specifier: workspace:*
         version: link:../testing
+      '@croco/testing-resources':
+        specifier: workspace:*
+        version: link:../testing-resources
+      esbuild:
+        specifier: 0.27.2
+        version: 0.27.2
+      ioredis:
+        specifier: 5.11.1
+        version: 5.11.1(supports-color@10.2.2)
+      miniflare:
+        specifier: 4.20260312.0
+        version: 4.20260312.0(@types/node@24.13.2)
+      testcontainers:
+        specifier: 12.0.4
+        version: 12.0.4(supports-color@10.2.2)
       tsup:
         specifier: ^8.0.0
         version: 8.5.1(patch_hash=ce9dbc714c187cea78868f1e68c1a0e5097ddbceb7e976a564d94f2291b5bcb9)(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.18)(supports-color@10.2.2)(tsx@4.21.0)(typescript@6.0.3)(yaml@2.9.0)
@@ -17555,13 +17570,13 @@ snapshots:
 
   '@types/docker-modem@3.0.6':
     dependencies:
-      '@types/node': 22.19.3
+      '@types/node': 24.13.2
       '@types/ssh2': 1.15.5
 
   '@types/dockerode@4.0.1':
     dependencies:
       '@types/docker-modem': 3.0.6
-      '@types/node': 22.19.3
+      '@types/node': 24.13.2
       '@types/ssh2': 1.15.5
 
   '@types/estree-jsx@1.0.5':
@@ -17668,11 +17683,11 @@ snapshots:
 
   '@types/ssh2-streams@0.1.13':
     dependencies:
-      '@types/node': 22.19.3
+      '@types/node': 24.13.2
 
   '@types/ssh2@0.5.52':
     dependencies:
-      '@types/node': 22.19.3
+      '@types/node': 24.13.2
       '@types/ssh2-streams': 0.1.13
 
   '@types/ssh2@1.15.5':

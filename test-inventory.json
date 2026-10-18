@@ -4748,8 +4748,26 @@
       "owner": "@croco/ratelimit-core"
     },
     {
+      "path": "packages/ratelimit-upstash/src/tests/UpstashRateLimitClient.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/ratelimit-upstash"
+    },
+    {
       "path": "packages/ratelimit-upstash/src/tests/UpstashRateLimitStore.spec.ts",
       "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/ratelimit-upstash"
+    },
+    {
+      "path": "packages/ratelimit-upstash/src/tests/WorkersAdapter.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/ratelimit-upstash"
+    },
+    {
+      "path": "packages/ratelimit-upstash/src/tests/WorkersRedisLiveSmoke.spec.ts",
+      "lane": "live",
       "qualifiers": [],
       "owner": "@croco/ratelimit-upstash"
     },

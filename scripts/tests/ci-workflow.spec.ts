@@ -1112,6 +1112,13 @@ describe("CI verification profile contract", () => {
     expect(REAL_RESOURCE_JOB).toContain("pnpm --filter @croco/testing-resources test:real");
   });
 
+  it("runs Workers Upstash conformance against real Redis", () => {
+    expect(WORKFLOW).toContain("              - 'packages/ratelimit-core/**'");
+    expect(WORKFLOW).toContain("              - 'packages/ratelimit-upstash/**'");
+    expect(REAL_RESOURCE_JOB).toContain("pnpm build --filter=@croco/ratelimit-upstash...");
+    expect(REAL_RESOURCE_JOB).toContain("pnpm --filter @croco/ratelimit-upstash test:real");
+  });
+
   it("runs metering idempotency composition against real Redis", () => {
     expect(WORKFLOW).toContain("              - 'packages/metering-core/**'");
     expect(REAL_RESOURCE_JOB).toContain("pnpm build --filter=@croco/metering-core...");

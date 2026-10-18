@@ -29,4 +29,4 @@ Upstash Redis 저장소에 사용할 공통 옵션입니다.
 
 ### redis
 
-> **redis**: `Redis`
+> **redis**: `Pick`\<`Redis`, `"eval"` \| `"del"` \| `"expire"` \| `"get"` \| `"incrbyfloat"`\>

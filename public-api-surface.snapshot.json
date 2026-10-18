@@ -37207,9 +37207,20 @@
               "exportKind": "named",
               "source": "./libs/UpstashRateLimitStore",
               "declarationKind": "class"
+            },
+            {
+              "name": "createUpstashRateLimitClient",
+              "exportKind": "named",
+              "source": "./libs/createUpstashRateLimitClient",
+              "declarationKind": "function"
             }
           ],
           "typeExports": [
+            {
+              "name": "UpstashRateLimitClientOptions",
+              "exportKind": "named",
+              "source": "./libs/createUpstashRateLimitClient"
+            },
             {
               "name": "UpstashRateLimitStoreOptions",
               "exportKind": "named",

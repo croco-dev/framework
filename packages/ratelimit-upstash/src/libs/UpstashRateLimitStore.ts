@@ -35,7 +35,7 @@ import {
  * Upstash Redis 저장소에 사용할 공통 옵션입니다.
  */
 export type UpstashRateLimitStoreOptions = {
-  redis: Redis;
+  redis: Pick<Redis, "eval" | "del" | "expire" | "get" | "incrbyfloat">;
   prefix?: string;
   now?: () => number;
 };
@@ -55,7 +55,7 @@ function recordRefund(stats: MutableRateLimitStats): void {
  * Upstash Redis와 Lua 스크립트로 슬라이딩 윈도우 제한을 수행하는 저장소입니다.
  */
 export class UpstashSlidingWindowStore extends SlidingWindowStore {
-  private readonly redis: Redis;
+  private readonly redis: UpstashRateLimitStoreOptions["redis"];
   private readonly prefix: string;
   private readonly stats: { allowed: number; denied: number; total: number } = {
     allowed: 0,
@@ -199,7 +199,7 @@ export class UpstashSlidingWindowStore extends SlidingWindowStore {
  * Upstash Redis와 Lua 스크립트로 토큰 버킷 제한을 수행하는 저장소입니다.
  */
 export class UpstashTokenBucketStore extends TokenBucketStore {
-  private readonly redis: Redis;
+  private readonly redis: UpstashRateLimitStoreOptions["redis"];
   private readonly prefix: string;
   private readonly stats: { allowed: number; denied: number; total: number } = {
     allowed: 0,
@@ -355,7 +355,7 @@ export class UpstashTokenBucketStore extends TokenBucketStore {
  * Upstash Redis와 Lua 스크립트로 고정 윈도우 제한을 수행하는 저장소입니다.
  */
 export class UpstashFixedWindowStore extends FixedWindowStore {
-  private readonly redis: Redis;
+  private readonly redis: UpstashRateLimitStoreOptions["redis"];
   private readonly prefix: string;
   private readonly stats: { allowed: number; denied: number; total: number } = {
     allowed: 0,
@@ -505,7 +505,9 @@ function createRefundReceiptId(algorithm: string, timestamp: number): string {
   return `${algorithm}:${timestamp}:${refundReceiptSequence}:${randomPart}`;
 }
 
-function requireRedisClient(redis: Redis): Redis {
+function requireRedisClient(
+  redis: UpstashRateLimitStoreOptions["redis"],
+): UpstashRateLimitStoreOptions["redis"] {
   const candidate = redis as { readonly eval?: unknown } | undefined;
   if (!candidate || typeof candidate.eval !== "function") {
     throw new MissingUpstashRateLimitConfigProblem("redis");
@@ -524,7 +526,7 @@ function counterKey(prefix: string, key: string): string {
 }
 
 async function incrementCounter(
-  redis: Redis,
+  redis: UpstashRateLimitStoreOptions["redis"],
   prefix: string,
   algorithm: string,
   key: string,
@@ -536,7 +538,7 @@ async function incrementCounter(
 }
 
 async function getCounter(
-  redis: Redis,
+  redis: UpstashRateLimitStoreOptions["redis"],
   prefix: string,
   algorithm: string,
   key: string,
@@ -548,7 +550,7 @@ async function getCounter(
 }
 
 async function resetCounter(
-  redis: Redis,
+  redis: UpstashRateLimitStoreOptions["redis"],
   prefix: string,
   algorithm: string,
   key: string,
@@ -559,7 +561,7 @@ async function resetCounter(
 }
 
 async function expireCounter(
-  redis: Redis,
+  redis: UpstashRateLimitStoreOptions["redis"],
   prefix: string,
   algorithm: string,
   key: string,
