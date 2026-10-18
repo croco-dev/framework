@@ -349,6 +349,43 @@ describe("generated test execution evidence", () => {
     expect(existsSync(join(packageDir, ".croco-generated-test-evidence.json"))).toBe(false);
   });
 
+  it("captures only the package whose test command is selected", () => {
+    const projectDir = createTempRoot();
+    const entries = ["api-server", "console-web"].map((name): TestInventoryEntry => {
+      const generatedPath = `apps/${name}/src/tests/Subject.spec.ts`;
+      writeFile(join(projectDir, generatedPath), `${name} test source`);
+      writeGeneratedPackage(projectDir, `apps/${name}/package.json`, {
+        name: `@smoke/${name}`,
+        scripts: { test: "vitest run" },
+      });
+      return {
+        path: `templates/${generatedPath}`,
+        lane: "generated-app",
+        qualifiers: [],
+        owner: "create-croco-app",
+        generated: {
+          sourcePath: `templates/${generatedPath}`,
+          generatedPath,
+          commandId: "create-croco-app",
+        },
+      };
+    });
+    const webManifest = join(projectDir, "apps/console-web/package.json");
+    const originalWeb = readFileSync(webManifest, "utf8");
+    const capture = prepareGeneratedUnitEvidenceCapture(projectDir, entries, [
+      "apps",
+      "api-server",
+    ]);
+    try {
+      expect(capture.reports.flatMap(({ generatedPaths }) => generatedPaths)).toEqual([
+        "apps/api-server/src/tests/Subject.spec.ts",
+      ]);
+      expect(readFileSync(webManifest, "utf8")).toBe(originalWeb);
+    } finally {
+      capture.restore();
+    }
+  });
+
   it("executes an overridden generated test destination exactly once", () => {
     const projectDir = createTempRoot();
     const generatedPath = "apps/api-server/src/tests/node-lifecycle.spec.ts";
@@ -1180,6 +1217,7 @@ describe("create-croco-app-generated-smoke dependency resolution", () => {
     "goal-saas-api",
     "saas-single-tenant",
     "production-app-starter",
+    "lambda-api",
     "admin-console-starter",
   ])(
     "installs local tarballs for %s through workspace overrides while preserving source manifests",
@@ -1194,18 +1232,34 @@ describe("create-croco-app-generated-smoke dependency resolution", () => {
         writeFile(join(projectDir, path), content);
       }
       writeFile(join(projectDir, "pnpm-workspace.yaml"), "packages:\n  - apps/*\n");
+      const packs = createTempRoot();
+      writeFile(join(packs, "cli.tgz"), "cli package bytes");
+      writeFile(join(packs, "framework-context.tgz"), "context package bytes");
       const overrides = {
-        "@croco/cli": "file:/tmp/cli.tgz",
-        "@croco/framework-context": "file:/tmp/framework-context.tgz",
+        "@croco/cli": `file:${join(packs, "cli.tgz")}`,
+        "@croco/framework-context": `file:${join(packs, "framework-context.tgz")}`,
       };
 
-      prepareGeneratedSmokeDependencyOverrides(projectDir, caseName, overrides);
+      const installedRanges = prepareGeneratedSmokeDependencyOverrides(
+        projectDir,
+        caseName,
+        overrides,
+      );
+      if (caseName === "lambda-api") {
+        expect(installedRanges["@croco/cli"]).toBe("file:.croco/smoke-packages/cli.tgz");
+        expect(readFileSync(join(projectDir, ".croco/smoke-packages/cli.tgz"), "utf8")).toBe(
+          "cli package bytes",
+        );
+        expect(
+          readFileSync(join(projectDir, ".croco/smoke-packages/framework-context.tgz"), "utf8"),
+        ).toBe("context package bytes");
+      }
 
       for (const [path, content] of Object.entries(originalManifests)) {
         expect(readFileSync(join(projectDir, path), "utf8"), path).toBe(content);
       }
       const workspace = readFileSync(join(projectDir, "pnpm-workspace.yaml"), "utf8");
-      for (const [name, range] of Object.entries(overrides)) {
+      for (const [name, range] of Object.entries(installedRanges)) {
         expect(workspace).toContain(`"${name}": "${range}"`);
       }
     },
@@ -1587,6 +1641,7 @@ describe("create-croco-app generated smoke matrix", () => {
       "graphql-vite-spa-docker",
       "meta-vite-fullstack-workers",
       "kubernetes-node-api",
+      "lambda-api",
       "production-app-starter",
       "saas-golden-path",
       "saas-single-tenant",
@@ -1624,6 +1679,7 @@ describe("create-croco-app generated smoke matrix", () => {
       "graphql-vite-spa-docker",
       "meta-vite-fullstack-workers",
       "kubernetes-node-api",
+      "lambda-api",
       "production-app-starter",
       "saas-golden-path",
       "saas-single-tenant",

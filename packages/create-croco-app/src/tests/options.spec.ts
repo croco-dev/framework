@@ -1130,7 +1130,7 @@ describe("noninteractive CLI option validation", () => {
     [{ webApps: "web" }, "--web-apps is not supported with the production-app preset"],
     [{ db: "postgres" }, "--db is not supported with the production-app preset"],
     [
-      { backendDeploy: "lambda" },
+      { backendDeploy: "docker" },
       "--backend-deploy is not supported with the production-app preset",
     ],
     [

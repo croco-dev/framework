@@ -328,7 +328,7 @@ describe("verification manifest", () => {
     expect(
       createHash("sha256").update(JSON.stringify(manifests)).digest("hex"),
       "The pre-split monolithic manifest changed; update this digest only after intentionally verifying the new serialized commands.",
-    ).toBe("74b5fdfffd22f4a64bdc04a01bddf7afa841cb0c67f4de98b73b4eee83dd832d");
+    ).toBe("e045023723638efab650eb5d3a4b1da0bf7ee0ca3f9850ea91cc0fc7339e8c85");
   });
 
   it("classifies every dependency edge and every cross-lane edge for synthesis", () => {
@@ -443,7 +443,7 @@ describe("verification manifest", () => {
         generatedInventoryPaths,
       ).sort(),
     ).toEqual(generatedInventoryPaths);
-    expect(PUBLISH_REQUIRED_GENERATED_SMOKE_CASES).toHaveLength(16);
+    expect(PUBLISH_REQUIRED_GENERATED_SMOKE_CASES).toHaveLength(17);
     expect(PUBLISH_REQUIRED_GENERATED_SMOKE_CASES).toContain("kubernetes-node-api");
     expect(PUBLISH_REQUIRED_GENERATED_SMOKE_CASES).toContain("saas-single-tenant");
     expect(PUBLISH_REQUIRED_GENERATED_SMOKE_CASES).toContain("trpc-nextjs-vercel-fullstack");
@@ -1023,7 +1023,9 @@ describe("verification manifest", () => {
       expect(selectedCases.length, packagePath).toBeGreaterThan(0);
       expect(selectedCases, packagePath).toContain("kubernetes-node-api");
       expect(
-        selectedCases.filter((caseName) => caseName !== "kubernetes-node-api").length,
+        selectedCases.filter(
+          (caseName) => caseName !== "kubernetes-node-api" && caseName !== "lambda-api",
+        ).length,
         packagePath,
       ).toBeLessThan(18);
       expect(generatedSmoke?.applicable, packagePath).toBe(true);

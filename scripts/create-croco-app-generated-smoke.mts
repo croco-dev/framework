@@ -501,12 +501,15 @@ function resolveGeneratedTestScriptName(scripts: Readonly<Record<string, string>
 export function prepareGeneratedUnitEvidenceCapture(
   projectDir: string,
   inventoryEntries: readonly TestInventoryEntry[] = testInventory.tests,
+  packagePath?: readonly string[],
 ): GeneratedUnitEvidenceCapture {
   const grouped = new Map<string, readonly string[]>();
+  const packagePrefix = packagePath?.length ? `${packagePath.join("/")}/` : undefined;
   for (const entry of inventoryEntries.filter(({ lane }) => lane === "generated-app")) {
     const generatedPath = entry.generated?.generatedPath;
     if (
       !generatedPath ||
+      (packagePrefix !== undefined && !generatedPath.startsWith(packagePrefix)) ||
       generatedPath.startsWith("tests/journeys/") ||
       !existsSync(resolve(projectDir, generatedPath))
     ) {
@@ -1688,6 +1691,44 @@ const smokeCaseDefinitionsWithoutLint: readonly Omit<SmokeCase, "tier" | "adviso
     ],
   },
   {
+    name: "lambda-api",
+    args: [
+      "--preset",
+      "production-app",
+      "--backend-deploy",
+      "lambda",
+      "--scope",
+      "@smoke",
+      "--no-install",
+      "--no-git",
+    ],
+    runtimeTarget: "lambda",
+    matrixTargets: ["spa-be-split"],
+    validations: [
+      {
+        label: "install-immediate contract verify",
+        readOnly: true,
+        recovery: "pnpm codegen",
+        args: ["contract:verify"],
+      },
+      runtimeCapabilityManifestValidation("saas-lambda"),
+      { label: "Lambda API typecheck", packagePath: ["apps", "api-server"], args: ["typecheck"] },
+      { label: "test", packagePath: ["apps", "api-server"], args: ["test"] },
+      {
+        label: "Lambda deployment package",
+        args: ["lambda:package"],
+        paths: ["dist/lambda-package/dist/lambda.js", "dist/lambda-package/node_modules"],
+      },
+      {
+        label: "Lambda profile drift",
+        readOnly: true,
+        recovery: "Review changes before pnpm lambda:lock",
+        args: ["lambda:check"],
+      },
+      { label: "Packaged Lambda Host invocation", args: ["lambda:smoke"] },
+    ],
+  },
+  {
     name: "kubernetes-node-api",
     args: [
       "--preset",
@@ -2405,23 +2446,40 @@ export function prepareGeneratedSmokeDependencyOverrides(
   projectDir: string,
   smokeCaseName: string,
   rangeOverrides: Readonly<Record<string, string>>,
-): void {
+): Readonly<Record<string, string>> {
+  let installedRanges = rangeOverrides;
+  if (smokeCaseName === "lambda-api") {
+    const packageDirectory = join(projectDir, ".croco", "smoke-packages");
+    mkdirSync(packageDirectory, { recursive: true });
+    installedRanges = Object.fromEntries(
+      Object.entries(rangeOverrides).map(([name, range]) => {
+        if (!range.startsWith("file:"))
+          throw new Error(`Expected a packed local dependency for ${name}`);
+        const source = range.slice(5);
+        const filename = basename(source);
+        copyFileSync(source, join(packageDirectory, filename));
+        return [name, `file:.croco/smoke-packages/${filename}`];
+      }),
+    );
+  }
   if (
     ![
       "goal-saas-api",
       "saas-single-tenant",
       "production-app-starter",
       "kubernetes-node-api",
+      "lambda-api",
       "admin-console-starter",
     ].includes(smokeCaseName)
   ) {
     rewriteExternalCrocoRanges(
       projectDir,
-      rangeOverrides,
+      installedRanges,
       generatedSmokeExternalCrocoRangeExceptions,
     );
   }
-  writePnpmWorkspaceOverrides(projectDir, rangeOverrides);
+  writePnpmWorkspaceOverrides(projectDir, installedRanges);
+  return installedRanges;
 }
 
 export function getGeneratedGoalSmokeCaseInputs(): readonly {
@@ -2573,7 +2631,7 @@ if (isMainModule()) {
         assertGeneratedEnvironmentTemplate(projectDir, smokeCase);
         assertNoGeneratedSecurityValidationOptOut(projectDir, smokeCase);
         assertNoGeneratedCredentialLookingValues(projectDir, smokeCase);
-        prepareGeneratedSmokeDependencyOverrides(
+        const installedRangeOverrides = prepareGeneratedSmokeDependencyOverrides(
           projectDir,
           smokeCase.name,
           generatedSmokeRangeOverrides,
@@ -2592,7 +2650,7 @@ if (isMainModule()) {
         assertPnpmLockfileUsesLocalTarballOverrides(
           lockfilePath,
           smokeCase.name,
-          generatedSmokeRangeOverrides,
+          installedRangeOverrides,
         );
         assertExists(
           join(projectDir, "node_modules"),
@@ -3787,7 +3845,13 @@ function runValidation(
 
   try {
     unitCapture =
-      validation.label === "test" ? prepareGeneratedUnitEvidenceCapture(projectDir) : undefined;
+      validation.label === "test"
+        ? prepareGeneratedUnitEvidenceCapture(
+            projectDir,
+            testInventory.tests,
+            validation.packagePath,
+          )
+        : undefined;
     if (validation.args) {
       if (validation.expectFailure) {
         const commandResult = runExpectFailure(
