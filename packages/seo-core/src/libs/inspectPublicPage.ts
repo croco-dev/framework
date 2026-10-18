@@ -239,7 +239,12 @@ export function createPublicPageInspector(
   const targets = new Map(options.targets.map((target) => [target.id, target]));
   if (targets.size !== options.targets.length) throw new PublicPageProblem("duplicate-target");
   for (const target of targets.values()) {
-    const url = new URL(target.requestUrl);
+    let url: URL;
+    try {
+      url = new URL(target.requestUrl);
+    } catch {
+      throw new PublicPageProblem("invalid-target");
+    }
     if (!["http:", "https:"].includes(url.protocol) || url.username || url.password)
       throw new PublicPageProblem("invalid-target");
   }
@@ -318,7 +323,16 @@ export function createPublicPageInspector(
     };
     try {
       return await Promise.race([inspect(), deadline]);
-    } catch {
+    } catch (cause) {
+      if (
+        cause instanceof PublicPageProblem &&
+        !["inspection-timeout", "response-limit"].includes(cause.reason)
+      )
+        return {
+          targetId,
+          state: "partial",
+          diagnostics: [{ code: "SEO_INVALID_SOURCE", field: "definition" }],
+        };
       return {
         targetId,
         state: "unavailable",

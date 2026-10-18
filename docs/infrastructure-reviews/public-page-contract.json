@@ -8,7 +8,7 @@
       "files": {
         "packages/seo-core/package.json": "d83463db239a892c7774dc4f4c537ea2c97bdab98b1583d5fb43550769f29b95",
         "packages/seo-core/src/index.ts": "92faeb3152d6df3ac649e58676fd0c5530a522afa2d99e166975adbfd6356d8b",
-        "packages/seo-core/src/libs/inspectPublicPage.ts": "deef8048baa42f98f29a71782c55918cee08bac5ee3d09926e42d5a105c66945",
+        "packages/seo-core/src/libs/inspectPublicPage.ts": "97d26fed0237a4324e6f2f5a3b21837cd2871765156d3f0eb3b17c946948ffa3",
         "packages/seo-core/src/libs/publicPage.ts": "7f5dcd9a34ac7888c89613d9f837c4a76b6953eee72a03292aafea29fe72c791",
         "docs/package-catalog.json": "e2b163103955281d3a91bf89351b4cfcd406170739ac147cf432d65e04bbea44"
       },

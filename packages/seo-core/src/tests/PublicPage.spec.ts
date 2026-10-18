@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import {
+  PublicPageProblem,
   createPublicPageSourceRequest,
   createPublicPageInspector,
   resolvePublicPageMetadata,
@@ -355,4 +356,26 @@ it("requires the actual HTML MIME type rather than a prefix match", () => {
     html,
   });
   expect(report.diagnostics).toContainEqual({ code: "SEO_CONTENT_TYPE", field: "content-type" });
+});
+
+it("reports an invalid canonical origin as partial before loading a source", async () => {
+  const load = vi.fn();
+  const inspect = createPublicPageInspector({
+    targets: [{ ...target, definition: { ...definition, origin: "not a URL", source: { load } } }],
+    authorize: async () => true,
+  });
+  expect(await inspect("lamp")).toMatchObject({
+    state: "partial",
+    diagnostics: [{ code: "SEO_INVALID_SOURCE", field: "definition" }],
+  });
+  expect(load).not.toHaveBeenCalled();
+});
+
+it("rejects an invalid registered preview URL through the public Problem contract", () => {
+  expect(() =>
+    createPublicPageInspector({
+      targets: [{ ...target, requestUrl: "not a URL" }],
+      authorize: async () => true,
+    }),
+  ).toThrow(PublicPageProblem);
 });
