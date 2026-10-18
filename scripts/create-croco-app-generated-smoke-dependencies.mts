@@ -282,16 +282,22 @@ export function selectGeneratedTestPathsForSmokeCases(
       prefixes: selected.map((prefix) => `packages/create-croco-app/templates/${prefix}`),
       excludesNodeLifecycle:
         caseName === "saas-cloudflare-profile" || caseName === "saas-lambda-profile",
+      includesWorkerBootstrap: caseName === "saas-cloudflare-profile",
     };
   });
   return generatedTestPaths
     .filter((path) =>
       selections.some(
-        ({ prefixes, excludesNodeLifecycle }) =>
+        ({ prefixes, excludesNodeLifecycle, includesWorkerBootstrap }) =>
           !(
             excludesNodeLifecycle &&
             path ===
               "packages/create-croco-app/templates/saas/apps/api-server/src/tests/node-lifecycle.spec.ts"
+          ) &&
+          !(
+            !includesWorkerBootstrap &&
+            path ===
+              "packages/create-croco-app/templates/saas/apps/api-server/src/tests/WorkerBootstrap.spec.ts"
           ) &&
           prefixes.some((prefix) =>
             prefix.endsWith("/") ? path.startsWith(prefix) : path === prefix,
