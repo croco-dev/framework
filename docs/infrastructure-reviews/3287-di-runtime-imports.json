@@ -4,9 +4,9 @@
     {
       "package": "esbuild-plugin",
       "classification": "pure-contract",
-      "reason": "DI graph generation now follows TypeScript runtime import extensions and validates the consumer module settings. This changes a build-time compiler contract without changing deployment resources, storage or runtime lifecycle ownership.",
+      "reason": "DI graph generation now follows TypeScript runtime import extensions and validates the consumer module settings. This changes a build-time compiler contract without changing deployment resources, storage or runtime lifecycle ownership. The source binding covers the reviewed merge result with the named-provider export support already on trunk at 26266f34fdae27577c67aa4bd9e578130b62cb65.",
       "files": {
-        "packages/esbuild-plugin/src/libs/DiCompiler.ts": "100a3a1ba9b56c268fc33b38342cfb90f56a33b818071106cf252a65eedd3dc6"
+        "packages/esbuild-plugin/src/libs/DiCompiler.ts": "7b13f42b1758e8c8b41df7247e02a426d457de6f68d541a74cf258acfefefc37"
       },
       "catalogRuntimes": [],
       "profiles": {
