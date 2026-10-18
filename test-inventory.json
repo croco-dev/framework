@@ -1616,6 +1616,12 @@
       "owner": "create-croco-app"
     },
     {
+      "path": "packages/create-croco-app/src/tests/FrontendOpenNextDeploy.spec.ts",
+      "lane": "fast",
+      "qualifiers": ["coverage"],
+      "owner": "create-croco-app"
+    },
+    {
       "path": "packages/create-croco-app/src/tests/GenerationResult.spec.ts",
       "lane": "fast",
       "qualifiers": ["coverage"],
