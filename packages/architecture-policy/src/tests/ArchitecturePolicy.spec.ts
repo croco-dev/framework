@@ -733,6 +733,86 @@ describe("architecture policy engine", () => {
   });
 
   it.each([
+    { name: "missing root", manifest: { exports: { "./ok": "./public.js" } }, allowed: false },
+    { name: "null root", manifest: { exports: { ".": null } }, allowed: false },
+    { name: "string root", manifest: { exports: { ".": "./public.js" } }, allowed: true },
+    {
+      name: "conditional root",
+      manifest: { exports: { ".": { import: "./public.js" } } },
+      allowed: true,
+    },
+    { name: "string shorthand", manifest: { exports: "./public.js" }, allowed: true },
+    {
+      name: "conditional shorthand",
+      manifest: { exports: { import: "./public.js" } },
+      allowed: true,
+    },
+    { name: "empty exports", manifest: { exports: {} }, allowed: false },
+    { name: "legacy main", manifest: { main: "./public.js" }, allowed: true },
+    {
+      name: "legacy null exports",
+      manifest: { exports: null, main: "./public.js" },
+      allowed: true,
+    },
+  ])("checks source root imports against Node resolution for $name", ({ manifest, allowed }) => {
+    const repo = createTempRepo();
+    writePackage(repo, "packages/app", "@test/app", { dependencies: { "@test/feature": "*" } });
+    writePackage(repo, "packages/feature", "@test/feature", manifest);
+    writeFile(repo, "packages/app/src/index.ts", "import '@test/feature';\n");
+    writeFile(
+      repo,
+      "node_modules/@test/feature/package.json",
+      JSON.stringify({ name: "@test/feature", ...manifest }),
+    );
+    writeFile(repo, "node_modules/@test/feature/public.js", "export {};\n");
+    writeFile(repo, "consumer.mjs", "import '@test/feature';\n");
+    const node = spawnSync(process.execPath, [join(repo, "consumer.mjs")], { encoding: "utf8" });
+    expect(node.error).toBeUndefined();
+    expect(node.status).toBe(allowed ? 0 : 1);
+    if (!allowed) expect(node.stderr).toContain("ERR_PACKAGE_PATH_NOT_EXPORTED");
+
+    const report = checkArchitecturePolicy({
+      rootDir: repo,
+      manifest: {
+        schemaVersion: ARCHITECTURE_POLICY_SCHEMA_VERSION,
+        rules: { publicEntrypoints: { id: "public", includePackages: ["@test/*"] } },
+      },
+    });
+    expect(report.status).toBe(allowed ? "pass" : "fail");
+    expect(report.diagnostics).toEqual(
+      allowed
+        ? []
+        : [
+            expect.objectContaining({
+              code: "architecture-policy/private-entrypoint-import",
+              sourceKind: "source",
+              importSpecifier: "@test/feature",
+              message: "@test/feature is not a declared public export.",
+            }),
+          ],
+    );
+  });
+
+  it("allows a subpath-only dependency declaration when source uses its public subpath", () => {
+    const repo = createTempRepo();
+    writePackage(repo, "packages/app", "@test/app", { dependencies: { "@test/feature": "*" } });
+    writePackage(repo, "packages/feature", "@test/feature", {
+      publishConfig: { exports: { "./ok": "./public.js" } },
+    });
+    writeFile(repo, "packages/app/src/index.ts", "import '@test/feature/ok';\n");
+    const report = checkArchitecturePolicy({
+      rootDir: repo,
+      manifest: {
+        schemaVersion: ARCHITECTURE_POLICY_SCHEMA_VERSION,
+        rules: { publicEntrypoints: { id: "public", includePackages: ["@test/*"] } },
+      },
+    });
+    expect(report.checkedPackageManifestCount).toBeGreaterThan(0);
+    expect(report.status).toBe("pass");
+    expect(report.diagnostics).toEqual([]);
+  });
+
+  it.each([
     { name: "exact null", exports: { "./private": null }, subpath: "private", allowed: false },
     {
       name: "exact exclusion",

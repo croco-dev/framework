@@ -802,7 +802,10 @@ function runPublicEntrypointRule(
   }
 
   return imports.flatMap((entry) => {
-    if (!entry.importedPackageName || !entry.importedSubpath) {
+    if (
+      !entry.importedPackageName ||
+      (entry.sourceKind === "package-manifest" && !entry.importedSubpath)
+    ) {
       return [];
     }
 
@@ -835,7 +838,7 @@ function runPublicEntrypointRule(
         entry,
         context,
         rule.message ??
-          `${entry.importedPackageName}/${entry.importedSubpath} is not a declared public export.`,
+          `${entry.importedPackageName}${entry.importedSubpath ? `/${entry.importedSubpath}` : ""} is not a declared public export.`,
         rule.recovery,
       ),
     ];
@@ -1093,7 +1096,16 @@ function findJsonPropertyLocation(
   return { line: 1, column: 1 };
 }
 
-function isExportedSubpath(pkg: PackageInfo, subpath: string): boolean {
+function isExportedSubpath(pkg: PackageInfo, subpath: string | null): boolean {
+  if (subpath === null) {
+    const publishConfig = isRecord(pkg.packageJson.publishConfig)
+      ? pkg.packageJson.publishConfig
+      : undefined;
+    const exportsField = publishConfig?.exports ?? pkg.packageJson.exports;
+    // Without an exports map, legacy main/index resolution remains available.
+    return exportsField == null || publicExportTargetStatus(pkg.exportSubpaths["."]) === "public";
+  }
+
   const exportKey = `./${subpath}`;
   if (Object.hasOwn(pkg.exportSubpaths, exportKey)) {
     return publicExportTargetStatus(pkg.exportSubpaths[exportKey]) === "public";
