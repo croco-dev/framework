@@ -1239,8 +1239,12 @@ describe("E2E: generate()", () => {
         join(testDir, "apps", "api-server", "src", "app.ts"),
         "utf8",
       );
-      const apiNodeHostSource = readFileSync(
+      const apiNodeEntrypointSource = readFileSync(
         join(testDir, "apps", "api-server", "src", "index.ts"),
+        "utf8",
+      );
+      const apiNodeHostSource = readFileSync(
+        join(testDir, "apps", "api-server", "src", "node-application.ts"),
         "utf8",
       );
       const apiLambdaHostSource = readFileSync(
@@ -1352,6 +1356,10 @@ describe("E2E: generate()", () => {
       expect(apiAppSource).toContain("globalFilters: [HttpExceptionFilter]");
       expect(apiAppSource).toContain("createApplicationRuntime");
       expect(apiAppSource).toContain("runtime.bindHostCallback");
+      expect(apiNodeEntrypointSource).toContain(
+        'import { startNodeApplication } from "./node-application"',
+      );
+      expect(apiNodeEntrypointSource).toContain("await startNodeApplication()");
       expect(apiNodeHostSource).toContain("createNodeHost");
       expect(apiNodeHostSource).toContain("startNodeApplication");
       expect(apiNodeHostSource).toMatch(

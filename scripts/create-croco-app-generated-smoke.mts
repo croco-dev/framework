@@ -1688,6 +1688,40 @@ const smokeCaseDefinitionsWithoutLint: readonly Omit<SmokeCase, "tier" | "adviso
     ],
   },
   {
+    name: "kubernetes-node-api",
+    args: [
+      "--preset",
+      "production-app",
+      "--backend-deploy",
+      "kubernetes",
+      "--scope",
+      "@smoke",
+      "--no-install",
+      "--no-git",
+    ],
+    runtimeTarget: "node",
+    matrixTargets: ["spa-be-split"],
+    validations: [
+      {
+        label: "install-immediate contract verify",
+        readOnly: true,
+        recovery: "pnpm codegen",
+        args: ["contract:verify"],
+      },
+      { label: "typecheck", args: ["typecheck"] },
+      { label: "build", args: ["build"] },
+      { label: "Chromium install", args: ["test:browser:install"] },
+      { label: "test", args: ["test"] },
+      {
+        label: "profile drift",
+        readOnly: true,
+        recovery: "Review profile changes and run pnpm k8s:lock",
+        args: ["k8s:check"],
+      },
+      { label: "built Kubernetes Node Host smoke", args: ["k8s:smoke"] },
+    ],
+  },
+  {
     name: "production-app-starter",
     args: ["--preset", "production-app", "--scope", "@smoke", "--no-install", "--no-git"],
     runtimeTarget: "node+browser",
@@ -2377,6 +2411,7 @@ export function prepareGeneratedSmokeDependencyOverrides(
       "goal-saas-api",
       "saas-single-tenant",
       "production-app-starter",
+      "kubernetes-node-api",
       "admin-console-starter",
     ].includes(smokeCaseName)
   ) {

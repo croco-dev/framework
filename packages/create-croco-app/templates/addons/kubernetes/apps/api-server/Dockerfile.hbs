@@ -1,0 +1,25 @@
+# Same prune/build pipeline as the Docker backend; no cluster-local database.
+FROM node:24-slim AS base
+RUN npm install -g pnpm@12.7.0 turbo@2.10.2
+
+FROM base AS pruner
+WORKDIR /app
+COPY . .
+RUN turbo prune {{scope}}/api-server --docker
+
+FROM base AS builder
+WORKDIR /app
+COPY --from=pruner /app/out/json/ .
+COPY patches ./patches
+RUN pnpm install --frozen-lockfile
+COPY --from=pruner /app/out/full/ .
+RUN pnpm turbo build --filter={{scope}}/api-server
+
+FROM node:24-slim AS runner
+WORKDIR /app
+ENV NODE_ENV=production
+RUN addgroup --system --gid 1001 nodejs && adduser --system --uid 1001 nodejs
+COPY --from=builder --chown=nodejs:nodejs /app .
+USER 1001:1001
+EXPOSE 3000
+CMD ["node", "apps/api-server/dist/kubernetes.js"]

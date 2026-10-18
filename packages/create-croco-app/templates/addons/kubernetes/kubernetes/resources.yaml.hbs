@@ -1,0 +1,100 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: croco-api-config
+data:
+  NODE_ENV: production
+  PORT: "3000"
+  WEB_ORIGIN: "https://console.example.com"
+  TELEMETRY_ENABLED: "false"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: croco-api
+spec:
+  # The sample repository and limiter are process-local. Opt into durable providers
+  # before increasing replicas; this profile does not certify a full SaaS deployment.
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: croco-api
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: croco-api
+    spec:
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 120
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        runAsGroup: 1001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: api
+          image: croco-api:local
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 3000
+          envFrom:
+            - configMapRef:
+                name: croco-api-config
+            # Optional until an application opts into external providers. Create it
+            # out of band; no secret values or cluster-local services are generated.
+            - secretRef:
+                name: croco-api-secrets
+                optional: true
+          startupProbe:
+            httpGet:
+              path: /health/live
+              port: http
+            periodSeconds: 2
+            failureThreshold: 30
+          livenessProbe:
+            httpGet:
+              path: /health/live
+              port: http
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: http
+            periodSeconds: 2
+            failureThreshold: 1
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: "1"
+              memory: 512Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir:
+            sizeLimit: 64Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: croco-api
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: croco-api
+  ports:
+    - name: http
+      port: 80
+      targetPort: http

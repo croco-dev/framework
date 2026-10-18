@@ -27,3 +27,19 @@ users accessing web applications through a browser is unchanged.
 ## Report
 
 State the selected contract and implementation, runtime, maturity, certification state, commands that passed, and any unexecuted live or production check. For a custom adapter, identify its application-owned location and the missing first-party capability or compatibility that justified it.
+
+## Kubernetes Node API generation
+
+`--preset production-app --backend-deploy kubernetes` generates a minimal, uncertified
+Node API infrastructure profile. Inspect `croco-infrastructure-profile.manifest.json`
+alongside the Node runtime capability manifest. The SPA is deployed separately.
+Run generated build/typecheck, `pnpm k8s:check` for owned-file drift, an independent
+Kubernetes schema validator against `kubernetes/resources.yaml`, and `pnpm k8s:smoke`
+for real Node HTTP drain/readiness/close evidence. `pnpm k8s:lock` records reviewed
+file changes and clears verification claims; it never validates schemas or certifies a cluster.
+
+A live cluster requires separate server-side validation, image/probe/Secret wiring,
+controlled Pod termination and endpoint removal evidence. Without it, report
+`liveCluster: not-verified` and `certification: not-certified`. One replica with Recreate
+reflects the sample's process-local repository/limiter and restart data loss; durable
+provider composition and shared typed binding (#3547) are separate integration work.

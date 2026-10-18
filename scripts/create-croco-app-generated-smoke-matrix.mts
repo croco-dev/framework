@@ -189,6 +189,7 @@ export const GENERATED_SMOKE_MATRIX_CASES = [
     },
   },
   { name: "meta-vite-fullstack-workers", tier: "spine-blocking" },
+  { name: "kubernetes-node-api", tier: "spine-blocking" },
   { name: "production-app-starter", tier: "spine-blocking" },
   {
     name: "admin-console-starter",

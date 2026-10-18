@@ -1280,6 +1280,12 @@
       "owner": "@croco/cache-core"
     },
     {
+      "path": "packages/cli/src/tests/AgentReadExample.spec.ts",
+      "lane": "fast",
+      "qualifiers": ["coverage"],
+      "owner": "@croco/cli"
+    },
+    {
       "path": "packages/cli/src/tests/AgentReadProcess.spec.ts",
       "lane": "fast",
       "qualifiers": ["coverage"],
@@ -1587,6 +1593,12 @@
     },
     {
       "path": "packages/create-croco-app/src/tests/GeneratorOptions.spec.ts",
+      "lane": "fast",
+      "qualifiers": ["coverage"],
+      "owner": "create-croco-app"
+    },
+    {
+      "path": "packages/create-croco-app/src/tests/KubernetesProfile.spec.ts",
       "lane": "fast",
       "qualifiers": ["coverage"],
       "owner": "create-croco-app"

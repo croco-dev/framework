@@ -35,7 +35,10 @@ export function configureCreateCrocoAppProgram(program: Command): Command {
     .option("--api <api>", "API type (graphql|trpc). Only supported with ddd-api and ddd-fullstack")
     .option("--api-hosting <hosting>", "API hosting (standalone|nextjs)")
     .option("--web-apps <apps>", "Comma-separated web app names")
-    .option("--backend-deploy <deploy>", "Backend deploy (docker|lambda)")
+    .option(
+      "--backend-deploy <deploy>",
+      "Backend deploy (docker|lambda|kubernetes; kubernetes requires production-app)",
+    )
     .option(
       "--frontend-deploy <deploy>",
       "Frontend deploy (opennext|vercel|docker|cloudflare-meta-vite|vite-spa)",
