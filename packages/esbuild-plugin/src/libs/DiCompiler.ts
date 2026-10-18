@@ -1749,10 +1749,10 @@ function toGeneratedImport(
     : (ts.resolveModuleName(moduleSpecifier, outFile, compilerOptions, ts.sys).resolvedModule
         ?.resolvedFileName ?? moduleSpecifier);
   const relative = normalizePath(path.relative(path.dirname(outFile), sourceSpecifier))
-    .replace(/\.mts$/u, ".mjs")
-    .replace(/\.cts$/u, ".cjs")
+    .replace(/(?:\.d)?\.mts$/u, ".mjs")
+    .replace(/(?:\.d)?\.cts$/u, ".cjs")
     .replace(/\.tsx$/u, compilerOptions.jsx === ts.JsxEmit.Preserve ? ".jsx" : ".js")
-    .replace(/\.ts$/u, ".js");
+    .replace(/(?:\.d)?\.ts$/u, ".js");
   return relative.startsWith(".") ? relative : `./${relative}`;
 }
 

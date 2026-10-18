@@ -4,7 +4,7 @@ import * as path from "node:path";
 import { tmpdir } from "node:os";
 import * as ts from "typescript";
 import { afterEach, describe, expect, it } from "vitest";
-import { compileDiGraph, writeDiGraph } from "../libs/DiCompiler";
+import { compileDiGraph, createDiPackageDescriptor, writeDiGraph } from "../libs/DiCompiler";
 
 const repositoryRoot = path.resolve(__dirname, "../../../..");
 const roots: string[] = [];
@@ -179,6 +179,63 @@ describe("DI graph consumer imports", () => {
     },
     30_000,
   );
+
+  it("resolves extensionless package graph declarations to their existing runtime file", () => {
+    const root = fixture({ module: "NodeNext", moduleResolution: "NodeNext" }, "module", "ts");
+    const libraryDir = path.join(root, "node_modules/@fixture/library");
+    fs.mkdirSync(libraryDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(libraryDir, "package.json"),
+      JSON.stringify({
+        name: "@fixture/library",
+        type: "module",
+        exports: { "./croco-di.json": "./croco-di.json" },
+      }),
+    );
+    const library = compileDiGraph({ baseDir: root, scanDirs: [] });
+    fs.writeFileSync(
+      path.join(libraryDir, "croco-di.json"),
+      JSON.stringify(
+        createDiPackageDescriptor(library, {
+          packageName: "@fixture/library",
+          packageVersion: "1.0.0",
+          graphImport: "./di.generated",
+        }),
+      ),
+    );
+    fs.writeFileSync(
+      path.join(libraryDir, "di.generated.d.ts"),
+      'export declare const generatedDiGraph: import("@croco/framework-context").GeneratedDiGraph;',
+    );
+    fs.writeFileSync(
+      path.join(libraryDir, "di.generated.js"),
+      "export const generatedDiGraph = { providers: [], roots: [] };",
+    );
+    typecheck(root);
+    const result = compileDiGraph({
+      baseDir: root,
+      outFile: "src/di.generated.ts",
+      packageDescriptors: ["@fixture/library/croco-di.json"],
+    });
+    writeDiGraph(result);
+    typecheck(root);
+    const generated = ts.createSourceFile(
+      result.outFile,
+      result.code,
+      ts.ScriptTarget.Latest,
+      true,
+    );
+    const references = generated.statements.flatMap((statement) =>
+      ts.isImportDeclaration(statement) && ts.isStringLiteral(statement.moduleSpecifier)
+        ? [statement.moduleSpecifier.text]
+        : [],
+    );
+    const libraryImport = references.find((reference) => reference.includes("@fixture/library"));
+    expect(libraryImport).toBe("../node_modules/@fixture/library/di.generated.js");
+    expect(fs.existsSync(path.resolve(path.dirname(result.outFile), libraryImport ?? ""))).toBe(
+      true,
+    );
+  }, 30_000);
 
   it("rejects generated ESM syntax in a CommonJS graph with verbatimModuleSyntax", () => {
     const root = fixture(
