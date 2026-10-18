@@ -226,11 +226,21 @@ function validWorkload(profile: InfrastructureProfile, workload: ObjectValue, id
   return (
     workload["apiVersion"] === "apps/v1" &&
     containers.length === 1 &&
-    containers.every(
-      (container) =>
-        typeof object(container)["image"] === "string" &&
-        /^[a-zA-Z0-9][a-zA-Z0-9._/:@-]*$/.test(String(object(container)["image"])),
-    )
+    containers.every((entry) => {
+      const container = object(entry);
+      const environment = list(container["env"]).map(object);
+      const names = environment.map((variable) => variable["name"]);
+      return (
+        typeof container["image"] === "string" &&
+        /^[a-zA-Z0-9][a-zA-Z0-9._/:@-]*$/.test(container["image"]) &&
+        (container["env"] === undefined || Array.isArray(container["env"])) &&
+        names.every((variable) => typeof variable === "string" && variable.length > 0) &&
+        new Set(names).size === names.length &&
+        environment.every(
+          (variable) => variable["value"] === undefined || variable["valueFrom"] === undefined,
+        )
+      );
+    })
   );
 }
 

@@ -264,3 +264,27 @@ it.each(profiles)("accepts a supplied valid optional resource for %s", (profile)
   input.bindings.push({ ...input.bindings[2], requirement: "OPTIONAL" });
   expect(validateInfrastructure(input).ok).toBe(true);
 });
+
+it.each(["DB_HOST", "API_TOKEN"])(
+  "rejects duplicate Kubernetes environment wiring for %s",
+  (name) => {
+    const input = fixture("kubernetes");
+    const env = input.artifact[0].spec.template.spec.containers[0].env;
+    env.push({ name, value: "another-endpoint.example.test" });
+    expect(validateInfrastructure(input).diagnostics).toContainEqual({
+      code: "CROCO_INFRA_RUNTIME",
+    });
+  },
+);
+
+it("rejects unnamed or conflicting Kubernetes Secret environment sources", () => {
+  for (const malformed of ["unnamed", "two-sources"]) {
+    const input = fixture("kubernetes");
+    const secret = input.artifact[0].spec.template.spec.containers[0].env[3];
+    if (malformed === "unnamed") delete secret.name;
+    else secret.value = "literal-overrides-reference";
+    expect(validateInfrastructure(input).diagnostics).toContainEqual({
+      code: "CROCO_INFRA_RUNTIME",
+    });
+  }
+});

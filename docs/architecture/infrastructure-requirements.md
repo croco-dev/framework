@@ -27,7 +27,8 @@ Serialize this declaration to `croco-infrastructure-requirements.json`. The func
 only the declared reference fields; do not put credentials in IDs, owner, scope or secretRef.
 `optional: true` permits an absent binding. Once supplied, an optional binding receives every
 normal check. Unrequired native resources are ignored; unrequired binding claims fail.
-Duplicate IDs and binding claims fail. Owner and scope must match exactly.
+Duplicate IDs and binding claims fail. Kubernetes environment names must be unique; an entry
+cannot supply both a literal value and valueFrom. Owner and scope must match exactly.
 
 ## Build/CI entrypoint
 
