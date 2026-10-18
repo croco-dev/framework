@@ -414,11 +414,11 @@ export const SAAS_PROVIDER_PROFILES = {
       },
       auth: {
         ...capability(
-        "auth",
-        "No verified Worker auth provider selected",
-        "unavailable",
-        undefined,
-        [],
+          "auth",
+          "No verified Worker auth provider selected",
+          "unavailable",
+          undefined,
+          [],
         ),
         verifiedSubset: {
           entrypoint: "@croco/auth-clerk/workers",
@@ -426,7 +426,7 @@ export const SAAS_PROVIDER_PROFILES = {
           verification: "pnpm --filter @croco/auth-clerk test",
           limitations: [
             "Alpha cookie/bearer authentication and fresh session status/revoke; synthetic upstream in actual workerd with nodejs_compat.",
-            "Trusted audience, authorizedParties and target tenant configuration required; permissions retain signed token lifetime.",
+            "Trusted audience and authorizedParties required; tenant binding is opt-in; permissions retain signed token lifetime.",
             "Webhook delivery and user/organization administration are not claimed on Workers.",
             "Full SaaS bootstrap remains documentation-only (#3537); live Clerk service is not certified.",
           ],
