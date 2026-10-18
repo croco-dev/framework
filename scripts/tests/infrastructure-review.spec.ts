@@ -118,20 +118,36 @@ function decisions(review: Record<string, unknown>): Record<string, Record<strin
 
 afterEach(() => roots.splice(0).forEach((root) => rmSync(root, { recursive: true, force: true })));
 describe("host evidence execution", () => {
-  it("executes the exact Node host test and rejects failed, skipped and unmatched names", () => {
-    const { root } = fixture();
-    symlinkSync(join(import.meta.dirname, "../../node_modules"), join(root, "node_modules"));
-    write(root, "package.json", { private: true, type: "module" });
-    write(
-      root,
-      "vitest.config.mts",
-      'export default { test: { include: ["scripts/tests/**/*.spec.ts"] } };',
-    );
-    const path = "scripts/tests/NodeHost.spec.ts";
-    write(
-      root,
-      path,
-      `import { it, expect } from 'vitest';
+  it.each([
+    {
+      scenario: "executes the exact Node HTTP host test",
+      testName: "Node host serves a request",
+      passed: true,
+    },
+    { scenario: "rejects a skipped host test", testName: "not executed", passed: false },
+    { scenario: "rejects an unmatched host test name", testName: "missing test", passed: false },
+    { scenario: "rejects a failed host test", testName: "fails assertion", passed: false },
+    {
+      scenario: "rejects a passing lookalike from another file",
+      testName: "forged title",
+      passed: false,
+    },
+  ])(
+    "$scenario",
+    ({ testName, passed }) => {
+      const { root } = fixture();
+      symlinkSync(join(import.meta.dirname, "../../node_modules"), join(root, "node_modules"));
+      write(root, "package.json", { private: true, type: "module" });
+      write(
+        root,
+        "vitest.config.mts",
+        'export default { test: { include: ["scripts/tests/**/*.spec.ts"] } };',
+      );
+      const path = "scripts/tests/NodeHost.spec.ts";
+      write(
+        root,
+        path,
+        `import { it, expect } from 'vitest';
 import { createServer } from 'node:http';
 it('Node host serves a request', async () => {
   const server = createServer((_request, response) => response.end('native-node'));
@@ -144,18 +160,16 @@ it('Node host serves a request', async () => {
 it.skip('not executed', () => {});
 it.skip('forged title', () => {});
 it('fails assertion', () => expect('actual').toBe('different'));`,
-    );
-    expect(executeEvidence(root, { path, testName: "Node host serves a request" })).toBe(true);
-    expect(executeEvidence(root, { path, testName: "not executed" })).toBe(false);
-    expect(executeEvidence(root, { path, testName: "missing test" })).toBe(false);
-    expect(executeEvidence(root, { path, testName: "fails assertion" })).toBe(false);
-    write(
-      root,
-      "scripts/tests/copy/scripts/tests/NodeHost.spec.ts",
-      "import { it, expect } from 'vitest'; it('forged title', () => expect(2).toBe(2));",
-    );
-    expect(executeEvidence(root, { path, testName: "forged title" })).toBe(false);
-  }, 20000);
+      );
+      write(
+        root,
+        "scripts/tests/copy/scripts/tests/NodeHost.spec.ts",
+        "import { it, expect } from 'vitest'; it('forged title', () => expect(2).toBe(2));",
+      );
+      expect(executeEvidence(root, { path, testName })).toBe(passed);
+    },
+    20000,
+  );
 });
 
 describe("infrastructure review gate", () => {
