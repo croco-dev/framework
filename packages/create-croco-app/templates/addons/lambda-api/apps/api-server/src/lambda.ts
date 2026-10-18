@@ -1,3 +1,4 @@
+import { defineCrocoApplication } from "@croco/framework-module";
 import { createLambdaHost } from "@croco/preset-lambda";
 import type { LambdaHost } from "@croco/preset-lambda";
 import {
@@ -14,9 +15,10 @@ export async function createLambdaApplication(
 ) {
   const app = createCrocoApp({
     ...options,
-    application: {
+    application: defineCrocoApplication({
+      name: "lambda-api",
       imports: [nodeTelemetry(createTelemetryConfig({ ...readEnv(), NODE_ENV: "production" }))],
-    },
+    }),
   });
   try {
     await app.applicationRuntime.initialize();
