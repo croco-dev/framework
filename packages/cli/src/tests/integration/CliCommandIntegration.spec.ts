@@ -782,12 +782,9 @@ function createCliHarness(): CliHarness {
     "@croco/batch-core",
     "@croco/execution-core",
   ].map((packageName) => requiredPackage(packageIndex, packageName));
-  run(
-    "pnpm",
-    ["--filter", "@croco/cli...", "--filter", "create-croco-app...", "build"],
-    REPO_ROOT,
-    { label: "build CLI runtime package graph" },
-  );
+  run("pnpm", ["build", "--filter=@croco/cli...", "--filter=create-croco-app..."], REPO_ROOT, {
+    label: "build CLI runtime package graph",
+  });
 
   const graphPackages = collectInternalRuntimeGraphs(rootPackages, packageIndex);
   const packedPackages = new Map<string, PackedPackageInfo>();
