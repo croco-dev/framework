@@ -301,6 +301,10 @@ function resolveProjectSourceDependencies(project: Project): void {
 
     if (addedDynamicDependency) project.resolveSourceFileDependencies();
   } while (addedDynamicDependency);
+
+  for (const sourceFile of project.getSourceFiles()) {
+    applyNodeModuleFormat(sourceFile, project.getCompilerOptions());
+  }
 }
 
 function createReferenceProjects(referencePaths: readonly string[]): Project[] {
@@ -349,9 +353,11 @@ function createEmitContext(
     ),
     skipFileDependencyResolution: true,
   });
-  const sourceFiles = analysisContext.sourceFiles.map((sourceFile) =>
-    project.addSourceFileAtPath(sourceFile.getFilePath()),
-  );
+  const sourceFiles = analysisContext.sourceFiles.map((sourceFile) => {
+    const emittedSource = project.addSourceFileAtPath(sourceFile.getFilePath());
+    applyNodeModuleFormat(emittedSource, project.getCompilerOptions());
+    return emittedSource;
+  });
   return { project, sourceFiles };
 }
 
@@ -867,6 +873,26 @@ function getResolutionFlags(): readonly string[] {
   return flags;
 }
 
+function applyNodeModuleFormat(sourceFile: SourceFile, options: ts.CompilerOptions): void {
+  if (!isNodeModuleKind(options.module)) return;
+  // ts-morph creates SourceFiles without the package format populated by a native compiler host.
+  sourceFile.compilerNode.impliedNodeFormat = ts.getImpliedNodeFormatForFile(
+    sourceFile.getFilePath(),
+    undefined,
+    ts.sys,
+    options,
+  );
+}
+
+function isNodeModuleKind(moduleKind: ts.ModuleKind | undefined): boolean {
+  return (
+    moduleKind === ts.ModuleKind.Node16 ||
+    moduleKind === ts.ModuleKind.Node18 ||
+    moduleKind === ts.ModuleKind.Node20 ||
+    moduleKind === ts.ModuleKind.NodeNext
+  );
+}
+
 function isEsmModuleKind(moduleKind: ts.ModuleKind | undefined, sourcePath: string): boolean {
   return (
     moduleKind === ts.ModuleKind.ES2015 ||
@@ -874,8 +900,7 @@ function isEsmModuleKind(moduleKind: ts.ModuleKind | undefined, sourcePath: stri
     moduleKind === ts.ModuleKind.ES2022 ||
     moduleKind === ts.ModuleKind.ESNext ||
     moduleKind === ts.ModuleKind.Preserve ||
-    ((moduleKind === ts.ModuleKind.Node16 || moduleKind === ts.ModuleKind.NodeNext) &&
-      sourceUsesEsmBoundary(sourcePath))
+    (isNodeModuleKind(moduleKind) && sourceUsesEsmBoundary(sourcePath))
   );
 }
 

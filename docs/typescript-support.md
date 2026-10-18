@@ -1,9 +1,15 @@
 # TypeScript compiler support
 
 Croco 1.x is built, typechecked, tested, and published with TypeScript 6.0.3. The workspace pins that exact
-compiler and forces every workspace tool invocation to the same version through the pnpm override. Generated
+compiler and forces dependencies on the `typescript` package to the same version through the pnpm override. Generated
 `create-croco-app` projects declare `^6.0.3`, so consumers receive TypeScript 6 while retaining compatible patch
 updates.
+
+Protocol project analysis and temporary emission use the TypeScript 6.0.2 compiler embedded in pinned
+`ts-morph` 28.0.0; pnpm's `typescript` override cannot replace an embedded compiler. Protocol regression tests
+check that actual compiler identity and compare Node18, Node20 and NodeNext analysis/emission with the workspace
+TypeScript 6.0.3 CLI, including ESM and CommonJS package boundaries. Updating this dependency requires rerunning
+those tests; accepting unknown compiler options or suppressing diagnostics is not a compatibility strategy.
 
 ## Decorator contract
 
