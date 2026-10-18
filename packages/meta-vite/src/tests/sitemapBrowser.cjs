@@ -149,6 +149,7 @@ const { build } = createRequire(require.resolve("tsup"))("esbuild");
       true,
     );
     assert.equal(await page.getByRole("button", { name: "Regenerate preview" }).isDisabled(), true);
+    await page.screenshot({ path: join(artifacts, "read-only-mobile.png"), fullPage: true });
     const denied = await page.request.post(`${base}/admin/sitemap`, {
       form: { action: "publish", revision, idempotencyKey: "forged" },
       headers: { Origin: base },
