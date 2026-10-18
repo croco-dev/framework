@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "esbuild-plugin",
+      "classification": "pure-contract",
+      "reason": "Recognize named runtime exports and aliases when compiling decorated providers. Symbol selection and literal generated references are build-time contracts independent of deployment infrastructure.",
+      "files": {
+        "packages/esbuild-plugin/src/libs/DiCompiler.ts": "2c862c972f7df98f626d59704e823179de56de6e8c1f8b00b328fa8b04cabd38"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "This change resolves TypeScript module export symbols at build time. It does not change the execution contract of Kubernetes Node Hosts.",
+          "providers": [],
+          "constraints": [
+            "Generated factories retain the existing DI graph contract; no host capability, storage or lifecycle behavior is added.",
+            "No new runtime support, live infrastructure evidence or provider certification is claimed."
+          ],
+          "references": [
+            "packages/esbuild-plugin/src/libs/DiCompiler.ts",
+            "packages/framework-context/src/libs/GeneratedGraph.ts",
+            "docs/architecture/compile-time-di.md"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "This change resolves TypeScript module export symbols at build time. It does not change the execution contract of Lambda invocations.",
+          "providers": [],
+          "constraints": [
+            "Generated factories retain the existing DI graph contract; no host capability, storage or lifecycle behavior is added.",
+            "No new runtime support, live infrastructure evidence or provider certification is claimed."
+          ],
+          "references": [
+            "packages/esbuild-plugin/src/libs/DiCompiler.ts",
+            "packages/framework-context/src/libs/GeneratedGraph.ts",
+            "docs/architecture/compile-time-di.md"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "This change resolves TypeScript module export symbols at build time. It does not change the execution contract of Workers and Node Container Hosts.",
+          "providers": [],
+          "constraints": [
+            "Generated factories retain the existing DI graph contract; no host capability, storage or lifecycle behavior is added.",
+            "No new runtime support, live infrastructure evidence or provider certification is claimed."
+          ],
+          "references": [
+            "packages/esbuild-plugin/src/libs/DiCompiler.ts",
+            "packages/framework-context/src/libs/GeneratedGraph.ts",
+            "docs/architecture/compile-time-di.md"
+          ]
+        }
+      }
+    }
+  ]
+}
