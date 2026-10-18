@@ -179,13 +179,16 @@ const adapter = createRlsTxAdapter(db, tenantProvider, {
 
 ## Hyperdrive local validation (experimental)
 
+Workspace root and subpath exports resolve built artifacts; run `pnpm build` before workspace use.
+
 The opt-in `@croco/tx-drizzle/hyperdrive` entrypoint runs one transaction on a fresh,
 request-owned `pg.Client`, reuses `createDrizzleTxAdapter`, and awaits connection close.
-Install `pg >=8.16.3 <9` only when selecting this entrypoint; the root entrypoint has
-no `pg` import. Supply the native binding explicitly. No global pool, environment
+Install `pg >=8.16.3 <9` (and `@types/pg` for TypeScript) when calling this entrypoint; the root entrypoint has
+no `pg` import. Driver modules load only inside an invocation, so importing the
+Hyperdrive entrypoint is safe without the optional driver. Supply the native binding explicitly. No global pool, environment
 lookup, boot DDL, automatic retry or fallback provider is installed.
 
-```typescript
+```typescript typecheck
 import { sql } from "drizzle-orm";
 import { withHyperdriveTransaction } from "@croco/tx-drizzle/hyperdrive";
 import type { HyperdriveBinding } from "@croco/tx-drizzle/hyperdrive";

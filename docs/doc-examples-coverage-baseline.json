@@ -1,7 +1,6 @@
 {
   "schemaVersion": 1,
   "uncoveredPackages": {
-    "tx-drizzle": "README examples require a live Drizzle database and application schema symbols.",
     "events-tx": "README examples require an application-owned store, transaction manager, and event types.",
     "testing": "README examples require an application bootstrap, controller, or test-runner context.",
     "create-croco-app": "README programmatic examples use published subpath entrypoints unavailable to the source-based docs checker."

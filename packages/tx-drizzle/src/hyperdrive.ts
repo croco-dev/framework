@@ -1,11 +1,11 @@
 import { sql } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/node-postgres";
-import { Client } from "pg";
 import { Problem, ProblemCategory } from "@croco/problems-core";
 import { createDrizzleTxAdapter } from "./libs/DrizzleTxAdapter";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import type { PgTransactionConfig } from "drizzle-orm/pg-core";
+import type { Client as PgClient } from "pg";
 import type { InferTxClient } from "./libs/types";
+// Driver modules load inside the request, keeping the pg peer optional during import.
 
 /** Native Worker binding subset; no Cloudflare SDK or global environment lookup. */
 export type HyperdriveBinding = { readonly connectionString: string };
@@ -82,10 +82,14 @@ export async function withHyperdriveTransaction<T>(
   let failed = false;
   let cleanupFailed = false;
   let result: T | undefined;
-  let client: Client | undefined;
+  let client: PgClient | undefined;
   // pg can emit idle socket errors independently of a query promise. Contain them at this boundary.
   let transportFailed = false;
   try {
+    const [{ drizzle }, { Client }] = await Promise.all([
+      import("drizzle-orm/node-postgres"),
+      import("pg"),
+    ]);
     client = new Client({
       connectionString: binding.connectionString,
       connectionTimeoutMillis: connectionTimeoutMs,

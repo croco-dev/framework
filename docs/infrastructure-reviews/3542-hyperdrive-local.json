@@ -6,8 +6,8 @@
       "classification": "runtime-adapter",
       "reason": "Opt-in request-owned pg/Drizzle transaction entrypoint. Local workerd tests do not promote the root plugin or any domain adapter.",
       "files": {
-        "packages/tx-drizzle/package.json": "214bb6eba3240d014e09797e6c6feb2a2c262451065634db26a68daaba3b0e4a",
-        "packages/tx-drizzle/src/hyperdrive.ts": "adccc007f1063957cdd6010ab80601685765096757e61dc47ee7c49a0da72959"
+        "packages/tx-drizzle/package.json": "f7d60075d7fb1c37fc144bf8fb91e9487794525f0692a267dd8f6d0891ec4c95",
+        "packages/tx-drizzle/src/hyperdrive.ts": "193d833761b03ac28eb866107b3af533fe262849ee51b789fd2f30116cb37514"
       },
       "catalogRuntimes": [],
       "profiles": {
@@ -64,7 +64,7 @@
       "classification": "pure-contract",
       "reason": "Generated additive Problem code registration for the redacted Hyperdrive boundary; no new transport or storage implementation.",
       "files": {
-        "packages/problems-core/src/generated/problem-code-registry.ts": "a583343310a9dbb40e01f8752c1d4681121cc70104de6c40e230f8b0b053da48"
+        "packages/problems-core/src/generated/problem-code-registry.ts": "e28a5d930aa4bca49547ebb42efb74b657640f720294c00ec4c64a53da10f8f6"
       },
       "catalogRuntimes": [],
       "profiles": {

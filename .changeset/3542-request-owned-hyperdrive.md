@@ -1,6 +1,7 @@
 ---
 "@croco/tx-drizzle": minor
 "@croco/problems-core": patch
+"create-croco-app": patch
 ---
 
 Run opt-in Hyperdrive transactions with request-owned PostgreSQL connections, bounded connection and statement budgets, redacted failures, and awaited cleanup. Live Cloudflare deployment and durable adapter conformance remain unverified.
