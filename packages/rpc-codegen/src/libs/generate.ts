@@ -39,7 +39,7 @@ import {
   normalizeProjectManifestBundlePath,
   type RouteIR,
 } from "@croco/protocols-core";
-
+import { hasZodModuleReference } from "./hasZodModuleReference";
 export type GenerateClientOptions = {
   readonly frontendActionManifestInputs?: readonly FrontendActionManifestMergeInput[];
   readonly frontendActionManifestPath?: string;
@@ -4304,11 +4304,7 @@ function getOperationId(route: GeneratedClientRoute): string {
 }
 
 function assertNoZodImport(content: string): void {
-  if (
-    content.includes("from 'zod'") ||
-    content.includes("import { z }") ||
-    content.includes("zod")
-  ) {
+  if (hasZodModuleReference(content)) {
     throw new RpcCodegenContractProblem("Generated client must not import zod.");
   }
 }

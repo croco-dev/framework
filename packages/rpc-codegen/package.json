@@ -62,6 +62,7 @@
     "@croco/protocol-codegen": "workspace:*",
     "@croco/protocols-core": "workspace:*",
     "prettier": "^3.0.0",
+    "typescript": "^5.0.0",
     "zod": "^3.23.8"
   },
   "devDependencies": {
@@ -83,7 +84,6 @@
     "reflect-metadata": "^0.2.2",
     "ts-morph": "^24.0.0",
     "tsup": "^8.5.1",
-    "typescript": "^5.0.0",
     "vitest": "4.1.8"
   }
 }
