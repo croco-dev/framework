@@ -62,6 +62,9 @@ describe.each([
             : "pnpm di:generate && next build",
       );
       expect(manifest.dependencies.next).toBeTruthy();
+      const nextConfig = readFileSync(join(appDir, "next.config.ts"), "utf8");
+      expect(nextConfig).toMatch(/output\s*:\s*["']standalone["']/);
+      expect(nextConfig).toMatch(/outputFileTracingRoot\s*:/);
       const config = readFileSync(join(appDir, "open-next.config.ts"), "utf8");
       expect(config).toContain('import { defineCloudflareConfig } from "@opennextjs/cloudflare"');
       expect(config).toContain("defineCloudflareConfig()");
