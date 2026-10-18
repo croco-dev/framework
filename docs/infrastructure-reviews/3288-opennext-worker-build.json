@@ -10,7 +10,7 @@
         "packages/create-croco-app/templates/addons/frontend-opennext/open-next.config.ts": "8e02c850592160eb80d1aed908789f317babcb76985792a86bb79e7c0dd4b1d9",
         "packages/create-croco-app/templates/addons/frontend-opennext/wrangler.toml.hbs": "8ce59632f7d3a929eb4053bdd30e009ce9b7fa78d1f0c04205ab3b34a10f2ecd",
         "packages/create-croco-app/src/generator.ts": "4bfa8d83176b3d88822d5329350a19ed4c5034f1ad641b5687cc874b54a2b3cb",
-        "packages/create-croco-app/templates/base-ddd/pnpm-workspace.yaml.hbs": "1c6313011e434db48bcda3ac6c491210bf88d60d75c2024a4b6042d3a95fda3d",
+        "packages/create-croco-app/templates/base-ddd/pnpm-workspace.yaml.hbs": "738ab831838b56421af1fcb3d41c15b66bc74554dfd6bb7602a6fd4df9569f50",
         "packages/create-croco-app/templates/addons/frontend-opennext/next.config.ts.hbs": "6c4d6312abf5609a67eac3dff6153d67ae237e54bf1e236091e6a1633253590f"
       },
       "catalogRuntimes": [],

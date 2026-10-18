@@ -19,9 +19,9 @@ allowBuilds:
   protobufjs: true
   sharp: true
   unrs-resolver: true
-{{#if opennext}}
+#{{#if opennext}}
   workerd: true
-{{/if}}
+#{{/if}}
 
 onlyBuiltDependencies:
   - "@apollo/protobufjs"
@@ -31,6 +31,6 @@ onlyBuiltDependencies:
   - protobufjs
   - sharp
   - unrs-resolver
-{{#if opennext}}
+#{{#if opennext}}
   - workerd
-{{/if}}
+#{{/if}}
