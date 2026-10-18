@@ -3,10 +3,12 @@
 import { compareStrings } from "../tooling/compareStrings.mjs";
 
 import { parseFrontmatter } from "@astrojs/internal-helpers/frontmatter";
-import { fromMarkdown } from "mdast-util-from-markdown";
-import { mdxFromMarkdown } from "mdast-util-mdx";
-import { mdxjs } from "micromark-extension-mdxjs";
+import remarkDirective from "remark-directive";
+import remarkGfm from "remark-gfm";
+import remarkMdx from "remark-mdx";
+import remarkParse from "remark-parse";
 import * as ts from "typescript";
+import { unified } from "unified";
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, extname, join, relative, resolve } from "node:path";
@@ -48,12 +50,13 @@ const coverageBaselinePath = join("docs", "doc-examples-coverage-baseline.json")
 const packageCatalogPath = join("docs", "package-catalog.json");
 const defaultSkippedReason =
   "Legacy authored docs block is not yet isolated for documentation typechecking.";
+const starlightDocsRoot = "packages/docs/src/content/docs";
 const docsRoots = [
   "README.md",
   "docs",
-  join("packages", "docs", "src", "content", "docs", "en", "guides"),
-  join("packages", "docs", "src", "content", "docs", "en", "reference"),
-  join("packages", "docs", "src", "content", "docs", "ko"),
+  join(starlightDocsRoot, "en", "guides"),
+  join(starlightDocsRoot, "en", "reference"),
+  join(starlightDocsRoot, "ko"),
 ] as const;
 const operationalEnvironmentSourceRoots = [
   join("packages", "cli", "src"),
@@ -660,12 +663,14 @@ function extractTypeScriptBlocks(rootDir: string, filePath: string): MarkdownCod
   const { content } = parseFrontmatter(readFileSync(filePath, "utf-8"), {
     frontmatter: "empty-with-spaces",
   });
-  const tree = fromMarkdown(
-    content,
-    extname(filePath) === ".mdx"
-      ? { extensions: [mdxjs()], mdastExtensions: [mdxFromMarkdown()] }
-      : undefined,
-  );
+  const parser = unified().use(remarkParse).use(remarkGfm);
+  if (file.startsWith(`${starlightDocsRoot}/`)) {
+    parser.use(remarkDirective);
+  }
+  if (extname(filePath) === ".mdx") {
+    parser.use(remarkMdx);
+  }
+  const tree = parser.parse(content);
   const blocks: MarkdownCodeBlock[] = [];
   let typeScriptBlockIndex = 0;
 

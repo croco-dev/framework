@@ -133,6 +133,11 @@ describe("doc-examples-check.mts", () => {
         "    ```ts typecheck",
         '    const indentedBacktick: number = "wrong";',
         "    ```",
+        "  :::note",
+        "    ~~~ts typecheck",
+        '    const literalDirective: number = "wrong";',
+        "    ~~~",
+        "  :::",
         "~~~ts typecheck",
         'const checked: number = "wrong";',
         "~~~",
@@ -141,7 +146,7 @@ describe("doc-examples-check.mts", () => {
       const result = runScript(root, "--check");
       expect(result.status).toBe(1);
       expect(result.stdout).toContain(
-        "README.md:40: Type 'string' is not assignable to type 'number'",
+        "README.md:45: Type 'string' is not assignable to type 'number'",
       );
       expect(result.stdout.match(/not assignable/g)).toHaveLength(1);
       expect(result.stdout).not.toContain("must be marked");
@@ -241,6 +246,73 @@ describe("doc-examples-check.mts", () => {
         `docs/frontmatter.${extension}:10: Type 'string' is not assignable to type 'number'`,
       );
       expect(invalid.stdout.match(/not assignable/g)).toHaveLength(1);
+    },
+    scriptTestTimeout,
+  );
+
+  it.each(["md", "mdx"])(
+    "checks fences inside %s GFM footnotes with original source lines",
+    (extension) => {
+      const root = createTempRoot();
+      writeValidDocs(root);
+      const writeExample = (value: string) =>
+        writeOperationalSource(
+          root,
+          `docs/footnote.${extension}`,
+          [
+            "A footnote[^example].",
+            "",
+            "[^example]:",
+            "    ```tsx typecheck",
+            `    const insideFootnote: number = ${value};`,
+            "    ```",
+          ].join("\n"),
+        );
+
+      writeExample("123");
+      const valid = runScript(root, "--check");
+      expect(valid.status).toBe(0);
+      expect(valid.stdout).toContain("checked 2 TypeScript documentation examples");
+
+      writeExample('"wrong"');
+      const invalid = runScript(root, "--check");
+      expect(invalid.status).toBe(1);
+      expect(invalid.stdout).toContain(
+        `docs/footnote.${extension}:5: Type 'string' is not assignable to type 'number'`,
+      );
+    },
+    scriptTestTimeout,
+  );
+
+  it(
+    "checks indented Starlight aside fences with original source lines",
+    () => {
+      const root = createTempRoot();
+      writeValidDocs(root);
+      const writeExample = (value: string) =>
+        writeOperationalSource(
+          root,
+          "packages/docs/src/content/docs/en/guides/aside.md",
+          [
+            "  :::note",
+            "    ```ts typecheck",
+            `    const insideAside: number = ${value};`,
+            "    ```",
+            "  :::",
+          ].join("\n"),
+        );
+
+      writeExample("123");
+      const valid = runScript(root, "--check");
+      expect(valid.status).toBe(0);
+      expect(valid.stdout).toContain("checked 2 TypeScript documentation examples");
+
+      writeExample('"wrong"');
+      const invalid = runScript(root, "--check");
+      expect(invalid.status).toBe(1);
+      expect(invalid.stdout).toContain(
+        "packages/docs/src/content/docs/en/guides/aside.md:3: Type 'string' is not assignable to type 'number'",
+      );
     },
     scriptTestTimeout,
   );
