@@ -1270,6 +1270,19 @@ function resolveSymbolReference(
       ts.isImportDeclaration(importDeclaration) &&
       ts.isStringLiteral(importDeclaration.moduleSpecifier)
     ) {
+      if (importDeclaration.moduleSpecifier.text.startsWith(".")) {
+        const resolved = checker.getAliasedSymbol(symbol);
+        const resolvedDeclaration = resolved.declarations?.[0];
+        if (resolvedDeclaration && ts.isClassDeclaration(resolvedDeclaration)) {
+          const exportName = getNamedClassExport(resolvedDeclaration, checker);
+          if (exportName !== undefined) {
+            return {
+              moduleSpecifier: resolvedDeclaration.getSourceFile().fileName,
+              exportName,
+            };
+          }
+        }
+      }
       return { moduleSpecifier: importDeclaration.moduleSpecifier.text, exportName: "default" };
     }
   }

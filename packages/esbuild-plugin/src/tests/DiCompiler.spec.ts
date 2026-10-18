@@ -461,6 +461,16 @@ describe("compileDiGraph", () => {
         }
       `;
     }
+    files["src/defaultBarrel.ts"] = 'export { default } from "./Service4";';
+    files["src/DefaultConsumer.ts"] = `
+      import { Component, Inject } from "@croco/framework-context";
+      import DirectDependency from "./Service4";
+      import BarrelDependency from "./defaultBarrel";
+      @Component() export class DefaultConsumer {
+        constructor(readonly service: DirectDependency) {}
+        @Inject(BarrelDependency) property!: BarrelDependency;
+      }
+    `;
     writeProject(files);
     const result = compileDiGraph({ baseDir: TEMP_DIR });
     const runtimeImports: string[] = [];
@@ -493,6 +503,21 @@ describe("compileDiGraph", () => {
         assert.equal(Container.get(LocalConsumer${index}).service, consumer.service);
       }`);
     }
+    const defaultConsumer = result.manifest.providers.find(
+      (provider) => provider.tokenId === "app:src/DefaultConsumer#DefaultConsumer",
+    );
+    expect(defaultConsumer?.dependencies).toHaveLength(2);
+    expect(defaultConsumer?.dependencies.map((dependency) => dependency.tokenId)).toEqual([
+      "app:src/Service4#PublicService",
+      "app:src/Service4#PublicService",
+    ]);
+    runtimeImports.push('import { DefaultConsumer } from "./src/DefaultConsumer";');
+    runtimeAssertions.push(`{
+      const consumer = Container.get(DefaultConsumer);
+      assert.equal(consumer.service.value, "named-provider-4");
+      assert.equal(consumer.property, consumer.service);
+      assert.equal(consumer.service, Container.get(Consumer4).service);
+    }`);
     writeDiGraph(result);
     fs.writeFileSync(
       path.join(TEMP_DIR, "runtime.ts"),

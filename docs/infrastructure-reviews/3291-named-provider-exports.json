@@ -6,7 +6,7 @@
       "classification": "pure-contract",
       "reason": "Recognize named runtime exports and aliases when compiling decorated providers. Symbol selection and literal generated references are build-time contracts independent of deployment infrastructure.",
       "files": {
-        "packages/esbuild-plugin/src/libs/DiCompiler.ts": "dfb44d0e4f9ba58d6b1240f09a4a7cba3312889c46f2be5c838b92ecfc48118d"
+        "packages/esbuild-plugin/src/libs/DiCompiler.ts": "2c862c972f7df98f626d59704e823179de56de6e8c1f8b00b328fa8b04cabd38"
       },
       "catalogRuntimes": [],
       "profiles": {
