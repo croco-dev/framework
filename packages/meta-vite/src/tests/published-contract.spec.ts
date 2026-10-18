@@ -38,6 +38,7 @@ type PackageTarballs = {
   readonly metaVite: string;
   readonly presentationPreset: string;
   readonly problemsCore: string;
+  readonly storageCore: string;
 };
 
 type CommandInvocation = {
@@ -58,6 +59,7 @@ const buildTargets: readonly BuildTarget[] = [
   libraryBuildTarget("framework-context"),
   libraryBuildTarget("framework-preset"),
   libraryBuildTarget("cache-core"),
+  libraryBuildTarget("storage-core"),
   libraryBuildTarget("presentation-preset"),
   {
     packageName: "@croco/meta-vite",
@@ -346,6 +348,7 @@ function packPackages(packRoot: string): PackageTarballs {
     ["--filter", "@croco/presentation-preset", "pack", "--pack-destination", packRoot],
     rootDir,
   );
+  run("pnpm", ["--filter", "@croco/storage-core", "pack", "--pack-destination", packRoot], rootDir);
   run("pnpm", ["--filter", "@croco/meta-vite", "pack", "--pack-destination", packRoot], rootDir);
 
   return {
@@ -356,6 +359,7 @@ function packPackages(packRoot: string): PackageTarballs {
     metaVite: findTarball(packRoot, "croco-meta-vite-"),
     presentationPreset: findTarball(packRoot, "croco-presentation-preset-"),
     problemsCore: findTarball(packRoot, "croco-problems-core-"),
+    storageCore: findTarball(packRoot, "croco-storage-core-"),
   };
 }
 
@@ -472,6 +476,7 @@ function writeConsumerPackageJson(consumerRoot: string, tarballs: PackageTarball
     "@croco/framework-preset": `file:${tarballs.frameworkPreset}`,
     "@croco/presentation-preset": `file:${tarballs.presentationPreset}`,
     "@croco/problems-core": `file:${tarballs.problemsCore}`,
+    "@croco/storage-core": `file:${tarballs.storageCore}`,
     postcss: supportedPostcssVersion,
   });
 }
