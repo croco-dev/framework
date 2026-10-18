@@ -1746,8 +1746,10 @@ function toGeneratedImport(
   if (!path.isAbsolute(moduleSpecifier)) return moduleSpecifier;
   const sourceSpecifier = /\.(?:[cm]?[jt]s|[jt]sx)$/u.test(moduleSpecifier)
     ? moduleSpecifier
-    : (ts.resolveModuleName(moduleSpecifier, outFile, compilerOptions, ts.sys).resolvedModule
-        ?.resolvedFileName ?? moduleSpecifier);
+    : (ts.resolveModuleName(moduleSpecifier, outFile, compilerOptions, {
+        ...ts.sys,
+        realpath: (fileName) => fileName,
+      }).resolvedModule?.resolvedFileName ?? moduleSpecifier);
   const relative = normalizePath(path.relative(path.dirname(outFile), sourceSpecifier))
     .replace(/(?:\.d)?\.mts$/u, ".mjs")
     .replace(/(?:\.d)?\.cts$/u, ".cjs")

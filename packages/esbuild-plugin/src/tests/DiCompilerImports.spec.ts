@@ -183,7 +183,10 @@ describe("DI graph consumer imports", () => {
   it("resolves extensionless package graph declarations to their existing runtime file", () => {
     const root = fixture({ module: "NodeNext", moduleResolution: "NodeNext" }, "module", "ts");
     const libraryDir = path.join(root, "node_modules/@fixture/library");
-    fs.mkdirSync(libraryDir, { recursive: true });
+    const linkedLibraryDir = path.join(root, "linked-library");
+    fs.mkdirSync(linkedLibraryDir);
+    fs.mkdirSync(path.dirname(libraryDir), { recursive: true });
+    fs.symlinkSync(linkedLibraryDir, libraryDir, "dir");
     fs.writeFileSync(
       path.join(libraryDir, "package.json"),
       JSON.stringify({
