@@ -104,13 +104,15 @@ function changed(): { root: string; base: string; review: Record<string, unknown
   write(root, "packages/sample/src/index.ts", "export const answer = 43;");
   return { root, base, review: record(root) };
 }
-function inspect(input: ReturnType<typeof changed>, run = () => true) {
+function commitReview(input: ReturnType<typeof changed>): string {
   write(input.root, "docs/infrastructure-reviews/feature.json", {
     schemaVersion: 1,
     changes: [input.review],
   });
-  const head = commit(input.root);
-  return inspectInfrastructureReview(input.root, input.base, head, run);
+  return commit(input.root);
+}
+function inspect(input: ReturnType<typeof changed>, run = () => true) {
+  return inspectInfrastructureReview(input.root, input.base, commitReview(input), run);
 }
 function decisions(review: Record<string, unknown>): Record<string, Record<string, unknown>> {
   return review.profiles as Record<string, Record<string, unknown>>;
@@ -191,6 +193,32 @@ describe("infrastructure review gate", () => {
     expect(result.diagnostics).toEqual([]);
     expect(executions).toBe(1);
     expect(result.reviews[0]?.package).toBe("sample");
+  });
+  it.each(["source", "catalog", "review"])("reads a %s blob larger than 1 MiB", (kind) => {
+    const input = changed();
+    const padding = "x".repeat(2 * 1024 * 1024);
+    if (kind === "source") {
+      write(input.root, "packages/sample/src/index.ts", `export const answer = "${padding}";`);
+      input.review = record(input.root);
+    } else if (kind === "catalog") {
+      const path = "docs/package-catalog.json";
+      const catalog = JSON.parse(readFileSync(join(input.root, path), "utf8"));
+      write(input.root, path, { ...catalog, description: padding });
+    } else {
+      input.review.reason = padding;
+    }
+    const result = inspect(input);
+    expect(result.diagnostics).toEqual([]);
+    expect(result.reviews[0]?.package).toBe("sample");
+  });
+  it("reports a Git read failure instead of treating a tracked blob as missing", () => {
+    const input = changed();
+    const head = commitReview(input);
+    const blob = git(input.root, "rev-parse", `${head}:docs/package-catalog.json`);
+    rmSync(join(input.root, ".git/objects", blob.slice(0, 2), blob.slice(2)));
+    expect(() => inspectInfrastructureReview(input.root, input.base, head)).toThrow(
+      expect.objectContaining({ code: "INFRA_GIT_FAILED" }),
+    );
   });
   it.each(["legacy", "split"])(
     "executes supported evidence with the real %s CI reporting runner",
@@ -514,8 +542,7 @@ it('real host', async () => {
   });
   it("detects removed reviews even when the implementation is unchanged", () => {
     const input = changed();
-    inspect(input);
-    const base = git(input.root, "rev-parse", "HEAD");
+    const base = commitReview(input);
     git(input.root, "rm", "docs/infrastructure-reviews/feature.json");
     const head = commit(input.root);
     expect(inspectInfrastructureReview(input.root, base, head).diagnostics[0]?.code).toBe(
@@ -575,8 +602,7 @@ it('real host', async () => {
   });
   it("validates support changes made only in review metadata", () => {
     const input = changed();
-    inspect(input);
-    const base = git(input.root, "rev-parse", "HEAD");
+    const base = commitReview(input);
     const profile = decisions(input.review).cloudflare!;
     profile.result = "supported";
     profile.host = "workers";

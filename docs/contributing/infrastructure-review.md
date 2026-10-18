@@ -97,7 +97,7 @@ the claimed host. Certification and npm release remain separate existing gates.
 | `INFRA_REVIEW_INVALID`, `INFRA_DECISION_INVALID` | Correct version, classification, required profile fields or tracked references                                         |
 | `INFRA_SCOPE_DRIFT`                              | Review the changed implementation and refresh final content hashes, including catalog changes                          |
 | `INFRA_RUNTIME_DRIFT`                            | Reconcile the reviewed runtime snapshot/decision with the catalog and runtime manifests; run `pnpm docs:catalog:check` |
-| `INFRA_EXECUTION_REQUIRED`                       | Supply a pinned named host test or use unverified/unsupported rather than unsupported evidence                         |
+| `INFRA_EXECUTION_REQUIRED`                       | Supply a pinned named host test, or record `unverified`/`unsupported` instead of claiming support without evidence     |
 | `INFRA_EXECUTION_FAILED`                         | Fix the failing/missing/skipped test; keep the execution claim unverified until it passes                              |
 | `INFRA_EVIDENCE_CHECKOUT`                        | Commit the reviewed tree and run the gate at that clean head                                                           |
 | `INFRA_SKILL_DRIFT`                              | Edit canonical `.agents/skills/croco`, then run `pnpm skill:write && pnpm skill:check`                                 |

@@ -45,8 +45,17 @@ function git(root: string, args: string[]): string {
   return result.stdout;
 }
 function at(root: string, ref: string, path: string): string | null {
-  const result = spawnSync("git", ["show", `${ref}:${path}`], { cwd: root, encoding: "utf8" });
-  return result.status === 0 ? result.stdout : null;
+  const result = spawnSync("git", ["show", `${ref}:${path}`], {
+    cwd: root,
+    encoding: "utf8",
+    maxBuffer: 64 * 1024 * 1024,
+  });
+  if (result.error)
+    throw new VerificationProblem("INFRA_GIT_FAILED", "input", result.error.message);
+  if (result.status === 0) return result.stdout;
+  if (git(root, ["ls-tree", ref, "--", path]).trim())
+    throw new VerificationProblem("INFRA_GIT_FAILED", "input", result.stderr);
+  return null;
 }
 export function contentHash(value: string): string {
   return createHash("sha256").update(value).digest("hex");
