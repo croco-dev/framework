@@ -104,6 +104,7 @@
     "@vitejs/plugin-rsc": "0.5.26"
   },
   "devDependencies": {
+    "@astrojs/internal-helpers": "0.10.0",
     "@changesets/cli": "3.0.3",
     "@changesets/parse": "0.4.2",
     "@swc/core": "1.15.43",
@@ -113,11 +114,16 @@
     "madge": "8.0.0",
     "oxfmt": "*",
     "oxlint": "*",
+    "remark-directive": "4.0.0",
+    "remark-gfm": "4.0.1",
+    "remark-mdx": "3.1.1",
+    "remark-parse": "11.0.0",
     "semver": "7.7.4",
     "smol-toml": "1.7.0",
     "tsup": "8.5.1",
     "turbo": "2.10.2",
     "typescript": "6.0.3",
+    "unified": "11.0.5",
     "vitest": "4.1.8",
     "yaml": "2.9.0"
   },

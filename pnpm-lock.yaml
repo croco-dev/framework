@@ -239,6 +239,9 @@ importers:
         specifier: 0.5.26
         version: 0.5.26(react-dom@19.2.6(react@19.2.6))(react-server-dom-webpack@19.2.5(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(webpack@5.111.1(@swc/core@1.15.43)(csso@5.0.5)(esbuild@0.27.2)(postcss@8.5.18)(sharp@0.35.4(@types/node@24.13.2))(svgo@4.0.2)(uglify-js@3.19.3)))(react@19.2.6)(vite@7.3.5(@types/node@24.13.2)(jiti@2.6.1)(terser@5.51.2)(tsx@4.21.0)(yaml@2.9.0))
     devDependencies:
+      '@astrojs/internal-helpers':
+        specifier: 0.10.0
+        version: 0.10.0
       '@changesets/cli':
         specifier: 3.0.3
         version: 3.0.3
@@ -266,6 +269,18 @@ importers:
       oxlint:
         specifier: '*'
         version: 1.64.0
+      remark-directive:
+        specifier: 4.0.0
+        version: 4.0.0(supports-color@10.2.2)
+      remark-gfm:
+        specifier: 4.0.1
+        version: 4.0.1(supports-color@10.2.2)
+      remark-mdx:
+        specifier: 3.1.1
+        version: 3.1.1(supports-color@10.2.2)
+      remark-parse:
+        specifier: 11.0.0
+        version: 11.0.0(supports-color@10.2.2)
       semver:
         specifier: 7.7.4
         version: 7.7.4
@@ -281,6 +296,9 @@ importers:
       typescript:
         specifier: 6.0.3
         version: 6.0.3
+      unified:
+        specifier: 11.0.5
+        version: 11.0.5
       vitest:
         specifier: 4.1.8
         version: 4.1.8(@opentelemetry/api@1.9.0)(@types/node@24.13.2)(@vitest/coverage-v8@4.1.8)(vite@7.3.5(@types/node@24.13.2)(jiti@2.6.1)(terser@5.51.2)(tsx@4.21.0)(yaml@2.9.0))
