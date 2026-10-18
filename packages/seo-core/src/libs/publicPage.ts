@@ -100,6 +100,7 @@ export function resolvePublicPageMetadata(
   request: Request,
   snapshot: Extract<PublicPageSnapshot, { state: "published" }>,
 ): PublicPageMetadata {
+  if (typeof snapshot.indexable !== "boolean") throw new PublicPageProblem("invalid-indexability");
   const content = snapshot.content;
   if (!content || typeof content !== "object" || !Array.isArray(content.links))
     throw new PublicPageProblem("invalid-public-content");
@@ -112,11 +113,13 @@ export function resolvePublicPageMetadata(
   ])
     required(value);
   if (
+    typeof content.modifiedAt !== "string" ||
     !/^\d{4}-\d{2}-\d{2}T/.test(content.modifiedAt) ||
     !Number.isFinite(Date.parse(content.modifiedAt))
   )
     throw new PublicPageProblem("invalid-modified-at");
-  const localeValid = (locale: string) => /^(?:[a-z]{2,3})(?:-[A-Za-z0-9]{2,8})*$/.test(locale);
+  const localeValid = (locale: string) =>
+    typeof locale === "string" && /^(?:[a-z]{2,3})(?:-[A-Za-z0-9]{2,8})*$/.test(locale);
   if (!localeValid(content.locale)) throw new PublicPageProblem("invalid-locale");
   const canonical = publicPageUrl(definition.origin, definition.pathname(content));
   const input = new URL(request.url);
@@ -168,6 +171,8 @@ export function resolvePublicPageMetadata(
     if (offer) required(offer.availabilityLabel);
     if (
       !offer ||
+      typeof offer.price !== "string" ||
+      typeof offer.currency !== "string" ||
       !/^\d+(?:\.\d{1,4})?$/.test(offer.price) ||
       !/^[A-Z]{3}$/.test(offer.currency) ||
       !["InStock", "OutOfStock", "PreOrder"].includes(offer.availability)

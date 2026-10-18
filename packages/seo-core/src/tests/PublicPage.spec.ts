@@ -379,3 +379,50 @@ it("rejects an invalid registered preview URL through the public Problem contrac
     }),
   ).toThrow(PublicPageProblem);
 });
+
+it.each([
+  ["indexability string", { ...snapshot, indexable: "false" }],
+  ["missing indexability", { ...snapshot, indexable: undefined }],
+  ["locale array", { ...snapshot, content: { ...content, locale: ["en"] } }],
+  [
+    "modification time array",
+    { ...snapshot, content: { ...content, modifiedAt: [content.modifiedAt] } },
+  ],
+  [
+    "price array",
+    { ...snapshot, content: { ...content, product: { ...content.product, price: ["37.50"] } } },
+  ],
+  [
+    "numeric price",
+    { ...snapshot, content: { ...content, product: { ...content.product, price: 37.5 } } },
+  ],
+  [
+    "currency array",
+    { ...snapshot, content: { ...content, product: { ...content.product, currency: ["USD"] } } },
+  ],
+])("rejects a malformed %s before serializing public facts", (_, value) => {
+  expect(() =>
+    resolvePublicPageMetadata(
+      definition,
+      new Request(requestUrl),
+      value as unknown as typeof snapshot,
+    ),
+  ).toThrow(PublicPageProblem);
+});
+
+it("rejects a coerced alternate locale and accepts explicit noindex with a zero price", () => {
+  const malformed: PublicPageDefinition = {
+    ...definition,
+    alternates: () => [{ locale: ["ko"] as unknown as string, pathname: "/ko/products/lamp-7" }],
+  };
+  expect(() => resolvePublicPageMetadata(malformed, new Request(requestUrl), snapshot)).toThrow(
+    PublicPageProblem,
+  );
+  const metadata = resolvePublicPageMetadata(definition, new Request(requestUrl), {
+    ...snapshot,
+    indexable: false,
+    content: { ...content, product: { ...content.product!, price: "0" } },
+  });
+  expect(metadata.robots).toBe("noindex,nofollow");
+  expect(JSON.parse(metadata.jsonLd).offers.price).toBe("0");
+});
