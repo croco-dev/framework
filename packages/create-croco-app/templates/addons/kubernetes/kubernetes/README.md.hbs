@@ -89,3 +89,14 @@ than replacing it with a liveness check.
 See Kubernetes documentation for [termination](https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#pod-termination),
 [Secret environment references](https://kubernetes.io/docs/concepts/configuration/secret/#using-secrets-as-environment-variables)
 and [security contexts](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/).
+
+## Resource requirements
+
+Build first runs `pnpm infrastructure:check`, reading current native YAML, the runtime manifest,
+`croco-infrastructure-requirements.json` and `croco-infrastructure-bindings.json`. The sample's
+process-local providers need no external resource bindings. Its optional external Secret is
+not a verified provider claim. Add requirements and exact bindings when selecting real providers.
+`k8s:lock` does not approve resource types or permissions. See the
+[static binding contract](https://github.com/croco-dev/framework/blob/trunk/docs/architecture/infrastructure-requirements.md)
+for supported endpoints/Secret injection and deterministic failure codes. Static checks do not
+prove network access, remote permissions or live-cluster certification.

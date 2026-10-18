@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export type CrocoProblemRegistry = {
   readonly version: "croco.problem-code-registry.v1";
-  readonly problemCount: 1071;
+  readonly problemCount: 1072;
   readonly problems: readonly [
     {
       readonly code: "ACCESS_DENIED";
@@ -16787,6 +16787,34 @@ export type CrocoProblemRegistry = {
       ];
     },
     {
+      readonly code: "infrastructure/invalid-artifact";
+      readonly category: "BadRequest";
+      readonly status: 400;
+      readonly title: "Bad Request";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#infrastructure-invalid-artifact";
+      readonly recovery: {
+        readonly cause: "The caller sent malformed input or unsupported request options.";
+        readonly userAction: "Correct the request input and retry after validation passes.";
+        readonly operatorAction: "Inspect validation details and request logs; do not retry unchanged input.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "public";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.info";
+          readonly severity: "info";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/create-croco-app/src/infrastructure-files.ts";
+          readonly line: 87;
+          readonly column: 10;
+          readonly kind: "problem-factory";
+        },
+      ];
+    },
+    {
       readonly code: "integrations-posthog/missing-config";
       readonly category: "InternalServerError";
       readonly status: 500;
@@ -30281,7 +30309,7 @@ export type CrocoProblemRegistry = {
 
 export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 1071,
+  problemCount: 1072,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -48968,6 +48996,37 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
           line: 171,
           column: 1,
           kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "infrastructure/invalid-artifact",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath: "/reference/problem-recovery-cookbook/#infrastructure-invalid-artifact",
+      recovery: {
+        cause: "The caller sent malformed input or unsupported request options.",
+        userAction: "Correct the request input and retry after validation passes.",
+        operatorAction:
+          "Inspect validation details and request logs; do not retry unchanged input.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/create-croco-app/src/infrastructure-files.ts",
+          line: 87,
+          column: 10,
+          kind: "problem-factory",
         },
       ],
     },

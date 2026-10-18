@@ -1,6 +1,6 @@
 {
   "version": "croco.problem-code-registry.v1",
-  "problemCount": 1071,
+  "problemCount": 1072,
   "problems": [
     {
       "code": "ACCESS_DENIED",
@@ -17950,6 +17950,36 @@
           "line": 171,
           "column": 1,
           "kind": "problem-class"
+        }
+      ]
+    },
+    {
+      "code": "infrastructure/invalid-artifact",
+      "category": "BadRequest",
+      "status": 400,
+      "title": "Bad Request",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#infrastructure-invalid-artifact",
+      "recovery": {
+        "cause": "The caller sent malformed input or unsupported request options.",
+        "userAction": "Correct the request input and retry after validation passes.",
+        "operatorAction": "Inspect validation details and request logs; do not retry unchanged input.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "public",
+        "telemetry": {
+          "eventName": "croco.problem.info",
+          "severity": "info",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/create-croco-app/src/infrastructure-files.ts",
+          "line": 87,
+          "column": 10,
+          "kind": "problem-factory"
         }
       ]
     },

@@ -1,0 +1,108 @@
+{
+  "profile": "cloudflare-workers",
+  "requirements": {
+    "schemaVersion": "croco.infrastructure-requirements/v1",
+    "runtime": "cloudflare-workers",
+    "runtimeCapabilities": ["env"],
+    "resources": [
+      {
+        "id": "DB",
+        "kind": "database",
+        "capabilities": ["read"],
+        "scope": "shop-api",
+        "owner": "shop"
+      },
+      {
+        "id": "JOBS",
+        "kind": "queue",
+        "capabilities": ["enqueue"],
+        "scope": "shop-api",
+        "owner": "shop"
+      },
+      {
+        "id": "FILES",
+        "kind": "storage",
+        "capabilities": ["write"],
+        "scope": "shop-api",
+        "owner": "shop"
+      },
+      {
+        "id": "TOKEN",
+        "kind": "secret",
+        "capabilities": ["read"],
+        "scope": "shop-api",
+        "owner": "shop",
+        "secretRef": "api-token"
+      },
+      {
+        "id": "OPTIONAL",
+        "kind": "storage",
+        "capabilities": ["read"],
+        "scope": "shop-api",
+        "owner": "shop",
+        "optional": true
+      }
+    ]
+  },
+  "bindings": [
+    {
+      "requirement": "DB",
+      "owner": "shop",
+      "scope": "shop-api",
+      "resource": "DB"
+    },
+    {
+      "requirement": "JOBS",
+      "owner": "shop",
+      "scope": "shop-api",
+      "resource": "JOBS"
+    },
+    {
+      "requirement": "FILES",
+      "owner": "shop",
+      "scope": "shop-api",
+      "resource": "FILES"
+    },
+    {
+      "requirement": "TOKEN",
+      "owner": "shop",
+      "scope": "shop-api",
+      "resource": "TOKEN",
+      "secretRef": "api-token"
+    }
+  ],
+  "workload": "shop-api",
+  "artifact": {
+    "name": "shop-api",
+    "main": "src/worker.ts",
+    "compatibility_date": "2026-10-01",
+    "d1_databases": [
+      {
+        "binding": "DB",
+        "database_name": "shop",
+        "database_id": "11111111-2222-3333-4444-555555555555"
+      }
+    ],
+    "r2_buckets": [
+      {
+        "binding": "FILES",
+        "bucket_name": "files"
+      }
+    ],
+    "queues": {
+      "producers": [
+        {
+          "binding": "JOBS",
+          "queue": "jobs"
+        }
+      ]
+    },
+    "secrets_store_secrets": [
+      {
+        "binding": "TOKEN",
+        "store_id": "store-id",
+        "secret_name": "api-token"
+      }
+    ]
+  }
+}

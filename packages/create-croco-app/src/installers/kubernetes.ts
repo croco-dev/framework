@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { copyFileSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { defineInfrastructureRequirements } from "@croco/framework-context";
 import { mergeInto } from "../helpers/fs.js";
 import { getPackageVersion } from "../package-version.js";
 import { TEMPLATES_DIR } from "../template-path.js";
@@ -32,16 +33,33 @@ export function installKubernetes(targetDir: string, context: Record<string, unk
   );
   const packagePath = join(targetDir, "package.json");
   const pkg = JSON.parse(readFileSync(packagePath, "utf8"));
+  pkg.devDependencies["create-croco-app"] = `^${getPackageVersion()}`;
+  pkg.scripts["infrastructure:check"] = "node scripts/check-infrastructure.mjs";
+  pkg.scripts.build = "pnpm infrastructure:check && turbo build";
+  writeFileSync(
+    join(targetDir, "croco-infrastructure-requirements.json"),
+    `${JSON.stringify(defineInfrastructureRequirements({ runtime: "node", runtimeCapabilities: ["env", "nodeApi"], resources: [] }), null, 2)}\n`,
+  );
+  writeFileSync(
+    join(targetDir, "croco-infrastructure-bindings.json"),
+    `${JSON.stringify({ profile: "kubernetes", workload: "croco-api", requirements: "croco-infrastructure-requirements.json", runtimeManifest: "croco-runtime-capability.manifest.json", artifact: "kubernetes/resources.yaml", bindings: [] }, null, 2)}\n`,
+  );
   pkg.scripts["k8s:check"] = "node scripts/check-kubernetes-profile.mjs";
   pkg.scripts["k8s:smoke"] = "node scripts/smoke-kubernetes.mjs";
   pkg.scripts["k8s:lock"] = "node scripts/check-kubernetes-profile.mjs --write";
   writeFileSync(packagePath, `${JSON.stringify(pkg, null, 2)}\n`);
   const mapPath = join(targetDir, "croco.project-map.json");
   const projectMap = JSON.parse(readFileSync(mapPath, "utf8"));
-  const commands = ["k8s:check", "k8s:lock", "k8s:smoke"];
+  const commands = ["infrastructure:check", "k8s:check", "k8s:lock", "k8s:smoke"];
   for (const workspacePackage of projectMap.packageGraph.packages) {
-    if (workspacePackage.path === "package.json")
+    if (workspacePackage.path === "package.json") {
       workspacePackage.scripts = Object.keys(pkg.scripts).sort();
+      workspacePackage.dependencies.push({
+        name: "create-croco-app",
+        range: pkg.devDependencies["create-croco-app"],
+        kind: "devDependency",
+      });
+    }
   }
   projectMap.entrypoints.push(
     ...commands.map((command) => ({
@@ -63,6 +81,9 @@ export function writeKubernetesProfileManifest(targetDir: string): void {
     "apps/api-server/src/kubernetes.ts",
     "apps/api-server/src/node-application.ts",
     "croco-runtime-capability.manifest.json",
+    "croco-infrastructure-requirements.json",
+    "croco-infrastructure-bindings.json",
+    "scripts/check-infrastructure.mjs",
     "kubernetes/README.md",
     "kubernetes/resources.yaml",
     "scripts/check-kubernetes-profile.mjs",
@@ -89,6 +110,12 @@ export function writeKubernetesProfileManifest(targetDir: string): void {
         build: {
           dockerfile: "apps/api-server/Dockerfile",
           buildConfig: "apps/api-server/tsup.config.ts",
+        },
+        bindings: {
+          requirements: "croco-infrastructure-requirements.json",
+          plan: "croco-infrastructure-bindings.json",
+          check: "infrastructure:check",
+          verification: "static-artifact-only",
         },
         configuration: { resourceFile: "kubernetes/resources.yaml" },
         termination: {

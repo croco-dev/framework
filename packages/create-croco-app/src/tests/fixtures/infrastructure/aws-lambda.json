@@ -1,0 +1,157 @@
+{
+  "profile": "aws-lambda",
+  "requirements": {
+    "schemaVersion": "croco.infrastructure-requirements/v1",
+    "runtime": "lambda",
+    "runtimeCapabilities": ["env"],
+    "resources": [
+      {
+        "id": "DB",
+        "kind": "database",
+        "capabilities": ["read"],
+        "scope": "Api",
+        "owner": "shop"
+      },
+      {
+        "id": "JOBS",
+        "kind": "queue",
+        "capabilities": ["enqueue"],
+        "scope": "Api",
+        "owner": "shop"
+      },
+      {
+        "id": "FILES",
+        "kind": "storage",
+        "capabilities": ["write"],
+        "scope": "Api",
+        "owner": "shop"
+      },
+      {
+        "id": "TOKEN",
+        "kind": "secret",
+        "capabilities": ["read"],
+        "scope": "Api",
+        "owner": "shop",
+        "secretRef": "TOKEN"
+      },
+      {
+        "id": "OPTIONAL",
+        "kind": "storage",
+        "capabilities": ["read"],
+        "scope": "Api",
+        "owner": "shop",
+        "optional": true
+      }
+    ]
+  },
+  "bindings": [
+    {
+      "requirement": "DB",
+      "owner": "shop",
+      "scope": "Api",
+      "resource": "DB"
+    },
+    {
+      "requirement": "JOBS",
+      "owner": "shop",
+      "scope": "Api",
+      "resource": "JOBS"
+    },
+    {
+      "requirement": "FILES",
+      "owner": "shop",
+      "scope": "Api",
+      "resource": "FILES"
+    },
+    {
+      "requirement": "TOKEN",
+      "owner": "shop",
+      "scope": "Api",
+      "resource": "TOKEN",
+      "secretRef": "TOKEN"
+    }
+  ],
+  "workload": "Api",
+  "artifact": {
+    "Transform": "AWS::Serverless-2016-10-31",
+    "Resources": {
+      "DB": {
+        "Type": "AWS::DynamoDB::Table",
+        "Properties": {
+          "BillingMode": "PAY_PER_REQUEST",
+          "AttributeDefinitions": [
+            {
+              "AttributeName": "id",
+              "AttributeType": "S"
+            }
+          ],
+          "KeySchema": [
+            {
+              "AttributeName": "id",
+              "KeyType": "HASH"
+            }
+          ]
+        }
+      },
+      "JOBS": {
+        "Type": "AWS::SQS::Queue"
+      },
+      "FILES": {
+        "Type": "AWS::S3::Bucket"
+      },
+      "TOKEN": {
+        "Type": "AWS::SecretsManager::Secret"
+      },
+      "Api": {
+        "Type": "AWS::Serverless::Function",
+        "Properties": {
+          "Runtime": "nodejs24.x",
+          "Handler": "index.handler",
+          "CodeUri": "dist/",
+          "Policies": [
+            {
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Action": "dynamodb:GetItem",
+                  "Resource": {
+                    "Fn::GetAtt": ["DB", "Arn"]
+                  }
+                },
+                {
+                  "Effect": "Allow",
+                  "Action": "sqs:SendMessage",
+                  "Resource": {
+                    "Fn::GetAtt": ["JOBS", "Arn"]
+                  }
+                },
+                {
+                  "Effect": "Allow",
+                  "Action": "s3:PutObject",
+                  "Resource": {
+                    "Fn::Join": [
+                      "",
+                      [
+                        {
+                          "Fn::GetAtt": ["FILES", "Arn"]
+                        },
+                        "/*"
+                      ]
+                    ]
+                  }
+                },
+                {
+                  "Effect": "Allow",
+                  "Action": "secretsmanager:GetSecretValue",
+                  "Resource": {
+                    "Ref": "TOKEN"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      }
+    }
+  }
+}

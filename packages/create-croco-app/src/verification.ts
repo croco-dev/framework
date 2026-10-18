@@ -13,3 +13,13 @@ export {
   validateResolvedOptions,
 } from "./options.js";
 export type { GeneratorOptions, NormalizedGeneratorOptions, RawCliOptions } from "./types.js";
+export { INFRASTRUCTURE_DIAGNOSTIC_CODES, validateInfrastructure } from "./infrastructure.js";
+export { validateInfrastructureFiles } from "./infrastructure-files.js";
+export type {
+  InfrastructureBinding,
+  InfrastructureProfile,
+  InfrastructureValidationInput,
+  InfrastructureDiagnostic,
+  InfrastructureValidationReport,
+} from "./infrastructure.js";
+export type { InfrastructureFilePlan } from "./infrastructure-files.js";

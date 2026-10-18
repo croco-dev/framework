@@ -61,3 +61,18 @@ sample storage and no async event source/DLQ, SQS, scheduler or configured SaaS 
 It does not complete the documentation-only `saas-lambda` composition or shared binding work.
 Signed/unsigned live requests, secret resolution, telemetry delivery and AWS operational checks
 remain separate: `liveAws: not-verified`, `certification: not-certified` until actually verified.
+
+## Infrastructure bindings
+
+For resource requirements, use `defineInfrastructureRequirements` from `@croco/framework-context`
+and the static validators in `create-croco-app/dist/verification.js`. Follow the
+[static infrastructure contract](https://github.com/croco-dev/framework/blob/trunk/docs/architecture/infrastructure-requirements.md)
+for each profile's supported native artifact, scope and permission subset. Run the generated
+`pnpm infrastructure:check` before build/CI. Kubernetes generation starts with empty requirements
+because the sample providers are process-local. Add real provider requirements explicitly;
+never turn the optional external Secret into a verified provider claim.
+
+Missing required bindings, supplied invalid optional bindings and stale binding claims fail.
+Use references only; keep credentials out of declarations and reports. Static artifact success
+is not live existence, effective authorization, executable code/image proof or certification.
+SAM/CDK and Wrangler validators do not imply generated full SaaS deployment support.

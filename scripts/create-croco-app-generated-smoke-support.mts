@@ -136,7 +136,7 @@ export function createWorkspacePackageIndex(
   for (const packageJsonPath of findPackageJsonFiles(join(rootDir, "packages"))) {
     const packageJson = readPackageJson(packageJsonPath);
 
-    if (typeof packageJson.name !== "string" || !packageJson.name.startsWith("@croco/")) {
+    if (typeof packageJson.name !== "string" || !isLocalCrocoPackage(packageJson.name)) {
       continue;
     }
 
@@ -245,7 +245,7 @@ export function rewriteExternalCrocoRanges(
       }
 
       for (const packageName of Object.keys(dependencies)) {
-        if (!packageName.startsWith("@croco/") || generatedPackageNames.has(packageName)) {
+        if (!isLocalCrocoPackage(packageName) || generatedPackageNames.has(packageName)) {
           continue;
         }
 
@@ -340,7 +340,7 @@ function collectCrocoDependencyNames(
     }
 
     for (const packageName of Object.keys(dependencyMap)) {
-      if (packageName.startsWith("@croco/")) {
+      if (isLocalCrocoPackage(packageName)) {
         dependencies.add(packageName);
       }
     }
@@ -398,4 +398,8 @@ function removeTopLevelYamlBlock(content: string, key: string): string {
 
 function toYamlDoubleQuotedScalar(value: string): string {
   return `"${value.replaceAll("\\", "\\\\").replaceAll('"', '\\"')}"`;
+}
+
+function isLocalCrocoPackage(name: string): boolean {
+  return name.startsWith("@croco/") || name === "create-croco-app";
 }

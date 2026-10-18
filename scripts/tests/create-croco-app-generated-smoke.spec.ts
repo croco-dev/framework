@@ -1170,6 +1170,33 @@ describe("create-croco-app-generated-smoke dependency resolution", () => {
     ]);
   });
 
+  it("resolves and overrides the generator verification dependency through its local package closure", () => {
+    const root = createTempRoot();
+    const projectDir = join(root, "generated-app");
+    writeWorkspacePackage(root, "create-croco-app", "create-croco-app", {
+      "@croco/context-fixture": "workspace:*",
+    });
+    writeWorkspacePackage(root, "context-fixture", "@croco/context-fixture");
+    writeGeneratedPackage(projectDir, "package.json", {
+      name: "generated-app",
+      devDependencies: { "create-croco-app": "^0.1.0" },
+    });
+    const resolved = resolveLocalCrocoPackagesForGeneratedProject(
+      projectDir,
+      createWorkspacePackageIndex(root),
+    );
+    expect(resolved.map(({ name }) => name)).toEqual([
+      "@croco/context-fixture",
+      "create-croco-app",
+    ]);
+    rewriteExternalCrocoRanges(projectDir, {
+      "create-croco-app": "file:/tmp/generator.tgz",
+      "@croco/context-fixture": "file:/tmp/context.tgz",
+    });
+    const manifest = JSON.parse(readFileSync(join(projectDir, "package.json"), "utf8"));
+    expect(manifest.devDependencies["create-croco-app"]).toBe("file:/tmp/generator.tgz");
+  });
+
   it("fails when a generated manifest references an unhandled Croco dependency", () => {
     const root = createTempRoot();
     const projectDir = join(root, "generated-app");

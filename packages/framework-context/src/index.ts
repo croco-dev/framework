@@ -632,3 +632,10 @@ export type { Guard } from "./libs/Guard";
  * ```
  */
 export type { ILogger } from "./libs/ILogger";
+
+export { defineInfrastructureRequirements } from "./libs/infrastructureRequirements";
+export type {
+  InfrastructureCapability,
+  InfrastructureRequirement,
+  InfrastructureRequirements,
+} from "./libs/infrastructureRequirements";

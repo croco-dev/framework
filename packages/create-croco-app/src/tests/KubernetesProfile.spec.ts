@@ -1,7 +1,16 @@
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 import { parseAllDocuments } from "yaml";
 import { generate } from "../generator.js";
@@ -163,6 +172,59 @@ describe("Kubernetes Node API profile", () => {
     expect(readFileSync(join(target, "croco-infrastructure-profile.manifest.json"), "utf8")).toBe(
       beforeAdoption,
     );
+  });
+
+  it("runs the generated binding gate and cannot adopt an invalid requirement into success", async () => {
+    const root = mkdtempSync(join(tmpdir(), "croco-k8s-binding-"));
+    roots.push(root);
+    const target = join(root, "app");
+    await generate(target, normalizeNonInteractiveOptions(input));
+    // Resolve the actual built verification entrypoint as an installed generated consumer would.
+    mkdirSync(join(target, "node_modules"));
+    symlinkSync(
+      fileURLToPath(new URL("../../", import.meta.url)),
+      join(target, "node_modules/create-croco-app"),
+      "dir",
+    );
+    const run = () =>
+      spawnSync(process.execPath, ["scripts/check-infrastructure.mjs"], {
+        cwd: target,
+        encoding: "utf8",
+      });
+    expect(run().status).toBe(0);
+    const pkg = JSON.parse(readFileSync(join(target, "package.json"), "utf8"));
+    expect(pkg.scripts.build).toBe("pnpm infrastructure:check && turbo build");
+    const map = JSON.parse(readFileSync(join(target, "croco.project-map.json"), "utf8"));
+    expect(
+      map.packageGraph.packages.find((entry: { path: string }) => entry.path === "package.json")
+        .dependencies,
+    ).toContainEqual({
+      name: "create-croco-app",
+      range: pkg.devDependencies["create-croco-app"],
+      kind: "devDependency",
+    });
+    const requirementsPath = join(target, "croco-infrastructure-requirements.json");
+    const requirements = JSON.parse(readFileSync(requirementsPath, "utf8"));
+    requirements.resources.push({
+      id: "jobs",
+      kind: "queue",
+      capabilities: ["connect"],
+      scope: "default",
+      owner: "app",
+    });
+    writeFileSync(requirementsPath, JSON.stringify(requirements));
+    const failed = run();
+    expect(failed.status).toBe(1);
+    expect(JSON.parse(failed.stdout).diagnostics).toContainEqual({
+      code: "CROCO_INFRA_BINDING",
+      requirement: 0,
+    });
+    expect(
+      spawnSync(process.execPath, ["scripts/check-kubernetes-profile.mjs", "--write"], {
+        cwd: target,
+      }).status,
+    ).toBe(0);
+    expect(run().status).toBe(1);
   });
 
   it.each([

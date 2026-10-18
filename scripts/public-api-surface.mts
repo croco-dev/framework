@@ -441,6 +441,15 @@ const frameworkContextCompatibilityContract = {
       groupId: "runtime-capability",
       exports: [
         {
+          source: "./libs/infrastructureRequirements",
+          names: [
+            "defineInfrastructureRequirements",
+            "InfrastructureCapability",
+            "InfrastructureRequirement",
+            "InfrastructureRequirements",
+          ],
+        },
+        {
           source: "./libs/runtimeCapabilities",
           names: [
             "RUNTIME_CAPABILITY_MANIFEST_VERSION",
