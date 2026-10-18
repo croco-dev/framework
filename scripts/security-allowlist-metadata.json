@@ -20,6 +20,13 @@
           "owner": "kang-heewon",
           "reason": "Issue #3295 infrastructure review contains source SHA-256 digests and build-time runtime assessments, not credentials. The codegenOpenapi.ts digest matches the source file but triggers generic-api-key. This exact review-record path remains stable after squash; production source and every other review record remain scanned.",
           "reviewBy": "2027-01-31"
+        },
+        {
+          "kind": "path",
+          "value": "^docs/infrastructure-reviews/clerk-workers-auth-subset\\.json$",
+          "owner": "kang-heewon",
+          "reason": "Reviewed infrastructure evidence record contains source SHA-256 digests, independently recomputed and equal to tracked files, that generic-api-key misclassifies. Exact file path remains stable after squash merge; this record must contain public evidence only and no credentials. Re-review the entire file by the deadline.",
+          "reviewBy": "2026-11-30"
         }
       ],
       "ignoreFingerprints": [
