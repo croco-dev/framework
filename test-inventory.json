@@ -134,6 +134,12 @@
       "owner": "repo:examples"
     },
     {
+      "path": "examples/workers-protocols/src/tests/WorkersProtocols.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "repo:examples"
+    },
+    {
       "path": "packages/access-core/src/tests/Access.spec.ts",
       "lane": "fast",
       "qualifiers": [],
@@ -5595,6 +5601,12 @@
     },
     {
       "path": "packages/transports-graphql/src/tests/GraphQLExecutionMiddleware.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/transports-graphql"
+    },
+    {
+      "path": "packages/transports-graphql/src/tests/GraphQLFetchHandler.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/transports-graphql"

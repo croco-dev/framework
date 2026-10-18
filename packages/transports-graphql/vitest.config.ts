@@ -4,6 +4,9 @@ import { defineConfig } from "vitest/config";
 export default defineConfig({
   resolve: {
     alias: {
+      "@croco/protocols-graphql/fetch": fileURLToPath(
+        new URL("../protocols-graphql/src/fetch.ts", import.meta.url),
+      ),
       graphql: fileURLToPath(new URL("./node_modules/graphql/index.js", import.meta.url)),
     },
   },

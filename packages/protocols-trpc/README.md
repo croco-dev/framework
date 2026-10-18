@@ -72,3 +72,14 @@ the tRPC schema rejects. The existing body-only and location-envelope shapes are
 pnpm --filter @croco/protocols-trpc test
 pnpm --filter @croco/protocols-trpc typecheck
 ```
+
+## Workers fetch adapter
+
+The [Workers protocol fixture](../../examples/workers-protocols/README.md) connects
+`createTrpcRouter` to the official `@trpc/server/adapters/fetch` adapter and
+`createCloudflareWorkersHost`. With Workers `nodejs_compat`, local workerd tests cover
+queries/mutations, Croco guards/Problem mapping, input validation, tenant isolation,
+cookies, content-type rejection and host-provided request signals. Native tRPC clients
+use their own wire format; this path does not translate REST payloads or subscription
+semantics. Client disconnect cancellation and remote side-effect reversal are not
+guaranteed, and subscriptions/streaming and deployed-provider certification are unverified.

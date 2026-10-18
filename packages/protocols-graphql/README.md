@@ -149,3 +149,13 @@ version 1 snapshots before comparing them with version 2 output.
 pnpm --filter @croco/protocols-graphql test
 pnpm --filter @croco/protocols-graphql typecheck
 ```
+
+## Fetch runtime entrypoint
+
+`@croco/protocols-graphql/fetch` exposes `GraphQLAuthGuard`, its `GRAPHQL_AUTH_GUARD_OPTIONS` DI token, `GraphQLRolesGuard`,
+`GuardChain`, `isProblem` and `problemToGraphQLError` without importing the code-first
+schema compiler. Use it with a prepared schema and `@croco/transports-graphql/fetch`
+on Workers (`nodejs_compat` required). Decorated schema compilation remains a separate
+Node build step; this entrypoint does not compile or discover resolver classes.
+The [local Workers fixture](../../examples/workers-protocols/README.md) verifies the
+fetch path without claiming deployment certification or subscription support.

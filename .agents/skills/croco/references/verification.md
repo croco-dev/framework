@@ -102,3 +102,13 @@ backfill historical packages. Pure refactors use reasoned not-applicable without
 In a generated application, use its reported manifest and verification scripts; the repository-only review
 checker is not installed there. Keep the same three decisions in the application's own review evidence and
 report missing Providers or host paths explicitly. Never mark untested or unsupported paths as supported.
+
+## Workers GraphQL and tRPC
+
+Run `pnpm --filter @croco-example/workers-protocols test` for real local workerd
+query/mutation, scope, cookie, content-type, Problem and host-signal evidence.
+`pnpm --filter @croco-example/workers-protocols codegen:check` verifies the generated
+GraphQL SDK against the declared schema and operations. The shared GraphQL fixture also
+runs through Node fetch and the Lambda host envelope. Keep client-disconnect cancellation,
+subscription/streaming, deployed Cloudflare and full SaaS profile certification separate
+from these local results.

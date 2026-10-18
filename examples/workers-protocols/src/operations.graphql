@@ -1,0 +1,8 @@
+query Probe {
+  probe
+  broken
+}
+
+mutation Echo($name: String!) {
+  echo(name: $name)
+}

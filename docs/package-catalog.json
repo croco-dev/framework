@@ -103,6 +103,14 @@
               "packages/create-croco-app/templates/saas/apps/api-server/src/compositionRoot.ts",
               "packages/create-croco-app/templates/saas/apps/api-server/src/worker.ts"
             ]
+          },
+          {
+            "id": "cloudflare-workers-protocols",
+            "packages": ["transports-graphql", "protocols-trpc", "preset-cloudflare"],
+            "examples": [
+              "examples/workers-protocols/src/worker.ts",
+              "examples/workers-protocols/src/tests/WorkersProtocols.spec.ts"
+            ]
           }
         ]
       }
@@ -1044,7 +1052,7 @@
     "protocols-trpc": {
       "role": "Plugins",
       "subtype": "protocol",
-      "runtimes": [],
+      "runtimes": ["node", "cloudflare-workers"],
       "domain": "Protocols Trpc"
     },
     "ratelimit-core": {
@@ -1170,7 +1178,7 @@
     "transports-graphql": {
       "role": "Plugins",
       "subtype": "transport",
-      "runtimes": ["node", "lambda"],
+      "runtimes": ["node", "lambda", "cloudflare-workers"],
       "domain": "GraphQL transport"
     },
     "transports-http": {
@@ -2252,9 +2260,14 @@
       "transports-graphql": {
         "domain": "GraphQL transport",
         "adapter": "GraphQL Yoga transport",
-        "runtimes": ["node", "lambda"],
+        "runtimes": ["node", "lambda", "cloudflare-workers"],
         "requiredEnv": ["none"],
-        "features": ["GraphQL server", "resolver execution", "Problem mapping"]
+        "features": [
+          "GraphQL server",
+          "resolver execution",
+          "Problem mapping",
+          "Workers fetch subpath: prepared query/mutation schemas, nodejs_compat required; subscriptions unsupported; local workerd conformance only"
+        ]
       },
       "transports-http": {
         "domain": "HTTP transport",

@@ -1,0 +1,41 @@
+{
+  "name": "@croco-example/workers-protocols",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:evidence": "pnpm run test --maxWorkers=1 --reporter=json --outputFile=.turbo/croco-test-evidence.json",
+    "codegen": "node codegen.mjs",
+    "codegen:check": "node codegen.mjs --check"
+  },
+  "dependencies": {
+    "@croco/framework-context": "workspace:*",
+    "@croco/preset-cloudflare": "workspace:*",
+    "@croco/problems-core": "workspace:*",
+    "@croco/protocols-graphql": "workspace:*",
+    "@croco/protocols-rest": "workspace:*",
+    "@croco/protocols-trpc": "workspace:*",
+    "@croco/transports-graphql": "workspace:*"
+  },
+  "devDependencies": {
+    "@croco/preset-lambda": "workspace:*",
+    "@graphql-codegen/core": "6.2.2",
+    "@graphql-codegen/typescript": "6.1.2",
+    "@graphql-codegen/typescript-generic-sdk": "5.0.1",
+    "@graphql-codegen/typescript-operations": "6.1.10",
+    "@trpc/client": "11.17.0",
+    "@trpc/server": "^11.6.0",
+    "esbuild": "^0.28.1",
+    "graphql": "^16.12.0",
+    "graphql-tag": "2.12.6",
+    "graphql-yoga": "^5.24.2",
+    "miniflare": "4.20260312.0",
+    "reflect-metadata": "^0.2.2",
+    "typescript": "^6.0.3",
+    "vitest": "4.1.8",
+    "zod": "^3.23.8"
+  }
+}

@@ -994,6 +994,8 @@ This cookbook documents 1072 public Croco Problem codes. The deterministic JSON 
 | [`testing/test-runtime-drain-limit`](#testing-test-runtime-drain-limit)                                                               | InternalServerError                                                 |           500 | conditional   | operator-only | active     |       1 |
 | [`testing/transaction-context-not-active`](#testing-transaction-context-not-active)                                                   | InternalServerError                                                 |           500 | conditional   | operator-only | active     |       1 |
 | [`transports-graphql/body-limit-invalid-configuration`](#transports-graphql-body-limit-invalid-configuration)                         | InternalServerError                                                 |           500 | not-retryable | operator-only | active     |       1 |
+| [`transports-graphql/fetch-schema-required`](#transports-graphql-fetch-schema-required)                                               | BadRequest                                                          |           400 | not-retryable | public        | active     |       1 |
+| [`transports-graphql/fetch-subscriptions-unsupported`](#transports-graphql-fetch-subscriptions-unsupported)                           | BadRequest                                                          |           400 | not-retryable | public        | active     |       1 |
 | [`transports-graphql/request-body-aborted`](#transports-graphql-request-body-aborted)                                                 | BadRequest                                                          |           400 | not-retryable | public        | active     |       1 |
 | [`transports-graphql/request-body-too-large`](#transports-graphql-request-body-too-large)                                             | PayloadTooLarge                                                     |           413 | not-retryable | public        | active     |       1 |
 | [`transports-graphql/request-handling-failed`](#transports-graphql-request-handling-failed)                                           | InternalServerError                                                 |           500 | conditional   | operator-only | active     |       1 |
@@ -18937,6 +18939,42 @@ Sources:
 Sources:
 
 - `packages/transports-graphql/src/libs/problems/GraphQLTransportProblems.ts:8:5` (problem-constructor)
+
+<a id="transports-graphql-fetch-schema-required"></a>
+
+## `transports-graphql/fetch-schema-required`
+
+- Category: `BadRequest`
+- HTTP status: `400` Bad Request
+- Retryability: `not-retryable`
+- Redaction policy: `public`
+- Lifecycle: `active`
+- Cause: The caller sent malformed input or unsupported request options.
+- User action: Correct the request input and retry after validation passes.
+- Operator action: Inspect validation details and request logs; do not retry unchanged input.
+- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/transports-graphql/src/libs/GraphQLFetchHandler.ts:52:11` (problem-factory)
+
+<a id="transports-graphql-fetch-subscriptions-unsupported"></a>
+
+## `transports-graphql/fetch-subscriptions-unsupported`
+
+- Category: `BadRequest`
+- HTTP status: `400` Bad Request
+- Retryability: `not-retryable`
+- Redaction policy: `public`
+- Lifecycle: `active`
+- Cause: The caller sent malformed input or unsupported request options.
+- User action: Correct the request input and retry after validation passes.
+- Operator action: Inspect validation details and request logs; do not retry unchanged input.
+- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/transports-graphql/src/libs/GraphQLFetchHandler.ts:58:11` (problem-factory)
 
 <a id="transports-graphql-request-body-aborted"></a>
 

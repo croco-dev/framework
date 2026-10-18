@@ -28,12 +28,20 @@
         },
         "import": "./dist/index.js",
         "require": "./dist/index.cjs"
+      },
+      "./fetch": {
+        "types": {
+          "import": "./dist/fetch.d.ts",
+          "require": "./dist/fetch.d.cts"
+        },
+        "import": "./dist/fetch.js",
+        "require": "./dist/fetch.cjs"
       }
     },
     "access": "public"
   },
   "scripts": {
-    "build": "tsup src/index.ts --format esm,cjs --minify --clean --dts",
+    "build": "tsup src/index.ts src/fetch.ts --format esm,cjs --minify --clean --dts",
     "lint": "oxlint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
