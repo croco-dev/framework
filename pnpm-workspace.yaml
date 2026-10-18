@@ -11,7 +11,7 @@ overrides:
   typescript: 6.0.3
   oxfmt>tinypool: 2.1.2
   source-map-js: 1.2.2
-  "@graphql-tools/utils@<=12.0.0": 12.0.3
+  "@graphql-tools/utils": 12.1.0
   sharp: 0.35.4
   "@clerk/shared": 3.47.7
   "@hono/node-server": 1.19.17
