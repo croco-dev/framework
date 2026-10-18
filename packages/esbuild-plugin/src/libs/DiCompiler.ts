@@ -302,7 +302,7 @@ export function compileDiGraph(options: DiCompilerOptions = {}): DiCompilerResul
         continue;
       }
       const exportName = getNamedClassExport(statement, checker);
-      if (!exportName) {
+      if (exportName === undefined) {
         diagnostics.push(
           createDiagnostic(
             statement,

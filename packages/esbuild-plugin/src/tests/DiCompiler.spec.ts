@@ -439,6 +439,7 @@ describe("compileDiGraph", () => {
     ["export default Service; export { Service as PublicService };", "PublicService"],
     ['export { Service as "public-service" };', "public-service"],
     ['export { Service as "public.service" };', "public.service"],
+    ['export { Service as "", Service as PublicService };', ""],
   ])("generates usable factories for named provider exports: %s", async (exports, exportName) => {
     writeProject({
       "src/Service.ts": `
