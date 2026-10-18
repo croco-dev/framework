@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "esbuild-plugin",
+      "classification": "pure-contract",
+      "reason": "DI graph generation now follows TypeScript runtime import extensions and validates the consumer module settings. This changes a build-time compiler contract without changing deployment resources, storage or runtime lifecycle ownership.",
+      "files": {
+        "packages/esbuild-plugin/src/libs/DiCompiler.ts": "100a3a1ba9b56c268fc33b38342cfb90f56a33b818071106cf252a65eedd3dc6"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "This build-target tooling generates TypeScript imports before the Node application is deployed; it introduces no Kubernetes resource or Node Host lifecycle behavior.",
+          "providers": [],
+          "constraints": [
+            "The DI compiler requires Node build tooling and filesystem access.",
+            "The application still selects and validates its own Host, runtime capabilities and lifecycle."
+          ],
+          "references": [
+            "packages/esbuild-plugin/src/libs/DiCompiler.ts",
+            "packages/esbuild-plugin/src/tests/DiCompilerImports.spec.ts",
+            "docs/architecture/compile-time-di.md"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Import generation and consumer typechecking happen during the build; invocation scope, initialization and flush remain owned by the selected Lambda Host.",
+          "providers": [],
+          "constraints": [
+            "The DI compiler requires Node build tooling and filesystem access.",
+            "The application still selects and validates its own Host, runtime capabilities and lifecycle."
+          ],
+          "references": [
+            "packages/esbuild-plugin/src/libs/DiCompiler.ts",
+            "packages/esbuild-plugin/src/tests/DiCompilerImports.spec.ts",
+            "docs/architecture/compile-time-di.md"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "This review covers build-time import generation only. It adds no Worker or Node Container runtime capability or provider support claim.",
+          "providers": [],
+          "constraints": [
+            "The DI compiler requires Node build tooling and filesystem access.",
+            "The application still selects and validates its own Host, runtime capabilities and lifecycle."
+          ],
+          "references": [
+            "packages/esbuild-plugin/src/libs/DiCompiler.ts",
+            "packages/esbuild-plugin/src/tests/DiCompilerImports.spec.ts",
+            "docs/architecture/compile-time-di.md"
+          ]
+        }
+      }
+    }
+  ]
+}
