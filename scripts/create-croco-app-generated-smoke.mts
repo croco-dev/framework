@@ -1717,7 +1717,7 @@ const smokeCaseDefinitionsWithoutLint: readonly Omit<SmokeCase, "tier" | "adviso
       {
         label: "Lambda deployment package",
         args: ["lambda:package"],
-        paths: [".lambda-package/dist/lambda.js", ".lambda-package/node_modules"],
+        paths: ["dist/lambda-package/dist/lambda.js", "dist/lambda-package/node_modules"],
       },
       {
         label: "Lambda profile drift",

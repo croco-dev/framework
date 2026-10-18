@@ -37,7 +37,7 @@ describe("Lambda API infrastructure profile", () => {
     expect(fn).toMatchObject({
       Runtime: "nodejs24.x",
       Handler: "dist/lambda.handler",
-      CodeUri: "../.lambda-package/",
+      CodeUri: "../dist/lambda-package/",
       Timeout: 30,
       ReservedConcurrentExecutions: 1,
     });

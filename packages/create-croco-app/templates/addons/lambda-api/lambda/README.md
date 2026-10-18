@@ -18,7 +18,7 @@ sam deploy --template-file lambda/template.json --resolve-s3 --capabilities CAPA
 ```
 
 `lambda:package` builds the API and deploys its production dependency closure into
-`.lambda-package/`. SAM packages that directory with `dist/lambda.handler`; do not deploy
+`dist/lambda-package/`. SAM packages that directory with `dist/lambda.handler`; do not deploy
 only the compiled JavaScript without its dependencies. Use a Linux x86_64 build environment
 when adding native dependencies. The local fixture loads this deployment directory and invokes
 API Gateway v2 events; it does not contact AWS or prove gateway IAM enforcement.

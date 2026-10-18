@@ -70,7 +70,7 @@ export function installLambdaApi(targetDir: string, context: Record<string, unkn
     `${readFileSync(readme, "utf8")}\n## Lambda HTTP API\n\nSee [the Lambda profile](lambda/README.md) for production dependency packaging, IAM, secrets, invocation fixtures and AWS verification limits. The SPA is deployed separately.\n`,
   );
   const ignore = join(targetDir, ".gitignore");
-  writeFileSync(ignore, `${readFileSync(ignore, "utf8")}\n.lambda-package/\n.aws-sam/\n`);
+  writeFileSync(ignore, `${readFileSync(ignore, "utf8")}\ndist/lambda-package/\n.aws-sam/\n`);
 }
 
 export function writeLambdaApiManifest(targetDir: string): void {
@@ -93,7 +93,7 @@ export function writeLambdaApiManifest(targetDir: string): void {
     ownership: "generated-until-reviewed-adoption",
     runtimeCapabilityManifest: "croco-runtime-capability.manifest.json",
     build: {
-      packageDirectory: ".lambda-package",
+      packageDirectory: "dist/lambda-package",
       handler: "dist/lambda.handler",
       script: "scripts/package-lambda.mjs",
     },

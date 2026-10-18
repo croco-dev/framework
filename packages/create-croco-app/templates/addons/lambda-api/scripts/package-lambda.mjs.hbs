@@ -8,6 +8,6 @@ function pnpm(args) {
   if (result.status !== 0) process.exit(result.status ?? 1);
 }
 pnpm(['--filter', '{{scope}}/api-server', 'build']);
-rmSync(new URL('../.lambda-package/', import.meta.url), { recursive: true, force: true });
-pnpm(['--filter', '{{scope}}/api-server', 'deploy', '--prod', '.lambda-package']);
+rmSync(new URL('../dist/lambda-package/', import.meta.url), { recursive: true, force: true });
+pnpm(['--filter', '{{scope}}/api-server', 'deploy', '--prod', 'dist/lambda-package']);
 console.log('Lambda deployment directory prepared. Run lambda:smoke and lambda:check before SAM packaging.');

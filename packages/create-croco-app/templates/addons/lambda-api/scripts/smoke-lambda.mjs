@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { createRequire } from "node:module";
 import { readFileSync } from "node:fs";
-const require = createRequire(new URL("../.lambda-package/package.json", import.meta.url));
+const require = createRequire(new URL("../dist/lambda-package/package.json", import.meta.url));
 const { handler, createLambdaApplication } = require("./dist/lambda.js");
 const { Context } = require("@croco/framework-context");
 const { TELEMETRY_RUNTIME_TOKEN } = require("@croco/telemetry-sdk-node");

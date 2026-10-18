@@ -98,7 +98,7 @@
         "Runtime": "nodejs24.x",
         "Architectures": ["x86_64"],
         "Handler": "dist/lambda.handler",
-        "CodeUri": "../.lambda-package/",
+        "CodeUri": "../dist/lambda-package/",
         "Role": {
           "Fn::GetAtt": ["ApiRole", "Arn"]
         },
