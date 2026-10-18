@@ -257,8 +257,11 @@ tenant 기능은 선택 사항이며 target resolver 사용 시 mapping이 필�
 
 Workers entry는 webhook handler와 user/organization 관리 API를 export하지 않습니다. 기존 Node/Lambda
 webhook 검증·lease-aware 중복 처리 경로를 유지하며, Workers용 webhook 보장은 선언하지 않습니다.
-`saas-cloudflare`의 generated profile은 `createGeneratedWorkersAuthPlugin`과 검증 범위를 노출하지만
-full SaaS composition은 #3537의 별도 통합 전까지 `documentation-only`로 유지합니다.
+`saas-cloudflare`의 generated profile은 검증 범위와 선택적인
+`createGeneratedWorkersAuthPlugin(options, () => import("@croco/auth-clerk/workers"))` helper를 제공합니다.
+사용하는 앱이 `@croco/auth-clerk` 의존성을 추가하고 provider를 연결합니다. 기본 native bootstrap은
+`bootstrap-only`이며 auth capability는 연결 전까지 `unavailable`입니다. Bootstrap health는
+full SaaS 또는 실제 Clerk 서비스 인증을 뜻하지 않습니다.
 
 Node/Lambda의 `clerkAuth()`와 `ClerkAuthProvider`도 `audience`를 지정하면 검증된 `aud`와
 허용 목록의 교집합을 확인합니다. 누락·잘못된 타입·빈 audience 설정은 거부하며, 옵션을 지정하지 않은

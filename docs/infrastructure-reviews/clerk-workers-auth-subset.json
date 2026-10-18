@@ -74,13 +74,13 @@
       "classification": "deployment-profile",
       "reason": "Expose a lazy factory for the already bounded Workers auth subset without changing full SaaS profile executability or adding platform implementations.",
       "files": {
-        "packages/create-croco-app/src/saas-provider-profiles.ts": "e4094a3b952e74d0e323fcbe35b940d234a185953f827ba357c8efa5cd4de129"
+        "packages/create-croco-app/src/saas-provider-profiles.ts": "ac48703e8a43d45e62d7fc39597336ea21479f9a6ace5b110e4c97e36086dd72"
       },
       "catalogRuntimes": [],
       "profiles": {
         "kubernetes": {
           "result": "not-applicable",
-          "reason": "This package is a development-time scaffolding CLI, not an application Host or deployed Provider. The changed helper lazily exposes only the selected Workers auth factory; full SaaS bootstrap remains documentation-only.",
+          "reason": "This package is a development-time scaffolding CLI, not an application Host or deployed Provider. The changed helper lazily exposes only the selected Workers auth factory; native bootstrap remains bootstrap-only and does not select the optional auth provider.",
           "providers": ["@croco/auth-clerk/workers"],
           "constraints": [
             "No generated full SaaS deployment support or live infrastructure certification is claimed.",
@@ -93,7 +93,7 @@
         },
         "aws-lambda": {
           "result": "not-applicable",
-          "reason": "This package is a development-time scaffolding CLI, not an application Host or deployed Provider. The changed helper lazily exposes only the selected Workers auth factory; full SaaS bootstrap remains documentation-only.",
+          "reason": "This package is a development-time scaffolding CLI, not an application Host or deployed Provider. The changed helper lazily exposes only the selected Workers auth factory; native bootstrap remains bootstrap-only and does not select the optional auth provider.",
           "providers": ["@croco/auth-clerk/workers"],
           "constraints": [
             "No generated full SaaS deployment support or live infrastructure certification is claimed.",
@@ -106,7 +106,7 @@
         },
         "cloudflare": {
           "result": "not-applicable",
-          "reason": "This package is a development-time scaffolding CLI, not an application Host or deployed Provider. The changed helper lazily exposes only the selected Workers auth factory; full SaaS bootstrap remains documentation-only.",
+          "reason": "This package is a development-time scaffolding CLI, not an application Host or deployed Provider. The changed helper lazily exposes only the selected Workers auth factory; native bootstrap remains bootstrap-only and does not select the optional auth provider.",
           "providers": ["@croco/auth-clerk/workers"],
           "constraints": [
             "No generated full SaaS deployment support or live infrastructure certification is claimed.",

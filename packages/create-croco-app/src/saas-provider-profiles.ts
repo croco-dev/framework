@@ -428,7 +428,7 @@ export const SAAS_PROVIDER_PROFILES = {
             "Alpha cookie/bearer authentication and fresh session status/revoke; synthetic upstream in actual workerd with nodejs_compat.",
             "Trusted audience and authorizedParties required; tenant binding is opt-in; permissions retain signed token lifetime.",
             "Webhook delivery and user/organization administration are not claimed on Workers.",
-            "Full SaaS bootstrap remains documentation-only (#3537); live Clerk service is not certified.",
+            "Native bootstrap remains bootstrap-only; auth needs application selection and connection. Full SaaS and live Clerk service are not certified.",
           ],
         },
       },
@@ -759,7 +759,7 @@ export function renderGeneratedSaasProviderProfileSource(
     return [
       ...(options.manifest.profile.name === "saas-cloudflare"
         ? [
-            'export async function createGeneratedWorkersAuthPlugin(options: import("@croco/auth-clerk/workers").ClerkWorkersAuthOptions) { const { clerkWorkersAuth } = await import("@croco/auth-clerk/workers"); return clerkWorkersAuth(options); }',
+            "export async function createGeneratedWorkersAuthPlugin<TOptions, TPlugin>(options: TOptions, loadFactory: () => Promise<{ clerkWorkersAuth: (options: TOptions) => TPlugin }>): Promise<TPlugin> { const { clerkWorkersAuth } = await loadFactory(); return clerkWorkersAuth(options); }",
           ]
         : []),
       'import type { ApplicationRuntime, CrocoApplicationDefinition } from "@croco/framework-module";',

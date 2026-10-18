@@ -42,8 +42,10 @@ real local signatures and synthetic upstream HTTP. They verify the SDK browser c
 expiry/signature/audience/origin rejection, tenant isolation, session revoke and redacted failures.
 This is not live Clerk certification. Webhook and user/organization administration remain
 unclaimed on Workers. The generated `saas-cloudflare` profile exposes an opt-in
-`createGeneratedWorkersAuthPlugin()` helper and the subset evidence; full SaaS bootstrap
-remains documentation-only until its separate integration is verified.
+`createGeneratedWorkersAuthPlugin(options, () => import("@croco/auth-clerk/workers"))` helper
+and the subset evidence. Add the optional auth package when selecting this helper. Native
+bootstrap remains `bootstrap-only`; its auth capability stays unavailable until the application
+connects the provider. Bootstrap health does not establish full SaaS or live Clerk certification.
 
 ## Kubernetes Node API generation
 
