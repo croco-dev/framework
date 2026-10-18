@@ -338,3 +338,21 @@ it.each(["EUR 37.50", "USD 137.50"])(
     });
   },
 );
+
+it("detects an HTTP noindex directive conflicting with an indexable public page", () => {
+  const report = validatePublicPageResponse(target, snapshot, {
+    status: 200,
+    headers: new Headers({ "content-type": "text/html", "x-robots-tag": "googlebot: NoIndex" }),
+    html,
+  });
+  expect(report.diagnostics).toContainEqual({ code: "SEO_INDEXABILITY_MISMATCH", field: "robots" });
+});
+
+it("requires the actual HTML MIME type rather than a prefix match", () => {
+  const report = validatePublicPageResponse(target, snapshot, {
+    status: 200,
+    headers: new Headers({ "content-type": "text/html-untrusted" }),
+    html,
+  });
+  expect(report.diagnostics).toContainEqual({ code: "SEO_CONTENT_TYPE", field: "content-type" });
+});

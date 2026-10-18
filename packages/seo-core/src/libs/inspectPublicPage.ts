@@ -59,6 +59,7 @@ function text(node: Node): string {
   return "childNodes" in node ? node.childNodes.map(text).join(" ") : "";
 }
 const normalize = (value: string) => value.replace(/\s+/g, " ").trim();
+const hasNoindex = (value: string | null | undefined) => /\b(?:noindex|none)\b/i.test(value ?? "");
 function canonicalJson(value: unknown): string {
   if (Array.isArray(value)) return `[${value.map(canonicalJson).join(",")}]`;
   if (value !== null && typeof value === "object")
@@ -92,10 +93,7 @@ export function validatePublicPageResponse(
       if (response.headers.get("location") !== snapshot.location)
         fail("REDIRECT_MISMATCH", "location");
     }
-    if (
-      !(response.headers.get("x-robots-tag") ?? "").includes("noindex") &&
-      !meta("robots").some((value) => value?.includes("noindex"))
-    )
+    if (!hasNoindex(response.headers.get("x-robots-tag")) && !meta("robots").some(hasNoindex))
       fail("INDEXABILITY_MISMATCH", "robots");
     if (
       nodes.some(
@@ -129,7 +127,7 @@ export function validatePublicPageResponse(
       diagnostics,
     };
   }
-  if (!response.headers.get("content-type")?.includes("text/html"))
+  if (response.headers.get("content-type")?.split(";", 1)[0]?.trim().toLowerCase() !== "text/html")
     fail("CONTENT_TYPE", "content-type");
   const titles = headNodes.filter((node) => node.tagName === "title");
   if (titles.length !== 1 || normalize(text(titles[0])) !== normalize(metadata.title))
@@ -150,6 +148,8 @@ export function validatePublicPageResponse(
     "canonical",
   );
   check(meta("robots"), metadata.robots, "INDEXABILITY_MISMATCH", "robots");
+  if (snapshot.indexable && hasNoindex(response.headers.get("x-robots-tag")))
+    fail("INDEXABILITY_MISMATCH", "robots");
   check(meta("croco:revision"), metadata.revision, "REVISION_MISMATCH", "revision");
   const htmlNode = nodes.find((node) => node.tagName === "html");
   if (!htmlNode || attr(htmlNode, "lang") !== metadata.lang) fail("LOCALE_MISMATCH", "lang");
