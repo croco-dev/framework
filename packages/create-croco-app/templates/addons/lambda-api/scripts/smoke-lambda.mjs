@@ -125,6 +125,11 @@ try {
   }
   assert.equal(flushed, 3);
   const flushFailure = new Error("local fixture flush failure");
+  telemetry.forceFlush = async () => ({ outcome: "failed", flushedSpans: -1, error: flushFailure });
+  await assert.rejects(
+    running.handler(event("/users", "flush-result-failed"), context("flush-result-failed")),
+    (error) => error === flushFailure,
+  );
   telemetry.forceFlush = async () => {
     throw flushFailure;
   };
