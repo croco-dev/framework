@@ -237,7 +237,9 @@ function validWorkload(profile: InfrastructureProfile, workload: ObjectValue, id
         names.every((variable) => typeof variable === "string" && variable.length > 0) &&
         new Set(names).size === names.length &&
         environment.every(
-          (variable) => variable["value"] === undefined || variable["valueFrom"] === undefined,
+          (variable) =>
+            (variable["value"] === undefined || variable["valueFrom"] === undefined) &&
+            validEnvironmentSource(variable["valueFrom"]),
         )
       );
     })
@@ -374,7 +376,24 @@ function aws(
       : list(object(role["Properties"])["Policies"]).map((policy) =>
           object(object(policy)["PolicyDocument"]),
         );
-  const statements = policyDocs.flatMap((policy) => list(policy["Statement"])).map(object);
+  if (
+    policyDocs.some(
+      (policy) =>
+        policy["Statement"] === undefined ||
+        (policy["Version"] !== undefined &&
+          !["2012-10-17", "2008-10-17"].includes(String(policy["Version"]))) ||
+        (policy["Id"] !== undefined && typeof policy["Id"] !== "string") ||
+        Object.keys(policy).some((key) => !["Version", "Id", "Statement"].includes(key)),
+    )
+  )
+    return ["CROCO_INFRA_PERMISSION"];
+  const statements = policyDocs
+    .flatMap((policy) =>
+      Array.isArray(policy["Statement"]) ? policy["Statement"] : [policy["Statement"]],
+    )
+    .map(object);
+  if (statements.some((statement) => !validPermissionStatement(statement)))
+    return ["CROCO_INFRA_PERMISSION"];
   const exactArn = { "Fn::GetAtt": [binding["resource"], "Arn"] };
   const objectArn = { "Fn::Join": ["", [exactArn, "/*"]] };
   const requiredArn = resource["kind"] === "storage" ? objectArn : exactArn;
@@ -452,4 +471,61 @@ function validDate(value: unknown): boolean {
   if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
   const date = new Date(value);
   return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === value;
+}
+
+function validEnvironmentSource(value: unknown): boolean {
+  if (value === undefined) return true;
+  const source = object(value);
+  const fields = Object.keys(source);
+  const field = fields[0];
+  if (fields.length !== 1 || field === undefined) return false;
+  const reference = object(source[field]);
+  if (source[field] === null || typeof source[field] !== "object" || Array.isArray(source[field]))
+    return false;
+  if (field === "secretKeyRef" || field === "configMapKeyRef") {
+    return (
+      name(reference["name"]) &&
+      name(reference["key"]) &&
+      (reference["optional"] === undefined || typeof reference["optional"] === "boolean")
+    );
+  }
+  if (field === "fieldRef") return name(reference["fieldPath"]);
+  if (field === "resourceFieldRef") return name(reference["resource"]);
+  return false;
+}
+
+function validPermissionStatement(statement: ObjectValue): boolean {
+  const action = statement["Action"];
+  const actions = typeof action === "string" ? [action] : list(action);
+  const resource = statement["Resource"];
+  const resources = Array.isArray(resource) ? resource : [resource];
+  return (
+    Object.keys(statement).every((field) =>
+      ["Sid", "Effect", "Action", "Resource"].includes(field),
+    ) &&
+    statement["Effect"] === "Allow" &&
+    (statement["Sid"] === undefined || typeof statement["Sid"] === "string") &&
+    actions.length > 0 &&
+    actions.every((entry) => typeof entry === "string" && entry.length > 0) &&
+    resources.length > 0 &&
+    resources.every(isSupportedArn)
+  );
+}
+
+function isSupportedArn(value: unknown): boolean {
+  if (typeof value === "string") return value.length > 0;
+  const arn = object(value);
+  if (Object.keys(arn).length !== 1) return false;
+  const attribute = list(arn["Fn::GetAtt"]);
+  if (attribute.length === 2 && name(attribute[0]) && attribute[1] === "Arn") return true;
+  const join = list(arn["Fn::Join"]);
+  const parts = list(join[1]);
+  return (
+    join.length === 2 &&
+    join[0] === "" &&
+    parts.length === 2 &&
+    parts[1] === "/*" &&
+    Object.hasOwn(object(parts[0]), "Fn::GetAtt") &&
+    isSupportedArn(parts[0])
+  );
 }

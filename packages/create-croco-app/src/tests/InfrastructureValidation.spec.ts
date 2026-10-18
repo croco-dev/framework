@@ -288,3 +288,60 @@ it("rejects unnamed or conflicting Kubernetes Secret environment sources", () =>
     });
   }
 });
+
+it.each(["fieldRef", "configMapKeyRef"])(
+  "rejects competing Kubernetes %s and Secret sources",
+  (field) => {
+    const input = fixture("kubernetes");
+    input.artifact[0].spec.template.spec.containers[0].env[3].valueFrom[field] = {
+      name: "other",
+      key: "password",
+      fieldPath: "metadata.name",
+    };
+    expect(validateInfrastructure(input).diagnostics).toContainEqual({
+      code: "CROCO_INFRA_RUNTIME",
+    });
+  },
+);
+
+it.each(["NotAction", "NotResource"])("rejects conflicting IAM %s selectors", (field) => {
+  const input = fixture("aws-lambda");
+  input.artifact.Resources.Api.Properties.Policies[0].Statement[0][field] =
+    field === "NotAction" ? "dynamodb:DeleteItem" : "*";
+  expect(validateInfrastructure(input).diagnostics).toContainEqual({
+    code: "CROCO_INFRA_PERMISSION",
+    requirement: 0,
+  });
+});
+
+it("checks object-shaped inline IAM statements, including their deny semantics", () => {
+  const input = fixture("aws-lambda");
+  const props = input.artifact.Resources.Api.Properties;
+  props.Policies = props.Policies[0].Statement.map((statement: unknown) => ({
+    Version: "2012-10-17",
+    Statement: statement,
+  }));
+  expect(validateInfrastructure(input).ok).toBe(true);
+  props.Policies[0].Statement.Effect = "Deny";
+  expect(validateInfrastructure(input).ok).toBe(false);
+});
+
+it("accepts typed IAM selector arrays but rejects malformed elements", () => {
+  const input = fixture("aws-lambda");
+  const statement = input.artifact.Resources.Api.Properties.Policies[0].Statement[0];
+  statement.Action = [statement.Action];
+  statement.Resource = [statement.Resource];
+  expect(validateInfrastructure(input).ok).toBe(true);
+  statement.Action.push(42);
+  expect(validateInfrastructure(input).ok).toBe(false);
+  statement.Action.pop();
+  statement.Resource.push({ UnsupportedIntrinsic: "other-resource" });
+  expect(validateInfrastructure(input).ok).toBe(false);
+});
+
+it("rejects non-boolean Secret optional selectors", () => {
+  const input = fixture("kubernetes");
+  input.artifact[0].spec.template.spec.containers[0].env[3].valueFrom.secretKeyRef.optional =
+    "false";
+  expect(validateInfrastructure(input).ok).toBe(false);
+});
