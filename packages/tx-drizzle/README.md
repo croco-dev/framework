@@ -176,3 +176,59 @@ const adapter = createRlsTxAdapter(db, tenantProvider, {
 ## Peer Dependencies
 
 - `drizzle-orm` >=0.30.0
+
+## Hyperdrive local validation (experimental)
+
+The opt-in `@croco/tx-drizzle/hyperdrive` entrypoint runs one transaction on a fresh,
+request-owned `pg.Client`, reuses `createDrizzleTxAdapter`, and awaits connection close.
+Install `pg >=8.16.3 <9` only when selecting this entrypoint; the root entrypoint has
+no `pg` import. Supply the native binding explicitly. No global pool, environment
+lookup, boot DDL, automatic retry or fallback provider is installed.
+
+```typescript
+import { sql } from "drizzle-orm";
+import { withHyperdriveTransaction } from "@croco/tx-drizzle/hyperdrive";
+import type { HyperdriveBinding } from "@croco/tx-drizzle/hyperdrive";
+
+export async function readDatabase(env: { HYPERDRIVE: HyperdriveBinding }) {
+  return withHyperdriveTransaction(env.HYPERDRIVE, async (tx) => {
+    const result = await tx.execute(sql`select 1 as value`);
+    return result.rows;
+  });
+}
+```
+
+Call this inside the Worker request and await it before returning. Await all SQL in
+the callback; never retain its client or start concurrent transactions on that client.
+Concurrent invocations own separate connections. Hyperdrive owns upstream pooling;
+applications own admission/concurrency limits. Use `nodejs_compat` and a compatible
+Worker date, and configure the `HYPERDRIVE` binding in Wrangler. The driver requirement
+and request-owned connection follow [Cloudflare's node-postgres guidance](https://developers.cloudflare.com/hyperdrive/examples/connect-to-postgres/postgres-drivers-and-libraries/node-postgres/).
+
+`connectionTimeoutMs` defaults to 5000; `statementTimeoutMs` sets PostgreSQL
+`statement_timeout` (default 10000). This is a server statement budget, not a deadline
+for arbitrary JavaScript in the callback. `signal` and `operationDrainTimeoutMs`
+(default 5000) use the existing adapter's abort/drain boundary. Cancellation does not
+promise remote side-effect cancellation. Every invocation closes its connection,
+including failed acquisition and abort paths; a new call acquires a new connection.
+
+`HyperdriveTransactionProblem` retains only static phase, outcome, aborted and cleanup
+flags. Driver messages, SQL/parameters, connection strings and abort reasons are not
+retained, including as causes. Callback failures are redacted at this boundary too.
+`outcome: unknown` requires application reconciliation; `outcome: committed` means
+execution succeeded but cleanup/transport failed. Neither is automatically retryable.
+Tenant identity must come from application authorization; apply transaction-local
+`set_config` and a non-bypass-RLS database role. This helper does not authorize tenants.
+
+Run `pnpm --filter @croco/tx-drizzle test:workers` with Docker for actual local workerd
+and PostgreSQL. It exercises binding/driver import, concurrent claim/CAS, RLS isolation,
+commit/rollback/savepoints, abort, statement timeout, reconnect and redaction.
+The ordinary package suite includes deterministic lifecycle/error tests without Docker.
+
+**Live Cloudflare deployment: not verified. Hyperdrive proxy pooling/cache/failover:
+not verified. Provider certification: not certified.** Local Hyperdrive bindings
+connect to loopback PostgreSQL, bypassing the deployed service. Kubernetes/Lambda
+execution of this entrypoint is unverified; existing root plugin behavior is unchanged.
+Runtime catalog claims remain unchanged. Worker conformance for `execution-drizzle`,
+`cohort-drizzle`, `features-drizzle` and `engagement-drizzle`, their profile integration,
+and actual credential-backed deployment remain subsequent #3542 verification stages.

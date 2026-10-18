@@ -45908,6 +45908,75 @@
               "source": "./libs/RlsTxAdapter"
             }
           ]
+        },
+        {
+          "exportPath": "./hyperdrive",
+          "kind": "code",
+          "targets": [
+            {
+              "conditions": ["types", "import"],
+              "target": "./dist/hyperdrive.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
+              "target": "./dist/hyperdrive.d.ts"
+            },
+            {
+              "conditions": ["import"],
+              "target": "./dist/hyperdrive.mjs"
+            },
+            {
+              "conditions": ["require"],
+              "target": "./dist/hyperdrive.js"
+            }
+          ],
+          "sourceEntrypoint": "packages/tx-drizzle/src/hyperdrive.ts",
+          "runtimeExports": [
+            {
+              "name": "HyperdriveTransactionProblem",
+              "exportKind": "declaration",
+              "source": null,
+              "declarationKind": "class"
+            },
+            {
+              "name": "withHyperdriveTransaction",
+              "exportKind": "declaration",
+              "source": null,
+              "declarationKind": "function"
+            }
+          ],
+          "typeExports": [
+            {
+              "name": "HyperdriveBinding",
+              "exportKind": "declaration",
+              "source": null,
+              "declarationKind": "type"
+            },
+            {
+              "name": "HyperdriveTransactionClient",
+              "exportKind": "declaration",
+              "source": null,
+              "declarationKind": "type"
+            },
+            {
+              "name": "HyperdriveTransactionOptions",
+              "exportKind": "declaration",
+              "source": null,
+              "declarationKind": "type"
+            },
+            {
+              "name": "HyperdriveTransactionOutcome",
+              "exportKind": "declaration",
+              "source": null,
+              "declarationKind": "type"
+            },
+            {
+              "name": "HyperdriveTransactionPhase",
+              "exportKind": "declaration",
+              "source": null,
+              "declarationKind": "type"
+            }
+          ]
         }
       ]
     },

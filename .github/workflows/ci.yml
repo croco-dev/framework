@@ -1516,6 +1516,11 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Verify request-owned Hyperdrive transactions in local Workers
+        run: |
+          pnpm build --filter=@croco/tx-drizzle...
+          pnpm --filter @croco/tx-drizzle test:workers
+
       - name: Verify persistence concurrency against PostgreSQL
         env:
           ANALYTICS_POSTGRES_URL: postgresql://postgres:postgres@127.0.0.1:5432/croco_membership

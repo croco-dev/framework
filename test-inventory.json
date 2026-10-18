@@ -6091,6 +6091,18 @@
       "owner": "@croco/tx-drizzle"
     },
     {
+      "path": "packages/tx-drizzle/src/tests/HyperdriveTransaction.spec.ts",
+      "lane": "fast",
+      "qualifiers": ["coverage"],
+      "owner": "@croco/tx-drizzle"
+    },
+    {
+      "path": "packages/tx-drizzle/src/tests/HyperdriveWorkers.postgres.spec.ts",
+      "lane": "live",
+      "qualifiers": [],
+      "owner": "@croco/tx-drizzle"
+    },
+    {
       "path": "packages/tx-drizzle/src/tests/RealDb.spec.ts",
       "lane": "fast",
       "qualifiers": ["coverage"],

@@ -1,0 +1,95 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "tx-drizzle",
+      "classification": "runtime-adapter",
+      "reason": "Opt-in request-owned pg/Drizzle transaction entrypoint. Local workerd tests do not promote the root plugin or any domain adapter.",
+      "files": {
+        "packages/tx-drizzle/package.json": "214bb6eba3240d014e09797e6c6feb2a2c262451065634db26a68daaba3b0e4a",
+        "packages/tx-drizzle/src/hyperdrive.ts": "adccc007f1063957cdd6010ab80601685765096757e61dc47ee7c49a0da72959"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "unverified",
+          "reason": "This change carries only local Worker/PostgreSQL evidence; no infrastructure deployment is verified.",
+          "providers": ["@croco/tx-drizzle/hyperdrive", "pg", "drizzle-orm/node-postgres"],
+          "constraints": [
+            "No live Cloudflare Hyperdrive proxy/cache/failover or production credentials verified.",
+            "No durable domain adapter conformance or profile integration claim.",
+            "Per-call connections; applications own tenant authorization, concurrency limits and outcome reconciliation."
+          ],
+          "references": [
+            "packages/tx-drizzle/src/hyperdrive.ts",
+            "packages/tx-drizzle/src/tests/HyperdriveWorkers.postgres.spec.ts",
+            "packages/tx-drizzle/README.md"
+          ]
+        },
+        "aws-lambda": {
+          "result": "unverified",
+          "reason": "This change carries only local Worker/PostgreSQL evidence; no infrastructure deployment is verified.",
+          "providers": ["@croco/tx-drizzle/hyperdrive", "pg", "drizzle-orm/node-postgres"],
+          "constraints": [
+            "No live Cloudflare Hyperdrive proxy/cache/failover or production credentials verified.",
+            "No durable domain adapter conformance or profile integration claim.",
+            "Per-call connections; applications own tenant authorization, concurrency limits and outcome reconciliation."
+          ],
+          "references": [
+            "packages/tx-drizzle/src/hyperdrive.ts",
+            "packages/tx-drizzle/src/tests/HyperdriveWorkers.postgres.spec.ts",
+            "packages/tx-drizzle/README.md"
+          ]
+        },
+        "cloudflare": {
+          "result": "unverified",
+          "reason": "This change carries only local Worker/PostgreSQL evidence; no infrastructure deployment is verified.",
+          "providers": ["@croco/tx-drizzle/hyperdrive", "pg", "drizzle-orm/node-postgres"],
+          "constraints": [
+            "No live Cloudflare Hyperdrive proxy/cache/failover or production credentials verified.",
+            "No durable domain adapter conformance or profile integration claim.",
+            "Per-call connections; applications own tenant authorization, concurrency limits and outcome reconciliation."
+          ],
+          "references": [
+            "packages/tx-drizzle/src/hyperdrive.ts",
+            "packages/tx-drizzle/src/tests/HyperdriveWorkers.postgres.spec.ts",
+            "packages/tx-drizzle/README.md"
+          ],
+          "host": "workers"
+        }
+      }
+    },
+    {
+      "package": "problems-core",
+      "classification": "pure-contract",
+      "reason": "Generated additive Problem code registration for the redacted Hyperdrive boundary; no new transport or storage implementation.",
+      "files": {
+        "packages/problems-core/src/generated/problem-code-registry.ts": "a583343310a9dbb40e01f8752c1d4681121cc70104de6c40e230f8b0b053da48"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Generated Problem metadata is host-neutral.",
+          "providers": [],
+          "constraints": [],
+          "references": ["packages/problems-core/src/generated/problem-code-registry.ts"]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Generated Problem metadata is host-neutral.",
+          "providers": [],
+          "constraints": [],
+          "references": ["packages/problems-core/src/generated/problem-code-registry.ts"]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Generated Problem metadata is host-neutral.",
+          "providers": [],
+          "constraints": [],
+          "references": ["packages/problems-core/src/generated/problem-code-registry.ts"]
+        }
+      }
+    }
+  ]
+}

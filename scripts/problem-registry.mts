@@ -3357,6 +3357,17 @@ const recoveryMetadataByCode = {
     redactionPolicy: "public",
     severity: "info",
   }),
+  "tx-drizzle/hyperdrive-transaction-failed": recovery({
+    cause:
+      "Request-owned PostgreSQL connection, transaction or cleanup failed at the Hyperdrive boundary.",
+    userAction:
+      "Do not replay automatically. A committed outcome must not be retried; reconcile an unknown outcome first.",
+    operatorAction:
+      "Inspect the redacted phase, outcome, aborted and cleanupFailed fields. Correct binding or deadline configuration; acquire a fresh connection for any authorized new operation.",
+    retryability: "not-retryable",
+    redactionPolicy: "safe-message",
+    severity: "error",
+  }),
   CROCO_META_VITE_SSG_OUTPUT_CONFLICT: recovery({
     cause: "Multiple SSG routes map to the same static HTML output path.",
     userAction: "Remove or rename a conflicting SSG route before rebuilding.",

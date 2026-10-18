@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export type CrocoProblemRegistry = {
   readonly version: "croco.problem-code-registry.v1";
-  readonly problemCount: 1076;
+  readonly problemCount: 1077;
   readonly problems: readonly [
     {
       readonly code: "ACCESS_DENIED";
@@ -29066,6 +29066,34 @@ export type CrocoProblemRegistry = {
       ];
     },
     {
+      readonly code: "tx-drizzle/hyperdrive-transaction-failed";
+      readonly category: "InternalServerError";
+      readonly status: 500;
+      readonly title: "Internal Server Error";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#tx-drizzle-hyperdrive-transaction-failed";
+      readonly recovery: {
+        readonly cause: "Request-owned PostgreSQL connection, transaction or cleanup failed at the Hyperdrive boundary.";
+        readonly userAction: "Do not replay automatically. A committed outcome must not be retried; reconcile an unknown outcome first.";
+        readonly operatorAction: "Inspect the redacted phase, outcome, aborted and cleanupFailed fields. Correct binding or deadline configuration; acquire a fresh connection for any authorized new operation.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "safe-message";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.error";
+          readonly severity: "error";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/tx-drizzle/src/hyperdrive.ts";
+          readonly line: 28;
+          readonly column: 1;
+          readonly kind: "problem-class";
+        },
+      ];
+    },
+    {
       readonly code: "tx-drizzle/rls-configuration-invalid";
       readonly category: "InternalServerError";
       readonly status: 500;
@@ -30432,7 +30460,7 @@ export type CrocoProblemRegistry = {
 
 export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 1076,
+  problemCount: 1077,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -62949,6 +62977,40 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
         {
           file: "packages/tx-core/src/libs/problems/TransactionProblems.ts",
           line: 145,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "tx-drizzle/hyperdrive-transaction-failed",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#tx-drizzle-hyperdrive-transaction-failed",
+      recovery: {
+        cause:
+          "Request-owned PostgreSQL connection, transaction or cleanup failed at the Hyperdrive boundary.",
+        userAction:
+          "Do not replay automatically. A committed outcome must not be retried; reconcile an unknown outcome first.",
+        operatorAction:
+          "Inspect the redacted phase, outcome, aborted and cleanupFailed fields. Correct binding or deadline configuration; acquire a fresh connection for any authorized new operation.",
+        retryability: "not-retryable",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/tx-drizzle/src/hyperdrive.ts",
+          line: 28,
           column: 1,
           kind: "problem-class",
         },

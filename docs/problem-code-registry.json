@@ -1,6 +1,6 @@
 {
   "version": "croco.problem-code-registry.v1",
-  "problemCount": 1076,
+  "problemCount": 1077,
   "problems": [
     {
       "code": "ACCESS_DENIED",
@@ -31049,6 +31049,36 @@
         {
           "file": "packages/tx-core/src/libs/problems/TransactionProblems.ts",
           "line": 145,
+          "column": 1,
+          "kind": "problem-class"
+        }
+      ]
+    },
+    {
+      "code": "tx-drizzle/hyperdrive-transaction-failed",
+      "category": "InternalServerError",
+      "status": 500,
+      "title": "Internal Server Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#tx-drizzle-hyperdrive-transaction-failed",
+      "recovery": {
+        "cause": "Request-owned PostgreSQL connection, transaction or cleanup failed at the Hyperdrive boundary.",
+        "userAction": "Do not replay automatically. A committed outcome must not be retried; reconcile an unknown outcome first.",
+        "operatorAction": "Inspect the redacted phase, outcome, aborted and cleanupFailed fields. Correct binding or deadline configuration; acquire a fresh connection for any authorized new operation.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "safe-message",
+        "telemetry": {
+          "eventName": "croco.problem.error",
+          "severity": "error",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/tx-drizzle/src/hyperdrive.ts",
+          "line": 28,
           "column": 1,
           "kind": "problem-class"
         }

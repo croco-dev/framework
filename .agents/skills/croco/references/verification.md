@@ -143,3 +143,15 @@ GraphQL SDK against the declared schema and operations. Shared GraphQL and tRPC 
 run through Node fetch and the Lambda host envelope. Keep client-disconnect cancellation,
 subscription/streaming, deployed Cloudflare and full SaaS profile certification separate
 from these local results.
+
+## Hyperdrive transaction local evidence
+
+`@croco/tx-drizzle/hyperdrive` is an experimental opt-in, request-owned transaction
+boundary. Run `pnpm --filter @croco/tx-drizzle test` for deterministic lifecycle/error
+cases and `pnpm --filter @croco/tx-drizzle test:workers` with Docker for local workerd
+and PostgreSQL. Native binding emulation bypasses the deployed Hyperdrive proxy.
+Keep live deployment, proxy pooling/cache/failover, domain adapter conformance and
+profile integration explicitly unverified. Do not promote the root transaction plugin
+or durable adapter runtime claims from these local tests. Application authorization,
+transaction-local tenant settings, concurrency admission and reconciliation of an
+unknown outcome remain application responsibilities; never retry a committed outcome.
