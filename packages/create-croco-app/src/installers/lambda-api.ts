@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { copyFileSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import lambdaTelemetry from "../data/lambda-api-telemetry.json";
 import { mergeInto } from "../helpers/fs.js";
 import { getPackageVersion } from "../package-version.js";
 import { TEMPLATES_DIR } from "../template-path.js";
@@ -44,6 +45,24 @@ export function installLambdaApi(targetDir: string, context: Record<string, unkn
       source: { file: "package.json", symbol: `scripts.${command}` },
     });
   }
+  // Canonical project-map scanner output for the owned Lambda entrypoint.
+  map.telemetry.boundaries = [
+    ...map.telemetry.boundaries.filter(
+      (entry: { source: { file: string } }) =>
+        entry.source.file !== "apps/api-server/src/lambda.ts",
+    ),
+    ...lambdaTelemetry.boundaries,
+  ].sort((left, right) => {
+    const a = `${left.kind}:${left.id}`;
+    const b = `${right.kind}:${right.id}`;
+    return a < b ? -1 : a > b ? 1 : 0;
+  });
+  map.summary.telemetryBoundaries = map.telemetry.boundaries.length;
+  const runtimePath = join(targetDir, ".croco/manifest/runtime.json");
+  const runtime = JSON.parse(readFileSync(runtimePath, "utf8"));
+  runtime.telemetry = map.telemetry;
+  runtime.summary.telemetryBoundaries = map.summary.telemetryBoundaries;
+  writeFileSync(runtimePath, `${JSON.stringify(runtime, null, 2)}\n`);
   writeFileSync(mapPath, `${JSON.stringify(map, null, 2)}\n`);
   const readme = join(targetDir, "README.md");
   writeFileSync(
