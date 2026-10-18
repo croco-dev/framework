@@ -263,10 +263,18 @@ function addControllerSourceFiles(project: Project, patterns: readonly string[])
 }
 
 function resolveProjectSourceDependencies(project: Project): void {
-  project.resolveSourceFileDependencies();
   let addedDynamicDependency: boolean;
+  let pendingNodeFormats = isNodeModuleKind(project.getCompilerOptions().module);
 
   do {
+    if (pendingNodeFormats) {
+      // Rebuild cached resolutions after discovering files whose package format was unknown.
+      project.compilerOptions.set({});
+      for (const sourceFile of project.getSourceFiles()) {
+        applyNodeModuleFormat(sourceFile, project.getCompilerOptions());
+      }
+    }
+    project.resolveSourceFileDependencies();
     addedDynamicDependency = false;
     const compilerOptions = project.getCompilerOptions();
 
@@ -299,12 +307,21 @@ function resolveProjectSourceDependencies(project: Project): void {
       visit(sourceFile.compilerNode);
     }
 
-    if (addedDynamicDependency) project.resolveSourceFileDependencies();
-  } while (addedDynamicDependency);
-
-  for (const sourceFile of project.getSourceFiles()) {
-    applyNodeModuleFormat(sourceFile, project.getCompilerOptions());
-  }
+    pendingNodeFormats =
+      isNodeModuleKind(compilerOptions.module) &&
+      project
+        .getSourceFiles()
+        .some(
+          (sourceFile) =>
+            sourceFile.compilerNode.impliedNodeFormat !==
+            ts.getImpliedNodeFormatForFile(
+              sourceFile.getFilePath(),
+              undefined,
+              ts.sys,
+              compilerOptions,
+            ),
+        );
+  } while (addedDynamicDependency || pendingNodeFormats);
 }
 
 function createReferenceProjects(referencePaths: readonly string[]): Project[] {

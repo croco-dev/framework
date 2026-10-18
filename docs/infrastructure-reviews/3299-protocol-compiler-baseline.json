@@ -7,7 +7,7 @@
       "reason": "Use the TypeScript 6 compiler embedded in pinned ts-morph 28 for controller analysis/emission and recognize Node18/Node20 package boundaries. RPC/OpenAPI consume this shared build-time project; catalog runtime claims remain empty.",
       "files": {
         "packages/protocol-codegen/package.json": "baccce5ebff2947047815bda91e2bbe471c53985743763a18cccaa45a7fdee9f",
-        "packages/protocol-codegen/src/libs/ControllerProject.ts": "a205241d3c5caa312605debe757560085a3cbe3b156b62bdbcbc2b82b8bf2db7"
+        "packages/protocol-codegen/src/libs/ControllerProject.ts": "1b95d9f9fd7bbd6a6b65911c2798d4a191e0a4b8a80cc287e5e9c50e75e2a1d8"
       },
       "catalogRuntimes": [],
       "profiles": {

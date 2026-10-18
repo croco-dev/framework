@@ -88,6 +88,31 @@ describe("protocol compiler baseline", () => {
     }
   }
 
+  it("resolves transitive CommonJS imports using each source file's package format", () => {
+    const { root, configPath } = fixture("node20", "commonjs", false);
+    writeFileSync(join(root, "src/Controller.ts"), "export { value } from './Helper.js';");
+    writeFileSync(join(root, "src/Helper.ts"), "export { value } from './value';");
+    writeFileSync(join(root, "src/value.ts"), "export const value: number = 73;");
+    execFileSync(process.execPath, [tscPath, "--project", configPath], { encoding: "utf8" });
+    const session = createControllerProject({ cwd: root, controllers: "src/Controller.ts" });
+    try {
+      expect(session.getPreEmitDiagnostics().map((diagnostic) => diagnostic.getCode())).toEqual([]);
+      session.emit();
+      const value = execFileSync(
+        process.execPath,
+        [
+          "--input-type=module",
+          "--eval",
+          `const { value } = await import(${JSON.stringify(join(session.emitDir, "Controller.js"))}); console.log(value);`,
+        ],
+        { encoding: "utf8" },
+      );
+      expect(value.trim()).toBe("73");
+    } finally {
+      session.dispose();
+    }
+  }, 60_000);
+
   it.each([false, true])("rejects unknown module options (explicit config: %s)", (explicit) => {
     const { root, configPath } = fixture("unknown-module", "module", explicit);
     expect(() =>
