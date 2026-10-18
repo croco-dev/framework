@@ -4,6 +4,94 @@ import { createRoot } from "react-dom/client";
 import { ExperienceSlot } from "../../libs/ExperienceSlot";
 import type { ExperienceDecision, ExposureHandle } from "@croco/experience-core";
 
+/** Uses native browser keyboard input to verify the actual sequential focus boundaries. */
+export async function verifyModalTabBoundaries(
+  container: HTMLElement,
+  opener: HTMLButtonElement,
+  press: (key: string) => Promise<void>,
+  observe: (step: string) => Promise<void>,
+): Promise<number> {
+  const root = createRoot(container);
+  const decision: ExperienceDecision = {
+    decisionId: "tab-preview",
+    placementId: "help",
+    configId: "help",
+    policyVersion: 1,
+    scope: { appId: "synthetic", environment: "test", tenantId: "synthetic" },
+    subject: { kind: "preview", id: "preview" },
+    renderer: "modal",
+    content: { locale: "en", title: "Edit display label", body: "Local keyboard preview" },
+    selectedAt: "2026-09-30T00:00:00Z",
+    expiresAt: "2026-10-01T00:00:00Z",
+    reason: "matched",
+  };
+  const excluded = {
+    ordinary: () => null,
+    hiddenInput: () => h("input", { type: "hidden", value: "label", readOnly: true }),
+    hiddenAncestor: () => h("div", { hidden: true }, h("input")),
+    displayNone: () => h("div", { style: { display: "none" } }, h("input")),
+    visibilityHidden: () => h("input", { style: { visibility: "hidden" } }),
+    negativeTabIndex: () => h("input", { tabIndex: -2 }),
+    disabled: () => h("button", { disabled: true, tabIndex: 0 }, "Disabled"),
+    disabledFieldset: () => h("fieldset", { disabled: true }, h("input", { tabIndex: 0 })),
+    inertAncestor: () => h("div", { inert: true }, h("input")),
+  };
+  function assertFocus(selector: string, message: string) {
+    if (document.activeElement !== container.querySelector(selector)) throw new Error(message);
+  }
+  try {
+    for (const [name, hiddenControl] of Object.entries(excluded)) {
+      opener.focus();
+      flushSync(() =>
+        root.render(
+          h(ExperienceSlot, {
+            decision: { ...decision, decisionId: name },
+            preview: true,
+            renderers: {
+              modal: () =>
+                h(
+                  "div",
+                  null,
+                  hiddenControl(),
+                  h("label", null, "Label", h("input", { name: "label", defaultValue: "example" })),
+                  h("button", { type: "button", "data-action": true }, "Save label"),
+                  hiddenControl(),
+                ),
+            },
+          }),
+        ),
+      );
+      assertFocus("section > button", `${name}: missing initial Close focus`);
+      await press("Tab");
+      assertFocus('[name="label"]', `${name}: Close Tab did not reach the visible input`);
+      await press("Shift+Tab");
+      assertFocus("section > button", `${name}: first input Shift+Tab did not wrap to Close`);
+      await press("Shift+Tab");
+      assertFocus("[data-action]", `${name}: native backward navigation skipped the action`);
+      await press("Tab");
+      assertFocus("section > button", `${name}: native forward navigation skipped Close`);
+      await observe(`${name}: native Tab and Shift+Tab boundaries`);
+    }
+    flushSync(() =>
+      root.render(
+        h(ExperienceSlot, {
+          decision: { ...decision, decisionId: "close-only" },
+          preview: true,
+          renderers: { modal: excluded.hiddenInput },
+        }),
+      ),
+    );
+    for (const key of ["Tab", "Shift+Tab"]) {
+      await press(key);
+      assertFocus("section > button", `Close-only ${key} escaped the modal`);
+    }
+    await observe("Close-only: both directions stay inside modal");
+    return Object.keys(excluded).length + 1;
+  } finally {
+    flushSync(() => root.unmount());
+  }
+}
+
 /** Browser regression fixture for the modal's mounted focus lifecycle. */
 export async function verifyMountedExperienceSlot(
   container: HTMLElement,
