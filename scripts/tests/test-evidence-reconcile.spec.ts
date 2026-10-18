@@ -184,7 +184,10 @@ describe("test evidence reconciliation", () => {
         !path.includes("/spa-be-split/tests/journeys/") &&
         !path.includes("/addons/trpc-nextjs/"),
     );
-    expect(executedPaths).toHaveLength(19);
+    expect(executedPaths).toHaveLength(20);
+    const workerBootstrapPath =
+      "packages/create-croco-app/templates/saas/apps/api-server/src/tests/WorkerBootstrap.spec.ts";
+    expect(executedPaths).toContain(workerBootstrapPath);
     const requiredGeneratedPaths = selectGeneratedTestPathsForSmokeCases(
       [
         "goal-saas-api",
@@ -206,7 +209,16 @@ describe("test evidence reconciliation", () => {
         generatedExecutedPaths: paths,
       });
 
+    expect(requiredGeneratedPaths).toContain(workerBootstrapPath);
     expect(reconcile(executedPaths).diagnostics).toEqual([]);
+    expect(
+      reconcile(executedPaths.filter((path) => path !== workerBootstrapPath)).diagnostics,
+    ).toEqual([
+      expect.objectContaining({
+        code: "TEST_EVIDENCE_MISSING_REQUIRED",
+        path: workerBootstrapPath,
+      }),
+    ]);
     const firstRequiredPath = requiredGeneratedPaths[0];
     expect(
       reconcile(executedPaths.filter((path) => path !== firstRequiredPath)).diagnostics,

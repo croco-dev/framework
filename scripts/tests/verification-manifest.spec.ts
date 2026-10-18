@@ -1319,6 +1319,25 @@ describe("verification manifest", () => {
             readFileSync(join(projectDir, "croco.project-map.json"), "utf8"),
           );
           expect(projectMap.telemetry, smokeCase.name).toEqual(expectedProjectMap.telemetry);
+          const telemetryMarkers: Record<string, string> = {
+            "span-wrapper": "withSpan",
+            "telemetry-flush": "forceFlush",
+            "telemetry-runtime": "TelemetryRuntime",
+            "trace-decorator": "@Trace",
+          };
+          for (const boundary of projectMap.telemetry.boundaries as {
+            kind: string;
+            source: { file: string; line: number; column: number };
+          }[]) {
+            const sourceLine = readFileSync(join(projectDir, boundary.source.file), "utf8").split(
+              "\n",
+            )[boundary.source.line - 1];
+            expect(
+              sourceLine,
+              `${smokeCase.name}: ${boundary.source.file}:${boundary.source.line}`,
+            ).toContain(telemetryMarkers[boundary.kind]);
+            expect(sourceLine?.search(/\S/), smokeCase.name).toBe(boundary.source.column - 1);
+          }
         }
         if (smokeCase.name === "ai-saas-golden-path") {
           expect(options.preset).toBe("ai-saas");

@@ -180,7 +180,7 @@ describe("fresh scaffold contract artifacts", () => {
     );
     expect(existsSync(join(singleDir, "contract-graph.snapshot.json"))).toBe(true);
     expect(readFileSync(join(singleDir, "croco.project-map.json"), "utf8")).toContain(
-      "telemetry-flush:apps/api-server/src/generatedSaasProviderProfile.ts:547",
+      "telemetry-flush:apps/api-server/src/generatedSaasProviderProfile.ts:548",
     );
     expectProjectMapDependencies(singleDir);
 
