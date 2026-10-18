@@ -76,7 +76,15 @@ describe("DI graph consumer imports", () => {
       packageType: "module",
       source: "ts",
       graph: "ts",
-      runtime: "js",
+      importSpecifier: "./Service.js",
+    },
+    {
+      module: "NodeNext",
+      moduleResolution: undefined,
+      packageType: "module",
+      source: "ts",
+      graph: "ts",
+      importSpecifier: "./Service.js",
     },
     {
       module: "NodeNext",
@@ -84,7 +92,7 @@ describe("DI graph consumer imports", () => {
       packageType: "commonjs",
       source: "mts",
       graph: "mts",
-      runtime: "mjs",
+      importSpecifier: "./Service.mjs",
     },
     {
       module: "NodeNext",
@@ -92,7 +100,7 @@ describe("DI graph consumer imports", () => {
       packageType: "module",
       source: "cts",
       graph: "mts",
-      runtime: "cjs",
+      importSpecifier: "./Service.cjs",
     },
     {
       module: "NodeNext",
@@ -100,7 +108,7 @@ describe("DI graph consumer imports", () => {
       packageType: "commonjs",
       source: "ts",
       graph: "ts",
-      runtime: "js",
+      importSpecifier: "./Service.js",
     },
     {
       module: "CommonJS",
@@ -108,7 +116,7 @@ describe("DI graph consumer imports", () => {
       packageType: "commonjs",
       source: "ts",
       graph: "ts",
-      runtime: "js",
+      importSpecifier: "./Service",
     },
     {
       module: "ESNext",
@@ -116,11 +124,11 @@ describe("DI graph consumer imports", () => {
       packageType: "module",
       source: "ts",
       graph: "ts",
-      runtime: "js",
+      importSpecifier: "./Service",
     },
   ])(
-    "typechecks $module/$packageType .$source from .$graph graph",
-    ({ module, moduleResolution, packageType, source, graph, runtime }) => {
+    "typechecks $module/$moduleResolution/$packageType .$source from .$graph graph",
+    ({ module, moduleResolution, packageType, source, graph, importSpecifier }) => {
       const root = fixture({ module, moduleResolution }, packageType, source);
       typecheck(root);
       const result = compileDiGraph({ baseDir: root, outFile: `src/di.generated.${graph}` });
@@ -135,10 +143,23 @@ describe("DI graph consumer imports", () => {
       );
       expect(config?.fileNames).toContain(result.outFile);
       typecheck(root);
-      expect(result.code).toContain(`from "./Service.${runtime}"`);
+      expect(result.code).toContain(`from "${importSpecifier}"`);
     },
     30_000,
   );
+
+  it("keeps Bundler TSX source imports extensionless", () => {
+    const root = fixture(
+      { module: "ESNext", moduleResolution: "Bundler", jsx: "preserve" },
+      "module",
+      "tsx",
+    );
+    typecheck(root);
+    const result = compileDiGraph({ baseDir: root, outFile: "src/di.generated.ts" });
+    writeDiGraph(result);
+    typecheck(root);
+    expect(result.code).toContain('from "./Service"');
+  }, 30_000);
 
   it.each([
     { jsx: "preserve", runtime: "jsx" },
@@ -180,65 +201,73 @@ describe("DI graph consumer imports", () => {
     30_000,
   );
 
-  it("resolves extensionless package graph declarations to their existing runtime file", () => {
-    const root = fixture({ module: "NodeNext", moduleResolution: "NodeNext" }, "module", "ts");
-    const libraryDir = path.join(root, "node_modules/@fixture/library");
-    const linkedLibraryDir = path.join(root, "linked-library");
-    fs.mkdirSync(linkedLibraryDir);
-    fs.mkdirSync(path.dirname(libraryDir), { recursive: true });
-    fs.symlinkSync(linkedLibraryDir, libraryDir, "dir");
-    fs.writeFileSync(
-      path.join(libraryDir, "package.json"),
-      JSON.stringify({
-        name: "@fixture/library",
-        type: "module",
-        exports: { "./croco-di.json": "./croco-di.json" },
-      }),
-    );
-    const library = compileDiGraph({ baseDir: root, scanDirs: [] });
-    fs.writeFileSync(
-      path.join(libraryDir, "croco-di.json"),
-      JSON.stringify(
-        createDiPackageDescriptor(library, {
-          packageName: "@fixture/library",
-          packageVersion: "1.0.0",
-          graphImport: "./di.generated",
+  it.each(["NodeNext", "Bundler"])(
+    "resolves %s package graph declarations to their existing runtime file",
+    (moduleResolution) => {
+      const root = fixture(
+        { module: moduleResolution === "NodeNext" ? "NodeNext" : "ESNext", moduleResolution },
+        "module",
+        "ts",
+      );
+      const libraryDir = path.join(root, "node_modules/@fixture/library");
+      const linkedLibraryDir = path.join(root, "linked-library");
+      fs.mkdirSync(linkedLibraryDir);
+      fs.mkdirSync(path.dirname(libraryDir), { recursive: true });
+      fs.symlinkSync(linkedLibraryDir, libraryDir, "dir");
+      fs.writeFileSync(
+        path.join(libraryDir, "package.json"),
+        JSON.stringify({
+          name: "@fixture/library",
+          type: "module",
+          exports: { "./croco-di.json": "./croco-di.json" },
         }),
-      ),
-    );
-    fs.writeFileSync(
-      path.join(libraryDir, "di.generated.d.ts"),
-      'export declare const generatedDiGraph: import("@croco/framework-context").GeneratedDiGraph;',
-    );
-    fs.writeFileSync(
-      path.join(libraryDir, "di.generated.js"),
-      "export const generatedDiGraph = { providers: [], roots: [] };",
-    );
-    typecheck(root);
-    const result = compileDiGraph({
-      baseDir: root,
-      outFile: "src/di.generated.ts",
-      packageDescriptors: ["@fixture/library/croco-di.json"],
-    });
-    writeDiGraph(result);
-    typecheck(root);
-    const generated = ts.createSourceFile(
-      result.outFile,
-      result.code,
-      ts.ScriptTarget.Latest,
-      true,
-    );
-    const references = generated.statements.flatMap((statement) =>
-      ts.isImportDeclaration(statement) && ts.isStringLiteral(statement.moduleSpecifier)
-        ? [statement.moduleSpecifier.text]
-        : [],
-    );
-    const libraryImport = references.find((reference) => reference.endsWith("/di.generated.js"));
-    expect(libraryImport).toBeDefined();
-    expect(fs.existsSync(path.resolve(path.dirname(result.outFile), libraryImport ?? ""))).toBe(
-      true,
-    );
-  }, 30_000);
+      );
+      const library = compileDiGraph({ baseDir: root, scanDirs: [] });
+      fs.writeFileSync(
+        path.join(libraryDir, "croco-di.json"),
+        JSON.stringify(
+          createDiPackageDescriptor(library, {
+            packageName: "@fixture/library",
+            packageVersion: "1.0.0",
+            graphImport: "./di.generated",
+          }),
+        ),
+      );
+      fs.writeFileSync(
+        path.join(libraryDir, "di.generated.d.ts"),
+        'export declare const generatedDiGraph: import("@croco/framework-context").GeneratedDiGraph;',
+      );
+      fs.writeFileSync(
+        path.join(libraryDir, "di.generated.js"),
+        "export const generatedDiGraph = { providers: [], roots: [] };",
+      );
+      typecheck(root);
+      const result = compileDiGraph({
+        baseDir: root,
+        outFile: "src/di.generated.ts",
+        packageDescriptors: ["@fixture/library/croco-di.json"],
+      });
+      writeDiGraph(result);
+      typecheck(root);
+      const generated = ts.createSourceFile(
+        result.outFile,
+        result.code,
+        ts.ScriptTarget.Latest,
+        true,
+      );
+      const references = generated.statements.flatMap((statement) =>
+        ts.isImportDeclaration(statement) && ts.isStringLiteral(statement.moduleSpecifier)
+          ? [statement.moduleSpecifier.text]
+          : [],
+      );
+      const libraryImport = references.find((reference) => reference.endsWith("/di.generated.js"));
+      expect(libraryImport).toBeDefined();
+      expect(fs.existsSync(path.resolve(path.dirname(result.outFile), libraryImport ?? ""))).toBe(
+        true,
+      );
+    },
+    30_000,
+  );
 
   it("rejects generated ESM syntax in a CommonJS graph with verbatimModuleSyntax", () => {
     const root = fixture(

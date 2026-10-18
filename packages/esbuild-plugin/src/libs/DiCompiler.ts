@@ -1748,11 +1748,22 @@ function toGeneratedImport(
     ? moduleSpecifier
     : (ts.resolveModuleName(moduleSpecifier, outFile, compilerOptions, ts.sys).resolvedModule
         ?.resolvedFileName ?? moduleSpecifier);
+  const moduleKind = compilerOptions.module ?? ts.ModuleKind.CommonJS;
+  const nodeResolution =
+    compilerOptions.moduleResolution === ts.ModuleResolutionKind.Node16 ||
+    compilerOptions.moduleResolution === ts.ModuleResolutionKind.NodeNext ||
+    (compilerOptions.moduleResolution === undefined &&
+      moduleKind >= ts.ModuleKind.Node16 &&
+      moduleKind <= ts.ModuleKind.NodeNext);
+  const tsImportExtension = nodeResolution ? ".js" : "";
+  const tsxImportExtension =
+    nodeResolution && compilerOptions.jsx === ts.JsxEmit.Preserve ? ".jsx" : tsImportExtension;
   const relative = normalizePath(path.relative(path.dirname(outFile), sourceSpecifier))
     .replace(/(?:\.d)?\.mts$/u, ".mjs")
     .replace(/(?:\.d)?\.cts$/u, ".cjs")
-    .replace(/\.tsx$/u, compilerOptions.jsx === ts.JsxEmit.Preserve ? ".jsx" : ".js")
-    .replace(/(?:\.d)?\.ts$/u, ".js");
+    .replace(/\.tsx$/u, tsxImportExtension)
+    .replace(/\.d\.ts$/u, ".js")
+    .replace(/\.ts$/u, tsImportExtension);
   return relative.startsWith(".") ? relative : `./${relative}`;
 }
 
