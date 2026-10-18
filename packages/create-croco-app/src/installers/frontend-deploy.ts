@@ -1,6 +1,7 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { mergeInto, renderHandlebars } from "../helpers/fs.js";
+import { mergePackageJson } from "../helpers/pkg-json.js";
 import { TEMPLATES_DIR } from "../template-path.js";
 import type { GeneratorFrontendDeploy } from "../types.js";
 
@@ -58,6 +59,22 @@ export function installFrontendDeploy(
     );
     mergeInto(join(dockerTemplateDir, "public"), join(appTargetDir, "public"), {});
     return;
+  }
+
+  if (options.frontendDeploy === "opennext") {
+    mergePackageJson(appTargetDir, {
+      scripts: {
+        "build:worker": "opennextjs-cloudflare build",
+        preview: "pnpm build:worker && opennextjs-cloudflare preview",
+        deploy: "pnpm build:worker && opennextjs-cloudflare deploy",
+      },
+      dependencies: {
+        "@opennextjs/cloudflare": "1.19.11",
+      },
+      devDependencies: {
+        wrangler: "^4.86.0",
+      },
+    });
   }
 
   const addonKey = `frontend-${options.frontendDeploy}`;

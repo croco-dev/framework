@@ -1436,9 +1436,10 @@ const smokeCaseDefinitionsWithoutLint: readonly Omit<SmokeCase, "tier" | "adviso
       },
       { label: "typecheck", packagePath: ["apps", "web"], args: ["typecheck"] },
       {
-        label: "OpenNext deployment files",
+        label: "OpenNext Worker build",
         packagePath: ["apps", "web"],
-        paths: ["open-next.config.ts", "wrangler.toml"],
+        args: ["build:worker"],
+        paths: [".open-next/worker.js", ".open-next/assets"],
       },
     ],
   },
