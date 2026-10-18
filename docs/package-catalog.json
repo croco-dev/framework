@@ -1745,6 +1745,8 @@
         ],
         "features": [
           "token auth",
+          "Workers alpha subset via /workers: cookie/bearer, session status/revoke, tenant mapping; nodejs_compat required",
+          "Workers webhook and user/organization administration unclaimed; full SaaS bootstrap and live certification unverified",
           "session management",
           "organizations",
           "webhooks",

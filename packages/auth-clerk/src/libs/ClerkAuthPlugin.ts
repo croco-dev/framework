@@ -19,6 +19,11 @@ export type ClerkAuthPluginOptions = ClerkAuthOptions & {
 export const clerkAuth: PluginFactory<ClerkAuthPluginOptions> = (options) => {
   const authOptions: ClerkAuthOptions = Object.freeze({
     secretKey: options.secretKey,
+    ...(options.jwtKey === undefined ? {} : { jwtKey: options.jwtKey }),
+    ...(options.audience === undefined ? {} : { audience: options.audience }),
+    ...(options.authorizedParties === undefined
+      ? {}
+      : { authorizedParties: [...options.authorizedParties] }),
     ...(options.publishableKey ? { publishableKey: options.publishableKey } : {}),
   });
   const diagnosticsProvider = new ClerkAuthDiagnosticsProvider(

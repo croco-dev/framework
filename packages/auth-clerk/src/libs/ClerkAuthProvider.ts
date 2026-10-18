@@ -9,6 +9,9 @@ import type { AuthorizationHeaderCarrier } from "./types";
 export type ClerkAuthOptions = {
   secretKey: string;
   publishableKey?: string;
+  jwtKey?: string;
+  audience?: string | string[];
+  authorizedParties?: string[];
 };
 
 function isObjectRecord(value: unknown): value is Record<string, unknown> {
@@ -114,6 +117,8 @@ function getV2OrganizationClaims(payload: Record<string, unknown>): {
 export class ClerkAuthProvider implements AuthProvider<AuthorizationHeaderCarrier> {
   constructor(private options: ClerkAuthOptions) {}
 
+  protected validateClaims(_payload: Record<string, unknown>): void {}
+
   async authenticate(request: AuthorizationHeaderCarrier): Promise<AuthUser | null> {
     const authHeader = request.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
@@ -126,10 +131,19 @@ export class ClerkAuthProvider implements AuthProvider<AuthorizationHeaderCarrie
     }
 
     try {
-      const verified = await verifyToken(token, { secretKey: this.options.secretKey });
+      const verified = await verifyToken(token, {
+        secretKey: this.options.secretKey,
+        ...(this.options.jwtKey === undefined ? {} : { jwtKey: this.options.jwtKey }),
+        ...(this.options.audience === undefined ? {} : { audience: this.options.audience }),
+        ...(this.options.authorizedParties === undefined
+          ? {}
+          : { authorizedParties: this.options.authorizedParties }),
+      });
       if (!isObjectRecord(verified)) {
         throw new ClerkMalformedClaimProblem("sub");
       }
+
+      this.validateClaims(verified);
 
       const userId = getStringClaim(verified, "sub");
       if (!userId) {

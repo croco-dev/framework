@@ -1870,6 +1870,17 @@ describe("E2E: generate()", () => {
             "productionState": "unavailable",
             "provider": "No verified Worker auth provider selected",
             "status": "unavailable",
+            "verifiedSubset": {
+              "entrypoint": "@croco/auth-clerk/workers",
+              "factoryExport": "clerkWorkersAuth",
+              "limitations": [
+                "Alpha cookie/bearer authentication and fresh session status/revoke; synthetic upstream in actual workerd with nodejs_compat.",
+                "Trusted audience, authorizedParties and target tenant configuration required; permissions retain signed token lifetime.",
+                "Webhook delivery and user/organization administration are not claimed on Workers.",
+                "Full SaaS bootstrap remains documentation-only (#3537); live Clerk service is not certified.",
+              ],
+              "verification": "pnpm --filter @croco/auth-clerk test",
+            },
             "zeroCredentialState": "unavailable",
           },
           {
