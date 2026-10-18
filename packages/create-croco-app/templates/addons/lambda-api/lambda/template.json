@@ -1,0 +1,162 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Transform": "AWS::Serverless-2016-10-31",
+  "Description": "Minimal Croco Lambda HTTP API; local fixtures do not certify AWS operation.",
+  "Parameters": {
+    "WebOrigin": {
+      "Type": "String",
+      "Default": "http://localhost:5173"
+    },
+    "TelemetryEnabled": {
+      "Type": "String",
+      "Default": "false",
+      "AllowedValues": ["true", "false"]
+    },
+    "OtlpEndpoint": {
+      "Type": "String",
+      "Default": ""
+    },
+    "TelemetryHeadersSecretArn": {
+      "Type": "String",
+      "Default": ""
+    }
+  },
+  "Conditions": {
+    "HasTelemetryHeaders": {
+      "Fn::Not": [
+        {
+          "Fn::Equals": [
+            {
+              "Ref": "TelemetryHeadersSecretArn"
+            },
+            ""
+          ]
+        }
+      ]
+    }
+  },
+  "Resources": {
+    "HttpApi": {
+      "Type": "AWS::Serverless::HttpApi",
+      "Properties": {
+        "Auth": {
+          "DefaultAuthorizer": "AWS_IAM",
+          "EnableIamAuthorizer": true
+        }
+      }
+    },
+    "ApiLogGroup": {
+      "Type": "AWS::Logs::LogGroup",
+      "Properties": {
+        "LogGroupName": {
+          "Fn::Sub": "/aws/lambda/${AWS::StackName}-api"
+        },
+        "RetentionInDays": 14
+      }
+    },
+    "ApiRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "lambda.amazonaws.com"
+              },
+              "Action": "sts:AssumeRole"
+            }
+          ]
+        },
+        "Policies": [
+          {
+            "PolicyName": "WriteFunctionLogs",
+            "PolicyDocument": {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Action": ["logs:CreateLogStream", "logs:PutLogEvents"],
+                  "Resource": {
+                    "Fn::GetAtt": ["ApiLogGroup", "Arn"]
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "ApiFunction": {
+      "Type": "AWS::Serverless::Function",
+      "DependsOn": ["ApiLogGroup"],
+      "Properties": {
+        "FunctionName": {
+          "Fn::Sub": "${AWS::StackName}-api"
+        },
+        "Runtime": "nodejs24.x",
+        "Architectures": ["x86_64"],
+        "Handler": "dist/lambda.handler",
+        "CodeUri": "../.lambda-package/",
+        "Role": {
+          "Fn::GetAtt": ["ApiRole", "Arn"]
+        },
+        "Timeout": 30,
+        "MemorySize": 512,
+        "ReservedConcurrentExecutions": 1,
+        "Environment": {
+          "Variables": {
+            "NODE_ENV": "production",
+            "WEB_ORIGIN": {
+              "Ref": "WebOrigin"
+            },
+            "TELEMETRY_ENABLED": {
+              "Ref": "TelemetryEnabled"
+            },
+            "OTEL_EXPORTER_OTLP_TRACES_ENDPOINT": {
+              "Ref": "OtlpEndpoint"
+            },
+            "OTEL_EXPORTER_OTLP_HEADERS": {
+              "Fn::If": [
+                "HasTelemetryHeaders",
+                {
+                  "Fn::Sub": "{{{lambdaTelemetrySecretReference}}}"
+                },
+                {
+                  "Ref": "AWS::NoValue"
+                }
+              ]
+            }
+          }
+        },
+        "Events": {
+          "Api": {
+            "Type": "HttpApi",
+            "Properties": {
+              "ApiId": {
+                "Ref": "HttpApi"
+              },
+              "Path": "/{proxy+}",
+              "Method": "ANY",
+              "PayloadFormatVersion": "2.0"
+            }
+          }
+        }
+      }
+    }
+  },
+  "Metadata": {
+    "CrocoProfile": "lambda-api",
+    "DeadLetterQueue": "not-applicable: synchronous HTTP API; no asynchronous event sources",
+    "Providers": "process-local sample state only; no configured SaaS providers",
+    "Telemetry": "OTLP; invocation-owned flush; no exec wrapper or layer"
+  },
+  "Outputs": {
+    "ApiUrl": {
+      "Value": {
+        "Fn::Sub": "https://${HttpApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}"
+      }
+    }
+  }
+}

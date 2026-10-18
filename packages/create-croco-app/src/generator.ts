@@ -55,6 +55,7 @@ import {
   renderSaasSecretsChecklist,
 } from "./saas-provider-profiles.js";
 import { installKubernetes, writeKubernetesProfileManifest } from "./installers/kubernetes.js";
+import { installLambdaApi, writeLambdaApiManifest } from "./installers/lambda-api.js";
 import { TEMPLATES_DIR } from "./template-path.js";
 import {
   createStagingDirectory,
@@ -159,6 +160,8 @@ async function generateProject(
     }
     if (options.backendDeploy === "kubernetes") {
       installKubernetes(targetDir, vars);
+    } else if (options.backendDeploy === "lambda") {
+      installLambdaApi(targetDir, vars);
     }
     sortScaffoldProjectMap(targetDir);
     if (options.agentRules) {
@@ -661,6 +664,8 @@ async function finalize(
 
   if (options.backendDeploy === "kubernetes") {
     writeKubernetesProfileManifest(targetDir);
+  } else if (options.preset === "production-app" && options.backendDeploy === "lambda") {
+    writeLambdaApiManifest(targetDir);
   }
 
   // Step 10: git init
@@ -743,6 +748,18 @@ function createGeneratedRuntimeComposition(
         name: "cloudflare-workers-workspace",
         format: "esm",
         constraints: ["cloudflare-nodejs-compat", "web-standard-apis"],
+      },
+    };
+  }
+
+  if (options.preset === "production-app" && platform === "lambda") {
+    return {
+      host: { platform, lifecycle: "invocation", packageName: "@croco/preset-lambda" },
+      transports,
+      buildTarget: {
+        name: "lambda-function",
+        format: "cjs",
+        outputDirectory: "apps/api-server/dist",
       },
     };
   }

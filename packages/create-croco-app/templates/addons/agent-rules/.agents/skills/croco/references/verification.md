@@ -43,3 +43,21 @@ controlled Pod termination and endpoint removal evidence. Without it, report
 `liveCluster: not-verified` and `certification: not-certified`. One replica with Recreate
 reflects the sample's process-local repository/limiter and restart data loss; durable
 provider composition and shared typed binding (#3547) are separate integration work.
+
+## Lambda HTTP API generation
+
+`--preset production-app --backend-deploy lambda` selects the minimal API profile using
+`@croco/preset-lambda`, the generated DI graph and application-owned `nodeTelemetry()`.
+Inspect `croco-infrastructure-profile.manifest.json`, the Lambda runtime capability manifest
+and `lambda/template.json`. Run generated `pnpm lambda:package`, `pnpm lambda:check` and
+`pnpm lambda:smoke`, plus independent `sam validate --lint --template-file lambda/template.json`.
+The smoke loads the production deployment directory and invokes API Gateway v2 events;
+fixture auth/cookies and local concurrent context/flush tests do not prove gateway IAM.
+
+Keep the SAM default IAM authorizer, function-scoped log permissions, execution budgets and
+optional OTLP header secret reference under review. `lambda:lock` adopts reviewed hashes and
+clears verification claims. Missing owned files cannot be adopted. This profile has process-local
+sample storage and no async event source/DLQ, SQS, scheduler or configured SaaS providers.
+It does not complete the documentation-only `saas-lambda` composition or shared binding work.
+Signed/unsigned live requests, secret resolution, telemetry delivery and AWS operational checks
+remain separate: `liveAws: not-verified`, `certification: not-certified` until actually verified.

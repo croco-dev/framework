@@ -16,7 +16,7 @@ import {
   rateLimitHttpMiddleware,
   securityHeadersMiddleware,
 } from "@croco/transports-http";
-import type { ApplicationRuntime } from "@croco/framework-module";
+import type { ApplicationRuntime, CrocoApplicationDefinition } from "@croco/framework-module";
 import type { Constructor } from "@croco/protocols-rest";
 import type { CrocoApp, MiddlewareFunction } from "@croco/transports-http";
 import { generatedDiGraph } from "../.croco/di.generated";
@@ -28,6 +28,7 @@ const OPERATIONAL_RATE_LIMIT_BYPASS_PATHS = new Set(["/ops/health", "/ops/metric
 const controllers = [UserController];
 
 export type CreateCrocoAppOptions = {
+  readonly application?: CrocoApplicationDefinition;
   readonly extraControllers?: readonly Constructor[];
   readonly extraMiddlewares?: readonly MiddlewareFunction[];
 };
@@ -48,24 +49,21 @@ export function createCrocoDiGraphRoots(
 }
 
 export function createCrocoApp(options: CreateCrocoAppOptions = {}): RuntimeOwnedCrocoApp {
-  const runtime = createApplicationRuntime(
-    {},
-    {
-      ...generatedDiGraph,
-      providers: [
-        ...generatedDiGraph.providers,
-        {
-          token: HttpExceptionFilter,
-          tokenId: "@croco/protocols-rest#HttpExceptionFilter",
-          debugName: "HttpExceptionFilter",
-          scope: "singleton",
-          dependencies: [],
-          factory: () => new HttpExceptionFilter(),
-          sourceLocation: { file: "src/app.ts", line: 1, column: 1 },
-        },
-      ],
-    },
-  );
+  const runtime = createApplicationRuntime(options.application ?? {}, {
+    ...generatedDiGraph,
+    providers: [
+      ...generatedDiGraph.providers,
+      {
+        token: HttpExceptionFilter,
+        tokenId: "@croco/protocols-rest#HttpExceptionFilter",
+        debugName: "HttpExceptionFilter",
+        scope: "singleton",
+        dependencies: [],
+        factory: () => new HttpExceptionFilter(),
+        sourceLocation: { file: "src/app.ts", line: 1, column: 1 },
+      },
+    ],
+  });
 
   return runtime.run(() => {
     initializeUserRuntime();

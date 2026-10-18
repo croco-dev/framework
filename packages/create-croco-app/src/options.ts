@@ -540,7 +540,10 @@ function assertProductionOptions(
   }
   if (
     options.backendDeploy &&
-    !(preset === "production-app" && options.backendDeploy === "kubernetes")
+    !(
+      preset === "production-app" &&
+      (options.backendDeploy === "kubernetes" || options.backendDeploy === "lambda")
+    )
   ) {
     throwUnsupportedPresetOption("--backend-deploy", preset);
   }

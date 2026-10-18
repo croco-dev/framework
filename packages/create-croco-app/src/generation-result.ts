@@ -114,7 +114,10 @@ function createGenerationArtifacts(options: GeneratorOptions): GenerationArtifac
     { kind: "runtime-capability", path: "croco-runtime-capability.manifest.json" },
   ];
 
-  if (options.backendDeploy === "kubernetes") {
+  if (
+    options.backendDeploy === "kubernetes" ||
+    (options.preset === "production-app" && options.backendDeploy === "lambda")
+  ) {
     artifacts.push({
       kind: "infrastructure-profile",
       path: "croco-infrastructure-profile.manifest.json",
@@ -153,13 +156,16 @@ function createGenerationNextSteps(
     commands.push({ command: "pnpm", args: ["install"], cwd: targetDir });
   }
 
-  const nextScript = isSaasPreset(options.preset)
-    ? runtimePlatform === "node"
-      ? "dev:api"
-      : runtimePlatform === "lambda"
-        ? "build:lambda"
-        : "build:worker"
-    : "dev";
+  const nextScript =
+    options.preset === "production-app" && runtimePlatform === "lambda"
+      ? "lambda:package"
+      : isSaasPreset(options.preset)
+        ? runtimePlatform === "node"
+          ? "dev:api"
+          : runtimePlatform === "lambda"
+            ? "build:lambda"
+            : "build:worker"
+        : "dev";
 
   commands.push({ command: "pnpm", args: [nextScript], cwd: targetDir });
 

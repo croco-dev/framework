@@ -155,3 +155,20 @@ are in memory, so the Deployment uses one replica and Recreate; restart loses sa
 Compose durable providers and verify their readiness before deploying a stateful service.
 Typed external-provider binding integration remains tracked in #3547. No full SaaS or
 live Kubernetes support is implied by local schema, build or Host smoke results.
+
+## Lambda HTTP API
+
+Generate a minimal Lambda API with `--preset production-app --backend-deploy lambda`.
+Run generated `pnpm lambda:package`, `pnpm lambda:check` and `pnpm lambda:smoke`, then
+independently validate `lambda/template.json` with `sam validate --lint` before deployment.
+The SAM template requires gateway IAM authentication and grants the execution role access
+only to its log group. It records timeout/concurrency and an optional Secrets Manager
+reference for OTLP headers; no permanent key or async event source is installed.
+
+The deployment directory includes the compiled handler and production dependencies. Its local
+API Gateway v2 fixture checks invoke/Problem behavior, fixture-only auth/cookies, concurrent
+request context and invocation flush failures. This does not verify AWS IAM enforcement,
+secret resolution or telemetry delivery. Live AWS and certification remain unverified.
+The sample uses process-local state; the SPA is separate. `saas-lambda` remains documentation-only,
+and this minimal API does not claim Clerk, Polar, QStash, SQS or scheduler support.
+See the generated `lambda/README.md` for packaging, drift adoption and live validation boundaries.

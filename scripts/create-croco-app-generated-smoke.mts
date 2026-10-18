@@ -1688,6 +1688,44 @@ const smokeCaseDefinitionsWithoutLint: readonly Omit<SmokeCase, "tier" | "adviso
     ],
   },
   {
+    name: "lambda-api",
+    args: [
+      "--preset",
+      "production-app",
+      "--backend-deploy",
+      "lambda",
+      "--scope",
+      "@smoke",
+      "--no-install",
+      "--no-git",
+    ],
+    runtimeTarget: "lambda",
+    matrixTargets: ["spa-be-split"],
+    validations: [
+      {
+        label: "install-immediate contract verify",
+        readOnly: true,
+        recovery: "pnpm codegen",
+        args: ["contract:verify"],
+      },
+      runtimeCapabilityManifestValidation("saas-lambda"),
+      { label: "Lambda API typecheck", packagePath: ["apps", "api-server"], args: ["typecheck"] },
+      { label: "test", packagePath: ["apps", "api-server"], args: ["test"] },
+      {
+        label: "Lambda deployment package",
+        args: ["lambda:package"],
+        paths: [".lambda-package/dist/lambda.js", ".lambda-package/node_modules"],
+      },
+      {
+        label: "Lambda profile drift",
+        readOnly: true,
+        recovery: "Review changes before pnpm lambda:lock",
+        args: ["lambda:check"],
+      },
+      { label: "Packaged Lambda Host invocation", args: ["lambda:smoke"] },
+    ],
+  },
+  {
     name: "kubernetes-node-api",
     args: [
       "--preset",
