@@ -192,9 +192,19 @@ function ExperienceSlotState(props: ExperienceSlotProps): ReactElement | null {
             if (event.key === "Tab" && container.current) {
               const focusable = Array.from(
                 container.current.querySelectorAll<HTMLElement>(
-                  "a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex='-1'])",
+                  "a[href],button,input,select,textarea,[tabindex]",
                 ),
-              );
+              ).filter((element) => {
+                if (
+                  element.tabIndex < 0 ||
+                  element.matches(':disabled,input[type="hidden"]') ||
+                  element.closest("[hidden],[inert]") ||
+                  element.getClientRects().length === 0
+                )
+                  return false;
+                const { visibility } = getComputedStyle(element);
+                return visibility !== "hidden" && visibility !== "collapse";
+              });
               const first = focusable[0];
               const last = focusable.at(-1);
               if (event.shiftKey && document.activeElement === first && last) {

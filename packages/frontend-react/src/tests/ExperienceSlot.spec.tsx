@@ -61,8 +61,8 @@ describe("ExperienceSlot mounted focus", () => {
       const runner = fileURLToPath(new URL("./experienceSlotBrowser.cjs", import.meta.url));
       const output = await runExperienceSlotProcess(runner);
       expect(JSON.parse(output)).toEqual([
-        { viewport: { width: 1280, height: 720 }, steps: 9 },
-        { viewport: { width: 390, height: 844 }, steps: 9 },
+        { viewport: { width: 1280, height: 720 }, steps: 9, tabCases: 10 },
+        { viewport: { width: 390, height: 844 }, steps: 9, tabCases: 10 },
       ]);
     },
     TEST_TIMEOUT_MS,

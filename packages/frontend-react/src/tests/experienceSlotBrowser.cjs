@@ -62,7 +62,7 @@ diagnostic("dependencies", "completed", {
     diagnostic("bundle", "start");
     const bundle = await build({
       stdin: {
-        contents: `import { verifyMountedExperienceSlot } from ${JSON.stringify(fixture)}; window.verifyFocus = verifyMountedExperienceSlot;`,
+        contents: `import { verifyMountedExperienceSlot, verifyModalTabBoundaries } from ${JSON.stringify(fixture)}; Object.assign(window, { verifyFocus: verifyMountedExperienceSlot, verifyTabs: verifyModalTabBoundaries });`,
         resolveDir: __dirname,
         loader: "ts",
       },
@@ -92,6 +92,7 @@ diagnostic("dependencies", "completed", {
       });
       await page.setContent('<button id="opener">Open preview</button><main id="root"></main>');
       await page.addScriptTag({ content: bundle.outputFiles[0].text });
+      await page.exposeFunction("pressTabKey", (key) => page.keyboard.press(key));
       diagnostic(`${viewportStage}.setup`, "completed");
       diagnostic(`${viewportStage}.verification`, "start");
       const steps = await page.evaluate(async () => {
@@ -107,8 +108,19 @@ diagnostic("dependencies", "completed", {
         );
         return observed;
       });
+      const tabCases = await page.evaluate(async () =>
+        window.verifyTabs(
+          document.querySelector("#root"),
+          document.querySelector("#opener"),
+          window.pressTabKey,
+          async () => {
+            if (document.documentElement.scrollWidth > innerWidth)
+              throw new Error("Horizontal overflow");
+          },
+        ),
+      );
       if (errors.length) throw new Error(errors.join("\n"));
-      results.push({ viewport, steps: steps.length });
+      results.push({ viewport, steps: steps.length, tabCases });
       diagnostic(`${viewportStage}.verification`, "completed", { steps: steps.length });
       diagnostic(`${viewportStage}.page.close`, "start");
       await page.close();
