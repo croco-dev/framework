@@ -1744,6 +1744,53 @@ void createInvalidationRouteId;
     GENERATED_CLIENT_TYPECHECK_TIMEOUT_MS,
   );
 
+  it.each([["all", "allRoute"], ["allRoute", "all"], ["all", "allRoute", "allRoute2"], ["all"]])(
+    "should keep reserved query key aliases distinct for %j",
+    (...methodNames) => {
+      const routes: RouteIR[] = methodNames.map((methodName) => ({
+        controllerName: "UserController",
+        methodName,
+        httpMethod: "GET",
+        path: `/${methodName}`,
+        params: [],
+        routeContract: null,
+        inputSchema: null,
+        inputSchemas: EMPTY_INPUT_SCHEMAS,
+        outputSchema: null,
+        domain: null,
+      }));
+      generateClientFiles(routes, TEMP_DIR, { reactQuery: true });
+      const content = fs.readFileSync(path.join(TEMP_DIR, "user.ts"), "utf8");
+      assertGeneratedReactQueryClientTypechecks(content);
+      const output = ts.transpileModule(content, {
+        compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
+      }).outputText;
+      const context = {
+        exports: {} as Record<string, unknown>,
+        require: (specifier: string) => (specifier === "./rpc" ? loadGeneratedRpcModule() : {}),
+      };
+      vm.runInNewContext(output, context);
+      const keys = context.exports.userKeys as Record<string, () => readonly string[]>;
+      const queries = context.exports.userQueries as Record<
+        string,
+        () => { queryKey: readonly string[] }
+      >;
+      expect(keys.all()).toEqual(["user"]);
+      expect(Object.keys(keys)).toHaveLength(methodNames.length + 1);
+      for (const methodName of methodNames) {
+        const matchingFactories = Object.entries(keys).filter(
+          ([, factory]) => JSON.stringify(factory()) === JSON.stringify(["user", methodName]),
+        );
+        expect(matchingFactories).toHaveLength(1);
+        expect(queries[methodName]().queryKey).toEqual(["user", methodName]);
+        expect(queries[`${methodName}Result`]().queryKey).toEqual(["user", methodName, "result"]);
+        if (methodName !== "all") expect(keys[methodName]()).toEqual(["user", methodName]);
+      }
+      if (methodNames.length === 1) expect(keys.allRoute()).toEqual(["user", "all"]);
+    },
+    GENERATED_CLIENT_TYPECHECK_TIMEOUT_MS,
+  );
+
   it("should serialize query key inputs deterministically and reject unsupported values", () => {
     const routes: RouteIR[] = [
       {
