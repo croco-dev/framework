@@ -431,44 +431,67 @@ describe("compileDiGraph", () => {
     expect(build.errors).toEqual([]);
   });
 
-  it.each([
-    ["export { Service };", "Service"],
-    ["export { Service as PublicService };", "PublicService"],
-    ["export { Service as Zebra, Service as Alpha };", "Alpha"],
-    ["export type { Service as Alpha }; export { Service as PublicService };", "PublicService"],
-    ["export default Service; export { Service as PublicService };", "PublicService"],
-    ['export { Service as "public-service" };', "public-service"],
-    ['export { Service as "public.service" };', "public.service"],
-    ['export { Service as "", Service as PublicService };', ""],
-  ])("generates usable factories for named provider exports: %s", async (exports, exportName) => {
-    writeProject({
-      "src/Service.ts": `
+  it("generates usable factories for named provider exports", async () => {
+    const cases = [
+      ["export { Service };", "Service"],
+      ["export { Service as PublicService };", "PublicService"],
+      ["export { Service as Zebra, Service as Alpha };", "Alpha"],
+      ["export type { Service as Alpha }; export { Service as PublicService };", "PublicService"],
+      ["export default Service; export { Service as PublicService };", "PublicService"],
+      ['export { Service as "public-service" };', "public-service"],
+      ['export { Service as "public.service" };', "public.service"],
+      ['export { Service as "", Service as PublicService };', ""],
+    ] as const;
+    const files: Record<string, string> = {};
+    for (const [index, [exports, exportName]] of cases.entries()) {
+      files[`src/Service${index}.ts`] = `
         import { Component } from "@croco/framework-context";
-        @Component() class Service { value = "named-provider"; }
+        @Component() class Service { value = "named-provider-${index}"; }
         @Component() export class LocalConsumer { constructor(readonly service: Service) {} }
         ${exports}
-      `,
-      "src/barrel.ts": `export { ${JSON.stringify(exportName)} as ImportedService } from "./Service";`,
-      "src/Consumer.ts": `
+      `;
+      files[`src/barrel${index}.ts`] =
+        `export { ${JSON.stringify(exportName)} as ImportedService } from "./Service${index}";`;
+      files[`src/Consumer${index}.ts`] = `
         import { Component, Inject } from "@croco/framework-context";
-        import { ImportedService as Dependency } from "./barrel";
+        import { ImportedService as Dependency } from "./barrel${index}";
         @Component() export class Consumer {
           constructor(readonly service: Dependency) {}
           @Inject(Dependency) property!: Dependency;
         }
-      `,
-    });
+      `;
+    }
+    writeProject(files);
     const result = compileDiGraph({ baseDir: TEMP_DIR });
-    const tokenId = `app:src/Service#${exportName}`;
-    expect(
-      result.manifest.providers.find((provider) => provider.exportName === exportName),
-    ).toMatchObject({ tokenId });
-    for (const name of ["Consumer", "LocalConsumer"]) {
-      const consumer = result.manifest.providers.find((provider) => provider.exportName === name);
-      expect(consumer?.dependencies.length).toBe(name === "Consumer" ? 2 : 1);
-      expect(consumer?.dependencies.every((dependency) => dependency.tokenId === tokenId)).toBe(
-        true,
-      );
+    const runtimeImports: string[] = [];
+    const runtimeAssertions: string[] = [];
+    for (const [index, [, exportName]] of cases.entries()) {
+      const tokenId = `app:src/Service${index}#${exportName}`;
+      expect(
+        result.manifest.providers.find((provider) => provider.tokenId === tokenId),
+      ).toMatchObject({ exportName });
+      for (const [file, name, count] of [
+        [`Consumer${index}`, "Consumer", 2],
+        [`Service${index}`, "LocalConsumer", 1],
+      ] as const) {
+        const consumer = result.manifest.providers.find(
+          (provider) => provider.tokenId === `app:src/${file}#${name}`,
+        );
+        expect(consumer?.dependencies).toHaveLength(count);
+        expect(consumer?.dependencies.every((dependency) => dependency.tokenId === tokenId)).toBe(
+          true,
+        );
+      }
+      runtimeImports.push(`
+        import { Consumer as Consumer${index} } from "./src/Consumer${index}";
+        import { LocalConsumer as LocalConsumer${index} } from "./src/Service${index}";
+      `);
+      runtimeAssertions.push(`{
+        const consumer = Container.get(Consumer${index});
+        assert.equal(consumer.service.value, "named-provider-${index}");
+        assert.equal(consumer.property, consumer.service);
+        assert.equal(Container.get(LocalConsumer${index}).service, consumer.service);
+      }`);
     }
     writeDiGraph(result);
     fs.writeFileSync(
@@ -477,15 +500,11 @@ describe("compileDiGraph", () => {
       import { strict as assert } from "node:assert";
       import { Container } from "@croco/framework-context";
       import { generatedDiGraph } from "./.croco/di.generated";
-      import { Consumer } from "./src/Consumer";
-      import { LocalConsumer } from "./src/Service";
+      ${runtimeImports.join("\n")}
       const scope = Container.createScope();
       scope.run(() => {
         Container.installGeneratedGraph(generatedDiGraph);
-        const consumer = Container.get(Consumer);
-        assert.equal(consumer.service.value, "named-provider");
-        assert.equal(consumer.property, consumer.service);
-        assert.equal(Container.get(LocalConsumer).service, consumer.service);
+        ${runtimeAssertions.join("\n")}
       });
       scope.dispose();
     `,
