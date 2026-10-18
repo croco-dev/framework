@@ -39,9 +39,7 @@ import {
   normalizeProjectManifestBundlePath,
   type RouteIR,
 } from "@croco/protocols-core";
-
 import { hasZodModuleReference } from "./hasZodModuleReference";
-
 export type GenerateClientOptions = {
   readonly frontendActionManifestInputs?: readonly FrontendActionManifestMergeInput[];
   readonly frontendActionManifestPath?: string;
