@@ -1,12 +1,7 @@
 {
   "extends": "../../tsconfig/tsconfig.node.json",
   "compilerOptions": {
-    "noEmit": true,
-    "paths": {
-      "@croco/transports-graphql/fetch": ["../../packages/transports-graphql/src/fetch.ts"],
-      "@croco/protocols-graphql/fetch": ["../../packages/protocols-graphql/src/fetch.ts"],
-      "@croco/preset-cloudflare/fetch": ["../../packages/preset-cloudflare/src/fetch.ts"]
-    }
+    "noEmit": true
   },
   "include": ["src/**/*.ts"]
 }

@@ -1,5 +1,6 @@
 ---
 "@croco/problems-core": patch
+"@croco/preset-cloudflare": patch
 "@croco/protocols-graphql": patch
 "@croco/transports-graphql": patch
 "@croco/protocols-trpc": patch

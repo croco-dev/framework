@@ -13,6 +13,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 let worker: Miniflare;
 beforeAll(async () => {
+  execFileSync(process.execPath, ["codegen.mjs", "--check"]);
   execFileSync(process.execPath, ["build.mjs"]);
   let arrivals = 0;
   let release: () => void = () => undefined;

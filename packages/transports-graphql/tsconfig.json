@@ -3,10 +3,7 @@
   "extends": "../../tsconfig/tsconfig.node.json",
   "compilerOptions": {
     "module": "esnext",
-    "moduleResolution": "bundler",
-    "paths": {
-      "@croco/protocols-graphql/fetch": ["../protocols-graphql/src/fetch.ts"]
-    }
+    "moduleResolution": "bundler"
   },
   "include": ["src/**/*.ts"]
 }
