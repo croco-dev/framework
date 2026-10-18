@@ -2450,6 +2450,7 @@ export function prepareGeneratedSmokeDependencyOverrides(
       "saas-single-tenant",
       "production-app-starter",
       "kubernetes-node-api",
+      "lambda-api",
       "admin-console-starter",
     ].includes(smokeCaseName)
   ) {

@@ -1180,6 +1180,7 @@ describe("create-croco-app-generated-smoke dependency resolution", () => {
     "goal-saas-api",
     "saas-single-tenant",
     "production-app-starter",
+    "lambda-api",
     "admin-console-starter",
   ])(
     "installs local tarballs for %s through workspace overrides while preserving source manifests",
