@@ -92,3 +92,21 @@ Import `TargetingImpactOperations` from the server-only [`@croco/admin-core/targ
 Keep full input rows and predicates in the private `TargetingImpactReportStore`, subject to application retention and privacy policy. Call `replay(input)` and `save(input)` only with trusted server evidence whose source and subject membership the host has checked; never forward browser-supplied rows. These methods do not validate rows against `CampaignStore`. Authorized save/re-read verifies immutable data, hashes and recomputed results, not source authenticity. Reads and exports return aggregate views without subject rows, traits or predicate literals. Connect [`TargetingImpactInspector`](https://github.com/croco-dev/framework/blob/trunk/packages/admin-react/README.md#targeting-impact-inspector) from `@croco/admin-react` through its callbacks to this server boundary and preserve loading, empty, denied, unavailable, error and partial states.
 
 Run the synthetic [`examples/targeting-impact`](https://github.com/croco-dev/framework/tree/trunk/examples/targeting-impact) from the framework checkout with `pnpm --filter @croco-example/targeting-impact dev`; verify its service flow with `pnpm --filter @croco-example/targeting-impact test`. It exercises compare, save/re-read and aggregate export with in-memory storage that resets on restart. Replay sends no messages and never substitutes current traits for missing history. Observed costs and credited outcomes do not establish causal lift or lost revenue. This local example does not establish production storage, provider certification or npm release status.
+
+## Workers GraphQL and tRPC
+
+Use `@croco/transports-graphql/fetch` with a prepared schema and
+`@croco/protocols-graphql/fetch` for runtime guards/Problem conversion. The root
+GraphQL entrypoints retain Node listener and code-first compilation responsibilities.
+Connect the tRPC router to its official fetch adapter; preserve its native envelope and
+Croco guard/validation pipeline. Both can run behind `createCloudflareWorkersHost`
+with `nodejs_compat`. Follow
+[the local workerd fixture](https://github.com/croco-dev/framework/tree/trunk/examples/workers-protocols).
+
+Local evidence covers queries/mutations, partial GraphQL data/errors, cookies, tenant
+isolation, tRPC validation, content-type handling and a host-provided aborted signal.
+GraphQL subscription schemas fail with
+`transports-graphql/fetch-subscriptions-unsupported`. Neither subscription/streaming
+support, client-disconnect cancellation, live deployment nor full SaaS profile
+certification follows from this fixture. Fetch hosts own body admission and deadlines;
+prepared schemas must already contain their selected policy semantics.

@@ -209,7 +209,7 @@ None.
 | `@croco/protocols-core`                | Contracts      | protocol      | Protocols               | unclaimed                                 |
 | `@croco/protocols-graphql`             | Plugins        | protocol      | Protocols Graphql       | unclaimed                                 |
 | `@croco/protocols-rest`                | Contracts      | protocol      | Protocols Rest          | unclaimed                                 |
-| `@croco/protocols-trpc`                | Plugins        | protocol      | Protocols Trpc          | unclaimed                                 |
+| `@croco/protocols-trpc`                | Plugins        | protocol      | Protocols Trpc          | node, cloudflare-workers                  |
 | `@croco/ratelimit-core`                | Contracts      | domain        | Ratelimit               | unclaimed                                 |
 | `@croco/ratelimit-upstash`             | Plugins        | provider      | Rate limiting           | node, lambda, cloudflare-workers          |
 | `@croco/referral-core`                 | Contracts      | domain        | Referrals               | unclaimed                                 |
@@ -234,7 +234,7 @@ None.
 | `@croco/testing`                       | Tooling        | testing       | Testing                 | unclaimed                                 |
 | `@croco/testing-resources`             | Tooling        | testing       | Testing Resources       | unclaimed                                 |
 | `@croco/transports-cloudflare-workers` | Plugins        | host          | Cloudflare Workers host | cloudflare-workers                        |
-| `@croco/transports-graphql`            | Plugins        | transport     | GraphQL transport       | node, lambda                              |
+| `@croco/transports-graphql`            | Plugins        | transport     | GraphQL transport       | node, lambda, cloudflare-workers          |
 | `@croco/transports-http`               | Plugins        | transport     | HTTP transport          | node, lambda                              |
 | `@croco/triggers-core`                 | Contracts      | domain        | Triggers                | unclaimed                                 |
 | `@croco/triggers-qstash`               | Plugins        | provider      | Triggers                | node, lambda                              |

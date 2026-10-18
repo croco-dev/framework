@@ -1,8 +1,6 @@
-import { randomUUID } from "node:crypto";
 import { once } from "node:events";
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
-import { Container, Context as FrameworkContext } from "@croco/framework-context";
-import type { RequestContext } from "@croco/framework-context";
+import { Container } from "@croco/framework-context";
 import { Logger } from "@croco/framework-logger";
 import {
   createProblemResponseDetail,
@@ -10,9 +8,6 @@ import {
   Problem,
   resolveProblemResponseRedactionPolicy,
 } from "@croco/problems-core";
-import { isProblem, problemToGraphQLError } from "@croco/protocols-graphql";
-import { createYoga, maskError, useExecutionCancellation } from "graphql-yoga";
-import type { Plugin } from "graphql-yoga";
 import {
   GraphQLBodyLimitConfigurationProblem,
   GraphQLRequestBodyAbortedProblem,
@@ -24,18 +19,9 @@ import {
   GraphQLServerNotInitializedProblem,
 } from "./problems/GraphQLTransportProblems";
 import type { GraphQLServerOptions } from "./types";
+import { createYogaHandler, runInGraphQLRequestContext } from "./GraphQLFetchHandler";
 
 type YogaHandler = (request: Request) => Promise<Response>;
-type GraphQLExecutionContextValue = Record<string, unknown> & {
-  tenantId?: unknown;
-  user?: unknown;
-};
-type GraphQLExecuteFn = (...args: readonly unknown[]) => unknown;
-type GraphQLContextPropagationPlugin = Plugin<
-  Record<string, never>,
-  Record<string, never>,
-  GraphQLExecutionContextValue
->;
 type NodeRequestAbortScope = {
   readonly aborted: Promise<never>;
   readonly signal: AbortSignal;
@@ -54,23 +40,6 @@ type NodeRequestPhase =
 
 const DEFAULT_MAX_BODY_SIZE_BYTES = 1024 * 1024;
 const MAX_REQUEST_TIMEOUT_MS = 2_147_483_647;
-
-const CROCO_YOGA_LOGGER = {
-  debug: (...args: unknown[]) => console.debug(...args),
-  info: (...args: unknown[]) => console.info(...args),
-  warn: (...args: unknown[]) => console.warn(...args),
-  error: (...args: unknown[]) => {
-    const [error] = args;
-    const problem = getCrocoProblem(error);
-
-    if (problem) {
-      console.error(problemToGraphQLError(problem, getGraphQLErrorPath(error)));
-      return;
-    }
-
-    console.error(...args);
-  },
-};
 
 export class GraphQLServer {
   private yogaHandler: YogaHandler | null = null;
@@ -126,27 +95,13 @@ export class GraphQLServer {
       throw new GraphQLSchemaNotConfiguredProblem();
     }
 
-    const yoga = createYoga({
+    this.yogaHandler = createYogaHandler({
       schema: graphqlSchema,
+      context,
       graphqlEndpoint,
       cors,
-      plugins: [useExecutionCancellation(), ...(plugins ?? []), createCrocoContextPlugin()],
-      logging: CROCO_YOGA_LOGGER,
-      maskedErrors: {
-        maskError: maskCrocoProblemError,
-      },
-      context: async ({ request }) => {
-        const userContext =
-          typeof context === "function" ? await context(request) : (context ?? {});
-        return {
-          ...userContext,
-          headers: Object.fromEntries(request.headers),
-          request,
-        };
-      },
+      plugins,
     });
-
-    this.yogaHandler = yoga.fetch.bind(yoga) as YogaHandler;
 
     this.initialized = true;
   }
@@ -613,75 +568,6 @@ function waitForStreamOperation<T>(operation: Promise<T>, signal: AbortSignal): 
   });
 }
 
-function runInGraphQLRequestContext<T>(fn: () => Promise<T> | T): Promise<T> | T {
-  const activeContext = FrameworkContext.get();
-  if (activeContext) {
-    return FrameworkContext.run({ ...activeContext }, fn, { inheritScope: true });
-  }
-  return FrameworkContext.run({ requestId: randomUUID() }, fn);
-}
-
-function createCrocoContextPlugin(): GraphQLContextPropagationPlugin {
-  return {
-    onExecute({ executeFn, setExecuteFn }) {
-      const execute: GraphQLExecuteFn = (...args) => Reflect.apply(executeFn, undefined, args);
-      setExecuteFn(((...args: readonly unknown[]) => {
-        const [executionArgs] = args;
-        return FrameworkContext.run(
-          propagateGraphQLContext(readContextValue(executionArgs)),
-          () => Reflect.apply(execute, undefined, args),
-          { inheritScope: true },
-        );
-      }) as typeof executeFn);
-    },
-    onSubscribe({ subscribeFn, setSubscribeFn }) {
-      const subscribe: GraphQLExecuteFn = (...args) => Reflect.apply(subscribeFn, undefined, args);
-      setSubscribeFn(((...args: readonly unknown[]) => {
-        const [subscriptionArgs] = args;
-        return FrameworkContext.run(
-          propagateGraphQLContext(readContextValue(subscriptionArgs)),
-          () => Reflect.apply(subscribe, undefined, args),
-          { inheritScope: true },
-        );
-      }) as typeof subscribeFn);
-    },
-  };
-}
-
-function readContextValue(executionArgs: unknown): unknown {
-  return isRecord(executionArgs) ? executionArgs.contextValue : undefined;
-}
-
-function propagateGraphQLContext(yogaContext: unknown): RequestContext {
-  const base = FrameworkContext.get() ?? { requestId: randomUUID() };
-  const contextValue = isRecord(yogaContext) ? yogaContext : {};
-  const propagated: RequestContext = { ...base };
-  const tenantId = readTenantId(contextValue.tenantId);
-  if (tenantId !== undefined) {
-    propagated.tenantId = tenantId;
-  }
-  const user = readGraphQLUser(contextValue.user);
-  if (user !== undefined) {
-    propagated.user = user;
-  }
-  return propagated;
-}
-
-function readTenantId(value: unknown): string | undefined {
-  return typeof value === "string" && value.length > 0 ? value : undefined;
-}
-
-function readGraphQLUser(value: unknown): RequestContext["user"] | undefined {
-  if (!isRecord(value) || typeof value.id !== "string") {
-    return undefined;
-  }
-  return value as RequestContext["user"];
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
 function getSetCookieHeaders(headers: Headers): string[] {
   const getSetCookie = (headers as { getSetCookie?: () => string[] }).getSetCookie;
 
@@ -696,46 +582,4 @@ function getSetCookieHeaders(headers: Headers): string[] {
     }
   });
   return setCookieHeaders;
-}
-
-function maskCrocoProblemError(error: unknown, message: string, isDev?: boolean): Error {
-  const problem = getCrocoProblem(error);
-
-  if (!problem) {
-    return maskError(error, message, isDev);
-  }
-
-  return problemToGraphQLError(problem, getGraphQLErrorPath(error));
-}
-
-function getCrocoProblem(error: unknown): Problem | undefined {
-  let currentError: unknown = error;
-  const visited = new Set<Error>();
-
-  while (currentError instanceof Error && !visited.has(currentError)) {
-    if (isProblem(currentError)) {
-      return currentError;
-    }
-
-    visited.add(currentError);
-
-    if (!isGraphQLError(currentError)) {
-      return undefined;
-    }
-
-    currentError = currentError.originalError;
-  }
-
-  return undefined;
-}
-
-function getGraphQLErrorPath(error: unknown): readonly (string | number)[] | undefined {
-  return error instanceof Error && isGraphQLError(error) ? error.path : undefined;
-}
-
-function isGraphQLError(error: Error): error is Error & {
-  originalError?: unknown;
-  path?: readonly (string | number)[];
-} {
-  return error.name === "GraphQLError";
 }

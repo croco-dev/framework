@@ -65,3 +65,26 @@ need deployment-specific secret handling for non-Problem failures.
 pnpm --filter @croco/transports-graphql test
 pnpm --filter @croco/transports-graphql typecheck
 ```
+
+## Workers fetch transport
+
+Use `createGraphQLFetchHandler` from `@croco/transports-graphql/fetch` with a prepared
+`GraphQLSchema` and `createCloudflareWorkersHost` from `@croco/preset-cloudflare/fetch`.
+The fetch entrypoint avoids Node HTTP listeners and the filesystem-based code-first
+compiler. Runtime guards and Problem conversion are available through
+`@croco/protocols-graphql/fetch`. Existing Node server/schema compilation APIs remain on
+the root entrypoint.
+
+Workers requires `nodejs_compat` for Croco request scopes. Queries and mutations use
+Yoga's native Request/Response path, preserving content negotiation, partial data,
+Problem masking and response headers. The fetch-only entrypoint disables GraphiQL and
+the landing page. It rejects a schema containing subscription fields with
+`transports-graphql/fetch-subscriptions-unsupported`; subscription delivery, WebSockets,
+incremental streaming and deployment certification are outside this support claim.
+Node listener body limits and timers apply only to `GraphQLServer.start()`. Fetch hosts
+own body admission and deadlines. Request abort signals reach Yoga; remote side effects
+are not rolled back by cancelling a request.
+
+See [Workers protocol conformance](../../examples/workers-protocols/README.md) for the
+local workerd smoke, generated GraphQL SDK and native tRPC client evidence. This does
+not certify a deployed Worker or the full SaaS Cloudflare profile.

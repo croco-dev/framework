@@ -1,0 +1,274 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "preset-cloudflare",
+      "classification": "runtime-adapter",
+      "reason": "Source export mappings let alias-free consumers reuse the existing Workers Host for native GraphQL and tRPC requests.",
+      "files": {
+        "packages/preset-cloudflare/package.json": "bdabbf520948a13a39cde19b3dd1a3a06cd750d81fa4990210cca80d1f79c145"
+      },
+      "catalogRuntimes": ["cloudflare-workers"],
+      "profiles": {
+        "kubernetes": {
+          "result": "unsupported",
+          "reason": "This is the Workers Host; Node and Lambda use their existing dedicated Hosts.",
+          "providers": ["@croco/preset-cloudflare"],
+          "constraints": ["Do not deploy the Workers Host as a Node or Lambda Host."],
+          "references": ["packages/preset-cloudflare/src/fetch.ts"]
+        },
+        "aws-lambda": {
+          "result": "unsupported",
+          "reason": "This is the Workers Host; Node and Lambda use their existing dedicated Hosts.",
+          "providers": ["@croco/preset-cloudflare"],
+          "constraints": ["Do not deploy the Workers Host as a Node or Lambda Host."],
+          "references": ["packages/preset-cloudflare/src/fetch.ts"]
+        },
+        "cloudflare": {
+          "result": "supported",
+          "reason": "The pinned native-protocol test executes the existing host path with fixed output assertions.",
+          "providers": ["@croco/preset-cloudflare"],
+          "constraints": [
+            "Actual local workerd with nodejs_compat; live Cloudflare deployment and account bindings are not certified.",
+            "Host-provided abort signal identity is covered; remote disconnect and side-effect cancellation are not established."
+          ],
+          "references": [
+            "examples/workers-protocols/src/tests/WorkersProtocols.spec.ts",
+            "examples/workers-protocols/README.md"
+          ],
+          "host": "workers",
+          "evidence": {
+            "kind": "host-runtime",
+            "runtime": "cloudflare-workers",
+            "path": "examples/workers-protocols/src/tests/WorkersProtocols.spec.ts",
+            "testName": "Workers protocol transports on actual workerd runs the generated GraphQL SDK against workerd using the same fixture",
+            "sha256": "b56d4c3b139d1210276e92863173d2b2c895d10f6f9b1bfbdc9d9c2f039a6754"
+          }
+        }
+      }
+    },
+    {
+      "package": "problems-core",
+      "classification": "pure-contract",
+      "reason": "Generated recovery guidance distinguishes schema/subscription setup failures from request input failures; codes and transport behavior are unchanged.",
+      "files": {
+        "packages/problems-core/src/generated/problem-code-registry.ts": "beba5abd8130f7ac54deb04f6679326c9ef67b5b5d05a350ccb9de954cb29d48"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Generated Problem recovery metadata and types have no host capability, storage, connection or lifecycle dependency.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "docs/problem-code-registry.json"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Generated Problem recovery metadata and types have no host capability, storage, connection or lifecycle dependency.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "docs/problem-code-registry.json"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Generated Problem recovery metadata and types have no host capability, storage, connection or lifecycle dependency.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "docs/problem-code-registry.json"
+          ]
+        }
+      }
+    },
+    {
+      "package": "protocols-graphql",
+      "classification": "protocol-render",
+      "reason": "The fetch subpath exposes existing guards and Problem conversion without Node code-first compiler imports; split output preserves token identity.",
+      "files": {
+        "packages/protocols-graphql/package.json": "08ffc6ad97be06e8621447620f4927bb37efa1ea57896eb850bcd3cd561e99b8",
+        "packages/protocols-graphql/src/fetch.ts": "d73a06121195994d0fc361e650e25d97bfb4b869c254b87ca9a7f154111b052b"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "unverified",
+          "reason": "Prepared-schema consumers exercise the fetch subpath, but package-wide runtime support including code-first compilation remains unclaimed in the catalog.",
+          "providers": ["@croco/protocols-graphql"],
+          "constraints": [
+            "Prepared schemas must already contain their selected authorization semantics.",
+            "No package-wide compiler or live infrastructure support is established."
+          ],
+          "references": [
+            "packages/protocols-graphql/src/fetch.ts",
+            "packages/protocols-graphql/src/tests/PublishedFetchEntrypoints.spec.ts",
+            "examples/workers-protocols/src/tests/WorkersProtocols.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "unverified",
+          "reason": "Prepared-schema consumers exercise the fetch subpath, but package-wide runtime support including code-first compilation remains unclaimed in the catalog.",
+          "providers": ["@croco/protocols-graphql"],
+          "constraints": [
+            "Prepared schemas must already contain their selected authorization semantics.",
+            "No package-wide compiler or live infrastructure support is established."
+          ],
+          "references": [
+            "packages/protocols-graphql/src/fetch.ts",
+            "packages/protocols-graphql/src/tests/PublishedFetchEntrypoints.spec.ts",
+            "examples/workers-protocols/src/tests/WorkersProtocols.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "unverified",
+          "reason": "Prepared-schema consumers exercise the fetch subpath, but package-wide runtime support including code-first compilation remains unclaimed in the catalog.",
+          "providers": ["@croco/protocols-graphql"],
+          "constraints": [
+            "Prepared schemas must already contain their selected authorization semantics.",
+            "No package-wide compiler or live infrastructure support is established."
+          ],
+          "references": [
+            "packages/protocols-graphql/src/fetch.ts",
+            "packages/protocols-graphql/src/tests/PublishedFetchEntrypoints.spec.ts",
+            "examples/workers-protocols/src/tests/WorkersProtocols.spec.ts"
+          ]
+        }
+      }
+    },
+    {
+      "package": "transports-graphql",
+      "classification": "protocol-render",
+      "reason": "Prepared-schema fetch handling reuses Yoga, context and Problem mapping without Node listeners or runtime schema compilation.",
+      "files": {
+        "packages/transports-graphql/package.json": "3b77a76f2372dd15651d5a87b4aa291c4afd6c557e42eb492f44def8e4814658",
+        "packages/transports-graphql/src/fetch.ts": "fad1cb38c9d9f199d6317eb52e572f664a6b7f7e0bb3a2493628394652a5aae8",
+        "packages/transports-graphql/src/index.ts": "43c7c7e98ff274bf20591372984d7a0515405041bc6a301615ddc550643d2ffb",
+        "packages/transports-graphql/src/libs/GraphQLFetchHandler.ts": "2d2731aa1567c1dc60af9270fe386c184b0e6e8829338e954d036fadacac3b11",
+        "packages/transports-graphql/src/libs/GraphQLServer.ts": "fe69380ace3c0039a1c84bac553e6e723704684990cea2a7c660dd3e51670fec",
+        "docs/package-catalog.json": "288dc77aa948935eee3953f1057f227a124d8a918da79b3321b8dba1fbe9edb8"
+      },
+      "catalogRuntimes": ["node", "lambda", "cloudflare-workers"],
+      "profiles": {
+        "kubernetes": {
+          "result": "conditional",
+          "reason": "Reuse the existing Node Host with this fetch adapter; direct Node fetch conformance does not establish Node Host HTTP adaptation or Kubernetes deployment.",
+          "providers": ["@croco/transports-graphql"],
+          "constraints": [
+            "Direct Node fetch tests pass, but actual Node Host dispatch and HTTP request/response adaptation remain unverified by this fixture.",
+            "A Kubernetes application must compose the existing Node Host and validate ingress, probes, request limits and graceful shutdown.",
+            "No Kubernetes cluster deployment or Node Host conformance execution is claimed by this decision."
+          ],
+          "references": [
+            "examples/workers-protocols/src/tests/WorkersProtocols.spec.ts",
+            "examples/workers-protocols/README.md"
+          ]
+        },
+        "aws-lambda": {
+          "result": "supported",
+          "reason": "The pinned native-protocol test executes the existing host path with fixed output assertions.",
+          "providers": ["@croco/transports-graphql"],
+          "constraints": [
+            "Local canonical Lambda Host envelope only; deployed AWS invocation, IAM and production lifecycle are not certified.",
+            "Prepared query/mutation schemas only; subscriptions, WebSockets and runtime schema compilation are unsupported."
+          ],
+          "references": [
+            "examples/workers-protocols/src/tests/WorkersProtocols.spec.ts",
+            "examples/workers-protocols/README.md"
+          ],
+          "evidence": {
+            "kind": "host-runtime",
+            "runtime": "lambda",
+            "path": "examples/workers-protocols/src/tests/WorkersProtocols.spec.ts",
+            "testName": "Workers protocol transports on actual workerd preserves the shared GraphQL fixture through the Lambda host envelope",
+            "sha256": "b56d4c3b139d1210276e92863173d2b2c895d10f6f9b1bfbdc9d9c2f039a6754"
+          }
+        },
+        "cloudflare": {
+          "result": "supported",
+          "reason": "The pinned native-protocol test executes the existing host path with fixed output assertions.",
+          "providers": ["@croco/transports-graphql"],
+          "constraints": [
+            "Actual local workerd with nodejs_compat; live Cloudflare deployment and account bindings are not certified.",
+            "Host-provided abort signal identity is covered; remote disconnect and side-effect cancellation are not established.",
+            "Prepared query/mutation schemas only; subscriptions, WebSockets and runtime schema compilation are unsupported."
+          ],
+          "references": [
+            "examples/workers-protocols/src/tests/WorkersProtocols.spec.ts",
+            "examples/workers-protocols/README.md"
+          ],
+          "host": "workers",
+          "evidence": {
+            "kind": "host-runtime",
+            "runtime": "cloudflare-workers",
+            "path": "examples/workers-protocols/src/tests/WorkersProtocols.spec.ts",
+            "testName": "Workers protocol transports on actual workerd runs the generated GraphQL SDK against workerd using the same fixture",
+            "sha256": "b56d4c3b139d1210276e92863173d2b2c895d10f6f9b1bfbdc9d9c2f039a6754"
+          }
+        }
+      }
+    },
+    {
+      "package": "protocols-trpc",
+      "classification": "protocol-render",
+      "reason": "The existing native fetch adapter now claims Node and Workers after shared-controller host conformance.",
+      "files": {
+        "docs/package-catalog.json": "288dc77aa948935eee3953f1057f227a124d8a918da79b3321b8dba1fbe9edb8"
+      },
+      "catalogRuntimes": ["node", "cloudflare-workers"],
+      "profiles": {
+        "kubernetes": {
+          "result": "conditional",
+          "reason": "Reuse the existing Node Host with this fetch adapter; direct Node fetch conformance does not establish Node Host HTTP adaptation or Kubernetes deployment.",
+          "providers": ["@croco/protocols-trpc"],
+          "constraints": [
+            "Direct Node fetch tests pass, but actual Node Host dispatch and HTTP request/response adaptation remain unverified by this fixture.",
+            "A Kubernetes application must compose the existing Node Host and validate ingress, probes, request limits and graceful shutdown.",
+            "No Kubernetes cluster deployment or Node Host conformance execution is claimed by this decision."
+          ],
+          "references": [
+            "examples/workers-protocols/src/tests/WorkersProtocols.spec.ts",
+            "examples/workers-protocols/README.md"
+          ]
+        },
+        "aws-lambda": {
+          "result": "unverified",
+          "reason": "The shared-controller Lambda envelope fixture passes, but the catalog does not yet claim package-wide Lambda support.",
+          "providers": ["@croco/protocols-trpc"],
+          "constraints": ["No package-wide Lambda or live AWS support claim is introduced."],
+          "references": [
+            "examples/workers-protocols/src/tests/WorkersProtocols.spec.ts",
+            "examples/workers-protocols/README.md"
+          ]
+        },
+        "cloudflare": {
+          "result": "supported",
+          "reason": "The pinned native-protocol test executes the existing host path with fixed output assertions.",
+          "providers": ["@croco/protocols-trpc"],
+          "constraints": [
+            "Actual local workerd with nodejs_compat; live Cloudflare deployment and account bindings are not certified.",
+            "Host-provided abort signal identity is covered; remote disconnect and side-effect cancellation are not established."
+          ],
+          "references": [
+            "examples/workers-protocols/src/tests/WorkersProtocols.spec.ts",
+            "examples/workers-protocols/README.md"
+          ],
+          "host": "workers",
+          "evidence": {
+            "kind": "host-runtime",
+            "runtime": "cloudflare-workers",
+            "path": "examples/workers-protocols/src/tests/WorkersProtocols.spec.ts",
+            "testName": "Workers protocol transports on actual workerd uses the native tRPC client wire format and validates body input",
+            "sha256": "b56d4c3b139d1210276e92863173d2b2c895d10f6f9b1bfbdc9d9c2f039a6754"
+          }
+        }
+      }
+    }
+  ]
+}

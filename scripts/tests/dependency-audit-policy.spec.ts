@@ -58,17 +58,26 @@ describe("dependency-audit-policy.mts", () => {
   });
 
   it("resolves the blocking formatter, source map, and GraphQL advisories to patched versions", () => {
+    const workspace = parse(readFileSync(join(repositoryRoot, "pnpm-workspace.yaml"), "utf-8")) as {
+      readonly overrides?: Readonly<Record<string, unknown>>;
+    };
     const lockfile = parseAllDocuments(
       readFileSync(join(repositoryRoot, "pnpm-lock.yaml"), "utf-8"),
     )
       .at(-1)
-      ?.toJS() as { readonly packages: Readonly<Record<string, unknown>> };
+      ?.toJS() as {
+      readonly overrides?: Readonly<Record<string, unknown>>;
+      readonly packages: Readonly<Record<string, unknown>>;
+    };
     const packages = Object.keys(lockfile.packages);
+
+    expect(workspace.overrides?.["@graphql-tools/utils"]).toBe("12.1.0");
+    expect(lockfile.overrides?.["@graphql-tools/utils"]).toBe("12.1.0");
 
     for (const [name, version] of [
       ["tinypool", "2.1.2"],
       ["source-map-js", "1.2.2"],
-      ["@graphql-tools/utils", "12.0.3"],
+      ["@graphql-tools/utils", "12.1.0"],
     ]) {
       expect(packages.filter((key) => key.startsWith(`${name}@`))).toEqual([`${name}@${version}`]);
     }

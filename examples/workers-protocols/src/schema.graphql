@@ -1,0 +1,8 @@
+type Query {
+  probe: String
+  broken: String
+}
+
+type Mutation {
+  echo(name: String!): String!
+}

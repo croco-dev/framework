@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export type CrocoProblemRegistry = {
   readonly version: "croco.problem-code-registry.v1";
-  readonly problemCount: 1072;
+  readonly problemCount: 1074;
   readonly problems: readonly [
     {
       readonly code: "ACCESS_DENIED";
@@ -27510,6 +27510,62 @@ export type CrocoProblemRegistry = {
       ];
     },
     {
+      readonly code: "transports-graphql/fetch-schema-required";
+      readonly category: "BadRequest";
+      readonly status: 400;
+      readonly title: "Bad Request";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#transports-graphql-fetch-schema-required";
+      readonly recovery: {
+        readonly cause: "The fetch handler was configured without a prepared GraphQL schema, such as with Node-only schemaOptions.";
+        readonly userAction: "Provide a prepared GraphQLSchema in the schema option; compile code-first schemas before creating the fetch handler.";
+        readonly operatorAction: "Inspect createGraphQLFetchHandler configuration and move schemaOptions compilation outside the fetch transport.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "public";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.info";
+          readonly severity: "info";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/transports-graphql/src/libs/GraphQLFetchHandler.ts";
+          readonly line: 52;
+          readonly column: 11;
+          readonly kind: "problem-factory";
+        },
+      ];
+    },
+    {
+      readonly code: "transports-graphql/fetch-subscriptions-unsupported";
+      readonly category: "BadRequest";
+      readonly status: 400;
+      readonly title: "Bad Request";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#transports-graphql-fetch-subscriptions-unsupported";
+      readonly recovery: {
+        readonly cause: "A subscription type is present in the schema supplied to the query/mutation-only fetch handler.";
+        readonly userAction: "Provide a schema without subscription fields, or use a subscription-capable transport such as Node GraphQLServer.";
+        readonly operatorAction: "Inspect the schema passed to createGraphQLFetchHandler; keep subscriptions on a separately supported transport.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "public";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.info";
+          readonly severity: "info";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/transports-graphql/src/libs/GraphQLFetchHandler.ts";
+          readonly line: 58;
+          readonly column: 11;
+          readonly kind: "problem-factory";
+        },
+      ];
+    },
+    {
       readonly code: "transports-graphql/request-body-aborted";
       readonly category: "BadRequest";
       readonly status: 400;
@@ -30309,7 +30365,7 @@ export type CrocoProblemRegistry = {
 
 export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 1072,
+  problemCount: 1074,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -61033,6 +61089,74 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
           line: 8,
           column: 5,
           kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "transports-graphql/fetch-schema-required",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#transports-graphql-fetch-schema-required",
+      recovery: {
+        cause:
+          "The fetch handler was configured without a prepared GraphQL schema, such as with Node-only schemaOptions.",
+        userAction:
+          "Provide a prepared GraphQLSchema in the schema option; compile code-first schemas before creating the fetch handler.",
+        operatorAction:
+          "Inspect createGraphQLFetchHandler configuration and move schemaOptions compilation outside the fetch transport.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/transports-graphql/src/libs/GraphQLFetchHandler.ts",
+          line: 52,
+          column: 11,
+          kind: "problem-factory",
+        },
+      ],
+    },
+    {
+      code: "transports-graphql/fetch-subscriptions-unsupported",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#transports-graphql-fetch-subscriptions-unsupported",
+      recovery: {
+        cause:
+          "A subscription type is present in the schema supplied to the query/mutation-only fetch handler.",
+        userAction:
+          "Provide a schema without subscription fields, or use a subscription-capable transport such as Node GraphQLServer.",
+        operatorAction:
+          "Inspect the schema passed to createGraphQLFetchHandler; keep subscriptions on a separately supported transport.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/transports-graphql/src/libs/GraphQLFetchHandler.ts",
+          line: 58,
+          column: 11,
+          kind: "problem-factory",
         },
       ],
     },

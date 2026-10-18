@@ -35882,6 +35882,79 @@
               "source": "./libs/guards"
             }
           ]
+        },
+        {
+          "exportPath": "./fetch",
+          "kind": "code",
+          "targets": [
+            {
+              "conditions": ["types", "import"],
+              "target": "./dist/fetch.d.ts"
+            },
+            {
+              "conditions": ["types", "require"],
+              "target": "./dist/fetch.d.cts"
+            },
+            {
+              "conditions": ["import"],
+              "target": "./dist/fetch.js"
+            },
+            {
+              "conditions": ["require"],
+              "target": "./dist/fetch.cjs"
+            }
+          ],
+          "sourceEntrypoint": "packages/protocols-graphql/src/fetch.ts",
+          "runtimeExports": [
+            {
+              "name": "GRAPHQL_AUTH_GUARD_OPTIONS",
+              "exportKind": "named",
+              "source": "./libs/guards/AuthGuard",
+              "declarationKind": "const"
+            },
+            {
+              "name": "GraphQLAuthGuard",
+              "exportKind": "named",
+              "source": "./libs/guards/AuthGuard",
+              "declarationKind": "class"
+            },
+            {
+              "name": "GraphQLRolesGuard",
+              "exportKind": "named",
+              "source": "./libs/guards/RolesGuard",
+              "declarationKind": "class"
+            },
+            {
+              "name": "GuardChain",
+              "exportKind": "named",
+              "source": "./libs/guards/GuardChain",
+              "declarationKind": "class"
+            },
+            {
+              "name": "isProblem",
+              "exportKind": "named",
+              "source": "./libs/errors/ErrorConverter",
+              "declarationKind": "function"
+            },
+            {
+              "name": "problemToGraphQLError",
+              "exportKind": "named",
+              "source": "./libs/errors/ErrorConverter",
+              "declarationKind": "function"
+            }
+          ],
+          "typeExports": [
+            {
+              "name": "AuthGuardOptions",
+              "exportKind": "named",
+              "source": "./libs/guards/AuthGuard"
+            },
+            {
+              "name": "TokenVerifier",
+              "exportKind": "named",
+              "source": "./libs/guards/AuthGuard"
+            }
+          ]
         }
       ]
     },
@@ -44169,6 +44242,12 @@
               "exportKind": "named",
               "source": "./libs/SchemaCompiler",
               "declarationKind": "class"
+            },
+            {
+              "name": "createGraphQLFetchHandler",
+              "exportKind": "named",
+              "source": "./libs/GraphQLFetchHandler",
+              "declarationKind": "function"
             }
           ],
           "typeExports": [
@@ -44176,6 +44255,11 @@
               "name": "ContainerType",
               "exportKind": "named",
               "source": "./libs/types"
+            },
+            {
+              "name": "GraphQLFetchOptions",
+              "exportKind": "named",
+              "source": "./libs/GraphQLFetchHandler"
             },
             {
               "name": "GraphQLServerOptions",
@@ -44186,6 +44270,44 @@
               "name": "SchemaCompileOptions",
               "exportKind": "named",
               "source": "./libs/types"
+            }
+          ]
+        },
+        {
+          "exportPath": "./fetch",
+          "kind": "code",
+          "targets": [
+            {
+              "conditions": ["types", "import"],
+              "target": "./dist/fetch.d.ts"
+            },
+            {
+              "conditions": ["types", "require"],
+              "target": "./dist/fetch.d.cts"
+            },
+            {
+              "conditions": ["import"],
+              "target": "./dist/fetch.js"
+            },
+            {
+              "conditions": ["require"],
+              "target": "./dist/fetch.cjs"
+            }
+          ],
+          "sourceEntrypoint": "packages/transports-graphql/src/fetch.ts",
+          "runtimeExports": [
+            {
+              "name": "createGraphQLFetchHandler",
+              "exportKind": "named",
+              "source": "./libs/GraphQLFetchHandler",
+              "declarationKind": "function"
+            }
+          ],
+          "typeExports": [
+            {
+              "name": "GraphQLFetchOptions",
+              "exportKind": "named",
+              "source": "./libs/GraphQLFetchHandler"
             }
           ]
         }

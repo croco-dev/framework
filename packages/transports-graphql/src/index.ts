@@ -20,3 +20,6 @@ export {
 export { SchemaCompiler } from "./libs/SchemaCompiler";
 /** GraphQL server and schema compilation option types. */
 export type { ContainerType, GraphQLServerOptions, SchemaCompileOptions } from "./libs/types";
+/** Query/mutation transport for Fetch hosts with a prepared schema. */
+export { createGraphQLFetchHandler } from "./libs/GraphQLFetchHandler";
+export type { GraphQLFetchOptions } from "./libs/GraphQLFetchHandler";

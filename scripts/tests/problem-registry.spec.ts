@@ -1050,6 +1050,34 @@ class Missing extends Base { constructor() { super("literal"); } }`,
     });
   });
 
+  it.each([
+    {
+      code: "transports-graphql/fetch-schema-required",
+      cause: /prepared.*schema/i,
+      recovery: /prepared.*GraphQLSchema/i,
+    },
+    {
+      code: "transports-graphql/fetch-subscriptions-unsupported",
+      cause: /subscription.*schema/i,
+      recovery: /schema without.*subscription/i,
+    },
+  ])("publishes handler configuration recovery for $code", ({ code, cause, recovery }) => {
+    const repo = createTempRepo();
+    writeFile(
+      repo,
+      "packages/transports-graphql/src/FetchProblems.ts",
+      `import { ProblemFactory } from "@croco/problems-core";
+export const failure = ProblemFactory.badRequest("${code}", "Invalid fetch configuration");`,
+    );
+    const registry = createProblemCodeRegistry(discoverProblemCodes(repo));
+    const guidance = registry.problems.find((problem) => problem.code === code)?.recovery;
+    expect(guidance?.cause).toMatch(cause);
+    expect(guidance?.userAction).toMatch(recovery);
+    expect(guidance?.operatorAction).toMatch(/createGraphQLFetchHandler/);
+    expect(guidance?.retryability).toBe("not-retryable");
+    expect(guidance?.userAction).not.toMatch(/request input/i);
+  });
+
   it("requires a configuration correction for invalid batch loader sizes", () => {
     const repo = createTempRepo();
     writeFile(

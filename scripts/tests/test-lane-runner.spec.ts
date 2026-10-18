@@ -1089,6 +1089,7 @@ describe("test lane runner", () => {
       "@croco-example/saas-billing-golden-path",
       "@croco-example/saved-intents",
       "@croco-example/targeting-impact",
+      "@croco-example/workers-protocols",
     ]);
   });
 });
