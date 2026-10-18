@@ -27258,6 +27258,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "FileSitemapPublisher",
+              "exportKind": "named",
+              "source": "./libs/sitemap/FileSitemapPublisher",
+              "declarationKind": "class"
+            },
+            {
               "name": "META_VITE_ROUTE_MANIFEST_COMPONENT_REF_REQUIRED",
               "exportKind": "named",
               "source": "./libs/build/routeManifest",
@@ -27480,6 +27486,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "SitemapProblem",
+              "exportKind": "named",
+              "source": "./libs/sitemap/SitemapProblem",
+              "declarationKind": "class"
+            },
+            {
               "name": "applyShellStreamHeaders",
               "exportKind": "named",
               "source": "./libs/render/shellStream",
@@ -27672,6 +27684,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "createSitemapHandler",
+              "exportKind": "named",
+              "source": "./libs/sitemap/createSitemapHandler",
+              "declarationKind": "function"
+            },
+            {
               "name": "crocoMetaVitePlugin",
               "exportKind": "named",
               "source": "./libs/vite/crocoMetaVitePlugin",
@@ -27711,6 +27729,12 @@
               "name": "formatPersonalizedInspectEvent",
               "exportKind": "named",
               "source": "./libs/isr/personalizedFragments",
+              "declarationKind": "function"
+            },
+            {
+              "name": "generateSitemap",
+              "exportKind": "named",
+              "source": "./libs/sitemap/generateSitemap",
               "declarationKind": "function"
             },
             {
@@ -28251,6 +28275,56 @@
               "name": "ShellStreamRequest",
               "exportKind": "named",
               "source": "./libs/render/shellStream"
+            },
+            {
+              "name": "SitemapAccess",
+              "exportKind": "named",
+              "source": "./libs/sitemap/createSitemapHandler"
+            },
+            {
+              "name": "SitemapEntry",
+              "exportKind": "named",
+              "source": "./libs/sitemap/types"
+            },
+            {
+              "name": "SitemapExclusionReason",
+              "exportKind": "named",
+              "source": "./libs/sitemap/types"
+            },
+            {
+              "name": "SitemapGeneration",
+              "exportKind": "named",
+              "source": "./libs/sitemap/types"
+            },
+            {
+              "name": "SitemapHandlerOptions",
+              "exportKind": "named",
+              "source": "./libs/sitemap/createSitemapHandler"
+            },
+            {
+              "name": "SitemapPolicy",
+              "exportKind": "named",
+              "source": "./libs/sitemap/types"
+            },
+            {
+              "name": "SitemapPublication",
+              "exportKind": "named",
+              "source": "./libs/sitemap/types"
+            },
+            {
+              "name": "SitemapPublisher",
+              "exportKind": "named",
+              "source": "./libs/sitemap/types"
+            },
+            {
+              "name": "SitemapReport",
+              "exportKind": "named",
+              "source": "./libs/sitemap/types"
+            },
+            {
+              "name": "SitemapSource",
+              "exportKind": "named",
+              "source": "./libs/sitemap/types"
             },
             {
               "name": "SsgRenderFunction",

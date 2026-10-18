@@ -4575,6 +4575,9 @@ importers:
       '@croco/problems-core':
         specifier: workspace:*
         version: link:../problems-core
+      '@croco/storage-core':
+        specifier: workspace:*
+        version: link:../storage-core
     devDependencies:
       '@types/react':
         specifier: ^19.2.0
@@ -4585,6 +4588,9 @@ importers:
       '@vitejs/plugin-rsc':
         specifier: ^0.5.26
         version: 0.5.26(react-dom@19.2.6(react@19.2.6))(react-server-dom-webpack@19.2.6(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(webpack@5.111.1(@swc/core@1.15.43)(csso@5.0.5)(esbuild@0.27.2)(postcss@8.5.18)(sharp@0.35.4(@types/node@24.13.2))(svgo@4.0.2)(uglify-js@3.19.3)))(react@19.2.6)(vite@6.4.3(@types/node@24.13.2)(jiti@2.6.1)(terser@5.51.2)(tsx@4.21.0)(yaml@2.9.0))
+      fast-xml-parser:
+        specifier: 5.7.3
+        version: 5.7.3
       ioredis:
         specifier: 5.10.1
         version: 5.10.1(supports-color@10.2.2)

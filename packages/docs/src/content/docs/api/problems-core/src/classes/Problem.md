@@ -436,6 +436,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`ServerActionMalformedBodyProblem`](/api/meta-vite/src/classes/serveractionmalformedbodyproblem/)
 - [`ServerActionNotFoundProblem`](/api/meta-vite/src/classes/serveractionnotfoundproblem/)
 - [`ServerActionValidationProblem`](/api/meta-vite/src/classes/serveractionvalidationproblem/)
+- [`SitemapProblem`](/api/meta-vite/src/classes/sitemapproblem/)
 - [`AtomicQuotaNotSupportedProblem`](/api/metering-core/src/classes/atomicquotanotsupportedproblem/)
 - [`BillableUsageJournalRequiredProblem`](/api/metering-core/src/classes/billableusagejournalrequiredproblem/)
 - [`DuplicateRecordProblem`](/api/metering-core/src/classes/duplicaterecordproblem/)

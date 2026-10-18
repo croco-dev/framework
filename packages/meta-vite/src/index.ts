@@ -1,4 +1,19 @@
 // @croco/meta-vite — Croco-native Vite SSR/RSC meta-framework
+export { generateSitemap } from "./libs/sitemap/generateSitemap";
+export { FileSitemapPublisher } from "./libs/sitemap/FileSitemapPublisher";
+export { createSitemapHandler } from "./libs/sitemap/createSitemapHandler";
+export { SitemapProblem } from "./libs/sitemap/SitemapProblem";
+export type { SitemapAccess, SitemapHandlerOptions } from "./libs/sitemap/createSitemapHandler";
+export type {
+  SitemapEntry,
+  SitemapSource,
+  SitemapPolicy,
+  SitemapReport,
+  SitemapGeneration,
+  SitemapExclusionReason,
+  SitemapPublication,
+  SitemapPublisher,
+} from "./libs/sitemap/types";
 //
 // v1 public API:
 // - defineRoute: flat code-based route registration

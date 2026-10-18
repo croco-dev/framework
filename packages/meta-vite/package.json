@@ -70,12 +70,14 @@
   "dependencies": {
     "@croco/cache-core": "workspace:*",
     "@croco/presentation-preset": "workspace:*",
-    "@croco/problems-core": "workspace:*"
+    "@croco/problems-core": "workspace:*",
+    "@croco/storage-core": "workspace:*"
   },
   "devDependencies": {
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
     "@vitejs/plugin-rsc": "^0.5.26",
+    "fast-xml-parser": "5.7.3",
     "ioredis": "5.10.1",
     "react": "19.2.6",
     "react-dom": "19.2.6",

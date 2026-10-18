@@ -1,0 +1,130 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "meta-vite",
+      "classification": "runtime-adapter",
+      "reason": "Introduce resource-snapshot sitemap generation, authenticated report/publication endpoints and local or existing StorageProvider XML writes under an explicit shared POSIX publication boundary. Pure validation/partition logic is reused across those writers; no GSC, warehouse or SSR dependency is introduced.",
+      "files": {
+        "packages/meta-vite/package.json": "f6bcf8bf4e27bc2a153a6048d4c0927f8dcfa7d9518a85b64472f5680e480ba9",
+        "packages/meta-vite/src/index.ts": "8185ba76f0705eb1de45320d9079d59c868acba203b09cce2c266168d4552239",
+        "packages/meta-vite/src/libs/sitemap/FileSitemapPublisher.ts": "bd407608ca28cb200ea0cc95d0d0f4a18db2f3ef6e59f54b1b41a4bccf5b36dd",
+        "packages/meta-vite/src/libs/sitemap/SitemapProblem.ts": "9674dad457884c57791309d25dc08c29259be4379888fd9d981c21b8fef79c61",
+        "packages/meta-vite/src/libs/sitemap/createSitemapHandler.ts": "705a2b5d46ae219ae6a7c8675f9c0419bfeb4db3263aefb0cbf549b7fb5e909c",
+        "packages/meta-vite/src/libs/sitemap/generateSitemap.ts": "1bc9e2656a426b4e882b05b0f1bab687425afa270b3b5868a7cf17d3b966d3d7",
+        "packages/meta-vite/src/libs/sitemap/types.ts": "ee1dc35e7d723d13436dba63b765d1cbb764321d82de0292f90abe17492200a1"
+      },
+      "catalogRuntimes": ["node", "lambda", "cloudflare-workers", "browser"],
+      "profiles": {
+        "kubernetes": {
+          "result": "supported",
+          "reason": "The Node HTTP test reads a completed filesystem generation through real local sockets. Kubernetes uses the existing Node Host; no new cluster resource or runtime enum is introduced.",
+          "providers": [
+            "@croco/meta-vite/FileSitemapPublisher",
+            "@croco/storage-core/StorageProvider"
+          ],
+          "constraints": [
+            "All writers for one site and tenant must share one persistent coherent POSIX directory and object namespace. Local Node evidence is not a live Kubernetes or storage-provider certification.",
+            "Crash locks fail closed and require operator inspection; publication is process-atomic rather than power-loss durable."
+          ],
+          "references": [
+            "packages/meta-vite/SITEMAPS.md",
+            "packages/meta-vite/src/tests/Sitemap.spec.ts",
+            "packages/storage-core/src/libs/types.ts",
+            "packages/meta-vite/src/libs/providers/node.ts",
+            "packages/meta-vite/src/libs/providers/lambda.ts",
+            "packages/meta-vite/src/libs/providers/cloudflare.ts"
+          ],
+          "evidence": {
+            "kind": "host-runtime",
+            "runtime": "node",
+            "path": "packages/meta-vite/src/tests/Sitemap.spec.ts",
+            "testName": "Sitemap serves actual local HTTP XML/robots and enforces server actor, tenant, permission, origin, revision and idempotency",
+            "sha256": "025fcbc40f1be2791ba7b57bb87749ee5abeb7834e2f6173211d97cdf216ca28"
+          }
+        },
+        "aws-lambda": {
+          "result": "conditional",
+          "reason": "The Node coordinator can only be reused when every Lambda writer has the same persistent POSIX mount; ordinary invocation-local /tmp cannot coordinate durable publication.",
+          "providers": [
+            "@croco/meta-vite/FileSitemapPublisher",
+            "@croco/storage-core/StorageProvider"
+          ],
+          "constraints": [
+            "Requires an application-owned shared persistent POSIX mount, bounded snapshot/memory/execution budgets, coherent read-after-write objects and awaited work before invocation completion.",
+            "No live Lambda/EFS execution or certification is claimed."
+          ],
+          "references": [
+            "packages/meta-vite/SITEMAPS.md",
+            "packages/meta-vite/src/tests/Sitemap.spec.ts",
+            "packages/storage-core/src/libs/types.ts",
+            "packages/meta-vite/src/libs/providers/node.ts",
+            "packages/meta-vite/src/libs/providers/lambda.ts",
+            "packages/meta-vite/src/libs/providers/cloudflare.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "unsupported",
+          "host": "workers",
+          "reason": "The publication coordinator uses node:fs and POSIX rename/locking; Worker isolates have no shared persistent POSIX filesystem. Existing Workers rendering support is unchanged.",
+          "providers": ["@croco/meta-vite/FileSitemapPublisher"],
+          "constraints": [
+            "Generate artifacts in a Node build environment or separately evaluate an explicit Node Container with shared persistent storage. No Worker or Node Container publication support is certified."
+          ],
+          "references": [
+            "packages/meta-vite/SITEMAPS.md",
+            "packages/meta-vite/src/tests/Sitemap.spec.ts",
+            "packages/storage-core/src/libs/types.ts",
+            "packages/meta-vite/src/libs/providers/node.ts",
+            "packages/meta-vite/src/libs/providers/lambda.ts",
+            "packages/meta-vite/src/libs/providers/cloudflare.ts"
+          ]
+        }
+      }
+    },
+    {
+      "package": "problems-core",
+      "classification": "pure-contract",
+      "reason": "The generated Problem registry records the new sitemap diagnostic code and its existing runtime-dependent category policy; no host, storage or lifecycle implementation changes.",
+      "files": {
+        "packages/problems-core/src/generated/problem-code-registry.ts": "4187d13370638bc836c1d9eccd68f9b32e6593207324d0d10b640b8546133744"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Generated diagnostic metadata is consumed uniformly by all hosts and adds no infrastructure capability, provider, durable state or lifecycle boundary.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "packages/meta-vite/src/libs/sitemap/SitemapProblem.ts",
+            "packages/meta-vite/SITEMAPS.md"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Generated diagnostic metadata is consumed uniformly by all hosts and adds no infrastructure capability, provider, durable state or lifecycle boundary.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "packages/meta-vite/src/libs/sitemap/SitemapProblem.ts",
+            "packages/meta-vite/SITEMAPS.md"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Generated diagnostic metadata is consumed uniformly by all hosts and adds no infrastructure capability, provider, durable state or lifecycle boundary.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "packages/meta-vite/src/libs/sitemap/SitemapProblem.ts",
+            "packages/meta-vite/SITEMAPS.md"
+          ]
+        }
+      }
+    }
+  ]
+}
