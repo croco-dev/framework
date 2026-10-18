@@ -13,6 +13,13 @@
           "owner": "kang-heewon",
           "reason": "Test fixtures use dummy API and idempotency key strings under package test files; production source remains scanned.",
           "reviewBy": "2027-01-31"
+        },
+        {
+          "kind": "path",
+          "value": "^docs/infrastructure-reviews/3295-codegen-cwd\\.json$",
+          "owner": "kang-heewon",
+          "reason": "Issue #3295 infrastructure review contains source SHA-256 digests and build-time runtime assessments, not credentials. The codegenOpenapi.ts digest matches the source file but triggers generic-api-key. This exact review-record path remains stable after squash; production source and every other review record remain scanned.",
+          "reviewBy": "2027-01-31"
         }
       ],
       "ignoreFingerprints": [
@@ -21,12 +28,6 @@
           "owner": "kang-heewon",
           "reason": "Historical planning evidence artifact in git history triggers generic-api-key detection; current source tree does not include the artifact and the exact fingerprint is tracked for future history-cleanup review.",
           "reviewBy": "2026-10-31"
-        },
-        {
-          "fingerprint": "cbd088a71c827f3ebfe741443cc4defd0608ed9c:docs/infrastructure-reviews/3295-codegen-cwd.json:generic-api-key:9",
-          "owner": "kang-heewon",
-          "reason": "Issue #3295 infrastructure review records the SHA-256 of packages/cli/src/commands/codegenOpenapi.ts. The detected value exactly matches that source digest and is not a credential; only this historical commit, file, rule and line are exempted.",
-          "reviewBy": "2027-01-31"
         }
       ]
     },
