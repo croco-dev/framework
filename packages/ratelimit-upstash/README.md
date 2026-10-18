@@ -31,7 +31,7 @@ const result = await limiter.check({ ip: "127.0.0.1" }, policy);
 
 | API                                    | 설명                                                                |
 | -------------------------------------- | ------------------------------------------------------------------- |
-| `createUpstashRateLimitClient`        | Workers bindings로 fetch-only REST 클라이언트를 생성합니다. |
+| `createUpstashRateLimitClient`         | Workers bindings로 fetch-only REST 클라이언트를 생성합니다.         |
 | `UpstashSlidingWindowStore`            | 슬라이딩 윈도우 제한을 수행합니다.                                  |
 | `UpstashTokenBucketStore`              | 토큰 버킷 제한을 수행합니다.                                        |
 | `UpstashFixedWindowStore`              | 고정 윈도우 제한을 수행합니다.                                      |
@@ -91,8 +91,8 @@ HTTP 상태를 보존하므로 429/5xx는 retryable Problem, 401/403은 terminal
 있으므로 retryable은 자동 재시도 허가가 아닙니다.
 
 ```typescript typecheck
-import { createUpstashRateLimitClient, UpstashFixedWindowStore } from '@croco/ratelimit-upstash';
-import { RateLimiter } from '@croco/ratelimit-core';
+import { createUpstashRateLimitClient, UpstashFixedWindowStore } from "@croco/ratelimit-upstash";
+import { RateLimiter } from "@croco/ratelimit-core";
 
 type Bindings = { UPSTASH_REDIS_REST_URL: string; UPSTASH_REDIS_REST_TOKEN: string };
 
@@ -102,9 +102,13 @@ export function createLimiter(env: Bindings, namespace: string) {
     token: env.UPSTASH_REDIS_REST_TOKEN,
   });
   const store = new UpstashFixedWindowStore({ redis, prefix: `${namespace}:fixed` });
-  return new RateLimiter<{ verifiedClientIp: string }>(store, (context) => context.verifiedClientIp, {
-    failOpen: false,
-  });
+  return new RateLimiter<{ verifiedClientIp: string }>(
+    store,
+    (context) => context.verifiedClientIp,
+    {
+      failOpen: false,
+    },
+  );
 }
 ```
 
