@@ -464,7 +464,7 @@ describe("createControllerProject", () => {
       compilerOptions: {
         target: "ES2020",
         module: "CommonJS",
-        paths: { "@app/*": ["./src/*"] },
+        paths: { "@app/*": ["./src/*.ts"] },
       },
     });
     writeFile(path.join(root, "src", "value.ts"), "export const value = 'resolved';");
@@ -650,7 +650,7 @@ describe("createControllerProject", () => {
         target: "ES2022",
         module: "NodeNext",
         moduleResolution: "NodeNext",
-        paths: { "@app/*": ["./src/*"] },
+        paths: { "@app/*": ["./src/*.ts"] },
       },
     });
     writeFile(path.join(root, "src", "value.ts"), "export const value = 'esm';");
@@ -861,7 +861,7 @@ describe("createControllerProject", () => {
       compilerOptions: {
         module: "NodeNext",
         moduleResolution: "NodeNext",
-        paths: { "@app/*": ["./src/*"] },
+        paths: { "@app/*": ["./src/*.ts"] },
         target: "ES2022",
       },
     });
