@@ -177,11 +177,14 @@ export function inspectInfrastructureReview(
     report.diagnostics.push({ code, path, message });
   const catalog = json(at(root, head, "docs/package-catalog.json"));
   if (object(catalog.agentCapabilities)) {
-    if (git(root, ["rev-parse", "--verify", "HEAD"]).trim() !== head) {
+    if (
+      git(root, ["rev-parse", "--verify", "HEAD"]).trim() !== head ||
+      git(root, ["status", "--porcelain=v1", "--untracked-files=all"]).trim()
+    ) {
       diagnostic(
         "INFRA_SKILL_CHECKOUT_REQUIRED",
         ".agents/skills/croco/SKILL.md",
-        "Check out the reviewed head before validating generated Skill consistency.",
+        "Use a clean checkout at the reviewed head before validating generated Skill consistency.",
       );
     } else {
       for (const error of validateCrocoSkill(root))

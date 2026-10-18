@@ -422,7 +422,7 @@ it('real host', async () => {
       );
     },
   );
-  it.each(["reviewed", "different-broken", "different-healthy"])(
+  it.each(["reviewed", "different-broken", "different-healthy", "dirty-restored", "dirty-deleted"])(
     "validates generated skills against the requested revision (%s)",
     (mode) => {
       const { root } = fixture();
@@ -452,7 +452,17 @@ it('real host', async () => {
       rmSync(join(root, generated, "SKILL.md"));
       const head = commit(root);
       if (mode === "different-broken") git(root, "checkout", "--detach", base);
-      const requestedHead = mode === "different-healthy" ? base : head;
+      if (mode === "dirty-restored")
+        write(
+          root,
+          `${generated}/SKILL.md`,
+          readFileSync(join(repository, generated, "SKILL.md"), "utf8"),
+        );
+      if (mode === "dirty-deleted") {
+        git(root, "checkout", "--detach", base);
+        rmSync(join(root, generated, "SKILL.md"));
+      }
+      const requestedHead = ["different-healthy", "dirty-deleted"].includes(mode) ? base : head;
       const codes = inspectInfrastructureReview(root, base, requestedHead).diagnostics.map(
         (d) => d.code,
       );
