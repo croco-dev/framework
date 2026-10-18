@@ -7,14 +7,27 @@ import { GraphQLServer } from "@croco/transports-graphql";
 import { createGraphQLFixture } from "../graphqlFixture";
 import { getSdk } from "../generated/graphql";
 import { execFileSync } from "node:child_process";
-import { Miniflare } from "miniflare";
+import { Miniflare, Response as MiniflareResponse } from "miniflare";
 import { createTRPCUntypedClient, httpLink } from "@trpc/client";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 let worker: Miniflare;
 beforeAll(async () => {
   execFileSync(process.execPath, ["build.mjs"]);
+  let arrivals = 0;
+  let release: () => void = () => undefined;
+  const ready = new Promise<void>((resolve) => {
+    release = resolve;
+  });
   worker = new Miniflare({
+    outboundService: async (request) => {
+      if (request.url !== "https://request-overlap.invalid/rendezvous") {
+        throw new Error("Unexpected outbound request in the local protocol fixture");
+      }
+      if (++arrivals === 4) release();
+      await ready;
+      return new MiniflareResponse(null, { status: 204 });
+    },
     modules: true,
     scriptPath: "dist/worker.mjs",
     compatibilityDate: "2026-03-12",
@@ -26,7 +39,8 @@ afterAll(async () => {
   await worker?.dispose();
 });
 
-const headers = (tenant = "tenant-a") => ({
+const headers = (tenant = "tenant-a", overlap = false) => ({
+  ...(overlap ? { "x-overlap": "four-requests" } : {}),
   authorization: `Bearer ${tenant}`,
   cookie: `session=${tenant}`,
   "content-type": "application/json",
@@ -37,12 +51,12 @@ const graphql = (query: string, tenant = "tenant-a", extra: Record<string, strin
     headers: { ...headers(tenant), ...extra },
     body: JSON.stringify({ query }),
   });
-const trpc = (tenant = "tenant-a") =>
+const trpc = (tenant = "tenant-a", overlap = false) =>
   createTRPCUntypedClient({
     links: [
       httpLink({
         url: "http://worker/trpc",
-        headers: () => headers(tenant),
+        headers: () => headers(tenant, overlap),
         fetch: (url, init) =>
           worker.dispatchFetch(
             String(url),
@@ -174,8 +188,10 @@ describe("Workers protocol transports on actual workerd", () => {
   it("isolates overlapping GraphQL and tRPC tenant requests", async () => {
     const results = await Promise.all(
       ["tenant-a", "tenant-b"].flatMap((tenant) => [
-        graphql("{ probe }", tenant).then((response) => response.json()),
-        trpc(tenant).query("probe.read"),
+        graphql("{ probe }", tenant, { "x-overlap": "four-requests" }).then((response) =>
+          response.json(),
+        ),
+        trpc(tenant, true).query("probe.read"),
       ]),
     );
     expect(results).toEqual([

@@ -12,6 +12,7 @@ import { buildSchema } from "graphql";
 import schemaSDL from "./schema.graphql";
 import { createGraphQLFixture } from "./graphqlFixture";
 import { z } from "zod";
+import { waitForOverlappingRequests } from "./requestOverlap";
 
 const inputSchema = z.object({ name: z.string().min(2) });
 
@@ -36,7 +37,7 @@ class AuthGuard implements Guard<TrpcExecutionContext> {
 class ProbeController {
   @Get("/")
   async read(@Ctx() context: { request: Request }): Promise<string> {
-    await Promise.resolve();
+    await waitForOverlappingRequests(context.request);
     return `${Context.get()?.tenantId}:${context.request.headers.get("cookie")}`;
   }
 

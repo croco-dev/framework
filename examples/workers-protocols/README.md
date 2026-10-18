@@ -23,7 +23,9 @@ The build bundles only the fetch entrypoints and rejects filesystem/HTTP listene
 imports. Croco's AsyncLocalStorage scopes require Workers `nodejs_compat`;
 `node:async_hooks` and `node:crypto` are the only permitted Node imports. The API returns
 GraphQL partial data/errors and tRPC envelopes independently, preserves multiple cookies,
-and isolates tenant state during overlapping requests. The abort fixture creates an
+and isolates tenant state during overlapping requests. A local Miniflare outbound
+rendezvous holds all four tenant/protocol requests until they have arrived; it uses no
+external service or timers. The abort fixture creates an
 already-aborted Request inside workerd and proves the host signal reaches the tRPC
 procedure; it does not establish propagation of a network client disconnect.
 

@@ -2,6 +2,7 @@ import { Context } from "@croco/framework-context";
 import { ProblemFactory } from "@croco/problems-core";
 import { GraphQLAuthGuard } from "@croco/protocols-graphql/fetch";
 import { buildSchema } from "graphql";
+import { waitForOverlappingRequests } from "./requestOverlap";
 import type { GraphQLFetchOptions } from "@croco/transports-graphql/fetch";
 
 export function createGraphQLFixture(schemaSDL: string): GraphQLFetchOptions {
@@ -13,7 +14,7 @@ export function createGraphQLFixture(schemaSDL: string): GraphQLFetchOptions {
   if (fields) {
     fields.probe.resolve = async (root, args, context, info) => {
       await guard.canActivate({ root, args, context, info });
-      await Promise.resolve();
+      await waitForOverlappingRequests(context.request);
       return `${Context.get()?.tenantId}:${context.request.headers.get("cookie")}`;
     };
     fields.broken.resolve = () => {
