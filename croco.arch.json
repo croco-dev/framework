@@ -72,6 +72,7 @@
         "@croco/research-core",
         "@croco/retry-core",
         "@croco/search-core",
+        "@croco/seo-core",
         "@croco/storage-core",
         "@croco/tasks-core",
         "@croco/telemetry-api",
