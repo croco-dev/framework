@@ -36941,6 +36941,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "RateLimitPolicyProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/RateLimitConfigProblems",
+              "declarationKind": "class"
+            },
+            {
               "name": "RateLimitPruneIntervalProblem",
               "exportKind": "named",
               "source": "./libs/problems/RateLimitConfigProblems",
@@ -37040,6 +37046,12 @@
               "name": "parseWindowMs",
               "exportKind": "named",
               "source": "./libs/types",
+              "declarationKind": "function"
+            },
+            {
+              "name": "validateRateLimitPolicy",
+              "exportKind": "named",
+              "source": "./libs/validateRateLimitPolicy",
               "declarationKind": "function"
             }
           ],

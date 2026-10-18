@@ -15,6 +15,7 @@ import {
   isTokenBucketPolicy,
   SlidingWindowStore,
   TokenBucketStore,
+  validateRateLimitPolicy,
 } from "@croco/ratelimit-core";
 import { Problem } from "@croco/problems-core";
 import type { Redis } from "@upstash/redis";
@@ -99,6 +100,7 @@ export class UpstashSlidingWindowStore extends SlidingWindowStore {
   }
 
   async checkSlidingWindow(key: string, policy: SlidingWindowPolicy): Promise<RateLimitResult> {
+    validateRateLimitPolicy(policy);
     const now = this.now();
     const windowStart = now - policy.windowMs;
     const redisKey = `${this.prefix}:${key}`;
@@ -137,6 +139,7 @@ export class UpstashSlidingWindowStore extends SlidingWindowStore {
     if (!isSlidingWindowPolicy(policy)) {
       throw new InvalidRateLimitPolicyProblem("sliding window");
     }
+    validateRateLimitPolicy(policy);
     if (!receipt || receipt.algorithm !== "sliding") {
       throw new InvalidRateLimitPolicyProblem("sliding window refund receipt");
     }
@@ -239,6 +242,7 @@ export class UpstashTokenBucketStore extends TokenBucketStore {
   }
 
   async checkTokenBucket(key: string, policy: TokenBucketPolicy): Promise<RateLimitResult> {
+    validateRateLimitPolicy(policy);
     const now = this.now();
     const redisKey = clusteredRateLimitKey(this.prefix, key);
     const receiptKey = `${redisKey}:receipts`;
@@ -289,6 +293,7 @@ export class UpstashTokenBucketStore extends TokenBucketStore {
     if (!isTokenBucketPolicy(policy)) {
       throw new InvalidRateLimitPolicyProblem("token bucket");
     }
+    validateRateLimitPolicy(policy);
     if (!receipt || receipt.algorithm !== "token-bucket") {
       throw new InvalidRateLimitPolicyProblem("token bucket refund receipt");
     }
@@ -378,6 +383,7 @@ export class UpstashFixedWindowStore extends FixedWindowStore {
   }
 
   async checkFixedWindow(key: string, policy: FixedWindowPolicy): Promise<RateLimitResult> {
+    validateRateLimitPolicy(policy);
     const now = this.now();
     const windowStart = Math.floor(now / policy.windowMs) * policy.windowMs;
     const redisKey = clusteredRateLimitKey(this.prefix, key);
@@ -424,6 +430,7 @@ export class UpstashFixedWindowStore extends FixedWindowStore {
     if (!isFixedWindowPolicy(policy)) {
       throw new InvalidRateLimitPolicyProblem("fixed window");
     }
+    validateRateLimitPolicy(policy);
     if (!receipt || receipt.algorithm !== "fixed") {
       throw new InvalidRateLimitPolicyProblem("fixed window refund receipt");
     }

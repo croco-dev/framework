@@ -2,6 +2,7 @@ import {
   createFixedWindowPolicy,
   createSlidingWindowPolicy,
   createTokenBucketPolicy,
+  type RateLimitPolicy,
 } from "@croco/ratelimit-core";
 import { createUpstashRedisRateLimitConformanceSuite } from "@croco/testing";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -981,5 +982,87 @@ describe("Upstash store clocks", () => {
       check.refundReceipt?.id,
       120_000,
     ]);
+  });
+});
+
+describe("Shared rate-limit policy validation", () => {
+  const cases = [
+    {
+      Store: UpstashFixedWindowStore,
+      policy: { name: "fixed", algorithm: "fixed", limit: 2, windowMs: 1000 },
+      fields: ["limit", "windowMs"],
+    },
+    {
+      Store: UpstashSlidingWindowStore,
+      policy: { name: "sliding", algorithm: "sliding", limit: 2, windowMs: 1000 },
+      fields: ["limit", "windowMs"],
+    },
+    {
+      Store: UpstashTokenBucketStore,
+      policy: {
+        name: "bucket",
+        algorithm: "token-bucket",
+        capacity: 2,
+        refillRate: 1,
+        refillIntervalMs: 1000,
+      },
+      fields: ["capacity", "refillRate", "refillIntervalMs"],
+    },
+  ] as const;
+  for (const { Store, policy, fields } of cases) {
+    for (const field of fields) {
+      it.each([NaN, Infinity, 0, -1, Number.MAX_SAFE_INTEGER + 1])(
+        `${policy.algorithm} rejects ${field}=%s before Redis or statistics change`,
+        async (value) => {
+          const redis = createMockRedis();
+          const store = new Store({ redis: redis as never });
+          const invalidPolicy = { ...policy, [field]: value } as RateLimitPolicy;
+          await expect(store.check("key", invalidPolicy)).rejects.toMatchObject({
+            code: "ratelimit/invalid-policy",
+          });
+          const receipt =
+            policy.algorithm === "fixed"
+              ? ({ algorithm: "fixed", id: "r", windowStart: 0 } as const)
+              : policy.algorithm === "sliding"
+                ? ({ algorithm: "sliding", id: "r", timestamp: 0 } as const)
+                : ({ algorithm: "token-bucket", id: "r", expiresAtMs: 1000 } as const);
+          await expect(store.refund("key", invalidPolicy, receipt)).rejects.toMatchObject({
+            code: "ratelimit/invalid-policy",
+          });
+          expect(redis.eval).not.toHaveBeenCalled();
+          expect(await store.getStats()).toEqual({ allowed: 0, denied: 0, total: 0 });
+        },
+      );
+    }
+  }
+
+  it("validates direct algorithm methods before Redis access", async () => {
+    const redis = createMockRedis();
+    await expect(
+      new UpstashFixedWindowStore({ redis: redis as never }).checkFixedWindow("key", {
+        name: "f",
+        algorithm: "fixed",
+        limit: 1.5,
+        windowMs: 1000,
+      }),
+    ).rejects.toMatchObject({ code: "ratelimit/invalid-policy" });
+    await expect(
+      new UpstashSlidingWindowStore({ redis: redis as never }).checkSlidingWindow("key", {
+        name: "s",
+        algorithm: "sliding",
+        limit: 2,
+        windowMs: 0.5,
+      }),
+    ).rejects.toMatchObject({ code: "ratelimit/invalid-policy" });
+    await expect(
+      new UpstashTokenBucketStore({ redis: redis as never }).checkTokenBucket("key", {
+        name: "b",
+        algorithm: "token-bucket",
+        capacity: 2,
+        refillRate: Number.MIN_VALUE,
+        refillIntervalMs: 1000,
+      }),
+    ).rejects.toMatchObject({ code: "ratelimit/invalid-policy" });
+    expect(redis.eval).not.toHaveBeenCalled();
   });
 });

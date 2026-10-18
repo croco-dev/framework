@@ -591,6 +591,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`RateLimitDuplicateDefaultPolicyProblem`](/api/ratelimit-core/src/classes/ratelimitduplicatedefaultpolicyproblem/)
 - [`RateLimitExceededProblem`](/api/ratelimit-core/src/classes/ratelimitexceededproblem/)
 - [`RateLimitKeyBuilderProblem`](/api/ratelimit-core/src/classes/ratelimitkeybuilderproblem/)
+- [`RateLimitPolicyProblem`](/api/ratelimit-core/src/classes/ratelimitpolicyproblem/)
 - [`RateLimitPruneIntervalProblem`](/api/ratelimit-core/src/classes/ratelimitpruneintervalproblem/)
 - [`RateLimitRefundUnsupportedProblem`](/api/ratelimit-core/src/classes/ratelimitrefundunsupportedproblem/)
 - [`RateLimitWindowProblem`](/api/ratelimit-core/src/classes/ratelimitwindowproblem/)

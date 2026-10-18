@@ -2,6 +2,7 @@ import { ProblemCategory } from "@croco/problems-core";
 import { describe, expect, it } from "vitest";
 import {
   RateLimitKeyBuilderProblem,
+  RateLimitPolicyProblem,
   RateLimitWindowProblem,
 } from "../libs/problems/RateLimitConfigProblems";
 
@@ -30,4 +31,16 @@ describe("RateLimitConfigProblems", () => {
       expect(problem.toJSON()).toMatchObject({ code, detail });
     },
   );
+  it("serializes nonfinite policy values as stable diagnostic strings", () => {
+    const problem = new RateLimitPolicyProblem(
+      "limit",
+      Infinity,
+      "must be a positive safe integer",
+    );
+    expect(JSON.parse(JSON.stringify(problem))).toMatchObject({
+      code: "ratelimit/invalid-policy",
+      field: "limit",
+      value: "Infinity",
+    });
+  });
 });

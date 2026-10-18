@@ -1,3 +1,4 @@
+import { validateRateLimitPolicy } from "./validateRateLimitPolicy";
 import type { KeyContext, RateLimitKeyBuilder } from "./RateLimitKeyBuilder";
 import type { RateLimitStore } from "./RateLimitStore";
 import { RateLimitUnexpectedPolicyProblem } from "./problems/RateLimitConfigProblems";
@@ -46,6 +47,7 @@ export class RateLimiter<TContext = KeyContext> {
     policy: RateLimitPolicy,
     options?: RateLimitCheckOptions,
   ): Promise<RateLimitResult> {
+    validateRateLimitPolicy(policy);
     const key = this.keyBuilder(context, policy.name);
 
     try {
@@ -61,6 +63,7 @@ export class RateLimiter<TContext = KeyContext> {
     policy: RateLimitPolicy,
     options?: RateLimitCheckOptions,
   ): Promise<RateLimitResult> {
+    validateRateLimitPolicy(policy);
     try {
       const result = await this.store.check(key, policy);
       return { ...result, policyName: policy.name };
@@ -74,6 +77,7 @@ export class RateLimiter<TContext = KeyContext> {
     policy: RateLimitPolicy,
     receipt?: RateLimitRefundReceipt,
   ): Promise<RateLimitRefundResult> {
+    validateRateLimitPolicy(policy);
     const key = this.keyBuilder(context, policy.name);
     return this.refundWithKey(key, policy, receipt);
   }
@@ -83,6 +87,7 @@ export class RateLimiter<TContext = KeyContext> {
     policy: RateLimitPolicy,
     receipt?: RateLimitRefundReceipt,
   ): Promise<RateLimitRefundResult> {
+    validateRateLimitPolicy(policy);
     try {
       const result = await this.store.refund(key, policy, receipt);
       return { ...result, policyName: policy.name };
@@ -196,12 +201,14 @@ export function createFixedWindowPolicy(
   limit: number,
   windowMs: number,
 ): FixedWindowPolicy {
-  return {
+  const policy: FixedWindowPolicy = {
     name,
     algorithm: "fixed",
     limit,
     windowMs,
   };
+  validateRateLimitPolicy(policy);
+  return policy;
 }
 
 export function createSlidingWindowPolicy(
@@ -209,12 +216,14 @@ export function createSlidingWindowPolicy(
   limit: number,
   windowMs: number,
 ): SlidingWindowPolicy {
-  return {
+  const policy: SlidingWindowPolicy = {
     name,
     algorithm: "sliding",
     limit,
     windowMs,
   };
+  validateRateLimitPolicy(policy);
+  return policy;
 }
 
 export function createTokenBucketPolicy(
@@ -223,11 +232,13 @@ export function createTokenBucketPolicy(
   refillRate: number,
   refillIntervalMs = 1000,
 ): TokenBucketPolicy {
-  return {
+  const policy: TokenBucketPolicy = {
     name,
     algorithm: "token-bucket",
     capacity,
     refillRate,
     refillIntervalMs,
   };
+  validateRateLimitPolicy(policy);
+  return policy;
 }

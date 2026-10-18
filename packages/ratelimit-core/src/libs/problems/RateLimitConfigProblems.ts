@@ -67,3 +67,14 @@ export class RateLimitDuplicateDefaultPolicyProblem extends Problem {
     );
   }
 }
+
+export class RateLimitPolicyProblem extends Problem {
+  constructor(field: string, value: number, requirement: string) {
+    super(
+      "ratelimit/invalid-policy",
+      ProblemCategory.ValidationError,
+      `Rate limit policy ${field} ${requirement}; received '${String(value)}'.`,
+      { extensions: { field, value: String(value) } },
+    );
+  }
+}

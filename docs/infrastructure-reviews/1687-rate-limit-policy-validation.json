@@ -1,0 +1,149 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "ratelimit-core",
+      "classification": "pure-contract",
+      "reason": "Validate numeric policy fields and derived token-bucket lifetime before arithmetic, state access, factory return and fail-open handling. Pruning scheduler behavior is unchanged.",
+      "files": {
+        "packages/ratelimit-core/src/index.ts": "56b31f84ff3f07f43ad0829fcab90b7a1390e4690752240869734c452f70fc46",
+        "packages/ratelimit-core/src/libs/InMemoryRateLimitStore.ts": "9523f1ace3188c04d476e263412aeacb40d3e408dcef88a70a506338eafe3aaa",
+        "packages/ratelimit-core/src/libs/RateLimitStore.ts": "f4f4bafdac58160947eda03fa2fc382ccec9dc2bfd9a3810bcc86c01c6e15e04",
+        "packages/ratelimit-core/src/libs/RateLimiter.ts": "47eaa1ca864bafb79d31edd090b5245cdc52993b289451acbcd47d4f73bf4e76",
+        "packages/ratelimit-core/src/libs/problems/RateLimitConfigProblems.ts": "40edc9d9c0a8108e34ccc4251aa1d848446a90787430b6bbae6be5f7c4c4acc7",
+        "packages/ratelimit-core/src/libs/types.ts": "f76a681d797b862015f1b8503a2b72cbc5690b7e82eece706dfebfbe82d8c643",
+        "packages/ratelimit-core/src/libs/validateRateLimitPolicy.ts": "33e5f89095d5a1706090915a4c1feef9cc9326fbf328fb7516f07cb15cb455de"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Validate numeric policy fields and derived token-bucket lifetime before arithmetic, state access, factory return and fail-open handling. Pruning scheduler behavior is unchanged. The changed numeric validation or declarative metadata has no Kubernetes Node Host capability, storage or lifecycle dependency, so it reuses the same contract without platform-specific implementation.",
+          "providers": ["@croco/ratelimit-core"],
+          "constraints": [
+            "This review covers only numeric validation and generated diagnostics; it makes no new runtime support, live-provider certification or deployment claim."
+          ],
+          "references": [
+            "packages/ratelimit-core/src/index.ts",
+            "packages/ratelimit-core/src/libs/InMemoryRateLimitStore.ts",
+            "packages/ratelimit-core/src/libs/RateLimitStore.ts",
+            "packages/ratelimit-core/src/libs/RateLimiter.ts",
+            "packages/ratelimit-core/src/libs/problems/RateLimitConfigProblems.ts",
+            "packages/ratelimit-core/src/libs/types.ts",
+            "packages/ratelimit-core/src/libs/validateRateLimitPolicy.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Validate numeric policy fields and derived token-bucket lifetime before arithmetic, state access, factory return and fail-open handling. Pruning scheduler behavior is unchanged. The changed numeric validation or declarative metadata has no AWS Lambda Host capability, storage or lifecycle dependency, so it reuses the same contract without platform-specific implementation.",
+          "providers": ["@croco/ratelimit-core"],
+          "constraints": [
+            "This review covers only numeric validation and generated diagnostics; it makes no new runtime support, live-provider certification or deployment claim."
+          ],
+          "references": [
+            "packages/ratelimit-core/src/index.ts",
+            "packages/ratelimit-core/src/libs/InMemoryRateLimitStore.ts",
+            "packages/ratelimit-core/src/libs/RateLimitStore.ts",
+            "packages/ratelimit-core/src/libs/RateLimiter.ts",
+            "packages/ratelimit-core/src/libs/problems/RateLimitConfigProblems.ts",
+            "packages/ratelimit-core/src/libs/types.ts",
+            "packages/ratelimit-core/src/libs/validateRateLimitPolicy.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Validate numeric policy fields and derived token-bucket lifetime before arithmetic, state access, factory return and fail-open handling. Pruning scheduler behavior is unchanged. The changed numeric validation or declarative metadata has no Cloudflare Workers Host or explicit Node Container Host capability, storage or lifecycle dependency, so it reuses the same contract without platform-specific implementation.",
+          "providers": ["@croco/ratelimit-core"],
+          "constraints": [
+            "This review covers only numeric validation and generated diagnostics; it makes no new runtime support, live-provider certification or deployment claim."
+          ],
+          "references": [
+            "packages/ratelimit-core/src/index.ts",
+            "packages/ratelimit-core/src/libs/InMemoryRateLimitStore.ts",
+            "packages/ratelimit-core/src/libs/RateLimitStore.ts",
+            "packages/ratelimit-core/src/libs/RateLimiter.ts",
+            "packages/ratelimit-core/src/libs/problems/RateLimitConfigProblems.ts",
+            "packages/ratelimit-core/src/libs/types.ts",
+            "packages/ratelimit-core/src/libs/validateRateLimitPolicy.ts"
+          ]
+        }
+      }
+    },
+    {
+      "package": "ratelimit-upstash",
+      "classification": "pure-contract",
+      "reason": "Reuse the core numeric policy validator before Redis check/refund calls, including direct algorithm methods. Lua, keys, atomicity, credentials and network/lifecycle behavior are unchanged.",
+      "files": {
+        "packages/ratelimit-upstash/src/libs/UpstashRateLimitStore.ts": "cc0535354c236763126e11b0c7a9e7c84c41e71eb7780757352064042caee67e"
+      },
+      "catalogRuntimes": ["node", "lambda", "cloudflare-workers"],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Reuse the core numeric policy validator before Redis check/refund calls, including direct algorithm methods. Lua, keys, atomicity, credentials and network/lifecycle behavior are unchanged. The changed numeric validation or declarative metadata has no Kubernetes Node Host capability, storage or lifecycle dependency, so it reuses the same contract without platform-specific implementation.",
+          "providers": ["@croco/ratelimit-core"],
+          "constraints": [
+            "This review covers only numeric validation and generated diagnostics; it makes no new runtime support, live-provider certification or deployment claim."
+          ],
+          "references": ["packages/ratelimit-upstash/src/libs/UpstashRateLimitStore.ts"]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Reuse the core numeric policy validator before Redis check/refund calls, including direct algorithm methods. Lua, keys, atomicity, credentials and network/lifecycle behavior are unchanged. The changed numeric validation or declarative metadata has no AWS Lambda Host capability, storage or lifecycle dependency, so it reuses the same contract without platform-specific implementation.",
+          "providers": ["@croco/ratelimit-core"],
+          "constraints": [
+            "This review covers only numeric validation and generated diagnostics; it makes no new runtime support, live-provider certification or deployment claim."
+          ],
+          "references": ["packages/ratelimit-upstash/src/libs/UpstashRateLimitStore.ts"]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Reuse the core numeric policy validator before Redis check/refund calls, including direct algorithm methods. Lua, keys, atomicity, credentials and network/lifecycle behavior are unchanged. The changed numeric validation or declarative metadata has no Cloudflare Workers Host or explicit Node Container Host capability, storage or lifecycle dependency, so it reuses the same contract without platform-specific implementation.",
+          "providers": ["@croco/ratelimit-core"],
+          "constraints": [
+            "This review covers only numeric validation and generated diagnostics; it makes no new runtime support, live-provider certification or deployment claim."
+          ],
+          "references": ["packages/ratelimit-upstash/src/libs/UpstashRateLimitStore.ts"]
+        }
+      }
+    },
+    {
+      "package": "problems-core",
+      "classification": "pure-contract",
+      "reason": "Regenerate the public Problem registry and client union for the new ratelimit/invalid-policy configuration diagnostic. This is declarative metadata, with no Host or provider implementation.",
+      "files": {
+        "packages/problems-core/src/generated/problem-code-registry.ts": "5baf1d98741402447f1706bc340d25232cdf29ae3685b43901b490a3dc40b49d"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Regenerate the public Problem registry and client union for the new ratelimit/invalid-policy configuration diagnostic. This is declarative metadata, with no Host or provider implementation. The changed numeric validation or declarative metadata has no Kubernetes Node Host capability, storage or lifecycle dependency, so it reuses the same contract without platform-specific implementation.",
+          "providers": [],
+          "constraints": [
+            "This review covers only numeric validation and generated diagnostics; it makes no new runtime support, live-provider certification or deployment claim."
+          ],
+          "references": ["packages/problems-core/src/generated/problem-code-registry.ts"]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Regenerate the public Problem registry and client union for the new ratelimit/invalid-policy configuration diagnostic. This is declarative metadata, with no Host or provider implementation. The changed numeric validation or declarative metadata has no AWS Lambda Host capability, storage or lifecycle dependency, so it reuses the same contract without platform-specific implementation.",
+          "providers": [],
+          "constraints": [
+            "This review covers only numeric validation and generated diagnostics; it makes no new runtime support, live-provider certification or deployment claim."
+          ],
+          "references": ["packages/problems-core/src/generated/problem-code-registry.ts"]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Regenerate the public Problem registry and client union for the new ratelimit/invalid-policy configuration diagnostic. This is declarative metadata, with no Host or provider implementation. The changed numeric validation or declarative metadata has no Cloudflare Workers Host or explicit Node Container Host capability, storage or lifecycle dependency, so it reuses the same contract without platform-specific implementation.",
+          "providers": [],
+          "constraints": [
+            "This review covers only numeric validation and generated diagnostics; it makes no new runtime support, live-provider certification or deployment claim."
+          ],
+          "references": ["packages/problems-core/src/generated/problem-code-registry.ts"]
+        }
+      }
+    }
+  ]
+}

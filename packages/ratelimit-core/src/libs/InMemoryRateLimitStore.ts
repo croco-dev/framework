@@ -1,3 +1,4 @@
+import { validateRateLimitPolicy } from "./validateRateLimitPolicy";
 import { FixedWindowStore, SlidingWindowStore, TokenBucketStore } from "./RateLimitStore";
 import type {
   FixedWindowPolicy,
@@ -282,6 +283,7 @@ export class SlidingWindowInMemoryStore extends SlidingWindowStore {
   }
 
   async check(key: string, policy: SlidingWindowPolicy): Promise<RateLimitResult> {
+    validateRateLimitPolicy(policy);
     this._windowMsCache.set(key, policy.windowMs);
     const result = await this.checkSlidingWindow(key, policy);
     this._windowMsCache.delete(key);
@@ -308,6 +310,7 @@ export class SlidingWindowInMemoryStore extends SlidingWindowStore {
       throw new RateLimitRefundUnsupportedProblem();
     }
 
+    validateRateLimitPolicy(policy);
     const now = this.now();
     const windowStart = now - policy.windowMs;
 

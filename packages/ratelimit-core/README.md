@@ -105,3 +105,19 @@ rate-limited 트래픽을 중단하세요. 그 기간이 지나 기존 limiter s
 - 저장소 장애 시 `resetAtMs`는 장애를 관측한 시각을 기준으로 계산한 추정값입니다. fixed/sliding/legacy 정책은 `windowMs`, token-bucket 정책은 다음 토큰 보충 간격(`refillIntervalMs / refillRate`)을 사용하며, 사용할 수 없는 저장소의 정확한 경계를 의미하지 않습니다.
 - `getStats()`는 저장소 통계 조회가 실패하면 `degraded: true`와 직렬화 가능한 `error` 메타데이터를 함께 반환합니다.
 - 윈도우 문자열은 `1s`, `1m`, `1h`, `1d` 형식을 사용합니다.
+
+### 정책 숫자 검증
+
+`validateRateLimitPolicy()`는 factory, RateLimiter의 check/refund, 알고리즘별 store에서
+계산·저장소 접근 전에 공통으로 사용됩니다. `limit`, `capacity`, `windowMs`, `refillIntervalMs`는
+양의 안전 정수여야 합니다. `refillRate`는 `Number.MAX_SAFE_INTEGER` 이하의 유한한 양수이며
+`0.5`처럼 소수 보충률도 허용합니다. 버킷 전체 보충 시간
+`capacity * refillIntervalMs / refillRate`도 유한한 양수이며 `Number.MAX_SAFE_INTEGER` 이하여야 합니다.
+
+잘못된 정책은 `RateLimitPolicyProblem` (`ratelimit/invalid-policy`)으로 실패합니다.
+이 설정 오류는 `failOpen`의 저장소 장애 fallback으로 처리하지 않습니다. 유효한 정책에서 발생한
+저장소 장애의 기존 fallback 동작은 유지됩니다. `parseWindowMs()`도 안전 정수 범위를 벗어난
+밀리초 변환을 `RateLimitWindowProblem`으로 거부합니다.
+
+기본 pruning scheduler는 기존과 같이 활성 interval의 NaN, Infinity 및 native timer 최대 지연 초과를
+거부하고, 0 이하이면 pruning을 끕니다. 사용자 scheduler가 받은 interval의 의미는 변경하지 않습니다.
