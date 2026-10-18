@@ -4538,6 +4538,12 @@
       "owner": "@croco/protocols-graphql"
     },
     {
+      "path": "packages/protocols-graphql/src/tests/PublishedFetchEntrypoints.spec.ts",
+      "lane": "published",
+      "qualifiers": [],
+      "owner": "@croco/protocols-graphql"
+    },
+    {
       "path": "packages/protocols-rest/src/tests/AuthGuard.spec.ts",
       "lane": "fast",
       "qualifiers": ["coverage"],
