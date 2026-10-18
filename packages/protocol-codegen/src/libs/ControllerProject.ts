@@ -215,8 +215,8 @@ export function createControllerProject(
       }
       for (const context of emitContexts) {
         rewriteRuntimeSpecifiers(context, outputPaths);
-        writeModuleBoundaries(context, outputPaths);
       }
+      writeModuleBoundaries(emitContexts, outputPaths);
       emitted = true;
     },
     async importModule(sourceFile: SourceFile): Promise<ControllerModule> {
@@ -922,19 +922,33 @@ function isEsmModuleKind(moduleKind: ts.ModuleKind | undefined, sourcePath: stri
 }
 
 function writeModuleBoundaries(
-  context: ProjectContext,
+  contexts: readonly ProjectContext[],
   outputPaths: ReadonlyMap<string, string>,
 ): void {
-  const moduleKind = context.project.getCompilerOptions().module;
+  const boundaries = new Map<string, { isEsm: boolean; hasJavaScript: boolean }>();
 
-  for (const sourceFile of context.sourceFiles) {
-    const sourcePath = sourceFile.getFilePath();
-    if (sourcePath.endsWith(".json")) continue;
-    const emittedPath = getEmittedFilePath(outputPaths, sourcePath);
-    if (!fs.existsSync(emittedPath)) continue;
-    const isEsm = isEsmModuleKind(moduleKind, sourcePath);
+  for (const context of contexts) {
+    const moduleKind = context.project.getCompilerOptions().module;
+    for (const sourceFile of context.sourceFiles) {
+      const sourcePath = sourceFile.getFilePath();
+      if (sourcePath.endsWith(".json")) continue;
+      const emittedPath = getEmittedFilePath(outputPaths, sourcePath);
+      if (!fs.existsSync(emittedPath)) continue;
+      const directory = path.dirname(emittedPath);
+      const hasJavaScript = path.extname(emittedPath) === ".js";
+      // Explicit .mjs/.cjs formats cannot override the package scope of a sibling .js file.
+      if (!boundaries.get(directory)?.hasJavaScript || hasJavaScript) {
+        boundaries.set(directory, {
+          isEsm: isEsmModuleKind(moduleKind, sourcePath),
+          hasJavaScript,
+        });
+      }
+    }
+  }
+
+  for (const [directory, { isEsm }] of boundaries) {
     fs.writeFileSync(
-      path.join(path.dirname(emittedPath), "package.json"),
+      path.join(directory, "package.json"),
       JSON.stringify({ type: isEsm ? "module" : "commonjs" }),
     );
   }

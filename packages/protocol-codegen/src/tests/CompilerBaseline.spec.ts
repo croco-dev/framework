@@ -88,6 +88,103 @@ describe("protocol compiler baseline", () => {
     }
   }
 
+  for (const module of ["node18", "node20", "nodenext"]) {
+    it.each([
+      { type: "module", sourceExtension: "cts", runtimeExtension: "cjs", value: 79 },
+      { type: "commonjs", sourceExtension: "mts", runtimeExtension: "mjs", value: 83 },
+    ])(
+      `preserves sibling .js boundaries with explicit format overrides (${module}/$type)`,
+      ({ type, sourceExtension, runtimeExtension, value }) => {
+        const { root, configPath } = fixture(module, type, false);
+        writeFileSync(join(root, `src/z.${sourceExtension}`), `export const value = ${value};`);
+        writeFileSync(
+          join(root, "src/Controller.ts"),
+          `export class Controller { static async value() { return (await import('./z.${runtimeExtension}')).value; } }`,
+        );
+        execFileSync(process.execPath, [tscPath, "--project", configPath], { encoding: "utf8" });
+        const session = createControllerProject({ cwd: root, controllers: "src/Controller.ts" });
+        try {
+          expect(session.getPreEmitDiagnostics().map((diagnostic) => diagnostic.getCode())).toEqual(
+            [],
+          );
+          session.emit();
+          expect(JSON.parse(readFileSync(join(session.emitDir, "package.json"), "utf8"))).toEqual({
+            type,
+          });
+          const output = join(session.emitDir, "Controller.js");
+          execFileSync(process.execPath, ["--check", output], { encoding: "utf8" });
+          const actual = execFileSync(
+            process.execPath,
+            [
+              "--input-type=module",
+              "--eval",
+              `const { Controller } = await import(${JSON.stringify(output)}); console.log(await Controller.value());`,
+            ],
+            { encoding: "utf8" },
+          );
+          expect(actual.trim()).toBe(String(value));
+        } finally {
+          session.dispose();
+        }
+      },
+      60_000,
+    );
+  }
+
+  it("keeps a sibling referenced .cts project from changing the controller package boundary", () => {
+    const { root, configPath } = fixture("node20", "module", false);
+    writeFileSync(join(root, "src/z.cts"), "export const value = 89;");
+    writeFileSync(
+      join(root, "src/Controller.ts"),
+      "export class Controller { static async value() { return (await import('./z.cjs')).value; } }",
+    );
+    const referenceConfig = join(root, "tsconfig.helper.json");
+    writeFileSync(
+      referenceConfig,
+      JSON.stringify({
+        compilerOptions: {
+          module: "node20",
+          target: "ES2022",
+          composite: true,
+          declaration: true,
+          rootDir: "./src",
+          outDir: "./lib",
+        },
+        include: ["src/z.cts"],
+      }),
+    );
+    writeFileSync(
+      configPath,
+      JSON.stringify({
+        compilerOptions: { module: "node20", target: "ES2022", noEmit: true },
+        include: ["src/Controller.ts"],
+        references: [{ path: "./tsconfig.helper.json" }],
+      }),
+    );
+    execFileSync(process.execPath, [tscPath, "--build", referenceConfig], { encoding: "utf8" });
+    execFileSync(process.execPath, [tscPath, "--project", configPath], { encoding: "utf8" });
+    const session = createControllerProject({ cwd: root, controllers: "src/Controller.ts" });
+    try {
+      expect(session.getPreEmitDiagnostics().map((diagnostic) => diagnostic.getCode())).toEqual([]);
+      session.emit();
+      expect(JSON.parse(readFileSync(join(session.emitDir, "package.json"), "utf8"))).toEqual({
+        type: "module",
+      });
+      const actual = execFileSync(
+        process.execPath,
+        [
+          "--input-type=module",
+          "--eval",
+          `const { Controller } = await import(${JSON.stringify(join(session.emitDir, "Controller.js"))}); console.log(await Controller.value());`,
+        ],
+        { encoding: "utf8" },
+      );
+      expect(actual.trim()).toBe("89");
+    } finally {
+      session.dispose();
+    }
+  }, 60_000);
+
   it("resolves transitive CommonJS imports using each source file's package format", () => {
     const { root, configPath } = fixture("node20", "commonjs", false);
     writeFileSync(join(root, "src/Controller.ts"), "export { value } from './Helper.js';");
