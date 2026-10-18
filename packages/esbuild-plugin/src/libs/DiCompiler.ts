@@ -148,6 +148,10 @@ export type ImportReference = {
   readonly exportName: string;
 };
 
+type ResolvedImportReference = ImportReference & {
+  readonly memberPath?: readonly string[];
+};
+
 type DependencyAnalysis = DiManifestDependency & {
   readonly expression: string;
   readonly many: boolean;
@@ -297,7 +301,8 @@ export function compileDiGraph(options: DiCompilerOptions = {}): DiCompilerResul
       if (!stereotype) {
         continue;
       }
-      if (!statement.name || !isNamedExport(statement)) {
+      const exportName = getNamedClassExport(statement, checker);
+      if (!exportName) {
         diagnostics.push(
           createDiagnostic(
             statement,
@@ -310,7 +315,6 @@ export function compileDiGraph(options: DiCompilerOptions = {}): DiCompilerResul
         continue;
       }
 
-      const exportName = statement.name.text;
       const tokenId = createLocalTokenId(
         baseDir,
         sourceFile.fileName,
@@ -1185,7 +1189,7 @@ function getDeclaredScope(
 function resolveParameterTypeReference(
   parameter: ts.ParameterDeclaration,
   checker: ts.TypeChecker,
-): ImportReference | undefined {
+): ResolvedImportReference | undefined {
   if (!parameter.type || !ts.isTypeReferenceNode(parameter.type)) {
     return undefined;
   }
@@ -1203,7 +1207,7 @@ function resolveParameterTypeReference(
 function resolvePropertyTypeReference(
   property: ts.PropertyDeclaration,
   checker: ts.TypeChecker,
-): ImportReference | undefined {
+): ResolvedImportReference | undefined {
   if (!property.type || !ts.isTypeReferenceNode(property.type)) {
     return undefined;
   }
@@ -1216,14 +1220,16 @@ function resolvePropertyTypeReference(
 function resolveExpressionReference(
   expression: ts.Expression,
   checker: ts.TypeChecker,
-): ImportReference | undefined {
+): ResolvedImportReference | undefined {
   if (ts.isIdentifier(expression)) {
     const symbol = checker.getSymbolAtLocation(expression);
     return symbol ? resolveSymbolReference(symbol, expression, checker) : undefined;
   }
   if (ts.isPropertyAccessExpression(expression)) {
     const base = resolveExpressionReference(expression.expression, checker);
-    return base ? { ...base, exportName: `${base.exportName}.${expression.name.text}` } : undefined;
+    return base
+      ? { ...base, memberPath: [...(base.memberPath ?? []), expression.name.text] }
+      : undefined;
   }
   return undefined;
 }
@@ -1232,7 +1238,7 @@ function resolveSymbolReference(
   symbol: ts.Symbol,
   location: ts.Node,
   checker: ts.TypeChecker,
-): ImportReference | undefined {
+): ResolvedImportReference | undefined {
   const declaration = symbol.declarations?.[0];
   if (declaration && ts.isImportSpecifier(declaration)) {
     const importDeclaration = declaration.parent.parent.parent;
@@ -1246,7 +1252,9 @@ function resolveSymbolReference(
         if (resolvedDeclaration) {
           return {
             moduleSpecifier: resolvedDeclaration.getSourceFile().fileName,
-            exportName: resolved.getName(),
+            exportName: ts.isClassDeclaration(resolvedDeclaration)
+              ? (getNamedClassExport(resolvedDeclaration, checker) ?? resolved.getName())
+              : resolved.getName(),
           };
         }
       }
@@ -1276,7 +1284,9 @@ function resolveSymbolReference(
   }
   return {
     moduleSpecifier: sourceFile.fileName,
-    exportName: resolved.getName() || location.getText(),
+    exportName: ts.isClassDeclaration(resolvedDeclaration)
+      ? (getNamedClassExport(resolvedDeclaration, checker) ?? resolved.getName())
+      : resolved.getName() || location.getText(),
   };
 }
 
@@ -1550,31 +1560,33 @@ function addSourceReference(
   });
 }
 
-function addImportReference(imports: Map<string, string>, reference: ImportReference): string {
+function addImportReference(
+  imports: Map<string, string>,
+  reference: ResolvedImportReference,
+): string {
   let alias = imports.get(reference.moduleSpecifier);
   if (!alias) {
     alias = `source${imports.size}`;
     imports.set(reference.moduleSpecifier, alias);
   }
-  return reference.exportName === "default"
-    ? `${alias}.default`
-    : `${alias}.${reference.exportName}`;
+  const exported = /^[A-Za-z_$][\w$]*$/u.test(reference.exportName)
+    ? `${alias}.${reference.exportName}`
+    : `${alias}[${JSON.stringify(reference.exportName)}]`;
+  return (
+    exported + (reference.memberPath ?? []).map((name) => `[${JSON.stringify(name)}]`).join("")
+  );
 }
 
 function createReferenceTokenId(
   baseDir: string,
-  reference: ImportReference,
+  reference: ResolvedImportReference,
   packageName?: string,
 ): string {
+  const exportName = [reference.exportName, ...(reference.memberPath ?? [])].join(".");
   if (path.isAbsolute(reference.moduleSpecifier)) {
-    return createLocalTokenId(
-      baseDir,
-      reference.moduleSpecifier,
-      reference.exportName,
-      packageName,
-    );
+    return createLocalTokenId(baseDir, reference.moduleSpecifier, exportName, packageName);
   }
-  return `package:${reference.moduleSpecifier}#${reference.exportName}`;
+  return `package:${reference.moduleSpecifier}#${exportName}`;
 }
 
 function createLocalTokenId(
@@ -1683,12 +1695,28 @@ function readCompilerOptions(baseDir: string, explicitConfig?: string): ts.Compi
   return ts.parseJsonConfigFileContent(config.config, ts.sys, path.dirname(configPath)).options;
 }
 
-function isNamedExport(declaration: ts.ClassDeclaration): boolean {
-  const modifiers = ts.getModifiers(declaration) ?? [];
-  return (
-    modifiers.some((modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword) &&
-    !modifiers.some((modifier) => modifier.kind === ts.SyntaxKind.DefaultKeyword)
-  );
+function getNamedClassExport(
+  declaration: ts.ClassDeclaration,
+  checker: ts.TypeChecker,
+): string | undefined {
+  if (!declaration.name) return undefined;
+  const classSymbol = checker.getSymbolAtLocation(declaration.name);
+  const moduleSymbol = checker.getSymbolAtLocation(declaration.getSourceFile());
+  if (!classSymbol || !moduleSymbol) return undefined;
+  const names = checker.getExportsOfModule(moduleSymbol).flatMap((entry) => {
+    if (entry.name === "default") return [];
+    if (
+      entry.declarations?.some(
+        (node) => ts.isExportSpecifier(node) && (node.isTypeOnly || node.parent.parent.isTypeOnly),
+      )
+    )
+      return [];
+    const target = entry.flags & ts.SymbolFlags.Alias ? checker.getAliasedSymbol(entry) : entry;
+    return target === classSymbol ? [entry.name] : [];
+  });
+  return names.includes(declaration.name.text)
+    ? declaration.name.text
+    : names.sort(compareStrings)[0];
 }
 
 function getSourceLocation(

@@ -431,6 +431,111 @@ describe("compileDiGraph", () => {
     expect(build.errors).toEqual([]);
   });
 
+  it.each([
+    ["export { Service };", "Service"],
+    ["export { Service as PublicService };", "PublicService"],
+    ["export { Service as Zebra, Service as Alpha };", "Alpha"],
+    ["export type { Service as Alpha }; export { Service as PublicService };", "PublicService"],
+    ["export default Service; export { Service as PublicService };", "PublicService"],
+    ['export { Service as "public-service" };', "public-service"],
+    ['export { Service as "public.service" };', "public.service"],
+  ])("generates usable factories for named provider exports: %s", async (exports, exportName) => {
+    writeProject({
+      "src/Service.ts": `
+        import { Component } from "@croco/framework-context";
+        @Component() class Service { value = "named-provider"; }
+        @Component() export class LocalConsumer { constructor(readonly service: Service) {} }
+        ${exports}
+      `,
+      "src/barrel.ts": `export { ${JSON.stringify(exportName)} as ImportedService } from "./Service";`,
+      "src/Consumer.ts": `
+        import { Component, Inject } from "@croco/framework-context";
+        import { ImportedService as Dependency } from "./barrel";
+        @Component() export class Consumer {
+          constructor(readonly service: Dependency) {}
+          @Inject(Dependency) property!: Dependency;
+        }
+      `,
+    });
+    const result = compileDiGraph({ baseDir: TEMP_DIR });
+    const tokenId = `app:src/Service#${exportName}`;
+    expect(
+      result.manifest.providers.find((provider) => provider.exportName === exportName),
+    ).toMatchObject({ tokenId });
+    for (const name of ["Consumer", "LocalConsumer"]) {
+      const consumer = result.manifest.providers.find((provider) => provider.exportName === name);
+      expect(consumer?.dependencies.length).toBe(name === "Consumer" ? 2 : 1);
+      expect(consumer?.dependencies.every((dependency) => dependency.tokenId === tokenId)).toBe(
+        true,
+      );
+    }
+    writeDiGraph(result);
+    fs.writeFileSync(
+      path.join(TEMP_DIR, "runtime.ts"),
+      `
+      import { strict as assert } from "node:assert";
+      import { Container } from "@croco/framework-context";
+      import { generatedDiGraph } from "./.croco/di.generated";
+      import { Consumer } from "./src/Consumer";
+      import { LocalConsumer } from "./src/Service";
+      const scope = Container.createScope();
+      scope.run(() => {
+        Container.installGeneratedGraph(generatedDiGraph);
+        const consumer = Container.get(Consumer);
+        assert.equal(consumer.service.value, "named-provider");
+        assert.equal(consumer.property, consumer.service);
+        assert.equal(Container.get(LocalConsumer).service, consumer.service);
+      });
+      scope.dispose();
+    `,
+    );
+    const bundleFile = path.join(TEMP_DIR, "runtime.cjs");
+    await esbuild.build({
+      entryPoints: [path.join(TEMP_DIR, "runtime.ts")],
+      outfile: bundleFile,
+      alias: {
+        "@croco/framework-context": path.resolve(
+          __dirname,
+          "../../../framework-context/src/index.ts",
+        ),
+      },
+      bundle: true,
+      format: "cjs",
+      platform: "node",
+      tsconfig: path.join(TEMP_DIR, "tsconfig.json"),
+    });
+    execFileSync(process.execPath, [bundleFile], { cwd: TEMP_DIR, stdio: "pipe" });
+  });
+
+  it.each([
+    "@Component() class Service {}",
+    "@Component() export default class Service {}",
+    "@Component() class Service {} export { Service as default };",
+    "@Component() class Service {} export type { Service };",
+    "@Component() class Service {} export { type Service };",
+    "@Component() class Service {} export const PublicService = Service;",
+  ])("rejects providers without a named runtime export: %s", (declaration) => {
+    writeProject({
+      "src/Service.ts": `import { Component } from "@croco/framework-context"; ${declaration}`,
+    });
+    expect(() => compileDiGraph({ baseDir: TEMP_DIR })).toThrow(
+      "Decorated providers must be named exports",
+    );
+  });
+
+  it("preserves the declared name when additional aliases are exported", () => {
+    writeProject({
+      "src/Service.ts": `
+      import { Component } from "@croco/framework-context";
+      @Component() export class Service {}
+      export { Service as Alpha };
+    `,
+    });
+    expect(compileDiGraph({ baseDir: TEMP_DIR }).manifest.providers[0]?.tokenId).toBe(
+      "app:src/Service#Service",
+    );
+  });
+
   it("uses symbol identity and ignores a user decorator with the same name", () => {
     writeProject({
       "src/Fake.ts": `
