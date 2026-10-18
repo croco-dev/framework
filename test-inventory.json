@@ -4922,6 +4922,12 @@
       "owner": "@croco/rpc-codegen"
     },
     {
+      "path": "packages/rpc-codegen/src/tests/ZodModuleReference.spec.ts",
+      "lane": "fast",
+      "qualifiers": ["coverage"],
+      "owner": "@croco/rpc-codegen"
+    },
+    {
       "path": "packages/rpc-codegen/src/tests/codegen.spec.ts",
       "lane": "fast",
       "qualifiers": ["coverage"],

@@ -2673,6 +2673,42 @@ void handleMissingProblemBranch;
     expect(fs.existsSync(path.join(TEMP_DIR, "index.ts"))).toBe(false);
   });
 
+  it(
+    "generates zodiac fields, paths and literals as ordinary consumer data",
+    () => {
+      const files = generateClientFiles(
+        [
+          {
+            controllerName: "UserController",
+            methodName: "get",
+            httpMethod: "GET",
+            path: "/zodiac",
+            routeContract: null,
+            params: [],
+            inputSchema: null,
+            inputSchemas: EMPTY_INPUT_SCHEMAS,
+            outputSchema: z.object({
+              zodiacSign: z.string(),
+              label: z.literal("import { z } from 'zod'"),
+            }) as unknown as RouteIR["outputSchema"],
+            domain: null,
+          },
+        ],
+        TEMP_DIR,
+      );
+      const content = fs.readFileSync(files[0], "utf-8");
+      expect(content).toContain("zodiacSign: string");
+      expect(content).toContain("/zodiac");
+      assertGeneratedClientTypechecks(`${content}
+const response: GetOutput = { zodiacSign: 'Aries', label: "import { z } from 'zod'" };
+const request: Promise<GetOutput> = userClient.get();
+void response;
+void request;
+`);
+    },
+    GENERATED_CLIENT_TYPECHECK_TIMEOUT_MS,
+  );
+
   it("should not emit zod references for body-only routes", () => {
     const routes: RouteIR[] = [
       {
