@@ -7,4 +7,7 @@ useDefault = true
 # Scoped tightly to *.spec.ts and one source-digest review record; production code remains scanned.
 [allowlist]
 description = "Test fixture dummy keys and the #3295 source-digest review record"
-paths = ['''^docs/infrastructure-reviews/3295-codegen-cwd\.json$''', '''(^|/)packages/[^/]+/src/tests/.*\.spec\.ts$''']
+paths = [
+  '''^docs/infrastructure-reviews/3295-codegen-cwd\.json$''',
+  '''(^|/)packages/[^/]+/src/tests/.*\.spec\.ts$''',
+]
