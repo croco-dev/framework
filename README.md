@@ -383,7 +383,7 @@ Follow-up work is tracked in GitHub Issues and in [Croco 1.0 Spine](docs/release
 
 > 이 섹션은 `pnpm docs:catalog:write`로 생성됩니다. 패키지 이름과 경로는 `packages/*/package.json`에서 읽고, 그룹/성숙도는 `docs/package-catalog.json`에서 관리합니다.
 
-현재 카탈로그는 **139개 public package**를 추적합니다. Private package 2개는 publish 카탈로그에서 제외됩니다. 문서 커버리지 상세는 [docs/package-docs-report.md](docs/package-docs-report.md)를 확인하세요.
+현재 카탈로그는 **140개 public package**를 추적합니다. Private package 2개는 publish 카탈로그에서 제외됩니다. 문서 커버리지 상세는 [docs/package-docs-report.md](docs/package-docs-report.md)를 확인하세요.
 
 ### Croco 1.0 Spine
 
@@ -542,6 +542,7 @@ Current 1.0 spine status: 18 spine packages; 10 production-ready, 8 beta, 0 alph
 | `@croco/search-core`                   | Contracts      | domain        | Search                  | unclaimed                                 |
 | `@croco/search-drizzle`                | Plugins        | provider      | Search                  | node, lambda                              |
 | `@croco/search-meilisearch`            | Plugins        | provider      | Search                  | node, lambda                              |
+| `@croco/seo-core`                      | Contracts      | domain        | Public pages            | unclaimed                                 |
 | `@croco/storage-cloudflare`            | Plugins        | provider      | Storage                 | node, lambda                              |
 | `@croco/storage-cloudinary`            | Plugins        | provider      | Storage                 | node, lambda                              |
 | `@croco/storage-core`                  | Contracts      | domain        | Storage                 | unclaimed                                 |
@@ -574,7 +575,7 @@ These historical inventory buckets retain certification scope and discovery meta
 | 그룹         | 설명                                                                                                   | 패키지 수 |
 | ------------ | ------------------------------------------------------------------------------------------------------ | --------: |
 | Core         | Framework primitives, context, reliability, transactions, and cross-cutting core utilities             |        23 |
-| Domain       | Business-domain APIs and package-level abstractions                                                    |        38 |
+| Domain       | Business-domain APIs and package-level abstractions                                                    |        39 |
 | Provider     | Concrete datastore, SaaS provider, and external service adapters                                       |        40 |
 | Integration  | Analytics, feature-flag, and observability integrations                                                |         6 |
 | Protocol     | API protocol definitions and code generation                                                           |         8 |
@@ -592,7 +593,7 @@ Adapter 경계와 공식 우선순위, compatibility certification checklist는 
 | ------------------- | ----------------------------------- | --------------------: |
 | 🟢 production-ready | 안정화, 적극 사용 권장              |                    23 |
 | 🟡 beta             | 기능 완성, 실사용 검증 중           |                    78 |
-| 🔴 alpha/WIP        | 개발 중, 사용 시 주의 필요          |                    38 |
+| 🔴 alpha/WIP        | 개발 중, 사용 시 주의 필요          |                    39 |
 | ⚠️ deprecated       | 대체 패키지 존재, 마이그레이션 권장 |                     0 |
 
 ### Extension & Adapter Matrix
@@ -814,6 +815,7 @@ Runtime columns: Node는 장기 실행 서버/CLI, Lambda는 서버리스 함수
 | `@croco/promotions-core`           | Domain       | `packages/promotions-core`           | README, API, tests |
 | `@croco/referral-core`             | Domain       | `packages/referral-core`             | README, API, tests |
 | `@croco/research-core`             | Domain       | `packages/research-core`             | README, API, tests |
+| `@croco/seo-core`                  | Domain       | `packages/seo-core`                  | README, API, tests |
 | `@croco/warehouse-core`            | Domain       | `packages/warehouse-core`            | README, API, tests |
 | `@croco/etl-events-tx`             | Integration  | `packages/etl-events-tx`             | README, API, tests |
 | `@croco/admin-react`               | Presentation | `packages/admin-react`               | README, API, tests |

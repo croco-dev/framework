@@ -65,6 +65,7 @@
     "@croco/problems-core": "workspace:*",
     "@croco/protocols-core": "workspace:*",
     "@croco/rpc-codegen": "workspace:*",
+    "@croco/seo-core": "workspace:*",
     "@croco/testing": "workspace:*",
     "@croco/warehouse-tooling": "workspace:*",
     "@modelcontextprotocol/server": "2.2.0",

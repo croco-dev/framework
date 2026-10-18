@@ -391,3 +391,5 @@ export type {
   SurveyResultsData,
   SurveyResultsState,
 } from "./libs/SurveyConsole";
+
+export { PublicPageInspector } from "./libs/PublicPageInspector";

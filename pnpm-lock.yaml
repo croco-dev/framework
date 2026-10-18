@@ -2129,6 +2129,9 @@ importers:
       '@croco/research-core':
         specifier: workspace:*
         version: link:../research-core
+      '@croco/seo-core':
+        specifier: workspace:*
+        version: link:../seo-core
     devDependencies:
       vitest:
         specifier: 4.1.8
@@ -2256,6 +2259,9 @@ importers:
       '@croco/search-core':
         specifier: workspace:*
         version: link:../search-core
+      '@croco/seo-core':
+        specifier: workspace:*
+        version: link:../seo-core
       '@croco/tenant-core':
         specifier: workspace:*
         version: link:../tenant-core
@@ -2871,6 +2877,9 @@ importers:
       '@croco/rpc-codegen':
         specifier: workspace:*
         version: link:../rpc-codegen
+      '@croco/seo-core':
+        specifier: workspace:*
+        version: link:../seo-core
       '@croco/testing':
         specifier: workspace:*
         version: link:../testing
@@ -3142,6 +3151,9 @@ importers:
       '@astrojs/starlight':
         specifier: ^0.40.0
         version: 0.40.0(astro@6.4.8(@types/node@24.13.2)(@upstash/redis@1.36.1)(ioredis@5.10.1(supports-color@10.2.2))(jiti@2.6.1)(rollup@4.59.0)(supports-color@10.2.2)(terser@5.51.2)(tsx@4.21.0)(yaml@2.9.0))(supports-color@10.2.2)(typescript@6.0.3)
+      '@croco/seo-core':
+        specifier: workspace:*
+        version: link:../seo-core
       astro:
         specifier: ^6.4.6
         version: 6.4.8(@types/node@24.13.2)(@upstash/redis@1.36.1)(ioredis@5.10.1(supports-color@10.2.2))(jiti@2.6.1)(rollup@4.59.0)(supports-color@10.2.2)(terser@5.51.2)(tsx@4.21.0)(yaml@2.9.0)
@@ -4581,6 +4593,9 @@ importers:
       '@croco/problems-core':
         specifier: workspace:*
         version: link:../problems-core
+      '@croco/seo-core':
+        specifier: workspace:*
+        version: link:../seo-core
       '@croco/storage-core':
         specifier: workspace:*
         version: link:../storage-core
@@ -5747,6 +5762,28 @@ importers:
       reflect-metadata:
         specifier: ^0.2.2
         version: 0.2.2
+    devDependencies:
+      '@types/node':
+        specifier: ^24
+        version: 24.13.2
+      tsup:
+        specifier: 8.5.1
+        version: 8.5.1(patch_hash=ce9dbc714c187cea78868f1e68c1a0e5097ddbceb7e976a564d94f2291b5bcb9)(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.18)(supports-color@10.2.2)(tsx@4.21.0)(typescript@6.0.3)(yaml@2.9.0)
+      typescript:
+        specifier: 6.0.3
+        version: 6.0.3
+      vitest:
+        specifier: 4.1.8
+        version: 4.1.8(@opentelemetry/api@1.9.0)(@types/node@24.13.2)(@vitest/coverage-v8@4.1.8)(vite@7.3.5(@types/node@24.13.2)(jiti@2.6.1)(terser@5.51.2)(tsx@4.21.0)(yaml@2.9.0))
+
+  packages/seo-core:
+    dependencies:
+      '@croco/problems-core':
+        specifier: workspace:*
+        version: link:../problems-core
+      parse5:
+        specifier: 7.3.0
+        version: 7.3.0
     devDependencies:
       '@types/node':
         specifier: ^24

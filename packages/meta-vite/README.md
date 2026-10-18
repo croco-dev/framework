@@ -530,3 +530,9 @@ Apache-2.0
 Generate and publish dynamic public canonical URLs with `SitemapSource`, `generateSitemap`,
 `FileSitemapPublisher` and `createSitemapHandler`. See [source mapping, publication and administrator contracts](./SITEMAPS.md)
 for snapshot completion, query policy, atomicity, retention and infrastructure limitations.
+
+## Public page source contracts
+
+`createPublicPageHandler({ definition, component })` resolves an `@croco/seo-core` source before headers commit and renders the component with the same public snapshot used for initial metadata. Published pages use buffered SSR with escaped title/description/canonical/lang/hreflang/robots and Product or Article JSON-LD. Nonpublic snapshots return their declared 401/403/404/410 or redirect status without public facts. Invalid declarations return 422; unavailable sources return a redacted 503. GET and HEAD are supported; responses default to `private, no-store`.
+
+This opt-in handler composes with `createMetaFetchHandler` and existing adapters; it does not change RSC/streaming/SSG/ISR behavior. See [the executable public-page application](../../examples/public-pages/README.md) for repository mapping, offer markers, CLI/admin inspection, browser verification and deployment limits.

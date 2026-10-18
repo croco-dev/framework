@@ -18,6 +18,7 @@
   },
   "dependencies": {
     "@astrojs/starlight": "^0.40.0",
+    "@croco/seo-core": "workspace:*",
     "astro": "^6.4.6",
     "sharp": "^0.35.4",
     "starlight-typedoc": "0.23.0",

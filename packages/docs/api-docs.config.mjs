@@ -17,6 +17,12 @@ export const apiDocCompilerOptions = {
 
 export const apiDocPackages = [
   {
+    packageName: "@croco/seo-core",
+    directory: "seo-core",
+    entryPoint: "src/index.ts",
+    moduleName: "seo-core/src",
+  },
+  {
     packageName: "@croco/access-core",
     directory: "access-core",
     entryPoint: "src/index.ts",

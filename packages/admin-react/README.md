@@ -734,3 +734,7 @@ versions, credits, selected touchpoint IDs, retained observed sources and separa
 claims. Its state contract includes loading/empty/partial/denied/error/ready. It accepts only authorized,
 masked results, performs no independent attribution, and offers an explicit keyboard-accessible refresh.
 See [the standalone acquisition example](../../examples/acquisition).
+
+## Public page inspector
+
+`PublicPageInspector({ report })` renders the authorized `PublicPageInspection` shared with CLI/agent JSON, including ready, partial, denied and unavailable states, response status, revision and stable diagnostics. It accepts no raw HTML or executable structured-data input. The server owns authorization and inspection. See [the local application and browser checks](../../examples/public-pages/README.md).

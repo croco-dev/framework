@@ -6,7 +6,7 @@
 
 | Metric                         | Count |
 | ------------------------------ | ----: |
-| Public packages                |   139 |
+| Public packages                |   140 |
 | Private packages skipped       |     2 |
 | Missing package README         |     0 |
 | Missing generated API docs     |     0 |
@@ -222,6 +222,7 @@ None.
 | `@croco/search-core`                   | Contracts      | domain        | Search                  | unclaimed                                 |
 | `@croco/search-drizzle`                | Plugins        | provider      | Search                  | node, lambda                              |
 | `@croco/search-meilisearch`            | Plugins        | provider      | Search                  | node, lambda                              |
+| `@croco/seo-core`                      | Contracts      | domain        | Public pages            | unclaimed                                 |
 | `@croco/storage-cloudflare`            | Plugins        | provider      | Storage                 | node, lambda                              |
 | `@croco/storage-cloudinary`            | Plugins        | provider      | Storage                 | node, lambda                              |
 | `@croco/storage-core`                  | Contracts      | domain        | Storage                 | unclaimed                                 |
@@ -252,7 +253,7 @@ None.
 | Group        | Packages |
 | ------------ | -------: |
 | Core         |       23 |
-| Domain       |       38 |
+| Domain       |       39 |
 | Provider     |       40 |
 | Integration  |        6 |
 | Protocol     |        8 |
@@ -266,7 +267,7 @@ None.
 | ------------------- | -------: |
 | 🟢 production-ready |       23 |
 | 🟡 beta             |       78 |
-| 🔴 alpha/WIP        |       38 |
+| 🔴 alpha/WIP        |       39 |
 | ⚠️ deprecated       |        0 |
 
 ## Extension Matrix

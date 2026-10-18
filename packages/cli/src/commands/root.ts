@@ -109,6 +109,11 @@ function createBoundCrocoCommand(runtime: CrocoCommandRuntime): CommandDef<typeo
       }
     },
     subCommands: {
+      seo: lazyCommand(
+        "seo",
+        "Inspect registered public pages",
+        async () => (await import("./seo.js")).seo as LoadedCommand,
+      ),
       make: lazyCommand(
         "make",
         "Generate application source files",

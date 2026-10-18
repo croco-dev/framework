@@ -960,6 +960,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "createPublicPageOperations",
+              "exportKind": "named",
+              "source": "./libs/PublicPageOperations",
+              "declarationKind": "function"
+            },
+            {
               "name": "createReferralConsoleActions",
               "exportKind": "named",
               "source": "./libs/ReferralConsole",
@@ -4271,6 +4277,12 @@
               "name": "ProblemNotice",
               "exportKind": "named",
               "source": "./libs/components",
+              "declarationKind": "function"
+            },
+            {
+              "name": "PublicPageInspector",
+              "exportKind": "named",
+              "source": "./libs/PublicPageInspector",
               "declarationKind": "function"
             },
             {
@@ -27697,6 +27709,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "createPublicPageHandler",
+              "exportKind": "named",
+              "source": "./libs/seo/publicPageHandler",
+              "declarationKind": "function"
+            },
+            {
               "name": "createRscBrowserFlightHeaders",
               "exportKind": "named",
               "source": "./libs/rsc/flight",
@@ -39714,6 +39732,126 @@
               "exportKind": "declaration",
               "source": "./libs/types",
               "declarationKind": "type"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "packageName": "@croco/seo-core",
+      "relativeDir": "packages/seo-core",
+      "entrypoints": [
+        {
+          "exportPath": ".",
+          "kind": "code",
+          "targets": [
+            {
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
+              "target": "./dist/index.d.ts"
+            },
+            {
+              "conditions": ["import"],
+              "target": "./dist/index.mjs"
+            },
+            {
+              "conditions": ["require"],
+              "target": "./dist/index.js"
+            }
+          ],
+          "sourceEntrypoint": "packages/seo-core/src/index.ts",
+          "runtimeExports": [
+            {
+              "name": "PublicPageProblem",
+              "exportKind": "named",
+              "source": "./libs/publicPage",
+              "declarationKind": "class"
+            },
+            {
+              "name": "createPublicPageInspector",
+              "exportKind": "named",
+              "source": "./libs/inspectPublicPage",
+              "declarationKind": "function"
+            },
+            {
+              "name": "createPublicPageSourceRequest",
+              "exportKind": "named",
+              "source": "./libs/publicPage",
+              "declarationKind": "function"
+            },
+            {
+              "name": "formatPublicPageInspection",
+              "exportKind": "named",
+              "source": "./libs/inspectPublicPage",
+              "declarationKind": "function"
+            },
+            {
+              "name": "publicPageUrl",
+              "exportKind": "named",
+              "source": "./libs/publicPage",
+              "declarationKind": "function"
+            },
+            {
+              "name": "resolvePublicPageMetadata",
+              "exportKind": "named",
+              "source": "./libs/publicPage",
+              "declarationKind": "function"
+            },
+            {
+              "name": "validatePublicPageResponse",
+              "exportKind": "named",
+              "source": "./libs/inspectPublicPage",
+              "declarationKind": "function"
+            }
+          ],
+          "typeExports": [
+            {
+              "name": "PublicPageContent",
+              "exportKind": "named",
+              "source": "./libs/publicPage"
+            },
+            {
+              "name": "PublicPageDefinition",
+              "exportKind": "named",
+              "source": "./libs/publicPage"
+            },
+            {
+              "name": "PublicPageDiagnostic",
+              "exportKind": "named",
+              "source": "./libs/inspectPublicPage"
+            },
+            {
+              "name": "PublicPageInspection",
+              "exportKind": "named",
+              "source": "./libs/inspectPublicPage"
+            },
+            {
+              "name": "PublicPageInspectionTarget",
+              "exportKind": "named",
+              "source": "./libs/inspectPublicPage"
+            },
+            {
+              "name": "PublicPageMetadata",
+              "exportKind": "named",
+              "source": "./libs/publicPage"
+            },
+            {
+              "name": "PublicPageSnapshot",
+              "exportKind": "named",
+              "source": "./libs/publicPage"
+            },
+            {
+              "name": "PublicPageSource",
+              "exportKind": "named",
+              "source": "./libs/publicPage"
+            },
+            {
+              "name": "PublicProduct",
+              "exportKind": "named",
+              "source": "./libs/publicPage"
             }
           ]
         }

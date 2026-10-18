@@ -96,6 +96,7 @@
     "@croco/problems-core": "workspace:*",
     "@croco/research-core": "workspace:*",
     "@croco/search-core": "workspace:*",
+    "@croco/seo-core": "workspace:*",
     "@croco/tenant-core": "workspace:*",
     "@croco/warehouse-core": "workspace:*"
   },

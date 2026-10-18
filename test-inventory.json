@@ -332,6 +332,12 @@
       "owner": "@croco/admin-core"
     },
     {
+      "path": "packages/admin-core/src/tests/PublicPageOperations.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-core"
+    },
+    {
       "path": "packages/admin-core/src/tests/ReferralConsole.spec.ts",
       "lane": "fast",
       "qualifiers": [],
@@ -1383,6 +1389,12 @@
     },
     {
       "path": "packages/cli/src/tests/Pipeline.spec.ts",
+      "lane": "fast",
+      "qualifiers": ["coverage"],
+      "owner": "@croco/cli"
+    },
+    {
+      "path": "packages/cli/src/tests/SeoCommand.spec.ts",
       "lane": "fast",
       "qualifiers": ["coverage"],
       "owner": "@croco/cli"
@@ -3583,6 +3595,12 @@
       "owner": "@croco/meta-vite"
     },
     {
+      "path": "packages/meta-vite/src/tests/PublicPageHandler.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/meta-vite"
+    },
+    {
       "path": "packages/meta-vite/src/tests/RenderServerHead.spec.ts",
       "lane": "fast",
       "qualifiers": [],
@@ -5219,6 +5237,12 @@
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/search-meilisearch"
+    },
+    {
+      "path": "packages/seo-core/src/tests/PublicPage.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/seo-core"
     },
     {
       "path": "packages/storage-cloudflare/src/tests/CloudflareImagesDiagnosticsProvider.spec.ts",

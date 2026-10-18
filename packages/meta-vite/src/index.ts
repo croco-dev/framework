@@ -264,3 +264,5 @@ export { decodeFlightToHtmlStream } from "./libs/rsc/ssrDecode";
 // Vite plugin
 export type { CrocoMetaVitePluginOptions, EnvironmentName } from "./libs/vite/crocoMetaVitePlugin";
 export { crocoMetaVitePlugin, MissingRscPeerProblem } from "./libs/vite/crocoMetaVitePlugin";
+
+export { createPublicPageHandler } from "./libs/seo/publicPageHandler";
