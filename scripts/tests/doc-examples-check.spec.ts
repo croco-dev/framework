@@ -177,6 +177,34 @@ describe("doc-examples-check.mts", () => {
     scriptTestTimeout,
   );
 
+  it(
+    "checks fences directly inside MDX components with original source lines",
+    () => {
+      const root = createTempRoot();
+      writeValidDocs(root);
+      writeOperationalSource(
+        root,
+        "docs/example.mdx",
+        [
+          "<Tabs>",
+          '<TabItem value="ts">',
+          "~~~~tsx typecheck",
+          'const insideComponent: number = "wrong";',
+          "~~~~",
+          "</TabItem>",
+          "</Tabs>",
+        ].join("\n"),
+      );
+
+      const result = runScript(root, "--check");
+      expect(result.status).toBe(1);
+      expect(result.stdout).toContain(
+        "docs/example.mdx:4: Type 'string' is not assignable to type 'number'",
+      );
+    },
+    scriptTestTimeout,
+  );
+
   it.each([
     ["direct", "./src/features/main.ts"],
     ["barrel", "./src/features/index.ts"],
