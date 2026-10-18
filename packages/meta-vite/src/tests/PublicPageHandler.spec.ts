@@ -139,3 +139,52 @@ describe("PublicPageHandler", () => {
     expect(html).toContain("\\u003c/script\\u003e");
   });
 });
+
+it("keeps body, head and product facts isolated between concurrent public resources", async () => {
+  const copper: PublicPageContent = {
+    ...content,
+    id: "copper",
+    revision: "copper-r2",
+    title: "Copper desk lamp",
+    description: "A copper desk lamp with a narrow beam.",
+    product: { ...content.product!, price: "13.25" },
+  };
+  const blue: PublicPageContent = {
+    ...content,
+    id: "blue",
+    revision: "blue-r9",
+    title: "Blue reading lamp",
+    description: "A blue reading lamp with a broad beam.",
+    product: { ...content.product!, price: "84.70" },
+  };
+  const definition: PublicPageDefinition = {
+    ...setup().definition,
+    pathname: (page) => `/products/${page.id}`,
+    source: {
+      async load(request) {
+        return {
+          state: "published",
+          indexable: true,
+          content: new URL(request.url).pathname.endsWith("/copper") ? copper : blue,
+        };
+      },
+    },
+  };
+  const handler = createPublicPageHandler({ definition, component: Component });
+  const responses = await Promise.all([
+    handler(new Request("https://preview.example/products/copper")),
+    handler(new Request("https://preview.example/products/blue")),
+  ]);
+  expect(responses.map((response) => response.status)).toEqual([200, 200]);
+  const [copperHtml, blueHtml] = await Promise.all(responses.map((response) => response.text()));
+  expect(copperHtml).toContain("<title>Copper desk lamp</title>");
+  expect(copperHtml).toContain("https://shop.example/products/copper");
+  expect(copperHtml).toContain('data-public-price="13.25"');
+  expect(copperHtml).toContain('"price":"13.25"');
+  expect(copperHtml).not.toContain("Blue reading lamp");
+  expect(blueHtml).toContain("<title>Blue reading lamp</title>");
+  expect(blueHtml).toContain("https://shop.example/products/blue");
+  expect(blueHtml).toContain('data-public-price="84.70"');
+  expect(blueHtml).toContain('"price":"84.70"');
+  expect(blueHtml).not.toContain("Copper desk lamp");
+});
