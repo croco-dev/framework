@@ -319,11 +319,10 @@ schema.parse({ id: 'user-1' });`,
         tsconfigPath,
         JSON.stringify({
           compilerOptions: {
-            baseUrl: ".",
             experimentalDecorators: true,
             module: "NodeNext",
             moduleResolution: "NodeNext",
-            paths: { "@app/*": ["src/*"] },
+            paths: { "@app/*": ["./src/*"] },
             target: "ES2022",
           },
         }),
