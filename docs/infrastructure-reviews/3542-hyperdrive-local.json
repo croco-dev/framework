@@ -6,7 +6,7 @@
       "classification": "runtime-adapter",
       "reason": "Opt-in request-owned pg/Drizzle transaction entrypoint. Local workerd tests do not promote the root plugin or any domain adapter.",
       "files": {
-        "packages/tx-drizzle/package.json": "f7d60075d7fb1c37fc144bf8fb91e9487794525f0692a267dd8f6d0891ec4c95",
+        "packages/tx-drizzle/package.json": "5c8db44e858f177e4d9c61a4aed134d0e6dbf4262449405e16f06bf79cdf7994",
         "packages/tx-drizzle/src/hyperdrive.ts": "193d833761b03ac28eb866107b3af533fe262849ee51b789fd2f30116cb37514"
       },
       "catalogRuntimes": [],
