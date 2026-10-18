@@ -15,8 +15,9 @@ pnpm --filter @croco-example/workers-protocols codegen:check
 `src/schema.graphql` and `src/operations.graphql` feed the official GraphQL Code
 Generator generic SDK. `pnpm --filter @croco-example/workers-protocols codegen`
 regenerates the checked-in client. The same schema, resolvers and GraphQL error oracle
-run through the Node fetch handler and workerd. tRPC uses its native client proxy and
-existing decorated controller route contracts, validation and execution pipeline.
+run through the Node fetch handler, Lambda host envelope and workerd. tRPC reuses one
+decorated controller, its native client proxy and the official fetch adapter across
+all three paths, preserving route contracts, validation and the execution pipeline.
 No domain calculation is reimplemented per runtime.
 
 The build bundles only the fetch entrypoints and rejects filesystem/HTTP listener

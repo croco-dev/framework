@@ -1,5 +1,5 @@
-import { createLambdaHost } from "@croco/preset-lambda";
-import type { LambdaContext, LambdaEvent } from "@croco/preset-lambda";
+import { createProtocolFixture } from "../application";
+import { invokeLambdaFixture, fetchThroughLambdaFixture } from "./lambdaFixture";
 import "reflect-metadata";
 import { print } from "graphql";
 import { readFileSync } from "node:fs";
@@ -105,50 +105,14 @@ describe("Workers protocol transports on actual workerd", () => {
       createGraphQLFixture(readFileSync("src/schema.graphql", "utf8")),
     );
     await server.initialize();
-    const handler = createLambdaHost({ fetch: server.getHandler() });
-    const event: LambdaEvent = {
-      version: "2.0",
-      routeKey: "$default",
-      rawPath: "/graphql",
-      rawQueryString: "",
-      headers: headers(),
-      cookies: ["session=tenant-a"],
-      body: JSON.stringify({ query: "{ probe broken }" }),
-      isBase64Encoded: false,
-      requestContext: {
-        accountId: "local",
-        apiId: "local",
-        domainName: "lambda.local",
-        domainPrefix: "local",
-        http: {
-          method: "POST",
-          path: "/graphql",
-          protocol: "HTTP/1.1",
-          sourceIp: "127.0.0.1",
-          userAgent: "test",
-        },
-        requestId: "lambda-request",
-        routeKey: "$default",
-        stage: "$default",
-        time: "",
-        timeEpoch: 0,
-      },
-    };
-    const context: LambdaContext = {
-      callbackWaitsForEmptyEventLoop: false,
-      functionName: "local",
-      functionVersion: "$LATEST",
-      invokedFunctionArn: "local",
-      logGroupName: "local",
-      logStreamName: "local",
-      memoryLimitInMB: "128",
-      awsRequestId: "lambda-request",
-      getRemainingTimeInMillis: () => 5000,
-      done: () => undefined,
-      fail: () => undefined,
-      succeed: () => undefined,
-    };
-    const response = await handler(event, context);
+    const response = await invokeLambdaFixture(
+      { fetch: server.getHandler() },
+      new Request("http://worker/graphql", {
+        method: "POST",
+        headers: headers(),
+        body: JSON.stringify({ query: "{ probe broken }" }),
+      }),
+    );
     expect(response.statusCode).toBe(200);
     expect(response.cookies).toEqual([
       "first=one; HttpOnly; Path=/",
@@ -159,6 +123,34 @@ describe("Workers protocol transports on actual workerd", () => {
       errors: [{ extensions: { code: "workers-protocols/missing" } }],
     });
   });
+
+  it.each(["node-fetch", "lambda"])(
+    "runs the same tRPC controller and client through %s",
+    async (runtime) => {
+      const app = createProtocolFixture(readFileSync("src/schema.graphql", "utf8"));
+      const client = createTRPCUntypedClient({
+        links: [
+          httpLink({
+            url: "http://worker/trpc",
+            headers: () => headers("tenant-b"),
+            fetch: async (url, init) => {
+              const request = new Request(String(url), init);
+              return runtime === "lambda"
+                ? fetchThroughLambdaFixture(app, request)
+                : app.fetch(request);
+            },
+          }),
+        ],
+      });
+      expect(await client.query("probe.read")).toBe("tenant-b:session=tenant-b");
+      expect(await client.mutation("probe.write", { name: "Crocodile" })).toBe(
+        "tenant-b:Crocodile",
+      );
+      await expect(client.mutation("probe.write", { name: "x" })).rejects.toMatchObject({
+        data: { code: "BAD_REQUEST" },
+      });
+    },
+  );
 
   it("reports unsupported subscriptions explicitly in workerd", async () => {
     const response = await worker.dispatchFetch("http://worker/unsupported-subscriptions");

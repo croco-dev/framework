@@ -108,7 +108,7 @@ report missing Providers or host paths explicitly. Never mark untested or unsupp
 Run `pnpm --filter @croco-example/workers-protocols test` for real local workerd
 query/mutation, scope, cookie, content-type, Problem and host-signal evidence.
 `pnpm --filter @croco-example/workers-protocols codegen:check` verifies the generated
-GraphQL SDK against the declared schema and operations. The shared GraphQL fixture also
-runs through Node fetch and the Lambda host envelope. Keep client-disconnect cancellation,
+GraphQL SDK against the declared schema and operations. Shared GraphQL and tRPC fixtures
+run through Node fetch and the Lambda host envelope. Keep client-disconnect cancellation,
 subscription/streaming, deployed Cloudflare and full SaaS profile certification separate
 from these local results.
