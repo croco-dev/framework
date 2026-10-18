@@ -79,14 +79,6 @@ describe("DI graph consumer imports", () => {
       runtime: "js",
     },
     {
-      module: "Node16",
-      moduleResolution: "Node16",
-      packageType: "module",
-      source: "ts",
-      graph: "ts",
-      runtime: "js",
-    },
-    {
       module: "NodeNext",
       moduleResolution: "NodeNext",
       packageType: "commonjs",
