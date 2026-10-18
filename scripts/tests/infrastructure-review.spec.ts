@@ -422,36 +422,46 @@ it('real host', async () => {
       );
     },
   );
-  it("rejects missing generated skills on a documentation-only change", () => {
-    const { root } = fixture();
-    const repository = join(import.meta.dirname, "../..");
-    write(
-      root,
-      "docs/package-catalog.json",
-      readFileSync(join(repository, "docs/package-catalog.json"), "utf8"),
-    );
-    cpSync(join(repository, ".agents/skills/croco"), join(root, ".agents/skills/croco"), {
-      recursive: true,
-    });
-    const generated = "packages/create-croco-app/templates/addons/agent-rules/.agents/skills/croco";
-    cpSync(join(repository, generated), join(root, generated), { recursive: true });
-    symlinkSync(join(repository, "examples"), join(root, "examples"));
-    const apiTemplate = "packages/create-croco-app/templates/saas/apps/api-server/src";
-    for (const file of ["compositionRoot.ts", "index.ts", "lambda.ts", "worker.ts"]) {
+  it.each(["reviewed", "different-broken", "different-healthy"])(
+    "validates generated skills against the requested revision (%s)",
+    (mode) => {
+      const { root } = fixture();
+      const repository = join(import.meta.dirname, "../..");
       write(
         root,
-        `${apiTemplate}/${file}`,
-        readFileSync(join(repository, apiTemplate, file), "utf8"),
+        "docs/package-catalog.json",
+        readFileSync(join(repository, "docs/package-catalog.json"), "utf8"),
       );
-    }
-    const base = commit(root);
-    expect(inspectInfrastructureReview(root, base, base).diagnostics).toEqual([]);
-    rmSync(join(root, generated, "SKILL.md"));
-    const head = commit(root);
-    expect(inspectInfrastructureReview(root, base, head).diagnostics.map((d) => d.code)).toContain(
-      "INFRA_SKILL_DRIFT",
-    );
-  });
+      cpSync(join(repository, ".agents/skills/croco"), join(root, ".agents/skills/croco"), {
+        recursive: true,
+      });
+      const generated =
+        "packages/create-croco-app/templates/addons/agent-rules/.agents/skills/croco";
+      cpSync(join(repository, generated), join(root, generated), { recursive: true });
+      symlinkSync(join(repository, "examples"), join(root, "examples"));
+      const apiTemplate = "packages/create-croco-app/templates/saas/apps/api-server/src";
+      for (const file of ["compositionRoot.ts", "index.ts", "lambda.ts", "worker.ts"]) {
+        write(
+          root,
+          `${apiTemplate}/${file}`,
+          readFileSync(join(repository, apiTemplate, file), "utf8"),
+        );
+      }
+      const base = commit(root);
+      expect(inspectInfrastructureReview(root, base, base).diagnostics).toEqual([]);
+      rmSync(join(root, generated, "SKILL.md"));
+      const head = commit(root);
+      if (mode === "different-broken") git(root, "checkout", "--detach", base);
+      const requestedHead = mode === "different-healthy" ? base : head;
+      const codes = inspectInfrastructureReview(root, base, requestedHead).diagnostics.map(
+        (d) => d.code,
+      );
+      expect(codes).toContain(
+        mode === "reviewed" ? "INFRA_SKILL_DRIFT" : "INFRA_SKILL_CHECKOUT_REQUIRED",
+      );
+      if (mode !== "reviewed") expect(codes).not.toContain("INFRA_SKILL_DRIFT");
+    },
+  );
 
   it("rejects symlinks as executable evidence", () => {
     const input = changed();

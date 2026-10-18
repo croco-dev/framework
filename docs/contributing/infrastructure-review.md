@@ -10,6 +10,8 @@ Profile metadata; the generated extension matrix remains the compatibility table
 `pnpm infrastructure-review:check -- --base <base-sha> [--head <head-sha>]` compares the immutable head against its merge-base with the requested base. Base-only changes on a diverged branch are excluded.
 `pnpm check` also runs it; local default base is `origin/trunk`, CI supplies its immutable verification base.
 Spine and publish profiles run host evidence after build, isolated from concurrent workspace/test consumers.
+The read-only repo profile does not build packages: prepare any build artifacts required by the selected
+host test first (`pnpm setup` includes the normal build). Missing prerequisites fail the evidence test.
 The PR companion runs the same gate and includes decisions, constraints, reusable providers and diagnostics
 in its JSON and Markdown reports. The gate never rewrites files.
 
@@ -73,6 +75,8 @@ A `supported` decision additionally needs `evidence` with `kind: "host-runtime"`
 A successful receipt must name the pinned file as well as the exact test title. The checker executes that exact named test with the repository's pinned Vitest, in its package/example directory
 or at the root for script tests. Zero matches, skipped-only execution, test failures, stale test hashes and `mock`
 evidence fail. Execution requires a clean checkout at the reviewed head, preventing receipts for another tree.
+Generated Skill validation also requires the requested head to be checked out; an explicit different head
+fails with `INFRA_SKILL_CHECKOUT_REQUIRED` instead of checking another revision's Skill.
 Verification/companion report directories are ignored generated outputs, so the CI reporting runner can retain
 its checkpoints while tracked source mutations still fail. Tests can use the existing no-credential runtime harness; they must exercise the claimed host path.
 Each execution is bounded to two minutes. Longer live checks should remain separately recorded as unverified
