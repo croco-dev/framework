@@ -879,6 +879,8 @@ export class EnrichmentService {
     limit = 20,
   ): Promise<EnrichmentPage> {
     await this.allow(scope, "read");
+    const actor = await this.options.currentActor(scope);
+    const authorityRevision = await this.options.authorizationRevision(scope);
     if (
       !Number.isSafeInteger(offset) ||
       offset < 0 ||
@@ -897,7 +899,14 @@ export class EnrichmentService {
       );
       sources.push({ row, available });
     }
-    // Project the entire page after all asynchronous source checks finish.
+    // Revalidate the principal and read permission after every asynchronous source check,
+    // then project retention at release time for the entire page.
+    await this.allow(scope, "read");
+    if (
+      (await this.options.currentActor(scope)) !== actor ||
+      (await this.options.authorizationRevision(scope)) !== authorityRevision
+    )
+      fail("authority-changed");
     const resultExpired = this.now() >= run.resultExpiresAt;
     const rawExpired = this.now() >= run.rawExpiresAt;
     const items: EnrichmentItem[] = sources.map(({ row, available }) => ({

@@ -218,8 +218,10 @@ function Console(props: EnrichmentReviewConsoleProps) {
             <div key={candidate.receiptId}>
               <p>
                 {candidate.definitionVersion} · {candidate.method} · {candidate.state} · Candidate:{" "}
-                {candidate.labelId ?? "none"} · {candidate.reason ?? "complete"} · Attempt{" "}
-                {candidate.attempt}
+                {candidate.labelId ?? "none"} ·{" "}
+                {candidate.reason ??
+                  (candidate.state === "running" ? "awaiting worker" : "complete")}{" "}
+                · Attempt {candidate.attempt}
               </p>
               <p>
                 Model {candidate.modelRef} · Normalization {candidate.normalizationVersion} ·
@@ -232,7 +234,7 @@ function Console(props: EnrichmentReviewConsoleProps) {
                   : `${candidate.usage.kind}: ${candidate.usage.inputTokens} input / ${candidate.usage.outputTokens} output tokens`}{" "}
                 · Delivery {candidate.delivery}
               </p>
-              {candidate.state === "failed" && (
+              {(candidate.state === "failed" || candidate.state === "running") && (
                 <button
                   type="button"
                   disabled={
@@ -240,7 +242,8 @@ function Console(props: EnrichmentReviewConsoleProps) {
                     !props.canClassify ||
                     !reason.trim() ||
                     candidate.retryAuthorized ||
-                    (candidate.reason === "acceptance-unknown" && !acknowledge)
+                    ((candidate.state === "running" || candidate.reason === "acceptance-unknown") &&
+                      !acknowledge)
                   }
                   onClick={() => {
                     void perform(() =>
@@ -253,15 +256,19 @@ function Console(props: EnrichmentReviewConsoleProps) {
                     );
                   }}
                 >
-                  Authorize bounded retry
+                  {candidate.state === "running"
+                    ? "Acknowledge stopped worker"
+                    : "Authorize bounded retry"}
                 </button>
               )}
-              {candidate.state === "failed" && (
+              {(candidate.state === "failed" || candidate.state === "running") && (
                 <p>
-                  Failed calls are not retried automatically. Acceptance may be unknown; an
+                  Provider calls are not retried automatically. Acceptance may be unknown; an
                   authorized server retry requires an audit reason and acknowledgement of possible
                   duplicate billing.
-                  {candidate.reason === "acceptance-unknown" &&
+                  {candidate.state === "running" &&
+                    " The server rejects acknowledgement until the worker lease expires. Reload after expiry; confirm the worker has stopped before acknowledging."}
+                  {(candidate.state === "running" || candidate.reason === "acceptance-unknown") &&
                     " After confirming the old worker stopped, acknowledgement releases its slot even when the attempt limit prevents another call."}
                 </p>
               )}

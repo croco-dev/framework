@@ -21,6 +21,9 @@ acknowledgement; confirm the previous worker has stopped first. At the final all
 the same acknowledgement releases its uncertain concurrency slot without allowing another
 attempt for that item. Its unknown usage and reserved budget remain recorded; other items can
 then continue within the original run limits.
+The console also exposes stopped-worker acknowledgement for a persisted `running` candidate,
+including after raw text expires. The server rejects it until its lease expires and requires
+the audit reason and explicit duplicate-billing/stopped-worker acknowledgement.
 Changing the operator or authorization revision changes cache identity but never resets the
 item/version model-attempt limit or bypasses acknowledgement of uncertain acceptance.
 
@@ -68,6 +71,13 @@ estimated usage. Unknown acceptance blocks further model work until an operator 
 retry or acknowledges the stopped worker after its final attempt; changing a run ID must not be used to bypass admission policy. Providers without idempotency
 can bill twice after an acknowledged retry. SDK retries are disabled.
 
+For the local Chrome regression, use a disposable loopback database whose password is
+`synthetic-only`. After a fresh `setup` and server start, run
+`ENRICHMENT_BROWSER_URL=<printed-loopback-url> pnpm --filter @croco-example/enrichment-review test:browser`
+with the same `ENRICHMENT_POSTGRES_URL`. This test changes synthetic persisted receipts to
+exercise stopped-worker recovery and expired raw text; rerun setup in an empty disposable
+database before repeating the complete browser flow.
+
 Results and a text-free, label-free event/usage intent are persisted together before sink delivery.
 The idempotent `settle` callback is keyed by receipt ID; a failed sink never causes inference to
 repeat. The example connects measured usage to the existing metering journal and publishes observational receipts through the existing in-memory event bus. These demonstration sinks are in memory; install durable event/metering
@@ -82,7 +92,9 @@ Conflicting originals for the same scoped item/revision are rejected across runs
 Human reviews are independent of candidates. Re-running a definition never erases a review, and
 export rechecks that reviewed IDs remain allowed in the selected definition.
 
-Original and result retention have separate expirations. Reads hide expired originals immediately,
+Original and result retention have separate expirations. Page reads revalidate read permission,
+operator identity and authorization revision after asynchronous store/source checks.
+Reads hide expired originals immediately,
 while valid reviewed results remain exportable until their own expiration. Source access is checked
 again before cache reads, transmission, review and export; deletion cannot be bypassed by cache.
 Call `purge` from an existing application task to physically remove expired/deleted originals and

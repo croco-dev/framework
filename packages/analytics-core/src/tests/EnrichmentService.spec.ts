@@ -147,6 +147,42 @@ async function fixture(
 }
 
 describe("EnrichmentService", () => {
+  it.each(["load", "source"] as const)(
+    "denies page release when read permission is revoked during %s",
+    async (boundary) => {
+      const f = await fixture();
+      await f.classify();
+      if (boundary === "load") {
+        const load = f.store.load.bind(f.store);
+        vi.spyOn(f.store, "load").mockImplementation(async (...args) => {
+          const row = await load(...args);
+          f.state.allowed = false;
+          return row;
+        });
+      } else {
+        f.policy.sourceAvailable = async () => {
+          f.state.allowed = false;
+          return true;
+        };
+      }
+      await expect(f.service.read(scope, "run")).rejects.toMatchObject({
+        code: "analytics-core/enrichment-denied",
+      });
+    },
+  );
+  it.each(["actor", "authority"] as const)(
+    "denies page release when %s changes during source checks",
+    async (field) => {
+      const f = await fixture();
+      f.policy.sourceAvailable = async () => {
+        f.state[field] = "changed";
+        return true;
+      };
+      await expect(f.service.read(scope, "run")).rejects.toMatchObject({
+        code: "analytics-core/enrichment-authority-changed",
+      });
+    },
+  );
   it.each(["actor", "authority"] as const)(
     "numbers acknowledged model attempts across a changed %s identity",
     async (identity) => {
