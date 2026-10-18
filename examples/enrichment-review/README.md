@@ -48,6 +48,7 @@ The module does not read credentials or construct a global client. `deterministi
 satisfies the same feature contract without an account. SDK conformance tests use a loopback HTTP
 fixture to verify real serialization, usage, quota errors, malformed/truncated output and cancellation.
 They prove protocol mapping, not vendor accuracy, availability or model quality.
+The example supplies the SDK's optional `undici` peer at patched version `8.10.2`.
 
 PII policy runs before model dispatch over both text and context. This example blocks illustrative
 email/phone patterns. Production applications must supply their actual block/mask policy; a regex is

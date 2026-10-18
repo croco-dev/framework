@@ -798,7 +798,7 @@ importers:
         version: 0.45.2(@cloudflare/workers-types@4.20260316.1)(@opentelemetry/api@1.9.0)(@types/better-sqlite3@7.6.13)(@types/pg@8.20.0)(@upstash/redis@1.36.1)(better-sqlite3@12.11.1)(kysely@0.28.17)(pg@8.22.0)
       openai:
         specifier: 7.25.0
-        version: 7.25.0(@aws-sdk/credential-provider-node@3.972.47)(@smithy/signature-v4@5.4.5)(undici@8.9.0)(ws@8.21.0)(zod@4.3.6)
+        version: 7.25.0(@aws-sdk/credential-provider-node@3.972.47)(@smithy/signature-v4@5.4.5)(undici@8.10.2)(ws@8.21.0)(zod@4.3.6)
       pg:
         specifier: 8.22.0
         version: 8.22.0
@@ -808,6 +808,9 @@ importers:
       react-dom:
         specifier: ^19.0.0
         version: 19.2.6(react@19.2.6)
+      undici:
+        specifier: 8.10.2
+        version: 8.10.2
     devDependencies:
       '@types/node':
         specifier: ^24
@@ -14288,6 +14291,10 @@ packages:
     resolution: {integrity: sha512-IDxfleLmmbSskfWSUATiN1nfn2rDuvnMOqb5CWR92iIfojA0Ud+ulOAAEQ57LPr9rWmsreUyf5lwyao+7GNNVw==}
     engines: {node: '>=20.18.1'}
 
+  undici@8.10.2:
+    resolution: {integrity: sha512-/y4/bH9YNU5hi9NIrpOuvGXFcxrj3CMrV+/AYpowAYTpHn8gX/XPFjNy766FPoYY0miQhdW977JFWKGNhBdwyQ==}
+    engines: {node: '>=22.19.0'}
+
   undici@8.9.0:
     resolution: {integrity: sha512-aWZpUj7XoGonMClx4gdDRfgBjqeA+F473aDmROQQbM9n6PRfK/u1q/a0X4wMTgcHfT8H6fpbt98PFuDUwFg2YA==}
     engines: {node: '>=22.19.0'}
@@ -21736,6 +21743,14 @@ snapshots:
       regex: 6.1.0
       regex-recursion: 6.0.2
 
+  openai@7.25.0(@aws-sdk/credential-provider-node@3.972.47)(@smithy/signature-v4@5.4.5)(undici@8.10.2)(ws@8.21.0)(zod@4.3.6):
+    optionalDependencies:
+      '@aws-sdk/credential-provider-node': 3.972.47
+      '@smithy/signature-v4': 5.4.5
+      undici: 8.10.2
+      ws: 8.21.0
+      zod: 4.3.6
+
   openai@7.25.0(@aws-sdk/credential-provider-node@3.972.47)(@smithy/signature-v4@5.4.5)(undici@8.9.0)(ws@8.21.0)(zod@4.3.6):
     optionalDependencies:
       '@aws-sdk/credential-provider-node': 3.972.47
@@ -23393,6 +23408,8 @@ snapshots:
   undici@6.27.0: {}
 
   undici@7.29.0: {}
+
+  undici@8.10.2: {}
 
   undici@8.9.0: {}
 
