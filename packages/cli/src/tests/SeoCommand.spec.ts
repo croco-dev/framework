@@ -49,3 +49,41 @@ describe("SeoCommand", () => {
     }
   });
 });
+
+it("loads the inspector config from the explicit cwd option", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "croco-seo-cwd-"));
+  try {
+    await writeFile(
+      join(directory, "ready.mjs"),
+      `export const inspect = async (targetId) => ({targetId, state:'ready', diagnostics:[]});`,
+    );
+    const output: string[] = [];
+    const errors: string[] = [];
+    const result = await runCroco(
+      [
+        "seo",
+        "--cwd",
+        directory,
+        "--config",
+        "ready.mjs",
+        "--target",
+        "selected-preview",
+        "--json",
+      ],
+      {
+        cwd: tmpdir(),
+        stdout: (message) => output.push(message),
+        stderr: (message) => errors.push(message),
+      },
+    );
+    expect(result.exitCode).toBe(0);
+    expect(errors).toEqual([]);
+    expect(JSON.parse(output.join(""))).toEqual({
+      targetId: "selected-preview",
+      state: "ready",
+      diagnostics: [],
+    });
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});

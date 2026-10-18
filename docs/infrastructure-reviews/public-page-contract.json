@@ -167,7 +167,7 @@
       "files": {
         "packages/cli/package.json": "c874b44145c8be52116a0bf8046cf8721b62b363396b1838e833185083de5c02",
         "packages/cli/src/commands/root.ts": "b65544a2cb704a6f3cdcdfaec41ec6de473c733114e0b7bd83d9c04d3fa35360",
-        "packages/cli/src/commands/seo.ts": "19b71c1102987ba99b75dccd54d2105cb9740bbf39a0a73cc82ca6430569ca53"
+        "packages/cli/src/commands/seo.ts": "8ac01ff36805ea7086d1ee0df376eb1d06336879c14f12ef7e66149de362401a"
       },
       "catalogRuntimes": [],
       "profiles": {
