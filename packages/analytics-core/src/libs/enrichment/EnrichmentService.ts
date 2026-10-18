@@ -393,10 +393,13 @@ export class EnrichmentService {
     scope: EnrichmentScope,
     runId: string,
     change: (run: EnrichmentRun) => T,
+    beforeChange?: (run: EnrichmentRun) => Promise<void>,
   ): Promise<T> {
     // Retry only CAS contention. Never repeat an external invocation inside this function.
     for (let attempt = 0; attempt < 16; attempt++) {
       const run = await this.load(scope, runId);
+      // Command guards inspect the freshly loaded state on every CAS attempt.
+      if (beforeChange) await beforeChange(run);
       const revision = run.revision;
       const before = JSON.stringify(run);
       const result = change(run);
@@ -994,6 +997,10 @@ export class EnrichmentService {
     command: EnrichmentCommand,
   ): Promise<EnrichmentPage> {
     await this.allow(scope, "review", command.actor);
+    const actor = await this.options.currentActor(scope);
+    if (!identifier(actor)) fail("invalid-actor");
+    const authorityRevision = await this.options.authorizationRevision(scope);
+    if (!identifier(authorityRevision)) fail("invalid-authority-revision");
     const definition = this.definition(definitionId, version);
     if (
       !definition.labels.some((label) => label.id === labelId) ||
@@ -1002,33 +1009,47 @@ export class EnrichmentService {
       evidence.length > 1000
     )
       fail("invalid-review");
-    const current = await this.load(scope, runId);
-    const item = current.items.find((row) => row.input.itemId === itemId) ?? fail("not-found");
-    await this.live(scope, current, item);
-    await this.mutate(scope, runId, (run) => {
-      if (!this.command(run, command, "review", [itemId, definitionId, version, labelId, evidence]))
-        return;
-      const row = run.items.find((entry) => entry.input.itemId === itemId) ?? fail("not-found");
-      const candidate = row.candidates
-        .filter(
-          (entry) => entry.definitionId === definitionId && entry.definitionVersion === version,
+    await this.mutate(
+      scope,
+      runId,
+      (run) => {
+        if (
+          !this.command(run, command, "review", [itemId, definitionId, version, labelId, evidence])
         )
-        .at(-1);
-      if (candidate?.state === "running") fail("candidate-running");
-      if (!candidate && (row.input.text === null || this.now() >= run.rawExpiresAt))
-        fail("raw-expired");
-      row.review = {
-        labelId,
-        evidence,
-        actor: command.actor,
-        reason: command.reason,
-        revision: run.revision + 1,
-        candidateRef: candidate?.receiptId ?? null,
-        definitionVersion: version,
-        definitionId,
-      };
-      row.reviews.push(row.review);
-    });
+          return;
+        const row = run.items.find((entry) => entry.input.itemId === itemId) ?? fail("not-found");
+        const candidate = row.candidates
+          .filter(
+            (entry) => entry.definitionId === definitionId && entry.definitionVersion === version,
+          )
+          .at(-1);
+        if (candidate?.state === "running") fail("candidate-running");
+        if (!candidate && (row.input.text === null || this.now() >= run.rawExpiresAt))
+          fail("raw-expired");
+        row.review = {
+          labelId,
+          evidence,
+          actor: command.actor,
+          reason: command.reason,
+          revision: run.revision + 1,
+          candidateRef: candidate?.receiptId ?? null,
+          definitionVersion: version,
+          definitionId,
+        };
+        row.reviews.push(row.review);
+      },
+      async (run) => {
+        const item = run.items.find((row) => row.input.itemId === itemId) ?? fail("not-found");
+        await this.live(scope, run, item);
+        await this.allow(scope, "review", command.actor);
+        if (
+          (await this.options.currentActor(scope)) !== actor ||
+          (await this.options.authorizationRevision(scope)) !== authorityRevision
+        )
+          fail("authority-changed");
+        if (this.now() >= run.resultExpiresAt) fail("result-expired");
+      },
+    );
     return this.read(scope, runId);
   }
   async exportLabels(

@@ -147,6 +147,98 @@ async function fixture(
 }
 
 describe("EnrichmentService", () => {
+  it.each(
+    (["load", "source", "contention"] as const).flatMap((boundary) =>
+      (["permission", "actor", "authority"] as const).map((identity) => ({ boundary, identity })),
+    ),
+  )(
+    "does not persist a review when $identity changes during $boundary",
+    async ({ boundary, identity }) => {
+      const f = await fixture();
+      await f.classify();
+      const command = await f.command("review-race");
+      const load = f.store.load.bind(f.store);
+      const before = await load(scope, "run");
+      let canReview = true;
+      const revoke = () => {
+        if (identity === "permission") canReview = false;
+        else f.state[identity] = "changed";
+      };
+      if (boundary === "load")
+        vi.spyOn(f.store, "load").mockImplementationOnce(async (...args) => {
+          const run = await load(...args);
+          revoke();
+          return run;
+        });
+      if (boundary === "contention")
+        vi.spyOn(f.store, "compareAndSet").mockImplementationOnce(async () => {
+          revoke();
+          return false;
+        });
+      const service = new EnrichmentService({
+        ...f.policy,
+        authorize: async (_scope, action) => action !== "review" || canReview,
+        sourceAvailable:
+          boundary === "source"
+            ? async () => {
+                revoke();
+                return true;
+              }
+            : f.policy.sourceAvailable,
+      });
+      await expect(
+        service.review(scope, "run", "a", "intent", "v1", "buy", "Human approval", command),
+      ).rejects.toMatchObject({
+        code: `analytics-core/enrichment-${identity === "permission" ? "denied" : "authority-changed"}`,
+      });
+      expect(await load(scope, "run")).toEqual(before);
+      expect((await f.service.read(scope, "run")).items[0].review).toBeUndefined();
+    },
+  );
+  it.each(["source", "retention"] as const)(
+    "rechecks %s before retrying a contended review write",
+    async (boundary) => {
+      const f = await fixture();
+      await f.classify();
+      const command = await f.command("review-contention");
+      const before = await f.store.load(scope, "run");
+      vi.spyOn(f.store, "compareAndSet").mockImplementationOnce(async () => {
+        if (boundary === "source") f.state.available = false;
+        else f.state.now = 6000;
+        return false;
+      });
+      await expect(
+        f.service.review(scope, "run", "a", "intent", "v1", "buy", "Human approval", command),
+      ).rejects.toMatchObject({
+        code: `analytics-core/enrichment-${boundary === "source" ? "source-unavailable" : "result-expired"}`,
+      });
+      expect(await f.store.load(scope, "run")).toEqual(before);
+    },
+  );
+  it("does not persist a review when its authority check crosses result retention", async () => {
+    const f = await fixture();
+    await f.classify();
+    const command = await f.command("review-expiry");
+    const load = f.store.load.bind(f.store);
+    const before = await load(scope, "run");
+    let loaded = false;
+    vi.spyOn(f.store, "load").mockImplementation(async (...args) => {
+      const run = await load(...args);
+      loaded = true;
+      return run;
+    });
+    const service = new EnrichmentService({
+      ...f.policy,
+      authorizationRevision: async () => {
+        if (loaded) f.state.now = 6000;
+        return f.state.authority;
+      },
+    });
+    await expect(
+      service.review(scope, "run", "a", "intent", "v1", "buy", "Human approval", command),
+    ).rejects.toMatchObject({ code: "analytics-core/enrichment-result-expired" });
+    expect(await load(scope, "run")).toEqual(before);
+  });
   it.each(["load", "source"] as const)(
     "denies page release when read permission is revoked during %s",
     async (boundary) => {
@@ -497,12 +589,11 @@ describe("EnrichmentService", () => {
     expect(model).toHaveBeenCalledTimes(2);
     expect((await f.service.read(scope, "run")).requests).toBe(2);
   });
-  it("retains human overrides while a different definition/prompt produces a separate candidate", async () => {
+  it("retains human overrides while a different definition version produces a separate candidate", async () => {
     const model = vi.fn(async () => answer);
     const next = {
       ...withModel,
       version: "v2",
-      modelPolicy: { ...withModel.modelPolicy, promptVersion: "p2" },
     };
     const f = await fixture({
       model,
@@ -529,41 +620,141 @@ describe("EnrichmentService", () => {
       await f.service.exportLabels(scope, "run", "intent", "v2", await f.command("export")),
     ).toEqual([{ itemId: "a", inputRevision: "r1", labelId: "help", reviewRevision: 3 }]);
   });
-  it("separates normalized input, taxonomy, catalog, normalization and permission-context cache identities", async () => {
-    const variants: ClassificationDefinition[] = [
-      withModel,
-      {
+  it.each([
+    {
+      name: "taxonomy",
+      variant: {
         ...withModel,
-        version: "v2",
         labels: [
           { id: "buy", label: "Paid purchase" },
           { id: "help", label: "Support" },
         ],
       },
-      { ...withModel, version: "v3", normalization: { ...withModel.normalization, version: "n2" } },
-      { ...withModel, version: "v4", referenceCatalog: [{ text: "unrelated", labelId: "help" }] },
-    ];
+    },
+    {
+      name: "catalog",
+      variant: { ...withModel, referenceCatalog: [{ text: "unrelated", labelId: "help" }] },
+    },
+    {
+      name: "normalization",
+      variant: { ...withModel, normalization: { ...withModel.normalization, version: "n2" } },
+    },
+    {
+      name: "prompt version",
+      variant: {
+        ...withModel,
+        modelPolicy: { ...withModel.modelPolicy, promptVersion: "p2" },
+      },
+    },
+    {
+      name: "prompt instructions",
+      variant: {
+        ...withModel,
+        modelPolicy: { ...withModel.modelPolicy, instructions: "Choose only declared labels." },
+      },
+    },
+    {
+      name: "model",
+      variant: { ...withModel, modelPolicy: { ...withModel.modelPolicy, modelRef: "fixture-2" } },
+    },
+  ])(
+    "separates $name with the same definition version and preserves human review",
+    async ({ variant }) => {
+      const model = vi.fn<ClassifyText>(async (request) => ({
+        ...answer,
+        modelRef: request.modelRef,
+      }));
+      const f = await fixture({ model, inputs: [input("a", "new text")] });
+      const first = await f.classify();
+      await f.service.review(
+        scope,
+        "run",
+        "a",
+        "intent",
+        "v1",
+        "help",
+        "Human correction remains authoritative",
+        await f.command("review"),
+      );
+      const review = (await f.service.read(scope, "run")).items[0].review;
+      const restarted = new EnrichmentService({ ...f.policy, definitions: [variant] });
+      const second = await restarted.classify(scope, "run", "a", "intent", "v1");
+      expect(second).toMatchObject({ state: "classified", labelId: "buy", attempt: 2 });
+      expect(second.receiptId).not.toBe(first.receiptId);
+      expect(second.cacheKey).not.toBe(first.cacheKey);
+      expect(model).toHaveBeenCalledTimes(2);
+      const page = await restarted.read(scope, "run");
+      expect(page.items[0].candidates).toHaveLength(2);
+      expect(page.items[0].review).toEqual(review);
+      expect(page.items[0].review).toMatchObject({
+        labelId: "help",
+        evidence: "Human correction remains authoritative",
+      });
+    },
+  );
+  it("separates semantic context and keeps reordered context equivalent across run-local workloads", async () => {
+    const model = vi.fn<ClassifyText>(async () => answer);
+    const original = { ...input("a", "new text"), context: { locale: "en", country: "US" } };
+    const f = await fixture({ model, inputs: [original] });
+    const first = await f.classify();
+    for (const [runId, context] of [
+      ["same-context", { country: "US", locale: "en" }],
+      ["changed-context", { country: "US", locale: "ko" }],
+    ] as const)
+      await f.service.enqueueBatch(scope, runId, [{ ...original, context }], limits, {
+        rawMs: 1000,
+        resultMs: 5000,
+      });
+    const restarted = new EnrichmentService(f.policy);
+    const same = await restarted.classify(scope, "same-context", "a", "intent", "v1");
+    const changed = await restarted.classify(scope, "changed-context", "a", "intent", "v1");
+    expect(same.cacheKey).toBe(first.cacheKey);
+    expect(changed.cacheKey).not.toBe(first.cacheKey);
+    // Cache reuse stays run-local even when the semantic identity is identical.
+    expect(new Set([first.receiptId, same.receiptId, changed.receiptId]).size).toBe(3);
+    expect(model).toHaveBeenCalledTimes(3);
+    expect(model.mock.calls.map(([request]) => request.context.locale)).toEqual(["en", "en", "ko"]);
+  });
+  it.each(["text", "context"] as const)(
+    "rejects changed immutable %s in an existing run without replacing its cached result",
+    async (field) => {
+      const model = vi.fn(async () => answer);
+      const original = input("a", "new text");
+      const f = await fixture({ model, inputs: [original] });
+      const candidate = await f.classify();
+      const replacement =
+        field === "text"
+          ? { ...original, text: "new meaning" }
+          : { ...original, context: { locale: "ko" } };
+      await expect(
+        f.service.enqueueBatch(scope, "run", [replacement], limits, {
+          rawMs: 1000,
+          resultMs: 5000,
+        }),
+      ).rejects.toMatchObject({ code: "analytics-core/enrichment-input-conflict" });
+      expect(
+        await new EnrichmentService(f.policy).classify(scope, "run", "a", "intent", "v1"),
+      ).toEqual(candidate);
+      expect(model).toHaveBeenCalledTimes(1);
+      expect((await f.service.read(scope, "run")).items[0].original).toBe("new text");
+    },
+  );
+  it("separates actor and authorization-revision cache identities without changing the definition version", async () => {
+    const model = vi.fn(async () => answer);
     const f = await fixture({
-      model: async () => answer,
-      definitions: variants,
+      model,
       inputs: [input("a", "new text")],
-      // v1 deliberately admits three successful permission-context identities.
-      limits: { ...limits, maxAttempts: 3, maxRequests: 8, maxReservedTokens: 16000 },
+      limits: { ...limits, maxAttempts: 3, maxRequests: 3, maxReservedTokens: 6000 },
     });
-    for (const entry of variants) await f.classify("a", entry.version);
+    await f.classify();
     f.state.authority = "auth-2";
     await f.classify();
-    const candidates = (await f.service.read(scope, "run")).items[0].candidates;
-    expect(new Set(candidates.map((candidate) => candidate.cacheKey)).size).toBe(5);
     f.state.actor = "second-operator";
     await f.classify();
-    expect(
-      new Set(
-        (await f.service.read(scope, "run")).items[0].candidates.map(
-          (candidate) => candidate.cacheKey,
-        ),
-      ).size,
-    ).toBe(6);
+    const candidates = (await f.service.read(scope, "run")).items[0].candidates;
+    expect(new Set(candidates.map((candidate) => candidate.cacheKey)).size).toBe(3);
+    expect(candidates.map((candidate) => candidate.attempt)).toEqual([1, 2, 3]);
+    expect(model).toHaveBeenCalledTimes(3);
   });
   it("blocks PII before SDK dispatch, denies missing tenants, and revokes cache/export when source access is lost", async () => {
     const model = vi.fn(async () => answer);
