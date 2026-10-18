@@ -6,7 +6,7 @@
       "classification": "deployment-profile",
       "reason": "The build-time CLI now emits an explicit bootstrap-only Workers application. These package decisions concern the Tooling process, which does not execute an application Host; emitted application behavior remains infrastructure-dependent and its native Workers adapter is reviewed separately below.",
       "files": {
-        "packages/create-croco-app/src/generator.ts": "a7479d3e8975435afbfc1c25270b98141aaa8a8598214e8c5f7141a9d1756d5b",
+        "packages/create-croco-app/src/generator.ts": "f33fc1c0e2e92d11f6c6a7d5eada50c120c6c731f0b220ede1778099f05d6138",
         "packages/create-croco-app/src/saas-provider-profiles.ts": "3390d117f1f2d4eea206f45b372d783a016e8267a218ff03f925307cce696a02",
         "packages/create-croco-app/templates/saas/apps/api-server/src/workerBootstrap.ts.hbs": "11881e60e33debf5b0925b5f4049179e8ed269df168636fc4c1c1b9845d5dd62",
         "packages/create-croco-app/templates/saas/apps/api-server/scripts/worker-smoke.mjs": "136cdc4c721ea80dcd9bdc509bc7a047b9077efe6eb103e68dc5e006d81b27d3"
