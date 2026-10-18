@@ -16,6 +16,18 @@ the same artifacts.
 - Intent-map helpers such as `createProjectIntentMap`.
 - Metadata readers for controller constructors and route metadata.
 
+## Generated artifact ignore policy
+
+The default artifact policy inspects the project and ancestor `.gitignore` files.
+Literal paths are relative to the directory containing each ignore file; a leading
+`/` and a trailing directory `/` are accepted. The existing `**/.croco/build` rule
+also covers nested projects. Matching preserves path-component boundaries and the
+original rule in `gitIgnoreRule`.
+
+This inspection supports positive literal paths and that specific recursive build
+rule. It is not a complete Git ignore evaluator: general globbing, negation and
+Git rule precedence are not supported.
+
 ## Usage
 
 ```typescript
