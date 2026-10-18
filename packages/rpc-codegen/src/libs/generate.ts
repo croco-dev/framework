@@ -804,7 +804,7 @@ function generateQueryKeys(domainRoutes: DomainRoutes): string {
         keyParts.push("serializeRpcQueryKeyInput(cacheScope)");
       }
 
-      return `  ${getQueryKeyFactoryProperty(route)}: (${parameters}) => [${keyParts.join(", ")}] as const,`;
+      return `  ${getQueryKeyFactoryProperty(route, domainRoutes)}: (${parameters}) => [${keyParts.join(", ")}] as const,`;
     })
     .join("\n");
 
@@ -3514,8 +3514,10 @@ function generateReactQueryImports(domainRoutes: DomainRoutes): string {
 function generateReactQueryHooks(domainRoutes: DomainRoutes, clientName: string): string {
   const queries = domainRoutes.routes.filter(isReactQueryQueryRoute);
   const mutations = domainRoutes.routes.filter((route) => !isReactQueryQueryRoute(route));
-  const typeArtifacts = domainRoutes.routes.map(generateReactQueryTypeArtifacts).join("\n");
-  const queryFactories = generateReactQueryFactories(domainRoutes.domain, queries, clientName);
+  const typeArtifacts = domainRoutes.routes
+    .map((route) => generateReactQueryTypeArtifacts(route, domainRoutes))
+    .join("\n");
+  const queryFactories = generateReactQueryFactories(domainRoutes, queries, clientName);
   const mutationFactories = generateReactMutationFactories(
     domainRoutes.domain,
     mutations,
@@ -3528,10 +3530,13 @@ function generateReactQueryHooks(domainRoutes: DomainRoutes, clientName: string)
     .join("\n");
 }
 
-function generateReactQueryTypeArtifacts(route: GeneratedClientRoute): string {
+function generateReactQueryTypeArtifacts(
+  route: GeneratedClientRoute,
+  domainRoutes: DomainRoutes,
+): string {
   if (isReactQueryQueryRoute(route)) {
-    return `export type ${getQueryKeyTypeName(route)} = ${getReactQueryKeyType(route, false)};
-export type ${getResultQueryKeyTypeName(route)} = ${getReactQueryKeyType(route, true)};
+    return `export type ${getQueryKeyTypeName(route)} = ${getReactQueryKeyType(route, false, domainRoutes)};
+export type ${getResultQueryKeyTypeName(route)} = ${getReactQueryKeyType(route, true, domainRoutes)};
 export type ${getQueryFactoryTypeName(route)} = {
   readonly queryKey: ${getQueryKeyTypeName(route)};
   readonly queryFn: () => Promise<${getSuccessType(route)}>;
@@ -3556,7 +3561,7 @@ export type ${getResultMutationOptionsTypeName(route)}<TContext = unknown> = Omi
 }
 
 function generateReactQueryFactories(
-  domain: string,
+  domainRoutes: DomainRoutes,
   routes: readonly GeneratedClientRoute[],
   clientName: string,
 ): string {
@@ -3564,7 +3569,10 @@ function generateReactQueryFactories(
     return "";
   }
 
-  const entries = routes.map((route) => generateReactQueryFactoryEntry(domain, route, "client"));
+  const domain = domainRoutes.domain;
+  const entries = routes.map((route) =>
+    generateReactQueryFactoryEntry(domainRoutes, route, "client"),
+  );
   const clientTypeName = `${toPascalCase(domain)}Client`;
   const factoryName = `create${toPascalCase(domain)}Queries`;
 
@@ -3578,13 +3586,13 @@ export const ${domain}Queries = ${factoryName}();`;
 }
 
 function generateReactQueryFactoryEntry(
-  domain: string,
+  domainRoutes: DomainRoutes,
   route: GeneratedClientRoute,
   clientName: string,
 ): string {
   const input = `${getReactQueryFactoryParameters(route)}${needsInput(route) ? ", " : ""}rpc?: RpcClientRequestOptions`;
-  const queryKey = getReactQueryKeyExpression(domain, route, false);
-  const resultQueryKey = getReactQueryKeyExpression(domain, route, true);
+  const queryKey = getReactQueryKeyExpression(domainRoutes, route, false);
+  const resultQueryKey = getReactQueryKeyExpression(domainRoutes, route, true);
 
   return `  ${route.methodName}: (${input}): ${getQueryFactoryTypeName(route)} => ({
     queryKey: ${queryKey},
@@ -3805,18 +3813,22 @@ function getQueryKeyInputExpression(route: GeneratedClientRoute): string | null 
   return `{ ${fieldNames.map((fieldName) => `${fieldName}: input.${fieldName}`).join(", ")} }`;
 }
 
-function getReactQueryKeyType(route: GeneratedClientRoute, result: boolean): string {
-  const keyType = `ReturnType<typeof ${getDomainName(route)}Keys${getQueryKeyFactoryAccessor(route)}>`;
+function getReactQueryKeyType(
+  route: GeneratedClientRoute,
+  result: boolean,
+  domainRoutes: DomainRoutes,
+): string {
+  const keyType = `ReturnType<typeof ${getDomainName(route)}Keys${getQueryKeyFactoryAccessor(route, domainRoutes)}>`;
 
   return result ? `readonly [...${keyType}, 'result']` : keyType;
 }
 
 function getReactQueryKeyExpression(
-  domain: string,
+  domainRoutes: DomainRoutes,
   route: GeneratedClientRoute,
   result: boolean,
 ): string {
-  const keyExpression = `${domain}Keys${getQueryKeyFactoryAccessor(route)}(${getQueryKeyFactoryCallArguments(route)})`;
+  const keyExpression = `${getQueryKeysName(domainRoutes)}${getQueryKeyFactoryAccessor(route, domainRoutes)}(${getQueryKeyFactoryCallArguments(route)})`;
 
   return result ? `[...${keyExpression}, 'result'] as const` : keyExpression;
 }
@@ -4334,14 +4346,34 @@ function getQueryKeysName(domainRoutes: DomainRoutes): string {
   return `${domainRoutes.domain}Keys`;
 }
 
-function getQueryKeyFactoryProperty(route: GeneratedClientRoute): string {
-  const name = route.methodName === "all" ? "allRoute" : route.methodName;
+function getQueryKeyFactoryName(route: GeneratedClientRoute, domainRoutes: DomainRoutes): string {
+  if (route.methodName !== "all") {
+    return route.methodName;
+  }
+
+  const routeNames = new Set(domainRoutes.routes.map((entry) => entry.methodName));
+  let name = "allRoute";
+  let suffix = 2;
+  while (routeNames.has(name)) {
+    name = `allRoute${suffix++}`;
+  }
+  return name;
+}
+
+function getQueryKeyFactoryProperty(
+  route: GeneratedClientRoute,
+  domainRoutes: DomainRoutes,
+): string {
+  const name = getQueryKeyFactoryName(route, domainRoutes);
 
   return isJavaScriptIdentifier(name) ? name : formatObjectKey(name);
 }
 
-function getQueryKeyFactoryAccessor(route: GeneratedClientRoute): string {
-  const name = route.methodName === "all" ? "allRoute" : route.methodName;
+function getQueryKeyFactoryAccessor(
+  route: GeneratedClientRoute,
+  domainRoutes: DomainRoutes,
+): string {
+  const name = getQueryKeyFactoryName(route, domainRoutes);
 
   return isJavaScriptIdentifier(name) ? `.${name}` : `[${formatObjectKey(name)}]`;
 }
