@@ -15,6 +15,20 @@ title: "SitemapReport"
 
 ---
 
+### exclusionDetailsTruncated
+
+> `readonly` **exclusionDetailsTruncated**: `boolean`
+
+---
+
+### exclusions
+
+> `readonly` **exclusions**: readonly `object`[]
+
+First 100 distinct, deterministically sorted resource/reason details.
+
+---
+
 ### files
 
 > `readonly` **files**: readonly `object`[]

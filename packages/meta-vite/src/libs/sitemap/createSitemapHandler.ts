@@ -1,4 +1,5 @@
-import { generateSitemap, escapeSitemapXml } from "./generateSitemap";
+import { randomUUID } from "node:crypto";
+import { generateSitemap, escapeSitemapXml, isSitemapRevision } from "./generateSitemap";
 import { SitemapProblem } from "./SitemapProblem";
 import type { SitemapPolicy, SitemapPublisher, SitemapReport, SitemapSource } from "./types";
 
@@ -45,11 +46,12 @@ function preview(
   state: "idle" | "preview" | "published" | "incomplete",
   generationId: string | null,
   access: SitemapAccess,
+  sourceRevision: string,
 ): string {
   return `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Sitemap report</title>
-  <style>body{font:16px system-ui;margin:2rem auto;padding:0 1rem;max-width:64rem}pre{white-space:pre-wrap;overflow-wrap:anywhere}label{display:block;margin:1rem 0}input{max-width:100%;box-sizing:border-box}button{padding:.6rem 1rem;margin:.5rem .5rem .5rem 0}table{border-collapse:collapse}td,th{padding:.5rem;text-align:left;border-bottom:1px solid #ccc}</style>
-  <main><h1>Sitemap report</h1><p>Last successful revision: ${escapeSitemapXml(current ?? "none")}</p>
-  <p role="status">${state === "incomplete" ? "Source incomplete. Current publication preserved." : state === "published" ? "Complete sitemap published." : state === "preview" ? "Snapshot complete. Preview does not publish." : "Last published report."}</p>
+  <style>body{font:16px system-ui;margin:2rem auto;padding:0 1rem;max-width:64rem;overflow-wrap:anywhere}pre{white-space:pre-wrap;overflow-wrap:anywhere}label{display:block;margin:1rem 0}input{max-width:100%;box-sizing:border-box}button{padding:.6rem 1rem;margin:.5rem .5rem .5rem 0}table{border-collapse:collapse}td,th{padding:.5rem;text-align:left;border-bottom:1px solid #ccc}</style>
+  <main><h1>Sitemap report</h1><p>Source revision: ${escapeSitemapXml(sourceRevision || "unavailable")}</p><p>Last successful revision: ${escapeSitemapXml(current ?? "none")}</p>
+  <p role="status">${state === "incomplete" ? "Source incomplete. Current publication preserved." : state === "published" ? "Complete sitemap published." : state === "preview" ? "Snapshot complete. Preview does not publish." : current ? "Last published report." : "Preview the public URLs before publishing."}</p>
   ${
     report
       ? `<p>Included: ${report.included}; scanned: ${report.scanned}; lastmod unknown: ${report.lastmodUnknown}</p><h2>Exclusions</h2><table><tr><th>Reason</th><th>Count</th></tr>${Object.entries(
@@ -60,10 +62,10 @@ function preview(
           )
           .join(
             "",
-          )}</table><h2>Files</h2><table><tr><th>Name</th><th>Bytes</th><th>URLs</th></tr>${report.files.map((file) => `<tr><td>${escapeSitemapXml(file.name)}</td><td>${file.bytes}</td><td>${file.urls}</td></tr>`).join("")}</table>`
+          )}</table><h2>Excluded resources</h2><p>${report.exclusionDetailsTruncated ? "Showing the first 100 resource details; aggregate counts include all exclusions." : "Opaque resource identifiers; other-tenant identifiers are hidden."}</p><table aria-label="Excluded resources"><tr><th>Resource</th><th>Reason</th><th>Count</th></tr>${report.exclusions.map((detail) => `<tr><td>${escapeSitemapXml(detail.resourceId)}</td><td>${escapeSitemapXml(detail.reason)}${detail.publication ? ` (${escapeSitemapXml(detail.publication)})` : ""}</td><td>${detail.count}</td></tr>`).join("")}</table><h2>Files</h2><table><tr><th>Name</th><th>Bytes</th><th>URLs</th></tr>${report.files.map((file) => `<tr><td>${escapeSitemapXml(file.name)}</td><td>${file.bytes}</td><td>${file.urls}</td></tr>`).join("")}</table>`
       : ""
   }
-  <form method="post"><label>Expected source revision <input name="revision" required maxlength="256" value="${escapeSitemapXml(report?.revision ?? current ?? "")}"></label><label>Expected generation ID (empty for first publication) <input name="expectedGenerationId" maxlength="64" value="${escapeSitemapXml(generationId ?? "")}"></label><label>Idempotency key <input name="idempotencyKey" required maxlength="128"></label><button name="action" value="regenerate" ${access.permissions.includes("sitemap:regenerate") ? "" : "disabled"}>Regenerate preview</button><button name="action" value="publish" ${access.permissions.includes("sitemap:publish") ? "" : "disabled"}>Publish complete sitemap</button></form></main></html>`;
+  <form method="post"><input type="hidden" name="revision" value="${escapeSitemapXml(sourceRevision)}"><input type="hidden" name="expectedGenerationId" value="${escapeSitemapXml(generationId ?? "")}"><input type="hidden" name="idempotencyKey" value="${randomUUID()}"><button name="action" value="regenerate" ${sourceRevision && access.permissions.includes("sitemap:regenerate") ? "" : "disabled"}>Regenerate preview</button><button name="action" value="publish" ${state === "preview" && report?.sourceComplete && access.permissions.includes("sitemap:publish") ? "" : "disabled"}>Publish complete sitemap</button></form>${state === "incomplete" ? '<p><a href="/admin/sitemap">Reload report</a> to read the source revision again.</p>' : ""}</main></html>`;
 }
 
 /** Mount before the application's fallback/page renderer; unrelated paths return null. */
@@ -112,6 +114,20 @@ export function createSitemapHandler(
       let report: SitemapReport | null = current?.report ?? null;
       let published = false;
       let incomplete = false;
+      let sourceRevision = "";
+      if (request.method === "GET") {
+        try {
+          const snapshot = await options.source.open();
+          if (
+            snapshot.tenantId !== options.policy.tenantId ||
+            !isSitemapRevision(snapshot.revision)
+          )
+            throw new SitemapProblem("source-incomplete");
+          sourceRevision = snapshot.revision;
+        } catch {
+          incomplete = true;
+        }
+      }
       if (request.method === "POST") {
         if (
           request.headers.get("origin") !== new URL(options.policy.origin).origin ||
@@ -127,12 +143,13 @@ export function createSitemapHandler(
           throw new SitemapProblem("access");
         const revision = form.get("revision") ?? "";
         const key = form.get("idempotencyKey") ?? "";
-        if (!revision.trim() || revision.length > 256 || !key.trim() || key.length > 128)
+        if (!isSitemapRevision(revision) || !key.trim() || key.length > 128)
           throw new SitemapProblem("access");
         try {
           const generated = await generateSitemap(options.source, options.policy);
           if (generated.revision !== revision) throw new SitemapProblem("conflict");
           report = generated.report;
+          sourceRevision = generated.revision;
           if (action === "publish") {
             await options.publisher.publish(generated, {
               actorId: access.actorId,
@@ -145,6 +162,7 @@ export function createSitemapHandler(
           if (!(error instanceof SitemapProblem) || error.reason !== "source-incomplete")
             throw error;
           report = error.report ?? null;
+          sourceRevision = isSitemapRevision(report?.revision) ? report.revision : "";
           incomplete = true;
         }
       }
@@ -162,6 +180,7 @@ export function createSitemapHandler(
                 : "idle",
           latest?.generationId ?? null,
           access,
+          sourceRevision,
         ),
         {
           status: incomplete ? 503 : 200,

@@ -15,16 +15,19 @@ empty snapshot returns no entries, `nextCursor: null`, and `complete: true`.
 Repository errors must reject; do not catch them and return an empty page.
 
 Each row declares `resourceId`, `tenantId`, absolute `url`, `canonical`, publication
-state and explicit indexability. Only public, indexable, self-canonical rows survive.
+state and explicit indexability. Resource IDs must be opaque application keys, not
+credentials or personal data; authorized reports can display these keys. Only public, indexable, self-canonical rows survive.
 Unknown publication/indexability/canonical decisions are excluded. Use the same
 page definition as the PDP's canonical/publication decision when one exists; this
 API does not infer such decisions from route templates. Revision identifiers use
-1–256 ASCII letters, digits, periods, underscores, colons or hyphens.
+1–256 ASCII letters, digits, periods, underscores, colons or hyphens. A resource ID
+identifies one canonical page per locale; include a public variant dimension in the
+identity when query-based variants represent distinct pages.
 
 `approveUrl` is required server-owned policy. Validate approved public paths and
 tenant ownership there, including sensitive path segments. The generator also
 rejects other origins, credentials, fragments, control characters, email-like paths,
-unknown/repeated query parameters and sensitive query names. `queryValues` lists
+unknown/repeated query parameters, URLs of 2,048 or more characters and sensitive query names. `queryValues` lists
 the exact meaningful public values allowed for each query key; nothing is silently
 removed. This allowlist cannot make sensitive query names public.
 
@@ -76,7 +79,8 @@ or exhausted bound fails the operation and cannot replace current publication.
 
 After validation, canonical URLs are deduplicated and sorted before partitioning.
 Conflicting resource/locale/modification claims for one canonical exclude the
-entire canonical group. Matching duplicates count separately. Files split at
+entire canonical group. A resource/locale identity claiming different canonical URLs
+also excludes every conflicting claim. Matching duplicates count separately. Files split at
 50,000 URLs or 52,428,800 UTF-8 bytes including XML wrappers, whichever comes first.
 Smaller per-file limits are available; larger limits are rejected. A single entry
 that cannot fit fails generation. Indexes are bounded by the same protocol limits.
@@ -126,7 +130,10 @@ history even when XML objects remain in storage. Back it up with the site's stat
 
 `authorize` must authenticate the server session and derive actor, tenant and
 permissions from server-owned authorization data. Never construct its result from
-POST actor/tenant fields. Every administrator request needs `sitemap:read` and the
+POST actor/tenant fields. The browser reads the source revision and carries revision,
+current generation and a fresh idempotency key in hidden form fields; operators
+preview counts and exclusions before enabling Publish. HTTP clients must supply
+these same checked command fields. Every administrator request needs `sitemap:read` and the
 configured tenant. POST additionally requires `sitemap:regenerate` or
 `sitemap:publish`, exact same-origin form submission, an expected source revision
 and an idempotency key. Publishing also compares expected generation. The source is
@@ -138,7 +145,13 @@ The HTML report exposes scanned/included counts, exclusions by reason, unknown
 lastmod, completeness, per-file URL/byte counts and the last successful revision.
 Denied actions are disabled and remain forbidden on the server. Source failures
 return an explicit incomplete report with status 503 while retaining current.
-Reports do not contain excluded raw URLs, connection errors or credentials.
+Reports include at most 100 deterministically sorted resource/reason details, with
+per-resource counts and publication state where relevant; a truncation indicator
+keeps the complete aggregate counts distinct from this bounded detail sample.
+Non-opaque identifiers are masked as SHA-256 references and other-tenant identifiers
+are hidden. Reports do not include excluded raw URLs or connection errors. Keep
+`current.json` and the coordinator directory outside public asset roots; only the
+authorized report endpoint exposes report metadata.
 
 ## Infrastructure decisions and evidence
 

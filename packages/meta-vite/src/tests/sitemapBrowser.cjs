@@ -32,6 +32,7 @@ const { build } = createRequire(require.resolve("tsup"))("esbuild");
   const { FileSitemapPublisher, createSitemapHandler } = loaded.exports;
   let handler;
   let unavailable = false;
+  const revision = "pdp-" + "7".repeat(64);
   const errors = [];
   const server = createServer(async (req, res) => {
     const chunks = [];
@@ -58,11 +59,11 @@ const { build } = createRequire(require.resolve("tsup"))("esbuild");
       approveUrl: (url) => url.pathname.startsWith("/products/"),
     },
     source: {
-      open: async () => ({ tenantId: "shop", revision: "pdp-7" }),
+      open: async () => ({ tenantId: "shop", revision }),
       read: async () => {
         if (unavailable) throw new Error("source unavailable");
         return {
-          revision: "pdp-7",
+          revision,
           entries: [
             {
               resourceId: "public",
@@ -104,8 +105,11 @@ const { build } = createRequire(require.resolve("tsup"))("esbuild");
         errors.push(message.text());
     });
     await page.goto(`${base}/admin/sitemap`);
-    await page.getByLabel("Expected source revision", { exact: true }).fill("pdp-7");
-    await page.getByLabel("Idempotency key", { exact: true }).fill("preview-1");
+    assert.equal(
+      await page.getByRole("button", { name: "Publish complete sitemap" }).isDisabled(),
+      true,
+    );
+    assert.ok((await page.locator("main").innerText()).includes(`Source revision: ${revision}`));
     await page.getByRole("button", { name: "Regenerate preview" }).click();
     await page.getByRole("status").filter({ hasText: "Snapshot complete" }).waitFor();
     assert.match(
@@ -113,8 +117,11 @@ const { build } = createRequire(require.resolve("tsup"))("esbuild");
       /Included: 1; scanned: 2; lastmod unknown: 1/,
     );
     assert.match(await page.locator("table").first().innerText(), /publication\s+1/);
+    assert.match(
+      await page.getByRole("table", { name: "Excluded resources", exact: true }).innerText(),
+      /private\s+publication \(private\)\s+1/,
+    );
     await page.screenshot({ path: join(artifacts, "preview-desktop.png"), fullPage: true });
-    await page.getByLabel("Idempotency key", { exact: true }).fill("publish-1");
     await page.getByRole("button", { name: "Publish complete sitemap" }).focus();
     await page.keyboard.press("Enter");
     await page.getByRole("status").filter({ hasText: "Complete sitemap published." }).waitFor();
@@ -126,13 +133,14 @@ const { build } = createRequire(require.resolve("tsup"))("esbuild");
       false,
     );
     unavailable = true;
-    await page.getByLabel("Idempotency key", { exact: true }).fill("retry-1");
     await page.getByRole("button", { name: "Regenerate preview" }).click();
     await page
       .getByRole("status")
       .filter({ hasText: "Source incomplete. Current publication preserved." })
       .waitFor();
-    assert.match(await page.locator("main").innerText(), /Last successful revision: pdp-7/);
+    assert.ok(
+      (await page.locator("main").innerText()).includes(`Last successful revision: ${revision}`),
+    );
     await page.screenshot({ path: join(artifacts, "incomplete-mobile.png"), fullPage: true });
     await page.context().addCookies([{ name: "role", value: "reader", url: base }]);
     await page.goto(`${base}/admin/sitemap`);
@@ -142,7 +150,7 @@ const { build } = createRequire(require.resolve("tsup"))("esbuild");
     );
     assert.equal(await page.getByRole("button", { name: "Regenerate preview" }).isDisabled(), true);
     const denied = await page.request.post(`${base}/admin/sitemap`, {
-      form: { action: "publish", revision: "pdp-7", idempotencyKey: "forged" },
+      form: { action: "publish", revision, idempotencyKey: "forged" },
       headers: { Origin: base },
     });
     assert.equal(denied.status(), 403);

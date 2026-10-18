@@ -53,6 +53,14 @@ export type SitemapReport = {
   readonly scanned: number;
   readonly included: number;
   readonly excluded: Readonly<Record<SitemapExclusionReason, number>>;
+  /** First 100 distinct, deterministically sorted resource/reason details. */
+  readonly exclusions: readonly {
+    readonly resourceId: string;
+    readonly reason: SitemapExclusionReason;
+    readonly publication?: SitemapEntry["publication"];
+    readonly count: number;
+  }[];
+  readonly exclusionDetailsTruncated: boolean;
   readonly lastmodUnknown: number;
   readonly files: readonly { name: string; bytes: number; urls: number }[];
 };

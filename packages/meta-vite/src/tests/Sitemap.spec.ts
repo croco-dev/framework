@@ -93,6 +93,63 @@ describe("Sitemap", () => {
     expect(generated.files[0]?.xml).toContain("<lastmod>2024-02-29</lastmod>");
     expect(generated.files[0]?.xml).not.toContain("private");
     expect(JSON.stringify(generated.report)).not.toContain("https://");
+    expect(generated.report.exclusions).toContainEqual({
+      resourceId: "private",
+      reason: "publication",
+      publication: "private",
+      count: 1,
+    });
+    expect(generated.report.exclusions).toContainEqual({
+      resourceId: "alias",
+      reason: "canonical",
+      count: 1,
+    });
+    expect(JSON.stringify(generated.report)).not.toContain("other-tenant");
+  });
+
+  it("bounds deterministic resource-level diagnostics and masks unsafe and other-tenant identifiers", async () => {
+    const rows = Array.from({ length: 105 }, (_, i) =>
+      entry(`private-${String(i).padStart(3, "0")}`, { publication: "private" }),
+    );
+    const repeated = rows[0];
+    if (!repeated) throw new Error("missing fixture");
+    rows.push(repeated);
+    const generated = await generateSitemap(source(rows), policy);
+    expect(generated.report).toMatchObject({
+      scanned: 106,
+      included: 0,
+      exclusionDetailsTruncated: true,
+      excluded: { publication: 106 },
+    });
+    expect(generated.report.exclusions).toHaveLength(100);
+    expect(generated.report.exclusions[0]).toEqual({
+      resourceId: "private-000",
+      reason: "publication",
+      publication: "private",
+      count: 2,
+    });
+    expect(await generateSitemap(source([...rows].reverse()), { ...policy, pageSize: 1 })).toEqual(
+      generated,
+    );
+    const masked = await generateSitemap(
+      source([
+        entry("person@example.com", { publication: "private" }),
+        entry("foreign-secret", { tenantId: "other" }),
+      ]),
+      policy,
+    );
+    expect(masked.report.exclusions).toContainEqual({
+      resourceId: "[unavailable]",
+      reason: "tenant",
+      count: 1,
+    });
+    expect(
+      masked.report.exclusions.some(
+        (detail) => detail.resourceId.startsWith("sha256:") && detail.reason === "publication",
+      ),
+    ).toBe(true);
+    expect(JSON.stringify(masked.report)).not.toContain("person@example.com");
+    expect(JSON.stringify(masked.report)).not.toContain("foreign-secret");
   });
 
   it("rejects outside origins, credentials, sensitive or unknown queries and XML injection while preserving approved query semantics", async () => {
@@ -160,6 +217,12 @@ describe("Sitemap", () => {
       policy,
     );
     expect(many.report.files.map((file) => file.urls)).toEqual([50000, 1]);
+    expect(
+      many.files.map((file) => {
+        const urls = parser.parse(file.xml).urlset.url;
+        return Array.isArray(urls) ? urls.length : 1;
+      }),
+    ).toEqual([50000, 1]);
     const a = entry("é&one");
     const single = await generateSitemap(source([a]), policy);
     const exact = single.report.files[0]?.bytes ?? 0;
@@ -169,6 +232,7 @@ describe("Sitemap", () => {
     });
     expect(paired.report.files.map((file) => file.urls)).toEqual([1, 1]);
     expect(paired.report.files.every((file) => file.bytes <= exact)).toBe(true);
+    expect(paired.files.every((file) => Buffer.byteLength(file.xml, "utf8") <= exact)).toBe(true);
     await expect(
       generateSitemap(source([a]), { ...policy, maxBytesPerFile: exact - 1 }),
     ).rejects.toMatchObject({ reason: "limit" });
@@ -178,6 +242,55 @@ describe("Sitemap", () => {
     await expect(
       generateSitemap(source([]), { ...policy, maxUrlsPerFile: 50001 }),
     ).rejects.toMatchObject({ reason: "invalid-policy" });
+  });
+
+  it("rejects protocol URL length 2048 while retaining 2047", async () => {
+    const prefix = "https://shop.example/products/";
+    const short = prefix + "a".repeat(2047 - prefix.length);
+    const long = prefix + "b".repeat(2048 - prefix.length);
+    const generated = await generateSitemap(
+      source([
+        entry("short", { url: short, canonical: short }),
+        entry("long", { url: long, canonical: long }),
+      ]),
+      policy,
+    );
+    expect(generated.report.included).toBe(1);
+    expect(generated.report.excluded.url).toBe(1);
+    expect(parser.parse(generated.files[0]?.xml ?? "").urlset.url.loc).toBe(short);
+  });
+
+  it("excludes conflicting canonical identity while retaining distinct real locales", async () => {
+    const rows = [
+      entry("same", {
+        url: "https://shop.example/products/old",
+        canonical: "https://shop.example/products/old",
+      }),
+      entry("same", {
+        url: "https://shop.example/products/new",
+        canonical: "https://shop.example/products/new",
+      }),
+      entry("translated", {
+        url: "https://shop.example/products/en",
+        canonical: "https://shop.example/products/en",
+        locale: "en-US",
+        localeGroup: "translation",
+      }),
+      entry("translated", {
+        url: "https://shop.example/products/ko",
+        canonical: "https://shop.example/products/ko",
+        locale: "ko-KR",
+        localeGroup: "translation",
+      }),
+    ];
+    const generated = await generateSitemap(source(rows), policy);
+    expect(generated.report.included).toBe(2);
+    expect(generated.report.excluded["canonical-conflict"]).toBe(2);
+    expect(generated.files[0]?.xml).not.toContain("/products/old");
+    expect(generated.files[0]?.xml).not.toContain("/products/new");
+    expect(
+      parser.parse(generated.files[0]?.xml ?? "").urlset.url.map((row: { loc: string }) => row.loc),
+    ).toEqual(["https://shop.example/products/en", "https://shop.example/products/ko"]);
   });
 
   it("does not substitute rebuild time for content time and distinguishes complete empty from incomplete sources", async () => {
@@ -249,6 +362,10 @@ describe("Sitemap", () => {
     expect(generated.report.files.reduce((total, file) => total + file.bytes, 0)).toBeGreaterThan(
       52428800,
     );
+    expect(generated.files).toHaveLength(2);
+    const actualSizes = generated.files.map((file) => Buffer.byteLength(file.xml, "utf8"));
+    expect(actualSizes.every((bytes) => bytes <= 52428800)).toBe(true);
+    expect(actualSizes.reduce((sum, bytes) => sum + bytes, 0)).toBeGreaterThan(52428800);
     for (const file of generated.files) expect(XMLValidator.validate(file.xml)).toBe(true);
   });
 
@@ -269,7 +386,7 @@ describe("Sitemap", () => {
         { ...source([]), open: async () => ({ tenantId: "other", revision: "v1" }) },
         policy,
       ),
-    ).rejects.toMatchObject({ reason: "source-incomplete" });
+    ).rejects.toMatchObject({ reason: "source-incomplete", report: { revision: "" } });
     const outage: SitemapSource = {
       ...source([]),
       read: async ({ cursor }) => {
@@ -321,11 +438,14 @@ describe("Sitemap", () => {
   it("preserves the last complete index on partial storage writes, stale publication and lock contention", async () => {
     const root = await directory();
     const storage = new InMemoryStorageProvider();
-    let failing = false;
+    let failing: string | undefined;
     const publisher = new FileSitemapPublisher(root, {
       get: storage.get.bind(storage),
       put: async (key, bytes, options) => {
-        if (failing && key.endsWith("sitemap-00002.xml")) throw new Error("injected partial write");
+        if (failing && key.endsWith(failing)) {
+          await storage.put(key, new TextEncoder().encode("<partial>"), options);
+          throw new Error("injected partial write");
+        }
         await storage.put(key, bytes, options);
       },
     });
@@ -335,7 +455,7 @@ describe("Sitemap", () => {
       idempotencyKey: "one",
       expectedGenerationId: null,
     });
-    failing = true;
+    failing = "sitemap-00002.xml";
     const next = await generateSitemap(source([entry("second"), entry("third")], "v8"), {
       ...policy,
       maxUrlsPerFile: 1,
@@ -349,7 +469,17 @@ describe("Sitemap", () => {
     ).rejects.toMatchObject({ reason: "storage" });
     expect(await publisher.current()).toEqual(original);
     expect(await publisher.read(next.id, "sitemap-00001.xml")).toBeNull();
-    failing = false;
+    failing = "index.xml";
+    await expect(
+      publisher.publish(next, {
+        actorId: "operator",
+        idempotencyKey: "two",
+        expectedGenerationId: first.id,
+      }),
+    ).rejects.toMatchObject({ reason: "storage" });
+    expect(await publisher.current()).toEqual(original);
+    expect(await publisher.read(next.id, "sitemap-00001.xml")).toBeNull();
+    failing = undefined;
     await expect(
       publisher.publish(next, {
         actorId: "operator",
@@ -536,6 +666,8 @@ describe("Sitemap", () => {
           revision: "catalog-v7",
           expectedGenerationId: first.id,
           idempotencyKey: "key",
+          actorId: "forged-client-actor",
+          tenantId: "other",
         })
       )?.status,
     ).toBe(200);

@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { SitemapProblem } from "./SitemapProblem";
 import type {
   SitemapEntry,
+  SitemapExclusionReason,
   SitemapGeneration,
   SitemapPolicy,
   SitemapReport,
@@ -58,11 +59,11 @@ function publicUrl(raw: string, origin: string, policy: SitemapPolicy): string |
   }
   if (
     Array.from(raw).some((char) => char.charCodeAt(0) <= 32 || char.charCodeAt(0) === 127) ||
-    raw.length > 2048
+    raw.length >= 2048
   )
     return null;
   if (
-    url.href.length > 2048 ||
+    url.href.length >= 2048 ||
     url.origin !== origin ||
     url.username ||
     url.password ||
@@ -92,6 +93,10 @@ function publicUrl(raw: string, origin: string, policy: SitemapPolicy): string |
   } catch {
     throw new SitemapProblem("invalid-policy");
   }
+}
+
+export function isSitemapRevision(value: unknown): value is string {
+  return typeof value === "string" && /^[A-Za-z0-9._:-]{1,256}$/.test(value);
 }
 
 function lastmod(entry: SitemapEntry): string | undefined {
@@ -134,6 +139,38 @@ export async function generateSitemap(
     "canonical-conflict": 0,
     locale: 0,
   };
+  const details = new Map<string, SitemapReport["exclusions"][number]>();
+  const exclude = (entry: SitemapEntry, reason: SitemapExclusionReason, occurrences = 1) => {
+    excluded[reason] += occurrences;
+    let resourceId = "[unavailable]";
+    if (entry.tenantId === policy.tenantId) {
+      const id = typeof entry.resourceId === "string" ? entry.resourceId : "[invalid identifier]";
+      resourceId = /^[A-Za-z0-9._:-]{1,128}$/.test(id)
+        ? id
+        : `sha256:${createHash("sha256").update(id).digest("hex")}`;
+    }
+    const states: readonly SitemapEntry["publication"][] = [
+      "public",
+      "private",
+      "draft",
+      "deleted",
+      "redirect",
+      "unknown",
+    ];
+    const publication =
+      reason === "publication"
+        ? states.includes(entry.publication)
+          ? entry.publication
+          : "unknown"
+        : undefined;
+    const key = JSON.stringify([resourceId, reason, publication ?? null]);
+    details.set(key, {
+      resourceId,
+      reason,
+      ...(publication ? { publication } : {}),
+      count: (details.get(key)?.count ?? 0) + occurrences,
+    });
+  };
   let revision = "";
   let scanned = 0;
   const report = (complete: boolean): SitemapReport => ({
@@ -142,19 +179,20 @@ export async function generateSitemap(
     scanned,
     included: 0,
     excluded: { ...excluded },
+    exclusions: [...details.entries()]
+      .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+      .slice(0, 100)
+      .map(([, detail]) => detail),
+    exclusionDetailsTruncated: details.size > 100,
     lastmodUnknown: 0,
     files: [],
   });
   const entries: SitemapEntry[] = [];
   try {
     const snapshot = await source.open();
-    revision = snapshot.revision;
-    if (
-      typeof revision !== "string" ||
-      !/^[A-Za-z0-9._:-]{1,256}$/.test(revision) ||
-      snapshot.tenantId !== policy.tenantId
-    )
+    if (!isSitemapRevision(snapshot.revision) || snapshot.tenantId !== policy.tenantId)
       throw new SitemapProblem("source-incomplete");
+    revision = snapshot.revision;
     let cursor: string | null = null;
     const cursors = new Set<string>();
     let complete = false;
@@ -189,20 +227,20 @@ export async function generateSitemap(
   const candidates = new Map<string, SitemapEntry[]>();
   for (const entry of entries) {
     if (entry.tenantId !== policy.tenantId) {
-      excluded.tenant++;
+      exclude(entry, "tenant");
       continue;
     }
     if (entry.publication !== "public") {
-      excluded.publication++;
+      exclude(entry, "publication");
       continue;
     }
     if (entry.indexable !== true) {
-      excluded.indexability++;
+      exclude(entry, "indexability");
       continue;
     }
     const url = publicUrl(entry.url, origin, policy);
     if (!url) {
-      excluded.url++;
+      exclude(entry, "url");
       continue;
     }
     if (
@@ -211,19 +249,30 @@ export async function generateSitemap(
       !entry.canonical ||
       publicUrl(entry.canonical, origin, policy) !== url
     ) {
-      excluded.canonical++;
+      exclude(entry, "canonical");
       continue;
     }
     if (
       (entry.locale && !/^(?:[a-z]{2,3})(?:-[A-Za-z0-9]{2,8})*$/.test(entry.locale)) ||
       Boolean(entry.locale) !== Boolean(entry.localeGroup)
     ) {
-      excluded.locale++;
+      exclude(entry, "locale");
       continue;
     }
     const group = candidates.get(url) ?? [];
     group.push({ ...entry, url });
     candidates.set(url, group);
+  }
+  const identity = (entry: SitemapEntry) =>
+    JSON.stringify([entry.resourceId, entry.locale || null]);
+  const canonicalByIdentity = new Map<string, Set<string>>();
+  for (const [url, group] of candidates) {
+    for (const entry of group) {
+      const key = identity(entry);
+      const urls = canonicalByIdentity.get(key) ?? new Set<string>();
+      urls.add(url);
+      canonicalByIdentity.set(key, urls);
+    }
   }
   const accepted: SitemapEntry[] = [];
   for (const [, group] of candidates) {
@@ -231,11 +280,17 @@ export async function generateSitemap(
     if (!first) continue;
     const signature = (entry: SitemapEntry) =>
       JSON.stringify([entry.resourceId, lastmod(entry), entry.locale, entry.localeGroup]);
-    if (group.some((entry) => signature(entry) !== signature(first))) {
-      excluded["canonical-conflict"] += group.length;
+    if (
+      group.some(
+        (entry) =>
+          signature(entry) !== signature(first) ||
+          (canonicalByIdentity.get(identity(entry))?.size ?? 0) > 1,
+      )
+    ) {
+      for (const entry of group) exclude(entry, "canonical-conflict");
       continue;
     }
-    excluded.duplicate += group.length - 1;
+    if (group.length > 1) exclude(first, "duplicate", group.length - 1);
     accepted.push(first);
   }
   accepted.sort((a, b) => (a.url < b.url ? -1 : a.url > b.url ? 1 : 0));

@@ -39,6 +39,32 @@ function publication(value: unknown): value is SitemapPublication {
     count(report.scanned) &&
     count(report.included) &&
     count(report.lastmodUnknown) &&
+    typeof report.exclusionDetailsTruncated === "boolean" &&
+    Array.isArray(report.exclusions) &&
+    report.exclusions.length <= 100 &&
+    report.exclusions.every(
+      (detail: unknown) =>
+        record(detail) &&
+        typeof detail.resourceId === "string" &&
+        detail.resourceId.length <= 128 &&
+        count(detail.count) &&
+        typeof detail.reason === "string" &&
+        [
+          "publication",
+          "indexability",
+          "tenant",
+          "url",
+          "canonical",
+          "duplicate",
+          "canonical-conflict",
+          "locale",
+        ].includes(detail.reason) &&
+        (detail.publication === undefined ||
+          (typeof detail.publication === "string" &&
+            ["public", "private", "draft", "deleted", "redirect", "unknown"].includes(
+              detail.publication,
+            ))),
+    ) &&
     record(report.excluded) &&
     [
       "publication",

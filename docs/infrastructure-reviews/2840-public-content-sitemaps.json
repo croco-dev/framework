@@ -8,11 +8,11 @@
       "files": {
         "packages/meta-vite/package.json": "f6bcf8bf4e27bc2a153a6048d4c0927f8dcfa7d9518a85b64472f5680e480ba9",
         "packages/meta-vite/src/index.ts": "8185ba76f0705eb1de45320d9079d59c868acba203b09cce2c266168d4552239",
-        "packages/meta-vite/src/libs/sitemap/FileSitemapPublisher.ts": "bd407608ca28cb200ea0cc95d0d0f4a18db2f3ef6e59f54b1b41a4bccf5b36dd",
+        "packages/meta-vite/src/libs/sitemap/FileSitemapPublisher.ts": "b6b9c72df3bb2341c0b6bfa9cdf84536cb9e79257adf76fd948601d6e23849a9",
         "packages/meta-vite/src/libs/sitemap/SitemapProblem.ts": "9674dad457884c57791309d25dc08c29259be4379888fd9d981c21b8fef79c61",
-        "packages/meta-vite/src/libs/sitemap/createSitemapHandler.ts": "705a2b5d46ae219ae6a7c8675f9c0419bfeb4db3263aefb0cbf549b7fb5e909c",
-        "packages/meta-vite/src/libs/sitemap/generateSitemap.ts": "1bc9e2656a426b4e882b05b0f1bab687425afa270b3b5868a7cf17d3b966d3d7",
-        "packages/meta-vite/src/libs/sitemap/types.ts": "ee1dc35e7d723d13436dba63b765d1cbb764321d82de0292f90abe17492200a1"
+        "packages/meta-vite/src/libs/sitemap/createSitemapHandler.ts": "7a1412872d06ad4df1b23294011d3ab011ab0114cc607708a000845d05454114",
+        "packages/meta-vite/src/libs/sitemap/generateSitemap.ts": "b5c4fb135e29caf29f5789212cade7e7a0df498f896203cb49a3fcee1a6f42be",
+        "packages/meta-vite/src/libs/sitemap/types.ts": "03d77f83ec7142a7e88f3dabccd2112d716d032547aa94ed07a9ed0fdf014c7c"
       },
       "catalogRuntimes": ["node", "lambda", "cloudflare-workers", "browser"],
       "profiles": {
@@ -40,7 +40,7 @@
             "runtime": "node",
             "path": "packages/meta-vite/src/tests/Sitemap.spec.ts",
             "testName": "Sitemap serves actual local HTTP XML/robots and enforces server actor, tenant, permission, origin, revision and idempotency",
-            "sha256": "025fcbc40f1be2791ba7b57bb87749ee5abeb7834e2f6173211d97cdf216ca28"
+            "sha256": "44f1ade991f6d6e929be7ec22af609ba856b35e81bafb319a02b55ec2e138117"
           }
         },
         "aws-lambda": {
