@@ -85,6 +85,7 @@ diagnostics/readiness provider는 아직 beta/production promotion blocker입니
 Workers bindings에서 REST credential을 명시적으로 전달합니다. `createUpstashRateLimitClient()`는
 Web `fetch`와 Upstash command serializer를 사용하며 Node compatibility flag가 필요하지 않습니다.
 HTTP 상태를 보존하므로 429/5xx는 retryable Problem, 401/403은 terminal Problem으로 구분합니다.
+동일 client에서 받은 `upstash-sync-token`을 다음 요청에 전달해 SDK의 read-your-writes 경계를 유지합니다.
 응답 본문과 transport 오류 메시지는 진단에 포함하지 않습니다. HTTPS origin만 허용하며 redirect를
 따르지 않고 각 명령은 10초 timeout으로 한 번 전송합니다. 응답 손실 전에 Lua 실행이 완료됐을 수
 있으므로 retryable은 자동 재시도 허가가 아닙니다.

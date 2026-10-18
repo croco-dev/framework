@@ -39,6 +39,7 @@ export function createUpstashRateLimitClient(
     throw new MissingUpstashRateLimitConfigProblem("token");
   }
   const token = options.token;
+  let syncToken = "";
   return new Redis({
     async request<T>(request: UpstashRequest): Promise<{ result?: T; error?: string }> {
       let response: Response;
@@ -46,7 +47,11 @@ export function createUpstashRateLimitClient(
         response = await fetch(endpoint, {
           method: "POST",
           redirect: "manual",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+            "upstash-sync-token": syncToken,
+          },
           body: JSON.stringify(request.body),
           signal: AbortSignal.timeout(10_000),
         });
@@ -58,6 +63,7 @@ export function createUpstashRateLimitClient(
         await response.body?.cancel().catch(() => undefined);
         throw new UpstashRateLimitUpstreamProblem("http.request", { status: response.status });
       }
+      syncToken = response.headers.get("upstash-sync-token") ?? "";
       let payload: unknown;
       try {
         payload = await response.json();

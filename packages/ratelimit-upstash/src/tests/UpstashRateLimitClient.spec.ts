@@ -59,6 +59,29 @@ describe("explicit Upstash REST client", () => {
       extensions: expect.objectContaining({ retryable }),
     });
   });
+  it("preserves read-your-writes tokens across sequential counter commands", async () => {
+    let calls = 0;
+    const fetcher = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+      calls++;
+      if (calls === 1) {
+        return Response.json({ result: "2.5" }, { headers: { "upstash-sync-token": "commit-17" } });
+      }
+      const expectedToken = calls === 2 ? "commit-17" : "commit-23";
+      const token = new Headers(init?.headers).get("upstash-sync-token");
+      return Response.json(
+        { result: token === expectedToken ? "2.5" : "0" },
+        {
+          headers: { "upstash-sync-token": "commit-23" },
+        },
+      );
+    });
+    vi.stubGlobal("fetch", fetcher);
+    const client = createUpstashRateLimitClient({ url: "https://redis.fixture", token: "secret" });
+    expect(await client.incrbyfloat("counter", 2.5)).toBe(2.5);
+    expect(await client.get<number>("counter")).toBe(2.5);
+    expect(await client.get<number>("counter")).toBe(2.5);
+    expect(fetcher).toHaveBeenCalledTimes(3);
+  });
   it("retains Redis serialization and number results for counters", async () => {
     const fetcher = vi.fn().mockResolvedValue(new Response('{"result":"4.25"}'));
     vi.stubGlobal("fetch", fetcher);
