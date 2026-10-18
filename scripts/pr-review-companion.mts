@@ -176,6 +176,25 @@ function runGit(rootDir: string, args: readonly string[]): string {
   return result.stdout.trim();
 }
 
+function hasGitFile(rootDir: string, ref: string, path: string): boolean {
+  const repository = spawnSync("git", ["rev-parse", "--git-dir"], {
+    cwd: rootDir,
+    encoding: "utf8",
+    env: { ...process.env, LC_ALL: "C" },
+  });
+  if (repository.status !== 0) {
+    if (
+      repository.status === 128 &&
+      !existsSync(join(rootDir, ".git")) &&
+      repository.stderr.includes("not a git repository")
+    )
+      return false;
+    throw new Error(repository.stderr.trim() || "Unable to inspect the Git repository");
+  }
+  const head = runGit(rootDir, ["rev-parse", "--verify", "--end-of-options", `${ref}^{commit}`]);
+  return runGit(rootDir, ["ls-tree", "--name-only", head, "--", path]) === path;
+}
+
 function readGitFile(rootDir: string, ref: string, path: string): string | null {
   const result = spawnSync("git", ["show", `${ref}:${path}`], {
     cwd: rootDir,
@@ -1304,10 +1323,13 @@ function createCompanionOutput(options: Options): {
   const annotations = createAnnotations(requiredChecks, generatedArtifacts, contractDiff);
   const outputDir = resolve(options.rootDir, options.outputDir);
 
-  const infrastructureReview =
-    readGitFile(options.rootDir, options.headRef, "docs/package-catalog.json") !== null
-      ? inspectInfrastructureReview(options.rootDir, options.baseRef, options.headRef)
-      : null;
+  const infrastructureReview = hasGitFile(
+    options.rootDir,
+    options.headRef,
+    "docs/package-catalog.json",
+  )
+    ? inspectInfrastructureReview(options.rootDir, options.baseRef, options.headRef)
+    : null;
   for (const diagnostic of infrastructureReview?.diagnostics ?? []) {
     annotations.push({
       file: diagnostic.path,
