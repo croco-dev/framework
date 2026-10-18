@@ -345,3 +345,42 @@ it("rejects non-boolean Secret optional selectors", () => {
     "false";
   expect(validateInfrastructure(input).ok).toBe(false);
 });
+
+it.each([{ Ref: "TOKEN" }, { "Fn::GetAtt": ["TOKEN", "Id"] }])(
+  "accepts native Secrets Manager ARN reference %j",
+  (reference) => {
+    const input = fixture("aws-lambda");
+    input.artifact.Resources.Api.Properties.Policies[0].Statement[3].Resource = reference;
+    expect(validateInfrastructure(input).ok).toBe(true);
+  },
+);
+
+it("rejects the nonexistent Secrets Manager Arn attribute and another secret reference", () => {
+  for (const reference of [{ "Fn::GetAtt": ["TOKEN", "Arn"] }, { Ref: "OTHER" }]) {
+    const input = fixture("aws-lambda");
+    input.artifact.Resources.Api.Properties.Policies[0].Statement[3].Resource = reference;
+    expect(validateInfrastructure(input).diagnostics).toContainEqual({
+      code: "CROCO_INFRA_PERMISSION",
+      requirement: 3,
+    });
+  }
+});
+
+it.each([
+  ["kv_namespaces", [{ binding: "DB", id: "existing" }]],
+  ["services", [{ binding: "DB", service: "existing" }]],
+  ["browser", { binding: "DB" }],
+  ["durable_objects", { bindings: [{ name: "DB", class_name: "Existing" }] }],
+  ["unsafe", { bindings: [{ name: "DB", type: "plain_text", text: "existing" }] }],
+  ["text_blobs", { DB: "existing.txt" }],
+])("rejects a claimed Wrangler name colliding with %s", (section, value) => {
+  const input = fixture("cloudflare-workers");
+  input.artifact[String(section)] = value;
+  expect(validateInfrastructure(input).diagnostics).toContainEqual({
+    code: "CROCO_INFRA_BINDING",
+    requirement: 0,
+  });
+  input.artifact[String(section)] =
+    section === "kv_namespaces" ? [{ binding: "UNUSED", id: "existing" }] : undefined;
+  expect(validateInfrastructure(input).ok).toBe(true);
+});

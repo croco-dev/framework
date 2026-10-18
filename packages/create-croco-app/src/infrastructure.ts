@@ -396,12 +396,18 @@ function aws(
     return ["CROCO_INFRA_PERMISSION"];
   const exactArn = { "Fn::GetAtt": [binding["resource"], "Arn"] };
   const objectArn = { "Fn::Join": ["", [exactArn, "/*"]] };
-  const requiredArn = resource["kind"] === "storage" ? objectArn : exactArn;
+  const requiredArns =
+    resource["kind"] === "secret"
+      ? [{ Ref: binding["resource"] }, { "Fn::GetAtt": [binding["resource"], "Id"] }]
+      : [resource["kind"] === "storage" ? objectArn : exactArn];
   const equal = (left: unknown, right: unknown): boolean =>
     JSON.stringify(left) === JSON.stringify(right);
   const covers = (statement: ObjectValue): boolean => {
     const value = statement["Resource"];
-    return equal(value, requiredArn) || list(value).some((arn) => equal(arn, requiredArn));
+    return requiredArns.some(
+      (requiredArn) =>
+        equal(value, requiredArn) || list(value).some((arn) => equal(arn, requiredArn)),
+    );
   };
   if (resource["kind"] === "secret" && binding["secretRef"] !== binding["resource"])
     return ["CROCO_INFRA_SECRET"];
@@ -453,6 +459,19 @@ function cloudflare(resource: ObjectValue, binding: ObjectValue, artifact: Objec
   ];
   if (Object.hasOwn(object(artifact["vars"]), String(binding["resource"])))
     return ["CROCO_INFRA_KIND"];
+  const nativeNames = Object.entries(artifact).flatMap(([section, value]) => {
+    if (["vars", "wasm_modules", "text_blobs", "data_blobs"].includes(section))
+      return Object.keys(object(value));
+    if (Array.isArray(value)) return value.map((entry) => object(entry)["binding"]);
+    const config = object(value);
+    return [
+      config["binding"],
+      ...list(config["bindings"]).map((entry) => object(entry)["name"] ?? object(entry)["binding"]),
+      ...list(config["producers"]).map((entry) => object(entry)["binding"]),
+    ];
+  });
+  if (nativeNames.filter((name) => name === binding["resource"]).length !== 1)
+    return ["CROCO_INFRA_BINDING"];
   const found = entries.filter((entry) => entry.value["binding"] === binding["resource"]);
   if (found.length !== 1) return ["CROCO_INFRA_BINDING"];
   const entry = found[0];
@@ -516,8 +535,10 @@ function isSupportedArn(value: unknown): boolean {
   if (typeof value === "string") return value.length > 0;
   const arn = object(value);
   if (Object.keys(arn).length !== 1) return false;
+  if (name(arn["Ref"])) return true;
   const attribute = list(arn["Fn::GetAtt"]);
-  if (attribute.length === 2 && name(attribute[0]) && attribute[1] === "Arn") return true;
+  if (attribute.length === 2 && name(attribute[0]) && ["Arn", "Id"].includes(String(attribute[1])))
+    return true;
   const join = list(arn["Fn::Join"]);
   const parts = list(join[1]);
   return (

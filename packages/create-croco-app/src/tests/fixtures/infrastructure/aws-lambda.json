@@ -144,7 +144,7 @@
                   "Effect": "Allow",
                   "Action": "secretsmanager:GetSecretValue",
                   "Resource": {
-                    "Fn::GetAtt": ["TOKEN", "Arn"]
+                    "Ref": "TOKEN"
                   }
                 }
               ]
