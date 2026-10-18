@@ -104,6 +104,7 @@
     "@vitejs/plugin-rsc": "0.5.26"
   },
   "devDependencies": {
+    "@astrojs/internal-helpers": "0.10.0",
     "@changesets/cli": "3.0.3",
     "@changesets/parse": "0.4.2",
     "@swc/core": "1.15.43",

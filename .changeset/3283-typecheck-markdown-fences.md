@@ -1,4 +1,4 @@
 ---
 ---
 
-Typecheck documentation examples in tilde and longer backtick fences while preserving nested examples, skip markers, and source diagnostics.
+Typecheck documentation examples in tilde and longer backtick fences while preserving nested examples, frontmatter, skip markers, and source diagnostics.

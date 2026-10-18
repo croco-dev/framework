@@ -205,6 +205,46 @@ describe("doc-examples-check.mts", () => {
     scriptTestTimeout,
   );
 
+  it.each(["md", "mdx"])(
+    "ignores %s frontmatter content while preserving body diagnostic lines",
+    (extension) => {
+      const root = createTempRoot();
+      writeValidDocs(root);
+      const writeExample = (value: string) =>
+        writeOperationalSource(
+          root,
+          `docs/frontmatter.${extension}`,
+          [
+            "---",
+            'title: "Example {not valid}"',
+            "example: |",
+            "  ~~~ts typecheck",
+            '  const metadata: number = "wrong";',
+            "  ~~~",
+            "---",
+            "",
+            "~~~typescript typecheck",
+            `const body: number = ${value};`,
+            "~~~",
+          ].join("\n"),
+        );
+
+      writeExample("123");
+      const valid = runScript(root, "--check");
+      expect(valid.status).toBe(0);
+      expect(valid.stdout).toContain("checked 2 TypeScript documentation examples");
+
+      writeExample('"wrong"');
+      const invalid = runScript(root, "--check");
+      expect(invalid.status).toBe(1);
+      expect(invalid.stdout).toContain(
+        `docs/frontmatter.${extension}:10: Type 'string' is not assignable to type 'number'`,
+      );
+      expect(invalid.stdout.match(/not assignable/g)).toHaveLength(1);
+    },
+    scriptTestTimeout,
+  );
+
   it.each([
     ["direct", "./src/features/main.ts"],
     ["barrel", "./src/features/index.ts"],

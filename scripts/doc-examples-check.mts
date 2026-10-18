@@ -2,6 +2,7 @@
 
 import { compareStrings } from "../tooling/compareStrings.mjs";
 
+import { parseFrontmatter } from "@astrojs/internal-helpers/frontmatter";
 import { fromMarkdown } from "mdast-util-from-markdown";
 import { mdxFromMarkdown } from "mdast-util-mdx";
 import { mdxjs } from "micromark-extension-mdxjs";
@@ -656,8 +657,11 @@ function isMarkdownFile(path: string): boolean {
 
 function extractTypeScriptBlocks(rootDir: string, filePath: string): MarkdownCodeBlock[] {
   const file = normalizeRelativePath(rootDir, filePath);
+  const { content } = parseFrontmatter(readFileSync(filePath, "utf-8"), {
+    frontmatter: "empty-with-spaces",
+  });
   const tree = fromMarkdown(
-    readFileSync(filePath, "utf-8"),
+    content,
     extname(filePath) === ".mdx"
       ? { extensions: [mdxjs()], mdastExtensions: [mdxFromMarkdown()] }
       : undefined,
