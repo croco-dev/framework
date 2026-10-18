@@ -139,6 +139,26 @@ Or run them all at once with `pnpm setup` (the same frozen-lockfile sequence as 
 The `pre-push` hook runs auto-changeset, `pnpm test`, and a mutation-guarded `pnpm typecheck`. Run
 `pnpm format`, `pnpm lint`, and `pnpm check` manually before pushing.
 
+## Infrastructure review for public changes
+
+Before implementing a new public feature, Provider, Host, deployment Profile or a support-changing fix:
+
+- [ ] Follow contract → Profile → Provider through the catalog, manifests and existing executable examples.
+- [ ] Evaluate Kubernetes (Node), AWS Lambda and Cloudflare (Workers or explicit Node Containers).
+      Record each decision, provider/reference, capability/storage/lifecycle constraints and reason.
+- [ ] Add a scoped version-1 review under `docs/infrastructure-reviews/`; run
+      `pnpm infrastructure-review:check -- --base <base-sha>`. Keep catalog claims and generated skills consistent.
+- [ ] For `supported`, pin and execute a named host-runtime test. Identify no-credential/local evidence separately
+      from a live infrastructure test and provider certification. Use `unverified` when execution is missing.
+
+A native Node Provider can be `supported` on Kubernetes with local Node runtime evidence (cluster verification
+still absent), `conditional` on Lambda with connection/flush limits, and `unsupported` on Workers. It does not
+need a Workers implementation. Pure domain changes can use reasoned `not-applicable` for all three without
+platform copies or smoke tests. See the [review format and diagnostics](docs/contributing/infrastructure-review.md).
+Existing packages are not backfilled; documentation, formatting and test-only changes are excluded. The static
+gate conservatively selects public implementation changes, so an internal pure refactor records its exemption
+without claiming platform support.
+
 ## Git Workflow
 
 1. **Create a branch** from `trunk`:

@@ -53,6 +53,27 @@ Croco는 런타임에서 추측하게 하지 않고, 빌드타임에 의도를 �
   아니라 설치, 승인, rotation, 관측, 장애 복구, 폐기까지 포함한 총 운영비용이 더 작은
   설계를 선택한다.
 
+## Infrastructure compatibility review
+
+새 공개 기능, Provider, Host, 배포 Profile 또는 지원 의미가 바뀌는 변경은 구현 전에 세 infrastructure
+profile을 평가한다: `kubernetes`는 Node Host, `aws-lambda`는 Lambda Host, `cloudflare`는 Workers Host
+(필요하면 명시적인 Node Container Host)다. Kubernetes를 `KnownRuntimePlatform`에 추가하거나
+Cloudflare Container를 Worker isolate로 표시하지 않는다.
+
+- contract → Profile → Provider 순서로 catalog, runtime manifest, profile metadata와 실행 예제를 찾는다.
+  기존 adapter를 재사용하고 pure logic을 플랫폼별로 복제하지 않는다.
+- 각 profile에 `supported | conditional | unsupported | unverified | not-applicable`, provider/ref,
+  capability·storage·lifecycle 제약, 근거와 결정 사유를 기록한다. 미지원은 허용한다.
+  `supported`에는 해당 host 경로의 실제 테스트 실행이 필요하다. mock/no-credential 실행을 live 인증이나
+  production certification으로 승격하지 않는다. `not-applicable`에도 인프라 의존성이 없는 이유를 쓴다.
+- 변경 검토는 [infrastructure review contract](docs/contributing/infrastructure-review.md)를 따른다.
+  package catalog의 runtime claim을 복제해 운영 레지스트리를 만들지 않는다. 검토 기록은 변경 파일 hash와
+  catalog snapshot에 묶이며, 실행 검증·provider certification·출시는 별개다.
+- `pnpm infrastructure-review:check -- --base <base-sha>`와 `pnpm docs:catalog:check`,
+  `pnpm skill:write && pnpm skill:check`, `pnpm check`로 검증한다. 생성 Skill 사본은 수동 편집하지 않는다.
+  기존 미지원 패키지는 소급 검토하지 않는다. 문서·서식·test-only 변경에는 새 평가가 필요 없고,
+  내부 pure refactor는 사유 있는 `not-applicable`로 중복 구현이나 형식적 smoke 없이 통과한다.
+
 ## Code Style
 
 formatter는 Oxfmt, linter는 Oxlint를 사용한다. 아래 요약보다 `.oxfmtrc.json`과 `.oxlintrc.json`이 source of truth다.

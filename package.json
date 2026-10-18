@@ -98,7 +98,8 @@
     "static-misuse:check": "node --experimental-strip-types scripts/verification-command.mts --id static-misuse",
     "strict-contract-typecheck": "node --experimental-strip-types scripts/verification-command.mts --id strict-contract-typecheck",
     "tracked-files:guard": "node --experimental-strip-types scripts/tracked-file-mutation-guard.mts",
-    "verification-policy:check": "node --experimental-strip-types scripts/verification-command.mts --id verification-policy"
+    "verification-policy:check": "node --experimental-strip-types scripts/verification-command.mts --id verification-policy",
+    "infrastructure-review:check": "node --experimental-strip-types scripts/verification-command.mts --id infrastructure-review"
   },
   "dependencies": {
     "@vitejs/plugin-rsc": "0.5.26"

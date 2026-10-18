@@ -56,7 +56,7 @@ describe("release-spine-evidence.mts", () => {
     const publishManifest = createVerificationManifest("publish");
 
     expect(manifest[0]?.id).toBe("verification-policy");
-    expect(manifest.at(-1)?.id).toBe("public-api");
+    expect(manifest.slice(-2).map(({ id }) => id)).toEqual(["public-api", "infrastructure-review"]);
     expect(findCheck(manifest, "changeset-required").applicable).toBe(false);
     expect(findCheck(manifest, "production-ready").command).toEqual([
       "node",
@@ -182,9 +182,12 @@ describe("release-spine-evidence.mts", () => {
     expect(report.profile).toBe("publish");
     expect(calledIds).toContain("dependency-audit-policy");
     expect(calledIds).toContain("provenance-config");
-    expect(calledIds.at(-1)).toBe("publish-dry-run");
+    expect(calledIds.slice(-2)).toEqual(["publish-dry-run", "infrastructure-review"]);
     expect(findCheck(calledCommands, "changeset-required").command).toContain("origin/trunk");
-    expect(report.checks.map(({ id }) => id).at(-1)).toBe("publish-dry-run");
+    expect(report.checks.slice(-2).map(({ id }) => id)).toEqual([
+      "publish-dry-run",
+      "infrastructure-review",
+    ]);
   });
 
   it("converts an early checkpoint rejection into failed evidence", async () => {

@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -57,6 +57,102 @@ describe("pr-review-companion.mts", () => {
     for (const root of tempRoots.splice(0)) {
       rmSync(root, { force: true, recursive: true });
     }
+  });
+
+  it("fails and reports missing infrastructure decisions for a changed public capability", () => {
+    const root = createTempRoot();
+    writeRootPackage(root, {});
+    writePackage(root, "sample", "@croco/sample");
+    writeFile(
+      root,
+      "docs/package-catalog.json",
+      JSON.stringify({ packageRoles: { sample: { runtimes: ["node"] } } }),
+    );
+    writeFile(root, "packages/sample/src/index.ts", "export const capability = 41;");
+    initializeGit(root);
+    commitAll(root, "base");
+    writeFile(root, "packages/sample/src/index.ts", "export const capability = 43;");
+    commitAll(root, "new public capability");
+    writeChangedFiles(root, ["packages/sample/src/index.ts"]);
+    const result = runScript(root, ["--base", "HEAD~1", "--head", "HEAD"]);
+    expect(result.status).toBe(1);
+    expect(
+      result.report.annotations.some((annotation) => annotation.title === "INFRA_REVIEW_MISSING"),
+    ).toBe(true);
+    expect(readFileSync(join(root, "ci-reports/pr-review-companion/report.md"), "utf8")).toContain(
+      "INFRA_REVIEW_MISSING",
+    );
+  });
+
+  it("uses the requested head catalog when the working tree catalog is absent", () => {
+    const root = createTempRoot();
+    writeRootPackage(root, {});
+    writePackage(root, "sample", "@croco/sample");
+    writeFile(
+      root,
+      "docs/package-catalog.json",
+      JSON.stringify({ packageRoles: { sample: { runtimes: ["node"] } } }),
+    );
+    initializeGit(root);
+    commitAll(root, "base");
+    writeFile(root, "packages/sample/src/index.ts", "export const capability = 43;");
+    commitAll(root, "changed capability");
+    rmSync(join(root, "docs/package-catalog.json"));
+    writeChangedFiles(root, ["packages/sample/src/index.ts"]);
+    const result = runScript(root, ["--base", "HEAD~1", "--head", "HEAD"]);
+    expect(result.status).toBe(1);
+    expect(
+      result.report.annotations.some((annotation) => annotation.title === "INFRA_REVIEW_MISSING"),
+    ).toBe(true);
+  });
+
+  it("allows a valid Git head without a Croco catalog", () => {
+    const root = createTempRoot();
+    writeRootPackage(root, {});
+    writePackage(root, "sample", "@croco/sample");
+    initializeGit(root);
+    commitAll(root, "base");
+    writeChangedFiles(root, ["packages/sample/src/index.ts"]);
+    const result = runScript(root, ["--base", "HEAD", "--head", "HEAD"]);
+    expect(result.status).toBe(0);
+    expect(
+      result.report.annotations.some((annotation) => annotation.title.startsWith("INFRA_")),
+    ).toBe(false);
+  });
+
+  it("fails an invalid explicit head even when changed files are supplied externally", () => {
+    const root = createTempRoot();
+    writeRootPackage(root, {});
+    writePackage(root, "sample", "@croco/sample");
+    writeFile(
+      root,
+      "docs/package-catalog.json",
+      JSON.stringify({ packageRoles: { sample: { runtimes: ["node"] } } }),
+    );
+    initializeGit(root);
+    commitAll(root, "base");
+    writeChangedFiles(root, ["packages/sample/src/index.ts"]);
+    const result = spawnSync(
+      "node",
+      [
+        "--experimental-strip-types",
+        scriptPath,
+        "--root",
+        root,
+        "--changed-files-file",
+        join(root, "changed-files.txt"),
+        "--output-dir",
+        "ci-reports/pr-review-companion",
+        "--base",
+        "HEAD",
+        "--head",
+        "missing-reviewed-head",
+      ],
+      { encoding: "utf8" },
+    );
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain("pr-review-companion: failed:");
+    expect(existsSync(join(root, "ci-reports/pr-review-companion/report.json"))).toBe(false);
   });
 
   it("detects changed packages and suggests affected validation commands", () => {

@@ -254,8 +254,13 @@ describe("cacheable CI lane evaluator contract", () => {
     ).toThrow(/must be a subset/);
   });
 
-  it("validates the exact 55-check and five-security ownership ledger", () => {
-    expect(manifestOwnership).toHaveLength(55);
+  it("validates the exact 56-check and five-security ownership ledger", () => {
+    expect(manifestOwnership).toHaveLength(56);
+    expect(manifestOwnership).toContainEqual({
+      id: "infrastructure-review",
+      owner: "core-verification",
+      semantics: "blocking",
+    });
     expect(SECURITY_OWNERSHIP).toHaveLength(5);
     const passing = evaluateDataset(makeDataset(1), { contractOnly: true });
     expect(passing.failed).toBe(false);
