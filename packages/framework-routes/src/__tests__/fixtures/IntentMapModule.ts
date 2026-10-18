@@ -1,6 +1,4 @@
-function Component(_options?: { readonly scope?: "singleton" | "request" | "transient" }) {
-  return (_target: new (...args: never[]) => unknown): void => {};
-}
+import { Component } from "@croco/framework-context";
 
 function RegisterEvent() {
   return (_target: new (...args: never[]) => unknown): void => {};
