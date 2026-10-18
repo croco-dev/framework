@@ -6,6 +6,10 @@ Fact History or warehouse. It never contacts a vendor by default.
 
 ## Run locally
 
+From the repository root, run `pnpm install --frozen-lockfile`, then
+`pnpm turbo run build --filter=@croco-example/enrichment-review...`.
+This builds the workspace entrypoints required by `setup` and the server.
+
 Use a disposable PostgreSQL database on loopback. Set `ENRICHMENT_POSTGRES_URL` explicitly;
 the example refuses non-loopback hosts. Apply the additive migration and seed the synthetic
 batch with `pnpm --filter @croco-example/enrichment-review setup`, then run
