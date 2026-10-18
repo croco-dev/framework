@@ -159,8 +159,9 @@ export function inspectInfrastructureReview(
   headRef: string,
   runEvidence = executeEvidence,
 ): InfrastructureReviewReport {
-  const base = git(root, ["rev-parse", "--verify", baseRef]).trim();
+  const requestedBase = git(root, ["rev-parse", "--verify", baseRef]).trim();
   const head = git(root, ["rev-parse", "--verify", headRef]).trim();
+  const base = git(root, ["merge-base", requestedBase, head]).trim();
   const changed = git(root, ["diff", "--name-only", "-z", "--no-renames", base, head])
     .split("\0")
     .filter(Boolean);
@@ -203,6 +204,8 @@ export function inspectInfrastructureReview(
           "name",
           "private",
           "exports",
+          "imports",
+          "bin",
           "main",
           "module",
           "types",

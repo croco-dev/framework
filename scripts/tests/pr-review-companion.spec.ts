@@ -84,6 +84,28 @@ describe("pr-review-companion.mts", () => {
     );
   });
 
+  it("uses the requested head catalog when the working tree catalog is absent", () => {
+    const root = createTempRoot();
+    writeRootPackage(root, {});
+    writePackage(root, "sample", "@croco/sample");
+    writeFile(
+      root,
+      "docs/package-catalog.json",
+      JSON.stringify({ packageRoles: { sample: { runtimes: ["node"] } } }),
+    );
+    initializeGit(root);
+    commitAll(root, "base");
+    writeFile(root, "packages/sample/src/index.ts", "export const capability = 43;");
+    commitAll(root, "changed capability");
+    rmSync(join(root, "docs/package-catalog.json"));
+    writeChangedFiles(root, ["packages/sample/src/index.ts"]);
+    const result = runScript(root, ["--base", "HEAD~1", "--head", "HEAD"]);
+    expect(result.status).toBe(1);
+    expect(
+      result.report.annotations.some((annotation) => annotation.title === "INFRA_REVIEW_MISSING"),
+    ).toBe(true);
+  });
+
   it("detects changed packages and suggests affected validation commands", () => {
     const root = createTempRoot();
     writeRootPackage(root);

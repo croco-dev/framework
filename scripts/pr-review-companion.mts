@@ -1304,9 +1304,10 @@ function createCompanionOutput(options: Options): {
   const annotations = createAnnotations(requiredChecks, generatedArtifacts, contractDiff);
   const outputDir = resolve(options.rootDir, options.outputDir);
 
-  const infrastructureReview = existsSync(join(options.rootDir, "docs/package-catalog.json"))
-    ? inspectInfrastructureReview(options.rootDir, options.baseRef, options.headRef)
-    : null;
+  const infrastructureReview =
+    readGitFile(options.rootDir, options.headRef, "docs/package-catalog.json") !== null
+      ? inspectInfrastructureReview(options.rootDir, options.baseRef, options.headRef)
+      : null;
   for (const diagnostic of infrastructureReview?.diagnostics ?? []) {
     annotations.push({
       file: diagnostic.path,

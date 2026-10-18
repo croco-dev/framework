@@ -250,6 +250,48 @@ it('real host', async () => {
     expect(result.diagnostics.map((d) => d.code)).toContain("INFRA_EVIDENCE_CHECKOUT");
   });
 
+  it("ignores base-only source, catalog and review additions on a diverged branch", () => {
+    const { root, base } = fixture();
+    git(root, "checkout", "-qb", "topic");
+    write(root, "topic.md", "Topic documentation only.");
+    const head = commit(root);
+    git(root, "checkout", "-qb", "advanced-base", base);
+    write(root, "packages/sample/src/index.ts", "export const answer = 99;");
+    write(root, "docs/package-catalog.json", {
+      packageRoles: { sample: { role: "Plugins", runtimes: ["cloudflare-workers"] } },
+    });
+    write(root, "docs/infrastructure-reviews/base-only.json", { schemaVersion: 1, changes: [] });
+    const advancedBase = commit(root);
+    git(root, "checkout", "topic");
+    const result = inspectInfrastructureReview(root, advancedBase, head);
+    expect(result.base).toBe(base);
+    expect(result.diagnostics).toEqual([]);
+    write(root, "packages/sample/src/index.ts", "export const answer = 43;");
+    const changedHead = commit(root);
+    expect(
+      inspectInfrastructureReview(root, advancedBase, changedHead).diagnostics.map((d) => d.code),
+    ).toEqual(["INFRA_REVIEW_MISSING"]);
+  });
+
+  it.each(["imports", "bin"])(
+    "selects runtime manifest %s changes without source changes",
+    (field) => {
+      const { root, base } = fixture();
+      write(root, "packages/sample/package.json", {
+        name: "@croco/sample",
+        version: "1.0.0",
+        [field]:
+          field === "imports"
+            ? { "#host": { workerd: "./worker.js", node: "./node.js" } }
+            : "./cli.js",
+      });
+      const head = commit(root);
+      expect(inspectInfrastructureReview(root, base, head).diagnostics.map((d) => d.code)).toEqual([
+        "INFRA_REVIEW_MISSING",
+      ]);
+    },
+  );
+
   it("selects deployment Profile metadata without a source or catalog change", () => {
     const { root } = fixture();
     write(root, "packages/sample/runtime-profiles.json", {
