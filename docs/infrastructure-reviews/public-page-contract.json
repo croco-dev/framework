@@ -10,7 +10,7 @@
         "packages/seo-core/src/index.ts": "92faeb3152d6df3ac649e58676fd0c5530a522afa2d99e166975adbfd6356d8b",
         "packages/seo-core/src/libs/inspectPublicPage.ts": "97d26fed0237a4324e6f2f5a3b21837cd2871765156d3f0eb3b17c946948ffa3",
         "packages/seo-core/src/libs/publicPage.ts": "c8c0cdc63c22a47798ead45db682f3bd85aee943ef427c225f175988d1891caa",
-        "docs/package-catalog.json": "e2b163103955281d3a91bf89351b4cfcd406170739ac147cf432d65e04bbea44"
+        "docs/package-catalog.json": "809643a5bfbaf38fc6bf4b615b354cca91637ccc5fecfb5c8e5647d47e0646b2"
       },
       "catalogRuntimes": [],
       "profiles": {
