@@ -15,7 +15,9 @@ in its JSON and Markdown reports. The gate never rewrites files.
 The gate selects changed production sources in public `packages/*/src`, runtime/infrastructure manifests, `presentation-preset/runtime-profiles.json`, runtime-affecting
 package manifest fields (including `type`, `browser`, `imports`, `bin` and `os`/`cpu`/`libc` deployment constraints), and changed catalog role/runtime metadata. Source deletions count. Private packages,
 tests/fixtures, documentation and release-only version bumps are excluded. Unchanged historical packages
-need no record. Formatting/comment-only edits are excluded using parsed TypeScript output (literal content is preserved).
+need no record. Workspace and effective published runtime fields are both checked, including
+`bundledDependencies`/`bundleDependencies` and runtime overrides in `publishConfig`. Published version or tag
+changes alone remain excluded. Formatting/comment-only edits are excluded using parsed TypeScript output (literal content is preserved).
 An internal pure refactor cannot be inferred safely from a diff:
 record `internal-pure-refactor` with reasoned `not-applicable` decisions to exempt it without smoke tests.
 A reviewer must check semantic scope: the gate cannot prove that an exemption is truthful or that a test actually

@@ -8,6 +8,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { validateCrocoSkill } from "./croco-skill.mts";
+import { effectivePublishManifest } from "./package-manifest-contracts.mjs";
 import { VerificationProblem, formatVerificationProblem } from "./verification-problem.mts";
 
 export const REVIEW_DIRECTORY = "docs/infrastructure-reviews/";
@@ -218,9 +219,19 @@ export function inspectInfrastructureReview(
           "dependencies",
           "peerDependencies",
           "optionalDependencies",
+          "bundledDependencies",
+          "bundleDependencies",
           "croco",
         ];
-        if (keys.every((key) => JSON.stringify(before[key]) === JSON.stringify(after[key])))
+        const beforePublished = effectivePublishManifest(before);
+        const afterPublished = effectivePublishManifest(after);
+        if (
+          keys.every(
+            (key) =>
+              JSON.stringify(before[key]) === JSON.stringify(after[key]) &&
+              JSON.stringify(beforePublished[key]) === JSON.stringify(afterPublished[key]),
+          )
+        )
           continue;
       }
       add(pkg, path);

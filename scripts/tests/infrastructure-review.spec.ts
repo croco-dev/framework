@@ -308,6 +308,58 @@ it('real host', async () => {
     ]);
   });
 
+  it.each(["bundledDependencies", "bundleDependencies"])(
+    "selects dependency packaging changes through %s",
+    (field) => {
+      const { root } = fixture();
+      const manifest = {
+        name: "@croco/sample",
+        version: "1.0.0",
+        dependencies: { "host-dep": "1.0.0" },
+      };
+      write(root, "packages/sample/package.json", manifest);
+      const base = commit(root);
+      write(root, "packages/sample/package.json", { ...manifest, [field]: ["host-dep"] });
+      const head = commit(root);
+      expect(inspectInfrastructureReview(root, base, head).diagnostics.map((d) => d.code)).toEqual([
+        "INFRA_REVIEW_MISSING",
+      ]);
+    },
+  );
+
+  it.each([
+    { field: "exports", value: { "./host": { import: "./dist/host.mjs" } } },
+    { field: "bin", value: "./dist/cli.js" },
+  ])("selects publishConfig.$field runtime overrides", ({ field, value }) => {
+    const { root, base } = fixture();
+    write(root, "packages/sample/package.json", {
+      name: "@croco/sample",
+      version: "1.0.0",
+      publishConfig: { [field]: value },
+    });
+    const head = commit(root);
+    expect(inspectInfrastructureReview(root, base, head).diagnostics.map((d) => d.code)).toEqual([
+      "INFRA_REVIEW_MISSING",
+    ]);
+  });
+
+  it("ignores release-only published version and tag changes", () => {
+    const { root } = fixture();
+    write(root, "packages/sample/package.json", {
+      name: "@croco/sample",
+      version: "1.0.0",
+      publishConfig: { version: "1.0.0", tag: "next" },
+    });
+    const base = commit(root);
+    write(root, "packages/sample/package.json", {
+      name: "@croco/sample",
+      version: "1.0.1",
+      publishConfig: { version: "1.0.1", tag: "latest" },
+    });
+    const head = commit(root);
+    expect(inspectInfrastructureReview(root, base, head).diagnostics).toEqual([]);
+  });
+
   it("selects deployment Profile metadata without a source or catalog change", () => {
     const { root } = fixture();
     write(root, "packages/sample/runtime-profiles.json", {
