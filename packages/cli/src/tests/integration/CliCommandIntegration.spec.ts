@@ -672,6 +672,42 @@ for (const entry of entries) { const schema = await entry.schema; if (!schema.sq
       `);
   }, 30_000);
 
+  it("generates relative controller and output paths under codegen --cwd", () => {
+    const harness = getHarness();
+    writeControllerFixtures(join(harness.consumerRoot, "cwd-fixtures"));
+    for (const kind of ["rpc", "openapi"] as const) {
+      const output = kind === "rpc" ? "cwd-generated/rpc" : "cwd-generated/openapi.json";
+      mkdirSync(join(harness.consumerRoot, "cwd-generated"), { recursive: true });
+      runInstalledCommand(
+        harness,
+        "croco",
+        [
+          "codegen",
+          kind,
+          ...(kind === "rpc" ? ["--cwd", harness.consumerRoot] : ["--cwd=.."]),
+          "--controllers",
+          "cwd-fixtures/controllers/UsersController.ts",
+          "--out",
+          output,
+          "--compatibility-schemas",
+          "--compatibility-problems",
+        ],
+        harness.commandRoot,
+        0,
+      );
+      if (kind === "rpc") {
+        expect(readFileSync(join(harness.consumerRoot, output, "users.ts"), "utf8")).toContain(
+          "listUsers",
+        );
+      } else {
+        expect(readJsonFile(join(harness.consumerRoot, output))).toMatchObject({
+          paths: { "/users": { get: { operationId: "UsersController_listUsers" } } },
+        });
+      }
+      expect(existsSync(join(harness.commandRoot, output))).toBe(false);
+    }
+  }, 30_000);
+
   it("runs upgrade JSON success and migrate failure through the installed croco command", () => {
     const harness = getHarness();
     const upgradeWorkspace = createUpgradeWorkspace(join(harness.commandRoot, "upgrade-workspace"));
@@ -746,12 +782,9 @@ function createCliHarness(): CliHarness {
     "@croco/batch-core",
     "@croco/execution-core",
   ].map((packageName) => requiredPackage(packageIndex, packageName));
-  run(
-    "pnpm",
-    ["--filter", "@croco/cli...", "--filter", "create-croco-app...", "build"],
-    REPO_ROOT,
-    { label: "build CLI runtime package graph" },
-  );
+  run("pnpm", ["build", "--filter=@croco/cli...", "--filter=create-croco-app..."], REPO_ROOT, {
+    label: "build CLI runtime package graph",
+  });
 
   const graphPackages = collectInternalRuntimeGraphs(rootPackages, packageIndex);
   const packedPackages = new Map<string, PackedPackageInfo>();

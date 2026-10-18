@@ -16,8 +16,8 @@ import { z } from "zod";
 import { generateClientFiles } from "../libs/generate";
 import { restFormIssueCases } from "../../../../test-fixtures/restFormIssueCases";
 
-const outDir = path.join(os.tmpdir(), "opencode-roundtrip-rpc-codegen");
-const moduleDir = path.join(os.tmpdir(), "opencode-roundtrip-rpc-codegen-modules");
+let outDir: string;
+let moduleDir: string;
 const EMPTY_INPUT_SCHEMAS = {
   body: null,
   path: null,
@@ -140,10 +140,8 @@ type GeneratedFormUserModule = {
 
 describe("rpc-codegen round trip", () => {
   beforeEach(() => {
-    fs.rmSync(outDir, { recursive: true, force: true });
-    fs.rmSync(moduleDir, { recursive: true, force: true });
-    fs.mkdirSync(outDir, { recursive: true });
-    fs.mkdirSync(moduleDir, { recursive: true });
+    outDir = fs.mkdtempSync(path.join(os.tmpdir(), "croco-roundtrip-rpc-codegen-"));
+    moduleDir = fs.mkdtempSync(path.join(os.tmpdir(), "croco-roundtrip-rpc-codegen-modules-"));
   });
 
   afterEach(() => {

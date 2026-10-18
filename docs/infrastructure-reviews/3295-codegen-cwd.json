@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "cli",
+      "classification": "runtime-adapter",
+      "reason": "Restore documented codegen --cwd behavior at the local Node child-process boundary. The catalog identifies this package as CLI Tooling with no deployed runtime claims; the change handles build-time arguments and output paths.",
+      "files": {
+        "packages/cli/src/commands/codegenOpenapi.ts": "4e6f4117d8ee5c3b940db2cbf8b175ab19da81c0f46983fec4851b64a69d8b45",
+        "packages/cli/src/commands/codegenRpc.ts": "906beeedf8fcc2d9af60c823f30feef1d523615853c893dbb828793f04ac29cf",
+        "packages/cli/src/libs/codegenInvocation.ts": "bcb426c76c665acd010c95804a7b5a1ca836546a17eee9ea7151ad7868931db7"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Code generation runs in a Node build process before the Kubernetes Node Host application starts. Working-directory selection has no cluster resource, provider or application lifecycle contract.",
+          "providers": [],
+          "constraints": [
+            "Requires a Node CLI process with filesystem and child_process access during the build."
+          ],
+          "references": [
+            "packages/cli/src/commands/codegenRpc.ts",
+            "packages/cli/src/commands/codegenOpenapi.ts",
+            "packages/cli/src/tests/integration/CliCommandIntegration.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "These wrappers generate artifacts before Lambda deployment. Directory selection belongs to the build process and does not participate in invocation scope, connection reuse or telemetry flush.",
+          "providers": [],
+          "constraints": [
+            "Run this code-generation command in a Node build environment before packaging the Lambda application."
+          ],
+          "references": [
+            "packages/cli/src/libs/codegenInvocation.ts",
+            "packages/cli/src/commands/codegenRpc.ts",
+            "packages/cli/src/commands/codegenOpenapi.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "The CLI prepares artifacts in a Node build process before a Workers or Node Container deployment. This change selects the generator process directory without introducing an application Host path or runtime support claim.",
+          "providers": [],
+          "constraints": [
+            "The child-process CLI requires a Node build environment; Worker isolates do not provide this execution boundary."
+          ],
+          "references": [
+            "packages/cli/src/libs/codegenInvocation.ts",
+            "packages/cli/src/commands/codegenRpc.ts",
+            "packages/cli/src/commands/codegenOpenapi.ts"
+          ]
+        }
+      }
+    }
+  ]
+}

@@ -7,6 +7,7 @@ import {
   getDelegatedCommandStdio,
   waitForDelegatedCommand,
 } from "../libs/delegatedCommand.js";
+import { parseCodegenInvocation } from "../libs/codegenInvocation.js";
 import { GLOBAL_OPTIONS } from "./options.js";
 import { resolveCliBinFromEntry } from "./resolveCliBin.js";
 
@@ -45,10 +46,17 @@ export function runOpenapiSpec(
     readonly writeError?: (message: string) => void;
   } = {},
 ): Promise<number> {
+  const invocation = parseCodegenInvocation(args, options.cwd);
+  if ("diagnostic" in invocation) {
+    const runtime = getCrocoCommandRuntime();
+    (options.writeError ?? options.stderr ?? runtime.stderr)(invocation.diagnostic);
+    (options.setExitCode ?? runtime.setExitCode)(1);
+    return Promise.resolve(1);
+  }
   const resolveBin = options.resolveBin ?? resolveOpenapiSpecBin;
   const spawnChild = options.spawn ?? spawn;
-  const child = spawnChild(process.execPath, [resolveBin(), ...args], {
-    ...(options.cwd === undefined ? {} : { cwd: options.cwd }),
+  const child = spawnChild(process.execPath, [resolveBin(), ...invocation.args], {
+    ...(invocation.cwd === undefined ? {} : { cwd: invocation.cwd }),
     ...(options.env === undefined ? {} : { env: options.env }),
     stdio: getDelegatedCommandStdio(options),
   });

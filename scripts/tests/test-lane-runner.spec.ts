@@ -849,6 +849,67 @@ describe("test lane runner", () => {
     expect(report.commands[0]).not.toHaveProperty("failureDetails");
   });
 
+  it("preserves failed integration assertions after the temporary report is removed", () => {
+    const root = mkdtempSync(join(tmpdir(), "croco-integration-failure-detail-"));
+    const packageRoot = join(root, "packages", "a");
+    try {
+      mkdirSync(join(packageRoot, "src", "tests"), { recursive: true });
+      writeFileSync(
+        join(root, "package.json"),
+        JSON.stringify({ private: true, packageManager: PACKAGE_MANAGER }),
+      );
+      writeFileSync(join(root, "pnpm-workspace.yaml"), "packages:\n  - packages/*\n");
+      symlinkSync(
+        resolve(import.meta.dirname, "../../node_modules"),
+        join(root, "node_modules"),
+        "dir",
+      );
+      writeFileSync(
+        join(packageRoot, "package.json"),
+        JSON.stringify({
+          name: "@croco/a",
+          private: true,
+          type: "module",
+          scripts: { "test:integration": "vitest run src/tests/Failure.spec.ts" },
+        }),
+      );
+      writeFileSync(
+        join(packageRoot, "src", "tests", "Failure.spec.ts"),
+        `import { expect, it } from 'vitest';
+it('retains the assertion failure', () => expect('actual-fixture-value').toBe('expected-fixture-value'));
+`,
+      );
+
+      const report = runTestLane({
+        rootDir: root,
+        lane: "integration",
+        inventory: {
+          version: 1,
+          exceptions: [],
+          tests: [
+            {
+              path: "packages/a/src/tests/Failure.spec.ts",
+              lane: "integration",
+              qualifiers: [],
+              owner: "@croco/a",
+            },
+          ],
+        },
+      });
+
+      expect(report.status).toBe("failed");
+      expect(report.diagnostics).toContainEqual({
+        code: "TEST_LANE_COMMAND_FAILURE_DETAIL",
+        message: expect.stringMatching(
+          /Failure\.spec\.ts[\s\S]*AssertionError:[\s\S]*expected-fixture-value/,
+        ),
+      });
+      assertLaneReportShape(report);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  }, 30_000);
+
   it("redacts configured live resource values from lane diagnostics", () => {
     vi.stubEnv("POLAR_PRODUCT_ID", "product-secret");
     vi.stubEnv("POLAR_PRICE_IDS", "price-one,price-two");
