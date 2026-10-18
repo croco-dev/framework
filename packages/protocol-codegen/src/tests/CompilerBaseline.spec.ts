@@ -3,6 +3,7 @@ import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "nod
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
+import { pathToFileURL } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 import { ts } from "ts-morph";
 import { ControllerProjectConfigProblem, createControllerProject } from "../libs/ControllerProject";
@@ -45,7 +46,7 @@ describe("protocol compiler baseline", () => {
     expect(ts.version).toBe("6.0.2");
   });
 
-  for (const module of ["node18", "node20", "nodenext"]) {
+  for (const module of ["node18", "node20", "nodenext"] as const) {
     for (const type of ["module", "commonjs"]) {
       it.each([false, true])(
         `${module} ${type} analysis and emission (explicit config: %s)`,
@@ -59,6 +60,13 @@ describe("protocol compiler baseline", () => {
           });
           try {
             expect(session.tsconfigPath).toBe(configPath);
+            expect(session.project.getCompilerOptions().module).toBe(
+              {
+                node18: ts.ModuleKind.Node18,
+                node20: ts.ModuleKind.Node20,
+                nodenext: ts.ModuleKind.NodeNext,
+              }[module],
+            );
             expect(session.getPreEmitDiagnostics()).toEqual([]);
             session.emit();
             const output = join(session.emitDir, "Controller.js");
@@ -74,7 +82,7 @@ describe("protocol compiler baseline", () => {
               [
                 "--input-type=module",
                 "--eval",
-                `const { Controller } = await import(${JSON.stringify(output)}); console.log(Controller.value);`,
+                `const { Controller } = await import(${JSON.stringify(pathToFileURL(output).href)}); console.log(Controller.value);`,
               ],
               { encoding: "utf8" },
             );
@@ -88,7 +96,7 @@ describe("protocol compiler baseline", () => {
     }
   }
 
-  for (const module of ["node18", "node20", "nodenext"]) {
+  for (const module of ["node18", "node20", "nodenext"] as const) {
     it.each([
       { type: "module", sourceExtension: "cts", runtimeExtension: "cjs", value: 79 },
       { type: "commonjs", sourceExtension: "mts", runtimeExtension: "mjs", value: 83 },
@@ -118,7 +126,7 @@ describe("protocol compiler baseline", () => {
             [
               "--input-type=module",
               "--eval",
-              `const { Controller } = await import(${JSON.stringify(output)}); console.log(await Controller.value());`,
+              `const { Controller } = await import(${JSON.stringify(pathToFileURL(output).href)}); console.log(await Controller.value());`,
             ],
             { encoding: "utf8" },
           );
@@ -175,7 +183,7 @@ describe("protocol compiler baseline", () => {
         [
           "--input-type=module",
           "--eval",
-          `const { Controller } = await import(${JSON.stringify(join(session.emitDir, "Controller.js"))}); console.log(await Controller.value());`,
+          `const { Controller } = await import(${JSON.stringify(pathToFileURL(join(session.emitDir, "Controller.js")).href)}); console.log(await Controller.value());`,
         ],
         { encoding: "utf8" },
       );
@@ -200,7 +208,7 @@ describe("protocol compiler baseline", () => {
         [
           "--input-type=module",
           "--eval",
-          `const { value } = await import(${JSON.stringify(join(session.emitDir, "Controller.js"))}); console.log(value);`,
+          `const { value } = await import(${JSON.stringify(pathToFileURL(join(session.emitDir, "Controller.js")).href)}); console.log(value);`,
         ],
         { encoding: "utf8" },
       );
