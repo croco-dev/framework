@@ -1,3 +1,4 @@
+import ts from "typescript";
 import { compareStrings } from "../../../tooling/compareStrings.mjs";
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
@@ -1023,48 +1024,69 @@ function extractPublicSymbols(
   filePath: string,
 ): IntentMapPublicSymbol[] {
   const symbols: IntentMapPublicSymbol[] = [];
-  const declarationPattern = new RegExp(
-    [
-      "\\bexport\\s+(?:declare\\s+)?(?:default\\s+)?(?:(?:abstract|async)\\s+)?",
-      "(class|interface|type|enum|function|const|let|var)\\s+([A-Za-z_$][\\w$]*)",
-    ].join(""),
-    "g",
-  );
-  const namedExportPattern = /\bexport\s+(type\s+)?\{([^}]+)\}/g;
+  const sourceFile = ts.createSourceFile(filePath, content, ts.ScriptTarget.Latest, true);
 
-  for (const match of content.matchAll(declarationPattern)) {
-    const kind = match[1];
-    const name = match[2];
-
-    if (!isPublicSymbolKind(kind) || !name) {
+  for (const statement of sourceFile.statements) {
+    if (ts.isExportDeclaration(statement)) {
+      if (statement.exportClause && ts.isNamedExports(statement.exportClause)) {
+        for (const specifier of statement.exportClause.elements) {
+          symbols.push({
+            name: specifier.name.text,
+            kind: "re-export",
+            location: toLocation(filePath, lineStarts, statement.getStart(sourceFile)),
+          });
+        }
+      }
       continue;
     }
 
-    symbols.push({
-      name,
-      kind,
-      location: toLocation(filePath, lineStarts, match.index ?? 0),
-    });
-  }
+    const exportModifier = ts.canHaveModifiers(statement)
+      ? ts
+          .getModifiers(statement)
+          ?.find((modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword)
+      : undefined;
+    if (!exportModifier) {
+      continue;
+    }
 
-  for (const match of content.matchAll(namedExportPattern)) {
-    const exportedNames = (match[2] ?? "")
-      .split(",")
-      .map((part) => part.trim())
-      .filter((part) => part.length > 0);
-
-    for (const exportedName of exportedNames) {
-      const name = getNamedExportName(exportedName);
-
-      if (!name) {
-        continue;
+    const location = toLocation(filePath, lineStarts, exportModifier.getStart(sourceFile));
+    if (ts.isVariableStatement(statement)) {
+      const flags = statement.declarationList.flags;
+      const kind = flags & ts.NodeFlags.Const ? "const" : flags & ts.NodeFlags.Let ? "let" : "var";
+      for (const declaration of statement.declarationList.declarations) {
+        for (const name of getBindingNames(declaration.name)) {
+          symbols.push({ name, kind, location });
+        }
       }
+      continue;
+    }
 
-      symbols.push({
-        name,
-        kind: "re-export",
-        location: toLocation(filePath, lineStarts, match.index ?? 0),
-      });
+    if (
+      !(
+        ts.isClassDeclaration(statement) ||
+        ts.isFunctionDeclaration(statement) ||
+        ts.isInterfaceDeclaration(statement) ||
+        ts.isTypeAliasDeclaration(statement) ||
+        ts.isEnumDeclaration(statement)
+      ) ||
+      !statement.name
+    ) {
+      continue;
+    }
+
+    const kind = ts.isClassDeclaration(statement)
+      ? "class"
+      : ts.isFunctionDeclaration(statement)
+        ? "function"
+        : ts.isInterfaceDeclaration(statement)
+          ? "interface"
+          : ts.isTypeAliasDeclaration(statement)
+            ? "type"
+            : ts.isEnumDeclaration(statement)
+              ? "enum"
+              : undefined;
+    if (kind) {
+      symbols.push({ name: statement.name.text, kind, location });
     }
   }
 
@@ -1295,25 +1317,14 @@ function toStablePath(value: string): string {
   return value.split(path.sep).join("/");
 }
 
-function isPublicSymbolKind(value: string | undefined): value is IntentMapPublicSymbolKind {
-  return (
-    value === "class" ||
-    value === "function" ||
-    value === "const" ||
-    value === "let" ||
-    value === "var" ||
-    value === "type" ||
-    value === "interface" ||
-    value === "enum"
+function getBindingNames(name: ts.BindingName): string[] {
+  if (ts.isIdentifier(name)) {
+    return [name.text];
+  }
+
+  return name.elements.flatMap((element) =>
+    ts.isOmittedExpression(element) ? [] : getBindingNames(element.name),
   );
-}
-
-function getNamedExportName(value: string): string | null {
-  const withoutTypePrefix = value.replace(/^type\s+/, "").trim();
-  const parts = withoutTypePrefix.split(/\s+as\s+/);
-  const candidate = (parts[1] ?? parts[0] ?? "").trim();
-
-  return /^[A-Za-z_$][\w$]*$/.test(candidate) ? candidate : null;
 }
 
 function dedupePublicSymbols(symbols: readonly IntentMapPublicSymbol[]): IntentMapPublicSymbol[] {
