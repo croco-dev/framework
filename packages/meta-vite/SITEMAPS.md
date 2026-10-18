@@ -12,7 +12,9 @@ The application supplies a repository snapshot and maps records to `SitemapEntry
 must read only that revision, return no more than `limit` entries, and mark
 `complete: true` **only** when the snapshot is successfully exhausted. A genuinely
 empty snapshot returns no entries, `nextCursor: null`, and `complete: true`.
-Repository errors must reject; do not catch them and return an empty page.
+Repository errors must reject; do not catch them and return an empty page. Malformed
+page/row frames or incompatible field types fail as source-incomplete; unknown
+business decisions use the explicit null/unknown values in the source contract.
 
 Each row declares `resourceId`, `tenantId`, absolute `url`, `canonical`, publication
 state and explicit indexability. Resource IDs must be opaque application keys, not
@@ -88,7 +90,7 @@ The generation ID hashes tenant, origin, source revision and ordered XML bytes;
 input page size and order do not change the output for the same snapshot.
 
 `contentModifiedAt` is a source assertion about a significant content change, in
-ISO date or timestamp form. Missing/invalid values are omitted and counted as
+ISO date or timestamp form. Missing or invalid date strings are omitted and counted as
 `lastmodUnknown`. No clock, build time or storage upload time substitutes for it.
 `locale` plus `localeGroup` produces alternates only among included real canonical
 rows in the group. Ambiguous duplicate locale labels suppress that group's

@@ -11,7 +11,7 @@
         "packages/meta-vite/src/libs/sitemap/FileSitemapPublisher.ts": "b6b9c72df3bb2341c0b6bfa9cdf84536cb9e79257adf76fd948601d6e23849a9",
         "packages/meta-vite/src/libs/sitemap/SitemapProblem.ts": "9674dad457884c57791309d25dc08c29259be4379888fd9d981c21b8fef79c61",
         "packages/meta-vite/src/libs/sitemap/createSitemapHandler.ts": "7a1412872d06ad4df1b23294011d3ab011ab0114cc607708a000845d05454114",
-        "packages/meta-vite/src/libs/sitemap/generateSitemap.ts": "b5c4fb135e29caf29f5789212cade7e7a0df498f896203cb49a3fcee1a6f42be",
+        "packages/meta-vite/src/libs/sitemap/generateSitemap.ts": "e6f15ed01782e488d09732e03876e0def40741b07cbcc065d3c00039cd906a3c",
         "packages/meta-vite/src/libs/sitemap/types.ts": "03d77f83ec7142a7e88f3dabccd2112d716d032547aa94ed07a9ed0fdf014c7c"
       },
       "catalogRuntimes": ["node", "lambda", "cloudflare-workers", "browser"],
@@ -40,7 +40,7 @@
             "runtime": "node",
             "path": "packages/meta-vite/src/tests/Sitemap.spec.ts",
             "testName": "Sitemap serves actual local HTTP XML/robots and enforces server actor, tenant, permission, origin, revision and idempotency",
-            "sha256": "44f1ade991f6d6e929be7ec22af609ba856b35e81bafb319a02b55ec2e138117"
+            "sha256": "0ba765b18b5d29c7aa4c4a90ebc66199c82161f78c79284705aef6af28b55801"
           }
         },
         "aws-lambda": {

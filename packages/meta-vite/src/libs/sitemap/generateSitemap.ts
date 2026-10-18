@@ -15,6 +15,35 @@ const CLOSE = "</urlset>\n";
 const INDEX_OPEN = `${HEADER}<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n`;
 const INDEX_CLOSE = "</sitemapindex>\n";
 const encoder = new TextEncoder();
+const PUBLICATIONS = new Set<string>([
+  "public",
+  "private",
+  "draft",
+  "deleted",
+  "redirect",
+  "unknown",
+]);
+
+function optionalText(text: unknown): text is string | undefined {
+  return text === undefined || typeof text === "string";
+}
+
+function isSitemapEntry(value: unknown): value is SitemapEntry {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return false;
+  const row = value as Record<string, unknown>;
+  return (
+    typeof row.resourceId === "string" &&
+    typeof row.tenantId === "string" &&
+    typeof row.url === "string" &&
+    (row.canonical === null || typeof row.canonical === "string") &&
+    typeof row.publication === "string" &&
+    PUBLICATIONS.has(row.publication) &&
+    (row.indexable === null || typeof row.indexable === "boolean") &&
+    optionalText(row.contentModifiedAt) &&
+    optionalText(row.locale) &&
+    optionalText(row.localeGroup)
+  );
+}
 
 export function escapeSitemapXml(value: string): string {
   return value.replace(
@@ -50,17 +79,14 @@ function originOf(policy: SitemapPolicy): string {
 }
 
 function publicUrl(raw: string, origin: string, policy: SitemapPolicy): string | null {
-  if (typeof raw !== "string") return null;
+  if (typeof raw !== "string" || raw.length >= 2048) return null;
   let url: URL;
   try {
     url = new URL(raw);
   } catch {
     return null;
   }
-  if (
-    Array.from(raw).some((char) => char.charCodeAt(0) <= 32 || char.charCodeAt(0) === 127) ||
-    raw.length >= 2048
-  )
+  if (Array.from(raw).some((char) => char.charCodeAt(0) <= 32 || char.charCodeAt(0) === 127))
     return null;
   if (
     url.href.length >= 2048 ||
@@ -149,17 +175,9 @@ export async function generateSitemap(
         ? id
         : `sha256:${createHash("sha256").update(id).digest("hex")}`;
     }
-    const states: readonly SitemapEntry["publication"][] = [
-      "public",
-      "private",
-      "draft",
-      "deleted",
-      "redirect",
-      "unknown",
-    ];
     const publication =
       reason === "publication"
-        ? states.includes(entry.publication)
+        ? PUBLICATIONS.has(entry.publication)
           ? entry.publication
           : "unknown"
         : undefined;
@@ -200,7 +218,10 @@ export async function generateSitemap(
       const page = await source.read({ revision, cursor, limit: pageSize });
       if (
         page.revision !== revision ||
+        !Array.isArray(page.entries) ||
         page.entries.length > pageSize ||
+        !page.entries.every(isSitemapEntry) ||
+        (page.nextCursor !== null && typeof page.nextCursor !== "string") ||
         page.complete !== (page.nextCursor === null)
       )
         throw new SitemapProblem("source-incomplete");

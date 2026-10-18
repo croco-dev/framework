@@ -345,6 +345,29 @@ describe("Sitemap", () => {
     );
   });
 
+  it("rejects malformed source frames instead of publishing empty or partial success", async () => {
+    const frames: readonly unknown[] = [
+      "upstream failed",
+      [entry("good"), "upstream failed"],
+      [{ ...entry("missing-decision"), indexable: undefined }],
+    ];
+    for (const entries of frames) {
+      const malformed: SitemapSource = {
+        ...source([]),
+        read: async () => ({
+          revision: "catalog-v7",
+          entries: entries as readonly SitemapEntry[],
+          nextCursor: null,
+          complete: true,
+        }),
+      };
+      await expect(generateSitemap(malformed, policy)).rejects.toMatchObject({
+        reason: "source-incomplete",
+        report: { sourceComplete: false },
+      });
+    }
+  });
+
   it("splits actual uncompressed XML above 50 MiB even below the URL-count limit", async () => {
     const generated = await generateSitemap(
       source(
