@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "create-croco-app",
+      "classification": "deployment-profile",
+      "reason": "The Node build-time generator emits the OpenNext builder dependency and separate Worker build, preview and deploy commands. This change prepares local artifacts; it adds no host adapter or runtime certification. Only the OpenNext selection permits the workerd dependency installation script; other targets retain the previous allowlist.",
+      "files": {
+        "packages/create-croco-app/src/installers/frontend-deploy.ts": "47cf8e3d15785f3de536bd94bc2da6b412e9e738e8c377ca58951304efccc245",
+        "packages/create-croco-app/templates/addons/frontend-opennext/open-next.config.ts": "8e02c850592160eb80d1aed908789f317babcb76985792a86bb79e7c0dd4b1d9",
+        "packages/create-croco-app/templates/addons/frontend-opennext/wrangler.toml.hbs": "8ce59632f7d3a929eb4053bdd30e009ce9b7fa78d1f0c04205ab3b34a10f2ecd",
+        "packages/create-croco-app/src/generator.ts": "4bfa8d83176b3d88822d5329350a19ed4c5034f1ad641b5687cc874b54a2b3cb",
+        "packages/create-croco-app/templates/base-ddd/pnpm-workspace.yaml.hbs": "1c6313011e434db48bcda3ac6c491210bf88d60d75c2024a4b6042d3a95fda3d"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "The selected OpenNext addon does not change the Kubernetes Node profile or its container artifacts.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/create-croco-app/src/installers/frontend-deploy.ts",
+            "packages/create-croco-app/src/installers/kubernetes.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "The selected OpenNext addon does not change Lambda packaging, invocation or flush ownership.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/create-croco-app/src/installers/frontend-deploy.ts",
+            "packages/create-croco-app/src/installers/lambda-api.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "unverified",
+          "host": "workers",
+          "reason": "The addon prepares OpenNext Worker and assets output using the existing Cloudflare adapter. Local artifact generation is distinct from executing the application in Workers.",
+          "providers": ["@opennextjs/cloudflare"],
+          "constraints": [
+            "No live Cloudflare deployment or Worker host conformance is claimed.",
+            "Application database and other provider compatibility must be verified separately.",
+            "The generator catalog runtime list remains unclaimed; installing the builder does not certify generated applications."
+          ],
+          "references": [
+            "packages/create-croco-app/templates/addons/frontend-opennext/open-next.config.ts",
+            "packages/create-croco-app/templates/addons/frontend-opennext/wrangler.toml.hbs",
+            "packages/create-croco-app/templates/addons/frontend-opennext/OPENNEXT.md",
+            "scripts/create-croco-app-generated-smoke.mts"
+          ]
+        }
+      }
+    }
+  ]
+}

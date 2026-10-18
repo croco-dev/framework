@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { parse } from "smol-toml";
 import { afterEach, describe, expect, it } from "vitest";
+import { parse as parseYaml } from "yaml";
 import { generate } from "../generator.js";
 import { normalizeNonInteractiveOptions } from "../options.js";
 
@@ -71,3 +72,36 @@ describe.each([
     }
   });
 });
+
+it.each(["opennext", "vercel"] as const)(
+  "permits the required workerd installation only for the OpenNext frontend (%s)",
+  async (frontendDeploy) => {
+    const root = mkdtempSync(join(tmpdir(), "croco-opennext-install-"));
+    roots.push(root);
+    const targetDir = join(root, "app");
+    await generate(
+      targetDir,
+      normalizeNonInteractiveOptions({
+        projectName: "sample",
+        scope: "@acme",
+        preset: "ddd-fullstack",
+        api: "graphql",
+        apiHosting: "nextjs",
+        webApps: ["web"],
+        frontendDeploy,
+        installDeps: false,
+        initGit: false,
+        agentRules: false,
+      }),
+      { outputMode: "json" },
+    );
+    const workspace = parseYaml(readFileSync(join(targetDir, "pnpm-workspace.yaml"), "utf8")) as {
+      allowBuilds: Record<string, boolean>;
+      onlyBuiltDependencies: string[];
+    };
+    expect(workspace.allowBuilds.workerd === true).toBe(frontendDeploy === "opennext");
+    expect(workspace.onlyBuiltDependencies.includes("workerd")).toBe(frontendDeploy === "opennext");
+    expect(workspace.allowBuilds.esbuild).toBe(true);
+    expect(workspace.onlyBuiltDependencies).toContain("esbuild");
+  },
+);

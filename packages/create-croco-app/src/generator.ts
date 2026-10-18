@@ -175,6 +175,7 @@ async function generateProject(
     mergeInto(join(TEMPLATES_DIR, "base-ddd"), targetDir, {
       ...vars,
       drizzleOrmRange: getGeneratedAppDependencyRange("drizzle-orm"),
+      opennext: options.frontendDeploy === "opennext",
     });
   }
 
