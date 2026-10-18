@@ -140,18 +140,45 @@ describe("DI graph consumer imports", () => {
     30_000,
   );
 
-  it("uses the JSX runtime extension when the consumer preserves JSX", () => {
-    const root = fixture(
-      { module: "NodeNext", moduleResolution: "NodeNext", jsx: "preserve" },
-      "module",
-      "tsx",
-    );
-    typecheck(root);
-    const result = compileDiGraph({ baseDir: root, outFile: "src/di.generated.ts" });
-    writeDiGraph(result);
-    typecheck(root);
-    expect(result.code).toContain('from "./Service.jsx"');
-  }, 30_000);
+  it.each([
+    { jsx: "preserve", runtime: "jsx" },
+    { jsx: "react-native", runtime: "js" },
+    { jsx: "react-jsx", runtime: "js" },
+  ])(
+    "matches actual TypeScript emission for jsx: $jsx",
+    ({ jsx, runtime }) => {
+      const root = fixture(
+        { module: "NodeNext", moduleResolution: "NodeNext", jsx },
+        "module",
+        "tsx",
+      );
+      typecheck(root);
+      const result = compileDiGraph({ baseDir: root, outFile: "src/di.generated.ts" });
+      writeDiGraph(result);
+      typecheck(root);
+      const config = ts.getParsedCommandLineOfConfigFile(
+        path.join(root, "tsconfig.json"),
+        {},
+        {
+          ...ts.sys,
+          onUnRecoverableConfigFileDiagnostic: () => {},
+        },
+      );
+      expect(config).toBeDefined();
+      const program = ts.createProgram(config?.fileNames ?? [], config?.options ?? {});
+      const emittedFiles: string[] = [];
+      const emit = program.emit(
+        program.getSourceFile(path.join(root, "src/Service.tsx")),
+        (fileName) => {
+          emittedFiles.push(path.resolve(fileName));
+        },
+      );
+      expect(emit.emitSkipped).toBe(false);
+      expect(emittedFiles).toContain(path.join(root, `src/Service.${runtime}`));
+      expect(result.code).toContain(`from "./Service.${runtime}"`);
+    },
+    30_000,
+  );
 
   it("rejects generated ESM syntax in a CommonJS graph with verbatimModuleSyntax", () => {
     const root = fixture(

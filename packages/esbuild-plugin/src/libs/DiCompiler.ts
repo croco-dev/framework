@@ -1744,12 +1744,14 @@ function toGeneratedImport(
   compilerOptions: ts.CompilerOptions,
 ): string {
   if (!path.isAbsolute(moduleSpecifier)) return moduleSpecifier;
-  const preserveJsx =
-    compilerOptions.jsx === ts.JsxEmit.Preserve || compilerOptions.jsx === ts.JsxEmit.ReactNative;
-  const relative = normalizePath(path.relative(path.dirname(outFile), moduleSpecifier))
+  const sourceSpecifier = /\.(?:[cm]?[jt]s|[jt]sx)$/u.test(moduleSpecifier)
+    ? moduleSpecifier
+    : (ts.resolveModuleName(moduleSpecifier, outFile, compilerOptions, ts.sys).resolvedModule
+        ?.resolvedFileName ?? moduleSpecifier);
+  const relative = normalizePath(path.relative(path.dirname(outFile), sourceSpecifier))
     .replace(/\.mts$/u, ".mjs")
     .replace(/\.cts$/u, ".cjs")
-    .replace(/\.tsx$/u, preserveJsx ? ".jsx" : ".js")
+    .replace(/\.tsx$/u, compilerOptions.jsx === ts.JsxEmit.Preserve ? ".jsx" : ".js")
     .replace(/\.ts$/u, ".js");
   return relative.startsWith(".") ? relative : `./${relative}`;
 }
