@@ -667,7 +667,7 @@ function extractTypeScriptBlocks(rootDir: string, filePath: string): MarkdownCod
     const openingLine = index + 1;
     index++;
 
-    while (index < lines.length && !isFenceClosing(lines[index])) {
+    while (index < lines.length && !isFenceClosing(lines[index], opening.fence)) {
       body.push(lines[index]);
       index++;
     }
@@ -692,22 +692,31 @@ function extractTypeScriptBlocks(rootDir: string, filePath: string): MarkdownCod
 
 function parseFenceOpening(
   line: string,
-): { readonly language: string; readonly meta: string } | undefined {
-  const match = /^(?<indent>\s*)```(?<info>.*)$/.exec(line);
+): { readonly fence: string; readonly language: string; readonly meta: string } | undefined {
+  const match = /^\s*(?<fence>`{3,}|~{3,})(?<info>.*)$/.exec(line);
   if (!match?.groups) {
     return undefined;
   }
 
   const info = match.groups.info.trim();
+  const fence = match.groups.fence;
+  if (fence[0] === "`" && info.includes("`")) {
+    return undefined;
+  }
+
   const [language = "", ...meta] = info.split(/\s+/);
   return {
+    fence,
     language: language.toLowerCase(),
     meta: meta.join(" "),
   };
 }
 
-function isFenceClosing(line: string): boolean {
-  return /^\s*```\s*$/.test(line);
+function isFenceClosing(line: string, openingFence: string): boolean {
+  const match = /^\s*(`{3,}|~{3,})\s*$/.exec(line);
+  return (
+    match !== null && match[1][0] === openingFence[0] && match[1].length >= openingFence.length
+  );
 }
 
 function isTypeScriptLanguage(language: string): language is "ts" | "tsx" | "typescript" {

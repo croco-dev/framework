@@ -68,6 +68,78 @@ describe("doc-examples-check.mts", () => {
     scriptTestTimeout,
   );
 
+  it.each(["```", "````", "`````", "~~~", "~~~~", "~~~~~"])(
+    "checks every TypeScript language with %s fences and preserves diagnostic lines",
+    (fence) => {
+      const root = createTempRoot();
+      const languages = ["ts", "tsx", "typescript"];
+      const examples = (invalid: boolean) =>
+        languages.flatMap((language, index) => [
+          `${fence}${language} typecheck`,
+          `const example${index}: number = ${invalid ? '"wrong"' : "123"};`,
+          fence + fence[0],
+          "",
+        ]);
+
+      writeValidDocs(root, examples(false));
+      const valid = runScript(root, "--check");
+      expect(valid.status).toBe(0);
+      expect(valid.stdout).toContain("checked 4 TypeScript documentation examples");
+
+      writeValidDocs(root, examples(true));
+      const invalid = runScript(root, "--check");
+      expect(invalid.status).toBe(1);
+      for (const line of [10, 14, 18]) {
+        expect(invalid.stdout).toContain(
+          `README.md:${line}: Type 'string' is not assignable to type 'number'`,
+        );
+      }
+    },
+    scriptTestTimeout,
+  );
+
+  it(
+    "keeps shorter, mixed and suffixed fences inside the enclosing example",
+    () => {
+      const root = createTempRoot();
+      writeValidDocs(root, [
+        "`````markdown",
+        "````ts typecheck",
+        'const ignored: number = "wrong";',
+        "````",
+        "~~~~~",
+        "````` trailing text",
+        "```ts typecheck",
+        'const alsoIgnored: number = "wrong";',
+        "```",
+        "``````",
+        "Inline ```ts typecheck is prose.",
+        "```ts `typecheck`",
+        "~~~ts no-check",
+        'const skipped: number = "wrong";',
+        "~~~",
+        "````tsx skip-typecheck",
+        'const skippedToo: number = "wrong";',
+        "````",
+        "~~~~~typescript pseudo",
+        'const pseudo: number = "wrong";',
+        "~~~~~",
+        "~~~ts typecheck",
+        'const checked: number = "wrong";',
+        "~~~",
+      ]);
+
+      const result = runScript(root, "--check");
+      expect(result.status).toBe(1);
+      expect(result.stdout).toContain(
+        "README.md:31: Type 'string' is not assignable to type 'number'",
+      );
+      expect(result.stdout.match(/not assignable/g)).toHaveLength(1);
+      expect(result.stdout).not.toContain("must be marked");
+    },
+    scriptTestTimeout,
+  );
+
   it.each([
     ["direct", "./src/features/main.ts"],
     ["barrel", "./src/features/index.ts"],
