@@ -2559,6 +2559,94 @@ void handleMissingProblemBranch;
     );
   });
 
+  it.each([
+    ["empty catchall", z.object({}).catchall(z.number())],
+    ["fixed fields and catchall", z.object({ label: z.string() }).catchall(z.number())],
+    ["unknown catchall", z.object({}).catchall(z.unknown())],
+    ["passthrough", z.object({}).passthrough()],
+    ["wrapped", z.object({}).catchall(z.number()).optional().nullable().readonly()],
+    ["nested array", z.object({ counters: z.array(z.object({}).catchall(z.number())) })],
+    ["record value", z.record(z.object({}).catchall(z.number()))],
+    ["union branch", z.union([z.string(), z.object({}).catchall(z.number())])],
+    [
+      "discriminated union",
+      z.discriminatedUnion("kind", [
+        z.object({ kind: z.literal("counts") }).catchall(z.number()),
+        z.object({ kind: z.literal("empty") }),
+      ]),
+    ],
+    [
+      "refinement",
+      z
+        .object({})
+        .catchall(z.number())
+        .refine(() => true),
+    ],
+    ["default", z.object({}).catchall(z.number()).default({})],
+    ["catch wrapper", z.object({}).catchall(z.number()).catch({})],
+    ["brand", z.object({}).catchall(z.number()).brand("Counters")],
+  ])("should reject dynamic output objects before writing files: %s", (_name, outputSchema) => {
+    const routes: RouteIR[] = [
+      { ...createBasicRoute(), domain: "alpha", outputSchema: z.object({ id: z.string() }) },
+      { ...createBasicRoute(), domain: "zeta", outputSchema },
+    ];
+    expect(() => generateClientFiles(routes, TEMP_DIR)).toThrow(
+      expect.objectContaining({
+        code: "rpc-codegen/invalid-contract",
+        message: expect.stringMatching(/output.*UserController.*dynamic.*(catchall|passthrough)/i),
+      }),
+    );
+    expect(fs.readdirSync(TEMP_DIR)).toEqual([]);
+  });
+
+  it("should preserve existing generated files when a dynamic output is rejected", () => {
+    const route = { ...createBasicRoute(), outputSchema: z.object({ id: z.string() }) };
+    const files = generateClientFiles([route], TEMP_DIR);
+    const before = new Map(
+      [...files, path.join(TEMP_DIR, ".croco-rpc-codegen.json")].map((file) => [
+        file,
+        fs.readFileSync(file, "utf8"),
+      ]),
+    );
+    expect(() =>
+      generateClientFiles(
+        [{ ...route, domain: "replacement", outputSchema: z.object({}).catchall(z.number()) }],
+        TEMP_DIR,
+      ),
+    ).toThrow(/dynamic/i);
+    for (const [file, content] of before) {
+      expect(fs.readFileSync(file, "utf8")).toBe(content);
+    }
+    expect(fs.existsSync(path.join(TEMP_DIR, "replacement.ts"))).toBe(false);
+  });
+
+  it(
+    "should retain fixed and record output field types",
+    () => {
+      const outputSchema = z.object({ id: z.string(), counters: z.record(z.number()) }).strict();
+      expect(outputSchema.parse({ id: "stats", counters: { widgets: 7 } })).toEqual({
+        id: "stats",
+        counters: { widgets: 7 },
+      });
+      const files = generateClientFiles([{ ...createBasicRoute(), outputSchema }], TEMP_DIR);
+      const sources = new Map(files.map((file) => [file, fs.readFileSync(file, "utf8")]));
+      const consumer = path.join(TEMP_DIR, "consumer.ts");
+      sources.set(
+        consumer,
+        `
+      import type { ListOutput } from './user';
+      const value: ListOutput = { id: 'stats', counters: { widgets: 7 } };
+      const id: string = value.id;
+      const count: number = value.counters.widgets;
+      // @ts-expect-error counters retain their numeric value contract
+      const wrong: string = value.counters.widgets;
+    `,
+      );
+      assertVirtualTypeScriptSourcesTypecheck(sources, [...sources.keys()]);
+    },
+    GENERATED_CLIENT_TYPECHECK_TIMEOUT_MS,
+  );
+
   it("should generate native enum output types without TypeScript reverse mappings", () => {
     const routes: RouteIR[] = [
       {

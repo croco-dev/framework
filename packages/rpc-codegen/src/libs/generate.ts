@@ -40,6 +40,8 @@ import {
   type RouteIR,
 } from "@croco/protocols-core";
 
+import type { z } from "zod";
+
 export type GenerateClientOptions = {
   readonly frontendActionManifestInputs?: readonly FrontendActionManifestMergeInput[];
   readonly frontendActionManifestPath?: string;
@@ -2841,7 +2843,62 @@ function generateOutputType(route: GeneratedClientRoute): string {
     return "";
   }
 
+  assertOutputObjectKeysSupported(route, route.outputSchema);
+
   return `export type ${getOutputTypeName(route)} = ${zodTypeToTypeScript(route.outputSchema)};`;
+}
+
+function assertOutputObjectKeysSupported(
+  route: GeneratedClientRoute,
+  schema: unknown,
+  schemaPath = "output",
+  seen = new Set<unknown>(),
+): void {
+  if (!schema || seen.has(schema)) {
+    return;
+  }
+  seen.add(schema);
+  const typeName = getSchemaName(schema);
+  if (typeName === "ZodObject") {
+    const mode = getZodObjectUnsupportedDynamicKeyMode(schema);
+    if (mode) {
+      throw new RpcCodegenContractProblem(
+        `Cannot generate RPC output type for route ${formatRoute(route)} at ${schemaPath}: dynamic ${mode} object keys are unsupported. Use z.record() for dynamic output values or a fixed object schema.`,
+      );
+    }
+    for (const [name, field] of Object.entries(getZodObjectShape(schema))) {
+      assertOutputObjectKeysSupported(route, field, `${schemaPath}.${name}`, seen);
+    }
+  } else if (typeName === "ZodArray") {
+    assertOutputObjectKeysSupported(
+      route,
+      getZodArrayElementSchema(schema),
+      `${schemaPath}[]`,
+      seen,
+    );
+  } else if (typeName === "ZodRecord") {
+    assertOutputObjectKeysSupported(
+      route,
+      (schema as z.ZodRecord).valueSchema,
+      `${schemaPath}[]`,
+      seen,
+    );
+  } else if (typeName === "ZodUnion" || typeName === "ZodDiscriminatedUnion") {
+    const options = (schema as { readonly options: readonly unknown[] }).options;
+    for (const [index, option] of options.entries()) {
+      assertOutputObjectKeysSupported(route, option, `${schemaPath}.options[${index}]`, seen);
+    }
+  } else if (
+    typeName === "ZodOptional" ||
+    typeName === "ZodNullable" ||
+    typeName === "ZodDefault" ||
+    typeName === "ZodCatch" ||
+    typeName === "ZodEffects" ||
+    typeName === "ZodBranded" ||
+    typeName === "ZodReadonly"
+  ) {
+    assertOutputObjectKeysSupported(route, getZodInnerSchema(schema), schemaPath, seen);
+  }
 }
 
 function generateProblemTypes(route: GeneratedClientRoute): string {
