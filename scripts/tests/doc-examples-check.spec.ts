@@ -75,7 +75,7 @@ describe("doc-examples-check.mts", () => {
       const languages = ["ts", "tsx", "typescript"];
       const examples = (invalid: boolean) =>
         languages.flatMap((language, index) => [
-          `${fence}${language} typecheck`,
+          `   ${fence}${language} typecheck`,
           `const example${index}: number = ${invalid ? '"wrong"' : "123"};`,
           fence + fence[0],
           "",
@@ -124,6 +124,15 @@ describe("doc-examples-check.mts", () => {
         "~~~~~typescript pseudo",
         'const pseudo: number = "wrong";',
         "~~~~~",
+        "    ~~~ts typecheck",
+        '    const indented: number = "wrong";',
+        "    ~~~",
+        "\t~~~ts typecheck",
+        '\tconst tabIndented: number = "wrong";',
+        "\t~~~",
+        "    ```ts typecheck",
+        '    const indentedBacktick: number = "wrong";',
+        "    ```",
         "~~~ts typecheck",
         'const checked: number = "wrong";',
         "~~~",
@@ -132,7 +141,7 @@ describe("doc-examples-check.mts", () => {
       const result = runScript(root, "--check");
       expect(result.status).toBe(1);
       expect(result.stdout).toContain(
-        "README.md:31: Type 'string' is not assignable to type 'number'",
+        "README.md:40: Type 'string' is not assignable to type 'number'",
       );
       expect(result.stdout.match(/not assignable/g)).toHaveLength(1);
       expect(result.stdout).not.toContain("must be marked");

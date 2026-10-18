@@ -693,7 +693,7 @@ function extractTypeScriptBlocks(rootDir: string, filePath: string): MarkdownCod
 function parseFenceOpening(
   line: string,
 ): { readonly fence: string; readonly language: string; readonly meta: string } | undefined {
-  const match = /^\s*(?<fence>`{3,}|~{3,})(?<info>.*)$/.exec(line);
+  const match = /^ {0,3}(?<fence>`{3,}|~{3,})(?<info>.*)$/.exec(line);
   if (!match?.groups) {
     return undefined;
   }
@@ -713,7 +713,7 @@ function parseFenceOpening(
 }
 
 function isFenceClosing(line: string, openingFence: string): boolean {
-  const match = /^\s*(`{3,}|~{3,})\s*$/.exec(line);
+  const match = /^ {0,3}(`{3,}|~{3,})[ \t]*$/.exec(line);
   return (
     match !== null && match[1][0] === openingFence[0] && match[1].length >= openingFence.length
   );
