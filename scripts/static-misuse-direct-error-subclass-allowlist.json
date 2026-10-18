@@ -105,7 +105,7 @@
     {
       "package": "@croco/esbuild-plugin",
       "file": "packages/esbuild-plugin/src/libs/DiCompiler.ts",
-      "line": 174,
+      "line": 178,
       "excerpt": "export class DiCompilerError extends Error {",
       "reason": "Compiler boundary carries the complete list of coded DI diagnostics for build-time reporting.",
       "owner": "framework-error-handling",
