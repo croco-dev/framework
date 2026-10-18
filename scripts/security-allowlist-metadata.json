@@ -21,6 +21,12 @@
           "owner": "kang-heewon",
           "reason": "Historical planning evidence artifact in git history triggers generic-api-key detection; current source tree does not include the artifact and the exact fingerprint is tracked for future history-cleanup review.",
           "reviewBy": "2026-10-31"
+        },
+        {
+          "fingerprint": "cbd088a71c827f3ebfe741443cc4defd0608ed9c:docs/infrastructure-reviews/3295-codegen-cwd.json:generic-api-key:9",
+          "owner": "kang-heewon",
+          "reason": "Issue #3295 infrastructure review records the SHA-256 of packages/cli/src/commands/codegenOpenapi.ts. The detected value exactly matches that source digest and is not a credential; only this historical commit, file, rule and line are exempted.",
+          "reviewBy": "2027-01-31"
         }
       ]
     },
