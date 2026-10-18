@@ -822,6 +822,10 @@ function defaultRunner(
         exitCode: result.status ?? 1,
         durationMs: Date.now() - startedAt,
         ...evidence,
+        failureDetails:
+          result.status !== 0 && !playwright && existsSync(reportPath)
+            ? readVitestFailureDetails(reportPath, resolve(rootDir, command.cwd))
+            : [],
         executionState: "executed" as const,
       };
     } finally {
