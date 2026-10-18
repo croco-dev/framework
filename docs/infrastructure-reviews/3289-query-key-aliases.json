@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "rpc-codegen",
+      "classification": "pure-contract",
+      "reason": "Generated query-key factories use collision-free names while preserving each route key. Identifier allocation and generated references do not depend on deployment infrastructure.",
+      "files": {
+        "packages/rpc-codegen/src/libs/generate.ts": "8eb4c83c91d62e99b5ea8967f0ecb62e356265e0de7b57f541031bc9ec7abab0"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "This change only allocates query-key property names and matching React Query references at build time. It adds no Kubernetes Node capabilities, storage, provider or lifecycle behavior.",
+          "providers": [],
+          "constraints": [
+            "The code generator has no catalog deployment-runtime claim; this review does not add one."
+          ],
+          "references": [
+            "packages/rpc-codegen/src/libs/generate.ts",
+            "packages/rpc-codegen/src/tests/codegen.spec.ts",
+            "docs/package-catalog.json"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "This change only allocates query-key property names and matching React Query references at build time. It adds no AWS Lambda capabilities, storage, provider or lifecycle behavior.",
+          "providers": [],
+          "constraints": [
+            "The code generator has no catalog deployment-runtime claim; this review does not add one."
+          ],
+          "references": [
+            "packages/rpc-codegen/src/libs/generate.ts",
+            "packages/rpc-codegen/src/tests/codegen.spec.ts",
+            "docs/package-catalog.json"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "This change only allocates query-key property names and matching React Query references at build time. It adds no Cloudflare Workers capabilities, storage, provider or lifecycle behavior.",
+          "providers": [],
+          "constraints": [
+            "The code generator has no catalog deployment-runtime claim; this review does not add one."
+          ],
+          "references": [
+            "packages/rpc-codegen/src/libs/generate.ts",
+            "packages/rpc-codegen/src/tests/codegen.spec.ts",
+            "docs/package-catalog.json"
+          ]
+        }
+      }
+    }
+  ]
+}
