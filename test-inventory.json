@@ -938,6 +938,12 @@
       "owner": "@croco/auth-clerk"
     },
     {
+      "path": "packages/auth-clerk/src/tests/ClerkAudienceVerification.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/auth-clerk"
+    },
+    {
       "path": "packages/auth-clerk/src/tests/ClerkAuthPlugin.spec.ts",
       "lane": "fast",
       "qualifiers": [],

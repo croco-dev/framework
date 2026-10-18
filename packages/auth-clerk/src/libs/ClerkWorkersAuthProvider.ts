@@ -41,11 +41,10 @@ export class ClerkWorkersAuthProvider extends ClerkAuthProvider implements AuthP
   }
 
   protected override validateClaims(payload: Record<string, unknown>): void {
+    super.validateClaims(payload);
     if (
       typeof payload.azp !== "string" ||
       !this.workerOptions.authorizedParties.includes(payload.azp) ||
-      (payload.aud !== this.workerOptions.audience &&
-        !(Array.isArray(payload.aud) && payload.aud.includes(this.workerOptions.audience))) ||
       payload.sts === "pending"
     )
       throw new ClerkTokenVerificationProblem();

@@ -19,6 +19,9 @@ export default defineConfig({
   test: {
     globals: true,
     environment: "node",
+    // Keep workerd startup from competing with other files' transforms and RSA key generation.
+    // Request/store concurrency remains exercised inside the individual suites.
+    maxWorkers: 1,
     include: ["src/**/*.test.ts", "src/**/*.spec.ts"],
     exclude: ["**/node_modules/**", "**/dist/**"],
   },

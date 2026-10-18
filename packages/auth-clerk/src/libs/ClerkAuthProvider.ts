@@ -2,6 +2,7 @@ import { verifyToken } from "@clerk/backend";
 import type { AuthProvider, AuthUser } from "@croco/auth-core";
 import {
   ClerkMalformedClaimProblem,
+  ClerkTokenVerificationProblem,
   createClerkTokenVerificationProblem,
 } from "./problems/ClerkProblems";
 import type { AuthorizationHeaderCarrier } from "./types";
@@ -117,7 +118,20 @@ function getV2OrganizationClaims(payload: Record<string, unknown>): {
 export class ClerkAuthProvider implements AuthProvider<AuthorizationHeaderCarrier> {
   constructor(private options: ClerkAuthOptions) {}
 
-  protected validateClaims(_payload: Record<string, unknown>): void {}
+  protected validateClaims(payload: Record<string, unknown>): void {
+    if (this.options.audience === undefined) return;
+    const expected =
+      typeof this.options.audience === "string" ? [this.options.audience] : this.options.audience;
+    const allowed = expected.filter((value) => value.trim().length > 0);
+    const actual = typeof payload.aud === "string" ? [payload.aud] : payload.aud;
+    if (
+      !Array.isArray(actual) ||
+      !actual.every((value) => typeof value === "string") ||
+      !actual.some((value) => allowed.includes(value))
+    ) {
+      throw new ClerkTokenVerificationProblem();
+    }
+  }
 
   async authenticate(request: AuthorizationHeaderCarrier): Promise<AuthUser | null> {
     const authHeader = request.headers.get("Authorization");
@@ -134,7 +148,7 @@ export class ClerkAuthProvider implements AuthProvider<AuthorizationHeaderCarrie
       const verified = await verifyToken(token, {
         secretKey: this.options.secretKey,
         ...(this.options.jwtKey === undefined ? {} : { jwtKey: this.options.jwtKey }),
-        ...(this.options.audience === undefined ? {} : { audience: this.options.audience }),
+        // The pinned SDK mishandles missing/array audiences; validate verified claims below.
         ...(this.options.authorizedParties === undefined
           ? {}
           : { authorizedParties: this.options.authorizedParties }),
