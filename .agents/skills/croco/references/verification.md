@@ -76,3 +76,29 @@ Missing required bindings, supplied invalid optional bindings and stale binding 
 Use references only; keep credentials out of declarations and reports. Static artifact success
 is not live existence, effective authorization, executable code/image proof or certification.
 SAM/CDK and Wrangler validators do not imply generated full SaaS deployment support.
+
+## Three infrastructure review
+
+For a new public capability, Provider, Host, deployment Profile or support-changing fix, inspect the contract,
+then the selected Profile metadata, Provider, runtime capability manifest and executable evidence. Evaluate:
+
+- `kubernetes`: Node Host; Kubernetes is not a `KnownRuntimePlatform`.
+- `aws-lambda`: Lambda Host; inspect invocation scope, resource reuse and flush/close ownership.
+- `cloudflare`: Workers Host, or explicitly identified Node Containers; a Container is not a Worker isolate.
+
+Record `supported | conditional | unsupported | unverified | not-applicable` for each, with provider references,
+capability/storage/lifecycle limits, test/fixture/file references and reasons. Prefer existing adapters; never
+copy pure contracts or domain logic for each platform. Unsupported is an acceptable outcome. Supported needs
+executed host-runtime evidence; local/no-credential tests do not establish live infrastructure certification.
+
+In the framework checkout, add a versioned, hash-bound review following
+[the infrastructure review contract](https://github.com/croco-dev/framework/blob/trunk/docs/contributing/infrastructure-review.md).
+Run `pnpm infrastructure-review:check -- --base <base-sha>`, `pnpm docs:catalog:check`,
+`pnpm skill:write && pnpm skill:check` and the affected `pnpm check` paths after changes. Review the companion's
+profile decisions and unverified surfaces. Keep catalog/runtime manifests authoritative for runtime claims;
+review records are change evidence, not another provider registry. Documentation/test-only changes do not
+backfill historical packages. Pure refactors use reasoned not-applicable without platform smoke.
+
+In a generated application, use its reported manifest and verification scripts; the repository-only review
+checker is not installed there. Keep the same three decisions in the application's own review evidence and
+report missing Providers or host paths explicitly. Never mark untested or unsupported paths as supported.

@@ -19,6 +19,9 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 
 import type { ContractGraphDiff, ContractGraphDiffChange } from "@croco/protocols-core";
 
+import { inspectInfrastructureReview } from "./infrastructure-review.mts";
+import type { InfrastructureReviewReport } from "./infrastructure-review.mts";
+
 type CompanionStatus = "pass" | "needs-checks" | "fail";
 type CheckStatus = "not-applicable" | "not-run" | "pass" | "fail";
 type AnnotationLevel = "notice" | "warning" | "error";
@@ -86,6 +89,7 @@ type ContractDiffAnalysis =
   | { readonly diff: ContractGraphDiff; readonly kind: "available" };
 
 type CompanionReport = {
+  readonly infrastructureReview: InfrastructureReviewReport | null;
   readonly annotations: readonly Annotation[];
   readonly baseRef: string;
   readonly changedFiles: readonly string[];
@@ -1204,6 +1208,21 @@ function buildMarkdown(
     }
   }
 
+  if (report.infrastructureReview) {
+    lines.push(
+      "",
+      "## Infrastructure review",
+      "",
+      `Revisions: ${report.infrastructureReview.base} → ${report.infrastructureReview.head}`,
+      "",
+      "Review decisions and executed named tests are scoped evidence, not infrastructure certification.",
+    );
+    for (const review of report.infrastructureReview.reviews) {
+      lines.push("", "```json", JSON.stringify(review, null, 2).replace(/`/g, "\\u0060"), "```");
+    }
+    for (const diagnostic of report.infrastructureReview.diagnostics)
+      lines.push(`- ${diagnostic.code}: ${escapeMarkdownTableCell(diagnostic.message)}`);
+  }
   lines.push(
     "",
     "## Required Checks",
@@ -1285,7 +1304,19 @@ function createCompanionOutput(options: Options): {
   const annotations = createAnnotations(requiredChecks, generatedArtifacts, contractDiff);
   const outputDir = resolve(options.rootDir, options.outputDir);
 
+  const infrastructureReview = existsSync(join(options.rootDir, "docs/package-catalog.json"))
+    ? inspectInfrastructureReview(options.rootDir, options.baseRef, options.headRef)
+    : null;
+  for (const diagnostic of infrastructureReview?.diagnostics ?? []) {
+    annotations.push({
+      file: diagnostic.path,
+      level: "error",
+      title: diagnostic.code,
+      message: diagnostic.message,
+    });
+  }
   const report: CompanionReport = {
+    infrastructureReview,
     annotations,
     baseRef: options.baseRef,
     changedFiles,
@@ -1298,7 +1329,7 @@ function createCompanionOutput(options: Options): {
     },
     requiredChecks,
     schemaVersion: "croco.pr-review-companion.v1",
-    status: resolveStatus(requiredChecks),
+    status: infrastructureReview?.diagnostics.length ? "fail" : resolveStatus(requiredChecks),
     suggestedCommands: createSuggestedCommands(changedPackages, requiredChecks),
   };
 

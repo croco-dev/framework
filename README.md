@@ -4,6 +4,14 @@ Croco는 coding agent와 함께 TypeScript 제품을 만드는 팀이 인프라 
 집중하게 하는 베타 프레임워크입니다. 저수준 API와 그 위의 실행 가능한 계약·정책·운영 UI·관측 경계를
 함께 제공하고, 렌더링과 프로토콜을 제품 실행 경로에 연결하는 것을 지향합니다.
 
+## 세 인프라 검토 대상
+
+Kubernetes(Node Host), AWS Lambda, Cloudflare(Workers 또는 명시적인 Node Containers)는 새 공개 기능의
+일급 **검토 대상**입니다. 이는 개발 목표이자 검토 정책이며, 모든 패키지에 세 구현이 있거나 운영 환경에서
+검증됐다는 뜻은 아닙니다. [생성된 extension matrix](packages/docs/src/content/docs/en/reference/extension-matrix.md)는
+현재 runtime 선언과 certification을 구분합니다. [변경별 인프라 검토](docs/contributing/infrastructure-review.md)는
+지원·조건부·미지원·미검증·해당 없음 판단과 실행 근거의 한계를 기록합니다.
+
 ## 제품 약속
 
 Croco가 겨냥하는 제품 루프는 다음과 같습니다.

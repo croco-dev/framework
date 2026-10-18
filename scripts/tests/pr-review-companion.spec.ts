@@ -59,6 +59,31 @@ describe("pr-review-companion.mts", () => {
     }
   });
 
+  it("fails and reports missing infrastructure decisions for a changed public capability", () => {
+    const root = createTempRoot();
+    writeRootPackage(root, {});
+    writePackage(root, "sample", "@croco/sample");
+    writeFile(
+      root,
+      "docs/package-catalog.json",
+      JSON.stringify({ packageRoles: { sample: { runtimes: ["node"] } } }),
+    );
+    writeFile(root, "packages/sample/src/index.ts", "export const capability = 41;");
+    initializeGit(root);
+    commitAll(root, "base");
+    writeFile(root, "packages/sample/src/index.ts", "export const capability = 43;");
+    commitAll(root, "new public capability");
+    writeChangedFiles(root, ["packages/sample/src/index.ts"]);
+    const result = runScript(root, ["--base", "HEAD~1", "--head", "HEAD"]);
+    expect(result.status).toBe(1);
+    expect(
+      result.report.annotations.some((annotation) => annotation.title === "INFRA_REVIEW_MISSING"),
+    ).toBe(true);
+    expect(readFileSync(join(root, "ci-reports/pr-review-companion/report.md"), "utf8")).toContain(
+      "INFRA_REVIEW_MISSING",
+    );
+  });
+
   it("detects changed packages and suggests affected validation commands", () => {
     const root = createTempRoot();
     writeRootPackage(root);

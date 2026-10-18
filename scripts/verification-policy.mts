@@ -48,6 +48,8 @@ const ROOT_SCRIPT_RECOVERY = {
   "docs:api-triggers:check": "pnpm docs:api-triggers:write",
   "docs:api:check": "pnpm docs:api:write",
   "docs:cache:check": "Fix the reported Turbo documentation cache contract",
+  "infrastructure-review:check":
+    "Restore the scoped infrastructure review, execution evidence and generated skill",
   "docs:catalog:check": "pnpm docs:catalog:write",
   "docs:examples:check": "pnpm docs:examples:write",
   "first-success:verify": "Follow the reported scaffold or documentation recovery command",

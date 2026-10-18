@@ -116,6 +116,7 @@ const repoIds = [
   "changeset-required",
   "package-manifests",
   "release-version-sync",
+  "infrastructure-review",
   "docs-catalog",
   "docs-api-triggers",
   "problem-registry",
@@ -180,6 +181,7 @@ const expectedLaneIds = {
     "changeset-required",
     "package-manifests",
     "release-version-sync",
+    "infrastructure-review",
     "docs-catalog",
     "docs-api-triggers",
     "problem-registry",
@@ -307,12 +309,12 @@ describe("verification manifest", () => {
     });
   });
 
-  it("owns all 55 commands exactly once across the closed verification lanes", () => {
+  it("owns all 56 commands exactly once across the closed verification lanes", () => {
     const publishIds = [...repoIds, ...spineOnlyIds, ...publishOnlyIds];
     const ownedIds = Object.values(expectedLaneIds).flat();
 
-    expect(publishIds).toHaveLength(55);
-    expect(new Set(ownedIds).size).toBe(55);
+    expect(publishIds).toHaveLength(56);
+    expect(new Set(ownedIds).size).toBe(56);
     expect([...ownedIds].sort()).toEqual([...publishIds].sort());
     expect(VERIFICATION_LANE_OWNERSHIP).toEqual(
       Object.fromEntries(
@@ -328,7 +330,7 @@ describe("verification manifest", () => {
     expect(
       createHash("sha256").update(JSON.stringify(manifests)).digest("hex"),
       "The pre-split monolithic manifest changed; update this digest only after intentionally verifying the new serialized commands.",
-    ).toBe("e045023723638efab650eb5d3a4b1da0bf7ee0ca3f9850ea91cc0fc7339e8c85");
+    ).toBe("a62125cea9a689ffd2c4ef2b3d7cf92ac408f0e7e2df49d26fd73eb6a160e427");
   });
 
   it("classifies every dependency edge and every cross-lane edge for synthesis", () => {
@@ -1539,7 +1541,7 @@ describe("verification manifest", () => {
       readFileSync(resolve(__dirname, "../../package.json"), "utf8"),
     ) as { scripts?: Record<string, string> };
 
-    expect(RELEASE_GATE_TEST_PATHS).toHaveLength(55);
+    expect(RELEASE_GATE_TEST_PATHS).toHaveLength(57);
     expect(RELEASE_GATE_TEST_PATHS).toEqual([...RELEASE_GATE_TEST_PATHS].sort());
     expect(RELEASE_GATE_ENTRYPOINT_PATHS).toEqual([...RELEASE_GATE_ENTRYPOINT_PATHS].sort());
     expect(RELEASE_GATE_FIXTURE_PATHS).toEqual([...RELEASE_GATE_FIXTURE_PATHS].sort());
@@ -1675,6 +1677,9 @@ describe("verification manifest", () => {
       "exec",
       "vitest",
       "run",
+      "scripts/tests/infrastructure-review.spec.ts",
+      "scripts/tests/pr-review-companion.spec.ts",
+      "scripts/tests/croco-skill.spec.ts",
       "scripts/tests/verification-command.spec.ts",
       "scripts/tests/verification-change-classifier.spec.ts",
       "scripts/tests/verification-manifest.spec.ts",
@@ -1908,6 +1913,7 @@ describe("verification manifest", () => {
       "verification-policy",
       "changeset-required",
       "package-manifests",
+      "infrastructure-review",
       "docs-catalog",
       "docs-api-triggers",
       "problem-registry",
