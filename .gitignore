@@ -17,12 +17,15 @@ coverage
 /ci-reports/package-quality/
 /ci-reports/generated-apps/
 /ci-reports/security/
+/ci-reports/cacheable-ci/
+/ci-reports/verification-identity.json
 /ci-reports/verification/
 /ci-reports/release/
 /ci-reports/pr-review-companion/
 
 # Turbo
 .turbo
+/.ci-cache/
 
 # Vercel
 .vercel

@@ -192,23 +192,28 @@ describe("infrastructure review gate", () => {
     expect(executions).toBe(1);
     expect(result.reviews[0]?.package).toBe("sample");
   });
-  it("executes supported evidence with the real CI reporting runner", async () => {
-    const input = changed();
-    write(
-      input.root,
-      ".gitignore",
-      readFileSync(join(import.meta.dirname, "../../.gitignore"), "utf8"),
-    );
-    symlinkSync(join(import.meta.dirname, "../../node_modules"), join(input.root, "node_modules"));
-    write(
-      input.root,
-      "packages/sample/vitest.config.mts",
-      'export default { test: { include: ["src/tests/*.spec.ts"] } };',
-    );
-    write(
-      input.root,
-      "packages/sample/src/tests/Runtime.spec.ts",
-      `import { it, expect } from 'vitest';
+  it.each(["legacy", "split"])(
+    "executes supported evidence with the real %s CI reporting runner",
+    async (mode) => {
+      const input = changed();
+      write(
+        input.root,
+        ".gitignore",
+        readFileSync(join(import.meta.dirname, "../../.gitignore"), "utf8"),
+      );
+      symlinkSync(
+        join(import.meta.dirname, "../../node_modules"),
+        join(input.root, "node_modules"),
+      );
+      write(
+        input.root,
+        "packages/sample/vitest.config.mts",
+        'export default { test: { include: ["src/tests/*.spec.ts"] } };',
+      );
+      write(
+        input.root,
+        "packages/sample/src/tests/Runtime.spec.ts",
+        `import { it, expect } from 'vitest';
 import { createServer } from 'node:http';
 it('real host', async () => {
   const server = createServer((_request, response) => response.end('owned-package-host'));
@@ -218,42 +223,53 @@ it('real host', async () => {
     expect(await response.text()).toBe('owned-package-host');
   } finally { await new Promise(resolve => server.close(resolve)); }
 });`,
-    );
-    input.review = record(input.root);
-    write(input.root, "docs/infrastructure-reviews/feature.json", {
-      schemaVersion: 1,
-      changes: [input.review],
-    });
-    const head = commit(input.root);
-    const report = await runReleaseSpineEvidence({
-      rootDir: input.root,
-      outputDir: "ci-reports/verification/publish",
-      profile: "repo",
-      totalTimeoutMs: 60000,
-      commands: [
-        {
-          id: "infrastructure-review",
-          label: "Infrastructure review",
-          category: "quality",
-          timeoutMs: 30000,
-          command: [
-            process.execPath,
-            "--experimental-strip-types",
-            join(import.meta.dirname, "../infrastructure-review.mts"),
-            "--base",
-            input.base,
-            "--head",
-            head,
-          ],
-        },
-      ],
-    });
-    expect(report.status).toBe("passed");
-    expect(report.checks[0]?.status).toBe("passed");
-    expect(
-      readFileSync(join(input.root, "ci-reports/verification/publish/spine-evidence.json"), "utf8"),
-    ).toContain("infrastructure-review");
-  }, 20000);
+      );
+      input.review = record(input.root);
+      write(input.root, "docs/infrastructure-reviews/feature.json", {
+        schemaVersion: 1,
+        changes: [input.review],
+      });
+      const head = commit(input.root);
+      const outputDir =
+        mode === "split"
+          ? "ci-reports/cacheable-ci/core-verification/execution"
+          : "ci-reports/verification/publish";
+      if (mode === "split") {
+        write(input.root, "ci-reports/cacheable-ci/identity.json", { head });
+        write(input.root, "ci-reports/verification-identity.json", { head });
+        write(input.root, ".ci-cache/exact/core-verification/receipt.json", { head });
+      }
+      const report = await runReleaseSpineEvidence({
+        rootDir: input.root,
+        outputDir,
+        profile: "repo",
+        totalTimeoutMs: 60000,
+        commands: [
+          {
+            id: "infrastructure-review",
+            label: "Infrastructure review",
+            category: "quality",
+            timeoutMs: 30000,
+            command: [
+              process.execPath,
+              "--experimental-strip-types",
+              join(import.meta.dirname, "../infrastructure-review.mts"),
+              "--base",
+              input.base,
+              "--head",
+              head,
+            ],
+          },
+        ],
+      });
+      expect(report.status).toBe("passed");
+      expect(report.checks[0]?.status).toBe("passed");
+      expect(readFileSync(join(input.root, outputDir, "spine-evidence.json"), "utf8")).toContain(
+        "infrastructure-review",
+      );
+    },
+    20000,
+  );
 
   it("rejects evidence execution that changes the reviewed checkout", () => {
     const input = changed();

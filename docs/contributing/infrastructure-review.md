@@ -77,7 +77,7 @@ or at the root for script tests. Zero matches, skipped-only execution, test fail
 evidence fail. Execution requires a clean checkout at the reviewed head, preventing receipts for another tree.
 Generated Skill validation also requires a clean checkout at the requested head. A different HEAD or
 Git-visible local changes fail with `INFRA_SKILL_CHECKOUT_REQUIRED` instead of checking another tree's Skill.
-Verification/companion report directories are ignored generated outputs, so the CI reporting runner can retain
+Verification/companion reports, split CI identities/receipts and the `.ci-cache` restore directory are ignored generated outputs, so the CI reporting runner can retain
 its checkpoints while tracked source mutations still fail. Tests can use the existing no-credential runtime harness; they must exercise the claimed host path.
 Each execution is bounded to two minutes. Longer live checks should remain separately recorded as unverified
 here until an appropriate bounded conformance test exists; do not weaken timeouts to obtain support.
