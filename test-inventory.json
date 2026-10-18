@@ -4388,6 +4388,12 @@
       "owner": "@croco/protocols-core"
     },
     {
+      "path": "packages/protocols-core/src/tests/PublishedSchemaDescriptorBundle.spec.ts",
+      "lane": "published",
+      "qualifiers": [],
+      "owner": "@croco/protocols-core"
+    },
+    {
       "path": "packages/protocols-core/src/tests/RoutePath.spec.ts",
       "lane": "fast",
       "qualifiers": ["coverage"],
