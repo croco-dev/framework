@@ -1210,7 +1210,8 @@ function getComponentScope(component: ts.Decorator | undefined): IntentMapProvid
         ts.isPropertyAssignment(property) &&
         (ts.isIdentifier(property.name) || ts.isStringLiteral(property.name)) &&
         property.name.text === "scope" &&
-        ts.isStringLiteral(property.initializer)
+        (ts.isStringLiteral(property.initializer) ||
+          ts.isNoSubstitutionTemplateLiteral(property.initializer))
       ) {
         const scope = property.initializer.text;
         return COMPONENT_SCOPES.has(scope) ? (scope as IntentMapProvider["scope"]) : "singleton";

@@ -7,7 +7,7 @@
       "reason": "Repair the static source-to-metadata contract for Component import bindings and scope. TypeScript becomes an explicit scanner dependency; existing Node filesystem access remains build/tooling behavior. No deployment Host, Provider, credentials, storage or lifecycle contract changes.",
       "files": {
         "packages/framework-routes/package.json": "7f5be621cdb3999d0174e0de89144a15f46d147b1233be3f68308d01bcd2b7c6",
-        "packages/framework-routes/src/intent-map.ts": "e5ff0bc62406a4f1f24b90d1890356946d5c6976a2a59471f219be34763fe421"
+        "packages/framework-routes/src/intent-map.ts": "1ef7d03e2c5e46ebd97924f76e6c07b6bdad84d863b152aa506e9286ccc97b08"
       },
       "catalogRuntimes": [],
       "profiles": {

@@ -55,6 +55,38 @@ export class DefaultService {}`);
   });
 
   it.each([
+    [
+      "named alias",
+      'import { Component as Service } from "@croco/framework-context";',
+      "Service",
+      "request",
+    ],
+    [
+      "namespace import",
+      'import * as Context from "@croco/framework-context";',
+      "Context.Component",
+      "transient",
+    ],
+  ])("preserves a fixed template scope for a %s", (_label, binding, decorator, scope) => {
+    const result = readIntent(`${binding}
+@${decorator}({ scope: \`${scope}\` })
+export class TemplateScopedService {}`);
+    expect(result.providers).toEqual([
+      expect.objectContaining({ id: "TemplateScopedService", scope }),
+    ]);
+  });
+
+  it("does not evaluate an interpolated scope template", () => {
+    const result = readIntent(`import { Component as Service } from '@croco/framework-context';
+const scope = 'request';
+@Service({ scope: \`\${scope}\` })
+export class DynamicService {}`);
+    expect(result.providers).toEqual([
+      expect.objectContaining({ id: "DynamicService", scope: "singleton" }),
+    ]);
+  });
+
+  it.each([
     "function Service() { return () => {}; }\n@Service()",
     "function Component() { return () => {}; }\n@Component()",
     'import { Component as Service } from "other-library";\n@Service()',
