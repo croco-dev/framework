@@ -235,3 +235,194 @@ describe.skipIf(!connectionString)("PostgreSQL fact history", () => {
     expect(batches.rows.every((row) => /^[a-f0-9]{64}$/.test(row.projection_set))).toBe(true);
   });
 });
+
+// Acquisition uses the same real PostgreSQL clients, with an independent migration and scope lock.
+import { AcquisitionService, parseAcquisitionContext } from "@croco/analytics-core/acquisition";
+import { DrizzleAcquisitionStore, createAcquisition } from "../index";
+import type { AcquisitionTouchpoint } from "@croco/analytics-core/acquisition";
+const acquisitionUrls = {
+  origin: "https://shop.test",
+  destinations: { home: "/" },
+  campaigns: { utm_source: ["newsletter"] },
+  referrerOrigins: [],
+};
+const acquisitionNow = "2026-10-17T12:00:00.000Z";
+const acquisitionSubject = { kind: "anonymous" as const, ref: "session" };
+function acquisitionService(pool: Pool) {
+  return new AcquisitionService(new DrizzleAcquisitionStore(drizzle(pool)), {
+    actor: "operator",
+    urls: acquisitionUrls,
+    claimCodes: ["friend"],
+    retentionMs: 86400000,
+    clock: () => new Date(acquisitionNow),
+    policy: { authorize() {}, mask: (row: AcquisitionTouchpoint) => row },
+  });
+}
+const acquisitionPoint = {
+  id: "visit",
+  scope,
+  source: "browser",
+  identity: acquisitionSubject,
+  occurredAt: "2026-10-17T08:00:00.000Z",
+  sourceKind: "observed" as const,
+  coverage: "partial" as const,
+  context: parseAcquisitionContext(
+    { url: "https://shop.test/?utm_source=newsletter", referrerAvailable: true },
+    acquisitionUrls,
+  ),
+};
+
+describe.skipIf(!connectionString)("PostgreSQL acquisition", () => {
+  let pool: Pool;
+  let other: Pool;
+  beforeAll(async () => {
+    pool = new Pool({ connectionString, max: 2 });
+    other = new Pool({ connectionString, max: 2 });
+    await createAcquisition(drizzle(pool));
+    await createAcquisition(drizzle(other));
+  });
+  beforeEach(async () => {
+    await pool.query("TRUNCATE analytics_acquisition_records,analytics_acquisition_scopes");
+  });
+  afterAll(async () => {
+    await pool.end();
+    await other.end();
+  });
+  it("serializes concurrent duplicate receipts, rejects conflicting payloads and reads from a new client", async () => {
+    const a = acquisitionService(pool);
+    const b = acquisitionService(other);
+    const results = await Promise.all([
+      a.recordTouchpoint(acquisitionPoint),
+      b.recordTouchpoint(acquisitionPoint),
+    ]);
+    expect(results[0]).toEqual(results[1]);
+    expect(
+      (
+        await pool.query(
+          "SELECT count(*) FROM analytics_acquisition_records WHERE kind='touchpoints'",
+        )
+      ).rows[0].count,
+    ).toBe("1");
+    await expect(
+      b.recordTouchpoint({ ...acquisitionPoint, occurredAt: "2026-10-17T09:00:00.000Z" }),
+    ).rejects.toMatchObject({ code: "analytics/acquisition/conflict" });
+    const restartedPool = new Pool({ connectionString });
+    try {
+      expect(await acquisitionService(restartedPool).recordTouchpoint(acquisitionPoint)).toEqual(
+        results[0],
+      );
+    } finally {
+      await restartedPool.end();
+    }
+  });
+  it("serializes different records without lost updates, snapshots explicit login links and isolates tenants", async () => {
+    const a = acquisitionService(pool);
+    const b = acquisitionService(other);
+    await Promise.all([
+      a.recordTouchpoint(acquisitionPoint),
+      b.recordTouchpoint({
+        ...acquisitionPoint,
+        id: "direct",
+        occurredAt: "2026-10-17T09:00:00.000Z",
+        context: parseAcquisitionContext(
+          { url: "https://shop.test/", referrerAvailable: true },
+          acquisitionUrls,
+        ),
+      }),
+    ]);
+    await a.define(scope, {
+      id: "last",
+      model: "last-observed-touch",
+      modelVersion: "1",
+      revision: 1,
+      windowMs: 86400000,
+      reason: "initial",
+      idempotencyKey: "last",
+    });
+    const query = {
+      scope,
+      conversion: {
+        ref: "conversion",
+        identity: { kind: "subject" as const, ref: "user" },
+        occurredAt: acquisitionNow,
+      },
+      definitions: [{ id: "last", revision: 1 }],
+      limit: 100,
+    };
+    expect((await a.compare(query)).touchpoints).toEqual([]);
+    await a.compare({
+      ...query,
+      conversion: { ...query.conversion, identity: acquisitionPoint.identity },
+      reportId: "anonymous-report",
+    });
+    await b.linkKnownSubject({
+      scope,
+      id: "login",
+      anonymousRef: "session",
+      subjectRef: "user",
+      provenance: "authenticated-session",
+    });
+    const comparison = await a.compare(query);
+    expect(comparison.touchpoints).toHaveLength(2);
+    expect(comparison.results[0]).toMatchObject({ touchpointRefs: ["direct"], credit: 0 });
+    await expect(
+      b.linkKnownSubject({
+        scope,
+        id: "login-b",
+        anonymousRef: "session",
+        subjectRef: "other-user",
+        provenance: "login",
+      }),
+    ).rejects.toMatchObject({ code: "analytics/acquisition/conflict" });
+    await b.recordTouchpoint({ ...acquisitionPoint, scope: { ...scope, tenantId: "two" } });
+    await a.compare({ ...query, reportId: "report" });
+    await a.deleteIdentity(scope, { kind: "subject", ref: "user" });
+    await expect(b.compare(query)).rejects.toMatchObject({ code: "analytics/acquisition/deleted" });
+    await expect(b.recordTouchpoint(acquisitionPoint)).rejects.toMatchObject({
+      code: "analytics/acquisition/deleted",
+    });
+    const left = await pool.query(
+      "SELECT kind,count(*) FROM analytics_acquisition_records WHERE scope_key=$1 GROUP BY kind",
+      [JSON.stringify([scope.app, scope.environment, scope.tenantId])],
+    );
+    expect(left.rows.some((row) => ["touchpoints", "links", "reports"].includes(row.kind))).toBe(
+      false,
+    );
+    expect(
+      (
+        await pool.query(
+          "SELECT count(*) FROM analytics_acquisition_records WHERE kind='touchpoints'",
+        )
+      ).rows[0].count,
+    ).toBe("1");
+  });
+  it("rolls back the whole scoped update when persistence fails, then accepts a clean retry", async () => {
+    const service = acquisitionService(pool);
+    await service.recordTouchpoint(acquisitionPoint);
+    await pool.query(
+      "ALTER TABLE analytics_acquisition_records ADD CONSTRAINT reject_bad CHECK(record_key <> 'bad')",
+    );
+    try {
+      await expect(
+        service.recordTouchpoint({ ...acquisitionPoint, id: "bad" }),
+      ).rejects.toMatchObject({ code: "analytics/acquisition/persistence" });
+    } finally {
+      await pool.query("ALTER TABLE analytics_acquisition_records DROP CONSTRAINT reject_bad");
+    }
+    expect(
+      (
+        await pool.query(
+          "SELECT record_key FROM analytics_acquisition_records WHERE kind='touchpoints'",
+        )
+      ).rows,
+    ).toEqual([{ record_key: "visit" }]);
+    await service.recordTouchpoint({ ...acquisitionPoint, id: "bad" });
+    expect(
+      (
+        await pool.query(
+          "SELECT count(*) FROM analytics_acquisition_records WHERE kind='touchpoints'",
+        )
+      ).rows[0].count,
+    ).toBe("2");
+  });
+});
