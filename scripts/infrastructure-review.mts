@@ -203,6 +203,11 @@ export function inspectInfrastructureReview(
         const keys = [
           "name",
           "private",
+          "type",
+          "browser",
+          "os",
+          "cpu",
+          "libc",
           "exports",
           "imports",
           "bin",

@@ -287,24 +287,26 @@ it('real host', async () => {
     ).toEqual(["INFRA_REVIEW_MISSING"]);
   });
 
-  it.each(["imports", "bin"])(
-    "selects runtime manifest %s changes without source changes",
-    (field) => {
-      const { root, base } = fixture();
-      write(root, "packages/sample/package.json", {
-        name: "@croco/sample",
-        version: "1.0.0",
-        [field]:
-          field === "imports"
-            ? { "#host": { workerd: "./worker.js", node: "./node.js" } }
-            : "./cli.js",
-      });
-      const head = commit(root);
-      expect(inspectInfrastructureReview(root, base, head).diagnostics.map((d) => d.code)).toEqual([
-        "INFRA_REVIEW_MISSING",
-      ]);
-    },
-  );
+  it.each([
+    { field: "imports", value: { "#host": { workerd: "./worker.js", node: "./node.js" } } },
+    { field: "bin", value: "./cli.js" },
+    { field: "type", value: "module" },
+    { field: "browser", value: { "./node.js": "./worker.js" } },
+    { field: "os", value: ["linux"] },
+    { field: "cpu", value: ["x64"] },
+    { field: "libc", value: ["glibc"] },
+  ])("selects runtime manifest $field changes without source changes", ({ field, value }) => {
+    const { root, base } = fixture();
+    write(root, "packages/sample/package.json", {
+      name: "@croco/sample",
+      version: "1.0.0",
+      [field]: value,
+    });
+    const head = commit(root);
+    expect(inspectInfrastructureReview(root, base, head).diagnostics.map((d) => d.code)).toEqual([
+      "INFRA_REVIEW_MISSING",
+    ]);
+  });
 
   it("selects deployment Profile metadata without a source or catalog change", () => {
     const { root } = fixture();

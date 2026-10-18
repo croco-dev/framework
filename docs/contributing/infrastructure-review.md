@@ -13,7 +13,7 @@ The PR companion runs the same gate and includes decisions, constraints, reusabl
 in its JSON and Markdown reports. The gate never rewrites files.
 
 The gate selects changed production sources in public `packages/*/src`, runtime/infrastructure manifests, `presentation-preset/runtime-profiles.json`, runtime-affecting
-package manifest fields (including `imports` and `bin`), and changed catalog role/runtime metadata. Source deletions count. Private packages,
+package manifest fields (including `type`, `browser`, `imports`, `bin` and `os`/`cpu`/`libc` deployment constraints), and changed catalog role/runtime metadata. Source deletions count. Private packages,
 tests/fixtures, documentation and release-only version bumps are excluded. Unchanged historical packages
 need no record. Formatting/comment-only edits are excluded using parsed TypeScript output (literal content is preserved).
 An internal pure refactor cannot be inferred safely from a diff:
