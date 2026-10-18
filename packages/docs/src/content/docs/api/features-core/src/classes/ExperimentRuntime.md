@@ -23,6 +23,24 @@ title: "ExperimentRuntime"
 
 ## Methods
 
+### admitDisplay()
+
+> **admitDisplay**(`input`): `Promise`\<[`ExperimentAssignmentResult`](/api/features-core/src/type-aliases/experimentassignmentresult/)\>
+
+Revalidate a frozen assignment for display without evaluating the allocator/provider again.
+
+#### Parameters
+
+##### input
+
+[`ExperimentTarget`](/api/features-core/src/type-aliases/experimenttarget/) & `object` & `object`
+
+#### Returns
+
+`Promise`\<[`ExperimentAssignmentResult`](/api/features-core/src/type-aliases/experimentassignmentresult/)\>
+
+---
+
 ### assign()
 
 > **assign**(`input`): `Promise`\<[`ExperimentAssignmentResult`](/api/features-core/src/type-aliases/experimentassignmentresult/)\>

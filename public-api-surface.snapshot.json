@@ -17632,6 +17632,12 @@
           "sourceEntrypoint": "packages/features-core/src/index.ts",
           "runtimeExports": [
             {
+              "name": "ExperimentDeliveryBridge",
+              "exportKind": "declaration",
+              "source": "./libs/ExperimentDelivery",
+              "declarationKind": "class"
+            },
+            {
               "name": "ExperimentProblem",
               "exportKind": "declaration",
               "source": "./libs/Experiment",
@@ -17641,6 +17647,12 @@
               "name": "ExperimentRuntime",
               "exportKind": "declaration",
               "source": "./libs/ExperimentRuntime",
+              "declarationKind": "class"
+            },
+            {
+              "name": "InMemoryExperimentDeliveryStore",
+              "exportKind": "declaration",
+              "source": "./libs/ExperimentDelivery",
               "declarationKind": "class"
             },
             {
@@ -17794,6 +17806,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "experimentRegionFragment",
+              "exportKind": "declaration",
+              "source": "./libs/ExperimentDelivery",
+              "declarationKind": "function"
+            },
+            {
               "name": "normalizePolicyScope",
               "exportKind": "declaration",
               "source": "./libs/Policy",
@@ -17940,6 +17958,42 @@
               "declarationKind": "type"
             },
             {
+              "name": "ExperimentDeliveryIdentity",
+              "exportKind": "declaration",
+              "source": "./libs/ExperimentDelivery",
+              "declarationKind": "type"
+            },
+            {
+              "name": "ExperimentDeliveryInspection",
+              "exportKind": "declaration",
+              "source": "./libs/ExperimentDelivery",
+              "declarationKind": "type"
+            },
+            {
+              "name": "ExperimentDeliveryOptions",
+              "exportKind": "declaration",
+              "source": "./libs/ExperimentDelivery",
+              "declarationKind": "type"
+            },
+            {
+              "name": "ExperimentDeliveryReader",
+              "exportKind": "declaration",
+              "source": "./libs/ExperimentDelivery",
+              "declarationKind": "interface"
+            },
+            {
+              "name": "ExperimentDeliveryReceipt",
+              "exportKind": "declaration",
+              "source": "./libs/ExperimentDelivery",
+              "declarationKind": "type"
+            },
+            {
+              "name": "ExperimentDeliveryStore",
+              "exportKind": "declaration",
+              "source": "./libs/ExperimentDelivery",
+              "declarationKind": "interface"
+            },
+            {
               "name": "ExperimentEligibility",
               "exportKind": "declaration",
               "source": "./libs/Experiment",
@@ -17973,6 +18027,18 @@
               "name": "ExperimentRegistration",
               "exportKind": "declaration",
               "source": "./libs/Experiment",
+              "declarationKind": "type"
+            },
+            {
+              "name": "ExperimentRenderDecision",
+              "exportKind": "declaration",
+              "source": "./libs/ExperimentDelivery",
+              "declarationKind": "type"
+            },
+            {
+              "name": "ExperimentRenderRegion",
+              "exportKind": "declaration",
+              "source": "./libs/ExperimentDelivery",
               "declarationKind": "type"
             },
             {
@@ -21881,6 +21947,18 @@
               "declarationKind": "function"
             },
             {
+              "name": "ExperimentDeliveryClientProblem",
+              "exportKind": "named",
+              "source": "./libs/ExperimentRegion",
+              "declarationKind": "class"
+            },
+            {
+              "name": "ExperimentRegion",
+              "exportKind": "named",
+              "source": "./libs/ExperimentRegion",
+              "declarationKind": "function"
+            },
+            {
               "name": "GoalProgress",
               "exportKind": "named",
               "source": "./libs/GoalProgress",
@@ -22229,6 +22307,16 @@
               "name": "ExperienceSlotProps",
               "exportKind": "named",
               "source": "./libs/ExperienceSlot"
+            },
+            {
+              "name": "ExperimentRegionDecision",
+              "exportKind": "named",
+              "source": "./libs/ExperimentRegion"
+            },
+            {
+              "name": "ExperimentRegionProps",
+              "exportKind": "named",
+              "source": "./libs/ExperimentRegion"
             },
             {
               "name": "FrontendAuthBridgeSource",
@@ -22622,6 +22710,55 @@
               "name": "ExperienceSlotProps",
               "exportKind": "named",
               "source": "./libs/ExperienceSlot"
+            }
+          ]
+        },
+        {
+          "exportPath": "./experiments",
+          "kind": "code",
+          "targets": [
+            {
+              "conditions": ["types", "import"],
+              "target": "./dist/experiments.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
+              "target": "./dist/experiments.d.ts"
+            },
+            {
+              "conditions": ["import"],
+              "target": "./dist/experiments.mjs"
+            },
+            {
+              "conditions": ["require"],
+              "target": "./dist/experiments.js"
+            }
+          ],
+          "sourceEntrypoint": "packages/frontend-react/src/experiments.ts",
+          "runtimeExports": [
+            {
+              "name": "ExperimentDeliveryClientProblem",
+              "exportKind": "named",
+              "source": "./libs/ExperimentRegion",
+              "declarationKind": "class"
+            },
+            {
+              "name": "ExperimentRegion",
+              "exportKind": "named",
+              "source": "./libs/ExperimentRegion",
+              "declarationKind": "function"
+            }
+          ],
+          "typeExports": [
+            {
+              "name": "ExperimentRegionDecision",
+              "exportKind": "named",
+              "source": "./libs/ExperimentRegion"
+            },
+            {
+              "name": "ExperimentRegionProps",
+              "exportKind": "named",
+              "source": "./libs/ExperimentRegion"
             }
           ]
         },

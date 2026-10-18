@@ -4045,6 +4045,17 @@ const recoveryMetadataByCode = {
     redactionPolicy: "public",
     severity: "error",
   }),
+  "frontend-react/experiment-delivery-failed": recovery({
+    cause:
+      "Delivery admission changed the frozen decision, or the private receipt transport failed.",
+    userAction:
+      "Keep fallback on failed admission; preserve an already delivered screen when exposure reporting fails.",
+    operatorAction:
+      "Inspect the authenticated admission response and receipt endpoint. Retry only observation with the same display identity after recovery; never replay a completed purchase or benefit command.",
+    retryability: "conditional",
+    redactionPolicy: "safe-message",
+    severity: "error",
+  }),
   "frontend-react/page-data-unavailable": recovery({
     cause:
       "A component required page data, but PageDataProvider was missing or its data value was undefined.",

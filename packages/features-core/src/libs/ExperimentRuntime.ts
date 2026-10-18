@@ -322,6 +322,30 @@ export class ExperimentRuntime {
       : result;
   }
 
+  /** Revalidate a frozen assignment for display without evaluating the allocator/provider again. */
+  async admitDisplay(
+    input: ExperimentInput & { readonly assignmentId: string },
+  ): Promise<ExperimentAssignmentResult> {
+    await this.authorize({ ...input, action: "assign" });
+    const original = await this.original(input.assignmentId, input);
+    const registration = await this.registration(original);
+    const eligibility = await this.checkEligibility(registration, input);
+    if (eligibility.status !== "eligible")
+      return {
+        status: eligibility.status === "ineligible" ? "not_assigned" : "unavailable",
+        reason: eligibility.reason,
+      };
+    const admission = await this.options.store.admit(
+      original.id,
+      input.scope,
+      input.subject,
+      this.now(),
+    );
+    return admission.status === "admitted"
+      ? { status: "assigned", assignment: admission.assignment }
+      : admission;
+  }
+
   /** Admission is linearized with pause in the store. Admitted handlers may finish after pause. */
   async treat(
     input: ExperimentInput & { readonly assignmentId: string },

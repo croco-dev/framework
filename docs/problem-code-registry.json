@@ -1,6 +1,6 @@
 {
   "version": "croco.problem-code-registry.v1",
-  "problemCount": 1063,
+  "problemCount": 1064,
   "problems": [
     {
       "code": "ACCESS_DENIED",
@@ -16508,6 +16508,36 @@
         {
           "file": "packages/frontend-problems/src/index.ts",
           "line": 226,
+          "column": 1,
+          "kind": "problem-class"
+        }
+      ]
+    },
+    {
+      "code": "frontend-react/experiment-delivery-failed",
+      "category": "InternalServerError",
+      "status": 500,
+      "title": "Internal Server Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#frontend-react-experiment-delivery-failed",
+      "recovery": {
+        "cause": "Delivery admission changed the frozen decision, or the private receipt transport failed.",
+        "userAction": "Keep fallback on failed admission; preserve an already delivered screen when exposure reporting fails.",
+        "operatorAction": "Inspect the authenticated admission response and receipt endpoint. Retry only observation with the same display identity after recovery; never replay a completed purchase or benefit command.",
+        "retryability": "conditional",
+        "redactionPolicy": "safe-message",
+        "telemetry": {
+          "eventName": "croco.problem.error",
+          "severity": "error",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/frontend-react/src/libs/ExperimentRegion.ts",
+          "line": 6,
           "column": 1,
           "kind": "problem-class"
         }
