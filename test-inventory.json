@@ -2438,6 +2438,12 @@
       "owner": "@croco/esbuild-plugin"
     },
     {
+      "path": "packages/esbuild-plugin/src/tests/DiCompilerImports.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/esbuild-plugin"
+    },
+    {
       "path": "packages/esbuild-plugin/src/tests/PublishedGraphConsumer.spec.ts",
       "lane": "published",
       "qualifiers": [],
