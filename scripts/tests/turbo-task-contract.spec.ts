@@ -24,6 +24,16 @@ const turbo = JSON.parse(
 ) as TurboConfiguration;
 
 describe("Turbo task contract", () => {
+  it("hashes the worker limit for normal and executable-evidence test tasks", () => {
+    for (const owner of ["", "@croco/docs#", "@croco/oxlint-rules#"]) {
+      for (const command of ["test", "test:evidence"]) {
+        const task = `${owner}${command}`;
+        expect(turbo.tasks[task]?.env, task).toContain("VITEST_MAX_WORKERS");
+      }
+    }
+    expect(turbo.globalPassThroughEnv).not.toContain("VITEST_MAX_WORKERS");
+  });
+
   it("keeps test evidence options out of Turbo passthrough arguments", () => {
     expect(turbo.tasks["test:evidence"]).toEqual(turbo.tasks.test);
     expect(turbo.tasks["test:evidence"]?.inputs).toBeUndefined();
