@@ -512,6 +512,7 @@ function writeSaasProviderPackageDependencies(
   } else if (manifest.profile.runtimeTarget === "cloudflare-workers") {
     scripts["dev:worker"] = "wrangler dev --config wrangler.toml";
     scripts["build:worker"] = "wrangler deploy --dry-run --outdir dist/wrangler";
+    scripts["worker:smoke"] = "node scripts/worker-smoke.mjs";
     packageJson.devDependencies = {
       ...packageJson.devDependencies,
       wrangler: "^4.73.0",
@@ -533,6 +534,10 @@ function writeSaasProviderPackageDependencies(
     });
   }
   if (manifest.profile.runtimeTarget !== "cloudflare-workers") {
+    rmSync(join(targetDir, "apps", "api-server", "scripts", "worker-smoke.mjs"), { force: true });
+    rmSync(join(targetDir, "apps", "api-server", "src", "tests", "WorkerBootstrap.spec.ts"), {
+      force: true,
+    });
     rmSync(join(targetDir, "apps", "api-server", "wrangler.toml"), { force: true });
   }
 }
@@ -560,6 +565,7 @@ function writeSaasRootHostScripts(
     delete scripts["dev:api"];
     scripts["dev:worker"] = "pnpm --filter ./apps/api-server dev:worker";
     scripts["build:worker"] = "pnpm --filter ./apps/api-server build:worker";
+    scripts["worker:smoke"] = "pnpm --filter ./apps/api-server worker:smoke";
     packageJson.scripts = scripts;
   }
 
@@ -825,7 +831,10 @@ function createGeneratedRuntimeComposition(
 function createGeneratedTransportManifest(
   options: GeneratorOptions,
 ): RuntimeCompositionManifest["transports"] {
-  if (options.preset === "blank") {
+  if (
+    options.preset === "blank" ||
+    (isSaasPreset(options.preset) && options.saasProviderProfile === "saas-cloudflare")
+  ) {
     return [];
   }
 

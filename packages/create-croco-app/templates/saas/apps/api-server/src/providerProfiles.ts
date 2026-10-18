@@ -9,7 +9,7 @@ export type SaasProviderProfileName = typeof DEFAULT_SAAS_PROVIDER_PROFILE;
 
 export type SaasProviderProfile = {
   readonly name: SaasProviderProfileName;
-  readonly status: "executable" | "documentation-only";
+  readonly status: "executable" | "bootstrap-only" | "documentation-only";
   readonly description: string;
   readonly packages: readonly string[];
   readonly env: readonly string[];
@@ -29,9 +29,12 @@ type RuntimeGlobal = typeof globalThis & {
 
 const generatedProfile: SaasProviderProfile = {
   name: generatedSaasProviderProfileManifest.profile.name,
-  status: generatedSaasProviderProfileManifest.composition.executable
-    ? "executable"
-    : "documentation-only",
+  status:
+    String(generatedSaasProviderProfileManifest.composition.scope) === "bootstrap-only"
+      ? "bootstrap-only"
+      : generatedSaasProviderProfileManifest.composition.executable
+        ? "executable"
+        : "documentation-only",
   description: generatedSaasProviderProfileManifest.profile.description,
   packages: generatedSaasProviderProfileManifest.packages,
   env: [

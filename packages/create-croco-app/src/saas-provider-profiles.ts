@@ -126,6 +126,7 @@ export type SaasProviderProfileManifest = {
   capabilities: readonly SaasProviderCapability[];
   composition: {
     executable: boolean;
+    scope: "saas" | "bootstrap-only" | "unavailable";
     plugins: readonly SaasProviderPluginDefinition[];
   };
   smoke: {
@@ -372,100 +373,104 @@ export const SAAS_PROVIDER_PROFILES = {
   },
   "saas-cloudflare": {
     name: "saas-cloudflare",
-    displayName: "Cloudflare SaaS",
+    displayName: "Cloudflare SaaS bootstrap",
     runtimeTarget: "cloudflare-workers",
     description:
-      "Cloudflare Workers profile with Clerk auth, Polar billing, Upstash metering/tasks, R2 storage, and explicit Worker runtime limits.",
-    packages: [
-      "@croco/preset-cloudflare",
-      "@croco/transports-cloudflare-workers",
-      "@croco/auth-clerk",
-      "@croco/billing-polar",
-      "@croco/metering-upstash",
-      "@croco/storage-r2",
-      "@croco/tasks-qstash",
-      "@croco/triggers-qstash",
-      "@clerk/backend",
-      "@polar-sh/sdk",
-      "@upstash/qstash",
-      "@upstash/redis",
+      "Native Worker bootstrap only. SaaS providers are unavailable until separately implemented, connected and verified; this profile is not full SaaS or production certified.",
+    packages: ["@croco/preset-cloudflare"],
+    plugins: [
+      plugin({
+        factoryExport: "cloudflareWorkersHost",
+        pluginName: "cloudflare-workers-host",
+        packageName: "@croco/preset-cloudflare",
+        moduleNames: ["@croco/preset-cloudflare/host"],
+        maturity: "alpha",
+        capabilities: ["runtime.host"],
+        env: [],
+        verification: ["pnpm --filter @croco/preset-cloudflare test"],
+        examples: ["packages/preset-cloudflare/README.md"],
+      }),
     ],
-    plugins: [],
-    env: [
-      ...commonEnv,
-      envVar("CLOUDFLARE_ACCOUNT_ID", true),
-      envVar("CLOUDFLARE_API_TOKEN", true),
-      envVar("R2_BUCKET", true),
-      envVar("CLERK_SECRET_KEY", true),
-      envVar("POLAR_ACCESS_TOKEN", true),
-      envVar("POLAR_WEBHOOK_SECRET", true),
-      envVar("POLAR_PRODUCT_ID_TEAM", true),
-      envVar("UPSTASH_REDIS_REST_URL", true),
-      envVar("UPSTASH_REDIS_REST_TOKEN", true),
-      envVar("UPSTASH_QSTASH_TOKEN", true),
-      envVar("UPSTASH_QSTASH_CURRENT_SIGNING_KEY", true),
-      envVar("UPSTASH_QSTASH_NEXT_SIGNING_KEY", true),
-    ],
+    env: [envVar("SAAS_PROVIDER_PROFILE", false, "saas-cloudflare")],
     capabilities: capabilities({
-      runtime: capability(
-        "runtime",
-        "Cloudflare Workers",
-        "documented",
-        "@croco/transports-cloudflare-workers",
-        ["CLOUDFLARE_ACCOUNT_ID"],
-      ),
-      auth: capability("auth", "Clerk", "documented", "@croco/auth-clerk", ["CLERK_SECRET_KEY"]),
-      persistence: capability(
-        "persistence",
-        "Application-defined Worker persistence",
-        "documented",
+      runtime: {
+        ...capability(
+          "runtime",
+          "Cloudflare Workers bootstrap",
+          "configured",
+          "@croco/preset-cloudflare",
+          [],
+        ),
+        pluginName: "cloudflare-workers-host",
+        notes:
+          "Native env bindings and isolated application/request scopes. No SaaS provider certification.",
+      },
+      auth: capability(
+        "auth",
+        "No verified Worker auth provider selected",
+        "unavailable",
         undefined,
         [],
       ),
-      billing: capability("billing", "Polar", "documented", "@croco/billing-polar", [
-        "POLAR_ACCESS_TOKEN",
-        "POLAR_WEBHOOK_SECRET",
-        "POLAR_PRODUCT_ID_TEAM",
-      ]),
-      metering: capability("metering", "Upstash Redis", "documented", "@croco/metering-upstash", [
-        "UPSTASH_REDIS_REST_URL",
-        "UPSTASH_REDIS_REST_TOKEN",
-      ]),
-      storage: capability("storage", "Cloudflare R2", "documented", "@croco/storage-r2", [
-        "R2_BUCKET",
-      ]),
-      tasks: capability("tasks", "QStash", "documented", "@croco/tasks-qstash", [
-        "UPSTASH_QSTASH_TOKEN",
-        "UPSTASH_QSTASH_CURRENT_SIGNING_KEY",
-        "UPSTASH_QSTASH_NEXT_SIGNING_KEY",
-      ]),
+      persistence: capability(
+        "persistence",
+        "No verified Worker persistence selected",
+        "unavailable",
+        undefined,
+        [],
+      ),
+      billing: capability(
+        "billing",
+        "No verified Worker billing provider selected",
+        "unavailable",
+        undefined,
+        [],
+      ),
+      metering: capability(
+        "metering",
+        "No verified Worker metering provider selected",
+        "unavailable",
+        undefined,
+        [],
+      ),
+      storage: capability(
+        "storage",
+        "No verified Worker storage binding selected",
+        "unavailable",
+        undefined,
+        [],
+      ),
+      tasks: capability(
+        "tasks",
+        "No verified Worker task provider selected",
+        "unavailable",
+        undefined,
+        [],
+      ),
       telemetry: capability(
         "telemetry",
-        "OpenTelemetry fetch export",
-        "documented",
-        "@croco/telemetry-api",
-        ["TELEMETRY_ENABLED", "OTEL_EXPORTER_OTLP_ENDPOINT"],
+        "No verified Worker telemetry exporter selected",
+        "unavailable",
+        undefined,
+        [],
       ),
       webhookVerification: capability(
         "webhookVerification",
-        "Polar + QStash signatures",
-        "documented",
+        "No verified Worker webhook provider selected",
+        "unavailable",
         undefined,
-        [
-          "POLAR_WEBHOOK_SECRET",
-          "UPSTASH_QSTASH_CURRENT_SIGNING_KEY",
-          "UPSTASH_QSTASH_NEXT_SIGNING_KEY",
-        ],
+        [],
       ),
     }),
-    zeroCredentialSmoke: "pnpm demo:smoke",
+    zeroCredentialSmoke: "pnpm worker:smoke",
     realProviderSmoke: "SAAS_PROVIDER_PROFILE=saas-cloudflare pnpm profile:smoke:real",
     deployNotes: [
-      "Keep the generated wrangler.toml nodejs_compat flag because the demo composition imports Node-compatible modules.",
-      "Keep generated smoke local; use pnpm profile:smoke:real only after Worker secrets are bound.",
-      "Verify Polar and QStash signatures before Worker handlers mutate billing, metering, or task state.",
-      "Flush telemetry through the Worker request lifecycle instead of AWS exec-wrapper style boot hooks.",
-      "Run pnpm profile:check in CI and fail deployment when runtimeTarget or required capabilities drift.",
+      "Only GET /ops/health is available. Other requests fail with CROCO_SAAS_PROFILE_CAPABILITY_UNAVAILABLE; webhooks never mutate state.",
+      "The host plugin installs the actual fetch env into one ApplicationRuntime per env identity; bindings are never read from process.env.",
+      "Keep nodejs_compat for the framework AsyncLocalStorage scope. No Node-only provider SDK is selected by the Worker entry.",
+      "Health proves bootstrap readiness only. It does not certify auth, billing, persistence, storage, tasks, metering, telemetry or webhook verification.",
+      "profile:check verifies the bootstrap graph. profile:smoke:real refuses full SaaS because required providers remain unavailable.",
+      "Provider implementations and their bindings require separate integration and real-service evidence before promotion.",
     ],
   },
   "saas-lambda": {
@@ -598,6 +603,12 @@ export function createSaasProviderProfileManifest(
     ),
     composition: {
       executable: profile.plugins.length > 0,
+      scope:
+        profile.name === "saas-cloudflare"
+          ? "bootstrap-only"
+          : profile.plugins.length > 0
+            ? "saas"
+            : "unavailable",
       plugins: profile.plugins,
     },
     smoke: {
@@ -625,7 +636,11 @@ export function createSaasProviderProfileManifest(
           "Run profile:check, croco doctor, and generated app smoke checks before accepting a manifest version change.",
         ],
       },
-      qualityGates: ["profile:check", "croco doctor --json", "demo:smoke"],
+      qualityGates: [
+        "profile:check",
+        "croco doctor --json",
+        profile.zeroCredentialSmoke.replace("pnpm ", ""),
+      ],
     },
     tenantModel: {
       currentModel: tenantModelManifest.currentModel,
@@ -717,7 +732,10 @@ export function renderGeneratedSaasProviderProfileSource(
     `export const generatedSaasProviderSecretsChecklist = ${JSON.stringify(options.providerSecretsChecklist)} as const;`,
   ];
 
-  if (!options.manifest.composition.executable) {
+  if (
+    !options.manifest.composition.executable ||
+    options.manifest.composition.scope === "bootstrap-only"
+  ) {
     return [
       'import type { ApplicationRuntime, CrocoApplicationDefinition } from "@croco/framework-module";',
       'import type { AppConfig } from "@croco/transports-http";',
@@ -1015,6 +1033,8 @@ export function renderSaasDeployNotes(manifest: SaasProviderProfileManifest): st
     ),
     "",
     "## Executable Composition",
+    "",
+    `Composition scope: \`${manifest.composition.scope}\`. Bootstrap readiness is distinct from full SaaS provider readiness.`,
     "",
     ...(manifest.composition.executable
       ? manifest.composition.plugins.map(

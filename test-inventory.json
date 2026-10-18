@@ -1598,6 +1598,12 @@
       "owner": "@croco/cohort-drizzle"
     },
     {
+      "path": "packages/create-croco-app/src/tests/CloudflareBootstrap.spec.ts",
+      "lane": "fast",
+      "qualifiers": ["coverage"],
+      "owner": "create-croco-app"
+    },
+    {
       "path": "packages/create-croco-app/src/tests/E2E.spec.ts",
       "lane": "integration",
       "qualifiers": ["coverage"],
@@ -1979,6 +1985,17 @@
       "generated": {
         "sourcePath": "packages/create-croco-app/templates/saas/apps/api-server/src/tests/SaasDemo.spec.ts",
         "generatedPath": "apps/api-server/src/tests/SaasDemo.spec.ts",
+        "commandId": "create-croco-app"
+      }
+    },
+    {
+      "path": "packages/create-croco-app/templates/saas/apps/api-server/src/tests/WorkerBootstrap.spec.ts",
+      "lane": "generated-app",
+      "qualifiers": [],
+      "owner": "create-croco-app",
+      "generated": {
+        "sourcePath": "packages/create-croco-app/templates/saas/apps/api-server/src/tests/WorkerBootstrap.spec.ts",
+        "generatedPath": "apps/api-server/src/tests/WorkerBootstrap.spec.ts",
         "commandId": "create-croco-app"
       }
     },
@@ -4320,6 +4337,12 @@
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/presentation-preset"
+    },
+    {
+      "path": "packages/preset-cloudflare/src/tests/CloudflareHostPlugin.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/preset-cloudflare"
     },
     {
       "path": "packages/preset-cloudflare/src/tests/presetCloudflare.spec.ts",

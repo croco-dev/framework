@@ -67,3 +67,17 @@ The preset facade owns the Workers lifecycle, `@croco/transports-http` owns HTTP
 pnpm --filter @croco/preset-cloudflare test
 pnpm --filter @croco/preset-cloudflare typecheck
 ```
+
+## Native Worker application bindings
+
+`cloudflareWorkersHost(env)` from `@croco/preset-cloudflare/application` installs `CLOUDFLARE_ENV_TOKEN` in an application-owned
+module. Compose it with `defineCrocoApplication`, initialize `createApplicationRuntime`,
+and bind callbacks with that runtime before calling `createCloudflareWorkersHost`.
+Create one runtime for each native env identity; never copy secrets into `process.env`.
+The plugin is alpha and provides only `runtime.host`. It selects no SaaS providers and
+does not certify auth, persistence, billing, metering, storage, tasks, telemetry or webhooks.
+Native Workers execution still requires `nodejs_compat` for framework AsyncLocalStorage.
+
+The application subpath also exports `createCloudflareWorkersHost`. Its ESM module
+can be loaded by the generated CommonJS tooling on Node.js 24. The existing fetch
+entrypoint keeps its independent dependency boundary.

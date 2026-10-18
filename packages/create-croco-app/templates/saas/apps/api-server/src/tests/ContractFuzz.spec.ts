@@ -52,9 +52,13 @@ type RuntimeContainerRegistry = {
 const runtimeEvidence = new Map<string, RuntimeEvidence>();
 
 describe("generated contract verification", () => {
-  if (!generatedSaasProviderProfileManifest.composition.executable) {
+  if (String(generatedSaasProviderProfileManifest.composition.scope) !== "saas") {
     it("reports that contract execution is unavailable for documentation-only profiles", () => {
-      expect(generatedSaasProviderProfileManifest.composition.plugins).toEqual([]);
+      expect(
+        generatedSaasProviderProfileManifest.capabilities.find(
+          ({ capability }) => capability === "billing",
+        )?.productionState,
+      ).not.toBe("configured-production-plugin");
     });
     return;
   }

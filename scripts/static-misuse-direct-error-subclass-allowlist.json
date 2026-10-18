@@ -60,7 +60,7 @@
     {
       "package": "create-croco-app",
       "file": "packages/create-croco-app/src/saas-provider-profiles.ts",
-      "line": 167,
+      "line": 168,
       "excerpt": "export class SaasProviderProfileError extends Error {",
       "reason": "Scaffolding policy error preserves the provider-profile diagnostic code and detail.",
       "owner": "framework-error-handling",

@@ -47,9 +47,10 @@ import {
   seedDefaultSaasRuntime,
 } from "../saasDemo";
 
-const executableProfileTest = generatedSaasProviderProfileManifest.composition.executable
-  ? it
-  : (_name: string, _test: () => void | Promise<void>): void => {};
+const executableProfileTest =
+  String(generatedSaasProviderProfileManifest.composition.scope) === "saas"
+    ? it
+    : (_name: string, _test: () => void | Promise<void>): void => {};
 
 describe("SaaS golden path demo", () => {
   beforeEach(() => {
@@ -60,10 +61,15 @@ describe("SaaS golden path demo", () => {
     const executable = generatedSaasProviderProfileManifest.composition.executable;
 
     expect(getSaasProviderProfile()).toMatchObject({
-      status: executable ? "executable" : "documentation-only",
+      status:
+        String(generatedSaasProviderProfileManifest.composition.scope) === "bootstrap-only"
+          ? "bootstrap-only"
+          : executable
+            ? "executable"
+            : "documentation-only",
     });
 
-    if (!executable) {
+    if (String(generatedSaasProviderProfileManifest.composition.scope) !== "saas") {
       await expect(createCrocoApp({ profileMode: "zero-credential" })).rejects.toThrow(
         "CROCO_SAAS_PROFILE_RUNTIME_UNAVAILABLE",
       );

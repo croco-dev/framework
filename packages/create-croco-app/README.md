@@ -181,3 +181,16 @@ secret resolution or telemetry delivery. Live AWS and certification remain unver
 The sample uses process-local state; the SPA is separate. `saas-lambda` remains documentation-only,
 and this minimal API does not claim Clerk, Polar, QStash, SQS or scheduler support.
 See the generated `lambda/README.md` for packaging, drift adoption and live validation boundaries.
+
+## Cloudflare SaaS bootstrap boundary
+
+The `saas-cloudflare` provider profile runs native Worker bootstrap health through the
+existing Host and an env-owned ApplicationRuntime. Its manifest declares
+`composition.scope: "bootstrap-only"`; GET `/ops/health` is separate from full SaaS readiness.
+Unconnected domain operations and webhooks fail with
+`CROCO_SAAS_PROFILE_CAPABILITY_UNAVAILABLE` (501), and invalid bootstrap bindings return a
+redacted `CROCO_SAAS_PROFILE_BOOTSTRAP_FAILED` (500). The Worker imports no Node-only
+provider SDK and uses no in-memory SaaS replacement. Local demo code is separate and
+unavailable for this profile. `profile:check` validates the bootstrap graph while
+`profile:smoke:real` refuses full SaaS promotion. Real provider support and certification
+require separate implementation, connection and execution evidence.

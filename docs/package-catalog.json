@@ -2241,7 +2241,12 @@
         "adapter": "Workers fetch lifecycle and build-target compatibility facade",
         "runtimes": ["cloudflare-workers"],
         "requiredEnv": ["Cloudflare Worker env object supplied by platform"],
-        "features": ["fetch lifecycle host", "runtime context bridge", "ESM build target"]
+        "features": [
+          "fetch lifecycle host",
+          "runtime context bridge",
+          "ESM build target",
+          "alpha env-owned application bindings; no SaaS provider certification"
+        ]
       },
       "preset-lambda": {
         "domain": "AWS Lambda host",

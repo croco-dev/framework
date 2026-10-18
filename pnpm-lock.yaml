@@ -5125,6 +5125,12 @@ importers:
 
   packages/preset-cloudflare:
     dependencies:
+      '@croco/framework-context':
+        specifier: workspace:*
+        version: link:../framework-context
+      '@croco/framework-module':
+        specifier: workspace:*
+        version: link:../framework-module
       '@croco/framework-preset':
         specifier: workspace:*
         version: link:../framework-preset

@@ -85,7 +85,7 @@ describe.each([
   });
 });
 
-describe.each(["lambda", "worker"] as const)("SaaS %s async host bootstrap", (entry) => {
+describe.each(["lambda"] as const)("SaaS %s async host bootstrap", (entry) => {
   function loadEntry(createCrocoApp: ReturnType<typeof vi.fn>) {
     const host = vi.fn(async () => "response");
     const createHost = vi.fn(() => host);
@@ -1143,11 +1143,11 @@ function checkSaasStructure() {
   checkFileContains(
     "saas",
     ["apps", "api-server", "src", "worker.ts"],
-    /hostPlatform: "cloudflare-workers"/,
+    /createWorkerApplication\(env\)/,
   );
   checkFileContains(
     "saas",
-    ["apps", "api-server", "src", "worker.ts"],
+    ["apps", "api-server", "src", "workerBootstrap.ts.hbs"],
     /createCloudflareWorkersHost/,
   );
   checkFileContains(
