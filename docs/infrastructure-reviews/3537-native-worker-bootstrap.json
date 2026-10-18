@@ -66,10 +66,9 @@
       "classification": "runtime-adapter",
       "reason": "The opt-in application entrypoint supplies an alpha native-env Host plugin for an application-owned initialized graph without installing or certifying SaaS providers.",
       "files": {
-        "packages/preset-cloudflare/package.json": "7fdff1d1a072f3a767a924f4588ba27e339a0003ecb65d632cc60484c130b54f",
+        "packages/preset-cloudflare/package.json": "b7f7bb67d36eba5779588ddc8eb03e7ae14ef4e0c9443c7e504b140382a11de9",
         "packages/preset-cloudflare/src/application.ts": "89a966fa68f6b4e85f8a26900eeb750066cfcfbe0c790c2f8146b56c44ba8e6d",
-        "packages/preset-cloudflare/tsup.config.ts": "03892da99c2bb8c3cc07405c1152ae7c5d11cbf61361777ffd0640080eabd4f3",
-        "docs/package-catalog.json": "f12ad7a827ed2ec8d34688adfab14219c9c7e7e6ce9f4aaf365ae29139e391ac"
+        "packages/preset-cloudflare/tsup.config.ts": "03892da99c2bb8c3cc07405c1152ae7c5d11cbf61361777ffd0640080eabd4f3"
       },
       "catalogRuntimes": ["cloudflare-workers"],
       "profiles": {

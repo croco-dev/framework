@@ -40,6 +40,44 @@ describe("Cloudflare host native environment ownership", () => {
       await Promise.all(runtimes.map((runtime) => runtime.dispose()));
     }
   });
+  it("resolves source entrypoints for workspace ESM and CommonJS tooling", () => {
+    const root = mkdtempSync(join(tmpdir(), "croco-worker-source-exports-"));
+    try {
+      const installed = join(root, "node_modules/@croco/preset-cloudflare");
+      mkdirSync(join(installed, "src"), { recursive: true });
+      writeFileSync(
+        join(installed, "package.json"),
+        readFileSync(new URL("../../package.json", import.meta.url), "utf8"),
+      );
+      for (const entry of ["index", "application", "fetch"]) {
+        writeFileSync(join(installed, `src/${entry}.ts`), "export {};\n");
+      }
+      const result = spawnSync(
+        process.execPath,
+        [
+          "--input-type=module",
+          "--eval",
+          `
+        import { createRequire } from "node:module";
+        import { pathToFileURL } from "node:url";
+        const require = createRequire(import.meta.url);
+        for (const [subpath, entry] of [["", "index"], ["/application", "application"], ["/fetch", "fetch"]]) {
+          const name = "@croco/preset-cloudflare" + subpath;
+          const expected = process.cwd() + "/node_modules/@croco/preset-cloudflare/src/" + entry + ".ts";
+          if (require.resolve(name) !== expected || import.meta.resolve(name) !== pathToFileURL(expected).href) {
+            throw new Error("Source entrypoint resolution differs: " + name);
+          }
+        }
+      `,
+        ],
+        { cwd: root, encoding: "utf8" },
+      );
+      expect(result.stderr).toBe("");
+      expect(result.status).toBe(0);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
   it("exposes the application entrypoint to both native ESM and generated CommonJS tooling", () => {
     const root = mkdtempSync(join(tmpdir(), "croco-worker-exports-"));
     try {
