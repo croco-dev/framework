@@ -1,3 +1,4 @@
+import { spawnSync } from "node:child_process";
 import { mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -96,6 +97,34 @@ secret_name = "api-token"
     `${source}\n[env.production]\nname = "production-api"\n`,
   );
   expect(validateInfrastructureFiles(root, { ...plan, artifact: "worker.toml" }).ok).toBe(false);
+});
+it.each([
+  "broken = [1 # synthetic-never-print-this",
+  "broken = { key = 1 # synthetic-never-print-this",
+])("rejects an unfinished TOML structure without hanging or disclosing input: %s", (source) => {
+  const { root, plan } = setup("cloudflare-workers");
+  writeFileSync(join(root, "worker.toml"), source);
+  const entrypoint = new URL("../../dist/verification.js", import.meta.url).href;
+  const result = spawnSync(
+    process.execPath,
+    [
+      "--input-type=module",
+      "-e",
+      `import { validateInfrastructureFiles } from ${JSON.stringify(entrypoint)};
+console.log(JSON.stringify(validateInfrastructureFiles(process.argv[1], JSON.parse(process.argv[2]))));`,
+      root,
+      JSON.stringify({ ...plan, artifact: "worker.toml" }),
+    ],
+    { encoding: "utf8", timeout: 5000 },
+  );
+  expect(result.error).toBeUndefined();
+  expect(result.status).toBe(0);
+  expect(JSON.parse(result.stdout)).toMatchObject({
+    ok: false,
+    diagnostics: [{ code: "CROCO_INFRA_SCHEMA" }],
+  });
+  expect(result.stdout).not.toContain("synthetic-never-print-this");
+  expect(result.stderr).toBe("");
 });
 it("rejects missing files, traversal and symlinks outside the project with a stable diagnostic", () => {
   const { root, plan } = setup("aws-lambda");

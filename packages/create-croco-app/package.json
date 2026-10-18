@@ -63,7 +63,7 @@
     "fs-extra": "^11.0.0",
     "handlebars": "^4.7.10",
     "picocolors": "^1.0.0",
-    "smol-toml": "1.7.0",
+    "smol-toml": "1.7.1",
     "yaml": "2.9.0"
   },
   "devDependencies": {
