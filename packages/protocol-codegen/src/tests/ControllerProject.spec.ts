@@ -392,6 +392,74 @@ describe("createControllerProject", () => {
     },
   );
 
+  describe.each([
+    {
+      name: "single-quoted apostrophe",
+      directory: "team's",
+      literal: String.raw`'./team\'s/value'`,
+    },
+    {
+      name: "double-quoted quotation mark",
+      directory: 'team"s',
+      literal: String.raw`"./team\"s/value"`,
+    },
+    {
+      name: "escaped backslash separators",
+      directory: "team's",
+      literal: String.raw`'.\\team\'s\\value'`,
+    },
+  ])("runtime import literals: $name", ({ directory, literal }) => {
+    it.each(["relative", "alias", "dynamic", "CommonJS"] as const)(
+      "preserves the dependency through a %s import",
+      async (kind) => {
+        const root = createTemporaryDirectory();
+        writeJson(path.join(root, "package.json"), {
+          type: kind === "CommonJS" ? "commonjs" : "module",
+        });
+        writeJson(path.join(root, "tsconfig.json"), {
+          compilerOptions: {
+            target: "ES2022",
+            module: kind === "CommonJS" ? "CommonJS" : "ESNext",
+            moduleResolution: kind === "CommonJS" ? "Node" : "Bundler",
+            baseUrl: ".",
+            paths: { "@helper/*": [`${directory}/*`] },
+          },
+        });
+        writeFile(
+          path.join(root, directory, "value.ts"),
+          "export const value = 'literal-dependency';",
+        );
+        const specifier = kind === "alias" ? "'@helper/value'" : literal;
+        const dependency =
+          kind === "dynamic"
+            ? `const { value } = await import(${specifier});`
+            : `import { value } from ${specifier};`;
+        writeFile(
+          path.join(root, "Controller.ts"),
+          `${dependency} export class Controller { static value = value; }`,
+        );
+        const session = createControllerProject({ cwd: root, controllers: "Controller.ts" });
+        try {
+          expect(session.getPreEmitDiagnostics()).toEqual([]);
+          session.emit();
+          const emittedPath = path.join(session.emitDir, "Controller.js");
+          const program = ts.createProgram([emittedPath], { allowJs: true, noEmit: true });
+          expect(
+            program.getSyntacticDiagnostics().map((diagnostic) => ({
+              code: diagnostic.code,
+              message: ts.flattenDiagnosticMessageText(diagnostic.messageText, "\n"),
+            })),
+          ).toEqual([]);
+          const [moduleExports] = await session.importControllerModules();
+          expect((moduleExports.Controller as { value: string }).value).toBe("literal-dependency");
+          expect(readNativeControllerValue(emittedPath)).toBe("literal-dependency");
+        } finally {
+          session.dispose();
+        }
+      },
+    );
+  });
+
   it("rewrites a runtime path alias to the emitted JavaScript module", async () => {
     const root = createTemporaryDirectory();
     writeJson(path.join(root, "tsconfig.json"), {
