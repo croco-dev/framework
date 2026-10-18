@@ -40,8 +40,6 @@ import {
   type RouteIR,
 } from "@croco/protocols-core";
 
-import type { z } from "zod";
-
 export type GenerateClientOptions = {
   readonly frontendActionManifestInputs?: readonly FrontendActionManifestMergeInput[];
   readonly frontendActionManifestPath?: string;
@@ -2879,7 +2877,7 @@ function assertOutputObjectKeysSupported(
   } else if (typeName === "ZodRecord") {
     assertOutputObjectKeysSupported(
       route,
-      (schema as z.ZodRecord).valueSchema,
+      (schema as { readonly valueSchema: unknown }).valueSchema,
       `${schemaPath}[]`,
       seen,
     );
