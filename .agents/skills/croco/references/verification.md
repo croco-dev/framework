@@ -28,6 +28,23 @@ users accessing web applications through a browser is unchanged.
 
 State the selected contract and implementation, runtime, maturity, certification state, commands that passed, and any unexecuted live or production check. For a custom adapter, identify its application-owned location and the missing first-party capability or compatibility that justified it.
 
+## Clerk Workers authentication subset
+
+Use the explicit `@croco/auth-clerk/workers` entry and `clerkWorkersAuth()` for the
+alpha cookie/bearer subset. The root package and `clerkAuth()` retain their Node/Lambda
+claims; the package-wide catalog must not recommend the entire Clerk surface on Workers.
+Pass the Worker secret binding directly, and configure trusted audience, authorized parties,
+authoritative tenant mapping and server target resolution. Each authenticated request reads
+upstream session state; revocation and upstream availability are part of that request path.
+
+`pnpm --filter @croco/auth-clerk test` includes actual workerd fixtures with `nodejs_compat`,
+real local signatures and synthetic upstream HTTP. They verify the SDK browser crypto branch,
+expiry/signature/audience/origin rejection, tenant isolation, session revoke and redacted failures.
+This is not live Clerk certification. Webhook and user/organization administration remain
+unclaimed on Workers. The generated `saas-cloudflare` profile exposes an opt-in
+`createGeneratedWorkersAuthPlugin()` helper and the subset evidence; full SaaS bootstrap
+remains documentation-only until its separate integration is verified.
+
 ## Kubernetes Node API generation
 
 `--preset production-app --backend-deploy kubernetes` generates a minimal, uncertified
@@ -124,20 +141,3 @@ GraphQL SDK against the declared schema and operations. Shared GraphQL and tRPC 
 run through Node fetch and the Lambda host envelope. Keep client-disconnect cancellation,
 subscription/streaming, deployed Cloudflare and full SaaS profile certification separate
 from these local results.
-
-## Clerk Workers authentication subset
-
-Use the explicit `@croco/auth-clerk/workers` entry and `clerkWorkersAuth()` for the
-alpha cookie/bearer subset. The root package and `clerkAuth()` retain their Node/Lambda
-claims; the package-wide catalog must not recommend the entire Clerk surface on Workers.
-Pass the Worker secret binding directly, and configure trusted audience, authorized parties,
-authoritative tenant mapping and server target resolution. Each authenticated request reads
-upstream session state; revocation and upstream availability are part of that request path.
-
-`pnpm --filter @croco/auth-clerk test` includes actual workerd fixtures with `nodejs_compat`,
-real local signatures and synthetic upstream HTTP. They verify the SDK browser crypto branch,
-expiry/signature/audience/origin rejection, tenant isolation, session revoke and redacted failures.
-This is not live Clerk certification. Webhook and user/organization administration remain
-unclaimed on Workers. The generated `saas-cloudflare` profile exposes an opt-in
-`createGeneratedWorkersAuthPlugin()` helper and the subset evidence; full SaaS bootstrap
-remains documentation-only until its separate integration is verified.
