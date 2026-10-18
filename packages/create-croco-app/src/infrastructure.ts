@@ -508,7 +508,41 @@ function validEnvironmentSource(value: unknown): boolean {
       (reference["optional"] === undefined || typeof reference["optional"] === "boolean")
     );
   }
-  if (field === "fieldRef") return name(reference["fieldPath"]);
+  if (field === "fieldRef") {
+    if (reference["apiVersion"] !== undefined && reference["apiVersion"] !== "v1") return false;
+    const path = reference["fieldPath"];
+    if (typeof path !== "string") return false;
+    if (
+      [
+        "metadata.name",
+        "metadata.namespace",
+        "metadata.uid",
+        "spec.nodeName",
+        "spec.serviceAccountName",
+        "status.hostIP",
+        "status.hostIPs",
+        "status.podIP",
+        "status.podIPs",
+      ].includes(path)
+    )
+      return true;
+    const match = /^metadata\.(labels|annotations)\['([^']+)'\]$/.exec(path);
+    const key = match?.[2];
+    if (!key) return false;
+    const parts = key.split("/");
+    const suffix = parts.at(-1) ?? "";
+    const prefix = parts.length === 2 ? (parts[0] ?? "") : undefined;
+    return (
+      parts.length <= 2 &&
+      suffix.length <= 63 &&
+      /^[a-zA-Z0-9]([a-zA-Z0-9_.-]*[a-zA-Z0-9])?$/.test(suffix) &&
+      (prefix === undefined ||
+        (prefix.length <= 253 &&
+          prefix
+            .split(".")
+            .every((part) => part.length <= 63 && /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/.test(part))))
+    );
+  }
   if (field === "resourceFieldRef") return name(reference["resource"]);
   return false;
 }
