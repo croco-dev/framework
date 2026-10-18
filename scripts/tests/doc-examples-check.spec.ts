@@ -149,6 +149,34 @@ describe("doc-examples-check.mts", () => {
     scriptTestTimeout,
   );
 
+  it(
+    "checks container-relative list and blockquote fences with original source lines",
+    () => {
+      const root = createTempRoot();
+      writeValidDocs(root, [
+        "1. Example",
+        "",
+        "    ~~~ts typecheck",
+        '    const list: number = "wrong";',
+        "    ~~~~",
+        "",
+        "> ````tsx typecheck",
+        '> const quote: number = "wrong";',
+        "> `````",
+      ]);
+
+      const result = runScript(root, "--check");
+      expect(result.status).toBe(1);
+      for (const line of [12, 16]) {
+        expect(result.stdout).toContain(
+          `README.md:${line}: Type 'string' is not assignable to type 'number'`,
+        );
+      }
+      expect(result.stdout.match(/not assignable/g)).toHaveLength(2);
+    },
+    scriptTestTimeout,
+  );
+
   it.each([
     ["direct", "./src/features/main.ts"],
     ["barrel", "./src/features/index.ts"],

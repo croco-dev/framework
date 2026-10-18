@@ -2,6 +2,7 @@
 
 import { compareStrings } from "../tooling/compareStrings.mjs";
 
+import { fromMarkdown } from "mdast-util-from-markdown";
 import * as ts from "typescript";
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -653,70 +654,37 @@ function isMarkdownFile(path: string): boolean {
 
 function extractTypeScriptBlocks(rootDir: string, filePath: string): MarkdownCodeBlock[] {
   const file = normalizeRelativePath(rootDir, filePath);
-  const lines = readFileSync(filePath, "utf-8").split(/\r?\n/);
+  const tree = fromMarkdown(readFileSync(filePath, "utf-8"));
   const blocks: MarkdownCodeBlock[] = [];
   let typeScriptBlockIndex = 0;
 
-  for (let index = 0; index < lines.length; index++) {
-    const opening = parseFenceOpening(lines[index]);
-    if (!opening) {
-      continue;
+  function visit(node: typeof tree | (typeof tree.children)[number]): void {
+    if ("children" in node) {
+      node.children.forEach(visit);
     }
 
-    const body: string[] = [];
-    const openingLine = index + 1;
-    index++;
-
-    while (index < lines.length && !isFenceClosing(lines[index], opening.fence)) {
-      body.push(lines[index]);
-      index++;
+    if (node.type !== "code" || !node.position) {
+      return;
     }
 
-    if (!isTypeScriptLanguage(opening.language)) {
-      continue;
+    const language = node.lang?.toLowerCase() ?? "";
+    if (!isTypeScriptLanguage(language)) {
+      return;
     }
 
     typeScriptBlockIndex++;
     blocks.push({
-      code: body.join("\n"),
+      code: node.value,
       file,
-      language: opening.language,
-      mode: getFenceMode(opening.meta),
-      openingLine,
+      language,
+      mode: getFenceMode(node.meta ?? ""),
+      openingLine: node.position.start.line,
       typeScriptBlockIndex,
     });
   }
 
+  visit(tree);
   return blocks;
-}
-
-function parseFenceOpening(
-  line: string,
-): { readonly fence: string; readonly language: string; readonly meta: string } | undefined {
-  const match = /^ {0,3}(?<fence>`{3,}|~{3,})(?<info>.*)$/.exec(line);
-  if (!match?.groups) {
-    return undefined;
-  }
-
-  const info = match.groups.info.trim();
-  const fence = match.groups.fence;
-  if (fence[0] === "`" && info.includes("`")) {
-    return undefined;
-  }
-
-  const [language = "", ...meta] = info.split(/\s+/);
-  return {
-    fence,
-    language: language.toLowerCase(),
-    meta: meta.join(" "),
-  };
-}
-
-function isFenceClosing(line: string, openingFence: string): boolean {
-  const match = /^ {0,3}(`{3,}|~{3,})[ \t]*$/.exec(line);
-  return (
-    match !== null && match[1][0] === openingFence[0] && match[1].length >= openingFence.length
-  );
 }
 
 function isTypeScriptLanguage(language: string): language is "ts" | "tsx" | "typescript" {

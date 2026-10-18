@@ -111,6 +111,7 @@
     "@vitest/coverage-v8": "4.1.8",
     "lefthook": "2.0.13",
     "madge": "8.0.0",
+    "mdast-util-from-markdown": "2.0.2",
     "oxfmt": "*",
     "oxlint": "*",
     "semver": "7.7.4",
