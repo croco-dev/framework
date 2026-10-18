@@ -529,7 +529,8 @@ function validEnvironmentSource(value: unknown): boolean {
     const match = /^metadata\.(labels|annotations)\['([^']+)'\]$/.exec(path);
     const key = match?.[2];
     if (!key) return false;
-    const parts = key.split("/");
+    const normalizedKey = match?.[1] === "annotations" ? key.toLowerCase() : key;
+    const parts = normalizedKey.split("/");
     const suffix = parts.at(-1) ?? "";
     const prefix = parts.length === 2 ? (parts[0] ?? "") : undefined;
     return (

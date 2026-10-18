@@ -385,22 +385,25 @@ it.each([
   expect(validateInfrastructure(input).ok).toBe(true);
 });
 
-it.each(["metadata.labels['app']", "metadata.annotations['example.com/key']", "status.podIP"])(
-  "accepts native downward API field path %s",
-  (fieldPath) => {
-    const input = fixture("kubernetes");
-    input.artifact[0].spec.template.spec.containers[0].env.push({
-      name: "POD_META",
-      valueFrom: { fieldRef: { fieldPath } },
-    });
-    expect(validateInfrastructure(input).ok).toBe(true);
-  },
-);
+it.each([
+  "metadata.labels['app']",
+  "metadata.annotations['example.com/key']",
+  "metadata.annotations['Example.COM/Key']",
+  "status.podIP",
+])("accepts native downward API field path %s", (fieldPath) => {
+  const input = fixture("kubernetes");
+  input.artifact[0].spec.template.spec.containers[0].env.push({
+    name: "POD_META",
+    valueFrom: { fieldRef: { fieldPath } },
+  });
+  expect(validateInfrastructure(input).ok).toBe(true);
+});
 
 it.each([
   "metadata.labels['']",
   "metadata.annotations['invalid key']",
   "metadata.labels['bad..prefix/key']",
+  "metadata.labels['Example.COM/Key']",
   "spec.unsupported",
 ])("rejects invalid downward API field path %s", (fieldPath) => {
   const input = fixture("kubernetes");
