@@ -96,18 +96,24 @@ describe.skipIf(process.env.CROCO_TEST_REAL_RESOURCES !== "1")(
       const second = await worker();
       const claimed = await Promise.all(
         Array.from({ length: 6 }, (_, index) =>
-          (index % 2 ? first : second).dispatchFetch("https://fixture/claim").then((r) => r.json()),
+          (index % 2 ? first : second).dispatchFetch("https://fixture/claim").then((response) => {
+            expect(response.status).toBe(200);
+            return response.json();
+          }),
         ),
       );
-      expect(
-        claimed.filter((result) => (result as { claimed: number }).claimed === 1),
-      ).toHaveLength(1);
+      expect(claimed.map((result) => (result as { claimed: number }).claimed).sort()).toEqual([
+        0, 0, 0, 0, 0, 1,
+      ]);
       const cas = await Promise.all(
         [first, second].map((item) =>
-          item.dispatchFetch("https://fixture/cas").then((r) => r.json()),
+          item.dispatchFetch("https://fixture/cas").then((response) => {
+            expect(response.status).toBe(200);
+            return response.json();
+          }),
         ),
       );
-      expect(cas.filter((result) => (result as { changed: number }).changed === 1)).toHaveLength(1);
+      expect(cas.map((result) => (result as { changed: number }).changed).sort()).toEqual([0, 1]);
       expect(await (await first.dispatchFetch("https://fixture/read?tenant=b")).json()).toEqual({
         rows: [],
       });
