@@ -26,6 +26,26 @@ try {
       else errors.push(message.text());
     }
   });
+  await page.goto(`${base}/?run=large`);
+  await page.getByRole("button", { name: "Next page", exact: true }).click();
+  await page.getByText("Operation in progress…").waitFor({ state: "hidden" });
+  assert.equal(await page.locator("article").count(), 6);
+  await page.screenshot({ path: `${output}/desktop-pagination-before-return.png`, fullPage: true });
+  assert.equal(
+    await page.getByRole("button", { name: "First page", exact: true }).count(),
+    1,
+    "the second page must provide a route back to earlier items",
+  );
+  await page.getByRole("button", { name: "First page", exact: true }).scrollIntoViewIfNeeded();
+  await page.screenshot({ path: `${output}/desktop-pagination-return.png` });
+  await page.getByRole("button", { name: "First page", exact: true }).click();
+  await page.getByText("Operation in progress…").waitFor({ state: "hidden" });
+  assert.equal(await page.locator("article").count(), 20);
+  assert.equal(
+    await page.locator("article").first().getByRole("heading").innerText(),
+    "sample-00 · r1",
+  );
+  assert.equal(await page.getByRole("button", { name: "First page", exact: true }).count(), 0);
   await page.goto(base);
   await page.getByText("Where is my order?", { exact: true }).waitFor();
   assert.equal(
@@ -64,6 +84,51 @@ try {
     .waitFor();
   await page.screenshot({ path: `${output}/desktop-partial.png`, fullPage: true });
   await page.getByLabel("Audit reason", { exact: true }).fill("Checked synthetic source evidence");
+  await articles
+    .nth(1)
+    .getByRole("combobox", { name: /^Reviewed label/ })
+    .selectOption("purchase");
+  await articles
+    .nth(1)
+    .getByLabel("Review evidence", { exact: true })
+    .fill("Verified purchase intent");
+  await articles.nth(1).getByRole("button", { name: "Approve label", exact: true }).click();
+  await articles
+    .nth(1)
+    .getByText(/Reviewed label: purchase by local-reviewer/)
+    .waitFor();
+  assert.equal(
+    await articles
+      .nth(1)
+      .getByRole("combobox", { name: /^Reviewed label/ })
+      .inputValue(),
+    "purchase",
+  );
+  await articles
+    .nth(1)
+    .getByLabel("Review evidence", { exact: true })
+    .fill("Updated evidence without changing the label");
+  await articles.nth(1).getByRole("button", { name: "Approve label", exact: true }).click();
+  await articles
+    .nth(1)
+    .getByText(/Evidence: Updated evidence without changing the label/)
+    .waitFor();
+  await articles
+    .nth(1)
+    .getByText(/Reviewed label: purchase by local-reviewer/)
+    .waitFor();
+  assert.equal(
+    await articles
+      .nth(1)
+      .getByRole("combobox", { name: /^Reviewed label/ })
+      .inputValue(),
+    "purchase",
+  );
+  await articles.nth(1).screenshot({ path: `${output}/desktop-preserved-review-label.png` });
+  await articles
+    .nth(1)
+    .getByRole("combobox", { name: /^Reviewed label/ })
+    .selectOption("support");
   await articles
     .nth(1)
     .getByLabel("Review evidence", { exact: true })
@@ -239,6 +304,19 @@ try {
   assert.equal(await page.locator("article").count(), 6);
   assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
   await page.screenshot({ path: `${output}/mobile-bounded-page.png`, fullPage: true });
+  await page.getByRole("button", { name: "First page", exact: true }).scrollIntoViewIfNeeded();
+  await page.screenshot({ path: `${output}/mobile-pagination-return.png` });
+  await page.getByRole("button", { name: "First page", exact: true }).click();
+  await page.getByText("Operation in progress…").waitFor({ state: "hidden" });
+  assert.equal(await page.locator("article").count(), 20);
+  await page.getByRole("button", { name: "Next page", exact: true }).click();
+  await page.getByText("Operation in progress…").waitFor({ state: "hidden" });
+  assert.equal(await page.locator("article").count(), 6);
+  await page
+    .locator("article")
+    .last()
+    .getByText(/model · classified · Candidate: purchase/)
+    .waitFor();
   assert.deepEqual(errors, []);
   assert.equal(expectedNetworkErrors.length, 3);
   console.log(
@@ -246,7 +324,7 @@ try {
       surface: base,
       viewports: ["1280x900", "390x844"],
       assertions:
-        "dictionary/model/unknown, manual override and version diff, review-gated export, second-page classify/settle/retry/reload, exhausted unknown acceptance acknowledged without blocking another model item, keyboard, failed callback recovery, loading/empty/denied/error, no horizontal overflow or unexpected console/page errors",
+        "dictionary/model/unknown, manual override and version diff, preserved reviewed label during evidence-only edits, review-gated export, first-page return and second-page classify/settle/retry/reload, exhausted unknown acceptance acknowledged without blocking another model item, keyboard, failed callback recovery, loading/empty/denied/error, no horizontal overflow or unexpected console/page errors",
       screenshots: output,
     }),
   );

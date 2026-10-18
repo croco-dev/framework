@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { enrichmentScopeKey } from "@croco/analytics-core/enrichment";
 import { ExecutionManagerImpl } from "@croco/execution-core";
-import { MemoryExecutionStore } from "../../../lifecycle-journey/src/MemoryExecutionStore";
+import { MemoryExecutionStore } from "./MemoryExecutionStore";
 import { createFixture, inputs, limits, scope } from "../fixture";
 import { classifyBatch } from "../batch";
 import { createDemoServer } from "../http";

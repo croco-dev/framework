@@ -287,6 +287,7 @@ function Console(props: EnrichmentReviewConsoleProps) {
             <ReviewEditor
               key={`${item.itemId}:${version}:${item.review?.revision ?? 0}`}
               labels={definition.labels}
+              initialLabel={item.review?.labelId}
               disabled={
                 busy ||
                 !props.canReview ||
@@ -315,6 +316,17 @@ function Console(props: EnrichmentReviewConsoleProps) {
           )}
         </article>
       ))}
+      {offset > 0 && (
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => {
+            void perform(() => props.onLoad(0), 0);
+          }}
+        >
+          First page
+        </button>
+      )}{" "}
       {page.nextOffset !== null && (
         <button
           type="button"
@@ -355,10 +367,13 @@ function Console(props: EnrichmentReviewConsoleProps) {
 }
 function ReviewEditor(props: {
   labels: readonly ClassificationLabel[];
+  initialLabel?: string;
   disabled: boolean;
   onReview: (labelId: string, evidence: string) => Promise<void>;
 }) {
-  const [label, setLabel] = useState(props.labels[0]?.id ?? "");
+  const [label, setLabel] = useState(
+    props.labels.find((entry) => entry.id === props.initialLabel)?.id ?? props.labels[0]?.id ?? "",
+  );
   const [evidence, setEvidence] = useState("");
   return (
     <form

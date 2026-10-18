@@ -38,6 +38,7 @@ export type ClassificationLimits = {
   readonly maxOutputTokens: number;
   readonly timeoutMs: number;
   readonly maxConcurrency: number;
+  /** Persisted model admissions per item/definition version, across actors and authority revisions. */
   readonly maxAttempts: number;
   readonly maxRequests: number;
   readonly maxReservedTokens: number;

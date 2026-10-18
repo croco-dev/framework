@@ -667,9 +667,27 @@ export class EnrichmentService {
       // A CAS retry must not restore derived data erased by a concurrent purge.
       if (this.now() >= current.resultExpiresAt) fail("result-expired");
       if (row.input.text === null) fail("raw-expired");
-      if (candidate.attempt > current.limits.maxAttempts) fail("attempt-limit");
       if (row.candidates.length >= 8) fail("version-limit");
+      let claimed = candidate;
       if (useModel) {
+        // Cache identities isolate permissions; durable admission remains item/version-wide.
+        const attempts = current.receipts.filter(
+          (entry) =>
+            entry.itemId === itemId &&
+            entry.candidate.definitionId === definition.id &&
+            entry.candidate.definitionVersion === definition.version &&
+            entry.candidate.method === "model",
+        );
+        if (
+          attempts.some(
+            ({ candidate: entry }) =>
+              entry.state === "running" ||
+              (entry.reason === "acceptance-unknown" && !entry.retryAuthorized),
+          )
+        )
+          fail("acceptance-unknown");
+        claimed = { ...candidate, attempt: attempts.length + 1 };
+        if (claimed.attempt > current.limits.maxAttempts) fail("attempt-limit");
         if (
           current.requests >= current.limits.maxRequests ||
           current.reservedTokens + current.limits.tokensPerRequest >
@@ -685,7 +703,7 @@ export class EnrichmentService {
         if (active >= current.limits.maxConcurrency) fail("concurrency-limit");
         current.requests++;
         current.reservedTokens += current.limits.tokensPerRequest;
-      }
+      } else if (candidate.attempt > current.limits.maxAttempts) fail("attempt-limit");
       if (current.audit.length >= 1000) fail("audit-limit");
       current.audit.push({
         actor,
@@ -695,9 +713,9 @@ export class EnrichmentService {
         fingerprint: key,
         revision: current.revision + 1,
       });
-      row.candidates.push(candidate);
-      current.receipts.push({ itemId, candidate: this.receiptCandidate(candidate) });
-      return candidate;
+      row.candidates.push(claimed);
+      current.receipts.push({ itemId, candidate: this.receiptCandidate(claimed) });
+      return claimed;
     });
     if (
       acquired.receiptId !== receiptId ||
@@ -750,7 +768,7 @@ export class EnrichmentService {
       const measured = usage(response.usage);
       cause = response.cause;
       const base = {
-        ...candidate,
+        ...acquired,
         usage: measured,
         ...(identifier(response.providerRequestRef)
           ? { providerRequestRef: response.providerRequestRef }
@@ -804,9 +822,9 @@ export class EnrichmentService {
     } catch (error) {
       cause = error;
       final = dispatched
-        ? { ...candidate, state: "failed", reason: "acceptance-unknown" }
+        ? { ...acquired, state: "failed", reason: "acceptance-unknown" }
         : {
-            ...candidate,
+            ...acquired,
             state: "failed",
             reason: "not-transmitted",
             usage: { kind: "known", inputTokens: 0, outputTokens: 0 },

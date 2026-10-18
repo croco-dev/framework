@@ -21,6 +21,8 @@ acknowledgement; confirm the previous worker has stopped first. At the final all
 the same acknowledgement releases its uncertain concurrency slot without allowing another
 attempt for that item. Its unknown usage and reserved budget remain recorded; other items can
 then continue within the original run limits.
+Changing the operator or authorization revision changes cache identity but never resets the
+item/version model-attempt limit or bypasses acknowledgement of uncertain acceptance.
 
 The HTTP host has one fixed synthetic principal and scope; it binds to loopback and checks Host,
 Origin and cross-site requests. It is a demonstration, not deployable authentication. A real host

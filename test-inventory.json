@@ -578,6 +578,12 @@
       "owner": "@croco/admin-react"
     },
     {
+      "path": "packages/admin-react/src/tests/EnrichmentReviewConsole.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-react"
+    },
+    {
       "path": "packages/admin-react/src/tests/EventCatalogPanel.spec.ts",
       "lane": "fast",
       "qualifiers": [],

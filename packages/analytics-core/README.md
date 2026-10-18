@@ -361,6 +361,8 @@ acknowledgement that the prior worker stopped. At the attempt limit, `retry` acc
 acknowledgement only to release the uncertain concurrency slot: `classify` still rejects another
 attempt, and the original unknown usage, receipts and budget reservation remain intact.
 Admission counts durable operational receipts, including those whose source results were purged.
+Model attempts and unresolved acceptance are tracked per item and definition version across actors
+and authorization revisions. Changing a permission-context cache key never resets this admission state.
 An authorized operator can acknowledge an unknown receipt, or an expired running receipt after
 confirming the worker stopped, using its persisted item/receipt IDs and current run revision.
 This remains available after source deletion or result expiry and returns no classification data;

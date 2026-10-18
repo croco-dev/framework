@@ -67,6 +67,7 @@ describe.skipIf(!connectionString)("PostgreSQL enrichment receipts and CAS", () 
     })),
     sourceAvailable = async (_sourceRef: string) => true,
     definitions: readonly ClassificationDefinition[] = [definition],
+    identity = { actor: "operator", authority: "auth-1" },
   ) {
     const settle = vi.fn(async (_receipt: EnrichmentReceipt) => {});
     const clock = { offset: 0 };
@@ -75,8 +76,8 @@ describe.skipIf(!connectionString)("PostgreSQL enrichment receipts and CAS", () 
       definitions,
       classifyText: model,
       authorize: async () => true,
-      currentActor: async () => "operator",
-      authorizationRevision: async () => "auth-1",
+      currentActor: async () => identity.actor,
+      authorizationRevision: async () => identity.authority,
       sourceAvailable: async (_scope, sourceRef) => sourceAvailable(sourceRef),
       prepareInput: (input) => ({ text: input.text, context: input.context }),
       settle,
@@ -84,7 +85,7 @@ describe.skipIf(!connectionString)("PostgreSQL enrichment receipts and CAS", () 
     });
     return { service, settle, model, clock };
   }
-  async function enqueue(service: EnrichmentService, runId = "one") {
+  async function enqueue(service: EnrichmentService, runId = "one", runLimits = limits) {
     return service.enqueueBatch(
       scope,
       runId,
@@ -104,10 +105,48 @@ describe.skipIf(!connectionString)("PostgreSQL enrichment receipts and CAS", () 
           context: { locale: "en" },
         },
       ],
-      limits,
+      runLimits,
       { rawMs: 60000, resultMs: 120000 },
     );
   }
+  it.each(["actor", "authority"] as const)(
+    "preserves admission across PostgreSQL connections and changed %s identities",
+    async (identityName) => {
+      const writer = fixture();
+      writer.model.mockRejectedValueOnce(new Error("unknown acceptance"));
+      await enqueue(writer.service, "one", { ...limits, maxConcurrency: 2 });
+      await expect(
+        writer.service.classify(scope, "one", "a", "intent", "v1"),
+      ).rejects.toMatchObject({ code: "analytics-core/enrichment-acceptance-unknown" });
+      const identity = { actor: "operator", authority: "auth-1" };
+      identity[identityName] = "changed";
+      const restarted = fixture(other, writer.model, undefined, undefined, identity);
+      await expect(
+        restarted.service.classify(scope, "one", "a", "intent", "v1"),
+      ).rejects.toMatchObject({ code: "analytics-core/enrichment-acceptance-unknown" });
+      expect(writer.model).toHaveBeenCalledTimes(1);
+      const prior = (await writer.service.read(scope, "one")).items[0].candidates[0];
+      await writer.service.retry(scope, "one", "a", prior.receiptId, true, {
+        actor: "operator",
+        reason: "Confirmed the previous worker stopped",
+        idempotencyKey: "stopped",
+        expectedRevision: (await writer.service.read(scope, "one")).revision,
+      });
+      expect(await restarted.service.classify(scope, "one", "a", "intent", "v1")).toMatchObject({
+        state: "classified",
+        attempt: 2,
+      });
+      identity[identityName] = "third";
+      await expect(
+        restarted.service.classify(scope, "one", "a", "intent", "v1"),
+      ).rejects.toMatchObject({ code: "analytics-core/enrichment-attempt-limit" });
+      expect(writer.model).toHaveBeenCalledTimes(2);
+      const stored = await other.load(scope, "one");
+      expect(stored?.requests).toBe(2);
+      expect(stored?.receipts).toHaveLength(2);
+      expect(stored?.receipts[1].candidate.attempt).toBe(2);
+    },
+  );
   it.each(["source-deleted", "result-expired"])(
     "keeps a PostgreSQL purge erased when a delayed dictionary claim retries after %s",
     async (reason) => {
