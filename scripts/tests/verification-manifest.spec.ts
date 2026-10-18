@@ -116,7 +116,6 @@ const repoIds = [
   "changeset-required",
   "package-manifests",
   "release-version-sync",
-  "infrastructure-review",
   "docs-catalog",
   "docs-api-triggers",
   "problem-registry",
@@ -139,6 +138,7 @@ const repoIds = [
   "format",
   "architecture-circular",
   "benchmark-thresholds",
+  "infrastructure-review",
 ];
 const spineOnlyIds = [
   "build",
@@ -277,14 +277,16 @@ describe("verification manifest", () => {
   it("composes exact ordered repo, spine, and publish profiles", () => {
     expect(createVerificationManifest("repo").map(({ id }) => id)).toEqual(repoIds);
     expect(createVerificationManifest("spine").map(({ id }) => id)).toEqual([
-      ...repoIds,
+      ...repoIds.filter((id) => id !== "infrastructure-review"),
       ...spineOnlyIds,
+      "infrastructure-review",
     ]);
     expect(createVerificationManifest("publish").map(({ id }) => id)).toEqual([
       "release-metadata",
-      ...repoIds,
+      ...repoIds.filter((id) => id !== "infrastructure-review"),
       ...spineOnlyIds,
       ...publishOnlyIds.filter((id) => id !== "release-metadata"),
+      "infrastructure-review",
     ]);
     expect(
       createVerificationManifest("publish").find(({ id }) => id === "spine-bundle-size")?.command,
@@ -330,7 +332,7 @@ describe("verification manifest", () => {
     expect(
       createHash("sha256").update(JSON.stringify(manifests)).digest("hex"),
       "The pre-split monolithic manifest changed; update this digest only after intentionally verifying the new serialized commands.",
-    ).toBe("a62125cea9a689ffd2c4ef2b3d7cf92ac408f0e7e2df49d26fd73eb6a160e427");
+    ).toBe("8fe81a8bc8d1dd06483183dff7ba92becf4d71a438278fb1b5b7dda76cda5361");
   });
 
   it("classifies every dependency edge and every cross-lane edge for synthesis", () => {
@@ -1894,6 +1896,20 @@ describe("verification manifest", () => {
     expect(byId.get("typecheck")?.command).not.toContain("--only");
     expect(byId.get("package-entrypoints-smoke")?.timeoutMs).toBe(15 * 60 * 1_000);
     expect(byId.get("quick-start-lambda-smoke")?.timeoutMs).toBe(15 * 60 * 1_000);
+  });
+
+  it("runs infrastructure evidence after built artifacts without overlapping workspace consumers", () => {
+    for (const profile of ["spine", "publish"] as const) {
+      const command = createVerificationManifest(profile).find(
+        ({ id }) => id === "infrastructure-review",
+      );
+      expect(command?.dependsOn).toContain("build");
+      expect(command?.concurrencyGroups).toEqual(["workspace-artifacts", "test-integration"]);
+    }
+    expect(
+      createVerificationManifest("repo").find(({ id }) => id === "infrastructure-review")
+        ?.dependsOn,
+    ).toBeUndefined();
   });
 
   it("routes compatibility aliases through authoritative profiles", () => {

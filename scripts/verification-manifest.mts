@@ -1395,6 +1395,7 @@ const VERIFICATION_DEPENDENCIES: Readonly<Record<string, readonly string[]>> = {
   "benchmark-thresholds": ["verification-contract-tests"],
   build: ["architecture-policy-runtime"],
   "docs-examples": ["architecture-policy-runtime"],
+  "infrastructure-review": ["build"],
   "quick-start-lambda-smoke": ["build"],
   "first-success": ["build"],
   "package-entrypoints-smoke": ["build", "typecheck", "generated-app-smoke"],
@@ -1430,6 +1431,7 @@ type VerificationDependencyEdge =
   | "build->architecture-policy-runtime"
   | "build->release-metadata"
   | "docs-examples->architecture-policy-runtime"
+  | "infrastructure-review->build"
   | "quick-start-lambda-smoke->build"
   | "first-success->build"
   | "package-entrypoints-smoke->build"
@@ -1476,6 +1478,7 @@ export const VERIFICATION_DEPENDENCY_CLASSIFICATION = {
   "benchmark-thresholds->verification-contract-tests": ["physical-local"],
   "build->architecture-policy-runtime": ["physical-local"],
   "docs-examples->architecture-policy-runtime": ["physical-local"],
+  "infrastructure-review->build": ["physical-local"],
   "build->release-metadata": ["physical-local", "logical-synthesis"],
   "quick-start-lambda-smoke->build": ["physical-local"],
   "first-success->build": ["physical-local"],
@@ -1522,6 +1525,7 @@ export const VERIFICATION_DEPENDENCY_CLASSIFICATION = {
 >;
 
 const WORKSPACE_ARTIFACT_CONCURRENCY_GROUP = new Set([
+  "infrastructure-review",
   "docs-examples",
   "typecheck",
   "test",
@@ -1545,7 +1549,10 @@ function withSchedulingContract(
   command: EvidenceCommand,
   profile: VerificationProfile,
 ): EvidenceCommand {
-  const dependencies = VERIFICATION_DEPENDENCIES[command.id];
+  const dependencies =
+    command.id === "infrastructure-review" && profile === "repo"
+      ? undefined
+      : VERIFICATION_DEPENDENCIES[command.id];
   const dependsOn =
     profile === "publish" && command.id === "build"
       ? [...(dependencies ?? []), "release-metadata"]
@@ -1556,9 +1563,13 @@ function withSchedulingContract(
   const concurrencyGroups = [
     ...(writesWorkspaceArtifacts ? ["workspace-artifacts"] : []),
     ...(PACKAGE_ENTRYPOINT_CONCURRENCY_GROUP.has(command.id) ? ["package-entrypoints"] : []),
-    ...(["test", "integration-test-lane", "published-test-lane", "core-coverage"].includes(
-      command.id,
-    )
+    ...([
+      "test",
+      "integration-test-lane",
+      "published-test-lane",
+      "core-coverage",
+      "infrastructure-review",
+    ].includes(command.id)
       ? ["test-integration"]
       : []),
   ];
@@ -1677,7 +1688,7 @@ export function createVerificationManifest(
     profile === "publish" || fastTestCoversRepositoryContracts,
   );
   const publish = profile === "publish" ? publishOnly(context) : [];
-  const commands = (
+  const composed =
     profile === "repo"
       ? repo
       : profile === "spine"
@@ -1687,8 +1698,11 @@ export function createVerificationManifest(
             ...repo,
             ...spine,
             ...publish.filter(({ id }) => id !== "release-metadata"),
-          ]
-  ).map((command) => withSchedulingContract(command, profile));
+          ];
+  const commands = [
+    ...composed.filter(({ id }) => id !== "infrastructure-review"),
+    ...composed.filter(({ id }) => id === "infrastructure-review"),
+  ].map((command) => withSchedulingContract(command, profile));
   assertVerificationManifest(commands);
   return commands;
 }

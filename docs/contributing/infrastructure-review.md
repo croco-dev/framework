@@ -9,6 +9,7 @@ Profile metadata; the generated extension matrix remains the compatibility table
 
 `pnpm infrastructure-review:check -- --base <base-sha> [--head <head-sha>]` compares the immutable head against its merge-base with the requested base. Base-only changes on a diverged branch are excluded.
 `pnpm check` also runs it; local default base is `origin/trunk`, CI supplies its immutable verification base.
+Spine and publish profiles run host evidence after build, isolated from concurrent workspace/test consumers.
 The PR companion runs the same gate and includes decisions, constraints, reusable providers and diagnostics
 in its JSON and Markdown reports. The gate never rewrites files.
 

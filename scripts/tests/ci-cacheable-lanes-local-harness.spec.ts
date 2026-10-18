@@ -263,13 +263,13 @@ function fixture() {
 }
 
 describe("local monolith versus split verification harness", () => {
-  it("accepts one exact 55-check pair and leaves hosted-only metrics unmeasured", () => {
+  it("accepts one exact 56-check pair and leaves hosted-only metrics unmeasured", () => {
     const report = evaluateLocalEquivalence(fixture());
 
     expect(report).toMatchObject({
       schemaVersion: LOCAL_EQUIVALENCE_REPORT_SCHEMA,
       status: "passed",
-      comparedCheckCount: 55,
+      comparedCheckCount: 56,
       comparedSecurityCount: 4,
       monolithicBlockingOutcome: "passed",
       splitBlockingOutcome: "passed",
