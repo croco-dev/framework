@@ -1,0 +1,290 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "admin-core",
+      "classification": "pure-contract",
+      "reason": "Adds request-context-resolved enrichment operations over an injected service. The operations own no Host, database connection, native runtime API or resource lifecycle; backend execution support is assessed in the analytics service and store records.",
+      "files": {
+        "packages/admin-core/src/index.ts": "6cdf45b5ef229f1ebfd4f47cc77f811845881dca65f17a72c12bd327fd4751b5",
+        "packages/admin-core/src/libs/EnrichmentOperations.ts": "077bd1130cb284cbd59f9adfb9a28eba3ae77632bf252142b5219786053009e7"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "The scoped operation boundary delegates execution and persistence; it does not select infrastructure.",
+          "providers": [],
+          "constraints": [
+            "The application must resolve principal/app/environment/tenant and authorization revision on the server for every operation.",
+            "This decision does not confer Host or storage support on the injected enrichment service."
+          ],
+          "references": [
+            "packages/admin-core/src/libs/EnrichmentOperations.ts",
+            "examples/enrichment-review/src/http.ts",
+            "packages/admin-core/README.md"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "The scoped operation boundary delegates execution and persistence; it does not select infrastructure.",
+          "providers": [],
+          "constraints": [
+            "The application must resolve principal/app/environment/tenant and authorization revision on the server for every operation.",
+            "This decision does not confer Host or storage support on the injected enrichment service."
+          ],
+          "references": [
+            "packages/admin-core/src/libs/EnrichmentOperations.ts",
+            "examples/enrichment-review/src/http.ts",
+            "packages/admin-core/README.md"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "The scoped operation boundary delegates execution and persistence; it does not select infrastructure.",
+          "providers": [],
+          "constraints": [
+            "The application must resolve principal/app/environment/tenant and authorization revision on the server for every operation.",
+            "This decision does not confer Host or storage support on the injected enrichment service."
+          ],
+          "references": [
+            "packages/admin-core/src/libs/EnrichmentOperations.ts",
+            "examples/enrichment-review/src/http.ts",
+            "packages/admin-core/README.md"
+          ]
+        }
+      }
+    },
+    {
+      "package": "admin-react",
+      "classification": "protocol-render",
+      "reason": "Adds a browser review component and typed async callbacks. It owns presentation state and pagination, not a backend Host, persistence Provider or deployment Profile.",
+      "files": {
+        "packages/admin-react/src/index.ts": "ecb60b70b3fc1117576c6ca5dd600680283440d1850abf58a87a4f3fe664920b",
+        "packages/admin-react/src/libs/EnrichmentReviewConsole.tsx": "6fd5cd1ff0d32c76b7647d2560ebfe5c44cef71f02e08bc1521370c2c8442332"
+      },
+      "catalogRuntimes": ["browser", "node"],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Browser presentation and callback contracts do not depend on the infrastructure serving the backend.",
+          "providers": [],
+          "constraints": [
+            "Client controls are not an authorization boundary; callbacks must use the separately authorized server operations.",
+            "Browser/SSR rendering evidence is not Kubernetes, Lambda or Workers backend execution evidence."
+          ],
+          "references": [
+            "packages/admin-react/src/libs/EnrichmentReviewConsole.tsx",
+            "packages/admin-react/src/tests/EnrichmentReviewConsole.spec.ts",
+            "examples/enrichment-review/scripts/verify-browser.mjs"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Browser presentation and callback contracts do not depend on the infrastructure serving the backend.",
+          "providers": [],
+          "constraints": [
+            "Client controls are not an authorization boundary; callbacks must use the separately authorized server operations.",
+            "Browser/SSR rendering evidence is not Kubernetes, Lambda or Workers backend execution evidence."
+          ],
+          "references": [
+            "packages/admin-react/src/libs/EnrichmentReviewConsole.tsx",
+            "packages/admin-react/src/tests/EnrichmentReviewConsole.spec.ts",
+            "examples/enrichment-review/scripts/verify-browser.mjs"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Browser presentation and callback contracts do not depend on the infrastructure serving the backend.",
+          "providers": [],
+          "constraints": [
+            "Client controls are not an authorization boundary; callbacks must use the separately authorized server operations.",
+            "Browser/SSR rendering evidence is not Kubernetes, Lambda or Workers backend execution evidence."
+          ],
+          "references": [
+            "packages/admin-react/src/libs/EnrichmentReviewConsole.tsx",
+            "packages/admin-react/src/tests/EnrichmentReviewConsole.spec.ts",
+            "examples/enrichment-review/scripts/verify-browser.mjs"
+          ]
+        }
+      }
+    },
+    {
+      "package": "analytics-core",
+      "classification": "runtime-adapter",
+      "reason": "Adds a server integration subpath with finite classification/review contracts and a stateful service using node:crypto, an injected store and application-owned authorization/PII policy. The package catalog has no runtime claim; Node tests and the loopback example do not establish a selected infrastructure Host/Profile.",
+      "files": {
+        "packages/analytics-core/package.json": "c2eb022ce0b880a9ed2c405548d2d22fe34ed1e0b4548163a37a19be7f3d0299",
+        "packages/analytics-core/src/enrichment.ts": "20acaccce2daf7fe1fafc09bd00bc764f533e194beb1f9f939265d29231af449",
+        "packages/analytics-core/src/libs/enrichment/Enrichment.ts": "7031210959afa8ab0bc92c8f507aad925ca61ba0b26bfb4a4a5ef8a875117efc",
+        "packages/analytics-core/src/libs/enrichment/EnrichmentService.ts": "acc88a47742165e496b16818037627369fd472b84910331694234c3a637fe978"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "unverified",
+          "reason": "The service executes in the Node reference path, but no Kubernetes/Node Host composition or deployment Profile is selected for this capability. The catalog remains runtime-unclaimed.",
+          "providers": [
+            "@croco/analytics-core/enrichment#EnrichmentStore",
+            "@croco/analytics-drizzle#DrizzleEnrichmentStore"
+          ],
+          "constraints": [
+            "Requires a Node-compatible crypto implementation and current application-owned authorization/PII/source checks.",
+            "The application owns durable event/usage sinks, PostgreSQL lifecycle and deployment; no cluster verification or provider certification is claimed."
+          ],
+          "references": [
+            "packages/analytics-core/src/libs/enrichment/EnrichmentService.ts",
+            "packages/analytics-core/src/libs/enrichment/Enrichment.ts",
+            "examples/enrichment-review/src/server.ts",
+            "examples/enrichment-review/src/batch.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "unverified",
+          "reason": "No Lambda Host/invocation-boundary integration was executed for the server subpath, and the catalog does not claim Lambda support.",
+          "providers": [
+            "@croco/analytics-core/enrichment#EnrichmentStore",
+            "@croco/analytics-drizzle#DrizzleEnrichmentStore"
+          ],
+          "constraints": [
+            "A selected Lambda composition must preserve invocation scope and settle/flush durable event and usage delivery before returning.",
+            "Unknown provider acceptance retains its reservation; a stopped-worker acknowledgement never makes retries exactly-once or bypasses attempt limits.",
+            "The example in-memory sinks and long-running HTTP server do not establish Lambda lifecycle behavior."
+          ],
+          "references": [
+            "packages/analytics-core/src/libs/enrichment/EnrichmentService.ts",
+            "examples/enrichment-review/src/batch.ts",
+            "examples/enrichment-review/README.md"
+          ]
+        },
+        "cloudflare": {
+          "result": "unverified",
+          "reason": "The subpath imports node:crypto and has no selected Workers Host, compatible durable store or runtime capability declaration. No Workers compatibility mode or Node Container composition was exercised.",
+          "providers": ["@croco/analytics-core/enrichment#EnrichmentStore"],
+          "constraints": [
+            "Do not infer Worker-isolate support from Node tests or Node Container availability.",
+            "An application must supply and validate compatible crypto, durable storage, authorization/PII policy and resource lifecycle before making a Workers claim."
+          ],
+          "references": [
+            "packages/analytics-core/src/libs/enrichment/EnrichmentService.ts",
+            "packages/analytics-core/package.json",
+            "examples/enrichment-review/src/database.ts"
+          ],
+          "host": "workers"
+        }
+      }
+    },
+    {
+      "package": "analytics-drizzle",
+      "classification": "durable-provider",
+      "reason": "Adds PostgreSQL run/CAS storage, immutable-source receipts and an explicit enrichment migration using the existing injected Drizzle database contract. Reuses the catalogued Node/Lambda provider rather than introducing platform-specific stores.",
+      "files": {
+        "packages/analytics-drizzle/package.json": "337e400d87a3b2df0bacbca6d4c8f5e4bee9c9b8e05f419e03729795dcec81b4",
+        "packages/analytics-drizzle/src/index.ts": "0cbc40a3232a8245dc7d6430c495e55e1565fe026ed6f149f71d1fa051a3aad4",
+        "packages/analytics-drizzle/src/libs/DrizzleEnrichmentStore.ts": "88433f024837c84f52adb9f4c3eb57168dd4f255e8a7775b191d74a43c41c657",
+        "packages/analytics-drizzle/src/migrations/createEnrichment.ts": "182c5b7d69007bc8e8df22806bdc258def9648e5d8ffff95fce729ad27454eda"
+      },
+      "catalogRuntimes": ["node", "lambda"],
+      "profiles": {
+        "kubernetes": {
+          "result": "conditional",
+          "reason": "The existing Node/PostgreSQL provider is reusable with application-managed PostgreSQL connections and an explicit migration; cluster deployment is not validated.",
+          "providers": ["@croco/analytics-drizzle#DrizzleEnrichmentStore", "@croco/tx-drizzle"],
+          "constraints": [
+            "Run createEnrichment explicitly before serving traffic; importing or booting the store does not own schema migration.",
+            "The application owns PostgreSQL availability, credentials, bounded connection pooling and rollout/close behavior.",
+            "Local real-PostgreSQL CAS/restart tests are not a Kubernetes cluster test or production certification; end-to-end Host integration remains unverified in the analytics-core record."
+          ],
+          "references": [
+            "packages/analytics-drizzle/src/libs/DrizzleEnrichmentStore.ts",
+            "packages/analytics-drizzle/src/libs/DrizzleFactHistoryStore.ts",
+            "packages/analytics-drizzle/src/migrations/createEnrichment.ts",
+            "packages/analytics-drizzle/src/tests/DrizzleEnrichmentStore.postgres.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "conditional",
+          "reason": "The catalogued Lambda provider requires an application-selected connection lifecycle and invocation-scoped execution; this store adds no Lambda Host integration.",
+          "providers": ["@croco/analytics-drizzle#DrizzleEnrichmentStore", "@croco/tx-drizzle"],
+          "constraints": [
+            "Reuse or close PostgreSQL resources according to the selected Lambda Host and provider contract; bound connections and concurrent invocations.",
+            "Apply the migration separately; preserve CAS leases, immutable input revisions and unknown-acceptance receipts across cold starts.",
+            "Flush/settle application-owned durable sinks before invocation return; in-memory reference sinks are not durable across cold starts.",
+            "No AWS invocation, deployment or production provider certification was executed for this change."
+          ],
+          "references": [
+            "packages/analytics-drizzle/src/libs/DrizzleEnrichmentStore.ts",
+            "packages/analytics-drizzle/src/migrations/createEnrichment.ts",
+            "examples/enrichment-review/src/database.ts",
+            "examples/enrichment-review/src/batch.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "unsupported",
+          "reason": "The selected PostgreSQL provider catalog claims Node and Lambda, not Workers. This change includes no Workers storage Provider or Host integration.",
+          "providers": ["@croco/analytics-drizzle#DrizzleEnrichmentStore"],
+          "constraints": [
+            "This decision covers Workers isolates; the Node/PostgreSQL example must not be treated as a Workers deployment.",
+            "A Cloudflare Node Container is a separate Node Host choice and remains unverified here; it is not a Worker isolate."
+          ],
+          "references": [
+            "packages/analytics-drizzle/package.json",
+            "packages/analytics-drizzle/src/libs/DrizzleEnrichmentStore.ts",
+            "examples/enrichment-review/src/database.ts"
+          ],
+          "host": "workers"
+        }
+      }
+    },
+    {
+      "package": "problems-core",
+      "classification": "pure-contract",
+      "reason": "Extends the existing generated registry with enrichment code literals, recovery metadata and matching types. The changed surface is contract data and existing registry projection, with no new Host capability, I/O, persistence or resource lifecycle.",
+      "files": {
+        "packages/problems-core/src/generated/problem-code-registry.ts": "048216fa16a50e224aaa8c7ec8cb73238272c9e6137b3eb718393d75ac1388b6"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Adding generated Problem contract records does not select or require infrastructure.",
+          "providers": [],
+          "constraints": [
+            "This decision covers the added registry metadata only; it does not backfill or enlarge historical package runtime claims."
+          ],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "packages/problems-core/src/libs/ProblemRegistry.ts",
+            "docs/problem-code-registry.json"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Adding generated Problem contract records does not select or require infrastructure.",
+          "providers": [],
+          "constraints": [
+            "This decision covers the added registry metadata only; it does not backfill or enlarge historical package runtime claims."
+          ],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "packages/problems-core/src/libs/ProblemRegistry.ts",
+            "docs/problem-code-registry.json"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Adding generated Problem contract records does not select or require infrastructure.",
+          "providers": [],
+          "constraints": [
+            "This decision covers the added registry metadata only; it does not backfill or enlarge historical package runtime claims."
+          ],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "packages/problems-core/src/libs/ProblemRegistry.ts",
+            "docs/problem-code-registry.json"
+          ]
+        }
+      }
+    }
+  ]
+}
