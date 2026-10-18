@@ -1628,6 +1628,18 @@
       "owner": "create-croco-app"
     },
     {
+      "path": "packages/create-croco-app/src/tests/InfrastructureFiles.spec.ts",
+      "lane": "fast",
+      "qualifiers": ["coverage"],
+      "owner": "create-croco-app"
+    },
+    {
+      "path": "packages/create-croco-app/src/tests/InfrastructureValidation.spec.ts",
+      "lane": "fast",
+      "qualifiers": ["coverage"],
+      "owner": "create-croco-app"
+    },
+    {
       "path": "packages/create-croco-app/src/tests/KubernetesProfile.spec.ts",
       "lane": "fast",
       "qualifiers": ["coverage"],

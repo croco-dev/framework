@@ -110,6 +110,7 @@ const nonEnvironmentCrocoDocumentationTokens = {
 } as const satisfies Record<string, string>;
 const nonEnvironmentCrocoTokenJsonRegistryPath = join("docs", "problem-code-registry.json");
 const nonEnvironmentCrocoTokenSourcePaths = [
+  join("packages", "create-croco-app", "src", "infrastructure.ts"),
   join("packages", "cli", "src", "commands", "upgradeRules.ts"),
   join("packages", "cli", "src", "libs", "diagnosticCodes.ts"),
   join("packages", "cli", "src", "commands", "desktopRemoved.ts"),
@@ -120,7 +121,11 @@ const nonEnvironmentCrocoTokenSourcePaths = [
   join("packages", "testing", "src", "libs", "test-evidence.mts"),
   join("scripts", "static-misuse-check.mts"),
 ] as const;
-const diagnosticCodeMapNames = new Set(["CLI_DIAGNOSTIC_CODES", "UPGRADE_FINDING_CODES"]);
+const diagnosticCodeMapNames = new Set([
+  "CLI_DIAGNOSTIC_CODES",
+  "UPGRADE_FINDING_CODES",
+  "INFRASTRUCTURE_DIAGNOSTIC_CODES",
+]);
 const scriptRootDir = dirname(dirname(fileURLToPath(import.meta.url)));
 
 main();

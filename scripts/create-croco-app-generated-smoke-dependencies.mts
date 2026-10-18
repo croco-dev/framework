@@ -311,6 +311,7 @@ export function readGeneratedSmokeCaseDirectDependencies(
   }
   return [
     ...new Set([
+      ...(caseName === "kubernetes-node-api" ? ["create-croco-app"] : []),
       ...templateRoots.flatMap((templateRoot) =>
         readTemplatePackageReferences(
           join(rootDir, "packages", "create-croco-app", "templates", templateRoot),

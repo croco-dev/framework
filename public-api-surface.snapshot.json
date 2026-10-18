@@ -19890,6 +19890,13 @@
               "compatibilityGroup": "di"
             },
             {
+              "name": "defineInfrastructureRequirements",
+              "exportKind": "named",
+              "source": "./libs/infrastructureRequirements",
+              "declarationKind": "function",
+              "compatibilityGroup": "runtime-capability"
+            },
+            {
               "name": "definePolicy",
               "exportKind": "named",
               "source": "./libs/RuntimePolicy",
@@ -20297,6 +20304,24 @@
               "exportKind": "named",
               "source": "./libs/ILogger",
               "compatibilityGroup": "di"
+            },
+            {
+              "name": "InfrastructureCapability",
+              "exportKind": "named",
+              "source": "./libs/infrastructureRequirements",
+              "compatibilityGroup": "runtime-capability"
+            },
+            {
+              "name": "InfrastructureRequirement",
+              "exportKind": "named",
+              "source": "./libs/infrastructureRequirements",
+              "compatibilityGroup": "runtime-capability"
+            },
+            {
+              "name": "InfrastructureRequirements",
+              "exportKind": "named",
+              "source": "./libs/infrastructureRequirements",
+              "compatibilityGroup": "runtime-capability"
             },
             {
               "name": "InjectionInspection",
@@ -47614,6 +47639,12 @@
               "declarationKind": "const"
             },
             {
+              "name": "INFRASTRUCTURE_DIAGNOSTIC_CODES",
+              "exportKind": "named",
+              "source": "./infrastructure.js",
+              "declarationKind": "const"
+            },
+            {
               "name": "assertSupportedNodeVersion",
               "exportKind": "named",
               "source": "./node-runtime.js",
@@ -47656,6 +47687,18 @@
               "declarationKind": "function"
             },
             {
+              "name": "validateInfrastructure",
+              "exportKind": "named",
+              "source": "./infrastructure.js",
+              "declarationKind": "function"
+            },
+            {
+              "name": "validateInfrastructureFiles",
+              "exportKind": "named",
+              "source": "./infrastructure-files.js",
+              "declarationKind": "function"
+            },
+            {
               "name": "validateResolvedOptions",
               "exportKind": "named",
               "source": "./options.js",
@@ -47667,6 +47710,36 @@
               "name": "GeneratorOptions",
               "exportKind": "named",
               "source": "./types.js"
+            },
+            {
+              "name": "InfrastructureBinding",
+              "exportKind": "named",
+              "source": "./infrastructure.js"
+            },
+            {
+              "name": "InfrastructureDiagnostic",
+              "exportKind": "named",
+              "source": "./infrastructure.js"
+            },
+            {
+              "name": "InfrastructureFilePlan",
+              "exportKind": "named",
+              "source": "./infrastructure-files.js"
+            },
+            {
+              "name": "InfrastructureProfile",
+              "exportKind": "named",
+              "source": "./infrastructure.js"
+            },
+            {
+              "name": "InfrastructureValidationInput",
+              "exportKind": "named",
+              "source": "./infrastructure.js"
+            },
+            {
+              "name": "InfrastructureValidationReport",
+              "exportKind": "named",
+              "source": "./infrastructure.js"
             },
             {
               "name": "NormalizedGeneratorOptions",

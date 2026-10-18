@@ -1,0 +1,195 @@
+{
+  "profile": "kubernetes",
+  "requirements": {
+    "schemaVersion": "croco.infrastructure-requirements/v1",
+    "runtime": "node",
+    "runtimeCapabilities": ["env"],
+    "resources": [
+      {
+        "id": "DB",
+        "kind": "database",
+        "capabilities": ["connect"],
+        "scope": "shop",
+        "owner": "shop"
+      },
+      {
+        "id": "JOBS",
+        "kind": "queue",
+        "capabilities": ["connect"],
+        "scope": "shop",
+        "owner": "shop"
+      },
+      {
+        "id": "FILES",
+        "kind": "storage",
+        "capabilities": ["connect"],
+        "scope": "shop",
+        "owner": "shop"
+      },
+      {
+        "id": "TOKEN",
+        "kind": "secret",
+        "capabilities": ["read"],
+        "scope": "shop",
+        "owner": "shop",
+        "secretRef": "password"
+      },
+      {
+        "id": "OPTIONAL",
+        "kind": "storage",
+        "capabilities": ["read"],
+        "scope": "shop",
+        "owner": "shop",
+        "optional": true
+      }
+    ]
+  },
+  "bindings": [
+    {
+      "requirement": "DB",
+      "owner": "shop",
+      "scope": "shop",
+      "resource": "db",
+      "env": "DB_HOST"
+    },
+    {
+      "requirement": "JOBS",
+      "owner": "shop",
+      "scope": "shop",
+      "resource": "jobs",
+      "env": "JOBS_HOST"
+    },
+    {
+      "requirement": "FILES",
+      "owner": "shop",
+      "scope": "shop",
+      "resource": "files",
+      "env": "FILES_HOST"
+    },
+    {
+      "requirement": "TOKEN",
+      "owner": "shop",
+      "scope": "shop",
+      "resource": "token",
+      "secretRef": "password"
+    }
+  ],
+  "workload": "api",
+  "artifact": [
+    {
+      "apiVersion": "apps/v1",
+      "kind": "Deployment",
+      "metadata": {
+        "name": "api",
+        "namespace": "shop"
+      },
+      "spec": {
+        "template": {
+          "spec": {
+            "containers": [
+              {
+                "name": "api",
+                "image": "shop:1",
+                "env": [
+                  {
+                    "name": "DB_HOST",
+                    "value": "db.shop.svc.cluster.local"
+                  },
+                  {
+                    "name": "JOBS_HOST",
+                    "value": "jobs.shop.svc.cluster.local"
+                  },
+                  {
+                    "name": "FILES_HOST",
+                    "value": "files.shop.svc.cluster.local"
+                  },
+                  {
+                    "name": "API_TOKEN",
+                    "valueFrom": {
+                      "secretKeyRef": {
+                        "name": "token",
+                        "key": "password"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          "metadata": {
+            "labels": {
+              "app": "api"
+            }
+          }
+        },
+        "selector": {
+          "matchLabels": {
+            "app": "api"
+          }
+        }
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "Service",
+      "metadata": {
+        "name": "db",
+        "namespace": "shop"
+      },
+      "spec": {
+        "type": "ExternalName",
+        "externalName": "external.example.test",
+        "ports": [
+          {
+            "port": 443
+          }
+        ]
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "Service",
+      "metadata": {
+        "name": "jobs",
+        "namespace": "shop"
+      },
+      "spec": {
+        "type": "ExternalName",
+        "externalName": "external.example.test",
+        "ports": [
+          {
+            "port": 443
+          }
+        ]
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "Service",
+      "metadata": {
+        "name": "files",
+        "namespace": "shop"
+      },
+      "spec": {
+        "type": "ExternalName",
+        "externalName": "external.example.test",
+        "ports": [
+          {
+            "port": 443
+          }
+        ]
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "Secret",
+      "metadata": {
+        "name": "token",
+        "namespace": "shop"
+      },
+      "stringData": {
+        "password": "synthetic-never-report-this"
+      }
+    }
+  ]
+}

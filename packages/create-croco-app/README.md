@@ -156,6 +156,15 @@ Compose durable providers and verify their readiness before deploying a stateful
 Typed external-provider binding integration remains tracked in #3547. No full SaaS or
 live Kubernetes support is implied by local schema, build or Host smoke results.
 
+### Static infrastructure bindings
+
+`create-croco-app/dist/verification.js` exposes `validateInfrastructure` and
+`validateInfrastructureFiles` for Kubernetes, synthesized SAM/CDK and effective Wrangler artifacts.
+Declare requirements through `defineInfrastructureRequirements` from `@croco/framework-context`.
+The generated Kubernetes app runs `infrastructure:check` before build; fixture validation of the
+other profiles does not imply a generated or certified SaaS deployment. See the
+[resource and permission contract](../../docs/architecture/infrastructure-requirements.md).
+
 ## Lambda HTTP API
 
 Generate a minimal Lambda API with `--preset production-app --backend-deploy lambda`.

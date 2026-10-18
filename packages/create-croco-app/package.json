@@ -56,22 +56,23 @@
   },
   "dependencies": {
     "@clack/prompts": "^0.9.0",
+    "@croco/framework-context": "workspace:*",
     "@croco/problems-core": "workspace:*",
     "@croco/telemetry-sdk-node": "workspace:*",
     "commander": "^12.0.0",
     "fs-extra": "^11.0.0",
     "handlebars": "^4.7.10",
-    "picocolors": "^1.0.0"
+    "picocolors": "^1.0.0",
+    "smol-toml": "1.7.0",
+    "yaml": "2.9.0"
   },
   "devDependencies": {
-    "@croco/framework-context": "workspace:*",
     "@croco/tenant-core": "workspace:*",
     "@types/fs-extra": "^11.0.0",
     "@types/handlebars": "^4.1.0",
     "tsup": "^8.5.1",
     "typescript": "^5.0.0",
-    "vitest": "4.1.8",
-    "yaml": "2.9.0"
+    "vitest": "4.1.8"
   },
   "engines": {
     "node": ">=24"
