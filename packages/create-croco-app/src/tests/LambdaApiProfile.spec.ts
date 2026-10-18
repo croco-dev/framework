@@ -47,6 +47,15 @@ describe("Lambda API infrastructure profile", () => {
       Method: "ANY",
       PayloadFormatVersion: "2.0",
     });
+    expect(fn.Environment.Variables.OTEL_EXPORTER_OTLP_HEADERS).toEqual({
+      "Fn::If": [
+        "HasTelemetryHeaders",
+        {
+          "Fn::Sub": "{{resolve:secretsmanager:${TelemetryHeadersSecretArn}:SecretString:headers}}",
+        },
+        { Ref: "AWS::NoValue" },
+      ],
+    });
     expect(fn.Role).toEqual({ "Fn::GetAtt": ["ApiRole", "Arn"] });
     const statements = template.Resources.ApiRole.Properties.Policies.flatMap(
       (policy: { PolicyDocument: { Statement: unknown[] } }) => policy.PolicyDocument.Statement,

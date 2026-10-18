@@ -1,12 +1,21 @@
 import { createHash } from "node:crypto";
-import { readFileSync, writeFileSync } from "node:fs";
+import { copyFileSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { mergeInto } from "../helpers/fs.js";
 import { getPackageVersion } from "../package-version.js";
 import { TEMPLATES_DIR } from "../template-path.js";
 
 export function installLambdaApi(targetDir: string, context: Record<string, unknown>): void {
-  mergeInto(join(TEMPLATES_DIR, "addons/lambda-api"), targetDir, context);
+  mergeInto(join(TEMPLATES_DIR, "addons/lambda-api"), targetDir, {
+    ...context,
+    lambdaTelemetrySecretReference:
+      "{{resolve:secretsmanager:${TelemetryHeadersSecretArn}:SecretString:headers}}",
+  });
+  // The base template already owns lambda.ts; ordinary mergeInto copies preserve it.
+  copyFileSync(
+    join(TEMPLATES_DIR, "addons/lambda-api/apps/api-server/src/lambda.ts"),
+    join(targetDir, "apps/api-server/src/lambda.ts"),
+  );
   const apiPath = join(targetDir, "apps/api-server/package.json");
   const api = JSON.parse(readFileSync(apiPath, "utf8"));
   api.main = "./dist/lambda.js";
