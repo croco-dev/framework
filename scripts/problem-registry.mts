@@ -3335,6 +3335,28 @@ const recoveryMetadataByCategory = {
 } as const satisfies Record<ProblemCategory, ProblemRecoveryMetadata>;
 
 const recoveryMetadataByCode = {
+  "transports-graphql/fetch-schema-required": recovery({
+    cause:
+      "The fetch handler was configured without a prepared GraphQL schema, such as with Node-only schemaOptions.",
+    userAction:
+      "Provide a prepared GraphQLSchema in the schema option; compile code-first schemas before creating the fetch handler.",
+    operatorAction:
+      "Inspect createGraphQLFetchHandler configuration and move schemaOptions compilation outside the fetch transport.",
+    retryability: "not-retryable",
+    redactionPolicy: "public",
+    severity: "info",
+  }),
+  "transports-graphql/fetch-subscriptions-unsupported": recovery({
+    cause:
+      "A subscription type is present in the schema supplied to the query/mutation-only fetch handler.",
+    userAction:
+      "Provide a schema without subscription fields, or use a subscription-capable transport such as Node GraphQLServer.",
+    operatorAction:
+      "Inspect the schema passed to createGraphQLFetchHandler; keep subscriptions on a separately supported transport.",
+    retryability: "not-retryable",
+    redactionPolicy: "public",
+    severity: "info",
+  }),
   CROCO_META_VITE_SSG_OUTPUT_CONFLICT: recovery({
     cause: "Multiple SSG routes map to the same static HTML output path.",
     userAction: "Remove or rename a conflicting SSG route before rebuilding.",

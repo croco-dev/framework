@@ -18949,9 +18949,9 @@ Sources:
 - Retryability: `not-retryable`
 - Redaction policy: `public`
 - Lifecycle: `active`
-- Cause: The caller sent malformed input or unsupported request options.
-- User action: Correct the request input and retry after validation passes.
-- Operator action: Inspect validation details and request logs; do not retry unchanged input.
+- Cause: The fetch handler was configured without a prepared GraphQL schema, such as with Node-only schemaOptions.
+- User action: Provide a prepared GraphQLSchema in the schema option; compile code-first schemas before creating the fetch handler.
+- Operator action: Inspect createGraphQLFetchHandler configuration and move schemaOptions compilation outside the fetch transport.
 - Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
 
 Sources:
@@ -18967,9 +18967,9 @@ Sources:
 - Retryability: `not-retryable`
 - Redaction policy: `public`
 - Lifecycle: `active`
-- Cause: The caller sent malformed input or unsupported request options.
-- User action: Correct the request input and retry after validation passes.
-- Operator action: Inspect validation details and request logs; do not retry unchanged input.
+- Cause: A subscription type is present in the schema supplied to the query/mutation-only fetch handler.
+- User action: Provide a schema without subscription fields, or use a subscription-capable transport such as Node GraphQLServer.
+- Operator action: Inspect the schema passed to createGraphQLFetchHandler; keep subscriptions on a separately supported transport.
 - Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
 
 Sources:

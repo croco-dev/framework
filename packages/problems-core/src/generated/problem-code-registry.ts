@@ -27516,9 +27516,9 @@ export type CrocoProblemRegistry = {
       readonly title: "Bad Request";
       readonly cookbookPath: "/reference/problem-recovery-cookbook/#transports-graphql-fetch-schema-required";
       readonly recovery: {
-        readonly cause: "The caller sent malformed input or unsupported request options.";
-        readonly userAction: "Correct the request input and retry after validation passes.";
-        readonly operatorAction: "Inspect validation details and request logs; do not retry unchanged input.";
+        readonly cause: "The fetch handler was configured without a prepared GraphQL schema, such as with Node-only schemaOptions.";
+        readonly userAction: "Provide a prepared GraphQLSchema in the schema option; compile code-first schemas before creating the fetch handler.";
+        readonly operatorAction: "Inspect createGraphQLFetchHandler configuration and move schemaOptions compilation outside the fetch transport.";
         readonly retryability: "not-retryable";
         readonly redactionPolicy: "public";
         readonly telemetry: {
@@ -27544,9 +27544,9 @@ export type CrocoProblemRegistry = {
       readonly title: "Bad Request";
       readonly cookbookPath: "/reference/problem-recovery-cookbook/#transports-graphql-fetch-subscriptions-unsupported";
       readonly recovery: {
-        readonly cause: "The caller sent malformed input or unsupported request options.";
-        readonly userAction: "Correct the request input and retry after validation passes.";
-        readonly operatorAction: "Inspect validation details and request logs; do not retry unchanged input.";
+        readonly cause: "A subscription type is present in the schema supplied to the query/mutation-only fetch handler.";
+        readonly userAction: "Provide a schema without subscription fields, or use a subscription-capable transport such as Node GraphQLServer.";
+        readonly operatorAction: "Inspect the schema passed to createGraphQLFetchHandler; keep subscriptions on a separately supported transport.";
         readonly retryability: "not-retryable";
         readonly redactionPolicy: "public";
         readonly telemetry: {
@@ -61100,10 +61100,12 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       cookbookPath:
         "/reference/problem-recovery-cookbook/#transports-graphql-fetch-schema-required",
       recovery: {
-        cause: "The caller sent malformed input or unsupported request options.",
-        userAction: "Correct the request input and retry after validation passes.",
+        cause:
+          "The fetch handler was configured without a prepared GraphQL schema, such as with Node-only schemaOptions.",
+        userAction:
+          "Provide a prepared GraphQLSchema in the schema option; compile code-first schemas before creating the fetch handler.",
         operatorAction:
-          "Inspect validation details and request logs; do not retry unchanged input.",
+          "Inspect createGraphQLFetchHandler configuration and move schemaOptions compilation outside the fetch transport.",
         retryability: "not-retryable",
         redactionPolicy: "public",
         telemetry: {
@@ -61132,10 +61134,12 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       cookbookPath:
         "/reference/problem-recovery-cookbook/#transports-graphql-fetch-subscriptions-unsupported",
       recovery: {
-        cause: "The caller sent malformed input or unsupported request options.",
-        userAction: "Correct the request input and retry after validation passes.",
+        cause:
+          "A subscription type is present in the schema supplied to the query/mutation-only fetch handler.",
+        userAction:
+          "Provide a schema without subscription fields, or use a subscription-capable transport such as Node GraphQLServer.",
         operatorAction:
-          "Inspect validation details and request logs; do not retry unchanged input.",
+          "Inspect the schema passed to createGraphQLFetchHandler; keep subscriptions on a separately supported transport.",
         retryability: "not-retryable",
         redactionPolicy: "public",
         telemetry: {
