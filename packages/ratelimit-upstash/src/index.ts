@@ -18,3 +18,6 @@ export {
   UpstashSlidingWindowStore,
   UpstashTokenBucketStore,
 } from "./libs/UpstashRateLimitStore";
+
+export { createUpstashRateLimitClient } from "./libs/createUpstashRateLimitClient";
+export type { UpstashRateLimitClientOptions } from "./libs/createUpstashRateLimitClient";

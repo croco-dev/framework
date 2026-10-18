@@ -211,7 +211,7 @@ None.
 | `@croco/protocols-rest`                | Contracts      | protocol      | Protocols Rest          | unclaimed                                 |
 | `@croco/protocols-trpc`                | Plugins        | protocol      | Protocols Trpc          | unclaimed                                 |
 | `@croco/ratelimit-core`                | Contracts      | domain        | Ratelimit               | unclaimed                                 |
-| `@croco/ratelimit-upstash`             | Plugins        | provider      | Rate limiting           | node, lambda                              |
+| `@croco/ratelimit-upstash`             | Plugins        | provider      | Rate limiting           | node, lambda, cloudflare-workers          |
 | `@croco/referral-core`                 | Contracts      | domain        | Referrals               | unclaimed                                 |
 | `@croco/referral-drizzle`              | Plugins        | provider      | Referrals               | node, lambda                              |
 | `@croco/repository-core`               | Contracts      | domain        | Repository              | unclaimed                                 |

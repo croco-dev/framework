@@ -36,3 +36,17 @@ If every first-party option is unavailable, incompatible with the runtime, too i
 3. Record supported runtimes, configuration names, verification, maturity, and the precise unsupported boundary.
 4. Add conformance and failure-path tests appropriate to that contract.
 5. Report that the adapter is application-scoped and not a certified Croco implementation.
+
+## Workers rate limiting
+
+`@croco/ratelimit-upstash` supports an explicit fetch-only `createUpstashRateLimitClient({ url, token })`
+from Worker bindings with one selected fixed/sliding/token-bucket store per algorithm namespace.
+Inject that owner through the application's module; do not auto-register an Upstash and Durable Object
+owner for the same limiter. Distinct applications and algorithms require distinct prefixes. Preserve
+host-verified client identity and explicitly select failOpen/failClosed. HTTP status Problems are redacted;
+a retryable failure may follow a committed Lua command, so never retry consumption blindly.
+
+The package's workerd REST fixture and Docker Redis suite prove the standalone adapter path, not a live
+Upstash service, deployed Workers, DO provider certification, or full Workers SaaS profile integration.
+DO remains unsupported by this package and requires its own implementation and conformance. Keep alpha
+maturity and unverified live/readiness evidence explicit; numeric policy validation remains in #1687.

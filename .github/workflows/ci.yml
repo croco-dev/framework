@@ -682,6 +682,8 @@ jobs:
               - 'packages/problems-core/**'
               - 'packages/promotions-core/**'
               - 'packages/promotions-drizzle/**'
+              - 'packages/ratelimit-core/**'
+              - 'packages/ratelimit-upstash/**'
               - 'packages/testing/**'
               - 'packages/testing-resources/**'
               - 'packages/transports-http/**'
@@ -1581,6 +1583,8 @@ jobs:
         run: |
           pnpm build --filter=@croco/testing-resources...
           pnpm --filter @croco/testing-resources test:real
+          pnpm build --filter=@croco/ratelimit-upstash...
+          pnpm --filter @croco/ratelimit-upstash test:real
           pnpm build --filter=@croco/metering-core...
           pnpm --filter @croco/metering-core test:real
           pnpm build --filter=@croco/warehouse-postgres...
