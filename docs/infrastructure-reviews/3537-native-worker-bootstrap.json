@@ -1,0 +1,127 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "create-croco-app",
+      "classification": "deployment-profile",
+      "reason": "The build-time CLI now emits an explicit bootstrap-only Workers application. These package decisions concern the Tooling process, which does not execute an application Host; emitted application behavior remains infrastructure-dependent and its native Workers adapter is reviewed separately below.",
+      "files": {
+        "packages/create-croco-app/src/generator.ts": "f33fc1c0e2e92d11f6c6a7d5eada50c120c6c731f0b220ede1778099f05d6138",
+        "packages/create-croco-app/src/saas-provider-profiles.ts": "3390d117f1f2d4eea206f45b372d783a016e8267a218ff03f925307cce696a02",
+        "packages/create-croco-app/templates/saas/apps/api-server/src/workerBootstrap.ts.hbs": "11881e60e33debf5b0925b5f4049179e8ed269df168636fc4c1c1b9845d5dd62",
+        "packages/create-croco-app/templates/saas/apps/api-server/scripts/worker-smoke.mjs": "136cdc4c721ea80dcd9bdc509bc7a047b9077efe6eb103e68dc5e006d81b27d3"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "The generator is build-time Tooling rather than a Kubernetes Node Host. Existing generated Node deployment composition is preserved; this change introduces no Kubernetes provider or cluster lifecycle.",
+          "providers": [],
+          "constraints": [
+            "Do not treat the CLI runtime snapshot as a generated application runtime claim.",
+            "Generated Kubernetes Node Host validation and real cluster certification are separate."
+          ],
+          "references": [
+            "packages/create-croco-app/src/generator.ts",
+            "packages/create-croco-app/src/saas-provider-profiles.ts",
+            "packages/create-croco-app/templates/saas/apps/api-server/src/workerBootstrap.ts.hbs",
+            "packages/create-croco-app/templates/saas/apps/api-server/scripts/worker-smoke.mjs"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "The generator is not invoked as a Lambda application Host and owns no invocation resource or flush boundary. Existing Lambda API generation remains separate from the bootstrap-only Workers composition.",
+          "providers": [],
+          "constraints": [
+            "Do not promote the documentation-only full SaaS Lambda profile to executable support.",
+            "Generated Lambda invocation scope, reuse, flush and live AWS evidence remain application Host responsibilities."
+          ],
+          "references": [
+            "packages/create-croco-app/src/generator.ts",
+            "packages/create-croco-app/src/saas-provider-profiles.ts",
+            "packages/create-croco-app/templates/saas/apps/api-server/src/workerBootstrap.ts.hbs",
+            "packages/create-croco-app/templates/saas/apps/api-server/scripts/worker-smoke.mjs"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "The CLI emits Worker sources but is not deployed inside a Worker isolate. Its catalog runtime list remains unclaimed. The emitted application selects the conditional native Workers adapter reviewed in preset-cloudflare.",
+          "providers": [],
+          "constraints": [
+            "Generated saas-cloudflare is bootstrap-only; all eight SaaS business capabilities are unavailable.",
+            "Generated Workers require nodejs_compat, native env bindings and a fresh request context.",
+            "Retain actual Wrangler/workerd generated smoke; Node unit tests and the review record do not certify Cloudflare deployment."
+          ],
+          "references": [
+            "packages/create-croco-app/src/generator.ts",
+            "packages/create-croco-app/src/saas-provider-profiles.ts",
+            "packages/create-croco-app/templates/saas/apps/api-server/src/workerBootstrap.ts.hbs",
+            "packages/create-croco-app/templates/saas/apps/api-server/scripts/worker-smoke.mjs"
+          ]
+        }
+      }
+    },
+    {
+      "package": "preset-cloudflare",
+      "classification": "runtime-adapter",
+      "reason": "The opt-in application entrypoint supplies an alpha native-env Host plugin for an application-owned initialized graph without installing or certifying SaaS providers.",
+      "files": {
+        "packages/preset-cloudflare/package.json": "b7f7bb67d36eba5779588ddc8eb03e7ae14ef4e0c9443c7e504b140382a11de9",
+        "packages/preset-cloudflare/src/application.ts": "89a966fa68f6b4e85f8a26900eeb750066cfcfbe0c790c2f8146b56c44ba8e6d",
+        "packages/preset-cloudflare/tsup.config.ts": "03892da99c2bb8c3cc07405c1152ae7c5d11cbf61361777ffd0640080eabd4f3"
+      },
+      "catalogRuntimes": ["cloudflare-workers"],
+      "profiles": {
+        "kubernetes": {
+          "result": "unsupported",
+          "reason": "This native Worker env/fetch Host is not a Kubernetes Node Host and introduces no Node server lifecycle adapter.",
+          "providers": ["@croco/preset-cloudflare/application"],
+          "constraints": [
+            "Select the existing Node Host deployment path separately; no Kubernetes cluster support or certification is asserted."
+          ],
+          "references": [
+            "packages/preset-cloudflare/src/application.ts",
+            "packages/preset-cloudflare/src/fetch.ts",
+            "packages/preset-cloudflare/README.md",
+            "packages/preset-cloudflare/src/tests/CloudflareHostPlugin.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "unsupported",
+          "reason": "This entrypoint does not implement the Lambda event/context Host or invocation completion boundary.",
+          "providers": ["@croco/preset-cloudflare/application"],
+          "constraints": [
+            "Select a Lambda Host separately and retain invocation-scoped resource and flush ownership; no AWS certification is asserted."
+          ],
+          "references": [
+            "packages/preset-cloudflare/src/application.ts",
+            "packages/preset-cloudflare/src/fetch.ts",
+            "packages/preset-cloudflare/README.md",
+            "packages/preset-cloudflare/src/tests/CloudflareHostPlugin.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "conditional",
+          "reason": "The alpha native env binding plugin participates in the existing Workers fetch Host and initialized ApplicationRuntime. Support is limited to this explicit bootstrap/runtime.host boundary.",
+          "providers": ["@croco/preset-cloudflare/application", "@croco/framework-module"],
+          "constraints": [
+            "Workers host only; not a Cloudflare Node Container.",
+            "Requires nodejs_compat for callback and request context isolation.",
+            "Native env identity owns the application runtime; do not serialize secret binding values into the graph.",
+            "Generated SaaS bootstrap provides health and explicit unavailable Problems, not the eight SaaS business providers or durable storage.",
+            "Actual Wrangler/workerd smoke remains required separately; Node env-ownership unit tests are not Workers execution receipts.",
+            "No live Cloudflare account, production deployment, vendor provider certification or npm release is claimed."
+          ],
+          "references": [
+            "packages/preset-cloudflare/src/application.ts",
+            "packages/preset-cloudflare/src/fetch.ts",
+            "packages/preset-cloudflare/README.md",
+            "packages/preset-cloudflare/src/tests/CloudflareHostPlugin.spec.ts",
+            "packages/create-croco-app/templates/saas/apps/api-server/scripts/worker-smoke.mjs"
+          ],
+          "host": "workers"
+        }
+      }
+    }
+  ]
+}

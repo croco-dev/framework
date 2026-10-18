@@ -10,14 +10,35 @@ Windows 개발자는 WSL2 안에서 Linux 도구 체인을 사용하는 대안�
 Croco는 WSL2 환경을 직접 검증하지 않았으며, Linux CI 통과가 WSL2 검증이나 인증을 뜻하지 않습니다.
 Windows에서 웹 브라우저로 웹서비스를 사용하는 사용자에 대한 지원은 변경하지 않습니다.
 
+{{#if saasCloudflare}}
+## Worker bootstrap 범위
+
+선택한 `saas-cloudflare`는 `composition.scope: bootstrap-only`입니다. 실제 native env를
+앱별 `ApplicationRuntime`에 연결하고 `GET /ops/health`만 제공합니다. health 성공은
+full SaaS 또는 실제 서비스 인증을 뜻하지 않습니다. 인증·저장·과금·미터링·작업·telemetry와
+webhook 검증은 `unavailable`이며 다른 요청은 `CROCO_SAAS_PROFILE_CAPABILITY_UNAVAILABLE`(501)로
+실패합니다. 임의의 secret을 설정해도 fake Provider나 검증되지 않은 SDK를 활성화하지 않습니다.
+
+`pnpm profile:check`는 bootstrap graph를 검사합니다. `pnpm worker:smoke`는 실제 workerd에서
+health, 미지원 webhook 거절, 잘못된 binding의 오류 redaction을 확인합니다.
+`pnpm profile:smoke:real`은 full SaaS Provider가 없으므로 명시적으로 실패합니다.
+`src/worker.ts` → `src/workerBootstrap.ts`가 Worker composition root이며, 기존 `src/app.ts`,
+SaaS demo controller/client 계약과 아래 Node/Postgres demo 예시는 Worker에서 활성화되지 않습니다.
+새 Provider는 구현·binding·실행 검증을 마친 뒤 manifest와 graph를 함께 갱신해야 합니다.
+
+{{/if}}
 ## Quickstart
 
 ```bash
 pnpm install
+{{#if saasCloudflare}}
+pnpm worker:smoke
+{{else}}
 pnpm demo:smoke
+{{/if}}
 ```
 
-`demo:smoke`는 REST contract graph를 검사하고, generated client를 만든 뒤, SaaS demo flow를 실행합니다.
+`demo:smoke`는 Node/Postgres profile에서 REST contract graph를 검사하고, generated client를 만든 뒤, SaaS demo flow를 실행합니다.
 CLI smoke는 서버를 시작하지 않으며 선택된 provider graph의 명시적 zero-credential replacement를 사용합니다.
 `pnpm profile:check`도 함께 실행되어 생성된 provider profile, tenant model manifest/schema/playbook, 타입 소스가 drift 없이 맞는지 확인합니다.
 
@@ -137,7 +158,7 @@ pnpm di:verify
 
 `croco-saas-profile.manifest.json`의 현재 public contract version은 `croco.saas-provider-profile/v1`입니다. v1 변경은 기존 field에 대해 additive여야 하며, field 제거/rename/semantic break는 새 `schemaVersion`, release note, migration guidance, `croco doctor` unsupported-version diagnostic을 함께 요구합니다. 각 capability의 실제 실행 상태는 `productionState`와 `zeroCredentialState`로 구분되며 값은 `configured-production-plugin`, `fake-local`, `unavailable`, `documentation-only` 중 하나입니다. `status`는 v1 consumer 호환용 요약 필드이고 실행 가능 여부 판단에는 사용하지 않습니다.
 
-`pnpm profile:check`는 manifest, generated source, package dependency, env, provider docs, tenant artifact가 같은 composition metadata에서 파생됐는지 검사합니다. `saas-cloudflare`와 `saas-lambda`는 아직 `documentation-only`/`unavailable` 상태이며 실행 가능한 graph가 추가되기 전에는 runtime bootstrap이 명시적으로 실패합니다.
+`pnpm profile:check`는 manifest, generated source, package dependency, env, provider docs, tenant artifact가 같은 composition metadata에서 파생됐는지 검사합니다. `saas-cloudflare`는 native host만 설치하는 `bootstrap-only`이며 SaaS Provider는 `unavailable`입니다. `saas-lambda`는 아직 `documentation-only`/`unavailable` 상태이며 실행 가능한 graph가 추가되기 전에는 runtime bootstrap이 명시적으로 실패합니다.
 
 실제 provider 구성 검증은 opt-in입니다. 필수 env가 빠지면 외부 호출 전에 `CROCO_SAAS_PROFILE_ENV_MISSING`으로 실패하고, 값이 갖춰지면 production plugin constructor와 application graph 초기화를 검증합니다. 이 경로는 별도의 수동 composition 파일을 사용하지 않습니다.
 

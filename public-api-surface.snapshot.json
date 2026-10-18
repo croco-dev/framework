@@ -33002,6 +33002,46 @@
           ]
         },
         {
+          "exportPath": "./application",
+          "kind": "code",
+          "targets": [
+            {
+              "conditions": ["types"],
+              "target": "./dist/application.d.mts"
+            },
+            {
+              "conditions": ["import"],
+              "target": "./dist/application.mjs"
+            },
+            {
+              "conditions": ["default"],
+              "target": "./dist/application.mjs"
+            }
+          ],
+          "sourceEntrypoint": "packages/preset-cloudflare/src/application.ts",
+          "runtimeExports": [
+            {
+              "name": "CLOUDFLARE_ENV_TOKEN",
+              "exportKind": "declaration",
+              "source": null,
+              "declarationKind": "const"
+            },
+            {
+              "name": "cloudflareWorkersHost",
+              "exportKind": "declaration",
+              "source": null,
+              "declarationKind": "function"
+            },
+            {
+              "name": "createCloudflareWorkersHost",
+              "exportKind": "named",
+              "source": "./fetch",
+              "declarationKind": "function"
+            }
+          ],
+          "typeExports": []
+        },
+        {
           "exportPath": "./fetch",
           "kind": "code",
           "targets": [

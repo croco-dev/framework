@@ -332,7 +332,7 @@ describe("verification manifest", () => {
     expect(
       createHash("sha256").update(JSON.stringify(manifests)).digest("hex"),
       "The pre-split monolithic manifest changed; update this digest only after intentionally verifying the new serialized commands.",
-    ).toBe("8fe81a8bc8d1dd06483183dff7ba92becf4d71a438278fb1b5b7dda76cda5361");
+    ).toBe("fe4ada04d138835484b4d10e59564cf88802100e5de1899dbd659dd036c96921");
   });
 
   it("classifies every dependency edge and every cross-lane edge for synthesis", () => {
@@ -447,9 +447,10 @@ describe("verification manifest", () => {
         generatedInventoryPaths,
       ).sort(),
     ).toEqual(generatedInventoryPaths);
-    expect(PUBLISH_REQUIRED_GENERATED_SMOKE_CASES).toHaveLength(17);
+    expect(PUBLISH_REQUIRED_GENERATED_SMOKE_CASES).toHaveLength(18);
     expect(PUBLISH_REQUIRED_GENERATED_SMOKE_CASES).toContain("kubernetes-node-api");
     expect(PUBLISH_REQUIRED_GENERATED_SMOKE_CASES).toContain("saas-single-tenant");
+    expect(PUBLISH_REQUIRED_GENERATED_SMOKE_CASES).toContain("saas-cloudflare-profile");
     expect(PUBLISH_REQUIRED_GENERATED_SMOKE_CASES).toContain("trpc-nextjs-vercel-fullstack");
 
     const packedCli = createVerificationManifest("publish").find(
@@ -1112,7 +1113,7 @@ describe("verification manifest", () => {
         ],
         paths,
       ),
-    ).toHaveLength(18);
+    ).toHaveLength(19);
     expect(selectGeneratedTestPathsForSmokeCases(["rest-spa-contracts"], paths)).toEqual([]);
     expect(() => selectGeneratedTestPathsForSmokeCases(["unknown-smoke-case"], paths)).toThrow(
       "Unknown generated smoke case: unknown-smoke-case",
@@ -1154,15 +1155,21 @@ describe("verification manifest", () => {
       const nodePaths = selectGeneratedTestPathsForSmokeCases(["goal-saas-api"], paths);
       const lifecycle =
         "packages/create-croco-app/templates/saas/apps/api-server/src/tests/node-lifecycle.spec.ts";
+      const workerBootstrap =
+        "packages/create-croco-app/templates/saas/apps/api-server/src/tests/WorkerBootstrap.spec.ts";
+      const profilePaths = [
+        ...nodePaths.filter((path) => path !== lifecycle),
+        ...(caseName === "saas-cloudflare-profile" ? [workerBootstrap] : []),
+      ].sort();
       expect(nodePaths).toContain(lifecycle);
-      expect(selectGeneratedTestPathsForSmokeCases([caseName], paths)).toEqual(
-        nodePaths.filter((path) => path !== lifecycle),
-      );
+      expect(nodePaths).not.toContain(workerBootstrap);
+      expect(selectGeneratedTestPathsForSmokeCases([caseName], paths)).toEqual(profilePaths);
+      const combinedPaths = [...new Set([...nodePaths, ...profilePaths])].sort();
       expect(selectGeneratedTestPathsForSmokeCases([caseName, "goal-saas-api"], paths)).toEqual(
-        nodePaths,
+        combinedPaths,
       );
       expect(selectGeneratedTestPathsForSmokeCases(["goal-saas-api", caseName], paths)).toEqual(
-        nodePaths,
+        combinedPaths,
       );
     },
   );
@@ -1215,10 +1222,13 @@ describe("verification manifest", () => {
     ).toBe(false);
   });
 
-  it("selects the exact generated case for a dynamically injected provider dependency", () => {
-    expect(selectGeneratedSmokeCasesForChangedFiles(["packages/storage-r2/src/index.ts"])).toEqual([
-      "saas-cloudflare-profile",
-    ]);
+  it("selects configured dynamic providers without treating unavailable R2 as installed", () => {
+    expect(selectGeneratedSmokeCasesForChangedFiles(["packages/storage-r2/src/index.ts"])).toEqual(
+      [],
+    );
+    expect(readGeneratedSmokeCaseDirectDependencies("saas-cloudflare-profile")).toContain(
+      "@croco/preset-cloudflare",
+    );
     expect(
       selectGeneratedSmokeCasesForChangedFiles(["packages/auth-better-auth/src/index.ts"]),
     ).toEqual(["goal-saas-api", "saas-golden-path", "saas-single-tenant", "ai-saas-golden-path"]);
@@ -1309,6 +1319,25 @@ describe("verification manifest", () => {
             readFileSync(join(projectDir, "croco.project-map.json"), "utf8"),
           );
           expect(projectMap.telemetry, smokeCase.name).toEqual(expectedProjectMap.telemetry);
+          const telemetryMarkers: Record<string, string> = {
+            "span-wrapper": "withSpan",
+            "telemetry-flush": "forceFlush",
+            "telemetry-runtime": "TelemetryRuntime",
+            "trace-decorator": "@Trace",
+          };
+          for (const boundary of projectMap.telemetry.boundaries as {
+            kind: string;
+            source: { file: string; line: number; column: number };
+          }[]) {
+            const sourceLine = readFileSync(join(projectDir, boundary.source.file), "utf8").split(
+              "\n",
+            )[boundary.source.line - 1];
+            expect(
+              sourceLine,
+              `${smokeCase.name}: ${boundary.source.file}:${boundary.source.line}`,
+            ).toContain(telemetryMarkers[boundary.kind]);
+            expect(sourceLine?.search(/\S/), smokeCase.name).toBe(boundary.source.column - 1);
+          }
         }
         if (smokeCase.name === "ai-saas-golden-path") {
           expect(options.preset).toBe("ai-saas");

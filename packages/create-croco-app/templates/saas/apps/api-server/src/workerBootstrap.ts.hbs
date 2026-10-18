@@ -1,0 +1,119 @@
+{{#if saasCloudflare}}
+import { Context } from "@croco/framework-context";
+import { createApplicationRuntime, defineCrocoApplication } from "@croco/framework-module";
+import type { ApplicationRuntimeGraphManifest } from "@croco/framework-module";
+import {
+  cloudflareWorkersHost,
+  CLOUDFLARE_ENV_TOKEN,
+  createCloudflareWorkersHost,
+} from "@croco/preset-cloudflare/application";
+import type { CloudflareFetchEnv, CloudflareHostAppFetch } from "@croco/preset-cloudflare";
+import { ProblemFactory } from "@croco/problems-core";
+import { generatedSaasProviderProfileManifest as manifest } from "./generatedSaasProviderProfile";
+
+export async function createWorkerApplication(env: CloudflareFetchEnv) {
+  const profile = env.SAAS_PROVIDER_PROFILE;
+  if (profile !== undefined && profile !== manifest.profile.name) {
+    throw ProblemFactory.internalServerError(
+      "CROCO_SAAS_PROFILE_BINDING_INVALID",
+      "SAAS_PROVIDER_PROFILE does not match the generated Worker.",
+    );
+  }
+  const imports = manifest.composition.plugins.map((plugin) => {
+    if (plugin.factoryExport !== "cloudflareWorkersHost") {
+      throw ProblemFactory.internalServerError(
+        "CROCO_SAAS_PROFILE_PLUGIN_FACTORY_UNSUPPORTED",
+        "The selected Worker plugin factory is unavailable.",
+      );
+    }
+    return cloudflareWorkersHost(env);
+  });
+  const runtime = createApplicationRuntime(
+    defineCrocoApplication({ name: manifest.profile.name, imports }),
+  );
+  try {
+    await runtime.initialize();
+    assertWorkerProfileGraph(runtime.createGraphManifest());
+  } catch (failure) {
+    await runtime.dispose();
+    throw failure;
+  }
+  const fetch: CloudflareHostAppFetch = runtime.bindHostCallback(async (request, context) =>
+    Context.run({ requestId: context?.requestId ?? crypto.randomUUID() }, async () => {
+      if (context?.env !== env || runtime.get(CLOUDFLARE_ENV_TOKEN) !== env) {
+        throw ProblemFactory.internalServerError(
+          "CROCO_SAAS_PROFILE_GRAPH_DRIFT",
+          "Worker environment ownership changed.",
+        );
+      }
+      if (request.method === "GET" && new URL(request.url).pathname === "/ops/health") {
+        return Response.json({
+          status: "healthy",
+          requestId: Context.getRequestId(),
+          scope: "bootstrap-only",
+          profile: manifest.profile.name,
+          fullSaas: false,
+          capabilities: manifest.capabilities.map(({ capability, productionState }) => ({
+            capability,
+            state: productionState,
+          })),
+        });
+      }
+      return workerProblemResponse("CROCO_SAAS_PROFILE_CAPABILITY_UNAVAILABLE");
+    }),
+  );
+  return { runtime, fetch: createCloudflareWorkersHost({ fetch }) };
+}
+
+export function assertWorkerProfileGraph(graph: ApplicationRuntimeGraphManifest): void {
+  const expected = manifest.composition.plugins
+    .map((plugin) => ({
+      name: plugin.pluginName,
+      packageName: plugin.packageName,
+      maturity: plugin.maturity,
+      capabilities: [...plugin.capabilities].sort(),
+      moduleNames: [...plugin.moduleNames].sort(),
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+  const actual = graph.plugins
+    .map((plugin) => ({
+      name: plugin.name,
+      packageName: plugin.packageName,
+      maturity: plugin.maturity,
+      capabilities: plugin.capabilities.map(({ id }) => id).sort(),
+      moduleNames: graph.moduleGraph.modules.map(({ name }) => name).sort(),
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+  if (
+    graph.status !== "ready" ||
+    graph.providerReplacements.length !== 0 ||
+    JSON.stringify(actual) !== JSON.stringify(expected)
+  ) {
+    throw ProblemFactory.internalServerError(
+      "CROCO_SAAS_PROFILE_GRAPH_DRIFT",
+      "Worker runtime graph differs from its generated profile.",
+    );
+  }
+}
+
+export function workerProblemResponse(
+  code: "CROCO_SAAS_PROFILE_CAPABILITY_UNAVAILABLE" | "CROCO_SAAS_PROFILE_BOOTSTRAP_FAILED",
+): Response {
+  const problem = (
+    code === "CROCO_SAAS_PROFILE_CAPABILITY_UNAVAILABLE"
+      ? ProblemFactory.notImplemented
+      : ProblemFactory.internalServerError
+  )(code, "This Worker provides bootstrap health only. SaaS providers are unavailable.");
+  return Response.json(problem.toJSON(), {
+    status: problem.status,
+    headers: { "content-type": "application/problem+json" },
+  });
+}
+{{else}}
+import { SaasProviderProfileRuntimeUnavailableProblem } from "./problems";
+export async function createWorkerApplication(
+  _env: Readonly<Record<string, unknown>>,
+): Promise<{ runtime: { dispose(): Promise<void> } }> {
+  throw new SaasProviderProfileRuntimeUnavailableProblem("Worker bootstrap is not selected");
+}
+{{/if}}

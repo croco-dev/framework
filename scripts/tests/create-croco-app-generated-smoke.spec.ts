@@ -1612,35 +1612,71 @@ describe("create-croco-app generated smoke matrix", () => {
   });
 
   it.each([
-    { status: 500, body: "CROCO_SAAS_PROFILE_RUNTIME_UNAVAILABLE: saas-cloudflare", passes: true },
-    { status: 500, body: "unrelated runtime failure", passes: false },
-    { status: 200, body: "CROCO_SAAS_PROFILE_RUNTIME_UNAVAILABLE", passes: false },
-    { status: 503, body: "CROCO_SAAS_PROFILE_RUNTIME_UNAVAILABLE", passes: false },
-  ])(
-    "requires the exact unsupported-provider Worker response ($status, $body)",
-    async ({ status, body, passes }) => {
-      const validation = getGeneratedSmokeDependencyCaseInputs()
-        .find(({ name }) => name === "saas-cloudflare-profile")
-        ?.validations.find(({ label }) => label === "Wrangler workerd runtime smoke");
-      const script = validation?.args?.at(-1);
-      if (!script) throw new Error("Missing Wrangler runtime smoke script");
-      let stopped = false;
-      const execution = runInNewContext(
-        `(async () => { ${script.replace('import { unstable_dev } from "wrangler";', "")} })()`,
-        {
-          unstable_dev: async () => ({
-            fetch: async () => ({ status, text: async () => body }),
-            stop: async () => {
-              stopped = true;
+    "none",
+    "legacy-health",
+    "full-saas",
+    "fake-provider",
+    "accepted-webhook",
+    "leaked-webhook",
+    "leaked-binding",
+  ])("requires bootstrap health and safe unsupported Worker responses (%s)", async (fault) => {
+    const validation = getGeneratedSmokeDependencyCaseInputs()
+      .find(({ name }) => name === "saas-cloudflare-profile")
+      ?.validations.find(({ label }) => label === "Wrangler workerd runtime smoke");
+    expect(validation?.args).toEqual(["worker:smoke"]);
+    const script = readFileSync(
+      new URL(
+        "../../packages/create-croco-app/templates/saas/apps/api-server/scripts/worker-smoke.mjs",
+        import.meta.url,
+      ),
+      "utf8",
+    );
+    let started = 0;
+    let stopped = 0;
+    const execution = runInNewContext(
+      `(async () => { ${script.replace('import { unstable_dev } from "wrangler";', "")} })()`,
+      {
+        unstable_dev: async () => {
+          const instance = ++started;
+          return {
+            fetch: async (_url: string, options?: { method?: string }) => {
+              if (instance === 2)
+                return new Response(
+                  JSON.stringify({
+                    code: "CROCO_SAAS_PROFILE_BOOTSTRAP_FAILED",
+                    ...(fault === "leaked-binding" ? { detail: "private-invalid-profile" } : {}),
+                  }),
+                  { status: 500 },
+                );
+              if (options?.method === "POST")
+                return new Response(
+                  JSON.stringify({
+                    code: "CROCO_SAAS_PROFILE_CAPABILITY_UNAVAILABLE",
+                    ...(fault === "leaked-webhook" ? { detail: "private-worker-binding" } : {}),
+                  }),
+                  { status: fault === "accepted-webhook" ? 200 : 501 },
+                );
+              if (fault === "legacy-health")
+                return new Response("CROCO_SAAS_PROFILE_RUNTIME_UNAVAILABLE", { status: 500 });
+              return Response.json({
+                scope: "bootstrap-only",
+                fullSaas: fault === "full-saas",
+                capabilities: Array.from({ length: fault === "fake-provider" ? 7 : 8 }, () => ({
+                  state: "unavailable",
+                })),
+              });
             },
-          }),
+            stop: async () => {
+              stopped++;
+            },
+          };
         },
-      );
-      if (passes) await expect(execution).resolves.toBeUndefined();
-      else await expect(execution).rejects.toThrow();
-      expect(stopped).toBe(true);
-    },
-  );
+      },
+    );
+    if (fault === "none") await expect(execution).resolves.toBeUndefined();
+    else await expect(execution).rejects.toThrow();
+    expect(stopped).toBe(started);
+  });
 
   it("keeps REST SPA contract canaries selectable in the blocking tier", () => {
     expect(

@@ -222,7 +222,7 @@ function findCompositionRoots(root) {
         continue;
       }
 
-      if (/^(?:compositionRoot|app)\.(?:[cm]?[jt]sx?)$/.test(entry.name)) {
+      if (/^(?:compositionRoot|workerBootstrap|app)\.(?:[cm]?[jt]sx?)$/.test(entry.name)) {
         const path = resolve(current, entry.name);
         const source = readFileSync(path, "utf8");
         if (/defineCrocoApplication|createGenerated.*ApplicationDefinition/.test(source)) {

@@ -77,6 +77,18 @@ Use references only; keep credentials out of declarations and reports. Static ar
 is not live existence, effective authorization, executable code/image proof or certification.
 SAM/CDK and Wrangler validators do not imply generated full SaaS deployment support.
 
+## Cloudflare SaaS bootstrap
+
+`--preset saas --saas-profile saas-cloudflare` selects a bootstrap-only Worker.
+Inspect `composition.scope`, the native host plugin and each capability state separately.
+`GET /ops/health` proves bootstrap readiness only; business and webhook requests return
+`CROCO_SAAS_PROFILE_CAPABILITY_UNAVAILABLE` without accepting deliveries or invoking fake providers.
+`profile:check` checks native env ownership and runtime graph identity; `profile:smoke:real`
+refuses the unavailable full SaaS path. Run the generated app's Wrangler workerd smoke
+for health, unavailable webhook and redacted invalid-binding evidence. Node-only provider
+SDKs, an installed package or local bootstrap health do not establish Worker provider support
+or certification. Provider implementation, connection and live-service evidence remain separate.
+
 ## Three infrastructure review
 
 For a new public capability, Provider, Host, deployment Profile or support-changing fix, inspect the contract,

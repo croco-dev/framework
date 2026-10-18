@@ -20,7 +20,7 @@ vi.mock("@croco/telemetry-sdk-node", async (importOriginal) => {
 });
 
 describe("generated SaaS telemetry endpoint", () => {
-  if (!generatedSaasProviderProfileManifest.composition.executable) {
+  if (String(generatedSaasProviderProfileManifest.composition.scope) !== "saas") {
     it("rejects telemetry composition for a documentation-only profile", () => {
       captureTelemetryOptions.mockClear();
 

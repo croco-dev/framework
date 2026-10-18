@@ -184,6 +184,10 @@ function runGeneratedProfileCheck(projectDir: string): { status: number | null; 
 }
 
 function writeGeneratedProfileCheckRuntimeStubs(projectDir: string): void {
+  writeFileSync(
+    join(projectDir, "apps/api-server/src/workerBootstrap.ts"),
+    "export async function createWorkerApplication() { return { runtime: { async dispose() {} } }; }\n",
+  );
   const problemsCoreStubDir = join(
     projectDir,
     "apps",
@@ -1828,7 +1832,7 @@ describe("E2E: generate()", () => {
         runtimeTarget: "cloudflare-workers",
       },
       smoke: {
-        zeroCredential: "pnpm demo:smoke",
+        zeroCredential: "pnpm worker:smoke",
         realProviderOptIn: "SAAS_PROVIDER_PROFILE=saas-cloudflare pnpm profile:smoke:real",
       },
       tenantModel: {
@@ -1850,115 +1854,86 @@ describe("E2E: generate()", () => {
         "capabilities": [
           {
             "capability": "runtime",
-            "env": [
-              "CLOUDFLARE_ACCOUNT_ID",
-            ],
-            "notes": "Cloudflare Workers covers runtime.",
-            "packageName": "@croco/transports-cloudflare-workers",
-            "productionState": "documentation-only",
-            "provider": "Cloudflare Workers",
-            "status": "documented",
-            "zeroCredentialState": "documentation-only",
+            "env": [],
+            "notes": "Native env bindings and isolated application/request scopes. No SaaS provider certification.",
+            "packageName": "@croco/preset-cloudflare",
+            "pluginName": "cloudflare-workers-host",
+            "productionState": "configured-production-plugin",
+            "provider": "Cloudflare Workers bootstrap",
+            "status": "configured",
+            "zeroCredentialState": "configured-production-plugin",
           },
           {
             "capability": "auth",
-            "env": [
-              "CLERK_SECRET_KEY",
-            ],
-            "notes": "Clerk covers auth.",
-            "packageName": "@croco/auth-clerk",
-            "productionState": "documentation-only",
-            "provider": "Clerk",
-            "status": "documented",
-            "zeroCredentialState": "documentation-only",
+            "env": [],
+            "notes": "No verified Worker auth provider selected covers auth.",
+            "productionState": "unavailable",
+            "provider": "No verified Worker auth provider selected",
+            "status": "unavailable",
+            "zeroCredentialState": "unavailable",
           },
           {
             "capability": "persistence",
             "env": [],
-            "notes": "Application-defined Worker persistence covers persistence.",
-            "productionState": "documentation-only",
-            "provider": "Application-defined Worker persistence",
-            "status": "documented",
-            "zeroCredentialState": "documentation-only",
+            "notes": "No verified Worker persistence selected covers persistence.",
+            "productionState": "unavailable",
+            "provider": "No verified Worker persistence selected",
+            "status": "unavailable",
+            "zeroCredentialState": "unavailable",
           },
           {
             "capability": "billing",
-            "env": [
-              "POLAR_ACCESS_TOKEN",
-              "POLAR_WEBHOOK_SECRET",
-              "POLAR_PRODUCT_ID_TEAM",
-            ],
-            "notes": "Polar covers billing.",
-            "packageName": "@croco/billing-polar",
-            "productionState": "documentation-only",
-            "provider": "Polar",
-            "status": "documented",
-            "zeroCredentialState": "documentation-only",
+            "env": [],
+            "notes": "No verified Worker billing provider selected covers billing.",
+            "productionState": "unavailable",
+            "provider": "No verified Worker billing provider selected",
+            "status": "unavailable",
+            "zeroCredentialState": "unavailable",
           },
           {
             "capability": "metering",
-            "env": [
-              "UPSTASH_REDIS_REST_URL",
-              "UPSTASH_REDIS_REST_TOKEN",
-            ],
-            "notes": "Upstash Redis covers metering.",
-            "packageName": "@croco/metering-upstash",
-            "productionState": "documentation-only",
-            "provider": "Upstash Redis",
-            "status": "documented",
-            "zeroCredentialState": "documentation-only",
+            "env": [],
+            "notes": "No verified Worker metering provider selected covers metering.",
+            "productionState": "unavailable",
+            "provider": "No verified Worker metering provider selected",
+            "status": "unavailable",
+            "zeroCredentialState": "unavailable",
           },
           {
             "capability": "storage",
-            "env": [
-              "R2_BUCKET",
-            ],
-            "notes": "Cloudflare R2 covers storage.",
-            "packageName": "@croco/storage-r2",
-            "productionState": "documentation-only",
-            "provider": "Cloudflare R2",
-            "status": "documented",
-            "zeroCredentialState": "documentation-only",
+            "env": [],
+            "notes": "No verified Worker storage binding selected covers storage.",
+            "productionState": "unavailable",
+            "provider": "No verified Worker storage binding selected",
+            "status": "unavailable",
+            "zeroCredentialState": "unavailable",
           },
           {
             "capability": "tasks",
-            "env": [
-              "UPSTASH_QSTASH_TOKEN",
-              "UPSTASH_QSTASH_CURRENT_SIGNING_KEY",
-              "UPSTASH_QSTASH_NEXT_SIGNING_KEY",
-            ],
-            "notes": "QStash covers tasks.",
-            "packageName": "@croco/tasks-qstash",
-            "productionState": "documentation-only",
-            "provider": "QStash",
-            "status": "documented",
-            "zeroCredentialState": "documentation-only",
+            "env": [],
+            "notes": "No verified Worker task provider selected covers tasks.",
+            "productionState": "unavailable",
+            "provider": "No verified Worker task provider selected",
+            "status": "unavailable",
+            "zeroCredentialState": "unavailable",
           },
           {
             "capability": "telemetry",
-            "env": [
-              "TELEMETRY_ENABLED",
-              "OTEL_EXPORTER_OTLP_ENDPOINT",
-            ],
-            "notes": "OpenTelemetry fetch export covers telemetry.",
-            "packageName": "@croco/telemetry-api",
-            "productionState": "documentation-only",
-            "provider": "OpenTelemetry fetch export",
-            "status": "documented",
-            "zeroCredentialState": "documentation-only",
+            "env": [],
+            "notes": "No verified Worker telemetry exporter selected covers telemetry.",
+            "productionState": "unavailable",
+            "provider": "No verified Worker telemetry exporter selected",
+            "status": "unavailable",
+            "zeroCredentialState": "unavailable",
           },
           {
             "capability": "webhookVerification",
-            "env": [
-              "POLAR_WEBHOOK_SECRET",
-              "UPSTASH_QSTASH_CURRENT_SIGNING_KEY",
-              "UPSTASH_QSTASH_NEXT_SIGNING_KEY",
-            ],
-            "notes": "Polar + QStash signatures covers webhookVerification.",
-            "productionState": "documentation-only",
-            "provider": "Polar + QStash signatures",
-            "status": "documented",
-            "zeroCredentialState": "documentation-only",
+            "env": [],
+            "notes": "No verified Worker webhook provider selected covers webhookVerification.",
+            "productionState": "unavailable",
+            "provider": "No verified Worker webhook provider selected",
+            "status": "unavailable",
+            "zeroCredentialState": "unavailable",
           },
         ],
         "compatibility": {
@@ -1983,7 +1958,7 @@ describe("E2E: generate()", () => {
           "qualityGates": [
             "profile:check",
             "croco doctor --json",
-            "demo:smoke",
+            "worker:smoke",
           ],
           "requiredCapabilities": [
             "runtime",
@@ -2003,166 +1978,56 @@ describe("E2E: generate()", () => {
           ],
         },
         "composition": {
-          "executable": false,
-          "plugins": [],
+          "executable": true,
+          "plugins": [
+            {
+              "capabilities": [
+                "runtime.host",
+              ],
+              "env": [],
+              "examples": [
+                "packages/preset-cloudflare/README.md",
+              ],
+              "factoryExport": "cloudflareWorkersHost",
+              "maturity": "alpha",
+              "moduleNames": [
+                "@croco/preset-cloudflare/host",
+              ],
+              "packageName": "@croco/preset-cloudflare",
+              "pluginName": "cloudflare-workers-host",
+              "verification": [
+                "pnpm --filter @croco/preset-cloudflare test",
+              ],
+            },
+          ],
+          "scope": "bootstrap-only",
         },
         "deployNotes": [
-          "Keep the generated wrangler.toml nodejs_compat flag because the demo composition imports Node-compatible modules.",
-          "Keep generated smoke local; use pnpm profile:smoke:real only after Worker secrets are bound.",
-          "Verify Polar and QStash signatures before Worker handlers mutate billing, metering, or task state.",
-          "Flush telemetry through the Worker request lifecycle instead of AWS exec-wrapper style boot hooks.",
-          "Run pnpm profile:check in CI and fail deployment when runtimeTarget or required capabilities drift.",
+          "Only GET /ops/health is available. Other requests fail with CROCO_SAAS_PROFILE_CAPABILITY_UNAVAILABLE; webhooks never mutate state.",
+          "The host plugin installs the actual fetch env into one ApplicationRuntime per env identity; bindings are never read from process.env.",
+          "Keep nodejs_compat for the framework AsyncLocalStorage scope. No Node-only provider SDK is selected by the Worker entry.",
+          "Health proves bootstrap readiness only. It does not certify auth, billing, persistence, storage, tasks, metering, telemetry or webhook verification.",
+          "profile:check verifies the bootstrap graph. profile:smoke:real refuses full SaaS because required providers remain unavailable.",
+          "Provider implementations and their bindings require separate integration and real-service evidence before promotion.",
         ],
         "env": {
           "optional": [
             {
-              "description": "Opt-in local HTTP demo endpoints.",
-              "example": "false",
-              "name": "SAAS_DEMO_ENDPOINTS_ENABLED",
-              "requiredForRealProvider": false,
-              "secret": false,
-            },
-            {
-              "description": "Runtime environment used for production defaults and telemetry sampling.",
-              "example": "development",
-              "name": "NODE_ENV",
-              "requiredForRealProvider": false,
-              "secret": false,
-            },
-            {
-              "description": "Port used by the generated Node API server.",
-              "example": "3000",
-              "name": "PORT",
-              "requiredForRealProvider": false,
-              "secret": false,
-            },
-            {
-              "description": "Browser origin allowed by the generated API CORS policy.",
-              "example": "http://localhost:5173",
-              "name": "WEB_ORIGIN",
-              "requiredForRealProvider": false,
-              "secret": false,
-            },
-            {
-              "description": "Enable OpenTelemetry exporter wiring.",
-              "example": "true",
-              "name": "TELEMETRY_ENABLED",
-              "requiredForRealProvider": false,
-              "secret": false,
-            },
-            {
-              "description": "OTLP endpoint used by telemetry init and flush.",
-              "example": "http://localhost:4318",
-              "name": "OTEL_EXPORTER_OTLP_ENDPOINT",
-              "requiredForRealProvider": false,
-              "secret": false,
-            },
-            {
-              "description": "Optional trace-specific OTLP endpoint that overrides the shared OTLP endpoint.",
-              "example": "http://localhost:4318/v1/traces",
-              "name": "OTEL_EXPORTER_OTLP_TRACES_ENDPOINT",
-              "requiredForRealProvider": false,
-              "secret": false,
-            },
-          ],
-          "required": [
-            {
               "description": "Selected generated provider profile name.",
+              "example": "saas-cloudflare",
               "name": "SAAS_PROVIDER_PROFILE",
-              "requiredForRealProvider": true,
+              "requiredForRealProvider": false,
               "secret": false,
-            },
-            {
-              "description": "Cloudflare account id for Workers and R2.",
-              "name": "CLOUDFLARE_ACCOUNT_ID",
-              "requiredForRealProvider": true,
-              "secret": true,
-            },
-            {
-              "description": "Cloudflare deploy token.",
-              "name": "CLOUDFLARE_API_TOKEN",
-              "requiredForRealProvider": true,
-              "secret": true,
-            },
-            {
-              "description": "R2 bucket name for object storage.",
-              "name": "R2_BUCKET",
-              "requiredForRealProvider": true,
-              "secret": false,
-            },
-            {
-              "description": "Clerk backend secret key.",
-              "name": "CLERK_SECRET_KEY",
-              "requiredForRealProvider": true,
-              "secret": true,
-            },
-            {
-              "description": "Polar API access token.",
-              "name": "POLAR_ACCESS_TOKEN",
-              "requiredForRealProvider": true,
-              "secret": true,
-            },
-            {
-              "description": "Polar webhook signature secret.",
-              "name": "POLAR_WEBHOOK_SECRET",
-              "requiredForRealProvider": true,
-              "secret": true,
-            },
-            {
-              "description": "Polar product id for the team plan.",
-              "name": "POLAR_PRODUCT_ID_TEAM",
-              "requiredForRealProvider": true,
-              "secret": false,
-            },
-            {
-              "description": "Upstash Redis REST URL for metering state.",
-              "name": "UPSTASH_REDIS_REST_URL",
-              "requiredForRealProvider": true,
-              "secret": true,
-            },
-            {
-              "description": "Upstash Redis REST token.",
-              "name": "UPSTASH_REDIS_REST_TOKEN",
-              "requiredForRealProvider": true,
-              "secret": true,
-            },
-            {
-              "description": "QStash token for task delivery.",
-              "name": "UPSTASH_QSTASH_TOKEN",
-              "requiredForRealProvider": true,
-              "secret": true,
-            },
-            {
-              "description": "Current QStash webhook signing key.",
-              "name": "UPSTASH_QSTASH_CURRENT_SIGNING_KEY",
-              "requiredForRealProvider": true,
-              "secret": true,
-            },
-            {
-              "description": "Next QStash webhook signing key.",
-              "name": "UPSTASH_QSTASH_NEXT_SIGNING_KEY",
-              "requiredForRealProvider": true,
-              "secret": true,
             },
           ],
+          "required": [],
         },
         "packages": [
           "@croco/preset-cloudflare",
-          "@croco/transports-cloudflare-workers",
-          "@croco/auth-clerk",
-          "@croco/billing-polar",
-          "@croco/metering-upstash",
-          "@croco/storage-r2",
-          "@croco/tasks-qstash",
-          "@croco/triggers-qstash",
-          "@clerk/backend",
-          "@polar-sh/sdk",
-          "@upstash/qstash",
-          "@upstash/redis",
         ],
         "profile": {
-          "description": "Cloudflare Workers profile with Clerk auth, Polar billing, Upstash metering/tasks, R2 storage, and explicit Worker runtime limits.",
-          "displayName": "Cloudflare SaaS",
+          "description": "Native Worker bootstrap only. SaaS providers are unavailable until separately implemented, connected and verified; this profile is not full SaaS or production certified.",
+          "displayName": "Cloudflare SaaS bootstrap",
           "name": "saas-cloudflare",
           "runtimeTarget": "cloudflare-workers",
         },
@@ -2176,7 +2041,7 @@ describe("E2E: generate()", () => {
         "schemaVersion": "croco.saas-provider-profile/v1",
         "smoke": {
           "realProviderOptIn": "SAAS_PROVIDER_PROFILE=saas-cloudflare pnpm profile:smoke:real",
-          "zeroCredential": "pnpm demo:smoke",
+          "zeroCredential": "pnpm worker:smoke",
         },
         "tenantModel": {
           "currentModel": "workspace",
@@ -2644,12 +2509,7 @@ describe("E2E: generate()", () => {
           platform: "cloudflare-workers",
           lifecycle: "fetch",
         },
-        transports: [
-          {
-            protocol: "http",
-            packageName: "@croco/transports-http",
-          },
-        ],
+        transports: [],
         buildTarget: {
           name: "cloudflare-worker",
           format: "esm",
@@ -2764,16 +2624,7 @@ describe("E2E: generate()", () => {
     );
     rmSync(providerFixture, { recursive: true });
     rmSync(contractFixture);
-    expect(profileManifest.packages).toEqual(
-      expect.arrayContaining([
-        "@croco/transports-cloudflare-workers",
-        "@croco/auth-clerk",
-        "@croco/billing-polar",
-        "@croco/metering-upstash",
-        "@croco/storage-r2",
-        "@croco/tasks-qstash",
-      ]),
-    );
+    expect(profileManifest.packages).toEqual(["@croco/preset-cloudflare"]);
     for (const packageName of [
       ...(profileManifest.packages as string[]),
       ...(profileManifest.tenantModel.requiredPackages as string[]),
@@ -2782,16 +2633,6 @@ describe("E2E: generate()", () => {
     }
     expect(apiPackageJson.dependencies).toMatchObject({
       "@croco/preset-cloudflare": externalCrocoRange("@croco/preset-cloudflare"),
-      "@croco/auth-clerk": externalCrocoRange("@croco/auth-clerk"),
-      "@croco/billing-polar": externalCrocoRange("@croco/billing-polar"),
-      "@croco/metering-upstash": externalCrocoRange("@croco/metering-upstash"),
-      "@croco/storage-r2": externalCrocoRange("@croco/storage-r2"),
-      "@croco/tasks-qstash": externalCrocoRange("@croco/tasks-qstash"),
-      "@croco/triggers-qstash": externalCrocoRange("@croco/triggers-qstash"),
-      "@clerk/backend": "^1.0.0",
-      "@polar-sh/sdk": "^0.32.2",
-      "@upstash/qstash": "^2.9.0",
-      "@upstash/redis": "^1.34.0",
     });
     expect(profileManifest.compatibility.requiredCapabilities).toEqual([
       "runtime",
@@ -2805,18 +2646,18 @@ describe("E2E: generate()", () => {
       "webhookVerification",
     ]);
     expect(envExample).toContain("# SAAS_PROVIDER_PROFILE=saas-cloudflare");
-    expect(envExample).toContain("# CLOUDFLARE_ACCOUNT_ID=<croco-secret:CLOUDFLARE_ACCOUNT_ID>");
-    expect(envExample).toContain("# R2_BUCKET=<croco-config:R2_BUCKET>");
+    expect(envExample).not.toContain("CLOUDFLARE_API_TOKEN");
+    expect(profileManifest.env.required).toEqual([]);
     expect(existsSync(join(testDir, ".env"))).toBe(false);
     expect(providerProfileDocs).toContain("Capability Matrix");
     expect(providerProfileDocs).toContain("Manifest Contract");
     expect(providerProfileDocs).toContain("Schema version: `croco.saas-provider-profile/v1`");
     expect(providerProfileDocs).toContain("Policy version: `croco.secret-placeholder-policy/v1`");
-    expect(providerProfileDocs).toContain("`<croco-secret:CLOUDFLARE_API_TOKEN>`");
-    expect(secretsChecklist).toContain("`<croco-secret:CLOUDFLARE_API_TOKEN>`");
-    expect(secretsChecklist).toContain("`<croco-config:R2_BUCKET>`");
+    expect(providerProfileDocs).toContain("bootstrap-only");
+    expect(secretsChecklist).not.toContain("CLOUDFLARE_API_TOKEN");
+    expect(secretsChecklist).not.toContain("R2_BUCKET");
     expect(providerProfileDocs).toContain("Tenant model: `workspace`");
-    expect(providerProfileDocs).toContain("QStash");
+    expect(providerProfileDocs).toContain("unavailable");
     expect(tenantModelPlaybook).toContain("Current model: `workspace`");
     expect(tenantModelPlaybook).toContain("## Manifest Versioning");
     expect(tenantModelPlaybook).toContain("Current version: `croco.tenant-model/v1`");
@@ -2863,8 +2704,8 @@ describe("E2E: generate()", () => {
       "croco-saas-profile.manifest.json",
       (source) =>
         source.replace(
-          '"displayName": "Cloudflare SaaS"',
-          '"displayName": "Cloudflare SaaS Drift"',
+          '"displayName": "Cloudflare SaaS bootstrap"',
+          '"displayName": "Cloudflare SaaS bootstrap Drift"',
         ),
       "CROCO_SAAS_PROFILE_MANIFEST_DRIFT",
     );
@@ -2945,7 +2786,7 @@ describe("E2E: generate()", () => {
       build: "pnpm di:generate && tsup src/worker.ts --format esm --platform browser --clean --dts",
       buildFormat: "esm",
       source: "worker.ts",
-      canonicalHost: "createCloudflareWorkersHost",
+      canonicalHost: "createWorkerApplication",
       nextStep: "build:worker",
     },
   ])(
@@ -2991,7 +2832,11 @@ describe("E2E: generate()", () => {
       expect(apiPackageJson.scripts?.build).toBe(build);
       expect(apiPackageJson.dependencies?.[hostPackage]).toBeDefined();
       expect(hostSource).toContain(canonicalHost);
-      expect(hostSource).toContain(`hostPlatform: "${platform}"`);
+      if (platform === "cloudflare-workers") {
+        expect(hostSource).toContain("createWorkerApplication(env)");
+      } else {
+        expect(hostSource).toContain(`hostPlatform: "${platform}"`);
+      }
       expect(result.nextSteps.at(-1)).toEqual({ command: "pnpm", args: [nextStep], cwd: testDir });
       expect(rootPackageJson.scripts?.[nextStep]).toBeDefined();
       expect(rootPackageJson.scripts?.["dev:api"] !== undefined).toBe(platform === "node");
@@ -3014,7 +2859,10 @@ describe("E2E: generate()", () => {
         platform,
         composition: {
           host: { platform, lifecycle, packageName: hostPackage },
-          transports: [{ protocol: "http", packageName: "@croco/transports-http" }],
+          transports:
+            platform === "cloudflare-workers"
+              ? []
+              : [{ protocol: "http", packageName: "@croco/transports-http" }],
           buildTarget: {
             format: buildFormat,
             outputDirectory: "apps/api-server/dist",

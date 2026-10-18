@@ -56,7 +56,10 @@ async function main(): Promise<void> {
   assertTenantModelCompatibility(manifest, tenantModelManifest);
   assertManifestPackagesDeclared(manifest);
 
-  if (mode === "real-provider" && !manifest.composition.executable) {
+  if (
+    mode === "real-provider" &&
+    (!manifest.composition.executable || String(manifest.composition.scope) === "bootstrap-only")
+  ) {
     throw new SaasProviderProfileRuntimeUnavailableProblem(manifest.profile.name);
   }
 
@@ -64,7 +67,11 @@ async function main(): Promise<void> {
     assertRealProviderEnv(manifest);
   }
 
-  if (manifest.composition.executable) {
+  if (String(manifest.composition.scope) === "bootstrap-only") {
+    const { createWorkerApplication } = await import("./workerBootstrap");
+    const app = await createWorkerApplication({});
+    await app.runtime.dispose();
+  } else if (manifest.composition.executable) {
     const { createCrocoApp } = await import("./app");
     const app = await createCrocoApp({
       profileMode: mode === "real-provider" ? "production" : "zero-credential",

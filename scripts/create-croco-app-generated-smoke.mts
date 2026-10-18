@@ -916,17 +916,6 @@ const runtimeCapabilitySmokeSupport = {
     shutdown: false,
   },
 } as const satisfies Record<RuntimeCapabilitySmokePlatform, Record<string, boolean>>;
-const saasCloudflareWorkerRuntimeSmokeScript = [
-  'import { unstable_dev } from "wrangler";',
-  'const worker = await unstable_dev("src/worker.ts", { config: "wrangler.toml", local: true, logLevel: "error", experimental: { disableExperimentalWarning: true, disableDevRegistry: true, watch: false } });',
-  "try {",
-  '  const response = await worker.fetch("http://example.com/ops/health");',
-  "  const body = await response.text();",
-  '  if (response.status !== 500 || !body.includes("CROCO_SAAS_PROFILE_RUNTIME_UNAVAILABLE")) throw new Error(`Expected unsupported SaaS provider failure, received ${response.status}: ${body}`);',
-  "} finally {",
-  "  await worker.stop();",
-  "}",
-].join(" ");
 const smokeCaseDefinitionsWithoutLint: readonly Omit<SmokeCase, "tier" | "advisory">[] = [
   {
     name: "blank-basic",
@@ -2241,13 +2230,7 @@ const smokeCaseDefinitionsWithoutLint: readonly Omit<SmokeCase, "tier" | "adviso
       {
         label: "Wrangler workerd runtime smoke",
         packagePath: ["apps", "api-server"],
-        args: [
-          "exec",
-          "tsx",
-          "--input-type=module",
-          "--eval",
-          saasCloudflareWorkerRuntimeSmokeScript,
-        ],
+        args: ["worker:smoke"],
       },
       {
         label: "Contract snapshot",
@@ -3506,7 +3489,7 @@ function runtimeCapabilityManifestValidation(
         lifecycle: "fetch",
         packageName: "@croco/preset-cloudflare",
       },
-      transports: [{ protocol: "http", packageName: "@croco/transports-http" }],
+      transports: [],
       buildTarget: {
         name: "cloudflare-worker",
         format: "esm",

@@ -193,6 +193,7 @@ export const PUBLISH_REQUIRED_GENERATED_SMOKE_CASES = [
   ),
   "admin-console-starter",
   "ai-saas-golden-path",
+  "saas-cloudflare-profile",
   "trpc-nextjs-vercel-fullstack",
 ] as const;
 

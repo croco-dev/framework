@@ -272,6 +272,21 @@ describe("official Croco Skill", () => {
     );
   });
 
+  it("reports the native Worker bootstrap composition root", () => {
+    const projectRoot = createProject({ name: "worker-bootstrap-inspection" });
+    const source = resolve(projectRoot, "apps/api-server/src");
+    mkdirSync(source, { recursive: true });
+    writeFileSync(
+      resolve(source, "workerBootstrap.ts"),
+      "export const application = defineCrocoApplication({ imports: [] });\n",
+    );
+    const inspection = runInspector(projectRoot);
+    expect(inspection.status).toBe(0);
+    expect(JSON.parse(inspection.stdout).compositionRoots).toContain(
+      "apps/api-server/src/workerBootstrap.ts",
+    );
+  });
+
   it("ships a project inspector without direct environment access", () => {
     const source = readFileSync(inspectorPath, "utf8");
 

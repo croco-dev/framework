@@ -36,9 +36,13 @@ afterAll(async () => {
 });
 
 describe("generated SaaS executable assurance", () => {
-  if (!generatedSaasProviderProfileManifest.composition.executable) {
+  if (String(generatedSaasProviderProfileManifest.composition.scope) !== "saas") {
     it("reports that executable assurance is unavailable for documentation-only profiles", () => {
-      expect(generatedSaasProviderProfileManifest.composition.plugins).toEqual([]);
+      expect(
+        generatedSaasProviderProfileManifest.capabilities.find(
+          ({ capability }) => capability === "billing",
+        )?.productionState,
+      ).not.toBe("configured-production-plugin");
     });
     return;
   }

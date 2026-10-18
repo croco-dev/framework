@@ -16,6 +16,7 @@
   "types": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts",
+    "./application": "./src/application.ts",
     "./fetch": "./src/fetch.ts"
   },
   "publishConfig": {
@@ -25,6 +26,11 @@
       ".": {
         "types": "./dist/index.d.mts",
         "import": "./dist/index.mjs"
+      },
+      "./application": {
+        "types": "./dist/application.d.mts",
+        "import": "./dist/application.mjs",
+        "default": "./dist/application.mjs"
       },
       "./fetch": {
         "types": "./dist/fetch.d.mts",
@@ -42,6 +48,8 @@
     "docs:api:model": "node --experimental-strip-types ../docs/scripts/generate-package-api-model.mts"
   },
   "dependencies": {
+    "@croco/framework-context": "workspace:*",
+    "@croco/framework-module": "workspace:*",
     "@croco/framework-preset": "workspace:*",
     "@croco/transports-http": "workspace:*"
   },
