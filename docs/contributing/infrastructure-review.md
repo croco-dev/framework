@@ -12,7 +12,7 @@ Profile metadata; the generated extension matrix remains the compatibility table
 The PR companion runs the same gate and includes decisions, constraints, reusable providers and diagnostics
 in its JSON and Markdown reports. The gate never rewrites files.
 
-The gate selects changed production sources in public `packages/*/src`, runtime manifests, runtime-affecting
+The gate selects changed production sources in public `packages/*/src`, runtime/infrastructure manifests, `presentation-preset/runtime-profiles.json`, runtime-affecting
 package manifest fields, and changed catalog role/runtime metadata. Source deletions count. Private packages,
 tests/fixtures, documentation and release-only version bumps are excluded. Unchanged historical packages
 need no record. Formatting/comment-only edits are excluded using parsed TypeScript output (literal content is preserved).
@@ -67,10 +67,11 @@ for all three: explain why it has no host capabilities, storage or lifecycle req
 A `supported` decision additionally needs `evidence` with `kind: "host-runtime"` or `"live-infrastructure"`,
 `runtime`, tracked test `path`, exact Vitest `testName` (the complete suite plus test name), and test content
 `sha256`. Compute hashes from the final committed bytes, for example with `shasum -a 256 <file>`.
-The checker executes that exact named test with the repository's pinned Vitest, in its package/example directory
+A successful receipt must name the pinned file as well as the exact test title. The checker executes that exact named test with the repository's pinned Vitest, in its package/example directory
 or at the root for script tests. Zero matches, skipped-only execution, test failures, stale test hashes and `mock`
 evidence fail. Execution requires a clean checkout at the reviewed head, preventing receipts for another tree.
-Tests can use the existing no-credential runtime harness; they must exercise the claimed host path.
+Verification/companion report directories are ignored generated outputs, so the CI reporting runner can retain
+its checkpoints while tracked source mutations still fail. Tests can use the existing no-credential runtime harness; they must exercise the claimed host path.
 Each execution is bounded to two minutes. Longer live checks should remain separately recorded as unverified
 here until an appropriate bounded conformance test exists; do not weaken timeouts to obtain support.
 

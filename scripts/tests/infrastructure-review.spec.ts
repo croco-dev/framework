@@ -16,6 +16,7 @@ import {
   executeEvidence,
   inspectInfrastructureReview,
 } from "../infrastructure-review.mts";
+import { runReleaseSpineEvidence } from "../release-spine-evidence.mts";
 
 const roots: string[] = [];
 function git(root: string, ...args: string[]): string {
@@ -124,7 +125,7 @@ describe("host evidence execution", () => {
     write(
       root,
       "vitest.config.mts",
-      'export default { test: { include: ["scripts/tests/*.spec.ts"] } };',
+      'export default { test: { include: ["scripts/tests/**/*.spec.ts"] } };',
     );
     const path = "scripts/tests/NodeHost.spec.ts";
     write(
@@ -141,12 +142,19 @@ it('Node host serves a request', async () => {
   } finally { await new Promise(resolve => server.close(resolve)); }
 });
 it.skip('not executed', () => {});
+it.skip('forged title', () => {});
 it('fails assertion', () => expect('actual').toBe('different'));`,
     );
     expect(executeEvidence(root, { path, testName: "Node host serves a request" })).toBe(true);
     expect(executeEvidence(root, { path, testName: "not executed" })).toBe(false);
     expect(executeEvidence(root, { path, testName: "missing test" })).toBe(false);
     expect(executeEvidence(root, { path, testName: "fails assertion" })).toBe(false);
+    write(
+      root,
+      "scripts/tests/copy/scripts/tests/NodeHost.spec.ts",
+      "import { it, expect } from 'vitest'; it('forged title', () => expect(2).toBe(2));",
+    );
+    expect(executeEvidence(root, { path, testName: "forged title" })).toBe(false);
   }, 20000);
 });
 
@@ -170,9 +178,13 @@ describe("infrastructure review gate", () => {
     expect(executions).toBe(1);
     expect(result.reviews[0]?.package).toBe("sample");
   });
-  it("executes supported evidence in the owning package at the pinned head", () => {
+  it("executes supported evidence with the real CI reporting runner", async () => {
     const input = changed();
-    write(input.root, ".gitignore", "node_modules\n");
+    write(
+      input.root,
+      ".gitignore",
+      readFileSync(join(import.meta.dirname, "../../.gitignore"), "utf8"),
+    );
     symlinkSync(join(import.meta.dirname, "../../node_modules"), join(input.root, "node_modules"));
     write(
       input.root,
@@ -199,7 +211,34 @@ it('real host', async () => {
       changes: [input.review],
     });
     const head = commit(input.root);
-    expect(inspectInfrastructureReview(input.root, input.base, head).diagnostics).toEqual([]);
+    const report = await runReleaseSpineEvidence({
+      rootDir: input.root,
+      outputDir: "ci-reports/verification/publish",
+      profile: "repo",
+      totalTimeoutMs: 60000,
+      commands: [
+        {
+          id: "infrastructure-review",
+          label: "Infrastructure review",
+          category: "quality",
+          timeoutMs: 30000,
+          command: [
+            process.execPath,
+            "--experimental-strip-types",
+            join(import.meta.dirname, "../infrastructure-review.mts"),
+            "--base",
+            input.base,
+            "--head",
+            head,
+          ],
+        },
+      ],
+    });
+    expect(report.status).toBe("passed");
+    expect(report.checks[0]?.status).toBe("passed");
+    expect(
+      readFileSync(join(input.root, "ci-reports/verification/publish/spine-evidence.json"), "utf8"),
+    ).toContain("infrastructure-review");
   }, 20000);
 
   it("rejects evidence execution that changes the reviewed checkout", () => {
@@ -209,6 +248,30 @@ it('real host', async () => {
       return true;
     });
     expect(result.diagnostics.map((d) => d.code)).toContain("INFRA_EVIDENCE_CHECKOUT");
+  });
+
+  it("selects deployment Profile metadata without a source or catalog change", () => {
+    const { root } = fixture();
+    write(root, "packages/sample/runtime-profiles.json", {
+      profiles: [{ runtime: "lambda", timeout: 30 }],
+    });
+    const base = commit(root);
+    write(root, "packages/sample/runtime-profiles.json", {
+      profiles: [{ runtime: "lambda", timeout: 45 }],
+    });
+    const head = commit(root);
+    expect(inspectInfrastructureReview(root, base, head).diagnostics.map((d) => d.code)).toEqual([
+      "INFRA_REVIEW_MISSING",
+    ]);
+  });
+
+  it("selects Unicode source paths without Git quoted-path loss", () => {
+    const { root, base } = fixture();
+    write(root, "packages/sample/src/새기능.ts", "export const newCapability = 53;");
+    const head = commit(root);
+    expect(inspectInfrastructureReview(root, base, head).diagnostics.map((d) => d.code)).toEqual([
+      "INFRA_REVIEW_MISSING",
+    ]);
   });
 
   it("allows pure contract decisions with reasons and no platform smoke", () => {
@@ -313,6 +376,33 @@ it('real host', async () => {
       "INFRA_REVIEW_REMOVED",
     );
   });
+  it("detects a removed package entry within a retained review document", () => {
+    const input = changed();
+    const otherPath = "packages/other/src/index.ts";
+    write(input.root, "packages/other/package.json", { name: "@croco/other" });
+    write(input.root, otherPath, "export const other = 59;");
+    const other = {
+      ...input.review,
+      package: "other",
+      files: { [otherPath]: contentHash("export const other = 59;") },
+    };
+    write(input.root, "docs/infrastructure-reviews/feature.json", {
+      schemaVersion: 1,
+      changes: [input.review, other],
+    });
+    const base = commit(input.root);
+    write(input.root, "docs/infrastructure-reviews/feature.json", {
+      schemaVersion: 1,
+      changes: [input.review],
+    });
+    const head = commit(input.root);
+    expect(
+      inspectInfrastructureReview(input.root, base, head, () => true).diagnostics.map(
+        (d) => d.code,
+      ),
+    ).toContain("INFRA_REVIEW_REMOVED");
+  });
+
   it("ignores formatting but preserves meaningful whitespace inside literals", () => {
     const { root, base } = fixture();
     write(root, "packages/sample/src/index.ts", "// comment only\nexport const answer=41;\n");

@@ -3,7 +3,7 @@
 import ts from "typescript";
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, realpathSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -93,7 +93,7 @@ function regularFile(root: string, ref: string, path: string): boolean {
 }
 function sourcePackage(path: string): string | null {
   const match =
-    /^packages\/([^/]+)\/(?:src\/|package\.json$|.*(?:runtime|infrastructure|profile|capability).*manifest.*\.json$)/.exec(
+    /^packages\/([^/]+)\/(?:src\/|package\.json$|runtime-profiles\.json$|.*(?:runtime|infrastructure|profile|capability).*manifest.*\.json$)/.exec(
       path,
     );
   if (
@@ -140,6 +140,9 @@ export function executeEvidence(root: string, evidence: JsonObject): boolean {
     return receipt.testResults.some(
       (file) =>
         object(file) &&
+        text(file.name) &&
+        existsSync(file.name) &&
+        realpathSync(file.name) === realpathSync(join(root, testPath)) &&
         Array.isArray(file.assertionResults) &&
         file.assertionResults.some(
           (test) => object(test) && test.fullName === evidence.testName && test.status === "passed",
@@ -158,9 +161,8 @@ export function inspectInfrastructureReview(
 ): InfrastructureReviewReport {
   const base = git(root, ["rev-parse", "--verify", baseRef]).trim();
   const head = git(root, ["rev-parse", "--verify", headRef]).trim();
-  const changed = git(root, ["diff", "--name-only", "--no-renames", base, head])
-    .trim()
-    .split("\n")
+  const changed = git(root, ["diff", "--name-only", "-z", "--no-renames", base, head])
+    .split("\0")
     .filter(Boolean);
   const report: InfrastructureReviewReport = {
     schemaVersion: 1,
@@ -235,6 +237,22 @@ export function inspectInfrastructureReview(
     }
     try {
       const parsed = json(value);
+      const previous = json(at(root, base, path));
+      if (Array.isArray(previous.changes) && Array.isArray(parsed.changes)) {
+        for (const old of previous.changes) {
+          if (
+            object(old) &&
+            text(old.package) &&
+            !parsed.changes.some((next) => object(next) && next.package === old.package)
+          ) {
+            diagnostic(
+              "INFRA_REVIEW_REMOVED",
+              path,
+              `Retain the review for ${old.package}; supersede it explicitly.`,
+            );
+          }
+        }
+      }
       if (
         parsed.schemaVersion !== 1 ||
         !Array.isArray(parsed.changes) ||
