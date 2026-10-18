@@ -157,24 +157,18 @@
       "catalogRuntimes": ["node", "lambda", "cloudflare-workers"],
       "profiles": {
         "kubernetes": {
-          "result": "supported",
-          "reason": "The pinned native-protocol test executes the existing host path with fixed output assertions.",
+          "result": "conditional",
+          "reason": "Reuse the existing Node Host with this fetch adapter; direct Node fetch conformance does not establish Node Host HTTP adaptation or Kubernetes deployment.",
           "providers": ["@croco/transports-graphql"],
           "constraints": [
-            "Local Node fetch execution only; Kubernetes deployment, probes, ingress and shutdown behavior are not certified.",
-            "Prepared query/mutation schemas only; subscriptions, WebSockets and runtime schema compilation are unsupported."
+            "Direct Node fetch tests pass, but actual Node Host dispatch and HTTP request/response adaptation remain unverified by this fixture.",
+            "A Kubernetes application must compose the existing Node Host and validate ingress, probes, request limits and graceful shutdown.",
+            "No Kubernetes cluster deployment or Node Host conformance execution is claimed by this decision."
           ],
           "references": [
             "examples/workers-protocols/src/tests/WorkersProtocols.spec.ts",
             "examples/workers-protocols/README.md"
-          ],
-          "evidence": {
-            "kind": "host-runtime",
-            "runtime": "node",
-            "path": "examples/workers-protocols/src/tests/WorkersProtocols.spec.ts",
-            "testName": "Workers protocol transports on actual workerd runs the generated GraphQL SDK against node-fetch using the same fixture",
-            "sha256": "b56d4c3b139d1210276e92863173d2b2c895d10f6f9b1bfbdc9d9c2f039a6754"
-          }
+          ]
         },
         "aws-lambda": {
           "result": "supported",
@@ -230,23 +224,18 @@
       "catalogRuntimes": ["node", "cloudflare-workers"],
       "profiles": {
         "kubernetes": {
-          "result": "supported",
-          "reason": "The pinned native-protocol test executes the existing host path with fixed output assertions.",
+          "result": "conditional",
+          "reason": "Reuse the existing Node Host with this fetch adapter; direct Node fetch conformance does not establish Node Host HTTP adaptation or Kubernetes deployment.",
           "providers": ["@croco/protocols-trpc"],
           "constraints": [
-            "Local Node fetch execution only; Kubernetes deployment, probes, ingress and shutdown behavior are not certified."
+            "Direct Node fetch tests pass, but actual Node Host dispatch and HTTP request/response adaptation remain unverified by this fixture.",
+            "A Kubernetes application must compose the existing Node Host and validate ingress, probes, request limits and graceful shutdown.",
+            "No Kubernetes cluster deployment or Node Host conformance execution is claimed by this decision."
           ],
           "references": [
             "examples/workers-protocols/src/tests/WorkersProtocols.spec.ts",
             "examples/workers-protocols/README.md"
-          ],
-          "evidence": {
-            "kind": "host-runtime",
-            "runtime": "node",
-            "path": "examples/workers-protocols/src/tests/WorkersProtocols.spec.ts",
-            "testName": "Workers protocol transports on actual workerd runs the same tRPC controller and client through node-fetch",
-            "sha256": "b56d4c3b139d1210276e92863173d2b2c895d10f6f9b1bfbdc9d9c2f039a6754"
-          }
+          ]
         },
         "aws-lambda": {
           "result": "unverified",
