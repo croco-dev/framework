@@ -816,6 +816,83 @@ describe("EnrichmentService", () => {
     expect(await f.classify()).toMatchObject({ state: "classified", attempt: 2 });
     expect((await f.service.read(scope, "run")).reservedTokens).toBe(4000);
   });
+  it.each([false, true])(
+    "preserves terminal ownership after lease observation unless stopped-worker acknowledgement is %s",
+    async (acknowledge) => {
+      const model = vi.fn(async () => answer);
+      const f = await fixture({
+        model,
+        inputs: [input("a", "new text")],
+        retention: { rawMs: 20000, resultMs: 30000 },
+      });
+      let reached = () => {};
+      let resume = () => {};
+      const held = new Promise<void>((resolve) => {
+        reached = resolve;
+      });
+      const resumed = new Promise<void>((resolve) => {
+        resume = resolve;
+      });
+      const compareAndSet = f.store.compareAndSet.bind(f.store);
+      let intercepted = false;
+      f.store.compareAndSet = async (run, revision) => {
+        if (!intercepted && run.receipts[0]?.candidate.state === "classified") {
+          intercepted = true;
+          reached();
+          await resumed;
+        }
+        return compareAndSet(run, revision);
+      };
+      const pending = f.classify().catch((error: unknown) => error);
+      await held;
+      const original = await f.store.load(scope, "run");
+      const receipt = original?.receipts[0].candidate;
+      if (!receipt?.leaseUntil) throw new Error("missing fixture lease");
+      f.state.now = receipt.leaseUntil + 1;
+      try {
+        // Elapsed time alone does not prove that a worker with a known response stopped.
+        await f.classify();
+        await f.service.settle(scope, "run");
+        if (acknowledge) {
+          await f.service.retry(
+            scope,
+            "run",
+            "a",
+            receipt.receiptId,
+            true,
+            await f.command("stopped"),
+          );
+        }
+      } finally {
+        resume();
+      }
+      const result = await pending;
+      if (acknowledge) {
+        expect(result).toMatchObject({ code: "analytics-core/enrichment-conflict" });
+        expect((await f.store.load(scope, "run"))?.receipts[0].candidate).toMatchObject({
+          state: "failed",
+          reason: "acceptance-unknown",
+          retryAuthorized: true,
+        });
+      } else {
+        expect(result).toMatchObject({ state: "classified", labelId: "buy", usage: answer.usage });
+        const stored = await f.store.load(scope, "run");
+        expect(stored?.items[0].candidates[0]).toMatchObject({
+          state: "classified",
+          labelId: "buy",
+          usage: answer.usage,
+        });
+        await f.service.settle(scope, "run");
+        expect(f.settle).toHaveBeenCalledOnce();
+        expect(f.settle.mock.calls[0]).toMatchObject([
+          { candidate: { state: "classified", usage: answer.usage } },
+        ]);
+      }
+      if (acknowledge) expect(f.settle).not.toHaveBeenCalled();
+      expect(model).toHaveBeenCalledOnce();
+      expect(await f.store.load(scope, "run")).toMatchObject({ requests: 1, reservedTokens: 2000 });
+    },
+  );
   it("releases an exhausted uncertain slot only after stopped-worker acknowledgement without permitting another attempt", async () => {
     const model = vi
       .fn<ClassifyText>()

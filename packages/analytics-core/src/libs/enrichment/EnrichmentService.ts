@@ -579,34 +579,8 @@ export class EnrichmentService {
     };
     const existing = item.candidates.filter((candidate) => candidate.cacheKey === key).at(-1);
     if (existing && !existing.retryAuthorized) {
-      if (existing.state === "running" && (existing.leaseUntil ?? Infinity) <= this.now()) {
-        await this.mutate(scope, runId, (current) => {
-          const row =
-            current.items.find((entry) => entry.input.itemId === itemId) ?? fail("not-found");
-          const index = row.candidates.findIndex(
-            (candidate) => candidate.receiptId === existing.receiptId,
-          );
-          if (index >= 0 && row.candidates[index].state === "running") {
-            const failed: EnrichmentCandidate = {
-              ...existing,
-              state: "failed",
-              reason: "acceptance-unknown",
-              delivery: "pending",
-            };
-            row.candidates[index] = failed;
-            const receipt = current.receipts.find(
-              (entry) => entry.candidate.receiptId === existing.receiptId,
-            );
-            if (receipt) receipt.candidate = this.receiptCandidate(failed);
-          }
-        });
-        return release({
-          ...existing,
-          state: "failed",
-          reason: "acceptance-unknown",
-          delivery: "pending",
-        });
-      }
+      // Lease expiry cannot prove the worker stopped: a completed response may still await CAS.
+      // Only explicit stopped-worker acknowledgement fences this receipt from finalization.
       return release(existing);
     }
     if (this.now() >= run.rawExpiresAt) fail("raw-expired");
