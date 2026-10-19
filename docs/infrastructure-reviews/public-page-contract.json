@@ -10,7 +10,7 @@
         "packages/seo-core/src/index.ts": "cef2422620536593d0856da1d440e365a4abb83ff13f57609766f801ef01f1ec",
         "packages/seo-core/src/libs/inspectPublicPage.ts": "8e025e13aa08e73208ee272bf43d288bad9654e11b083662bee4b2c9ce441904",
         "packages/seo-core/src/libs/publicPage.ts": "288b51b10085971c29bf7384443ccd1e0abb69d7a38deb8cb5aee1328cb2d504",
-        "docs/package-catalog.json": "809643a5bfbaf38fc6bf4b615b354cca91637ccc5fecfb5c8e5647d47e0646b2"
+        "docs/package-catalog.json": "ca7e6c260827f503af4b6e39b0f52eb1648d0696ca68e77e5b481f50e80d0784"
       },
       "catalogRuntimes": [],
       "profiles": {
@@ -51,8 +51,8 @@
       "classification": "protocol-render",
       "reason": "Opt-in buffered public-page handler resolves repository publication and facts before existing RenderServer/Host adapters. No streaming/RSC/ISR compatibility claim is added.",
       "files": {
-        "packages/meta-vite/package.json": "8ac6a514060b70329c02d5b40823d9e694c3c9bfeabeb99ba05315dafe3bc6ea",
-        "packages/meta-vite/src/index.ts": "929442f4531f1e804efcb70aab5f1d714e8ed4095b82ba617f2744a225727a8f",
+        "packages/meta-vite/package.json": "5ffe68db1b768f8a553bb354495209d7f98b2f52bb7f35961e87ba06556954ac",
+        "packages/meta-vite/src/index.ts": "eb827f1ecc9a81fd331f7b5c6da3e272f83bd2f9fb0553d72053922fb4302b1f",
         "packages/meta-vite/src/libs/render/renderServer.ts": "0eb297a1cf4056803e861179b53e8c15046aef69efb0362309bd2209367bfac6",
         "packages/meta-vite/src/libs/routes/head.ts": "39f43d6c546e0ae7c61c8fc40284a9564c43f6051eed6dc503720f39d7cc1d78",
         "packages/meta-vite/src/libs/seo/publicPageHandler.ts": "fa7c6fc3b600c16191cada5f08e7ff70c1c4c0feb0cd3b08f3d2e6b68f518ce7"
@@ -208,7 +208,7 @@
       "classification": "pure-contract",
       "reason": "Generated registry adds only the public-page validation diagnostic and recovery type. No Host capability, I/O, storage or lifecycle changes.",
       "files": {
-        "packages/problems-core/src/generated/problem-code-registry.ts": "d4d4e68c56e0cf280304b9155510cb625428a30f3f949d6604907a25cae1c407"
+        "packages/problems-core/src/generated/problem-code-registry.ts": "da158b65862f6fe3755f5452d6e1e353e85508fc9864661f7b39b5ec75874f43"
       },
       "catalogRuntimes": [],
       "profiles": {
