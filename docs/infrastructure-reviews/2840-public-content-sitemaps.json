@@ -87,7 +87,7 @@
       "classification": "pure-contract",
       "reason": "The generated Problem registry records the new sitemap diagnostic code and its existing runtime-dependent category policy; no host, storage or lifecycle implementation changes.",
       "files": {
-        "packages/problems-core/src/generated/problem-code-registry.ts": "4187d13370638bc836c1d9eccd68f9b32e6593207324d0d10b640b8546133744"
+        "packages/problems-core/src/generated/problem-code-registry.ts": "321e4b19a07261ced2c242980f6dd195e4938f0bcfebb4da811a4314af01c532"
       },
       "catalogRuntimes": [],
       "profiles": {
