@@ -6,7 +6,7 @@
       "classification": "runtime-adapter",
       "reason": "Opt-in request-owned pg/Drizzle transaction entrypoint with repository-only authenticated smoke Worker and HTTP/SQL verifier. Local workerd tests do not promote the root plugin or any domain adapter; no resource provisioning or Cloudflare deployment is performed.",
       "files": {
-        "packages/tx-drizzle/package.json": "6b6b7fdf301589ed0b126df7987e5daba0534ba2122e8c9eb99882ae51c4a66c",
+        "packages/tx-drizzle/package.json": "a4b595656eeeb885f79acb497624cb77f256e77a700e33b0dec8b6b0786df166",
         "packages/tx-drizzle/src/hyperdrive.ts": "e37cc4507444b5dadb2142ef13cba11cb64c638842e5bb830859e214e1f604f1",
         "packages/tx-drizzle/smoke/README.md": "f136de4170cf7d113f88047862c638720856ba6de89db05c8018a9349de46f09",
         "packages/tx-drizzle/smoke/protocol.mts": "59455c9b98e2ddb5c088039626a61b29a2581fd2d495fed89b8a9acfaf26036d",

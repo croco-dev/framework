@@ -63,6 +63,11 @@ describe.skipIf(process.env.CROCO_TEST_REAL_RESOURCES !== "1")(
       return instance;
     }
     beforeAll(async () => {
+      // Direct Vitest and package lane commands must both exercise the current published entrypoint.
+      await promisify(execFile)("pnpm", ["run", "build"], {
+        cwd: resolve(import.meta.dirname, "../.."),
+        timeout: 60_000,
+      });
       container = await new GenericContainer("postgres:17-alpine")
         .withEnvironment({
           POSTGRES_USER: "fixture",
