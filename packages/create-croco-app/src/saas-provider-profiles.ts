@@ -87,6 +87,13 @@ export type SaasProviderCapability = {
   zeroCredentialState: SaasProviderCapabilityRuntimeState;
   packageName?: string;
   pluginName?: string;
+  /** Independently verified provider subset; does not make the full profile executable. */
+  verifiedSubset?: {
+    readonly entrypoint: string;
+    readonly factoryExport: string;
+    readonly verification: string;
+    readonly limitations: readonly string[];
+  };
   env: readonly string[];
   notes: string;
 };
@@ -405,13 +412,26 @@ export const SAAS_PROVIDER_PROFILES = {
         notes:
           "Native env bindings and isolated application/request scopes. No SaaS provider certification.",
       },
-      auth: capability(
-        "auth",
-        "No verified Worker auth provider selected",
-        "unavailable",
-        undefined,
-        [],
-      ),
+      auth: {
+        ...capability(
+          "auth",
+          "No verified Worker auth provider selected",
+          "unavailable",
+          undefined,
+          [],
+        ),
+        verifiedSubset: {
+          entrypoint: "@croco/auth-clerk/workers",
+          factoryExport: "clerkWorkersAuth",
+          verification: "pnpm --filter @croco/auth-clerk test",
+          limitations: [
+            "Alpha cookie/bearer authentication and fresh session status/revoke; synthetic upstream in actual workerd with nodejs_compat.",
+            "Trusted audience and authorizedParties required; tenant binding is opt-in; permissions retain signed token lifetime.",
+            "Webhook delivery and user/organization administration are not claimed on Workers.",
+            "Native bootstrap remains bootstrap-only; auth needs application selection and connection. Full SaaS and live Clerk service are not certified.",
+          ],
+        },
+      },
       persistence: capability(
         "persistence",
         "No verified Worker persistence selected",
@@ -737,6 +757,11 @@ export function renderGeneratedSaasProviderProfileSource(
     options.manifest.composition.scope === "bootstrap-only"
   ) {
     return [
+      ...(options.manifest.profile.name === "saas-cloudflare"
+        ? [
+            "export async function createGeneratedWorkersAuthPlugin<TOptions, TPlugin>(options: TOptions, loadFactory: () => Promise<{ clerkWorkersAuth: (options: TOptions) => TPlugin }>): Promise<TPlugin> { const { clerkWorkersAuth } = await loadFactory(); return clerkWorkersAuth(options); }",
+          ]
+        : []),
       'import type { ApplicationRuntime, CrocoApplicationDefinition } from "@croco/framework-module";',
       'import type { AppConfig } from "@croco/transports-http";',
       "",
@@ -1032,6 +1057,18 @@ export function renderSaasDeployNotes(manifest: SaasProviderProfileManifest): st
         `| ${capability.capability} | ${capability.provider} | ${capability.packageName ?? "-"} | ${capability.productionState} | ${capability.zeroCredentialState} | ${capability.env.length > 0 ? capability.env.join(", ") : "-"} |`,
     ),
     "",
+    ...manifest.capabilities.flatMap((capability) =>
+      capability.verifiedSubset === undefined
+        ? []
+        : [
+            `### Verified ${capability.capability} subset`,
+            "",
+            `Opt-in factory: \`${capability.verifiedSubset.factoryExport}()\` from \`${capability.verifiedSubset.entrypoint}\`.`,
+            `Verification: \`${capability.verifiedSubset.verification}\`.`,
+            ...capability.verifiedSubset.limitations.map((limitation) => `- ${limitation}`),
+            "",
+          ],
+    ),
     "## Executable Composition",
     "",
     `Composition scope: \`${manifest.composition.scope}\`. Bootstrap readiness is distinct from full SaaS provider readiness.`,

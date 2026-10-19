@@ -209,3 +209,60 @@ pnpm public-api:check
 - `ClerkTenantRequest`, `TenantMappingClaimResult`, `TenantMappingStore`
 - `createTenantMappingStoreConformanceSuite`와 관련 conformance 타입
 - `WebhookHandlerOptions`, `WebhookEventHandler`, `WebhookEventType`, `ClerkWebhookDeliveryOutcome`
+
+## Workers authentication subset
+
+`@croco/auth-clerk/workers`는 alpha 인증 subset입니다. `clerkWorkersAuth()`를 application imports에
+조합하고 `AUTH_PROVIDER_TOKEN`으로 사용합니다. Worker의 `CLERK_SECRET_KEY` secret binding을
+factory에 직접 전달하며 `process.env`나 전역 singleton에 보관하지 않습니다.
+
+```typescript typecheck
+import {
+  clerkWorkersAuth,
+  ClerkTenantMapper,
+  type TenantMappingStore,
+} from "@croco/auth-clerk/workers";
+
+// env는 Worker fetch의 binding, store는 애플리케이션의 내구 tenant mapping입니다.
+export function createWorkerAuth(
+  env: { CLERK_SECRET_KEY: string },
+  store: TenantMappingStore,
+  resolveTargetTenant: (request: Request) => Promise<string | null>,
+) {
+  return clerkWorkersAuth({
+    secretKey: env.CLERK_SECRET_KEY,
+    audience: "croco-api",
+    authorizedParties: ["https://console.example.com"],
+    tenantMapping: new ClerkTenantMapper(store),
+    resolveTargetTenant,
+  });
+}
+```
+
+실제 workerd의 `nodejs_compat` 환경에서 SDK의 browser Web Crypto 조건으로 검증합니다.
+Node crypto polyfill을 Clerk SDK에 주입하지 않습니다. Bearer 또는 `__session` cookie를 검증하고,
+매 인증마다 Clerk session API로 active 상태·사용자·만료를 확인합니다. `ClerkSessionProvider.revokeSession()`
+후 upstream이 revoked 상태를 반환하면 아직 서명이 유효한 JWT도 거부합니다. 이 조회는 매 요청의
+외부 의존성이며 upstream 장애는 실패로 반환합니다. JWT 공개키를 `jwtKey`로 선택해도 session 조회는 필요합니다.
+
+쿠키 요청의 Origin은 허용 목록과 일치해야 하며, 쓰기 요청은 Origin이 필수입니다. Authorization이 있으면
+쿠키로 fallback하지 않습니다. host는 적절한 cookie 속성, 응답 cache 정책과 route authorization을 소유합니다.
+검증된 조직을 기존 `TenantMappingProvider`로 매핑하고 서버가 결정한 target tenant와 다르면 거부합니다.
+tenant 기능은 선택 사항이며 target resolver 사용 시 mapping이 필수입니다. 사용자·permission·request scope는
+요청 사이에 저장하지 않습니다. role/permission 변경은 서명된 JWT의 수명 동안 남을 수 있습니다.
+
+검증 범위는 synthetic key와 synthetic Clerk HTTP 응답을 쓰는 실제 workerd request fixture입니다.
+만료·잘못된 서명·audience/party·tenant mismatch·동시 요청·revoke·장애·redaction과 기존 auth conformance를
+`pnpm --filter @croco/auth-clerk test`로 확인합니다. 실서비스 credential, 배포 인증, npm 출시는 미검증입니다.
+
+Workers entry는 webhook handler와 user/organization 관리 API를 export하지 않습니다. 기존 Node/Lambda
+webhook 검증·lease-aware 중복 처리 경로를 유지하며, Workers용 webhook 보장은 선언하지 않습니다.
+`saas-cloudflare`의 generated profile은 검증 범위와 선택적인
+`createGeneratedWorkersAuthPlugin(options, () => import("@croco/auth-clerk/workers"))` helper를 제공합니다.
+사용하는 앱이 `@croco/auth-clerk` 의존성을 추가하고 provider를 연결합니다. 기본 native bootstrap은
+`bootstrap-only`이며 auth capability는 연결 전까지 `unavailable`입니다. Bootstrap health는
+full SaaS 또는 실제 Clerk 서비스 인증을 뜻하지 않습니다.
+
+Node/Lambda의 `clerkAuth()`와 `ClerkAuthProvider`도 `audience`를 지정하면 검증된 `aud`와
+허용 목록의 교집합을 확인합니다. 누락·잘못된 타입·빈 audience 설정은 거부하며, 옵션을 지정하지 않은
+기존 경로는 유지합니다. SDK의 audience 배열 처리에 의존하지 않고 서명 검증 후 공통 provider가 검사합니다.

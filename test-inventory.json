@@ -938,6 +938,12 @@
       "owner": "@croco/auth-clerk"
     },
     {
+      "path": "packages/auth-clerk/src/tests/ClerkAudienceVerification.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/auth-clerk"
+    },
+    {
       "path": "packages/auth-clerk/src/tests/ClerkAuthPlugin.spec.ts",
       "lane": "fast",
       "qualifiers": [],
@@ -981,6 +987,12 @@
     },
     {
       "path": "packages/auth-clerk/src/tests/ClerkWebhookHandler.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/auth-clerk"
+    },
+    {
+      "path": "packages/auth-clerk/src/tests/ClerkWorkersAuthProvider.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/auth-clerk"
@@ -1725,6 +1737,12 @@
     },
     {
       "path": "packages/create-croco-app/src/tests/SaasDiBuildOrder.spec.ts",
+      "lane": "fast",
+      "qualifiers": ["coverage"],
+      "owner": "create-croco-app"
+    },
+    {
+      "path": "packages/create-croco-app/src/tests/SaasWorkersAuthSubset.spec.ts",
       "lane": "fast",
       "qualifiers": ["coverage"],
       "owner": "create-croco-app"

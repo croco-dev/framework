@@ -2,6 +2,7 @@ import { verifyToken } from "@clerk/backend";
 import type { AuthProvider, AuthUser } from "@croco/auth-core";
 import {
   ClerkMalformedClaimProblem,
+  ClerkTokenVerificationProblem,
   createClerkTokenVerificationProblem,
 } from "./problems/ClerkProblems";
 import type { AuthorizationHeaderCarrier } from "./types";
@@ -9,6 +10,9 @@ import type { AuthorizationHeaderCarrier } from "./types";
 export type ClerkAuthOptions = {
   secretKey: string;
   publishableKey?: string;
+  jwtKey?: string;
+  audience?: string | string[];
+  authorizedParties?: string[];
 };
 
 function isObjectRecord(value: unknown): value is Record<string, unknown> {
@@ -114,6 +118,21 @@ function getV2OrganizationClaims(payload: Record<string, unknown>): {
 export class ClerkAuthProvider implements AuthProvider<AuthorizationHeaderCarrier> {
   constructor(private options: ClerkAuthOptions) {}
 
+  protected validateClaims(payload: Record<string, unknown>): void {
+    if (this.options.audience === undefined) return;
+    const expected =
+      typeof this.options.audience === "string" ? [this.options.audience] : this.options.audience;
+    const allowed = expected.filter((value) => value.trim().length > 0);
+    const actual = typeof payload.aud === "string" ? [payload.aud] : payload.aud;
+    if (
+      !Array.isArray(actual) ||
+      !actual.every((value) => typeof value === "string") ||
+      !actual.some((value) => allowed.includes(value))
+    ) {
+      throw new ClerkTokenVerificationProblem();
+    }
+  }
+
   async authenticate(request: AuthorizationHeaderCarrier): Promise<AuthUser | null> {
     const authHeader = request.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
@@ -126,10 +145,19 @@ export class ClerkAuthProvider implements AuthProvider<AuthorizationHeaderCarrie
     }
 
     try {
-      const verified = await verifyToken(token, { secretKey: this.options.secretKey });
+      const verified = await verifyToken(token, {
+        secretKey: this.options.secretKey,
+        ...(this.options.jwtKey === undefined ? {} : { jwtKey: this.options.jwtKey }),
+        // The pinned SDK mishandles missing/array audiences; validate verified claims below.
+        ...(this.options.authorizedParties === undefined
+          ? {}
+          : { authorizedParties: this.options.authorizedParties }),
+      });
       if (!isObjectRecord(verified)) {
         throw new ClerkMalformedClaimProblem("sub");
       }
+
+      this.validateClaims(verified);
 
       const userId = getStringClaim(verified, "sub");
       if (!userId) {

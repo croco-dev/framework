@@ -2578,6 +2578,12 @@ importers:
       '@croco/testing':
         specifier: workspace:*
         version: link:../testing
+      esbuild:
+        specifier: 0.27.7
+        version: 0.27.7
+      miniflare:
+        specifier: 4.20260312.0
+        version: 4.20260312.0(@types/node@24.13.2)
       tsup:
         specifier: ^8.4.0
         version: 8.5.1(patch_hash=ce9dbc714c187cea78868f1e68c1a0e5097ddbceb7e976a564d94f2291b5bcb9)(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.18)(supports-color@10.2.2)(tsx@4.21.0)(typescript@6.0.3)(yaml@2.9.0)

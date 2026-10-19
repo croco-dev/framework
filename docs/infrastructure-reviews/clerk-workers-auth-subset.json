@@ -1,0 +1,123 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "auth-clerk",
+      "classification": "runtime-adapter",
+      "reason": "Opt-in Workers session authentication and configured Node/Lambda audience verification; reuse the existing auth/session/tenant contracts.",
+      "files": {
+        "packages/auth-clerk/package.json": "d3d01aa2dff2c3c9800c8a342f31631ed5760c75d3add7b7f1758b1bd1535f7f",
+        "packages/auth-clerk/src/libs/ClerkAuthPlugin.ts": "84e6256c26519beee528162f96d58c247efa3df515054e9c6387565d1fd73be6",
+        "packages/auth-clerk/src/libs/ClerkAuthProvider.ts": "398665fc7e6a2f7cd299ca4095947a683a7dcbe4934e64e0d2109c252c522520",
+        "packages/auth-clerk/src/libs/ClerkWorkersAuthPlugin.ts": "965e687841df945f4871adbe8d7b1ee539bfdf40042bcf3fa5d8f8eff5dbc3ed",
+        "packages/auth-clerk/src/libs/ClerkWorkersAuthProvider.ts": "aa15f4590dd0e7b8522e50c637983376cdd1e3e45470b1722fea0a96f75b19a0",
+        "packages/auth-clerk/src/workers.ts": "43fdcd7db7e58b63769a13f5d7b2ddd5bb52aa1e3e812af63ebd0a7a07230295"
+      },
+      "catalogRuntimes": ["node", "lambda"],
+      "profiles": {
+        "kubernetes": {
+          "result": "supported",
+          "reason": "The existing Node provider verifies real signed Clerk JWTs with the SDK; the new optional audience restriction remains on that provider.",
+          "providers": ["@croco/auth-clerk", "@croco/auth-core"],
+          "constraints": [
+            "Local Node host-runtime execution only; no Kubernetes cluster or live Clerk certification.",
+            "The application owns authorization and authoritative tenant resolution."
+          ],
+          "references": [
+            "packages/auth-clerk/src/libs/ClerkAuthProvider.ts",
+            "packages/auth-clerk/src/tests/ClerkAudienceVerification.spec.ts"
+          ],
+          "evidence": {
+            "kind": "host-runtime",
+            "runtime": "node",
+            "path": "packages/auth-clerk/src/tests/ClerkAudienceVerification.spec.ts",
+            "testName": "Clerk audience verification with actual SDK and signed JWTs preserves legacy authentication when no audience restriction is configured",
+            "sha256": "430f7fbd53907d281514ef13a551e4b4bfd79b30e90e197d52a62b9fb3d251af"
+          }
+        },
+        "aws-lambda": {
+          "result": "conditional",
+          "reason": "Reuse the existing Node/Lambda provider and shared auth contract; no Lambda-specific implementation or runtime claim is added.",
+          "providers": ["@croco/auth-clerk", "@croco/preset-lambda"],
+          "constraints": [
+            "Invocation scope, callback isolation and telemetry flush/close remain the selected Lambda host responsibility.",
+            "This change has no live AWS or Clerk deployment evidence; Node SDK tests do not certify Lambda infrastructure."
+          ],
+          "references": [
+            "packages/auth-clerk/src/libs/ClerkAuthProvider.ts",
+            "packages/auth-clerk/src/tests/ClerkAudienceVerification.spec.ts",
+            "packages/preset-lambda/src/index.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "unverified",
+          "reason": "Package-wide Cloudflare support is unclaimed in the catalog. Only the opt-in /workers authentication subset is executed in workerd; full SaaS deployment, webhooks and administration are outside that proof.",
+          "providers": ["@croco/auth-clerk/workers", "@croco/auth-core"],
+          "constraints": [
+            "Native nodejs_compat is required; the SDK browser/Web Crypto path is bundled.",
+            "Each authenticated request fetches a fresh Clerk session; upstream availability, rate limits and latency apply.",
+            "Synthetic local upstream and signed workerd fixtures do not establish live Cloudflare/Clerk certification.",
+            "Roles and permissions retain the signed token lifetime; applications own route authorization, tenant target and cookie/cache policy."
+          ],
+          "references": [
+            "packages/auth-clerk/src/workers.ts",
+            "packages/auth-clerk/src/libs/ClerkWorkersAuthProvider.ts",
+            "packages/auth-clerk/src/tests/ClerkWorkersAuthProvider.spec.ts",
+            "packages/auth-clerk/README.md"
+          ],
+          "host": "workers"
+        }
+      }
+    },
+    {
+      "package": "create-croco-app",
+      "classification": "deployment-profile",
+      "reason": "Expose a lazy factory for the already bounded Workers auth subset without changing full SaaS profile executability or adding platform implementations.",
+      "files": {
+        "packages/create-croco-app/src/saas-provider-profiles.ts": "ac48703e8a43d45e62d7fc39597336ea21479f9a6ace5b110e4c97e36086dd72"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "This package is a development-time scaffolding CLI, not an application Host or deployed Provider. The changed helper lazily exposes only the selected Workers auth factory; native bootstrap remains bootstrap-only and does not select the optional auth provider.",
+          "providers": ["@croco/auth-clerk/workers"],
+          "constraints": [
+            "No generated full SaaS deployment support or live infrastructure certification is claimed.",
+            "The generated helper needs application-supplied Clerk/session/tenant options; runtime compatibility belongs to the selected provider."
+          ],
+          "references": [
+            "packages/create-croco-app/src/saas-provider-profiles.ts",
+            "packages/create-croco-app/src/tests/SaasWorkersAuthSubset.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "This package is a development-time scaffolding CLI, not an application Host or deployed Provider. The changed helper lazily exposes only the selected Workers auth factory; native bootstrap remains bootstrap-only and does not select the optional auth provider.",
+          "providers": ["@croco/auth-clerk/workers"],
+          "constraints": [
+            "No generated full SaaS deployment support or live infrastructure certification is claimed.",
+            "The generated helper needs application-supplied Clerk/session/tenant options; runtime compatibility belongs to the selected provider."
+          ],
+          "references": [
+            "packages/create-croco-app/src/saas-provider-profiles.ts",
+            "packages/create-croco-app/src/tests/SaasWorkersAuthSubset.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "This package is a development-time scaffolding CLI, not an application Host or deployed Provider. The changed helper lazily exposes only the selected Workers auth factory; native bootstrap remains bootstrap-only and does not select the optional auth provider.",
+          "providers": ["@croco/auth-clerk/workers"],
+          "constraints": [
+            "No generated full SaaS deployment support or live infrastructure certification is claimed.",
+            "The generated helper needs application-supplied Clerk/session/tenant options; runtime compatibility belongs to the selected provider."
+          ],
+          "references": [
+            "packages/create-croco-app/src/saas-provider-profiles.ts",
+            "packages/create-croco-app/src/tests/SaasWorkersAuthSubset.spec.ts"
+          ]
+        }
+      }
+    }
+  ]
+}

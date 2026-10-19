@@ -7926,6 +7926,73 @@
               "source": "./libs/types"
             }
           ]
+        },
+        {
+          "exportPath": "./workers",
+          "kind": "code",
+          "targets": [
+            {
+              "conditions": ["types", "import"],
+              "target": "./dist/workers.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
+              "target": "./dist/workers.d.ts"
+            },
+            {
+              "conditions": ["import"],
+              "target": "./dist/workers.mjs"
+            },
+            {
+              "conditions": ["require"],
+              "target": "./dist/workers.js"
+            }
+          ],
+          "sourceEntrypoint": "packages/auth-clerk/src/workers.ts",
+          "runtimeExports": [
+            {
+              "name": "ClerkAuthDiagnosticsProvider",
+              "exportKind": "named",
+              "source": "./libs/ClerkAuthDiagnosticsProvider",
+              "declarationKind": "class"
+            },
+            {
+              "name": "ClerkSessionProvider",
+              "exportKind": "named",
+              "source": "./libs/ClerkSessionProvider",
+              "declarationKind": "class"
+            },
+            {
+              "name": "ClerkTenantMapper",
+              "exportKind": "named",
+              "source": "./libs/ClerkTenantMapper",
+              "declarationKind": "class"
+            },
+            {
+              "name": "ClerkWorkersAuthProvider",
+              "exportKind": "named",
+              "source": "./libs/ClerkWorkersAuthProvider",
+              "declarationKind": "class"
+            },
+            {
+              "name": "clerkWorkersAuth",
+              "exportKind": "named",
+              "source": "./libs/ClerkWorkersAuthPlugin",
+              "declarationKind": "function"
+            }
+          ],
+          "typeExports": [
+            {
+              "name": "ClerkWorkersAuthOptions",
+              "exportKind": "named",
+              "source": "./libs/ClerkWorkersAuthProvider"
+            },
+            {
+              "name": "TenantMappingStore",
+              "exportKind": "named",
+              "source": "./libs/ClerkTenantMapper"
+            }
+          ]
         }
       ]
     },
