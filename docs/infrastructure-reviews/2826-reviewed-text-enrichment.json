@@ -117,7 +117,7 @@
         "packages/analytics-core/package.json": "c2eb022ce0b880a9ed2c405548d2d22fe34ed1e0b4548163a37a19be7f3d0299",
         "packages/analytics-core/src/enrichment.ts": "20acaccce2daf7fe1fafc09bd00bc764f533e194beb1f9f939265d29231af449",
         "packages/analytics-core/src/libs/enrichment/Enrichment.ts": "7031210959afa8ab0bc92c8f507aad925ca61ba0b26bfb4a4a5ef8a875117efc",
-        "packages/analytics-core/src/libs/enrichment/EnrichmentService.ts": "0b6af3f558b6744a3f786bbd783a6806d041b3d455d7bc7fed0be469ff913866"
+        "packages/analytics-core/src/libs/enrichment/EnrichmentService.ts": "b4916acdb1519f2a1e20fb557d6d332c047aedeafd69a0cd6491d63fb0307a5e"
       },
       "catalogRuntimes": [],
       "profiles": {

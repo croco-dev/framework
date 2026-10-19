@@ -148,6 +148,62 @@ async function fixture(
 
 describe("EnrichmentService", () => {
   it.each(
+    (["snapshot", "mutation", "contention"] as const).flatMap((boundary) =>
+      (["permission", "actor", "authority"] as const).flatMap((identity) =>
+        (["unknown", "running"] as const).map((claim) => ({ boundary, identity, claim })),
+      ),
+    ),
+  )(
+    "does not acknowledge a $claim claim when $identity changes during $boundary",
+    async ({ boundary, identity, claim }) => {
+      const model = vi.fn<ClassifyText>().mockRejectedValue(new Error("unknown acceptance"));
+      const f = await fixture({ model, inputs: [input("a", "new text")] });
+      await expect(f.classify()).rejects.toMatchObject({
+        code: "analytics-core/enrichment-acceptance-unknown",
+      });
+      const load = f.store.load.bind(f.store);
+      if (claim === "running") {
+        const run = (await load(scope, "run")) as EnrichmentRun;
+        const candidate = run.receipts[0].candidate;
+        candidate.state = "running";
+        delete candidate.reason;
+        candidate.leaseUntil = f.state.now - 1;
+        run.items[0].candidates[0] = structuredClone(candidate);
+        const revision = run.revision;
+        run.revision++;
+        expect(await f.store.compareAndSet(run, revision)).toBe(true);
+      }
+      const command = await f.command("stopped-worker-race");
+      const before = await load(scope, "run");
+      const receiptId = before?.receipts[0].candidate.receiptId as string;
+      const revoke = () => {
+        if (identity === "permission") f.state.allowed = false;
+        else f.state[identity] = "changed";
+      };
+      if (boundary === "contention")
+        vi.spyOn(f.store, "compareAndSet").mockImplementationOnce(async () => {
+          revoke();
+          return false;
+        });
+      else {
+        let loads = 0;
+        vi.spyOn(f.store, "load").mockImplementation(async (...args) => {
+          const run = await load(...args);
+          loads++;
+          if (loads === (boundary === "snapshot" ? 1 : 2)) revoke();
+          return run;
+        });
+      }
+      await expect(
+        f.service.retry(scope, "run", "a", receiptId, true, command),
+      ).rejects.toMatchObject({
+        code: `analytics-core/enrichment-${identity === "permission" ? "denied" : "authority-changed"}`,
+      });
+      expect(await load(scope, "run")).toEqual(before);
+      expect(model).toHaveBeenCalledTimes(1);
+    },
+  );
+  it.each(
     (["load", "source", "contention"] as const).flatMap((boundary) =>
       (["permission", "actor", "authority"] as const).map((identity) => ({ boundary, identity })),
     ),

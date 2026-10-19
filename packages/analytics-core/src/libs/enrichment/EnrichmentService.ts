@@ -1085,6 +1085,10 @@ export class EnrichmentService {
     command: EnrichmentCommand,
   ): Promise<void> {
     await this.allow(scope, "classify", command.actor);
+    const actor = await this.options.currentActor(scope);
+    if (!identifier(actor)) fail("invalid-actor");
+    const authorityRevision = await this.options.authorizationRevision(scope);
+    if (!identifier(authorityRevision)) fail("invalid-authority-revision");
     const snapshot = await this.load(scope, runId);
     const prior =
       snapshot.receipts.find(
@@ -1098,37 +1102,52 @@ export class EnrichmentService {
         snapshot,
         snapshot.items.find((item) => item.input.itemId === itemId) ?? fail("not-found"),
       );
-    await this.mutate(scope, runId, (run) => {
-      if (!this.command(run, command, "retry", [itemId, receiptId, acknowledgeDuplicateBilling]))
-        return;
-      const row = run.items.find((item) => item.input.itemId === itemId) ?? fail("not-found");
-      const index = row.candidates.findIndex((item) => item.receiptId === receiptId);
-      const receipt =
-        run.receipts.find(
-          (entry) => entry.itemId === itemId && entry.candidate.receiptId === receiptId,
-        ) ?? fail("conflict");
-      const candidate = receipt.candidate;
-      const uncertain = candidate.reason === "acceptance-unknown" || candidate.state === "running";
-      if (index !== row.candidates.length - 1 && !uncertain) fail("conflict");
-      if (
-        candidate.state === "classified" ||
-        (candidate.state === "running" && (candidate.leaseUntil ?? Infinity) > this.now()) ||
-        candidate.retryAuthorized
-      )
-        fail("retry-unavailable");
-      if (uncertain && !acknowledgeDuplicateBilling)
-        fail("duplicate-billing-acknowledgement-required");
-      if (candidate.attempt >= run.limits.maxAttempts && !uncertain) fail("attempt-limit");
-      // The trusted operator confirms that the old worker has stopped. At the final attempt
-      // this only releases the uncertain slot; classify still rejects an additional attempt.
-      const acknowledged: EnrichmentCandidate = {
-        ...candidate,
-        ...(candidate.state === "running" ? { state: "failed", reason: "acceptance-unknown" } : {}),
-        retryAuthorized: true,
-      };
-      receipt.candidate = acknowledged;
-      if (index >= 0) row.candidates[index] = { ...row.candidates[index], ...acknowledged };
-    });
+    await this.mutate(
+      scope,
+      runId,
+      (run) => {
+        if (!this.command(run, command, "retry", [itemId, receiptId, acknowledgeDuplicateBilling]))
+          return;
+        const row = run.items.find((item) => item.input.itemId === itemId) ?? fail("not-found");
+        const index = row.candidates.findIndex((item) => item.receiptId === receiptId);
+        const receipt =
+          run.receipts.find(
+            (entry) => entry.itemId === itemId && entry.candidate.receiptId === receiptId,
+          ) ?? fail("conflict");
+        const candidate = receipt.candidate;
+        const uncertain =
+          candidate.reason === "acceptance-unknown" || candidate.state === "running";
+        if (index !== row.candidates.length - 1 && !uncertain) fail("conflict");
+        if (
+          candidate.state === "classified" ||
+          (candidate.state === "running" && (candidate.leaseUntil ?? Infinity) > this.now()) ||
+          candidate.retryAuthorized
+        )
+          fail("retry-unavailable");
+        if (uncertain && !acknowledgeDuplicateBilling)
+          fail("duplicate-billing-acknowledgement-required");
+        if (candidate.attempt >= run.limits.maxAttempts && !uncertain) fail("attempt-limit");
+        // The trusted operator confirms that the old worker has stopped. At the final attempt
+        // this only releases the uncertain slot; classify still rejects an additional attempt.
+        const acknowledged: EnrichmentCandidate = {
+          ...candidate,
+          ...(candidate.state === "running"
+            ? { state: "failed", reason: "acceptance-unknown" }
+            : {}),
+          retryAuthorized: true,
+        };
+        receipt.candidate = acknowledged;
+        if (index >= 0) row.candidates[index] = { ...row.candidates[index], ...acknowledged };
+      },
+      async () => {
+        await this.allow(scope, "classify", command.actor);
+        if (
+          (await this.options.currentActor(scope)) !== actor ||
+          (await this.options.authorizationRevision(scope)) !== authorityRevision
+        )
+          fail("authority-changed");
+      },
+    );
   }
   /** Retries only pending event/usage intents; model calls are never part of settlement. */
   async settle(scope: EnrichmentScope, runId: string): Promise<void> {
