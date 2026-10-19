@@ -29,3 +29,14 @@ semantics. Neither dropping a table nor lowering retention is an automatic recov
 Run `ANALYTICS_POSTGRES_URL=<disposable-database> pnpm --filter @croco/analytics-drizzle test:postgres`
 for two-client concurrency, replay/collision, migration idempotence, restart persistence, transaction
 rollback and linked erasure evidence. See [the acquisition example](../../examples/acquisition).
+
+## Enrichment run persistence
+
+`DrizzleEnrichmentStore` implements server-only `EnrichmentStore` with PostgreSQL atomic creation
+and revision CAS. Explicitly run `createEnrichment(db)` before accepting work; service startup
+performs no DDL. The additive table is independent of Fact History. Bounded run documents preserve
+item/version claims, budget reservations, review/audit state and text-free usage/event receipts.
+
+`ANALYTICS_POSTGRES_URL=... pnpm --filter @croco/analytics-drizzle test:postgres` exercises both
+Fact History and Enrichment on a disposable PostgreSQL database. See
+[enrichment-review](../../examples/enrichment-review/README.md) for retention and recovery ownership.

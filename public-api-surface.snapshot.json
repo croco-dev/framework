@@ -469,6 +469,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "EnrichmentOperations",
+              "exportKind": "named",
+              "source": "./libs/EnrichmentOperations",
+              "declarationKind": "class"
+            },
+            {
               "name": "EventCatalogValidationProblem",
               "exportKind": "named",
               "source": "./libs/EventCatalog",
@@ -4130,6 +4136,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "EnrichmentReviewConsole",
+              "exportKind": "named",
+              "source": "./libs/EnrichmentReviewConsole",
+              "declarationKind": "function"
+            },
+            {
               "name": "EntitlementList",
               "exportKind": "named",
               "source": "./libs/components",
@@ -5208,6 +5220,21 @@
               "name": "EngagementOperationsConsoleProps",
               "exportKind": "named",
               "source": "./libs/EngagementOperationsConsole"
+            },
+            {
+              "name": "EnrichmentConsoleCommand",
+              "exportKind": "named",
+              "source": "./libs/EnrichmentReviewConsole"
+            },
+            {
+              "name": "EnrichmentConsoleState",
+              "exportKind": "named",
+              "source": "./libs/EnrichmentReviewConsole"
+            },
+            {
+              "name": "EnrichmentReviewConsoleProps",
+              "exportKind": "named",
+              "source": "./libs/EnrichmentReviewConsole"
             },
             {
               "name": "EventCatalogPanelProps",
@@ -6667,6 +6694,147 @@
           ]
         },
         {
+          "exportPath": "./enrichment",
+          "kind": "code",
+          "targets": [
+            {
+              "conditions": ["types", "import"],
+              "target": "./dist/enrichment.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
+              "target": "./dist/enrichment.d.ts"
+            },
+            {
+              "conditions": ["import"],
+              "target": "./dist/enrichment.mjs"
+            },
+            {
+              "conditions": ["require"],
+              "target": "./dist/enrichment.js"
+            }
+          ],
+          "sourceEntrypoint": "packages/analytics-core/src/enrichment.ts",
+          "runtimeExports": [
+            {
+              "name": "EnrichmentProblem",
+              "exportKind": "named",
+              "source": "./libs/enrichment/EnrichmentService",
+              "declarationKind": "class"
+            },
+            {
+              "name": "EnrichmentService",
+              "exportKind": "named",
+              "source": "./libs/enrichment/EnrichmentService",
+              "declarationKind": "class"
+            },
+            {
+              "name": "defineClassification",
+              "exportKind": "named",
+              "source": "./libs/enrichment/EnrichmentService",
+              "declarationKind": "function"
+            },
+            {
+              "name": "enrichmentScopeKey",
+              "exportKind": "named",
+              "source": "./libs/enrichment/EnrichmentService",
+              "declarationKind": "function"
+            }
+          ],
+          "typeExports": [
+            {
+              "name": "ClassificationDefinition",
+              "exportKind": "named",
+              "source": "./libs/enrichment/Enrichment"
+            },
+            {
+              "name": "ClassificationLabel",
+              "exportKind": "named",
+              "source": "./libs/enrichment/Enrichment"
+            },
+            {
+              "name": "ClassificationLimits",
+              "exportKind": "named",
+              "source": "./libs/enrichment/Enrichment"
+            },
+            {
+              "name": "ClassifyText",
+              "exportKind": "named",
+              "source": "./libs/enrichment/Enrichment"
+            },
+            {
+              "name": "EnrichmentAudit",
+              "exportKind": "named",
+              "source": "./libs/enrichment/Enrichment"
+            },
+            {
+              "name": "EnrichmentCandidate",
+              "exportKind": "named",
+              "source": "./libs/enrichment/Enrichment"
+            },
+            {
+              "name": "EnrichmentCommand",
+              "exportKind": "named",
+              "source": "./libs/enrichment/Enrichment"
+            },
+            {
+              "name": "EnrichmentInput",
+              "exportKind": "named",
+              "source": "./libs/enrichment/Enrichment"
+            },
+            {
+              "name": "EnrichmentItem",
+              "exportKind": "named",
+              "source": "./libs/enrichment/Enrichment"
+            },
+            {
+              "name": "EnrichmentPage",
+              "exportKind": "named",
+              "source": "./libs/enrichment/Enrichment"
+            },
+            {
+              "name": "EnrichmentProblemReason",
+              "exportKind": "named",
+              "source": "./libs/enrichment/EnrichmentService"
+            },
+            {
+              "name": "EnrichmentReceipt",
+              "exportKind": "named",
+              "source": "./libs/enrichment/Enrichment"
+            },
+            {
+              "name": "EnrichmentReview",
+              "exportKind": "named",
+              "source": "./libs/enrichment/Enrichment"
+            },
+            {
+              "name": "EnrichmentRun",
+              "exportKind": "named",
+              "source": "./libs/enrichment/Enrichment"
+            },
+            {
+              "name": "EnrichmentScope",
+              "exportKind": "named",
+              "source": "./libs/enrichment/Enrichment"
+            },
+            {
+              "name": "EnrichmentServiceOptions",
+              "exportKind": "named",
+              "source": "./libs/enrichment/EnrichmentService"
+            },
+            {
+              "name": "EnrichmentStore",
+              "exportKind": "named",
+              "source": "./libs/enrichment/Enrichment"
+            },
+            {
+              "name": "EnrichmentUsage",
+              "exportKind": "named",
+              "source": "./libs/enrichment/Enrichment"
+            }
+          ]
+        },
+        {
           "exportPath": "./runtime",
           "kind": "code",
           "targets": [
@@ -6767,6 +6935,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "DrizzleEnrichmentStore",
+              "exportKind": "named",
+              "source": "./libs/DrizzleEnrichmentStore",
+              "declarationKind": "class"
+            },
+            {
               "name": "DrizzleFactHistoryStore",
               "exportKind": "named",
               "source": "./libs/DrizzleFactHistoryStore",
@@ -6776,6 +6950,12 @@
               "name": "createAcquisition",
               "exportKind": "named",
               "source": "./migrations/createAcquisition",
+              "declarationKind": "function"
+            },
+            {
+              "name": "createEnrichment",
+              "exportKind": "named",
+              "source": "./migrations/createEnrichment",
               "declarationKind": "function"
             },
             {

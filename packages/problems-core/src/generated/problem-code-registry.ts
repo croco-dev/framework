@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export type CrocoProblemRegistry = {
   readonly version: "croco.problem-code-registry.v1";
-  readonly problemCount: 1079;
+  readonly problemCount: 1125;
   readonly problems: readonly [
     {
       readonly code: "ACCESS_DENIED";
@@ -5770,6 +5770,1294 @@ export type CrocoProblemRegistry = {
           readonly line: 112;
           readonly column: 5;
           readonly kind: "problem-constructor";
+        },
+      ];
+    },
+    {
+      readonly code: "analytics-core/enrichment-acceptance-unknown";
+      readonly category: "InternalServerError";
+      readonly status: 500;
+      readonly title: "Internal Server Error";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#analytics-core-enrichment-acceptance-unknown";
+      readonly recovery: {
+        readonly cause: "Croco or an upstream dependency failed after accepting the request.";
+        readonly userAction: "Retry later only when the operation is idempotent or the caller owns retry safety.";
+        readonly operatorAction: "Use traces, logs, and upstream diagnostics to isolate the failing boundary.";
+        readonly retryability: "conditional";
+        readonly redactionPolicy: "operator-only";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.error";
+          readonly severity: "error";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/analytics-core/src/libs/enrichment/EnrichmentService.ts";
+          readonly line: 20;
+          readonly column: 25;
+          readonly kind: "problem-metadata";
+        },
+      ];
+    },
+    {
+      readonly code: "analytics-core/enrichment-attempt-limit";
+      readonly category: "BadRequest";
+      readonly status: 400;
+      readonly title: "Bad Request";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#analytics-core-enrichment-attempt-limit";
+      readonly recovery: {
+        readonly cause: "The caller sent malformed input or unsupported request options.";
+        readonly userAction: "Correct the request input and retry after validation passes.";
+        readonly operatorAction: "Inspect validation details and request logs; do not retry unchanged input.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "public";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.info";
+          readonly severity: "info";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/analytics-core/src/libs/enrichment/EnrichmentService.ts";
+          readonly line: 24;
+          readonly column: 20;
+          readonly kind: "problem-metadata";
+        },
+      ];
+    },
+    {
+      readonly code: "analytics-core/enrichment-audit-limit";
+      readonly category: "BadRequest";
+      readonly status: 400;
+      readonly title: "Bad Request";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#analytics-core-enrichment-audit-limit";
+      readonly recovery: {
+        readonly cause: "The caller sent malformed input or unsupported request options.";
+        readonly userAction: "Correct the request input and retry after validation passes.";
+        readonly operatorAction: "Inspect validation details and request logs; do not retry unchanged input.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "public";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.info";
+          readonly severity: "info";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/analytics-core/src/libs/enrichment/EnrichmentService.ts";
+          readonly line: 28;
+          readonly column: 18;
+          readonly kind: "problem-metadata";
+        },
+      ];
+    },
+    {
+      readonly code: "analytics-core/enrichment-authority-changed";
+      readonly category: "Forbidden";
+      readonly status: 403;
+      readonly title: "Forbidden";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#analytics-core-enrichment-authority-changed";
+      readonly recovery: {
+        readonly cause: "The authenticated caller is not allowed to perform the requested action.";
+        readonly userAction: "Request the required permission or choose an allowed action.";
+        readonly operatorAction: "Review policy, role, tenant, entitlement, and impersonation context.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "safe-message";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.warning";
+          readonly severity: "warning";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/analytics-core/src/libs/enrichment/EnrichmentService.ts";
+          readonly line: 32;
+          readonly column: 24;
+          readonly kind: "problem-metadata";
+        },
+      ];
+    },
+    {
+      readonly code: "analytics-core/enrichment-budget-exhausted";
+      readonly category: "TooManyRequests";
+      readonly status: 429;
+      readonly title: "Too Many Requests";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#analytics-core-enrichment-budget-exhausted";
+      readonly recovery: {
+        readonly cause: "The caller exceeded a rate, quota, or concurrency limit.";
+        readonly userAction: "Wait for the retry window or reduce request volume.";
+        readonly operatorAction: "Check limiter state, quota configuration, and abuse signals.";
+        readonly retryability: "retryable";
+        readonly redactionPolicy: "safe-message";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.warning";
+          readonly severity: "warning";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/analytics-core/src/libs/enrichment/EnrichmentService.ts";
+          readonly line: 36;
+          readonly column: 23;
+          readonly kind: "problem-metadata";
+        },
+      ];
+    },
+    {
+      readonly code: "analytics-core/enrichment-cancelled";
+      readonly category: "BadRequest";
+      readonly status: 400;
+      readonly title: "Bad Request";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#analytics-core-enrichment-cancelled";
+      readonly recovery: {
+        readonly cause: "The caller sent malformed input or unsupported request options.";
+        readonly userAction: "Correct the request input and retry after validation passes.";
+        readonly operatorAction: "Inspect validation details and request logs; do not retry unchanged input.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "public";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.info";
+          readonly severity: "info";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/analytics-core/src/libs/enrichment/EnrichmentService.ts";
+          readonly line: 40;
+          readonly column: 14;
+          readonly kind: "problem-metadata";
+        },
+      ];
+    },
+    {
+      readonly code: "analytics-core/enrichment-candidate-required";
+      readonly category: "BadRequest";
+      readonly status: 400;
+      readonly title: "Bad Request";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#analytics-core-enrichment-candidate-required";
+      readonly recovery: {
+        readonly cause: "The caller sent malformed input or unsupported request options.";
+        readonly userAction: "Correct the request input and retry after validation passes.";
+        readonly operatorAction: "Inspect validation details and request logs; do not retry unchanged input.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "public";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.info";
+          readonly severity: "info";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/analytics-core/src/libs/enrichment/EnrichmentService.ts";
+          readonly line: 41;
+          readonly column: 25;
+          readonly kind: "problem-metadata";
+        },
+      ];
+    },
+    {
+      readonly code: "analytics-core/enrichment-candidate-running";
+      readonly category: "BadRequest";
+      readonly status: 400;
+      readonly title: "Bad Request";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#analytics-core-enrichment-candidate-running";
+      readonly recovery: {
+        readonly cause: "The caller sent malformed input or unsupported request options.";
+        readonly userAction: "Correct the request input and retry after validation passes.";
+        readonly operatorAction: "Inspect validation details and request logs; do not retry unchanged input.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "public";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.info";
+          readonly severity: "info";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/analytics-core/src/libs/enrichment/EnrichmentService.ts";
+          readonly line: 45;
+          readonly column: 24;
+          readonly kind: "problem-metadata";
+        },
+      ];
+    },
+    {
+      readonly code: "analytics-core/enrichment-concurrency-limit";
+      readonly category: "TooManyRequests";
+      readonly status: 429;
+      readonly title: "Too Many Requests";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#analytics-core-enrichment-concurrency-limit";
+      readonly recovery: {
+        readonly cause: "The caller exceeded a rate, quota, or concurrency limit.";
+        readonly userAction: "Wait for the retry window or reduce request volume.";
+        readonly operatorAction: "Check limiter state, quota configuration, and abuse signals.";
+        readonly retryability: "retryable";
+        readonly redactionPolicy: "safe-message";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.warning";
+          readonly severity: "warning";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/analytics-core/src/libs/enrichment/EnrichmentService.ts";
+          readonly line: 49;
+          readonly column: 24;
+          readonly kind: "problem-metadata";
+        },
+      ];
+    },
+    {
+      readonly code: "analytics-core/enrichment-conflict";
+      readonly category: "Conflict";
+      readonly status: 409;
+      readonly title: "Conflict";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#analytics-core-enrichment-conflict";
+      readonly recovery: {
+        readonly cause: "The request conflicts with current state or an idempotency constraint.";
+        readonly userAction: "Refresh state, resolve the conflict, and retry with the updated intent.";
+        readonly operatorAction: "Inspect concurrent writes, idempotency keys, and uniqueness constraints.";
+        readonly retryability: "conditional";
+        readonly redactionPolicy: "safe-message";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.warning";
+          readonly severity: "warning";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/analytics-core/src/libs/enrichment/EnrichmentService.ts";
+          readonly line: 53;
+          readonly column: 13;
+          readonly kind: "problem-metadata";
+        },
+      ];
+    },
+    {
+      readonly code: "analytics-core/enrichment-definition-mismatch";
+      readonly category: "BadRequest";
+      readonly status: 400;
+      readonly title: "Bad Request";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#analytics-core-enrichment-definition-mismatch";
+      readonly recovery: {
+        readonly cause: "The caller sent malformed input or unsupported request options.";
+        readonly userAction: "Correct the request input and retry after validation passes.";
+        readonly operatorAction: "Inspect validation details and request logs; do not retry unchanged input.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "public";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.info";
+          readonly severity: "info";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/analytics-core/src/libs/enrichment/EnrichmentService.ts";
+          readonly line: 54;
+          readonly column: 26;
+          readonly kind: "problem-metadata";
+        },
+      ];
+    },
+    {
+      readonly code: "analytics-core/enrichment-definition-unavailable";
+      readonly category: "BadRequest";
+      readonly status: 400;
+      readonly title: "Bad Request";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#analytics-core-enrichment-definition-unavailable";
+      readonly recovery: {
+        readonly cause: "The caller sent malformed input or unsupported request options.";
+        readonly userAction: "Correct the request input and retry after validation passes.";
+        readonly operatorAction: "Inspect validation details and request logs; do not retry unchanged input.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "public";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.info";
+          readonly severity: "info";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/analytics-core/src/libs/enrichment/EnrichmentService.ts";
+          readonly line: 58;
+          readonly column: 29;
+          readonly kind: "problem-metadata";
+        },
+      ];
+    },
+    {
+      readonly code: "analytics-core/enrichment-denied";
+      readonly category: "Forbidden";
+      readonly status: 403;
+      readonly title: "Forbidden";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#analytics-core-enrichment-denied";
+      readonly recovery: {
+        readonly cause: "The authenticated caller is not allowed to perform the requested action.";
+        readonly userAction: "Request the required permission or choose an allowed action.";
+        readonly operatorAction: "Review policy, role, tenant, entitlement, and impersonation context.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "safe-message";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.warning";
+          readonly severity: "warning";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/analytics-core/src/libs/enrichment/EnrichmentService.ts";
+          readonly line: 62;
+          readonly column: 11;
+          readonly kind: "problem-metadata";
+        },
+      ];
+    },
+    {
+      readonly code: "analytics-core/enrichment-duplicate-billing-acknowledgement-required";
+      readonly category: "BadRequest";
+      readonly status: 400;
+      readonly title: "Bad Request";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#analytics-core-enrichment-duplicate-billing-acknowledgement-required";
+      readonly recovery: {
+        readonly cause: "The caller sent malformed input or unsupported request options.";
+        readonly userAction: "Correct the request input and retry after validation passes.";
+        readonly operatorAction: "Inspect validation details and request logs; do not retry unchanged input.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "public";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.info";
+          readonly severity: "info";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/analytics-core/src/libs/enrichment/EnrichmentService.ts";
+          readonly line: 63;
+          readonly column: 49;
+          readonly kind: "problem-metadata";
+        },
+      ];
+    },
+    {
+      readonly code: "analytics-core/enrichment-idempotency-conflict";
+      readonly category: "Conflict";
+      readonly status: 409;
+      readonly title: "Conflict";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#analytics-core-enrichment-idempotency-conflict";
+      readonly recovery: {
+        readonly cause: "The request conflicts with current state or an idempotency constraint.";
+        readonly userAction: "Refresh state, resolve the conflict, and retry with the updated intent.";
+        readonly operatorAction: "Inspect concurrent writes, idempotency keys, and uniqueness constraints.";
+        readonly retryability: "conditional";
+        readonly redactionPolicy: "safe-message";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.warning";
+          readonly severity: "warning";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/analytics-core/src/libs/enrichment/EnrichmentService.ts";
+          readonly line: 67;
+          readonly column: 27;
+          readonly kind: "problem-metadata";
+        },
+      ];
+    },
+    {
+      readonly code: "analytics-core/enrichment-input-budget";
+      readonly category: "BadRequest";
+      readonly status: 400;
+      readonly title: "Bad Request";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#analytics-core-enrichment-input-budget";
+      readonly recovery: {
+        readonly cause: "The caller sent malformed input or unsupported request options.";
+        readonly userAction: "Correct the request input and retry after validation passes.";
+        readonly operatorAction: "Inspect validation details and request logs; do not retry unchanged input.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "public";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.info";
+          readonly severity: "info";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/analytics-core/src/libs/enrichment/EnrichmentService.ts";
+          readonly line: 71;
+          readonly column: 19;
+          readonly kind: "problem-metadata";
+        },
+      ];
+    },
+    {
+      readonly code: "analytics-core/enrichment-input-conflict";
+      readonly category: "Conflict";
+      readonly status: 409;
+      readonly title: "Conflict";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#analytics-core-enrichment-input-conflict";
+      readonly recovery: {
+        readonly cause: "The request conflicts with current state or an idempotency constraint.";
+        readonly userAction: "Refresh state, resolve the conflict, and retry with the updated intent.";
+        readonly operatorAction: "Inspect concurrent writes, idempotency keys, and uniqueness constraints.";
+        readonly retryability: "conditional";
+        readonly redactionPolicy: "safe-message";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.warning";
+          readonly severity: "warning";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/analytics-core/src/libs/enrichment/EnrichmentService.ts";
+          readonly line: 75;
+          readonly column: 21;
+          readonly kind: "problem-metadata";
+        },
+      ];
+    },
+    {
+      readonly code: "analytics-core/enrichment-invalid-actor";
+      readonly category: "BadRequest";
+      readonly status: 400;
+      readonly title: "Bad Request";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#analytics-core-enrichment-invalid-actor";
+      readonly recovery: {
+        readonly cause: "The caller sent malformed input or unsupported request options.";
+        readonly userAction: "Correct the request input and retry after validation passes.";
+        readonly operatorAction: "Inspect validation details and request logs; do not retry unchanged input.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "public";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.info";
+          readonly severity: "info";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/analytics-core/src/libs/enrichment/EnrichmentService.ts";
+          readonly line: 79;
+          readonly column: 20;
+          readonly kind: "problem-metadata";
+        },
+      ];
+    },
+    {
+      readonly code: "analytics-core/enrichment-invalid-authority-revision";
+      readonly category: "BadRequest";
+      readonly status: 400;
+      readonly title: "Bad Request";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#analytics-core-enrichment-invalid-authority-revision";
+      readonly recovery: {
+        readonly cause: "The caller sent malformed input or unsupported request options.";
+        readonly userAction: "Correct the request input and retry after validation passes.";
+        readonly operatorAction: "Inspect validation details and request logs; do not retry unchanged input.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "public";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.info";
+          readonly severity: "info";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/analytics-core/src/libs/enrichment/EnrichmentService.ts";
+          readonly line: 83;
+          readonly column: 33;
+          readonly kind: "problem-metadata";
+        },
+      ];
+    },
+    {
+      readonly code: "analytics-core/enrichment-invalid-batch";
+      readonly category: "BadRequest";
+      readonly status: 400;
+      readonly title: "Bad Request";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#analytics-core-enrichment-invalid-batch";
+      readonly recovery: {
+        readonly cause: "The caller sent malformed input or unsupported request options.";
+        readonly userAction: "Correct the request input and retry after validation passes.";
+        readonly operatorAction: "Inspect validation details and request logs; do not retry unchanged input.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "public";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.info";
+          readonly severity: "info";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/analytics-core/src/libs/enrichment/EnrichmentService.ts";
+          readonly line: 87;
+          readonly column: 20;
+          readonly kind: "problem-metadata";
+        },
+      ];
+    },
+    {
+      readonly code: "analytics-core/enrichment-invalid-catalog";
+      readonly category: "BadRequest";
+      readonly status: 400;
+      readonly title: "Bad Request";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#analytics-core-enrichment-invalid-catalog";
+      readonly recovery: {
+        readonly cause: "The caller sent malformed input or unsupported request options.";
+        readonly userAction: "Correct the request input and retry after validation passes.";
+        readonly operatorAction: "Inspect validation details and request logs; do not retry unchanged input.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "public";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.info";
+          readonly severity: "info";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/analytics-core/src/libs/enrichment/EnrichmentService.ts";
+          readonly line: 91;
+          readonly column: 22;
+          readonly kind: "problem-metadata";
+        },
+      ];
+    },
+    {
+      readonly code: "analytics-core/enrichment-invalid-command";
+      readonly category: "BadRequest";
+      readonly status: 400;
+      readonly title: "Bad Request";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#analytics-core-enrichment-invalid-command";
+      readonly recovery: {
+        readonly cause: "The caller sent malformed input or unsupported request options.";
+        readonly userAction: "Correct the request input and retry after validation passes.";
+        readonly operatorAction: "Inspect validation details and request logs; do not retry unchanged input.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "public";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.info";
+          readonly severity: "info";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/analytics-core/src/libs/enrichment/EnrichmentService.ts";
+          readonly line: 95;
+          readonly column: 22;
+          readonly kind: "problem-metadata";
+        },
+      ];
+    },
+    {
+      readonly code: "analytics-core/enrichment-invalid-context";
+      readonly category: "BadRequest";
+      readonly status: 400;
+      readonly title: "Bad Request";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#analytics-core-enrichment-invalid-context";
+      readonly recovery: {
+        readonly cause: "The caller sent malformed input or unsupported request options.";
+        readonly userAction: "Correct the request input and retry after validation passes.";
+        readonly operatorAction: "Inspect validation details and request logs; do not retry unchanged input.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "public";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.info";
+          readonly severity: "info";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/analytics-core/src/libs/enrichment/EnrichmentService.ts";
+          readonly line: 99;
+          readonly column: 22;
+          readonly kind: "problem-metadata";
+        },
+      ];
+    },
+    {
+      readonly code: "analytics-core/enrichment-invalid-definition";
+      readonly category: "BadRequest";
+      readonly status: 400;
+      readonly title: "Bad Request";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#analytics-core-enrichment-invalid-definition";
+      readonly recovery: {
+        readonly cause: "The caller sent malformed input or unsupported request options.";
+        readonly userAction: "Correct the request input and retry after validation passes.";
+        readonly operatorAction: "Inspect validation details and request logs; do not retry unchanged input.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "public";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.info";
+          readonly severity: "info";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/analytics-core/src/libs/enrichment/EnrichmentService.ts";
+          readonly line: 103;
+          readonly column: 25;
+          readonly kind: "problem-metadata";
+        },
+      ];
+    },
+    {
+      readonly code: "analytics-core/enrichment-invalid-input";
+      readonly category: "BadRequest";
+      readonly status: 400;
+      readonly title: "Bad Request";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#analytics-core-enrichment-invalid-input";
+      readonly recovery: {
+        readonly cause: "The caller sent malformed input or unsupported request options.";
+        readonly userAction: "Correct the request input and retry after validation passes.";
+        readonly operatorAction: "Inspect validation details and request logs; do not retry unchanged input.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "public";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.info";
+          readonly severity: "info";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/analytics-core/src/libs/enrichment/EnrichmentService.ts";
+          readonly line: 107;
+          readonly column: 20;
+          readonly kind: "problem-metadata";
+        },
+      ];
+    },
+    {
+      readonly code: "analytics-core/enrichment-invalid-limits";
+      readonly category: "BadRequest";
+      readonly status: 400;
+      readonly title: "Bad Request";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#analytics-core-enrichment-invalid-limits";
+      readonly recovery: {
+        readonly cause: "The caller sent malformed input or unsupported request options.";
+        readonly userAction: "Correct the request input and retry after validation passes.";
+        readonly operatorAction: "Inspect validation details and request logs; do not retry unchanged input.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "public";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.info";
+          readonly severity: "info";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/analytics-core/src/libs/enrichment/EnrichmentService.ts";
+          readonly line: 111;
+          readonly column: 21;
+          readonly kind: "problem-metadata";
+        },
+      ];
+    },
+    {
+      readonly code: "analytics-core/enrichment-invalid-model-policy";
+      readonly category: "BadRequest";
+      readonly status: 400;
+      readonly title: "Bad Request";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#analytics-core-enrichment-invalid-model-policy";
+      readonly recovery: {
+        readonly cause: "The caller sent malformed input or unsupported request options.";
+        readonly userAction: "Correct the request input and retry after validation passes.";
+        readonly operatorAction: "Inspect validation details and request logs; do not retry unchanged input.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "public";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.info";
+          readonly severity: "info";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/analytics-core/src/libs/enrichment/EnrichmentService.ts";
+          readonly line: 115;
+          readonly column: 27;
+          readonly kind: "problem-metadata";
+        },
+      ];
+    },
+    {
+      readonly code: "analytics-core/enrichment-invalid-page";
+      readonly category: "BadRequest";
+      readonly status: 400;
+      readonly title: "Bad Request";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#analytics-core-enrichment-invalid-page";
+      readonly recovery: {
+        readonly cause: "The caller sent malformed input or unsupported request options.";
+        readonly userAction: "Correct the request input and retry after validation passes.";
+        readonly operatorAction: "Inspect validation details and request logs; do not retry unchanged input.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "public";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.info";
+          readonly severity: "info";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/analytics-core/src/libs/enrichment/EnrichmentService.ts";
+          readonly line: 119;
+          readonly column: 19;
+          readonly kind: "problem-metadata";
+        },
+      ];
+    },
+    {
+      readonly code: "analytics-core/enrichment-invalid-review";
+      readonly category: "BadRequest";
+      readonly status: 400;
+      readonly title: "Bad Request";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#analytics-core-enrichment-invalid-review";
+      readonly recovery: {
+        readonly cause: "The caller sent malformed input or unsupported request options.";
+        readonly userAction: "Correct the request input and retry after validation passes.";
+        readonly operatorAction: "Inspect validation details and request logs; do not retry unchanged input.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "public";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.info";
+          readonly severity: "info";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/analytics-core/src/libs/enrichment/EnrichmentService.ts";
+          readonly line: 123;
+          readonly column: 21;
+          readonly kind: "problem-metadata";
+        },
+      ];
+    },
+    {
+      readonly code: "analytics-core/enrichment-invalid-revision";
+      readonly category: "BadRequest";
+      readonly status: 400;
+      readonly title: "Bad Request";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#analytics-core-enrichment-invalid-revision";
+      readonly recovery: {
+        readonly cause: "The caller sent malformed input or unsupported request options.";
+        readonly userAction: "Correct the request input and retry after validation passes.";
+        readonly operatorAction: "Inspect validation details and request logs; do not retry unchanged input.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "public";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.info";
+          readonly severity: "info";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/analytics-core/src/libs/enrichment/EnrichmentService.ts";
+          readonly line: 127;
+          readonly column: 23;
+          readonly kind: "problem-metadata";
+        },
+      ];
+    },
+    {
+      readonly code: "analytics-core/enrichment-invalid-run";
+      readonly category: "BadRequest";
+      readonly status: 400;
+      readonly title: "Bad Request";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#analytics-core-enrichment-invalid-run";
+      readonly recovery: {
+        readonly cause: "The caller sent malformed input or unsupported request options.";
+        readonly userAction: "Correct the request input and retry after validation passes.";
+        readonly operatorAction: "Inspect validation details and request logs; do not retry unchanged input.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "public";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.info";
+          readonly severity: "info";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/analytics-core/src/libs/enrichment/EnrichmentService.ts";
+          readonly line: 131;
+          readonly column: 18;
+          readonly kind: "problem-metadata";
+        },
+      ];
+    },
+    {
+      readonly code: "analytics-core/enrichment-invalid-scope";
+      readonly category: "BadRequest";
+      readonly status: 400;
+      readonly title: "Bad Request";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#analytics-core-enrichment-invalid-scope";
+      readonly recovery: {
+        readonly cause: "The caller sent malformed input or unsupported request options.";
+        readonly userAction: "Correct the request input and retry after validation passes.";
+        readonly operatorAction: "Inspect validation details and request logs; do not retry unchanged input.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "public";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.info";
+          readonly severity: "info";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/analytics-core/src/libs/enrichment/EnrichmentService.ts";
+          readonly line: 135;
+          readonly column: 20;
+          readonly kind: "problem-metadata";
+        },
+      ];
+    },
+    {
+      readonly code: "analytics-core/enrichment-invalid-usage";
+      readonly category: "BadRequest";
+      readonly status: 400;
+      readonly title: "Bad Request";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#analytics-core-enrichment-invalid-usage";
+      readonly recovery: {
+        readonly cause: "The caller sent malformed input or unsupported request options.";
+        readonly userAction: "Correct the request input and retry after validation passes.";
+        readonly operatorAction: "Inspect validation details and request logs; do not retry unchanged input.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "public";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.info";
+          readonly severity: "info";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/analytics-core/src/libs/enrichment/EnrichmentService.ts";
+          readonly line: 139;
+          readonly column: 20;
+          readonly kind: "problem-metadata";
+        },
+      ];
+    },
+    {
+      readonly code: "analytics-core/enrichment-local-database-required";
+      readonly category: "BadRequest";
+      readonly status: 400;
+      readonly title: "Bad Request";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#analytics-core-enrichment-local-database-required";
+      readonly recovery: {
+        readonly cause: "The caller sent malformed input or unsupported request options.";
+        readonly userAction: "Correct the request input and retry after validation passes.";
+        readonly operatorAction: "Inspect validation details and request logs; do not retry unchanged input.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "public";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.info";
+          readonly severity: "info";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/analytics-core/src/libs/enrichment/EnrichmentService.ts";
+          readonly line: 143;
+          readonly column: 30;
+          readonly kind: "problem-metadata";
+        },
+      ];
+    },
+    {
+      readonly code: "analytics-core/enrichment-local-provider-unavailable";
+      readonly category: "BadRequest";
+      readonly status: 400;
+      readonly title: "Bad Request";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#analytics-core-enrichment-local-provider-unavailable";
+      readonly recovery: {
+        readonly cause: "The caller sent malformed input or unsupported request options.";
+        readonly userAction: "Correct the request input and retry after validation passes.";
+        readonly operatorAction: "Inspect validation details and request logs; do not retry unchanged input.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "public";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.info";
+          readonly severity: "info";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/analytics-core/src/libs/enrichment/EnrichmentService.ts";
+          readonly line: 147;
+          readonly column: 33;
+          readonly kind: "problem-metadata";
+        },
+      ];
+    },
+    {
+      readonly code: "analytics-core/enrichment-local-server-unavailable";
+      readonly category: "BadRequest";
+      readonly status: 400;
+      readonly title: "Bad Request";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#analytics-core-enrichment-local-server-unavailable";
+      readonly recovery: {
+        readonly cause: "The caller sent malformed input or unsupported request options.";
+        readonly userAction: "Correct the request input and retry after validation passes.";
+        readonly operatorAction: "Inspect validation details and request logs; do not retry unchanged input.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "public";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.info";
+          readonly severity: "info";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/analytics-core/src/libs/enrichment/EnrichmentService.ts";
+          readonly line: 151;
+          readonly column: 31;
+          readonly kind: "problem-metadata";
+        },
+      ];
+    },
+    {
+      readonly code: "analytics-core/enrichment-not-found";
+      readonly category: "NotFound";
+      readonly status: 404;
+      readonly title: "Not Found";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#analytics-core-enrichment-not-found";
+      readonly recovery: {
+        readonly cause: "The requested resource or route-visible record does not exist.";
+        readonly userAction: "Verify the identifier and refresh the resource list before retrying.";
+        readonly operatorAction: "Confirm tenant scoping, data retention, and backing-store lookup behavior.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "public";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.info";
+          readonly severity: "info";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/analytics-core/src/libs/enrichment/EnrichmentService.ts";
+          readonly line: 155;
+          readonly column: 16;
+          readonly kind: "problem-metadata";
+        },
+      ];
+    },
+    {
+      readonly code: "analytics-core/enrichment-persistence-failed";
+      readonly category: "InternalServerError";
+      readonly status: 500;
+      readonly title: "Internal Server Error";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#analytics-core-enrichment-persistence-failed";
+      readonly recovery: {
+        readonly cause: "Croco or an upstream dependency failed after accepting the request.";
+        readonly userAction: "Retry later only when the operation is idempotent or the caller owns retry safety.";
+        readonly operatorAction: "Use traces, logs, and upstream diagnostics to isolate the failing boundary.";
+        readonly retryability: "conditional";
+        readonly redactionPolicy: "operator-only";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.error";
+          readonly severity: "error";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/analytics-core/src/libs/enrichment/EnrichmentService.ts";
+          readonly line: 156;
+          readonly column: 25;
+          readonly kind: "problem-metadata";
+        },
+      ];
+    },
+    {
+      readonly code: "analytics-core/enrichment-provider-failed";
+      readonly category: "InternalServerError";
+      readonly status: 500;
+      readonly title: "Internal Server Error";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#analytics-core-enrichment-provider-failed";
+      readonly recovery: {
+        readonly cause: "Croco or an upstream dependency failed after accepting the request.";
+        readonly userAction: "Retry later only when the operation is idempotent or the caller owns retry safety.";
+        readonly operatorAction: "Use traces, logs, and upstream diagnostics to isolate the failing boundary.";
+        readonly retryability: "conditional";
+        readonly redactionPolicy: "operator-only";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.error";
+          readonly severity: "error";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/analytics-core/src/libs/enrichment/EnrichmentService.ts";
+          readonly line: 160;
+          readonly column: 22;
+          readonly kind: "problem-metadata";
+        },
+      ];
+    },
+    {
+      readonly code: "analytics-core/enrichment-raw-expired";
+      readonly category: "Gone";
+      readonly status: 410;
+      readonly title: "Gone";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#analytics-core-enrichment-raw-expired";
+      readonly recovery: {
+        readonly cause: "The requested resource is no longer available through this API surface.";
+        readonly userAction: "Stop using the stale reference and follow the replacement flow when available.";
+        readonly operatorAction: "Verify lifecycle, migration, deprecation, and retention state.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "public";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.info";
+          readonly severity: "info";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/analytics-core/src/libs/enrichment/EnrichmentService.ts";
+          readonly line: 164;
+          readonly column: 18;
+          readonly kind: "problem-metadata";
+        },
+      ];
+    },
+    {
+      readonly code: "analytics-core/enrichment-result-expired";
+      readonly category: "Gone";
+      readonly status: 410;
+      readonly title: "Gone";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#analytics-core-enrichment-result-expired";
+      readonly recovery: {
+        readonly cause: "The requested resource is no longer available through this API surface.";
+        readonly userAction: "Stop using the stale reference and follow the replacement flow when available.";
+        readonly operatorAction: "Verify lifecycle, migration, deprecation, and retention state.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "public";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.info";
+          readonly severity: "info";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/analytics-core/src/libs/enrichment/EnrichmentService.ts";
+          readonly line: 165;
+          readonly column: 21;
+          readonly kind: "problem-metadata";
+        },
+      ];
+    },
+    {
+      readonly code: "analytics-core/enrichment-retry-unavailable";
+      readonly category: "BadRequest";
+      readonly status: 400;
+      readonly title: "Bad Request";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#analytics-core-enrichment-retry-unavailable";
+      readonly recovery: {
+        readonly cause: "The caller sent malformed input or unsupported request options.";
+        readonly userAction: "Correct the request input and retry after validation passes.";
+        readonly operatorAction: "Inspect validation details and request logs; do not retry unchanged input.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "public";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.info";
+          readonly severity: "info";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/analytics-core/src/libs/enrichment/EnrichmentService.ts";
+          readonly line: 169;
+          readonly column: 24;
+          readonly kind: "problem-metadata";
+        },
+      ];
+    },
+    {
+      readonly code: "analytics-core/enrichment-review-required";
+      readonly category: "BadRequest";
+      readonly status: 400;
+      readonly title: "Bad Request";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#analytics-core-enrichment-review-required";
+      readonly recovery: {
+        readonly cause: "The caller sent malformed input or unsupported request options.";
+        readonly userAction: "Correct the request input and retry after validation passes.";
+        readonly operatorAction: "Inspect validation details and request logs; do not retry unchanged input.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "public";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.info";
+          readonly severity: "info";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/analytics-core/src/libs/enrichment/EnrichmentService.ts";
+          readonly line: 173;
+          readonly column: 22;
+          readonly kind: "problem-metadata";
+        },
+      ];
+    },
+    {
+      readonly code: "analytics-core/enrichment-settlement-failed";
+      readonly category: "InternalServerError";
+      readonly status: 500;
+      readonly title: "Internal Server Error";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#analytics-core-enrichment-settlement-failed";
+      readonly recovery: {
+        readonly cause: "Croco or an upstream dependency failed after accepting the request.";
+        readonly userAction: "Retry later only when the operation is idempotent or the caller owns retry safety.";
+        readonly operatorAction: "Use traces, logs, and upstream diagnostics to isolate the failing boundary.";
+        readonly retryability: "conditional";
+        readonly redactionPolicy: "operator-only";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.error";
+          readonly severity: "error";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/analytics-core/src/libs/enrichment/EnrichmentService.ts";
+          readonly line: 177;
+          readonly column: 24;
+          readonly kind: "problem-metadata";
+        },
+      ];
+    },
+    {
+      readonly code: "analytics-core/enrichment-source-unavailable";
+      readonly category: "Forbidden";
+      readonly status: 403;
+      readonly title: "Forbidden";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#analytics-core-enrichment-source-unavailable";
+      readonly recovery: {
+        readonly cause: "The authenticated caller is not allowed to perform the requested action.";
+        readonly userAction: "Request the required permission or choose an allowed action.";
+        readonly operatorAction: "Review policy, role, tenant, entitlement, and impersonation context.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "safe-message";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.warning";
+          readonly severity: "warning";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/analytics-core/src/libs/enrichment/EnrichmentService.ts";
+          readonly line: 181;
+          readonly column: 25;
+          readonly kind: "problem-metadata";
+        },
+      ];
+    },
+    {
+      readonly code: "analytics-core/enrichment-version-limit";
+      readonly category: "BadRequest";
+      readonly status: 400;
+      readonly title: "Bad Request";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#analytics-core-enrichment-version-limit";
+      readonly recovery: {
+        readonly cause: "The caller sent malformed input or unsupported request options.";
+        readonly userAction: "Correct the request input and retry after validation passes.";
+        readonly operatorAction: "Inspect validation details and request logs; do not retry unchanged input.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "public";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.info";
+          readonly severity: "info";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/analytics-core/src/libs/enrichment/EnrichmentService.ts";
+          readonly line: 185;
+          readonly column: 20;
+          readonly kind: "problem-metadata";
         },
       ];
     },
@@ -30516,7 +31804,7 @@ export type CrocoProblemRegistry = {
 
 export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 1079,
+  problemCount: 1125,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -36915,6 +38203,1458 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
           line: 112,
           column: 5,
           kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "analytics-core/enrichment-acceptance-unknown",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#analytics-core-enrichment-acceptance-unknown",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/analytics-core/src/libs/enrichment/EnrichmentService.ts",
+          line: 20,
+          column: 25,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "analytics-core/enrichment-attempt-limit",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath: "/reference/problem-recovery-cookbook/#analytics-core-enrichment-attempt-limit",
+      recovery: {
+        cause: "The caller sent malformed input or unsupported request options.",
+        userAction: "Correct the request input and retry after validation passes.",
+        operatorAction:
+          "Inspect validation details and request logs; do not retry unchanged input.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/analytics-core/src/libs/enrichment/EnrichmentService.ts",
+          line: 24,
+          column: 20,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "analytics-core/enrichment-audit-limit",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath: "/reference/problem-recovery-cookbook/#analytics-core-enrichment-audit-limit",
+      recovery: {
+        cause: "The caller sent malformed input or unsupported request options.",
+        userAction: "Correct the request input and retry after validation passes.",
+        operatorAction:
+          "Inspect validation details and request logs; do not retry unchanged input.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/analytics-core/src/libs/enrichment/EnrichmentService.ts",
+          line: 28,
+          column: 18,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "analytics-core/enrichment-authority-changed",
+      category: "Forbidden",
+      status: 403,
+      title: "Forbidden",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#analytics-core-enrichment-authority-changed",
+      recovery: {
+        cause: "The authenticated caller is not allowed to perform the requested action.",
+        userAction: "Request the required permission or choose an allowed action.",
+        operatorAction: "Review policy, role, tenant, entitlement, and impersonation context.",
+        retryability: "not-retryable",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/analytics-core/src/libs/enrichment/EnrichmentService.ts",
+          line: 32,
+          column: 24,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "analytics-core/enrichment-budget-exhausted",
+      category: "TooManyRequests",
+      status: 429,
+      title: "Too Many Requests",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#analytics-core-enrichment-budget-exhausted",
+      recovery: {
+        cause: "The caller exceeded a rate, quota, or concurrency limit.",
+        userAction: "Wait for the retry window or reduce request volume.",
+        operatorAction: "Check limiter state, quota configuration, and abuse signals.",
+        retryability: "retryable",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/analytics-core/src/libs/enrichment/EnrichmentService.ts",
+          line: 36,
+          column: 23,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "analytics-core/enrichment-cancelled",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath: "/reference/problem-recovery-cookbook/#analytics-core-enrichment-cancelled",
+      recovery: {
+        cause: "The caller sent malformed input or unsupported request options.",
+        userAction: "Correct the request input and retry after validation passes.",
+        operatorAction:
+          "Inspect validation details and request logs; do not retry unchanged input.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/analytics-core/src/libs/enrichment/EnrichmentService.ts",
+          line: 40,
+          column: 14,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "analytics-core/enrichment-candidate-required",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#analytics-core-enrichment-candidate-required",
+      recovery: {
+        cause: "The caller sent malformed input or unsupported request options.",
+        userAction: "Correct the request input and retry after validation passes.",
+        operatorAction:
+          "Inspect validation details and request logs; do not retry unchanged input.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/analytics-core/src/libs/enrichment/EnrichmentService.ts",
+          line: 41,
+          column: 25,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "analytics-core/enrichment-candidate-running",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#analytics-core-enrichment-candidate-running",
+      recovery: {
+        cause: "The caller sent malformed input or unsupported request options.",
+        userAction: "Correct the request input and retry after validation passes.",
+        operatorAction:
+          "Inspect validation details and request logs; do not retry unchanged input.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/analytics-core/src/libs/enrichment/EnrichmentService.ts",
+          line: 45,
+          column: 24,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "analytics-core/enrichment-concurrency-limit",
+      category: "TooManyRequests",
+      status: 429,
+      title: "Too Many Requests",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#analytics-core-enrichment-concurrency-limit",
+      recovery: {
+        cause: "The caller exceeded a rate, quota, or concurrency limit.",
+        userAction: "Wait for the retry window or reduce request volume.",
+        operatorAction: "Check limiter state, quota configuration, and abuse signals.",
+        retryability: "retryable",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/analytics-core/src/libs/enrichment/EnrichmentService.ts",
+          line: 49,
+          column: 24,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "analytics-core/enrichment-conflict",
+      category: "Conflict",
+      status: 409,
+      title: "Conflict",
+      cookbookPath: "/reference/problem-recovery-cookbook/#analytics-core-enrichment-conflict",
+      recovery: {
+        cause: "The request conflicts with current state or an idempotency constraint.",
+        userAction: "Refresh state, resolve the conflict, and retry with the updated intent.",
+        operatorAction: "Inspect concurrent writes, idempotency keys, and uniqueness constraints.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/analytics-core/src/libs/enrichment/EnrichmentService.ts",
+          line: 53,
+          column: 13,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "analytics-core/enrichment-definition-mismatch",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#analytics-core-enrichment-definition-mismatch",
+      recovery: {
+        cause: "The caller sent malformed input or unsupported request options.",
+        userAction: "Correct the request input and retry after validation passes.",
+        operatorAction:
+          "Inspect validation details and request logs; do not retry unchanged input.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/analytics-core/src/libs/enrichment/EnrichmentService.ts",
+          line: 54,
+          column: 26,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "analytics-core/enrichment-definition-unavailable",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#analytics-core-enrichment-definition-unavailable",
+      recovery: {
+        cause: "The caller sent malformed input or unsupported request options.",
+        userAction: "Correct the request input and retry after validation passes.",
+        operatorAction:
+          "Inspect validation details and request logs; do not retry unchanged input.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/analytics-core/src/libs/enrichment/EnrichmentService.ts",
+          line: 58,
+          column: 29,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "analytics-core/enrichment-denied",
+      category: "Forbidden",
+      status: 403,
+      title: "Forbidden",
+      cookbookPath: "/reference/problem-recovery-cookbook/#analytics-core-enrichment-denied",
+      recovery: {
+        cause: "The authenticated caller is not allowed to perform the requested action.",
+        userAction: "Request the required permission or choose an allowed action.",
+        operatorAction: "Review policy, role, tenant, entitlement, and impersonation context.",
+        retryability: "not-retryable",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/analytics-core/src/libs/enrichment/EnrichmentService.ts",
+          line: 62,
+          column: 11,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "analytics-core/enrichment-duplicate-billing-acknowledgement-required",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#analytics-core-enrichment-duplicate-billing-acknowledgement-required",
+      recovery: {
+        cause: "The caller sent malformed input or unsupported request options.",
+        userAction: "Correct the request input and retry after validation passes.",
+        operatorAction:
+          "Inspect validation details and request logs; do not retry unchanged input.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/analytics-core/src/libs/enrichment/EnrichmentService.ts",
+          line: 63,
+          column: 49,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "analytics-core/enrichment-idempotency-conflict",
+      category: "Conflict",
+      status: 409,
+      title: "Conflict",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#analytics-core-enrichment-idempotency-conflict",
+      recovery: {
+        cause: "The request conflicts with current state or an idempotency constraint.",
+        userAction: "Refresh state, resolve the conflict, and retry with the updated intent.",
+        operatorAction: "Inspect concurrent writes, idempotency keys, and uniqueness constraints.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/analytics-core/src/libs/enrichment/EnrichmentService.ts",
+          line: 67,
+          column: 27,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "analytics-core/enrichment-input-budget",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath: "/reference/problem-recovery-cookbook/#analytics-core-enrichment-input-budget",
+      recovery: {
+        cause: "The caller sent malformed input or unsupported request options.",
+        userAction: "Correct the request input and retry after validation passes.",
+        operatorAction:
+          "Inspect validation details and request logs; do not retry unchanged input.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/analytics-core/src/libs/enrichment/EnrichmentService.ts",
+          line: 71,
+          column: 19,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "analytics-core/enrichment-input-conflict",
+      category: "Conflict",
+      status: 409,
+      title: "Conflict",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#analytics-core-enrichment-input-conflict",
+      recovery: {
+        cause: "The request conflicts with current state or an idempotency constraint.",
+        userAction: "Refresh state, resolve the conflict, and retry with the updated intent.",
+        operatorAction: "Inspect concurrent writes, idempotency keys, and uniqueness constraints.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/analytics-core/src/libs/enrichment/EnrichmentService.ts",
+          line: 75,
+          column: 21,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "analytics-core/enrichment-invalid-actor",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath: "/reference/problem-recovery-cookbook/#analytics-core-enrichment-invalid-actor",
+      recovery: {
+        cause: "The caller sent malformed input or unsupported request options.",
+        userAction: "Correct the request input and retry after validation passes.",
+        operatorAction:
+          "Inspect validation details and request logs; do not retry unchanged input.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/analytics-core/src/libs/enrichment/EnrichmentService.ts",
+          line: 79,
+          column: 20,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "analytics-core/enrichment-invalid-authority-revision",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#analytics-core-enrichment-invalid-authority-revision",
+      recovery: {
+        cause: "The caller sent malformed input or unsupported request options.",
+        userAction: "Correct the request input and retry after validation passes.",
+        operatorAction:
+          "Inspect validation details and request logs; do not retry unchanged input.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/analytics-core/src/libs/enrichment/EnrichmentService.ts",
+          line: 83,
+          column: 33,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "analytics-core/enrichment-invalid-batch",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath: "/reference/problem-recovery-cookbook/#analytics-core-enrichment-invalid-batch",
+      recovery: {
+        cause: "The caller sent malformed input or unsupported request options.",
+        userAction: "Correct the request input and retry after validation passes.",
+        operatorAction:
+          "Inspect validation details and request logs; do not retry unchanged input.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/analytics-core/src/libs/enrichment/EnrichmentService.ts",
+          line: 87,
+          column: 20,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "analytics-core/enrichment-invalid-catalog",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#analytics-core-enrichment-invalid-catalog",
+      recovery: {
+        cause: "The caller sent malformed input or unsupported request options.",
+        userAction: "Correct the request input and retry after validation passes.",
+        operatorAction:
+          "Inspect validation details and request logs; do not retry unchanged input.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/analytics-core/src/libs/enrichment/EnrichmentService.ts",
+          line: 91,
+          column: 22,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "analytics-core/enrichment-invalid-command",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#analytics-core-enrichment-invalid-command",
+      recovery: {
+        cause: "The caller sent malformed input or unsupported request options.",
+        userAction: "Correct the request input and retry after validation passes.",
+        operatorAction:
+          "Inspect validation details and request logs; do not retry unchanged input.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/analytics-core/src/libs/enrichment/EnrichmentService.ts",
+          line: 95,
+          column: 22,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "analytics-core/enrichment-invalid-context",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#analytics-core-enrichment-invalid-context",
+      recovery: {
+        cause: "The caller sent malformed input or unsupported request options.",
+        userAction: "Correct the request input and retry after validation passes.",
+        operatorAction:
+          "Inspect validation details and request logs; do not retry unchanged input.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/analytics-core/src/libs/enrichment/EnrichmentService.ts",
+          line: 99,
+          column: 22,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "analytics-core/enrichment-invalid-definition",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#analytics-core-enrichment-invalid-definition",
+      recovery: {
+        cause: "The caller sent malformed input or unsupported request options.",
+        userAction: "Correct the request input and retry after validation passes.",
+        operatorAction:
+          "Inspect validation details and request logs; do not retry unchanged input.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/analytics-core/src/libs/enrichment/EnrichmentService.ts",
+          line: 103,
+          column: 25,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "analytics-core/enrichment-invalid-input",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath: "/reference/problem-recovery-cookbook/#analytics-core-enrichment-invalid-input",
+      recovery: {
+        cause: "The caller sent malformed input or unsupported request options.",
+        userAction: "Correct the request input and retry after validation passes.",
+        operatorAction:
+          "Inspect validation details and request logs; do not retry unchanged input.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/analytics-core/src/libs/enrichment/EnrichmentService.ts",
+          line: 107,
+          column: 20,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "analytics-core/enrichment-invalid-limits",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#analytics-core-enrichment-invalid-limits",
+      recovery: {
+        cause: "The caller sent malformed input or unsupported request options.",
+        userAction: "Correct the request input and retry after validation passes.",
+        operatorAction:
+          "Inspect validation details and request logs; do not retry unchanged input.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/analytics-core/src/libs/enrichment/EnrichmentService.ts",
+          line: 111,
+          column: 21,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "analytics-core/enrichment-invalid-model-policy",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#analytics-core-enrichment-invalid-model-policy",
+      recovery: {
+        cause: "The caller sent malformed input or unsupported request options.",
+        userAction: "Correct the request input and retry after validation passes.",
+        operatorAction:
+          "Inspect validation details and request logs; do not retry unchanged input.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/analytics-core/src/libs/enrichment/EnrichmentService.ts",
+          line: 115,
+          column: 27,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "analytics-core/enrichment-invalid-page",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath: "/reference/problem-recovery-cookbook/#analytics-core-enrichment-invalid-page",
+      recovery: {
+        cause: "The caller sent malformed input or unsupported request options.",
+        userAction: "Correct the request input and retry after validation passes.",
+        operatorAction:
+          "Inspect validation details and request logs; do not retry unchanged input.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/analytics-core/src/libs/enrichment/EnrichmentService.ts",
+          line: 119,
+          column: 19,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "analytics-core/enrichment-invalid-review",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#analytics-core-enrichment-invalid-review",
+      recovery: {
+        cause: "The caller sent malformed input or unsupported request options.",
+        userAction: "Correct the request input and retry after validation passes.",
+        operatorAction:
+          "Inspect validation details and request logs; do not retry unchanged input.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/analytics-core/src/libs/enrichment/EnrichmentService.ts",
+          line: 123,
+          column: 21,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "analytics-core/enrichment-invalid-revision",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#analytics-core-enrichment-invalid-revision",
+      recovery: {
+        cause: "The caller sent malformed input or unsupported request options.",
+        userAction: "Correct the request input and retry after validation passes.",
+        operatorAction:
+          "Inspect validation details and request logs; do not retry unchanged input.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/analytics-core/src/libs/enrichment/EnrichmentService.ts",
+          line: 127,
+          column: 23,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "analytics-core/enrichment-invalid-run",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath: "/reference/problem-recovery-cookbook/#analytics-core-enrichment-invalid-run",
+      recovery: {
+        cause: "The caller sent malformed input or unsupported request options.",
+        userAction: "Correct the request input and retry after validation passes.",
+        operatorAction:
+          "Inspect validation details and request logs; do not retry unchanged input.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/analytics-core/src/libs/enrichment/EnrichmentService.ts",
+          line: 131,
+          column: 18,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "analytics-core/enrichment-invalid-scope",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath: "/reference/problem-recovery-cookbook/#analytics-core-enrichment-invalid-scope",
+      recovery: {
+        cause: "The caller sent malformed input or unsupported request options.",
+        userAction: "Correct the request input and retry after validation passes.",
+        operatorAction:
+          "Inspect validation details and request logs; do not retry unchanged input.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/analytics-core/src/libs/enrichment/EnrichmentService.ts",
+          line: 135,
+          column: 20,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "analytics-core/enrichment-invalid-usage",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath: "/reference/problem-recovery-cookbook/#analytics-core-enrichment-invalid-usage",
+      recovery: {
+        cause: "The caller sent malformed input or unsupported request options.",
+        userAction: "Correct the request input and retry after validation passes.",
+        operatorAction:
+          "Inspect validation details and request logs; do not retry unchanged input.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/analytics-core/src/libs/enrichment/EnrichmentService.ts",
+          line: 139,
+          column: 20,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "analytics-core/enrichment-local-database-required",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#analytics-core-enrichment-local-database-required",
+      recovery: {
+        cause: "The caller sent malformed input or unsupported request options.",
+        userAction: "Correct the request input and retry after validation passes.",
+        operatorAction:
+          "Inspect validation details and request logs; do not retry unchanged input.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/analytics-core/src/libs/enrichment/EnrichmentService.ts",
+          line: 143,
+          column: 30,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "analytics-core/enrichment-local-provider-unavailable",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#analytics-core-enrichment-local-provider-unavailable",
+      recovery: {
+        cause: "The caller sent malformed input or unsupported request options.",
+        userAction: "Correct the request input and retry after validation passes.",
+        operatorAction:
+          "Inspect validation details and request logs; do not retry unchanged input.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/analytics-core/src/libs/enrichment/EnrichmentService.ts",
+          line: 147,
+          column: 33,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "analytics-core/enrichment-local-server-unavailable",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#analytics-core-enrichment-local-server-unavailable",
+      recovery: {
+        cause: "The caller sent malformed input or unsupported request options.",
+        userAction: "Correct the request input and retry after validation passes.",
+        operatorAction:
+          "Inspect validation details and request logs; do not retry unchanged input.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/analytics-core/src/libs/enrichment/EnrichmentService.ts",
+          line: 151,
+          column: 31,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "analytics-core/enrichment-not-found",
+      category: "NotFound",
+      status: 404,
+      title: "Not Found",
+      cookbookPath: "/reference/problem-recovery-cookbook/#analytics-core-enrichment-not-found",
+      recovery: {
+        cause: "The requested resource or route-visible record does not exist.",
+        userAction: "Verify the identifier and refresh the resource list before retrying.",
+        operatorAction:
+          "Confirm tenant scoping, data retention, and backing-store lookup behavior.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/analytics-core/src/libs/enrichment/EnrichmentService.ts",
+          line: 155,
+          column: 16,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "analytics-core/enrichment-persistence-failed",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#analytics-core-enrichment-persistence-failed",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/analytics-core/src/libs/enrichment/EnrichmentService.ts",
+          line: 156,
+          column: 25,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "analytics-core/enrichment-provider-failed",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#analytics-core-enrichment-provider-failed",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/analytics-core/src/libs/enrichment/EnrichmentService.ts",
+          line: 160,
+          column: 22,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "analytics-core/enrichment-raw-expired",
+      category: "Gone",
+      status: 410,
+      title: "Gone",
+      cookbookPath: "/reference/problem-recovery-cookbook/#analytics-core-enrichment-raw-expired",
+      recovery: {
+        cause: "The requested resource is no longer available through this API surface.",
+        userAction:
+          "Stop using the stale reference and follow the replacement flow when available.",
+        operatorAction: "Verify lifecycle, migration, deprecation, and retention state.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/analytics-core/src/libs/enrichment/EnrichmentService.ts",
+          line: 164,
+          column: 18,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "analytics-core/enrichment-result-expired",
+      category: "Gone",
+      status: 410,
+      title: "Gone",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#analytics-core-enrichment-result-expired",
+      recovery: {
+        cause: "The requested resource is no longer available through this API surface.",
+        userAction:
+          "Stop using the stale reference and follow the replacement flow when available.",
+        operatorAction: "Verify lifecycle, migration, deprecation, and retention state.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/analytics-core/src/libs/enrichment/EnrichmentService.ts",
+          line: 165,
+          column: 21,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "analytics-core/enrichment-retry-unavailable",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#analytics-core-enrichment-retry-unavailable",
+      recovery: {
+        cause: "The caller sent malformed input or unsupported request options.",
+        userAction: "Correct the request input and retry after validation passes.",
+        operatorAction:
+          "Inspect validation details and request logs; do not retry unchanged input.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/analytics-core/src/libs/enrichment/EnrichmentService.ts",
+          line: 169,
+          column: 24,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "analytics-core/enrichment-review-required",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#analytics-core-enrichment-review-required",
+      recovery: {
+        cause: "The caller sent malformed input or unsupported request options.",
+        userAction: "Correct the request input and retry after validation passes.",
+        operatorAction:
+          "Inspect validation details and request logs; do not retry unchanged input.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/analytics-core/src/libs/enrichment/EnrichmentService.ts",
+          line: 173,
+          column: 22,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "analytics-core/enrichment-settlement-failed",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#analytics-core-enrichment-settlement-failed",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/analytics-core/src/libs/enrichment/EnrichmentService.ts",
+          line: 177,
+          column: 24,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "analytics-core/enrichment-source-unavailable",
+      category: "Forbidden",
+      status: 403,
+      title: "Forbidden",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#analytics-core-enrichment-source-unavailable",
+      recovery: {
+        cause: "The authenticated caller is not allowed to perform the requested action.",
+        userAction: "Request the required permission or choose an allowed action.",
+        operatorAction: "Review policy, role, tenant, entitlement, and impersonation context.",
+        retryability: "not-retryable",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/analytics-core/src/libs/enrichment/EnrichmentService.ts",
+          line: 181,
+          column: 25,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "analytics-core/enrichment-version-limit",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath: "/reference/problem-recovery-cookbook/#analytics-core-enrichment-version-limit",
+      recovery: {
+        cause: "The caller sent malformed input or unsupported request options.",
+        userAction: "Correct the request input and retry after validation passes.",
+        operatorAction:
+          "Inspect validation details and request logs; do not retry unchanged input.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/analytics-core/src/libs/enrichment/EnrichmentService.ts",
+          line: 185,
+          column: 20,
+          kind: "problem-metadata",
         },
       ],
     },

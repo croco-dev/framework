@@ -484,3 +484,11 @@ exceeded; it contains no credits from truncated data.
 ## Public page inspection
 
 `createPublicPageOperations({ authorize, inspect })` binds authenticated admin authorization to an inspector from `@croco/seo-core`. It accepts registered target ids, never URLs. Authorization runs before source/response reads. Its report is shared by the CLI JSON output and `PublicPageInspector` from `@croco/admin-react`; see [the local application](../../examples/public-pages/README.md). Application policy owns site/tenant authority.
+
+## Enrichment review operations
+
+`EnrichmentOperations` binds a server `EnrichmentService` to a current authenticated
+app/environment/tenant and actor. Only code-registered definition versions are selectable.
+Browser payloads do not select a principal, model, handler or tenant. Review/export/retry commands
+carry revision, reason and idempotency key; service authorization and source access remain required.
+See [the standalone example](../../examples/enrichment-review/README.md).

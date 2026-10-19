@@ -393,3 +393,10 @@ export type {
 } from "./libs/SurveyConsole";
 
 export { PublicPageInspector } from "./libs/PublicPageInspector";
+
+export { EnrichmentReviewConsole } from "./libs/EnrichmentReviewConsole";
+export type {
+  EnrichmentConsoleState,
+  EnrichmentConsoleCommand,
+  EnrichmentReviewConsoleProps,
+} from "./libs/EnrichmentReviewConsole";

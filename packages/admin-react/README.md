@@ -738,3 +738,18 @@ See [the standalone acquisition example](../../examples/acquisition).
 ## Public page inspector
 
 `PublicPageInspector({ report })` renders the authorized `PublicPageInspection` shared with CLI/agent JSON, including ready, partial, denied and unavailable states, response status, revision and stable diagnostics. It accepts no raw HTML or executable structured-data input. The server owns authorization and inspection. See [the local application and browser checks](../../examples/public-pages/README.md).
+
+## Enrichment Review Console
+
+`EnrichmentReviewConsole` displays original availability, dictionary/model candidates, finite
+labels, unknown/failure states, catalog/model/prompt/normalization versions, measured/estimated/unknown
+usage, manual overrides and candidate differences. Approval requires an audit reason and evidence;
+unreviewed batches cannot be exported by the server. Failed unchanged commands retain their
+idempotency key. Delivery retries do not repeat inference, while an uncertain model retry requires
+an explicit acknowledgement of possible duplicate billing.
+
+Bind callbacks to `EnrichmentOperations` and change `scopeKey` with authenticated tenant or permission
+revision. That epoch discards old drafts, results, exports and pending responses. Loading/denied/error
+states hide originals. Server policy, not the presentation booleans, enforces read/review/export rights.
+The [synthetic standalone example](../../examples/enrichment-review/README.md) uses PostgreSQL and
+finite feature operations without Survey, Cohort or warehouse dependencies.

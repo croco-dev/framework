@@ -1139,6 +1139,7 @@ it('retains the assertion failure', () => expect('actual-fixture-value').toBe('e
     expect(resolveTurboPackageFilters(root, exampleCommands)).toEqual([
       "@croco-example/acquisition",
       "@croco-example/cancellation-flow",
+      "@croco-example/enrichment-review",
       "@croco-example/experiment-runtime",
       "@croco-example/first-party-plugin-composition",
       "@croco-example/growth-analysis",

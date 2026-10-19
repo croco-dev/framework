@@ -344,3 +344,29 @@ bind the conversion, definition versions and exact retained evidence references;
 requires a new report ID instead of silently changing a prior receipt. Differences between referral claims
 and self-reported answers are independent declarations. Conflict indicates multiple values within the same
 source kind, rather than disagreement between those two kinds.
+
+## Reviewed text enrichment
+
+The server-only `@croco/analytics-core/enrichment` entry exports `defineClassification` and
+`EnrichmentService` (`enqueueBatch`, `classify`, `review`, `exportLabels`, `retry`, `settle`, `purge`).
+An exact normalized dictionary precedes the optional injected `ClassifyText` function; otherwise
+classification is explicitly unknown. All candidates require human review before export.
+
+Supply an `EnrichmentStore`, current principal/authorization revision, action authorization,
+source availability, mandatory PII block/mask policy and an idempotent usage/event receipt sink.
+Budgets and concurrency are bounded per run. Candidates, human overrides, raw/result retention,
+and operational receipts are separate. A model response is persisted before sink delivery, so
+repeating settlement does not repeat inference. Unknown acceptance requires an explicit operator
+acknowledgement that the prior worker stopped. At the attempt limit, `retry` accepts this
+acknowledgement only to release the uncertain concurrency slot: `classify` still rejects another
+attempt, and the original unknown usage, receipts and budget reservation remain intact.
+Admission counts durable operational receipts, including those whose source results were purged.
+Model attempts and unresolved acceptance are tracked per item and definition version across actors
+and authorization revisions. Changing a permission-context cache key never resets this admission state.
+An authorized operator can acknowledge an unknown receipt, or an expired running receipt after
+confirming the worker stopped, using its persisted item/receipt IDs and current run revision.
+This remains available after source deletion or result expiry and returns no classification data;
+it does not recreate purged results, refund reservations or bypass source checks on classification.
+
+See [the independent example](../../examples/enrichment-review/README.md) for native SDK mapping,
+PostgreSQL migration/CAS, batch checkpoints, review UI, budget assumptions and recovery limitations.
