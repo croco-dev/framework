@@ -155,3 +155,12 @@ profile integration explicitly unverified. Do not promote the root transaction p
 or durable adapter runtime claims from these local tests. Application authorization,
 transaction-local tenant settings, concurrency admission and reconciliation of an
 unknown outcome remain application responsibilities; never retry a committed outcome.
+
+The repository-only `packages/tx-drizzle/smoke` artifact supplies an authenticated Worker and
+`pnpm --filter @croco/tx-drizzle smoke:verify --url <origin> --target <local|remote> --output <path>`.
+The Docker-backed Worker suite runs the same CLI over local HTTP with an independent SQL observer.
+Provision the dedicated schema/roles outside the Worker; the runner only mutates and cleans its own
+run UUID. Secrets come from bindings/environment and are omitted from reports. A remote target
+requires HTTPS and redirects fail. Remote HTTP success does not attest Cloudflare deployment or
+binding identity; keep deployment, proxy pooling/cache/failover and certification unverified until
+separate deployment/configuration evidence exists. Neither artifact provisions or deploys resources.

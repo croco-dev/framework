@@ -4,10 +4,17 @@
     {
       "package": "tx-drizzle",
       "classification": "runtime-adapter",
-      "reason": "Opt-in request-owned pg/Drizzle transaction entrypoint. Local workerd tests do not promote the root plugin or any domain adapter.",
+      "reason": "Opt-in request-owned pg/Drizzle transaction entrypoint with repository-only authenticated smoke Worker and HTTP/SQL verifier. Local workerd tests do not promote the root plugin or any domain adapter; no resource provisioning or Cloudflare deployment is performed.",
       "files": {
-        "packages/tx-drizzle/package.json": "5c8db44e858f177e4d9c61a4aed134d0e6dbf4262449405e16f06bf79cdf7994",
-        "packages/tx-drizzle/src/hyperdrive.ts": "193d833761b03ac28eb866107b3af533fe262849ee51b789fd2f30116cb37514"
+        "packages/tx-drizzle/package.json": "990d860d38cf12251aed96cac83ada3f08d57eb77200cbb2eefe33539a77dc7f",
+        "packages/tx-drizzle/src/hyperdrive.ts": "193d833761b03ac28eb866107b3af533fe262849ee51b789fd2f30116cb37514",
+        "packages/tx-drizzle/smoke/README.md": "247eaf03192408d7516042e04ffec6f0b3e52c9b5b5e053a08c3cdc96f419eec",
+        "packages/tx-drizzle/smoke/protocol.mts": "59455c9b98e2ddb5c088039626a61b29a2581fd2d495fed89b8a9acfaf26036d",
+        "packages/tx-drizzle/smoke/setup.sql": "61b72fa23161fbafd10a06e7a97cad8ead166c07fb1c016d13280e89efc96402",
+        "packages/tx-drizzle/smoke/verify.mts": "9381dc47d8a78befcc72f9503bcdb7ba64c323f7ebbe41d320e8088e80ff0b95",
+        "packages/tx-drizzle/smoke/worker.ts": "97be0d8166ff1094057acc7f72337000850d7023a03e9051e1fea039c199f83d",
+        "packages/tx-drizzle/smoke/wrangler.jsonc": "8ab5a361d66e0614d8a7e0f0afc762538f6a1254f887e5fca725b3208a82e520",
+        "packages/tx-drizzle/tsconfig.json": "268b6e6101bf1e08d90dca0afaed00f9394e1861cea8d4447042a4ffe16f05de"
       },
       "catalogRuntimes": [],
       "profiles": {
@@ -23,7 +30,10 @@
           "references": [
             "packages/tx-drizzle/src/hyperdrive.ts",
             "packages/tx-drizzle/src/tests/HyperdriveWorkers.postgres.spec.ts",
-            "packages/tx-drizzle/README.md"
+            "packages/tx-drizzle/README.md",
+            "packages/tx-drizzle/smoke/README.md",
+            "packages/tx-drizzle/smoke/worker.ts",
+            "packages/tx-drizzle/smoke/verify.mts"
           ]
         },
         "aws-lambda": {
@@ -38,7 +48,10 @@
           "references": [
             "packages/tx-drizzle/src/hyperdrive.ts",
             "packages/tx-drizzle/src/tests/HyperdriveWorkers.postgres.spec.ts",
-            "packages/tx-drizzle/README.md"
+            "packages/tx-drizzle/README.md",
+            "packages/tx-drizzle/smoke/README.md",
+            "packages/tx-drizzle/smoke/worker.ts",
+            "packages/tx-drizzle/smoke/verify.mts"
           ]
         },
         "cloudflare": {
@@ -53,7 +66,10 @@
           "references": [
             "packages/tx-drizzle/src/hyperdrive.ts",
             "packages/tx-drizzle/src/tests/HyperdriveWorkers.postgres.spec.ts",
-            "packages/tx-drizzle/README.md"
+            "packages/tx-drizzle/README.md",
+            "packages/tx-drizzle/smoke/README.md",
+            "packages/tx-drizzle/smoke/worker.ts",
+            "packages/tx-drizzle/smoke/verify.mts"
           ],
           "host": "workers"
         }
@@ -62,9 +78,9 @@
     {
       "package": "problems-core",
       "classification": "pure-contract",
-      "reason": "Generated additive Problem code registration for the redacted Hyperdrive boundary; no new transport or storage implementation.",
+      "reason": "Generated additive Problem code registration for redacted Hyperdrive transaction and repository smoke-verification diagnostics; no new transport or storage implementation.",
       "files": {
-        "packages/problems-core/src/generated/problem-code-registry.ts": "e28a5d930aa4bca49547ebb42efb74b657640f720294c00ec4c64a53da10f8f6"
+        "packages/problems-core/src/generated/problem-code-registry.ts": "4fbdc45a88642dc94075ab251124fcacc0b5f370f14368a58ed710943a8efbc2"
       },
       "catalogRuntimes": [],
       "profiles": {

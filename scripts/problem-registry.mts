@@ -3357,6 +3357,17 @@ const recoveryMetadataByCode = {
     redactionPolicy: "public",
     severity: "info",
   }),
+  HYPERDRIVE_SMOKE_CHECK_FAILED: recovery({
+    cause:
+      "The repository Hyperdrive HTTP/SQL smoke verifier rejected a configuration or observed result.",
+    userAction:
+      "Inspect failed and not-run checks in the safe report. Reconcile the run UUID before deliberately starting another run.",
+    operatorAction:
+      "Verify the dedicated Worker, token, observer permissions and smoke schema. Preserve unverified deployment and certification claims.",
+    retryability: "not-retryable",
+    redactionPolicy: "safe-message",
+    severity: "error",
+  }),
   "tx-drizzle/hyperdrive-transaction-failed": recovery({
     cause:
       "Request-owned PostgreSQL connection, transaction or cleanup failed at the Hyperdrive boundary.",

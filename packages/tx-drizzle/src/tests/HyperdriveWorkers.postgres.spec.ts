@@ -1,13 +1,20 @@
 import { resolve } from "node:path";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
+import { createServer as createHttpServer } from "node:http";
 import { createServer } from "node:net";
 import type { Socket } from "node:net";
 import { once } from "node:events";
 import { build } from "esbuild";
 import { Miniflare } from "miniflare";
+import { parseConfigFileTextToJson } from "typescript";
 import { Pool } from "pg";
 import { GenericContainer, Wait } from "testcontainers";
 import type { StartedTestContainer } from "testcontainers";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { runHyperdriveSmoke } from "../../smoke/verify.mts";
 
 // This is local workerd → PostgreSQL. It does not exercise the deployed Hyperdrive proxy/cache.
 const workers: Miniflare[] = [];
@@ -18,6 +25,24 @@ describe.skipIf(process.env.CROCO_TEST_REAL_RESOURCES !== "1")(
     let pool: Pool;
     let connectionString: string;
     let script: string;
+    let smokeScript: string;
+    let observerUrl: string;
+    let smokeCompatibility: { compatibilityDate: string; compatibilityFlags: string[] };
+    async function smokeWorker(token: string): Promise<string> {
+      const instance = new Miniflare({
+        modules: true,
+        script: smokeScript,
+        port: 0,
+        host: "127.0.0.1",
+        ...smokeCompatibility,
+        hyperdrives: {
+          HYPERDRIVE: connectionString.replace("worker_login", "croco_hyperdrive_smoke_worker"),
+        },
+        bindings: { HYPERDRIVE_SMOKE_TOKEN: token },
+      });
+      workers.push(instance);
+      return (await instance.ready).origin;
+    }
     async function worker(
       binding: string | undefined = connectionString,
       native = true,
@@ -49,9 +74,8 @@ describe.skipIf(process.env.CROCO_TEST_REAL_RESOURCES !== "1")(
         .start();
       const host = container.getHost();
       const port = container.getMappedPort(5432);
-      pool = new Pool({
-        connectionString: `postgres://fixture:fixture-secret@${host}:${port}/fixture`,
-      });
+      observerUrl = `postgres://fixture:fixture-secret@${host}:${port}/fixture`;
+      pool = new Pool({ connectionString: observerUrl });
       await pool.query(`create role worker_login login password 'worker-secret' nosuperuser nobypassrls;
       create table hyperdrive_claims (id text primary key, tenant text not null, value int not null);
       alter table hyperdrive_claims enable row level security;
@@ -59,6 +83,17 @@ describe.skipIf(process.env.CROCO_TEST_REAL_RESOURCES !== "1")(
         using (tenant = current_setting('croco.tenant', true))
         with check (tenant = current_setting('croco.tenant', true));
       grant select, insert, update on hyperdrive_claims to worker_login;`);
+      await pool.query(
+        "create role croco_hyperdrive_smoke_worker login password 'worker-secret' nosuperuser nobypassrls",
+      );
+      await pool.query(
+        await readFile(resolve(import.meta.dirname, "../../smoke/setup.sql"), "utf8"),
+      );
+      await pool.query(
+        "create role smoke_observer_readonly login password 'observer-secret' nosuperuser bypassrls",
+      );
+      await pool.query("grant usage on schema croco_hyperdrive_smoke to smoke_observer_readonly");
+      await pool.query("grant select on croco_hyperdrive_smoke.claims to smoke_observer_readonly");
       connectionString = `postgres://worker_login:worker-secret@${host}:${port}/fixture`;
       const bundle = await build({
         entryPoints: [resolve(import.meta.dirname, "fixtures/hyperdriveWorker.ts")],
@@ -81,6 +116,40 @@ describe.skipIf(process.env.CROCO_TEST_REAL_RESOURCES !== "1")(
       const output = bundle.outputFiles[0];
       if (!output) throw new Error("Missing Worker bundle");
       script = output.text;
+      const directory = await mkdtemp(resolve(tmpdir(), "croco-hyperdrive-bundle-"));
+      try {
+        const parsed = parseConfigFileTextToJson(
+          "wrangler.jsonc",
+          await readFile(resolve(import.meta.dirname, "../../smoke/wrangler.jsonc"), "utf8"),
+        );
+        if (parsed.error) throw new Error("Invalid smoke Wrangler JSONC");
+        const configuration = parsed.config;
+        smokeCompatibility = {
+          compatibilityDate: configuration.compatibility_date,
+          compatibilityFlags: configuration.compatibility_flags,
+        };
+        await promisify(execFile)(
+          "pnpm",
+          [
+            "exec",
+            "wrangler",
+            "deploy",
+            "--dry-run",
+            "--config",
+            resolve(import.meta.dirname, "../../smoke/wrangler.jsonc"),
+            "--outdir",
+            directory,
+          ],
+          {
+            cwd: resolve(import.meta.dirname, "../.."),
+            env: { ...process.env, WRANGLER_SEND_METRICS: "false" },
+            timeout: 60_000,
+          },
+        );
+        smokeScript = await readFile(resolve(directory, "worker.js"), "utf8");
+      } finally {
+        await rm(directory, { recursive: true, force: true });
+      }
     }, 180_000);
     beforeEach(async () => {
       await pool.query("truncate hyperdrive_claims");
@@ -90,6 +159,184 @@ describe.skipIf(process.env.CROCO_TEST_REAL_RESOURCES !== "1")(
       await pool?.end();
       await container?.stop();
     }, 180_000);
+
+    it("runs the deployment Worker and CLI over local HTTP with an independent SQL oracle and scoped cleanup", async () => {
+      const token = "dedicated-smoke-token-with-at-least-32-characters";
+      const url = await smokeWorker(token);
+      const spectator = "dc54bbbf-c6d1-4ca5-9db0-f4aa4601bbba";
+      await pool.query(
+        "insert into croco_hyperdrive_smoke.claims values ($1, 'unrelated', 'tenant-b', 109)",
+        [spectator],
+      );
+      const directory = await mkdtemp(resolve(tmpdir(), "croco-hyperdrive-cli-"));
+      try {
+        expect((await fetch(`${url}/health`)).status).toBe(401);
+        expect(
+          (
+            await fetch(`${url}/transaction`, {
+              method: "POST",
+              headers: { authorization: `Bearer ${token}` },
+              body: '{"runId":"unsafe","tenant":"a","action":"read"}',
+            })
+          ).status,
+        ).toBe(400);
+        const output = resolve(directory, "evidence.json");
+        const result = await promisify(execFile)(
+          process.execPath,
+          [
+            "--experimental-strip-types",
+            resolve(import.meta.dirname, "../../smoke/verify.mts"),
+            "--url",
+            url,
+            "--target",
+            "local",
+            "--output",
+            output,
+          ],
+          {
+            env: {
+              ...process.env,
+              HYPERDRIVE_SMOKE_TOKEN: token,
+              HYPERDRIVE_SMOKE_DATABASE_URL: observerUrl,
+            },
+            timeout: 120_000,
+          },
+        );
+        expect(result.stdout).toContain(
+          "Hyperdrive smoke: passed; target=local; deployment=not-verified",
+        );
+        const evidence = JSON.parse(await readFile(output, "utf8"));
+        expect(evidence).toMatchObject({
+          schemaVersion: "croco.hyperdrive-smoke/v1",
+          status: "passed",
+          target: "local",
+          cloudflareDeployment: "not-verified",
+          certification: "not-certified",
+        });
+        expect(
+          evidence.checks.every((check: { status: string }) => check.status === "passed"),
+        ).toBe(true);
+        expect(JSON.stringify(evidence)).not.toMatch(
+          /fixture-secret|worker-secret|dedicated-smoke-token|postgres:/,
+        );
+        expect(
+          (await pool.query("select id, value from croco_hyperdrive_smoke.claims")).rows,
+        ).toEqual([{ id: "unrelated", value: 109 }]);
+        const denied = await runHyperdriveSmoke({
+          url,
+          target: "local",
+          token,
+          databaseUrl: connectionString,
+        });
+        expect(denied.status).toBe("failed");
+        expect(denied.checks[0].status).toBe("failed");
+      } finally {
+        await pool.query("delete from croco_hyperdrive_smoke.claims where run_id = $1", [
+          spectator,
+        ]);
+        await rm(directory, { recursive: true, force: true });
+      }
+    }, 120_000);
+
+    it("fails the report when the observer cannot clean up, without hiding persisted rows", async () => {
+      const token = "cleanup-smoke-token-with-at-least-32-characters";
+      const url = await smokeWorker(token);
+      const report = await runHyperdriveSmoke({
+        url,
+        target: "local",
+        token,
+        databaseUrl: observerUrl.replace(
+          "fixture:fixture-secret@",
+          "smoke_observer_readonly:observer-secret@",
+        ),
+      });
+      try {
+        expect(report.status).toBe("failed");
+        expect(report.checks.filter(({ status }) => status === "failed")).toEqual([
+          { name: "cleanup", status: "failed" },
+        ]);
+        expect(
+          (
+            await pool.query(
+              "select id from croco_hyperdrive_smoke.claims where run_id = $1 order by id",
+              [report.runId],
+            )
+          ).rows,
+        ).toEqual([{ id: "outer" }, { id: "shared" }]);
+        expect(JSON.stringify(report)).not.toContain("observer-secret");
+      } finally {
+        await pool.query("delete from croco_hyperdrive_smoke.claims where run_id = $1", [
+          report.runId,
+        ]);
+      }
+    }, 120_000);
+
+    it("fails closed for absent, short and non-string smoke credentials", async () => {
+      for (const token of [undefined, "short", { token: "private-structured-token" }]) {
+        const instance = new Miniflare({
+          modules: true,
+          script: smokeScript,
+          ...smokeCompatibility,
+          ...(token === undefined ? {} : { bindings: { HYPERDRIVE_SMOKE_TOKEN: token } }),
+        });
+        workers.push(instance);
+        const response = await instance.dispatchFetch("https://fixture/health", {
+          headers: { authorization: "Bearer [object Object]" },
+        });
+        expect(response.status).toBe(503);
+        expect(await response.json()).toEqual({ code: "HYPERDRIVE_SMOKE_DISABLED" });
+      }
+    }, 30_000);
+
+    it.each(["counts", "persistence", "redirect"])(
+      "rejects a misleading HTTP endpoint: %s",
+      async (fault) => {
+        let claims = 0;
+        let redirected = false;
+        const token = "negative-smoke-token-with-at-least-32-characters";
+        const server = createHttpServer((request, response) => {
+          response.setHeader("content-type", "application/json");
+          if (request.url === "/credential-sink") {
+            redirected = true;
+            response.end(JSON.stringify({ protocol: "croco.hyperdrive-smoke/v1" }));
+          } else if (fault === "redirect") {
+            response.writeHead(302, { location: "/credential-sink" });
+            response.end();
+          } else if (request.headers.authorization !== `Bearer ${token}`) {
+            response.writeHead(401);
+            response.end(JSON.stringify({ code: "HYPERDRIVE_SMOKE_UNAUTHORIZED" }));
+          } else if (request.url === "/health") {
+            response.end(JSON.stringify({ protocol: "croco.hyperdrive-smoke/v1" }));
+          } else {
+            response.end(JSON.stringify({ count: fault === "counts" || claims++ === 0 ? 1 : 0 }));
+          }
+        });
+        server.listen(0, "127.0.0.1");
+        await once(server, "listening");
+        try {
+          const address = server.address();
+          if (!address || typeof address === "string") throw new Error("Missing local HTTP port");
+          const report = await runHyperdriveSmoke({
+            url: `http://127.0.0.1:${address.port}`,
+            target: "local",
+            token,
+            databaseUrl: observerUrl,
+          });
+          expect(report.status).toBe("failed");
+          expect(redirected).toBe(false);
+          expect(report.checks.find(({ status }) => status === "failed")?.name).toBe(
+            fault === "redirect" ? "protocol" : "claim",
+          );
+          expect(report.checks.find(({ name }) => name === "cleanup")?.status).toBe("passed");
+          expect(JSON.stringify(report)).not.toMatch(
+            /negative-smoke-token|fixture-secret|postgres:/,
+          );
+        } finally {
+          await new Promise<void>((resolve) => server.close(() => resolve()));
+        }
+      },
+      30_000,
+    );
 
     it("commits only one competing claim and CAS, isolates tenants across requests and isolates", async () => {
       const first = await worker();

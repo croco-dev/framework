@@ -64,6 +64,8 @@
     "typecheck": "tsc --noEmit",
     "docs:api:model": "node --experimental-strip-types ../docs/scripts/generate-package-api-model.mts",
     "test:workers": "pnpm test:live",
+    "smoke:verify": "node --experimental-strip-types smoke/verify.mts",
+    "smoke:bundle": "WRANGLER_SEND_METRICS=false wrangler deploy --dry-run --config smoke/wrangler.jsonc --outdir \"$PWD/.wrangler/smoke-build\"",
     "test:live": "CROCO_TEST_REAL_RESOURCES=1 vitest run src/tests/HyperdriveWorkers.postgres.spec.ts"
   },
   "dependencies": {
@@ -84,7 +86,8 @@
     "esbuild": "0.27.2",
     "miniflare": "4.20260312.0",
     "pg": "8.22.0",
-    "testcontainers": "12.0.4"
+    "testcontainers": "12.0.4",
+    "wrangler": "4.73.0"
   },
   "peerDependencies": {
     "drizzle-orm": "catalog:",

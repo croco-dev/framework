@@ -235,3 +235,8 @@ execution of this entrypoint is unverified; existing root plugin behavior is unc
 Runtime catalog claims remain unchanged. Worker conformance for `execution-drizzle`,
 `cohort-drizzle`, `features-drizzle` and `engagement-drizzle`, their profile integration,
 and actual credential-backed deployment remain subsequent #3542 verification stages.
+
+The repository includes an authenticated [deployment smoke Worker and verification CLI](smoke/README.md).
+The local Worker suite executes that same Worker over HTTP and runs the CLI against an independent
+PostgreSQL observer. The harness contains no Cloudflare deploy/provision command. Remote HTTP success alone
+does not attest Cloudflare deployment identity, proxy semantics or certification.

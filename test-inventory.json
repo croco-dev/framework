@@ -6091,6 +6091,12 @@
       "owner": "@croco/tx-drizzle"
     },
     {
+      "path": "packages/tx-drizzle/src/tests/HyperdriveSmokeRunner.spec.ts",
+      "lane": "fast",
+      "qualifiers": ["coverage"],
+      "owner": "@croco/tx-drizzle"
+    },
+    {
       "path": "packages/tx-drizzle/src/tests/HyperdriveTransaction.spec.ts",
       "lane": "fast",
       "qualifiers": ["coverage"],
