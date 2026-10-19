@@ -90,7 +90,8 @@ The generation ID hashes tenant, origin, source revision and ordered XML bytes;
 input page size and order do not change the output for the same snapshot.
 
 `contentModifiedAt` is a source assertion about a significant content change, in
-ISO date or timestamp form. Missing or invalid date strings are omitted and counted as
+W3C [date or timestamp](https://www.w3.org/TR/NOTE-datetime) form, with local hours from 00 to 23.
+Missing or invalid date strings are omitted and counted as
 `lastmodUnknown`. No clock, build time or storage upload time substitutes for it.
 `locale` plus `localeGroup` produces alternates only among included real canonical
 rows in the group. Ambiguous duplicate locale labels suppress that group's

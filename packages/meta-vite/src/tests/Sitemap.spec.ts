@@ -293,6 +293,30 @@ describe("Sitemap", () => {
     ).toEqual(["https://shop.example/products/en", "https://shop.example/products/ko"]);
   });
 
+  it("omits out-of-range local clocks without dropping public URLs or changing valid timestamps", async () => {
+    const generated = await generateSitemap(
+      source([
+        entry("rollover-z", { contentModifiedAt: "2025-01-01T24:00:00Z" }),
+        entry("rollover-offset", { contentModifiedAt: "2025-01-01T24:00:00+09:00" }),
+        entry("last-second", { contentModifiedAt: "2025-01-01T23:59:59Z" }),
+        entry("start-offset", { contentModifiedAt: "2025-01-01T00:00:00+09:00" }),
+      ]),
+      policy,
+    );
+    expect(generated.report).toMatchObject({ included: 4, lastmodUnknown: 2 });
+    const urls = parser.parse(generated.files[0]?.xml ?? "").urlset.url;
+    expect(
+      Object.fromEntries(
+        urls.map((url: { loc: string; lastmod?: string }) => [url.loc, url.lastmod ?? null]),
+      ),
+    ).toEqual({
+      "https://shop.example/products/rollover-z": null,
+      "https://shop.example/products/rollover-offset": null,
+      "https://shop.example/products/last-second": "2025-01-01T23:59:59Z",
+      "https://shop.example/products/start-offset": "2025-01-01T00:00:00+09:00",
+    });
+  });
+
   it("does not substitute rebuild time for content time and distinguishes complete empty from incomplete sources", async () => {
     const rows = [entry("stable", { contentModifiedAt: "2023-06-08T07:21:04Z" }), entry("unknown")];
     vi.useFakeTimers({ toFake: ["Date"] });
