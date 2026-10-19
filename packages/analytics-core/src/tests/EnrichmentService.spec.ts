@@ -164,10 +164,9 @@ describe("EnrichmentService", () => {
       const load = f.store.load.bind(f.store);
       if (claim === "running") {
         const run = (await load(scope, "run")) as EnrichmentRun;
-        const candidate = run.receipts[0].candidate;
-        candidate.state = "running";
-        delete candidate.reason;
-        candidate.leaseUntil = f.state.now - 1;
+        const { reason: _reason, ...prior } = run.receipts[0].candidate;
+        const candidate = { ...prior, state: "running" as const, leaseUntil: f.state.now - 1 };
+        run.receipts[0].candidate = candidate;
         run.items[0].candidates[0] = structuredClone(candidate);
         const revision = run.revision;
         run.revision++;
