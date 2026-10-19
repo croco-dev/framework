@@ -208,7 +208,7 @@
       "classification": "pure-contract",
       "reason": "Generated registry adds only the public-page validation diagnostic and recovery type. No Host capability, I/O, storage or lifecycle changes.",
       "files": {
-        "packages/problems-core/src/generated/problem-code-registry.ts": "da158b65862f6fe3755f5452d6e1e353e85508fc9864661f7b39b5ec75874f43"
+        "packages/problems-core/src/generated/problem-code-registry.ts": "2550db310c882b7e7eaa194835f554dda763034025bee1f82372cedd3d0f1c64"
       },
       "catalogRuntimes": [],
       "profiles": {
