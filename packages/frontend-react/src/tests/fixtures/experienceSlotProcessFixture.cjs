@@ -7,7 +7,27 @@ const diagnostic = (stage, event, details = {}) =>
   process.stderr.write(
     `${JSON.stringify({ runner: "experienceSlotBrowser", stage, event, ...details })}\n`,
   );
-if (mode === "browser-stall" || mode === "browser-startup-stall") {
+if (mode === "experiment-region-cleanup") {
+  const cleanupEvents = [];
+  const stderrWrite = process.stderr.write;
+  process.stderr.write = function (chunk) {
+    for (const line of String(chunk).split("\n")) {
+      let entry;
+      try {
+        entry = JSON.parse(line);
+      } catch {
+        continue;
+      }
+      if (entry.runner === "experienceSlotBrowser" && entry.stage === "cleanup")
+        cleanupEvents.push(entry.event);
+    }
+    return stderrWrite.apply(this, arguments);
+  };
+  process.once("beforeExit", () => {
+    require("node:assert/strict").deepEqual(cleanupEvents, ["start", "completed"]);
+  });
+  require("../experimentRegionBrowser.cjs");
+} else if (mode === "browser-stall" || mode === "browser-startup-stall") {
   const { createRequire } = require("node:module");
   const docsRequire = createRequire(join(__dirname, "../../../../docs/package.json"));
   const { chromium } = docsRequire("@playwright/test");

@@ -60,7 +60,8 @@ describe("ExperimentRegion mounted failure isolation", () => {
     "keeps fallback or delivered UI usable for synchronous callback errors and malformed admission",
     async () => {
       const output = await runExperienceSlotProcess(
-        fileURLToPath(new URL("./experimentRegionBrowser.cjs", import.meta.url)),
+        fileURLToPath(new URL("./fixtures/experienceSlotProcessFixture.cjs", import.meta.url)),
+        { args: ["experiment-region-cleanup"] },
       );
       expect(JSON.parse(output)).toEqual([
         { kind: "admission-sync", errorReported: true, usable: true },
