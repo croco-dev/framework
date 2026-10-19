@@ -5,7 +5,13 @@ const { chromium } = createRequire(resolve(__dirname, "../../../docs/package.jso
   "@playwright/test",
 );
 const esbuild = createRequire(require.resolve("tsup"))("esbuild");
+const diagnostic = (stage, event, details = {}) =>
+  process.stderr.write(
+    `${JSON.stringify({ runner: "experienceSlotBrowser", stage, event, ...details })}\n`,
+  );
 (async () => {
+  const results = [];
+  const failures = [];
   let browser;
   try {
     const fixture = resolve(__dirname, "fixtures/ExperimentRegion.ts");
@@ -22,7 +28,6 @@ const esbuild = createRequire(require.resolve("tsup"))("esbuild");
       define: { "process.env.NODE_ENV": '"production"' },
     });
     browser = await chromium.launch({ headless: true });
-    const results = [];
     for (const kind of ["admission-sync", "report-sync", "admission-null"]) {
       const page = await browser.newPage();
       page.setDefaultTimeout(5000);
@@ -118,11 +123,31 @@ const esbuild = createRequire(require.resolve("tsup"))("esbuild");
       assert.deepEqual(await page.evaluate(() => window.regionProbe.errors), []);
       await page.close();
     }
-    process.stdout.write(JSON.stringify(results));
+  } catch (error) {
+    failures.push(error);
+    diagnostic("execution", "failed", { message: String(error) });
   } finally {
-    if (browser) await browser.close();
-    esbuild.stop();
+    diagnostic("cleanup", "start");
+    try {
+      await esbuild.stop();
+    } catch (error) {
+      failures.push(error);
+      diagnostic("esbuild.stop", "failed", { message: String(error) });
+    }
+    if (browser) {
+      try {
+        await browser.close();
+      } catch (error) {
+        failures.push(error);
+        diagnostic("browser.close", "failed", { message: String(error) });
+      }
+    }
+    diagnostic("cleanup", "completed", { failures: failures.length });
   }
+  if (failures.length === 1) throw failures[0];
+  if (failures.length > 1)
+    throw new AggregateError(failures, "Browser verification and cleanup failed");
+  process.stdout.write(JSON.stringify(results));
 })().catch((error) => {
   console.error(error);
   process.exitCode = 1;

@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "framework-routes",
+      "classification": "pure-contract",
+      "reason": "Repair the static source-to-metadata contract for Component import bindings and scope. TypeScript becomes an explicit scanner dependency; existing Node filesystem access remains build/tooling behavior. No deployment Host, Provider, credentials, storage or lifecycle contract changes.",
+      "files": {
+        "packages/framework-routes/package.json": "7f5be621cdb3999d0174e0de89144a15f46d147b1233be3f68308d01bcd2b7c6",
+        "packages/framework-routes/src/intent-map.ts": "84dd691277e9941fe936afba6fbca501e736862dd0fce693a77b82076102945d"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "The change repairs static source-to-intent-map metadata before application deployment. It adds no Host, Provider, deployment profile or runtime capability for Kubernetes Node applications; the catalog remains unclaimed.",
+          "providers": [],
+          "constraints": [
+            "Source discovery requires Node filesystem access and TypeScript during build/tooling. It does not initialize deployed applications, change invocation/flush ownership, or certify a deployment host.",
+            "Direct public Component imports are recognized; local wrappers and application re-export barrels are not resolved."
+          ],
+          "references": [
+            "packages/framework-routes/src/intent-map.ts",
+            "packages/framework-routes/src/tests/ComponentBindings.spec.ts",
+            "packages/framework-routes/README.md",
+            "docs/package-catalog.json"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "The change repairs static source-to-intent-map metadata before application deployment. It adds no Host, Provider, deployment profile or runtime capability for Lambda applications; the catalog remains unclaimed.",
+          "providers": [],
+          "constraints": [
+            "Source discovery requires Node filesystem access and TypeScript during build/tooling. It does not initialize deployed applications, change invocation/flush ownership, or certify a deployment host.",
+            "Direct public Component imports are recognized; local wrappers and application re-export barrels are not resolved."
+          ],
+          "references": [
+            "packages/framework-routes/src/intent-map.ts",
+            "packages/framework-routes/src/tests/ComponentBindings.spec.ts",
+            "packages/framework-routes/README.md",
+            "docs/package-catalog.json"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "The change repairs static source-to-intent-map metadata before application deployment. It adds no Host, Provider, deployment profile or runtime capability for Cloudflare Workers applications; the catalog remains unclaimed.",
+          "providers": [],
+          "constraints": [
+            "Source discovery requires Node filesystem access and TypeScript during build/tooling. It does not initialize deployed applications, change invocation/flush ownership, or certify a deployment host.",
+            "Direct public Component imports are recognized; local wrappers and application re-export barrels are not resolved."
+          ],
+          "references": [
+            "packages/framework-routes/src/intent-map.ts",
+            "packages/framework-routes/src/tests/ComponentBindings.spec.ts",
+            "packages/framework-routes/README.md",
+            "docs/package-catalog.json"
+          ]
+        }
+      }
+    }
+  ]
+}

@@ -146,7 +146,7 @@ describe("project intent map", () => {
     const root = mkdtempSync(join(tmpdir(), "croco-intent-duplicate-provider-"));
 
     try {
-      const component = "function Component() { return () => {}; }\n";
+      const component = 'import { Component } from "@croco/framework-context";\n';
       writeFileSync(join(root, "a.ts"), `${component}@Component() export class Service {}`);
       writeFileSync(
         join(root, "b.ts"),
@@ -178,7 +178,7 @@ describe("project intent map", () => {
     const root = mkdtempSync(join(tmpdir(), "croco-intent-provider-edge-"));
 
     try {
-      const component = "function Component() { return () => {}; }\n";
+      const component = 'import { Component } from "@croco/framework-context";\n';
       writeFileSync(join(root, "a.ts"), `${component}@Component() export class Repository {}`);
       writeFileSync(join(root, "b.ts"), `${component}@Component() export class Repository {}`);
       writeFileSync(
@@ -211,7 +211,7 @@ describe("project intent map", () => {
     const root = mkdtempSync(join(tmpdir(), "croco-intent-provider-alias-"));
 
     try {
-      const component = "function Component() { return () => {}; }\n";
+      const component = 'import { Component } from "@croco/framework-context";\n';
       writeFileSync(join(root, "a.ts"), `${component}@Component() export class Repository {}`);
       writeFileSync(join(root, "b.ts"), `${component}@Component() export class Repository {}`);
       writeFileSync(
@@ -237,7 +237,7 @@ describe("project intent map", () => {
     const root = mkdtempSync(join(tmpdir(), "croco-intent-provider-ambiguous-"));
 
     try {
-      const component = "function Component() { return () => {}; }\n";
+      const component = 'import { Component } from "@croco/framework-context";\n';
       writeFileSync(join(root, "a.ts"), `${component}@Component() export class Service {}`);
       writeFileSync(join(root, "b.ts"), `${component}@Component() export class Service {}`);
       writeFileSync(
@@ -268,7 +268,7 @@ describe("project intent map", () => {
     const root = mkdtempSync(join(tmpdir(), "croco-intent-provider-default-"));
 
     try {
-      const component = "function Component() { return () => {}; }\n";
+      const component = 'import { Component } from "@croco/framework-context";\n';
       writeFileSync(
         join(root, "a.ts"),
         `${component}@Component() export default class Repository {}`,
@@ -297,7 +297,7 @@ describe("project intent map", () => {
     const root = mkdtempSync(join(tmpdir(), "croco-intent-provider-stale-"));
 
     try {
-      const component = "function Component() { return () => {}; }\n";
+      const component = 'import { Component } from "@croco/framework-context";\n';
       writeFileSync(join(root, "a.ts"), `${component}@Component() export class Repository {}`);
       writeFileSync(
         join(root, "service.ts"),
@@ -322,7 +322,7 @@ describe("project intent map", () => {
     const root = mkdtempSync(join(tmpdir(), "croco-intent-provider-unknown-"));
 
     try {
-      const component = "function Component() { return () => {}; }\n";
+      const component = 'import { Component } from "@croco/framework-context";\n';
       writeFileSync(
         join(root, "service.ts"),
         `${component}@Component() export class Service {\n  constructor(private readonly repository: MissingRepository) {}\n}`,
@@ -351,7 +351,7 @@ describe("project intent map", () => {
     const root = mkdtempSync(join(tmpdir(), "croco-intent-provider-ext-"));
 
     try {
-      const component = "function Component() { return () => {}; }\n";
+      const component = 'import { Component } from "@croco/framework-context";\n';
       writeFileSync(join(root, "a.ts"), `${component}@Component() export class Repository {}`);
       writeFileSync(join(root, "b.ts"), `${component}@Component() export class Repository {}`);
       mkdirSync(join(root, "repos"), { recursive: true });
@@ -382,7 +382,7 @@ describe("project intent map", () => {
     const root = mkdtempSync(join(tmpdir(), "croco-intent-provider-nonprovider-"));
 
     try {
-      const component = "function Component() { return () => {}; }\n";
+      const component = 'import { Component } from "@croco/framework-context";\n';
       writeFileSync(join(root, "a.ts"), `export class Repository {}`);
       writeFileSync(join(root, "b.ts"), `${component}@Component() export class Repository {}`);
       writeFileSync(
@@ -413,7 +413,7 @@ describe("project intent map", () => {
     const root = mkdtempSync(join(tmpdir(), "croco-intent-provider-ext-collision-"));
 
     try {
-      const component = "function Component() { return () => {}; }\n";
+      const component = 'import { Component } from "@croco/framework-context";\n';
       writeFileSync(join(root, "a.ts"), `${component}@Component() export class Service {}`);
       writeFileSync(join(root, "a.mts"), `${component}@Component() export class Service {}`);
       const intentMap = createProjectIntentMap({
@@ -435,7 +435,7 @@ describe("project intent map", () => {
     const root = mkdtempSync(join(tmpdir(), "croco-intent-provider-barrel-"));
 
     try {
-      const component = "function Component() { return () => {}; }\n";
+      const component = 'import { Component } from "@croco/framework-context";\n';
       writeFileSync(join(root, "repo.ts"), `${component}@Component() export class Repository {}`);
       mkdirSync(join(root, "repos"), { recursive: true });
       writeFileSync(join(root, "repos", "index.ts"), "export { Repository } from '../repo';\n");
@@ -469,7 +469,7 @@ describe("project intent map", () => {
     const root = mkdtempSync(join(tmpdir(), "croco-intent-provider-star-"));
 
     try {
-      const component = "function Component() { return () => {}; }\n";
+      const component = 'import { Component } from "@croco/framework-context";\n';
       writeFileSync(join(root, "repo.ts"), `${component}@Component() export class Repository {}`);
       mkdirSync(join(root, "repos"), { recursive: true });
       writeFileSync(join(root, "repos", "index.ts"), "export * from '../repo';\n");

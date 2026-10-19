@@ -25,6 +25,18 @@ const compiled = compileRoutes([UserController]);
 const table = createRouteRegistrationTable(compiled);
 ```
 
+## Component discovery
+
+Project intent maps recognize top-level classes decorated with `Component` imported
+from `@croco/framework-context`, including named aliases (`Component as Service`)
+and namespace imports (`import * as Context`, then `@Context.Component()`). Provider
+identity, literal scope options and constructor dependency edges use the same output
+contract for each form. Scope is read from the Component call itself.
+
+Type-only imports, unrelated local or third-party decorators, local wrappers and
+Component re-exports through application barrels are not inferred as Croco providers.
+Discovery parses source without executing decorators or resolving application modules.
+
 ## Verification
 
 ```bash

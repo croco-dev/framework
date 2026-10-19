@@ -1100,26 +1100,43 @@ function extractClasses(
 ): SourceClassIntent[] {
   const classes: SourceClassIntent[] = [];
   const imports = extractRelativeImports(content, filePath);
-  const classPattern =
-    /((?:\s*@[\s\S]*?)?)(?:\bexport\s+)?(?:default\s+)?(?:abstract\s+)?class\s+([A-Za-z_$][\w$]*)[^{]*\{/g;
+  const sourceFile = ts.createSourceFile(filePath, content, ts.ScriptTarget.Latest, true);
+  const componentBindings = getComponentBindings(sourceFile);
 
-  for (const match of content.matchAll(classPattern)) {
-    const name = match[2];
-
-    if (!name) {
+  for (const declaration of sourceFile.statements) {
+    if (!ts.isClassDeclaration(declaration) || !declaration.name) {
       continue;
     }
 
-    const decorators = match[1] ?? "";
-    const classOffset = (match.index ?? 0) + match[0].lastIndexOf("class");
-    const body = getClassBody(content, (match.index ?? 0) + match[0].length - 1);
+    const classDecorators = ts.getDecorators(declaration) ?? [];
+    const decorators = classDecorators.map((decorator) => decorator.getText(sourceFile)).join("\n");
+    const component = classDecorators.find((decorator) => {
+      if (!ts.isCallExpression(decorator.expression)) {
+        return false;
+      }
+      const callee = decorator.expression.expression;
+      const name = ts.isIdentifier(callee)
+        ? callee.text
+        : ts.isPropertyAccessExpression(callee) && ts.isIdentifier(callee.expression)
+          ? `${callee.expression.text}.${callee.name.text}`
+          : undefined;
+      return name !== undefined && componentBindings.has(name);
+    });
+    const classKeyword = declaration
+      .getChildren(sourceFile)
+      .find((child) => child.kind === ts.SyntaxKind.ClassKeyword);
+    const body = content.slice(declaration.members.pos, declaration.members.end);
 
     classes.push({
-      name,
+      name: declaration.name.text,
       decorators,
-      source: toLocation(filePath, lineStarts, classOffset),
-      roles: getClassRoles(decorators),
-      componentScope: getComponentScope(decorators),
+      source: toLocation(
+        filePath,
+        lineStarts,
+        classKeyword?.getStart(sourceFile) ?? declaration.getStart(sourceFile),
+      ),
+      roles: getClassRoles(decorators, component !== undefined),
+      componentScope: getComponentScope(component),
       eventHandler: getEventHandlerMetadata(decorators),
       dependencies: extractConstructorDependencies(body),
       imports,
@@ -1129,14 +1146,14 @@ function extractClasses(
   return classes.sort((left, right) => compareStrings(left.name, right.name));
 }
 
-function getClassRoles(decorators: string): IntentMapFileRole[] {
+function getClassRoles(decorators: string, isComponent: boolean): IntentMapFileRole[] {
   const roles: IntentMapFileRole[] = [];
 
   if (/@Controller\b/.test(decorators)) {
     roles.push("http.controller");
   }
 
-  if (/@Component\b/.test(decorators)) {
+  if (isComponent) {
     roles.push("di.provider");
   }
 
@@ -1151,15 +1168,58 @@ function getClassRoles(decorators: string): IntentMapFileRole[] {
   return roles.sort(compareStrings);
 }
 
-function getComponentScope(decorators: string): IntentMapProvider["scope"] {
-  if (!/@Component\b/.test(decorators)) {
+// Resolve only direct value imports from the public Component entrypoint. Local
+// wrappers and re-export barrels need semantic resolution and are not inferred.
+function getComponentBindings(sourceFile: ts.SourceFile): ReadonlySet<string> {
+  const bindings = new Set<string>();
+
+  for (const statement of sourceFile.statements) {
+    if (
+      !ts.isImportDeclaration(statement) ||
+      !ts.isStringLiteral(statement.moduleSpecifier) ||
+      statement.moduleSpecifier.text !== "@croco/framework-context" ||
+      statement.importClause?.isTypeOnly
+    ) {
+      continue;
+    }
+
+    const namedBindings = statement.importClause?.namedBindings;
+    if (namedBindings && ts.isNamespaceImport(namedBindings)) {
+      bindings.add(`${namedBindings.name.text}.Component`);
+    } else if (namedBindings && ts.isNamedImports(namedBindings)) {
+      for (const binding of namedBindings.elements) {
+        if (!binding.isTypeOnly && (binding.propertyName ?? binding.name).text === "Component") {
+          bindings.add(binding.name.text);
+        }
+      }
+    }
+  }
+
+  return bindings;
+}
+
+function getComponentScope(component: ts.Decorator | undefined): IntentMapProvider["scope"] {
+  if (!component || !ts.isCallExpression(component.expression)) {
     return "unknown";
   }
 
-  const match = decorators.match(/\bscope\s*:\s*["']([^"']+)["']/);
-  const scope = match?.[1];
+  const options = component.expression.arguments[0];
+  if (options && ts.isObjectLiteralExpression(options)) {
+    for (const property of options.properties) {
+      if (
+        ts.isPropertyAssignment(property) &&
+        (ts.isIdentifier(property.name) || ts.isStringLiteral(property.name)) &&
+        property.name.text === "scope" &&
+        (ts.isStringLiteral(property.initializer) ||
+          ts.isNoSubstitutionTemplateLiteral(property.initializer))
+      ) {
+        const scope = property.initializer.text;
+        return COMPONENT_SCOPES.has(scope) ? (scope as IntentMapProvider["scope"]) : "singleton";
+      }
+    }
+  }
 
-  return scope && COMPONENT_SCOPES.has(scope) ? (scope as IntentMapProvider["scope"]) : "singleton";
+  return "singleton";
 }
 
 function getEventHandlerMetadata(
@@ -1196,30 +1256,6 @@ function extractConstructorDependencies(classBody: string): string[] {
   });
 
   return [...new Set(dependencies)].sort(compareStrings);
-}
-
-function getClassBody(content: string, openingBraceIndex: number): string {
-  let depth = 0;
-
-  for (let index = openingBraceIndex; index < content.length; index += 1) {
-    const char = content[index];
-
-    if (char === "{") {
-      depth += 1;
-      continue;
-    }
-
-    if (char !== "}") {
-      continue;
-    }
-
-    depth -= 1;
-    if (depth === 0) {
-      return content.slice(openingBraceIndex + 1, index);
-    }
-  }
-
-  return content.slice(openingBraceIndex + 1);
 }
 
 function findGitIgnoreRule(projectRoot: string, artifactPath: string): string | undefined {
