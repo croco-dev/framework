@@ -524,3 +524,9 @@ pnpm typecheck --filter=@croco/meta-vite
 ## License
 
 Apache-2.0
+
+## Resource-backed sitemaps
+
+Generate and publish dynamic public canonical URLs with `SitemapSource`, `generateSitemap`,
+`FileSitemapPublisher` and `createSitemapHandler`. See [source mapping, publication and administrator contracts](./SITEMAPS.md)
+for snapshot completion, query policy, atomicity, retention and infrastructure limitations.

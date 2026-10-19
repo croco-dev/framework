@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export type CrocoProblemRegistry = {
   readonly version: "croco.problem-code-registry.v1";
-  readonly problemCount: 1075;
+  readonly problemCount: 1076;
   readonly problems: readonly [
     {
       readonly code: "ACCESS_DENIED";
@@ -18747,6 +18747,45 @@ export type CrocoProblemRegistry = {
       ];
     },
     {
+      readonly code: "meta-vite/sitemap";
+      readonly category: null;
+      readonly status: null;
+      readonly categoryPolicy: {
+        readonly kind: "runtime-dependent";
+        readonly possibleCategories: readonly [
+          "BadRequest",
+          "Conflict",
+          "Forbidden",
+          "InternalServerError",
+          "PayloadTooLarge",
+        ];
+        readonly possibleStatuses: readonly [400, 403, 409, 413, 500];
+      };
+      readonly title: null;
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#meta-vite-sitemap";
+      readonly recovery: {
+        readonly cause: "Croco or an upstream dependency failed after accepting the request.";
+        readonly userAction: "Retry later only when the operation is idempotent or the caller owns retry safety.";
+        readonly operatorAction: "Use traces, logs, and upstream diagnostics to isolate the failing boundary.";
+        readonly retryability: "conditional";
+        readonly redactionPolicy: "operator-only";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.error";
+          readonly severity: "error";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/meta-vite/src/libs/sitemap/SitemapProblem.ts";
+          readonly line: 4;
+          readonly column: 1;
+          readonly kind: "problem-class";
+        },
+      ];
+    },
+    {
       readonly code: "meta-vite/unsupported-render-capability";
       readonly category: "NotImplemented";
       readonly status: 501;
@@ -30393,7 +30432,7 @@ export type CrocoProblemRegistry = {
 
 export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 1075,
+  problemCount: 1076,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -51276,6 +51315,49 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
         {
           file: "packages/meta-vite/src/libs/actions/serverActions.ts",
           line: 121,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "meta-vite/sitemap",
+      category: null,
+      status: null,
+      categoryPolicy: {
+        kind: "runtime-dependent",
+        possibleCategories: [
+          "BadRequest",
+          "Conflict",
+          "Forbidden",
+          "InternalServerError",
+          "PayloadTooLarge",
+        ],
+        possibleStatuses: [400, 403, 409, 413, 500],
+      },
+      title: null,
+      cookbookPath: "/reference/problem-recovery-cookbook/#meta-vite-sitemap",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/meta-vite/src/libs/sitemap/SitemapProblem.ts",
+          line: 4,
           column: 1,
           kind: "problem-class",
         },

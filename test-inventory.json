@@ -3601,6 +3601,18 @@
       "owner": "@croco/meta-vite"
     },
     {
+      "path": "packages/meta-vite/src/tests/Sitemap.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/meta-vite"
+    },
+    {
+      "path": "packages/meta-vite/src/tests/SitemapBrowser.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/meta-vite"
+    },
+    {
       "path": "packages/meta-vite/src/tests/UnicodeRouteDispatch.spec.ts",
       "lane": "fast",
       "qualifiers": [],
