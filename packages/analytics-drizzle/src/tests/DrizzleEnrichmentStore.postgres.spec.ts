@@ -365,12 +365,47 @@ describe.skipIf(!connectionString)("PostgreSQL enrichment receipts and CAS", () 
       await exited;
       const restarted = fixture(other, f.model);
       restarted.clock.offset = 70000;
-      expect(await restarted.service.classify(scope, "crash", "a", "intent", "v1")).toMatchObject({
-        state: "failed",
-        reason: "acceptance-unknown",
-      });
+      const observed = await restarted.service.classify(scope, "crash", "a", "intent", "v1");
+      expect(observed).toMatchObject({ state: "running" });
       expect(f.model).not.toHaveBeenCalled();
-      expect((await other.load(scope, "crash"))?.requests).toBe(1);
+      expect(await other.load(scope, "crash")).toMatchObject({
+        requests: 1,
+        reservedTokens: 2048,
+        receipts: [{ candidate: { state: "running", receiptId: observed.receiptId } }],
+      });
+      const command = async (idempotencyKey: string) => ({
+        actor: "operator",
+        reason: "Confirmed the child worker exited",
+        idempotencyKey,
+        expectedRevision: (await restarted.service.read(scope, "crash")).revision,
+      });
+      await expect(
+        restarted.service.retry(
+          scope,
+          "crash",
+          "a",
+          observed.receiptId,
+          false,
+          await command("no-ack"),
+        ),
+      ).rejects.toMatchObject({
+        code: "analytics-core/enrichment-duplicate-billing-acknowledgement-required",
+      });
+      await restarted.service.retry(
+        scope,
+        "crash",
+        "a",
+        observed.receiptId,
+        true,
+        await command("stopped"),
+      );
+      expect(await restarted.service.classify(scope, "crash", "a", "intent", "v1")).toMatchObject({
+        state: "classified",
+        labelId: "buy",
+        attempt: 2,
+      });
+      expect(f.model).toHaveBeenCalledOnce();
+      expect(await other.load(scope, "crash")).toMatchObject({ requests: 2, reservedTokens: 4096 });
     } finally {
       child.kill("SIGKILL");
       await exited;
