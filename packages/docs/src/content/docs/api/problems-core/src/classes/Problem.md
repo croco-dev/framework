@@ -14,7 +14,6 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 ## Extended by
 
 - [`ProblemRegistryValidationProblem`](/api/problems-core/src/classes/problemregistryvalidationproblem/)
-- [`PublicPageProblem`](/api/seo-core/src/classes/publicpageproblem/)
 - [`BadRequestProblem`](/api/access-core/src/classes/badrequestproblem/)
 - [`ForbiddenProblem`](/api/access-core/src/classes/forbiddenproblem/)
 - [`ActivationAdminProblem`](/api/admin-core/src/classes/activationadminproblem/)
@@ -645,6 +644,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`MeilisearchTerminalUpstreamProblem`](/api/search-meilisearch/src/classes/meilisearchterminalupstreamproblem/)
 - [`MissingMeilisearchConfigProblem`](/api/search-meilisearch/src/classes/missingmeilisearchconfigproblem/)
 - [`TenantTokenNotConfiguredProblem`](/api/search-meilisearch/src/classes/tenanttokennotconfiguredproblem/)
+- [`PublicPageProblem`](/api/seo-core/src/classes/publicpageproblem/)
 - [`CloudflareImagesMissingConfigProblem`](/api/storage-cloudflare/src/classes/cloudflareimagesmissingconfigproblem/)
 - [`CloudflareImagesRetryableUpstreamProblem`](/api/storage-cloudflare/src/classes/cloudflareimagesretryableupstreamproblem/)
 - [`CloudflareImagesTerminalUpstreamProblem`](/api/storage-cloudflare/src/classes/cloudflareimagesterminalupstreamproblem/)

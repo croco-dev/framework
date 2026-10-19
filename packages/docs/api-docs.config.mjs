@@ -17,12 +17,6 @@ export const apiDocCompilerOptions = {
 
 export const apiDocPackages = [
   {
-    packageName: "@croco/seo-core",
-    directory: "seo-core",
-    entryPoint: "src/index.ts",
-    moduleName: "seo-core/src",
-  },
-  {
     packageName: "@croco/access-core",
     directory: "access-core",
     entryPoint: "src/index.ts",
@@ -711,6 +705,12 @@ export const apiDocPackages = [
     directory: "search-meilisearch",
     entryPoint: "src/index.ts",
     moduleName: "search-meilisearch/src",
+  },
+  {
+    packageName: "@croco/seo-core",
+    directory: "seo-core",
+    entryPoint: "src/index.ts",
+    moduleName: "seo-core/src",
   },
   {
     packageName: "@croco/storage-cloudflare",

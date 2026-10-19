@@ -161,7 +161,10 @@ export function validatePublicPageResponse(
   const htmlNode = nodes.find((node) => node.tagName === "html");
   if (!htmlNode || attr(htmlNode, "lang") !== metadata.lang) fail("LOCALE_MISMATCH", "lang");
   const actualAlternates = headNodes.filter(
-    (node) => node.tagName === "link" && attr(node, "rel") === "alternate",
+    (node) =>
+      node.tagName === "link" &&
+      attr(node, "rel") === "alternate" &&
+      attr(node, "hreflang") !== undefined,
   );
   if (
     actualAlternates.length !== metadata.alternates.length ||
@@ -206,7 +209,7 @@ export function validatePublicPageResponse(
   } catch {
     fail("INVALID_JSON_LD", "jsonLd");
   }
-  if (snapshot.content.product) {
+  if (target.definition.schema === "Product" && snapshot.content.product) {
     const price = bodyNodes.filter((node) => attr(node, "data-public-price") !== undefined);
     const availability = bodyNodes.filter(
       (node) => attr(node, "data-public-availability") !== undefined,

@@ -19,4 +19,17 @@ describe("PublicPageOperations", () => {
     expect(await allowed.inspect("product-7")).toBe(report);
     expect(inspect).toHaveBeenCalledWith("product-7");
   });
+  it("returns unavailable when an authorized inspection callback rejects", async () => {
+    const operations = createPublicPageOperations({
+      authorize: async () => true,
+      inspect: async () => {
+        throw new Error("sensitive backend detail");
+      },
+    });
+    expect(await operations.inspect("product-7")).toEqual({
+      targetId: "product-7",
+      state: "unavailable",
+      diagnostics: [{ code: "SEO_INSPECTION_UNAVAILABLE", field: "target" }],
+    });
+  });
 });

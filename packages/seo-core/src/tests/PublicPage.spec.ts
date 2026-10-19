@@ -70,6 +70,52 @@ describe("Public page contracts", () => {
       availability: "https://schema.org/OutOfStock",
     });
   });
+  it.each(["en-US-u-ca-gregory", "en-x-test", "en-x-a"])(
+    "preserves an extended locale %s in page and alternate metadata",
+    (locale) => {
+      const metadata = resolvePublicPageMetadata(
+        { ...definition, alternates: () => [{ locale, pathname: "/en/products/lamp-7" }] },
+        new Request(requestUrl),
+        { ...snapshot, content: { ...content, locale } },
+      );
+      expect(metadata.lang).toBe(locale);
+      expect(metadata.alternates[0]?.locale).toBe(locale);
+      expect(JSON.parse(metadata.jsonLd).inLanguage).toBe(locale);
+    },
+  );
+  it.each(["en-u", "en-x", "en-u-a"])(
+    "rejects an incomplete locale %s in page and alternate metadata",
+    (locale) => {
+      expect(() =>
+        resolvePublicPageMetadata(definition, new Request(requestUrl), {
+          ...snapshot,
+          content: { ...content, locale },
+        }),
+      ).toThrow("invalid-locale");
+      expect(() =>
+        resolvePublicPageMetadata(
+          { ...definition, alternates: () => [{ locale, pathname: "/en/products/lamp-7" }] },
+          new Request(requestUrl),
+          snapshot,
+        ),
+      ).toThrow("invalid-alternate-locale");
+    },
+  );
+  it("rejects equivalent alternate locale spellings", () => {
+    expect(() =>
+      resolvePublicPageMetadata(
+        {
+          ...definition,
+          alternates: () => [
+            { locale: "en-US", pathname: "/en/products/lamp-7" },
+            { locale: "en-us", pathname: "/legacy/products/lamp-7" },
+          ],
+        },
+        new Request(requestUrl),
+        snapshot,
+      ),
+    ).toThrow("duplicate-alternate-locale");
+  });
   it.each([
     "//evil.example/item",
     "/\\evil.example",
@@ -115,6 +161,31 @@ describe("Public page contracts", () => {
       resourceId: "lamp-7",
       diagnostics: [],
     });
+  });
+  it("ignores feed alternate links without hreflang", () => {
+    expect(
+      validate(
+        html.replace(
+          "</head>",
+          '<link rel="alternate" type="application/rss+xml" href="/feed.xml"></head>',
+        ),
+      ),
+    ).toMatchObject({ state: "ready", diagnostics: [] });
+  });
+  it("validates Article HTML without imposing Product-only body facts", () => {
+    const articleHtml = `<!doctype html><html lang="ko-KR"><head><title>Reading lamp</title>
+<meta name="description" content="A warm adjustable reading lamp."><link rel="canonical" href="https://shop.example/ko/products/lamp-7?variant=amber&amp;variant=large">
+<meta name="robots" content="index,follow"><meta name="croco:revision" content="r12">
+<link rel="alternate" hreflang="en" href="https://shop.example/en/products/lamp-7">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","name":"Reading lamp","description":"A warm adjustable reading lamp.","url":"https://shop.example/ko/products/lamp-7?variant=amber&variant=large","inLanguage":"ko-KR","dateModified":"2026-10-18T03:10:00Z"}</script></head><body>
+<main><h1>Reading lamp</h1><p>A warm adjustable reading lamp.</p><a href="/delivery">Delivery</a></main></body></html>`;
+    expect(
+      validatePublicPageResponse(
+        { ...target, definition: { ...definition, schema: "Article" } },
+        snapshot,
+        { status: 200, headers: new Headers({ "content-type": "text/html" }), html: articleHtml },
+      ),
+    ).toMatchObject({ state: "ready", diagnostics: [] });
   });
   it.each([
     [

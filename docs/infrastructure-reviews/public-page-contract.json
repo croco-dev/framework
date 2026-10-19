@@ -7,9 +7,9 @@
       "reason": "Public source/metadata contracts and bounded registered in-process HTML comparison are pure logic with no network, storage or Host lifecycle. Trusted callbacks own access and I/O.",
       "files": {
         "packages/seo-core/package.json": "d83463db239a892c7774dc4f4c537ea2c97bdab98b1583d5fb43550769f29b95",
-        "packages/seo-core/src/index.ts": "92faeb3152d6df3ac649e58676fd0c5530a522afa2d99e166975adbfd6356d8b",
-        "packages/seo-core/src/libs/inspectPublicPage.ts": "7a0ccd43f5c85dd9591e850a5027b95c6a281153243242162f4b83075a1f9320",
-        "packages/seo-core/src/libs/publicPage.ts": "c8c0cdc63c22a47798ead45db682f3bd85aee943ef427c225f175988d1891caa",
+        "packages/seo-core/src/index.ts": "cef2422620536593d0856da1d440e365a4abb83ff13f57609766f801ef01f1ec",
+        "packages/seo-core/src/libs/inspectPublicPage.ts": "8e025e13aa08e73208ee272bf43d288bad9654e11b083662bee4b2c9ce441904",
+        "packages/seo-core/src/libs/publicPage.ts": "288b51b10085971c29bf7384443ccd1e0abb69d7a38deb8cb5aee1328cb2d504",
         "docs/package-catalog.json": "809643a5bfbaf38fc6bf4b615b354cca91637ccc5fecfb5c8e5647d47e0646b2"
       },
       "catalogRuntimes": [],
@@ -18,21 +18,30 @@
           "result": "not-applicable",
           "reason": "Public source/metadata contracts and bounded registered in-process HTML comparison are pure logic with no network, storage or Host lifecycle. Trusted callbacks own access and I/O.",
           "providers": [],
-          "constraints": ["No deployed Host capability or storage is introduced."],
+          "constraints": [
+            "No deployed Host capability or storage is introduced.",
+            "Locale validation requires the standard Intl.getCanonicalLocales API; no Host adapter or lifecycle is added."
+          ],
           "references": ["packages/seo-core/README.md"]
         },
         "aws-lambda": {
           "result": "not-applicable",
           "reason": "Public source/metadata contracts and bounded registered in-process HTML comparison are pure logic with no network, storage or Host lifecycle. Trusted callbacks own access and I/O.",
           "providers": [],
-          "constraints": ["No deployed Host capability or storage is introduced."],
+          "constraints": [
+            "No deployed Host capability or storage is introduced.",
+            "Locale validation requires the standard Intl.getCanonicalLocales API; no Host adapter or lifecycle is added."
+          ],
           "references": ["packages/seo-core/README.md"]
         },
         "cloudflare": {
           "result": "not-applicable",
           "reason": "Public source/metadata contracts and bounded registered in-process HTML comparison are pure logic with no network, storage or Host lifecycle. Trusted callbacks own access and I/O.",
           "providers": [],
-          "constraints": ["No deployed Host capability or storage is introduced."],
+          "constraints": [
+            "No deployed Host capability or storage is introduced.",
+            "Locale validation requires the standard Intl.getCanonicalLocales API; no Host adapter or lifecycle is added."
+          ],
           "references": ["packages/seo-core/README.md"]
         }
       }
@@ -45,7 +54,7 @@
         "packages/meta-vite/package.json": "8ac6a514060b70329c02d5b40823d9e694c3c9bfeabeb99ba05315dafe3bc6ea",
         "packages/meta-vite/src/index.ts": "929442f4531f1e804efcb70aab5f1d714e8ed4095b82ba617f2744a225727a8f",
         "packages/meta-vite/src/libs/render/renderServer.ts": "0eb297a1cf4056803e861179b53e8c15046aef69efb0362309bd2209367bfac6",
-        "packages/meta-vite/src/libs/routes/head.ts": "4c108f14841c34d6b42311c7b58c0850bb5b8bf920e8898584219b357124f666",
+        "packages/meta-vite/src/libs/routes/head.ts": "39f43d6c546e0ae7c61c8fc40284a9564c43f6051eed6dc503720f39d7cc1d78",
         "packages/meta-vite/src/libs/seo/publicPageHandler.ts": "fa7c6fc3b600c16191cada5f08e7ff70c1c4c0feb0cd3b08f3d2e6b68f518ce7"
       },
       "catalogRuntimes": ["node", "lambda", "cloudflare-workers", "browser"],
@@ -99,7 +108,7 @@
       "files": {
         "packages/admin-core/package.json": "a25dda3534503e61003b68a2bf9516e4630b4a797192845de2206fb687051da2",
         "packages/admin-core/src/index.ts": "7c6d0ec73a6929d04fdee454f6128ffb55f14bc62cb4bf0008d99aa976bb8c8e",
-        "packages/admin-core/src/libs/PublicPageOperations.ts": "7c7f4e88bd51207fcd31f5754be2838defd7e0a0e401d5845cd9ecd57169dece"
+        "packages/admin-core/src/libs/PublicPageOperations.ts": "469a83a11e42a1170720cc17a095ba5f537bd47207cfb0344e7cb122bc59ebd0"
       },
       "catalogRuntimes": [],
       "profiles": {
@@ -199,7 +208,7 @@
       "classification": "pure-contract",
       "reason": "Generated registry adds only the public-page validation diagnostic and recovery type. No Host capability, I/O, storage or lifecycle changes.",
       "files": {
-        "packages/problems-core/src/generated/problem-code-registry.ts": "1521a9b6eddac37ed38bdf6bb49f4cee1ad60acc56eb3196ac71e4dc925e7fff"
+        "packages/problems-core/src/generated/problem-code-registry.ts": "d4d4e68c56e0cf280304b9155510cb625428a30f3f949d6604907a25cae1c407"
       },
       "catalogRuntimes": [],
       "profiles": {

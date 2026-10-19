@@ -18,7 +18,6 @@
   },
   "dependencies": {
     "@astrojs/starlight": "^0.40.0",
-    "@croco/seo-core": "workspace:*",
     "astro": "^6.4.6",
     "sharp": "^0.35.4",
     "starlight-typedoc": "0.23.0",
@@ -141,6 +140,7 @@
     "@croco/search-core": "workspace:*",
     "@croco/search-drizzle": "workspace:*",
     "@croco/search-meilisearch": "workspace:*",
+    "@croco/seo-core": "workspace:*",
     "@croco/storage-cloudflare": "workspace:*",
     "@croco/storage-cloudinary": "workspace:*",
     "@croco/storage-core": "workspace:*",

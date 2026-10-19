@@ -4,6 +4,11 @@ export {
   publicPageUrl,
   resolvePublicPageMetadata,
 } from "./libs/publicPage";
+export {
+  createPublicPageInspector,
+  formatPublicPageInspection,
+  validatePublicPageResponse,
+} from "./libs/inspectPublicPage";
 export type {
   PublicPageContent,
   PublicPageDefinition,
@@ -12,11 +17,6 @@ export type {
   PublicPageSource,
   PublicProduct,
 } from "./libs/publicPage";
-export {
-  createPublicPageInspector,
-  formatPublicPageInspection,
-  validatePublicPageResponse,
-} from "./libs/inspectPublicPage";
 export type {
   PublicPageDiagnostic,
   PublicPageInspection,

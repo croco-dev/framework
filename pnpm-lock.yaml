@@ -3151,9 +3151,6 @@ importers:
       '@astrojs/starlight':
         specifier: ^0.40.0
         version: 0.40.0(astro@6.4.8(@types/node@24.13.2)(@upstash/redis@1.36.1)(ioredis@5.10.1(supports-color@10.2.2))(jiti@2.6.1)(rollup@4.59.0)(supports-color@10.2.2)(terser@5.51.2)(tsx@4.21.0)(yaml@2.9.0))(supports-color@10.2.2)(typescript@6.0.3)
-      '@croco/seo-core':
-        specifier: workspace:*
-        version: link:../seo-core
       astro:
         specifier: ^6.4.6
         version: 6.4.8(@types/node@24.13.2)(@upstash/redis@1.36.1)(ioredis@5.10.1(supports-color@10.2.2))(jiti@2.6.1)(rollup@4.59.0)(supports-color@10.2.2)(terser@5.51.2)(tsx@4.21.0)(yaml@2.9.0)
@@ -3515,6 +3512,9 @@ importers:
       '@croco/search-meilisearch':
         specifier: workspace:*
         version: link:../search-meilisearch
+      '@croco/seo-core':
+        specifier: workspace:*
+        version: link:../seo-core
       '@croco/storage-cloudflare':
         specifier: workspace:*
         version: link:../storage-cloudflare

@@ -23,7 +23,15 @@ export function createPublicPageOperations(
           diagnostics: [{ code: "SEO_AUTHORIZATION_UNAVAILABLE", field: "authorization" }],
         };
       }
-      return options.inspect(targetId);
+      try {
+        return await options.inspect(targetId);
+      } catch {
+        return {
+          targetId,
+          state: "unavailable",
+          diagnostics: [{ code: "SEO_INSPECTION_UNAVAILABLE", field: "target" }],
+        };
+      }
     },
   };
 }

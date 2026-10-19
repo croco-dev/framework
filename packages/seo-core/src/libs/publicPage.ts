@@ -118,8 +118,14 @@ export function resolvePublicPageMetadata(
     !Number.isFinite(Date.parse(content.modifiedAt))
   )
     throw new PublicPageProblem("invalid-modified-at");
-  const localeValid = (locale: string) =>
-    typeof locale === "string" && /^(?:[a-z]{2,3})(?:-[A-Za-z0-9]{2,8})*$/.test(locale);
+  const localeValid = (locale: string) => {
+    if (typeof locale !== "string") return false;
+    try {
+      return Intl.getCanonicalLocales(locale).length === 1;
+    } catch {
+      return false;
+    }
+  };
   if (!localeValid(content.locale)) throw new PublicPageProblem("invalid-locale");
   const canonical = publicPageUrl(definition.origin, definition.pathname(content));
   const input = new URL(request.url);
@@ -139,7 +145,10 @@ export function resolvePublicPageMetadata(
       href: publicPageUrl(definition.origin, alternate.pathname).href,
     };
   });
-  if (new Set(alternates.map((entry) => entry.locale)).size !== alternates.length)
+  const alternateLocales = alternates.map((entry) =>
+    entry.locale === "x-default" ? entry.locale : Intl.getCanonicalLocales(entry.locale)[0],
+  );
+  if (new Set(alternateLocales).size !== alternates.length)
     throw new PublicPageProblem("duplicate-alternate-locale");
   for (const link of content.links) {
     if (!link || typeof link !== "object" || typeof link.href !== "string")
