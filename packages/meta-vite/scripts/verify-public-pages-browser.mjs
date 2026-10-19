@@ -134,6 +134,8 @@ try {
     const inspectionTarget = { id: "browser-links", definition, requestUrl, respond: handler };
     for (const [id, base, fallback, expected] of [
       ["noscript", "", true, "ready"],
+      ["svg-base", "", false, "partial"],
+      ["svg-only", "", false, "ready"],
       ["foreign-base", '<base href="https://other.example/">', false, "partial"],
       ["same-base", '<base href="/other/">', false, "ready"],
       ["first-base", '<base href="/other/"><base href="https://other.example/">', false, "ready"],
@@ -142,6 +144,16 @@ try {
       ["data-base", '<base href="data:text/html,ignored">', false, "ready"],
     ]) {
       let candidate = initialHtml.replace("<head>", `<head>${base}`);
+      if (id === "svg-base")
+        candidate = candidate.replace(
+          "<main",
+          '<svg><base href="/"></base></svg><base href="https://other.example/"><main',
+        );
+      if (id === "svg-only")
+        candidate = candidate.replace(
+          "<main",
+          '<svg><base href="https://other.example/"></base></svg><main',
+        );
       if (fallback)
         candidate = candidate
           .replace("<main", "<noscript><main")
@@ -153,7 +165,7 @@ try {
       const destination = await link.evaluate((node) => node.href);
       assert.equal(
         destination,
-        id === "foreign-base"
+        id === "foreign-base" || id === "svg-base"
           ? "https://other.example/delivery"
           : id === "invalid-base"
             ? "/delivery"
@@ -213,6 +225,8 @@ try {
       surfaces: ["PDP", "ready", "partial", "denied", "unavailable"],
       linkFixtures: [
         "noscript",
+        "svg-base",
+        "svg-only",
         "foreign-base",
         "same-base",
         "first-base",

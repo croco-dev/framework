@@ -183,7 +183,10 @@ export function validatePublicPageResponse(
     fail("BODY_DESCRIPTION_MISSING", "body");
   const bodyNodes = body ? visibleElements(body) : [];
   const baseHref = nodes.find(
-    (node) => node.tagName === "base" && attr(node, "href") !== undefined,
+    (node) =>
+      node.namespaceURI === "http://www.w3.org/1999/xhtml" &&
+      node.tagName === "base" &&
+      attr(node, "href") !== undefined,
   );
   let documentBase = target.requestUrl;
   if (baseHref) {

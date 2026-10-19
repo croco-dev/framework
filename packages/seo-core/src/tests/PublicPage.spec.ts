@@ -168,6 +168,23 @@ describe("Public page contracts", () => {
       .replace("</main>", "</main></noscript>");
     expect(validate(fallback)).toMatchObject({ state: "ready", diagnostics: [] });
   });
+  it("does not let an SVG base mask the effective HTML base", () => {
+    const masked = html.replace(
+      "<main>",
+      '<svg><base href="/"></base></svg><base href="https://other.example/"><main>',
+    );
+    expect(validate(masked)).toMatchObject({
+      state: "partial",
+      diagnostics: [{ code: "SEO_LINK_MISSING", field: "links" }],
+    });
+  });
+  it("ignores an SVG base that cannot change document link destinations", () => {
+    const svg = html.replace(
+      "<main>",
+      '<svg><base href="https://other.example/"></base></svg><main>',
+    );
+    expect(validate(svg)).toMatchObject({ state: "ready", diagnostics: [] });
+  });
   it.each(['<base href="https://other.example/">', '<base href="http://[">'])(
     "rejects a base URL that changes a declared link destination: %s",
     (base) => {
