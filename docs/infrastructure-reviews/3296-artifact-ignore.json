@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "framework-routes",
+      "classification": "pure-contract",
+      "reason": "Correct root-anchored paths in generated artifact policy metadata. Existing literal matching and recursive build rule remain bounded; no runtime execution path changes.",
+      "files": {
+        "packages/framework-routes/src/intent-map.ts": "d6e1e984f4059e6516197d231f3fc053b7b3432219ea0dfb172f5b9e324e259b"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Ignore-rule inspection determines build-time artifact commit metadata before Kubernetes Node deployment. It changes no Host capabilities, provider storage or runtime lifecycle.",
+          "providers": [],
+          "constraints": [
+            "Inspection requires a build environment with filesystem access; no deployed runtime support or live infrastructure certification is claimed."
+          ],
+          "references": [
+            "packages/framework-routes/src/intent-map.ts",
+            "packages/framework-routes/src/framework-manifest.ts",
+            "packages/framework-routes/README.md"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Ignore-rule inspection determines build-time artifact commit metadata before Lambda deployment. It changes no Host capabilities, provider storage or runtime lifecycle.",
+          "providers": [],
+          "constraints": [
+            "Inspection requires a build environment with filesystem access; no deployed runtime support or live infrastructure certification is claimed."
+          ],
+          "references": [
+            "packages/framework-routes/src/intent-map.ts",
+            "packages/framework-routes/src/framework-manifest.ts",
+            "packages/framework-routes/README.md"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Ignore-rule inspection determines build-time artifact commit metadata before Workers or Node Container deployment. It changes no Host capabilities, provider storage or runtime lifecycle.",
+          "providers": [],
+          "constraints": [
+            "Inspection requires a build environment with filesystem access; no deployed runtime support or live infrastructure certification is claimed."
+          ],
+          "references": [
+            "packages/framework-routes/src/intent-map.ts",
+            "packages/framework-routes/src/framework-manifest.ts",
+            "packages/framework-routes/README.md"
+          ]
+        }
+      }
+    }
+  ]
+}

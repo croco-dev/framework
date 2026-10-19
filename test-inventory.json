@@ -3097,6 +3097,12 @@
       "owner": "@croco/framework-routes"
     },
     {
+      "path": "packages/framework-routes/src/tests/GeneratedArtifactIgnore.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/framework-routes"
+    },
+    {
       "path": "packages/framework-routes/src/tests/IntentMapPublicSymbols.spec.ts",
       "lane": "fast",
       "qualifiers": [],

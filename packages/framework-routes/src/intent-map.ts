@@ -1294,7 +1294,7 @@ function readGitIgnoreRules(gitignorePath: string): string[] {
 }
 
 function matchesGitIgnoreRule(rule: string, artifactPath: string): boolean {
-  const normalizedRule = toStablePath(rule).replace(/\/$/, "");
+  const normalizedRule = toStablePath(rule).replace(/^\//, "").replace(/\/$/, "");
 
   if (normalizedRule === artifactPath) {
     return true;
