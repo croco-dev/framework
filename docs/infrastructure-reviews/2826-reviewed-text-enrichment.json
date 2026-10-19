@@ -241,7 +241,7 @@
       "classification": "pure-contract",
       "reason": "Extends the existing generated registry with enrichment code literals, recovery metadata and matching types. The changed surface is contract data and existing registry projection, with no new Host capability, I/O, persistence or resource lifecycle.",
       "files": {
-        "packages/problems-core/src/generated/problem-code-registry.ts": "3461d365e9b7844b0d76842430f0b605de30a30e31da28d894b35d78e63f8eef"
+        "packages/problems-core/src/generated/problem-code-registry.ts": "71aae86f953cafd872d6cefdd89182aafee91824d283f0b46bc21f29c876220a"
       },
       "catalogRuntimes": [],
       "profiles": {
