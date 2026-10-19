@@ -141,7 +141,13 @@ export function parseWindowMs(window: string): number {
     h: 60 * 60 * 1000,
     d: 24 * 60 * 60 * 1000,
   };
-  return value * multipliers[unit];
+  const windowMs = value * multipliers[unit];
+  if (!Number.isSafeInteger(windowMs)) {
+    throw new RateLimitWindowProblem(
+      `Invalid window value: ${window}. Window must be a positive safe integer in milliseconds`,
+    );
+  }
+  return windowMs;
 }
 
 export function isFixedWindowPolicy(policy: RateLimitPolicy): policy is FixedWindowPolicy {

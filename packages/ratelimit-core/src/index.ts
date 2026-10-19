@@ -49,6 +49,7 @@ export {
   RateLimitDuplicateDefaultPolicyProblem,
   RateLimitKeyBuilderProblem,
   RateLimitPruneIntervalProblem,
+  RateLimitPolicyProblem,
   RateLimitRefundUnsupportedProblem,
   RateLimitWindowProblem,
 } from "./libs/problems/RateLimitConfigProblems";
@@ -120,3 +121,5 @@ export type {
   InMemoryRateLimitStoreOptions,
   RateLimitPruneScheduler,
 } from "./libs/InMemoryRateLimitStore";
+
+export { validateRateLimitPolicy } from "./libs/validateRateLimitPolicy";

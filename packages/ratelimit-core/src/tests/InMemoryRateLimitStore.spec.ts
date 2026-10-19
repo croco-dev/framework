@@ -122,6 +122,41 @@ describe("InMemoryRateLimitStore", () => {
     },
   );
 
+  describe.each([FixedWindowInMemoryStore, SlidingWindowInMemoryStore, TokenBucketInMemoryStore])(
+    "%s native pruning contract",
+    (Store) => {
+      it.each([NaN, Infinity, 2_147_483_648])(
+        "never schedules rejected active interval %s",
+        (pruneIntervalMs) => {
+          const timer = vi.spyOn(globalThis, "setTimeout");
+          try {
+            expect(() => new Store({ pruneIntervalMs })).toThrow(RateLimitPruneIntervalProblem);
+            expect(timer).not.toHaveBeenCalled();
+          } finally {
+            timer.mockRestore();
+          }
+        },
+      );
+      it.each([0, -1, -Infinity])("keeps pruning disabled for %s", (pruneIntervalMs) => {
+        const schedule = vi.fn();
+        const store = new Store({ pruneIntervalMs, scheduler: { schedule } });
+        expect(schedule).not.toHaveBeenCalled();
+        store.close();
+      });
+      it.each([NaN, Infinity, 2_147_483_648, 0.5])(
+        "leaves custom scheduler interval %s unchanged",
+        (pruneIntervalMs) => {
+          const cancel = vi.fn();
+          const schedule = vi.fn(() => cancel);
+          const store = new Store({ pruneIntervalMs, scheduler: { schedule } });
+          expect(schedule).toHaveBeenCalledWith(expect.any(Function), pruneIntervalMs);
+          store.close();
+          expect(cancel).toHaveBeenCalledOnce();
+        },
+      );
+    },
+  );
+
   it("should allow requests within limit", async () => {
     const result1 = await store.check("user:1", policy);
     expect(result1.success).toBe(true);

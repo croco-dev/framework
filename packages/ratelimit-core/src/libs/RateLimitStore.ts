@@ -1,3 +1,4 @@
+import { validateRateLimitPolicy } from "./validateRateLimitPolicy";
 import type {
   FixedWindowRefundReceipt,
   FixedWindowPolicy,
@@ -83,6 +84,7 @@ export abstract class FixedWindowStore extends DistributedRateLimitStore {
   ): Promise<void>;
 
   async checkFixedWindow(key: string, policy: FixedWindowPolicy): Promise<RateLimitResult> {
+    validateRateLimitPolicy(policy);
     const now = this.now();
     const windowStart = Math.floor(now / policy.windowMs) * policy.windowMs;
     const resetAtMs = windowStart + policy.windowMs;
@@ -131,6 +133,7 @@ export abstract class FixedWindowStore extends DistributedRateLimitStore {
     policy: FixedWindowPolicy,
     receipt?: RateLimitRefundReceipt,
   ): Promise<RateLimitRefundResult> {
+    validateRateLimitPolicy(policy);
     if (!receipt || receipt.algorithm !== "fixed") {
       throw new RateLimitRefundUnsupportedProblem();
     }
@@ -233,6 +236,7 @@ export abstract class SlidingWindowStore extends DistributedRateLimitStore {
   protected abstract removeTimestamps(key: string, before: number): Promise<void>;
 
   async checkSlidingWindow(key: string, policy: SlidingWindowPolicy): Promise<RateLimitResult> {
+    validateRateLimitPolicy(policy);
     const now = this.now();
     const windowStart = now - policy.windowMs;
 
@@ -281,6 +285,7 @@ export abstract class TokenBucketStore extends DistributedRateLimitStore {
   protected abstract setBucket(key: string, entry: TokenBucketEntry, ttlMs: number): Promise<void>;
 
   async checkTokenBucket(key: string, policy: TokenBucketPolicy): Promise<RateLimitResult> {
+    validateRateLimitPolicy(policy);
     const now = this.now();
     const intervalMs = policy.refillIntervalMs;
 
@@ -336,6 +341,7 @@ export abstract class TokenBucketStore extends DistributedRateLimitStore {
     policy: TokenBucketPolicy,
     receipt?: RateLimitRefundReceipt,
   ): Promise<RateLimitRefundResult> {
+    validateRateLimitPolicy(policy);
     if (!receipt || receipt.algorithm !== "token-bucket") {
       throw new RateLimitRefundUnsupportedProblem();
     }

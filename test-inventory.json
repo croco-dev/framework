@@ -4801,6 +4801,12 @@
       "owner": "@croco/ratelimit-core"
     },
     {
+      "path": "packages/ratelimit-core/src/tests/RateLimitPolicyValidation.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/ratelimit-core"
+    },
+    {
       "path": "packages/ratelimit-core/src/tests/RateLimiter.spec.ts",
       "lane": "fast",
       "qualifiers": [],
