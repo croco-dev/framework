@@ -4,6 +4,7 @@ import {
   createPublicPageSourceRequest,
   resolvePublicPageMetadata,
   PublicPageProblem,
+  publicPageUrl,
 } from "./publicPage";
 import type { PublicPageDefinition, PublicPageSnapshot } from "./publicPage";
 
@@ -90,6 +91,12 @@ export function validatePublicPageResponse(
   if (response.status !== status) fail("STATUS_MISMATCH", "status");
   if (snapshot.state !== "published") {
     if (snapshot.state === "redirect") {
+      try {
+        publicPageUrl(target.definition.origin, snapshot.location);
+      } catch (error) {
+        if (!(error instanceof PublicPageProblem)) throw error;
+        fail("INVALID_SOURCE", error.reason);
+      }
       if (response.headers.get("location") !== snapshot.location)
         fail("REDIRECT_MISMATCH", "location");
     }

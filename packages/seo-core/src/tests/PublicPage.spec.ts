@@ -161,6 +161,65 @@ describe("Public page contracts", () => {
       ]),
     );
   });
+  it.each([
+    "//evil.example/collect",
+    "https://evil.example/collect",
+    "/\\evil.example/collect",
+    "/products/lamp-8?preview=secret",
+    "/products/lamp-8#preview",
+  ])("rejects forbidden redirect source %s through an independent responder", async (location) => {
+    const inspect = createPublicPageInspector({
+      targets: [
+        {
+          ...target,
+          definition: {
+            ...definition,
+            source: { load: async () => ({ state: "redirect", status: 302, location }) },
+          },
+          respond: async () =>
+            new Response(null, {
+              status: 302,
+              headers: { location, "x-robots-tag": "noindex" },
+            }),
+        },
+      ],
+      authorize: async () => true,
+    });
+    expect(await inspect("lamp")).toMatchObject({
+      state: "partial",
+      diagnostics: [{ code: "SEO_INVALID_SOURCE", field: "invalid-pathname" }],
+    });
+  });
+  it.each([301, 302, 307, 308] as const)(
+    "accepts a declared same-origin redirect with status %s",
+    async (status) => {
+      const inspect = createPublicPageInspector({
+        targets: [
+          {
+            ...target,
+            definition: {
+              ...definition,
+              source: {
+                load: async () => ({ state: "redirect", status, location: "/products/lamp-8" }),
+              },
+            },
+            respond: async () =>
+              new Response(null, {
+                status,
+                headers: { location: "/products/lamp-8", "x-robots-tag": "noindex" },
+              }),
+          },
+        ],
+        authorize: async () => true,
+      });
+      expect(await inspect("lamp")).toMatchObject({
+        state: "ready",
+        publication: "redirect",
+        responseStatus: status,
+        diagnostics: [],
+      });
+    },
+  );
   it("denies unknown and unauthorized targets without calling sources or responders", async () => {
     const load = vi.fn();
     const respond = vi.fn();
