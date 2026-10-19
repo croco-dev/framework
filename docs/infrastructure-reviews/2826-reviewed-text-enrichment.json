@@ -6,7 +6,7 @@
       "classification": "pure-contract",
       "reason": "Adds request-context-resolved enrichment operations over an injected service. The operations own no Host, database connection, native runtime API or resource lifecycle; backend execution support is assessed in the analytics service and store records.",
       "files": {
-        "packages/admin-core/src/index.ts": "6cdf45b5ef229f1ebfd4f47cc77f811845881dca65f17a72c12bd327fd4751b5",
+        "packages/admin-core/src/index.ts": "90951e6f8ad9773e64ba0ebb3d06c80c2eaddef2cbd7ebd64764cf6954ec4e32",
         "packages/admin-core/src/libs/EnrichmentOperations.ts": "077bd1130cb284cbd59f9adfb9a28eba3ae77632bf252142b5219786053009e7"
       },
       "catalogRuntimes": [],
@@ -60,7 +60,7 @@
       "classification": "protocol-render",
       "reason": "Adds a browser review component and typed async callbacks. It owns presentation state and pagination, not a backend Host, persistence Provider or deployment Profile.",
       "files": {
-        "packages/admin-react/src/index.ts": "ecb60b70b3fc1117576c6ca5dd600680283440d1850abf58a87a4f3fe664920b",
+        "packages/admin-react/src/index.ts": "2c341815070f829a0950db7bd2467072520996b70222e0625ce3c460face335a",
         "packages/admin-react/src/libs/EnrichmentReviewConsole.tsx": "6fd5cd1ff0d32c76b7647d2560ebfe5c44cef71f02e08bc1521370c2c8442332"
       },
       "catalogRuntimes": ["browser", "node"],
