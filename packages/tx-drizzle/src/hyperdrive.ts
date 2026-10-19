@@ -98,12 +98,12 @@ export async function withHyperdriveTransaction<T>(
       transportFailed = true;
     });
     await client.connect();
-    phase = "transaction";
     const db = drizzle(client);
     // Recheck after connect: abort during connection acquisition must not enter user code.
     if (options.signal?.aborted || transportFailed) {
       failed = true;
     } else {
+      phase = "transaction";
       outcome = "unknown";
       result = await createDrizzleTxAdapter(db, { operationDrainTimeoutMs }).transaction(
         async (tx) => {

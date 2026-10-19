@@ -288,6 +288,27 @@ describe.skipIf(process.env.CROCO_TEST_REAL_RESOURCES !== "1")(
       }
     }, 30_000);
 
+    it("rejects missing, truncated and same-length incorrect bearer credentials", async () => {
+      const token = "auth-smoke-token-with-at-least-32-characters";
+      const url = await smokeWorker(token);
+      for (const authorization of [
+        undefined,
+        `Bearer ${token.slice(1)}`,
+        `Bearer X${token.slice(1)}`,
+      ]) {
+        const response = await fetch(`${url}/health`, {
+          headers: authorization === undefined ? {} : { authorization },
+        });
+        expect(response.status).toBe(401);
+        expect(await response.json()).toEqual({ code: "HYPERDRIVE_SMOKE_UNAUTHORIZED" });
+      }
+      const response = await fetch(`${url}/health`, {
+        headers: { authorization: `Bearer ${token}` },
+      });
+      expect(response.status).toBe(200);
+      expect(await response.json()).toEqual({ protocol: "croco.hyperdrive-smoke/v1" });
+    }, 30_000);
+
     it.each(["counts", "persistence", "redirect"])(
       "rejects a misleading HTTP endpoint: %s",
       async (fault) => {
@@ -394,10 +415,12 @@ describe.skipIf(process.env.CROCO_TEST_REAL_RESOURCES !== "1")(
       expect((await pool.query("select id, value from hyperdrive_claims")).rows).toEqual([
         { id: "outer", value: 31 },
       ]);
-      const sessions = await pool.query(
-        "select count(*)::int as count from pg_stat_activity where usename = 'worker_login'",
-      );
-      expect(sessions.rows).toEqual([{ count: 0 }]);
+      await vi.waitFor(async () => {
+        const sessions = await pool.query(
+          "select count(*)::int as count from pg_stat_activity where usename = 'worker_login'",
+        );
+        expect(sessions.rows).toEqual([{ count: 0 }]);
+      });
     }, 30_000);
 
     it("recovers from PostgreSQL connection exhaustion without sharing a connection", async () => {

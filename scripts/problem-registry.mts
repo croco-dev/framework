@@ -3374,7 +3374,7 @@ const recoveryMetadataByCode = {
     userAction:
       "Do not replay automatically. A committed outcome must not be retried; reconcile an unknown outcome first.",
     operatorAction:
-      "Inspect the redacted phase, outcome, aborted and cleanupFailed fields. Correct binding or deadline configuration; acquire a fresh connection for any authorized new operation.",
+      "Inspect the redacted phase, outcome, aborted and cleanupFailed fields. For transaction failures, investigate application SQL and callback errors. Check binding or deadline configuration when implicated by the failing phase; acquire a fresh connection for any authorized new operation.",
     retryability: "not-retryable",
     redactionPolicy: "safe-message",
     severity: "error",

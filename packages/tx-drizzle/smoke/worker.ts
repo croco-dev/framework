@@ -1,3 +1,4 @@
+import { timingSafeEqual } from "node:crypto";
 import { sql } from "drizzle-orm";
 import {
   HyperdriveTransactionProblem,
@@ -44,7 +45,10 @@ export default {
   async fetch(request: Request, env: Bindings): Promise<Response> {
     if (typeof env.HYPERDRIVE_SMOKE_TOKEN !== "string" || env.HYPERDRIVE_SMOKE_TOKEN.length < 32)
       return failure("HYPERDRIVE_SMOKE_DISABLED", 503);
-    if (request.headers.get("authorization") !== `Bearer ${env.HYPERDRIVE_SMOKE_TOKEN}`)
+    const encoder = new TextEncoder();
+    const supplied = encoder.encode(request.headers.get("authorization") ?? "");
+    const expected = encoder.encode(`Bearer ${env.HYPERDRIVE_SMOKE_TOKEN}`);
+    if (supplied.byteLength !== expected.byteLength || !timingSafeEqual(supplied, expected))
       return failure("HYPERDRIVE_SMOKE_UNAUTHORIZED", 401);
     const path = new URL(request.url).pathname;
     if (request.method === "GET" && path === "/health")

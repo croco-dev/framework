@@ -96,7 +96,7 @@ exception.
   `scripts/package-manifest-contracts.mjs` and `tsup.config.ts`.
 - Direct-dist root entrypoint exceptions are checked in
   `scripts/package-manifest-contracts.mjs`: `@croco/problems-core`, `@croco/rpc-codegen`,
-  `@croco/storage-cloudinary`, `@croco/storage-core`, `@croco/storage-r2`, and
+  `@croco/storage-cloudinary`, `@croco/storage-core`, `@croco/storage-r2`,
   `@croco/telemetry-api`, and `@croco/tx-drizzle`.
 
 The transaction package keeps its built root and optional `./hyperdrive` subpath aligned in

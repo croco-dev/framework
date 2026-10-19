@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export type CrocoProblemRegistry = {
   readonly version: "croco.problem-code-registry.v1";
-  readonly problemCount: 1046;
+  readonly problemCount: 1078;
   readonly problems: readonly [
     {
       readonly code: "ACCESS_DENIED";
@@ -1182,6 +1182,34 @@ export type CrocoProblemRegistry = {
       ];
     },
     {
+      readonly code: "EMBEDDING_ERROR";
+      readonly category: "InternalServerError";
+      readonly status: 500;
+      readonly title: "Internal Server Error";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#embedding-error";
+      readonly recovery: {
+        readonly cause: "Croco or an upstream dependency failed after accepting the request.";
+        readonly userAction: "Retry later only when the operation is idempotent or the caller owns retry safety.";
+        readonly operatorAction: "Use traces, logs, and upstream diagnostics to isolate the failing boundary.";
+        readonly retryability: "conditional";
+        readonly redactionPolicy: "operator-only";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.error";
+          readonly severity: "error";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: {
+        readonly status: "deprecated";
+        readonly deprecation: {
+          readonly reason: "The framework-owned LLM abstraction or its generated example contract was retired.";
+          readonly migrationNote: "Remove branches for this code and handle vendor SDK failures explicitly at the application call boundary.";
+          readonly noReplacementReason: "The retired generic LLM capability has no framework-level equivalent.";
+        };
+      };
+      readonly sources: readonly [];
+    },
+    {
       readonly code: "ENTITLEMENT_DENIED";
       readonly category: "Forbidden";
       readonly status: 403;
@@ -1404,6 +1432,34 @@ export type CrocoProblemRegistry = {
           readonly kind: "problem-class";
         },
       ];
+    },
+    {
+      readonly code: "GENERATION_ERROR";
+      readonly category: "InternalServerError";
+      readonly status: 500;
+      readonly title: "Internal Server Error";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#generation-error";
+      readonly recovery: {
+        readonly cause: "Croco or an upstream dependency failed after accepting the request.";
+        readonly userAction: "Retry later only when the operation is idempotent or the caller owns retry safety.";
+        readonly operatorAction: "Use traces, logs, and upstream diagnostics to isolate the failing boundary.";
+        readonly retryability: "conditional";
+        readonly redactionPolicy: "operator-only";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.error";
+          readonly severity: "error";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: {
+        readonly status: "deprecated";
+        readonly deprecation: {
+          readonly reason: "The framework-owned LLM abstraction or its generated example contract was retired.";
+          readonly migrationNote: "Remove branches for this code and handle vendor SDK failures explicitly at the application call boundary.";
+          readonly noReplacementReason: "The retired generic LLM capability has no framework-level equivalent.";
+        };
+      };
+      readonly sources: readonly [];
     },
     {
       readonly code: "GRAPHQL_NOT_FOUND";
@@ -2246,6 +2302,62 @@ export type CrocoProblemRegistry = {
       ];
     },
     {
+      readonly code: "LLM_PROVIDER_NOT_FOUND";
+      readonly category: "NotFound";
+      readonly status: 404;
+      readonly title: "Not Found";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#llm-provider-not-found";
+      readonly recovery: {
+        readonly cause: "The requested resource or route-visible record does not exist.";
+        readonly userAction: "Verify the identifier and refresh the resource list before retrying.";
+        readonly operatorAction: "Confirm tenant scoping, data retention, and backing-store lookup behavior.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "public";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.info";
+          readonly severity: "info";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: {
+        readonly status: "deprecated";
+        readonly deprecation: {
+          readonly reason: "The framework-owned LLM abstraction or its generated example contract was retired.";
+          readonly migrationNote: "Remove branches for this code and handle vendor SDK failures explicitly at the application call boundary.";
+          readonly noReplacementReason: "The retired generic LLM capability has no framework-level equivalent.";
+        };
+      };
+      readonly sources: readonly [];
+    },
+    {
+      readonly code: "LLM_SERVICE_ERROR";
+      readonly category: "InternalServerError";
+      readonly status: 500;
+      readonly title: "Internal Server Error";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#llm-service-error";
+      readonly recovery: {
+        readonly cause: "Croco or an upstream dependency failed after accepting the request.";
+        readonly userAction: "Retry later only when the operation is idempotent or the caller owns retry safety.";
+        readonly operatorAction: "Use traces, logs, and upstream diagnostics to isolate the failing boundary.";
+        readonly retryability: "conditional";
+        readonly redactionPolicy: "operator-only";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.error";
+          readonly severity: "error";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: {
+        readonly status: "deprecated";
+        readonly deprecation: {
+          readonly reason: "The framework-owned LLM abstraction or its generated example contract was retired.";
+          readonly migrationNote: "Remove branches for this code and handle vendor SDK failures explicitly at the application call boundary.";
+          readonly noReplacementReason: "The retired generic LLM capability has no framework-level equivalent.";
+        };
+      };
+      readonly sources: readonly [];
+    },
+    {
       readonly code: "MEMBERSHIP_CONSTRAINT";
       readonly category: "Forbidden";
       readonly status: 403;
@@ -2468,6 +2580,34 @@ export type CrocoProblemRegistry = {
           readonly kind: "problem-constructor";
         },
       ];
+    },
+    {
+      readonly code: "MODEL_NOT_FOUND";
+      readonly category: "NotFound";
+      readonly status: 404;
+      readonly title: "Not Found";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#model-not-found";
+      readonly recovery: {
+        readonly cause: "The requested resource or route-visible record does not exist.";
+        readonly userAction: "Verify the identifier and refresh the resource list before retrying.";
+        readonly operatorAction: "Confirm tenant scoping, data retention, and backing-store lookup behavior.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "public";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.info";
+          readonly severity: "info";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: {
+        readonly status: "deprecated";
+        readonly deprecation: {
+          readonly reason: "The framework-owned LLM abstraction or its generated example contract was retired.";
+          readonly migrationNote: "Remove branches for this code and handle vendor SDK failures explicitly at the application call boundary.";
+          readonly noReplacementReason: "The retired generic LLM capability has no framework-level equivalent.";
+        };
+      };
+      readonly sources: readonly [];
     },
     {
       readonly code: "NESTED_IMPERSONATION_NOT_ALLOWED";
@@ -3310,6 +3450,34 @@ export type CrocoProblemRegistry = {
       ];
     },
     {
+      readonly code: "STRUCTURED_OUTPUT_ERROR";
+      readonly category: "InternalServerError";
+      readonly status: 500;
+      readonly title: "Internal Server Error";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#structured-output-error";
+      readonly recovery: {
+        readonly cause: "Croco or an upstream dependency failed after accepting the request.";
+        readonly userAction: "Retry later only when the operation is idempotent or the caller owns retry safety.";
+        readonly operatorAction: "Use traces, logs, and upstream diagnostics to isolate the failing boundary.";
+        readonly retryability: "conditional";
+        readonly redactionPolicy: "operator-only";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.error";
+          readonly severity: "error";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: {
+        readonly status: "deprecated";
+        readonly deprecation: {
+          readonly reason: "The framework-owned LLM abstraction or its generated example contract was retired.";
+          readonly migrationNote: "Remove branches for this code and handle vendor SDK failures explicitly at the application call boundary.";
+          readonly noReplacementReason: "The retired generic LLM capability has no framework-level equivalent.";
+        };
+      };
+      readonly sources: readonly [];
+    },
+    {
       readonly code: "TELEMETRY_AUTO_INSTRUMENTATION_INVALID_CONFIG";
       readonly category: "ValidationError";
       readonly status: 422;
@@ -3448,6 +3616,62 @@ export type CrocoProblemRegistry = {
           readonly kind: "problem-class";
         },
       ];
+    },
+    {
+      readonly code: "TOKEN_LIMIT_EXCEEDED";
+      readonly category: "BadRequest";
+      readonly status: 400;
+      readonly title: "Bad Request";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#token-limit-exceeded";
+      readonly recovery: {
+        readonly cause: "The caller sent malformed input or unsupported request options.";
+        readonly userAction: "Correct the request input and retry after validation passes.";
+        readonly operatorAction: "Inspect validation details and request logs; do not retry unchanged input.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "public";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.info";
+          readonly severity: "info";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: {
+        readonly status: "deprecated";
+        readonly deprecation: {
+          readonly reason: "The framework-owned LLM abstraction or its generated example contract was retired.";
+          readonly migrationNote: "Remove branches for this code and handle vendor SDK failures explicitly at the application call boundary.";
+          readonly noReplacementReason: "The retired generic LLM capability has no framework-level equivalent.";
+        };
+      };
+      readonly sources: readonly [];
+    },
+    {
+      readonly code: "TOOL_EXECUTION_ERROR";
+      readonly category: "InternalServerError";
+      readonly status: 500;
+      readonly title: "Internal Server Error";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#tool-execution-error";
+      readonly recovery: {
+        readonly cause: "Croco or an upstream dependency failed after accepting the request.";
+        readonly userAction: "Retry later only when the operation is idempotent or the caller owns retry safety.";
+        readonly operatorAction: "Use traces, logs, and upstream diagnostics to isolate the failing boundary.";
+        readonly retryability: "conditional";
+        readonly redactionPolicy: "operator-only";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.error";
+          readonly severity: "error";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: {
+        readonly status: "deprecated";
+        readonly deprecation: {
+          readonly reason: "The framework-owned LLM abstraction or its generated example contract was retired.";
+          readonly migrationNote: "Remove branches for this code and handle vendor SDK failures explicitly at the application call boundary.";
+          readonly noReplacementReason: "The retired generic LLM capability has no framework-level equivalent.";
+        };
+      };
+      readonly sources: readonly [];
     },
     {
       readonly code: "TRIAL_AUTH_REQUIRED";
@@ -4764,6 +4988,34 @@ export type CrocoProblemRegistry = {
           readonly kind: "problem-constructor";
         },
       ];
+    },
+    {
+      readonly code: "ai-saas/model-not-found";
+      readonly category: "NotFound";
+      readonly status: 404;
+      readonly title: "Not Found";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#ai-saas-model-not-found";
+      readonly recovery: {
+        readonly cause: "The requested resource or route-visible record does not exist.";
+        readonly userAction: "Verify the identifier and refresh the resource list before retrying.";
+        readonly operatorAction: "Confirm tenant scoping, data retention, and backing-store lookup behavior.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "public";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.info";
+          readonly severity: "info";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: {
+        readonly status: "deprecated";
+        readonly deprecation: {
+          readonly reason: "The framework-owned LLM abstraction or its generated example contract was retired.";
+          readonly migrationNote: "Remove branches for this code and handle vendor SDK failures explicitly at the application call boundary.";
+          readonly noReplacementReason: "The retired generic LLM capability has no framework-level equivalent.";
+        };
+      };
+      readonly sources: readonly [];
     },
     {
       readonly code: "ai-saas/model-required";
@@ -10207,6 +10459,62 @@ export type CrocoProblemRegistry = {
       ];
     },
     {
+      readonly code: "desktop-codegen/invalid-contract-graph";
+      readonly category: "ValidationError";
+      readonly status: 422;
+      readonly title: "Validation Error";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#desktop-codegen-invalid-contract-graph";
+      readonly recovery: {
+        readonly cause: "The request or generated contract failed schema or semantic validation.";
+        readonly userAction: "Fix the invalid fields and retry with schema-conformant input.";
+        readonly operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "public";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.info";
+          readonly severity: "info";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: {
+        readonly status: "deprecated";
+        readonly deprecation: {
+          readonly reason: "Croco desktop contracts and code generation were removed from the supported product scope.";
+          readonly migrationNote: "See docs/release/problem-code-migrations.md#desktop-support-removal.";
+          readonly noReplacementReason: "Croco does not provide a replacement desktop bridge or silently map desktop contracts to web scaffolds.";
+        };
+      };
+      readonly sources: readonly [];
+    },
+    {
+      readonly code: "desktop-codegen/invalid-renderer-contract-graph";
+      readonly category: "ValidationError";
+      readonly status: 422;
+      readonly title: "Validation Error";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#desktop-codegen-invalid-renderer-contract-graph";
+      readonly recovery: {
+        readonly cause: "The request or generated contract failed schema or semantic validation.";
+        readonly userAction: "Fix the invalid fields and retry with schema-conformant input.";
+        readonly operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "public";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.info";
+          readonly severity: "info";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: {
+        readonly status: "deprecated";
+        readonly deprecation: {
+          readonly reason: "Croco desktop contracts and code generation were removed from the supported product scope.";
+          readonly migrationNote: "See docs/release/problem-code-migrations.md#desktop-support-removal.";
+          readonly noReplacementReason: "Croco does not provide a replacement desktop bridge or silently map desktop contracts to web scaffolds.";
+        };
+      };
+      readonly sources: readonly [];
+    },
+    {
       readonly code: "diagnostics-core/duplicate-provider";
       readonly category: "InternalServerError";
       readonly status: 500;
@@ -12165,6 +12473,34 @@ export type CrocoProblemRegistry = {
           readonly kind: "problem-class";
         },
       ];
+    },
+    {
+      readonly code: "events-core/transaction-context-unavailable";
+      readonly category: "InternalServerError";
+      readonly status: 500;
+      readonly title: "Internal Server Error";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#events-core-transaction-context-unavailable";
+      readonly recovery: {
+        readonly cause: "Croco or an upstream dependency failed after accepting the request.";
+        readonly userAction: "Retry later only when the operation is idempotent or the caller owns retry safety.";
+        readonly operatorAction: "Use traces, logs, and upstream diagnostics to isolate the failing boundary.";
+        readonly retryability: "conditional";
+        readonly redactionPolicy: "operator-only";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.error";
+          readonly severity: "error";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: {
+        readonly status: "deprecated";
+        readonly deprecation: {
+          readonly reason: "After-commit publication no longer resolves a transaction context through a process-global container.";
+          readonly migrationNote: "See docs/release/problem-code-migrations.md#explicit-event-transaction-context.";
+          readonly replacementCode: "events-core/after-commit-requires-active-transaction";
+        };
+      };
+      readonly sources: readonly [];
     },
     {
       readonly code: "events-core/unknown-event-type";
@@ -17345,6 +17681,566 @@ export type CrocoProblemRegistry = {
           readonly kind: "problem-class";
         },
       ];
+    },
+    {
+      readonly code: "llm-core/completion-event-publication-failed";
+      readonly category: "Conflict";
+      readonly status: 409;
+      readonly title: "Conflict";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#llm-core-completion-event-publication-failed";
+      readonly recovery: {
+        readonly cause: "The model completed billable work, but its completion event was not durably confirmed afterward.";
+        readonly userAction: "Hand the opaque failure reference to an operator; do not invoke the model again or manually publish the completion event.";
+        readonly operatorAction: "Use retryCompletionEvent with the in-process Problem or saved intent: published_unconfirmed confirms storage without republishing, delivery_in_progress waits for the active claim, and not_published atomically claims delivery before publishing. Never publish the event manually.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "operator-only";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.error";
+          readonly severity: "error";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: {
+        readonly status: "deprecated";
+        readonly deprecation: {
+          readonly reason: "The framework-owned LLM abstraction or its generated example contract was retired.";
+          readonly migrationNote: "Remove branches for this code and handle vendor SDK failures explicitly at the application call boundary.";
+          readonly noReplacementReason: "The retired generic LLM capability has no framework-level equivalent.";
+        };
+      };
+      readonly sources: readonly [];
+    },
+    {
+      readonly code: "llm-core/invalid-llm-prompt";
+      readonly category: "BadRequest";
+      readonly status: 400;
+      readonly title: "Bad Request";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#llm-core-invalid-llm-prompt";
+      readonly recovery: {
+        readonly cause: "The caller sent malformed input or unsupported request options.";
+        readonly userAction: "Correct the request input and retry after validation passes.";
+        readonly operatorAction: "Inspect validation details and request logs; do not retry unchanged input.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "public";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.info";
+          readonly severity: "info";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: {
+        readonly status: "deprecated";
+        readonly deprecation: {
+          readonly reason: "The framework-owned LLM abstraction or its generated example contract was retired.";
+          readonly migrationNote: "Remove branches for this code and handle vendor SDK failures explicitly at the application call boundary.";
+          readonly noReplacementReason: "The retired generic LLM capability has no framework-level equivalent.";
+        };
+      };
+      readonly sources: readonly [];
+    },
+    {
+      readonly code: "llm-core/invalid-llm-response";
+      readonly category: "InternalServerError";
+      readonly status: 500;
+      readonly title: "Internal Server Error";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#llm-core-invalid-llm-response";
+      readonly recovery: {
+        readonly cause: "Croco or an upstream dependency failed after accepting the request.";
+        readonly userAction: "Retry later only when the operation is idempotent or the caller owns retry safety.";
+        readonly operatorAction: "Use traces, logs, and upstream diagnostics to isolate the failing boundary.";
+        readonly retryability: "conditional";
+        readonly redactionPolicy: "operator-only";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.error";
+          readonly severity: "error";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: {
+        readonly status: "deprecated";
+        readonly deprecation: {
+          readonly reason: "The framework-owned LLM abstraction or its generated example contract was retired.";
+          readonly migrationNote: "Remove branches for this code and handle vendor SDK failures explicitly at the application call boundary.";
+          readonly noReplacementReason: "The retired generic LLM capability has no framework-level equivalent.";
+        };
+      };
+      readonly sources: readonly [];
+    },
+    {
+      readonly code: "llm-core/llm-service-not-initialized";
+      readonly category: "InternalServerError";
+      readonly status: 500;
+      readonly title: "Internal Server Error";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#llm-core-llm-service-not-initialized";
+      readonly recovery: {
+        readonly cause: "Croco or an upstream dependency failed after accepting the request.";
+        readonly userAction: "Retry later only when the operation is idempotent or the caller owns retry safety.";
+        readonly operatorAction: "Use traces, logs, and upstream diagnostics to isolate the failing boundary.";
+        readonly retryability: "conditional";
+        readonly redactionPolicy: "operator-only";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.error";
+          readonly severity: "error";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: {
+        readonly status: "deprecated";
+        readonly deprecation: {
+          readonly reason: "The framework-owned LLM abstraction or its generated example contract was retired.";
+          readonly migrationNote: "Remove branches for this code and handle vendor SDK failures explicitly at the application call boundary.";
+          readonly noReplacementReason: "The retired generic LLM capability has no framework-level equivalent.";
+        };
+      };
+      readonly sources: readonly [];
+    },
+    {
+      readonly code: "llm-core/operation-aborted";
+      readonly category: "BadRequest";
+      readonly status: 400;
+      readonly title: "Bad Request";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#llm-core-operation-aborted";
+      readonly recovery: {
+        readonly cause: "The caller sent malformed input or unsupported request options.";
+        readonly userAction: "Correct the request input and retry after validation passes.";
+        readonly operatorAction: "Inspect validation details and request logs; do not retry unchanged input.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "public";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.info";
+          readonly severity: "info";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: {
+        readonly status: "deprecated";
+        readonly deprecation: {
+          readonly reason: "The framework-owned LLM abstraction or its generated example contract was retired.";
+          readonly migrationNote: "Remove branches for this code and handle vendor SDK failures explicitly at the application call boundary.";
+          readonly noReplacementReason: "The retired generic LLM capability has no framework-level equivalent.";
+        };
+      };
+      readonly sources: readonly [];
+    },
+    {
+      readonly code: "llm-core/rate-limit-exceeded";
+      readonly category: "TooManyRequests";
+      readonly status: 429;
+      readonly title: "Too Many Requests";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#llm-core-rate-limit-exceeded";
+      readonly recovery: {
+        readonly cause: "The caller exceeded a rate, quota, or concurrency limit.";
+        readonly userAction: "Wait for the retry window or reduce request volume.";
+        readonly operatorAction: "Check limiter state, quota configuration, and abuse signals.";
+        readonly retryability: "retryable";
+        readonly redactionPolicy: "safe-message";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.warning";
+          readonly severity: "warning";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: {
+        readonly status: "deprecated";
+        readonly deprecation: {
+          readonly reason: "The framework-owned LLM abstraction or its generated example contract was retired.";
+          readonly migrationNote: "Remove branches for this code and handle vendor SDK failures explicitly at the application call boundary.";
+          readonly noReplacementReason: "The retired generic LLM capability has no framework-level equivalent.";
+        };
+      };
+      readonly sources: readonly [];
+    },
+    {
+      readonly code: "llm-metering/cost-limit-exceeded";
+      readonly category: "Forbidden";
+      readonly status: 403;
+      readonly title: "Forbidden";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#llm-metering-cost-limit-exceeded";
+      readonly recovery: {
+        readonly cause: "The authenticated caller is not allowed to perform the requested action.";
+        readonly userAction: "Request the required permission or choose an allowed action.";
+        readonly operatorAction: "Review policy, role, tenant, entitlement, and impersonation context.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "safe-message";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.warning";
+          readonly severity: "warning";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: {
+        readonly status: "deprecated";
+        readonly deprecation: {
+          readonly reason: "The framework-owned LLM abstraction was removed in favor of application-owned SDK calls and SDK-independent usage ingestion.";
+          readonly migrationNote: "Branch on ai-usage/cost-limit-exceeded after migrating usage handling to @croco/ai-usage.";
+          readonly replacementCode: "ai-usage/cost-limit-exceeded";
+        };
+      };
+      readonly sources: readonly [];
+    },
+    {
+      readonly code: "llm-metering/pricing-not-found";
+      readonly category: "NotFound";
+      readonly status: 404;
+      readonly title: "Not Found";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#llm-metering-pricing-not-found";
+      readonly recovery: {
+        readonly cause: "The requested resource or route-visible record does not exist.";
+        readonly userAction: "Verify the identifier and refresh the resource list before retrying.";
+        readonly operatorAction: "Confirm tenant scoping, data retention, and backing-store lookup behavior.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "public";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.info";
+          readonly severity: "info";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: {
+        readonly status: "deprecated";
+        readonly deprecation: {
+          readonly reason: "The framework-owned LLM abstraction was removed in favor of application-owned SDK calls and SDK-independent usage ingestion.";
+          readonly migrationNote: "Branch on ai-usage/pricing-not-found after migrating usage handling to @croco/ai-usage.";
+          readonly replacementCode: "ai-usage/pricing-not-found";
+        };
+      };
+      readonly sources: readonly [];
+    },
+    {
+      readonly code: "llm-metering/pricing-registry-conflict";
+      readonly category: "Conflict";
+      readonly status: 409;
+      readonly title: "Conflict";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#llm-metering-pricing-registry-conflict";
+      readonly recovery: {
+        readonly cause: "The request conflicts with current state or an idempotency constraint.";
+        readonly userAction: "Refresh state, resolve the conflict, and retry with the updated intent.";
+        readonly operatorAction: "Inspect concurrent writes, idempotency keys, and uniqueness constraints.";
+        readonly retryability: "conditional";
+        readonly redactionPolicy: "safe-message";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.warning";
+          readonly severity: "warning";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: {
+        readonly status: "deprecated";
+        readonly deprecation: {
+          readonly reason: "The framework-owned LLM abstraction was removed in favor of application-owned SDK calls and SDK-independent usage ingestion.";
+          readonly migrationNote: "Branch on ai-usage/pricing-registry-conflict after migrating usage handling to @croco/ai-usage.";
+          readonly replacementCode: "ai-usage/pricing-registry-conflict";
+        };
+      };
+      readonly sources: readonly [];
+    },
+    {
+      readonly code: "llm-metering/quota-exceeded";
+      readonly category: "Forbidden";
+      readonly status: 403;
+      readonly title: "Forbidden";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#llm-metering-quota-exceeded";
+      readonly recovery: {
+        readonly cause: "The authenticated caller is not allowed to perform the requested action.";
+        readonly userAction: "Request the required permission or choose an allowed action.";
+        readonly operatorAction: "Review policy, role, tenant, entitlement, and impersonation context.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "safe-message";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.warning";
+          readonly severity: "warning";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: {
+        readonly status: "deprecated";
+        readonly deprecation: {
+          readonly reason: "The framework-owned LLM abstraction was removed in favor of application-owned SDK calls and SDK-independent usage ingestion.";
+          readonly migrationNote: "Branch on ai-usage/quota-exceeded after migrating usage handling to @croco/ai-usage.";
+          readonly replacementCode: "ai-usage/quota-exceeded";
+        };
+      };
+      readonly sources: readonly [];
+    },
+    {
+      readonly code: "llm-metering/record-failed";
+      readonly category: "InternalServerError";
+      readonly status: 500;
+      readonly title: "Internal Server Error";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#llm-metering-record-failed";
+      readonly recovery: {
+        readonly cause: "Croco or an upstream dependency failed after accepting the request.";
+        readonly userAction: "Retry later only when the operation is idempotent or the caller owns retry safety.";
+        readonly operatorAction: "Use traces, logs, and upstream diagnostics to isolate the failing boundary.";
+        readonly retryability: "conditional";
+        readonly redactionPolicy: "operator-only";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.error";
+          readonly severity: "error";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: {
+        readonly status: "deprecated";
+        readonly deprecation: {
+          readonly reason: "The framework-owned LLM abstraction was removed in favor of application-owned SDK calls and SDK-independent usage ingestion.";
+          readonly migrationNote: "Branch on ai-usage/record-failed after migrating usage handling to @croco/ai-usage.";
+          readonly replacementCode: "ai-usage/record-failed";
+        };
+      };
+      readonly sources: readonly [];
+    },
+    {
+      readonly code: "llm-metering/service-required";
+      readonly category: "InternalServerError";
+      readonly status: 500;
+      readonly title: "Internal Server Error";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#llm-metering-service-required";
+      readonly recovery: {
+        readonly cause: "@AiMetered required usage recording, but no scoped or global LlmMeteringService was configured.";
+        readonly userAction: "Do not retry the unchanged operation; ask the service operator to configure LLM metering or explicitly disable it for an intentionally unmetered method.";
+        readonly operatorAction: 'Bind LlmMeteringService at bootstrap with setLlmMeteringService(), bind it per execution with runWithLlmMeteringService(), or set @AiMetered({ metering: "disabled" }) only when skipping usage recording is intentional.';
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "operator-only";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.error";
+          readonly severity: "error";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: {
+        readonly status: "deprecated";
+        readonly deprecation: {
+          readonly reason: "The framework-owned LLM abstraction or its generated example contract was retired.";
+          readonly migrationNote: "Remove branches for this code and handle vendor SDK failures explicitly at the application call boundary.";
+          readonly noReplacementReason: "The retired generic LLM capability has no framework-level equivalent.";
+        };
+      };
+      readonly sources: readonly [];
+    },
+    {
+      readonly code: "llm-openai/aborted";
+      readonly category: "BadRequest";
+      readonly status: 400;
+      readonly title: "Bad Request";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#llm-openai-aborted";
+      readonly recovery: {
+        readonly cause: "The caller sent malformed input or unsupported request options.";
+        readonly userAction: "Correct the request input and retry after validation passes.";
+        readonly operatorAction: "Inspect validation details and request logs; do not retry unchanged input.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "public";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.info";
+          readonly severity: "info";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: {
+        readonly status: "deprecated";
+        readonly deprecation: {
+          readonly reason: "The framework-owned LLM abstraction or its generated example contract was retired.";
+          readonly migrationNote: "Remove branches for this code and handle vendor SDK failures explicitly at the application call boundary.";
+          readonly noReplacementReason: "The retired generic LLM capability has no framework-level equivalent.";
+        };
+      };
+      readonly sources: readonly [];
+    },
+    {
+      readonly code: "llm-openai/authentication-failed";
+      readonly category: "Unauthorized";
+      readonly status: 401;
+      readonly title: "Unauthorized";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#llm-openai-authentication-failed";
+      readonly recovery: {
+        readonly cause: "The request did not include valid authentication credentials.";
+        readonly userAction: "Sign in again or provide a valid credential.";
+        readonly operatorAction: "Check authentication configuration, token issuer, and clock skew.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "safe-message";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.warning";
+          readonly severity: "warning";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: {
+        readonly status: "deprecated";
+        readonly deprecation: {
+          readonly reason: "The framework-owned LLM abstraction or its generated example contract was retired.";
+          readonly migrationNote: "Remove branches for this code and handle vendor SDK failures explicitly at the application call boundary.";
+          readonly noReplacementReason: "The retired generic LLM capability has no framework-level equivalent.";
+        };
+      };
+      readonly sources: readonly [];
+    },
+    {
+      readonly code: "llm-openai/invalid-response";
+      readonly category: "InternalServerError";
+      readonly status: 500;
+      readonly title: "Internal Server Error";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#llm-openai-invalid-response";
+      readonly recovery: {
+        readonly cause: "Croco or an upstream dependency failed after accepting the request.";
+        readonly userAction: "Retry later only when the operation is idempotent or the caller owns retry safety.";
+        readonly operatorAction: "Use traces, logs, and upstream diagnostics to isolate the failing boundary.";
+        readonly retryability: "conditional";
+        readonly redactionPolicy: "operator-only";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.error";
+          readonly severity: "error";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: {
+        readonly status: "deprecated";
+        readonly deprecation: {
+          readonly reason: "The framework-owned LLM abstraction or its generated example contract was retired.";
+          readonly migrationNote: "Remove branches for this code and handle vendor SDK failures explicitly at the application call boundary.";
+          readonly noReplacementReason: "The retired generic LLM capability has no framework-level equivalent.";
+        };
+      };
+      readonly sources: readonly [];
+    },
+    {
+      readonly code: "llm-openai/missing-config";
+      readonly category: "InternalServerError";
+      readonly status: 500;
+      readonly title: "Internal Server Error";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#llm-openai-missing-config";
+      readonly recovery: {
+        readonly cause: "Croco or an upstream dependency failed after accepting the request.";
+        readonly userAction: "Retry later only when the operation is idempotent or the caller owns retry safety.";
+        readonly operatorAction: "Use traces, logs, and upstream diagnostics to isolate the failing boundary.";
+        readonly retryability: "conditional";
+        readonly redactionPolicy: "operator-only";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.error";
+          readonly severity: "error";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: {
+        readonly status: "deprecated";
+        readonly deprecation: {
+          readonly reason: "The framework-owned LLM abstraction or its generated example contract was retired.";
+          readonly migrationNote: "Remove branches for this code and handle vendor SDK failures explicitly at the application call boundary.";
+          readonly noReplacementReason: "The retired generic LLM capability has no framework-level equivalent.";
+        };
+      };
+      readonly sources: readonly [];
+    },
+    {
+      readonly code: "llm-openai/rate-limited";
+      readonly category: "TooManyRequests";
+      readonly status: 429;
+      readonly title: "Too Many Requests";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#llm-openai-rate-limited";
+      readonly recovery: {
+        readonly cause: "The caller exceeded a rate, quota, or concurrency limit.";
+        readonly userAction: "Wait for the retry window or reduce request volume.";
+        readonly operatorAction: "Check limiter state, quota configuration, and abuse signals.";
+        readonly retryability: "retryable";
+        readonly redactionPolicy: "safe-message";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.warning";
+          readonly severity: "warning";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: {
+        readonly status: "deprecated";
+        readonly deprecation: {
+          readonly reason: "The framework-owned LLM abstraction or its generated example contract was retired.";
+          readonly migrationNote: "Remove branches for this code and handle vendor SDK failures explicitly at the application call boundary.";
+          readonly noReplacementReason: "The retired generic LLM capability has no framework-level equivalent.";
+        };
+      };
+      readonly sources: readonly [];
+    },
+    {
+      readonly code: "llm-openai/retryable-upstream";
+      readonly category: "InternalServerError";
+      readonly status: 500;
+      readonly title: "Internal Server Error";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#llm-openai-retryable-upstream";
+      readonly recovery: {
+        readonly cause: "Croco or an upstream dependency failed after accepting the request.";
+        readonly userAction: "Retry later only when the operation is idempotent or the caller owns retry safety.";
+        readonly operatorAction: "Use traces, logs, and upstream diagnostics to isolate the failing boundary.";
+        readonly retryability: "conditional";
+        readonly redactionPolicy: "operator-only";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.error";
+          readonly severity: "error";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: {
+        readonly status: "deprecated";
+        readonly deprecation: {
+          readonly reason: "The framework-owned LLM abstraction or its generated example contract was retired.";
+          readonly migrationNote: "Remove branches for this code and handle vendor SDK failures explicitly at the application call boundary.";
+          readonly noReplacementReason: "The retired generic LLM capability has no framework-level equivalent.";
+        };
+      };
+      readonly sources: readonly [];
+    },
+    {
+      readonly code: "llm-openai/terminal-upstream";
+      readonly category: "InternalServerError";
+      readonly status: 500;
+      readonly title: "Internal Server Error";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#llm-openai-terminal-upstream";
+      readonly recovery: {
+        readonly cause: "Croco or an upstream dependency failed after accepting the request.";
+        readonly userAction: "Retry later only when the operation is idempotent or the caller owns retry safety.";
+        readonly operatorAction: "Use traces, logs, and upstream diagnostics to isolate the failing boundary.";
+        readonly retryability: "conditional";
+        readonly redactionPolicy: "operator-only";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.error";
+          readonly severity: "error";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: {
+        readonly status: "deprecated";
+        readonly deprecation: {
+          readonly reason: "The framework-owned LLM abstraction or its generated example contract was retired.";
+          readonly migrationNote: "Remove branches for this code and handle vendor SDK failures explicitly at the application call boundary.";
+          readonly noReplacementReason: "The retired generic LLM capability has no framework-level equivalent.";
+        };
+      };
+      readonly sources: readonly [];
+    },
+    {
+      readonly code: "llm-openai/validation-failed";
+      readonly category: "BadRequest";
+      readonly status: 400;
+      readonly title: "Bad Request";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#llm-openai-validation-failed";
+      readonly recovery: {
+        readonly cause: "The caller sent malformed input or unsupported request options.";
+        readonly userAction: "Correct the request input and retry after validation passes.";
+        readonly operatorAction: "Inspect validation details and request logs; do not retry unchanged input.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "public";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.info";
+          readonly severity: "info";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: {
+        readonly status: "deprecated";
+        readonly deprecation: {
+          readonly reason: "The framework-owned LLM abstraction or its generated example contract was retired.";
+          readonly migrationNote: "Remove branches for this code and handle vendor SDK failures explicitly at the application call boundary.";
+          readonly noReplacementReason: "The retired generic LLM capability has no framework-level equivalent.";
+        };
+      };
+      readonly sources: readonly [];
     },
     {
       readonly code: "meta-vite/personalized-fragment-invalid";
@@ -28206,7 +29102,7 @@ export type CrocoProblemRegistry = {
       readonly recovery: {
         readonly cause: "Request-owned PostgreSQL connection, transaction or cleanup failed at the Hyperdrive boundary.";
         readonly userAction: "Do not replay automatically. A committed outcome must not be retried; reconcile an unknown outcome first.";
-        readonly operatorAction: "Inspect the redacted phase, outcome, aborted and cleanupFailed fields. Correct binding or deadline configuration; acquire a fresh connection for any authorized new operation.";
+        readonly operatorAction: "Inspect the redacted phase, outcome, aborted and cleanupFailed fields. For transaction failures, investigate application SQL and callback errors. Check binding or deadline configuration when implicated by the failing phase; acquire a fresh connection for any authorized new operation.";
         readonly retryability: "not-retryable";
         readonly redactionPolicy: "safe-message";
         readonly telemetry: {
@@ -29592,7 +30488,7 @@ export type CrocoProblemRegistry = {
 
 export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 1046,
+  problemCount: 1078,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -30892,6 +31788,39 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       ],
     },
     {
+      code: "EMBEDDING_ERROR",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#embedding-error",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "deprecated",
+        deprecation: {
+          reason:
+            "The framework-owned LLM abstraction or its generated example contract was retired.",
+          migrationNote:
+            "Remove branches for this code and handle vendor SDK failures explicitly at the application call boundary.",
+          noReplacementReason:
+            "The retired generic LLM capability has no framework-level equivalent.",
+        },
+      },
+      sources: [],
+    },
+    {
       code: "ENTITLEMENT_DENIED",
       category: "Forbidden",
       status: 403,
@@ -31133,6 +32062,39 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
           kind: "problem-class",
         },
       ],
+    },
+    {
+      code: "GENERATION_ERROR",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#generation-error",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "deprecated",
+        deprecation: {
+          reason:
+            "The framework-owned LLM abstraction or its generated example contract was retired.",
+          migrationNote:
+            "Remove branches for this code and handle vendor SDK failures explicitly at the application call boundary.",
+          noReplacementReason:
+            "The retired generic LLM capability has no framework-level equivalent.",
+        },
+      },
+      sources: [],
     },
     {
       code: "GRAPHQL_NOT_FOUND",
@@ -32063,6 +33025,71 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       ],
     },
     {
+      code: "LLM_PROVIDER_NOT_FOUND",
+      category: "NotFound",
+      status: 404,
+      title: "Not Found",
+      cookbookPath: "/reference/problem-recovery-cookbook/#llm-provider-not-found",
+      recovery: {
+        cause: "The requested resource or route-visible record does not exist.",
+        userAction: "Verify the identifier and refresh the resource list before retrying.",
+        operatorAction:
+          "Confirm tenant scoping, data retention, and backing-store lookup behavior.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "deprecated",
+        deprecation: {
+          reason:
+            "The framework-owned LLM abstraction or its generated example contract was retired.",
+          migrationNote:
+            "Remove branches for this code and handle vendor SDK failures explicitly at the application call boundary.",
+          noReplacementReason:
+            "The retired generic LLM capability has no framework-level equivalent.",
+        },
+      },
+      sources: [],
+    },
+    {
+      code: "LLM_SERVICE_ERROR",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#llm-service-error",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "deprecated",
+        deprecation: {
+          reason:
+            "The framework-owned LLM abstraction or its generated example contract was retired.",
+          migrationNote:
+            "Remove branches for this code and handle vendor SDK failures explicitly at the application call boundary.",
+          noReplacementReason:
+            "The retired generic LLM capability has no framework-level equivalent.",
+        },
+      },
+      sources: [],
+    },
+    {
       code: "MEMBERSHIP_CONSTRAINT",
       category: "Forbidden",
       status: 403,
@@ -32307,6 +33334,38 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
           kind: "problem-constructor",
         },
       ],
+    },
+    {
+      code: "MODEL_NOT_FOUND",
+      category: "NotFound",
+      status: 404,
+      title: "Not Found",
+      cookbookPath: "/reference/problem-recovery-cookbook/#model-not-found",
+      recovery: {
+        cause: "The requested resource or route-visible record does not exist.",
+        userAction: "Verify the identifier and refresh the resource list before retrying.",
+        operatorAction:
+          "Confirm tenant scoping, data retention, and backing-store lookup behavior.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "deprecated",
+        deprecation: {
+          reason:
+            "The framework-owned LLM abstraction or its generated example contract was retired.",
+          migrationNote:
+            "Remove branches for this code and handle vendor SDK failures explicitly at the application call boundary.",
+          noReplacementReason:
+            "The retired generic LLM capability has no framework-level equivalent.",
+        },
+      },
+      sources: [],
     },
     {
       code: "NESTED_IMPERSONATION_NOT_ALLOWED",
@@ -33249,6 +34308,39 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       ],
     },
     {
+      code: "STRUCTURED_OUTPUT_ERROR",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#structured-output-error",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "deprecated",
+        deprecation: {
+          reason:
+            "The framework-owned LLM abstraction or its generated example contract was retired.",
+          migrationNote:
+            "Remove branches for this code and handle vendor SDK failures explicitly at the application call boundary.",
+          noReplacementReason:
+            "The retired generic LLM capability has no framework-level equivalent.",
+        },
+      },
+      sources: [],
+    },
+    {
       code: "TELEMETRY_AUTO_INSTRUMENTATION_INVALID_CONFIG",
       category: "ValidationError",
       status: 422,
@@ -33403,6 +34495,71 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
           kind: "problem-class",
         },
       ],
+    },
+    {
+      code: "TOKEN_LIMIT_EXCEEDED",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath: "/reference/problem-recovery-cookbook/#token-limit-exceeded",
+      recovery: {
+        cause: "The caller sent malformed input or unsupported request options.",
+        userAction: "Correct the request input and retry after validation passes.",
+        operatorAction:
+          "Inspect validation details and request logs; do not retry unchanged input.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "deprecated",
+        deprecation: {
+          reason:
+            "The framework-owned LLM abstraction or its generated example contract was retired.",
+          migrationNote:
+            "Remove branches for this code and handle vendor SDK failures explicitly at the application call boundary.",
+          noReplacementReason:
+            "The retired generic LLM capability has no framework-level equivalent.",
+        },
+      },
+      sources: [],
+    },
+    {
+      code: "TOOL_EXECUTION_ERROR",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#tool-execution-error",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "deprecated",
+        deprecation: {
+          reason:
+            "The framework-owned LLM abstraction or its generated example contract was retired.",
+          migrationNote:
+            "Remove branches for this code and handle vendor SDK failures explicitly at the application call boundary.",
+          noReplacementReason:
+            "The retired generic LLM capability has no framework-level equivalent.",
+        },
+      },
+      sources: [],
     },
     {
       code: "TRIAL_AUTH_REQUIRED",
@@ -34843,6 +36000,38 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
           kind: "problem-constructor",
         },
       ],
+    },
+    {
+      code: "ai-saas/model-not-found",
+      category: "NotFound",
+      status: 404,
+      title: "Not Found",
+      cookbookPath: "/reference/problem-recovery-cookbook/#ai-saas-model-not-found",
+      recovery: {
+        cause: "The requested resource or route-visible record does not exist.",
+        userAction: "Verify the identifier and refresh the resource list before retrying.",
+        operatorAction:
+          "Confirm tenant scoping, data retention, and backing-store lookup behavior.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "deprecated",
+        deprecation: {
+          reason:
+            "The framework-owned LLM abstraction or its generated example contract was retired.",
+          migrationNote:
+            "Remove branches for this code and handle vendor SDK failures explicitly at the application call boundary.",
+          noReplacementReason:
+            "The retired generic LLM capability has no framework-level equivalent.",
+        },
+      },
+      sources: [],
     },
     {
       code: "ai-saas/model-required",
@@ -40924,6 +42113,67 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       ],
     },
     {
+      code: "desktop-codegen/invalid-contract-graph",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#desktop-codegen-invalid-contract-graph",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "deprecated",
+        deprecation: {
+          reason:
+            "Croco desktop contracts and code generation were removed from the supported product scope.",
+          migrationNote: "See docs/release/problem-code-migrations.md#desktop-support-removal.",
+          noReplacementReason:
+            "Croco does not provide a replacement desktop bridge or silently map desktop contracts to web scaffolds.",
+        },
+      },
+      sources: [],
+    },
+    {
+      code: "desktop-codegen/invalid-renderer-contract-graph",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#desktop-codegen-invalid-renderer-contract-graph",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "deprecated",
+        deprecation: {
+          reason:
+            "Croco desktop contracts and code generation were removed from the supported product scope.",
+          migrationNote: "See docs/release/problem-code-migrations.md#desktop-support-removal.",
+          noReplacementReason:
+            "Croco does not provide a replacement desktop bridge or silently map desktop contracts to web scaffolds.",
+        },
+      },
+      sources: [],
+    },
+    {
       code: "diagnostics-core/duplicate-provider",
       category: "InternalServerError",
       status: 500,
@@ -43112,6 +44362,39 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
           kind: "problem-class",
         },
       ],
+    },
+    {
+      code: "events-core/transaction-context-unavailable",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#events-core-transaction-context-unavailable",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "deprecated",
+        deprecation: {
+          reason:
+            "After-commit publication no longer resolves a transaction context through a process-global container.",
+          migrationNote:
+            "See docs/release/problem-code-migrations.md#explicit-event-transaction-context.",
+          replacementCode: "events-core/after-commit-requires-active-transaction",
+        },
+      },
+      sources: [],
     },
     {
       code: "events-core/unknown-event-type",
@@ -48883,6 +50166,647 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
           kind: "problem-class",
         },
       ],
+    },
+    {
+      code: "llm-core/completion-event-publication-failed",
+      category: "Conflict",
+      status: 409,
+      title: "Conflict",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#llm-core-completion-event-publication-failed",
+      recovery: {
+        cause:
+          "The model completed billable work, but its completion event was not durably confirmed afterward.",
+        userAction:
+          "Hand the opaque failure reference to an operator; do not invoke the model again or manually publish the completion event.",
+        operatorAction:
+          "Use retryCompletionEvent with the in-process Problem or saved intent: published_unconfirmed confirms storage without republishing, delivery_in_progress waits for the active claim, and not_published atomically claims delivery before publishing. Never publish the event manually.",
+        retryability: "not-retryable",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "deprecated",
+        deprecation: {
+          reason:
+            "The framework-owned LLM abstraction or its generated example contract was retired.",
+          migrationNote:
+            "Remove branches for this code and handle vendor SDK failures explicitly at the application call boundary.",
+          noReplacementReason:
+            "The retired generic LLM capability has no framework-level equivalent.",
+        },
+      },
+      sources: [],
+    },
+    {
+      code: "llm-core/invalid-llm-prompt",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath: "/reference/problem-recovery-cookbook/#llm-core-invalid-llm-prompt",
+      recovery: {
+        cause: "The caller sent malformed input or unsupported request options.",
+        userAction: "Correct the request input and retry after validation passes.",
+        operatorAction:
+          "Inspect validation details and request logs; do not retry unchanged input.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "deprecated",
+        deprecation: {
+          reason:
+            "The framework-owned LLM abstraction or its generated example contract was retired.",
+          migrationNote:
+            "Remove branches for this code and handle vendor SDK failures explicitly at the application call boundary.",
+          noReplacementReason:
+            "The retired generic LLM capability has no framework-level equivalent.",
+        },
+      },
+      sources: [],
+    },
+    {
+      code: "llm-core/invalid-llm-response",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#llm-core-invalid-llm-response",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "deprecated",
+        deprecation: {
+          reason:
+            "The framework-owned LLM abstraction or its generated example contract was retired.",
+          migrationNote:
+            "Remove branches for this code and handle vendor SDK failures explicitly at the application call boundary.",
+          noReplacementReason:
+            "The retired generic LLM capability has no framework-level equivalent.",
+        },
+      },
+      sources: [],
+    },
+    {
+      code: "llm-core/llm-service-not-initialized",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#llm-core-llm-service-not-initialized",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "deprecated",
+        deprecation: {
+          reason:
+            "The framework-owned LLM abstraction or its generated example contract was retired.",
+          migrationNote:
+            "Remove branches for this code and handle vendor SDK failures explicitly at the application call boundary.",
+          noReplacementReason:
+            "The retired generic LLM capability has no framework-level equivalent.",
+        },
+      },
+      sources: [],
+    },
+    {
+      code: "llm-core/operation-aborted",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath: "/reference/problem-recovery-cookbook/#llm-core-operation-aborted",
+      recovery: {
+        cause: "The caller sent malformed input or unsupported request options.",
+        userAction: "Correct the request input and retry after validation passes.",
+        operatorAction:
+          "Inspect validation details and request logs; do not retry unchanged input.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "deprecated",
+        deprecation: {
+          reason:
+            "The framework-owned LLM abstraction or its generated example contract was retired.",
+          migrationNote:
+            "Remove branches for this code and handle vendor SDK failures explicitly at the application call boundary.",
+          noReplacementReason:
+            "The retired generic LLM capability has no framework-level equivalent.",
+        },
+      },
+      sources: [],
+    },
+    {
+      code: "llm-core/rate-limit-exceeded",
+      category: "TooManyRequests",
+      status: 429,
+      title: "Too Many Requests",
+      cookbookPath: "/reference/problem-recovery-cookbook/#llm-core-rate-limit-exceeded",
+      recovery: {
+        cause: "The caller exceeded a rate, quota, or concurrency limit.",
+        userAction: "Wait for the retry window or reduce request volume.",
+        operatorAction: "Check limiter state, quota configuration, and abuse signals.",
+        retryability: "retryable",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "deprecated",
+        deprecation: {
+          reason:
+            "The framework-owned LLM abstraction or its generated example contract was retired.",
+          migrationNote:
+            "Remove branches for this code and handle vendor SDK failures explicitly at the application call boundary.",
+          noReplacementReason:
+            "The retired generic LLM capability has no framework-level equivalent.",
+        },
+      },
+      sources: [],
+    },
+    {
+      code: "llm-metering/cost-limit-exceeded",
+      category: "Forbidden",
+      status: 403,
+      title: "Forbidden",
+      cookbookPath: "/reference/problem-recovery-cookbook/#llm-metering-cost-limit-exceeded",
+      recovery: {
+        cause: "The authenticated caller is not allowed to perform the requested action.",
+        userAction: "Request the required permission or choose an allowed action.",
+        operatorAction: "Review policy, role, tenant, entitlement, and impersonation context.",
+        retryability: "not-retryable",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "deprecated",
+        deprecation: {
+          reason:
+            "The framework-owned LLM abstraction was removed in favor of application-owned SDK calls and SDK-independent usage ingestion.",
+          migrationNote:
+            "Branch on ai-usage/cost-limit-exceeded after migrating usage handling to @croco/ai-usage.",
+          replacementCode: "ai-usage/cost-limit-exceeded",
+        },
+      },
+      sources: [],
+    },
+    {
+      code: "llm-metering/pricing-not-found",
+      category: "NotFound",
+      status: 404,
+      title: "Not Found",
+      cookbookPath: "/reference/problem-recovery-cookbook/#llm-metering-pricing-not-found",
+      recovery: {
+        cause: "The requested resource or route-visible record does not exist.",
+        userAction: "Verify the identifier and refresh the resource list before retrying.",
+        operatorAction:
+          "Confirm tenant scoping, data retention, and backing-store lookup behavior.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "deprecated",
+        deprecation: {
+          reason:
+            "The framework-owned LLM abstraction was removed in favor of application-owned SDK calls and SDK-independent usage ingestion.",
+          migrationNote:
+            "Branch on ai-usage/pricing-not-found after migrating usage handling to @croco/ai-usage.",
+          replacementCode: "ai-usage/pricing-not-found",
+        },
+      },
+      sources: [],
+    },
+    {
+      code: "llm-metering/pricing-registry-conflict",
+      category: "Conflict",
+      status: 409,
+      title: "Conflict",
+      cookbookPath: "/reference/problem-recovery-cookbook/#llm-metering-pricing-registry-conflict",
+      recovery: {
+        cause: "The request conflicts with current state or an idempotency constraint.",
+        userAction: "Refresh state, resolve the conflict, and retry with the updated intent.",
+        operatorAction: "Inspect concurrent writes, idempotency keys, and uniqueness constraints.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "deprecated",
+        deprecation: {
+          reason:
+            "The framework-owned LLM abstraction was removed in favor of application-owned SDK calls and SDK-independent usage ingestion.",
+          migrationNote:
+            "Branch on ai-usage/pricing-registry-conflict after migrating usage handling to @croco/ai-usage.",
+          replacementCode: "ai-usage/pricing-registry-conflict",
+        },
+      },
+      sources: [],
+    },
+    {
+      code: "llm-metering/quota-exceeded",
+      category: "Forbidden",
+      status: 403,
+      title: "Forbidden",
+      cookbookPath: "/reference/problem-recovery-cookbook/#llm-metering-quota-exceeded",
+      recovery: {
+        cause: "The authenticated caller is not allowed to perform the requested action.",
+        userAction: "Request the required permission or choose an allowed action.",
+        operatorAction: "Review policy, role, tenant, entitlement, and impersonation context.",
+        retryability: "not-retryable",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "deprecated",
+        deprecation: {
+          reason:
+            "The framework-owned LLM abstraction was removed in favor of application-owned SDK calls and SDK-independent usage ingestion.",
+          migrationNote:
+            "Branch on ai-usage/quota-exceeded after migrating usage handling to @croco/ai-usage.",
+          replacementCode: "ai-usage/quota-exceeded",
+        },
+      },
+      sources: [],
+    },
+    {
+      code: "llm-metering/record-failed",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#llm-metering-record-failed",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "deprecated",
+        deprecation: {
+          reason:
+            "The framework-owned LLM abstraction was removed in favor of application-owned SDK calls and SDK-independent usage ingestion.",
+          migrationNote:
+            "Branch on ai-usage/record-failed after migrating usage handling to @croco/ai-usage.",
+          replacementCode: "ai-usage/record-failed",
+        },
+      },
+      sources: [],
+    },
+    {
+      code: "llm-metering/service-required",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#llm-metering-service-required",
+      recovery: {
+        cause:
+          "@AiMetered required usage recording, but no scoped or global LlmMeteringService was configured.",
+        userAction:
+          "Do not retry the unchanged operation; ask the service operator to configure LLM metering or explicitly disable it for an intentionally unmetered method.",
+        operatorAction:
+          'Bind LlmMeteringService at bootstrap with setLlmMeteringService(), bind it per execution with runWithLlmMeteringService(), or set @AiMetered({ metering: "disabled" }) only when skipping usage recording is intentional.',
+        retryability: "not-retryable",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "deprecated",
+        deprecation: {
+          reason:
+            "The framework-owned LLM abstraction or its generated example contract was retired.",
+          migrationNote:
+            "Remove branches for this code and handle vendor SDK failures explicitly at the application call boundary.",
+          noReplacementReason:
+            "The retired generic LLM capability has no framework-level equivalent.",
+        },
+      },
+      sources: [],
+    },
+    {
+      code: "llm-openai/aborted",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath: "/reference/problem-recovery-cookbook/#llm-openai-aborted",
+      recovery: {
+        cause: "The caller sent malformed input or unsupported request options.",
+        userAction: "Correct the request input and retry after validation passes.",
+        operatorAction:
+          "Inspect validation details and request logs; do not retry unchanged input.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "deprecated",
+        deprecation: {
+          reason:
+            "The framework-owned LLM abstraction or its generated example contract was retired.",
+          migrationNote:
+            "Remove branches for this code and handle vendor SDK failures explicitly at the application call boundary.",
+          noReplacementReason:
+            "The retired generic LLM capability has no framework-level equivalent.",
+        },
+      },
+      sources: [],
+    },
+    {
+      code: "llm-openai/authentication-failed",
+      category: "Unauthorized",
+      status: 401,
+      title: "Unauthorized",
+      cookbookPath: "/reference/problem-recovery-cookbook/#llm-openai-authentication-failed",
+      recovery: {
+        cause: "The request did not include valid authentication credentials.",
+        userAction: "Sign in again or provide a valid credential.",
+        operatorAction: "Check authentication configuration, token issuer, and clock skew.",
+        retryability: "not-retryable",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "deprecated",
+        deprecation: {
+          reason:
+            "The framework-owned LLM abstraction or its generated example contract was retired.",
+          migrationNote:
+            "Remove branches for this code and handle vendor SDK failures explicitly at the application call boundary.",
+          noReplacementReason:
+            "The retired generic LLM capability has no framework-level equivalent.",
+        },
+      },
+      sources: [],
+    },
+    {
+      code: "llm-openai/invalid-response",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#llm-openai-invalid-response",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "deprecated",
+        deprecation: {
+          reason:
+            "The framework-owned LLM abstraction or its generated example contract was retired.",
+          migrationNote:
+            "Remove branches for this code and handle vendor SDK failures explicitly at the application call boundary.",
+          noReplacementReason:
+            "The retired generic LLM capability has no framework-level equivalent.",
+        },
+      },
+      sources: [],
+    },
+    {
+      code: "llm-openai/missing-config",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#llm-openai-missing-config",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "deprecated",
+        deprecation: {
+          reason:
+            "The framework-owned LLM abstraction or its generated example contract was retired.",
+          migrationNote:
+            "Remove branches for this code and handle vendor SDK failures explicitly at the application call boundary.",
+          noReplacementReason:
+            "The retired generic LLM capability has no framework-level equivalent.",
+        },
+      },
+      sources: [],
+    },
+    {
+      code: "llm-openai/rate-limited",
+      category: "TooManyRequests",
+      status: 429,
+      title: "Too Many Requests",
+      cookbookPath: "/reference/problem-recovery-cookbook/#llm-openai-rate-limited",
+      recovery: {
+        cause: "The caller exceeded a rate, quota, or concurrency limit.",
+        userAction: "Wait for the retry window or reduce request volume.",
+        operatorAction: "Check limiter state, quota configuration, and abuse signals.",
+        retryability: "retryable",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "deprecated",
+        deprecation: {
+          reason:
+            "The framework-owned LLM abstraction or its generated example contract was retired.",
+          migrationNote:
+            "Remove branches for this code and handle vendor SDK failures explicitly at the application call boundary.",
+          noReplacementReason:
+            "The retired generic LLM capability has no framework-level equivalent.",
+        },
+      },
+      sources: [],
+    },
+    {
+      code: "llm-openai/retryable-upstream",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#llm-openai-retryable-upstream",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "deprecated",
+        deprecation: {
+          reason:
+            "The framework-owned LLM abstraction or its generated example contract was retired.",
+          migrationNote:
+            "Remove branches for this code and handle vendor SDK failures explicitly at the application call boundary.",
+          noReplacementReason:
+            "The retired generic LLM capability has no framework-level equivalent.",
+        },
+      },
+      sources: [],
+    },
+    {
+      code: "llm-openai/terminal-upstream",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#llm-openai-terminal-upstream",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "deprecated",
+        deprecation: {
+          reason:
+            "The framework-owned LLM abstraction or its generated example contract was retired.",
+          migrationNote:
+            "Remove branches for this code and handle vendor SDK failures explicitly at the application call boundary.",
+          noReplacementReason:
+            "The retired generic LLM capability has no framework-level equivalent.",
+        },
+      },
+      sources: [],
+    },
+    {
+      code: "llm-openai/validation-failed",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath: "/reference/problem-recovery-cookbook/#llm-openai-validation-failed",
+      recovery: {
+        cause: "The caller sent malformed input or unsupported request options.",
+        userAction: "Correct the request input and retry after validation passes.",
+        operatorAction:
+          "Inspect validation details and request logs; do not retry unchanged input.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "deprecated",
+        deprecation: {
+          reason:
+            "The framework-owned LLM abstraction or its generated example contract was retired.",
+          migrationNote:
+            "Remove branches for this code and handle vendor SDK failures explicitly at the application call boundary.",
+          noReplacementReason:
+            "The retired generic LLM capability has no framework-level equivalent.",
+        },
+      },
+      sources: [],
     },
     {
       code: "meta-vite/personalized-fragment-invalid",
@@ -61132,7 +63056,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
         userAction:
           "Do not replay automatically. A committed outcome must not be retried; reconcile an unknown outcome first.",
         operatorAction:
-          "Inspect the redacted phase, outcome, aborted and cleanupFailed fields. Correct binding or deadline configuration; acquire a fresh connection for any authorized new operation.",
+          "Inspect the redacted phase, outcome, aborted and cleanupFailed fields. For transaction failures, investigate application SQL and callback errors. Check binding or deadline configuration when implicated by the failing phase; acquire a fresh connection for any authorized new operation.",
         retryability: "not-retryable",
         redactionPolicy: "safe-message",
         telemetry: {

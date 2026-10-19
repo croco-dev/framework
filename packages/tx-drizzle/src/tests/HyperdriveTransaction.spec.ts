@@ -78,7 +78,9 @@ describe("request-owned Hyperdrive transaction", () => {
   it("does not connect for an already aborted request", async () => {
     await expect(
       withHyperdriveTransaction(binding, vi.fn(), { signal: AbortSignal.abort("secret") }),
-    ).rejects.toMatchObject({ extensions: { aborted: true, outcome: "not-started" } });
+    ).rejects.toMatchObject({
+      extensions: { phase: "connect", aborted: true, outcome: "not-started" },
+    });
     expect(driver.created).toBe(0);
   });
 
@@ -89,7 +91,9 @@ describe("request-owned Hyperdrive transaction", () => {
     });
     await expect(
       withHyperdriveTransaction(binding, vi.fn(), { signal: controller.signal }),
-    ).rejects.toMatchObject({ extensions: { aborted: true, outcome: "not-started" } });
+    ).rejects.toMatchObject({
+      extensions: { phase: "connect", aborted: true, outcome: "not-started" },
+    });
     expect(driver.transaction).not.toHaveBeenCalled();
     expect(driver.end).toHaveBeenCalledOnce();
   });

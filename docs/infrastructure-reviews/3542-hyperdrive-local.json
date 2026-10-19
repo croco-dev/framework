@@ -6,53 +6,35 @@
       "classification": "runtime-adapter",
       "reason": "Opt-in request-owned pg/Drizzle transaction entrypoint with repository-only authenticated smoke Worker and HTTP/SQL verifier. Local workerd tests do not promote the root plugin or any domain adapter; no resource provisioning or Cloudflare deployment is performed.",
       "files": {
-        "packages/tx-drizzle/package.json": "a4b595656eeeb885f79acb497624cb77f256e77a700e33b0dec8b6b0786df166",
-        "packages/tx-drizzle/src/hyperdrive.ts": "193d833761b03ac28eb866107b3af533fe262849ee51b789fd2f30116cb37514",
+        "packages/tx-drizzle/package.json": "6b6b7fdf301589ed0b126df7987e5daba0534ba2122e8c9eb99882ae51c4a66c",
+        "packages/tx-drizzle/src/hyperdrive.ts": "e37cc4507444b5dadb2142ef13cba11cb64c638842e5bb830859e214e1f604f1",
         "packages/tx-drizzle/smoke/README.md": "f136de4170cf7d113f88047862c638720856ba6de89db05c8018a9349de46f09",
         "packages/tx-drizzle/smoke/protocol.mts": "59455c9b98e2ddb5c088039626a61b29a2581fd2d495fed89b8a9acfaf26036d",
         "packages/tx-drizzle/smoke/setup.sql": "61b72fa23161fbafd10a06e7a97cad8ead166c07fb1c016d13280e89efc96402",
         "packages/tx-drizzle/smoke/verify.mts": "9381dc47d8a78befcc72f9503bcdb7ba64c323f7ebbe41d320e8088e80ff0b95",
-        "packages/tx-drizzle/smoke/worker.ts": "97be0d8166ff1094057acc7f72337000850d7023a03e9051e1fea039c199f83d",
+        "packages/tx-drizzle/smoke/worker.ts": "f41f72f9df787bec9264983660c5c6a94ee043c18af6dba81e53242f2f82dd23",
         "packages/tx-drizzle/smoke/wrangler.jsonc": "8ab5a361d66e0614d8a7e0f0afc762538f6a1254f887e5fca725b3208a82e520",
         "packages/tx-drizzle/tsconfig.json": "268b6e6101bf1e08d90dca0afaed00f9394e1861cea8d4447042a4ffe16f05de"
       },
       "catalogRuntimes": [],
       "profiles": {
         "kubernetes": {
-          "result": "unverified",
-          "reason": "This change carries only local Worker/PostgreSQL evidence; no infrastructure deployment is verified.",
-          "providers": ["@croco/tx-drizzle/hyperdrive", "pg", "drizzle-orm/node-postgres"],
+          "result": "not-applicable",
+          "reason": "This optional entrypoint consumes a native Cloudflare Worker Hyperdrive binding. The Node Host does not supply that binding; its existing transaction provider is unchanged.",
+          "providers": [],
           "constraints": [
-            "No live Cloudflare Hyperdrive proxy/cache/failover or production credentials verified.",
-            "No durable domain adapter conformance or profile integration claim.",
-            "Per-call connections; applications own tenant authorization, concurrency limits and outcome reconciliation."
+            "No Node Host deployment, lifecycle or transaction provider support is added by this Worker-only entrypoint."
           ],
-          "references": [
-            "packages/tx-drizzle/src/hyperdrive.ts",
-            "packages/tx-drizzle/src/tests/HyperdriveWorkers.postgres.spec.ts",
-            "packages/tx-drizzle/README.md",
-            "packages/tx-drizzle/smoke/README.md",
-            "packages/tx-drizzle/smoke/worker.ts",
-            "packages/tx-drizzle/smoke/verify.mts"
-          ]
+          "references": ["packages/tx-drizzle/src/hyperdrive.ts", "packages/tx-drizzle/README.md"]
         },
         "aws-lambda": {
-          "result": "unverified",
-          "reason": "This change carries only local Worker/PostgreSQL evidence; no infrastructure deployment is verified.",
-          "providers": ["@croco/tx-drizzle/hyperdrive", "pg", "drizzle-orm/node-postgres"],
+          "result": "not-applicable",
+          "reason": "This optional entrypoint consumes a native Cloudflare Worker Hyperdrive binding. The Lambda Host does not supply that binding; its existing transaction provider is unchanged.",
+          "providers": [],
           "constraints": [
-            "No live Cloudflare Hyperdrive proxy/cache/failover or production credentials verified.",
-            "No durable domain adapter conformance or profile integration claim.",
-            "Per-call connections; applications own tenant authorization, concurrency limits and outcome reconciliation."
+            "No Lambda Host deployment, lifecycle or transaction provider support is added by this Worker-only entrypoint."
           ],
-          "references": [
-            "packages/tx-drizzle/src/hyperdrive.ts",
-            "packages/tx-drizzle/src/tests/HyperdriveWorkers.postgres.spec.ts",
-            "packages/tx-drizzle/README.md",
-            "packages/tx-drizzle/smoke/README.md",
-            "packages/tx-drizzle/smoke/worker.ts",
-            "packages/tx-drizzle/smoke/verify.mts"
-          ]
+          "references": ["packages/tx-drizzle/src/hyperdrive.ts", "packages/tx-drizzle/README.md"]
         },
         "cloudflare": {
           "result": "unverified",
@@ -80,7 +62,7 @@
       "classification": "pure-contract",
       "reason": "Generated additive Problem code registration for redacted Hyperdrive transaction and repository smoke-verification diagnostics; no new transport or storage implementation.",
       "files": {
-        "packages/problems-core/src/generated/problem-code-registry.ts": "4fbdc45a88642dc94075ab251124fcacc0b5f370f14368a58ed710943a8efbc2"
+        "packages/problems-core/src/generated/problem-code-registry.ts": "b4820df789aeb3e72c29449b75a54cbfb29a7ff379c3de0f299d473fccd1faa0"
       },
       "catalogRuntimes": [],
       "profiles": {
