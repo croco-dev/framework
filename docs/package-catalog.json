@@ -1288,6 +1288,12 @@
       "subtype": "provider",
       "runtimes": ["node", "lambda"],
       "domain": "Research"
+    },
+    "seo-core": {
+      "role": "Contracts",
+      "subtype": "domain",
+      "runtimes": [],
+      "domain": "Public pages"
     }
   },
   "groups": {
@@ -1359,7 +1365,8 @@
         "workflow-core",
         "promotions-core",
         "referral-core",
-        "research-core"
+        "research-core",
+        "seo-core"
       ]
     },
     "Provider": {
@@ -1628,7 +1635,8 @@
         "gamification-drizzle",
         "billing-drizzle",
         "research-core",
-        "research-drizzle"
+        "research-drizzle",
+        "seo-core"
       ]
     },
     "deprecated": {

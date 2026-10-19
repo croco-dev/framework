@@ -707,6 +707,12 @@ export const apiDocPackages = [
     moduleName: "search-meilisearch/src",
   },
   {
+    packageName: "@croco/seo-core",
+    directory: "seo-core",
+    entryPoint: "src/index.ts",
+    moduleName: "seo-core/src",
+  },
+  {
     packageName: "@croco/storage-cloudflare",
     directory: "storage-cloudflare",
     entryPoint: "src/index.ts",

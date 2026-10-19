@@ -1,6 +1,6 @@
 {
   "version": "croco.problem-code-registry.v1",
-  "problemCount": 1078,
+  "problemCount": 1079,
   "problems": [
     {
       "code": "ACCESS_DENIED",
@@ -27619,6 +27619,36 @@
         {
           "file": "packages/search-meilisearch/src/libs/problems/MeilisearchProblems.ts",
           "line": 117,
+          "column": 5,
+          "kind": "problem-constructor"
+        }
+      ]
+    },
+    {
+      "code": "seo-core/invalid-public-page",
+      "category": "ValidationError",
+      "status": 422,
+      "title": "Validation Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#seo-core-invalid-public-page",
+      "recovery": {
+        "cause": "The request or generated contract failed schema or semantic validation.",
+        "userAction": "Fix the invalid fields and retry with schema-conformant input.",
+        "operatorAction": "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "public",
+        "telemetry": {
+          "eventName": "croco.problem.info",
+          "severity": "info",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/seo-core/src/libs/publicPage.ts",
+          "line": 53,
           "column": 5,
           "kind": "problem-constructor"
         }

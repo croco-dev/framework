@@ -480,3 +480,7 @@ writes require both read and write permission for every content field, including
 ready/empty/denied/partial states; storage failures propagate for the host to render as error. The scope
 is supplied by the server, and caller payloads cannot replace it. Partial means the evidence bound was
 exceeded; it contains no credits from truncated data.
+
+## Public page inspection
+
+`createPublicPageOperations({ authorize, inspect })` binds authenticated admin authorization to an inspector from `@croco/seo-core`. It accepts registered target ids, never URLs. Authorization runs before source/response reads. Its report is shared by the CLI JSON output and `PublicPageInspector` from `@croco/admin-react`; see [the local application](../../examples/public-pages/README.md). Application policy owns site/tenant authority.

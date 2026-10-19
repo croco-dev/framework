@@ -32,6 +32,7 @@ type BuildTarget = {
 
 type PackageTarballs = {
   readonly cacheCore: string;
+  readonly seoCore: string;
   readonly diagnosticsCore: string;
   readonly frameworkContext: string;
   readonly frameworkPreset: string;
@@ -55,6 +56,7 @@ type CommandResult = {
 
 const buildTargets: readonly BuildTarget[] = [
   libraryBuildTarget("problems-core"),
+  libraryBuildTarget("seo-core"),
   libraryBuildTarget("diagnostics-core"),
   libraryBuildTarget("framework-context"),
   libraryBuildTarget("framework-preset"),
@@ -349,10 +351,13 @@ function packPackages(packRoot: string): PackageTarballs {
     rootDir,
   );
   run("pnpm", ["--filter", "@croco/storage-core", "pack", "--pack-destination", packRoot], rootDir);
+
+  run("pnpm", ["--filter", "@croco/seo-core", "pack", "--pack-destination", packRoot], rootDir);
   run("pnpm", ["--filter", "@croco/meta-vite", "pack", "--pack-destination", packRoot], rootDir);
 
   return {
     cacheCore: findTarball(packRoot, "croco-cache-core-"),
+    seoCore: findTarball(packRoot, "croco-seo-core-"),
     diagnosticsCore: findTarball(packRoot, "croco-diagnostics-core-"),
     frameworkContext: findTarball(packRoot, "croco-framework-context-"),
     frameworkPreset: findTarball(packRoot, "croco-framework-preset-"),
@@ -471,6 +476,7 @@ function writeConsumerPackageJson(consumerRoot: string, tarballs: PackageTarball
   );
   writePnpmWorkspaceOverrides(consumerRoot, {
     "@croco/cache-core": `file:${tarballs.cacheCore}`,
+    "@croco/seo-core": `file:${tarballs.seoCore}`,
     "@croco/diagnostics-core": `file:${tarballs.diagnosticsCore}`,
     "@croco/framework-context": `file:${tarballs.frameworkContext}`,
     "@croco/framework-preset": `file:${tarballs.frameworkPreset}`,

@@ -100,12 +100,27 @@ describe("API documentation pipeline", () => {
   });
 
   it("keeps one canonical, ordered package-model catalog", () => {
-    expect(apiDocPackages).toHaveLength(139);
-    expect(new Set(apiDocPackages.map(({ packageName }) => packageName)).size).toBe(139);
-    expect(new Set(apiDocPackages.map(({ directory }) => directory)).size).toBe(139);
-    expect(new Set(apiDocPackages.map(({ moduleName }) => moduleName)).size).toBe(139);
+    const docsManifest = readManifest(join(REPOSITORY_ROOT, "packages", "docs", "package.json"));
+    const modelDependencies = Object.entries(docsManifest.devDependencies ?? {})
+      .filter(([, version]) => version.startsWith("workspace:"))
+      .map(([name]) => name)
+      .sort();
+    expect(apiDocPackages.map(({ packageName }) => packageName).sort()).toEqual(modelDependencies);
+    expect(new Set(apiDocPackages.map(({ packageName }) => packageName)).size).toBe(
+      apiDocPackages.length,
+    );
+    expect(new Set(apiDocPackages.map(({ directory }) => directory)).size).toBe(
+      apiDocPackages.length,
+    );
+    expect(new Set(apiDocPackages.map(({ moduleName }) => moduleName)).size).toBe(
+      apiDocPackages.length,
+    );
     expect(apiDocPackages.map(({ packageName }) => packageName)).toEqual(
-      expect.arrayContaining(["@croco/research-core", "@croco/research-drizzle"]),
+      expect.arrayContaining([
+        "@croco/research-core",
+        "@croco/research-drizzle",
+        "@croco/seo-core",
+      ]),
     );
     expect(apiDocModelEntryPoints).toEqual(
       apiDocPackages.map(({ directory }) => `../${directory}/.turbo/docs-api/model.json`),

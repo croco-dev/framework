@@ -805,6 +805,7 @@ jobs:
               - 'packages/search-core/src/**'
               - 'packages/search-drizzle/src/**'
               - 'packages/search-meilisearch/src/**'
+              - 'packages/seo-core/src/**'
               - 'packages/storage-cloudflare/src/**'
               - 'packages/storage-cloudinary/src/**'
               - 'packages/storage-core/src/**'

@@ -136,7 +136,8 @@
     "@croco/problems-core": "workspace:*",
     "@croco/promotions-core": "workspace:*",
     "@croco/referral-core": "workspace:*",
-    "@croco/research-core": "workspace:*"
+    "@croco/research-core": "workspace:*",
+    "@croco/seo-core": "workspace:*"
   },
   "devDependencies": {
     "vitest": "4.1.8"

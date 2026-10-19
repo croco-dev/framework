@@ -1126,8 +1126,22 @@ export class RenderServer {
       metaTags += `\n    <link rel="canonical" href="${this.escapeHtml(headMetadata.canonical)}">`;
     }
 
+    const publicPage = headMetadata?.publicPage;
+    if (publicPage) {
+      metaTags += `\n    <meta name="robots" content="${this.escapeHtml(publicPage.robots)}">`;
+      metaTags += `\n    <meta name="croco:revision" content="${this.escapeHtml(publicPage.revision)}">`;
+      for (const alternate of publicPage.alternates) {
+        metaTags += `\n    <link rel="alternate" hreflang="${this.escapeHtml(alternate.locale)}" href="${this.escapeHtml(alternate.href)}">`;
+      }
+      // Escape again at the output boundary even if a caller bypasses the resolver.
+      const jsonLd = publicPage.jsonLd
+        .replace(/</g, "\\u003c")
+        .replace(/>/g, "\\u003e")
+        .replace(/&/g, "\\u0026");
+      metaTags += `\n    <script type="application/ld+json">${jsonLd}</script>`;
+    }
     return `<!DOCTYPE html>
-<html lang="en">
+<html lang="${this.escapeHtml(publicPage?.lang ?? "en")}">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">

@@ -114,6 +114,7 @@
   "@croco/search-core": "contracts",
   "@croco/search-drizzle": "plugins",
   "@croco/search-meilisearch": "plugins",
+  "@croco/seo-core": "contracts",
   "@croco/storage-cloudflare": "plugins",
   "@croco/storage-cloudinary": "plugins",
   "@croco/storage-core": "contracts",

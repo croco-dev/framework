@@ -65,12 +65,14 @@
     "test:published": "vitest run src/tests/published-contract.spec.ts",
     "typecheck": "tsc --noEmit",
     "lint": "oxlint .",
-    "docs:api:model": "node --experimental-strip-types ../docs/scripts/generate-package-api-model.mts"
+    "docs:api:model": "node --experimental-strip-types ../docs/scripts/generate-package-api-model.mts",
+    "test:public-pages": "node scripts/verify-public-pages-browser.mjs"
   },
   "dependencies": {
     "@croco/cache-core": "workspace:*",
     "@croco/presentation-preset": "workspace:*",
     "@croco/problems-core": "workspace:*",
+    "@croco/seo-core": "workspace:*",
     "@croco/storage-core": "workspace:*"
   },
   "devDependencies": {

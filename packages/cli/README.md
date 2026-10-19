@@ -385,3 +385,7 @@ Commands like `create domain` use codemods to register controllers in the API se
 ### CLI package usage
 
 Use `pnpm exec croco` inside a Croco workspace, or install `@croco/cli` as a dev dependency when a generated project needs CLI helpers in package scripts.
+
+### Inspect registered public pages
+
+`croco seo --config ./public-pages.mjs --target product-preview [--json]` loads trusted application code exporting `inspect(targetId)` and reports its shared public-page inspection. The target is a registered id, not a crawl URL; configuration resolves from the selected cwd. Exit zero means ready; partial, denied and unavailable exit one. The config owns source/handler registration and authorization. It is executable trusted code, not a sandbox. See [the local application](../../examples/public-pages/README.md).

@@ -34,6 +34,14 @@ OpenGraph / Twitter card title override
 
 ---
 
+### publicPage?
+
+> `optional` **publicPage?**: [`PublicPageMetadata`](/api/seo-core/src/type-aliases/publicpagemetadata/)
+
+Validated request-owned metadata for buffered SSR only; streaming and RSC do not consume it.
+
+---
+
 ### title?
 
 > `optional` **title?**: `string`

@@ -140,6 +140,7 @@
     "@croco/search-core": "workspace:*",
     "@croco/search-drizzle": "workspace:*",
     "@croco/search-meilisearch": "workspace:*",
+    "@croco/seo-core": "workspace:*",
     "@croco/storage-cloudflare": "workspace:*",
     "@croco/storage-cloudinary": "workspace:*",
     "@croco/storage-core": "workspace:*",
