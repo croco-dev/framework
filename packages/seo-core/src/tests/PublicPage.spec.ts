@@ -162,6 +162,34 @@ describe("Public page contracts", () => {
       diagnostics: [],
     });
   });
+  it("reads noscript content as a JavaScript-disabled browser does", () => {
+    const fallback = html
+      .replace("<main>", "<noscript><main>")
+      .replace("</main>", "</main></noscript>");
+    expect(validate(fallback)).toMatchObject({ state: "ready", diagnostics: [] });
+  });
+  it.each(['<base href="https://other.example/">', '<base href="http://[">'])(
+    "rejects a base URL that changes a declared link destination: %s",
+    (base) => {
+      const redirected = html.replace("<head>", `<head>${base}`);
+      expect(validate(redirected)).toMatchObject({
+        state: "partial",
+        diagnostics: [{ code: "SEO_LINK_MISSING", field: "links" }],
+      });
+    },
+  );
+  it.each([
+    '<base href="/other/">',
+    '<base target="_blank"><base href="/other/">',
+    '<base href="/other/"><base href="https://other.example/">',
+    '<base href="javascript:alert(1)">',
+    '<base href="data:text/html,ignored">',
+  ])("accepts a document base that preserves the declared destination: %s", (base) => {
+    expect(validate(html.replace("<head>", `<head>${base}`))).toMatchObject({
+      state: "ready",
+      diagnostics: [],
+    });
+  });
   it("ignores feed alternate links without hreflang", () => {
     expect(
       validate(

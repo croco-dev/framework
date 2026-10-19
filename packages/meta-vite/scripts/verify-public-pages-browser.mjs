@@ -15,6 +15,7 @@ await build({
     application: fileURLToPath(
       new URL("../../../examples/public-pages/application.mjs", import.meta.url),
     ),
+    inspection: fileURLToPath(new URL("../../seo-core/src/index.ts", import.meta.url)),
   },
   outDir: evidenceDir,
   format: ["esm"],
@@ -44,7 +45,12 @@ await symlink(
   join(evidenceDir, "node_modules"),
   "dir",
 );
-const { app, inspect } = await import(pathToFileURL(join(evidenceDir, "application.mjs")).href);
+const { app, inspect, definition, handler } = await import(
+  pathToFileURL(join(evidenceDir, "application.mjs")).href
+);
+const { validatePublicPageResponse } = await import(
+  pathToFileURL(join(evidenceDir, "inspection.mjs")).href
+);
 const server = createServer(async (request, response) => {
   try {
     if (request.url === "/favicon.ico") {
@@ -121,6 +127,55 @@ try {
       });
     }
     assert.deepEqual(errors, []);
+    const requestUrl = `${origin}/products/lamp-7?variant=amber`;
+    const snapshot = await definition.source.load(new Request(requestUrl));
+    const response = await handler(new Request(requestUrl));
+    const initialHtml = await response.text();
+    const inspectionTarget = { id: "browser-links", definition, requestUrl, respond: handler };
+    for (const [id, base, fallback, expected] of [
+      ["noscript", "", true, "ready"],
+      ["foreign-base", '<base href="https://other.example/">', false, "partial"],
+      ["same-base", '<base href="/other/">', false, "ready"],
+      ["first-base", '<base href="/other/"><base href="https://other.example/">', false, "ready"],
+      ["invalid-base", '<base href="http://[">', false, "partial"],
+      ["script-base", '<base href="javascript:alert(1)">', false, "ready"],
+      ["data-base", '<base href="data:text/html,ignored">', false, "ready"],
+    ]) {
+      let candidate = initialHtml.replace("<head>", `<head>${base}`);
+      if (fallback)
+        candidate = candidate
+          .replace("<main", "<noscript><main")
+          .replace("</main>", "</main></noscript>");
+      await page.goto(requestUrl);
+      await page.setContent(candidate);
+      const link = page.getByRole("link", { name: "Delivery details" });
+      assert.equal(await link.isVisible(), true, id);
+      const destination = await link.evaluate((node) => node.href);
+      assert.equal(
+        destination,
+        id === "foreign-base"
+          ? "https://other.example/delivery"
+          : id === "invalid-base"
+            ? "/delivery"
+            : `${origin}/delivery`,
+        id,
+      );
+      const report = validatePublicPageResponse(inspectionTarget, snapshot, {
+        status: response.status,
+        headers: response.headers,
+        html: candidate,
+      });
+      assert.equal(report.state, expected, id);
+      assert.deepEqual(
+        report.diagnostics,
+        expected === "partial" ? [{ code: "SEO_LINK_MISSING", field: "links" }] : [],
+        id,
+      );
+    }
+    assert.deepEqual(errors, [
+      "'javascript' URLs may not be used as base URLs for a document. []",
+      "'data' URLs may not be used as base URLs for a document. []",
+    ]);
     await context.close();
   }
   for (const [path, status] of [
@@ -156,10 +211,20 @@ try {
       javascriptDisabled: true,
       viewports: ["1280x900", "390x844"],
       surfaces: ["PDP", "ready", "partial", "denied", "unavailable"],
+      linkFixtures: [
+        "noscript",
+        "foreign-base",
+        "same-base",
+        "first-base",
+        "invalid-base",
+        "script-base",
+        "data-base",
+      ],
       xssExecuted: false,
       httpStatuses: [200, 403, 404, 410, 308, 503],
       pageErrors: [],
-      consoleErrors: [],
+      unexpectedConsoleErrors: [],
+      expectedBaseUrlRejections: ["javascript", "data"],
     }),
   );
 } finally {

@@ -78,7 +78,7 @@ export function validatePublicPageResponse(
 ): PublicPageInspection {
   const diagnostics: PublicPageDiagnostic[] = [];
   const fail = (code: string, field: string) => diagnostics.push({ code: `SEO_${code}`, field });
-  const root = parse(response.html);
+  const root = parse(response.html, { scriptingEnabled: false });
   const nodes = elements(root);
   const head = nodes.find((node) => node.tagName === "head");
   const headNodes = head ? elements(head) : [];
@@ -182,12 +182,32 @@ export function validatePublicPageResponse(
   if (!visible.includes(normalize(snapshot.content.description)))
     fail("BODY_DESCRIPTION_MISSING", "body");
   const bodyNodes = body ? visibleElements(body) : [];
+  const baseHref = nodes.find(
+    (node) => node.tagName === "base" && attr(node, "href") !== undefined,
+  );
+  let documentBase = target.requestUrl;
+  if (baseHref) {
+    try {
+      const base = new URL(attr(baseHref, "href") ?? "", target.requestUrl);
+      if (!["data:", "javascript:"].includes(base.protocol)) documentBase = base.href;
+    } catch {
+      documentBase = "about:blank";
+    }
+  }
+  const preservesDestination = (href: string): boolean => {
+    try {
+      return new URL(href, documentBase).href === new URL(href, target.requestUrl).href;
+    } catch {
+      return false;
+    }
+  };
   for (const link of snapshot.content.links) {
     if (
       !bodyNodes.some(
         (node) =>
           node.tagName === "a" &&
           attr(node, "href") === link.href &&
+          preservesDestination(link.href) &&
           normalize(text(node)) === normalize(link.label),
       )
     )
