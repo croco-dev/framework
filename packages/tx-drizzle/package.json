@@ -64,8 +64,8 @@
     "typecheck": "tsc --noEmit",
     "docs:api:model": "node --experimental-strip-types ../docs/scripts/generate-package-api-model.mts",
     "test:workers": "pnpm test:live",
-    "smoke:verify": "node --experimental-strip-types ../../scripts/tracked-file-mutation-guard.mts --recovery \"Restore the Hyperdrive smoke command and use an untracked report path\" -- node --experimental-strip-types smoke/verify.mts",
-    "smoke:bundle": "WRANGLER_SEND_METRICS=false node --experimental-strip-types ../../scripts/tracked-file-mutation-guard.mts --recovery \"Restore the Hyperdrive smoke command and use an untracked report path\" -- wrangler deploy --dry-run --config smoke/wrangler.jsonc --outdir \"$PWD/.wrangler/smoke-build\"",
+    "smoke:verify": "pnpm --workspace-root tracked-files:guard --recovery \"Restore the Hyperdrive smoke command and use an untracked report path\" -- pnpm --dir packages/tx-drizzle exec node --experimental-strip-types smoke/verify.mts",
+    "smoke:bundle": "WRANGLER_SEND_METRICS=false pnpm --workspace-root tracked-files:guard --recovery \"Restore the Hyperdrive smoke command and use an untracked report path\" -- pnpm --dir packages/tx-drizzle exec wrangler deploy --dry-run --config smoke/wrangler.jsonc --outdir \"$PWD/.wrangler/smoke-build\"",
     "test:live": "CROCO_TEST_REAL_RESOURCES=1 vitest run src/tests/HyperdriveWorkers.postgres.spec.ts"
   },
   "dependencies": {

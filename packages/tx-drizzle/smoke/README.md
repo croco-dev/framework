@@ -60,7 +60,7 @@ The artifact uses compatibility date `2026-03-12` and `nodejs_compat`, matching 
 Build the PR candidate before bundling: this entrypoint is not yet an npm release. The package
 pins Wrangler `4.73.0`; `smoke:bundle` always passes `--dry-run` and writes its output to
 `.wrangler/smoke-build` inside this package. Both package commands use the repository
-tracked-file mutation guard; choose an untracked report path such as `/tmp` so a report
+tracked-file mutation guard from the workspace root; choose an untracked report path such as `/tmp` so a report
 cannot overwrite committed source. A future operator may use Wrangler with
 `--config smoke/wrangler.jsonc`; no package script uploads/deploys or provisions resources.
 Cloudflare account authentication, binding provisioning and actual deployment remain manual

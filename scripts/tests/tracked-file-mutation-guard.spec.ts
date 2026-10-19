@@ -122,6 +122,56 @@ describe("tracked-file-mutation-guard", () => {
     expect(readFileSync(join(repo, "tracked.txt"), "utf8")).toBe("original");
     expect(status(repo)).toBe("");
   });
+  it("protects root and sibling tracked files through the package smoke wrapper", () => {
+    const repo = createRepository();
+    const packageRoot = join(repo, "packages/tx-drizzle");
+    mkdirSync(join(packageRoot, "smoke"), { recursive: true });
+    mkdirSync(join(repo, "scripts"));
+    mkdirSync(join(repo, "packages/sibling"));
+    const repositoryRoot = resolve(__dirname, "../..");
+    const rootManifest = JSON.parse(readFileSync(join(repositoryRoot, "package.json"), "utf8"));
+    const packageManifest = JSON.parse(
+      readFileSync(join(repositoryRoot, "packages/tx-drizzle/package.json"), "utf8"),
+    );
+    writeFileSync(join(repo, "scripts/tracked-file-mutation-guard.mts"), readFileSync(script));
+    writeFileSync(join(repo, "pnpm-workspace.yaml"), "packages:\n  - packages/*\n");
+    writeFileSync(
+      join(repo, "package.json"),
+      JSON.stringify({
+        private: true,
+        scripts: { "tracked-files:guard": rootManifest.scripts["tracked-files:guard"] },
+      }),
+    );
+    writeFileSync(
+      join(packageRoot, "package.json"),
+      JSON.stringify({
+        name: "@fixture/smoke",
+        scripts: { "smoke:verify": packageManifest.scripts["smoke:verify"] },
+      }),
+    );
+    writeFileSync(
+      join(packageRoot, "smoke/verify.mts"),
+      'import { writeFileSync } from "node:fs"; writeFileSync(process.argv[process.argv.indexOf("--output") + 1], "changed");',
+    );
+    writeFileSync(join(repo, "packages/sibling/tracked.txt"), "sibling original");
+    git(repo, ["add", "."]);
+    git(repo, ["commit", "-m", "smoke wrapper fixture"]);
+
+    for (const output of ["../../tracked.txt", "../sibling/tracked.txt"]) {
+      const result = spawnSync("pnpm", ["smoke:verify", "--output", output], {
+        cwd: packageRoot,
+        encoding: "utf8",
+      });
+      expect(result.status).not.toBe(0);
+      expect(result.stderr).toContain("the verification command mutated tracked files");
+      expect(result.stderr).toContain("restored the tracked worktree and index baseline");
+      expect(readFileSync(join(repo, "tracked.txt"), "utf8")).toBe("original");
+      expect(readFileSync(join(repo, "packages/sibling/tracked.txt"), "utf8")).toBe(
+        "sibling original",
+      );
+      expect(status(repo)).toBe("");
+    }
+  });
   it("reports command failure alongside mutation", () => {
     const result = run(createRepository(), [
       "node",

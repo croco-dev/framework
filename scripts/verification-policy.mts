@@ -120,9 +120,9 @@ const TEMPLATE_SCRIPT_NAMES = new Set([
 
 const HYPERDRIVE_SMOKE_COMMANDS: Readonly<Record<string, string>> = {
   "smoke:bundle":
-    'WRANGLER_SEND_METRICS=false node --experimental-strip-types ../../scripts/tracked-file-mutation-guard.mts --recovery "Restore the Hyperdrive smoke command and use an untracked report path" -- wrangler deploy --dry-run --config smoke/wrangler.jsonc --outdir "$PWD/.wrangler/smoke-build"',
+    'WRANGLER_SEND_METRICS=false pnpm --workspace-root tracked-files:guard --recovery "Restore the Hyperdrive smoke command and use an untracked report path" -- pnpm --dir packages/tx-drizzle exec wrangler deploy --dry-run --config smoke/wrangler.jsonc --outdir "$PWD/.wrangler/smoke-build"',
   "smoke:verify":
-    'node --experimental-strip-types ../../scripts/tracked-file-mutation-guard.mts --recovery "Restore the Hyperdrive smoke command and use an untracked report path" -- node --experimental-strip-types smoke/verify.mts',
+    'pnpm --workspace-root tracked-files:guard --recovery "Restore the Hyperdrive smoke command and use an untracked report path" -- pnpm --dir packages/tx-drizzle exec node --experimental-strip-types smoke/verify.mts',
 };
 
 const CLI_POLICIES: Readonly<Record<string, VerificationPolicy>> = {
@@ -277,7 +277,7 @@ export function classifyVerificationPath(path: VerificationPath): VerificationPo
         classification: "repository-guarded",
         owner: `@croco/tx-drizzle ${path.name}`,
         nonmutationEvidence:
-          "The exact command uses tracked-file-mutation-guard; Wrangler is dry-run only and outputs ignored artifacts, while the verifier writes its explicit report and UUID-scoped smoke database rows",
+          "The exact command runs tracked-file-mutation-guard from the workspace root before executing in the package directory; Wrangler is dry-run only and outputs ignored artifacts, while the verifier writes its explicit report and UUID-scoped smoke database rows",
         recoveryCommand:
           "Restore the Hyperdrive smoke command and use an untracked report path; reconcile the reported run UUID before rerunning",
       };
