@@ -134,9 +134,9 @@ describe("crocoPlugin", () => {
     expect(app.errors).toEqual([]);
     expect(Object.keys(app.metafile?.inputs ?? {})).toContain("src/registry.gen.ts");
     const graph = fs.readFileSync(path.join(TEMP_DIR, "src", "registry.gen.ts"), "utf8");
-    expect(graph).toContain('from "./Service"');
-    expect(graph).toContain('from "../Parent"');
-    expect(graph).toContain('from "../other/Sibling"');
+    expect(graph).toContain('from "./Service.js"');
+    expect(graph).toContain('from "../Parent.js"');
+    expect(graph).toContain('from "../other/Sibling.js"');
     const registry = await esbuild.build({ ...common, entryPoints: ["src/registry.gen.ts"] });
     expect(registry.errors).toEqual([]);
     expect(Object.keys(registry.metafile?.inputs ?? {})).toEqual(
