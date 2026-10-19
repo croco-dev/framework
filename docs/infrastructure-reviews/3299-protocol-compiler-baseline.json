@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "protocol-codegen",
+      "classification": "protocol-render",
+      "reason": "Use the TypeScript 6 compiler embedded in pinned ts-morph 28 for controller analysis/emission. Populate native Node module formats and keep each output directory package scope aligned with its .js files across referenced projects, independently of .mts/.cts overrides. RPC/OpenAPI consume this shared build-time project; catalog runtime claims remain empty.",
+      "files": {
+        "packages/protocol-codegen/package.json": "baccce5ebff2947047815bda91e2bbe471c53985743763a18cccaa45a7fdee9f",
+        "packages/protocol-codegen/src/libs/ControllerProject.ts": "520432da797f0210f9f70f8db5e3a8433ba92c0b8271545a645ac4c0f6b58586"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "The compiler runs in a Node build process before deployment to the Kubernetes Node Host. Parsing TypeScript module options and preserving emitted package boundaries introduces no deployed Host, storage, provider or request lifecycle behavior.",
+          "providers": [],
+          "constraints": [
+            "Requires Node filesystem and child-process access at build time; this is not a deployed runtime compatibility claim."
+          ],
+          "references": [
+            "packages/protocol-codegen/README.md",
+            "packages/protocol-codegen/src/libs/ControllerProject.ts",
+            "docs/typescript-support.md"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "The compiler runs in a Node build process before deployment to the Lambda Host. Parsing TypeScript module options and preserving emitted package boundaries introduces no deployed Host, storage, provider or request lifecycle behavior.",
+          "providers": [],
+          "constraints": [
+            "Requires Node filesystem and child-process access at build time; this is not a deployed runtime compatibility claim."
+          ],
+          "references": [
+            "packages/protocol-codegen/README.md",
+            "packages/protocol-codegen/src/libs/ControllerProject.ts",
+            "docs/typescript-support.md"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "The compiler runs in a Node build process before deployment to the Workers or Node Container Host. Parsing TypeScript module options and preserving emitted package boundaries introduces no deployed Host, storage, provider or request lifecycle behavior.",
+          "providers": [],
+          "constraints": [
+            "Requires Node filesystem and child-process access at build time; this is not a deployed runtime compatibility claim."
+          ],
+          "references": [
+            "packages/protocol-codegen/README.md",
+            "packages/protocol-codegen/src/libs/ControllerProject.ts",
+            "docs/typescript-support.md"
+          ]
+        }
+      }
+    }
+  ]
+}

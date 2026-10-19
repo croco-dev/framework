@@ -67,8 +67,8 @@ describe("loadRoutes", () => {
         JSON.stringify({
           compilerOptions: {
             experimentalDecorators: true,
-            module: moduleKind,
-            moduleResolution: moduleKind === "NodeNext" ? "NodeNext" : "Node",
+            module: moduleKind === "CommonJS" ? "Node16" : moduleKind,
+            moduleResolution: moduleKind === "NodeNext" ? "NodeNext" : "Node16",
             target: "ES2022",
           },
         }),
@@ -319,11 +319,10 @@ schema.parse({ id: 'user-1' });`,
         tsconfigPath,
         JSON.stringify({
           compilerOptions: {
-            baseUrl: ".",
             experimentalDecorators: true,
             module: "NodeNext",
             moduleResolution: "NodeNext",
-            paths: { "@app/*": ["src/*"] },
+            paths: { "@app/*": ["./src/*.ts"] },
             target: "ES2022",
           },
         }),

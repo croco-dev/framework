@@ -4,6 +4,8 @@ Shared TypeScript project loading for Croco protocol generators.
 
 The package gives RPC and OpenAPI generation one deterministic contract for application tsconfig discovery, compiler diagnostics, temporary JavaScript emission, runtime path-alias rewriting, and module loading. An explicit `tsconfigPath` takes precedence; otherwise the nearest `tsconfig.json` above the matched controller sources is used. Projects without a config retain the legacy CommonJS/ES2020 analysis defaults.
 
+The pinned `ts-morph` compiler supports TypeScript 6 configuration, including `module: "node18"`, `"node20"` and `"nodenext"`. Temporary output retains the source package's ESM/CommonJS boundary. See [compiler support](../../docs/typescript-support.md) for the embedded compiler version and compatibility checks.
+
 ```ts
 import { createControllerProject } from "@croco/protocol-codegen";
 

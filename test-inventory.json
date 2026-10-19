@@ -4483,6 +4483,12 @@
       "owner": "@croco/promotions-drizzle"
     },
     {
+      "path": "packages/protocol-codegen/src/tests/CompilerBaseline.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/protocol-codegen"
+    },
+    {
       "path": "packages/protocol-codegen/src/tests/ControllerProject.spec.ts",
       "lane": "fast",
       "qualifiers": [],

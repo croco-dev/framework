@@ -215,8 +215,8 @@ export function createControllerProject(
       }
       for (const context of emitContexts) {
         rewriteRuntimeSpecifiers(context, outputPaths);
-        writeModuleBoundaries(context, outputPaths);
       }
+      writeModuleBoundaries(emitContexts, outputPaths);
       emitted = true;
     },
     async importModule(sourceFile: SourceFile): Promise<ControllerModule> {
@@ -263,10 +263,18 @@ function addControllerSourceFiles(project: Project, patterns: readonly string[])
 }
 
 function resolveProjectSourceDependencies(project: Project): void {
-  project.resolveSourceFileDependencies();
   let addedDynamicDependency: boolean;
+  let pendingNodeFormats = isNodeModuleKind(project.getCompilerOptions().module);
 
   do {
+    if (pendingNodeFormats) {
+      // Rebuild cached resolutions after discovering files whose package format was unknown.
+      project.compilerOptions.set({});
+      for (const sourceFile of project.getSourceFiles()) {
+        applyNodeModuleFormat(sourceFile, project.getCompilerOptions());
+      }
+    }
+    project.resolveSourceFileDependencies();
     addedDynamicDependency = false;
     const compilerOptions = project.getCompilerOptions();
 
@@ -299,8 +307,21 @@ function resolveProjectSourceDependencies(project: Project): void {
       visit(sourceFile.compilerNode);
     }
 
-    if (addedDynamicDependency) project.resolveSourceFileDependencies();
-  } while (addedDynamicDependency);
+    pendingNodeFormats =
+      isNodeModuleKind(compilerOptions.module) &&
+      project
+        .getSourceFiles()
+        .some(
+          (sourceFile) =>
+            sourceFile.compilerNode.impliedNodeFormat !==
+            ts.getImpliedNodeFormatForFile(
+              sourceFile.getFilePath(),
+              undefined,
+              ts.sys,
+              compilerOptions,
+            ),
+        );
+  } while (addedDynamicDependency || pendingNodeFormats);
 }
 
 function createReferenceProjects(referencePaths: readonly string[]): Project[] {
@@ -349,9 +370,11 @@ function createEmitContext(
     ),
     skipFileDependencyResolution: true,
   });
-  const sourceFiles = analysisContext.sourceFiles.map((sourceFile) =>
-    project.addSourceFileAtPath(sourceFile.getFilePath()),
-  );
+  const sourceFiles = analysisContext.sourceFiles.map((sourceFile) => {
+    const emittedSource = project.addSourceFileAtPath(sourceFile.getFilePath());
+    applyNodeModuleFormat(emittedSource, project.getCompilerOptions());
+    return emittedSource;
+  });
   return { project, sourceFiles };
 }
 
@@ -867,6 +890,26 @@ function getResolutionFlags(): readonly string[] {
   return flags;
 }
 
+function applyNodeModuleFormat(sourceFile: SourceFile, options: ts.CompilerOptions): void {
+  if (!isNodeModuleKind(options.module)) return;
+  // ts-morph creates SourceFiles without the package format populated by a native compiler host.
+  sourceFile.compilerNode.impliedNodeFormat = ts.getImpliedNodeFormatForFile(
+    sourceFile.getFilePath(),
+    undefined,
+    ts.sys,
+    options,
+  );
+}
+
+function isNodeModuleKind(moduleKind: ts.ModuleKind | undefined): boolean {
+  return (
+    moduleKind === ts.ModuleKind.Node16 ||
+    moduleKind === ts.ModuleKind.Node18 ||
+    moduleKind === ts.ModuleKind.Node20 ||
+    moduleKind === ts.ModuleKind.NodeNext
+  );
+}
+
 function isEsmModuleKind(moduleKind: ts.ModuleKind | undefined, sourcePath: string): boolean {
   return (
     moduleKind === ts.ModuleKind.ES2015 ||
@@ -874,25 +917,38 @@ function isEsmModuleKind(moduleKind: ts.ModuleKind | undefined, sourcePath: stri
     moduleKind === ts.ModuleKind.ES2022 ||
     moduleKind === ts.ModuleKind.ESNext ||
     moduleKind === ts.ModuleKind.Preserve ||
-    ((moduleKind === ts.ModuleKind.Node16 || moduleKind === ts.ModuleKind.NodeNext) &&
-      sourceUsesEsmBoundary(sourcePath))
+    (isNodeModuleKind(moduleKind) && sourceUsesEsmBoundary(sourcePath))
   );
 }
 
 function writeModuleBoundaries(
-  context: ProjectContext,
+  contexts: readonly ProjectContext[],
   outputPaths: ReadonlyMap<string, string>,
 ): void {
-  const moduleKind = context.project.getCompilerOptions().module;
+  const boundaries = new Map<string, { isEsm: boolean; hasJavaScript: boolean }>();
 
-  for (const sourceFile of context.sourceFiles) {
-    const sourcePath = sourceFile.getFilePath();
-    if (sourcePath.endsWith(".json")) continue;
-    const emittedPath = getEmittedFilePath(outputPaths, sourcePath);
-    if (!fs.existsSync(emittedPath)) continue;
-    const isEsm = isEsmModuleKind(moduleKind, sourcePath);
+  for (const context of contexts) {
+    const moduleKind = context.project.getCompilerOptions().module;
+    for (const sourceFile of context.sourceFiles) {
+      const sourcePath = sourceFile.getFilePath();
+      if (sourcePath.endsWith(".json")) continue;
+      const emittedPath = getEmittedFilePath(outputPaths, sourcePath);
+      if (!fs.existsSync(emittedPath)) continue;
+      const directory = path.dirname(emittedPath);
+      const hasJavaScript = path.extname(emittedPath) === ".js";
+      // Explicit .mjs/.cjs formats cannot override the package scope of a sibling .js file.
+      if (!boundaries.get(directory)?.hasJavaScript || hasJavaScript) {
+        boundaries.set(directory, {
+          isEsm: isEsmModuleKind(moduleKind, sourcePath),
+          hasJavaScript,
+        });
+      }
+    }
+  }
+
+  for (const [directory, { isEsm }] of boundaries) {
     fs.writeFileSync(
-      path.join(path.dirname(emittedPath), "package.json"),
+      path.join(directory, "package.json"),
       JSON.stringify({ type: isEsm ? "module" : "commonjs" }),
     );
   }

@@ -2,10 +2,12 @@
 
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
+import { createRequire } from "node:module";
 import { pathToFileURL } from "node:url";
 import { parse as parseYaml } from "yaml";
 
 export const TYPESCRIPT_BASELINE = "6.0.3";
+export const PROTOCOL_TYPESCRIPT_BASELINE = "6.0.2";
 export const GENERATED_TYPESCRIPT_RANGE = `^${TYPESCRIPT_BASELINE}`;
 export const TSUP_COMPATIBILITY_VERSION = "8.5.1";
 export const TSUP_COMPATIBILITY_PATCH = "patches/tsup@8.5.1.patch";
@@ -52,6 +54,16 @@ export function collectCompilerBaselineDiagnostics(rootDir: string): string[] {
   ) as JsonRecord;
 
   diagnostics.push(...collectWorkspaceCompilerDiagnostics(rootPackage, workspace));
+
+  // ts-morph embeds its compiler; the workspace typescript override cannot replace it.
+  const protocolRequire = createRequire(join(rootDir, "packages/protocol-codegen/package.json"));
+  const protocolCompiler = protocolRequire("ts-morph") as { ts: { version: string } };
+  checkValue(
+    diagnostics,
+    "protocol-codegen embedded TypeScript compiler",
+    protocolCompiler.ts.version,
+    PROTOCOL_TYPESCRIPT_BASELINE,
+  );
 
   const baseConfigPath = join(rootDir, "tsconfig", "tsconfig.base.json");
   const baseCompilerOptions = compilerOptionsFor(readJson(baseConfigPath));

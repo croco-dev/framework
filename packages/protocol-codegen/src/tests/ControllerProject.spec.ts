@@ -28,9 +28,9 @@ describe("createControllerProject", () => {
       writeJson(path.join(root, "tsconfig.json"), {
         compilerOptions: {
           target: "ES2022",
-          module,
+          module: module === "CommonJS" ? "Node16" : module,
           moduleResolution:
-            module === "NodeNext" ? "NodeNext" : module === "CommonJS" ? "Node" : "Bundler",
+            module === "NodeNext" ? "NodeNext" : module === "CommonJS" ? "Node16" : "Bundler",
           jsx: "preserve",
         },
       });
@@ -66,8 +66,7 @@ describe("createControllerProject", () => {
           module: "ESNext",
           moduleResolution: "Bundler",
           jsx: "preserve",
-          baseUrl: ".",
-          paths: { "@helper/*": ["helpers/*"] },
+          paths: { "@helper/*": ["./helpers/*"] },
         },
       });
       writeFile(path.join(root, "helpers", "value.tsx"), "export const value = 'tsx-helper';");
@@ -419,10 +418,9 @@ describe("createControllerProject", () => {
         writeJson(path.join(root, "tsconfig.json"), {
           compilerOptions: {
             target: "ES2022",
-            module: kind === "CommonJS" ? "CommonJS" : "ESNext",
-            moduleResolution: kind === "CommonJS" ? "Node" : "Bundler",
-            baseUrl: ".",
-            paths: { "@helper/*": [`${directory}/*`] },
+            module: kind === "CommonJS" ? "Node16" : "ESNext",
+            moduleResolution: kind === "CommonJS" ? "Node16" : "Bundler",
+            paths: { "@helper/*": [`./${directory}/*`] },
           },
         });
         writeFile(
@@ -466,8 +464,7 @@ describe("createControllerProject", () => {
       compilerOptions: {
         target: "ES2020",
         module: "CommonJS",
-        baseUrl: ".",
-        paths: { "@app/*": ["src/*"] },
+        paths: { "@app/*": ["./src/*.ts"] },
       },
     });
     writeFile(path.join(root, "src", "value.ts"), "export const value = 'resolved';");
@@ -566,8 +563,7 @@ describe("createControllerProject", () => {
         module: "CommonJS",
         resolveJsonModule: true,
         esModuleInterop: true,
-        baseUrl: ".",
-        paths: { "@config/*": ["config/*"] },
+        paths: { "@config/*": ["./config/*"] },
       },
     });
     writeJson(path.join(root, "config", "nested", "settings.json"), { title: "aliased-json" });
@@ -612,8 +608,7 @@ describe("createControllerProject", () => {
           module: "NodeNext",
           moduleResolution: "NodeNext",
           resolveJsonModule: true,
-          baseUrl: ".",
-          paths: { "@config/*": ["config/*"] },
+          paths: { "@config/*": ["./config/*"] },
         },
       });
       writeJson(path.join(root, "config", "settings.json"), { title: "esm-json" });
@@ -626,9 +621,7 @@ describe("createControllerProject", () => {
       const session = createControllerProject({ cwd: root, controllers: "src/Controller.ts" });
 
       try {
-        expect(session.getPreEmitDiagnostics().map((diagnostic) => diagnostic.getCode())).toEqual(
-          importKind === "static" ? [2856] : [],
-        );
+        expect(session.getPreEmitDiagnostics()).toEqual([]);
         session.emit();
         const [moduleExports] = await session.importControllerModules();
         const Controller = moduleExports.Controller as { title: string | (() => Promise<string>) };
@@ -657,8 +650,7 @@ describe("createControllerProject", () => {
         target: "ES2022",
         module: "NodeNext",
         moduleResolution: "NodeNext",
-        baseUrl: ".",
-        paths: { "@app/*": ["src/*"] },
+        paths: { "@app/*": ["./src/*.ts"] },
       },
     });
     writeFile(path.join(root, "src", "value.ts"), "export const value = 'esm';");
@@ -780,11 +772,10 @@ describe("createControllerProject", () => {
     const root = createTemporaryDirectory();
     writeJson(path.join(root, "shared", "tsconfig.json"), {
       compilerOptions: {
-        baseUrl: ".",
         composite: true,
         declaration: true,
         module: "CommonJS",
-        paths: { "@shared/*": ["src/*"] },
+        paths: { "@shared/*": ["./src/*"] },
       },
       include: ["src/**/*.ts"],
     });
@@ -868,10 +859,9 @@ describe("createControllerProject", () => {
     writeJson(path.join(root, "package.json"), { type: "module" });
     writeJson(path.join(root, "tsconfig.json"), {
       compilerOptions: {
-        baseUrl: ".",
         module: "NodeNext",
         moduleResolution: "NodeNext",
-        paths: { "@app/*": ["src/*"] },
+        paths: { "@app/*": ["./src/*.ts"] },
         target: "ES2022",
       },
     });
