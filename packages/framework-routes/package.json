@@ -48,7 +48,8 @@
     "@croco/framework-context": "workspace:*",
     "@croco/protocols-core": "workspace:*",
     "@croco/protocols-rest": "workspace:*",
-    "reflect-metadata": "^0.2.2"
+    "reflect-metadata": "^0.2.2",
+    "typescript": "6.0.3"
   },
   "devDependencies": {
     "tsup": "8.5.1",

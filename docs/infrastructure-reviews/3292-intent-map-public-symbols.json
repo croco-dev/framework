@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "framework-routes",
+      "classification": "pure-contract",
+      "reason": "Issue #3292: derive public-symbol metadata from actual TypeScript exports instead of lexical regex matches, preserving named exports and locations. The explicit TypeScript dependency supports existing build-time inspection and adds no deployed Host or infrastructure capability.",
+      "files": {
+        "packages/framework-routes/package.json": "7f5be621cdb3999d0174e0de89144a15f46d147b1233be3f68308d01bcd2b7c6",
+        "packages/framework-routes/src/intent-map.ts": "63a67eb70c61646ada9af18fdcd0ee5803f7c7246c92ae9ce1f6f47044f2f2fb"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "This change corrects build-time source inspection on the Node tooling process. It adds no Kubernetes Host, provider, resource binding, deployment or runtime lifecycle.",
+          "providers": [],
+          "constraints": [
+            "Intent-map generation reads local source files; no Kubernetes execution or certification is claimed."
+          ],
+          "references": [
+            "packages/framework-routes/src/intent-map.ts",
+            "packages/framework-routes/src/tests/IntentMapPublicSymbols.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "The export parser runs when generating source metadata and does not participate in Lambda invocation, initialization, context isolation or flush boundaries.",
+          "providers": [],
+          "constraints": [
+            "No Lambda runtime support or live infrastructure validation is claimed by this parser fix."
+          ],
+          "references": [
+            "packages/framework-routes/src/intent-map.ts",
+            "packages/framework-routes/src/tests/IntentMapPublicSymbols.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Source parsing remains local Node tooling using node:fs and TypeScript. No code path is introduced into Workers isolates or a Cloudflare Node Container Host.",
+          "providers": [],
+          "constraints": [
+            "The catalog has no runtime claim for this package; this change does not introduce Workers or Container support."
+          ],
+          "references": [
+            "packages/framework-routes/src/intent-map.ts",
+            "packages/framework-routes/package.json"
+          ]
+        }
+      }
+    }
+  ]
+}

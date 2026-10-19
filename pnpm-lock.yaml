@@ -4120,6 +4120,9 @@ importers:
       reflect-metadata:
         specifier: ^0.2.2
         version: 0.2.2
+      typescript:
+        specifier: 6.0.3
+        version: 6.0.3
     devDependencies:
       tsup:
         specifier: 8.5.1
