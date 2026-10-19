@@ -41,6 +41,38 @@ describe("verification policy", () => {
     expect(findUnclassifiedVerificationPaths(discoveries)).toEqual([]);
   });
 
+  it("guards only the exact Hyperdrive dry-run and verifier commands", () => {
+    const path = "packages/tx-drizzle/package.json";
+    const manifest = readFileSync(resolve(repositoryRoot, path), "utf-8");
+    const discoveries = discoverPackageVerificationScripts({ [path]: manifest }).filter(
+      ({ name }) => name.startsWith("smoke:"),
+    );
+
+    expect(discoveries.map(({ name }) => name)).toEqual(["smoke:bundle", "smoke:verify"]);
+    for (const discovery of discoveries) {
+      expect(classifyVerificationPath(discovery)?.classification).toBe("repository-guarded");
+      expect(
+        classifyVerificationPath({ ...discovery, command: `${discovery.command} && echo extra` }),
+      ).toBeUndefined();
+      expect(
+        classifyVerificationPath({ ...discovery, path: "packages/other/package.json" }),
+      ).toBeUndefined();
+    }
+    const bundle = discoveries.find(({ name }) => name === "smoke:bundle");
+    expect(
+      bundle &&
+        classifyVerificationPath({ ...bundle, command: bundle.command.replace("--dry-run ", "") }),
+    ).toBeUndefined();
+    const verifier = discoveries.find(({ name }) => name === "smoke:verify");
+    expect(
+      verifier &&
+        classifyVerificationPath({
+          ...verifier,
+          command: "node --experimental-strip-types smoke/verify.mts",
+        }),
+    ).toBeUndefined();
+  });
+
   it("fails closed for a new root verification script", () => {
     const discoveries = discoverRootVerificationScripts(
       JSON.stringify({ scripts: { ...rootScripts(), "synthetic:verify": "node verify.mjs" } }),

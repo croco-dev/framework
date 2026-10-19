@@ -42,5 +42,6 @@
   "@croco/onboarding-drizzle": ["ONBOARDING_POSTGRES_URL"],
   "@croco/warehouse-postgres": [],
   "@croco/testing-resources": [],
+  "@croco/tx-drizzle": [],
   "@croco/cohort-drizzle": ["COHORT_TEST_DATABASE_URL"]
 }

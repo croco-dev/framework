@@ -62,6 +62,10 @@ export const DIRECT_DIST_ENTRYPOINT_EXCEPTIONS = new Map([
     "@croco/telemetry-api",
     "Telemetry decorators and helpers are consumed as built runtime artifacts across Node and browser smokes.",
   ],
+  [
+    "@croco/tx-drizzle",
+    "Transaction consumers resolve the same built root and optional Hyperdrive subpath in workspace examples and packed packages.",
+  ],
 ]);
 
 export const DIRECT_DIST_ENTRYPOINT_PACKAGES = new Set(DIRECT_DIST_ENTRYPOINT_EXCEPTIONS.keys());

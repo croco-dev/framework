@@ -143,3 +143,26 @@ GraphQL SDK against the declared schema and operations. Shared GraphQL and tRPC 
 run through Node fetch and the Lambda host envelope. Keep client-disconnect cancellation,
 subscription/streaming, deployed Cloudflare and full SaaS profile certification separate
 from these local results.
+
+## Hyperdrive transaction local evidence
+
+`@croco/tx-drizzle/hyperdrive` is an experimental opt-in, request-owned transaction
+boundary. In the framework checkout only, run `pnpm --filter @croco/tx-drizzle test` for deterministic lifecycle/error
+cases and `pnpm --filter @croco/tx-drizzle test:workers` with Docker for local workerd
+and PostgreSQL. Native binding emulation bypasses the deployed Hyperdrive proxy.
+Keep live deployment, proxy pooling/cache/failover, domain adapter conformance and
+profile integration explicitly unverified. Do not promote the root transaction plugin
+or durable adapter runtime claims from these local tests. Application authorization,
+transaction-local tenant settings, concurrency admission and reconciliation of an
+unknown outcome remain application responsibilities; never retry a committed outcome.
+
+The repository-only `packages/tx-drizzle/smoke` artifact supplies an authenticated Worker and
+`pnpm --filter @croco/tx-drizzle smoke:verify --url <origin> --target <local|remote> --output <path>`.
+The Docker-backed Worker suite runs the same CLI over local HTTP with an independent SQL observer.
+Provision the dedicated schema/roles outside the Worker; the runner only mutates and cleans its own
+run UUID. Secrets come from bindings/environment and are omitted from reports. A remote target
+requires HTTPS and redirects fail. Remote HTTP success does not attest Cloudflare deployment or
+binding identity; keep deployment, proxy pooling/cache/failover and certification unverified until
+separate deployment/configuration evidence exists. Neither artifact provisions or deploys resources.
+These artifacts and package scripts are not shipped in generated applications. In a generated
+application, use its own declared scripts; inspect the framework repository for this local evidence.

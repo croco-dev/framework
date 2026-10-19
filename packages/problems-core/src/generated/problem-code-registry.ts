@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export type CrocoProblemRegistry = {
   readonly version: "croco.problem-code-registry.v1";
-  readonly problemCount: 1076;
+  readonly problemCount: 1078;
   readonly problems: readonly [
     {
       readonly code: "ACCESS_DENIED";
@@ -1512,6 +1512,34 @@ export type CrocoProblemRegistry = {
         {
           readonly file: "packages/customer-health-core/src/libs/problems/HealthProblems.ts";
           readonly line: 24;
+          readonly column: 1;
+          readonly kind: "problem-class";
+        },
+      ];
+    },
+    {
+      readonly code: "HYPERDRIVE_SMOKE_CHECK_FAILED";
+      readonly category: "InternalServerError";
+      readonly status: 500;
+      readonly title: "Internal Server Error";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#hyperdrive-smoke-check-failed";
+      readonly recovery: {
+        readonly cause: "The repository Hyperdrive HTTP/SQL smoke verifier rejected a configuration or observed result.";
+        readonly userAction: "Inspect failed and not-run checks in the safe report. Reconcile the run UUID before deliberately starting another run.";
+        readonly operatorAction: "Verify the dedicated Worker, token, observer permissions and smoke schema. Preserve unverified deployment and certification claims.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "safe-message";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.error";
+          readonly severity: "error";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/tx-drizzle/smoke/verify.mts";
+          readonly line: 30;
           readonly column: 1;
           readonly kind: "problem-class";
         },
@@ -29066,6 +29094,34 @@ export type CrocoProblemRegistry = {
       ];
     },
     {
+      readonly code: "tx-drizzle/hyperdrive-transaction-failed";
+      readonly category: "InternalServerError";
+      readonly status: 500;
+      readonly title: "Internal Server Error";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#tx-drizzle-hyperdrive-transaction-failed";
+      readonly recovery: {
+        readonly cause: "Request-owned PostgreSQL connection, transaction or cleanup failed at the Hyperdrive boundary.";
+        readonly userAction: "Do not replay automatically. A committed outcome must not be retried; reconcile an unknown outcome first.";
+        readonly operatorAction: "Inspect the redacted phase, outcome, aborted and cleanupFailed fields. For transaction failures, investigate application SQL and callback errors. Check binding or deadline configuration when implicated by the failing phase; acquire a fresh connection for any authorized new operation.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "safe-message";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.error";
+          readonly severity: "error";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/tx-drizzle/src/hyperdrive.ts";
+          readonly line: 28;
+          readonly column: 1;
+          readonly kind: "problem-class";
+        },
+      ];
+    },
+    {
       readonly code: "tx-drizzle/rls-configuration-invalid";
       readonly category: "InternalServerError";
       readonly status: 500;
@@ -30432,7 +30488,7 @@ export type CrocoProblemRegistry = {
 
 export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 1076,
+  problemCount: 1078,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -32097,6 +32153,39 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
         {
           file: "packages/customer-health-core/src/libs/problems/HealthProblems.ts",
           line: 24,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "HYPERDRIVE_SMOKE_CHECK_FAILED",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#hyperdrive-smoke-check-failed",
+      recovery: {
+        cause:
+          "The repository Hyperdrive HTTP/SQL smoke verifier rejected a configuration or observed result.",
+        userAction:
+          "Inspect failed and not-run checks in the safe report. Reconcile the run UUID before deliberately starting another run.",
+        operatorAction:
+          "Verify the dedicated Worker, token, observer permissions and smoke schema. Preserve unverified deployment and certification claims.",
+        retryability: "not-retryable",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/tx-drizzle/smoke/verify.mts",
+          line: 30,
           column: 1,
           kind: "problem-class",
         },
@@ -62949,6 +63038,40 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
         {
           file: "packages/tx-core/src/libs/problems/TransactionProblems.ts",
           line: 145,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "tx-drizzle/hyperdrive-transaction-failed",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#tx-drizzle-hyperdrive-transaction-failed",
+      recovery: {
+        cause:
+          "Request-owned PostgreSQL connection, transaction or cleanup failed at the Hyperdrive boundary.",
+        userAction:
+          "Do not replay automatically. A committed outcome must not be retried; reconcile an unknown outcome first.",
+        operatorAction:
+          "Inspect the redacted phase, outcome, aborted and cleanupFailed fields. For transaction failures, investigate application SQL and callback errors. Check binding or deadline configuration when implicated by the failing phase; acquire a fresh connection for any authorized new operation.",
+        retryability: "not-retryable",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/tx-drizzle/src/hyperdrive.ts",
+          line: 28,
           column: 1,
           kind: "problem-class",
         },

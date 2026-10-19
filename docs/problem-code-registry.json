@@ -1,6 +1,6 @@
 {
   "version": "croco.problem-code-registry.v1",
-  "problemCount": 1076,
+  "problemCount": 1078,
   "problems": [
     {
       "code": "ACCESS_DENIED",
@@ -1613,6 +1613,36 @@
         {
           "file": "packages/customer-health-core/src/libs/problems/HealthProblems.ts",
           "line": 24,
+          "column": 1,
+          "kind": "problem-class"
+        }
+      ]
+    },
+    {
+      "code": "HYPERDRIVE_SMOKE_CHECK_FAILED",
+      "category": "InternalServerError",
+      "status": 500,
+      "title": "Internal Server Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#hyperdrive-smoke-check-failed",
+      "recovery": {
+        "cause": "The repository Hyperdrive HTTP/SQL smoke verifier rejected a configuration or observed result.",
+        "userAction": "Inspect failed and not-run checks in the safe report. Reconcile the run UUID before deliberately starting another run.",
+        "operatorAction": "Verify the dedicated Worker, token, observer permissions and smoke schema. Preserve unverified deployment and certification claims.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "safe-message",
+        "telemetry": {
+          "eventName": "croco.problem.error",
+          "severity": "error",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/tx-drizzle/smoke/verify.mts",
+          "line": 30,
           "column": 1,
           "kind": "problem-class"
         }
@@ -31049,6 +31079,36 @@
         {
           "file": "packages/tx-core/src/libs/problems/TransactionProblems.ts",
           "line": 145,
+          "column": 1,
+          "kind": "problem-class"
+        }
+      ]
+    },
+    {
+      "code": "tx-drizzle/hyperdrive-transaction-failed",
+      "category": "InternalServerError",
+      "status": 500,
+      "title": "Internal Server Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#tx-drizzle-hyperdrive-transaction-failed",
+      "recovery": {
+        "cause": "Request-owned PostgreSQL connection, transaction or cleanup failed at the Hyperdrive boundary.",
+        "userAction": "Do not replay automatically. A committed outcome must not be retried; reconcile an unknown outcome first.",
+        "operatorAction": "Inspect the redacted phase, outcome, aborted and cleanupFailed fields. For transaction failures, investigate application SQL and callback errors. Check binding or deadline configuration when implicated by the failing phase; acquire a fresh connection for any authorized new operation.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "safe-message",
+        "telemetry": {
+          "eventName": "croco.problem.error",
+          "severity": "error",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/tx-drizzle/src/hyperdrive.ts",
+          "line": 28,
           "column": 1,
           "kind": "problem-class"
         }

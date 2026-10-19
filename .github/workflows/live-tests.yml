@@ -224,6 +224,13 @@ jobs:
           --lane live --allow-live --owner @croco/testing-resources
           --output ci-reports/package-quality/live-test-lanes/testing-resources.json
 
+      - name: Run @croco/tx-drizzle live tests
+        continue-on-error: true
+        run: >-
+          node --experimental-strip-types scripts/test-lane-runner.mts
+          --lane live --allow-live --owner @croco/tx-drizzle
+          --output ci-reports/package-quality/live-test-lanes/tx-drizzle.json
+
       - name: Enforce scheduled-live evidence
         if: ${{ !cancelled() }}
         run: >-
@@ -248,6 +255,7 @@ jobs:
           --lane-report ci-reports/package-quality/live-test-lanes/storage-cloudinary.json
           --lane-report ci-reports/package-quality/live-test-lanes/storage-r2.json
           --lane-report ci-reports/package-quality/live-test-lanes/testing-resources.json
+          --lane-report ci-reports/package-quality/live-test-lanes/tx-drizzle.json
           --output ci-reports/package-quality/live-test-evidence.json
 
       - name: Upload live evidence

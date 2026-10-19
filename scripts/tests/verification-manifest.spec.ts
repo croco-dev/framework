@@ -332,7 +332,7 @@ describe("verification manifest", () => {
     expect(
       createHash("sha256").update(JSON.stringify(manifests)).digest("hex"),
       "The pre-split monolithic manifest changed; update this digest only after intentionally verifying the new serialized commands.",
-    ).toBe("fe4ada04d138835484b4d10e59564cf88802100e5de1899dbd659dd036c96921");
+    ).toBe("5cb3d7d48cdee351b17a9e5ba794f75d6fc9d008dd6ca58f7f49ca23917bcded");
   });
 
   it("classifies every dependency edge and every cross-lane edge for synthesis", () => {
@@ -1886,6 +1886,8 @@ describe("verification manifest", () => {
       createVerificationManifest("repo").find(({ id }) => id === "docs-examples")?.dependsOn,
     ).toEqual(["architecture-policy-runtime"]);
     for (const id of [
+      "benchmark-thresholds",
+      "build",
       "docs-examples",
       "package-bins-smoke",
       "test",

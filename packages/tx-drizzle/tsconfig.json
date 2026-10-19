@@ -2,8 +2,9 @@
   "exclude": ["node_modules"],
   "extends": "../../tsconfig/tsconfig.node.json",
   "compilerOptions": {
+    "allowImportingTsExtensions": true,
     "module": "esnext",
     "moduleResolution": "bundler"
   },
-  "include": ["src/**/*.ts"]
+  "include": ["src/**/*.ts", "smoke/**/*.ts", "smoke/**/*.mts"]
 }

@@ -3357,6 +3357,28 @@ const recoveryMetadataByCode = {
     redactionPolicy: "public",
     severity: "info",
   }),
+  HYPERDRIVE_SMOKE_CHECK_FAILED: recovery({
+    cause:
+      "The repository Hyperdrive HTTP/SQL smoke verifier rejected a configuration or observed result.",
+    userAction:
+      "Inspect failed and not-run checks in the safe report. Reconcile the run UUID before deliberately starting another run.",
+    operatorAction:
+      "Verify the dedicated Worker, token, observer permissions and smoke schema. Preserve unverified deployment and certification claims.",
+    retryability: "not-retryable",
+    redactionPolicy: "safe-message",
+    severity: "error",
+  }),
+  "tx-drizzle/hyperdrive-transaction-failed": recovery({
+    cause:
+      "Request-owned PostgreSQL connection, transaction or cleanup failed at the Hyperdrive boundary.",
+    userAction:
+      "Do not replay automatically. A committed outcome must not be retried; reconcile an unknown outcome first.",
+    operatorAction:
+      "Inspect the redacted phase, outcome, aborted and cleanupFailed fields. For transaction failures, investigate application SQL and callback errors. Check binding or deadline configuration when implicated by the failing phase; acquire a fresh connection for any authorized new operation.",
+    retryability: "not-retryable",
+    redactionPolicy: "safe-message",
+    severity: "error",
+  }),
   CROCO_META_VITE_SSG_OUTPUT_CONFLICT: recovery({
     cause: "Multiple SSG routes map to the same static HTML output path.",
     userAction: "Remove or rename a conflicting SSG route before rebuilding.",

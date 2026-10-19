@@ -1526,6 +1526,8 @@ export const VERIFICATION_DEPENDENCY_CLASSIFICATION = {
 >;
 
 const WORKSPACE_ARTIFACT_CONCURRENCY_GROUP = new Set([
+  "benchmark-thresholds",
+  "build",
   "infrastructure-review",
   "docs-examples",
   "typecheck",

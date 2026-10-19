@@ -1,3 +1,4 @@
+import { setImmediate } from "node:timers/promises";
 import { TransactionRollbackConfirmedProblem } from "@croco/tx-core";
 import type { TxAdapter } from "@croco/tx-core";
 import type { SQL } from "drizzle-orm";
@@ -609,11 +610,19 @@ describe("DrizzleTxAdapter", () => {
     it("should wait for un-awaited in-flight queries before executing rollback on early callback return", async () => {
       let inFlight = false;
       const events: string[] = [];
+      let finishQuery: () => void = () => undefined;
+      const queryFinished = new Promise<void>((resolve) => {
+        finishQuery = resolve;
+      });
+      let returnFromCallback: () => void = () => undefined;
+      const callbackMayReturn = new Promise<void>((resolve) => {
+        returnFromCallback = resolve;
+      });
 
       const execute = vi.fn(async (query: string) => {
         events.push(`query:start:${query}`);
         inFlight = true;
-        await new Promise((resolve) => setTimeout(resolve, 50));
+        await queryFinished;
         inFlight = false;
         events.push(`query:end:${query}`);
         return "query-result";
@@ -641,17 +650,25 @@ describe("DrizzleTxAdapter", () => {
       const promise = adapter.transaction(
         async (tx: any) => {
           void tx.execute("slow-background-query");
-          await new Promise((resolve) => setTimeout(resolve, 10));
+          await callbackMayReturn;
           return "early-return";
         },
         undefined,
         controller.signal,
       );
 
-      await new Promise((resolve) => setTimeout(resolve, 5));
-      controller.abort(new Error("Timeout at 5ms"));
+      const queryInFlightAtAbort = inFlight;
+      void promise.catch(() => undefined);
+      controller.abort(new Error("Transaction aborted with a query in flight"));
+      returnFromCallback();
+      // Let abort propagation reach the transaction boundary while the query is held.
+      await setImmediate();
+      const eventsBeforeQueryFinished = [...events];
+      finishQuery();
 
       await expect(promise).rejects.toThrow(TransactionRollbackConfirmedProblem);
+      expect(queryInFlightAtAbort).toBe(true);
+      expect(eventsBeforeQueryFinished).toEqual(["query:start:slow-background-query"]);
       expect(events).not.toContain("conflict:query_in_progress");
       expect(events).toEqual([
         "query:start:slow-background-query",
