@@ -118,6 +118,13 @@ const TEMPLATE_SCRIPT_NAMES = new Set([
   "typecheck",
 ]);
 
+const HYPERDRIVE_SMOKE_COMMANDS: Readonly<Record<string, string>> = {
+  "smoke:bundle":
+    'WRANGLER_SEND_METRICS=false node --experimental-strip-types ../../scripts/tracked-file-mutation-guard.mts --recovery "Restore the Hyperdrive smoke command and use an untracked report path" -- wrangler deploy --dry-run --config smoke/wrangler.jsonc --outdir "$PWD/.wrangler/smoke-build"',
+  "smoke:verify":
+    'node --experimental-strip-types ../../scripts/tracked-file-mutation-guard.mts --recovery "Restore the Hyperdrive smoke command and use an untracked report path" -- node --experimental-strip-types smoke/verify.mts',
+};
+
 const CLI_POLICIES: Readonly<Record<string, VerificationPolicy>> = {
   "packages/cli/src/commands/architecturePolicy.ts:check-subcommand": generatedProjectPolicy(
     "architecture-policy check",
@@ -262,6 +269,19 @@ export function classifyVerificationPath(path: VerificationPath): VerificationPo
     };
   }
   if (path.surface === "package-script") {
+    if (
+      path.path === "packages/tx-drizzle/package.json" &&
+      HYPERDRIVE_SMOKE_COMMANDS[path.name] === path.command
+    ) {
+      return {
+        classification: "repository-guarded",
+        owner: `@croco/tx-drizzle ${path.name}`,
+        nonmutationEvidence:
+          "The exact command uses tracked-file-mutation-guard; Wrangler is dry-run only and outputs ignored artifacts, while the verifier writes its explicit report and UUID-scoped smoke database rows",
+        recoveryCommand:
+          "Restore the Hyperdrive smoke command and use an untracked report path; reconcile the reported run UUID before rerunning",
+      };
+    }
     if (path.path.startsWith("packages/create-croco-app/templates/")) {
       if (!TEMPLATE_SCRIPT_NAMES.has(path.name)) return undefined;
       if (
