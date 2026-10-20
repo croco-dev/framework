@@ -236,6 +236,49 @@ describe("ApolloSession", () => {
     session.dispose();
   });
 
+  it("fences a mutation disposed after response headers but before body completion", async () => {
+    let finish: (body: string) => void = () => {};
+    let bodyStarted: () => void = () => {};
+    const reading = new Promise<void>((resolve) => {
+      bodyStarted = resolve;
+    });
+    const response = Response.json({});
+    vi.spyOn(response, "text").mockImplementation(() => {
+      bodyStarted();
+      return new Promise<string>((resolve) => {
+        finish = resolve;
+      });
+    });
+    const session = createApolloSession({ ...options, fetch: async () => response });
+    const update = vi.fn();
+    const result = session.client
+      .mutate({
+        mutation: gql`
+          mutation Change {
+            product {
+              __typename
+              id
+              quote(variant: "member") {
+                __typename
+                amount
+              }
+            }
+          }
+        `,
+        update,
+      })
+      .then(
+        () => "success",
+        () => "cancelled",
+      );
+    await reading;
+    session.dispose();
+    finish(JSON.stringify({ data: data("17.00") }));
+    expect(await result).toBe("cancelled");
+    expect(update).not.toHaveBeenCalled();
+    expect(session.client.cache.extract()).toEqual({});
+  });
+
   it("fences a delayed old response during login or tenant transition, even if a transport ignores abort", async () => {
     let finish: (value: Response) => void = () => {
       throw new Error("not started");

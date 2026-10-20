@@ -8,7 +8,7 @@
       "files": {
         "packages/frontend-react/package.json": "d2052017ee4bdfa5f9fc76a32d6076c048bf5a1ff0903f00df06949846fd9a3b",
         "packages/frontend-react/src/apollo.ts": "90473ff82a4ceab3d6c7ce8efae0fe503f457b4bc86830cf1350b39aa7d49dfa",
-        "packages/frontend-react/src/libs/apolloSession.ts": "f04d9c2b6389699d778cda0f617c5a5b27f11298d18efd05708f52ae52bf980d"
+        "packages/frontend-react/src/libs/apolloSession.ts": "6823af027e35662e9645bd5540fb69aae8decb654a6b514fef7565b21c43e4cc"
       },
       "catalogRuntimes": ["browser", "node"],
       "profiles": {
@@ -57,7 +57,7 @@
       "classification": "pure-contract",
       "reason": "Generated metadata includes the opt-in Apollo diagnostics; this changes no Host, storage or lifecycle behavior.",
       "files": {
-        "packages/problems-core/src/generated/problem-code-registry.ts": "11693e5cf5aa55efc4dac3193fb8409ada394d6632798eba885f1d2b533be719"
+        "packages/problems-core/src/generated/problem-code-registry.ts": "7c48929bd205cfbd3814f19cbfa6d67da5a95065ef9c775c56016afc4b67a117"
       },
       "catalogRuntimes": [],
       "profiles": {

@@ -12109,7 +12109,7 @@ Sources:
 
 Sources:
 
-- `packages/frontend-react/src/libs/apolloSession.ts:137:15` (problem-factory)
+- `packages/frontend-react/src/libs/apolloSession.ts:138:15` (problem-factory)
 
 <a id="frontend-react-apollo-endpoint"></a>
 
@@ -12127,7 +12127,7 @@ Sources:
 
 Sources:
 
-- `packages/frontend-react/src/libs/apolloSession.ts:194:10` (problem-factory)
+- `packages/frontend-react/src/libs/apolloSession.ts:195:10` (problem-factory)
 
 <a id="frontend-react-apollo-failed-hydration"></a>
 
@@ -12145,7 +12145,7 @@ Sources:
 
 Sources:
 
-- `packages/frontend-react/src/libs/apolloSession.ts:131:15` (problem-factory)
+- `packages/frontend-react/src/libs/apolloSession.ts:132:15` (problem-factory)
 
 <a id="frontend-react-apollo-hydration-json"></a>
 
@@ -12199,7 +12199,7 @@ Sources:
 
 Sources:
 
-- `packages/frontend-react/src/libs/apolloSession.ts:206:10` (problem-factory)
+- `packages/frontend-react/src/libs/apolloSession.ts:207:10` (problem-factory)
 
 <a id="frontend-react-apollo-server-hydration"></a>
 
@@ -12217,7 +12217,7 @@ Sources:
 
 Sources:
 
-- `packages/frontend-react/src/libs/apolloSession.ts:200:10` (problem-factory)
+- `packages/frontend-react/src/libs/apolloSession.ts:201:10` (problem-factory)
 
 <a id="frontend-react-apollo-transport"></a>
 

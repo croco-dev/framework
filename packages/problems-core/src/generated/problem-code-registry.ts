@@ -16948,7 +16948,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/frontend-react/src/libs/apolloSession.ts";
-          readonly line: 137;
+          readonly line: 138;
           readonly column: 15;
           readonly kind: "problem-factory";
         },
@@ -16976,7 +16976,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/frontend-react/src/libs/apolloSession.ts";
-          readonly line: 194;
+          readonly line: 195;
           readonly column: 10;
           readonly kind: "problem-factory";
         },
@@ -17004,7 +17004,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/frontend-react/src/libs/apolloSession.ts";
-          readonly line: 131;
+          readonly line: 132;
           readonly column: 15;
           readonly kind: "problem-factory";
         },
@@ -17088,7 +17088,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/frontend-react/src/libs/apolloSession.ts";
-          readonly line: 206;
+          readonly line: 207;
           readonly column: 10;
           readonly kind: "problem-factory";
         },
@@ -17116,7 +17116,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/frontend-react/src/libs/apolloSession.ts";
-          readonly line: 200;
+          readonly line: 201;
           readonly column: 10;
           readonly kind: "problem-factory";
         },
@@ -50930,7 +50930,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/frontend-react/src/libs/apolloSession.ts",
-          line: 137,
+          line: 138,
           column: 15,
           kind: "problem-factory",
         },
@@ -50961,7 +50961,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/frontend-react/src/libs/apolloSession.ts",
-          line: 194,
+          line: 195,
           column: 10,
           kind: "problem-factory",
         },
@@ -50992,7 +50992,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/frontend-react/src/libs/apolloSession.ts",
-          line: 131,
+          line: 132,
           column: 15,
           kind: "problem-factory",
         },
@@ -51085,7 +51085,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/frontend-react/src/libs/apolloSession.ts",
-          line: 206,
+          line: 207,
           column: 10,
           kind: "problem-factory",
         },
@@ -51116,7 +51116,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/frontend-react/src/libs/apolloSession.ts",
-          line: 200,
+          line: 201,
           column: 10,
           kind: "problem-factory",
         },

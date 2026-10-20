@@ -111,6 +111,7 @@ export function createApolloSession(options: ApolloSessionOptions): ApolloSessio
         forward(operation).pipe(
           tap({
             next(result) {
+              lifetime.signal.throwIfAborted();
               if (result.errors?.length) hydrationFailed = true;
             },
             error() {
