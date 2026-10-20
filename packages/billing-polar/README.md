@@ -457,3 +457,13 @@ Apache-2.0
 - production-ready 승격에는 기본 conformance와 diagnostics 통과 외에도 실제 Polar credential로 수행한
   optional live smoke 증거가 필요합니다. package catalog maturity는 해당 증거가 확인되기 전까지 beta로
   유지합니다.
+
+최초 구독 결제는 서명된 주문의 `subscription_id`, `product_id`와 proration이 아닌 항목의
+`product_price_id`를 `PlanRegistry.resolveProviderPlanVersion`으로 조회해 당시 플랜 버전을 찾습니다.
+이벤트 발행 전에 같은 구독 identity와 가격 버전을 `Order.subscription`과
+`OrderPaidEvent.subscription`에 보존합니다. 현재 구독이나 주문의 `net_amount`로 정기 결제 가격을
+대체하지 않습니다.
+
+ID가 없거나 가격 binding이 없거나 모호하면 저장·발행 전에 실패합니다. 과거 가격 binding을 복구하거나
+신뢰할 수 있는 원래 주문 근거로 재전달해야 하며, 현재 구독으로 대체하면 안 됩니다.
+발행 재시도에서도 webhook으로 정한 이벤트 identity와 주문 timestamp를 유지합니다.

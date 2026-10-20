@@ -88,6 +88,12 @@ export type OrderPaymentReason =
   | "subscription_update"
   | "one_time";
 
+/** Event-time subscription identity and immutable recurring-price evidence; never the order total. */
+export type OrderSubscriptionEvidence = {
+  readonly externalSubscriptionId: string;
+  readonly planVersionRef: PlanVersionRef;
+};
+
 export type Order = {
   id: string;
   billingAccountId: string;
@@ -96,6 +102,7 @@ export type Order = {
   currency: string;
   reason: OrderPaymentReason;
   paidAt: Date;
+  readonly subscription?: OrderSubscriptionEvidence;
 };
 
 export type ProcessedWebhook = {

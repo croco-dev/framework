@@ -35,6 +35,7 @@ pnpm add @croco/metrics-billing @croco/warehouse-postgres
 ## 사용법
 
 ```typescript
+import { OrderPaidEvent, planVersionRef } from "@croco/billing-core";
 import { BillingEventHandler } from "@croco/metrics-billing";
 import { PostgresMetricsStore } from "@croco/warehouse-postgres/metrics";
 import { Container } from "@croco/framework-context";
@@ -43,9 +44,15 @@ const metricsRepository = new PostgresMetricsStore(db);
 const handler = new BillingEventHandler(planRegistry, billingStore, metricsRepository);
 
 await eventBus.publish(
-  new OrderPaidEvent("tenant-1", "order-1", 2900, "USD", "subscription_create"),
+  new OrderPaidEvent("tenant-1", "order-1", 2900, "USD", "subscription_create", {
+    externalSubscriptionId: "subscription-1",
+    planVersionRef: planVersionRef("plan-pro@v1"),
+  }),
 );
 ```
+
+`plan-pro@v1`은 주문 당시 가격 binding으로 확인해 저장한 불변 버전 ref입니다.
+후속 플랜 변경이 있어도 현재 구독의 ref로 바꾸지 않습니다.
 
 ### DI 컨테이너 등록
 
@@ -69,6 +76,12 @@ Container.register(BillingEventHandler, {
 - `subscription_cycle`: 갱신 결제이므로 MRR movement를 기록하지 않음
 - `subscription_update`, `one_time`: 활성 구독 MRR을 새로 만들지 않으므로 movement를 기록하지 않음
 - 연간 플랜: 월별 MRR로 정규화한 뒤 구독별로 가장 가까운 정수 minor unit으로 반올림합니다 (정확히 절반이면 0에서 먼 방향).
+
+신규·재활성 MRR은 `event.subscription.planVersionRef`가 가리키는 불변 플랜의 금액·통화·주기를
+사용합니다. 주문 합계나 현재 구독으로 대체하지 않습니다. 근거가 없는 기존 이벤트는
+`metrics-billing/metric-dropped`의 `reason: order_price_evidence_missing`으로, 참조한 버전이 없으면
+`reason: plan_not_found`로 실패합니다. 신뢰할 수 있는 과거 근거를 복구한 뒤 원래 이벤트 ID와
+timestamp를 유지해 재전달합니다.
 
 ### PlanChangedEvent
 

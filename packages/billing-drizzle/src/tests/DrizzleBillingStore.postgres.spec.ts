@@ -400,6 +400,10 @@ describe.skipIf(!connectionString)("PostgreSQL billing persistence", () => {
       id: "order",
       billingAccountId: "account",
       externalOrderId: "provider-order",
+      subscription: {
+        externalSubscriptionId: "original-sub",
+        planVersionRef: planVersionRef("original:v1"),
+      },
       amount: 100,
       currency: "USD",
       reason: "one_time" as const,

@@ -1,0 +1,208 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "billing-core",
+      "classification": "pure-contract",
+      "reason": "Paid orders and serializable payment events retain the event-time subscription identity and immutable recurring plan version. In-memory order copies isolate that evidence.",
+      "files": {
+        "packages/billing-core/src/index.ts": "289be993f4f797a77b442e280d3d5bc501be3d4b34a06150e40405d515a96d06",
+        "packages/billing-core/src/libs/InMemoryBillingStore.ts": "a9bb71b9f93d2f263bde286af1f2d4b9fc1a491b60e5659d81e1cde9ce1ae61a",
+        "packages/billing-core/src/libs/events/OrderPaidEvent.ts": "44b7542c48404264f6647a67f1aee8e0eed7603ce6e8b3928a9764275148a50f",
+        "packages/billing-core/src/types.ts": "5e8c24b0ed37cf9a9908beb1ac75dc6700edc303ad04a09c909bb781faeb9258"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Paid orders and serializable payment events retain the event-time subscription identity and immutable recurring plan version. In-memory order copies isolate that evidence. This change is pure domain data/price selection and has no new host capability, connection, storage engine or lifecycle requirement.",
+          "providers": ["@croco/billing-core"],
+          "constraints": [
+            "No live provider credentials, deployment certification or new runtime support claim. Immutable historical plan bindings must remain available for replay."
+          ],
+          "references": [
+            "packages/billing-core/src/index.ts",
+            "packages/billing-core/src/libs/InMemoryBillingStore.ts",
+            "packages/billing-core/src/libs/events/OrderPaidEvent.ts",
+            "packages/billing-core/src/types.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Paid orders and serializable payment events retain the event-time subscription identity and immutable recurring plan version. In-memory order copies isolate that evidence. This change is pure domain data/price selection and has no new host capability, connection, storage engine or lifecycle requirement.",
+          "providers": ["@croco/billing-core"],
+          "constraints": [
+            "No live provider credentials, deployment certification or new runtime support claim. Immutable historical plan bindings must remain available for replay."
+          ],
+          "references": [
+            "packages/billing-core/src/index.ts",
+            "packages/billing-core/src/libs/InMemoryBillingStore.ts",
+            "packages/billing-core/src/libs/events/OrderPaidEvent.ts",
+            "packages/billing-core/src/types.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Paid orders and serializable payment events retain the event-time subscription identity and immutable recurring plan version. In-memory order copies isolate that evidence. This change is pure domain data/price selection and has no new host capability, connection, storage engine or lifecycle requirement.",
+          "providers": ["@croco/billing-core"],
+          "constraints": [
+            "No live provider credentials, deployment certification or new runtime support claim. Immutable historical plan bindings must remain available for replay."
+          ],
+          "references": [
+            "packages/billing-core/src/index.ts",
+            "packages/billing-core/src/libs/InMemoryBillingStore.ts",
+            "packages/billing-core/src/libs/events/OrderPaidEvent.ts",
+            "packages/billing-core/src/types.ts"
+          ]
+        }
+      }
+    },
+    {
+      "package": "billing-polar",
+      "classification": "runtime-adapter",
+      "reason": "Resolve the paid order product and non-proration price identities through the existing immutable registry before storage and publication; reject missing evidence without consulting the current subscription.",
+      "files": {
+        "packages/billing-polar/src/libs/PolarEventMapper.ts": "93a74591f0d5efe5bb6c77e721a61e99c3d2866230077ecde00b50a49b6e0232",
+        "packages/billing-polar/src/libs/PolarWebhookHandler.ts": "74fee46d0c1f217d7b9c6e792090539d587166470b00afcdc83d16a86609663f",
+        "packages/billing-polar/src/libs/schemas/polarWebhookSchema.ts": "86df954bb6cc1a95de0b47f3da9eff37e3c3e96c0e56456953596b07d7658180"
+      },
+      "catalogRuntimes": ["node", "lambda"],
+      "profiles": {
+        "kubernetes": {
+          "result": "unverified",
+          "reason": "Resolve the paid order product and non-proration price identities through the existing immutable registry before storage and publication; reject missing evidence without consulting the current subscription. The existing Polar integration targets Node/Lambda; this change does not establish deployment or host execution evidence.",
+          "providers": ["@croco/billing-polar"],
+          "constraints": [
+            "No live provider credentials, deployment certification or new runtime support claim. Immutable historical plan bindings must remain available for replay."
+          ],
+          "references": [
+            "packages/billing-polar/src/libs/PolarEventMapper.ts",
+            "packages/billing-polar/src/libs/PolarWebhookHandler.ts",
+            "packages/billing-polar/src/libs/schemas/polarWebhookSchema.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "unverified",
+          "reason": "Resolve the paid order product and non-proration price identities through the existing immutable registry before storage and publication; reject missing evidence without consulting the current subscription. The existing Polar integration targets Node/Lambda; this change does not establish deployment or host execution evidence.",
+          "providers": ["@croco/billing-polar"],
+          "constraints": [
+            "No live provider credentials, deployment certification or new runtime support claim. Immutable historical plan bindings must remain available for replay."
+          ],
+          "references": [
+            "packages/billing-polar/src/libs/PolarEventMapper.ts",
+            "packages/billing-polar/src/libs/PolarWebhookHandler.ts",
+            "packages/billing-polar/src/libs/schemas/polarWebhookSchema.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "unsupported",
+          "reason": "Resolve the paid order product and non-proration price identities through the existing immutable registry before storage and publication; reject missing evidence without consulting the current subscription. The existing Polar integration targets Node/Lambda; this change does not establish deployment or host execution evidence.",
+          "providers": ["@croco/billing-polar"],
+          "constraints": [
+            "No live provider credentials, deployment certification or new runtime support claim. Immutable historical plan bindings must remain available for replay."
+          ],
+          "references": [
+            "packages/billing-polar/src/libs/PolarEventMapper.ts",
+            "packages/billing-polar/src/libs/PolarWebhookHandler.ts",
+            "packages/billing-polar/src/libs/schemas/polarWebhookSchema.ts"
+          ]
+        }
+      }
+    },
+    {
+      "package": "metrics-billing",
+      "classification": "pure-contract",
+      "reason": "New and reactivation MRR use only pinned order evidence; legacy missing evidence raises a recoverable metric-dropped Problem. Existing movement identities remain unchanged.",
+      "files": {
+        "packages/metrics-billing/src/libs/BillingEventHandler.ts": "07cf75a79e4d6343608e393b74767d571fa21ba7f3e786965c2608a2337bbf0c",
+        "packages/metrics-billing/src/libs/problems/BillingMetricsProblems.ts": "dc801991290b878b0d1aa38cc61cb461804da1b0899aa72a745c59a124d3bc93"
+      },
+      "catalogRuntimes": ["node", "lambda", "cloudflare-workers"],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "New and reactivation MRR use only pinned order evidence; legacy missing evidence raises a recoverable metric-dropped Problem. Existing movement identities remain unchanged. This change is pure domain data/price selection and has no new host capability, connection, storage engine or lifecycle requirement.",
+          "providers": ["@croco/metrics-billing"],
+          "constraints": [
+            "No live provider credentials, deployment certification or new runtime support claim. Immutable historical plan bindings must remain available for replay."
+          ],
+          "references": [
+            "packages/metrics-billing/src/libs/BillingEventHandler.ts",
+            "packages/metrics-billing/src/libs/problems/BillingMetricsProblems.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "New and reactivation MRR use only pinned order evidence; legacy missing evidence raises a recoverable metric-dropped Problem. Existing movement identities remain unchanged. This change is pure domain data/price selection and has no new host capability, connection, storage engine or lifecycle requirement.",
+          "providers": ["@croco/metrics-billing"],
+          "constraints": [
+            "No live provider credentials, deployment certification or new runtime support claim. Immutable historical plan bindings must remain available for replay."
+          ],
+          "references": [
+            "packages/metrics-billing/src/libs/BillingEventHandler.ts",
+            "packages/metrics-billing/src/libs/problems/BillingMetricsProblems.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "New and reactivation MRR use only pinned order evidence; legacy missing evidence raises a recoverable metric-dropped Problem. Existing movement identities remain unchanged. This change is pure domain data/price selection and has no new host capability, connection, storage engine or lifecycle requirement.",
+          "providers": ["@croco/metrics-billing"],
+          "constraints": [
+            "No live provider credentials, deployment certification or new runtime support claim. Immutable historical plan bindings must remain available for replay."
+          ],
+          "references": [
+            "packages/metrics-billing/src/libs/BillingEventHandler.ts",
+            "packages/metrics-billing/src/libs/problems/BillingMetricsProblems.ts"
+          ]
+        }
+      }
+    },
+    {
+      "package": "problems-core",
+      "classification": "pure-contract",
+      "reason": "Generated diagnostic source locations follow the extended billing metric drop reason union. Only six line numbers change; diagnostic codes and recovery behavior are unchanged.",
+      "files": {
+        "packages/problems-core/src/generated/problem-code-registry.ts": "b8d3c33350f368dfd593e94a709f2661d5a627da88828345b586a580fa65bb36"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Generated diagnostic source locations follow the extended billing metric drop reason union. Only six line numbers change; diagnostic codes and recovery behavior are unchanged. These source-location records have no host capability, storage or lifecycle dependency.",
+          "providers": ["@croco/problems-core"],
+          "constraints": [
+            "Source-location metadata only; no runtime support or certification claim."
+          ],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "packages/metrics-billing/src/libs/problems/BillingMetricsProblems.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Generated diagnostic source locations follow the extended billing metric drop reason union. Only six line numbers change; diagnostic codes and recovery behavior are unchanged. These source-location records have no host capability, storage or lifecycle dependency.",
+          "providers": ["@croco/problems-core"],
+          "constraints": [
+            "Source-location metadata only; no runtime support or certification claim."
+          ],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "packages/metrics-billing/src/libs/problems/BillingMetricsProblems.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Generated diagnostic source locations follow the extended billing metric drop reason union. Only six line numbers change; diagnostic codes and recovery behavior are unchanged. These source-location records have no host capability, storage or lifecycle dependency.",
+          "providers": ["@croco/problems-core"],
+          "constraints": [
+            "Source-location metadata only; no runtime support or certification claim."
+          ],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "packages/metrics-billing/src/libs/problems/BillingMetricsProblems.ts"
+          ]
+        }
+      }
+    }
+  ]
+}

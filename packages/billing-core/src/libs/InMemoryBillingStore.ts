@@ -494,6 +494,7 @@ function cloneWebhookEventIntent(intent: BillingWebhookEventIntent): BillingWebh
 function cloneOrder(order: Order): Order {
   return {
     ...order,
+    ...(order.subscription && { subscription: { ...order.subscription } }),
     paidAt: new Date(order.paidAt),
   };
 }

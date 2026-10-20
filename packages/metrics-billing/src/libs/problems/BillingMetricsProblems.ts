@@ -3,7 +3,8 @@ import { Problem, ProblemCategory } from "@croco/problems-core";
 export type BillingMetricDropReason =
   | "account_not_found"
   | "subscription_not_found"
-  | "plan_not_found";
+  | "plan_not_found"
+  | "order_price_evidence_missing";
 
 export type BillingMetricDroppedProblemOptions = {
   readonly eventName: string;

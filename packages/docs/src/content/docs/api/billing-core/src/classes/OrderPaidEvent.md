@@ -15,7 +15,7 @@ title: "OrderPaidEvent"
 
 ### Constructor
 
-> **new OrderPaidEvent**(`tenantId`, `externalOrderId`, `amount`, `currency`, `reason`): `OrderPaidEvent`
+> **new OrderPaidEvent**(`tenantId`, `externalOrderId`, `amount`, `currency`, `reason`, `subscription?`): `OrderPaidEvent`
 
 #### Parameters
 
@@ -38,6 +38,10 @@ title: "OrderPaidEvent"
 ##### reason
 
 [`OrderPaymentReason`](/api/billing-core/src/type-aliases/orderpaymentreason/)
+
+##### subscription?
+
+[`OrderSubscriptionEvidence`](/api/billing-core/src/type-aliases/ordersubscriptionevidence/)
 
 #### Returns
 
@@ -103,6 +107,12 @@ title: "OrderPaidEvent"
 
 ---
 
+### subscription?
+
+> `readonly` `optional` **subscription?**: [`OrderSubscriptionEvidence`](/api/billing-core/src/type-aliases/ordersubscriptionevidence/)
+
+---
+
 ### tenantId
 
 > `readonly` **tenantId**: `string`
@@ -126,3 +136,19 @@ title: "OrderPaidEvent"
 #### Overrides
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`eventName`](/api/events-core/src/classes/domainevent/#eventname-1)
+
+## Methods
+
+### fromPayload()
+
+> `static` **fromPayload**(`payload`): `OrderPaidEvent`
+
+#### Parameters
+
+##### payload
+
+`Record`\<`string`, `unknown`\>
+
+#### Returns
+
+`OrderPaidEvent`

@@ -5,4 +5,4 @@ prev: false
 title: "BillingMetricDropReason"
 ---
 
-> **BillingMetricDropReason** = `"account_not_found"` \| `"subscription_not_found"` \| `"plan_not_found"`
+> **BillingMetricDropReason** = `"account_not_found"` \| `"subscription_not_found"` \| `"plan_not_found"` \| `"order_price_evidence_missing"`

@@ -323,3 +323,18 @@ version과 revision을 원자적으로 비교해야 하며,
 더 오래된 source version을 side effect 없는 `stale` 결과로 처리해야 합니다. 하나의 안정적인
 reconciliation identity 아래에서 응답 유실 재시도는 operation identity를 재사용하고, 이후 새로
 관측한 provider drift 복구는 새 operation identity를 사용합니다.
+
+### 주문 시점의 정기 결제 가격 근거
+
+`Order.subscription`과 `OrderPaidEvent` 생성자의 여섯 번째 인자는 결제 당시의
+`{ externalSubscriptionId, planVersionRef }`를 보존합니다. `planVersionRef`는 불변 플랜 버전을
+가리킵니다. 이벤트를 발행하기 전에 이 근거를 저장하고, `DefaultEventSerializer`로 가격 근거와
+이벤트 identity를 함께 직렬화·복원합니다. 할인·세금·일회성 금액이 포함될 수 있는 주문 합계는 MRR이 아닙니다.
+
+`metrics-billing`은 `subscription_create`와 `subscription_reactivation`에 이 근거를 요구합니다.
+근거가 없는 기존 이벤트는 `metrics-billing/metric-dropped`와
+`reason: order_price_evidence_missing`으로 실패하며 현재 구독을 대신 조회하지 않습니다.
+원래 주문의 신뢰할 수 있는 과거 기록에서 구독과 플랜 버전을 복구해 근거를 보완하고,
+기존 이벤트 ID와 timestamp를 유지해 재전달합니다. 참조한 플랜 버전이 없으면
+`reason: plan_not_found`로 실패하므로 해당 불변 버전을 복구한 뒤 재전달합니다.
+기존 movement 중복 방지 identity는 유지됩니다.
