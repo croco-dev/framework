@@ -15,6 +15,7 @@ export default function PdpClient({
   const [selected, select] = useState(false);
   useEffect(() => {
     document.documentElement.dataset.pdpHydrated = snapshot;
+    performance.mark("pdp:hydrated");
   }, [snapshot]);
   return (
     <>

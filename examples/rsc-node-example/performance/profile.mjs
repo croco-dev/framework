@@ -22,7 +22,14 @@ export const profile = Object.freeze({
     requests: 18,
   },
   // Relative to the measured baseline under the same cache/device/network conditions.
-  regression: { ttfbMs: 500, shellMs: 600, heroMs: 600, lcpMs: 600, interactionMs: 200 },
+  regression: {
+    ttfbMs: 500,
+    shellMs: 600,
+    heroMs: 600,
+    lcpMs: 600,
+    interactionMs: 200,
+    hydrationReadyMs: 600,
+  },
 });
 export const configurations = ["baseline", "experiment", "personalization", "combined"];
 export const measuredKeys = [...Object.keys(profile.limits), ...Object.keys(profile.regression)];

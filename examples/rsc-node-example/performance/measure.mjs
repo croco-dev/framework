@@ -210,6 +210,7 @@ try {
         const initial = document.getElementById("pdp-initial-flight");
         return {
           ...window.pdpLab,
+          hydrationReadyMs: performance.getEntriesByName("pdp:hydrated")[0]?.startTime,
           ttfbMs: nav.responseStart,
           htmlBytes: nav.decodedBodySize,
           flightBytes: new TextEncoder().encode(JSON.parse(initial.textContent)).length,

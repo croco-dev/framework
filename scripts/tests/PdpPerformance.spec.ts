@@ -18,6 +18,7 @@ const baseline = {
   heroMs: 160,
   lcpMs: 175,
   interactionMs: 32,
+  hydrationReadyMs: 220,
 };
 describe("PDP performance evidence", () => {
   it("compares measured overhead only under identical artifact and device/cache conditions", () => {
@@ -45,7 +46,7 @@ describe("PDP performance evidence", () => {
       ).toContain(`PDP_BUDGET_EXCEEDED:${key}`);
     },
   );
-  it.each(["ttfbMs", "shellMs", "heroMs", "lcpMs", "interactionMs"] as const)(
+  it.each(["ttfbMs", "shellMs", "heroMs", "lcpMs", "interactionMs", "hydrationReadyMs"] as const)(
     "detects measured %s regression relative to its baseline",
     (key) => {
       expect(

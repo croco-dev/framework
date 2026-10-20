@@ -154,8 +154,10 @@ first load the same configuration in that context, then navigate again with its
 browser and fragment caches retained. Each mode runs three repetitions. Reports
 record document TTFB, public-loader timing/waterfall, first visible critical shell,
 decoded/visible hero, browser LCP, decoded HTML/embedded Flight/JS/image bytes,
-actual transfer bytes, requests, fragment source and keyboard-click-to-next-paint
-latency. The latter is a **lab interaction measurement, not field INP**. Missing
+actual transfer bytes, requests, fragment source, hydration-ready time and keyboard-click-to-next-paint
+latency. The current fixture hydrates when its initial Flight snapshot is complete;
+hydration-ready time includes deferred-content waiting.
+Click-to-next-paint is a **lab interaction measurement, not field INP**. Missing
 measurements fail; they are never zero-filled. Timing deltas require identical
 artifact, fixture, versions, user, viewport, network, CPU, cache mode and repetition.
 
