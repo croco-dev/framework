@@ -1,6 +1,8 @@
 import React, { Suspense } from "react";
 import { renderToReadableStream } from "@vitejs/plugin-rsc/rsc";
 import Counter from "./Counter";
+import { productPage } from "../performance/Pdp";
+export { resetLabCache, imagePath, exposeLab } from "../performance/runtime";
 
 export const SERVER_ONLY_VALUE = "RSC:server-only-value";
 
@@ -27,7 +29,13 @@ function RscPage() {
   );
 }
 
-export default async function handler(_request: Request): Promise<Response> {
+export default async function handler(request: Request): Promise<Response> {
+  if (new URL(request.url).pathname.startsWith("/products/")) {
+    const { node } = await productPage(request);
+    return new Response(renderToReadableStream(node), {
+      headers: { "content-type": "text/x-component; charset=utf-8" },
+    });
+  }
   const stream = renderToReadableStream(<RscPage />);
   return new Response(stream, {
     headers: { "content-type": "text/x-component; charset=utf-8" },

@@ -98,10 +98,134 @@ const documentManifest = JSON.stringify({
   clientManifestVersion,
 }).replace(/</g, "\\u003c");
 
+let deferredRelease;
+let deferredGate;
 const httpServer = createServer(async (nodeRequest, nodeResponse) => {
   try {
-    const url = new URL(nodeRequest.url ?? "/", `http://localhost:${port}`);
+    const origin = `http://127.0.0.1:${httpServer.address().port}`;
+    const url = new URL(nodeRequest.url ?? "/", origin);
+    if (url.origin !== origin) {
+      nodeResponse.writeHead(400);
+      nodeResponse.end("Invalid request origin");
+      return;
+    }
 
+    if (url.pathname === "/lab/defer" && nodeRequest.method === "POST") {
+      deferredGate = new Promise((resolve) => {
+        deferredRelease = resolve;
+      });
+      nodeResponse.writeHead(204);
+      nodeResponse.end();
+      return;
+    }
+    if (url.pathname === "/lab/resume" && nodeRequest.method === "POST") {
+      deferredRelease?.();
+      deferredGate = undefined;
+      nodeResponse.writeHead(204);
+      nodeResponse.end();
+      return;
+    }
+    if (url.pathname === "/lab/recommendation") {
+      await deferredGate;
+      nodeResponse.end("Saved inspiration");
+      return;
+    }
+    if (url.pathname === "/lab/blocking-fetch") {
+      // Intentional, bounded negative control: a real awaited upstream fetch.
+      await new Promise((resolve) => setTimeout(resolve, 1800));
+      nodeResponse.end("released");
+      return;
+    }
+    if (url.pathname === "/favicon.ico") {
+      nodeResponse.writeHead(204);
+      nodeResponse.end();
+      return;
+    }
+    if (url.pathname === "/lab/expose" && nodeRequest.method === "POST") {
+      if (nodeRequest.headers.origin !== `http://${nodeRequest.headers.host}`) {
+        nodeResponse.writeHead(403);
+        nodeResponse.end();
+        return;
+      }
+      let body = "";
+      for await (const chunk of nodeRequest) {
+        body += chunk;
+        if (body.length > 8192) {
+          nodeResponse.writeHead(413);
+          nodeResponse.end();
+          return;
+        }
+      }
+      let input;
+      try {
+        input = JSON.parse(body);
+      } catch {
+        nodeResponse.writeHead(400);
+        nodeResponse.end();
+        return;
+      }
+      if (
+        !input ||
+        typeof input !== "object" ||
+        ["receipt", "displayInstanceId", "occurredAt"].some(
+          (key) => typeof input[key] !== "string",
+        ) ||
+        Object.keys(input).some(
+          (key) => !["receipt", "displayInstanceId", "occurredAt"].includes(key),
+        )
+      ) {
+        nodeResponse.writeHead(400);
+        nodeResponse.end();
+        return;
+      }
+      try {
+        await rsc.exposeLab(
+          new Request(url, { headers: { cookie: nodeRequest.headers.cookie ?? "" } }),
+          input,
+        );
+      } catch {
+        nodeResponse.writeHead(403);
+        nodeResponse.end();
+        return;
+      }
+      nodeResponse.writeHead(204, { "cache-control": "private, no-store" });
+      nodeResponse.end();
+      return;
+    }
+    // Local lab control only. No production credentials or shared durable state.
+    if (url.pathname === "/lab/reset" && nodeRequest.method === "POST") {
+      await rsc.resetLabCache();
+      nodeResponse.writeHead(204);
+      nodeResponse.end();
+      return;
+    }
+    if (url.pathname.startsWith("/cdn-cgi/imagedelivery/")) {
+      if (![400, 800, 1200].some((width) => url.pathname === rsc.imagePath(width))) {
+        nodeResponse.writeHead(404);
+        nodeResponse.end();
+        return;
+      }
+      const width = Number(/width=(\d+)/.exec(url.pathname)?.[1] ?? 800);
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${width * 0.75}" viewBox="0 0 800 600"><rect width="800" height="600" fill="#ede4d1"/><g stroke="#283e65" stroke-width="2" fill="none"><ellipse cx="400" cy="300" rx="250" ry="110" transform="rotate(-30 400 300)"/><ellipse cx="400" cy="300" rx="220" ry="170" transform="rotate(35 400 300)"/><circle cx="400" cy="300" r="65"/></g><circle cx="400" cy="300" r="16" fill="#bb7847"/></svg>`;
+      const padding = url.searchParams.has("oversized") ? " ".repeat(150000) : "";
+      nodeResponse.writeHead(200, {
+        "content-type": "image/svg+xml",
+        "cache-control": "public, max-age=3600",
+      });
+      nodeResponse.end(svg + padding);
+      return;
+    }
+    const isPdp = url.pathname === "/products/orbit" || url.pathname === "/products/orbit.rsc";
+    if (
+      url.pathname !== "/" &&
+      url.pathname !== "/index.rsc" &&
+      !isPdp &&
+      !url.pathname.startsWith("/assets/")
+    ) {
+      nodeResponse.writeHead(404);
+      nodeResponse.end("Not Found");
+      return;
+    }
     if (url.pathname.startsWith("/assets/")) {
       try {
         // Resolve against the client assets root and verify containment:
@@ -158,7 +282,11 @@ const httpServer = createServer(async (nodeRequest, nodeResponse) => {
       }
     }
 
-    const flightResponse = await rsc.default(new Request(`http://localhost:${port}/`));
+    const renderUrl = new URL(url);
+    renderUrl.pathname = renderUrl.pathname.replace(/\.rsc$/, "");
+    const flightResponse = await rsc.default(
+      new Request(renderUrl, { headers: { cookie: nodeRequest.headers.cookie ?? "" } }),
+    );
 
     if (wantsFlight) {
       nodeResponse.writeHead(200, {
@@ -170,6 +298,7 @@ const httpServer = createServer(async (nodeRequest, nodeResponse) => {
         // these, a shared cache could hand a Flight body to a document
         // request, or a payload from an older build to a newer one.
         vary: "Accept, x-croco-rsc-client-manifest",
+        "cache-control": "private, no-store",
       });
       // Stream the Flight bytes straight through: buffering them first would
       // hold back the first rows until the slow server component resolves.
@@ -180,24 +309,32 @@ const httpServer = createServer(async (nodeRequest, nodeResponse) => {
 
     // Pass the encoder's web ReadableStream straight through: the official
     // client decoder requires a web stream with getReader().
-    const htmlResponse = await ssr.renderHtml(flightResponse.body);
+    const [renderStream, initialStream] = isPdp
+      ? flightResponse.body.tee()
+      : [flightResponse.body, undefined];
+    const initialFlight = initialStream ? new Response(initialStream).text() : undefined;
+    const htmlResponse = await ssr.renderHtml(renderStream);
     nodeResponse.writeHead(200, {
       "content-type": "text/html; charset=utf-8",
       vary: "Accept",
+      "cache-control": "private, no-store",
     });
     // Write the document around the streamed body so the shell and the first
     // HTML rows reach the client before rendering finishes. The manifest block
     // is what the browser reads its Flight headers from, so it is written with
     // the document rather than hardcoded into the client bundle.
     nodeResponse.write(
-      `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>RSC Node Example</title>` +
+      `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>RSC Node Example</title>` +
         `<meta name="croco:rsc-flight-version" content="${clientBuild.flightVersion}">` +
         `<meta name="croco:rsc-client-manifest" content="${clientManifestVersion}"></head><body>` +
         `<div id="root">`,
     );
     await streamBody(htmlResponse.body, nodeResponse);
+    const flightScript = initialFlight
+      ? `<script type="application/json" id="pdp-initial-flight">${JSON.stringify(await initialFlight).replace(/</g, "\\u003c")}</script>`
+      : "";
     nodeResponse.end(
-      `</div><script type="application/json" id="croco-rsc-manifest">${documentManifest}</script>` +
+      `</div>${flightScript}<script type="application/json" id="croco-rsc-manifest">${documentManifest}</script>` +
         `<script type="module" src="/assets/${clientEntry}"></script></body></html>`,
     );
   } catch (error) {
@@ -212,6 +349,6 @@ const httpServer = createServer(async (nodeRequest, nodeResponse) => {
   }
 });
 
-httpServer.listen(port, () => {
-  console.log(`[rsc-node-example] listening on http://localhost:${port}`);
+httpServer.listen(port, "127.0.0.1", () => {
+  console.log(`[rsc-node-example] listening on http://127.0.0.1:${httpServer.address().port}`);
 });

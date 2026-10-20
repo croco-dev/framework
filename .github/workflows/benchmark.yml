@@ -46,6 +46,7 @@ jobs:
               /^packages\/[^/]+\/src\//.test(filename) ||
               filename.startsWith('tsconfig/') ||
               filename.startsWith('benchmarks/') ||
+              filename.startsWith('examples/rsc-node-example/') ||
               filename.startsWith('ci-reports/benchmark/') ||
               filename === 'scripts/bench-threshold-check.mts' ||
               filename === 'scripts/benchmark-readiness-report.mts' ||
@@ -111,6 +112,19 @@ jobs:
             ci-reports/benchmark/summary.md
             ci-reports/benchmark/latest-five-green-runs.md
           if-no-files-found: warn
+      - name: Install Playwright Chromium
+        run: pnpm --dir packages/docs run playwright:install
+      - name: Build the production PDP fixture
+        run: pnpm build --filter=@croco-example/rsc-node...
+      - name: Measure PDP configurations and intentional regressions
+        run: pnpm --filter @croco-example/rsc-node test:performance "$RUNNER_TEMP/pdp-lab"
+      - name: Upload PDP lab evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: pdp-lab-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/pdp-lab/
+          if-no-files-found: error
       - name: Fail if benchmark enforcement failed
         if: env.BENCHMARK_GATE_MODE == 'enforce' && (steps.bench.outcome == 'failure' || steps.readiness.outcome == 'failure')
         run: exit 1
