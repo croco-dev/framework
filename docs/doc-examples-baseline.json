@@ -2285,16 +2285,16 @@
     },
     {
       "file": "packages/protocols-core/README.md",
-      "blockIndex": 1,
+      "blockIndex": 2,
       "language": "typescript",
-      "openingLine": 23,
+      "openingLine": 74,
       "reason": "Legacy authored docs block is not yet isolated for documentation typechecking."
     },
     {
       "file": "packages/protocols-core/README.md",
-      "blockIndex": 2,
+      "blockIndex": 3,
       "language": "typescript",
-      "openingLine": 62,
+      "openingLine": 113,
       "reason": "Legacy authored docs block is not yet isolated for documentation typechecking."
     },
     {
@@ -2327,37 +2327,37 @@
     },
     {
       "file": "packages/protocols-rest/README.md",
-      "blockIndex": 1,
-      "language": "typescript",
-      "openingLine": 15,
-      "reason": "Legacy authored docs block is not yet isolated for documentation typechecking."
-    },
-    {
-      "file": "packages/protocols-rest/README.md",
       "blockIndex": 2,
       "language": "typescript",
-      "openingLine": 35,
+      "openingLine": 72,
       "reason": "Legacy authored docs block is not yet isolated for documentation typechecking."
     },
     {
       "file": "packages/protocols-rest/README.md",
       "blockIndex": 3,
       "language": "typescript",
-      "openingLine": 60,
+      "openingLine": 92,
       "reason": "Legacy authored docs block is not yet isolated for documentation typechecking."
     },
     {
       "file": "packages/protocols-rest/README.md",
       "blockIndex": 4,
       "language": "typescript",
-      "openingLine": 90,
+      "openingLine": 117,
       "reason": "Legacy authored docs block is not yet isolated for documentation typechecking."
     },
     {
       "file": "packages/protocols-rest/README.md",
       "blockIndex": 5,
       "language": "typescript",
-      "openingLine": 131,
+      "openingLine": 147,
+      "reason": "Legacy authored docs block is not yet isolated for documentation typechecking."
+    },
+    {
+      "file": "packages/protocols-rest/README.md",
+      "blockIndex": 6,
+      "language": "typescript",
+      "openingLine": 188,
       "reason": "Legacy authored docs block is not yet isolated for documentation typechecking."
     },
     {

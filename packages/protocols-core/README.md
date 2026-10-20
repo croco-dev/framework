@@ -25,7 +25,7 @@ projection path. Authorization completes before an adapter reads its input sourc
 Authorization and policy callbacks complete without returning a value, or throw a
 `Problem`; boolean results fail closed.
 
-```typescript
+```typescript typecheck
 import { ProblemFactory } from "@croco/problems-core";
 import { createOperation, defineOperation } from "@croco/protocols-core";
 import { z } from "zod";

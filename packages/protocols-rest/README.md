@@ -18,11 +18,24 @@ binding은 `method`, 절대 `path`, 입력 위치(`body`, `query`, `params`),
 `createContext`를 선언한다. `createContext`는 인증 middleware가 검증한 서버 context를
 전달해야 하며, 입력에서 tenant·사용자 권한을 복사하지 않는다.
 
-```typescript
+```typescript typecheck
 import { ProblemFactory } from "@croco/problems-core";
 import { createRestOperationController } from "@croco/protocols-rest";
+import { createOperation, defineOperation } from "@croco/protocols-core";
+import { z } from "zod";
 
-// checkout은 protocols-core README의 함수 operation이다.
+const checkout = createOperation(
+  defineOperation({
+    id: "checkout.start",
+    kind: "command",
+    input: z.object({ productId: z.string() }),
+    output: z.object({ productId: z.string(), tenantId: z.string() }),
+    authorize(context: { tenantId: string; canPurchase: boolean }) {
+      if (!context.canPurchase) throw ProblemFactory.forbidden("checkout/denied");
+    },
+  }),
+  (input, context) => ({ ...input, tenantId: context.tenantId }),
+);
 const CheckoutRestController = createRestOperationController(checkout, {
   method: "POST",
   path: "/checkout/start",
