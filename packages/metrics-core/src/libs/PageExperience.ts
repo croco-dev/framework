@@ -226,6 +226,7 @@ export async function calculatePageExperience(
     "deletions",
   );
   input.deletedSubjects.forEach(pageExperienceToken);
+  const deletedSubjects = new Set(input.deletedSubjects);
   requirePageExperience(Array.isArray(input.rows) && input.rows.length <= 100000, "row-budget");
   const unique = new Map<string, PageExperienceRow>();
   let lateRows = 0;
@@ -238,10 +239,7 @@ export async function calculatePageExperience(
   }
   const rows = [...unique.values()]
     .filter((row) => {
-      if (
-        input.deletedSubjects.includes(row.subject) ||
-        pageExperienceTime(row.receivedAt) > cutoff
-      )
+      if (deletedSubjects.has(row.subject) || pageExperienceTime(row.receivedAt) > cutoff)
         return false;
       if (
         pageExperienceTime(row.receivedAt) - pageExperienceTime(row.occurredAt) >

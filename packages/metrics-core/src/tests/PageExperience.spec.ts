@@ -262,6 +262,21 @@ describe("Page experience", () => {
       (await calculatePageExperience({ ...data, deletedSubjects: ["one"] })).committed.numerator,
     ).toBe(0);
   });
+  it("excludes deleted subjects without excluding other cohort members", async () => {
+    const data = fixture();
+    data.deletedSubjects = [
+      ...Array.from({ length: 10000 }, (_, i) => `deleted-${i}`),
+      "one",
+      "one",
+    ];
+    const result = await calculatePageExperience(data);
+    expect(result.viewed).toBe(2);
+    expect(result.engaged.numerator).toBe(1);
+    expect(result.attempted.numerator).toBe(0);
+    expect(result.committed.numerator).toBe(0);
+    expect(result.confirmedOutcomes).toBe(0);
+    expect(result.bounce).toEqual({ unobserved: 0, numerator: 1, denominator: 2, value: 0.5 });
+  });
   it("imports bounded JSONL with the shared parser and exactly matches standalone results", async () => {
     const data = fixture();
     async function* bytes() {
