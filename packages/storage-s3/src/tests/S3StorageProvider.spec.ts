@@ -81,8 +81,18 @@ describe("S3StorageProvider HTTP conformance", () => {
   it("uploads asymmetric multi-part bytes and awaits deletion of incomplete upload on failure", async () => {
     const p = provider();
     const bytes = new Uint8Array(5 * 1024 * 1024 + 713).fill(71);
+    bytes.set([21, 78, 36, 99]);
+    bytes.set([31, 54, 201, 8, 61, 74, 9, 16], 5 * 1024 * 1024 - 4);
     bytes.set([9, 32, 255], bytes.length - 3);
-    await p.put("large", storageStreamFromBytes(bytes), { metadata: { mode: "multipart" } });
+    const input = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(bytes.subarray(0, 17));
+        controller.enqueue(bytes.subarray(17, 5 * 1024 * 1024 + 23));
+        controller.enqueue(bytes.subarray(5 * 1024 * 1024 + 23));
+        controller.close();
+      },
+    });
+    await p.put("large", input, { metadata: { mode: "multipart" } });
     expect(Buffer.from(await p.get("large")).equals(bytes)).toBe(true);
     expect((await p.getMetadata("large")).metadata).toEqual({ mode: "multipart" });
     expect(fixture.uploads.size).toBe(0);

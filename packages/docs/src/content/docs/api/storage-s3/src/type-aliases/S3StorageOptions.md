@@ -15,6 +15,14 @@ title: "S3StorageOptions"
 
 ---
 
+### cleanupTimeoutMs?
+
+> `readonly` `optional` **cleanupTimeoutMs?**: `number`
+
+Independent abort-cleanup budget; defaults to 5000 ms. Reserve it in the host deadline.
+
+---
+
 ### credentials?
 
 > `readonly` `optional` **credentials?**: `S3ClientConfig`\[`"credentials"`\]
