@@ -39,7 +39,7 @@ await runtime.dispose();
 ## 객체와 실패 계약
 
 - `put/get/getStream/delete/exists/getMetadata/getSignedUrl/getPublicUrl`이 공통 계약입니다. Web stream과 `Uint8Array`를 사용합니다. 미존재는 `FileNotFoundProblem`, 사전·실행 중 취소는 `StorageOperationAbortedProblem`입니다. 403은 미존재로 숨기지 않습니다.
-- namespace는 모든 원격 key와 URL에 literal prefix로 적용합니다. `/`로 끝나는 prefix와 유효한 상대 key를 사용하며 합친 UTF-8 key는 1,024 bytes 이하입니다. prefix는 IAM/tenant authorization을 대체하지 않습니다.
+- namespace는 모든 원격 key와 URL에 literal prefix로 적용합니다. `/`로 끝나는 prefix와 유효한 상대 key를 사용하며 합친 UTF-8 key는 1,024 bytes 이하입니다. 잘못된 Unicode key·prefix는 네트워크 요청 전에 `InvalidKeyProblem`으로 거부합니다. prefix는 IAM/tenant authorization을 대체하지 않습니다.
 - `S3StorageProvider.get/getStream`의 `range: { start, end? }`는 inclusive byte range입니다. `get`은 결과 전체를 메모리에 모으므로 큰 객체에는 `getStream`을 사용하세요.
 - `contentType`, `cacheControl`, 사용자 metadata를 전송하고 S3 ETag를 그대로 반환합니다. ETag를 MD5나 무결성 증명으로 해석하지 않습니다.
 - ACL은 보내지 않습니다. `isPublic: true`는 실패합니다. Bucket owner enforced/Block Public Access를 유지하며 public URL은 별도로 허가된 bucket/CDN의 `publicUrlBase`를 명시해야 합니다. URL 생성은 실제 공개 접근을 증명하지 않습니다.

@@ -2,6 +2,7 @@ import { createHmac, createHash } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createStorageProviderConformanceSuite } from "@croco/testing";
 import {
+  InvalidKeyProblem,
   readStorageStream,
   StorageOperationAbortedProblem,
   storageStreamFromBytes,
@@ -449,6 +450,34 @@ describe("S3StorageProvider HTTP conformance", () => {
     expect(() => provider("../bad/")).toThrow();
     expect(() => provider("bad")).toThrow();
     expect(fixture.requests.length).toBe(count);
+  });
+
+  it.each([0xd800, 0xdc00])(
+    "rejects malformed Unicode keys and prefixes before I/O (%d)",
+    async (code) => {
+      const p = provider("");
+      const key = `bad${String.fromCharCode(code)}`;
+      const count = fixture.requests.length;
+      expect(() => p.getPublicUrl(key)).toThrowError(InvalidKeyProblem);
+      await expect(p.put(key, new Uint8Array([11]))).rejects.toMatchObject({
+        code: "STORAGE_INVALID_KEY",
+      });
+      const namespaced = provider(`${key}/`);
+      expect(() => namespaced.getPublicUrl("valid")).toThrowError(InvalidKeyProblem);
+      await expect(namespaced.getMetadata("valid")).rejects.toMatchObject({
+        code: "STORAGE_INVALID_KEY",
+      });
+      expect(fixture.requests.length).toBe(count);
+    },
+  );
+
+  it("preserves valid supplementary characters, leading BOM and replacement characters in keys", async () => {
+    const p = provider("");
+    const key = String.fromCodePoint(0xfeff, 0x1f600, 0xfffd);
+    expect(p.getPublicUrl(key)).toBe("https://cdn.example.test/%EF%BB%BF%F0%9F%98%80%EF%BF%BD");
+    const value = new Uint8Array([13, 74]);
+    await p.put(key, value);
+    expect(await p.get(key)).toEqual(value);
   });
 
   it("produces independently verifiable SigV4 GET URLs with session credentials", async () => {

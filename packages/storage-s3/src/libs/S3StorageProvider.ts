@@ -83,11 +83,17 @@ export class S3StorageProvider extends BaseStorageProvider {
   private objectKey(key: string): string {
     this.validateKey(key);
     const objectKey = `${this.options.keyPrefix ?? ""}${key}`;
-    if (new TextEncoder().encode(objectKey).byteLength > 1024) {
+    const bytes = new TextEncoder().encode(objectKey);
+    if (bytes.byteLength > 1024) {
       throw new InvalidKeyProblem(
         key,
         "S3 keys must be at most 1024 UTF-8 bytes including namespace",
       );
+    }
+    // TextEncoder replaces lone UTF-16 surrogates. Reject them instead of aliasing
+    // another object or leaking encodeURIComponent's raw URIError. Preserve a valid BOM.
+    if (new TextDecoder("utf-8", { ignoreBOM: true }).decode(bytes) !== objectKey) {
+      throw new InvalidKeyProblem(key, "S3 keys must contain well-formed Unicode");
     }
     return objectKey;
   }
