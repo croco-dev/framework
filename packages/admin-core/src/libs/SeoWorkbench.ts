@@ -111,7 +111,7 @@ export function createSeoWorkbench(options: SeoWorkbenchOptions) {
     }));
     return report;
   }
-  function page(report: SeoComparisonReport, offset: number, limit: number): SeoWorkbenchPage {
+  function validatePage(offset: number, limit: number): void {
     check(
       Number.isSafeInteger(offset) &&
         offset >= 0 &&
@@ -120,6 +120,9 @@ export function createSeoWorkbench(options: SeoWorkbenchOptions) {
         limit <= 100,
       "pagination",
     );
+  }
+  function page(report: SeoComparisonReport, offset: number, limit: number): SeoWorkbenchPage {
+    validatePage(offset, limit);
     const { rows, ...summary } = report;
     return {
       report: summary,
@@ -169,8 +172,9 @@ export function createSeoWorkbench(options: SeoWorkbenchOptions) {
         const scope = await access("seo.read", undefined, signal);
         try {
           validateSeoDefinition(definition);
+          validatePage(offset, limit);
         } catch (error) {
-          if (error instanceof SeoComparisonProblem)
+          if (error instanceof SeoComparisonProblem || error instanceof SeoWorkbenchProblem)
             return { kind: "error", code: "SEO_INVALID_REQUEST" };
           throw error;
         }
@@ -185,7 +189,7 @@ export function createSeoWorkbench(options: SeoWorkbenchOptions) {
           return { kind: "denied", code: "SEO_DENIED" };
         return {
           kind: "error",
-          code: error instanceof SeoWorkbenchProblem ? "SEO_INVALID_REQUEST" : "SEO_SOURCE_ERROR",
+          code: "SEO_SOURCE_ERROR",
         };
       }
     },

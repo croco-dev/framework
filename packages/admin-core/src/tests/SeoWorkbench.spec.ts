@@ -1,11 +1,14 @@
 import { describe, expect, it, vi } from "vitest";
 import { SeoComparisonProblem } from "@croco/metrics-core";
+import { MetricReadService, registerSeoQuery } from "@croco/metrics-core/runtime";
 import { createSeoWorkbench } from "../libs/SeoWorkbench";
 import {
   createSeoFixture,
   seoDefinition,
   seoScope,
   seoFixtureInput,
+  seoLimits,
+  seoQuality,
 } from "../../../../examples/seo-workbench/src/fixture";
 
 describe("SeoWorkbench", () => {
@@ -36,8 +39,58 @@ describe("SeoWorkbench", () => {
       store: { read: async () => undefined, write: async () => {}, delete: async () => {} },
     });
     expect(await operations.read(invalid)).toEqual({ kind: "error", code: "SEO_INVALID_REQUEST" });
+    expect(await operations.read(seoDefinition, -1, 25)).toEqual({
+      kind: "error",
+      code: "SEO_INVALID_REQUEST",
+    });
     expect(reader).not.toHaveBeenCalled();
     expect(await operations.read(seoDefinition)).toEqual({
+      kind: "error",
+      code: "SEO_SOURCE_ERROR",
+    });
+  });
+  it("classifies a mismatched registered report as a source failure for a valid request", async () => {
+    const sourceRevisions = [
+      { sourceRef: "search", revision: "snapshot-v1" },
+      { sourceRef: "events", revision: "snapshot-v1" },
+    ];
+    const registration = await registerSeoQuery({
+      queryId: "stale-registration",
+      queryVersion: 1,
+      scope: seoScope,
+      definition: seoDefinition,
+      sourceRevisions,
+      limits: seoLimits,
+      requiredFields: ["seo.pages"],
+      source: async () => ({ input: seoFixtureInput(), quality: seoQuality }),
+    });
+    const service = new MetricReadService([registration.definition], [registration.query], {
+      currentContext: () => ({
+        principal: { ...seoScope, subject: "synthetic-operator" },
+        allowedFields: ["seo.pages"],
+        allowRaw: false,
+        budget: seoLimits,
+        sourceRevisions,
+        snapshotRefs: ["search", "events"],
+      }),
+      authorize: async () => ({ permissionEpoch: "p1", privacyEpoch: "v1" }),
+    });
+    const operations = createSeoWorkbench({
+      authenticate: async () => ({ scope: seoScope, permissions: ["seo.read"] }),
+      reader: async () => ({
+        service,
+        queryId: registration.query.id,
+        window: {
+          from: seoDefinition.baselineWindow.from,
+          to: seoDefinition.currentWindow.to,
+        },
+      }),
+      mask: (_field, value) => value,
+      now: () => new Date("2026-10-20T00:00:00Z"),
+      store: { read: async () => undefined, write: async () => {}, delete: async () => {} },
+    });
+    expect(await operations.read(seoDefinition)).toMatchObject({ kind: "ready" });
+    expect(await operations.read({ ...structuredClone(seoDefinition), version: "v2" })).toEqual({
       kind: "error",
       code: "SEO_SOURCE_ERROR",
     });
