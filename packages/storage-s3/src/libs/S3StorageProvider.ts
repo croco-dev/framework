@@ -241,10 +241,12 @@ export class S3StorageProvider extends BaseStorageProvider {
       const cleanup = Promise.allSettled([remote, input]).then((results) => {
         const failures = results.filter((result) => result.status === "rejected");
         if (failures.length)
-          throw new AggregateError(
-            failures.map((result) => result.reason),
-            "S3 cleanup failed",
-          );
+          throw new S3StorageProblem("cleanup", {
+            cause: new AggregateError(
+              failures.map((result) => result.reason),
+              "S3 cleanup failed",
+            ),
+          });
       });
       await Promise.race([cleanup, deadline]);
     } finally {
