@@ -1,8 +1,16 @@
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 
 describe("BrowserSsr", () => {
+  beforeAll(async () => {
+    await promisify(execFile)("pnpm", ["run", "build"], {
+      cwd: new URL("../..", import.meta.url),
+      timeout: 50_000,
+      maxBuffer: 1_000_000,
+    });
+  }, 55_000);
+
   it("hydrates the production build and isolates a late response after identity change on desktop and mobile", async () => {
     const { stdout } = await promisify(execFile)(process.execPath, ["browser-check.mjs"], {
       cwd: new URL("../..", import.meta.url),

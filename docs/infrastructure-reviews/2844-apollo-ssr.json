@@ -30,7 +30,7 @@
             "runtime": "node",
             "path": "examples/apollo-ssr/src/tests/BrowserSsr.spec.ts",
             "testName": "BrowserSsr hydrates the production build and isolates a late response after identity change on desktop and mobile",
-            "sha256": "308fa527a720b78f53d02c0e5b57bcfe5a196a3b258a1db315284a13067d9b89"
+            "sha256": "722021e54b6f572de595589222a2a2c93d3c344a7ba3db424042d08e11cacb8e"
           }
         },
         "aws-lambda": {
