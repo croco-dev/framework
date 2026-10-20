@@ -921,17 +921,19 @@ function collectInternalRuntimeGraph(
 
 function smokeAdditionalDependencyNames(pkg: PackageJson): string[] {
   const selectedPeers =
-    pkg.name === "@croco/etl-core"
-      ? ["@croco/batch-core", "@croco/execution-core", "@croco/warehouse-core"]
-      : pkg.name === "@croco/warehouse-postgres"
-        ? [
-            "@croco/etl-core",
-            "@croco/execution-core",
-            "@croco/execution-drizzle",
-            "drizzle-orm",
-            "pg",
-          ]
-        : [];
+    pkg.name === "@croco/frontend-react"
+      ? ["@apollo/client", "graphql", "rxjs"]
+      : pkg.name === "@croco/etl-core"
+        ? ["@croco/batch-core", "@croco/execution-core", "@croco/warehouse-core"]
+        : pkg.name === "@croco/warehouse-postgres"
+          ? [
+              "@croco/etl-core",
+              "@croco/execution-core",
+              "@croco/execution-drizzle",
+              "drizzle-orm",
+              "pg",
+            ]
+          : [];
 
   return selectedPeers.filter((name) => pkg.peerDependencies?.[name] !== undefined);
 }

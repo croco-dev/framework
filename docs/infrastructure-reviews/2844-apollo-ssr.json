@@ -1,0 +1,97 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "frontend-react",
+      "classification": "protocol-render",
+      "reason": "Opt-in native Apollo request ownership, explicit client/server native cache hydration ownership and credential-restricted HTTP. Buffered Node SSR example; no Flight or incremental transport integration.",
+      "files": {
+        "packages/frontend-react/package.json": "d2052017ee4bdfa5f9fc76a32d6076c048bf5a1ff0903f00df06949846fd9a3b",
+        "packages/frontend-react/src/apollo.ts": "90473ff82a4ceab3d6c7ce8efae0fe503f457b4bc86830cf1350b39aa7d49dfa",
+        "packages/frontend-react/src/libs/apolloSession.ts": "6823af027e35662e9645bd5540fb69aae8decb654a6b514fef7565b21c43e4cc"
+      },
+      "catalogRuntimes": ["browser", "node"],
+      "profiles": {
+        "kubernetes": {
+          "result": "supported",
+          "reason": "The opt-in session, common guarded HTTP transport and buffered SSR render execute on Node in the named HTTP fixture. Production-build and browser evidence is verified separately; no live Kubernetes cluster is certified.",
+          "providers": ["@croco/frontend-react/apollo"],
+          "constraints": [
+            "Per-request client/cache, dispose in finally; no global request cache.",
+            "No live Kubernetes deployment, certification or streaming/RSC evidence."
+          ],
+          "references": [
+            "packages/frontend-react/README.md",
+            "examples/apollo-ssr/README.md",
+            "examples/apollo-ssr/src/tests/BrowserSsr.spec.ts",
+            "examples/apollo-ssr/src/tests/GraphQLHttp.spec.ts"
+          ],
+          "evidence": {
+            "kind": "host-runtime",
+            "runtime": "node",
+            "path": "examples/apollo-ssr/src/tests/GraphQLHttp.spec.ts",
+            "testName": "GraphQLHttp preserves guard failures, partial data, null bubbling, normalization and explicit mutation refresh over real HTTP",
+            "sha256": "6dc36c99f5c31bf15adb30730af69fcb6b7a65a397377cdeb3f9986f4eb14962"
+          }
+        },
+        "aws-lambda": {
+          "result": "unverified",
+          "reason": "No Lambda SSR integration or invocation test is supplied.",
+          "providers": ["@croco/frontend-react/apollo"],
+          "constraints": [
+            "No Lambda runtime claim; invocation adapter and cleanup evidence required."
+          ],
+          "references": ["packages/frontend-react/README.md"]
+        },
+        "cloudflare": {
+          "result": "unverified",
+          "reason": "No Worker SSR integration or execution test is supplied.",
+          "providers": ["@croco/frontend-react/apollo"],
+          "constraints": ["No Worker runtime claim; Node example is not a Worker isolate."],
+          "references": ["packages/frontend-react/README.md"]
+        }
+      }
+    },
+    {
+      "package": "problems-core",
+      "classification": "pure-contract",
+      "reason": "Generated metadata includes the opt-in Apollo diagnostics; this changes no Host, storage or lifecycle behavior.",
+      "files": {
+        "packages/problems-core/src/generated/problem-code-registry.ts": "7c48929bd205cfbd3814f19cbfa6d67da5a95065ef9c775c56016afc4b67a117"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "The generated diagnostic code catalog is static provider-neutral data with no infrastructure capability, persistence or lifecycle dependency.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "docs/problem-code-registry.json"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "The generated diagnostic code catalog is static provider-neutral data with no infrastructure capability, persistence or lifecycle dependency.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "docs/problem-code-registry.json"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "The generated diagnostic code catalog is static provider-neutral data with no infrastructure capability, persistence or lifecycle dependency.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "docs/problem-code-registry.json"
+          ]
+        }
+      }
+    }
+  ]
+}

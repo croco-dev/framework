@@ -110,3 +110,15 @@ GraphQL subscription schemas fail with
 support, client-disconnect cancellation, live deployment nor full SaaS profile
 certification follows from this fixture. Fetch hosts own body admission and deadlines;
 prepared schemas must already contain their selected policy semantics.
+
+## Native Apollo buffered SSR
+
+Select `@croco/frontend-react/apollo` with its optional Apollo 4, GraphQL and RxJS peers.
+Follow `examples/apollo-ssr/README.md` for real schema/document codegen and native React hooks.
+Create a fresh session for each request and browser identity generation; declare client versus server
+ownership explicitly. Only client-owned sessions can export/restore native cache hydration. Keep server-only
+reads in a non-hydratable owner, preserve native field/normalization policies, and dispose/remount before
+login, logout, tenant or personalization changes. Never treat a header change as cache isolation.
+Use a trusted configured HTTP endpoint and selected credentials through the same guarded protocol path.
+The example verifies buffered Node SSR and browser hydration, not Flight/RSC, Suspense, defer, streaming,
+Lambda, Workers, live deployment or provider certification. Query observations are not conversion facts.

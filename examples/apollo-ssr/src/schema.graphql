@@ -1,0 +1,20 @@
+scalar Money
+
+type Quote {
+  amount: Money!
+  currency: String!
+}
+type Product {
+  id: ID!
+  name: String!
+  quote(variant: String!): Quote
+}
+type Query {
+  product(id: ID!): Product
+  serverOnly: String!
+  denied: String
+  requiredDenied: String!
+}
+type Mutation {
+  discount(id: ID!, variant: String!): Product!
+}
