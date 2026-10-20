@@ -4262,6 +4262,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "PageExperiencePanel",
+              "exportKind": "named",
+              "source": "./libs/PageExperiencePanel",
+              "declarationKind": "function"
+            },
+            {
               "name": "PermissionInspector",
               "exportKind": "named",
               "source": "./libs/components",
@@ -5467,6 +5473,11 @@
               "source": "./libs/OfferConsole"
             },
             {
+              "name": "PageExperiencePanelState",
+              "exportKind": "named",
+              "source": "./libs/PageExperiencePanel"
+            },
+            {
               "name": "PermissionDeniedAdminPanelState",
               "exportKind": "named",
               "source": "./libs/types"
@@ -6246,6 +6257,18 @@
               "declarationKind": "class"
             },
             {
+              "name": "PageExperienceCollection",
+              "exportKind": "named",
+              "source": "./libs/PageExperienceCollection",
+              "declarationKind": "class"
+            },
+            {
+              "name": "PageExperienceCollectionProblem",
+              "exportKind": "named",
+              "source": "./libs/PageExperienceCollection",
+              "declarationKind": "class"
+            },
+            {
               "name": "ProductEventCatalog",
               "exportKind": "named",
               "source": "./libs/ProductEvent",
@@ -6463,6 +6486,16 @@
               "name": "FactValue",
               "exportKind": "named",
               "source": "./libs/FactHistory"
+            },
+            {
+              "name": "PageExperienceBrowserObservation",
+              "exportKind": "named",
+              "source": "./libs/PageExperienceCollection"
+            },
+            {
+              "name": "PageExperienceCollectionContext",
+              "exportKind": "named",
+              "source": "./libs/PageExperienceCollection"
             },
             {
               "name": "ProductEventContext",
@@ -22539,6 +22572,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "PageExperienceCollectorProblem",
+              "exportKind": "named",
+              "source": "./libs/pageExperienceCollector",
+              "declarationKind": "class"
+            },
+            {
               "name": "ProblemBoundary",
               "exportKind": "named",
               "source": "./libs/problemUi",
@@ -22701,6 +22740,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "createPageExperienceCollector",
+              "exportKind": "named",
+              "source": "./libs/pageExperienceCollector",
+              "declarationKind": "function"
+            },
+            {
               "name": "createProblemToastPayload",
               "exportKind": "named",
               "source": "./libs/problemUi",
@@ -22734,6 +22779,12 @@
               "name": "usePageData",
               "exportKind": "named",
               "source": "./libs/hooks/usePageData",
+              "declarationKind": "function"
+            },
+            {
+              "name": "usePageExperience",
+              "exportKind": "named",
+              "source": "./libs/pageExperienceCollector",
               "declarationKind": "function"
             },
             {
@@ -23028,6 +23079,16 @@
               "name": "OfferCardState",
               "exportKind": "named",
               "source": "./libs/OfferCard"
+            },
+            {
+              "name": "PageExperienceCollector",
+              "exportKind": "named",
+              "source": "./libs/pageExperienceCollector"
+            },
+            {
+              "name": "PageExperienceObservation",
+              "exportKind": "named",
+              "source": "./libs/pageExperienceCollector"
             },
             {
               "name": "ProblemBoundaryFallback",
@@ -29810,6 +29871,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "PageExperienceProblem",
+              "exportKind": "named",
+              "source": "./libs/PageExperience",
+              "declarationKind": "class"
+            },
+            {
               "name": "PolicyReplayProblem",
               "exportKind": "named",
               "source": "./libs/replay/PolicyReplay",
@@ -29861,6 +29928,12 @@
               "name": "calculateActivationCandidates",
               "exportKind": "named",
               "source": "./libs/activation/ActivationCandidates",
+              "declarationKind": "function"
+            },
+            {
+              "name": "calculatePageExperience",
+              "exportKind": "named",
+              "source": "./libs/PageExperience",
               "declarationKind": "function"
             },
             {
@@ -29978,6 +30051,18 @@
               "declarationKind": "function"
             },
             {
+              "name": "hashPageExperience",
+              "exportKind": "named",
+              "source": "./libs/PageExperience",
+              "declarationKind": "function"
+            },
+            {
+              "name": "importGa4Engagement",
+              "exportKind": "named",
+              "source": "./libs/PageExperience",
+              "declarationKind": "function"
+            },
+            {
               "name": "importGrowthCounts",
               "exportKind": "named",
               "source": "./libs/growth/GrowthSources",
@@ -30071,6 +30156,18 @@
               "name": "validateGrowthScope",
               "exportKind": "named",
               "source": "./libs/growth/GrowthModel",
+              "declarationKind": "function"
+            },
+            {
+              "name": "validatePageExperienceDefinition",
+              "exportKind": "named",
+              "source": "./libs/PageExperience",
+              "declarationKind": "function"
+            },
+            {
+              "name": "validatePageExperienceRow",
+              "exportKind": "named",
+              "source": "./libs/PageExperience",
               "declarationKind": "function"
             },
             {
@@ -30388,6 +30485,11 @@
               "source": "./libs/experiment/ExperimentReview"
             },
             {
+              "name": "Ga4EngagementSnapshot",
+              "exportKind": "named",
+              "source": "./libs/PageExperience"
+            },
+            {
               "name": "GrowthBacktest",
               "exportKind": "named",
               "source": "./libs/growth/GrowthModel"
@@ -30578,6 +30680,36 @@
               "source": "./libs/outcome/types"
             },
             {
+              "name": "PageExperienceDefinition",
+              "exportKind": "named",
+              "source": "./libs/PageExperience"
+            },
+            {
+              "name": "PageExperienceInput",
+              "exportKind": "named",
+              "source": "./libs/PageExperience"
+            },
+            {
+              "name": "PageExperienceRatio",
+              "exportKind": "named",
+              "source": "./libs/PageExperience"
+            },
+            {
+              "name": "PageExperienceReport",
+              "exportKind": "named",
+              "source": "./libs/PageExperience"
+            },
+            {
+              "name": "PageExperienceRow",
+              "exportKind": "named",
+              "source": "./libs/PageExperience"
+            },
+            {
+              "name": "PageExperienceScope",
+              "exportKind": "named",
+              "source": "./libs/PageExperience"
+            },
+            {
               "name": "Percentage",
               "exportKind": "named",
               "source": "./types"
@@ -30738,6 +30870,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "PAGE_EXPERIENCE_FIELDS",
+              "exportKind": "named",
+              "source": "./libs/PageExperienceSources",
+              "declarationKind": "const"
+            },
+            {
               "name": "assignedOutcomeSourceSchema",
               "exportKind": "named",
               "source": "./libs/read/AssignedOutcomeImport",
@@ -30753,6 +30891,12 @@
               "name": "collectBehaviorSource",
               "exportKind": "named",
               "source": "./libs/BehaviorSources",
+              "declarationKind": "function"
+            },
+            {
+              "name": "collectPageExperienceSource",
+              "exportKind": "named",
+              "source": "./libs/PageExperienceSources",
               "declarationKind": "function"
             },
             {
@@ -30786,6 +30930,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "importPageExperienceSource",
+              "exportKind": "named",
+              "source": "./libs/PageExperienceSources",
+              "declarationKind": "function"
+            },
+            {
               "name": "normalizeActivationRow",
               "exportKind": "named",
               "source": "./libs/activation/ActivationSources",
@@ -30795,6 +30945,12 @@
               "name": "normalizeBehaviorRow",
               "exportKind": "named",
               "source": "./libs/BehaviorSources",
+              "declarationKind": "function"
+            },
+            {
+              "name": "normalizePageExperienceRow",
+              "exportKind": "named",
+              "source": "./libs/PageExperienceSources",
               "declarationKind": "function"
             },
             {
@@ -30822,6 +30978,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "readPageExperienceWarehouse",
+              "exportKind": "named",
+              "source": "./libs/PageExperienceSources",
+              "declarationKind": "function"
+            },
+            {
               "name": "registerActivationQuery",
               "exportKind": "named",
               "source": "./libs/activation/ActivationSources",
@@ -30831,6 +30993,12 @@
               "name": "registerBehaviorQuery",
               "exportKind": "named",
               "source": "./libs/BehaviorSources",
+              "declarationKind": "function"
+            },
+            {
+              "name": "registerPageExperienceQuery",
+              "exportKind": "named",
+              "source": "./libs/PageExperienceSources",
               "declarationKind": "function"
             }
           ],

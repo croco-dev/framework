@@ -161,3 +161,13 @@ export type { SurveyCardProps, SurveyModalProps } from "./libs/SurveyCard";
 
 export { ExperimentRegion, ExperimentDeliveryClientProblem } from "./libs/ExperimentRegion";
 export type { ExperimentRegionProps, ExperimentRegionDecision } from "./libs/ExperimentRegion";
+
+export {
+  createPageExperienceCollector,
+  usePageExperience,
+  PageExperienceCollectorProblem,
+} from "./libs/pageExperienceCollector";
+export type {
+  PageExperienceObservation,
+  PageExperienceCollector,
+} from "./libs/pageExperienceCollector";

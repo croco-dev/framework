@@ -400,3 +400,6 @@ export type {
   EnrichmentConsoleCommand,
   EnrichmentReviewConsoleProps,
 } from "./libs/EnrichmentReviewConsole";
+
+export { PageExperiencePanel } from "./libs/PageExperiencePanel";
+export type { PageExperiencePanelState } from "./libs/PageExperiencePanel";

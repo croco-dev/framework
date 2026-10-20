@@ -370,3 +370,7 @@ it does not recreate purged results, refund reservations or bypass source checks
 
 See [the independent example](../../examples/enrichment-review/README.md) for native SDK mapping,
 PostgreSQL migration/CAS, batch checkpoints, review UI, budget assumptions and recovery limitations.
+
+## Page experience collection
+
+`PageExperienceCollection` binds browser observations to authenticated server session/subject/tenant context, current collection consent and allowlisted origins. Verified committed receipts come from a domain-owned callback after commit or the existing outbox; telemetry failure returns `unavailable` without changing the domain result. The injected source owns durable deduplication, retention and suppression. See [the page experience example](../../examples/page-experience/README.md).

@@ -356,3 +356,7 @@ Invalid definitions, missing array cells, units, probabilities, empty training r
 `GrowthModelProblem` (`metrics-core/invalid-growth-model`) with a precise `field`. Bounds are input
 controls, not promised performance. See [the independent executable example](../../examples/growth-model/README.md)
 for full input contracts and UI composition. Existing user CC and revenue calculations are unchanged.
+
+## Page experience
+
+`calculatePageExperience` computes an ordered view/engagement/attempt/committed funnel from validated session and page-instance rows. Definitions fix distinct units, observable content, foreground time, action, timezone and session window. Missing coverage, open sessions and zero denominators remain explicit; GA4 import retains its own provider definition and session denominator. The `/runtime` source adapters reuse shared ETL decoding, bounded warehouse reads and registered metric authority. See [the standalone and browser example](../../examples/page-experience/README.md) for trust, privacy, lateness, receipt, native PostgreSQL and lifecycle constraints.

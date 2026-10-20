@@ -104,6 +104,12 @@
       "owner": "repo:examples"
     },
     {
+      "path": "examples/page-experience/src/Fixture.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "repo:examples"
+    },
+    {
       "path": "examples/promotion-offers/src/tests/personalized-pdp.spec.ts",
       "lane": "fast",
       "qualifiers": [],
@@ -855,6 +861,12 @@
     },
     {
       "path": "packages/analytics-core/src/tests/GrowthAnalysisService.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/analytics-core"
+    },
+    {
+      "path": "packages/analytics-core/src/tests/PageExperienceCollection.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/analytics-core"
@@ -3247,6 +3259,12 @@
       "owner": "@croco/frontend-react"
     },
     {
+      "path": "packages/frontend-react/src/tests/PageExperienceCollector.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/frontend-react"
+    },
+    {
       "path": "packages/frontend-react/src/tests/ReferralCards.spec.ts",
       "lane": "fast",
       "qualifiers": [],
@@ -4118,6 +4136,12 @@
     },
     {
       "path": "packages/metrics-core/src/tests/OutcomeLedgerNormalizer.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/metrics-core"
+    },
+    {
+      "path": "packages/metrics-core/src/tests/PageExperience.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/metrics-core"
@@ -6273,6 +6297,12 @@
     {
       "path": "packages/warehouse-postgres/src/tests/CompilePostgresMetric.spec.ts",
       "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/warehouse-postgres"
+    },
+    {
+      "path": "packages/warehouse-postgres/src/tests/PageExperience.integration.spec.ts",
+      "lane": "integration",
       "qualifiers": [],
       "owner": "@croco/warehouse-postgres"
     },

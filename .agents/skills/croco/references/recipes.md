@@ -122,3 +122,9 @@ login, logout, tenant or personalization changes. Never treat a header change as
 Use a trusted configured HTTP endpoint and selected credentials through the same guarded protocol path.
 The example verifies buffered Node SSR and browser hydration, not Flight/RSC, Suspense, defer, streaming,
 Lambda, Workers, live deployment or provider certification. Query observations are not conversion facts.
+
+## Page experience funnels
+
+Use `calculatePageExperience` from `@croco/metrics-core` for normalized session/page observations and verified domain receipts. See `examples/page-experience/README.md`. Keep one actual page-instance collector across hydration/StrictMode effects with `createPageExperienceCollector` and `usePageExperience`; wire the declared intersection condition and exclude hidden time. Server `PageExperienceCollection` binds scope/subject/session, validates origin and consent, and reads committed receipts through domain-owned authority. An attempt, client trace or successful HTTP status is not a conversion.
+
+Reuse ETL decoding through `importPageExperienceSource`, pinned warehouse reads through `readPageExperienceWarehouse`, and current authorization/report/privacy checks through `registerPageExperienceQuery` plus `MetricReadService`. Scope, coverage and receipt authenticity are trusted server-source evidence, never claims from uploaded browser rows. Render the aggregate `PageExperiencePanel`; keep complete, open and unknown sessions and all domain outcomes distinct from the ordered funnel. GA4 imports preserve their original denominator/settings; custom engagement is a different definition. Hashes establish identity, not source authenticity or causal effects. No new parser, SQL runner, event bus or report store is needed.

@@ -1,6 +1,6 @@
 {
   "version": "croco.problem-code-registry.v1",
-  "problemCount": 1134,
+  "problemCount": 1137,
   "problems": [
     {
       "code": "ACCESS_DENIED",
@@ -8171,6 +8171,36 @@
           "line": 113,
           "column": 22,
           "kind": "problem-metadata"
+        }
+      ]
+    },
+    {
+      "code": "analytics/page-experience/rejected",
+      "category": "ValidationError",
+      "status": 422,
+      "title": "Validation Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#analytics-page-experience-rejected",
+      "recovery": {
+        "cause": "The request or generated contract failed schema or semantic validation.",
+        "userAction": "Fix the invalid fields and retry with schema-conformant input.",
+        "operatorAction": "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "public",
+        "telemetry": {
+          "eventName": "croco.problem.info",
+          "severity": "info",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/analytics-core/src/libs/PageExperienceCollection.ts",
+          "line": 25,
+          "column": 1,
+          "kind": "problem-class"
         }
       ]
     },
@@ -18464,6 +18494,36 @@
       ]
     },
     {
+      "code": "frontend/page-experience/invalid-policy",
+      "category": "ValidationError",
+      "status": 422,
+      "title": "Validation Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#frontend-page-experience-invalid-policy",
+      "recovery": {
+        "cause": "The request or generated contract failed schema or semantic validation.",
+        "userAction": "Fix the invalid fields and retry with schema-conformant input.",
+        "operatorAction": "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "public",
+        "telemetry": {
+          "eventName": "croco.problem.info",
+          "severity": "info",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/frontend-react/src/libs/pageExperienceCollector.ts",
+          "line": 4,
+          "column": 1,
+          "kind": "problem-class"
+        }
+      ]
+    },
+    {
       "code": "gamification-core/access-denied",
       "category": "Forbidden",
       "status": 403,
@@ -23054,6 +23114,36 @@
         {
           "file": "packages/metrics-core/src/libs/SnapshotScheduler.ts",
           "line": 18,
+          "column": 1,
+          "kind": "problem-class"
+        }
+      ]
+    },
+    {
+      "code": "metrics/page-experience/invalid",
+      "category": "ValidationError",
+      "status": 422,
+      "title": "Validation Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#metrics-page-experience-invalid",
+      "recovery": {
+        "cause": "The request or generated contract failed schema or semantic validation.",
+        "userAction": "Fix the invalid fields and retry with schema-conformant input.",
+        "operatorAction": "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "public",
+        "telemetry": {
+          "eventName": "croco.problem.info",
+          "severity": "info",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/metrics-core/src/libs/PageExperience.ts",
+          "line": 79,
           "column": 1,
           "kind": "problem-class"
         }

@@ -753,3 +753,7 @@ revision. That epoch discards old drafts, results, exports and pending responses
 states hide originals. Server policy, not the presentation booleans, enforces read/review/export rights.
 The [synthetic standalone example](../../examples/enrichment-review/README.md) uses PostgreSQL and
 finite feature operations without Survey, Cohort or warehouse dependencies.
+
+## Page Experience Panel
+
+`PageExperiencePanel` renders aggregate funnel numerator/denominator values, separate domain-confirmed outcomes, known custom bounce, open/unknown observation and immutable report identity. Its loading, empty, partial, denied, unavailable and error states do not substitute zero for missing evidence. Supply only current authorized `MetricReadService` results, with GA4's original definition kept separate. See [the page experience fixture](../../examples/page-experience/README.md).
