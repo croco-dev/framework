@@ -170,6 +170,12 @@
       "owner": "repo:examples"
     },
     {
+      "path": "examples/seo-workbench/src/fixture.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "repo:examples"
+    },
+    {
       "path": "examples/targeting-impact/src/tests/TargetingImpact.spec.ts",
       "lane": "fast",
       "qualifiers": [],
@@ -417,6 +423,12 @@
     },
     {
       "path": "packages/admin-core/src/tests/SavedIntentOperations.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-core"
+    },
+    {
+      "path": "packages/admin-core/src/tests/SeoWorkbench.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/admin-core"
@@ -759,6 +771,12 @@
     },
     {
       "path": "packages/admin-react/src/tests/SavedIntentConsole.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-react"
+    },
+    {
+      "path": "packages/admin-react/src/tests/SeoWorkbench.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/admin-react"
@@ -4177,6 +4195,18 @@
       "owner": "@croco/metrics-core"
     },
     {
+      "path": "packages/metrics-core/src/tests/SeoComparison.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/metrics-core"
+    },
+    {
+      "path": "packages/metrics-core/src/tests/SeoSources.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/metrics-core"
+    },
+    {
       "path": "packages/metrics-core/src/tests/SnapshotScheduler.spec.ts",
       "lane": "fast",
       "qualifiers": [],
@@ -6441,6 +6471,12 @@
     {
       "path": "packages/warehouse-postgres/src/tests/PostgresWarehouseWriter.spec.ts",
       "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/warehouse-postgres"
+    },
+    {
+      "path": "packages/warehouse-postgres/src/tests/SeoComparison.integration.spec.ts",
+      "lane": "integration",
       "qualifiers": [],
       "owner": "@croco/warehouse-postgres"
     },

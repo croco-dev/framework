@@ -1,0 +1,189 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "metrics-core",
+      "classification": "pure-contract",
+      "reason": "Pure normalized-row semantic comparison and registration of existing metric/ETL/warehouse contracts. Standard Intl and Web Crypto are required; no new provider, persistence or Host lifecycle is introduced.",
+      "files": {
+        "packages/metrics-core/src/index.ts": "ed1dc78dec90620d4b3ce523ba00926681bf267caddad47f7150db8c285c0bc4",
+        "packages/metrics-core/src/runtime.ts": "26ca0b4d13a84b21af9c310675611b2b78281d8b14db090913a1a30cfef40a50",
+        "packages/metrics-core/src/libs/seo/SeoComparison.ts": "527a8893ef3f8694d3c31471e4f009296ac95fd2fb52f0a7488362a637b96543",
+        "packages/metrics-core/src/libs/seo/SeoSources.ts": "1a9267c40c22c8d496aeb51860a5927346c5621a273678a6f0147b9a067c9c70"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Pure normalized-row semantic comparison and registration of existing metric/ETL/warehouse contracts. Standard Intl and Web Crypto are required; no new provider, persistence or Host lifecycle is introduced.",
+          "providers": [],
+          "constraints": [
+            "Existing host/provider runtime support is unchanged.",
+            "Synthetic standalone and local browser evidence does not certify a deployed profile.",
+            "Host repositories must isolate scope and enforce retention; invocation I/O lifecycle remains host-owned."
+          ],
+          "references": ["examples/seo-workbench/README.md", "packages/metrics-core/src/index.ts"]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Pure normalized-row semantic comparison and registration of existing metric/ETL/warehouse contracts. Standard Intl and Web Crypto are required; no new provider, persistence or Host lifecycle is introduced.",
+          "providers": [],
+          "constraints": [
+            "Existing host/provider runtime support is unchanged.",
+            "Synthetic standalone and local browser evidence does not certify a deployed profile.",
+            "Host repositories must isolate scope and enforce retention; invocation I/O lifecycle remains host-owned."
+          ],
+          "references": ["examples/seo-workbench/README.md", "packages/metrics-core/src/index.ts"]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Pure normalized-row semantic comparison and registration of existing metric/ETL/warehouse contracts. Standard Intl and Web Crypto are required; no new provider, persistence or Host lifecycle is introduced.",
+          "providers": [],
+          "constraints": [
+            "Existing host/provider runtime support is unchanged.",
+            "Synthetic standalone and local browser evidence does not certify a deployed profile.",
+            "Host repositories must isolate scope and enforce retention; invocation I/O lifecycle remains host-owned."
+          ],
+          "references": ["examples/seo-workbench/README.md", "packages/metrics-core/src/index.ts"]
+        }
+      }
+    },
+    {
+      "package": "admin-core",
+      "classification": "pure-contract",
+      "reason": "Server authorization and aggregate report orchestration over existing host-provided authority, runner and scoped repository contracts. No storage implementation, network client or Host lifecycle is introduced.",
+      "files": {
+        "packages/admin-core/src/index.ts": "1c51def979aeee13770062a966148b703835b3e2d0f4c1d74c544c2e1304c987",
+        "packages/admin-core/src/libs/SeoWorkbench.ts": "be72723b8172575b3a16724aeedc4a71534e7580d751a8c29f06bf02fcfad87c"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Server authorization and aggregate report orchestration over existing host-provided authority, runner and scoped repository contracts. No storage implementation, network client or Host lifecycle is introduced.",
+          "providers": [],
+          "constraints": [
+            "Existing host/provider runtime support is unchanged.",
+            "Synthetic standalone and local browser evidence does not certify a deployed profile.",
+            "Host repositories must isolate scope and enforce retention; invocation I/O lifecycle remains host-owned."
+          ],
+          "references": ["examples/seo-workbench/README.md", "packages/admin-core/src/index.ts"]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Server authorization and aggregate report orchestration over existing host-provided authority, runner and scoped repository contracts. No storage implementation, network client or Host lifecycle is introduced.",
+          "providers": [],
+          "constraints": [
+            "Existing host/provider runtime support is unchanged.",
+            "Synthetic standalone and local browser evidence does not certify a deployed profile.",
+            "Host repositories must isolate scope and enforce retention; invocation I/O lifecycle remains host-owned."
+          ],
+          "references": ["examples/seo-workbench/README.md", "packages/admin-core/src/index.ts"]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Server authorization and aggregate report orchestration over existing host-provided authority, runner and scoped repository contracts. No storage implementation, network client or Host lifecycle is introduced.",
+          "providers": [],
+          "constraints": [
+            "Existing host/provider runtime support is unchanged.",
+            "Synthetic standalone and local browser evidence does not certify a deployed profile.",
+            "Host repositories must isolate scope and enforce retention; invocation I/O lifecycle remains host-owned."
+          ],
+          "references": ["examples/seo-workbench/README.md", "packages/admin-core/src/index.ts"]
+        }
+      }
+    },
+    {
+      "package": "admin-react",
+      "classification": "protocol-render",
+      "reason": "Browser-only React comparison UI over authenticated server operations. No deployed server Host or infrastructure adapter is introduced.",
+      "files": {
+        "packages/admin-react/src/index.ts": "21eacec5db587445470ba3273f338baa5b728764073c984a48f350cb8aeef102",
+        "packages/admin-react/src/libs/SeoWorkbench.tsx": "bc56ce752064927517ff45d7026851b983c31fd49bc748e0e97a7f8b9d89a5f3"
+      },
+      "catalogRuntimes": ["browser", "node"],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Browser-only React comparison UI over authenticated server operations. No deployed server Host or infrastructure adapter is introduced.",
+          "providers": [],
+          "constraints": [
+            "Existing host/provider runtime support is unchanged.",
+            "Synthetic standalone and local browser evidence does not certify a deployed profile.",
+            "Host repositories must isolate scope and enforce retention; invocation I/O lifecycle remains host-owned."
+          ],
+          "references": ["examples/seo-workbench/README.md", "packages/admin-react/src/index.ts"]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Browser-only React comparison UI over authenticated server operations. No deployed server Host or infrastructure adapter is introduced.",
+          "providers": [],
+          "constraints": [
+            "Existing host/provider runtime support is unchanged.",
+            "Synthetic standalone and local browser evidence does not certify a deployed profile.",
+            "Host repositories must isolate scope and enforce retention; invocation I/O lifecycle remains host-owned."
+          ],
+          "references": ["examples/seo-workbench/README.md", "packages/admin-react/src/index.ts"]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Browser-only React comparison UI over authenticated server operations. No deployed server Host or infrastructure adapter is introduced.",
+          "providers": [],
+          "constraints": [
+            "Existing host/provider runtime support is unchanged.",
+            "Synthetic standalone and local browser evidence does not certify a deployed profile.",
+            "Host repositories must isolate scope and enforce retention; invocation I/O lifecycle remains host-owned."
+          ],
+          "references": ["examples/seo-workbench/README.md", "packages/admin-react/src/index.ts"]
+        }
+      }
+    },
+    {
+      "package": "problems-core",
+      "classification": "pure-contract",
+      "reason": "Generated registry includes the new SEO validation Problem code and source location; no failure handling, Host lifecycle or provider behavior changes.",
+      "files": {
+        "packages/problems-core/src/generated/problem-code-registry.ts": "fcc3aae0503d287e2f4562ad24ac86b06a5d90295a1f735004e75128227ab3d1"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Generated registry includes the new SEO validation Problem code and source location; no failure handling, Host lifecycle or provider behavior changes.",
+          "providers": [],
+          "constraints": [
+            "Only generated diagnostic metadata changes; deployment support is unchanged."
+          ],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "examples/seo-workbench/README.md"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Generated registry includes the new SEO validation Problem code and source location; no failure handling, Host lifecycle or provider behavior changes.",
+          "providers": [],
+          "constraints": [
+            "Only generated diagnostic metadata changes; deployment support is unchanged."
+          ],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "examples/seo-workbench/README.md"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Generated registry includes the new SEO validation Problem code and source location; no failure handling, Host lifecycle or provider behavior changes.",
+          "providers": [],
+          "constraints": [
+            "Only generated diagnostic metadata changes; deployment support is unchanged."
+          ],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "examples/seo-workbench/README.md"
+          ]
+        }
+      }
+    }
+  ]
+}

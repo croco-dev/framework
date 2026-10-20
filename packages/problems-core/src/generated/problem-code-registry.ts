@@ -21651,6 +21651,34 @@ export type CrocoProblemRegistry = {
       ];
     },
     {
+      readonly code: "metrics-core/seo-invalid-input";
+      readonly category: "ValidationError";
+      readonly status: 422;
+      readonly title: "Validation Error";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#metrics-core-seo-invalid-input";
+      readonly recovery: {
+        readonly cause: "The request or generated contract failed schema or semantic validation.";
+        readonly userAction: "Fix the invalid fields and retry with schema-conformant input.";
+        readonly operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "public";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.info";
+          readonly severity: "info";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/metrics-core/src/libs/seo/SeoComparison.ts";
+          readonly line: 106;
+          readonly column: 5;
+          readonly kind: "problem-constructor";
+        },
+      ];
+    },
+    {
       readonly code: "metrics-core/snapshot-tenant-required";
       readonly category: "ValidationError";
       readonly status: 422;
@@ -32218,6 +32246,16 @@ export type CrocoProblemRegistry = {
       readonly source: {
         readonly file: "packages/admin-core/src/libs/NetOutcomeOperations.ts";
         readonly line: 55;
+        readonly column: 1;
+        readonly kind: "problem-class";
+      };
+      readonly reason: "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged.";
+    },
+    {
+      readonly className: "SeoWorkbenchProblem";
+      readonly source: {
+        readonly file: "packages/admin-core/src/libs/SeoWorkbench.ts";
+        readonly line: 49;
         readonly column: 1;
         readonly kind: "problem-class";
       };
@@ -56589,6 +56627,36 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       ],
     },
     {
+      code: "metrics-core/seo-invalid-input",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#metrics-core-seo-invalid-input",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/metrics-core/src/libs/seo/SeoComparison.ts",
+          line: 106,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
       code: "metrics-core/snapshot-tenant-required",
       category: "ValidationError",
       status: 422,
@@ -68521,6 +68589,17 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       source: {
         file: "packages/admin-core/src/libs/NetOutcomeOperations.ts",
         line: 55,
+        column: 1,
+        kind: "problem-class",
+      },
+      reason:
+        "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged.",
+    },
+    {
+      className: "SeoWorkbenchProblem",
+      source: {
+        file: "packages/admin-core/src/libs/SeoWorkbench.ts",
+        line: 49,
         column: 1,
         kind: "problem-class",
       },

@@ -128,3 +128,17 @@ Lambda, Workers, live deployment or provider certification. Query observations a
 Use `calculatePageExperience` from `@croco/metrics-core` for normalized session/page observations and verified domain receipts. See `examples/page-experience/README.md`. Keep one actual page-instance collector across hydration/StrictMode effects with `createPageExperienceCollector` and `usePageExperience`; wire the declared intersection condition and exclude hidden time. Server `PageExperienceCollection` binds scope/subject/session, validates origin and consent, and reads committed receipts through domain-owned authority. An attempt, client trace or successful HTTP status is not a conversion.
 
 Reuse ETL decoding through `importPageExperienceSource`, pinned warehouse reads through `readPageExperienceWarehouse`, and current authorization/report/privacy checks through `registerPageExperienceQuery` plus `MetricReadService`. Scope, coverage and receipt authenticity are trusted server-source evidence, never claims from uploaded browser rows. Render the aggregate `PageExperiencePanel`; keep complete, open and unknown sessions and all domain outcomes distinct from the ordered funnel. GA4 imports preserve their original denominator/settings; custom engagement is a different definition. Hashes establish identity, not source authenticity or causal effects. No new parser, SQL runner, event bus or report store is needed.
+
+## SEO search and landing comparisons
+
+Use `compareSeo` from `@croco/metrics-core` with validated normalized rows and effective page mappings;
+see `examples/seo-workbench/README.md`. Register raw loaders through `registerSeoQuery` and the existing
+`MetricReadService`. Compose `createSeoWorkbench` with authenticated app/environment/tenant authority,
+field masking and the host's scoped report repository, then render `SeoWorkbench` from `admin-react`.
+The database-free profile runs without GSC credentials. Optional CSV/JSONL and warehouse paths reuse
+ETL source decoding and the bounded reader; do not introduce a collector, parser or SQL implementation.
+Keep PT source windows explicit and refuse incompatible daily comparisons. Query rows are partial
+coverage and never receive purchaser outcomes; clicks and sessions remain distinct populations.
+Retain null denominators, missing/anonymous query evidence and provider failures. Candidate filters
+are observational definitions, not ranking predictions, causal effects or expected revenue. Register
+only existing authenticated SEO/performance diagnostic actions; no deployment certification is implied.

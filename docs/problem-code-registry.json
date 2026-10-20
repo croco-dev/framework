@@ -23120,6 +23120,36 @@
       ]
     },
     {
+      "code": "metrics-core/seo-invalid-input",
+      "category": "ValidationError",
+      "status": 422,
+      "title": "Validation Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#metrics-core-seo-invalid-input",
+      "recovery": {
+        "cause": "The request or generated contract failed schema or semantic validation.",
+        "userAction": "Fix the invalid fields and retry with schema-conformant input.",
+        "operatorAction": "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "public",
+        "telemetry": {
+          "eventName": "croco.problem.info",
+          "severity": "info",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/metrics-core/src/libs/seo/SeoComparison.ts",
+          "line": 106,
+          "column": 5,
+          "kind": "problem-constructor"
+        }
+      ]
+    },
+    {
       "code": "metrics-core/snapshot-tenant-required",
       "category": "ValidationError",
       "status": 422,
@@ -34431,6 +34461,16 @@
       "source": {
         "file": "packages/admin-core/src/libs/NetOutcomeOperations.ts",
         "line": 55,
+        "column": 1,
+        "kind": "problem-class"
+      },
+      "reason": "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged."
+    },
+    {
+      "className": "SeoWorkbenchProblem",
+      "source": {
+        "file": "packages/admin-core/src/libs/SeoWorkbench.ts",
+        "line": 49,
         "column": 1,
         "kind": "problem-class"
       },

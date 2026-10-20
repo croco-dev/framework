@@ -785,6 +785,7 @@ This cookbook documents 1148 public Croco Problem codes. The deterministic JSON 
 | [`metrics-core/read-cancelled`](#metrics-core-read-cancelled)                                                                                   | BadRequest                                                                               |                     400 | conditional   | public        | active     |       1 |
 | [`metrics-core/read-timeout`](#metrics-core-read-timeout)                                                                                       | BadRequest                                                                               |                     400 | conditional   | public        | active     |       1 |
 | [`metrics-core/retention-metrics-unavailable`](#metrics-core-retention-metrics-unavailable)                                                     | NotImplemented                                                                           |                     501 | not-retryable | public        | active     |       1 |
+| [`metrics-core/seo-invalid-input`](#metrics-core-seo-invalid-input)                                                                             | ValidationError                                                                          |                     422 | not-retryable | public        | active     |       1 |
 | [`metrics-core/snapshot-tenant-required`](#metrics-core-snapshot-tenant-required)                                                               | ValidationError                                                                          |                     422 | not-retryable | public        | active     |       1 |
 | [`metrics-core/subscription-pricing-unavailable`](#metrics-core-subscription-pricing-unavailable)                                               | ValidationError                                                                          |                     422 | not-retryable | public        | active     |       1 |
 | [`metrics/page-experience/invalid`](#metrics-page-experience-invalid)                                                                           | ValidationError                                                                          |                     422 | not-retryable | public        | active     |       1 |
@@ -15251,6 +15252,24 @@ Sources:
 Sources:
 
 - `packages/metrics-core/src/libs/problems/MetricsProblems.ts:65:1` (problem-class)
+
+<a id="metrics-core-seo-invalid-input"></a>
+
+## `metrics-core/seo-invalid-input`
+
+- Category: `ValidationError`
+- HTTP status: `422` Validation Error
+- Retryability: `not-retryable`
+- Redaction policy: `public`
+- Lifecycle: `active`
+- Cause: The request or generated contract failed schema or semantic validation.
+- User action: Fix the invalid fields and retry with schema-conformant input.
+- Operator action: Inspect schema diagnostics, generated contracts, and validation metadata.
+- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/metrics-core/src/libs/seo/SeoComparison.ts:106:5` (problem-constructor)
 
 <a id="metrics-core-snapshot-tenant-required"></a>
 

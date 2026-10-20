@@ -678,6 +678,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "SeoWorkbenchProblem",
+              "exportKind": "named",
+              "source": "./libs/SeoWorkbench",
+              "declarationKind": "class"
+            },
+            {
               "name": "WebhookOperationsActionValidationProblem",
               "exportKind": "named",
               "source": "./libs/WebhookOperations",
@@ -1011,6 +1017,12 @@
               "name": "createRetentionWorkbenchSource",
               "exportKind": "named",
               "source": "./libs/RetentionWorkbench",
+              "declarationKind": "function"
+            },
+            {
+              "name": "createSeoWorkbench",
+              "exportKind": "named",
+              "source": "./libs/SeoWorkbench",
               "declarationKind": "function"
             },
             {
@@ -2833,6 +2845,36 @@
               "source": "./libs/SavedIntentOperations"
             },
             {
+              "name": "SeoAccess",
+              "exportKind": "named",
+              "source": "./libs/SeoWorkbench"
+            },
+            {
+              "name": "SeoPermission",
+              "exportKind": "named",
+              "source": "./libs/SeoWorkbench"
+            },
+            {
+              "name": "SeoSavedReport",
+              "exportKind": "named",
+              "source": "./libs/SeoWorkbench"
+            },
+            {
+              "name": "SeoWorkbenchOptions",
+              "exportKind": "named",
+              "source": "./libs/SeoWorkbench"
+            },
+            {
+              "name": "SeoWorkbenchPage",
+              "exportKind": "named",
+              "source": "./libs/SeoWorkbench"
+            },
+            {
+              "name": "SeoWorkbenchState",
+              "exportKind": "named",
+              "source": "./libs/SeoWorkbench"
+            },
+            {
               "name": "SurveyAdminAccess",
               "exportKind": "named",
               "source": "./libs/surveyOperations"
@@ -4346,6 +4388,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "SeoWorkbench",
+              "exportKind": "named",
+              "source": "./libs/SeoWorkbench",
+              "declarationKind": "function"
+            },
+            {
               "name": "SurveyEditor",
               "exportKind": "named",
               "source": "./libs/SurveyConsole",
@@ -5711,6 +5759,11 @@
               "name": "SavedIntentConsoleProps",
               "exportKind": "named",
               "source": "./libs/SavedIntentConsole"
+            },
+            {
+              "name": "SeoWorkbenchProps",
+              "exportKind": "named",
+              "source": "./libs/SeoWorkbench"
             },
             {
               "name": "SurveyEditorProps",
@@ -29905,6 +29958,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "SeoComparisonProblem",
+              "exportKind": "named",
+              "source": "./libs/seo/SeoComparison",
+              "declarationKind": "class"
+            },
+            {
               "name": "SnapshotScheduler",
               "exportKind": "named",
               "source": "./libs/SnapshotScheduler",
@@ -29974,6 +30033,12 @@
               "name": "compareAssignedOutcomes",
               "exportKind": "named",
               "source": "./libs/outcome/compareAssignedOutcomes",
+              "declarationKind": "function"
+            },
+            {
+              "name": "compareSeo",
+              "exportKind": "named",
+              "source": "./libs/seo/SeoComparison",
               "declarationKind": "function"
             },
             {
@@ -30073,6 +30138,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "hashSeoInput",
+              "exportKind": "named",
+              "source": "./libs/seo/SeoComparison",
+              "declarationKind": "function"
+            },
+            {
               "name": "importGa4Engagement",
               "exportKind": "named",
               "source": "./libs/PageExperience",
@@ -30133,6 +30204,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "seoScopeKey",
+              "exportKind": "named",
+              "source": "./libs/seo/SeoComparison",
+              "declarationKind": "function"
+            },
+            {
               "name": "serializePolicyReplayReport",
               "exportKind": "named",
               "source": "./libs/replay/PolicyReplay",
@@ -30190,6 +30267,12 @@
               "name": "validatePolicyReplayInput",
               "exportKind": "named",
               "source": "./libs/replay/PolicyReplay",
+              "declarationKind": "function"
+            },
+            {
+              "name": "validateSeoDefinition",
+              "exportKind": "named",
+              "source": "./libs/seo/SeoComparison",
               "declarationKind": "function"
             },
             {
@@ -30801,6 +30884,71 @@
               "source": "./libs/CarryingCapacityCalculator"
             },
             {
+              "name": "SeoComparisonInput",
+              "exportKind": "named",
+              "source": "./libs/seo/SeoComparison"
+            },
+            {
+              "name": "SeoComparisonReport",
+              "exportKind": "named",
+              "source": "./libs/seo/SeoComparison"
+            },
+            {
+              "name": "SeoComparisonRow",
+              "exportKind": "named",
+              "source": "./libs/seo/SeoComparison"
+            },
+            {
+              "name": "SeoDefinition",
+              "exportKind": "named",
+              "source": "./libs/seo/SeoComparison"
+            },
+            {
+              "name": "SeoLandingDataset",
+              "exportKind": "named",
+              "source": "./libs/seo/SeoComparison"
+            },
+            {
+              "name": "SeoLandingRow",
+              "exportKind": "named",
+              "source": "./libs/seo/SeoComparison"
+            },
+            {
+              "name": "SeoMetadata",
+              "exportKind": "named",
+              "source": "./libs/seo/SeoComparison"
+            },
+            {
+              "name": "SeoPageMapping",
+              "exportKind": "named",
+              "source": "./libs/seo/SeoComparison"
+            },
+            {
+              "name": "SeoPeriodValue",
+              "exportKind": "named",
+              "source": "./libs/seo/SeoComparison"
+            },
+            {
+              "name": "SeoScope",
+              "exportKind": "named",
+              "source": "./libs/seo/SeoComparison"
+            },
+            {
+              "name": "SeoSearchDataset",
+              "exportKind": "named",
+              "source": "./libs/seo/SeoComparison"
+            },
+            {
+              "name": "SeoSearchRow",
+              "exportKind": "named",
+              "source": "./libs/seo/SeoComparison"
+            },
+            {
+              "name": "SeoWindow",
+              "exportKind": "named",
+              "source": "./libs/seo/SeoComparison"
+            },
+            {
               "name": "SimulationConfig",
               "exportKind": "named",
               "source": "./libs/CarryingCapacityCalculator"
@@ -30916,6 +31064,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "collectSeoSource",
+              "exportKind": "named",
+              "source": "./libs/seo/SeoSources",
+              "declarationKind": "function"
+            },
+            {
               "name": "createAssignedOutcomeQuery",
               "exportKind": "named",
               "source": "./libs/read/AssignedOutcomeRead",
@@ -30952,6 +31106,18 @@
               "declarationKind": "function"
             },
             {
+              "name": "importSeoLanding",
+              "exportKind": "named",
+              "source": "./libs/seo/SeoSources",
+              "declarationKind": "function"
+            },
+            {
+              "name": "importSeoSearch",
+              "exportKind": "named",
+              "source": "./libs/seo/SeoSources",
+              "declarationKind": "function"
+            },
+            {
               "name": "normalizeActivationRow",
               "exportKind": "named",
               "source": "./libs/activation/ActivationSources",
@@ -30970,6 +31136,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "normalizeSeoRow",
+              "exportKind": "named",
+              "source": "./libs/seo/SeoSources",
+              "declarationKind": "function"
+            },
+            {
               "name": "parseAssignedOutcomeReport",
               "exportKind": "named",
               "source": "./libs/read/AssignedOutcomeRead",
@@ -30979,6 +31151,12 @@
               "name": "parseAssignedOutcomeRow",
               "exportKind": "named",
               "source": "./libs/read/AssignedOutcomeImport",
+              "declarationKind": "function"
+            },
+            {
+              "name": "parseSeoReport",
+              "exportKind": "named",
+              "source": "./libs/seo/SeoSources",
               "declarationKind": "function"
             },
             {
@@ -31000,6 +31178,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "readSeoWarehouse",
+              "exportKind": "named",
+              "source": "./libs/seo/SeoSources",
+              "declarationKind": "function"
+            },
+            {
               "name": "registerActivationQuery",
               "exportKind": "named",
               "source": "./libs/activation/ActivationSources",
@@ -31015,6 +31199,12 @@
               "name": "registerPageExperienceQuery",
               "exportKind": "named",
               "source": "./libs/PageExperienceSources",
+              "declarationKind": "function"
+            },
+            {
+              "name": "registerSeoQuery",
+              "exportKind": "named",
+              "source": "./libs/seo/SeoSources",
               "declarationKind": "function"
             }
           ],
@@ -31143,6 +31333,11 @@
               "name": "RegisteredQueryReadOptions",
               "exportKind": "named",
               "source": "./libs/read/MetricReadService"
+            },
+            {
+              "name": "SeoColumnBinding",
+              "exportKind": "named",
+              "source": "./libs/seo/SeoSources"
             },
             {
               "name": "SourceRevision",

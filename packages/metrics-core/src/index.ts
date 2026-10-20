@@ -309,3 +309,26 @@ export type {
   PageExperienceReport,
   Ga4EngagementSnapshot,
 } from "./libs/PageExperience";
+
+export {
+  compareSeo,
+  validateSeoDefinition,
+  hashSeoInput,
+  seoScopeKey,
+  SeoComparisonProblem,
+} from "./libs/seo/SeoComparison";
+export type {
+  SeoScope,
+  SeoWindow,
+  SeoMetadata,
+  SeoSearchRow,
+  SeoLandingRow,
+  SeoSearchDataset,
+  SeoLandingDataset,
+  SeoPageMapping,
+  SeoDefinition,
+  SeoComparisonInput,
+  SeoPeriodValue,
+  SeoComparisonRow,
+  SeoComparisonReport,
+} from "./libs/seo/SeoComparison";
