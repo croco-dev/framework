@@ -7,7 +7,7 @@ title: "createOperation"
 
 > **createOperation**\<`Input`, `Output`, `Context`, `Kind`\>(`definition`, `handler`): [`Operation`](/api/protocols-core/src/type-aliases/operation/)\<`Input`, `Output`, `Context`, `Kind`\>
 
-Bind either a function or a generated class-method factory to the same contract.
+Bind a typed function handler to an authorized operation contract.
 
 ## Type Parameters
 

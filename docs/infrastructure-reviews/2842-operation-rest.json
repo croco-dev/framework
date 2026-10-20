@@ -6,7 +6,7 @@
       "classification": "pure-contract",
       "reason": "Authorize and validate one domain operation across direct calls and an explicitly selected REST export; retain existing route contracts, HTTP status and application-owned execution policies. This is the first stage of #2842; decorated-class compilation and native tRPC/GraphQL bindings are deferred to its second stage.",
       "files": {
-        "packages/problems-core/src/generated/problem-code-registry.ts": "a6a4957686a5c06f529aabd68592d81348ee8266df6a8975d34a7d7440a21c13"
+        "packages/problems-core/src/generated/problem-code-registry.ts": "47d7790445c4f49a2992c6d90f91088c55b03043d0d2cf80c49ac6ef59cce1f7"
       },
       "catalogRuntimes": [],
       "profiles": {
@@ -45,7 +45,7 @@
       "reason": "Authorize and validate one domain operation across direct calls and an explicitly selected REST export; retain existing route contracts, HTTP status and application-owned execution policies. This is the first stage of #2842; decorated-class compilation and native tRPC/GraphQL bindings are deferred to its second stage.",
       "files": {
         "packages/protocols-core/src/index.ts": "72ff31aba0dc639d9efaf43d8f97fc039916da132a148b5412068c7ce43fff7b",
-        "packages/protocols-core/src/libs/Operation.ts": "a820a6d4ce298125b7181386ca899a2f91fe812d8fa615df8982d3229461ab68",
+        "packages/protocols-core/src/libs/Operation.ts": "00fcdacabbb4e3fedc864341f14916dab1c65e0a39fe1aa48001b0ef519e2d0e",
         "packages/protocols-core/src/libs/RouteIR.ts": "2ae989c77334f76bb8d7144ab45ac037826a357f9db8446bb0f98f6d3c3ff1e7",
         "packages/protocols-core/src/libs/extractRouteIR.ts": "8c1c19246773f037a33a129d2df1feb95d39e86cb6de16792c50a5c9fa284404",
         "packages/protocols-core/src/libs/ContractGraph.ts": "431b85e26e5b29f7888aebeb603ff65493c1016258e1ad5d7eecdd9e6b3a41d4",
@@ -90,7 +90,7 @@
       "reason": "Authorize and validate one domain operation across direct calls and an explicitly selected REST export; retain existing route contracts, HTTP status and application-owned execution policies. This is the first stage of #2842; decorated-class compilation and native tRPC/GraphQL bindings are deferred to its second stage.",
       "files": {
         "packages/protocols-rest/src/index.ts": "5d7731df696e6db2eba16a92242354712ceba3fa7647666aa03afdc6c27a4bba",
-        "packages/protocols-rest/src/libs/createRestOperationController.ts": "924400c2c4ed0862327a764a139e9ec2afe9ce34a27916819b65f0ffdcd37c2e",
+        "packages/protocols-rest/src/libs/createRestOperationController.ts": "bd4db32d407e55b5e5d85b39993cb67701c31e44c5b1d2b2f36e16d34b24149a",
         "packages/protocols-rest/src/libs/sourceLocation.ts": "992a02ab3bbbeaf7a7633708aaf0cbf8d1a7aeee91e98965113fc7172b7b8c0e",
         "packages/protocols-rest/src/type-tests/OperationBindingTypes.ts": "5acacabd1d97eb6ee50752fe00c638b31224516b1ea4b47120b0dc12cb191e33"
       },

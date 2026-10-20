@@ -26833,7 +26833,7 @@
       "sources": [
         {
           "file": "packages/protocols-rest/src/libs/createRestOperationController.ts",
-          "line": 97,
+          "line": 101,
           "column": 19,
           "kind": "problem-factory"
         }
@@ -26863,7 +26863,7 @@
       "sources": [
         {
           "file": "packages/protocols-rest/src/libs/createRestOperationController.ts",
-          "line": 89,
+          "line": 93,
           "column": 19,
           "kind": "problem-factory"
         }

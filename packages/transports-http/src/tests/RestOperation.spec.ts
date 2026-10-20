@@ -95,6 +95,73 @@ describe("REST operation binding", () => {
     expect((await app.fetch(new Request("http://localhost/checkout/start"))).status).toBe(404);
   });
 
+  it("publishes deterministic distinct REST identities for one operation on multiple routes", async () => {
+    const operation = createOperation(
+      defineOperation({
+        id: "product.alias",
+        kind: "query",
+        input: z.object({}),
+        output: z.number(),
+        authorize(_context: Authority) {},
+      }),
+      () => 1,
+    );
+    const bindings = [
+      { method: "GET", path: "/alias-a" },
+      { method: "GET", path: "/alias_a" },
+      { method: "POST", path: "/alias-a" },
+    ] as const;
+    const controllers = bindings.map((binding) =>
+      createRestOperationController(operation, {
+        ...binding,
+        input: "query",
+        createContext: () => verified,
+      }),
+    );
+    const graph = buildContractGraph(controllers, { strictSchemas: true });
+    expect(graph.diagnostics.filter((entry) => entry.severity === "error")).toEqual([]);
+    const document = emitOpenAPIFromContractGraph(graph);
+    const identities = [
+      document.paths?.["/alias-a"]?.get?.operationId,
+      document.paths?.["/alias_a"]?.get?.operationId,
+      document.paths?.["/alias-a"]?.post?.operationId,
+    ];
+    expect(identities.every((identity) => typeof identity === "string")).toBe(true);
+    expect(new Set(identities).size).toBe(3);
+    expect(new Set(controllers.map((controller) => controller.name)).size).toBe(3);
+    expect(
+      new Set(controllers.map((controller) => extractRouteIR(controller)[0]?.routeContract?.id))
+        .size,
+    ).toBe(3);
+    expect(
+      emitOpenAPIFromContractGraph(buildContractGraph([...controllers].reverse())).paths,
+    ).toEqual(document.paths);
+    const repeated = createRestOperationController(operation, {
+      ...bindings[0],
+      input: "query",
+      createContext: () => verified,
+    });
+    expect(repeated.name).toBe(controllers[0]?.name);
+    expect(
+      buildContractGraph([...controllers, repeated]).diagnostics.some(
+        (entry) => entry.severity === "error",
+      ),
+    ).toBe(true);
+    const app = createApp({ controllers, securityValidation: "off" });
+    for (const binding of bindings) {
+      const response = await app.fetch(
+        new Request(`http://localhost${binding.path}`, { method: binding.method }),
+      );
+      expect(response.status).toBe(200);
+      await expect(response.json()).resolves.toBe(1);
+    }
+    expect(controllers.map((controller) => extractRouteIR(controller)[0]?.operation?.id)).toEqual([
+      "product.alias",
+      "product.alias",
+      "product.alias",
+    ]);
+  });
+
   it("authorizes before malformed JSON, then preserves input, policy and media-type failures", async () => {
     const operation = checkout();
     const allowed = createRestOperationController(operation, {

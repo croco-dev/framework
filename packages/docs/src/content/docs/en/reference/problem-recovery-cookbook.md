@@ -17481,7 +17481,7 @@ Sources:
 
 Sources:
 
-- `packages/protocols-rest/src/libs/createRestOperationController.ts:97:19` (problem-factory)
+- `packages/protocols-rest/src/libs/createRestOperationController.ts:101:19` (problem-factory)
 
 <a id="protocols-rest-operation-media-type-invalid"></a>
 
@@ -17499,7 +17499,7 @@ Sources:
 
 Sources:
 
-- `packages/protocols-rest/src/libs/createRestOperationController.ts:89:19` (problem-factory)
+- `packages/protocols-rest/src/libs/createRestOperationController.ts:93:19` (problem-factory)
 
 <a id="protocols-rest-request-validation-failed"></a>
 

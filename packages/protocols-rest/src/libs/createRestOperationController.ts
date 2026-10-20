@@ -74,6 +74,10 @@ export function createRestOperationController<
   }
   const exportBinding = Object.freeze({ ...binding });
   const method = HttpMethod[exportBinding.method];
+  const bindingId = `${definition.id}:${exportBinding.method}:${exportBinding.path}`.replace(
+    /[^a-zA-Z0-9]/g,
+    (character) => `_${character.charCodeAt(0).toString(16)}_`,
+  );
   class RestOperationController {
     async handle(request: RestOperationRequest): Promise<z.output<Output>> {
       const context = await exportBinding.createContext(request);
@@ -105,7 +109,7 @@ export function createRestOperationController<
     }
   }
   Object.defineProperty(RestOperationController, "name", {
-    value: `Operation_${definition.id.replace(/[^a-zA-Z0-9]/g, (character) => `_${character.charCodeAt(0).toString(16)}_`)}`,
+    value: `Operation_${bindingId}`,
   });
   Controller()(RestOperationController);
   Ctx()(RestOperationController.prototype, "handle", 0);
@@ -117,8 +121,8 @@ export function createRestOperationController<
       statusCode: status,
       ...(sourceLocation ? { sourceLocation } : {}),
       contract: {
-        id: definition.id,
-        operationId: definition.id,
+        id: bindingId,
+        operationId: bindingId,
         method,
         path: exportBinding.path,
         ...(sourceLocation ? { sourceLocation } : {}),

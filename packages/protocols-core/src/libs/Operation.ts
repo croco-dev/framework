@@ -75,7 +75,7 @@ export function defineOperation<
   return Object.freeze({ ...definition });
 }
 
-/** Bind either a function or a generated class-method factory to the same contract. */
+/** Bind a typed function handler to an authorized operation contract. */
 export function createOperation<
   Input extends z.ZodType,
   Output extends z.ZodType,
