@@ -2,6 +2,7 @@
   "$schema": "https://turbo.build/schema.json",
   "globalDependencies": [
     "mise.toml",
+    "tsconfig/**",
     "pnpm-lock.yaml",
     "**/.env.*local",
     "tooling/compareStrings.*"
