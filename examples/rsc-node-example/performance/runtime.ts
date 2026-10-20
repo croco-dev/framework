@@ -156,6 +156,10 @@ export async function loadPdp(request: Request) {
               throw new PersonalizedFragmentProblem("Synthetic optional failure", {
                 reason: "injected-unavailable",
               });
+            if (url.searchParams.get("fault") === "deferred-blocking") {
+              const slow = await fetch(new URL("/lab/blocking-fetch", request.url));
+              await slow.text();
+            }
             const source = await fetch(new URL("/lab/recommendation", request.url));
             if (!source.ok)
               throw new PersonalizedFragmentProblem("Synthetic source unavailable", {

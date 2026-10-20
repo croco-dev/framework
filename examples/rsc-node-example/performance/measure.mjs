@@ -176,7 +176,7 @@ try {
               : html.replaceAll("Saved inspiration for alice", "Saved inspiration for bob"),
         });
       });
-    const url = `${origin}/products/orbit?configuration=${configuration}${fault === "personalization" || fault === "blocking" ? `&fault=${fault}` : ""}`;
+    const url = `${origin}/products/orbit?configuration=${configuration}${fault === "personalization" || fault === "blocking" || fault === "deferred-blocking" ? `&fault=${fault}` : ""}`;
     let initialResponse;
     try {
       if (cache === "warm") {
@@ -372,6 +372,10 @@ try {
   const blockingVerdict = assess(blockingSample, baseline);
   assert.ok(blockingVerdict.diagnostics.includes("PDP_REGRESSION:ttfbMs"));
   negativeControls.blocking = { sample: blockingSample, verdict: blockingVerdict };
+  const deferredSample = await measure("combined", "cold", 0, { fault: "deferred-blocking" });
+  const deferredVerdict = assess(deferredSample, baseline);
+  assert.ok(deferredVerdict.diagnostics.includes("PDP_REGRESSION:hydrationReadyMs"));
+  negativeControls.deferredBlocking = { sample: deferredSample, verdict: deferredVerdict };
   for (const fault of ["hydration", "private"]) {
     const sample = await measure("combined", "cold", 0, { fault });
     const verdict = assess(sample, baseline);
