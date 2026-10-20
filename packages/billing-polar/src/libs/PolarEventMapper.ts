@@ -6,7 +6,11 @@ import {
   SubscriptionPastDueEvent,
   SubscriptionRevokedEvent,
 } from "@croco/billing-core";
-import type { OrderPaymentReason, PlanVersionRef } from "@croco/billing-core";
+import type {
+  OrderPaymentReason,
+  OrderSubscriptionEvidence,
+  PlanVersionRef,
+} from "@croco/billing-core";
 import type { DomainEvent } from "@croco/events-core";
 
 /**
@@ -101,10 +105,20 @@ export class PolarEventMapper {
       amount: number;
       currency: string;
       reason: OrderPaymentReason;
+      subscription?: OrderSubscriptionEvidence;
     },
   ): DomainEvent[] {
     if (eventType === "order.paid") {
-      return [new OrderPaidEvent(tenantId, order.id, order.amount, order.currency, order.reason)];
+      return [
+        new OrderPaidEvent(
+          tenantId,
+          order.id,
+          order.amount,
+          order.currency,
+          order.reason,
+          order.subscription,
+        ),
+      ];
     }
     return [];
   }

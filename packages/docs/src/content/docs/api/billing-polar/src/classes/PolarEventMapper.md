@@ -53,6 +53,10 @@ Map a Polar order event to internal domain events.
 
 [`OrderPaymentReason`](/api/billing-core/src/type-aliases/orderpaymentreason/)
 
+###### subscription?
+
+[`OrderSubscriptionEvidence`](/api/billing-core/src/type-aliases/ordersubscriptionevidence/)
+
 #### Returns
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/)[]

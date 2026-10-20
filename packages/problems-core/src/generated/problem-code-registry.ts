@@ -20972,7 +20972,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/metrics-billing/src/libs/problems/BillingMetricsProblems.ts";
-          readonly line: 61;
+          readonly line: 62;
           readonly column: 1;
           readonly kind: "problem-class";
         },
@@ -21000,7 +21000,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/metrics-billing/src/libs/problems/BillingMetricsProblems.ts";
-          readonly line: 16;
+          readonly line: 17;
           readonly column: 1;
           readonly kind: "problem-class";
         },
@@ -21028,7 +21028,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/metrics-billing/src/libs/problems/BillingMetricsProblems.ts";
-          readonly line: 45;
+          readonly line: 46;
           readonly column: 1;
           readonly kind: "problem-class";
         },
@@ -55423,7 +55423,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/metrics-billing/src/libs/problems/BillingMetricsProblems.ts",
-          line: 61,
+          line: 62,
           column: 1,
           kind: "problem-class",
         },
@@ -55456,7 +55456,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/metrics-billing/src/libs/problems/BillingMetricsProblems.ts",
-          line: 16,
+          line: 17,
           column: 1,
           kind: "problem-class",
         },
@@ -55488,7 +55488,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/metrics-billing/src/libs/problems/BillingMetricsProblems.ts",
-          line: 45,
+          line: 46,
           column: 1,
           kind: "problem-class",
         },

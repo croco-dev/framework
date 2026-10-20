@@ -9812,6 +9812,11 @@
               "source": "./types"
             },
             {
+              "name": "OrderSubscriptionEvidence",
+              "exportKind": "named",
+              "source": "./types"
+            },
+            {
               "name": "Plan",
               "exportKind": "named",
               "source": "./types"

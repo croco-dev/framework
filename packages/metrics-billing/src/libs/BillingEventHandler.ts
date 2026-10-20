@@ -114,14 +114,20 @@ export class BillingEventHandler
       throw this.createDroppedProblem(event, "account_not_found", event.tenantId);
     }
 
-    const subscription = await this.billingStore.findSubscription(account.id);
-    if (subscription === null) {
-      throw this.createDroppedProblem(event, "subscription_not_found", account.id);
+    const evidence = event.subscription;
+    if (
+      !evidence ||
+      typeof evidence.externalSubscriptionId !== "string" ||
+      evidence.externalSubscriptionId.trim().length === 0 ||
+      typeof evidence.planVersionRef !== "string" ||
+      evidence.planVersionRef.trim().length === 0
+    ) {
+      throw this.createDroppedProblem(event, "order_price_evidence_missing", event.externalOrderId);
     }
 
-    const plan = await this.getPinnedPlan(subscription.planVersionRef);
+    const plan = await this.getPinnedPlan(evidence.planVersionRef);
     if (plan === null) {
-      throw this.createDroppedProblem(event, "plan_not_found", subscription.planId);
+      throw this.createDroppedProblem(event, "plan_not_found", evidence.planVersionRef);
     }
 
     const mrrAmount = this.calculator.normalizeMRR(plan.amount, plan.interval, plan.intervalCount);

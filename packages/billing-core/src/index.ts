@@ -301,6 +301,7 @@ export type {
   MembershipRole,
   Order,
   OrderPaymentReason,
+  OrderSubscriptionEvidence,
   Plan,
   PlanInterval,
   PlanRatingDefinition,

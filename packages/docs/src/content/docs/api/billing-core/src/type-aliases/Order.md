@@ -50,3 +50,9 @@ billing account, invoice, order, plan, subscription 도메인 타입입니다.
 ### reason
 
 > **reason**: [`OrderPaymentReason`](/api/billing-core/src/type-aliases/orderpaymentreason/)
+
+---
+
+### subscription?
+
+> `readonly` `optional` **subscription?**: [`OrderSubscriptionEvidence`](/api/billing-core/src/type-aliases/ordersubscriptionevidence/)

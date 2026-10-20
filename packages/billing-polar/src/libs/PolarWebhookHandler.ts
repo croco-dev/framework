@@ -4,6 +4,7 @@ import type {
   BillingSubscriptionWebhookTransition,
   BillingStore,
   OrderPaymentReason,
+  OrderSubscriptionEvidence,
   PlanRegistry,
   Subscription,
 } from "@croco/billing-core";
@@ -85,6 +86,9 @@ type ParsedSubscriptionPayload = {
 };
 
 type ParsedOrderPayload = {
+  externalSubscriptionId?: string;
+  productId?: string;
+  priceIds: readonly string[];
   id: string;
   tenantId: string;
   amount: number;
@@ -398,6 +402,15 @@ export class PolarWebhookHandler {
     return {
       id: orderData.id,
       tenantId: this.extractTenantId(orderData.customer),
+      externalSubscriptionId: orderData.subscriptionId ?? undefined,
+      productId: orderData.productId ?? undefined,
+      priceIds: [
+        ...new Set(
+          (orderData.items ?? [])
+            .filter((item) => !item.proration && item.productPriceId)
+            .map((item) => item.productPriceId as string),
+        ),
+      ],
       amount: orderData.netAmount,
       currency: orderData.currency,
       reason: this.mapOrderPaymentReason(orderData.billingReason),
@@ -519,6 +532,30 @@ export class PolarWebhookHandler {
     eventType: string,
     payload: ParsedOrderPayload,
   ): Promise<void> {
+    let subscription: OrderSubscriptionEvidence | undefined;
+    if (
+      payload.reason === "subscription_create" ||
+      payload.reason === "subscription_reactivation"
+    ) {
+      if (
+        !payload.externalSubscriptionId?.trim() ||
+        !payload.productId?.trim() ||
+        payload.priceIds.length === 0
+      ) {
+        throw new WebhookProcessingProblem(
+          "Order subscription identity and recurring price IDs are required; replay with authoritative order evidence",
+        );
+      }
+      const version = await this.planRegistry.resolveProviderPlanVersion({
+        provider: "polar",
+        productId: payload.productId,
+        priceIds: payload.priceIds,
+      });
+      subscription = {
+        externalSubscriptionId: payload.externalSubscriptionId,
+        planVersionRef: version.ref,
+      };
+    }
     await this.store.saveOrder({
       id: payload.id,
       billingAccountId: payload.tenantId,
@@ -527,6 +564,7 @@ export class PolarWebhookHandler {
       currency: payload.currency,
       reason: payload.reason,
       paidAt: payload.paidAt,
+      ...(subscription && { subscription }),
     });
 
     const domainEvents = this.eventMapper.mapOrderEvent(eventType, payload.tenantId, {
@@ -534,6 +572,7 @@ export class PolarWebhookHandler {
       amount: payload.amount,
       currency: payload.currency,
       reason: payload.reason,
+      ...(subscription && { subscription }),
     });
 
     for (const [index, event] of domainEvents.entries()) {
@@ -695,6 +734,15 @@ function normalizeVerifiedEvent(event: unknown): unknown {
       createdAt: data.createdAt ?? data.created_at,
       modifiedAt: data.modifiedAt ?? data.modified_at,
       netAmount: data.net_amount,
+      subscriptionId: data.subscription_id ?? data.subscriptionId,
+      productId: data.product_id ?? data.productId,
+      items: Array.isArray(data.items)
+        ? data.items.map((item) =>
+            isRecord(item)
+              ? { ...item, productPriceId: item.product_price_id ?? item.productPriceId }
+              : item,
+          )
+        : data.items,
     },
   };
 }

@@ -290,6 +290,31 @@ describe("InMemoryBillingStore", () => {
   });
 
   describe("saveOrder and findOrdersByAccount", () => {
+    it("isolates event-time subscription evidence on save and read", async () => {
+      const subscription = { externalSubscriptionId: "old-sub", planVersionRef: PLAN_VERSION_REF };
+      await store.saveOrder({
+        id: "paid",
+        billingAccountId: "account",
+        externalOrderId: "paid",
+        amount: 0,
+        currency: "USD",
+        reason: "subscription_create",
+        paidAt: new Date("2026-01-01"),
+        subscription,
+      });
+      subscription.externalSubscriptionId = "replaced";
+      const [saved] = await store.findOrdersByAccount("account");
+      expect(saved.subscription).toEqual({
+        externalSubscriptionId: "old-sub",
+        planVersionRef: PLAN_VERSION_REF,
+      });
+      if (!saved.subscription) expect.unreachable("saved order must retain its price evidence");
+      Object.assign(saved.subscription, { planVersionRef: "other@v2" });
+      expect((await store.findOrdersByAccount("account"))[0].subscription?.planVersionRef).toBe(
+        PLAN_VERSION_REF,
+      );
+    });
+
     it.each([false, true])(
       "should snapshot saved orders on insert and update (update: %s)",
       async (update) => {

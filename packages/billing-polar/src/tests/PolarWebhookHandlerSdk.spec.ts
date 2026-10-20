@@ -3,6 +3,7 @@ import { webhookOrderPaidPayloadFromJSON } from "@polar-sh/sdk/models/components
 import type { BillingStore, PlanRegistry, PlanVersionDefinition } from "@croco/billing-core";
 import {
   InMemoryBillingStore,
+  InMemoryPlanRegistry,
   OrderPaidEvent,
   PlanChangedEvent,
   planVersionRef,
@@ -701,8 +702,81 @@ describe("PolarWebhookHandler order.paid with the Polar SDK Order shape", () => 
     ]);
     expect(eventPublisher.publishIdempotently).toHaveBeenCalledWith(expect.any(OrderPaidEvent));
     expect(eventPublisher.publishIdempotently).toHaveBeenCalledWith(
-      expect.objectContaining({ amount: 2900, externalOrderId: "order-sdk-1" }),
+      expect.objectContaining({
+        amount: 2900,
+        externalOrderId: "order-sdk-1",
+        subscription: { externalSubscriptionId: "sub-sdk", planVersionRef: POLAR_PLAN_VERSION.ref },
+      }),
     );
+  });
+
+  it("keeps the order price mapping on publication retry after subscription replacement", async () => {
+    const store = createMockStore();
+    const publisher = createMockEventPublisher();
+    const registry = new InMemoryPlanRegistry();
+    await registry.publishPlanVersion({
+      ...POLAR_PLAN_VERSION,
+      providerBindings: [{ provider: "polar", productId: "plan-pro", priceIds: ["price-1"] }],
+    });
+    await registry.publishPlanVersion(POLAR_TEAM_PLAN_VERSION);
+    vi.spyOn(registry, "resolveProviderPlanVersion");
+    const handler = new PolarWebhookHandler(
+      { accessToken: "test-token", environment: "sandbox", webhookSecret },
+      {
+        store,
+        eventPublisher: publisher,
+        planRegistry: registry,
+      },
+    );
+    const payload = createSdkOrderPaidPayload(17);
+    const { body, headers } = signPayload(payload, "evt-price-retry");
+    vi.mocked(publisher.publishIdempotently).mockRejectedValueOnce(
+      new WebhookProcessingProblem("retry"),
+    );
+    await expect(handler.handle(body, headers)).rejects.toBeInstanceOf(WebhookProcessingProblem);
+    await store.saveSubscription({
+      id: "replacement",
+      billingAccountId: "tenant-sdk",
+      externalSubscriptionId: "replacement",
+      planId: "plan-team",
+      planVersionRef: POLAR_TEAM_PLAN_VERSION.ref,
+      status: "active",
+      currentPeriodEnd: now,
+      cancelAtPeriodEnd: false,
+      lastSyncedAt: now,
+    });
+    await handler.handle(body, headers);
+    expect(registry.resolveProviderPlanVersion).toHaveBeenCalledWith({
+      provider: "polar",
+      productId: "plan-pro",
+      priceIds: ["price-1"],
+    });
+    const [order] = await store.findOrdersByAccount("tenant-sdk");
+    expect(order.subscription).toEqual({
+      externalSubscriptionId: "sub-sdk",
+      planVersionRef: POLAR_PLAN_VERSION.ref,
+    });
+    const events = vi
+      .mocked(publisher.publishIdempotently)
+      .mock.calls.map(([event]) => event as OrderPaidEvent);
+    expect(events.map((event) => event.subscription)).toEqual([
+      order.subscription,
+      order.subscription,
+    ]);
+    expect(events[0].eventId).toBe(events[1].eventId);
+  });
+
+  it("rejects missing historical price evidence without saving or publishing", async () => {
+    const store = createMockStore();
+    const publisher = createMockEventPublisher();
+    const payload = createSdkOrderPaidPayload(0);
+    payload.data.items = [];
+    const { body, headers } = signPayload(payload, "evt-no-price");
+    await expect(createHandler(store, publisher).handle(body, headers)).rejects.toBeInstanceOf(
+      WebhookProcessingProblem,
+    );
+    expect(await store.findOrdersByAccount("tenant-sdk")).toEqual([]);
+    expect(publisher.publishIdempotently).not.toHaveBeenCalled();
   });
 
   it("rejects an order.paid redelivery while another instance holds the claim, then processes it after release", async () => {
