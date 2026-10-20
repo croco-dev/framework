@@ -96,6 +96,47 @@
           "references": ["packages/problems-core/src/generated/problem-code-registry.ts"]
         }
       }
+    },
+    {
+      "package": "create-croco-app",
+      "classification": "pure-contract",
+      "reason": "Generated canonical package-role metadata now classifies @croco/storage-s3 as a Plugin; no generated deployment profile, host path, identity provisioning or runtime behavior is added.",
+      "files": {
+        "packages/create-croco-app/src/data/package-roles.json": "8a51e76dc7810b158ce2bc4f6b7eb48fb059f5c1f6a16ca3b6f245b9904c6f50"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "This change is generated package-role selection data only, with no infrastructure storage, lifecycle or host execution requirement.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/create-croco-app/src/data/package-roles.json",
+            "docs/package-catalog.json"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "This change is generated package-role selection data only, with no infrastructure storage, lifecycle or host execution requirement.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/create-croco-app/src/data/package-roles.json",
+            "docs/package-catalog.json"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "This change is generated package-role selection data only, with no infrastructure storage, lifecycle or host execution requirement.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/create-croco-app/src/data/package-roles.json",
+            "docs/package-catalog.json"
+          ]
+        }
+      }
     }
   ]
 }
