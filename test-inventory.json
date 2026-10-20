@@ -6421,6 +6421,12 @@
       "owner": "@croco/workflow-core"
     },
     {
+      "path": "scripts/tests/PdpPerformance.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "repo:ci"
+    },
+    {
       "path": "scripts/tests/alpha-release-smoke.spec.ts",
       "lane": "fast",
       "qualifiers": [],

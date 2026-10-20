@@ -1789,9 +1789,21 @@ importers:
 
   examples/rsc-node-example:
     dependencies:
+      '@croco/cache-core':
+        specifier: workspace:*
+        version: link:../../packages/cache-core
+      '@croco/features-core':
+        specifier: workspace:*
+        version: link:../../packages/features-core
+      '@croco/frontend-react':
+        specifier: workspace:*
+        version: link:../../packages/frontend-react
       '@croco/meta-vite':
         specifier: workspace:*
         version: link:../../packages/meta-vite
+      '@croco/storage-cloudflare':
+        specifier: workspace:*
+        version: link:../../packages/storage-cloudflare
       react:
         specifier: 19.2.6
         version: 19.2.6
@@ -1802,6 +1814,12 @@ importers:
         specifier: 19.2.6
         version: 19.2.6(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(webpack@5.111.1(@swc/core@1.15.43)(csso@5.0.5)(esbuild@0.27.2)(postcss@8.5.18)(sharp@0.35.4(@types/node@24.13.2))(svgo@4.0.2)(uglify-js@3.19.3))
     devDependencies:
+      '@types/react':
+        specifier: ^19.2.0
+        version: 19.2.14
+      '@types/react-dom':
+        specifier: ^19.2.0
+        version: 19.2.3(@types/react@19.2.14)
       '@vitejs/plugin-rsc':
         specifier: ^0.5.26
         version: 0.5.26(react-dom@19.2.6(react@19.2.6))(react-server-dom-webpack@19.2.6(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(webpack@5.111.1(@swc/core@1.15.43)(csso@5.0.5)(esbuild@0.27.2)(postcss@8.5.18)(sharp@0.35.4(@types/node@24.13.2))(svgo@4.0.2)(uglify-js@3.19.3)))(react@19.2.6)(vite@6.4.3(@types/node@24.13.2)(jiti@2.6.1)(terser@5.51.2)(tsx@4.21.0)(yaml@2.9.0))

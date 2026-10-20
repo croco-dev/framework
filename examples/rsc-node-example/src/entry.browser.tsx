@@ -4,7 +4,7 @@
 import { createRscBrowserFlightHeaders } from "@croco/meta-vite/rsc/browser";
 import { hydrateRoot } from "react-dom/client";
 import type { Root } from "react-dom/client";
-import { createFromFetch } from "@vitejs/plugin-rsc/browser";
+import { createFromReadableStream, createFromFetch } from "@vitejs/plugin-rsc/browser";
 
 // `#root` already contains the server-rendered HTML, so attach with
 // `hydrateRoot` instead of `createRoot`: the latter throws the DOM away and
@@ -16,7 +16,7 @@ async function loadFlightNode() {
   // the server refuses a Flight request that echoes a different one, so a
   // browser running an older build fails here instead of rendering a tree it
   // cannot resolve. Refusing is `createRscBrowserFlightHeaders`'s job.
-  const response = await fetch(`${location.pathname}.rsc`, {
+  const response = await fetch(`${location.pathname}.rsc${location.search}`, {
     headers: createRscBrowserFlightHeaders(),
   });
 
@@ -54,7 +54,18 @@ async function hydrate() {
   if (!outlet) {
     return;
   }
-  root = hydrateRoot(outlet, await loadFlightNode());
+  const initial = document.getElementById("pdp-initial-flight");
+  const node = initial
+    ? await createFromReadableStream(
+        new ReadableStream({
+          start(controller) {
+            controller.enqueue(new TextEncoder().encode(JSON.parse(initial.textContent ?? '""')));
+            controller.close();
+          },
+        }),
+      )
+    : await loadFlightNode();
+  root = hydrateRoot(outlet, node as never);
   document.querySelector("[data-testid=refresh]")?.addEventListener("click", () => {
     void refresh();
   });

@@ -82,3 +82,101 @@ grep -o 'RSC:server-only-value' dist/rsc/index.js | head -1
 
 Node production path only. Workers/Lambda stay undeclared until verified
 against a real host contract (issue #2835 acceptance).
+
+## Production PDP performance lab (#2841)
+
+`/products/orbit` is a synthetic product-detail fixture on this same real Node
+Flight pipeline. It uses parallel filesystem reads for public product content,
+a reserved hero layout, one interactive preview CTA, and a Suspense recommendation
+region. The preview changes local UI state; it does not assert price, purchasing
+eligibility or a completed purchase. Missing products return 404.
+
+From the repository root:
+
+```bash
+pnpm install --frozen-lockfile
+pnpm build --filter=@croco-example/rsc-node...
+pnpm --dir packages/docs run playwright:install
+pnpm --filter @croco-example/rsc-node test:performance /tmp/croco-pdp-evidence
+```
+
+Build and serve both use production mode. The lab starts its own loopback-only
+server and project-owned headless Chromium, closes both, and writes evidence
+outside the checkout by default. The existing benchmark workflow runs these same
+commands and uploads the JSON, Markdown, inspector and screenshots. No account,
+production identity, remote CDN request, database or operational RUM is used.
+
+`performance/profile.mjs` declares critical/deferred regions, responsive image
+widths and sizes, viewport, device scale, CPU/network constraints, repetitions,
+structural payload/request budgets and permitted timing deltas from the measured
+baseline. These are adjustable starting budgets for this fixture, not an SLA for
+all applications. The example resolves the Problems ESM source while bundling;
+this avoids pulling an opaque prebuilt CommonJS registry into the browser. It
+measures the workspace production artifact, not an installed tarball consumer.
+
+All four registered configurations use the same URL, data, client build and
+profile. Only the named optional integrations change:
+
+| Configuration   | Actual integration                                                                                                 |
+| --------------- | ------------------------------------------------------------------------------------------------------------------ |
+| baseline        | Public PDP + real Flight encoder/SSR/browser decoder                                                               |
+| experiment      | `ExperimentRuntime` + `ExperimentDeliveryBridge`, immutable admitted supporting-copy decision                      |
+| personalization | `loadPersonalizedFragments`, `InMemoryCacheStore`, shared public fragment and request-local private recommendation |
+| combined        | Both integrations on the same PDP                                                                                  |
+
+The fixture's **synthetic** `lab-user` cookie selects Alice or Bob. It is not an
+authentication example. Final HTML and Flight are private/no-store; private values
+and receipts never enter the shared fragment cache. The experiment measurement includes assignment/admission, the native
+`ExperimentRegion` browser boundary and its display-exposure request. It does not
+measure conversion delivery. It adds no allocator. Optional recommendation failure yields
+an explicit unavailable region and diagnostic, leaving the real CTA usable. The
+browser hydrates the exact initial Flight bytes embedded with the document, rather
+than assigning again during hydration. Refresh fetches a new negotiated Flight
+snapshot and preserves a working client boundary. A stale manifest is rejected.
+
+The real `CloudflareImagesProvider` generates width/height transformation paths.
+The loopback fixture serves predefined SVG artwork at those paths. This validates
+adapter URL composition, browser `srcset`/`sizes` selection, explicit dimensions,
+selective hero priority, lazy below-fold images and byte accounting. It does **not**
+measure a live CDN, image transformation quality, a codec or remote provider latency.
+
+Each configuration produces `passed`, `failed`, `unsupported` or `not_run` with an
+artifact reference, dependency/browser versions, conditions, raw samples and budget
+results. Currently all four have executable integrations; the lab must run them.
+A later unavailable integration must carry its concrete missing API/issue reason;
+unsupported or unexecuted rows cannot count as certification. Exceptions produce
+`failure.json`, retaining completed rows and explicitly marking unstarted rows.
+`report.json` is authoritative, `report.md` summarizes its rows, and
+`inspector.html` displays that exact report without recalculating measurements.
+
+Cold samples use a fresh browser context and cleared fragment store. Warm samples
+first load the same configuration in that context, then navigate again with its
+browser and fragment caches retained. Each mode runs three repetitions. Reports
+record document TTFB, public-loader timing/waterfall, first visible critical shell,
+decoded/visible hero, browser LCP, decoded HTML/embedded Flight/JS/image bytes,
+actual transfer bytes, requests, fragment source and keyboard-click-to-next-paint
+latency. The latter is a **lab interaction measurement, not field INP**. Missing
+measurements fail; they are never zero-filled. Timing deltas require identical
+artifact, fixture, versions, user, viewport, network, CPU, cache mode and repetition.
+
+The lab also injects a held blocking fetch, oversized valid JS and image responses,
+an initial/hydrated snapshot discrepancy and private-content contamination. Each
+must be rejected. Separate browser checks verify optional-source failure, Alice/Bob
+isolation, mobile/desktop overflow, keyboard/ARIA behavior, no unexpected browser
+errors, manifest/status handling, actual shell visibility while the recommendation
+fetch is held, stable hero geometry after release, and a fresh decoded refresh.
+Synthetic negative-control errors are evidence of rejection, not healthy-page errors.
+
+### Infrastructure decisions
+
+| Profile                | PDP lab path                | Provider / constraint / evidence                                                                                                                         |
+| ---------------------- | --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Kubernetes (Node Host) | unverified deployment       | Existing Node Flight example and process-local cache/experiment stores; local Node HTTP + Chromium evidence only, no cluster or durability certification |
+| AWS Lambda             | unsupported in this fixture | The example uses a listening Node server, filesystem reads and process-local lab controls; no Lambda Host/flush lifecycle integration is selected        |
+| Cloudflare Workers     | unsupported in this fixture | This Node Flight entry uses Node filesystem and HTTP APIs; the image URL adapter does not imply Workers Flight support                                   |
+
+Tool completion, the four configuration results, infrastructure certification and
+npm release are separate states. The public image/cache/experiment contracts and
+package runtime catalog are unchanged. This lab requires neither the warehouse
+add-on (#2878) nor a new performance service. Broader deployment integrations must
+activate this same registered fixture and gather their own evidence.

@@ -4,16 +4,24 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "vite build",
-    "serve": "NODE_ENV=production node ./serve.mjs"
+    "build": "NODE_ENV=production vite build",
+    "serve": "NODE_ENV=production node ./serve.mjs",
+    "typecheck": "tsc --noEmit",
+    "test:performance": "node performance/measure.mjs"
   },
   "dependencies": {
+    "@croco/cache-core": "workspace:*",
+    "@croco/features-core": "workspace:*",
+    "@croco/frontend-react": "workspace:*",
     "@croco/meta-vite": "workspace:*",
+    "@croco/storage-cloudflare": "workspace:*",
     "react": "19.2.6",
     "react-dom": "19.2.6",
     "react-server-dom-webpack": "19.2.6"
   },
   "devDependencies": {
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
     "@vitejs/plugin-rsc": "^0.5.26",
     "typescript": "^6.0.3",
     "vite": "^6.4.3"

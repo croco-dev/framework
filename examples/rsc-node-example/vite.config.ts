@@ -5,8 +5,16 @@
 import { crocoMetaVitePlugin } from "../../packages/meta-vite/src/libs/vite/crocoMetaVitePlugin";
 import vitePluginRsc from "@vitejs/plugin-rsc";
 import { defineConfig } from "vite";
+import { fileURLToPath } from "node:url";
 
 export default defineConfig({
+  resolve: {
+    alias: {
+      "@croco/problems-core": fileURLToPath(
+        new URL("../../packages/problems-core/src/index.ts", import.meta.url),
+      ),
+    },
+  },
   plugins: [
     // `rsc: true` enables the Flight environments and makes the plugin record
     // the client build id (`dist/client/croco-rsc-client-build.json`), which
