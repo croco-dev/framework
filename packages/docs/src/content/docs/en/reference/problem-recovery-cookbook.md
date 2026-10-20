@@ -16455,7 +16455,7 @@ Sources:
 
 Sources:
 
-- `packages/openapi-spec/src/libs/emitOpenAPI.ts:108:5` (problem-constructor)
+- `packages/openapi-spec/src/libs/emitOpenAPI.ts:109:5` (problem-constructor)
 
 <a id="openapi-spec-no-rest-controllers-found"></a>
 
@@ -17139,7 +17139,7 @@ Sources:
 
 Sources:
 
-- `packages/protocols-core/src/libs/Operation.ts:94:13` (problem-factory)
+- `packages/protocols-core/src/libs/Operation.ts:99:13` (problem-factory)
 
 <a id="protocols-core-invalid-operation-definition"></a>
 
@@ -17157,7 +17157,7 @@ Sources:
 
 Sources:
 
-- `packages/protocols-core/src/libs/Operation.ts:137:10` (problem-factory)
+- `packages/protocols-core/src/libs/Operation.ts:161:10` (problem-factory)
 
 <a id="protocols-core-invalid-operation-policy"></a>
 
@@ -17175,7 +17175,7 @@ Sources:
 
 Sources:
 
-- `packages/protocols-core/src/libs/Operation.ts:114:13` (problem-factory)
+- `packages/protocols-core/src/libs/Operation.ts:138:13` (problem-factory)
 
 <a id="protocols-core-operation-input-invalid"></a>
 
@@ -17193,7 +17193,7 @@ Sources:
 
 Sources:
 
-- `packages/protocols-core/src/libs/Operation.ts:101:13` (problem-factory)
+- `packages/protocols-core/src/libs/Operation.ts:125:13` (problem-factory)
 
 <a id="protocols-core-operation-output-invalid"></a>
 
@@ -17211,7 +17211,7 @@ Sources:
 
 Sources:
 
-- `packages/protocols-core/src/libs/Operation.ts:122:13` (problem-factory)
+- `packages/protocols-core/src/libs/Operation.ts:146:13` (problem-factory)
 
 <a id="protocols-graphql-auth-invalid-header-format"></a>
 
@@ -17481,7 +17481,7 @@ Sources:
 
 Sources:
 
-- `packages/protocols-rest/src/libs/createRestOperationController.ts:95:17` (problem-factory)
+- `packages/protocols-rest/src/libs/createRestOperationController.ts:97:19` (problem-factory)
 
 <a id="protocols-rest-operation-media-type-invalid"></a>
 
@@ -17499,7 +17499,7 @@ Sources:
 
 Sources:
 
-- `packages/protocols-rest/src/libs/createRestOperationController.ts:87:17` (problem-factory)
+- `packages/protocols-rest/src/libs/createRestOperationController.ts:89:19` (problem-factory)
 
 <a id="protocols-rest-request-validation-failed"></a>
 
@@ -20613,7 +20613,7 @@ Sources:
 
 Sources:
 
-- `packages/transports-http/src/libs/ParamResolver.ts:149:13` (problem-factory)
+- `packages/transports-http/src/libs/ParamResolver.ts:115:13` (problem-factory)
 
 <a id="transports-http-invalid-contract-output"></a>
 
@@ -20631,7 +20631,7 @@ Sources:
 
 Sources:
 
-- `packages/transports-http/src/libs/ParamResolver.ts:186:13` (problem-factory)
+- `packages/transports-http/src/libs/ParamResolver.ts:146:13` (problem-factory)
 
 <a id="transports-http-middleware-next-called-multiple-times"></a>
 
@@ -20667,7 +20667,7 @@ Sources:
 
 Sources:
 
-- `packages/transports-http/src/libs/ParamResolver.ts:397:13` (problem-factory)
+- `packages/transports-http/src/libs/ParamResolver.ts:357:13` (problem-factory)
 
 <a id="transports-http-provider-resolution-failed"></a>
 
@@ -20811,7 +20811,7 @@ Sources:
 
 Sources:
 
-- `packages/transports-http/src/libs/ParamResolver.ts:224:13` (problem-factory)
+- `packages/transports-http/src/libs/ParamResolver.ts:184:13` (problem-factory)
 
 <a id="transports-http-unsupported-route-method"></a>
 

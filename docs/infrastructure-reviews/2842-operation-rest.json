@@ -6,7 +6,7 @@
       "classification": "pure-contract",
       "reason": "Authorize and validate one domain operation across direct calls and an explicitly selected REST export; retain existing route contracts, HTTP status and application-owned execution policies. This is the first stage of #2842; decorated-class compilation and native tRPC/GraphQL bindings are deferred to its second stage.",
       "files": {
-        "packages/problems-core/src/generated/problem-code-registry.ts": "f2ef8cf5ca0b0a13a60fcf448ba3fce95b3471bd811f0679d80230753134f5a6"
+        "packages/problems-core/src/generated/problem-code-registry.ts": "3fdd50c4735f9c69fa91fe40d27073a776ac99d3d04301c5a87ded91da56176d"
       },
       "catalogRuntimes": [],
       "profiles": {
@@ -44,12 +44,13 @@
       "classification": "pure-contract",
       "reason": "Authorize and validate one domain operation across direct calls and an explicitly selected REST export; retain existing route contracts, HTTP status and application-owned execution policies. This is the first stage of #2842; decorated-class compilation and native tRPC/GraphQL bindings are deferred to its second stage.",
       "files": {
-        "packages/protocols-core/src/index.ts": "99aa00e904ca2948901673a9c5a6ffffb9c18b6924d80e0a935239cbda0b44f2",
-        "packages/protocols-core/src/libs/Operation.ts": "861d908d4180537af501364fe6ad890f0af62d50a7f8aa14d209894ab1b3eaee",
+        "packages/protocols-core/src/index.ts": "72ff31aba0dc639d9efaf43d8f97fc039916da132a148b5412068c7ce43fff7b",
+        "packages/protocols-core/src/libs/Operation.ts": "a820a6d4ce298125b7181386ca899a2f91fe812d8fa615df8982d3229461ab68",
         "packages/protocols-core/src/libs/RouteIR.ts": "2ae989c77334f76bb8d7144ab45ac037826a357f9db8446bb0f98f6d3c3ff1e7",
         "packages/protocols-core/src/libs/extractRouteIR.ts": "8c1c19246773f037a33a129d2df1feb95d39e86cb6de16792c50a5c9fa284404",
         "packages/protocols-core/src/libs/ContractGraph.ts": "431b85e26e5b29f7888aebeb603ff65493c1016258e1ad5d7eecdd9e6b3a41d4",
-        "packages/protocols-core/src/type-tests/OperationTypes.ts": "b25b0a85aa47f40e543b46b91b87433a1d787ebf272672b241542dc4d1c9a4ef"
+        "packages/protocols-core/src/type-tests/OperationTypes.ts": "b25b0a85aa47f40e543b46b91b87433a1d787ebf272672b241542dc4d1c9a4ef",
+        "packages/protocols-core/src/libs/SchemaDescriptor.ts": "ed40fb4e89bd26b8b0ce4112e0fc0387c8eb18bc202ae2918e8f82871178cd76"
       },
       "catalogRuntimes": [],
       "profiles": {
@@ -88,7 +89,7 @@
       "reason": "Authorize and validate one domain operation across direct calls and an explicitly selected REST export; retain existing route contracts, HTTP status and application-owned execution policies. This is the first stage of #2842; decorated-class compilation and native tRPC/GraphQL bindings are deferred to its second stage.",
       "files": {
         "packages/protocols-rest/src/index.ts": "5d7731df696e6db2eba16a92242354712ceba3fa7647666aa03afdc6c27a4bba",
-        "packages/protocols-rest/src/libs/createRestOperationController.ts": "52ab5f3bf2e43dd7edd7b829d9effbed8ee4ac0f2249c46e8f785a18a6427679",
+        "packages/protocols-rest/src/libs/createRestOperationController.ts": "924400c2c4ed0862327a764a139e9ec2afe9ce34a27916819b65f0ffdcd37c2e",
         "packages/protocols-rest/src/libs/sourceLocation.ts": "992a02ab3bbbeaf7a7633708aaf0cbf8d1a7aeee91e98965113fc7172b7b8c0e",
         "packages/protocols-rest/src/type-tests/OperationBindingTypes.ts": "5acacabd1d97eb6ee50752fe00c638b31224516b1ea4b47120b0dc12cb191e33"
       },
@@ -139,6 +140,82 @@
             "packages/presentation-preset/runtime-profiles.json"
           ],
           "host": "workers"
+        }
+      }
+    },
+    {
+      "package": "openapi-spec",
+      "classification": "protocol-render",
+      "reason": "OpenAPI renders the already validated whole-source operation schema in its existing build-time consumer, without execution, storage, host lifecycle or new runtime dependencies.",
+      "files": {
+        "packages/openapi-spec/src/libs/emitOpenAPI.ts": "9c95ad5055e0c1f8dcee0741aafa9922d592adbf2c955872bcd2b617a2f04093"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "OpenAPI renders the already validated whole-source operation schema in its existing build-time consumer, without execution, storage, host lifecycle or new runtime dependencies.",
+          "providers": [],
+          "constraints": [
+            "No deployment host behavior, provider certification or production infrastructure claim changes."
+          ],
+          "references": ["packages/openapi-spec/src/index.ts"]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "OpenAPI renders the already validated whole-source operation schema in its existing build-time consumer, without execution, storage, host lifecycle or new runtime dependencies.",
+          "providers": [],
+          "constraints": [
+            "No deployment host behavior, provider certification or production infrastructure claim changes."
+          ],
+          "references": ["packages/openapi-spec/src/index.ts"]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "OpenAPI renders the already validated whole-source operation schema in its existing build-time consumer, without execution, storage, host lifecycle or new runtime dependencies.",
+          "providers": [],
+          "constraints": [
+            "No deployment host behavior, provider certification or production infrastructure claim changes."
+          ],
+          "references": ["packages/openapi-spec/src/index.ts"]
+        }
+      }
+    },
+    {
+      "package": "transports-http",
+      "classification": "internal-pure-refactor",
+      "reason": "The existing query normalization is shared with operation bindings without changing legacy controller parsing or host lifecycle.",
+      "files": {
+        "packages/transports-http/src/libs/ParamResolver.ts": "63e033b5643dd9b5b7fadfe87641cf487de5122be0e371f6ce41e95a16f44f4a"
+      },
+      "catalogRuntimes": ["node", "lambda"],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "The existing query normalization is shared with operation bindings without changing legacy controller parsing or host lifecycle.",
+          "providers": [],
+          "constraints": [
+            "No deployment host behavior, provider certification or production infrastructure claim changes."
+          ],
+          "references": ["packages/transports-http/src/index.ts"]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "The existing query normalization is shared with operation bindings without changing legacy controller parsing or host lifecycle.",
+          "providers": [],
+          "constraints": [
+            "No deployment host behavior, provider certification or production infrastructure claim changes."
+          ],
+          "references": ["packages/transports-http/src/index.ts"]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "The existing query normalization is shared with operation bindings without changing legacy controller parsing or host lifecycle.",
+          "providers": [],
+          "constraints": [
+            "No deployment host behavior, provider certification or production infrastructure claim changes."
+          ],
+          "references": ["packages/transports-http/src/index.ts"]
         }
       }
     }

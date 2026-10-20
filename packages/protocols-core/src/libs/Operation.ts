@@ -1,6 +1,6 @@
 import { ProblemFactory } from "@croco/problems-core";
 import type { z } from "zod";
-import { getUnsupportedZodMajor, isZodType } from "./SchemaDescriptor";
+import { getUnsupportedZodMajor, isZodType, normalizeZodQueryInput } from "./SchemaDescriptor";
 
 /** Transport-independent, explicitly authorized business operation contract. */
 export type OperationDefinition<
@@ -33,10 +33,14 @@ export type Operation<
   readonly definition: OperationDefinition<Input, Output, Context, Kind>;
   /** The caller supplies server-verified authority separately from domain input. */
   readonly invoke: (input: z.input<Input>, context: Context) => Promise<z.output<Output>>;
-  /** Adapter boundary: authorization completes before the untrusted input source is read. */
+  /**
+   * Adapter boundary: authorization completes before the untrusted input source is read.
+   * Query encoding retains schema-aware repeated-value selection before domain parsing.
+   */
   readonly dispatch: (
     context: Context,
     readInput: () => unknown | Promise<unknown>,
+    inputEncoding?: "query",
   ) => Promise<z.output<Output>>;
 };
 
@@ -88,6 +92,7 @@ export function createOperation<
   const dispatch = async (
     context: Context,
     readInput: () => unknown | Promise<unknown>,
+    inputEncoding?: "query",
   ): Promise<z.output<Output>> => {
     const authorization = await contract.authorize(context);
     if (authorization !== undefined) {
@@ -96,7 +101,26 @@ export function createOperation<
         "Operation authorization must complete without a result or throw a Problem to deny access",
       );
     }
-    const parsed = await contract.input.safeParseAsync(await readInput());
+    const rawInput = await readInput();
+    const normalized =
+      inputEncoding === "query" &&
+      typeof rawInput === "object" &&
+      rawInput !== null &&
+      !Array.isArray(rawInput)
+        ? normalizeZodQueryInput(contract.input, rawInput as Record<string, unknown>)
+        : { input: rawInput, schema: contract.input, repeatedScalarFields: [] };
+    const parsed =
+      normalized.repeatedScalarFields.length > 0
+        ? {
+            success: false as const,
+            error: {
+              issues: normalized.repeatedScalarFields.map((path) => ({
+                path: [path],
+                code: "invalid_type" as const,
+              })),
+            },
+          }
+        : await normalized.schema.safeParseAsync(normalized.input);
     if (!parsed.success) {
       throw ProblemFactory.validationError(
         "protocols-core/operation-input-invalid",

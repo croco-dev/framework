@@ -25123,7 +25123,7 @@
       "sources": [
         {
           "file": "packages/openapi-spec/src/libs/emitOpenAPI.ts",
-          "line": 108,
+          "line": 109,
           "column": 5,
           "kind": "problem-constructor"
         }
@@ -26263,7 +26263,7 @@
       "sources": [
         {
           "file": "packages/protocols-core/src/libs/Operation.ts",
-          "line": 94,
+          "line": 99,
           "column": 13,
           "kind": "problem-factory"
         }
@@ -26293,7 +26293,7 @@
       "sources": [
         {
           "file": "packages/protocols-core/src/libs/Operation.ts",
-          "line": 137,
+          "line": 161,
           "column": 10,
           "kind": "problem-factory"
         }
@@ -26323,7 +26323,7 @@
       "sources": [
         {
           "file": "packages/protocols-core/src/libs/Operation.ts",
-          "line": 114,
+          "line": 138,
           "column": 13,
           "kind": "problem-factory"
         }
@@ -26353,7 +26353,7 @@
       "sources": [
         {
           "file": "packages/protocols-core/src/libs/Operation.ts",
-          "line": 101,
+          "line": 125,
           "column": 13,
           "kind": "problem-factory"
         }
@@ -26383,7 +26383,7 @@
       "sources": [
         {
           "file": "packages/protocols-core/src/libs/Operation.ts",
-          "line": 122,
+          "line": 146,
           "column": 13,
           "kind": "problem-factory"
         }
@@ -26833,8 +26833,8 @@
       "sources": [
         {
           "file": "packages/protocols-rest/src/libs/createRestOperationController.ts",
-          "line": 95,
-          "column": 17,
+          "line": 97,
+          "column": 19,
           "kind": "problem-factory"
         }
       ]
@@ -26863,8 +26863,8 @@
       "sources": [
         {
           "file": "packages/protocols-rest/src/libs/createRestOperationController.ts",
-          "line": 87,
-          "column": 17,
+          "line": 89,
+          "column": 19,
           "kind": "problem-factory"
         }
       ]
@@ -32063,7 +32063,7 @@
       "sources": [
         {
           "file": "packages/transports-http/src/libs/ParamResolver.ts",
-          "line": 149,
+          "line": 115,
           "column": 13,
           "kind": "problem-factory"
         }
@@ -32093,7 +32093,7 @@
       "sources": [
         {
           "file": "packages/transports-http/src/libs/ParamResolver.ts",
-          "line": 186,
+          "line": 146,
           "column": 13,
           "kind": "problem-factory"
         }
@@ -32153,7 +32153,7 @@
       "sources": [
         {
           "file": "packages/transports-http/src/libs/ParamResolver.ts",
-          "line": 397,
+          "line": 357,
           "column": 13,
           "kind": "problem-factory"
         }
@@ -32398,7 +32398,7 @@
       "sources": [
         {
           "file": "packages/transports-http/src/libs/ParamResolver.ts",
-          "line": 224,
+          "line": 184,
           "column": 13,
           "kind": "problem-factory"
         }

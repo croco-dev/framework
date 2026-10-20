@@ -18,6 +18,7 @@ import {
   type ContractGraphRoute,
   getContractFieldSchema,
   getContractPathParams,
+  getZodInputObjectSchema,
   isZodArraySchema,
   normalizeProjectManifestBundlePath,
   type ParamIR,
@@ -386,8 +387,14 @@ function toTags(routes: ContractGraphRoute[]): { name: string; description: stri
 }
 
 function toRequestConfig(route: ContractGraphRoute): RouteConfig["request"] {
-  const params = toZodObject(route.params.filter((param) => param.kind === "path"));
-  const query = toZodObject(route.params.filter((param) => param.kind === "query"));
+  const params =
+    route.operation?.inputSource === "params"
+      ? getZodInputObjectSchema(route.operation.inputSchema)
+      : toZodObject(route.params.filter((param) => param.kind === "path"));
+  const query =
+    route.operation?.inputSource === "query"
+      ? getZodInputObjectSchema(route.operation.inputSchema)
+      : toZodObject(route.params.filter((param) => param.kind === "query"));
   const headers = toZodObject(route.params.filter((param) => param.kind === "header"));
   const declaredBodySchema =
     route.inputSchema ?? route.params.find((param) => param.kind === "body")?.schema;

@@ -148,6 +148,15 @@ describe("REST operation binding", () => {
       input: "query",
       createContext: () => verified,
     });
+    for (const [Controller, url, location] of [
+      [path, "/product/{id}", "path"],
+      [query, "/product", "query"],
+    ] as const) {
+      const document = emitOpenAPIFromContractGraph(buildContractGraph([Controller]));
+      expect(document.paths?.[url]?.get?.parameters).toEqual([
+        expect.objectContaining({ name: "id", in: location, required: true }),
+      ]);
+    }
     const pathApp = createApp({ controllers: [path], securityValidation: "off" });
     const queryApp = createApp({ controllers: [query], securityValidation: "off" });
     const a = await pathApp.fetch(new Request("http://localhost/product/abc"));
@@ -161,6 +170,63 @@ describe("REST operation binding", () => {
     expect(
       (await queryApp.fetch(new Request("http://localhost/product?id=abc&extra=value"))).status,
     ).toBe(422);
+  });
+
+  it("normalizes query cardinality only after authorization", async () => {
+    const calls: unknown[] = [];
+    const operation = createOperation(
+      defineOperation({
+        id: "product.search",
+        kind: "query",
+        input: z.object({
+          tags: z.array(z.string()),
+          value: z.coerce.string(),
+          mixed: z.union([z.coerce.string(), z.array(z.string())]),
+        }),
+        output: z.object({
+          tags: z.array(z.string()),
+          value: z.string(),
+          mixed: z.union([z.string(), z.array(z.string())]),
+        }),
+        authorize(context: Authority) {
+          if (!context.allowed) throw ProblemFactory.forbidden("checkout/denied");
+        },
+      }),
+      (input) => {
+        calls.push(input);
+        return input;
+      },
+    );
+    const controllers = [true, false].map((allowed) =>
+      createRestOperationController(operation, {
+        method: "GET",
+        path: allowed ? "/search" : "/denied-search",
+        input: "query",
+        createContext: () => ({ ...verified, allowed }),
+      }),
+    );
+    const app = createApp({ controllers, securityValidation: "off" });
+    const response = await app.fetch(
+      new Request("http://localhost/search?tags=one&value=a&mixed=x&mixed=y"),
+    );
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({
+      tags: ["one"],
+      value: "a",
+      mixed: ["x", "y"],
+    });
+    expect(
+      (await app.fetch(new Request("http://localhost/search?tags=one&value=a&value=b&mixed=x")))
+        .status,
+    ).toBe(422);
+    expect(
+      (
+        await app.fetch(
+          new Request("http://localhost/denied-search?tags=one&value=a&value=b&mixed=x"),
+        )
+      ).status,
+    ).toBe(403);
+    expect(calls).toHaveLength(1);
   });
 
   it("rejects unsafe exports and missing path bindings before serving requests", () => {

@@ -35526,6 +35526,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "normalizeZodQueryInput",
+              "exportKind": "named",
+              "source": "./libs/SchemaDescriptor",
+              "declarationKind": "function"
+            },
+            {
               "name": "parseContractGraphSnapshot",
               "exportKind": "named",
               "source": "./libs/ContractGraphSnapshot",

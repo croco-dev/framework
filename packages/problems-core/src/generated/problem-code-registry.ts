@@ -23520,7 +23520,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/openapi-spec/src/libs/emitOpenAPI.ts";
-          readonly line: 108;
+          readonly line: 109;
           readonly column: 5;
           readonly kind: "problem-constructor";
         },
@@ -24584,7 +24584,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/protocols-core/src/libs/Operation.ts";
-          readonly line: 94;
+          readonly line: 99;
           readonly column: 13;
           readonly kind: "problem-factory";
         },
@@ -24612,7 +24612,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/protocols-core/src/libs/Operation.ts";
-          readonly line: 137;
+          readonly line: 161;
           readonly column: 10;
           readonly kind: "problem-factory";
         },
@@ -24640,7 +24640,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/protocols-core/src/libs/Operation.ts";
-          readonly line: 114;
+          readonly line: 138;
           readonly column: 13;
           readonly kind: "problem-factory";
         },
@@ -24668,7 +24668,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/protocols-core/src/libs/Operation.ts";
-          readonly line: 101;
+          readonly line: 125;
           readonly column: 13;
           readonly kind: "problem-factory";
         },
@@ -24696,7 +24696,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/protocols-core/src/libs/Operation.ts";
-          readonly line: 122;
+          readonly line: 146;
           readonly column: 13;
           readonly kind: "problem-factory";
         },
@@ -25116,8 +25116,8 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/protocols-rest/src/libs/createRestOperationController.ts";
-          readonly line: 95;
-          readonly column: 17;
+          readonly line: 97;
+          readonly column: 19;
           readonly kind: "problem-factory";
         },
       ];
@@ -25144,8 +25144,8 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/protocols-rest/src/libs/createRestOperationController.ts";
-          readonly line: 87;
-          readonly column: 17;
+          readonly line: 89;
+          readonly column: 19;
           readonly kind: "problem-factory";
         },
       ];
@@ -30006,7 +30006,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/transports-http/src/libs/ParamResolver.ts";
-          readonly line: 149;
+          readonly line: 115;
           readonly column: 13;
           readonly kind: "problem-factory";
         },
@@ -30034,7 +30034,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/transports-http/src/libs/ParamResolver.ts";
-          readonly line: 186;
+          readonly line: 146;
           readonly column: 13;
           readonly kind: "problem-factory";
         },
@@ -30090,7 +30090,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/transports-http/src/libs/ParamResolver.ts";
-          readonly line: 397;
+          readonly line: 357;
           readonly column: 13;
           readonly kind: "problem-factory";
         },
@@ -30319,7 +30319,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/transports-http/src/libs/ParamResolver.ts";
-          readonly line: 224;
+          readonly line: 184;
           readonly column: 13;
           readonly kind: "problem-factory";
         },
@@ -58663,7 +58663,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/openapi-spec/src/libs/emitOpenAPI.ts",
-          line: 108,
+          line: 109,
           column: 5,
           kind: "problem-constructor",
         },
@@ -59856,7 +59856,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/protocols-core/src/libs/Operation.ts",
-          line: 94,
+          line: 99,
           column: 13,
           kind: "problem-factory",
         },
@@ -59889,7 +59889,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/protocols-core/src/libs/Operation.ts",
-          line: 137,
+          line: 161,
           column: 10,
           kind: "problem-factory",
         },
@@ -59921,7 +59921,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/protocols-core/src/libs/Operation.ts",
-          line: 114,
+          line: 138,
           column: 13,
           kind: "problem-factory",
         },
@@ -59951,7 +59951,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/protocols-core/src/libs/Operation.ts",
-          line: 101,
+          line: 125,
           column: 13,
           kind: "problem-factory",
         },
@@ -59983,7 +59983,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/protocols-core/src/libs/Operation.ts",
-          line: 122,
+          line: 146,
           column: 13,
           kind: "problem-factory",
         },
@@ -60455,8 +60455,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/protocols-rest/src/libs/createRestOperationController.ts",
-          line: 95,
-          column: 17,
+          line: 97,
+          column: 19,
           kind: "problem-factory",
         },
       ],
@@ -60486,8 +60486,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/protocols-rest/src/libs/createRestOperationController.ts",
-          line: 87,
-          column: 17,
+          line: 89,
+          column: 19,
           kind: "problem-factory",
         },
       ],
@@ -65980,7 +65980,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/transports-http/src/libs/ParamResolver.ts",
-          line: 149,
+          line: 115,
           column: 13,
           kind: "problem-factory",
         },
@@ -66012,7 +66012,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/transports-http/src/libs/ParamResolver.ts",
-          line: 186,
+          line: 146,
           column: 13,
           kind: "problem-factory",
         },
@@ -66078,7 +66078,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/transports-http/src/libs/ParamResolver.ts",
-          line: 397,
+          line: 357,
           column: 13,
           kind: "problem-factory",
         },
@@ -66340,7 +66340,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/transports-http/src/libs/ParamResolver.ts",
-          line: 224,
+          line: 184,
           column: 13,
           kind: "problem-factory",
         },

@@ -2,6 +2,8 @@
 "@croco/protocols-core": minor
 "@croco/protocols-rest": minor
 "@croco/problems-core": patch
+"@croco/transports-http": patch
+"@croco/openapi-spec": patch
 "create-croco-app": patch
 ---
 

@@ -77,27 +77,31 @@ export function createRestOperationController<
   class RestOperationController {
     async handle(request: RestOperationRequest): Promise<z.output<Output>> {
       const context = await exportBinding.createContext(request);
-      return operation.dispatch(context, async () => {
-        if (exportBinding.input === "query") return { ...request.req.query };
-        if (exportBinding.input === "params") return { ...request.req.params };
-        if (
-          request.header("content-type")?.split(";", 1)[0]?.trim().toLowerCase() !==
-          "application/json"
-        ) {
-          throw ProblemFactory.unsupportedMediaType(
-            "protocols-rest/operation-media-type-invalid",
-            "Operation request bodies require application/json",
-          );
-        }
-        try {
-          return await request.json();
-        } catch {
-          throw ProblemFactory.badRequest(
-            "protocols-rest/operation-json-invalid",
-            "Operation request body must contain valid JSON",
-          );
-        }
-      });
+      return operation.dispatch(
+        context,
+        async () => {
+          if (exportBinding.input === "query") return { ...request.req.query };
+          if (exportBinding.input === "params") return { ...request.req.params };
+          if (
+            request.header("content-type")?.split(";", 1)[0]?.trim().toLowerCase() !==
+            "application/json"
+          ) {
+            throw ProblemFactory.unsupportedMediaType(
+              "protocols-rest/operation-media-type-invalid",
+              "Operation request bodies require application/json",
+            );
+          }
+          try {
+            return await request.json();
+          } catch {
+            throw ProblemFactory.badRequest(
+              "protocols-rest/operation-json-invalid",
+              "Operation request body must contain valid JSON",
+            );
+          }
+        },
+        exportBinding.input === "query" ? "query" : undefined,
+      );
     }
   }
   Object.defineProperty(RestOperationController, "name", {
