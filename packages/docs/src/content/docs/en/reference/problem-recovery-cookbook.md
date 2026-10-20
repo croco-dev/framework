@@ -889,6 +889,11 @@ This cookbook documents 1139 public Croco Problem codes. The deterministic JSON 
 | [`protocol-codegen/controller-project-jsx-runtime`](#protocol-codegen-controller-project-jsx-runtime)                                           | ValidationError                                                                          |                     422 | not-retryable | public        | active     |       1 |
 | [`protocol-codegen/controller-project-state`](#protocol-codegen-controller-project-state)                                                       | InternalServerError                                                                      |                     500 | conditional   | operator-only | active     |       1 |
 | [`protocols-core/contract-graph-diagnostics`](#protocols-core-contract-graph-diagnostics)                                                       | ValidationError                                                                          |                     422 | not-retryable | public        | active     |       1 |
+| [`protocols-core/invalid-operation-authorization`](#protocols-core-invalid-operation-authorization)                                             | InternalServerError                                                                      |                     500 | conditional   | operator-only | active     |       1 |
+| [`protocols-core/invalid-operation-definition`](#protocols-core-invalid-operation-definition)                                                   | InternalServerError                                                                      |                     500 | conditional   | operator-only | active     |       1 |
+| [`protocols-core/invalid-operation-policy`](#protocols-core-invalid-operation-policy)                                                           | InternalServerError                                                                      |                     500 | conditional   | operator-only | active     |       1 |
+| [`protocols-core/operation-input-invalid`](#protocols-core-operation-input-invalid)                                                             | ValidationError                                                                          |                     422 | not-retryable | public        | active     |       1 |
+| [`protocols-core/operation-output-invalid`](#protocols-core-operation-output-invalid)                                                           | InternalServerError                                                                      |                     500 | conditional   | operator-only | active     |       1 |
 | [`protocols-graphql/auth-invalid-header-format`](#protocols-graphql-auth-invalid-header-format)                                                 | BadRequest                                                                               |                     400 | not-retryable | public        | active     |       1 |
 | [`protocols-graphql/auth-invalid-request`](#protocols-graphql-auth-invalid-request)                                                             | BadRequest                                                                               |                     400 | not-retryable | public        | active     |       1 |
 | [`protocols-graphql/auth-invalid-token`](#protocols-graphql-auth-invalid-token)                                                                 | Unauthorized                                                                             |                     401 | not-retryable | safe-message  | active     |       1 |
@@ -901,7 +906,10 @@ This cookbook documents 1139 public Croco Problem codes. The deterministic JSON 
 | [`protocols-rest/auth-missing-header`](#protocols-rest-auth-missing-header)                                                                     | Unauthorized                                                                             |                     401 | not-retryable | safe-message  | active     |       1 |
 | [`protocols-rest/auth-verifier-unavailable`](#protocols-rest-auth-verifier-unavailable)                                                         | InternalServerError                                                                      |                     500 | conditional   | operator-only | active     |       1 |
 | [`protocols-rest/duplicate-parameter-index`](#protocols-rest-duplicate-parameter-index)                                                         | InternalServerError                                                                      |                     500 | conditional   | operator-only | active     |       1 |
+| [`protocols-rest/invalid-operation-binding`](#protocols-rest-invalid-operation-binding)                                                         | InternalServerError                                                                      |                     500 | conditional   | operator-only | active     |       1 |
 | [`protocols-rest/invalid-route-parameter-schema`](#protocols-rest-invalid-route-parameter-schema)                                               | InternalServerError                                                                      |                     500 | conditional   | operator-only | active     |       1 |
+| [`protocols-rest/operation-json-invalid`](#protocols-rest-operation-json-invalid)                                                               | BadRequest                                                                               |                     400 | not-retryable | public        | active     |       1 |
+| [`protocols-rest/operation-media-type-invalid`](#protocols-rest-operation-media-type-invalid)                                                   | UnsupportedMediaType                                                                     |                     415 | not-retryable | public        | active     |       1 |
 | [`protocols-rest/request-validation-failed`](#protocols-rest-request-validation-failed)                                                         | ValidationError                                                                          |                     422 | not-retryable | public        | active     |       1 |
 | [`protocols-rest/response-validation-failed`](#protocols-rest-response-validation-failed)                                                       | InternalServerError                                                                      |                     500 | conditional   | operator-only | active     |       1 |
 | [`protocols-rest/validation-failed`](#protocols-rest-validation-failed)                                                                         | ValidationError                                                                          |                     422 | not-retryable | public        | active     |       1 |
@@ -17115,6 +17123,96 @@ Sources:
 
 - `packages/protocols-core/src/libs/ContractGraph.ts:164:5` (problem-constructor)
 
+<a id="protocols-core-invalid-operation-authorization"></a>
+
+## `protocols-core/invalid-operation-authorization`
+
+- Category: `InternalServerError`
+- HTTP status: `500` Internal Server Error
+- Retryability: `conditional`
+- Redaction policy: `operator-only`
+- Lifecycle: `active`
+- Cause: Croco or an upstream dependency failed after accepting the request.
+- User action: Retry later only when the operation is idempotent or the caller owns retry safety.
+- Operator action: Use traces, logs, and upstream diagnostics to isolate the failing boundary.
+- Telemetry: `croco.problem.error` (error) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/protocols-core/src/libs/Operation.ts:94:13` (problem-factory)
+
+<a id="protocols-core-invalid-operation-definition"></a>
+
+## `protocols-core/invalid-operation-definition`
+
+- Category: `InternalServerError`
+- HTTP status: `500` Internal Server Error
+- Retryability: `conditional`
+- Redaction policy: `operator-only`
+- Lifecycle: `active`
+- Cause: Croco or an upstream dependency failed after accepting the request.
+- User action: Retry later only when the operation is idempotent or the caller owns retry safety.
+- Operator action: Use traces, logs, and upstream diagnostics to isolate the failing boundary.
+- Telemetry: `croco.problem.error` (error) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/protocols-core/src/libs/Operation.ts:137:10` (problem-factory)
+
+<a id="protocols-core-invalid-operation-policy"></a>
+
+## `protocols-core/invalid-operation-policy`
+
+- Category: `InternalServerError`
+- HTTP status: `500` Internal Server Error
+- Retryability: `conditional`
+- Redaction policy: `operator-only`
+- Lifecycle: `active`
+- Cause: Croco or an upstream dependency failed after accepting the request.
+- User action: Retry later only when the operation is idempotent or the caller owns retry safety.
+- Operator action: Use traces, logs, and upstream diagnostics to isolate the failing boundary.
+- Telemetry: `croco.problem.error` (error) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/protocols-core/src/libs/Operation.ts:114:13` (problem-factory)
+
+<a id="protocols-core-operation-input-invalid"></a>
+
+## `protocols-core/operation-input-invalid`
+
+- Category: `ValidationError`
+- HTTP status: `422` Validation Error
+- Retryability: `not-retryable`
+- Redaction policy: `public`
+- Lifecycle: `active`
+- Cause: The request or generated contract failed schema or semantic validation.
+- User action: Fix the invalid fields and retry with schema-conformant input.
+- Operator action: Inspect schema diagnostics, generated contracts, and validation metadata.
+- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/protocols-core/src/libs/Operation.ts:101:13` (problem-factory)
+
+<a id="protocols-core-operation-output-invalid"></a>
+
+## `protocols-core/operation-output-invalid`
+
+- Category: `InternalServerError`
+- HTTP status: `500` Internal Server Error
+- Retryability: `conditional`
+- Redaction policy: `operator-only`
+- Lifecycle: `active`
+- Cause: Croco or an upstream dependency failed after accepting the request.
+- User action: Retry later only when the operation is idempotent or the caller owns retry safety.
+- Operator action: Use traces, logs, and upstream diagnostics to isolate the failing boundary.
+- Telemetry: `croco.problem.error` (error) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/protocols-core/src/libs/Operation.ts:122:13` (problem-factory)
+
 <a id="protocols-graphql-auth-invalid-header-format"></a>
 
 ## `protocols-graphql/auth-invalid-header-format`
@@ -17331,6 +17429,24 @@ Sources:
 
 - `packages/protocols-rest/src/libs/metadata/MetadataReader.ts:48:13` (problem-factory)
 
+<a id="protocols-rest-invalid-operation-binding"></a>
+
+## `protocols-rest/invalid-operation-binding`
+
+- Category: `InternalServerError`
+- HTTP status: `500` Internal Server Error
+- Retryability: `conditional`
+- Redaction policy: `operator-only`
+- Lifecycle: `active`
+- Cause: Croco or an upstream dependency failed after accepting the request.
+- User action: Retry later only when the operation is idempotent or the caller owns retry safety.
+- Operator action: Use traces, logs, and upstream diagnostics to isolate the failing boundary.
+- Telemetry: `croco.problem.error` (error) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/protocols-rest/src/libs/createRestOperationController.ts:70:11` (problem-factory)
+
 <a id="protocols-rest-invalid-route-parameter-schema"></a>
 
 ## `protocols-rest/invalid-route-parameter-schema`
@@ -17348,6 +17464,42 @@ Sources:
 Sources:
 
 - `packages/protocols-rest/src/libs/internal/routeParameterSchema.ts:25:11` (problem-factory)
+
+<a id="protocols-rest-operation-json-invalid"></a>
+
+## `protocols-rest/operation-json-invalid`
+
+- Category: `BadRequest`
+- HTTP status: `400` Bad Request
+- Retryability: `not-retryable`
+- Redaction policy: `public`
+- Lifecycle: `active`
+- Cause: The caller sent malformed input or unsupported request options.
+- User action: Correct the request input and retry after validation passes.
+- Operator action: Inspect validation details and request logs; do not retry unchanged input.
+- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/protocols-rest/src/libs/createRestOperationController.ts:95:17` (problem-factory)
+
+<a id="protocols-rest-operation-media-type-invalid"></a>
+
+## `protocols-rest/operation-media-type-invalid`
+
+- Category: `UnsupportedMediaType`
+- HTTP status: `415` Unsupported Media Type
+- Retryability: `not-retryable`
+- Redaction policy: `public`
+- Lifecycle: `active`
+- Cause: The request body uses a media type that the endpoint does not support.
+- User action: Send the request body with a supported Content-Type and retry.
+- Operator action: Confirm the route media-type contract and request Content-Type header.
+- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/protocols-rest/src/libs/createRestOperationController.ts:87:17` (problem-factory)
 
 <a id="protocols-rest-request-validation-failed"></a>
 

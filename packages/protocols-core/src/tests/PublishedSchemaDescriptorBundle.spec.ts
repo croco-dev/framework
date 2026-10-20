@@ -106,7 +106,8 @@ describe("packed schema descriptor consumer", () => {
         `
 import assert from 'node:assert/strict';
 import { z } from 'zod';
-import { describeZodSchema, getZodSchemaTypeName, isZodArraySchema, getZodInputObjectSchema, getZodArrayElementSchema, unwrapZodEffectsSchema } from '@croco/protocols-core';
+import { createOperation, defineOperation, describeZodSchema, getZodSchemaTypeName, isZodArraySchema, getZodInputObjectSchema, getZodArrayElementSchema, unwrapZodEffectsSchema } from '@croco/protocols-core';
+import { ProblemFactory } from '@croco/problems-core';
 const primitives = [z.string(), z.number(), z.object({ id: z.string() }), z.array(z.string()), z.enum(['draft', 'published'])];
 const expectedKinds = ['string', 'number', 'object', 'array', 'enum'];
 const wrap = [s => s, s => s.optional(), s => s.default(() => { throw new Error('must not execute defaults'); }), s => s.readonly()];
@@ -122,7 +123,19 @@ const results = primitives.flatMap((base, index) => wrap.map((transform, wrapper
   assert.equal(getZodSchemaTypeName(unwrapZodEffectsSchema(schema.refine(() => true))), getZodSchemaTypeName(schema));
   return descriptor;
 }));
-console.log(JSON.stringify(results));
+const operation = createOperation(defineOperation({
+  id: 'product.detail', kind: 'query',
+  input: z.object({ id: z.string().min(1) }),
+  output: z.object({ id: z.string(), tenant: z.string() }),
+  authorize(context) { if (!context.allowed) throw ProblemFactory.forbidden('product/denied'); },
+}), (input, context) => ({ id: input.id, tenant: context.tenant, secret: 'private' }));
+operation.invoke({ id: 'product_27', tenant: 'attacker' }, { tenant: 'verified', allowed: true }).then(async (value) => {
+  assert.deepEqual(value, { id: 'product_27', tenant: 'verified' });
+  await assert.rejects(operation.dispatch({ tenant: 'verified', allowed: false }, () => {
+    throw new Error('Unauthorized input source must not be read');
+  }), { code: 'product/denied' });
+  console.log(JSON.stringify([...results, { operation: value }]));
+});
 `,
       );
       const baseline = run(process.execPath, ["consumer.mjs"], root);

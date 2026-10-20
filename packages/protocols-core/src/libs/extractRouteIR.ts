@@ -59,6 +59,19 @@ export function extractRouteIR(controllerCtor: Constructor): RouteIR[] {
     );
 
     return {
+      ...(Reflect.hasMetadata(
+        Symbol.for("croco:operation:route"),
+        controllerCtor,
+        routeMeta.methodName,
+      )
+        ? {
+            operation: Reflect.getMetadata(
+              Symbol.for("croco:operation:route"),
+              controllerCtor,
+              routeMeta.methodName,
+            ) as NonNullable<RouteIR["operation"]>,
+          }
+        : {}),
       controllerName: controllerCtor.name,
       methodName: String(routeMeta.methodName),
       httpMethod: routeMeta.method,

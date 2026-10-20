@@ -10,6 +10,50 @@ pnpm add @croco/protocols-rest @croco/framework-context reflect-metadata zod
 
 ## 사용법
 
+### 함수 operation의 명시적 REST 공개
+
+`@croco/protocols-core`의 `createOperation`으로 만든 함수 operation은
+`createRestOperationController(operation, binding)`으로 선택한 REST 경로에만 공개한다.
+binding은 `method`, 절대 `path`, 입력 위치(`body`, `query`, `params`),
+`createContext`를 선언한다. `createContext`는 인증 middleware가 검증한 서버 context를
+전달해야 하며, 입력에서 tenant·사용자 권한을 복사하지 않는다.
+
+```typescript
+import { ProblemFactory } from "@croco/problems-core";
+import { createRestOperationController } from "@croco/protocols-rest";
+
+// checkout은 protocols-core README의 함수 operation이다.
+const CheckoutRestController = createRestOperationController(checkout, {
+  method: "POST",
+  path: "/checkout/start",
+  input: "body",
+  successStatus: 201,
+  createContext(request) {
+    const context = request.get<{ tenantId: string; canPurchase: boolean }>("verifiedContext");
+    if (!context) throw ProblemFactory.unauthorized("checkout/authentication-required");
+    return context;
+  },
+});
+```
+
+반환된 컨트롤러를 기존 앱의 controller 구성에 연결한다. 이는 작은 함수 operation용
+명시 binding이며, decorated class 자동 scan 경로를 대체하지 않는다. 이 단계에는
+클래스 operation 자동 발견과 생성 client가 포함되지 않는다.
+
+REST와 서버 직접 `operation.invoke(input, context)` 호출은 같은 권한·입력 검증·정책·출력
+projection을 실행한다. 입력은 HTTP envelope가 아닌 도메인 객체다. `params`/`query`는
+object 입력 schema가 필요하며, 경로 파라미터와 schema의 불일치는 binding 생성 시
+기존 contract graph 진단으로 실패한다. query의 반복 값은 배열로 전달되므로 scalar
+schema는 반복 값을 거부한다. command를 GET으로 공개하거나 GET에 body를 연결할 수 없다.
+
+출력 schema와 `successStatus`는 기존 RouteIR·OpenAPI에 남는다. operation executor의
+출력 projection 이후에도 기존 HTTP pipeline이 interceptor의 최종 반환값을 검증한다.
+REST binding은 기존 contract graph의 JSON-safe schema 규칙을 따른다. JSON으로 표현할 수
+없는 input/output transform은 binding 생성 시 거부되며, 서버 직접 호출의 transform 지원과
+구분된다. JSON body는
+`application/json`이 필요하고, 권한 거부는 JSON 읽기보다 먼저 결정된다. 이 경로의 새
+Node/Lambda/Workers 배포 인증은 주장하지 않는다.
+
 ### 컨트롤러와 라우트 정의
 
 ```typescript

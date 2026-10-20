@@ -35298,6 +35298,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "createOperation",
+              "exportKind": "named",
+              "source": "./libs/Operation",
+              "declarationKind": "function"
+            },
+            {
               "name": "createProjectManifestBundleArtifactPaths",
               "exportKind": "named",
               "source": "./libs/ProjectManifestBundle",
@@ -35307,6 +35313,12 @@
               "name": "defineContractMonetization",
               "exportKind": "named",
               "source": "./libs/ContractGraphMonetization",
+              "declarationKind": "function"
+            },
+            {
+              "name": "defineOperation",
+              "exportKind": "named",
+              "source": "./libs/Operation",
               "declarationKind": "function"
             },
             {
@@ -35929,6 +35941,21 @@
               "name": "InferRouteSchemaResponse",
               "exportKind": "named",
               "source": "./libs/RouteSchema"
+            },
+            {
+              "name": "Operation",
+              "exportKind": "named",
+              "source": "./libs/Operation"
+            },
+            {
+              "name": "OperationDefinition",
+              "exportKind": "named",
+              "source": "./libs/Operation"
+            },
+            {
+              "name": "OperationHandler",
+              "exportKind": "named",
+              "source": "./libs/Operation"
             },
             {
               "name": "ParamIR",
@@ -36857,6 +36884,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "createRestOperationController",
+              "exportKind": "named",
+              "source": "./libs/createRestOperationController",
+              "declarationKind": "function"
+            },
+            {
               "name": "createValidationPipe",
               "exportKind": "named",
               "source": "./ValidationPipe",
@@ -37192,6 +37225,16 @@
               "exportKind": "named",
               "source": "./ValidationSchema",
               "localName": "ResponseSchema"
+            },
+            {
+              "name": "RestOperationBinding",
+              "exportKind": "named",
+              "source": "./libs/createRestOperationController"
+            },
+            {
+              "name": "RestOperationRequest",
+              "exportKind": "named",
+              "source": "./libs/createRestOperationController"
             },
             {
               "name": "RouteBody",

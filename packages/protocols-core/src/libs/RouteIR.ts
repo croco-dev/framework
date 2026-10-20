@@ -21,6 +21,14 @@ export interface RouteIR {
   successStatus?: number;
   problemResponses?: readonly ProblemResponseIR[];
   domain: string | null;
+  /** Explicit whole-source operation binding consumed by the existing contract graph. */
+  operation?: {
+    readonly id: string;
+    readonly kind: "query" | "command";
+    readonly inputSource: "body" | "query" | "params";
+    readonly inputSchema: z.ZodType;
+    readonly outputSchema: z.ZodType;
+  };
 }
 
 export type RouteContractIR = {

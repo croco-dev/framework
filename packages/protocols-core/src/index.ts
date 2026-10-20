@@ -175,3 +175,5 @@ export type {
   EntitlementRequirementMetadata,
   EntitlementResourceRequirementMetadata,
 } from "./libs/sharedTypes";
+export { createOperation, defineOperation } from "./libs/Operation";
+export type { Operation, OperationDefinition, OperationHandler } from "./libs/Operation";

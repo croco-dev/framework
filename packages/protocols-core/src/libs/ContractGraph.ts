@@ -700,13 +700,15 @@ function validateContractNamedParams(
 
   const schemaBoundParams = params.filter((param) => param.contractSchema);
   const hasWholeSchemaBinding =
-    schemaBoundParams.length > 0 &&
-    (contractNames.size === 0 ||
-      schemaBoundParams.some(
-        (param) =>
-          param.contractSchema === contractSchema &&
-          !Object.prototype.hasOwnProperty.call(contractShape, param.name),
-      ));
+    (route.operation?.inputSource === (kind === "path" ? "params" : "query") &&
+      route.operation.inputSchema === contractSchema) ||
+    (schemaBoundParams.length > 0 &&
+      (contractNames.size === 0 ||
+        schemaBoundParams.some(
+          (param) =>
+            param.contractSchema === contractSchema &&
+            !Object.prototype.hasOwnProperty.call(contractShape, param.name),
+        )));
 
   for (const name of contractNames) {
     const param = params.find((candidate) => candidate.name === name);
@@ -785,6 +787,11 @@ function validateContractBody(route: ContractGraphRoute): ContractDiagnostic[] {
 
   const bodyParams = route.params.filter((param) => param.kind === "body");
   const contractBody = contract.inputSchemas.body;
+
+  // Operation bindings consume the entire declared source in their authorized executor.
+  if (route.operation?.inputSource === "body" && route.operation.inputSchema === contractBody) {
+    return [];
+  }
 
   if (!contractBody) {
     if (bodyParams.length === 0) {
@@ -1079,13 +1086,16 @@ function validatePathParams(route: ContractGraphRoute): ContractDiagnostic[] {
       .filter((param) => param.kind === "path" && !param.contractSchema)
       .map((param) => param.name),
   );
-  const contractInputNames = new Set(
-    route.params
+  const contractInputNames = new Set([
+    ...(route.operation?.inputSource === "params"
+      ? Object.keys(getNamedSchemaShape(route.operation.inputSchema))
+      : []),
+    ...route.params
       .filter((param) => param.kind === "path")
       .flatMap((param) =>
         param.contractSchema ? Object.keys(getNamedSchemaShape(param.contractSchema)) : [],
       ),
-  );
+  ]);
 
   for (const name of pathParamNames) {
     if (!declaredParamNames.has(name) && !contractInputNames.has(name)) {
