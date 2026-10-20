@@ -16,6 +16,13 @@
         },
         {
           "kind": "path",
+          "value": "^docs/infrastructure-reviews/2842-operation-rest\\.json$",
+          "owner": "kang-heewon",
+          "reason": "Issue #2842 infrastructure review contains public source SHA-256 digests, not credentials. The historical emitOpenAPI.ts values were independently recomputed from their tracked blobs and trigger generic-api-key. This exact evidence-record path remains stable after squash and exempts no production source or additional review record. Re-review the entire record by the deadline.",
+          "reviewBy": "2026-11-30"
+        },
+        {
+          "kind": "path",
           "value": "^docs/infrastructure-reviews/3295-codegen-cwd\\.json$",
           "owner": "kang-heewon",
           "reason": "Issue #3295 infrastructure review contains source SHA-256 digests and build-time runtime assessments, not credentials. The codegenOpenapi.ts digest matches the source file but triggers generic-api-key. This exact review-record path remains stable after squash; production source and every other review record remain scanned.",
