@@ -100,6 +100,7 @@ describe("S3StorageProvider HTTP conformance", () => {
       (r) => r.method === "PUT" && r.key.endsWith("/large") && r.query.has("partNumber"),
     );
     expect(parts.map((r) => r.query.get("partNumber"))).toEqual(["1", "2"]);
+    expect(parts.map((r) => Number(r.headers["content-length"]))).toEqual([5 * 1024 * 1024, 713]);
     fixture.failPart = true;
     try {
       await expect(p.put("failed", storageStreamFromBytes(bytes))).rejects.toBeInstanceOf(
@@ -298,7 +299,7 @@ describe("S3StorageProvider HTTP conformance", () => {
     expect(fixture.requests.length).toBe(count);
   });
 
-  it("produces independently verifiable SigV4 GET URLs with expiring session credentials", async () => {
+  it("produces independently verifiable SigV4 GET URLs with session credentials", async () => {
     const url = new URL(await provider().getSignedUrl("signed name", { expiresIn: 61 }));
     const q = url.searchParams;
     const date = q.get("X-Amz-Date") ?? "";
