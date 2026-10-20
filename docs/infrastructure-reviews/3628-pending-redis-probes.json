@@ -1,0 +1,65 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "retry-core",
+      "classification": "durable-provider",
+      "reason": "Retain Redis HALF_OPEN generation and counters through arbitrarily long pending probes; explicit completion/reopening restores TTL. Executor-loss recovery is explicit forceOpen using existing generation fencing.",
+      "files": {
+        "packages/retry-core/src/libs/stores/RedisCircuitBreakerStore.ts": "af57c1c7e72e593977df7f4c65b02e0ef819f88eb948546c5f2657ba98e833d1"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "unverified",
+          "reason": "Reuse the injected Redis client and existing distributed lock on the Kubernetes Node Host; no host-specific implementation is added. The retry-core catalog declares no deployment runtimes and this change has no host execution evidence.",
+          "providers": ["@croco/retry-core/RedisCircuitBreakerStore"],
+          "constraints": [
+            "HALF_OPEN state, generation and counters require Redis persistence without expiry or eviction until an explicit transition.",
+            "An abandoned executor requires upstream termination followed by forceOpen; Lambda return and Workers cancellation do not release pending slots.",
+            "All writers must use the updated implementation. No deployment, live provider certification or npm publication is claimed."
+          ],
+          "references": [
+            "packages/retry-core/src/libs/stores/RedisCircuitBreakerStore.ts",
+            "packages/retry-core/src/libs/CircuitBreaker.ts",
+            "packages/retry-core/README.md",
+            "docs/package-catalog.json"
+          ]
+        },
+        "aws-lambda": {
+          "result": "unverified",
+          "reason": "Reuse the injected Redis client and existing distributed lock on the AWS Lambda Host; no host-specific implementation is added. The retry-core catalog declares no deployment runtimes and this change has no host execution evidence.",
+          "providers": ["@croco/retry-core/RedisCircuitBreakerStore"],
+          "constraints": [
+            "HALF_OPEN state, generation and counters require Redis persistence without expiry or eviction until an explicit transition.",
+            "An abandoned executor requires upstream termination followed by forceOpen; Lambda return and Workers cancellation do not release pending slots.",
+            "All writers must use the updated implementation. No deployment, live provider certification or npm publication is claimed."
+          ],
+          "references": [
+            "packages/retry-core/src/libs/stores/RedisCircuitBreakerStore.ts",
+            "packages/retry-core/src/libs/CircuitBreaker.ts",
+            "packages/retry-core/README.md",
+            "docs/package-catalog.json"
+          ]
+        },
+        "cloudflare": {
+          "result": "unverified",
+          "reason": "Reuse the injected Redis client and existing distributed lock on the Cloudflare Workers Host; no host-specific implementation is added. The retry-core catalog declares no deployment runtimes and this change has no host execution evidence.",
+          "providers": ["@croco/retry-core/RedisCircuitBreakerStore"],
+          "constraints": [
+            "HALF_OPEN state, generation and counters require Redis persistence without expiry or eviction until an explicit transition.",
+            "An abandoned executor requires upstream termination followed by forceOpen; Lambda return and Workers cancellation do not release pending slots.",
+            "All writers must use the updated implementation. No deployment, live provider certification or npm publication is claimed."
+          ],
+          "references": [
+            "packages/retry-core/src/libs/stores/RedisCircuitBreakerStore.ts",
+            "packages/retry-core/src/libs/CircuitBreaker.ts",
+            "packages/retry-core/README.md",
+            "docs/package-catalog.json"
+          ],
+          "host": "workers"
+        }
+      }
+    }
+  ]
+}

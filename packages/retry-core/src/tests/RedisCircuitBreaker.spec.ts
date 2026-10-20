@@ -298,7 +298,7 @@ describe("RedisCircuitBreakerStore", () => {
     await expect(secondNewProbe).resolves.toBe("second");
   });
 
-  it("keeps the half-open generation available until its Redis state expires", async () => {
+  it("keeps the half-open generation available while its Redis state is retained", async () => {
     const { redis, data } = createSharedMockRedis();
     const expiresAt = new Map<string, number>();
     let now = 0;
@@ -315,8 +315,9 @@ describe("RedisCircuitBreakerStore", () => {
     redis.set = vi.fn(
       async (key: string, value: string, options?: { ex?: number; nx?: boolean }) => {
         const result = await baseSet(key, value, options);
-        if (result === "OK" && options?.ex !== undefined) {
-          expiresAt.set(key, now + options.ex * 1000);
+        if (result === "OK") {
+          if (options?.ex === undefined) expiresAt.delete(key);
+          else expiresAt.set(key, now + options.ex * 1000);
         }
         now += 1;
         return result;
@@ -579,6 +580,171 @@ describe("Redis circuit retention", () => {
     ).resolves.toBe("healthy");
     await expect(breaker.getState()).resolves.toBe(CircuitState.CLOSED);
   });
+
+  it.each(["success", "failure", "ignored", "classifier-throws"] as const)(
+    "retains a pending probe across TTL expiry and handles %s completion",
+    async (outcome) => {
+      let now = 0;
+      const redis = createExpiringRedis(() => now);
+      const storeA = new RedisCircuitBreakerStore({ redis, ttlSeconds: 1 });
+      const storeB = new RedisCircuitBreakerStore({ redis, ttlSeconds: 1 });
+      const circuitId = `pending-${outcome}`;
+      const classificationError = new Error("classifier failed");
+      const options = { circuitId, openDuration: 10, now: () => now };
+      const breakerA = new CircuitBreaker({
+        ...options,
+        stateStore: storeA,
+        recordFailure: () => {
+          if (outcome === "classifier-throws") throw classificationError;
+          return outcome !== "ignored";
+        },
+      });
+      const breakerB = new CircuitBreaker({ ...options, stateStore: storeB });
+      await breakerA.forceOpen();
+      now = 10;
+      let resolveProbe!: (value: string) => void;
+      let rejectProbe!: (error: Error) => void;
+      let started!: () => void;
+      const entered = new Promise<void>((resolve) => (started = resolve));
+      const probe = breakerA.execute(() => {
+        started();
+        return new Promise<string>((resolve, reject) => {
+          resolveProbe = resolve;
+          rejectProbe = reject;
+        });
+      });
+      const settled = probe.catch((error: unknown) => error);
+      await entered;
+      const unexpected = vi.fn(async () => "unexpected");
+      // No intervening reads or heartbeat may be needed to retain the pending slot.
+      now = 10_000;
+      await expect(breakerB.execute(unexpected)).rejects.toBeInstanceOf(CircuitBreakerOpenProblem);
+      expect(unexpected).not.toHaveBeenCalled();
+      expect(await breakerB.getState()).toBe(CircuitState.HALF_OPEN);
+      expect(await storeB.getHalfOpenActiveCount(circuitId)).toBe(1);
+      expect(await storeB.getLastFailureTime(circuitId)).toBe(0);
+
+      const upstreamError = new Error("probe failed");
+      if (outcome === "success") resolveProbe("healthy");
+      else rejectProbe(upstreamError);
+      expect(await settled).toBe(
+        outcome === "success"
+          ? "healthy"
+          : outcome === "classifier-throws"
+            ? classificationError
+            : upstreamError,
+      );
+      expect(await storeB.getHalfOpenActiveCount(circuitId)).toBe(0);
+      expect(await breakerB.getState()).toBe(
+        outcome === "success"
+          ? CircuitState.CLOSED
+          : outcome === "failure"
+            ? CircuitState.OPEN
+            : CircuitState.HALF_OPEN,
+      );
+      if (outcome === "failure") {
+        now += 9;
+        await expect(breakerB.execute(unexpected)).rejects.toBeInstanceOf(
+          CircuitBreakerOpenProblem,
+        );
+        expect(unexpected).not.toHaveBeenCalled();
+        now += 1;
+      }
+      await expect(breakerB.execute(async () => "recovered")).resolves.toBe("recovered");
+      expect(await breakerB.getState()).toBe(CircuitState.CLOSED);
+    },
+  );
+
+  it("retains partial successes and all active slots across independent TTL boundaries", async () => {
+    let now = 0;
+    const redis = createExpiringRedis(() => now);
+    const storeA = new RedisCircuitBreakerStore({ redis, ttlSeconds: 1 });
+    const storeB = new RedisCircuitBreakerStore({ redis, ttlSeconds: 1 });
+    const options = { circuitId: "partial", openDuration: 10, halfOpenRequests: 2, now: () => now };
+    const breakerA = new CircuitBreaker({ ...options, stateStore: storeA });
+    const breakerB = new CircuitBreaker({ ...options, stateStore: storeB });
+    await breakerA.forceOpen();
+    now = 10;
+    await expect(breakerA.execute(async () => "first")).resolves.toBe("first");
+    now = 5_000;
+    let complete!: () => void;
+    let started!: () => void;
+    const entered = new Promise<void>((resolve) => (started = resolve));
+    const probe = breakerB.execute(() => {
+      started();
+      return new Promise<void>((resolve) => (complete = resolve));
+    });
+    await entered;
+    now = 10_000;
+    expect(await storeA.getHalfOpenSuccessCount("partial")).toBe(1);
+    expect(await storeA.getHalfOpenActiveCount("partial")).toBe(1);
+    complete();
+    await probe;
+    expect(await breakerA.getState()).toBe(CircuitState.CLOSED);
+  });
+
+  it.each(["success", "failure", "ignored"] as const)(
+    "recovers an abandoned generation with forceOpen and fences late %s",
+    async (outcome) => {
+      let now = 0;
+      const redis = createExpiringRedis(() => now);
+      const storeA = new RedisCircuitBreakerStore({ redis, ttlSeconds: 1 });
+      const storeB = new RedisCircuitBreakerStore({ redis, ttlSeconds: 1 });
+      const options = { circuitId: "abandoned", openDuration: 10, now: () => now };
+      const breakerA = new CircuitBreaker({
+        ...options,
+        stateStore: storeA,
+        recordFailure: () => outcome !== "ignored",
+      });
+      const breakerB = new CircuitBreaker({ ...options, stateStore: storeB });
+      let resolveOld!: () => void;
+      let rejectOld!: (error: Error) => void;
+      let started!: () => void;
+      const entered = new Promise<void>((resolve) => (started = resolve));
+      await breakerA.forceOpen();
+      now = 10;
+      const old = breakerA
+        .execute(() => {
+          started();
+          return new Promise<void>((resolve, reject) => {
+            resolveOld = resolve;
+            rejectOld = reject;
+          });
+        })
+        .catch((error: unknown) => error);
+      await entered;
+      now = 20_000;
+      // Restarting a process must not silently admit traffic into an unverified circuit.
+      expect(await breakerB.getState()).toBe(CircuitState.HALF_OPEN);
+      await breakerB.forceOpen();
+      expect(await breakerB.getState()).toBe(CircuitState.OPEN);
+      now += 10;
+      let completeNew!: () => void;
+      const newEntered = new Promise<void>((resolve) => (started = resolve));
+      const current = breakerB.execute(() => {
+        started();
+        return new Promise<void>((resolve) => (completeNew = resolve));
+      });
+      await newEntered;
+      if (outcome === "success") resolveOld();
+      else rejectOld(new Error("old failure"));
+      await old;
+      expect(await breakerB.getState()).toBe(CircuitState.HALF_OPEN);
+      expect(await storeB.getHalfOpenActiveCount("abandoned")).toBe(1);
+      expect(await storeB.getHalfOpenSuccessCount("abandoned")).toBe(0);
+      const extra = vi.fn(async () => "unexpected");
+      await expect(breakerA.execute(extra)).rejects.toBeInstanceOf(CircuitBreakerOpenProblem);
+      expect(extra).not.toHaveBeenCalled();
+      completeNew();
+      await current;
+      expect(await breakerA.getState()).toBe(CircuitState.CLOSED);
+      now += 1_001;
+      await expect(redis.get("croco:cb:abandoned:state")).resolves.toBeNull();
+      await expect(redis.get("croco:cb:abandoned:lastFailureTime")).resolves.toBeNull();
+      await expect(redis.get("croco:cb:abandoned:halfOpenActive")).resolves.toBeNull();
+      await expect(redis.get("croco:cb:abandoned:halfOpenSuccess")).resolves.toBeNull();
+    },
+  );
 
   it("keeps Retryable timeout OPEN across Redis expiry and probes at its boundary", async () => {
     let now = 1_700_000_000_000;
