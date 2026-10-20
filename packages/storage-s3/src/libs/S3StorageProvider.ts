@@ -106,6 +106,8 @@ export class S3StorageProvider extends BaseStorageProvider {
     };
     let uploadId: string | undefined;
     try {
+      if (!(data instanceof Uint8Array) && typeof data?.getReader !== "function")
+        throw new S3StorageProblem("invalid-body");
       if (data instanceof Uint8Array && data.byteLength <= PART_BYTES) {
         await this.client.send(
           new PutObjectCommand({
@@ -203,6 +205,7 @@ export class S3StorageProvider extends BaseStorageProvider {
     let part = new Uint8Array(PART_BYTES);
     let used = 0;
     for await (const chunk of stream) {
+      if (!(chunk instanceof Uint8Array)) throw new S3StorageProblem("invalid-body");
       let offset = 0;
       while (offset < chunk.byteLength) {
         const count = Math.min(PART_BYTES - used, chunk.byteLength - offset);

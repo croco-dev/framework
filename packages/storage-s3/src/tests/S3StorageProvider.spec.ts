@@ -208,6 +208,40 @@ describe("S3StorageProvider HTTP conformance", () => {
     expect(tokens[0]).not.toBe(tokens[1]);
   });
 
+  it.each([false, true])(
+    "preserves the prior object when an upload source yields non-bytes (after part: %s)",
+    async (afterPart) => {
+      const p = provider();
+      const original = new Uint8Array([53, 9, 77]);
+      await p.put("invalid-source", original);
+      const input = new ReadableStream<Uint8Array>({
+        start(controller) {
+          if (afterPart) controller.enqueue(new Uint8Array(5 * 1024 * 1024).fill(19));
+          controller.enqueue("not byte data" as unknown as Uint8Array);
+          controller.close();
+        },
+      });
+      await expect(p.put("invalid-source", input)).rejects.toMatchObject({
+        code: "STORAGE_S3_FAILED",
+      });
+      expect(await p.get("invalid-source")).toEqual(original);
+      expect(fixture.uploads.size).toBe(0);
+    },
+  );
+
+  it.each([
+    { label: "empty string", body: "" },
+    { label: "empty array", body: [] },
+  ])("preserves an existing object for an invalid outer body ($label)", async ({ body }) => {
+    const p = provider();
+    const original = new Uint8Array([53, 9, 77]);
+    await p.put("invalid-body", original);
+    await expect(
+      p.put("invalid-body", body as unknown as ReadableStream<Uint8Array>),
+    ).rejects.toMatchObject({ code: "STORAGE_S3_FAILED" });
+    expect(await p.get("invalid-body")).toEqual(original);
+  });
+
   it("reports cleanup failure explicitly without exposing upstream messages", async () => {
     fixture.failPart = true;
     fixture.failCleanup = true;

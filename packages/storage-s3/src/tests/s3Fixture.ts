@@ -73,7 +73,22 @@ export async function createS3Fixture() {
             return;
           }
           const expected = [...upload.parts.keys()].sort((a, b) => a - b);
-          if (!expected.every((n) => body.includes(`<PartNumber>${n}</PartNumber>`))) {
+          const completed = [...body.toString("utf8").matchAll(/<Part>([\s\S]*?)<\/Part>/g)].map(
+            (match) => ({
+              number: Number((match[1] ?? "").match(/<PartNumber>(\d+)<\/PartNumber>/)?.[1]),
+              etag: ((match[1] ?? "").match(/<ETag>(.*?)<\/ETag>/)?.[1] ?? "").replaceAll(
+                "&quot;",
+                '"',
+              ),
+            }),
+          );
+          if (
+            completed.length !== expected.length ||
+            completed.some(
+              (part, index) =>
+                part.number !== expected[index] || part.etag !== `"part-${expected[index]}"`,
+            )
+          ) {
             error(response, 400, "InvalidPart");
             return;
           }

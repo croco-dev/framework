@@ -4,7 +4,7 @@ AWS S3를 `StorageProvider`에 연결하는 Node/Lambda용 alpha Provider입니�
 
 ## 애플리케이션 조합
 
-```typescript
+```typescript typecheck
 import { createApplicationRuntime, defineCrocoApplication } from "@croco/framework-module";
 import { s3Storage } from "@croco/storage-s3";
 import { STORAGE_PROVIDER_TOKEN } from "@croco/storage-core";
