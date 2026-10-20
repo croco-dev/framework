@@ -229,6 +229,81 @@ describe("REST operation binding", () => {
     expect(calls).toHaveLength(1);
   });
 
+  it("uses the existing OpenAPI parameter projection for arrays and catch wrappers", async () => {
+    const operation = createOperation(
+      defineOperation({
+        id: "product.filters",
+        kind: "query",
+        input: z.object({ tags: z.array(z.string()), limit: z.coerce.number().catch(7) }),
+        output: z.object({ tags: z.array(z.string()), limit: z.number() }),
+        authorize(_context: Authority) {},
+      }),
+      (input) => input,
+    );
+    const Controller = createRestOperationController(operation, {
+      method: "GET",
+      path: "/filters",
+      input: "query",
+      createContext: () => verified,
+    });
+    const document = emitOpenAPIFromContractGraph(buildContractGraph([Controller]));
+    expect(document.paths?.["/filters"]?.get?.parameters).toEqual([
+      expect.objectContaining({
+        name: "tags",
+        in: "query",
+        required: true,
+        style: "form",
+        explode: true,
+        schema: { type: "array", items: { type: "string" } },
+      }),
+      expect.objectContaining({
+        name: "limit",
+        in: "query",
+        required: false,
+        schema: { type: ["number", "null"] },
+      }),
+    ]);
+    const app = createApp({ controllers: [Controller], securityValidation: "off" });
+    const response = await app.fetch(
+      new Request("http://localhost/filters?tags=blue&limit=invalid"),
+    );
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({ tags: ["blue"], limit: 7 });
+  });
+
+  it.each(["query", "params"] as const)(
+    "emits no invented parameters for a zero-input %s operation",
+    async (input) => {
+      const operation = createOperation(
+        defineOperation({
+          id: "product.health",
+          kind: "query",
+          input: z.object({}).strict(),
+          output: z.literal("ok"),
+          authorize(_context: Authority) {},
+        }),
+        () => "ok" as const,
+      );
+      const Controller = createRestOperationController(operation, {
+        method: "GET",
+        path: "/operation-health",
+        input,
+        createContext: () => verified,
+      });
+      const document = emitOpenAPIFromContractGraph(buildContractGraph([Controller]));
+      expect(document.paths?.["/operation-health"]?.get?.parameters ?? []).toEqual([]);
+      const app = createApp({ controllers: [Controller], securityValidation: "off" });
+      const response = await app.fetch(new Request("http://localhost/operation-health"));
+      expect(response.status).toBe(200);
+      await expect(response.json()).resolves.toBe("ok");
+      if (input === "query")
+        expect(
+          (await app.fetch(new Request("http://localhost/operation-health?unexpected=value")))
+            .status,
+        ).toBe(422);
+    },
+  );
+
   it("rejects unsafe exports and missing path bindings before serving requests", () => {
     const operation = checkout();
     const base = {

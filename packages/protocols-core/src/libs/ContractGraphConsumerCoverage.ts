@@ -6,6 +6,8 @@ import {
   type ContractGraphRoute,
 } from "./ContractGraph";
 
+import { getZodInputObjectSchema, isZodType } from "./SchemaDescriptor";
+
 export type ContractGraphConsumerCoverageVersion = "croco.contract-consumer-coverage.v1";
 export type ContractGraphConsumerId = "admin-generated" | "openapi" | "rpc-client";
 export type ContractGraphConsumerRouteField =
@@ -349,11 +351,11 @@ function createRouteFieldFingerprint(
     case "request.body":
       return schemaPresenceFingerprint(route.inputSchemas.body);
     case "request.path":
-      return schemaPresenceFingerprint(route.inputSchemas.path);
+      return namedSchemaPresenceFingerprint(route.inputSchemas.path, consumerId);
     case "request.query":
-      return schemaPresenceFingerprint(route.inputSchemas.query);
+      return namedSchemaPresenceFingerprint(route.inputSchemas.query, consumerId);
     case "request.headers":
-      return schemaPresenceFingerprint(route.inputSchemas.headers);
+      return namedSchemaPresenceFingerprint(route.inputSchemas.headers, consumerId);
     case "response":
       return schemaPresenceFingerprint(route.outputSchema);
     case "problems":
@@ -369,6 +371,19 @@ function createRouteFieldFingerprint(
 
 function toOpenAPIComparablePath(path: string): string {
   return path.replace(/:\.\.\.([^/]+)/g, ":$1");
+}
+
+function namedSchemaPresenceFingerprint(
+  schema: unknown,
+  consumerId: ContractGraphConsumerId,
+): string | undefined {
+  if (consumerId === "openapi" && isZodType(schema)) {
+    const object = getZodInputObjectSchema(schema);
+    // OpenAPI represents named query/path/header fields as individual parameters.
+    // A zero-field object has no parameter to emit, while RPC consumers retain its object envelope.
+    if (object && Object.keys(object.shape).length === 0) return "absent";
+  }
+  return schemaPresenceFingerprint(schema);
 }
 
 function schemaPresenceFingerprint(schema: unknown): string | undefined {

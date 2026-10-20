@@ -50,7 +50,8 @@
         "packages/protocols-core/src/libs/extractRouteIR.ts": "8c1c19246773f037a33a129d2df1feb95d39e86cb6de16792c50a5c9fa284404",
         "packages/protocols-core/src/libs/ContractGraph.ts": "431b85e26e5b29f7888aebeb603ff65493c1016258e1ad5d7eecdd9e6b3a41d4",
         "packages/protocols-core/src/type-tests/OperationTypes.ts": "b25b0a85aa47f40e543b46b91b87433a1d787ebf272672b241542dc4d1c9a4ef",
-        "packages/protocols-core/src/libs/SchemaDescriptor.ts": "ed40fb4e89bd26b8b0ce4112e0fc0387c8eb18bc202ae2918e8f82871178cd76"
+        "packages/protocols-core/src/libs/SchemaDescriptor.ts": "ed40fb4e89bd26b8b0ce4112e0fc0387c8eb18bc202ae2918e8f82871178cd76",
+        "packages/protocols-core/src/libs/ContractGraphConsumerCoverage.ts": "8df1634b93e959d37bb2ec52020b0e373875d1b3e697072f659669789f0ef43d"
       },
       "catalogRuntimes": [],
       "profiles": {
@@ -148,7 +149,7 @@
       "classification": "protocol-render",
       "reason": "OpenAPI renders the already validated whole-source operation schema in its existing build-time consumer, without execution, storage, host lifecycle or new runtime dependencies.",
       "files": {
-        "packages/openapi-spec/src/libs/emitOpenAPI.ts": "9c95ad5055e0c1f8dcee0741aafa9922d592adbf2c955872bcd2b617a2f04093"
+        "packages/openapi-spec/src/libs/emitOpenAPI.ts": "906e223b4a51cfe1c669de1d3c4cd13cb44256fff34deecf854bc1612707b983"
       },
       "catalogRuntimes": [],
       "profiles": {
