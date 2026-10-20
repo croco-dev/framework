@@ -145,6 +145,7 @@
     "@croco/storage-cloudinary": "workspace:*",
     "@croco/storage-core": "workspace:*",
     "@croco/storage-r2": "workspace:*",
+    "@croco/storage-s3": "workspace:*",
     "@croco/tasks-core": "workspace:*",
     "@croco/tasks-qstash": "workspace:*",
     "@croco/telemetry-api": "workspace:*",

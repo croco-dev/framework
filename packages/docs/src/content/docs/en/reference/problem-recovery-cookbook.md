@@ -134,6 +134,7 @@ This cookbook documents 1137 public Croco Problem codes. The deterministic JSON 
 | [`STORAGE_R2_MISSING_CONFIG`](#storage-r2-missing-config)                                                                                       | InternalServerError                                                                      |                     500 | conditional   | operator-only | active     |       1 |
 | [`STORAGE_R2_OBJECT_TOO_LARGE`](#storage-r2-object-too-large)                                                                                   | InternalServerError                                                                      |                     500 | conditional   | operator-only | active     |       1 |
 | [`STORAGE_R2_READINESS_FAILED`](#storage-r2-readiness-failed)                                                                                   | InternalServerError                                                                      |                     500 | conditional   | operator-only | active     |       1 |
+| [`STORAGE_S3_FAILED`](#storage-s3-failed)                                                                                                       | InternalServerError                                                                      |                     500 | conditional   | operator-only | active     |       1 |
 | [`STORAGE_UPLOAD_FAILED`](#storage-upload-failed)                                                                                               | InternalServerError                                                                      |                     500 | conditional   | operator-only | active     |       1 |
 | [`STRATEGY_UNAVAILABLE`](#strategy-unavailable)                                                                                                 | InternalServerError                                                                      |                     500 | conditional   | operator-only | active     |       1 |
 | [`STRUCTURED_OUTPUT_ERROR`](#structured-output-error)                                                                                           | InternalServerError                                                                      |                     500 | conditional   | operator-only | deprecated |       0 |
@@ -3360,6 +3361,24 @@ Sources:
 Sources:
 
 - `packages/storage-r2/src/libs/problems/R2ReadinessProblem.ts:13:1` (problem-class)
+
+<a id="storage-s3-failed"></a>
+
+## `STORAGE_S3_FAILED`
+
+- Category: `InternalServerError`
+- HTTP status: `500` Internal Server Error
+- Retryability: `conditional`
+- Redaction policy: `operator-only`
+- Lifecycle: `active`
+- Cause: Croco or an upstream dependency failed after accepting the request.
+- User action: Retry later only when the operation is idempotent or the caller owns retry safety.
+- Operator action: Use traces, logs, and upstream diagnostics to isolate the failing boundary.
+- Telemetry: `croco.problem.error` (error) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/storage-s3/src/libs/S3StorageProblem.ts:12:5` (problem-constructor)
 
 <a id="storage-upload-failed"></a>
 

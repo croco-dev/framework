@@ -1,0 +1,12 @@
+{
+  "exclude": ["node_modules"],
+  "extends": "../../tsconfig/tsconfig.node.json",
+  "compilerOptions": {
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "paths": {
+      "@croco/storage-core/node": ["../storage-core/src/node.ts"]
+    }
+  },
+  "include": ["src/**/*.ts"]
+}

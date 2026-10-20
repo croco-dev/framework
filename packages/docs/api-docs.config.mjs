@@ -738,6 +738,12 @@ export const apiDocPackages = [
     moduleName: "storage-r2/src",
   },
   {
+    packageName: "@croco/storage-s3",
+    directory: "storage-s3",
+    entryPoint: "src/index.ts",
+    moduleName: "storage-s3/src",
+  },
+  {
     packageName: "@croco/telemetry-api",
     directory: "telemetry-api",
     entryPoint: "src/index.ts",

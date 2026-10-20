@@ -6,12 +6,12 @@
 
 | Metric                         | Count |
 | ------------------------------ | ----: |
-| Public packages                |   140 |
+| Public packages                |   141 |
 | Private packages skipped       |     2 |
 | Missing package README         |     0 |
-| Missing generated API docs     |     0 |
+| Missing generated API docs     |     1 |
 | Missing package test directory |     0 |
-| Extension matrix packages      |    61 |
+| Extension matrix packages      |    62 |
 | Certification records          |     8 |
 | Croco 1.0 spine packages       |    18 |
 
@@ -88,7 +88,7 @@ None.
 
 ## Missing Generated API Docs
 
-None.
+- `@croco/storage-s3` (`packages/storage-s3`) — new gap
 
 ## Generated API Docs Backlog By Maturity
 
@@ -96,7 +96,7 @@ None.
 | ------------------- | ---------------: |
 | 🟢 production-ready |                0 |
 | 🟡 beta             |                0 |
-| 🔴 alpha/WIP        |                0 |
+| 🔴 alpha/WIP        |                1 |
 | ⚠️ deprecated       |                0 |
 
 ## Missing Test Directory
@@ -227,6 +227,7 @@ None.
 | `@croco/storage-cloudinary`            | Plugins        | provider      | Storage                 | node, lambda                              |
 | `@croco/storage-core`                  | Contracts      | domain        | Storage                 | unclaimed                                 |
 | `@croco/storage-r2`                    | Plugins        | provider      | Storage                 | node, lambda                              |
+| `@croco/storage-s3`                    | Plugins        | provider      | Storage                 | node, lambda                              |
 | `@croco/tasks-core`                    | Contracts      | domain        | Tasks                   | unclaimed                                 |
 | `@croco/tasks-qstash`                  | Plugins        | provider      | Tasks                   | node, lambda                              |
 | `@croco/telemetry-api`                 | Contracts      | observability | Telemetry               | node, lambda, cloudflare-workers, browser |
@@ -254,7 +255,7 @@ None.
 | ------------ | -------: |
 | Core         |       23 |
 | Domain       |       39 |
-| Provider     |       40 |
+| Provider     |       41 |
 | Integration  |        6 |
 | Protocol     |        8 |
 | Transport    |        2 |
@@ -267,7 +268,7 @@ None.
 | ------------------- | -------: |
 | 🟢 production-ready |       23 |
 | 🟡 beta             |       78 |
-| 🔴 alpha/WIP        |       39 |
+| 🔴 alpha/WIP        |       40 |
 | ⚠️ deprecated       |        0 |
 
 ## Extension Matrix
@@ -276,7 +277,7 @@ Extension matrix metadata is maintained in `docs/package-catalog.json` and rende
 
 | Group        | Packages | Without package tests |
 | ------------ | -------: | --------------------: |
-| Provider     |       40 |                     0 |
+| Provider     |       41 |                     0 |
 | Integration  |        6 |                     0 |
 | Transport    |        2 |                     0 |
 | Host         |        4 |                     0 |

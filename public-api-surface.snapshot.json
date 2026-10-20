@@ -40882,6 +40882,78 @@
       ]
     },
     {
+      "packageName": "@croco/storage-s3",
+      "relativeDir": "packages/storage-s3",
+      "entrypoints": [
+        {
+          "exportPath": ".",
+          "kind": "code",
+          "targets": [
+            {
+              "conditions": ["types", "import"],
+              "target": "./dist/index.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
+              "target": "./dist/index.d.ts"
+            },
+            {
+              "conditions": ["import"],
+              "target": "./dist/index.mjs"
+            },
+            {
+              "conditions": ["require"],
+              "target": "./dist/index.js"
+            }
+          ],
+          "sourceEntrypoint": "packages/storage-s3/src/index.ts",
+          "runtimeExports": [
+            {
+              "name": "S3StorageProblem",
+              "exportKind": "named",
+              "source": "./libs/S3StorageProblem",
+              "declarationKind": "class"
+            },
+            {
+              "name": "S3StorageProvider",
+              "exportKind": "named",
+              "source": "./libs/S3StorageProvider",
+              "declarationKind": "class"
+            },
+            {
+              "name": "S3_STORAGE_MODULE_NAME",
+              "exportKind": "named",
+              "source": "./libs/S3StoragePlugin",
+              "declarationKind": "const"
+            },
+            {
+              "name": "s3Storage",
+              "exportKind": "named",
+              "source": "./libs/S3StoragePlugin",
+              "declarationKind": "const"
+            }
+          ],
+          "typeExports": [
+            {
+              "name": "S3PutOptions",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "S3ReadOptions",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "S3StorageOptions",
+              "exportKind": "named",
+              "source": "./libs/types"
+            }
+          ]
+        }
+      ]
+    },
+    {
       "packageName": "@croco/tasks-core",
       "relativeDir": "packages/tasks-core",
       "entrypoints": [

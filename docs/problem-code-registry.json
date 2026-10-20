@@ -3623,6 +3623,36 @@
       ]
     },
     {
+      "code": "STORAGE_S3_FAILED",
+      "category": "InternalServerError",
+      "status": 500,
+      "title": "Internal Server Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#storage-s3-failed",
+      "recovery": {
+        "cause": "Croco or an upstream dependency failed after accepting the request.",
+        "userAction": "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        "operatorAction": "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        "retryability": "conditional",
+        "redactionPolicy": "operator-only",
+        "telemetry": {
+          "eventName": "croco.problem.error",
+          "severity": "error",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/storage-s3/src/libs/S3StorageProblem.ts",
+          "line": 12,
+          "column": 5,
+          "kind": "problem-constructor"
+        }
+      ]
+    },
+    {
       "code": "STORAGE_UPLOAD_FAILED",
       "category": "InternalServerError",
       "status": 500,

@@ -1,0 +1,64 @@
+{
+  "name": "@croco/storage-s3",
+  "version": "0.0.0",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/croco-dev/framework.git",
+    "directory": "packages/storage-s3"
+  },
+  "files": [
+    "dist"
+  ],
+  "type": "commonjs",
+  "sideEffects": false,
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": {
+        "import": "./dist/index.d.mts",
+        "require": "./dist/index.d.ts"
+      },
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    }
+  },
+  "publishConfig": {
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+      ".": {
+        "types": {
+          "import": "./dist/index.d.mts",
+          "require": "./dist/index.d.ts"
+        },
+        "import": "./dist/index.mjs",
+        "require": "./dist/index.js"
+      }
+    },
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsup src/index.ts --format esm,cjs --minify --clean --dts",
+    "lint": "oxlint .",
+    "test": "vitest run",
+    "test:evidence": "pnpm run test --maxWorkers=1 --reporter=json --outputFile=.turbo/croco-test-evidence.json",
+    "typecheck": "tsc --noEmit",
+    "docs:api:model": "node --experimental-strip-types ../docs/scripts/generate-package-api-model.mts"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.1057.0",
+    "@aws-sdk/s3-request-presigner": "^3.1057.0",
+    "@croco/framework-module": "workspace:*",
+    "@croco/problems-core": "workspace:*",
+    "@croco/storage-core": "workspace:*"
+  },
+  "devDependencies": {
+    "@croco/preset-lambda": "workspace:*",
+    "@croco/preset-node": "workspace:*",
+    "@croco/testing": "workspace:*",
+    "@types/node": "^24.0.0"
+  }
+}
