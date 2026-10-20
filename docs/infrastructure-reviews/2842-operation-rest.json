@@ -48,7 +48,8 @@
         "packages/protocols-core/src/libs/Operation.ts": "861d908d4180537af501364fe6ad890f0af62d50a7f8aa14d209894ab1b3eaee",
         "packages/protocols-core/src/libs/RouteIR.ts": "2ae989c77334f76bb8d7144ab45ac037826a357f9db8446bb0f98f6d3c3ff1e7",
         "packages/protocols-core/src/libs/extractRouteIR.ts": "8c1c19246773f037a33a129d2df1feb95d39e86cb6de16792c50a5c9fa284404",
-        "packages/protocols-core/src/libs/ContractGraph.ts": "431b85e26e5b29f7888aebeb603ff65493c1016258e1ad5d7eecdd9e6b3a41d4"
+        "packages/protocols-core/src/libs/ContractGraph.ts": "431b85e26e5b29f7888aebeb603ff65493c1016258e1ad5d7eecdd9e6b3a41d4",
+        "packages/protocols-core/src/type-tests/OperationTypes.ts": "b25b0a85aa47f40e543b46b91b87433a1d787ebf272672b241542dc4d1c9a4ef"
       },
       "catalogRuntimes": [],
       "profiles": {
@@ -88,7 +89,8 @@
       "files": {
         "packages/protocols-rest/src/index.ts": "5d7731df696e6db2eba16a92242354712ceba3fa7647666aa03afdc6c27a4bba",
         "packages/protocols-rest/src/libs/createRestOperationController.ts": "52ab5f3bf2e43dd7edd7b829d9effbed8ee4ac0f2249c46e8f785a18a6427679",
-        "packages/protocols-rest/src/libs/sourceLocation.ts": "992a02ab3bbbeaf7a7633708aaf0cbf8d1a7aeee91e98965113fc7172b7b8c0e"
+        "packages/protocols-rest/src/libs/sourceLocation.ts": "992a02ab3bbbeaf7a7633708aaf0cbf8d1a7aeee91e98965113fc7172b7b8c0e",
+        "packages/protocols-rest/src/type-tests/OperationBindingTypes.ts": "5acacabd1d97eb6ee50752fe00c638b31224516b1ea4b47120b0dc12cb191e33"
       },
       "catalogRuntimes": [],
       "profiles": {
