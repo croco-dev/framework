@@ -67,6 +67,28 @@ describe("benchmark workflow", () => {
     }
   });
 
+  it("retains existing benchmark evidence before a PDP failure can stop execution", () => {
+    const workflow = readBenchmarkWorkflow();
+    const orderedSteps = [
+      "Run benchmarks with threshold check",
+      "Publish benchmark enforce-readiness report",
+      "Upload benchmark readiness report",
+      "Install Playwright Chromium",
+      "Build the production PDP fixture",
+      "Measure PDP configurations and intentional regressions",
+      "Upload PDP lab evidence",
+      "Fail if benchmark enforcement failed",
+    ];
+    let previousIndex = -1;
+    for (const step of orderedSteps) {
+      const index = workflow.indexOf(`- name: ${step}`);
+      expect(index, `${step} must preserve evidence before the next failing step`).toBeGreaterThan(
+        previousIndex,
+      );
+      previousIndex = index;
+    }
+  });
+
   it("enforces benchmark gate mode after latest-five-green evidence is committed", () => {
     const workflow = readBenchmarkWorkflow();
 
