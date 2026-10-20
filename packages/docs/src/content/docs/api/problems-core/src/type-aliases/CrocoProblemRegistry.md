@@ -17,7 +17,7 @@ title: "CrocoProblemRegistry"
 
 ### problemCount
 
-> `readonly` **problemCount**: `1137`
+> `readonly` **problemCount**: `1138`
 
 ---
 

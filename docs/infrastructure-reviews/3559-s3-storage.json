@@ -70,7 +70,7 @@
       "classification": "pure-contract",
       "reason": "Generated additive STORAGE_S3_FAILED diagnostic metadata; no host, storage or lifecycle implementation is added to the Problem contract.",
       "files": {
-        "packages/problems-core/src/generated/problem-code-registry.ts": "514640d96d5d9ac83e17a44dc0722819518a4fdad951740b436cb8c8dace99a1"
+        "packages/problems-core/src/generated/problem-code-registry.ts": "1f3fbdda2535b984ab91ce7b55f825f43e719ecdab01ce2a6c8a2408fe09afac"
       },
       "catalogRuntimes": [],
       "profiles": {
