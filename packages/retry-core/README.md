@@ -108,7 +108,7 @@ Redis 저장소의 `ttlSeconds`(기본 60초)는 기본 키 보존 기간입니�
 
 HALF_OPEN 상태, generation marker(마지막 실패 시각), 활성 슬롯 및 성공 카운터에는 TTL을 적용하지 않습니다. probe 실행 시간에 제한이 없으므로, 완료를 확인하지 않고 슬롯을 만료시키면 아직 실행 중인 호출과 새 호출이 겹칠 수 있기 때문입니다. 여러 인스턴스는 기존 분산 lock 아래에서 같은 슬롯을 공유하며, 성공 기준을 채우기 전에는 CLOSED로 바뀌지 않습니다. 실패로 OPEN이 되거나 성공으로 CLOSED가 되면 키에 다시 해당 상태의 TTL을 적용합니다.
 
-실행자가 종료되거나 probe가 끝나지 않으면 해당 슬롯은 자동 만료되지 않습니다. 애플리케이션은 upstream 작업의 종료를 확인한 뒤 같은 `circuitId`의 breaker에서 `forceOpen()`을 호출해 복구합니다. 새 OPEN 기간이 지난 후 새 generation으로 회복 검사를 시작하며, 이전 generation의 늦은 성공·실패·슬롯 반환은 새 상태를 바꾸지 않습니다. `reset()`/`forceClose()`는 회복 확인 없이 CLOSED로 여는 명시적 관리 동작이므로 이 복구 절차의 대체 수단이 아닙니다. 방치된 HALF_OPEN 키는 명시적 전이 또는 reset까지 남으므로 운영자가 복구와 정리를 소유해야 합니다. 이 보장은 Redis가 키를 보존하고 모든 writer가 이 구현을 사용하는 경우에 적용됩니다. Redis eviction, 데이터 삭제 및 이전 구현과의 혼합 배포는 별도로 관리해야 합니다.
+실행자가 종료되거나 probe가 끝나지 않으면 해당 슬롯은 자동 만료되지 않습니다. 애플리케이션은 upstream 작업의 종료를 확인한 뒤 같은 `circuitId`의 breaker에서 `forceOpen()`을 호출해 복구합니다. `forceOpen()`은 probe 완료 처리와 같은 circuit lock을 사용하며, lock 획득·저장소 오류에는 기존 정책을 적용합니다. 새 OPEN 기간이 지난 후 새 generation으로 회복 검사를 시작하며, 이전 generation의 늦은 성공·실패·슬롯 반환은 새 상태를 바꾸지 않습니다. `reset()`/`forceClose()`는 회복 확인 없이 CLOSED로 여는 명시적 관리 동작이므로 이 복구 절차의 대체 수단이 아닙니다. 방치된 HALF_OPEN 키는 명시적 전이 또는 reset까지 남으므로 운영자가 복구와 정리를 소유해야 합니다. 이 보장은 Redis가 키를 보존하고 모든 writer가 이 구현을 사용하는 경우에 적용됩니다. Redis eviction, 데이터 삭제 및 이전 구현과의 혼합 배포는 별도로 관리해야 합니다.
 
 기본 저장소와 breaker registry는 decorated method가 로드된 동안 유지됩니다. 기본 저장소의 idle retention은 최소 5분이며, 명시적인 `timeout`에는 첫 HALF_OPEN 전환을 보장하기 위한 5분이 추가됩니다. 비활성 registry 항목은 5분 또는 1,000개 한도에서 제거되지만, 제거 과정은 상태 저장소를 reset하지 않습니다. 프로세스나 런타임 간 OPEN/HALF_OPEN 상태 공유가 필요하면 같은 분산 `stateStore`를 명시적으로 전달해야 합니다. 분산 저장소는 저장된 상태를 공유하며, breaker 인스턴스 내부의 CLOSED 동시 실행 카운터까지 프로세스 간 공유하지는 않습니다.
 

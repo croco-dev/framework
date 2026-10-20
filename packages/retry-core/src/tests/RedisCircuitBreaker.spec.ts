@@ -298,6 +298,55 @@ describe("RedisCircuitBreakerStore", () => {
     await expect(secondNewProbe).resolves.toBe("second");
   });
 
+  it("serializes recovery with a probe completion that already passed its generation check", async () => {
+    const { redis } = createSharedMockRedis();
+    let attempted!: () => void;
+    const lockAttempt = new Promise<void>((resolve) => (attempted = resolve));
+    const storeA = new RedisCircuitBreakerStore({ redis });
+    const storeB = new RedisCircuitBreakerStore({
+      redis: {
+        ...redis,
+        set: async (key, value, options) => {
+          if (options?.nx) attempted();
+          return redis.set(key, value, options);
+        },
+      },
+    });
+    let now = 100;
+    const options = { circuitId: "recovery-bookkeeping", openDuration: 10, now: () => now };
+    const breakerA = new CircuitBreaker({ ...options, stateStore: storeA });
+    const breakerB = new CircuitBreaker({ ...options, stateStore: storeB });
+    await storeA.setLastFailureTime(options.circuitId, 0);
+    await storeA.setState(options.circuitId, CircuitState.HALF_OPEN);
+    let entered!: () => void;
+    let release!: () => void;
+    const bookkeeping = new Promise<void>((resolve) => (entered = resolve));
+    const gate = new Promise<void>((resolve) => (release = resolve));
+    const getSuccessCount = storeA.getHalfOpenSuccessCount.bind(storeA);
+    vi.spyOn(storeA, "getHalfOpenSuccessCount").mockImplementation(async (id) => {
+      entered();
+      await gate;
+      return getSuccessCount(id);
+    });
+    const old = breakerA.execute(async () => "healthy");
+    await bookkeeping;
+    const reopened = breakerB.forceOpen();
+    // Release the old completion after recovery either queues for its lock or finishes.
+    // Both implementations reach this boundary; the final state is the independent oracle.
+    await Promise.race([lockAttempt, reopened]);
+    release();
+    await old;
+    await reopened;
+    expect(await breakerA.getState()).toBe(CircuitState.OPEN);
+    expect(await breakerA.getLastFailureTime()).toBe(100);
+    const upstream = vi.fn(async () => "recovered");
+    await expect(breakerA.execute(upstream)).rejects.toBeInstanceOf(CircuitBreakerOpenProblem);
+    expect(upstream).not.toHaveBeenCalled();
+    now = 110;
+    await expect(breakerB.execute(upstream)).resolves.toBe("recovered");
+    expect(await breakerA.getState()).toBe(CircuitState.CLOSED);
+  });
+
   it("keeps the half-open generation available while its Redis state is retained", async () => {
     const { redis, data } = createSharedMockRedis();
     const expiresAt = new Map<string, number>();

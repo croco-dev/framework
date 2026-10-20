@@ -359,10 +359,12 @@ export class CircuitBreaker {
   }
 
   async forceOpen(): Promise<void> {
-    await this.stateStore.setLastFailureTime(this.circuitId, this.now(), {
-      minRetentionMs: this.openDuration,
+    await this.withCircuitLock(async () => {
+      await this.stateStore.setLastFailureTime(this.circuitId, this.now(), {
+        minRetentionMs: this.openDuration,
+      });
+      await this.setCircuitState(CircuitState.OPEN);
     });
-    await this.setCircuitState(CircuitState.OPEN);
   }
 
   async forceClose(): Promise<void> {

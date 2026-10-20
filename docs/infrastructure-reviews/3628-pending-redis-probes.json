@@ -4,9 +4,10 @@
     {
       "package": "retry-core",
       "classification": "durable-provider",
-      "reason": "Retain Redis HALF_OPEN generation and counters through arbitrarily long pending probes; explicit completion/reopening restores TTL. Executor-loss recovery is explicit forceOpen using existing generation fencing.",
+      "reason": "Retain Redis HALF_OPEN generation and counters through arbitrarily long pending probes; explicit completion/reopening restores TTL. Serialize forceOpen recovery with probe bookkeeping under the existing circuit lock and generation fence.",
       "files": {
-        "packages/retry-core/src/libs/stores/RedisCircuitBreakerStore.ts": "af57c1c7e72e593977df7f4c65b02e0ef819f88eb948546c5f2657ba98e833d1"
+        "packages/retry-core/src/libs/stores/RedisCircuitBreakerStore.ts": "af57c1c7e72e593977df7f4c65b02e0ef819f88eb948546c5f2657ba98e833d1",
+        "packages/retry-core/src/libs/CircuitBreaker.ts": "3b4268ed2ffeea1ef516b985c181f125f9643e415c2e0cb944af4bab22de90b6"
       },
       "catalogRuntimes": [],
       "profiles": {
