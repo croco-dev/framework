@@ -210,8 +210,11 @@ describe("Turbo compiler configuration cache inputs", () => {
           "appendFileSync('../../executions.log', process.argv[2] + '\\n');\n" +
           "mkdirSync('dist', { recursive: true }); writeFileSync('dist/result.txt', 'built');\n",
       );
-      execFileSync("git", ["init", "--quiet"], { cwd: root });
-      execFileSync("git", ["add", "."], { cwd: root });
+      const isolatedEnv = Object.fromEntries(
+        Object.entries(process.env).filter(([key]) => !key.startsWith("GIT_")),
+      );
+      execFileSync("git", ["init", "--quiet"], { cwd: root, env: isolatedEnv });
+      execFileSync("git", ["add", "."], { cwd: root, env: isolatedEnv });
       const run = () => {
         const previous = new Set(
           existsSync(resolve(root, ".turbo/runs")) ? readdirSync(resolve(root, ".turbo/runs")) : [],
@@ -233,7 +236,7 @@ describe("Turbo compiler configuration cache inputs", () => {
             encoding: "utf8",
             timeout: 60_000,
             stdio: "pipe",
-            env: { ...process.env, TURBO_TELEMETRY_DISABLED: "1" },
+            env: { ...isolatedEnv, TURBO_TELEMETRY_DISABLED: "1" },
           },
         );
         const runs = readdirSync(resolve(root, ".turbo/runs")).filter(
