@@ -13,7 +13,6 @@ import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import {
   BaseStorageProvider,
   InvalidKeyProblem,
-  StorageOperationAbortedProblem,
   readStorageStream,
   validateSignedUrlExpiry,
 } from "@croco/storage-core";
@@ -106,7 +105,9 @@ export class S3StorageProvider extends BaseStorageProvider {
       Metadata: options?.metadata,
     };
     let uploadId: string | undefined;
-    let source: StorageStream | undefined;
+    let reader: ReadableStreamDefaultReader<Uint8Array> | undefined;
+    let cancelSource: ((reason?: unknown) => Promise<void>) | undefined;
+    let removeAbortListener = () => {};
     try {
       if (!(data instanceof Uint8Array) && typeof data?.getReader !== "function")
         throw new S3StorageProblem("invalid-body");
@@ -131,9 +132,18 @@ export class S3StorageProvider extends BaseStorageProvider {
               })
             : data;
         const parts: { ETag: string; PartNumber: number }[] = [];
-        // bindOperationSignal also cancels a source stalled between network requests.
-        source = this.bindOperationSignal(stream, options, "put", key);
-        for await (const Body of this.chunks(source)) {
+        reader = stream.getReader();
+        const input = reader;
+        let cancellation: Promise<void> | undefined;
+        cancelSource = (reason) => (cancellation ??= input.cancel(reason));
+        const onAbort = () => {
+          // Retain this exact promise for cleanup; an errored wrapper loses its outcome.
+          void cancelSource?.(options?.signal?.reason).catch(() => {});
+        };
+        options?.signal?.addEventListener("abort", onAbort, { once: true });
+        removeAbortListener = () => options?.signal?.removeEventListener("abort", onAbort);
+        if (options?.signal?.aborted) onAbort();
+        for await (const Body of this.chunks(input, options, key)) {
           if (!uploadId) {
             const response = await this.client.send(new CreateMultipartUploadCommand(params), {
               abortSignal: options?.signal,
@@ -183,9 +193,9 @@ export class S3StorageProvider extends BaseStorageProvider {
       }
       this.assertOperationNotAborted(options, "put", key);
     } catch (error) {
-      if (uploadId || source) {
+      if (uploadId || cancelSource) {
         try {
-          await this.cleanupUpload(params.Key, error, uploadId, source, options?.signal);
+          await this.cleanupUpload(params.Key, error, uploadId, cancelSource);
         } catch (cleanupError) {
           throw new S3StorageProblem("put", {
             cleanupFailed: true,
@@ -195,6 +205,9 @@ export class S3StorageProvider extends BaseStorageProvider {
       }
       this.rethrowOperationAbort(error, options, "put", key);
       throw new S3StorageProblem("put", { cause: error });
+    } finally {
+      removeAbortListener();
+      reader?.releaseLock();
     }
   }
 
@@ -202,8 +215,7 @@ export class S3StorageProvider extends BaseStorageProvider {
     Key: string,
     failure: unknown,
     uploadId?: string,
-    source?: StorageStream,
-    signal?: AbortSignal,
+    cancelSource?: (reason?: unknown) => Promise<void>,
   ): Promise<void> {
     const controller = new AbortController();
     let timer: ReturnType<typeof setTimeout> | undefined;
@@ -228,15 +240,11 @@ export class S3StorageProvider extends BaseStorageProvider {
           )
         : Promise.resolve();
       const input = Promise.resolve()
-        .then(() => source?.cancel())
+        .then(() => cancelSource?.(failure))
         .catch((cause: unknown) => {
           // Cancelling an already errored stream rejects with its original read failure.
           // That is not an additional cleanup failure.
-          if (
-            cause !== failure &&
-            !(signal?.aborted && cause instanceof StorageOperationAbortedProblem)
-          )
-            throw cause;
+          if (cause !== failure) throw cause;
         });
       const cleanup = Promise.allSettled([remote, input]).then((results) => {
         const failures = results.filter((result) => result.status === "rejected");
@@ -254,12 +262,20 @@ export class S3StorageProvider extends BaseStorageProvider {
     }
   }
 
-  private async *chunks(stream: StorageStream): AsyncGenerator<Uint8Array> {
+  private async *chunks(
+    reader: ReadableStreamDefaultReader<Uint8Array>,
+    options: S3PutOptions | undefined,
+    key: string,
+  ): AsyncGenerator<Uint8Array> {
     let part = new Uint8Array(PART_BYTES);
     let used = 0;
-    // Release the iterator lock without awaiting user-controlled cancellation.
-    // The outer failure handler owns both source and remote cleanup under one deadline.
-    for await (const chunk of stream.values({ preventCancel: true })) {
+    // Reader ownership stays with put: generator unwinding must not await source cancellation.
+    while (true) {
+      this.assertOperationNotAborted(options, "put", key);
+      const next = await reader.read();
+      this.assertOperationNotAborted(options, "put", key);
+      if (next.done) break;
+      const chunk = next.value;
       if (!(chunk instanceof Uint8Array)) throw new S3StorageProblem("invalid-body");
       let offset = 0;
       while (offset < chunk.byteLength) {

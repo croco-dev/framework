@@ -286,6 +286,59 @@ describe("S3StorageProvider HTTP conformance", () => {
     }
   });
 
+  it.each(["stalls", "rejects"])(
+    "reports failed input cleanup when caller aborts and source cancellation %s",
+    async (mode) => {
+      const controller = new AbortController();
+      let release = () => {};
+      const blocked = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      let cancelled = false;
+      const p = new S3StorageProvider({
+        bucket: "fixture-bucket",
+        region: "ap-northeast-2",
+        endpoint: fixture.endpoint,
+        forcePathStyle: true,
+        credentials,
+        cleanupTimeoutMs: 100,
+      });
+      providers.push(p);
+      const input = new ReadableStream<Uint8Array>({
+        start(c) {
+          c.enqueue(new Uint8Array(5 * 1024 * 1024));
+        },
+        cancel() {
+          cancelled = true;
+          return mode === "stalls" ? blocked : Promise.reject(new Error("source cleanup failed"));
+        },
+      });
+      fixture.onPart = () => controller.abort(new Error("caller stopped"));
+      const operation = p.put(`caller-cleanup-${mode}`, input, { signal: controller.signal });
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      const guard = new Promise<never>((_resolve, reject) => {
+        timer = setTimeout(
+          () => reject(new Error("cleanup exceeded its 100 ms budget within 1 s")),
+          1000,
+        );
+      });
+      try {
+        await expect(Promise.race([operation, guard])).rejects.toMatchObject({
+          code: "STORAGE_S3_FAILED",
+          extensions: { details: { cleanupFailed: true } },
+        });
+        expect(cancelled).toBe(true);
+        expect(fixture.uploads.size).toBe(0);
+      } finally {
+        clearTimeout(timer);
+        release();
+        await operation.catch(() => {});
+        fixture.onPart = undefined;
+        fixture.uploads.clear();
+      }
+    },
+  );
+
   it.each(["source cancellation", "credential refresh"])(
     "bounds cleanup when %s stalls before the HTTP request",
     async (stall) => {
