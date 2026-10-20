@@ -121,8 +121,9 @@ const { build } = createRequire(require.resolve("tsup"))("esbuild");
     await new Promise((r) => server.listen(0, "127.0.0.1", r));
     const contents = `import React from 'react';import{createRoot}from'react-dom/client';import{SeoWorkbench}from ${JSON.stringify(resolve(__dirname, "../libs/SeoWorkbench.tsx"))};
     const definition=${JSON.stringify(module.seoDefinition)};const request=async(path,body,signal)=>{const r=await fetch(path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),signal});if(!r.ok)throw new Error('Read failed');return r.json();};
-    const read=(definition,offset,limit,signal)=>request('/read',{definition,offset,limit},signal);
-    const root=createRoot(document.getElementById('root'));window.render=scope=>root.render(React.createElement(SeoWorkbench,{scopeKey:scope,definition,read,onSave:(definition,hash,signal)=>request('/save',{definition,hash},signal),onExport:(definition,hash,signal)=>request('/export',{definition,hash},signal)}));window.render('tenant-a');`;
+    window.readRequests=[];window.renderedRevision=-1;
+    function Committed({revision}){React.useEffect(()=>{window.renderedRevision=revision},[revision]);return null;}
+    const root=createRoot(document.getElementById('root'));window.render=(scope,minImpressions=definition.minImpressions,revision=0)=>root.render(React.createElement(React.Fragment,null,React.createElement(SeoWorkbench,{scopeKey:scope,definition:{...definition,minImpressions},read:(definition,offset,limit,signal)=>{window.readRequests.push({definition,revision});return request('/read',{definition,offset,limit},signal)},onSave:(definition,hash,signal)=>request('/save',{definition,hash},signal),onExport:(definition,hash,signal)=>request('/export',{definition,hash},signal)}),React.createElement(Committed,{revision})));window.render('tenant-a');`;
     const ui = await build({
       stdin: { contents, resolveDir: resolve(__dirname, ".."), loader: "tsx" },
       bundle: true,
@@ -142,6 +143,35 @@ const { build } = createRequire(require.resolve("tsup"))("esbuild");
     await page.addScriptTag({ content: ui.outputFiles[0].text });
     await page.getByText(/Population 2 · Included 2 · Excluded 0/).waitFor();
     await page.screenshot({ path: join(evidenceDir, "ready-desktop.png"), fullPage: true });
+    await page.getByLabel("Minimum impressions", { exact: true }).fill("37");
+    await page.getByRole("combobox", { name: "Candidate filter" }).selectOption("value-rate-down");
+    await page.evaluate(() => window.render("tenant-a", undefined, 1));
+    await page.waitForFunction(() => window.renderedRevision === 1);
+    assert.equal(await page.getByLabel("Minimum impressions", { exact: true }).inputValue(), "37");
+    assert.equal(
+      await page.getByRole("combobox", { name: "Candidate filter" }).inputValue(),
+      "value-rate-down",
+    );
+    assert.equal(await page.evaluate(() => window.readRequests.length), 1);
+    await page.getByRole("button", { name: "Apply definition" }).click();
+    await page.locator('[aria-label="SEO workbench"][aria-busy="false"]').waitFor();
+    assert.deepEqual(
+      await page.evaluate(() => {
+        const last = window.readRequests.at(-1);
+        return { minImpressions: last.definition.minImpressions, revision: last.revision };
+      }),
+      { minImpressions: 37, revision: 1 },
+    );
+    await page.evaluate(() => window.render("tenant-a", 150, 2));
+    await page.waitForFunction(() => window.renderedRevision === 2);
+    await page.locator('[aria-label="SEO workbench"][aria-busy="false"]').waitFor();
+    await page.getByText(/Population 2 · Included 2 · Excluded 0/).waitFor();
+    assert.equal(await page.getByLabel("Minimum impressions", { exact: true }).inputValue(), "150");
+    assert.equal(await page.evaluate(() => window.readRequests.at(-1).revision), 2);
+    await page.screenshot({ path: join(evidenceDir, "parent-rerender.png"), fullPage: true });
+    await page.evaluate(() => window.render("after-parent-rerender"));
+    await page.getByText(/Population 2 · Included 2 · Excluded 0/).waitFor();
+
     await page.getByText("Sources, denominators and assumptions", { exact: true }).click();
     await page
       .getByText(/Denominator: search impressions/)

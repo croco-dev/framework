@@ -1,4 +1,9 @@
-import { hashSeoInput, seoScopeKey, validateSeoDefinition } from "@croco/metrics-core";
+import {
+  hashSeoInput,
+  seoScopeKey,
+  SeoComparisonProblem,
+  validateSeoDefinition,
+} from "@croco/metrics-core";
 import { parseSeoReport } from "@croco/metrics-core/runtime";
 import { Problem, ProblemCategory } from "@croco/problems-core";
 import type {
@@ -162,6 +167,13 @@ export function createSeoWorkbench(options: SeoWorkbenchOptions) {
     ): Promise<SeoWorkbenchState> {
       try {
         const scope = await access("seo.read", undefined, signal);
+        try {
+          validateSeoDefinition(definition);
+        } catch (error) {
+          if (error instanceof SeoComparisonProblem)
+            return { kind: "error", code: "SEO_INVALID_REQUEST" };
+          throw error;
+        }
         const report = await calculate(scope, definition, signal);
         if ("kind" in report) return report;
         const result = page(masked(report, scope), offset, limit);
@@ -169,9 +181,10 @@ export function createSeoWorkbench(options: SeoWorkbenchOptions) {
         return { kind: report.state, page: result };
       } catch (error) {
         signal?.throwIfAborted();
+        if (error instanceof SeoWorkbenchProblem && error.reason === "denied")
+          return { kind: "denied", code: "SEO_DENIED" };
         return {
-          kind:
-            error instanceof SeoWorkbenchProblem && error.reason === "denied" ? "denied" : "error",
+          kind: "error",
           code: error instanceof SeoWorkbenchProblem ? "SEO_INVALID_REQUEST" : "SEO_SOURCE_ERROR",
         };
       }

@@ -15269,7 +15269,7 @@ Sources:
 
 Sources:
 
-- `packages/metrics-core/src/libs/seo/SeoComparison.ts:106:5` (problem-constructor)
+- `packages/metrics-core/src/libs/seo/SeoComparison.ts:107:5` (problem-constructor)
 
 <a id="metrics-core-snapshot-tenant-required"></a>
 

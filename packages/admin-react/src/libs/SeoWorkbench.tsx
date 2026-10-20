@@ -67,42 +67,58 @@ function Workbench(props: SeoWorkbenchProps): React.ReactElement {
   const detailHeading = React.useRef<HTMLHeadingElement>(null);
   const selectedButton = React.useRef<HTMLButtonElement | null>(null);
   const id = React.useId();
-  const read = props.read;
-  const load = React.useCallback(
-    async (definition: SeoDefinition, offset: number) => {
-      pending.current?.abort();
-      const request = new AbortController();
-      pending.current = request;
-      setState({ kind: "loading" });
-      setDetail(null);
-      setMessage("");
-      setBusy(true);
-      try {
-        const next = await read(definition, offset, 25, request.signal);
-        if (pending.current === request) {
-          setState(next);
-          setApplied(definition);
-          heading.current?.focus();
-        }
-      } catch {
-        if (pending.current === request) setState({ kind: "error", code: "SEO_READ_ERROR" });
-      } finally {
-        if (pending.current === request) {
-          pending.current = null;
-          setBusy(false);
-        }
+  const readRef = React.useRef(props.read);
+  const definitionRef = React.useRef(props.definition);
+  React.useLayoutEffect(() => {
+    readRef.current = props.read;
+    definitionRef.current = props.definition;
+  });
+  const definitionKey = JSON.stringify([
+    props.definition.id,
+    props.definition.version,
+    props.definition.baselineWindow.from,
+    props.definition.baselineWindow.to,
+    props.definition.currentWindow.from,
+    props.definition.currentWindow.to,
+    props.definition.minImpressions,
+    props.definition.minSessions,
+    props.definition.minImpressionGrowth,
+    props.definition.minClickDecline,
+    props.definition.minValueRateDecline,
+    props.definition.candidate,
+  ]);
+  const load = React.useCallback(async (definition: SeoDefinition, offset: number) => {
+    pending.current?.abort();
+    const request = new AbortController();
+    pending.current = request;
+    setState({ kind: "loading" });
+    setDetail(null);
+    setMessage("");
+    setBusy(true);
+    try {
+      const next = await readRef.current(definition, offset, 25, request.signal);
+      if (pending.current === request) {
+        setState(next);
+        setApplied(definition);
+        heading.current?.focus();
       }
-    },
-    [read],
-  );
+    } catch {
+      if (pending.current === request) setState({ kind: "error", code: "SEO_READ_ERROR" });
+    } finally {
+      if (pending.current === request) {
+        pending.current = null;
+        setBusy(false);
+      }
+    }
+  }, []);
   React.useEffect(() => {
-    setDraft(props.definition);
-    void load(props.definition, 0);
+    setDraft(definitionRef.current);
+    void load(definitionRef.current, 0);
     return () => {
       pending.current?.abort();
       pending.current = null;
     };
-  }, [load, props.definition]);
+  }, [load, definitionKey]);
   React.useEffect(() => {
     if (detail) detailHeading.current?.focus();
   }, [detail]);

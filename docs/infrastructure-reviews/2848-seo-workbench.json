@@ -8,7 +8,7 @@
       "files": {
         "packages/metrics-core/src/index.ts": "ed1dc78dec90620d4b3ce523ba00926681bf267caddad47f7150db8c285c0bc4",
         "packages/metrics-core/src/runtime.ts": "26ca0b4d13a84b21af9c310675611b2b78281d8b14db090913a1a30cfef40a50",
-        "packages/metrics-core/src/libs/seo/SeoComparison.ts": "527a8893ef3f8694d3c31471e4f009296ac95fd2fb52f0a7488362a637b96543",
+        "packages/metrics-core/src/libs/seo/SeoComparison.ts": "a0cba06436782d8d2df9df3d614cbfa45196803a5ae309f29a942cfcb2e739a4",
         "packages/metrics-core/src/libs/seo/SeoSources.ts": "1a9267c40c22c8d496aeb51860a5927346c5621a273678a6f0147b9a067c9c70"
       },
       "catalogRuntimes": [],
@@ -54,7 +54,7 @@
       "reason": "Server authorization and aggregate report orchestration over existing host-provided authority, runner and scoped repository contracts. No storage implementation, network client or Host lifecycle is introduced.",
       "files": {
         "packages/admin-core/src/index.ts": "1c51def979aeee13770062a966148b703835b3e2d0f4c1d74c544c2e1304c987",
-        "packages/admin-core/src/libs/SeoWorkbench.ts": "be72723b8172575b3a16724aeedc4a71534e7580d751a8c29f06bf02fcfad87c"
+        "packages/admin-core/src/libs/SeoWorkbench.ts": "8fd863d3c0348c3f36a52e129fec009b1d628730838b4c7f6c4241c6feb57875"
       },
       "catalogRuntimes": [],
       "profiles": {
@@ -99,7 +99,7 @@
       "reason": "Browser-only React comparison UI over authenticated server operations. No deployed server Host or infrastructure adapter is introduced.",
       "files": {
         "packages/admin-react/src/index.ts": "21eacec5db587445470ba3273f338baa5b728764073c984a48f350cb8aeef102",
-        "packages/admin-react/src/libs/SeoWorkbench.tsx": "bc56ce752064927517ff45d7026851b983c31fd49bc748e0e97a7f8b9d89a5f3"
+        "packages/admin-react/src/libs/SeoWorkbench.tsx": "a71340a0386c942be9ba889309738b8833d3e5685a763f67227787f48516f16f"
       },
       "catalogRuntimes": ["browser", "node"],
       "profiles": {
@@ -143,7 +143,7 @@
       "classification": "pure-contract",
       "reason": "Generated registry includes the new SEO validation Problem code and source location; no failure handling, Host lifecycle or provider behavior changes.",
       "files": {
-        "packages/problems-core/src/generated/problem-code-registry.ts": "fcc3aae0503d287e2f4562ad24ac86b06a5d90295a1f735004e75128227ab3d1"
+        "packages/problems-core/src/generated/problem-code-registry.ts": "aec0fb9602e808a03eca5b1539578fc489fbaf58063034c2d82079df5a7395bc"
       },
       "catalogRuntimes": [],
       "profiles": {

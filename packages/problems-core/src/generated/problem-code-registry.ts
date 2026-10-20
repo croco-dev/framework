@@ -21672,7 +21672,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/metrics-core/src/libs/seo/SeoComparison.ts";
-          readonly line: 106;
+          readonly line: 107;
           readonly column: 5;
           readonly kind: "problem-constructor";
         },
@@ -32255,7 +32255,7 @@ export type CrocoProblemRegistry = {
       readonly className: "SeoWorkbenchProblem";
       readonly source: {
         readonly file: "packages/admin-core/src/libs/SeoWorkbench.ts";
-        readonly line: 49;
+        readonly line: 54;
         readonly column: 1;
         readonly kind: "problem-class";
       };
@@ -56650,7 +56650,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/metrics-core/src/libs/seo/SeoComparison.ts",
-          line: 106,
+          line: 107,
           column: 5,
           kind: "problem-constructor",
         },
@@ -68599,7 +68599,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       className: "SeoWorkbenchProblem",
       source: {
         file: "packages/admin-core/src/libs/SeoWorkbench.ts",
-        line: 49,
+        line: 54,
         column: 1,
         kind: "problem-class",
       },

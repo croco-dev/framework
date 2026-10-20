@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { SeoComparisonProblem } from "@croco/metrics-core";
 import { createSeoWorkbench } from "../libs/SeoWorkbench";
 import {
   createSeoFixture,
@@ -8,6 +9,39 @@ import {
 } from "../../../../examples/seo-workbench/src/fixture";
 
 describe("SeoWorkbench", () => {
+  it("returns the denied code when read permission is absent", async () => {
+    const fixture = createSeoFixture();
+    fixture.setAccess({ scope: seoScope, permissions: [] });
+    expect(await fixture.operations.read(seoDefinition)).toEqual({
+      kind: "denied",
+      code: "SEO_DENIED",
+    });
+  });
+  it("classifies an invalid definition separately from source validation", async () => {
+    const fixture = createSeoFixture();
+    const invalid = structuredClone(seoDefinition);
+    invalid.currentWindow.to = "invalid";
+    expect(await fixture.operations.read(invalid)).toEqual({
+      kind: "error",
+      code: "SEO_INVALID_REQUEST",
+    });
+    const reader = vi.fn(async () => {
+      throw new SeoComparisonProblem("source.metadata");
+    });
+    const operations = createSeoWorkbench({
+      authenticate: async () => ({ scope: seoScope, permissions: ["seo.read"] }),
+      reader,
+      mask: (_field, value) => value,
+      now: () => new Date("2026-10-20T00:00:00Z"),
+      store: { read: async () => undefined, write: async () => {}, delete: async () => {} },
+    });
+    expect(await operations.read(invalid)).toEqual({ kind: "error", code: "SEO_INVALID_REQUEST" });
+    expect(reader).not.toHaveBeenCalled();
+    expect(await operations.read(seoDefinition)).toEqual({
+      kind: "error",
+      code: "SEO_SOURCE_ERROR",
+    });
+  });
   it("runs shared authorized metrics and bounds pages without losing report denominators", async () => {
     const fixture = createSeoFixture();
     const state = await fixture.operations.read(seoDefinition, 0, 1);

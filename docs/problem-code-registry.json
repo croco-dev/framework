@@ -23143,7 +23143,7 @@
       "sources": [
         {
           "file": "packages/metrics-core/src/libs/seo/SeoComparison.ts",
-          "line": 106,
+          "line": 107,
           "column": 5,
           "kind": "problem-constructor"
         }
@@ -34470,7 +34470,7 @@
       "className": "SeoWorkbenchProblem",
       "source": {
         "file": "packages/admin-core/src/libs/SeoWorkbench.ts",
-        "line": 49,
+        "line": 54,
         "column": 1,
         "kind": "problem-class"
       },

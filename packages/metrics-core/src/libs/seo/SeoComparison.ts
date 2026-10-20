@@ -101,6 +101,7 @@ export type SeoComparisonReport = {
   assumptions: string[];
   changes: SeoComparisonInput["changes"];
 };
+/** A 422 validation failure identifying the invalid SEO input, definition or source metadata field. */
 export class SeoComparisonProblem extends Problem {
   constructor(readonly field: string) {
     super(

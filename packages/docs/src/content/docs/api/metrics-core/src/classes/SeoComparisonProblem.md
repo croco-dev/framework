@@ -5,7 +5,7 @@ prev: false
 title: "SeoComparisonProblem"
 ---
 
-RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다.
+A 422 validation failure identifying the invalid SEO input, definition or source metadata field.
 
 ## Extends
 
