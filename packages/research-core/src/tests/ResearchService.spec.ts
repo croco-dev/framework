@@ -383,6 +383,7 @@ describe("ResearchService", () => {
       { authorize: async (_access, permission) => permission !== "research.write" },
       { send: f.send },
       [study.bookingUrl],
+      () => new Date("2026-10-13T00:00:00Z"),
     );
     expect((await reader.inspect(scope, study.id, access)).candidates[0].note).toBe(
       "Private source evidence",
