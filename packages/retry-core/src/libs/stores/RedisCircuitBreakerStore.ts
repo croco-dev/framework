@@ -105,9 +105,17 @@ export class RedisCircuitBreakerStore extends CircuitBreakerStateStore {
     return this.runWithStoreErrorHandling(
       circuitId,
       async () => {
-        await this.redis.set(this.key(circuitId, "state"), state, { ex: ttlSeconds });
-        await this.redis.set(this.key(circuitId, "halfOpenActive"), "0", { ex: ttlSeconds });
-        await this.redis.set(this.key(circuitId, "halfOpenSuccess"), "0", { ex: ttlSeconds });
+        // A probe has no execution deadline. Expiring its state or slots would admit
+        // unverified traffic while it is still running. Explicit transitions restore TTLs.
+        const expiry = state === CircuitState.HALF_OPEN ? undefined : { ex: ttlSeconds };
+        const markerKey = this.key(circuitId, "lastFailureTime");
+        const marker = await this.redis.get(markerKey);
+        if (marker !== null) {
+          await this.redis.set(markerKey, marker, expiry);
+        }
+        await this.redis.set(this.key(circuitId, "state"), state, expiry);
+        await this.redis.set(this.key(circuitId, "halfOpenActive"), "0", expiry);
+        await this.redis.set(this.key(circuitId, "halfOpenSuccess"), "0", expiry);
       },
       (store) => store.setState(circuitId, state),
       async () => undefined,
@@ -206,9 +214,8 @@ export class RedisCircuitBreakerStore extends CircuitBreakerStateStore {
     return this.runWithStoreErrorHandling(
       circuitId,
       async () => {
-        await this.redis.set(this.key(circuitId, "lastFailureTime"), String(time), {
-          ex: ttlSeconds,
-        });
+        const expiry = await this.halfOpenExpiry(circuitId, ttlSeconds);
+        await this.redis.set(this.key(circuitId, "lastFailureTime"), String(time), expiry);
       },
       (store) => store.setLastFailureTime(circuitId, time),
       async () => undefined,
@@ -236,9 +243,12 @@ export class RedisCircuitBreakerStore extends CircuitBreakerStateStore {
     return this.runWithStoreErrorHandling(
       circuitId,
       async () => {
-        await this.redis.set(this.key(circuitId, "halfOpenActive"), String(Math.max(0, count)), {
-          ex: this.ttlSeconds,
-        });
+        const expiry = await this.halfOpenExpiry(circuitId, this.ttlSeconds);
+        await this.redis.set(
+          this.key(circuitId, "halfOpenActive"),
+          String(Math.max(0, count)),
+          expiry,
+        );
       },
       (store) => store.setHalfOpenActiveCount(circuitId, count),
       async () => undefined,
@@ -266,9 +276,12 @@ export class RedisCircuitBreakerStore extends CircuitBreakerStateStore {
     return this.runWithStoreErrorHandling(
       circuitId,
       async () => {
-        await this.redis.set(this.key(circuitId, "halfOpenSuccess"), String(Math.max(0, count)), {
-          ex: this.ttlSeconds,
-        });
+        const expiry = await this.halfOpenExpiry(circuitId, this.ttlSeconds);
+        await this.redis.set(
+          this.key(circuitId, "halfOpenSuccess"),
+          String(Math.max(0, count)),
+          expiry,
+        );
       },
       (store) => store.setHalfOpenSuccessCount(circuitId, count),
       async () => undefined,
@@ -392,6 +405,14 @@ export class RedisCircuitBreakerStore extends CircuitBreakerStateStore {
     }
 
     return this.fallbackStore;
+  }
+
+  private async halfOpenExpiry(
+    circuitId: string,
+    ttlSeconds: number,
+  ): Promise<{ ex: number } | undefined> {
+    const state = await this.redis.get(this.key(circuitId, "state"));
+    return state === CircuitState.HALF_OPEN ? undefined : { ex: ttlSeconds };
   }
 
   private retentionSeconds(minRetentionMs = 0): number {
