@@ -1146,6 +1146,7 @@ it('retains the assertion failure', () => expect('actual-fixture-value').toBe('e
       "@croco-example/growth-analysis",
       "@croco-example/growth-model",
       "@croco-example/lifecycle-journey",
+      "@croco-example/page-experience",
       "@croco-example/promotion-offers",
       "@croco-example/referral-program",
       "@croco-example/research-recruitment",
