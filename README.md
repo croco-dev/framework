@@ -845,7 +845,7 @@ Runtime columns: Node는 장기 실행 서버/CLI, Lambda는 서버리스 함수
 | `@croco/referral-drizzle`          | Provider     | `packages/referral-drizzle`          | README, API, tests |
 | `@croco/research-drizzle`          | Provider     | `packages/research-drizzle`          | README, API, tests |
 | `@croco/storage-cloudflare`        | Provider     | `packages/storage-cloudflare`        | README, API, tests |
-| `@croco/storage-s3`                | Provider     | `packages/storage-s3`                | README, tests      |
+| `@croco/storage-s3`                | Provider     | `packages/storage-s3`                | README, API, tests |
 | `@croco/tasks-qstash`              | Provider     | `packages/tasks-qstash`              | README, API, tests |
 | `@croco/triggers-qstash`           | Provider     | `packages/triggers-qstash`           | README, API, tests |
 | `@croco/warehouse-tooling`         | Tooling      | `packages/warehouse-tooling`         | README, API, tests |
