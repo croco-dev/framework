@@ -441,3 +441,5 @@ profiles are not claimed by this entrypoint. Existing page/auth bridge APIs rema
 ## Page experience collector
 
 Create one `createPageExperienceCollector` per actual navigation and keep it outside React effects. `usePageExperience` preserves that identity across StrictMode replay and excludes hidden time. Wire the real content intersection condition, registered actions, consent, transport deadlines and explicit flush boundaries; inspect bounded queue/drop status. Server rendering and prefetch do not call `start`. See [the browser fixture and contracts](../../examples/page-experience/README.md).
+
+An in-flight page-experience flush drains observations added during a successful send, including the final hidden/unmount sample. A failed batch retains its identities for the next explicit flush and remains bounded by `maxAttempts`; revocation invalidates queued and extracted batches.

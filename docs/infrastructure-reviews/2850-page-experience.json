@@ -7,8 +7,8 @@
       "reason": "Pure normalized calculation and semantic adapters reuse the existing ETL decoder, bounded warehouse reader and authorized MetricReadService. No provider, database engine or Host is introduced.",
       "files": {
         "packages/metrics-core/src/index.ts": "ddf6040e9d33ee5c7cd0479ab9b6449c2ee27204dd5b02566545608015f0df02",
-        "packages/metrics-core/src/libs/PageExperience.ts": "c6ff68c1898084055a83f2fc5cf290b4a51befa79a5fc3062ae3a7591f99c6a8",
-        "packages/metrics-core/src/libs/PageExperienceSources.ts": "8acd0f3d6ba8b22e4d340a89404d0edb94f121a8212b16aa3f7c9d340ccf78f2",
+        "packages/metrics-core/src/libs/PageExperience.ts": "55093c42c5b414a6f4482348545b9dd5b5039d138d0c0bd6f1e3bbe2a163b78a",
+        "packages/metrics-core/src/libs/PageExperienceSources.ts": "ae63b380d94b5687d47cdc55a20a15bc6c1436aace46b60656dc5bdaac482f91",
         "packages/metrics-core/src/runtime.ts": "ff7a6c15b9cfee654ef4ecaa0a838f52be2045b70b5ba25a1d8288cb9d4b64b0"
       },
       "catalogRuntimes": [],
@@ -48,7 +48,7 @@
       "reason": "Server collection validates observations and delegates authorization, durable writes and receipt verification to existing application-owned contracts. No concrete provider or Host capability is introduced.",
       "files": {
         "packages/analytics-core/src/index.ts": "807d766b4a5c0b21d609bcdb80393ca344d2c8e4d9b53363763c67a9a94ac250",
-        "packages/analytics-core/src/libs/PageExperienceCollection.ts": "529d1443065cd2aeabf8121f05ac3dbedc82c9e52206b4619962b36b5dc489d7"
+        "packages/analytics-core/src/libs/PageExperienceCollection.ts": "97f523e9c6a06070de21f283f5d0c970cdc26534e615badb5721d5ae6d66dd70"
       },
       "catalogRuntimes": [],
       "profiles": {
@@ -87,7 +87,7 @@
       "reason": "The opt-in browser collector and React lifecycle hook require browser visibility and application consent. They do not execute inside a server Host.",
       "files": {
         "packages/frontend-react/src/index.ts": "79ae02b7443cdb16afb50db714d521ef880138c19bc83bc1ef9d391589d30815",
-        "packages/frontend-react/src/libs/pageExperienceCollector.ts": "9cd93b1ae29b967d0655ccf8be1e64f7aeb7536cf16de00c50ad356cf26ef1b8"
+        "packages/frontend-react/src/libs/pageExperienceCollector.ts": "d6a58beed76cfa62863bf0f5a0ea82bc707cd34fae915e0e78e441193e1464aa"
       },
       "catalogRuntimes": ["browser", "node"],
       "profiles": {
@@ -164,7 +164,7 @@
       "classification": "pure-contract",
       "reason": "Generated Problem code declarations register the new page-experience validation failures. This adds typed identifiers and recovery metadata without any Host, storage or lifecycle behavior.",
       "files": {
-        "packages/problems-core/src/generated/problem-code-registry.ts": "30e9741cd3ee0c831fae3d19935dc312ff6b20b4689c6f3eb903b6a2336fcb18"
+        "packages/problems-core/src/generated/problem-code-registry.ts": "e0e07e377caec086319c1281deb49e19a289c6b01680fca35884874c35b0d5b3"
       },
       "catalogRuntimes": [],
       "profiles": {

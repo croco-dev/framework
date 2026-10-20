@@ -4,6 +4,7 @@
 "@croco/frontend-react": minor
 "@croco/admin-react": minor
 "@croco/problems-core": patch
+"@croco/warehouse-postgres": patch
 "create-croco-app": patch
 ---
 

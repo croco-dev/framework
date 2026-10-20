@@ -13,13 +13,15 @@ The host's content observer calls contentDisplayed only when its declared condit
 
 ### collector
 
+#### flush
+
+() => `Promise`\<`void`\>
+
 #### action
 
 #### attempt
 
 #### contentDisplayed
-
-#### flush
 
 #### observe
 

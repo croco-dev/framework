@@ -67,6 +67,14 @@ readonly `string`[]
 
 ## Returns
 
+### flush
+
+> **flush**: () => `Promise`\<`void`\>
+
+#### Returns
+
+`Promise`\<`void`\>
+
 ### action()
 
 > **action**(`action`, `identity`): `void`
@@ -116,14 +124,6 @@ readonly `string`[]
 #### Returns
 
 `void`
-
-### flush()
-
-> **flush**(): `Promise`\<`void`\>
-
-#### Returns
-
-`Promise`\<`void`\>
 
 ### observe()
 

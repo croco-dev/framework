@@ -89,6 +89,14 @@ Confirmed outcomes remain visible even without a linked browser event.
 
 ---
 
+### invalidInstances
+
+> **invalidInstances**: `number`
+
+Page instances excluded for contradictory browser sequences; confirmed receipts remain outcomes.
+
+---
+
 ### lateRows
 
 > **lateRows**: `number`
@@ -98,6 +106,14 @@ Confirmed outcomes remain visible even without a linked browser event.
 ### openSessions
 
 > **openSessions**: `number`
+
+---
+
+### orphanRows
+
+> **orphanRows**: `number`
+
+Rows excluded from the funnel because their session is absent or outside its declared window.
 
 ---
 

@@ -5,6 +5,7 @@ import type {
   PageExperienceScope,
 } from "@croco/metrics-core";
 import {
+  PageExperienceProblem,
   hashPageExperience,
   validatePageExperienceDefinition,
   validatePageExperienceRow,
@@ -46,6 +47,7 @@ export class PageExperienceCollection {
         action: "observe" | "receipt",
       ): Promise<boolean>;
       /** Source deduplicates scope + source + id, preserves first receivedAt and rejects other field changes.
+       * Permanent identity conflicts throw PageExperienceCollectionProblem; transient failures remain unavailable.
        * It owns retention and suppression. Browser IDs are namespaced by authenticated session/subject.
        */
       append(row: PageExperienceRow, scope: PageExperienceScope): Promise<void>;
@@ -150,11 +152,11 @@ export class PageExperienceCollection {
   async committed(
     ref: string,
     context: PageExperienceCollectionContext,
-  ): Promise<"recorded" | "unavailable"> {
+  ): Promise<"recorded" | "rejected" | "unavailable"> {
     const authority = structuredClone(context);
     try {
       await this.check(authority, "receipt");
-      if (!authority.collectionAllowed) return "unavailable";
+      if (!authority.collectionAllowed) return "rejected";
       const receipt = await this.options.verifyReceipt(ref, authority);
       if (
         !receipt ||
@@ -176,7 +178,12 @@ export class PageExperienceCollection {
       };
       await this.options.append(validatePageExperienceRow(row), authority.scope);
       return "recorded";
-    } catch {
+    } catch (error) {
+      if (
+        error instanceof PageExperienceCollectionProblem ||
+        error instanceof PageExperienceProblem
+      )
+        return "rejected";
       // Explicit unavailable lets the outbox/application retry without rolling back a successful purchase.
       return "unavailable";
     }

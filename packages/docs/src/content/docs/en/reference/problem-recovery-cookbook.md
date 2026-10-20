@@ -6137,7 +6137,7 @@ Sources:
 
 Sources:
 
-- `packages/analytics-core/src/libs/PageExperienceCollection.ts:29:1` (problem-class)
+- `packages/analytics-core/src/libs/PageExperienceCollection.ts:30:1` (problem-class)
 
 <a id="architecture-policy-manifest-json-parse"></a>
 
@@ -15257,7 +15257,7 @@ Sources:
 
 Sources:
 
-- `packages/metrics-core/src/libs/PageExperience.ts:79:1` (problem-class)
+- `packages/metrics-core/src/libs/PageExperience.ts:83:1` (problem-class)
 
 <a id="migration-runner-conflicting-rollback-options"></a>
 

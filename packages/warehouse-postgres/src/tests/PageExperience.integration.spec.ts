@@ -3,7 +3,7 @@ import { Pool } from "pg";
 import { describe, expect, it } from "vitest";
 import { postgresResource } from "@croco/testing-resources";
 import { c, compileFact, defineFact, validateRow } from "@croco/warehouse-core";
-import { PageExperienceCollection } from "@croco/analytics-core";
+import { PageExperienceCollection, PageExperienceCollectionProblem } from "@croco/analytics-core";
 import type { PageExperienceRow } from "@croco/metrics-core";
 import { calculatePageExperience } from "@croco/metrics-core";
 import { PAGE_EXPERIENCE_FIELDS, readPageExperienceWarehouse } from "@croco/metrics-core/runtime";
@@ -68,7 +68,7 @@ describe.skipIf(process.env.CROCO_TEST_REAL_RESOURCES !== "1")(
                   key !== "receivedAt" && prior[key as keyof PageExperienceRow] !== value,
               )
             )
-              throw new Error("conflicting receipt identity");
+              throw new PageExperienceCollectionProblem();
           },
           verifyReceipt: async (ref, current) => {
             const result = await pool.query(
@@ -94,7 +94,7 @@ describe.skipIf(process.env.CROCO_TEST_REAL_RESOURCES !== "1")(
             "INSERT INTO domain_receipts VALUES ('rolled-back','tenant','one','one')",
           );
           await domain.query("ROLLBACK");
-          expect(await bridge.committed("rolled-back", context)).toBe("unavailable");
+          expect(await bridge.committed("rolled-back", context)).toBe("rejected");
           expect(confirmed).toEqual([]);
           await domain.query("BEGIN");
           await domain.query(
@@ -114,7 +114,7 @@ describe.skipIf(process.env.CROCO_TEST_REAL_RESOURCES !== "1")(
             ...context,
             scope: { ...fixture.scope, tenant: "other" },
           }),
-        ).toBe("unavailable");
+        ).toBe("rejected");
         sourceFailed = true;
         expect(await bridge.committed("one-committed", context)).toBe("unavailable");
         expect(
@@ -252,15 +252,19 @@ describe.skipIf(process.env.CROCO_TEST_REAL_RESOURCES !== "1")(
             { ...request, access: { ...access, scope: { ...access.scope, tenant: "other" } } },
             { maxRows: 100, maxBytes: 100000, maxPages: 20 },
           ),
-        ).rejects.toThrow();
+        ).rejects.toMatchObject({ code: "WAREHOUSE_ACCESS_CHANGED" });
         access = { ...access, privacyEpoch: 1 };
         await expect(
-          readPageExperienceWarehouse(reader, request, {
-            maxRows: 100,
-            maxBytes: 100000,
-            maxPages: 20,
-          }),
-        ).rejects.toThrow();
+          readPageExperienceWarehouse(
+            reader,
+            { ...request, access },
+            {
+              maxRows: 100,
+              maxBytes: 100000,
+              maxPages: 20,
+            },
+          ),
+        ).rejects.toMatchObject({ code: "WAREHOUSE_EPOCH_CHANGED" });
       } finally {
         await cancellationPool.end();
         await resource.dispose?.();

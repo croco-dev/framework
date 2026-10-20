@@ -88,6 +88,49 @@ export function createPageExperienceCollector(options: {
     options.maxAttempts > 5
   )
     throw new PageExperienceCollectorProblem();
+  const flush = (): Promise<void> => {
+    if (pending) return pending;
+    if (!enabled()) {
+      dropped += queue.length;
+      queue.length = 0;
+      return Promise.resolve();
+    }
+    if (!queue.length) return Promise.resolve();
+    const batchGeneration = generation;
+    let failed = false;
+    pending = (async () => {
+      while (queue.length && enabled() && batchGeneration === generation) {
+        const batch = queue.splice(0, options.maxBuffer);
+        try {
+          await Promise.resolve().then(() => {
+            if (batchGeneration !== generation || !enabled()) {
+              dropped += batch.length;
+              return;
+            }
+            return options.send(batch);
+          });
+          attempts = 0;
+        } catch {
+          failed = true;
+          if (batchGeneration !== generation || !enabled()) {
+            dropped += batch.length;
+            return;
+          }
+          attempts++;
+          if (attempts < options.maxAttempts) {
+            const available = options.maxBuffer - queue.length;
+            queue.unshift(...batch.slice(0, available));
+            dropped += Math.max(0, batch.length - available);
+          } else dropped += batch.length;
+          break;
+        }
+      }
+    })().finally(() => {
+      pending = null;
+      if (!failed && queue.length && batchGeneration === generation && enabled()) return flush();
+    });
+    return pending;
+  };
   return {
     start() {
       if (!options.enabled()) return;
@@ -160,43 +203,7 @@ export function createPageExperienceCollector(options: {
       last = null;
       visibleMs = 0;
     },
-    flush(): Promise<void> {
-      if (pending) return pending;
-      if (!enabled()) {
-        dropped += queue.length;
-        queue.length = 0;
-        return Promise.resolve();
-      }
-      const batch = queue.splice(0, options.maxBuffer);
-      if (!batch.length) return Promise.resolve();
-      const batchGeneration = generation;
-      pending = (async () => {
-        try {
-          await Promise.resolve().then(() => {
-            if (batchGeneration !== generation || !enabled()) {
-              dropped += batch.length;
-              return;
-            }
-            return options.send(batch);
-          });
-          attempts = 0;
-        } catch {
-          if (batchGeneration !== generation || !enabled()) {
-            dropped += batch.length;
-            return;
-          }
-          attempts++;
-          if (attempts < options.maxAttempts) {
-            const available = options.maxBuffer - queue.length;
-            queue.unshift(...batch.slice(0, available));
-            dropped += Math.max(0, batch.length - available);
-          } else dropped += batch.length;
-        } finally {
-          pending = null;
-        }
-      })();
-      return pending;
-    },
+    flush,
     status() {
       return { queued: queue.length, dropped, attempts, visibleMs };
     },

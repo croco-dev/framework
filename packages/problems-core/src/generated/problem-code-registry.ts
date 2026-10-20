@@ -7671,7 +7671,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/analytics-core/src/libs/PageExperienceCollection.ts";
-          readonly line: 29;
+          readonly line: 30;
           readonly column: 1;
           readonly kind: "problem-class";
         },
@@ -21672,7 +21672,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/metrics-core/src/libs/PageExperience.ts";
-          readonly line: 79;
+          readonly line: 83;
           readonly column: 1;
           readonly kind: "problem-class";
         },
@@ -40668,7 +40668,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/analytics-core/src/libs/PageExperienceCollection.ts",
-          line: 29,
+          line: 30,
           column: 1,
           kind: "problem-class",
         },
@@ -56302,7 +56302,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/metrics-core/src/libs/PageExperience.ts",
-          line: 79,
+          line: 83,
           column: 1,
           kind: "problem-class",
         },

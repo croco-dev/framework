@@ -3,6 +3,7 @@ import { cancellableSource, readBoundedWarehouse } from "./read/BoundedSource";
 import {
   calculatePageExperience,
   hashPageExperience,
+  pageExperienceTime,
   requirePageExperience,
   validatePageExperienceRow,
 } from "./PageExperience";
@@ -186,6 +187,8 @@ export async function registerPageExperienceQuery(options: {
           "openSessions",
           "unknownSessions",
           "lateRows",
+          "orphanRows",
+          "invalidInstances",
         ] as const)
           requirePageExperience(
             Number.isSafeInteger(result[key]) && result[key] >= 0,
@@ -210,8 +213,6 @@ export async function registerPageExperienceQuery(options: {
                   : null),
             "query-output-ratio",
           );
-          if (key !== "bounce")
-            requirePageExperience(ratio.denominator === result.viewed, "query-output-denominator");
         }
         requirePageExperience(
           result.engaged.numerator >= result.attempted.numerator &&
@@ -224,7 +225,13 @@ export async function registerPageExperienceQuery(options: {
           ["complete", "partial", "unknown"].includes(result.coverage) &&
             Array.isArray(result.diagnostics) &&
             result.diagnostics.every((code) =>
-              ["open-sessions", "incomplete-coverage", "late-rows-excluded"].includes(code),
+              [
+                "open-sessions",
+                "incomplete-coverage",
+                "late-rows-excluded",
+                "orphan-rows-excluded",
+                "invalid-instances-excluded",
+              ].includes(code),
             ),
           "query-output-quality",
         );
@@ -286,7 +293,13 @@ export async function registerPageExperienceQuery(options: {
         quality: {
           ...loaded.quality,
           temporalCompleteness:
-            data.openSessions || data.unknownSessions
+            data.coverage !== "complete" ||
+            metadata.completeThrough === null ||
+            pageExperienceTime(metadata.completeThrough) < pageExperienceTime(window.to) ||
+            data.openSessions ||
+            data.unknownSessions ||
+            data.orphanRows ||
+            data.invalidInstances
               ? "partial"
               : loaded.quality.temporalCompleteness,
         },

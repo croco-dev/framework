@@ -74,6 +74,10 @@ export type PageExperienceReport = {
   openSessions: number;
   unknownSessions: number;
   lateRows: number;
+  /** Rows excluded from the funnel because their session is absent or outside its declared window. */
+  orphanRows: number;
+  /** Page instances excluded for contradictory browser sequences; confirmed receipts remain outcomes. */
+  invalidInstances: number;
   diagnostics: readonly string[];
 };
 export class PageExperienceProblem extends Problem {
@@ -261,22 +265,58 @@ export async function calculatePageExperience(
     sessions.set(row.session, row);
   }
   const instances = new Map<string, PageExperienceRow[]>();
+  const incompleteSessions = new Set<string>();
+  let orphanRows = 0;
   for (const row of rows.filter((r) => r.kind !== "session")) {
     const session = sessions.get(row.session);
     // A receipt without UI/session telemetry is a real outcome, outside the page funnel.
     if (!session) {
-      requirePageExperience(row.kind === "committed", "missing-session");
+      orphanRows++;
       continue;
     }
     requirePageExperience(row.subject === session.subject, "session-subject");
     const start = pageExperienceTime(session.occurredAt),
       at = pageExperienceTime(row.occurredAt);
-    requirePageExperience(at >= start && at < start + d.sessionWindowMs, "session-time");
+    if (at < start || at >= start + d.sessionWindowMs) {
+      orphanRows++;
+      incompleteSessions.add(row.session);
+      continue;
+    }
     const key = canonical([row.session, row.pageInstance]);
     const prior = instances.get(key) ?? [];
-    requirePageExperience(!prior[0] || prior[0].page === row.page, "instance-page");
     prior.push(row);
     instances.set(key, prior);
+  }
+  // Collection authenticates each row, but cannot trust browser event ordering or duration.
+  // Quarantine contradictory instances before session quality and cohort ratios are calculated.
+  let invalidInstances = 0;
+  for (const [key, group] of instances) {
+    const views = group.filter((r) => r.kind === "view");
+    const view = views[0];
+    const content =
+      view &&
+      group.find(
+        (r) =>
+          r.kind === "content" &&
+          r.value === d.contentCondition &&
+          pageExperienceTime(r.occurredAt) >= pageExperienceTime(view.occurredAt),
+      );
+    const invalid =
+      new Set(group.map((r) => r.page)).size > 1 ||
+      views.length > 1 ||
+      (content &&
+        group.some(
+          (r) =>
+            r.kind === "visible" &&
+            pageExperienceTime(r.occurredAt) >= pageExperienceTime(content.occurredAt) &&
+            Number(r.value) >
+              pageExperienceTime(r.occurredAt) - pageExperienceTime(content.occurredAt),
+        ));
+    if (invalid) {
+      instances.delete(key);
+      invalidInstances++;
+      for (const row of group) incompleteSessions.add(row.session);
+    }
   }
   const viewed = new Set<string>(),
     engaged = new Set<string>(),
@@ -304,7 +344,10 @@ export async function calculatePageExperience(
     const state =
       end + input.allowedLatenessMs > cutoff
         ? "open"
-        : input.coverage !== "complete" || through === null || through < end
+        : incompleteSessions.has(session.session) ||
+            input.coverage !== "complete" ||
+            through === null ||
+            through < end
           ? "unknown"
           : "complete";
     sessionState.set(session.session, state);
@@ -332,7 +375,6 @@ export async function calculatePageExperience(
     const first = group[0];
     if (!first || !cohortSessions.has(first.session) || first.page !== d.page) continue;
     const viewRows = group.filter((r) => r.kind === "view");
-    requirePageExperience(viewRows.length <= 1, "duplicate-page-view");
     const view = viewRows[0];
     if (!view) continue;
     const key = unit(view);
@@ -351,8 +393,6 @@ export async function calculatePageExperience(
       for (const row of afterView) {
         const at = pageExperienceTime(row.occurredAt);
         if (at < contentAt) continue;
-        if (row.kind === "visible")
-          requirePageExperience(Number(row.value) <= at - contentAt, "visible-duration");
         if (
           (row.kind === "visible" && Number(row.value) >= d.minVisibleMs) ||
           (row.kind === "action" && d.engagementActions.includes(row.value))
@@ -440,10 +480,14 @@ export async function calculatePageExperience(
     openSessions,
     unknownSessions,
     lateRows,
+    orphanRows,
+    invalidInstances,
     diagnostics: [
       ...(openSessions ? ["open-sessions"] : []),
       ...(unknownSessions ? ["incomplete-coverage"] : []),
       ...(lateRows ? ["late-rows-excluded"] : []),
+      ...(orphanRows ? ["orphan-rows-excluded"] : []),
+      ...(invalidInstances ? ["invalid-instances-excluded"] : []),
     ],
   };
 }

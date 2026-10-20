@@ -12,15 +12,35 @@ export function App({
   const collector = useMemo(() => createCollector(navigation), [createCollector, navigation]);
   const [state, setState] = useState<PageExperiencePanelState>({ kind: "loading" });
   const hero = useRef<HTMLElement>(null);
+  const mode = useRef("ready");
+  const request = useRef(0);
   usePageExperience(collector, true);
   const refresh = () => {
+    const current = ++request.current;
+    const selected = mode.current;
+    if (selected !== "ready" && selected !== "partial") {
+      setState({ kind: selected as "empty" });
+      return;
+    }
     setState({ kind: "loading" });
-    void fetch("/report")
-      .then((r) => r.json())
-      .then(setState);
+    void fetch(`/report?mode=${selected}`)
+      .then(async (response) => {
+        if (!response.ok) {
+          if (request.current === current) setState({ kind: "error" });
+          return;
+        }
+        const result: PageExperiencePanelState = await response.json();
+        if (request.current === current) setState(result);
+      })
+      .catch(() => {
+        if (request.current === current) setState({ kind: "error" });
+      });
   };
   useEffect(() => {
     refresh();
+    return () => {
+      request.current++;
+    };
   }, []);
   useEffect(() => {
     const target = hero.current;
@@ -76,12 +96,8 @@ export function App({
         {
           "aria-label": "Fixture state",
           onChange: (e) => {
-            const mode = (e.currentTarget as HTMLSelectElement).value;
-            if (mode === "ready" || mode === "partial")
-              void fetch(`/report?mode=${mode}`)
-                .then((r) => r.json())
-                .then(setState);
-            else setState({ kind: mode as "empty" });
+            mode.current = (e.currentTarget as HTMLSelectElement).value;
+            refresh();
           },
         },
         ...["ready", "partial", "empty", "loading", "denied", "error", "unavailable"].map((mode) =>

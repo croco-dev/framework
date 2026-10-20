@@ -117,6 +117,65 @@ describe("Page experience collector", () => {
     await c.flush();
     expect(sent).toHaveLength(3);
   });
+  it.each(["in-flight", "settling"])(
+    "drains the final visibility observation during %s send completion",
+    async (phase) => {
+      let time = 0;
+      let finish: () => void = () => {
+        throw new Error("send has not started");
+      };
+      const batches: PageExperienceObservation[][] = [];
+      const collector = createPageExperienceCollector({
+        page: "product",
+        pageInstance: "nav1",
+        contentCondition: "hero",
+        contentMinIntersectionRatio: 0.5,
+        engagementActions: ["preview"],
+        valueAction: "purchase",
+        enabled: () => true,
+        clock: () => time,
+        monotonic: () => time,
+        visible: () => true,
+        send: async (rows) => {
+          batches.push([...rows]);
+          if (batches.length === 1)
+            await new Promise<void>((resolve) => {
+              finish = resolve;
+            });
+        },
+        maxBuffer: 4,
+        maxAttempts: 2,
+      });
+      collector.start();
+      collector.contentDisplayed(1);
+      const pending = collector.flush();
+      await Promise.resolve();
+      const sample = () => {
+        time = 1750;
+        collector.pause();
+        collector.observe();
+        return collector.flush();
+      };
+      let finalFlush: Promise<void>;
+      if (phase === "in-flight") {
+        finalFlush = sample();
+        finish();
+      } else {
+        finish();
+        finalFlush = Promise.resolve()
+          .then(() => {})
+          .then(() => {})
+          .then(sample);
+      }
+      await Promise.all([pending, finalFlush]);
+      expect(batches.map((batch) => batch.map((r) => r.kind))).toEqual([
+        ["view", "content"],
+        ["visible"],
+      ]);
+      expect(batches[1]?.[0]?.value).toBe("1750");
+      expect(collector.status().queued).toBe(0);
+    },
+  );
   it("bounds the buffer and retries the same event identities, then explicitly drops", async () => {
     let calls = 0;
     const ids: string[][] = [];

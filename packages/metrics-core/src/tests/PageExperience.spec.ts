@@ -99,6 +99,42 @@ describe("Page experience", () => {
     expect(result.unlinkedCommitted).toBe(1);
     expect(result.committed.numerator).toBe(1);
   });
+  it.each(["late-session", "future-session", "missing-session"])(
+    "excludes orphan observations after %s without losing other cohorts or confirmed outcomes",
+    async (mode) => {
+      const input = fixture();
+      input.rows = input.rows.flatMap((r) => {
+        if (r.kind !== "session" || r.session !== "one") return [r];
+        if (mode === "missing-session") return [];
+        return [{ ...r, receivedAt: at(mode === "late-session" ? 11 : 121) }];
+      });
+      const result = await calculatePageExperience(input);
+      expect(result.viewed).toBe(2);
+      expect(result.engaged.numerator).toBe(1);
+      expect(result.confirmedOutcomes).toBe(1);
+      expect(result.unlinkedCommitted).toBe(1);
+      expect(result.committed.numerator).toBe(0);
+      expect(result.orphanRows).toBe(5);
+      expect(result.diagnostics).toContain("orphan-rows-excluded");
+    },
+  );
+  it("keeps boundary receipts unlinked and marks a cohort with out-of-window observations unknown", async () => {
+    const input = fixture();
+    input.rows = [
+      ...input.rows,
+      row("committed", "two", 70, "purchase"),
+      row("action", "two", 71, "preview"),
+    ];
+    const result = await calculatePageExperience(input);
+    expect(result.viewed).toBe(3);
+    expect(result.confirmedOutcomes).toBe(2);
+    expect(result.unlinkedCommitted).toBe(1);
+    expect(result.committed.numerator).toBe(1);
+    expect(result.unknownSessions).toBe(1);
+    expect(result.completeSessions).toBe(2);
+    expect(result.orphanRows).toBe(2);
+    expect(result.bounce).toEqual({ numerator: 0, denominator: 3, unobserved: 1, value: null });
+  });
   it("uses one cohort with a single-page engagement, an actual bounce and a timed engagement", async () => {
     const result = await calculatePageExperience(fixture());
     expect(result.viewed).toBe(3);
@@ -155,6 +191,40 @@ describe("Page experience", () => {
     const noCoverage = await calculatePageExperience({ ...fixture(), completeThrough: null });
     expect(noCoverage.unknownSessions).toBe(3);
   });
+  it("still rejects subject spoofing instead of treating it as missing telemetry", async () => {
+    const data = fixture();
+    await expect(
+      calculatePageExperience({
+        ...data,
+        rows: [...data.rows, { ...row("action", "two", 12, "preview"), subject: "other" }],
+      }),
+    ).rejects.toMatchObject({ field: "session-subject" });
+  });
+  it.each(["duplicate-view", "visible-duration", "mixed-page"])(
+    "isolates %s in one instance while preserving healthy cohorts and confirmed outcomes",
+    async (mode) => {
+      const data = fixture();
+      const corrupt =
+        mode === "duplicate-view"
+          ? { ...row("view", "one", 2, "product"), id: "second-view" }
+          : mode === "visible-duration"
+            ? row("visible", "one", 3, "50000")
+            : { ...row("action", "one", 3, "preview"), id: "mixed-page", page: "different" };
+      const result = await calculatePageExperience({ ...data, rows: [...data.rows, corrupt] });
+      expect(result).toMatchObject({
+        viewed: 2,
+        engaged: { numerator: 1, denominator: 2 },
+        attempted: { numerator: 0 },
+        committed: { numerator: 0 },
+        confirmedOutcomes: 1,
+        unlinkedCommitted: 1,
+        invalidInstances: 1,
+        unknownSessions: 1,
+        bounce: { numerator: 1, denominator: 2, unobserved: 0 },
+      });
+      expect(result.diagnostics).toContain("invalid-instances-excluded");
+    },
+  );
   it("distinguishes zero denominator and no observations", async () => {
     const result = await calculatePageExperience({ ...fixture(), rows: [] });
     expect(result.bounce.value).toBeNull();
@@ -216,7 +286,7 @@ describe("Page experience", () => {
       expect(result.bounce.numerator).toBe(0);
     },
   );
-  it("accepts repeated events while rejecting a different page in one instance", async () => {
+  it("accepts repeated action events while isolating a different page in one instance", async () => {
     const data = fixture();
     const events = [row("session", "one", 0), row("view", "one", 1, "product")];
     for (let i = 0; i < 10000; i++) {
@@ -227,7 +297,7 @@ describe("Page experience", () => {
     data.rows = events;
     expect((await calculatePageExperience(data)).viewed).toBe(1);
     data.rows = [...events, { ...row("action", "one", 3, "preview"), page: "different" }];
-    await expect(calculatePageExperience(data)).rejects.toMatchObject({ field: "instance-page" });
+    expect(await calculatePageExperience(data)).toMatchObject({ viewed: 0, invalidInstances: 1 });
   });
   it("revises cutoff identity for late arrivals and excludes arrivals beyond allowed lateness", async () => {
     const data = fixture();
@@ -329,57 +399,88 @@ describe("Page experience", () => {
       importGa4Engagement({ ...result, sessionDenominator: 0, engagedSessions: 0 }).bounce.value,
     ).toBeNull();
   });
-  it("runs the registered query under current authority and refuses cross-tenant and revoked reads", async () => {
-    const input = fixture();
-    const { rows, ...metadata } = input;
-    const limits = {
-      maxRows: 100,
-      maxBytes: 100000,
-      maxTimeMs: 30000,
-      maxWindowMs: 86400000,
-      maxConcurrency: 1,
-      maxCost: 100,
-    };
-    const quality = {
-      temporalCompleteness: "complete",
-      freshness: "fresh",
-      populationCoverage: "complete",
-      validity: "valid",
-      exactness: "exact",
-      reproducibility: "reproducible",
-    } as const;
-    const registration = await registerPageExperienceQuery({
-      id: "page-query",
-      version: 1,
-      metadata,
-      limits,
-      load: async () => ({ rows, quality }),
-    });
-    let tenant = input.scope.tenant,
-      permitted = true;
-    const service = new MetricReadService([registration.definition], [registration.query], {
-      currentContext: () => ({
-        principal: { ...input.scope, tenant, subject: "operator" },
-        allowedFields: PAGE_EXPERIENCE_FIELDS,
-        allowRaw: false,
-        budget: limits,
-        sourceRevisions: [{ sourceRef: input.sourceRef, revision: input.sourceRevision }],
-        snapshotRefs: [input.snapshotRef],
-      }),
-      authorize: async () => (permitted ? { permissionEpoch: "1", privacyEpoch: "1" } : null),
-    });
-    const result = await service.runRegisteredQuery("page-query", null, input.window);
-    expect(result.status).toBe("verified");
-    if (result.status === "verified")
-      expect(result.result.data).toEqual(await calculatePageExperience(input));
-    tenant = "other";
-    await expect(
-      service.runRegisteredQuery("page-query", null, input.window),
-    ).rejects.toBeInstanceOf(PageExperienceProblem);
-    tenant = input.scope.tenant;
-    permitted = false;
-    expect((await service.runRegisteredQuery("page-query", null, input.window)).status).toBe(
-      "denied",
-    );
-  });
+  it.each(["complete", "out-of-window", "missing-session", "invalid-instance"] as const)(
+    "runs authorized registered reads with %s evidence and refuses cross-tenant/revoked reads",
+    async (mode) => {
+      const input = fixture();
+      if (mode === "out-of-window")
+        input.rows = [
+          ...input.rows,
+          row("action", "two", 71, "preview"),
+          row("committed", "two", 70, "purchase"),
+        ];
+      if (mode === "missing-session")
+        input.rows = input.rows.filter((row) => row.kind !== "session" || row.session !== "one");
+      if (mode === "invalid-instance")
+        input.rows = [...input.rows, row("visible", "one", 3, "50000")];
+      const { rows, ...metadata } = input;
+      const limits = {
+        maxRows: 100,
+        maxBytes: 100000,
+        maxTimeMs: 30000,
+        maxWindowMs: 86400000,
+        maxConcurrency: 1,
+        maxCost: 100,
+      };
+      const quality = {
+        temporalCompleteness: "complete",
+        freshness: "fresh",
+        populationCoverage: "complete",
+        validity: "valid",
+        exactness: "exact",
+        reproducibility: "reproducible",
+      } as const;
+      const registration = await registerPageExperienceQuery({
+        id: "page-query",
+        version: 1,
+        metadata,
+        limits,
+        load: async () => ({ rows, quality }),
+      });
+      let tenant = input.scope.tenant,
+        permitted = true;
+      const service = new MetricReadService([registration.definition], [registration.query], {
+        currentContext: () => ({
+          principal: { ...input.scope, tenant, subject: "operator" },
+          allowedFields: PAGE_EXPERIENCE_FIELDS,
+          allowRaw: false,
+          budget: limits,
+          sourceRevisions: [{ sourceRef: input.sourceRef, revision: input.sourceRevision }],
+          snapshotRefs: [input.snapshotRef],
+        }),
+        authorize: async () => (permitted ? { permissionEpoch: "1", privacyEpoch: "1" } : null),
+      });
+      const result = await service.runRegisteredQuery("page-query", null, input.window);
+      expect(result.status).toBe(mode === "complete" ? "verified" : "partial");
+      if (result.status === "verified" || result.status === "partial") {
+        expect(result.result?.data).toEqual(await calculatePageExperience(input));
+        if (mode !== "complete")
+          expect(result.result?.quality.temporalCompleteness).toBe("partial");
+        if (mode === "missing-session")
+          expect(result.result?.data).toMatchObject({
+            viewed: 2,
+            orphanRows: 5,
+            unknownSessions: 0,
+            confirmedOutcomes: 1,
+            unlinkedCommitted: 1,
+          });
+        if (mode === "out-of-window")
+          expect(result.result?.data).toMatchObject({
+            orphanRows: 2,
+            unknownSessions: 1,
+            confirmedOutcomes: 2,
+            unlinkedCommitted: 1,
+          });
+      }
+      tenant = "other";
+      await expect(
+        service.runRegisteredQuery("page-query", null, input.window),
+      ).rejects.toBeInstanceOf(PageExperienceProblem);
+      tenant = input.scope.tenant;
+      permitted = false;
+      expect((await service.runRegisteredQuery("page-query", null, input.window)).status).toBe(
+        "denied",
+      );
+    },
+  );
 });

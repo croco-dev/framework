@@ -43,7 +43,7 @@ readonly `string`[]
 
 ### committed()
 
-> **committed**(`ref`, `context`): `Promise`\<`"unavailable"` \| `"recorded"`\>
+> **committed**(`ref`, `context`): `Promise`\<`"unavailable"` \| `"recorded"` \| `"rejected"`\>
 
 Invoke after domain commit (or from the existing outbox). Failure never changes that domain result.
 
@@ -59,7 +59,7 @@ Invoke after domain commit (or from the existing outbox). Failure never changes 
 
 #### Returns
 
-`Promise`\<`"unavailable"` \| `"recorded"`\>
+`Promise`\<`"unavailable"` \| `"recorded"` \| `"rejected"`\>
 
 ---
 
