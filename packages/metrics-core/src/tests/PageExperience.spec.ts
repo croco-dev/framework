@@ -74,6 +74,31 @@ function fixture(): PageExperienceInput {
   };
 }
 describe("Page experience", () => {
+  it.each([undefined, null, ""])(
+    "rejects an absent or empty reporting timezone (%s)",
+    async (timezone) => {
+      const input = fixture();
+      Object.assign(input.definition, { timezone });
+      await expect(calculatePageExperience(input)).rejects.toMatchObject({ field: "timezone" });
+    },
+  );
+  it("counts only the defined page's confirmed outcomes, including outcomes with missing UI", async () => {
+    const input = fixture();
+    const otherPage = {
+      ...row("committed", "one", 6, "purchase"),
+      id: "other-page-receipt",
+      page: "other",
+      pageInstance: "other-instance",
+    };
+    const missingUi = { ...row("committed", "missing", 7, "purchase"), id: "missing-ui-receipt" };
+    const result = await calculatePageExperience({
+      ...input,
+      rows: [...input.rows, otherPage, missingUi],
+    });
+    expect(result.confirmedOutcomes).toBe(2);
+    expect(result.unlinkedCommitted).toBe(1);
+    expect(result.committed.numerator).toBe(1);
+  });
   it("uses one cohort with a single-page engagement, an actual bounce and a timed engagement", async () => {
     const result = await calculatePageExperience(fixture());
     expect(result.viewed).toBe(3);
@@ -235,6 +260,9 @@ describe("Page experience", () => {
     });
     expect(result.bounce).toEqual({ unobserved: 0, numerator: 3, denominator: 10, value: 0.3 });
     expect(result.settingsVersion).toBe("settings-7");
+    const missingTimezone = { ...result };
+    Reflect.deleteProperty(missingTimezone, "timezone");
+    expect(() => importGa4Engagement(missingTimezone)).toThrow(PageExperienceProblem);
     expect(
       importGa4Engagement({ ...result, sessionDenominator: 0, engagedSessions: 0 }).bounce.value,
     ).toBeNull();

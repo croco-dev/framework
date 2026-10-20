@@ -136,6 +136,10 @@ export function validatePageExperienceDefinition(value: PageExperienceDefinition
     ["session", "subject", "pageInstance"].includes(value.unit) && value.hiddenTime === "exclude",
     "policy",
   );
+  requirePageExperience(
+    typeof value.timezone === "string" && value.timezone.length > 0,
+    "timezone",
+  );
   try {
     new Intl.DateTimeFormat("en", { timeZone: value.timezone }).format(0);
   } catch {
@@ -317,6 +321,7 @@ export async function calculatePageExperience(
   for (const row of rows.filter(
     (r) =>
       r.kind === "committed" &&
+      r.page === d.page &&
       r.value === d.valueAction &&
       (cohortSessions.has(r.session) ||
         (!sessions.has(r.session) &&
@@ -477,6 +482,10 @@ export function importGa4Engagement(
   requirePageExperience(
     pageExperienceTime(input.window.from) < pageExperienceTime(input.window.to),
     "window",
+  );
+  requirePageExperience(
+    typeof input.timezone === "string" && input.timezone.length > 0,
+    "timezone",
   );
   try {
     new Intl.DateTimeFormat("en", { timeZone: input.timezone }).format(0);

@@ -7,7 +7,7 @@
       "reason": "Pure normalized calculation and semantic adapters reuse the existing ETL decoder, bounded warehouse reader and authorized MetricReadService. No provider, database engine or Host is introduced.",
       "files": {
         "packages/metrics-core/src/index.ts": "ddf6040e9d33ee5c7cd0479ab9b6449c2ee27204dd5b02566545608015f0df02",
-        "packages/metrics-core/src/libs/PageExperience.ts": "87bda6a5debdbe5a9f4c261e761c1f58dfdc38c49f81bb9343beadf297af4c1f",
+        "packages/metrics-core/src/libs/PageExperience.ts": "5f3496a6961bc130355a392ad938f423ef0dab578ae9ed7709213bfaf249ade6",
         "packages/metrics-core/src/libs/PageExperienceSources.ts": "8acd0f3d6ba8b22e4d340a89404d0edb94f121a8212b16aa3f7c9d340ccf78f2",
         "packages/metrics-core/src/runtime.ts": "ff7a6c15b9cfee654ef4ecaa0a838f52be2045b70b5ba25a1d8288cb9d4b64b0"
       },
