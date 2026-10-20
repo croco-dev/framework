@@ -182,6 +182,53 @@ describe("Page experience", () => {
     expect(result.viewed).toBe(1);
     expect(result.bounce.numerator).toBe(0);
   });
+  it.each([
+    ["session", 2, 2],
+    ["subject", 1, 1],
+    ["pageInstance", 3, 3],
+  ] as const)(
+    "keeps instance ordering before counting distinct %s units",
+    async (unit, viewed, engaged) => {
+      const data = fixture();
+      data.definition.unit = unit;
+      data.rows = [
+        row("session", "one", 0),
+        row("view", "one", 1, "product"),
+        row("content", "one", 2, "hero-visible"),
+        row("action", "one", 3, "preview"),
+        { ...row("view", "one", 4, "product"), pageInstance: "second" },
+        { ...row("attempt", "one", 5, "purchase"), pageInstance: "second" },
+        { ...row("committed", "one", 6, "purchase"), pageInstance: "second" },
+        row("session", "two", 10),
+        row("view", "two", 11, "product"),
+        row("content", "two", 12, "hero-visible"),
+        row("action", "two", 13, "preview"),
+        row("attempt", "two", 14, "purchase"),
+        row("committed", "two", 15, "purchase"),
+      ].map((event) => ({ ...event, subject: "shared" }));
+      const result = await calculatePageExperience(data);
+      expect(result.viewed).toBe(viewed);
+      expect(result.engaged.numerator).toBe(engaged);
+      expect(result.attempted.numerator).toBe(1);
+      expect(result.committed.numerator).toBe(1);
+      expect(result.confirmedOutcomes).toBe(2);
+      expect(result.unlinkedCommitted).toBe(1);
+      expect(result.bounce.numerator).toBe(0);
+    },
+  );
+  it("accepts repeated events while rejecting a different page in one instance", async () => {
+    const data = fixture();
+    const events = [row("session", "one", 0), row("view", "one", 1, "product")];
+    for (let i = 0; i < 10000; i++) {
+      const event = row("action", "one", 2, "preview");
+      event.id = `repeat-${i}`;
+      events.push(event);
+    }
+    data.rows = events;
+    expect((await calculatePageExperience(data)).viewed).toBe(1);
+    data.rows = [...events, { ...row("action", "one", 3, "preview"), page: "different" }];
+    await expect(calculatePageExperience(data)).rejects.toMatchObject({ field: "instance-page" });
+  });
   it("revises cutoff identity for late arrivals and excludes arrivals beyond allowed lateness", async () => {
     const data = fixture();
     data.rows = data.rows.map((r) => (r.kind === "committed" ? { ...r, receivedAt: at(15) } : r));

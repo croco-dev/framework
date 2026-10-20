@@ -276,10 +276,7 @@ export async function calculatePageExperience(
     requirePageExperience(at >= start && at < start + d.sessionWindowMs, "session-time");
     const key = canonical([row.session, row.pageInstance]);
     const prior = instances.get(key) ?? [];
-    requirePageExperience(
-      prior.every((p) => p.page === row.page),
-      "instance-page",
-    );
+    requirePageExperience(!prior[0] || prior[0].page === row.page, "instance-page");
     prior.push(row);
     instances.set(key, prior);
   }
