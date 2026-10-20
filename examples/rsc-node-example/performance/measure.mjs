@@ -176,7 +176,7 @@ try {
               : html.replaceAll("Saved inspiration for alice", "Saved inspiration for bob"),
         });
       });
-    const url = `${origin}/products/orbit?configuration=${configuration}${fault === "personalization" || fault === "blocking" || fault === "deferred-blocking" ? `&fault=${fault}` : ""}`;
+    const url = `${origin}/products/orbit?configuration=${configuration}${fault === "personalization" || fault === "blocking" || fault === "deferred-blocking" || fault === "image-policy" ? `&fault=${fault}` : ""}`;
     let initialResponse;
     try {
       if (cache === "warm") {
@@ -222,6 +222,7 @@ try {
           snapshot: document.querySelector("main").dataset.pdpSnapshot,
           hydratedSnapshot: document.documentElement.dataset.pdpHydrated,
           image: {
+            alt: hero.alt,
             width: image.width,
             height: image.height,
             naturalWidth: hero.naturalWidth,
@@ -277,6 +278,9 @@ try {
         Math.abs(state.image.width / state.image.height - 4 / 3) < 0.01 &&
         state.image.widthAttribute === "800" &&
         state.image.heightAttribute === "600" &&
+        state.image.alt.trim().length > 0 &&
+        state.image.sizes === profile.image.sizes &&
+        profile.image.widths.every((width) => state.image.srcset.includes(` ${width}w`)) &&
         state.image.loading === "eager" &&
         state.image.priority === "high" &&
         state.highPriorityImages === 1 &&
@@ -376,7 +380,7 @@ try {
   const deferredVerdict = assess(deferredSample, baseline);
   assert.ok(deferredVerdict.diagnostics.includes("PDP_REGRESSION:hydrationReadyMs"));
   negativeControls.deferredBlocking = { sample: deferredSample, verdict: deferredVerdict };
-  for (const fault of ["hydration", "private"]) {
+  for (const fault of ["hydration", "private", "image-policy"]) {
     const sample = await measure("combined", "cold", 0, { fault });
     const verdict = assess(sample, baseline);
     assert.ok(

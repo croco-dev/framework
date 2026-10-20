@@ -23,6 +23,10 @@ export async function productPage(request: Request) {
   const data = await dataPromise;
   const snapshot = JSON.stringify({ user: data.user, decision: data.decision ?? null });
   const widths = profile.image.widths;
+  const imageSizes =
+    new URL(request.url).searchParams.get("fault") === "image-policy"
+      ? undefined
+      : profile.image.sizes;
   return {
     data,
     node: (
@@ -38,7 +42,7 @@ export async function productPage(request: Request) {
             alt="Indigo orbital paths on warm ivory paper"
             width={profile.image.width}
             height={profile.image.height}
-            sizes={profile.image.sizes}
+            sizes={imageSizes}
             src={imagePath(800)}
             srcSet={widths.map((w) => `${imagePath(w)} ${w}w`).join(", ")}
             fetchPriority="high"
