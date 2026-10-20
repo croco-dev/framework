@@ -9,7 +9,7 @@ async function Recommendation({ value }: { value: ReturnType<typeof loadPdp> }) 
   return (
     <section id="recommendation" aria-label="Recommendations" data-cache-source={result.source}>
       <h2>Keep exploring</h2>
-      <p>{result.text}</p>
+      <p id="recommendation-content">{result.text}</p>
       <script
         id="pdp-cache-events"
         type="application/json"

@@ -96,7 +96,9 @@ export async function loadPdp(request: Request) {
   const user = request.headers.get("cookie")?.includes("lab-user=bob") ? "bob" : "alice";
   const started = performance.now();
   if (url.searchParams.get("fault") === "blocking") {
-    const upstream = await fetch(new URL("/lab/blocking-fetch", request.url));
+    const upstream = await fetch(new URL("/lab/blocking-fetch", request.url), {
+      redirect: "error",
+    });
     await upstream.text();
   }
   const publicReads: { name: string; startMs: number; endMs: number }[] = [];
@@ -122,8 +124,31 @@ export async function loadPdp(request: Request) {
     : undefined;
   const inspect: { zone: string; outcome: string; reason: string }[] = [];
   const deferred = (async () => {
-    if (!personalized) return { text: "Discover more prints", source: "disabled" };
+    // All measured configurations consume identical source content. Baseline omits only
+    // the fragment cache/policy integration, not the deferred source work or visible data.
+    async function loadPrivate() {
+      if (url.searchParams.get("fault") === "personalization")
+        throw new PersonalizedFragmentProblem("Synthetic optional failure", {
+          reason: "injected-unavailable",
+        });
+      if (url.searchParams.get("fault") === "deferred-blocking") {
+        const slow = await fetch(new URL("/lab/blocking-fetch", request.url), {
+          redirect: "error",
+        });
+        await slow.text();
+      }
+      const source = await fetch(new URL("/lab/recommendation", request.url), {
+        redirect: "error",
+      });
+      if (!source.ok)
+        throw new PersonalizedFragmentProblem("Synthetic source unavailable", {
+          reason: "source-unavailable",
+        });
+      return `${await source.text()} for ${user}`;
+    }
     try {
+      if (!personalized)
+        return { text: `More orbital studies: ${await loadPrivate()}`, source: "disabled" };
       const fragments = await loadPersonalizedFragments({
         store,
         representation: "flight",
@@ -151,22 +176,11 @@ export async function loadPdp(request: Request) {
         },
         privateLoader: {
           zone: "private",
-          load: async () => {
-            if (url.searchParams.get("fault") === "personalization")
-              throw new PersonalizedFragmentProblem("Synthetic optional failure", {
-                reason: "injected-unavailable",
-              });
-            if (url.searchParams.get("fault") === "deferred-blocking") {
-              const slow = await fetch(new URL("/lab/blocking-fetch", request.url));
-              await slow.text();
-            }
-            const source = await fetch(new URL("/lab/recommendation", request.url));
-            if (!source.ok)
-              throw new PersonalizedFragmentProblem("Synthetic source unavailable", {
-                reason: "source-unavailable",
-              });
-            return `${await source.text()} for ${user}`;
-          },
+          load: () =>
+            url.searchParams.get("fault") === "shared-private"
+              ? // Negative control: a deliberately incorrect process-shared private result.
+                cache.getOrSet("synthetic-wrong-private", loadPrivate)
+              : loadPrivate(),
         },
         inspect: ({ zone, outcome, reason }) => inspect.push({ zone, outcome, reason }),
       });

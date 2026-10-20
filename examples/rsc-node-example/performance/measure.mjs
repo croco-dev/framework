@@ -7,6 +7,7 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { once } from "node:events";
+import { get as httpGet } from "node:http";
 import { profile, configurations, assess, summarize } from "./profile.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -86,6 +87,20 @@ try {
       }
     });
   });
+  const invalidTargetStatus = await new Promise((resolveStatus, reject) => {
+    httpGet(origin, { path: "//127.0.0.1:9/products/orbit?configuration=baseline" }, (response) => {
+      response.resume();
+      response.on("end", () => resolveStatus(response.statusCode));
+    }).on("error", reject);
+  });
+  assert.equal(
+    invalidTargetStatus,
+    400,
+    "Network-path targets must not change internal fetch origins",
+  );
+  const clientBuild = JSON.parse(
+    await readFile(join(app, "dist/client/croco-rsc-client-build.json"), "utf8"),
+  );
   browser = await chromium.launch({ headless: true });
   dependencyVersions.chromium = browser.version();
   dependencyVersions.node = process.version;
@@ -105,9 +120,16 @@ try {
     configuration,
     cache,
     repetition,
-    { fault, user = "alice", viewport = profile.viewport } = {},
+    {
+      fault,
+      user = "alice",
+      viewport = profile.viewport,
+      reset = true,
+      warmup = true,
+      verifyPrivate = false,
+    } = {},
   ) {
-    await fetch(`${origin}/lab/reset`, { method: "POST" });
+    if (reset) await fetch(`${origin}/lab/reset`, { method: "POST" });
     const context = await browser.newContext({
       viewport,
       deviceScaleFactor: profile.deviceScaleFactor,
@@ -176,10 +198,10 @@ try {
               : html.replaceAll("Saved inspiration for alice", "Saved inspiration for bob"),
         });
       });
-    const url = `${origin}/products/orbit?configuration=${configuration}${fault === "personalization" || fault === "blocking" || fault === "deferred-blocking" || fault === "image-policy" ? `&fault=${fault}` : ""}`;
+    const url = `${origin}/products/orbit?configuration=${configuration}${fault === "personalization" || fault === "blocking" || fault === "deferred-blocking" || fault === "image-policy" || fault === "shared-private" ? `&fault=${fault}` : ""}`;
     let initialResponse;
     try {
-      if (cache === "warm") {
+      if (cache === "warm" && warmup) {
         await page.goto(url);
         await page.waitForFunction(
           () =>
@@ -237,7 +259,7 @@ try {
           highPriorityImages: document.querySelectorAll("img[fetchpriority=high]").length,
           lazy: document.querySelector(".gallery img").loading,
           noOverflow: document.documentElement.scrollWidth <= innerWidth,
-          recommendation: document.getElementById("recommendation").textContent,
+          recommendation: document.getElementById("recommendation-content").textContent,
           cacheSource: document.getElementById("recommendation").dataset.cacheSource,
           description: document.getElementById("description").textContent,
           experimentCopy: document.querySelector("[data-experiment-copy]").textContent,
@@ -305,8 +327,36 @@ try {
         viewport,
         cache,
         repetition,
-        content: { title, description: state.description, supportingCopy: state.experimentCopy },
+        content: {
+          title,
+          description: state.description,
+          supportingCopy: state.experimentCopy,
+          recommendation: state.recommendation,
+        },
       };
+      if (verifyPrivate) {
+        const html = await initialResponse.text();
+        const flightResponse = await fetch(url, {
+          headers: {
+            accept: "text/x-component",
+            "x-croco-rsc-client-manifest": clientBuild.clientManifestVersion,
+            cookie: `lab-user=${user}`,
+          },
+        });
+        const flight = await flightResponse.text();
+        const isolated = (body) =>
+          body.includes(`Saved inspiration for ${user}`) &&
+          !body.includes(`Saved inspiration for ${user === "alice" ? "bob" : "alice"}`);
+        state.privateRepresentations = {
+          html: isolated(html),
+          flight:
+            flightResponse.status === 200 &&
+            isolated(flight) &&
+            flightResponse.headers.get("cache-control") === "private, no-store",
+        };
+        state.correctness &&=
+          state.privateRepresentations.html && state.privateRepresentations.flight;
+      }
       if (!fault && repetition === 0) {
         state.screenshot = join(output, `${configuration}-${cache}-${viewport.width}.png`);
         await page.screenshot({ path: state.screenshot, fullPage: true });
@@ -395,12 +445,38 @@ try {
     true,
     "Optional failure must leave the real critical PDP usable",
   );
-  const bob = await measure("combined", "warm", 0, { user: "bob" });
-  assert.equal(
-    bob.correctness,
-    true,
-    "Shared fragments must preserve request-local private values",
+  async function crossUserSequence(fault) {
+    const sequence = [];
+    for (const [index, user] of ["alice", "bob", "alice"].entries())
+      sequence.push(
+        await measure("combined", index === 0 ? "cold" : "warm", 0, {
+          user,
+          fault,
+          reset: index === 0,
+          warmup: false,
+          verifyPrivate: true,
+        }),
+      );
+    return sequence;
+  }
+  const crossUser = await crossUserSequence();
+  assert.deepEqual(
+    crossUser.map((sample) => sample.cacheSource),
+    ["render", "cache", "cache"],
   );
+  assert.ok(
+    crossUser.every((sample) => sample.correctness),
+    "Alice → Bob → Alice must reuse public cache while isolating HTML and Flight private values",
+  );
+  const sharedPrivate = await crossUserSequence("shared-private");
+  assert.equal(sharedPrivate[1].cacheSource, "cache");
+  assert.equal(
+    sharedPrivate[1].correctness,
+    false,
+    "Shared private cache regression escaped detection",
+  );
+  assert.deepEqual(sharedPrivate[1].privateRepresentations, { html: false, flight: false });
+  negativeControls.sharedPrivate = { sequence: sharedPrivate, detected: true };
   const desktop = await measure("combined", "cold", 0, { viewport: { width: 1280, height: 900 } });
   assert.equal(desktop.correctness, true);
   // Hold the real optional fetch open; the streamed shell must stay usable before release.
@@ -489,7 +565,8 @@ try {
     negativeControls,
     correctness: {
       fallback,
-      bob,
+      crossUser,
+      invalidTargetStatus,
       desktop,
       exposureStatuses: [204, 403, 403, 400, 413],
       missingStatus: 404,

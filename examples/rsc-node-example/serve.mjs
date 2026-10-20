@@ -102,7 +102,13 @@ let deferredRelease;
 let deferredGate;
 const httpServer = createServer(async (nodeRequest, nodeResponse) => {
   try {
-    const url = new URL(nodeRequest.url ?? "/", `http://127.0.0.1:${httpServer.address().port}`);
+    const origin = `http://127.0.0.1:${httpServer.address().port}`;
+    const url = new URL(nodeRequest.url ?? "/", origin);
+    if (url.origin !== origin) {
+      nodeResponse.writeHead(400);
+      nodeResponse.end("Invalid request origin");
+      return;
+    }
 
     if (url.pathname === "/lab/defer" && nodeRequest.method === "POST") {
       deferredGate = new Promise((resolve) => {

@@ -119,7 +119,7 @@ profile. Only the named optional integrations change:
 
 | Configuration   | Actual integration                                                                                                 |
 | --------------- | ------------------------------------------------------------------------------------------------------------------ |
-| baseline        | Public PDP + real Flight encoder/SSR/browser decoder                                                               |
+| baseline        | PDP + same deferred recommendation source/content + real Flight encoder/SSR/browser decoder                        |
 | experiment      | `ExperimentRuntime` + `ExperimentDeliveryBridge`, immutable admitted supporting-copy decision                      |
 | personalization | `loadPersonalizedFragments`, `InMemoryCacheStore`, shared public fragment and request-local private recommendation |
 | combined        | Both integrations on the same PDP                                                                                  |
@@ -164,9 +164,10 @@ artifact, fixture, versions, user, viewport, network, CPU, cache mode and repeti
 The lab also injects a held blocking fetch, oversized valid JS and image responses,
 a missing responsive image policy, an initial/hydrated snapshot discrepancy and private-content contamination. Each
 must be rejected. Separate browser checks verify optional-source failure, Alice/Bob
-isolation, mobile/desktop overflow, keyboard/ARIA behavior, no unexpected browser
+isolation (Alice → Bob → Alice with no intervening cache reset, public-cache hits, and HTML/Flight private values), network-path origin rejection, mobile/desktop overflow, keyboard/ARIA behavior, no unexpected browser
 errors, manifest/status handling, actual shell visibility while the recommendation
 fetch is held, stable hero geometry after release, and a fresh decoded refresh.
+The shared-private-cache negative control deliberately stores the first user’s private result in the process cache; the same user-switch checks must reject its HTML and Flight.
 Synthetic negative-control errors are evidence of rejection, not healthy-page errors.
 
 ### Infrastructure decisions

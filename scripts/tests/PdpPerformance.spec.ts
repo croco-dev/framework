@@ -31,6 +31,19 @@ describe("PDP performance evidence", () => {
     expect(mismatched).toMatchObject({ state: "failed", diagnostics: ["PDP_COMPARISON_MISMATCH"] });
     expect(mismatched).not.toHaveProperty("delta");
   });
+  it("refuses overhead deltas when deferred recommendation content changes", () => {
+    const reference = {
+      ...baseline,
+      conditions: { ...baseline.conditions, content: { recommendation: "Alice's studies" } },
+    };
+    const changed = {
+      ...reference,
+      conditions: { ...reference.conditions, content: { recommendation: "Bob's studies" } },
+    };
+    const verdict = assess(changed, reference);
+    expect(verdict.diagnostics).toContain("PDP_COMPARISON_MISMATCH");
+    expect(verdict).not.toHaveProperty("delta");
+  });
   it("rejects fast pages whose private or hydration correctness failed", () => {
     expect(assess({ ...baseline, correctness: false }, baseline)).toMatchObject({
       state: "failed",
