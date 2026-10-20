@@ -266,6 +266,121 @@ describe("PostgresMetricsStore", () => {
     });
   });
 
+  const currencyPeriod = {
+    from: new Date("2026-03-01T00:00:00.000Z"),
+    to: new Date("2026-04-01T00:00:00.000Z"),
+    granularity: "month" as const,
+  };
+
+  function storedMovement(currency = "USD") {
+    return {
+      new_mrr_amount: "15000",
+      new_mrr_currency: currency,
+      expansion_mrr_amount: "8000",
+      expansion_mrr_currency: currency,
+      contraction_mrr_amount: "2000",
+      contraction_mrr_currency: currency,
+      churned_mrr_amount: "3000",
+      churned_mrr_currency: currency,
+      reactivation_mrr_amount: "1000",
+      reactivation_mrr_currency: currency,
+      net_mrr_amount: "19000",
+      net_mrr_currency: currency,
+    };
+  }
+
+  const currencyFailure = {
+    code: "warehouse-postgres/metrics-currency-mismatch",
+    extensions: {
+      tenantId: "tenant-1",
+      period: { from: "2026-03-01T00:00:00.000Z", to: "2026-04-01T00:00:00.000Z" },
+      expectedCurrency: "USD",
+      actualCurrency: "KRW",
+    },
+  };
+
+  it.each(["expansion", "contraction", "churned", "reactivation", "net"] as const)(
+    "rejects a stored %s currency mismatch even for zero amounts",
+    async (field) => {
+      vi.mocked(db.query).mockResolvedValueOnce({
+        rows: [
+          {
+            ...storedMovement(),
+            [`${field}_mrr_amount`]: "0",
+            [`${field}_mrr_currency`]: "KRW",
+          },
+        ],
+      });
+      await expect(store.getMRRHistory("tenant-1", currencyPeriod)).rejects.toMatchObject({
+        ...currencyFailure,
+        extensions: { ...currencyFailure.extensions, movementIndex: 0, field },
+      });
+    },
+  );
+
+  it("rejects different currencies across stored movement rows", async () => {
+    vi.mocked(db.query).mockResolvedValueOnce({ rows: [storedMovement(), storedMovement("KRW")] });
+    await expect(store.getMRRHistory("tenant-1", currencyPeriod)).rejects.toMatchObject({
+      ...currencyFailure,
+      extensions: { ...currencyFailure.extensions, movementIndex: 1, field: "new" },
+    });
+  });
+
+  it("rejects movement currency that differs from the starting snapshot", async () => {
+    vi.mocked(db.query)
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            date: "2026-03-01",
+            total_mrr_amount: "100000",
+            total_mrr_currency: "USD",
+            activeCustomers: "100",
+          },
+        ],
+      })
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [storedMovement("KRW")] });
+    await expect(store.getRetentionMetrics("tenant-1", currencyPeriod)).rejects.toMatchObject({
+      ...currencyFailure,
+      extensions: { ...currencyFailure.extensions, movementIndex: 0, field: "new" },
+    });
+  });
+
+  it("preserves neutral retention for a non-USD history without a baseline", async () => {
+    vi.mocked(db.query)
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [storedMovement("KRW")] });
+    await expect(store.getRetentionMetrics("tenant-1", currencyPeriod)).resolves.toEqual({
+      logoChurn: 0,
+      revenueChurn: 0,
+      grr: 100,
+      nrr: 100,
+    });
+  });
+
+  it("preserves non-USD baseline retention for an empty movement period", async () => {
+    vi.mocked(db.query)
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            date: "2026-03-01",
+            total_mrr_amount: "100000",
+            total_mrr_currency: "KRW",
+            activeCustomers: "100",
+          },
+        ],
+      })
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [] });
+    await expect(store.getRetentionMetrics("tenant-1", currencyPeriod)).resolves.toEqual({
+      logoChurn: 0,
+      revenueChurn: 0,
+      grr: 100,
+      nrr: 100,
+    });
+  });
+
   it("decodes PostgreSQL numeric and date strings into a typed snapshot", async () => {
     vi.mocked(db.query).mockResolvedValueOnce({
       rows: [

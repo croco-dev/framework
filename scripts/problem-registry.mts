@@ -3873,6 +3873,17 @@ const recoveryMetadataByCode = {
     redactionPolicy: "operator-only",
     severity: "error",
   }),
+  "warehouse-postgres/metrics-currency-mismatch": recovery({
+    cause:
+      "Persisted metrics movements use inconsistent currencies, or differ from the starting snapshot currency.",
+    userAction:
+      "Do not use retention results until the inconsistent source data has been reviewed.",
+    operatorAction:
+      "Inspect tenantId, period, movementIndex, field, expectedCurrency and actualCurrency in the operator-only extensions; reconcile the source records without relabeling amounts or applying implicit currency conversion.",
+    retryability: "not-retryable",
+    redactionPolicy: "operator-only",
+    severity: "error",
+  }),
   "warehouse-postgres/metrics-row-invalid": recovery({
     cause: "A persisted PostgreSQL metrics row failed validation or decoding.",
     userAction: "Do not retry until the invalid persisted metrics row has been corrected.",

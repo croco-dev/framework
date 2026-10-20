@@ -173,6 +173,13 @@ idempotency, tenant filtering, amount meaning, timestamp boundaries, and retenti
 PostgreSQL `BIGINT` values are decoded to safe JavaScript integers because the core `Money` contract
 uses `number`; values outside the safe-integer range fail explicitly instead of corrupting a metric.
 
+Movement history reads require one currency across all six Money fields and every returned row,
+including zero amounts. Retention additionally requires that currency to match the starting snapshot.
+A mismatch throws `warehouse-postgres/metrics-currency-mismatch` before calculating rates, with
+operator-only tenant, period, movement index, field and expected/actual currency evidence. No currency
+conversion or historical data repair is performed. Single-currency histories without a baseline and
+empty periods keep their existing neutral retention values.
+
 ### Plain PostgreSQL
 
 `installPostgresMetricsSchema(db)` creates the existing relational layout and does not inspect,
