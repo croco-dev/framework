@@ -190,7 +190,9 @@ export class PostgresMetricsStore extends MetricsRepository {
       [tenantId, period.from, period.to],
     );
 
-    return result.rows.map(decodeMovement);
+    const movements = result.rows.map(decodeMovement);
+    validateMovementCurrencies(tenantId, period, movements, movements[0]?.new.currency);
+    return movements;
   }
 
   async getRetentionMetrics(tenantId: string, period: Period): Promise<RetentionMetrics> {
@@ -200,10 +202,9 @@ export class PostgresMetricsStore extends MetricsRepository {
       this.getMRRHistory(tenantId, period),
     ]);
 
-    const movement = this.aggregateMovements(
-      movements,
-      startingSnapshot?.totalMRR.currency ?? "USD",
-    );
+    const currency = startingSnapshot?.totalMRR.currency ?? movements[0]?.new.currency ?? "USD";
+    validateMovementCurrencies(tenantId, period, movements, currency);
+    const movement = this.aggregateMovements(movements, currency);
     const startingMRR = startingSnapshot?.totalMRR.amount ?? 0;
 
     const [revenueChurn, grr, nrr] = await Promise.all([
@@ -280,6 +281,47 @@ export class PostgresMetricsStore extends MetricsRepository {
     );
 
     return (churnedCustomers / startingSnapshot.activeCustomers) * 100;
+  }
+}
+
+const MOVEMENT_FIELDS = [
+  "new",
+  "expansion",
+  "contraction",
+  "churned",
+  "reactivation",
+  "net",
+] as const;
+
+function validateMovementCurrencies(
+  tenantId: string,
+  period: Period,
+  movements: readonly MRRMovement[],
+  expectedCurrency: string | undefined,
+): void {
+  if (expectedCurrency === undefined) {
+    return;
+  }
+  for (const [movementIndex, movement] of movements.entries()) {
+    for (const field of MOVEMENT_FIELDS) {
+      const actualCurrency = movement[field].currency;
+      if (actualCurrency !== expectedCurrency) {
+        throw ProblemFactory.internalServerError(
+          "warehouse-postgres/metrics-currency-mismatch",
+          `PostgreSQL metrics movement ${movementIndex}.${field} currency '${actualCurrency}' differs from '${expectedCurrency}'.`,
+          {
+            extensions: {
+              tenantId,
+              period: { from: period.from.toISOString(), to: period.to.toISOString() },
+              movementIndex,
+              field,
+              expectedCurrency,
+              actualCurrency,
+            },
+          },
+        );
+      }
+    }
   }
 }
 

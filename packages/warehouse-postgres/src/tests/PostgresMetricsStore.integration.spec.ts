@@ -471,6 +471,78 @@ describe.skipIf(!realResourcesEnabled).each(["PostgreSQL", "TimescaleDB"] as con
       });
     });
 
+    it.each(["within-row", "across-rows", "baseline"] as const)(
+      "rejects persisted %s currency mismatches before retention calculation",
+      async (scenario) => {
+        const [store] = stores();
+        const from = new Date("2026-03-01T00:00:00.000Z");
+        const to = new Date("2026-04-01T00:00:00.000Z");
+        const period = { from, to, granularity: "month" as const };
+        await store.recordSnapshot(
+          "tenant-1",
+          {
+            date: from,
+            activeCustomers: 10,
+            totalMRR: { amount: 100000, currency: "USD" },
+          },
+          from,
+        );
+        const foreign: MRRMovement = {
+          new: { amount: 15000, currency: "KRW" },
+          expansion: { amount: 8000, currency: "KRW" },
+          contraction: { amount: 2000, currency: "KRW" },
+          churned: { amount: 3000, currency: "KRW" },
+          reactivation: { amount: 1000, currency: "KRW" },
+          net: { amount: 19000, currency: "KRW" },
+        };
+        if (scenario === "across-rows") {
+          await store.recordMRRMovement("tenant-1", movement, from);
+        }
+        // The permissive write path models already stored, inconsistent historical data.
+        await store.recordMRRMovement(
+          "tenant-1",
+          scenario === "within-row" ? { ...movement, churned: foreign.churned } : foreign,
+          new Date("2026-03-02T00:00:00.000Z"),
+        );
+        const failure = {
+          code: "warehouse-postgres/metrics-currency-mismatch",
+          extensions: {
+            tenantId: "tenant-1",
+            period: { from: from.toISOString(), to: to.toISOString() },
+            expectedCurrency: "USD",
+            actualCurrency: "KRW",
+            movementIndex: scenario === "across-rows" ? 1 : 0,
+            field: scenario === "within-row" ? "churned" : "new",
+          },
+        };
+        await expect(store.getRetentionMetrics("tenant-1", period)).rejects.toMatchObject(failure);
+        if (scenario !== "baseline") {
+          await expect(store.getMRRHistory("tenant-1", period)).rejects.toMatchObject(failure);
+        }
+      },
+    );
+
+    it("preserves a non-USD baseline with no movements", async () => {
+      const [store] = stores();
+      const from = new Date("2026-03-01T00:00:00.000Z");
+      await store.recordSnapshot(
+        "tenant-1",
+        {
+          date: from,
+          activeCustomers: 10,
+          totalMRR: { amount: 100000, currency: "KRW" },
+        },
+        from,
+      );
+      await expect(
+        store.getRetentionMetrics("tenant-1", {
+          from,
+          to: new Date("2026-04-01T00:00:00.000Z"),
+          granularity: "month",
+        }),
+      ).resolves.toEqual({ logoChurn: 0, revenueChurn: 0, grr: 100, nrr: 100 });
+    });
+
     it("returns neutral retention when the tenant has no baseline", async () => {
       const [store] = stores();
       await expect(

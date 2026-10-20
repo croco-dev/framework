@@ -1,0 +1,84 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "warehouse-postgres",
+      "classification": "durable-provider",
+      "reason": "Reject inconsistent stored movement currencies at history reads and before retention arithmetic. Reuse the existing PostgreSQL client and calculators without schema, connection or lifecycle changes.",
+      "files": {
+        "packages/warehouse-postgres/src/metrics/PostgresMetricsStore.ts": "9c8bd3298c1d17956b56269f9169fcfb52e9ebb0b4788ab1abdb69261b8d3c45"
+      },
+      "catalogRuntimes": ["node", "lambda"],
+      "profiles": {
+        "kubernetes": {
+          "result": "unverified",
+          "reason": "The existing Node PostgreSQL provider is reused. Local database fixtures exercise persistence and decoding, but do not execute a Kubernetes Node Host deployment.",
+          "providers": ["@croco/warehouse-postgres/metrics"],
+          "constraints": ["No Kubernetes cluster or Node Host composition execution is claimed."],
+          "references": [
+            "packages/warehouse-postgres/src/metrics/PostgresMetricsStore.ts",
+            "packages/warehouse-postgres/README.md",
+            "packages/presentation-preset/runtime-profiles.json"
+          ]
+        },
+        "aws-lambda": {
+          "result": "conditional",
+          "reason": "The existing Lambda-compatible PostgreSQL client path uses the same validation; invocation resource ownership remains with the caller.",
+          "providers": ["@croco/warehouse-postgres/metrics"],
+          "constraints": [
+            "Bound connections per invocation and complete database work before returning.",
+            "No deployed Lambda execution or provider certification is claimed."
+          ],
+          "references": [
+            "packages/warehouse-postgres/src/metrics/PostgresMetricsStore.ts",
+            "packages/warehouse-postgres/README.md",
+            "packages/presentation-preset/runtime-profiles.json"
+          ]
+        },
+        "cloudflare": {
+          "result": "unsupported",
+          "reason": "The existing PostgreSQL provider claims Node and Lambda only; this validation does not introduce a Workers adapter or Node Container deployment.",
+          "providers": ["@croco/warehouse-postgres/metrics"],
+          "constraints": ["No Workers execution or Cloudflare deployment is claimed."],
+          "references": [
+            "packages/warehouse-postgres/src/metrics/PostgresMetricsStore.ts",
+            "packages/warehouse-postgres/README.md",
+            "packages/presentation-preset/runtime-profiles.json"
+          ]
+        }
+      }
+    },
+    {
+      "package": "problems-core",
+      "classification": "pure-contract",
+      "reason": "Register the operator-only metrics currency mismatch diagnostic and recovery metadata; no runtime capability, storage or lifecycle requirements.",
+      "files": {
+        "packages/problems-core/src/generated/problem-code-registry.ts": "db145ee48cd56eb786e632375c7d0639e542a5527af8157c0fb994b0d671ae27"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Host-neutral generated diagnostic metadata has no infrastructure dependency.",
+          "providers": [],
+          "constraints": [],
+          "references": ["packages/problems-core/src/generated/problem-code-registry.ts"]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Host-neutral generated diagnostic metadata has no infrastructure dependency.",
+          "providers": [],
+          "constraints": [],
+          "references": ["packages/problems-core/src/generated/problem-code-registry.ts"]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Host-neutral generated diagnostic metadata has no infrastructure dependency.",
+          "providers": [],
+          "constraints": [],
+          "references": ["packages/problems-core/src/generated/problem-code-registry.ts"]
+        }
+      }
+    }
+  ]
+}

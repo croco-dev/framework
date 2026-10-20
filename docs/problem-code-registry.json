@@ -1,6 +1,6 @@
 {
   "version": "croco.problem-code-registry.v1",
-  "problemCount": 1133,
+  "problemCount": 1134,
   "problems": [
     {
       "code": "ACCESS_DENIED",
@@ -32915,6 +32915,36 @@
       ]
     },
     {
+      "code": "warehouse-postgres/metrics-currency-mismatch",
+      "category": "InternalServerError",
+      "status": 500,
+      "title": "Internal Server Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#warehouse-postgres-metrics-currency-mismatch",
+      "recovery": {
+        "cause": "Persisted metrics movements use inconsistent currencies, or differ from the starting snapshot currency.",
+        "userAction": "Do not use retention results until the inconsistent source data has been reviewed.",
+        "operatorAction": "Inspect tenantId, period, movementIndex, field, expectedCurrency and actualCurrency in the operator-only extensions; reconcile the source records without relabeling amounts or applying implicit currency conversion.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "operator-only",
+        "telemetry": {
+          "eventName": "croco.problem.error",
+          "severity": "error",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/warehouse-postgres/src/metrics/PostgresMetricsStore.ts",
+          "line": 309,
+          "column": 15,
+          "kind": "problem-factory"
+        }
+      ]
+    },
+    {
       "code": "warehouse-postgres/metrics-row-invalid",
       "category": "InternalServerError",
       "status": 500,
@@ -32938,7 +32968,7 @@
       "sources": [
         {
           "file": "packages/warehouse-postgres/src/metrics/PostgresMetricsStore.ts",
-          "line": 345,
+          "line": 387,
           "column": 9,
           "kind": "problem-factory"
         }

@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export type CrocoProblemRegistry = {
   readonly version: "croco.problem-code-registry.v1";
-  readonly problemCount: 1133;
+  readonly problemCount: 1134;
   readonly problems: readonly [
     {
       readonly code: "ACCESS_DENIED";
@@ -30802,6 +30802,34 @@ export type CrocoProblemRegistry = {
       ];
     },
     {
+      readonly code: "warehouse-postgres/metrics-currency-mismatch";
+      readonly category: "InternalServerError";
+      readonly status: 500;
+      readonly title: "Internal Server Error";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#warehouse-postgres-metrics-currency-mismatch";
+      readonly recovery: {
+        readonly cause: "Persisted metrics movements use inconsistent currencies, or differ from the starting snapshot currency.";
+        readonly userAction: "Do not use retention results until the inconsistent source data has been reviewed.";
+        readonly operatorAction: "Inspect tenantId, period, movementIndex, field, expectedCurrency and actualCurrency in the operator-only extensions; reconcile the source records without relabeling amounts or applying implicit currency conversion.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "operator-only";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.error";
+          readonly severity: "error";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/warehouse-postgres/src/metrics/PostgresMetricsStore.ts";
+          readonly line: 309;
+          readonly column: 15;
+          readonly kind: "problem-factory";
+        },
+      ];
+    },
+    {
       readonly code: "warehouse-postgres/metrics-row-invalid";
       readonly category: "InternalServerError";
       readonly status: 500;
@@ -30823,7 +30851,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/warehouse-postgres/src/metrics/PostgresMetricsStore.ts";
-          readonly line: 345;
+          readonly line: 387;
           readonly column: 9;
           readonly kind: "problem-factory";
         },
@@ -32028,7 +32056,7 @@ export type CrocoProblemRegistry = {
 
 export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 1133,
+  problemCount: 1134,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -66507,6 +66535,40 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       ],
     },
     {
+      code: "warehouse-postgres/metrics-currency-mismatch",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#warehouse-postgres-metrics-currency-mismatch",
+      recovery: {
+        cause:
+          "Persisted metrics movements use inconsistent currencies, or differ from the starting snapshot currency.",
+        userAction:
+          "Do not use retention results until the inconsistent source data has been reviewed.",
+        operatorAction:
+          "Inspect tenantId, period, movementIndex, field, expectedCurrency and actualCurrency in the operator-only extensions; reconcile the source records without relabeling amounts or applying implicit currency conversion.",
+        retryability: "not-retryable",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/warehouse-postgres/src/metrics/PostgresMetricsStore.ts",
+          line: 309,
+          column: 15,
+          kind: "problem-factory",
+        },
+      ],
+    },
+    {
       code: "warehouse-postgres/metrics-row-invalid",
       category: "InternalServerError",
       status: 500,
@@ -66531,7 +66593,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/warehouse-postgres/src/metrics/PostgresMetricsStore.ts",
-          line: 345,
+          line: 387,
           column: 9,
           kind: "problem-factory",
         },
