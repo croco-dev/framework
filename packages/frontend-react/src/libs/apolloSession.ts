@@ -2,13 +2,7 @@ import { ApolloClient, ApolloLink, HttpLink, InMemoryCache } from "@apollo/clien
 import { ProblemFactory } from "@croco/problems-core";
 import { tap } from "rxjs";
 
-import type {
-  DocumentNode,
-  InMemoryCacheConfig,
-  NormalizedCacheObject,
-  OperationVariables,
-  TypedDocumentNode,
-} from "@apollo/client";
+import type { InMemoryCacheConfig, NormalizedCacheObject } from "@apollo/client";
 
 export type ApolloSessionOptions = {
   /** Absolute, application-configured URL. Never derive the allowlist from an incoming Host header. */
@@ -17,30 +11,27 @@ export type ApolloSessionOptions = {
   /** Non-secret generation id. Change it for login, logout, tenant and personalization changes. */
   readonly owner: string;
   readonly ssr: boolean;
+  /** Client-owned cache can hydrate. Server-only work must use a separate, non-hydratable owner. */
+  readonly ownership: "client" | "server";
   readonly headers?: HeadersInit;
   readonly fetch?: typeof globalThis.fetch;
   readonly cache?: InMemoryCacheConfig;
-  /** Serialized selected-query hydration, never an entire server cache. */
+  /** Serialized native client-owned cache; server-only owners cannot restore it. */
   readonly hydration?: string;
-};
-
-export type ApolloHydrationSelection = {
-  readonly query: DocumentNode | TypedDocumentNode;
-  readonly variables?: OperationVariables;
 };
 
 export type ApolloSession = {
   readonly client: ApolloClient;
   readonly owner: string;
-  /** Only select browser-owned, complete query results. Server-only queries stay on the server. */
-  extract(selections: readonly ApolloHydrationSelection[]): string;
+  /** Native raw cache extraction preserves field policies. Only client-owned sessions may hydrate. */
+  extract(): string;
   /** Abort transport, stop observers, erase private entities; never reuse this session afterward. */
   dispose(): void;
 };
 
 /** One instance per SSR request or browser identity generation; share only within that owner. */
 export function createApolloSession(options: ApolloSessionOptions): ApolloSession {
-  const { owner, ssr, cache: cacheConfig } = options;
+  const { owner, ssr, ownership, cache: cacheConfig } = options;
   let endpoint: URL;
   try {
     endpoint = new URL(options.endpoint);
@@ -69,6 +60,11 @@ export function createApolloSession(options: ApolloSessionOptions): ApolloSessio
   const headers = new Headers(options.headers);
   const cache = new InMemoryCache(cacheConfig);
   if (options.hydration !== undefined) {
+    if (ownership !== "client")
+      throw ProblemFactory.badRequest(
+        "frontend-react/apollo-server-hydration",
+        "Server-only owners cannot restore browser hydration.",
+      );
     let state: unknown;
     try {
       state = JSON.parse(options.hydration);
@@ -139,7 +135,12 @@ export function createApolloSession(options: ApolloSessionOptions): ApolloSessio
   return {
     client,
     owner: owner,
-    extract(selections) {
+    extract() {
+      if (ownership !== "client")
+        throw ProblemFactory.badRequest(
+          "frontend-react/apollo-server-hydration",
+          "Server-only owners cannot export browser hydration.",
+        );
       if (hydrationFailed) {
         throw ProblemFactory.badRequest(
           "frontend-react/apollo-failed-hydration",
@@ -152,23 +153,10 @@ export function createApolloSession(options: ApolloSessionOptions): ApolloSessio
           "A disposed Apollo session cannot be hydrated.",
         );
       }
-      // Rebuild from allowlisted selections: extract() alone would also copy RSC-only/private results.
-      const selected = new InMemoryCache(cacheConfig);
-      for (const selection of selections) {
-        const data = cache.readQuery({ ...selection, returnPartialData: false });
-        if (data === null) {
-          throw ProblemFactory.badRequest(
-            "frontend-react/apollo-incomplete-hydration",
-            "Hydration requires a complete selected query.",
-          );
-        }
-        assertJson(data);
-        selected.writeQuery({ ...selection, data });
-      }
       return serializeApolloHydration({
         version: 1,
         owner: owner,
-        cache: selected.extract(),
+        cache: cache.extract(),
       });
     },
     dispose() {

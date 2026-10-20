@@ -40,6 +40,7 @@ describe("GraphQLHttp", () => {
         allowedOrigins: [origin],
         owner: user,
         ssr: true,
+        ownership: "client",
         headers: { authorization: `Bearer ${user}` },
       }),
     );

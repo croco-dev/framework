@@ -23274,11 +23274,6 @@
           ],
           "typeExports": [
             {
-              "name": "ApolloHydrationSelection",
-              "exportKind": "named",
-              "source": "./libs/apolloSession"
-            },
-            {
               "name": "ApolloSession",
               "exportKind": "named",
               "source": "./libs/apolloSession"

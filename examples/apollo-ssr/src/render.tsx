@@ -5,7 +5,6 @@ import { prerenderStatic } from "@apollo/client/react/ssr";
 import { ProblemFactory } from "@croco/problems-core";
 import { gql } from "@apollo/client";
 import { createApolloSession } from "@croco/frontend-react/apollo";
-import { ProductDetailDocument } from "./generated/graphql";
 import { App } from "./App";
 
 export async function render(
@@ -20,18 +19,33 @@ export async function render(
     allowedOrigins: [new URL(endpoint).origin],
     owner,
     ssr: true,
+    ownership: "client",
     headers: { cookie },
   });
   signal?.addEventListener("abort", session.dispose, { once: true });
   try {
-    // This result belongs to server rendering only and must not enter the browser cache.
-    await session.client.query({
-      query: gql`
-        query ServerOnly {
-          serverOnly
-        }
-      `,
+    // Separate native ownership, without copying server-only results into the client cache.
+    const serverOnly = createApolloSession({
+      endpoint,
+      allowedOrigins: [new URL(endpoint).origin],
+      owner: `${owner}:server`,
+      ssr: true,
+      ownership: "server",
+      headers: { cookie },
     });
+    signal?.addEventListener("abort", serverOnly.dispose, { once: true });
+    try {
+      await serverOnly.client.query({
+        query: gql`
+          query ServerOnly {
+            serverOnly
+          }
+        `,
+      });
+    } finally {
+      signal?.removeEventListener("abort", serverOnly.dispose);
+      serverOnly.dispose();
+    }
     const tree = createElement(ApolloProvider, {
       client: session.client,
       children: createElement(App),
@@ -43,9 +57,7 @@ export async function render(
     });
     if (aborted)
       throw ProblemFactory.internalServerError("apollo-example/ssr-aborted", "SSR aborted");
-    const hydration = session.extract([
-      { query: ProductDetailDocument, variables: { id: "p1", variant: "member" } },
-    ]);
+    const hydration = session.extract();
     return { result, hydration };
   } finally {
     signal?.removeEventListener("abort", session.dispose);

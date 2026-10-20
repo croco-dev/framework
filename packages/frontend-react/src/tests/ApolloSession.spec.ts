@@ -19,12 +19,27 @@ const options = {
   allowedOrigins: ["https://api.example"],
   owner: "owner-a",
   ssr: true,
+  ownership: "client" as const,
 };
 const data = (amount: string) => ({
   product: { __typename: "Product", id: "p1", quote: { __typename: "Quote", amount } },
 });
 
 describe("ApolloSession", () => {
+  it("restores native read policies without applying them twice during hydration", () => {
+    const policy = {
+      typePolicies: { Quote: { fields: { amount: { read: (value: string) => `$${value}` } } } },
+    };
+    const server = createApolloSession({ ...options, cache: policy });
+    server.client.writeQuery({ query, variables: { variant: "member" }, data: data("17.00") });
+    const hydration = server.extract();
+    const browser = createApolloSession({ ...options, ssr: false, cache: policy, hydration });
+    expect(browser.client.readQuery({ query, variables: { variant: "member" } })).toEqual(
+      data("$17.00"),
+    );
+    server.dispose();
+    browser.dispose();
+  });
   it("keeps partial errors visible and refuses to hydrate their cached nulls as success", async () => {
     const session = createApolloSession({
       ...options,
@@ -41,9 +56,7 @@ describe("ApolloSession", () => {
     });
     expect(result.data).toEqual({ product: null });
     expect(result.error).toBeDefined();
-    expect(() => session.extract([{ query, variables: { variant: "member" } }])).toThrow(
-      "failed operations",
-    );
+    expect(() => session.extract()).toThrow("failed operations");
     session.dispose();
   });
   it("keeps private requests separate and preserves native entity normalization and argument keys", () => {
@@ -62,7 +75,7 @@ describe("ApolloSession", () => {
     b.dispose();
   });
 
-  it("hydrates selected browser queries only, escapes script terminators, and rejects stale owners", () => {
+  it("hydrates only client-owned cache, escapes script terminators, and rejects stale owners", () => {
     const server = createApolloSession(options);
     const secret = gql`
       query Secret {
@@ -74,8 +87,10 @@ describe("ApolloSession", () => {
       variables: { variant: "member" },
       data: data("</script><script>secret</script>"),
     });
-    server.client.writeQuery({ query: secret, data: { serverOnly: "do-not-ship" } });
-    const state = server.extract([{ query, variables: { variant: "member" } }]);
+    const serverOnly = createApolloSession({ ...options, ownership: "server" });
+    serverOnly.client.writeQuery({ query: secret, data: { serverOnly: "do-not-ship" } });
+    expect(() => serverOnly.extract()).toThrow("Server-only owners");
+    const state = server.extract();
     expect(state).not.toContain("<");
     expect(state).not.toContain("do-not-ship");
     const browser = createApolloSession({ ...options, ssr: false, hydration: state });
@@ -83,6 +98,10 @@ describe("ApolloSession", () => {
       data("</script><script>secret</script>"),
     );
     expect(browser.client.readQuery({ query: secret })).toBeNull();
+    expect(() =>
+      createApolloSession({ ...options, ownership: "server", hydration: state }),
+    ).toThrow("Server-only owners");
+    serverOnly.dispose();
     expect(() => createApolloSession({ ...options, owner: "owner-b", hydration: state })).toThrow(
       "another cache owner",
     );
@@ -90,11 +109,8 @@ describe("ApolloSession", () => {
     browser.dispose();
   });
 
-  it("rejects incomplete selections, server objects, accessors, cycles and prototype keys", () => {
+  it("rejects server objects, accessors, cycles and prototype keys", () => {
     const server = createApolloSession(options);
-    expect(() => server.extract([{ query, variables: { variant: "member" } }])).toThrow(
-      "complete selected query",
-    );
     for (const value of [
       new Date(),
       { token: undefined },
@@ -142,6 +158,27 @@ describe("ApolloSession", () => {
     expect(session.client.readQuery({ query: items, variables: { offset: 0 } })).toEqual({
       items: ["one", "two"],
     });
+    const browser = createApolloSession({
+      ...options,
+      ssr: false,
+      cache: {
+        typePolicies: {
+          Query: {
+            fields: {
+              items: {
+                keyArgs: false,
+                merge: (previous = [], incoming: unknown[]) => [...previous, ...incoming],
+              },
+            },
+          },
+        },
+      },
+      hydration: session.extract(),
+    });
+    expect(browser.client.readQuery({ query: items, variables: { offset: 0 } })).toEqual({
+      items: ["one", "two"],
+    });
+    browser.dispose();
     session.dispose();
   });
 
@@ -230,7 +267,7 @@ describe("ApolloSession", () => {
     expect(next.client.readQuery({ query, variables: { variant: "member" } })).toEqual(
       data("31.00"),
     );
-    expect(() => old.extract([])).toThrow("disposed");
+    expect(() => old.extract()).toThrow("disposed");
     next.dispose();
   });
 });

@@ -12,6 +12,7 @@ const options = {
   endpoint: `${location.origin}/graphql`,
   allowedOrigins: [location.origin],
   ssr: false,
+  ownership: "client" as const,
 };
 let session = createApolloSession({ ...options, owner, hydration: payload });
 const root = hydrateRoot(outlet, tree());

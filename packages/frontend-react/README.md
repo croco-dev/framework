@@ -426,7 +426,7 @@ private SSR/Node Flight → hydration → interaction → exposure path.
 ## Opt-in Apollo SSR
 
 `@croco/frontend-react/apollo` provides `createApolloSession` with a native Apollo 4 client/cache,
-explicit query-selection hydration, fixed trusted HTTP endpoint and identity-generation disposal.
+explicit client/server cache ownership and native hydration, fixed trusted HTTP endpoint and identity-generation disposal.
 Install the optional `@apollo/client`, `graphql` and `rxjs` peers when selecting this entrypoint.
 Keep `useQuery`, `useMutation`, `useFragment`, field policies and error policies native to Apollo.
 Create a new session per SSR request and per browser login/logout, tenant or personalization generation;
@@ -434,6 +434,6 @@ context/header changes alone never partition the cache. Dispose before changing 
 provider with the new owner key. Do not share sessions across requests or reuse old hydration.
 
 See [the runnable production-build example](../../examples/apollo-ssr/README.md) for real schema/document
-codegen, guard-preserving HTTP, normalized variant fields, selected-query safe hydration and browser tests.
+codegen, guard-preserving HTTP, normalized variant fields, client-owned safe hydration and browser tests.
 The verified design targets buffered Node SSR. RSC, Suspense, defer, incremental streaming and deployment
 profiles are not claimed by this entrypoint. Existing page/auth bridge APIs remain available independently.

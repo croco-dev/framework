@@ -4,11 +4,11 @@
     {
       "package": "frontend-react",
       "classification": "protocol-render",
-      "reason": "Opt-in native Apollo request ownership, explicit selected-query hydration and credential-restricted HTTP. Buffered Node SSR example; no Flight or incremental transport integration.",
+      "reason": "Opt-in native Apollo request ownership, explicit client/server native cache hydration ownership and credential-restricted HTTP. Buffered Node SSR example; no Flight or incremental transport integration.",
       "files": {
         "packages/frontend-react/package.json": "d2052017ee4bdfa5f9fc76a32d6076c048bf5a1ff0903f00df06949846fd9a3b",
-        "packages/frontend-react/src/apollo.ts": "737527471d790a83b3fc7f628f2f4f7fc6d7e663519e8293d9efada0ba8ec102",
-        "packages/frontend-react/src/libs/apolloSession.ts": "19d81863ed933507cf89e5c45218a602edfd562ef8b028553ad7d1378858aa56"
+        "packages/frontend-react/src/apollo.ts": "90473ff82a4ceab3d6c7ce8efae0fe503f457b4bc86830cf1350b39aa7d49dfa",
+        "packages/frontend-react/src/libs/apolloSession.ts": "76f6c967fa3607bb17424b7aae06118c74337cfeaad227d3c29ef631d2d2d1d9"
       },
       "catalogRuntimes": ["browser", "node"],
       "profiles": {
