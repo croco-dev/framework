@@ -38,7 +38,7 @@ await runtime.dispose();
 
 ## 객체와 실패 계약
 
-- `put/get/getStream/delete/exists/getMetadata/getSignedUrl/getPublicUrl`이 공통 계약입니다. Web stream과 `Uint8Array`를 사용합니다. 미존재는 `FileNotFoundProblem`, 사전·실행 중 취소는 `StorageOperationAbortedProblem`입니다. 403은 미존재로 숨기지 않습니다.
+- `put/get/getStream/delete/exists/getMetadata/getSignedUrl/getPublicUrl`이 공통 계약입니다. Web stream과 `Uint8Array`를 사용합니다. AWS가 404로 확인한 미존재는 `FileNotFoundProblem`이며 `exists()`는 `false`를 반환합니다. 사전·실행 중 취소는 `StorageOperationAbortedProblem`입니다. 403은 미존재로 숨기지 않습니다.
 - namespace는 모든 원격 key와 URL에 literal prefix로 적용합니다. `/`로 끝나는 prefix와 유효한 상대 key를 사용하며 합친 UTF-8 key는 1,024 bytes 이하입니다. 잘못된 Unicode key·prefix는 네트워크 요청 전에 `InvalidKeyProblem`으로 거부합니다. prefix는 IAM/tenant authorization을 대체하지 않습니다.
 - `S3StorageProvider.get/getStream`의 `range: { start, end? }`는 inclusive byte range입니다. `get`은 결과 전체를 메모리에 모으므로 큰 객체에는 `getStream`을 사용하세요.
 - `contentType`, `cacheControl`, 사용자 metadata를 전송하고 S3 ETag를 그대로 반환합니다. ETag를 MD5나 무결성 증명으로 해석하지 않습니다.
@@ -62,7 +62,9 @@ R2와 같은 SDK를 사용하더라도 AWS의 ACL·conditional write·multipart�
 | AWS Lambda / Lambda Host | conditional | role 권한·네트워크·invocation 시간/메모리 필요. 업로드와 cleanup을 await하고 stream 소비 완료. 실제 AWS 배포 미검증        |
 | Cloudflare Workers       | unsupported | Node SDK/네트워크 경로용 adapter. Worker isolate 지원을 주장하지 않음. R2 native binding은 별도 adapter                    |
 
-[identity-contract.json](smoke/identity-contract.json)은 projected token·OIDC audience/subject·scope 제한 object policy·Lambda role reference·선택적 Secret reference를 보여주는 검토용 artifact입니다. 적용 가능한 IaC나 실제 권한 검사 결과가 아닙니다. placeholder를 환경에 맞게 검토하고 bucket/role/trust와 lifecycle을 별도로 배포해야 합니다. KMS 사용에는 별도 KMS 권한이 필요합니다. `s3:ListBucket`이 없는 경우 없는 객체에 대해서도 AWS가 403을 반환할 수 있으며 Provider는 이를 거짓 `false`로 바꾸지 않습니다.
+[identity-contract.json](smoke/identity-contract.json)은 projected token·OIDC audience/subject·scope 제한 object policy·Lambda role reference·선택적 Secret reference를 보여주는 검토용 artifact입니다. 적용 가능한 IaC나 실제 권한 검사 결과가 아닙니다. placeholder를 환경에 맞게 검토하고 bucket/role/trust와 lifecycle을 별도로 배포해야 합니다. KMS 사용에는 별도 KMS 권한이 필요합니다.
+
+참조 object policy는 의도적으로 bucket 목록 권한을 부여하지 않습니다. 없는 객체를 404로 구분하려면 운영자가 해당 bucket의 유효한 `s3:ListBucket` 권한과 객체 존재 정보의 공개 범위를 검토해야 합니다. 이 권한이 없으면 AWS가 없는 객체에도 403을 반환할 수 있으며 Provider는 이를 거짓 `false`나 `FileNotFoundProblem`으로 바꾸지 않습니다. [AWS HeadObject 권한 계약](https://docs.aws.amazon.com/AmazonS3/latest/API/API_HeadObject.html)을 따릅니다. `s3:prefix`는 [목록 요청의 prefix 조건](https://docs.aws.amazon.com/AmazonS3/latest/userguide/amazon-s3-policy-keys.html)이므로 prefix 제한 목록 권한만으로 HeadObject의 404 동작이 검증됐다고 주장하지 않습니다. 로컬 conformance는 실제 IAM 권한 검증을 대체하지 않습니다.
 
 ```bash
 pnpm --filter @croco/storage-s3 test
