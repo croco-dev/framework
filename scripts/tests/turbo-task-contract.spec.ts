@@ -1,4 +1,15 @@
-import { existsSync, readFileSync, readdirSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import {
+  cpSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 
 import { describe, expect, it } from "vitest";
@@ -165,4 +176,123 @@ describe("Turbo task contract", () => {
       ".turbo/croco-test-evidence.json",
     ]);
   });
+});
+
+describe("Turbo compiler configuration cache inputs", () => {
+  it("invalidates build and typecheck for inherited and local configs while reusing identical inputs", () => {
+    const root = mkdtempSync(resolve(tmpdir(), "croco-tsconfig-cache-"));
+    const write = (path: string, value: unknown) =>
+      writeFileSync(resolve(root, path), JSON.stringify(value));
+    try {
+      mkdirSync(resolve(root, "packages/app"), { recursive: true });
+      cpSync(resolve(repositoryRoot, "tsconfig"), resolve(root, "tsconfig"), { recursive: true });
+      cpSync(resolve(repositoryRoot, "turbo.json"), resolve(root, "turbo.json"));
+      write("package.json", {
+        name: "compiler-cache-fixture",
+        private: true,
+        packageManager: "pnpm@10.15.0",
+      });
+      writeFileSync(resolve(root, "pnpm-workspace.yaml"), "packages:\n  - packages/*\n");
+      writeFileSync(
+        resolve(root, "pnpm-lock.yaml"),
+        "lockfileVersion: '9.0'\nimporters:\n  .: {}\n  packages/app: {}\n",
+      );
+      writeFileSync(resolve(root, ".gitignore"), ".turbo\n**/dist\nexecutions.log\n");
+      write("packages/app/package.json", {
+        name: "@fixture/app",
+        private: true,
+        scripts: { build: "node runner.mjs build", typecheck: "node runner.mjs typecheck" },
+      });
+      write("packages/app/tsconfig.json", { extends: "../../tsconfig/tsconfig.node.json" });
+      writeFileSync(
+        resolve(root, "packages/app/runner.mjs"),
+        "import { appendFileSync, mkdirSync, writeFileSync } from 'node:fs';\n" +
+          "appendFileSync('../../executions.log', process.argv[2] + '\\n');\n" +
+          "mkdirSync('dist', { recursive: true }); writeFileSync('dist/result.txt', 'built');\n",
+      );
+      const isolatedEnv = Object.fromEntries(
+        Object.entries(process.env).filter(([key]) => !key.startsWith("GIT_")),
+      );
+      execFileSync("git", ["init", "--quiet"], { cwd: root, env: isolatedEnv });
+      execFileSync("git", ["add", "."], { cwd: root, env: isolatedEnv });
+      const run = () => {
+        const previous = new Set(
+          existsSync(resolve(root, ".turbo/runs")) ? readdirSync(resolve(root, ".turbo/runs")) : [],
+        );
+        execFileSync(
+          resolve(repositoryRoot, "node_modules/.bin/turbo"),
+          [
+            "run",
+            "build",
+            "typecheck",
+            "--filter=@fixture/app",
+            "--cache=local:rw",
+            "--cache-dir=.turbo/cache",
+            "--summarize",
+            "--no-daemon",
+          ],
+          {
+            cwd: root,
+            encoding: "utf8",
+            timeout: 60_000,
+            stdio: "pipe",
+            env: { ...isolatedEnv, TURBO_TELEMETRY_DISABLED: "1" },
+          },
+        );
+        const runs = readdirSync(resolve(root, ".turbo/runs")).filter(
+          (file) => !previous.has(file),
+        );
+        expect(runs).toHaveLength(1);
+        return JSON.parse(readFileSync(resolve(root, ".turbo/runs", runs[0]), "utf8")) as {
+          tasks: { taskId: string; hash: string; cache: { status: string } }[];
+        };
+      };
+      const executions = () => readFileSync(resolve(root, "executions.log"), "utf8");
+      const baseline = run();
+      expect(baseline.tasks.map((task) => task.taskId).sort()).toEqual([
+        "@fixture/app#build",
+        "@fixture/app#typecheck",
+      ]);
+      expect(baseline.tasks.map((task) => task.cache.status)).toEqual(["MISS", "MISS"]);
+      const coldExecutions = executions();
+      expect(coldExecutions.trim().split("\n").sort()).toEqual(["build", "typecheck"]);
+      const reused = run();
+      expect(reused.tasks.map((task) => task.hash)).toEqual(
+        baseline.tasks.map((task) => task.hash),
+      );
+      expect(reused.tasks.map((task) => task.cache.status)).toEqual(["HIT", "HIT"]);
+      expect(executions()).toBe(coldExecutions);
+      for (const [path, option, value] of [
+        ["tsconfig/tsconfig.base.json", "strict", false],
+        ["tsconfig/tsconfig.node.json", "target", "es2022"],
+        ["packages/app/tsconfig.json", "experimentalDecorators", false],
+      ] as const) {
+        const original = readFileSync(resolve(root, path), "utf8");
+        const config = JSON.parse(original);
+        config.compilerOptions = { ...config.compilerOptions, [option]: value };
+        write(path, config);
+        const before = executions();
+        const changed = run();
+        for (const task of changed.tasks) {
+          expect(task.hash, `${path}: ${task.taskId}`).not.toBe(
+            baseline.tasks.find((old) => old.taskId === task.taskId)?.hash,
+          );
+          expect(task.cache.status, `${path}: ${task.taskId}`).toBe("MISS");
+        }
+        expect(executions().slice(before.length).trim().split("\n").sort(), path).toEqual([
+          "build",
+          "typecheck",
+        ]);
+        const after = executions();
+        expect(
+          run().tasks.map((task) => task.cache.status),
+          path,
+        ).toEqual(["HIT", "HIT"]);
+        expect(executions(), path).toBe(after);
+        writeFileSync(resolve(root, path), original);
+      }
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  }, 120_000);
 });
