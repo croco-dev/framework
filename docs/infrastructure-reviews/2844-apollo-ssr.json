@@ -14,7 +14,7 @@
       "profiles": {
         "kubernetes": {
           "result": "supported",
-          "reason": "The opt-in session and buffered production SSR artifact execute on the Node Host in the local browser fixture; a live Kubernetes cluster is not certified.",
+          "reason": "The opt-in session, common guarded HTTP transport and buffered SSR render execute on Node in the named HTTP fixture. Production-build and browser evidence is verified separately; no live Kubernetes cluster is certified.",
           "providers": ["@croco/frontend-react/apollo"],
           "constraints": [
             "Per-request client/cache, dispose in finally; no global request cache.",
@@ -23,14 +23,15 @@
           "references": [
             "packages/frontend-react/README.md",
             "examples/apollo-ssr/README.md",
-            "examples/apollo-ssr/src/tests/BrowserSsr.spec.ts"
+            "examples/apollo-ssr/src/tests/BrowserSsr.spec.ts",
+            "examples/apollo-ssr/src/tests/GraphQLHttp.spec.ts"
           ],
           "evidence": {
             "kind": "host-runtime",
             "runtime": "node",
-            "path": "examples/apollo-ssr/src/tests/BrowserSsr.spec.ts",
-            "testName": "BrowserSsr hydrates the production build and isolates a late response after identity change on desktop and mobile",
-            "sha256": "722021e54b6f572de595589222a2a2c93d3c344a7ba3db424042d08e11cacb8e"
+            "path": "examples/apollo-ssr/src/tests/GraphQLHttp.spec.ts",
+            "testName": "GraphQLHttp preserves guard failures, partial data, null bubbling, normalization and explicit mutation refresh over real HTTP",
+            "sha256": "6dc36c99f5c31bf15adb30730af69fcb6b7a65a397377cdeb3f9986f4eb14962"
           }
         },
         "aws-lambda": {
