@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "cache-core",
+      "classification": "pure-contract",
+      "reason": "Align process-local singleflight ownership and invalidation generations in the existing store. Preserve invalidated results per caller without restoring stale cache entries; no host capability, external storage or lifecycle is added.",
+      "files": {
+        "packages/cache-core/src/libs/CacheStore.ts": "74babdd9d42861e93ee2c2af3a25f2e49232cf8b5b321fa5afbb0c848d43ee0e",
+        "packages/cache-core/src/libs/InMemoryCacheStore.ts": "b99de1590b15364271ff4aed3c591d57068e9f81393505ab3ffd320362acf856",
+        "packages/cache-core/src/libs/decorators/Cacheable.ts": "4660ec32902632ecaed1cc3058132b7d67ecf05439f2bab30a2ad0d6898ae698"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "The Node Host is not involved in process-local Promise generation selection. This change adds no host capability, storage connection or lifecycle boundary.",
+          "providers": ["@croco/cache-core/InMemoryCacheStore"],
+          "constraints": [
+            "Process-local invalidation only; distributed invalidation and live deployment certification are outside this change."
+          ],
+          "references": [
+            "packages/cache-core/src/libs/CacheStore.ts",
+            "packages/cache-core/src/libs/InMemoryCacheStore.ts",
+            "packages/cache-core/src/libs/decorators/Cacheable.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "The Lambda Host is not involved in process-local Promise generation selection. This change adds no host capability, storage connection or lifecycle boundary.",
+          "providers": ["@croco/cache-core/InMemoryCacheStore"],
+          "constraints": [
+            "Process-local invalidation only; distributed invalidation and live deployment certification are outside this change."
+          ],
+          "references": [
+            "packages/cache-core/src/libs/CacheStore.ts",
+            "packages/cache-core/src/libs/InMemoryCacheStore.ts",
+            "packages/cache-core/src/libs/decorators/Cacheable.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "The Workers or Node Container Host is not involved in process-local Promise generation selection. This change adds no host capability, storage connection or lifecycle boundary.",
+          "providers": ["@croco/cache-core/InMemoryCacheStore"],
+          "constraints": [
+            "Process-local invalidation only; distributed invalidation and live deployment certification are outside this change."
+          ],
+          "references": [
+            "packages/cache-core/src/libs/CacheStore.ts",
+            "packages/cache-core/src/libs/InMemoryCacheStore.ts",
+            "packages/cache-core/src/libs/decorators/Cacheable.ts"
+          ]
+        }
+      }
+    }
+  ]
+}
