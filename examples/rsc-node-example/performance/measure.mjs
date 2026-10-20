@@ -43,6 +43,18 @@ const sourceRevision = execFileSync("git", ["rev-parse", "HEAD"], {
   cwd: app,
   encoding: "utf8",
 }).trim();
+for (const name of [
+  "meta-vite",
+  "cache-core",
+  "features-core",
+  "frontend-react",
+  "storage-cloudflare",
+]) {
+  const manifest = JSON.parse(
+    await readFile(resolve(app, "../../packages", name, "package.json"), "utf8"),
+  );
+  dependencyVersions[manifest.name] = `${manifest.version}@${sourceRevision}`;
+}
 const server = spawn(process.execPath, ["serve.mjs"], {
   cwd: app,
   env: { ...process.env, NODE_ENV: "production", PORT: "0" },
@@ -323,6 +335,7 @@ try {
         configuration,
         state: budgetResult.every((b) => b.state === "passed") ? "passed" : "failed",
         artifactRef,
+        sourceRevision,
         dependencyVersions,
         measurements,
         budgetResult,
@@ -333,6 +346,7 @@ try {
         configuration,
         state: "failed",
         artifactRef,
+        sourceRevision,
         dependencyVersions,
         reason: String(error),
         measurements,
