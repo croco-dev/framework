@@ -11,6 +11,7 @@ function fixture() {
   const store = new InMemoryResearchStore();
   const send = vi.fn(async () => ({ status: "queued" as const, executionIds: ["execution"] }));
   let now = new Date("2026-10-13T00:00:00Z");
+  const clock = () => now;
   const service = new ResearchService(
     store,
     {
@@ -20,12 +21,13 @@ function fixture() {
     },
     { send },
     [study.bookingUrl],
-    () => now,
+    clock,
   );
   return {
     store,
     service,
     send,
+    clock,
     setNow: (value: Date) => {
       now = value;
     },
@@ -345,6 +347,7 @@ describe("ResearchService", () => {
       { authorize: async (_access, permission) => permission !== "research.participate" },
       { send: f.send },
       [study.bookingUrl],
+      f.clock,
     );
     for (const response of ["declined", "withdrawn"] as const) {
       await expect(
@@ -383,7 +386,7 @@ describe("ResearchService", () => {
       { authorize: async (_access, permission) => permission !== "research.write" },
       { send: f.send },
       [study.bookingUrl],
-      () => new Date("2026-10-13T00:00:00Z"),
+      f.clock,
     );
     expect((await reader.inspect(scope, study.id, access)).candidates[0].note).toBe(
       "Private source evidence",
@@ -418,6 +421,7 @@ describe("ResearchService", () => {
       { authorize: async (_input, _permission, subject) => subject === undefined },
       { send: f.send },
       [study.bookingUrl],
+      f.clock,
     );
     await expect(
       restricted.importCandidates(
@@ -578,6 +582,7 @@ describe("ResearchService", () => {
       { authorize: async () => true },
       { send: f.send },
       [study.bookingUrl],
+      f.clock,
     );
     await restarted.invite(scope, study.id, next, access, command(5, "unknown"));
     expect(f.send).toHaveBeenCalledTimes(2);
