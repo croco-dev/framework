@@ -15,6 +15,7 @@ const context: PageExperienceCollectionContext = {
 };
 function fixture() {
   const rows: PageExperienceRow[] = [];
+  let now = new Date("2026-01-01T00:00:01.000Z");
   let authorized = true,
     committed = false,
     fail = false;
@@ -34,11 +35,18 @@ function fixture() {
       hiddenTime: "exclude",
     },
     allowedOrigins: ["https://shop.test"],
-    clock: () => new Date("2026-01-01T00:00:01.000Z"),
+    clock: () => now,
     authorize: async () => authorized,
     append: async (row) => {
       if (fail) throw new Error("source failed");
-      if (!rows.some((r) => r.id === row.id && r.source === row.source)) rows.push(row);
+      const prior = rows.find((r) => r.id === row.id && r.source === row.source);
+      if (!prior) rows.push(row);
+      else if (
+        Object.entries(row).some(
+          ([key, value]) => key !== "receivedAt" && prior[key as keyof PageExperienceRow] !== value,
+        )
+      )
+        throw new Error("conflicting source identity");
     },
     verifyReceipt: async (ref) =>
       committed && ref === "receipt-1"
@@ -55,6 +63,9 @@ function fixture() {
   return {
     service,
     rows,
+    setTime: (value: Date) => {
+      now = value;
+    },
     setAuthorized: (v: boolean) => {
       authorized = v;
     },
@@ -75,6 +86,20 @@ const observation = {
   value: "product",
 };
 describe("Page experience server collection", () => {
+  it("namespaces identical client IDs by authenticated session and subject while keeping retries stable", async () => {
+    const { service, rows } = fixture();
+    await service.observe(observation, context);
+    await service.observe(observation, {
+      ...context,
+      subject: "second-subject",
+      session: "second-session",
+    });
+    await service.observe(observation, context);
+    expect(rows).toHaveLength(2);
+    expect(new Set(rows.map((row) => row.id)).size).toBe(2);
+    expect(rows.map((row) => row.subject)).toEqual(["server-subject", "second-subject"]);
+    expect(rows.every((row) => row.id !== observation.id)).toBe(true);
+  });
   it("binds subject and tenant on server and rejects forged subject, outcome and foreign origin", async () => {
     const { service, rows } = fixture();
     await service.observe(observation, context);
@@ -105,7 +130,9 @@ describe("Page experience server collection", () => {
     expect(f.rows).toEqual([]);
     f.commit();
     expect(await f.service.committed("receipt-1", context)).toBe("recorded");
+    f.setTime(new Date("2026-01-01T00:00:02.000Z"));
     expect(await f.service.committed("receipt-1", context)).toBe("recorded");
+    expect(f.rows[0]?.receivedAt).toBe("2026-01-01T00:00:01.000Z");
     expect(f.rows).toHaveLength(1);
     f.fail();
     expect(await f.service.committed("receipt-1", context)).toBe("unavailable");

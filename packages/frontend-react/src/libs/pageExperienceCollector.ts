@@ -33,6 +33,9 @@ export function createPageExperienceCollector(options: {
   maxBuffer: number;
   maxAttempts: number;
 }) {
+  let revoked = false,
+    generation = 0;
+  const enabled = () => !revoked && options.enabled();
   const queue: PageExperienceObservation[] = [];
   const seen = new Set<string>();
   let sequence = 0,
@@ -44,7 +47,7 @@ export function createPageExperienceCollector(options: {
     attempts = 0;
   let pending: Promise<void> | null = null;
   const enqueue = (kind: PageExperienceObservation["kind"], value: string) => {
-    if (!options.enabled()) return;
+    if (!enabled()) return;
     if (queue.length >= options.maxBuffer) {
       dropped++;
       return;
@@ -60,8 +63,8 @@ export function createPageExperienceCollector(options: {
   };
   const tick = () => {
     const now = options.monotonic();
-    if (last !== null && content && options.enabled()) visibleMs += Math.max(0, now - last);
-    last = options.enabled() && content && options.visible() ? now : null;
+    if (last !== null && content && enabled()) visibleMs += Math.max(0, now - last);
+    last = enabled() && content && options.visible() ? now : null;
   };
   if (
     typeof options.pageInstance !== "string" ||
@@ -87,7 +90,9 @@ export function createPageExperienceCollector(options: {
     throw new PageExperienceCollectorProblem();
   return {
     start() {
-      if (started || !options.enabled()) return;
+      if (!options.enabled()) return;
+      revoked = false;
+      if (started) return;
       started = true;
       enqueue("view", options.page);
     },
@@ -98,7 +103,7 @@ export function createPageExperienceCollector(options: {
         intersectionRatio > 1
       )
         return;
-      if (!started || content || !options.enabled() || !options.visible()) return;
+      if (!started || content || !enabled() || !options.visible()) return;
       content = true;
       enqueue("content", options.contentCondition);
       last = options.monotonic();
@@ -109,7 +114,7 @@ export function createPageExperienceCollector(options: {
       last = null;
     },
     resume() {
-      last = content && options.enabled() && options.visible() ? options.monotonic() : null;
+      last = content && enabled() && options.visible() ? options.monotonic() : null;
     },
     observe() {
       tick();
@@ -117,7 +122,7 @@ export function createPageExperienceCollector(options: {
     },
     action(action: string, identity: string) {
       const key = JSON.stringify(["action", action, identity]);
-      if (!started || seen.has(key) || !options.enabled() || !options.visible()) return;
+      if (!started || seen.has(key) || !enabled() || !options.visible()) return;
       if (
         !options.engagementActions.includes(action) ||
         !/^[A-Za-z0-9][A-Za-z0-9_.:-]{0,95}$/.test(identity)
@@ -134,7 +139,7 @@ export function createPageExperienceCollector(options: {
     },
     attempt(action: string, identity: string) {
       const key = JSON.stringify(["attempt", action, identity]);
-      if (!started || seen.has(key) || !options.enabled() || !options.visible()) return;
+      if (!started || seen.has(key) || !enabled() || !options.visible()) return;
       if (action !== options.valueAction || !/^[A-Za-z0-9][A-Za-z0-9_.:-]{0,95}$/.test(identity)) {
         dropped++;
         return;
@@ -147,25 +152,41 @@ export function createPageExperienceCollector(options: {
       enqueue("attempt", action);
     },
     revoke() {
+      revoked = true;
+      generation++;
+      attempts = 0;
+      dropped += queue.length;
       queue.length = 0;
       last = null;
       visibleMs = 0;
     },
     flush(): Promise<void> {
       if (pending) return pending;
-      if (!options.enabled()) {
+      if (!enabled()) {
+        dropped += queue.length;
         queue.length = 0;
         return Promise.resolve();
       }
       const batch = queue.splice(0, options.maxBuffer);
       if (!batch.length) return Promise.resolve();
+      const batchGeneration = generation;
       pending = (async () => {
         try {
-          await Promise.resolve().then(() => options.send(batch));
+          await Promise.resolve().then(() => {
+            if (batchGeneration !== generation || !enabled()) {
+              dropped += batch.length;
+              return;
+            }
+            return options.send(batch);
+          });
           attempts = 0;
         } catch {
+          if (batchGeneration !== generation || !enabled()) {
+            dropped += batch.length;
+            return;
+          }
           attempts++;
-          if (attempts < options.maxAttempts && options.enabled()) {
+          if (attempts < options.maxAttempts) {
             const available = options.maxBuffer - queue.length;
             queue.unshift(...batch.slice(0, available));
             dropped += Math.max(0, batch.length - available);

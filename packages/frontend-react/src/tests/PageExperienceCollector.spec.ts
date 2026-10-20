@@ -2,6 +2,78 @@ import { describe, expect, it } from "vitest";
 import { createPageExperienceCollector } from "../libs/pageExperienceCollector";
 import type { PageExperienceObservation } from "../libs/pageExperienceCollector";
 describe("Page experience collector", () => {
+  it.each(["revoke", "consent"])(
+    "does not dispatch an extracted batch after %s withdrawal",
+    async (mode) => {
+      let consent = true;
+      const sent: PageExperienceObservation[] = [];
+      const collector = createPageExperienceCollector({
+        page: "product",
+        pageInstance: "nav1",
+        contentCondition: "hero",
+        contentMinIntersectionRatio: 0.5,
+        engagementActions: ["preview"],
+        valueAction: "purchase",
+        enabled: () => consent,
+        clock: () => 0,
+        monotonic: () => 0,
+        visible: () => true,
+        send: async (rows) => {
+          sent.push(...rows);
+        },
+        maxBuffer: 4,
+        maxAttempts: 2,
+      });
+      collector.start();
+      const pending = collector.flush();
+      if (mode === "revoke") collector.revoke();
+      else consent = false;
+      await pending;
+      expect(sent).toEqual([]);
+      expect(collector.status().queued).toBe(0);
+      expect(collector.status().dropped).toBe(1);
+    },
+  );
+  it("never restores a failed batch from before revocation after consent is granted again", async () => {
+    let rejectSend: (reason: Error) => void = () => {
+      throw new Error("send has not started");
+    };
+    let calls = 0;
+    const collector = createPageExperienceCollector({
+      page: "product",
+      pageInstance: "nav1",
+      contentCondition: "hero",
+      contentMinIntersectionRatio: 0.5,
+      engagementActions: ["preview"],
+      valueAction: "purchase",
+      enabled: () => true,
+      clock: () => 0,
+      monotonic: () => 0,
+      visible: () => true,
+      send: () => {
+        calls++;
+        return new Promise<void>((_resolve, reject) => {
+          rejectSend = reject;
+        });
+      },
+      maxBuffer: 4,
+      maxAttempts: 2,
+    });
+    collector.start();
+    const pending = collector.flush();
+    await Promise.resolve();
+    expect(calls).toBe(1);
+    collector.revoke();
+    collector.action("preview", "during-withdrawal");
+    expect(collector.status().queued).toBe(0);
+    collector.start();
+    rejectSend(new Error("late transport failure"));
+    await pending;
+    expect(collector.status().queued).toBe(0);
+    expect(collector.status().dropped).toBe(1);
+    await collector.flush();
+    expect(calls).toBe(1);
+  });
   it("emits no prefetch view, deduplicates remount and counts only visible time after content", async () => {
     let time = 0,
       visible = true,

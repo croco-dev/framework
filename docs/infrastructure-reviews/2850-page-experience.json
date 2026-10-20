@@ -48,7 +48,7 @@
       "reason": "Server collection validates observations and delegates authorization, durable writes and receipt verification to existing application-owned contracts. No concrete provider or Host capability is introduced.",
       "files": {
         "packages/analytics-core/src/index.ts": "807d766b4a5c0b21d609bcdb80393ca344d2c8e4d9b53363763c67a9a94ac250",
-        "packages/analytics-core/src/libs/PageExperienceCollection.ts": "27d3bd244c95c61a60b589a1786949c1cbd0df6d909f716f20a5a501327e9c0b"
+        "packages/analytics-core/src/libs/PageExperienceCollection.ts": "529d1443065cd2aeabf8121f05ac3dbedc82c9e52206b4619962b36b5dc489d7"
       },
       "catalogRuntimes": [],
       "profiles": {
@@ -87,7 +87,7 @@
       "reason": "The opt-in browser collector and React lifecycle hook require browser visibility and application consent. They do not execute inside a server Host.",
       "files": {
         "packages/frontend-react/src/index.ts": "79ae02b7443cdb16afb50db714d521ef880138c19bc83bc1ef9d391589d30815",
-        "packages/frontend-react/src/libs/pageExperienceCollector.ts": "d596870aedeea423b82989578280a72287518b2b0ffbaf3db1e7edc8eb408ca3"
+        "packages/frontend-react/src/libs/pageExperienceCollector.ts": "9cd93b1ae29b967d0655ccf8be1e64f7aeb7536cf16de00c50ad356cf26ef1b8"
       },
       "catalogRuntimes": ["browser", "node"],
       "profiles": {

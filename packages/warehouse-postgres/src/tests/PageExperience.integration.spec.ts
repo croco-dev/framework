@@ -45,10 +45,11 @@ describe.skipIf(process.env.CROCO_TEST_REAL_RESOURCES !== "1")(
         };
         const confirmed: PageExperienceRow[] = [];
         let sourceFailed = false;
+        let receivedAt = new Date("2026-01-01T00:00:05.000Z");
         const bridge = new PageExperienceCollection({
           definition: fixture.definition,
           allowedOrigins: ["https://shop.test"],
-          clock: () => new Date("2026-01-01T00:00:05.000Z"),
+          clock: () => receivedAt,
           authorize: async (current) =>
             current.scope.app === "shop" &&
             current.scope.environment === "test" &&
@@ -57,7 +58,17 @@ describe.skipIf(process.env.CROCO_TEST_REAL_RESOURCES !== "1")(
             current.session === "one",
           append: async (row) => {
             if (sourceFailed) throw new Error("synthetic observation source failure");
-            if (!confirmed.some((prior) => prior.id === row.id)) confirmed.push(row);
+            const prior = confirmed.find(
+              (value) => value.source === row.source && value.id === row.id,
+            );
+            if (!prior) confirmed.push(row);
+            else if (
+              Object.entries(row).some(
+                ([key, value]) =>
+                  key !== "receivedAt" && prior[key as keyof PageExperienceRow] !== value,
+              )
+            )
+              throw new Error("conflicting receipt identity");
           },
           verifyReceipt: async (ref, current) => {
             const result = await pool.query(
@@ -94,7 +105,9 @@ describe.skipIf(process.env.CROCO_TEST_REAL_RESOURCES !== "1")(
           domain.release();
         }
         expect(await bridge.committed("one-committed", context)).toBe("recorded");
+        receivedAt = new Date("2026-01-01T00:00:06.000Z");
         expect(await bridge.committed("one-committed", context)).toBe("recorded");
+        expect(confirmed[0]?.receivedAt).toBe("2026-01-01T00:00:05.000Z");
         expect(confirmed).toHaveLength(1);
         expect(
           await bridge.committed("one-committed", {

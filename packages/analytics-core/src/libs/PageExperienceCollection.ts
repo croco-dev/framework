@@ -4,7 +4,11 @@ import type {
   PageExperienceRow,
   PageExperienceScope,
 } from "@croco/metrics-core";
-import { validatePageExperienceDefinition, validatePageExperienceRow } from "@croco/metrics-core";
+import {
+  hashPageExperience,
+  validatePageExperienceDefinition,
+  validatePageExperienceRow,
+} from "@croco/metrics-core";
 
 export type PageExperienceBrowserObservation = {
   id: string;
@@ -41,7 +45,9 @@ export class PageExperienceCollection {
         context: PageExperienceCollectionContext,
         action: "observe" | "receipt",
       ): Promise<boolean>;
-      /** Source must persist/deduplicate by scope + source + id; it owns retention and suppression. */
+      /** Source deduplicates scope + source + id, preserves first receivedAt and rejects other field changes.
+       * It owns retention and suppression. Browser IDs are namespaced by authenticated session/subject.
+       */
       append(row: PageExperienceRow, scope: PageExperienceScope): Promise<void>;
       /** Reads a domain-owned committed receipt under the current trusted scope and subject. */
       verifyReceipt(
@@ -98,8 +104,8 @@ export class PageExperienceCollection {
     if (
       !["view", "content", "visible", "action", "attempt"].includes(observation.kind) ||
       observation.page !== this.definition.page ||
-      !/^[a-zA-Z0-9_.:-]{1,128}$/.test(observation.id) ||
-      !/^[a-zA-Z0-9_.:-]{1,128}$/.test(observation.pageInstance)
+      !/^[a-zA-Z0-9][a-zA-Z0-9_.:-]{0,127}$/.test(observation.id) ||
+      !/^[a-zA-Z0-9][a-zA-Z0-9_.:-]{0,127}$/.test(observation.pageInstance)
     )
       throw new PageExperienceCollectionProblem();
     const time = Date.parse(observation.occurredAt),
@@ -126,6 +132,11 @@ export class PageExperienceCollection {
     await this.options.append(
       validatePageExperienceRow({
         ...observation,
+        id: await hashPageExperience({
+          session: authority.session,
+          subject: authority.subject,
+          id: observation.id,
+        }),
         source: "browser",
         session: authority.session,
         subject: authority.subject,
