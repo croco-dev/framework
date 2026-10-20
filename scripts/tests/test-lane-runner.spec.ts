@@ -1122,6 +1122,30 @@ it('retains the assertion failure', () => expect('actual-fixture-value').toBe('e
     REAL_TURBO_TEST_TIMEOUT_MS,
   );
 
+  it("accepts the warehouse integration script with the page experience test", () => {
+    const root = resolve(import.meta.dirname, "../..");
+    const repositoryInventory = readTestInventory(resolve(root, "test-inventory.json")).inventory;
+    const runner = vi.fn((command: { readonly paths: readonly string[] }) => ({
+      exitCode: 0,
+      durationMs: 1,
+      executedPaths: command.paths,
+    }));
+    const report = runTestLane({
+      inventory: repositoryInventory,
+      lane: "integration",
+      owners: ["@croco/warehouse-postgres"],
+      rootDir: root,
+      runner,
+    });
+
+    expect(report.diagnostics).toEqual([]);
+    expect(report.status).toBe("passed");
+    expect(runner).toHaveBeenCalledOnce();
+    expect(report.executedPaths).toContain(
+      "packages/warehouse-postgres/src/tests/PageExperience.integration.spec.ts",
+    );
+  });
+
   it("accepts every real fast script and resolves inventory owners to workspace package filters", () => {
     const root = resolve(import.meta.dirname, "../..");
     const repositoryInventory = readTestInventory(resolve(root, "test-inventory.json")).inventory;
