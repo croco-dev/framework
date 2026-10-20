@@ -7,6 +7,16 @@ import { CacheEvict } from "../libs/decorators/CacheEvict";
 import { InMemoryCacheStore } from "../libs/InMemoryCacheStore";
 import type { CacheKeyArgumentProblem } from "../libs/problems/CacheDecoratorProblems";
 
+function deferred<T>() {
+  let resolve!: (value: T | PromiseLike<T>) => void;
+  let reject!: (reason: unknown) => void;
+  const promise = new Promise<T>((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise;
+    reject = rejectPromise;
+  });
+  return { promise, resolve, reject };
+}
+
 describe("@Cacheable", () => {
   let cache!: InMemoryCacheStore<string>;
 
@@ -65,6 +75,164 @@ describe("@Cacheable", () => {
 
     await expect(pending).resolves.toEqual(["data-123", "data-123", "data-123"]);
   });
+
+  it.each(
+    ["delete", "pattern", "clear"].flatMap((invalidation) =>
+      ["old-first", "new-first"].map((order) => ({ invalidation, order })),
+    ),
+  )("starts a new generation after $invalidation ($order)", async ({ invalidation, order }) => {
+    const oldLoad = deferred<string>();
+    const newLoad = deferred<string>();
+    let loads = 0;
+
+    class TestService {
+      @Cacheable({ store: cache, namespace: "users" })
+      async getUser(_id: string): Promise<string> {
+        loads++;
+        return loads === 1 ? oldLoad.promise : newLoad.promise;
+      }
+    }
+
+    const service = new TestService();
+    const owner = service.getUser("1");
+    const waiter = service.getUser("1");
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(loads).toBe(1);
+
+    const key = createCacheKey("users:getUser", ["1"]);
+    if (invalidation === "delete") await cache.delete(key);
+    else if (invalidation === "pattern") await cache.invalidatePattern("users:getUser:*");
+    else await cache.clear();
+
+    const fresh = service.getUser("1");
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(loads).toBe(2);
+
+    if (order === "old-first") {
+      oldLoad.resolve("old-user");
+      await expect(Promise.all([owner, waiter])).resolves.toEqual(["old-user", "old-user"]);
+      expect(await cache.get(key)).toBeUndefined();
+      const freshWaiter = service.getUser("1");
+      await Promise.resolve();
+      await Promise.resolve();
+      expect(loads).toBe(2);
+      newLoad.resolve("new-user");
+      await expect(freshWaiter).resolves.toBe("new-user");
+    } else {
+      newLoad.resolve("new-user");
+      await expect(fresh).resolves.toBe("new-user");
+      oldLoad.resolve("old-user");
+      await expect(Promise.all([owner, waiter])).resolves.toEqual(["old-user", "old-user"]);
+    }
+
+    await expect(fresh).resolves.toBe("new-user");
+    expect(await cache.get(key)).toBe("new-user");
+    await expect(service.getUser("1")).resolves.toBe("new-user");
+    expect(loads).toBe(2);
+  });
+
+  it.each(["delete", "pattern"])("keeps singleflight after unrelated %s", async (invalidation) => {
+    const load = deferred<string>();
+    let loads = 0;
+    class TestService {
+      @Cacheable({ store: cache, namespace: "users" })
+      async getUser(_id: string): Promise<string> {
+        loads++;
+        return load.promise;
+      }
+    }
+    const service = new TestService();
+    const owner = service.getUser("1");
+    await Promise.resolve();
+    await Promise.resolve();
+    if (invalidation === "delete") await cache.delete(createCacheKey("users:getUser", ["2"]));
+    else await cache.invalidatePattern("sessions:*");
+    const waiter = service.getUser("1");
+    await Promise.resolve();
+    await Promise.resolve();
+    load.resolve("same-user");
+    await expect(Promise.all([owner, waiter])).resolves.toEqual(["same-user", "same-user"]);
+    expect(loads).toBe(1);
+  });
+
+  it.each(["undefined", "rejection"])(
+    "keeps an old %s outcome isolated from the new load",
+    async (outcome) => {
+      const oldLoad = deferred<string | undefined>();
+      const newLoad = deferred<string>();
+      const failure = new Error("old load failed");
+      let loads = 0;
+      class TestService {
+        @Cacheable({ store: cache, namespace: "users" })
+        async getUser(_id: string): Promise<string | undefined> {
+          loads++;
+          return loads === 1 ? oldLoad.promise : newLoad.promise;
+        }
+      }
+      const service = new TestService();
+      const oldResults = Promise.allSettled([service.getUser("1"), service.getUser("1")]);
+      await Promise.resolve();
+      await Promise.resolve();
+      await cache.clear();
+      const fresh = service.getUser("1");
+      await Promise.resolve();
+      await Promise.resolve();
+      expect(loads).toBe(2);
+      if (outcome === "undefined") oldLoad.resolve(undefined);
+      else oldLoad.reject(failure);
+      await expect(oldResults).resolves.toEqual(
+        outcome === "undefined"
+          ? [
+              { status: "fulfilled", value: undefined },
+              { status: "fulfilled", value: undefined },
+            ]
+          : [
+              { status: "rejected", reason: failure },
+              { status: "rejected", reason: failure },
+            ],
+      );
+      const waiter = service.getUser("1");
+      await Promise.resolve();
+      await Promise.resolve();
+      expect(loads).toBe(2);
+      newLoad.resolve("new-user");
+      await expect(Promise.all([fresh, waiter])).resolves.toEqual(["new-user", "new-user"]);
+      expect(await cache.get(createCacheKey("users:getUser", ["1"]))).toBe("new-user");
+    },
+  );
+
+  it.each([true, false])(
+    "preserves per-caller invalidation results when the decorator starts first: %s",
+    async (decoratorFirst) => {
+      const load = deferred<string>();
+      let loads = 0;
+      const loader = () => {
+        loads++;
+        return load.promise;
+      };
+      class TestService {
+        @Cacheable({ store: cache, namespace: "users" })
+        async getUser(_id: string): Promise<string> {
+          return loader();
+        }
+      }
+      const service = new TestService();
+      const key = createCacheKey("users:getUser", ["1"]);
+      const first = decoratorFirst ? service.getUser("1") : cache.getOrSet(key, loader);
+      const second = decoratorFirst ? cache.getOrSet(key, loader) : service.getUser("1");
+      await Promise.resolve();
+      await Promise.resolve();
+      await cache.delete(key);
+      load.resolve("original-user");
+      await expect(Promise.all([first, second])).resolves.toEqual(
+        decoratorFirst ? ["original-user", undefined] : [undefined, "original-user"],
+      );
+      expect(loads).toBe(1);
+      expect(await cache.get(key)).toBeUndefined();
+    },
+  );
 
   it("uses different cache keys for different arguments", async () => {
     let callCount = 0;

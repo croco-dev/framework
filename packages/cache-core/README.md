@@ -63,6 +63,12 @@ const user = await cache.getOrSet(
 );
 ```
 
+`delete()`, 일치하는 `invalidatePattern()`, `clear()`가 진행 중 로드를 무효화하면 그 로드는 캐시를
+다시 채우지 않습니다. 무효화 완료 후 시작한 읽기는 새 로드를 시작합니다. 기존 `getOrSet()` 호출은
+기본적으로 `undefined`를 받으며, `preserveInvalidatedValue: true`를 지정한 호출과 `@Cacheable` 호출은
+같은 세대의 기존 대기자까지 원래 로드 결과를 받습니다. 이 옵션은 새 캐시 값을 덮어쓰지 않습니다.
+사용자 정의 저장소는 `getOrSet()`에서 중복 로드와 무효화 세대, 이 옵션을 함께 처리해야 합니다.
+
 ### warmup과 패턴 무효화
 
 ```typescript

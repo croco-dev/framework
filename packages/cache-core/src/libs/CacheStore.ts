@@ -14,6 +14,8 @@ export type CacheStats = {
 export type CacheGetOrSetOptions = {
   /** Finite, non-negative lifetime in milliseconds. Zero expires immediately. */
   ttlMs?: number;
+  /** Return the original load result to existing callers after invalidation; never repopulate the cache. */
+  preserveInvalidatedValue?: boolean;
 };
 
 /**

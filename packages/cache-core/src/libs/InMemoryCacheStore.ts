@@ -14,8 +14,13 @@ type CacheEntry<V> = {
   expiresAt: number | null;
 };
 
+type LoadResult<V> = {
+  value: V | undefined;
+  invalidated: boolean;
+};
+
 type InFlightLoad<V> = {
-  promise: Promise<V | undefined>;
+  promise: Promise<LoadResult<V>>;
   state: {
     invalidated: boolean;
   };
@@ -204,16 +209,16 @@ export class InMemoryCacheStore<V = unknown> extends CacheStore<string, V> {
 
     const pending = this.inFlightLoads.get(key);
     if (pending !== undefined) {
-      return pending.promise;
+      return this.readLoadResult(pending.promise, options);
     }
 
     const loadState = {
       invalidated: false,
     };
-    let resolveLoad!: (value: V | undefined | PromiseLike<V | undefined>) => void;
+    let resolveLoad!: (result: LoadResult<V>) => void;
     let rejectLoad!: (reason?: unknown) => void;
 
-    const loadPromise = new Promise<V | undefined>((resolve, reject) => {
+    const loadPromise = new Promise<LoadResult<V>>((resolve, reject) => {
       resolveLoad = resolve;
       rejectLoad = reject;
     });
@@ -230,7 +235,7 @@ export class InMemoryCacheStore<V = unknown> extends CacheStore<string, V> {
         if (loadedValue !== undefined) {
           // Store was cleared/deleted during load — don't restore
           if (loadState.invalidated) {
-            resolveLoad(undefined);
+            resolveLoad({ value: loadedValue, invalidated: true });
             return;
           }
 
@@ -238,14 +243,14 @@ export class InMemoryCacheStore<V = unknown> extends CacheStore<string, V> {
           const currentEntry = this.store.get(key);
           if (currentEntry !== undefined && !this.isExpired(currentEntry)) {
             // 다른 set()이 저장한 값이 아직 유효하면 유지
-            resolveLoad(currentEntry.value);
+            resolveLoad({ value: currentEntry.value, invalidated: false });
             return;
           }
 
           await this.set(key, loadedValue, options.ttlMs);
         }
 
-        resolveLoad(loadedValue);
+        resolveLoad({ value: loadedValue, invalidated: false });
       } catch (error) {
         rejectLoad(error);
       } finally {
@@ -255,7 +260,7 @@ export class InMemoryCacheStore<V = unknown> extends CacheStore<string, V> {
       }
     })();
 
-    return loadPromise;
+    return this.readLoadResult(loadPromise, options);
   }
 
   async warmup(entries: ReadonlyArray<CacheWarmupEntry<string, V>>): Promise<void> {
@@ -273,6 +278,14 @@ export class InMemoryCacheStore<V = unknown> extends CacheStore<string, V> {
       ...this.stats,
       size: this.store.size,
     };
+  }
+
+  private async readLoadResult(
+    promise: Promise<LoadResult<V>>,
+    options: CacheGetOrSetOptions,
+  ): Promise<V | undefined> {
+    const result = await promise;
+    return result.invalidated && !options.preserveInvalidatedValue ? undefined : result.value;
   }
 
   private isExpired(entry: CacheEntry<V>): boolean {
