@@ -13,6 +13,7 @@ import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import {
   BaseStorageProvider,
   InvalidKeyProblem,
+  StorageOperationAbortedProblem,
   readStorageStream,
   validateSignedUrlExpiry,
 } from "@croco/storage-core";
@@ -105,6 +106,7 @@ export class S3StorageProvider extends BaseStorageProvider {
       Metadata: options?.metadata,
     };
     let uploadId: string | undefined;
+    let source: StorageStream | undefined;
     try {
       if (!(data instanceof Uint8Array) && typeof data?.getReader !== "function")
         throw new S3StorageProblem("invalid-body");
@@ -130,9 +132,8 @@ export class S3StorageProvider extends BaseStorageProvider {
             : data;
         const parts: { ETag: string; PartNumber: number }[] = [];
         // bindOperationSignal also cancels a source stalled between network requests.
-        for await (const Body of this.chunks(
-          this.bindOperationSignal(stream, options, "put", key),
-        )) {
+        source = this.bindOperationSignal(stream, options, "put", key);
+        for await (const Body of this.chunks(source)) {
           if (!uploadId) {
             const response = await this.client.send(new CreateMultipartUploadCommand(params), {
               abortSignal: options?.signal,
@@ -182,13 +183,9 @@ export class S3StorageProvider extends BaseStorageProvider {
       }
       this.assertOperationNotAborted(options, "put", key);
     } catch (error) {
-      if (uploadId) {
+      if (uploadId || source) {
         try {
-          // Never pass the cancelled signal: cleanup must finish before the host returns.
-          await this.client.send(
-            new AbortMultipartUploadCommand({ Bucket: params.Bucket, Key, UploadId: uploadId }),
-            { abortSignal: AbortSignal.timeout(this.options.cleanupTimeoutMs ?? 5000) },
-          );
+          await this.cleanupUpload(params.Key, error, uploadId, source, options?.signal);
         } catch (cleanupError) {
           throw new S3StorageProblem("put", {
             cleanupFailed: true,
@@ -201,10 +198,66 @@ export class S3StorageProvider extends BaseStorageProvider {
     }
   }
 
+  private async cleanupUpload(
+    Key: string,
+    failure: unknown,
+    uploadId?: string,
+    source?: StorageStream,
+    signal?: AbortSignal,
+  ): Promise<void> {
+    const controller = new AbortController();
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const deadline = new Promise<never>((_resolve, reject) => {
+      timer = setTimeout(() => {
+        const problem = new S3StorageProblem("cleanup-timeout");
+        controller.abort(problem);
+        reject(problem);
+      }, this.options.cleanupTimeoutMs ?? 5000);
+    });
+    try {
+      // Start remote cleanup before invoking application-owned source cancellation.
+      // Race the entire SDK promise: credential refresh also precedes HTTP signal handling.
+      const remote = uploadId
+        ? this.client.send(
+            new AbortMultipartUploadCommand({
+              Bucket: this.options.bucket,
+              Key,
+              UploadId: uploadId,
+            }),
+            { abortSignal: controller.signal },
+          )
+        : Promise.resolve();
+      const input = Promise.resolve()
+        .then(() => source?.cancel())
+        .catch((cause: unknown) => {
+          // Cancelling an already errored stream rejects with its original read failure.
+          // That is not an additional cleanup failure.
+          if (
+            cause !== failure &&
+            !(signal?.aborted && cause instanceof StorageOperationAbortedProblem)
+          )
+            throw cause;
+        });
+      const cleanup = Promise.allSettled([remote, input]).then((results) => {
+        const failures = results.filter((result) => result.status === "rejected");
+        if (failures.length)
+          throw new AggregateError(
+            failures.map((result) => result.reason),
+            "S3 cleanup failed",
+          );
+      });
+      await Promise.race([cleanup, deadline]);
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
   private async *chunks(stream: StorageStream): AsyncGenerator<Uint8Array> {
     let part = new Uint8Array(PART_BYTES);
     let used = 0;
-    for await (const chunk of stream) {
+    // Release the iterator lock without awaiting user-controlled cancellation.
+    // The outer failure handler owns both source and remote cleanup under one deadline.
+    for await (const chunk of stream.values({ preventCancel: true })) {
       if (!(chunk instanceof Uint8Array)) throw new S3StorageProblem("invalid-body");
       let offset = 0;
       while (offset < chunk.byteLength) {

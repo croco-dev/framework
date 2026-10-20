@@ -50,7 +50,7 @@ await runtime.dispose();
 
 5 MiB 이하 bytes는 PutObject를 사용합니다. 큰 bytes와 모든 비어 있지 않은 stream은 AWS multipart를 사용합니다. 순차 업로드이며 part buffer는 5 MiB입니다(호출자가 제공한 chunk의 메모리는 별도). 최대 10,000 parts, 약 48.8 GiB까지 지원합니다. 빈 stream은 빈 객체로 저장합니다. 최종 part를 제외하면 5 MiB이며 part ETag와 순서를 완료 요청에 보존합니다. SDK가 재시도 가능한 bytes 요청을 처리하며 소모된 입력 stream 전체를 재생하지 않습니다.
 
-실패·취소는 입력 stream을 닫고 AbortMultipartUpload를 기다린 뒤 반환합니다. 이미 취소된 signal을 cleanup에 전달하지 않습니다. cleanup에는 독립적인 5초 예산을 적용하며 `cleanupTimeoutMs`로 설정할 수 있습니다. Lambda deadline에는 이 정리 예산을 남겨야 합니다. cleanup 실패는 정상 취소나 성공으로 숨기지 않습니다. 프로세스 강제 종료나 AWS 장애에 대비해 bucket에 incomplete multipart lifecycle expiration을 운영자가 설정해야 합니다. versioning, KMS, retention, IAM, 삭제 복구는 AWS native 정책을 따릅니다.
+실패·취소는 입력 stream 취소와 AbortMultipartUpload를 시작하고 정리를 기다린 뒤 반환합니다. 입력의 cancel()이 끝나지 않아도 원격 정리를 먼저 시작합니다. 이미 취소된 signal을 cleanup에 전달하지 않습니다. credential 갱신과 입력 취소를 포함한 전체 cleanup에는 독립적인 5초 예산을 적용하며 `cleanupTimeoutMs`로 설정할 수 있습니다. Lambda deadline에는 이 정리 예산을 남겨야 합니다. cleanup 실패는 정상 취소나 성공으로 숨기지 않습니다. 프로세스 강제 종료나 AWS 장애에 대비해 bucket에 incomplete multipart lifecycle expiration을 운영자가 설정해야 합니다. versioning, KMS, retention, IAM, 삭제 복구는 AWS native 정책을 따릅니다.
 
 R2와 같은 SDK를 사용하더라도 AWS의 ACL·conditional write·multipart·ETag 의미를 R2에 복제하거나 보장하지 않습니다. Cloudinary 변환·upload intent도 S3 공통 기능으로 주장하지 않습니다.
 

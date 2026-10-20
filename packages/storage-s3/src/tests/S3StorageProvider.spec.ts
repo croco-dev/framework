@@ -286,6 +286,71 @@ describe("S3StorageProvider HTTP conformance", () => {
     }
   });
 
+  it.each(["source cancellation", "credential refresh"])(
+    "bounds cleanup when %s stalls before the HTTP request",
+    async (stall) => {
+      let release = () => {};
+      const blocked = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      let stallCredentials = false;
+      let credentialBlocked = false;
+      let sourceCancelled = false;
+      const p = new S3StorageProvider({
+        bucket: "fixture-bucket",
+        region: "ap-northeast-2",
+        endpoint: fixture.endpoint,
+        forcePathStyle: true,
+        cleanupTimeoutMs: 100,
+        credentials: async () => {
+          if (stallCredentials) {
+            credentialBlocked = true;
+            await blocked;
+          }
+          return { ...credentials, expiration: new Date(Date.now() + 1000) };
+        },
+      });
+      providers.push(p);
+      fixture.failPart = true;
+      fixture.onPart = () => {
+        stallCredentials = stall === "credential refresh";
+      };
+      const input = new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.enqueue(new Uint8Array(5 * 1024 * 1024));
+        },
+        cancel() {
+          sourceCancelled = true;
+          return stall === "source cancellation" ? blocked : undefined;
+        },
+      });
+      const operation = p.put(`blocked-${stall}`, input);
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      const guard = new Promise<never>((_resolve, reject) => {
+        timer = setTimeout(
+          () => reject(new Error("cleanup did not honor its 100 ms budget within 1 s")),
+          1000,
+        );
+      });
+      try {
+        await expect(Promise.race([operation, guard])).rejects.toMatchObject({
+          code: "STORAGE_S3_FAILED",
+          extensions: { details: { cleanupFailed: true } },
+        });
+        expect(sourceCancelled).toBe(true);
+        if (stall === "source cancellation") expect(fixture.uploads.size).toBe(0);
+        else expect(credentialBlocked).toBe(true);
+      } finally {
+        clearTimeout(timer);
+        release();
+        await operation.catch(() => {});
+        fixture.failPart = false;
+        fixture.onPart = undefined;
+        fixture.uploads.clear();
+      }
+    },
+  );
+
   it("rejects conditional overwrite and preserves the original object for small and multipart writes", async () => {
     const p = provider();
     const original = new Uint8Array([34, 9, 71]);

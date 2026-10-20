@@ -11,7 +11,7 @@
         "packages/storage-s3/src/index.ts": "5931cc668b9cbfa02c9c10c02fe61d2758c05aba1211849faf64cbcb87630290",
         "packages/storage-s3/src/libs/S3StoragePlugin.ts": "8630bb35e2baaa9d9942b09f73326f6cfe2022115cec61051f333eb5479f26c1",
         "packages/storage-s3/src/libs/S3StorageProblem.ts": "f7a5e16c2d9b84143815b54be027d83a82ad24d28213754aae68dfe2bb9d2d81",
-        "packages/storage-s3/src/libs/S3StorageProvider.ts": "80ca82c4ab1a2df5ee5d1c4bc138e4f63b4c63a86c66afb29285c7305046c6b4",
+        "packages/storage-s3/src/libs/S3StorageProvider.ts": "665523b811c619528dfeb1681fb9165e9515e045652b864e8d99d23a665c1932",
         "packages/storage-s3/src/libs/types.ts": "22ed43abf4f819818e5acca7968b69404d545663f102a638b91ae78735d69aad"
       },
       "catalogRuntimes": ["node", "lambda"],
