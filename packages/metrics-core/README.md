@@ -368,3 +368,20 @@ Page-instance observations or committed receipts without their matching view kee
 Gap propagation and the orphan/invalid-instance quality counters concern the selected page. An invalid instance containing that page remains quarantined even when it also contains another page; errors confined to a separate, unrelated page instance do not make the selected page unknown.
 
 Distinct subject coverage also includes relevant observations excluded from the funnel, such as missing session telemetry, quarantined instances and out-of-session rows. Known sessions outside the selected cohort remain excluded. Receipts preceding their matching view preserve the outcome but leave timing incomplete. Missing observation never fabricates a view, engagement or funnel conversion.
+
+## 고정 가격으로 MRR snapshot 계산
+
+`SubscriptionSnapshot`에는 `id`, `planId`와 필수 `pricingRef`를 전달합니다. `pricingRef`는
+과거 입력과 함께 보관하는 불변 가격 식별자이며 현재 유효한 plan을 가리키는 alias가 아닙니다.
+`PlanProvider.getPlanVersion(pricingRef)`는 실행 시각과 관계없이 같은 가격·통화·청구 주기를
+반환하고, 찾을 수 없으면 `null`을 반환해야 합니다. `PlanSnapshot.id`는 plan family ID입니다.
+
+`MrrCalculator`, `MetricsEngine.calculateMRR`, `SnapshotScheduler`는 이 참조만 사용합니다.
+참조 누락·조회 실패·plan family 불일치는 `SubscriptionPricingUnavailableProblem`
+(`metrics-core/subscription-pricing-unavailable`)으로 실패하며 현재 가격으로 대체하거나
+해당 구독을 제외하지 않습니다. 실패한 snapshot은 저장되지 않습니다. 원래 고정 가격 근거를
+복구한 뒤 재계산하세요. 기존 `{ id, planId }` 입력과 `getPlan(planId)` provider는 이 계약으로
+마이그레이션해야 합니다. 과거 참조를 모르면 현재 버전으로 채워 과거 가격으로 간주하지 마세요.
+
+Billing 구독은 `pricingRef: subscription.planVersionRef`로 매핑하고 `@croco/metrics-billing`의
+`BillingEventHandler`를 provider로 사용할 수 있습니다. metrics-core는 billing 타입에 의존하지 않습니다.

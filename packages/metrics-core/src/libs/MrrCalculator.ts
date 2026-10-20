@@ -1,7 +1,10 @@
 import type { Money, SubscriptionSnapshot } from "../types";
 
 import type { PlanProvider } from "./interfaces/PlanProvider";
-import { MixedCurrencyMRRProblem } from "./problems/MetricsProblems";
+import {
+  MixedCurrencyMRRProblem,
+  SubscriptionPricingUnavailableProblem,
+} from "./problems/MetricsProblems";
 
 /**
  * Calculator for Monthly Recurring Revenue (MRR).
@@ -15,7 +18,7 @@ export class MrrCalculator {
    * Calculate total MRR from active subscriptions.
    *
    * @param subscriptions - Active subscriptions to calculate MRR from
-   * @param planRegistry - Registry to look up plan pricing details
+   * @param planProvider - Provider resolving the subscription's immutable pricing reference
    * @returns Total MRR as Money value
    */
   async calculateMRR(
@@ -26,9 +29,15 @@ export class MrrCalculator {
     let currency: string | null = null;
 
     for (const subscription of subscriptions) {
-      const plan = await planProvider.getPlan(subscription.planId);
-      if (plan === null) {
-        continue;
+      if (
+        typeof subscription.pricingRef !== "string" ||
+        subscription.pricingRef.trim().length === 0
+      ) {
+        throw new SubscriptionPricingUnavailableProblem(subscription.id, subscription.pricingRef);
+      }
+      const plan = await planProvider.getPlanVersion(subscription.pricingRef);
+      if (plan === null || plan.id !== subscription.planId) {
+        throw new SubscriptionPricingUnavailableProblem(subscription.id, subscription.pricingRef);
       }
 
       const normalizedAmount = this.normalizeMRR(plan.amount, plan.interval, plan.intervalCount);

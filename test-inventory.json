@@ -4045,6 +4045,12 @@
       "owner": "@croco/metrics-billing"
     },
     {
+      "path": "packages/metrics-billing/src/tests/PinnedMrr.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/metrics-billing"
+    },
+    {
       "path": "packages/metrics-core/src/tests/ActivationCandidates.spec.ts",
       "lane": "fast",
       "qualifiers": [],

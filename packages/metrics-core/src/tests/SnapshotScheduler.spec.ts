@@ -15,6 +15,7 @@ describe("SnapshotScheduler", () => {
     {
       id: "sub_1",
       planId: "plan_pro",
+      pricingRef: "plan_pro",
     },
   ];
 
@@ -38,7 +39,7 @@ describe("SnapshotScheduler", () => {
     };
 
     mockPlanProvider = {
-      getPlan: vi.fn().mockResolvedValue({
+      getPlanVersion: vi.fn().mockResolvedValue({
         id: "plan_pro",
         amount: 2900,
         currency: "USD",

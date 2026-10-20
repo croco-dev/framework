@@ -7,13 +7,15 @@ title: "PlanProvider"
 
 ## Methods
 
-### getPlan()
+### getPlanVersion()
 
-> **getPlan**(`planId`): `Promise`\<[`PlanSnapshot`](/api/metrics-core/src/type-aliases/plansnapshot/) \| `null`\>
+> **getPlanVersion**(`pricingRef`): `Promise`\<[`PlanSnapshot`](/api/metrics-core/src/type-aliases/plansnapshot/) \| `null`\>
+
+Resolve an immutable pricing reference, independent of the current time. Return null if unavailable.
 
 #### Parameters
 
-##### planId
+##### pricingRef
 
 `string`
 

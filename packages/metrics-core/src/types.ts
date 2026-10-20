@@ -180,6 +180,8 @@ export type MetricsSnapshot = {
 export type SubscriptionSnapshot = {
   id: string;
   planId: string;
+  /** Immutable pricing identity retained with historical input; never a current-plan alias. */
+  pricingRef: string;
 };
 
 export type PlanSnapshot = {

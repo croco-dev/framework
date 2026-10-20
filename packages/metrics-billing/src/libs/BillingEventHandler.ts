@@ -1,6 +1,7 @@
 import {
   type BillingStore,
   OrderPaidEvent,
+  planVersionRef,
   PlanChangedEvent,
   type PlanRegistry,
   type PlanVersionRef,
@@ -52,19 +53,8 @@ export class BillingEventHandler
     }
   }
 
-  async getPlan(planId: string) {
-    const plan = await this.planRegistry.getPlan(planId);
-    if (plan === null) {
-      return null;
-    }
-
-    return {
-      id: plan.planId,
-      amount: plan.amount,
-      currency: plan.currency,
-      interval: plan.interval,
-      intervalCount: plan.intervalCount,
-    };
+  async getPlanVersion(pricingRef: string) {
+    return this.getPinnedPlan(planVersionRef(pricingRef));
   }
 
   private async getPinnedPlan(planVersionRef: PlanVersionRef) {
