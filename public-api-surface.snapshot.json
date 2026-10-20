@@ -23237,6 +23237,60 @@
           ]
         },
         {
+          "exportPath": "./apollo",
+          "kind": "code",
+          "targets": [
+            {
+              "conditions": ["types", "import"],
+              "target": "./dist/apollo.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
+              "target": "./dist/apollo.d.ts"
+            },
+            {
+              "conditions": ["import"],
+              "target": "./dist/apollo.mjs"
+            },
+            {
+              "conditions": ["require"],
+              "target": "./dist/apollo.js"
+            }
+          ],
+          "sourceEntrypoint": "packages/frontend-react/src/apollo.ts",
+          "runtimeExports": [
+            {
+              "name": "createApolloSession",
+              "exportKind": "named",
+              "source": "./libs/apolloSession",
+              "declarationKind": "function"
+            },
+            {
+              "name": "serializeApolloHydration",
+              "exportKind": "named",
+              "source": "./libs/apolloSession",
+              "declarationKind": "function"
+            }
+          ],
+          "typeExports": [
+            {
+              "name": "ApolloHydrationSelection",
+              "exportKind": "named",
+              "source": "./libs/apolloSession"
+            },
+            {
+              "name": "ApolloSession",
+              "exportKind": "named",
+              "source": "./libs/apolloSession"
+            },
+            {
+              "name": "ApolloSessionOptions",
+              "exportKind": "named",
+              "source": "./libs/apolloSession"
+            }
+          ]
+        },
+        {
           "exportPath": "./experience-slot",
           "kind": "code",
           "targets": [

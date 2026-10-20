@@ -8,6 +8,24 @@
       "owner": "repo:examples"
     },
     {
+      "path": "examples/apollo-ssr/src/tests/BrowserSsr.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "repo:examples"
+    },
+    {
+      "path": "examples/apollo-ssr/src/tests/GraphQLDocuments.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "repo:examples"
+    },
+    {
+      "path": "examples/apollo-ssr/src/tests/GraphQLHttp.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "repo:examples"
+    },
+    {
       "path": "examples/cancellation-flow/src/tests/RequestValidation.spec.ts",
       "lane": "fast",
       "qualifiers": [],
@@ -3170,6 +3188,12 @@
     },
     {
       "path": "packages/frontend-react/src/tests/AcquisitionCollector.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/frontend-react"
+    },
+    {
+      "path": "packages/frontend-react/src/tests/ApolloSession.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/frontend-react"

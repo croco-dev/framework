@@ -1,0 +1,22 @@
+fragment ProductCard on Product {
+  id
+  name
+}
+query ProductDetail($id: ID!, $variant: String!) {
+  product(id: $id) {
+    ...ProductCard
+    quote(variant: $variant) {
+      amount
+      currency
+    }
+  }
+}
+mutation Discount($id: ID!, $variant: String!) {
+  discount(id: $id, variant: $variant) {
+    id
+    quote(variant: $variant) {
+      amount
+      currency
+    }
+  }
+}

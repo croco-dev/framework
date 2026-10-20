@@ -1,0 +1,41 @@
+{
+  "name": "@croco-example/apollo-ssr",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "codegen": "node codegen.mjs",
+    "codegen:check": "node codegen.mjs --check",
+    "build": "pnpm codegen:check && vite build && vite build --ssr src/server.ts --outDir dist/server",
+    "serve": "NODE_ENV=production node dist/server/server.js",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "lint": "oxlint .",
+    "test:browser": "node browser-check.mjs",
+    "test:evidence": "pnpm run test --maxWorkers=1 --reporter=json --outputFile=.turbo/croco-test-evidence.json"
+  },
+  "dependencies": {
+    "@apollo/client": "4.3.3",
+    "@croco/framework-context": "workspace:*",
+    "@croco/frontend-react": "workspace:*",
+    "@croco/problems-core": "workspace:*",
+    "@croco/protocols-graphql": "workspace:*",
+    "@croco/transports-graphql": "workspace:*",
+    "graphql": "^16.12.0",
+    "react": "19.2.6",
+    "react-dom": "19.2.6",
+    "rxjs": "^7.8.2"
+  },
+  "devDependencies": {
+    "@graphql-codegen/core": "6.2.2",
+    "@graphql-codegen/typed-document-node": "7.2.0",
+    "@graphql-codegen/typescript": "6.1.2",
+    "@graphql-codegen/typescript-operations": "6.1.10",
+    "@graphql-typed-document-node/core": "3.2.0",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "typescript": "^6.0.3",
+    "vite": "^6.4.3",
+    "vitest": "4.1.8"
+  }
+}

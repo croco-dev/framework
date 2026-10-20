@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "frontend-react",
+      "classification": "protocol-render",
+      "reason": "Opt-in native Apollo request ownership, explicit selected-query hydration and credential-restricted HTTP. Buffered Node SSR example; no Flight or incremental transport integration.",
+      "files": {
+        "packages/frontend-react/package.json": "d2052017ee4bdfa5f9fc76a32d6076c048bf5a1ff0903f00df06949846fd9a3b",
+        "packages/frontend-react/src/apollo.ts": "737527471d790a83b3fc7f628f2f4f7fc6d7e663519e8293d9efada0ba8ec102",
+        "packages/frontend-react/src/libs/apolloSession.ts": "19d81863ed933507cf89e5c45218a602edfd562ef8b028553ad7d1378858aa56"
+      },
+      "catalogRuntimes": ["browser", "node"],
+      "profiles": {
+        "kubernetes": {
+          "result": "supported",
+          "reason": "The opt-in session and buffered production SSR artifact execute on the Node Host in the local browser fixture; a live Kubernetes cluster is not certified.",
+          "providers": ["@croco/frontend-react/apollo"],
+          "constraints": [
+            "Per-request client/cache, dispose in finally; no global request cache.",
+            "No live Kubernetes deployment, certification or streaming/RSC evidence."
+          ],
+          "references": [
+            "packages/frontend-react/README.md",
+            "examples/apollo-ssr/README.md",
+            "examples/apollo-ssr/src/tests/BrowserSsr.spec.ts"
+          ],
+          "evidence": {
+            "kind": "host-runtime",
+            "runtime": "node",
+            "path": "examples/apollo-ssr/src/tests/BrowserSsr.spec.ts",
+            "testName": "BrowserSsr hydrates the production build and isolates a late response after identity change on desktop and mobile",
+            "sha256": "308fa527a720b78f53d02c0e5b57bcfe5a196a3b258a1db315284a13067d9b89"
+          }
+        },
+        "aws-lambda": {
+          "result": "unverified",
+          "reason": "No Lambda SSR integration or invocation test is supplied.",
+          "providers": ["@croco/frontend-react/apollo"],
+          "constraints": [
+            "No Lambda runtime claim; invocation adapter and cleanup evidence required."
+          ],
+          "references": ["packages/frontend-react/README.md"]
+        },
+        "cloudflare": {
+          "result": "unverified",
+          "reason": "No Worker SSR integration or execution test is supplied.",
+          "providers": ["@croco/frontend-react/apollo"],
+          "constraints": ["No Worker runtime claim; Node example is not a Worker isolate."],
+          "references": ["packages/frontend-react/README.md"]
+        }
+      }
+    }
+  ]
+}
