@@ -40,6 +40,9 @@ try {
   page.on("console", (m) => {
     if (m.type() === "error") errors.push(m.text());
   });
+  const prefetch = await page.request.get(origin);
+  expect(prefetch.headers()["x-page-experience-queued"]).toBe("0");
+  expect(await prefetch.text()).toContain("Product preview");
   await page.goto(origin);
   await expect(page.getByRole("heading", { name: "Page experience", exact: true })).toBeVisible();
   await expect(page.getByText("2 / 3 · 66.7%", { exact: true })).toBeVisible();
@@ -61,6 +64,25 @@ try {
       ),
     )
     .toBe(1);
+  await page.getByRole("button", { name: "Next product" }).click();
+  await page.getByRole("button", { name: "Preview product" }).click();
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () => window.pageExperienceFixture.observations.filter((r) => r.kind === "view").length,
+      ),
+    )
+    .toBe(2);
+  expect(
+    await page.evaluate(
+      () =>
+        new Set(
+          window.pageExperienceFixture.observations
+            .filter((r) => r.kind === "view")
+            .map((r) => r.pageInstance),
+        ).size,
+    ),
+  ).toBe(2);
   await page.getByRole("button", { name: "Refresh report" }).focus();
   await page.keyboard.press("Enter");
   await expect(page.getByText("2 / 3 · 66.7%", { exact: true })).toBeVisible();
@@ -98,7 +120,7 @@ try {
   }
   expect(errors).toEqual([]);
   console.log(
-    "Page experience: StrictMode view/content uniqueness, registered counts, keyboard refresh, seven states, desktop/mobile overflow and console checks passed. Screenshots are in the OS temporary directory: croco-2850-{ready,partial}-{1440,390}.png",
+    "Page experience: SSR/prefetch zero views, hydration/StrictMode uniqueness, SPA navigation identity, registered counts, keyboard refresh, seven states, desktop/mobile overflow and console checks passed. Screenshots are in the OS temporary directory: croco-2850-{ready,partial}-{1440,390}.png",
   );
 } finally {
   await browser?.close();

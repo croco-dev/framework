@@ -253,6 +253,12 @@ export async function registerPageExperienceQuery(options: {
       signal.throwIfAborted();
       const loaded = structuredClone(await load(context, signal));
       signal.throwIfAborted();
+      requirePageExperience(
+        loaded.quality.validity === "valid" &&
+          loaded.quality.exactness === "exact" &&
+          loaded.quality.reproducibility === "reproducible",
+        "query-source-quality",
+      );
       const bytes = new TextEncoder().encode(JSON.stringify(loaded.rows)).length;
       requirePageExperience(
         loaded.rows.length <= declaration.limits.maxRows && bytes <= declaration.limits.maxBytes,

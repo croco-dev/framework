@@ -4147,6 +4147,12 @@
       "owner": "@croco/metrics-core"
     },
     {
+      "path": "packages/metrics-core/src/tests/PageExperienceSourceQuality.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/metrics-core"
+    },
+    {
       "path": "packages/metrics-core/src/tests/PolicyReplay.spec.ts",
       "lane": "fast",
       "qualifiers": [],

@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { createServer } from "node:http";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -6,6 +7,7 @@ import { createRequire } from "node:module";
 import { build } from "tsup";
 import { calculatePageExperience, importGa4Engagement } from "@croco/metrics-core";
 import { fixture } from "./fixture";
+import type * as FixtureRenderer from "./render";
 async function main() {
   const directory = await mkdtemp(join(tmpdir(), "croco-page-experience-"));
   await build({
@@ -25,6 +27,26 @@ async function main() {
       };
     },
   });
+  await build({
+    entry: [resolve("src/render.ts")],
+    outDir: directory,
+    format: ["cjs"],
+    platform: "node",
+    noExternal: [/.*/],
+    dts: false,
+    config: false,
+    outExtension: () => ({ js: ".cjs" }),
+    esbuildOptions(options) {
+      const appRequire = createRequire(resolve("package.json"));
+      options.alias = {
+        react: dirname(appRequire.resolve("react/package.json")),
+        "react-dom": dirname(appRequire.resolve("react-dom/package.json")),
+      };
+    },
+  });
+  const { renderFixture } = createRequire(resolve("package.json"))(
+    join(directory, "render.cjs"),
+  ) as typeof FixtureRenderer;
   const server = createServer(async (req, res) => {
     const url = new URL(req.url ?? "/", "http://127.0.0.1");
     if (url.pathname === "/browser.js") {
@@ -53,9 +75,12 @@ async function main() {
       res.end(JSON.stringify({ kind: partial ? "partial" : "ready", report, ga4 }));
       return;
     }
-    res.setHeader("Content-Type", "text/html");
+    const seed = randomUUID();
+    const { html, queued } = renderFixture(seed);
+    res.setHeader("X-Page-Experience-Queued", queued);
+    res.setHeader("Content-Type", "text/html; charset=utf-8");
     res.end(
-      '<!doctype html><html lang="en"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Page experience fixture</title><div id="root"></div><script src="/browser.js"></script></html>',
+      `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Page experience fixture</title><div id="root" data-instance="${seed}">${html}</div><script src="/browser.js"></script></html>`,
     );
   });
   server.listen(Number(process.env.PORT ?? 4395), "127.0.0.1", () =>

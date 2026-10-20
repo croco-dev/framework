@@ -29,6 +29,10 @@ One explicit instance per real navigation, retained outside a StrictMode effect.
 
 () => `boolean`
 
+#### engagementActions
+
+readonly `string`[]
+
 #### maxAttempts
 
 `number`
@@ -36,6 +40,10 @@ One explicit instance per real navigation, retained outside a StrictMode effect.
 #### maxBuffer
 
 `number`
+
+#### monotonic
+
+() => `number`
 
 #### page
 
@@ -48,6 +56,10 @@ One explicit instance per real navigation, retained outside a StrictMode effect.
 #### send
 
 (`rows`) => `Promise`\<`void`\>
+
+#### valueAction
+
+`string`
 
 #### visible
 

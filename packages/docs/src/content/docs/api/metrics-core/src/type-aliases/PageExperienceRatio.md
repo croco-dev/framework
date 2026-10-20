@@ -21,6 +21,12 @@ title: "PageExperienceRatio"
 
 ---
 
+### unobserved
+
+> **unobserved**: `number`
+
+---
+
 ### value
 
 > **value**: `number` \| `null`
