@@ -40,7 +40,7 @@ export default function PdpClient({
           }}
         />
       ) : (
-        <p data-experiment-copy="disabled">Explore the print</p>
+        <p data-experiment-copy="disabled">Explore the orbital details</p>
       )}
       <button
         id="trial-cta"

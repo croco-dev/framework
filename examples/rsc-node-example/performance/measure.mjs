@@ -225,6 +225,7 @@ try {
           noOverflow: document.documentElement.scrollWidth <= innerWidth,
           recommendation: document.getElementById("recommendation").textContent,
           cacheSource: document.getElementById("recommendation").dataset.cacheSource,
+          description: document.getElementById("description").textContent,
           experimentCopy: document.querySelector("[data-experiment-copy]").textContent,
           cacheEvents: JSON.parse(document.getElementById("pdp-cache-events").textContent),
           diagnostics: JSON.parse(document.getElementById("pdp-diagnostics").textContent),
@@ -281,7 +282,14 @@ try {
           JSON.parse(state.snapshot).decision?.status === "assigned" &&
           state.experimentCopy === JSON.parse(state.snapshot).decision?.value;
       state.errors = errors;
-      state.conditions = { ...conditionsBase, user, viewport, cache, repetition };
+      state.conditions = {
+        ...conditionsBase,
+        user,
+        viewport,
+        cache,
+        repetition,
+        content: { title, description: state.description, supportingCopy: state.experimentCopy },
+      };
       if (!fault && repetition === 0) {
         state.screenshot = join(output, `${configuration}-${cache}-${viewport.width}.png`);
         await page.screenshot({ path: state.screenshot, fullPage: true });
