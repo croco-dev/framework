@@ -2,8 +2,8 @@ import { createElement } from "react";
 import { renderToString } from "react-dom/server";
 import { ApolloProvider } from "@apollo/client/react";
 import { prerenderStatic } from "@apollo/client/react/ssr";
-import { ProblemFactory } from "@croco/problems-core";
 import { gql } from "@apollo/client";
+import { ProblemFactory } from "@croco/problems-core";
 import { createApolloSession } from "@croco/frontend-react/apollo";
 import { App } from "./App";
 

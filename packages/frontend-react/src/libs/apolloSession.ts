@@ -1,6 +1,6 @@
 import { ApolloClient, ApolloLink, HttpLink, InMemoryCache } from "@apollo/client";
-import { ProblemFactory } from "@croco/problems-core";
 import { tap } from "rxjs";
+import { ProblemFactory } from "@croco/problems-core";
 
 import type { InMemoryCacheConfig, NormalizedCacheObject } from "@apollo/client";
 

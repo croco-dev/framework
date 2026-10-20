@@ -8,7 +8,7 @@
       "files": {
         "packages/frontend-react/package.json": "d2052017ee4bdfa5f9fc76a32d6076c048bf5a1ff0903f00df06949846fd9a3b",
         "packages/frontend-react/src/apollo.ts": "90473ff82a4ceab3d6c7ce8efae0fe503f457b4bc86830cf1350b39aa7d49dfa",
-        "packages/frontend-react/src/libs/apolloSession.ts": "3dbc01c5e8cb70fa5fbcd2a61b63e99e90a14decf269f93f960a39b6644ff5b1"
+        "packages/frontend-react/src/libs/apolloSession.ts": "f04d9c2b6389699d778cda0f617c5a5b27f11298d18efd05708f52ae52bf980d"
       },
       "catalogRuntimes": ["browser", "node"],
       "profiles": {
