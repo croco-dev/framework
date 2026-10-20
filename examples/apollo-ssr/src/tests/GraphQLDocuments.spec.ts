@@ -35,9 +35,12 @@ function negativeTypes(client: ApolloClient) {
   void client
     .query({ query: ProductDetailDocument, variables: { id: "p1", variant: "member" } })
     .then((result) => {
-      // @ts-expect-error custom Money output is a string; product/quote are nullable
-      const amount: number = result.data.product.quote.amount;
-      return amount;
+      const value = result.data?.product?.quote?.amount;
+      // @ts-expect-error Money output cannot become a number, independently of nullability
+      const amount: number | undefined = value;
+      // @ts-expect-error nullable GraphQL results cannot be dereferenced without checking
+      const unchecked = result.data.product.quote.amount;
+      return { amount, unchecked };
     });
 }
 void negativeTypes;

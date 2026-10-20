@@ -50,22 +50,27 @@ describe("package-entrypoint-smoke.mts", () => {
   });
 
   it.each([
+    ["frontend-react", ["@apollo/client", "graphql", "rxjs"]],
     ["etl-core", ["@croco/batch-core", "@croco/execution-core", "@croco/warehouse-core"]],
     [
       "warehouse-postgres",
       ["@croco/etl-core", "@croco/execution-core", "@croco/execution-drizzle", "drizzle-orm", "pg"],
     ],
-  ] as const)("installs selected optional pipeline peers for %s entrypoints", (name, peers) => {
+  ] as const)("installs selected optional peers for %s entrypoints", (name, peers) => {
     const root = createTempRoot();
     for (const peer of peers.filter((peer) => peer.startsWith("@croco/"))) {
       writeImportablePackage(root, peer.slice("@croco/".length));
     }
+    const externalPeerVersions: Readonly<Record<string, string>> = {
+      "@apollo/client": "4.3.3",
+      graphql: "16.12.0",
+      rxjs: "7.8.2",
+      "drizzle-orm": "^0.45.2",
+      pg: "8.22.0",
+    };
     writeImportablePackage(root, name, {
       peerDependencies: Object.fromEntries(
-        peers.map((peer) => [
-          peer,
-          peer === "drizzle-orm" ? "^0.45.2" : peer === "pg" ? "8.22.0" : "0.0.0",
-        ]),
+        peers.map((peer) => [peer, externalPeerVersions[peer] ?? "0.0.0"]),
       ),
       peerDependenciesMeta: Object.fromEntries(peers.map((peer) => [peer, { optional: true }])),
       cjsContent:

@@ -70,7 +70,7 @@ describe("ApolloSession", () => {
       data("26.00"),
     );
     expect(b.client.readQuery({ query, variables: { variant: "member" } })).toEqual(data("31.00"));
-    expect(Object.keys(a.client.cache.extract())).toContain("Product:p1");
+    expect(a.client.cache.extract()).toHaveProperty("Product:p1");
     a.dispose();
     b.dispose();
   });

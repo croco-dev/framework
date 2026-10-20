@@ -8,7 +8,7 @@
       "files": {
         "packages/frontend-react/package.json": "d2052017ee4bdfa5f9fc76a32d6076c048bf5a1ff0903f00df06949846fd9a3b",
         "packages/frontend-react/src/apollo.ts": "90473ff82a4ceab3d6c7ce8efae0fe503f457b4bc86830cf1350b39aa7d49dfa",
-        "packages/frontend-react/src/libs/apolloSession.ts": "76f6c967fa3607bb17424b7aae06118c74337cfeaad227d3c29ef631d2d2d1d9"
+        "packages/frontend-react/src/libs/apolloSession.ts": "3dbc01c5e8cb70fa5fbcd2a61b63e99e90a14decf269f93f960a39b6644ff5b1"
       },
       "catalogRuntimes": ["browser", "node"],
       "profiles": {
@@ -48,6 +48,47 @@
           "providers": ["@croco/frontend-react/apollo"],
           "constraints": ["No Worker runtime claim; Node example is not a Worker isolate."],
           "references": ["packages/frontend-react/README.md"]
+        }
+      }
+    },
+    {
+      "package": "problems-core",
+      "classification": "pure-contract",
+      "reason": "Generated metadata includes the opt-in Apollo diagnostics; this changes no Host, storage or lifecycle behavior.",
+      "files": {
+        "packages/problems-core/src/generated/problem-code-registry.ts": "11693e5cf5aa55efc4dac3193fb8409ada394d6632798eba885f1d2b533be719"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "The generated diagnostic code catalog is static provider-neutral data with no infrastructure capability, persistence or lifecycle dependency.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "docs/problem-code-registry.json"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "The generated diagnostic code catalog is static provider-neutral data with no infrastructure capability, persistence or lifecycle dependency.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "docs/problem-code-registry.json"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "The generated diagnostic code catalog is static provider-neutral data with no infrastructure capability, persistence or lifecycle dependency.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "docs/problem-code-registry.json"
+          ]
         }
       }
     }

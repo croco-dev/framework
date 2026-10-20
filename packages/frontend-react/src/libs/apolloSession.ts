@@ -36,10 +36,7 @@ export function createApolloSession(options: ApolloSessionOptions): ApolloSessio
   try {
     endpoint = new URL(options.endpoint);
   } catch {
-    throw ProblemFactory.badRequest(
-      "frontend-react/apollo-endpoint",
-      "Apollo requires an absolute HTTP endpoint.",
-    );
+    throw invalidEndpoint();
   }
   if (
     !["http:", "https:"].includes(endpoint.protocol) ||
@@ -49,10 +46,7 @@ export function createApolloSession(options: ApolloSessionOptions): ApolloSessio
     !options.allowedOrigins.includes(endpoint.origin) ||
     !owner
   ) {
-    throw ProblemFactory.badRequest(
-      "frontend-react/apollo-endpoint",
-      "Apollo requires a trusted HTTP endpoint and cache owner.",
-    );
+    throw invalidEndpoint();
   }
   const transport = options.fetch ?? globalThis.fetch;
   const lifetime = new AbortController();
@@ -60,11 +54,7 @@ export function createApolloSession(options: ApolloSessionOptions): ApolloSessio
   const headers = new Headers(options.headers);
   const cache = new InMemoryCache(cacheConfig);
   if (options.hydration !== undefined) {
-    if (ownership !== "client")
-      throw ProblemFactory.badRequest(
-        "frontend-react/apollo-server-hydration",
-        "Server-only owners cannot restore browser hydration.",
-      );
+    if (ownership !== "client") throw serverHydrationProblem();
     let state: unknown;
     try {
       state = JSON.parse(options.hydration);
@@ -136,11 +126,7 @@ export function createApolloSession(options: ApolloSessionOptions): ApolloSessio
     client,
     owner: owner,
     extract() {
-      if (ownership !== "client")
-        throw ProblemFactory.badRequest(
-          "frontend-react/apollo-server-hydration",
-          "Server-only owners cannot export browser hydration.",
-        );
+      if (ownership !== "client") throw serverHydrationProblem();
       if (hydrationFailed) {
         throw ProblemFactory.badRequest(
           "frontend-react/apollo-failed-hydration",
@@ -191,21 +177,34 @@ function assertJson(value: unknown, ancestors = new Set<object>()): void {
       Object.getPrototypeOf(value) !== Object.prototype &&
       Object.getPrototypeOf(value) !== null)
   ) {
-    throw ProblemFactory.badRequest(
-      "frontend-react/apollo-hydration-value",
-      "Hydration accepts finite plain JSON values only.",
-    );
+    throw invalidHydrationValue();
   }
   ancestors.add(value);
   for (const [key, descriptor] of Object.entries(Object.getOwnPropertyDescriptors(value))) {
     if (Array.isArray(value) && key === "length") continue;
     if (["__proto__", "constructor", "prototype"].includes(key) || !("value" in descriptor)) {
-      throw ProblemFactory.badRequest(
-        "frontend-react/apollo-hydration-value",
-        "Hydration cannot contain accessors or prototype keys.",
-      );
+      throw invalidHydrationValue();
     }
     assertJson(descriptor.value, ancestors);
   }
   ancestors.delete(value);
+}
+
+function invalidEndpoint() {
+  return ProblemFactory.badRequest(
+    "frontend-react/apollo-endpoint",
+    "Apollo requires an absolute trusted HTTP endpoint and cache owner.",
+  );
+}
+function serverHydrationProblem() {
+  return ProblemFactory.badRequest(
+    "frontend-react/apollo-server-hydration",
+    "Server-only owners cannot export or restore browser hydration.",
+  );
+}
+function invalidHydrationValue() {
+  return ProblemFactory.badRequest(
+    "frontend-react/apollo-hydration-value",
+    "Hydration accepts finite plain JSON without accessors or prototype keys.",
+  );
 }
