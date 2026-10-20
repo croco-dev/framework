@@ -98,7 +98,6 @@ const documentManifest = JSON.stringify({
   clientManifestVersion,
 }).replace(/</g, "\\u003c");
 
-let releaseBlocking;
 let deferredRelease;
 let deferredGate;
 const httpServer = createServer(async (nodeRequest, nodeResponse) => {
@@ -126,18 +125,9 @@ const httpServer = createServer(async (nodeRequest, nodeResponse) => {
       return;
     }
     if (url.pathname === "/lab/blocking-fetch") {
-      nodeResponse.writeHead(200, { "content-type": "text/plain" });
-      nodeResponse.flushHeaders();
-      await new Promise((resolve) => {
-        releaseBlocking = resolve;
-      });
+      // Intentional, bounded negative control: a real awaited upstream fetch.
+      await new Promise((resolve) => setTimeout(resolve, 1800));
       nodeResponse.end("released");
-      return;
-    }
-    if (url.pathname === "/lab/release" && nodeRequest.method === "POST") {
-      releaseBlocking?.();
-      nodeResponse.writeHead(204);
-      nodeResponse.end();
       return;
     }
     if (url.pathname === "/favicon.ico") {

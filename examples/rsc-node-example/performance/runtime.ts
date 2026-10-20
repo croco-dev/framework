@@ -95,6 +95,10 @@ export async function loadPdp(request: Request) {
   const experimented = configuration === "experiment" || configuration === "combined";
   const user = request.headers.get("cookie")?.includes("lab-user=bob") ? "bob" : "alice";
   const started = performance.now();
+  if (url.searchParams.get("fault") === "blocking") {
+    const upstream = await fetch(new URL("/lab/blocking-fetch", request.url));
+    await upstream.text();
+  }
   const publicReads: { name: string; startMs: number; endMs: number }[] = [];
   async function readPublic(name: string) {
     const startMs = performance.now() - started;

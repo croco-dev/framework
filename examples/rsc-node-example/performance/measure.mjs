@@ -164,7 +164,7 @@ try {
               : html.replaceAll("Saved inspiration for alice", "Saved inspiration for bob"),
         });
       });
-    const url = `${origin}/products/orbit?configuration=${configuration}${fault === "personalization" ? "&fault=personalization" : ""}`;
+    const url = `${origin}/products/orbit?configuration=${configuration}${fault === "personalization" || fault === "blocking" ? `&fault=${fault}` : ""}`;
     let initialResponse;
     try {
       if (cache === "warm") {
@@ -345,36 +345,10 @@ try {
     );
     negativeControls[fault] = { sample, verdict };
   }
-  // Inject a blocking fetch into the real navigation. The controlled server response is
-  // released after a measured interval; no healthy result depends on a sleep threshold.
-  const blockingContext = await browser.newContext({ viewport: profile.viewport });
-  const blockingPage = await blockingContext.newPage();
-  await blockingPage.route("**/products/orbit?**", async (route) => {
-    const blocked = performance.now();
-    const pending = await fetch(`${origin}/lab/blocking-fetch`);
-    const release = setTimeout(() => {
-      void fetch(`${origin}/lab/release`, { method: "POST" });
-    }, 1800);
-    try {
-      await pending.text();
-    } finally {
-      clearTimeout(release);
-    }
-    negativeControls.blockingFetchWaitMs = performance.now() - blocked;
-    await route.continue();
-  });
-  const navigation = blockingPage.goto(`${origin}/products/orbit?configuration=baseline`);
-  try {
-    await navigation;
-    const ttfbMs = await blockingPage.evaluate(
-      () => performance.getEntriesByType("navigation")[0].responseStart,
-    );
-    const verdict = assess({ ...baseline, ttfbMs }, baseline);
-    assert.ok(verdict.diagnostics.includes("PDP_REGRESSION:ttfbMs"));
-    negativeControls.blocking = { ttfbMs, verdict };
-  } finally {
-    await blockingContext.close();
-  }
+  const blockingSample = await measure("baseline", "cold", 0, { fault: "blocking" });
+  const blockingVerdict = assess(blockingSample, baseline);
+  assert.ok(blockingVerdict.diagnostics.includes("PDP_REGRESSION:ttfbMs"));
+  negativeControls.blocking = { sample: blockingSample, verdict: blockingVerdict };
   for (const fault of ["hydration", "private"]) {
     const sample = await measure("combined", "cold", 0, { fault });
     const verdict = assess(sample, baseline);
