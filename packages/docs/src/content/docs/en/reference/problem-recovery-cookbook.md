@@ -6137,7 +6137,7 @@ Sources:
 
 Sources:
 
-- `packages/analytics-core/src/libs/PageExperienceCollection.ts:25:1` (problem-class)
+- `packages/analytics-core/src/libs/PageExperienceCollection.ts:29:1` (problem-class)
 
 <a id="architecture-policy-manifest-json-parse"></a>
 

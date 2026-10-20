@@ -7671,7 +7671,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/analytics-core/src/libs/PageExperienceCollection.ts";
-          readonly line: 25;
+          readonly line: 29;
           readonly column: 1;
           readonly kind: "problem-class";
         },
@@ -40668,7 +40668,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/analytics-core/src/libs/PageExperienceCollection.ts",
-          line: 25,
+          line: 29,
           column: 1,
           kind: "problem-class",
         },

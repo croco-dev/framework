@@ -164,7 +164,7 @@
       "classification": "pure-contract",
       "reason": "Generated Problem code declarations register the new page-experience validation failures. This adds typed identifiers and recovery metadata without any Host, storage or lifecycle behavior.",
       "files": {
-        "packages/problems-core/src/generated/problem-code-registry.ts": "1def420a1281b62ab3fba7da2bbee98b23679d74c938a514159c71fb2bf8ee3d"
+        "packages/problems-core/src/generated/problem-code-registry.ts": "bea8a8b4d917ae691a0e27d310de92deac953e3ded33281421f66713362c4ea9"
       },
       "catalogRuntimes": [],
       "profiles": {
