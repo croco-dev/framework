@@ -184,8 +184,8 @@
     },
     {
       "package": "transports-http",
-      "classification": "internal-pure-refactor",
-      "reason": "The existing query normalization is shared with operation bindings without changing legacy controller parsing or host lifecycle.",
+      "classification": "protocol-render",
+      "reason": "Share schema-aware query cardinality validation with operation bindings. HTTP failure status and domain parsing policy remain unchanged; this pure query-input projection changes no host capabilities, storage or lifecycle.",
       "files": {
         "packages/transports-http/src/libs/ParamResolver.ts": "63e033b5643dd9b5b7fadfe87641cf487de5122be0e371f6ce41e95a16f44f4a"
       },
@@ -193,7 +193,7 @@
       "profiles": {
         "kubernetes": {
           "result": "not-applicable",
-          "reason": "The existing query normalization is shared with operation bindings without changing legacy controller parsing or host lifecycle.",
+          "reason": "Query cardinality projection is pure schema/input logic. It adds no host capabilities, storage, connections or lifecycle behavior.",
           "providers": [],
           "constraints": [
             "No deployment host behavior, provider certification or production infrastructure claim changes."
@@ -202,7 +202,7 @@
         },
         "aws-lambda": {
           "result": "not-applicable",
-          "reason": "The existing query normalization is shared with operation bindings without changing legacy controller parsing or host lifecycle.",
+          "reason": "Query cardinality projection is pure schema/input logic. It adds no host capabilities, storage, connections or lifecycle behavior.",
           "providers": [],
           "constraints": [
             "No deployment host behavior, provider certification or production infrastructure claim changes."
@@ -211,7 +211,7 @@
         },
         "cloudflare": {
           "result": "not-applicable",
-          "reason": "The existing query normalization is shared with operation bindings without changing legacy controller parsing or host lifecycle.",
+          "reason": "Query cardinality projection is pure schema/input logic. It adds no host capabilities, storage, connections or lifecycle behavior.",
           "providers": [],
           "constraints": [
             "No deployment host behavior, provider certification or production infrastructure claim changes."

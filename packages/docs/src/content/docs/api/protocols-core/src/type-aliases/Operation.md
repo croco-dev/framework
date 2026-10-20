@@ -35,9 +35,10 @@ title: "Operation"
 
 ### dispatch
 
-> `readonly` **dispatch**: (`context`, `readInput`) => `Promise`\<`z.output`\<`Output`\>\>
+> `readonly` **dispatch**: (`context`, `readInput`, `inputEncoding?`) => `Promise`\<`z.output`\<`Output`\>\>
 
 Adapter boundary: authorization completes before the untrusted input source is read.
+Query encoding retains schema-aware repeated-value selection before domain parsing.
 
 #### Parameters
 
@@ -48,6 +49,10 @@ Adapter boundary: authorization completes before the untrusted input source is r
 ##### readInput
 
 () => `unknown` \| `Promise`\<`unknown`\>
+
+##### inputEncoding?
+
+`"query"`
 
 #### Returns
 
