@@ -153,6 +153,18 @@ describe.skipIf(!enabled)("PostgreSQL reader transfer and cancellation", () => {
     const controller = new AbortController();
     const result = reader(pool).read({ ...request(), signal: controller.signal });
     await executing;
+    await expect
+      .poll(
+        async () =>
+          (
+            await connection.query(
+              "SELECT wait_event FROM pg_stat_activity WHERE pid=$1 AND state='active'",
+              [pid],
+            )
+          ).rows[0]?.wait_event,
+        { timeout: 3000 },
+      )
+      .toBe("PgSleep");
     controller.abort();
     await expect(result).rejects.toThrow("WAREHOUSE_READ_CANCELLED");
     expect(released).toHaveBeenCalledExactlyOnceWith(true);
