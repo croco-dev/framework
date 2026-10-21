@@ -245,6 +245,8 @@ export function createSeoWorkbench(options: SeoWorkbenchOptions) {
         return { kind: "unavailable", code: "SEO_REPORT_STALE" };
       const result = page(masked(current, scope), offset, limit);
       await access("seo.read", scope, signal);
+      if (!(Date.parse(record.expiresAt) > options.now().getTime()))
+        return { kind: "unavailable", code: "SEO_REPORT_EXPIRED" };
       return { kind: current.state, page: result };
     },
     async export(

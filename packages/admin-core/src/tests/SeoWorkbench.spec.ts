@@ -311,6 +311,85 @@ describe("SeoWorkbench unavailable period source", () => {
 });
 
 describe("SeoWorkbench saved report release authority", () => {
+  it.each([
+    { releaseAt: "2026-10-20T00:00:00.999Z", expired: false },
+    { releaseAt: "2026-10-20T00:00:01.000Z", expired: true },
+  ])("checks expiry during final authorization at $releaseAt", async ({ releaseAt, expired }) => {
+    const sourceRevisions = [
+      { sourceRef: "search", revision: "snapshot-v1" },
+      { sourceRef: "events", revision: "snapshot-v1" },
+    ];
+    const registration = await registerSeoQuery({
+      queryId: "retained-expiry",
+      queryVersion: 1,
+      scope: seoScope,
+      definition: seoDefinition,
+      sourceRevisions,
+      limits: seoLimits,
+      requiredFields: ["seo.pages"],
+      source: async () => ({ input: seoFixtureInput(), quality: seoQuality }),
+    });
+    const service = new MetricReadService([registration.definition], [registration.query], {
+      currentContext: () => ({
+        principal: { ...seoScope, subject: "synthetic-operator" },
+        allowedFields: ["seo.pages"],
+        allowRaw: false,
+        budget: seoLimits,
+        sourceRevisions,
+        snapshotRefs: ["search", "events"],
+      }),
+      authorize: async () => ({ permissionEpoch: "p1", privacyEpoch: "v1" }),
+    });
+    const record = {
+      id: "expiring",
+      scope: seoScope,
+      expiresAt: "2026-10-20T00:00:01.000Z",
+      report: await createSeoFixture().compare(),
+    };
+    let now = new Date("2026-10-20T00:00:00.000Z");
+    let masked = false;
+    let entered = () => {};
+    let resume = () => {};
+    const authenticationEntered = new Promise<void>((resolve) => {
+      entered = resolve;
+    });
+    const authenticationResumed = new Promise<void>((resolve) => {
+      resume = resolve;
+    });
+    const operations = createSeoWorkbench({
+      authenticate: async () => {
+        if (masked) {
+          entered();
+          await authenticationResumed;
+        }
+        return { scope: seoScope, permissions: ["seo.read"] };
+      },
+      reader: async () => ({
+        service,
+        queryId: registration.query.id,
+        window: { from: seoDefinition.baselineWindow.from, to: seoDefinition.currentWindow.to },
+      }),
+      mask: (_field, value) => {
+        masked = true;
+        return value;
+      },
+      now: () => now,
+      store: { read: async () => record, write: async () => {}, delete: async () => {} },
+    });
+    const pending = operations.readSaved(record.id);
+    await Promise.race([
+      authenticationEntered,
+      pending.then(() => {
+        throw new TypeError("Saved report did not reach final authorization");
+      }),
+    ]);
+    now = new Date(releaseAt);
+    resume();
+    const state = await pending;
+    if (expired) expect(state).toEqual({ kind: "unavailable", code: "SEO_REPORT_EXPIRED" });
+    else expect(state).toMatchObject({ kind: "ready", page: { total: 2 } });
+  });
+
   it.each(["permission", "scope", "abort"])(
     "rechecks %s after asynchronous definition identity validation",
     async (change) => {
