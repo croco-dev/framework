@@ -3091,8 +3091,8 @@ importers:
         specifier: workspace:*
         version: link:../warehouse-tooling
       '@modelcontextprotocol/server':
-        specifier: 2.3.0
-        version: 2.3.0
+        specifier: 2.3.1
+        version: 2.3.1
       citty:
         specifier: ^0.1.6
         version: 0.1.6
@@ -3107,8 +3107,8 @@ importers:
         specifier: workspace:*
         version: link:../execution-core
       '@modelcontextprotocol/client':
-        specifier: 2.3.0
-        version: 2.3.0
+        specifier: 2.3.1
+        version: 2.3.1
       '@types/node':
         specifier: ^24.0.0
         version: 24.13.2
@@ -8773,16 +8773,16 @@ packages:
   '@mdx-js/mdx@3.1.1':
     resolution: {integrity: sha512-f6ZO2ifpwAQIpzGWaBQT2TXxPv6z3RBzQKpVftEWN78Vl/YweF1uwussDx8ECAXVtr3Rs89fKyG9YlzUs9DyGQ==}
 
-  '@modelcontextprotocol/client@2.3.0':
-    resolution: {integrity: sha512-pbHtGj6EeFCHngFE8gtNPaKrsj8Mb1IMw45BLcaPML/m2WTxI7pyYmeNQvaux88Lw8BSO5r7nyRbUyIkICmGrg==}
+  '@modelcontextprotocol/client@2.3.1':
+    resolution: {integrity: sha512-mIGZXpHsjnZ6lD+gD/WCMpR5k8yVQQ8nNFH1N0Srf7AvnwTUMYD6pvTY8ng2+He5FfV7YMZLmrjL7cLa/cc3dQ==}
     engines: {node: '>=20'}
 
-  '@modelcontextprotocol/core@2.3.0':
-    resolution: {integrity: sha512-09BHFaNVBe5pB2AhzCfLj0cqmsKLERvZQ4FblzP90UMGLaXVqdZPByFjURwsUYCmxonUW2yAwgTTvle+8O2/8w==}
+  '@modelcontextprotocol/core@2.3.1':
+    resolution: {integrity: sha512-laVmIhPGpWi7rG9q+0UigblRN0Hws/Yjlb6qLFtVqryXVLkc4h+yN8z731POD2LnAGQlFe7/tXhUm7Bi0YB91g==}
     engines: {node: '>=20'}
 
-  '@modelcontextprotocol/server@2.3.0':
-    resolution: {integrity: sha512-+6b0LdsQLmHsvS7J6sQJ4weTpzUn61fU1JKS+321/+IyDYoHW5CR2Tgqcs6GgAAQvlesCo6yX3xttgmx+XGtJw==}
+  '@modelcontextprotocol/server@2.3.1':
+    resolution: {integrity: sha512-e59MfWuSssj6DoQ96JCTqdW1AXT5/XtnTl0WWd6MU1Ka434fFUGGosCLJbGNySDhHGvxQWoRWK137FXYFkYNWw==}
     engines: {node: '>=20'}
 
   '@noble/ciphers@2.1.1':
@@ -16776,9 +16776,9 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@modelcontextprotocol/client@2.3.0':
+  '@modelcontextprotocol/client@2.3.1':
     dependencies:
-      '@modelcontextprotocol/core': 2.3.0
+      '@modelcontextprotocol/core': 2.3.1
       cross-spawn: 7.0.6
       eventsource: 3.0.7
       eventsource-parser: 3.1.1
@@ -16786,13 +16786,13 @@ snapshots:
       pkce-challenge: 5.0.1
       zod: 4.3.6
 
-  '@modelcontextprotocol/core@2.3.0':
+  '@modelcontextprotocol/core@2.3.1':
     dependencies:
       zod: 4.3.6
 
-  '@modelcontextprotocol/server@2.3.0':
+  '@modelcontextprotocol/server@2.3.1':
     dependencies:
-      '@modelcontextprotocol/core': 2.3.0
+      '@modelcontextprotocol/core': 2.3.1
       zod: 4.3.6
 
   '@noble/ciphers@2.1.1': {}

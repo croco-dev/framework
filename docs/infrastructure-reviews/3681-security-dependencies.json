@@ -1,0 +1,67 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "cli",
+      "classification": "runtime-adapter",
+      "reason": "Update the MCP server SDK used by the existing local agent-read stdio adapter. No new application Host, HTTP transport, storage provider or deployment support is introduced.",
+      "files": {
+        "packages/cli/package.json": "6dbbea2831243fe0165e0d6372ea179687ffaa535205dfce90d6927717b662c7"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "unverified",
+          "reason": "The existing local Node stdio CLI can be invoked by an operator in a Node process, but this SDK dependency update has no Kubernetes Node Host execution evidence or cluster lifecycle integration.",
+          "constraints": [
+            "Existing Node filesystem and stdio requirements remain. Local CLI tests do not certify a Kubernetes deployment."
+          ],
+          "providers": [
+            "@croco/cli/agent",
+            "@modelcontextprotocol/server"
+          ],
+          "references": [
+            "packages/cli/package.json",
+            "packages/cli/src/libs/agentReadMcp.ts",
+            "packages/cli/src/bin/croco-agent.ts",
+            "packages/cli/src/tests/AgentReadProcess.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "unsupported",
+          "reason": "The existing agent-read CLI is a local stdio process, not an AWS Lambda Host invocation or HTTP MCP adapter. Updating its SDK does not introduce invocation lifecycle or flush ownership.",
+          "constraints": [
+            "No Lambda invocation transport is provided by this CLI entrypoint; callers must not treat the SDK version update as Lambda Host support."
+          ],
+          "providers": [
+            "@croco/cli/agent",
+            "@modelcontextprotocol/server"
+          ],
+          "references": [
+            "packages/cli/package.json",
+            "packages/cli/src/libs/agentReadMcp.ts",
+            "packages/cli/src/bin/croco-agent.ts",
+            "packages/cli/src/tests/AgentReadProcess.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "unsupported",
+          "reason": "The existing local Node CLI uses stdio and filesystem access and has no Cloudflare Workers Host or explicit Node Container Host integration.",
+          "constraints": [
+            "Worker isolates do not provide the CLI process stdio/filesystem contract. No Node Container deployment support is claimed."
+          ],
+          "providers": [
+            "@croco/cli/agent",
+            "@modelcontextprotocol/server"
+          ],
+          "references": [
+            "packages/cli/package.json",
+            "packages/cli/src/libs/agentReadMcp.ts",
+            "packages/cli/src/bin/croco-agent.ts",
+            "packages/cli/src/tests/AgentReadProcess.spec.ts"
+          ]
+        }
+      }
+    }
+  ]
+}
