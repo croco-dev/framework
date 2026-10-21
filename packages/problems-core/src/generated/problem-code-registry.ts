@@ -21685,9 +21685,9 @@ export type CrocoProblemRegistry = {
       readonly title: "Validation Error";
       readonly cookbookPath: "/reference/problem-recovery-cookbook/#metrics-core-subscription-pricing-unavailable";
       readonly recovery: {
-        readonly cause: "The request or generated contract failed schema or semantic validation.";
-        readonly userAction: "Fix the invalid fields and retry with schema-conformant input.";
-        readonly operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.";
+        readonly cause: "A subscription's immutable pricing reference is missing, unavailable, or belongs to another plan family.";
+        readonly userAction: "Supply the subscription's original immutable pricing reference and retry only after its retained price is available.";
+        readonly operatorAction: "Locate the missing pricingRef and restore its matching retained plan version for the subscription's plan family before recalculating MRR; never substitute the current plan price.";
         readonly retryability: "not-retryable";
         readonly redactionPolicy: "public";
         readonly telemetry: {
@@ -56374,9 +56374,12 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       cookbookPath:
         "/reference/problem-recovery-cookbook/#metrics-core-subscription-pricing-unavailable",
       recovery: {
-        cause: "The request or generated contract failed schema or semantic validation.",
-        userAction: "Fix the invalid fields and retry with schema-conformant input.",
-        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        cause:
+          "A subscription's immutable pricing reference is missing, unavailable, or belongs to another plan family.",
+        userAction:
+          "Supply the subscription's original immutable pricing reference and retry only after its retained price is available.",
+        operatorAction:
+          "Locate the missing pricingRef and restore its matching retained plan version for the subscription's plan family before recalculating MRR; never substitute the current plan price.",
         retryability: "not-retryable",
         redactionPolicy: "public",
         telemetry: {

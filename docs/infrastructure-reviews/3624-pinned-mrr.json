@@ -9,7 +9,7 @@
         "packages/metrics-core/src/index.ts": "86d6c5baec3fb2eb696f51216514e71a9f4617335bd5d7e471a270d319121a83",
         "packages/metrics-core/src/libs/MrrCalculator.ts": "253669aa56f8701fc957a7f4627dcd83f2827cb2f44360d896db8719cee70976",
         "packages/metrics-core/src/libs/interfaces/PlanProvider.ts": "68c42b598b0b1d84f91e31f25effedec6f41819061fa3039dd1e7a224d6ab079",
-        "packages/metrics-core/src/libs/problems/MetricsProblems.ts": "389e2946fd1d50e6da408260de86f537266cd88289d4857fd01f03e78b59a9e0",
+        "packages/metrics-core/src/libs/problems/MetricsProblems.ts": "e75a523de79ad3b520d2c72fce7806b39f3880127f254667ad35fe3a207fb6f6",
         "packages/metrics-core/src/types.ts": "893a43b2a581c78280fe30b365f33615c39dd3f268a94aa70312c0a75dbf514e"
       },
       "catalogRuntimes": [],
@@ -116,7 +116,7 @@
       "classification": "pure-contract",
       "reason": "Generated diagnostic metadata registers the subscription pricing failure; no error transport, Host capability, storage or lifecycle behavior changes.",
       "files": {
-        "packages/problems-core/src/generated/problem-code-registry.ts": "22b0b68fdbb97c284a71457ee492ebb3785231fddaa598baf17184be39ee3bbc"
+        "packages/problems-core/src/generated/problem-code-registry.ts": "3d83ba9970f818801b7f3c337f852b98d08cc699cb84cf5b5ef3bc655d80c0aa"
       },
       "catalogRuntimes": [],
       "profiles": {

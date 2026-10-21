@@ -49,7 +49,7 @@ afterEach(async () => {
   );
 });
 
-describe("Axios redirect credentials", () => {
+describe("follow-redirects (resolved via Axios)", () => {
   it.each(["array", "custom-name"] as const)(
     "strips %s credentials on a cross-origin redirect",
     async (kind) => {

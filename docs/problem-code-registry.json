@@ -23156,9 +23156,9 @@
       "title": "Validation Error",
       "cookbookPath": "/reference/problem-recovery-cookbook/#metrics-core-subscription-pricing-unavailable",
       "recovery": {
-        "cause": "The request or generated contract failed schema or semantic validation.",
-        "userAction": "Fix the invalid fields and retry with schema-conformant input.",
-        "operatorAction": "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        "cause": "A subscription's immutable pricing reference is missing, unavailable, or belongs to another plan family.",
+        "userAction": "Supply the subscription's original immutable pricing reference and retry only after its retained price is available.",
+        "operatorAction": "Locate the missing pricingRef and restore its matching retained plan version for the subscription's plan family before recalculating MRR; never substitute the current plan price.",
         "retryability": "not-retryable",
         "redactionPolicy": "public",
         "telemetry": {

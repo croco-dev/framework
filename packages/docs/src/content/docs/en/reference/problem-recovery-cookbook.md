@@ -15270,9 +15270,9 @@ Sources:
 - Retryability: `not-retryable`
 - Redaction policy: `public`
 - Lifecycle: `active`
-- Cause: The request or generated contract failed schema or semantic validation.
-- User action: Fix the invalid fields and retry with schema-conformant input.
-- Operator action: Inspect schema diagnostics, generated contracts, and validation metadata.
+- Cause: A subscription's immutable pricing reference is missing, unavailable, or belongs to another plan family.
+- User action: Supply the subscription's original immutable pricing reference and retry only after its retained price is available.
+- Operator action: Locate the missing pricingRef and restore its matching retained plan version for the subscription's plan family before recalculating MRR; never substitute the current plan price.
 - Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
 
 Sources:

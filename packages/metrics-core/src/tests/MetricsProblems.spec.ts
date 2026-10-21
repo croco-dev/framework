@@ -6,9 +6,23 @@ import {
   InvalidUserCarryingCapacityMetricProblem,
   InvalidRetentionMovementProblem,
   RetentionMetricsUnavailableProblem,
+  SubscriptionPricingUnavailableProblem,
 } from "../libs/problems/MetricsProblems";
 
 describe("MetricsProblems", () => {
+  it.each([
+    ["price-v1", "price-v1"],
+    [undefined, "missing"],
+  ])("serializes unavailable pricing evidence for %s", (pricingRef, expectedRef) => {
+    const problem = new SubscriptionPricingUnavailableProblem("sub-retained", pricingRef);
+
+    expect(JSON.parse(JSON.stringify(problem))).toMatchObject({
+      code: "metrics-core/subscription-pricing-unavailable",
+      status: 422,
+      detail: `Subscription 'sub-retained' requires matching immutable pricing evidence for '${expectedRef}'. Restore the pinned price before recalculating MRR.`,
+    });
+  });
+
   it("CarryingCapacitySimulationProblem has correct code and category", () => {
     const problem = new CarryingCapacitySimulationProblem(
       "Simulated churn rate is zero → infinite capacity",
