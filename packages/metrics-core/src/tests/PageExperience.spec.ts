@@ -143,6 +143,144 @@ describe("Page experience", () => {
     expect(result.committed.numerator).toBe(1);
     expect(result.bounce).toEqual({ unobserved: 0, numerator: 1, denominator: 3, value: 1 / 3 });
   });
+  it.each(["session", "subject", "pageInstance"] as const)(
+    "keeps missing-view receipts out of definitive %s bounce counts",
+    async (unit) => {
+      const input = fixture();
+      input.definition.unit = unit;
+      input.rows = [
+        row("session", "one", 0),
+        row("view", "one", 1, "product"),
+        { ...row("committed", "one", 5, "purchase"), pageInstance: "missing-view" },
+        row("session", "two", 10),
+        row("view", "two", 11, "product"),
+      ];
+      const result = await calculatePageExperience(input);
+      expect(result).toMatchObject({
+        viewed: 2,
+        confirmedOutcomes: 1,
+        unlinkedCommitted: 1,
+        unknownSessions: 1,
+        completeSessions: 1,
+        engaged: { numerator: 0, denominator: 2, unobserved: 1, value: null },
+        attempted: { numerator: 0 },
+        committed: { numerator: 0 },
+        bounce: { numerator: 1, denominator: 2, unobserved: 1, value: null },
+      });
+      expect(result.diagnostics).toContain("incomplete-coverage");
+      const otherPage = await calculatePageExperience({
+        ...input,
+        rows: input.rows.map((event) =>
+          event.kind === "committed" ? { ...event, page: "other" } : event,
+        ),
+      });
+      expect(otherPage.bounce).toEqual({ numerator: 2, denominator: 2, unobserved: 0, value: 1 });
+      expect(otherPage.confirmedOutcomes).toBe(0);
+    },
+  );
+  it.each([
+    ["session", { numerator: 1, unobserved: 0, value: 1 }],
+    ["subject", { numerator: 0, unobserved: 1, value: null }],
+    ["pageInstance", { numerator: 1, unobserved: 0, value: 1 }],
+  ] as const)(
+    "combines missing-view coverage across the same %s unit",
+    async (unit, expectedBounce) => {
+      const input = fixture();
+      input.definition.unit = unit;
+      input.rows = [
+        row("session", "one", 0),
+        row("view", "one", 1, "product"),
+        row("session", "two", 10),
+        { ...row("committed", "two", 12, "purchase"), pageInstance: "missing-view" },
+      ].map((event) => ({ ...event, subject: "shared" }));
+      const result = await calculatePageExperience(input);
+      expect(result).toMatchObject({
+        viewed: 1,
+        confirmedOutcomes: 1,
+        unlinkedCommitted: 1,
+        unknownSessions: 1,
+        completeSessions: 1,
+        engaged: { numerator: 0 },
+        attempted: { numerator: 0 },
+        committed: { numerator: 0 },
+      });
+      expect(result.bounce).toEqual({ ...expectedBounce, denominator: 1 });
+      const otherSubject = await calculatePageExperience({
+        ...input,
+        rows: input.rows.map((event) =>
+          event.session === "two" ? { ...event, subject: "other" } : event,
+        ),
+      });
+      expect(otherSubject.bounce).toEqual({
+        numerator: 1,
+        denominator: 1,
+        unobserved: 0,
+        value: 1,
+      });
+    },
+  );
+  it.each(["missing-session", "invalid-instance", "outside-session"] as const)(
+    "keeps subject completeness unknown for %s target-page rows",
+    async (mode) => {
+      const input = fixture();
+      input.definition.unit = "subject";
+      input.rows = [
+        row("session", "one", 0),
+        row("view", "one", 1, "product"),
+        ...(mode === "missing-session" ? [] : [row("session", "two", 10)]),
+        ...(mode === "invalid-instance"
+          ? [row("view", "two", 11, "product"), row("view", "two", 12, "product")]
+          : []),
+        row("committed", "two", mode === "outside-session" ? 80 : 13, "purchase"),
+      ].map((event) => ({ ...event, subject: "shared" }));
+      const result = await calculatePageExperience(input);
+      expect(result).toMatchObject({
+        viewed: 1,
+        confirmedOutcomes: 1,
+        unlinkedCommitted: 1,
+        engaged: { numerator: 0 },
+        committed: { numerator: 0 },
+        bounce: { numerator: 0, denominator: 1, unobserved: 1, value: null },
+      });
+    },
+  );
+  it("does not mix a known outside-cohort session into subject completeness", async () => {
+    const input = fixture();
+    input.definition.unit = "subject";
+    input.rows = [
+      row("session", "one", 0),
+      row("view", "one", 1, "product"),
+      row("session", "two", -10),
+      row("committed", "two", 12, "purchase"),
+    ].map((event) => ({ ...event, subject: "shared" }));
+    const result = await calculatePageExperience(input);
+    expect(result.confirmedOutcomes).toBe(0);
+    expect(result.bounce).toEqual({ numerator: 1, denominator: 1, unobserved: 0, value: 1 });
+  });
+  it.each(["session", "subject", "pageInstance"] as const)(
+    "keeps receipt-before-view timing uncertain for %s units",
+    async (unit) => {
+      const input = fixture();
+      input.definition.unit = unit;
+      input.rows = [
+        row("session", "one", 0),
+        row("committed", "one", 1, "purchase"),
+        row("view", "one", 2, "product"),
+        row("session", "two", 10),
+        row("view", "two", 11, "product"),
+      ];
+      const result = await calculatePageExperience(input);
+      expect(result).toMatchObject({
+        viewed: 2,
+        confirmedOutcomes: 1,
+        unlinkedCommitted: 1,
+        unknownSessions: 1,
+        engaged: { numerator: 0 },
+        committed: { numerator: 0 },
+        bounce: { numerator: 1, denominator: 2, unobserved: 1, value: null },
+      });
+    },
+  );
   it("deduplicates identical receipt replay and never turns rollback/attempt alone into success", async () => {
     const data = fixture();
     const receipt = data.rows.find((r) => r.kind === "committed");

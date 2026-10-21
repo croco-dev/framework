@@ -293,6 +293,21 @@ export async function calculatePageExperience(
   for (const [key, group] of instances) {
     const views = group.filter((r) => r.kind === "view");
     const view = views[0];
+    // Missing or unordered view timing cannot establish the absence of engagement.
+    const receiptBeforeView =
+      view &&
+      group.some(
+        (row) =>
+          row.kind === "committed" &&
+          row.page === d.page &&
+          row.value === d.valueAction &&
+          pageExperienceTime(row.occurredAt) < pageExperienceTime(view.occurredAt),
+      );
+    if (!view || receiptBeforeView) {
+      for (const row of group) {
+        if (row.page === d.page) incompleteSessions.add(row.session);
+      }
+    }
     const content =
       view &&
       group.find(
@@ -355,34 +370,38 @@ export async function calculatePageExperience(
     else if (state === "unknown") unknownSessions++;
     else completeSessions++;
   }
-  const receiptIds = new Set<string>();
-  for (const row of rows.filter(
+  const cohortRows = rows.filter(
     (r) =>
-      r.kind === "committed" &&
+      r.kind !== "session" &&
       r.page === d.page &&
-      r.value === d.valueAction &&
       (cohortSessions.has(r.session) ||
         (!sessions.has(r.session) &&
           pageExperienceTime(r.occurredAt) >= from &&
           pageExperienceTime(r.occurredAt) < to)),
-  )) {
+  );
+  const receiptIds = new Set<string>();
+  for (const row of cohortRows.filter((r) => r.kind === "committed" && r.value === d.valueAction)) {
     requirePageExperience(!receiptIds.has(canonical([row.source, row.id])), "receipt");
     receiptIds.add(canonical([row.source, row.id]));
   }
   const unitKnown = new Map<string, boolean>();
+  // Excluded observations still qualify what is known about an already viewed unit.
+  for (const row of cohortRows) {
+    const key = unit(row);
+    unitKnown.set(
+      key,
+      (unitKnown.get(key) ?? true) && sessionState.get(row.session) === "complete",
+    );
+  }
   const unitEngaged = new Set<string>();
   for (const group of instances.values()) {
     const first = group[0];
     if (!first || !cohortSessions.has(first.session) || first.page !== d.page) continue;
+    const key = unit(first);
     const viewRows = group.filter((r) => r.kind === "view");
     const view = viewRows[0];
     if (!view) continue;
-    const key = unit(view);
     viewed.add(key);
-    unitKnown.set(
-      key,
-      (unitKnown.get(key) ?? true) && sessionState.get(view.session) === "complete",
-    );
     const afterView = group.filter(
       (r) => pageExperienceTime(r.occurredAt) >= pageExperienceTime(view.occurredAt),
     );
