@@ -764,6 +764,16 @@ describe("CI verification profile contract", () => {
     ).toContainEqual(expect.stringContaining("BRANCH_POLICY_WORKFLOW_CONTEXT_COLLISION"));
   });
 
+  it("benchmarks the immutable event candidate so base-added fixtures are present", () => {
+    const benchmark = parseDocument(WORKFLOWS["benchmark.yml"] ?? "");
+    expect(benchmark.getIn(["jobs", "benchmark", "steps", 0, "with", "ref"])).toBe(
+      "${{ github.sha }}",
+    );
+    expect(benchmark.getIn(["jobs", "benchmark", "steps", 0, "with", "persist-credentials"])).toBe(
+      false,
+    );
+  });
+
   it("requires benchmark.yml to remain the sole benchmark-gate authority", () => {
     const benchmark = WORKFLOWS["benchmark.yml"] ?? "";
     const mutation = benchmark.replace("  benchmark-gate:\n", "  benchmark-gate-removed:\n");
