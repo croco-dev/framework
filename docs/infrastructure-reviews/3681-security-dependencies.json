@@ -16,10 +16,7 @@
           "constraints": [
             "Existing Node filesystem and stdio requirements remain. Local CLI tests do not certify a Kubernetes deployment."
           ],
-          "providers": [
-            "@croco/cli/agent",
-            "@modelcontextprotocol/server"
-          ],
+          "providers": ["@croco/cli/agent", "@modelcontextprotocol/server"],
           "references": [
             "packages/cli/package.json",
             "packages/cli/src/libs/agentReadMcp.ts",
@@ -33,10 +30,7 @@
           "constraints": [
             "No Lambda invocation transport is provided by this CLI entrypoint; callers must not treat the SDK version update as Lambda Host support."
           ],
-          "providers": [
-            "@croco/cli/agent",
-            "@modelcontextprotocol/server"
-          ],
+          "providers": ["@croco/cli/agent", "@modelcontextprotocol/server"],
           "references": [
             "packages/cli/package.json",
             "packages/cli/src/libs/agentReadMcp.ts",
@@ -50,10 +44,7 @@
           "constraints": [
             "Worker isolates do not provide the CLI process stdio/filesystem contract. No Node Container deployment support is claimed."
           ],
-          "providers": [
-            "@croco/cli/agent",
-            "@modelcontextprotocol/server"
-          ],
+          "providers": ["@croco/cli/agent", "@modelcontextprotocol/server"],
           "references": [
             "packages/cli/package.json",
             "packages/cli/src/libs/agentReadMcp.ts",
