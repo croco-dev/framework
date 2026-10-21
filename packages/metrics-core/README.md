@@ -365,4 +365,6 @@ Page experience excludes rows whose session telemetry is missing or whose event 
 
 Page-instance observations or committed receipts without their matching view keep the affected session unknown. Confirmed outcomes remain readable and unlinked; another observed instance in that session cannot establish a definitive bounce. For subject units, the gap also applies across that subject's sessions in the same cohort. Rows for a different page do not create this gap in the selected page report.
 
+Gap propagation and the orphan/invalid-instance quality counters concern the selected page. An invalid instance containing that page remains quarantined even when it also contains another page; errors confined to a separate, unrelated page instance do not make the selected page unknown.
+
 Distinct subject coverage also includes relevant observations excluded from the funnel, such as missing session telemetry, quarantined instances and out-of-session rows. Known sessions outside the selected cohort remain excluded. Receipts preceding their matching view preserve the outcome but leave timing incomplete. Missing observation never fabricates a view, engagement or funnel conversion.

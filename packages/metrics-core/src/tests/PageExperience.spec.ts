@@ -363,6 +363,92 @@ describe("Page experience", () => {
       expect(result.diagnostics).toContain("invalid-instances-excluded");
     },
   );
+  it.each(["duplicate-view", "outside-session", "missing-session", "mixed-page"] as const)(
+    "limits %s gaps and registered quality to the selected page",
+    async (mode) => {
+      const input = fixture();
+      const other = (kind: PageExperienceRow["kind"], seconds: number): PageExperienceRow => ({
+        ...row(kind, mode === "missing-session" ? "missing" : "two", seconds),
+        page: "checkout",
+        pageInstance: "checkout-instance",
+      });
+      input.rows = [
+        ...input.rows,
+        ...(mode === "outside-session"
+          ? [other("action", 71)]
+          : mode === "missing-session"
+            ? [other("action", 12)]
+            : [
+                other("view", 12),
+                { ...other("view", 13), page: mode === "mixed-page" ? "product" : "checkout" },
+              ]),
+      ];
+      const { rows, ...metadata } = input;
+      const limits = {
+        maxRows: 100,
+        maxBytes: 100000,
+        maxTimeMs: 30000,
+        maxWindowMs: 86400000,
+        maxConcurrency: 1,
+        maxCost: 100,
+      };
+      const registration = await registerPageExperienceQuery({
+        id: "page-isolation",
+        version: 1,
+        metadata,
+        limits,
+        load: async () => ({
+          rows,
+          quality: {
+            temporalCompleteness: "complete",
+            populationCoverage: "complete",
+            freshness: "fresh",
+            validity: "valid",
+            exactness: "exact",
+            reproducibility: "reproducible",
+          },
+        }),
+      });
+      const service = new MetricReadService([registration.definition], [registration.query], {
+        currentContext: () => ({
+          principal: { ...metadata.scope, subject: "operator" },
+          allowedFields: PAGE_EXPERIENCE_FIELDS,
+          allowRaw: false,
+          budget: limits,
+          sourceRevisions: [{ sourceRef: metadata.sourceRef, revision: metadata.sourceRevision }],
+          snapshotRefs: [metadata.snapshotRef],
+        }),
+        authorize: async () => ({ permissionEpoch: "1", privacyEpoch: "1" }),
+      });
+      const result = await service.runRegisteredQuery("page-isolation", null, input.window);
+      const mixed = mode === "mixed-page";
+      expect(result.status).toBe(mixed ? "partial" : "verified");
+      if (result.status !== "verified" && result.status !== "partial") return;
+      expect(result.result?.quality.temporalCompleteness).toBe(mixed ? "partial" : "complete");
+      expect(result.result?.data).toMatchObject({
+        viewed: 3,
+        engaged: {
+          numerator: 2,
+          denominator: 3,
+          unobserved: mixed ? 1 : 0,
+          value: mixed ? null : 2 / 3,
+        },
+        bounce: {
+          numerator: mixed ? 0 : 1,
+          denominator: 3,
+          unobserved: mixed ? 1 : 0,
+          value: mixed ? null : 1 / 3,
+        },
+        completeSessions: mixed ? 2 : 3,
+        unknownSessions: mixed ? 1 : 0,
+        orphanRows: 0,
+        invalidInstances: mixed ? 1 : 0,
+        confirmedOutcomes: 1,
+        unlinkedCommitted: 0,
+        diagnostics: mixed ? ["incomplete-coverage", "invalid-instances-excluded"] : [],
+      });
+    },
+  );
   it("distinguishes zero denominator and no observations", async () => {
     const result = await calculatePageExperience({ ...fixture(), rows: [] });
     expect(result.bounce.value).toBeNull();

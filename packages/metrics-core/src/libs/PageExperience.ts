@@ -271,15 +271,17 @@ export async function calculatePageExperience(
     const session = sessions.get(row.session);
     // A receipt without UI/session telemetry is a real outcome, outside the page funnel.
     if (!session) {
-      orphanRows++;
+      if (row.page === d.page) orphanRows++;
       continue;
     }
     requirePageExperience(row.subject === session.subject, "session-subject");
     const start = pageExperienceTime(session.occurredAt),
       at = pageExperienceTime(row.occurredAt);
     if (at < start || at >= start + d.sessionWindowMs) {
-      orphanRows++;
-      incompleteSessions.add(row.session);
+      if (row.page === d.page) {
+        orphanRows++;
+        incompleteSessions.add(row.session);
+      }
       continue;
     }
     const key = canonical([row.session, row.pageInstance]);
@@ -329,8 +331,10 @@ export async function calculatePageExperience(
         ));
     if (invalid) {
       instances.delete(key);
-      invalidInstances++;
-      for (const row of group) incompleteSessions.add(row.session);
+      if (group.some((row) => row.page === d.page)) {
+        invalidInstances++;
+        for (const row of group) incompleteSessions.add(row.session);
+      }
     }
   }
   const viewed = new Set<string>(),
