@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "cli",
+      "classification": "runtime-adapter",
+      "reason": "Use MCP SDK 2.3.0 for the existing stdio-only local agent. The CLI has no catalog runtime claims; deployment profiles and transports are unchanged. HTTP-specific SDK advisories do not describe the shipped CLI transport.",
+      "files": {
+        "packages/cli/package.json": "219b6af5992419dec25f5c6ad181c62dfc42af00b75221b6909ffd86d40a0a11"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "The dependency patch affects the local Node CLI and its stdio MCP process, not a deployed Kubernetes Node Host or provider.",
+          "providers": [],
+          "constraints": [
+            "Requires the existing Node CLI environment; this review does not certify a deployed Host or HTTP MCP server."
+          ],
+          "references": [
+            "packages/cli/package.json",
+            "packages/cli/src/bin/croco-agent.ts",
+            "packages/cli/src/tests/AgentReadProcess.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "The CLI is a separate local Node process, not a Lambda Host callback. This patch introduces no invocation storage, connection or flush contract.",
+          "providers": [],
+          "constraints": [
+            "Requires the existing Node CLI environment; this review does not certify a deployed Host or HTTP MCP server."
+          ],
+          "references": [
+            "packages/cli/package.json",
+            "packages/cli/src/bin/croco-agent.ts",
+            "packages/cli/src/tests/AgentReadProcess.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "The CLI requires a local Node process with stdio and child-process access. The dependency patch introduces no Worker isolate or Node Container Host path.",
+          "providers": [],
+          "constraints": [
+            "Requires the existing Node CLI environment; this review does not certify a deployed Host or HTTP MCP server."
+          ],
+          "references": [
+            "packages/cli/package.json",
+            "packages/cli/src/bin/croco-agent.ts",
+            "packages/cli/src/tests/AgentReadProcess.spec.ts"
+          ]
+        }
+      }
+    }
+  ]
+}
