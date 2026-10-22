@@ -1286,7 +1286,7 @@
       "file": "packages/framework-routes/README.md",
       "blockIndex": 1,
       "language": "typescript",
-      "openingLine": 21,
+      "openingLine": 33,
       "reason": "Legacy authored docs block is not yet isolated for documentation typechecking."
     },
     {
@@ -2273,14 +2273,14 @@
       "file": "packages/protocol-codegen/README.md",
       "blockIndex": 1,
       "language": "ts",
-      "openingLine": 7,
+      "openingLine": 9,
       "reason": "Legacy authored docs block is not yet isolated for documentation typechecking."
     },
     {
       "file": "packages/protocol-codegen/README.md",
       "blockIndex": 2,
       "language": "ts",
-      "openingLine": 30,
+      "openingLine": 32,
       "reason": "Legacy authored docs block is not yet isolated for documentation typechecking."
     },
     {

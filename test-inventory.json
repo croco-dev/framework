@@ -5473,6 +5473,18 @@
       "owner": "@croco/storage-r2"
     },
     {
+      "path": "packages/storage-s3/src/tests/S3Profiles.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/storage-s3"
+    },
+    {
+      "path": "packages/storage-s3/src/tests/S3StorageProvider.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/storage-s3"
+    },
+    {
       "path": "packages/tasks-core/src/tests/Task.spec.ts",
       "lane": "fast",
       "qualifiers": [],

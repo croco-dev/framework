@@ -50,3 +50,16 @@ The package's workerd REST fixture and Docker Redis suite prove the standalone a
 Upstash service, deployed Workers, DO provider certification, or full Workers SaaS profile integration.
 DO remains unsupported by this package and requires its own implementation and conformance. Keep alpha
 maturity and unverified live/readiness evidence explicit; numeric policy validation remains in #1687.
+
+## AWS S3 storage
+
+Use `s3Storage({ bucket, region, keyPrefix })` from `@croco/storage-s3` as an explicit
+application import. The alpha adapter owns one SDK client per application runtime;
+SDK default credentials cover Node/Lambda role and web-identity configuration without
+embedding keys. Finish upload/abort cleanup and consume download streams before a
+Lambda invocation ends; dispose the runtime only after all calls have drained.
+Inspect the [S3 identity contract](https://github.com/croco-dev/framework/blob/trunk/packages/storage-s3/smoke/identity-contract.json) for reference-only projected
+token, IAM scope and optional secret references. Local SDK/Node/Lambda tests do not
+certify AWS S3, IRSA, workload identity or deployed infrastructure. Workers isolates
+are unsupported. S3 multipart, conditional writes, ACL policy and opaque ETags must
+not be inferred from the R2 or Cloudinary adapter. See the [S3 README](https://github.com/croco-dev/framework/blob/trunk/packages/storage-s3/README.md) for limits.

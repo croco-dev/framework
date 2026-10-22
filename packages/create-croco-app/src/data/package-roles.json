@@ -119,6 +119,7 @@
   "@croco/storage-cloudinary": "plugins",
   "@croco/storage-core": "contracts",
   "@croco/storage-r2": "plugins",
+  "@croco/storage-s3": "plugins",
   "@croco/tasks-core": "contracts",
   "@croco/tasks-qstash": "plugins",
   "@croco/telemetry-api": "contracts",

@@ -810,6 +810,7 @@ jobs:
               - 'packages/storage-cloudinary/src/**'
               - 'packages/storage-core/src/**'
               - 'packages/storage-r2/src/**'
+              - 'packages/storage-s3/src/**'
               - 'packages/tasks-core/src/**'
               - 'packages/tasks-qstash/src/**'
               - 'packages/telemetry-api/src/**'

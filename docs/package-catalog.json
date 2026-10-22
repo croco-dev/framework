@@ -1294,6 +1294,12 @@
       "subtype": "domain",
       "runtimes": [],
       "domain": "Public pages"
+    },
+    "storage-s3": {
+      "role": "Plugins",
+      "subtype": "provider",
+      "runtimes": ["node", "lambda"],
+      "domain": "Storage"
     }
   },
   "groups": {
@@ -1411,7 +1417,8 @@
         "promotions-drizzle",
         "referral-drizzle",
         "billing-drizzle",
-        "research-drizzle"
+        "research-drizzle",
+        "storage-s3"
       ]
     },
     "Integration": {
@@ -1636,7 +1643,8 @@
         "billing-drizzle",
         "research-core",
         "research-drizzle",
-        "seo-core"
+        "seo-core",
+        "storage-s3"
       ]
     },
     "deprecated": {
@@ -2395,6 +2403,20 @@
           "scoped study/candidate/consent/invitation persistence",
           "status history and idempotency",
           "private note deletion and retention"
+        ]
+      },
+      "storage-s3": {
+        "domain": "Storage",
+        "adapter": "AWS S3 provider (alpha; live identity unverified)",
+        "runtimes": ["node", "lambda"],
+        "requiredEnv": ["S3_BUCKET", "AWS_REGION"],
+        "features": [
+          "put/get/delete/head",
+          "Web streams and byte ranges",
+          "signed GET URLs",
+          "sequential multipart with awaited abort cleanup",
+          "SDK credential chain",
+          "Node/Lambda local host smoke"
         ]
       }
     }

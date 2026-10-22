@@ -1,0 +1,88 @@
+{
+  "schemaVersion": 1,
+  "scope": "reference-only; operator substitutes bucket, prefix, account and role; no provisioning or live attestation",
+  "bucket": "croco-example-storage",
+  "keyPrefix": "app-a/",
+  "region": "ap-northeast-2",
+  "objectPolicy": {
+    "Version": "2012-10-17",
+    "Statement": [
+      {
+        "Effect": "Allow",
+        "Action": ["s3:GetObject", "s3:PutObject", "s3:DeleteObject", "s3:AbortMultipartUpload"],
+        "Resource": "arn:aws:s3:::croco-example-storage/app-a/*"
+      }
+    ]
+  },
+  "kubernetes": {
+    "apiVersion": "v1",
+    "kind": "Pod",
+    "metadata": { "name": "croco-s3-smoke", "namespace": "app-a" },
+    "spec": {
+      "serviceAccountName": "croco-s3",
+      "automountServiceAccountToken": false,
+      "containers": [
+        {
+          "name": "app",
+          "image": "application-owned-image:replace",
+          "env": [
+            { "name": "AWS_REGION", "value": "ap-northeast-2" },
+            { "name": "S3_BUCKET", "value": "croco-example-storage" },
+            { "name": "AWS_ROLE_ARN", "value": "arn:aws:iam::123456789012:role/croco-s3" },
+            { "name": "AWS_WEB_IDENTITY_TOKEN_FILE", "value": "/var/run/secrets/aws/token" }
+          ],
+          "volumeMounts": [
+            { "name": "aws-token", "mountPath": "/var/run/secrets/aws", "readOnly": true }
+          ]
+        }
+      ],
+      "volumes": [
+        {
+          "name": "aws-token",
+          "projected": {
+            "sources": [
+              {
+                "serviceAccountToken": {
+                  "audience": "sts.amazonaws.com",
+                  "expirationSeconds": 3600,
+                  "path": "token"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "trustPolicy": {
+    "Version": "2012-10-17",
+    "Statement": [
+      {
+        "Effect": "Allow",
+        "Principal": {
+          "Federated": "arn:aws:iam::123456789012:oidc-provider/oidc.eks.ap-northeast-2.amazonaws.com/id/EXAMPLE"
+        },
+        "Action": "sts:AssumeRoleWithWebIdentity",
+        "Condition": {
+          "StringEquals": {
+            "oidc.eks.ap-northeast-2.amazonaws.com/id/EXAMPLE:aud": "sts.amazonaws.com",
+            "oidc.eks.ap-northeast-2.amazonaws.com/id/EXAMPLE:sub": "system:serviceaccount:app-a:croco-s3"
+          }
+        }
+      }
+    ]
+  },
+  "lambda": {
+    "roleRef": "arn:aws:iam::123456789012:role/croco-s3-lambda",
+    "trustService": "lambda.amazonaws.com",
+    "environment": { "AWS_REGION": "ap-northeast-2", "S3_BUCKET": "croco-example-storage" }
+  },
+  "explicitCredentialAlternative": {
+    "owner": "application",
+    "secretRef": {
+      "name": "s3-session",
+      "keys": ["accessKeyId", "secretAccessKey", "sessionToken"]
+    },
+    "constraint": "Opt-in only; never commit values. Supply a rotating SDK credential provider for refresh."
+  }
+}

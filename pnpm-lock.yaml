@@ -3731,6 +3731,9 @@ importers:
       '@croco/storage-r2':
         specifier: workspace:*
         version: link:../storage-r2
+      '@croco/storage-s3':
+        specifier: workspace:*
+        version: link:../storage-s3
       '@croco/tasks-core':
         specifier: workspace:*
         version: link:../tasks-core
@@ -6100,6 +6103,37 @@ importers:
         specifier: workspace:*
         version: link:../storage-core
     devDependencies:
+      '@croco/testing':
+        specifier: workspace:*
+        version: link:../testing
+      '@types/node':
+        specifier: ^24.0.0
+        version: 24.13.2
+
+  packages/storage-s3:
+    dependencies:
+      '@aws-sdk/client-s3':
+        specifier: ^3.1057.0
+        version: 3.1057.0
+      '@aws-sdk/s3-request-presigner':
+        specifier: ^3.1057.0
+        version: 3.1057.0
+      '@croco/framework-module':
+        specifier: workspace:*
+        version: link:../framework-module
+      '@croco/problems-core':
+        specifier: workspace:*
+        version: link:../problems-core
+      '@croco/storage-core':
+        specifier: workspace:*
+        version: link:../storage-core
+    devDependencies:
+      '@croco/preset-lambda':
+        specifier: workspace:*
+        version: link:../preset-lambda
+      '@croco/preset-node':
+        specifier: workspace:*
+        version: link:../preset-node
       '@croco/testing':
         specifier: workspace:*
         version: link:../testing

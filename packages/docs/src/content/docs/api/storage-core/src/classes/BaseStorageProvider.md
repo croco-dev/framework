@@ -13,6 +13,7 @@ title: "BaseStorageProvider"
 - [`CloudflareImagesProvider`](/api/storage-cloudflare/src/classes/cloudflareimagesprovider/)
 - [`CloudinaryProvider`](/api/storage-cloudinary/src/classes/cloudinaryprovider/)
 - [`R2StorageProvider`](/api/storage-r2/src/classes/r2storageprovider/)
+- [`S3StorageProvider`](/api/storage-s3/src/classes/s3storageprovider/)
 
 ## Implements
 

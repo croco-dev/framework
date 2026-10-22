@@ -1,0 +1,142 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "storage-s3",
+      "classification": "durable-provider",
+      "reason": "Add an alpha application-owned AWS S3 StorageProvider with namespaced objects, ranged streams, signed GET URLs, credential-chain configuration and bounded awaited multipart cleanup.",
+      "files": {
+        "docs/package-catalog.json": "46cb9e796f9666803d9c7c7742c71a8b666a0030c3aca0b1e3aea8a707335990",
+        "packages/storage-s3/package.json": "e057cf1becee172322d4ff9202d2547689277afa6194150bf618a744096c030b",
+        "packages/storage-s3/src/index.ts": "5931cc668b9cbfa02c9c10c02fe61d2758c05aba1211849faf64cbcb87630290",
+        "packages/storage-s3/src/libs/S3StoragePlugin.ts": "8630bb35e2baaa9d9942b09f73326f6cfe2022115cec61051f333eb5479f26c1",
+        "packages/storage-s3/src/libs/S3StorageProblem.ts": "f7a5e16c2d9b84143815b54be027d83a82ad24d28213754aae68dfe2bb9d2d81",
+        "packages/storage-s3/src/libs/S3StorageProvider.ts": "edcdc51f3c515b72c537ea7e3c306dbf4b3958116974bcf478762ee34a1de668",
+        "packages/storage-s3/src/libs/types.ts": "22ed43abf4f819818e5acca7968b69404d545663f102a638b91ae78735d69aad"
+      },
+      "catalogRuntimes": ["node", "lambda"],
+      "profiles": {
+        "kubernetes": {
+          "result": "conditional",
+          "reason": "Use one AWS SDK S3 adapter under the Node Host; local HTTP/Host execution does not verify cluster identity or AWS authorization.",
+          "providers": ["@croco/storage-s3", "@croco/preset-node"],
+          "constraints": [
+            "Node networking and valid bucket/prefix-scoped IAM are required.",
+            "Operator owns IRSA/OIDC trust, projected token rotation, optional Secret references and incomplete multipart expiration.",
+            "Live Kubernetes, STS/S3 and workload identity authentication remain unverified."
+          ],
+          "references": [
+            "packages/storage-s3/README.md",
+            "packages/storage-s3/src/tests/S3Profiles.spec.ts",
+            "packages/storage-s3/src/tests/S3StorageProvider.spec.ts",
+            "packages/storage-s3/smoke/identity-contract.json"
+          ]
+        },
+        "aws-lambda": {
+          "result": "conditional",
+          "reason": "Reuse the Node SDK through the Lambda Host with default execution-role credentials; no credentials or infrastructure are provisioned.",
+          "providers": ["@croco/storage-s3", "@croco/preset-lambda"],
+          "constraints": [
+            "Await uploads and bounded independent multipart cleanup before returning; consume or cancel streams.",
+            "Reuse the application/client across warm invocations and dispose only after drain. Reserve cleanupTimeoutMs in the host deadline.",
+            "Live Lambda role permissions, deployment, network reachability and AWS S3 remain unverified."
+          ],
+          "references": [
+            "packages/storage-s3/README.md",
+            "packages/storage-s3/src/tests/S3Profiles.spec.ts",
+            "packages/storage-s3/src/tests/S3StorageProvider.spec.ts",
+            "packages/storage-s3/smoke/identity-contract.json"
+          ]
+        },
+        "cloudflare": {
+          "result": "unsupported",
+          "host": "workers",
+          "reason": "This adapter uses the Node AWS SDK path; Worker isolate support is not implemented or claimed.",
+          "providers": ["@croco/storage-s3"],
+          "constraints": [
+            "Use a separately reviewed Workers-native storage adapter. Node Container deployment is not assessed by this change."
+          ],
+          "references": [
+            "packages/storage-s3/README.md",
+            "packages/storage-s3/src/tests/S3Profiles.spec.ts",
+            "packages/storage-s3/src/tests/S3StorageProvider.spec.ts",
+            "packages/storage-s3/smoke/identity-contract.json"
+          ]
+        }
+      }
+    },
+    {
+      "package": "problems-core",
+      "classification": "pure-contract",
+      "reason": "Generated additive STORAGE_S3_FAILED diagnostic metadata; no host, storage or lifecycle implementation is added to the Problem contract.",
+      "files": {
+        "packages/problems-core/src/generated/problem-code-registry.ts": "3a44b6fda1c502f35460ddb4df842215f1cc18938acab2024be51d6f9c01ba81"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "This generated diagnostic registry is pure data/types and has no infrastructure-dependent execution, storage or lifecycle.",
+          "providers": [],
+          "constraints": [],
+          "references": ["packages/problems-core/src/generated/problem-code-registry.ts"]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "This generated diagnostic registry is pure data/types and has no infrastructure-dependent execution, storage or lifecycle.",
+          "providers": [],
+          "constraints": [],
+          "references": ["packages/problems-core/src/generated/problem-code-registry.ts"]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "This generated diagnostic registry is pure data/types and has no infrastructure-dependent execution, storage or lifecycle.",
+          "providers": [],
+          "constraints": [],
+          "references": ["packages/problems-core/src/generated/problem-code-registry.ts"]
+        }
+      }
+    },
+    {
+      "package": "create-croco-app",
+      "classification": "pure-contract",
+      "reason": "Generated canonical package-role metadata now classifies @croco/storage-s3 as a Plugin; no generated deployment profile, host path, identity provisioning or runtime behavior is added.",
+      "files": {
+        "packages/create-croco-app/src/data/package-roles.json": "8a51e76dc7810b158ce2bc4f6b7eb48fb059f5c1f6a16ca3b6f245b9904c6f50"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "This change is generated package-role selection data only, with no infrastructure storage, lifecycle or host execution requirement.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/create-croco-app/src/data/package-roles.json",
+            "docs/package-catalog.json"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "This change is generated package-role selection data only, with no infrastructure storage, lifecycle or host execution requirement.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/create-croco-app/src/data/package-roles.json",
+            "docs/package-catalog.json"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "This change is generated package-role selection data only, with no infrastructure storage, lifecycle or host execution requirement.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/create-croco-app/src/data/package-roles.json",
+            "docs/package-catalog.json"
+          ]
+        }
+      }
+    }
+  ]
+}
