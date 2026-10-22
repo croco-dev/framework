@@ -23,9 +23,11 @@ import type {
   RetryConsolePermissionDescriptor,
   RetryConsolePermissionGrant,
   RetryConsoleRecoveryInput,
+  RetryConsoleSourceKind,
 } from "../index";
 import {
   createBatchRetryConsoleSource,
+  createExecutionRetryConsoleSource,
   createLifecycleRetryConsoleSource,
   createRetryConsole,
   createTaskRetryConsoleSource,
@@ -244,7 +246,7 @@ const granted: RetryConsolePermissionGrant = {
 
 function permission(
   action: "inspect" | "replay" | "retry",
-  kind: "batch" | "lifecycle" | "task" | "workflow",
+  kind: RetryConsoleSourceKind,
   id: string,
 ): RetryConsolePermissionDescriptor {
   return {
@@ -561,7 +563,6 @@ describe("RetryConsole", () => {
         }),
       ]),
     );
-    const replaySpy = vi.spyOn(manager, "replay");
     const firstConsole = createRetryConsole([createTaskRetryConsoleSource(manager)]);
     const request = {
       itemId: "exec-1",
@@ -591,7 +592,6 @@ describe("RetryConsole", () => {
         recoveryAuditIdempotencyKey: "ops-recovery-1",
       },
     );
-    expect(replaySpy).toHaveBeenCalledTimes(3);
   });
 
   it("atomically reuses a replay across independent consoles and restarted managers", async () => {
@@ -636,14 +636,22 @@ describe("RetryConsole", () => {
     expect((await store.list()).filter((item) => item.replayOf === "exec-1")).toHaveLength(2);
   });
 
-  it.each(["payload", "reason", "actorId", "ticketId", "metadata"] as const)(
-    "rejects concurrent and restarted same-key replay requests with different %s",
-    async (field) => {
+  it.each([
+    ["payload", "task"],
+    ["reason", "task"],
+    ["actorId", "task"],
+    ["ticketId", "task"],
+    ["metadata", "task"],
+    ["payload", "execution"],
+    ["payload", "custom-execution"],
+  ] as const)(
+    "rejects concurrent and restarted same-key replay requests with different %s (%s source)",
+    async (field, kind) => {
       const store = new MemoryExecutionStore([execution({ attempts: 3, maxAttempts: 3 })]);
       const request: RetryConsoleRecoveryInput = {
         itemId: "exec-1",
         actionId: "replay",
-        permission: { granted: true, descriptor: permission("replay", "task", "exec-1") },
+        permission: { granted: true, descriptor: permission("replay", kind, "exec-1") },
         audit,
         payload: { version: 1 },
       };
@@ -654,9 +662,14 @@ describe("RetryConsole", () => {
               ...request,
               audit: { ...audit, [field]: field === "metadata" ? { change: true } : "different" },
             };
-      const console = createRetryConsole([
-        createTaskRetryConsoleSource(new ExecutionManagerImpl(store)),
-      ]);
+      const makeSource = () =>
+        kind === "task"
+          ? createTaskRetryConsoleSource(new ExecutionManagerImpl(store))
+          : createExecutionRetryConsoleSource(new ExecutionManagerImpl(store), {
+              kind,
+              label: "Execution",
+            });
+      const console = createRetryConsole([makeSource()]);
       const results = await Promise.all([console.recover(request), console.recover(changed)]);
       expect(results.map((result) => result.status).sort()).toEqual(["failed", "succeeded"]);
       const failed = results.find((result) => result.status === "failed");
@@ -664,9 +677,7 @@ describe("RetryConsole", () => {
       expect((await store.list()).filter((item) => item.replayOf === "exec-1")).toHaveLength(1);
       const winner = results[0].status === "succeeded" ? request : changed;
       const loser = results[0].status === "succeeded" ? changed : request;
-      const restarted = createRetryConsole([
-        createTaskRetryConsoleSource(new ExecutionManagerImpl(store)),
-      ]);
+      const restarted = createRetryConsole([makeSource()]);
       expect(await restarted.recover(winner)).toMatchObject({ status: "succeeded" });
       expect(await restarted.recover(loser)).toMatchObject({
         status: "failed",
@@ -746,6 +757,7 @@ describe("RetryConsole", () => {
         recoveryMetadata: audit.metadata,
       },
     });
+    const originalReceipt = structuredClone(legacy);
     const store = new TruncatingMemoryExecutionStore(
       [
         source,
@@ -772,7 +784,7 @@ describe("RetryConsole", () => {
         status: "succeeded",
         providerResult: { id: legacy.id, status: "completed" },
       });
-    expect(await store.findById(legacy.id)).toEqual(legacy);
+    expect(await store.findById(legacy.id)).toEqual(originalReceipt);
     expect(await recover({ ...request, audit: { ...audit, reason: "different" } })).toMatchObject({
       status: "failed",
       problem: { code: "execution/idempotency-conflict" },
@@ -1037,6 +1049,45 @@ describe("RetryConsole", () => {
       allowed: false,
     });
     expect((await console.recover(lifecycleRecoveryInput())).status).toBe("denied");
+  });
+
+  it("retains in-flight coalescing for custom task sources without provider ownership", async () => {
+    const manager = new ExecutionManagerImpl(
+      new MemoryExecutionStore([execution({ attempts: 3, maxAttempts: 3 })]),
+    );
+    const executionSource = createTaskRetryConsoleSource(manager);
+    let release: () => void = () => {
+      throw new Error("Gate is not initialized");
+    };
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const recover = vi.fn(async () => {
+      await gate;
+      return { providerResult: { accepted: true } };
+    });
+    const console = createRetryConsole([
+      {
+        kind: executionSource.kind,
+        list: executionSource.list,
+        recover,
+      },
+    ]);
+    const request: RetryConsoleRecoveryInput = {
+      itemId: "exec-1",
+      actionId: "replay",
+      permission: { granted: true, descriptor: permission("replay", "task", "exec-1") },
+      audit,
+    };
+    const first = console.recover(request);
+    const second = console.recover(request);
+    await vi.waitFor(() => expect(recover).toHaveBeenCalledTimes(1));
+    release();
+    expect((await Promise.all([first, second])).map((result) => result.status)).toEqual([
+      "succeeded",
+      "succeeded",
+    ]);
+    expect(recover).toHaveBeenCalledTimes(1);
   });
 
   it("deduplicates concurrent lifecycle recovery by audit idempotency key", async () => {

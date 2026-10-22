@@ -404,6 +404,7 @@ export function createExecutionRetryConsoleSource(
 ): RetryConsoleSource {
   return {
     kind: options.kind,
+    replayIdempotency: "provider",
 
     async list(listOptions: RetryConsoleListOptions = {}): Promise<readonly RetryConsoleItem[]> {
       const executions = await listAllExecutions(manager);

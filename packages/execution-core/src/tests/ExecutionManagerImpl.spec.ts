@@ -1820,7 +1820,7 @@ describe("ExecutionManagerImpl", () => {
       };
       const legacy = await manager.replay(source.id, intent);
       await store.update(legacy.id, { status: "completed" });
-      const before = await store.findById(legacy.id);
+      const before = structuredClone(await store.findById(legacy.id));
       const params = { ...intent, idempotencyKey: "migrated-key", legacyReplayId: legacy.id };
       expect(await manager.replay(source.id, params)).toEqual(before);
       expect(await store.findById(legacy.id)).toEqual(before);

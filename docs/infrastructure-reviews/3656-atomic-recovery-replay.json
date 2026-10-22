@@ -4,10 +4,11 @@
     {
       "package": "admin-ops",
       "classification": "runtime-adapter",
-      "reason": "Bind recovery intent to source-scoped durable replay keys and canonical fingerprints, preserving validated pre-key receipts. Reuse the existing ExecutionStore unique-key create/reuse contract without a new persistence format or deployment provider.",
+      "reason": "Execution sources explicitly delegate replay validation to the durable provider regardless of presentation kind; other sources preserve in-flight coalescing. Recovery intent uses the existing store unique key and fingerprint contract, with matching pre-key receipts reused unchanged.",
       "files": {
-        "packages/admin-ops/src/libs/retryConsole.ts": "0a06f0ba87c980e43bda27bb854f4133e7752ba1e95118d219185537b5ccb4be",
-        "packages/admin-ops/src/libs/sourceAdapters.ts": "e30f33a24dbfbb82450bec4f2cd49543618983071995534a2ff6e31779aa8e26"
+        "packages/admin-ops/src/libs/retryConsole.ts": "cf4766e8139ca0fd19a3486b1b611846392adb534e5d1c7cc3d93ec2c57f7d9d",
+        "packages/admin-ops/src/libs/sourceAdapters.ts": "9977d361410d18ae4022fad74a9ea84ad1f9490552a917ebab9cf8516e1648c1",
+        "packages/admin-ops/src/libs/types.ts": "d2d524dd921d670ffbf5cf336aab54558bc9ba7c7af21572d71f736778d8c939"
       },
       "catalogRuntimes": [],
       "profiles": {

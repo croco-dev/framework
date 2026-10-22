@@ -11,6 +11,15 @@ title: "RetryConsoleSource"
 
 > `readonly` **kind**: [`RetryConsoleSourceKind`](/api/admin-ops/src/type-aliases/retryconsolesourcekind/)
 
+---
+
+### replayIdempotency?
+
+> `readonly` `optional` **replayIdempotency?**: `"provider"`
+
+Delegate every replay request to a provider that atomically validates its durable key and intent.
+When omitted, the console retains in-flight coalescing; the provider still owns durable safety.
+
 ## Methods
 
 ### list()
