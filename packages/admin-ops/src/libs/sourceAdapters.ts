@@ -87,6 +87,7 @@ function hasAttemptsRemaining(execution: Execution): boolean {
 }
 
 function classifyExecution(execution: Execution): RetryConsoleItemState {
+  if (execution.error?.indeterminate === true) return "non_retryable";
   switch (execution.status) {
     case "pending":
     case "running":
@@ -95,9 +96,6 @@ function classifyExecution(execution: Execution): RetryConsoleItemState {
     case "completed":
       return "succeeded";
     case "timed_out":
-      if (execution.error?.indeterminate === true) {
-        return "non_retryable";
-      }
       return hasAttemptsRemaining(execution) ? "retryable" : "terminal_failed";
     case "failed":
       if (execution.error?.retryable && hasAttemptsRemaining(execution)) {
@@ -200,14 +198,14 @@ function executionRecoveryActions(
       ? "Cancelled executions cannot be replayed"
       : "Execution manager does not support replay";
 
-  if (execution.status === "timed_out" && execution.error?.indeterminate === true) {
+  if (execution.error?.indeterminate === true) {
     return [
       recoveryAction(
         kind,
         execution.id,
         "inspect",
         true,
-        "Inspect external effects, then resolve the timeout with an audited operator reason",
+        "Inspect external effects, then resolve the outcome with an audited operator reason",
       ),
     ];
   }

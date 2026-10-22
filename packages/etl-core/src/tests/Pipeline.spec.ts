@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { createExecutionJobsOperations } from "@croco/execution-core";
 import { c, compileFact, defineFact } from "@croco/warehouse-core";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createPipelineOperations } from "../pipeline/definePipeline";
@@ -567,6 +568,19 @@ describe("pipeline operations", () => {
     }));
     await expect(f.operations.run()).rejects.toMatchObject({ reason: "receipt-unresolved" });
     expect((await f.executions.get("execution-1")).error).toMatchObject({ indeterminate: true });
+    const unresolved = await f.executions.get("execution-1");
+    await expect(f.executions.retry("execution-1")).rejects.toMatchObject({
+      code: "execution/indeterminate-retry-blocked",
+    });
+    await expect(f.executions.replay("execution-1")).rejects.toMatchObject({
+      code: "execution/indeterminate-retry-blocked",
+    });
+    await expect(
+      createExecutionJobsOperations(f.executions).show("execution-1"),
+    ).resolves.toMatchObject({
+      failurePolicy: { retryable: false, replayable: false, recoveryAction: "inspect" },
+    });
+    expect(await f.executions.get("execution-1")).toEqual(unresolved);
     expect(f.catalog.publishCandidate).not.toHaveBeenCalled();
   });
   it("preserves uncertainty when receipt reconciliation fails", async () => {

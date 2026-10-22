@@ -928,6 +928,147 @@ describe("ExecutionManagerImpl", () => {
     });
   });
 
+  describe("indeterminate failure recovery", () => {
+    it("does not restart a legacy retrying execution with an unresolved outcome", async () => {
+      const execution = await manager.create({ type: "etl", maxAttempts: 3 });
+      await store.update(execution.id, {
+        status: "retrying",
+        attempts: 1,
+        error: { message: "unresolved", retryable: true, indeterminate: true },
+      });
+      await expect(manager.start(execution.id)).rejects.toMatchObject({
+        code: "execution/indeterminate-retry-blocked",
+      });
+      await expect(manager.get(execution.id)).resolves.toMatchObject({
+        status: "retrying",
+        attempts: 1,
+        error: { indeterminate: true },
+      });
+      await manager.resolveIndeterminateTimeout(
+        { executionId: execution.id, attempt: 1 },
+        "provider confirms rollback of the legacy attempt",
+      );
+      await expect(manager.start(execution.id)).resolves.toMatchObject({
+        status: "running",
+        attempts: 2,
+        error: undefined,
+      });
+    });
+    it.each(["retry", "replay", "show"] as const)(
+      "requires inspection for a failed receipt through %s",
+      async (action) => {
+        const execution = await manager.create({ type: "etl", maxAttempts: 3 });
+        await manager.start(execution.id);
+        await manager.fail(execution.id, {
+          message: "receipt unresolved",
+          retryable: false,
+          indeterminate: true,
+        });
+        if (action === "show") {
+          await expect(
+            createExecutionJobsOperations(manager).show(execution.id),
+          ).resolves.toMatchObject({
+            failurePolicy: {
+              needsAttention: true,
+              retryable: false,
+              replayable: false,
+              recoveryAction: "inspect",
+            },
+          });
+        } else {
+          await expect(manager[action](execution.id)).rejects.toMatchObject({
+            code: "execution/indeterminate-retry-blocked",
+          });
+        }
+        await expect(manager.get(execution.id)).resolves.toMatchObject({
+          status: "failed",
+          attempts: 1,
+          error: { indeterminate: true },
+        });
+      },
+    );
+    it("requires a current token and operator evidence to release a failed receipt", async () => {
+      const execution = await manager.create({
+        type: "etl",
+        maxAttempts: 3,
+        metadata: { receipt: "provider-42" },
+      });
+      await manager.start(execution.id);
+      const token = { executionId: execution.id, attempt: 1 };
+      await manager.fail(execution.id, {
+        message: "receipt unresolved",
+        code: "etl/receipt-unresolved",
+        retryable: true,
+        indeterminate: true,
+      });
+      await expect(manager.get(execution.id)).resolves.toMatchObject({ status: "failed" });
+      await expect(manager.settleTimedOutAttempt(token)).rejects.toMatchObject({
+        code: "execution/attempt-fence-conflict",
+      });
+      await expect(manager.resolveIndeterminateTimeout(token, " ")).rejects.toMatchObject({
+        code: "execution/conflict",
+      });
+      await expect(
+        manager.resolveIndeterminateTimeout({ ...token, attempt: 0 }, "provider confirms rollback"),
+      ).rejects.toMatchObject({ code: "execution/attempt-fence-conflict" });
+      await expect(manager.get(execution.id)).resolves.toMatchObject({
+        error: { indeterminate: true },
+        metadata: { receipt: "provider-42" },
+      });
+      const recovered = await manager.resolveIndeterminateTimeout(
+        token,
+        "provider confirms rollback",
+      );
+      expect(recovered).toMatchObject({
+        status: "failed",
+        error: { code: "etl/receipt-unresolved", indeterminate: false },
+        metadata: {
+          receipt: "provider-42",
+          indeterminateRecovery: { reason: "provider confirms rollback" },
+        },
+      });
+      expect(recovered.metadata?.indeterminateRecovery).toHaveProperty("resolvedAt");
+      await expect(manager.replay(execution.id)).resolves.toMatchObject({
+        status: "pending",
+        replayOf: execution.id,
+      });
+      await expect(manager.retry(execution.id)).resolves.toMatchObject({
+        status: "retrying",
+        error: undefined,
+      });
+    });
+    it.each([false, true])(
+      "preserves failed uncertainty when retryable is %s",
+      async (retryable) => {
+        const execution = await manager.create({ type: "etl", maxAttempts: 3 });
+        const started = await manager.start(execution.id);
+        const error = {
+          message: "receipt unresolved",
+          code: "etl/receipt-unresolved",
+          retryable,
+          indeterminate: true,
+        };
+        await manager.failAttempt({ executionId: execution.id, attempt: started.attempts }, error);
+        await expect(manager.retry(execution.id)).rejects.toMatchObject({
+          code: "execution/indeterminate-retry-blocked",
+        });
+        await expect(manager.replay(execution.id)).rejects.toMatchObject({
+          code: "execution/indeterminate-retry-blocked",
+        });
+        await expect(manager.get(execution.id)).resolves.toMatchObject({
+          status: "failed",
+          attempts: 1,
+          error,
+        });
+        await expect(
+          createExecutionJobsOperations(manager).show(execution.id),
+        ).resolves.toMatchObject({
+          failurePolicy: { retryable: false, replayable: false, recoveryAction: "inspect" },
+        });
+      },
+    );
+  });
+
   describe("retry", () => {
     it("transitions failed to retrying without incrementing attempts", async () => {
       const execution = await manager.create({ type: "task", maxAttempts: 3 });
