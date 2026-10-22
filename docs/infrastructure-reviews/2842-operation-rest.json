@@ -6,7 +6,7 @@
       "classification": "pure-contract",
       "reason": "Authorize and validate one domain operation across direct calls and an explicitly selected REST export; retain existing route contracts, HTTP status and application-owned execution policies. This is the first stage of #2842; decorated-class compilation and native tRPC/GraphQL bindings are deferred to its second stage.",
       "files": {
-        "packages/problems-core/src/generated/problem-code-registry.ts": "9b350dc6f36f068fb11091954a8e5ff7ff8420fa5058d8ebcc03e82ea2090032"
+        "packages/problems-core/src/generated/problem-code-registry.ts": "48db82773e2b0de5ecd8aadd67b724970e91cc134551bfd5fb3792ef40bb6f16"
       },
       "catalogRuntimes": [],
       "profiles": {
