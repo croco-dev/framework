@@ -6,7 +6,7 @@
       "classification": "pure-contract",
       "reason": "Authorize and validate one domain operation across direct calls and an explicitly selected REST export; retain existing route contracts, HTTP status and application-owned execution policies. This is the first stage of #2842; decorated-class compilation and native tRPC/GraphQL bindings are deferred to its second stage.",
       "files": {
-        "packages/problems-core/src/generated/problem-code-registry.ts": "48db82773e2b0de5ecd8aadd67b724970e91cc134551bfd5fb3792ef40bb6f16"
+        "packages/problems-core/src/generated/problem-code-registry.ts": "3e8b50eb208764c65dd28101a5235049ef06f2f8a6bbe5bb0d9945e357c12a59"
       },
       "catalogRuntimes": [],
       "profiles": {
@@ -50,7 +50,7 @@
         "packages/protocols-core/src/libs/extractRouteIR.ts": "8c1c19246773f037a33a129d2df1feb95d39e86cb6de16792c50a5c9fa284404",
         "packages/protocols-core/src/libs/ContractGraph.ts": "5afcbfdb5a2e68b2c407c3202d3965cc4c713aa5e41e3f0823094e4966571363",
         "packages/protocols-core/src/type-tests/OperationTypes.ts": "b25b0a85aa47f40e543b46b91b87433a1d787ebf272672b241542dc4d1c9a4ef",
-        "packages/protocols-core/src/libs/SchemaDescriptor.ts": "ed40fb4e89bd26b8b0ce4112e0fc0387c8eb18bc202ae2918e8f82871178cd76",
+        "packages/protocols-core/src/libs/SchemaDescriptor.ts": "24683fc08bb2d1972a0dd03ca6b32d85247675f1ce329592e00fa00cd095b4e0",
         "packages/protocols-core/src/libs/ContractGraphConsumerCoverage.ts": "8df1634b93e959d37bb2ec52020b0e373875d1b3e697072f659669789f0ef43d"
       },
       "catalogRuntimes": [],
