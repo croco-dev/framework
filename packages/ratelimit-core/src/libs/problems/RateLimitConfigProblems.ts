@@ -69,7 +69,7 @@ export class RateLimitDuplicateDefaultPolicyProblem extends Problem {
 }
 
 export class RateLimitPolicyProblem extends Problem {
-  constructor(field: string, value: number, requirement: string) {
+  constructor(field: string, value: unknown, requirement: string) {
     super(
       "ratelimit/invalid-policy",
       ProblemCategory.ValidationError,

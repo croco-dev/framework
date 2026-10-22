@@ -25,7 +25,7 @@ title: "RateLimitPolicyProblem"
 
 ##### value
 
-`number`
+`unknown`
 
 ##### requirement
 

@@ -1,0 +1,106 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "ratelimit-core",
+      "classification": "pure-contract",
+      "reason": "Canonicalize legacy fixed-window policies consistently for admission and refund while rejecting malformed policies before fail-open storage handling.",
+      "files": {
+        "packages/ratelimit-core/src/index.ts": "8cbc5735c83aeb809cdcff65f7f34c3aec6c8370199dd4008aad9bc8f59403b5",
+        "packages/ratelimit-core/src/libs/RateLimiter.ts": "11f84e7f0734112d3bebefb5c64d1a96ad0501ceb87a57ca9a366c3a6401f268",
+        "packages/ratelimit-core/src/libs/problems/RateLimitConfigProblems.ts": "54a42ce5ecceb7cbffb86288321cbfd5246c7bedc9580cedf0abd5f8ad26cd90",
+        "packages/ratelimit-core/src/libs/validateRateLimitPolicy.ts": "0c1867b383ced4108af57af968e90369e8c5bf1c43c14353a7cc2fe930915383"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Policy validation and canonicalization are pure input processing before storage access; they require no host capability, persistence or lifecycle change.",
+          "providers": ["@croco/ratelimit-core"],
+          "constraints": ["No new deployment or provider certification claim."],
+          "references": [
+            "packages/ratelimit-core/src/libs/validateRateLimitPolicy.ts",
+            "packages/ratelimit-core/src/libs/RateLimiter.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Policy validation and canonicalization are pure input processing before storage access; they require no host capability, persistence or lifecycle change.",
+          "providers": ["@croco/ratelimit-core"],
+          "constraints": ["No new deployment or provider certification claim."],
+          "references": [
+            "packages/ratelimit-core/src/libs/validateRateLimitPolicy.ts",
+            "packages/ratelimit-core/src/libs/RateLimiter.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Policy validation and canonicalization are pure input processing before storage access; they require no host capability, persistence or lifecycle change.",
+          "providers": ["@croco/ratelimit-core"],
+          "constraints": ["No new deployment or provider certification claim."],
+          "references": [
+            "packages/ratelimit-core/src/libs/validateRateLimitPolicy.ts",
+            "packages/ratelimit-core/src/libs/RateLimiter.ts"
+          ]
+        }
+      }
+    },
+    {
+      "package": "ratelimit-upstash",
+      "classification": "runtime-adapter",
+      "reason": "Canonicalize legacy fixed-window policies consistently for admission and refund while rejecting malformed policies before fail-open storage handling.",
+      "files": {
+        "packages/ratelimit-upstash/src/libs/UpstashRateLimitStore.ts": "536d336d829e0cfd2b3b2f071489bacc73bab8fd042dfb100585886cba1882d1"
+      },
+      "catalogRuntimes": ["node", "lambda", "cloudflare-workers"],
+      "profiles": {
+        "kubernetes": {
+          "result": "unverified",
+          "reason": "Reuse the existing Upstash Redis adapter and shared canonical policy for legacy fixed-window admission and refund. Local Redis stubs prove routing and results, not this deployed host.",
+          "providers": ["@croco/ratelimit-upstash", "@croco/ratelimit-core"],
+          "constraints": [
+            "Requires configured Upstash REST credentials and network access.",
+            "Await admission and refund before host request or invocation completion.",
+            "No live Upstash or deployed host validation performed."
+          ],
+          "references": [
+            "packages/ratelimit-upstash/src/libs/UpstashRateLimitStore.ts",
+            "packages/ratelimit-upstash/src/tests/UpstashRateLimitStore.spec.ts",
+            "packages/ratelimit-upstash/src/tests/WorkersAdapter.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "unverified",
+          "reason": "Reuse the existing Upstash Redis adapter and shared canonical policy for legacy fixed-window admission and refund. Local Redis stubs prove routing and results, not this deployed host.",
+          "providers": ["@croco/ratelimit-upstash", "@croco/ratelimit-core"],
+          "constraints": [
+            "Requires configured Upstash REST credentials and network access.",
+            "Await admission and refund before host request or invocation completion.",
+            "No live Upstash or deployed host validation performed."
+          ],
+          "references": [
+            "packages/ratelimit-upstash/src/libs/UpstashRateLimitStore.ts",
+            "packages/ratelimit-upstash/src/tests/UpstashRateLimitStore.spec.ts",
+            "packages/ratelimit-upstash/src/tests/WorkersAdapter.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "unverified",
+          "reason": "Reuse the existing Upstash Redis adapter and shared canonical policy for legacy fixed-window admission and refund. Local Redis stubs prove routing and results, not this deployed host.",
+          "providers": ["@croco/ratelimit-upstash", "@croco/ratelimit-core"],
+          "constraints": [
+            "Requires configured Upstash REST credentials and network access.",
+            "Await admission and refund before host request or invocation completion.",
+            "No live Upstash or deployed host validation performed."
+          ],
+          "references": [
+            "packages/ratelimit-upstash/src/libs/UpstashRateLimitStore.ts",
+            "packages/ratelimit-upstash/src/tests/UpstashRateLimitStore.spec.ts",
+            "packages/ratelimit-upstash/src/tests/WorkersAdapter.spec.ts"
+          ],
+          "host": "workers"
+        }
+      }
+    }
+  ]
+}

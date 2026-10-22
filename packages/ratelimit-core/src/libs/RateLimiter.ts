@@ -1,4 +1,4 @@
-import { validateRateLimitPolicy } from "./validateRateLimitPolicy";
+import { normalizeRateLimitPolicy, validateRateLimitPolicy } from "./validateRateLimitPolicy";
 import type { KeyContext, RateLimitKeyBuilder } from "./RateLimitKeyBuilder";
 import type { RateLimitStore } from "./RateLimitStore";
 import { RateLimitUnexpectedPolicyProblem } from "./problems/RateLimitConfigProblems";
@@ -47,11 +47,11 @@ export class RateLimiter<TContext = KeyContext> {
     policy: RateLimitPolicy,
     options?: RateLimitCheckOptions,
   ): Promise<RateLimitResult> {
-    validateRateLimitPolicy(policy);
+    const normalizedPolicy = normalizeRateLimitPolicy(policy);
     const key = this.keyBuilder(context, policy.name);
 
     try {
-      const result = await this.store.check(key, policy);
+      const result = await this.store.check(key, normalizedPolicy);
       return { ...result, policyName: policy.name };
     } catch (error) {
       return this.handleStoreError(error, policy, options?.failOpen);
@@ -63,9 +63,9 @@ export class RateLimiter<TContext = KeyContext> {
     policy: RateLimitPolicy,
     options?: RateLimitCheckOptions,
   ): Promise<RateLimitResult> {
-    validateRateLimitPolicy(policy);
+    const normalizedPolicy = normalizeRateLimitPolicy(policy);
     try {
-      const result = await this.store.check(key, policy);
+      const result = await this.store.check(key, normalizedPolicy);
       return { ...result, policyName: policy.name };
     } catch (error) {
       return this.handleStoreError(error, policy, options?.failOpen);
@@ -77,9 +77,9 @@ export class RateLimiter<TContext = KeyContext> {
     policy: RateLimitPolicy,
     receipt?: RateLimitRefundReceipt,
   ): Promise<RateLimitRefundResult> {
-    validateRateLimitPolicy(policy);
+    const normalizedPolicy = normalizeRateLimitPolicy(policy);
     const key = this.keyBuilder(context, policy.name);
-    return this.refundWithKey(key, policy, receipt);
+    return this.refundWithKey(key, normalizedPolicy, receipt);
   }
 
   async refundWithKey(
@@ -87,9 +87,9 @@ export class RateLimiter<TContext = KeyContext> {
     policy: RateLimitPolicy,
     receipt?: RateLimitRefundReceipt,
   ): Promise<RateLimitRefundResult> {
-    validateRateLimitPolicy(policy);
+    const normalizedPolicy = normalizeRateLimitPolicy(policy);
     try {
-      const result = await this.store.refund(key, policy, receipt);
+      const result = await this.store.refund(key, normalizedPolicy, receipt);
       return { ...result, policyName: policy.name };
     } catch (error) {
       const storeError = normalizeStoreError(error);

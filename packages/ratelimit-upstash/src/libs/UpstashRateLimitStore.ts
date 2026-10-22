@@ -11,6 +11,7 @@ import type {
 import {
   FixedWindowStore,
   isFixedWindowPolicy,
+  normalizeRateLimitPolicy,
   isSlidingWindowPolicy,
   isTokenBucketPolicy,
   SlidingWindowStore,
@@ -375,6 +376,7 @@ export class UpstashFixedWindowStore extends FixedWindowStore {
   }
 
   async check(key: string, policy: RateLimitPolicy): Promise<RateLimitResult> {
+    policy = normalizeRateLimitPolicy(policy);
     if (!isFixedWindowPolicy(policy)) {
       throw new InvalidRateLimitPolicyProblem("fixed window");
     }
@@ -427,6 +429,7 @@ export class UpstashFixedWindowStore extends FixedWindowStore {
     policy: RateLimitPolicy,
     receipt?: RateLimitRefundReceipt,
   ): Promise<RateLimitRefundResult> {
+    policy = normalizeRateLimitPolicy(policy);
     if (!isFixedWindowPolicy(policy)) {
       throw new InvalidRateLimitPolicyProblem("fixed window");
     }

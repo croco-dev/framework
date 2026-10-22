@@ -159,6 +159,56 @@ describe("RateLimitPolicyValidation", () => {
     expect(createTokenBucketPolicy("bucket", 2, 0.5)).toEqual(policies[2]);
   });
 
+  it.each([
+    { name: "invalid", algorithm: "unknown", limit: 2, windowMs: 1000 },
+    { name: "invalid", algorithm: null, limit: 2, windowMs: 1000 },
+    { name: "invalid", limit: 2, windowMs: 1000, capacity: 3 },
+    { name: "invalid", algorithm: "fixed", limit: 2, windowMs: 1000, refillRate: 1 },
+    { name: "invalid", algorithm: "sliding", limit: 2, windowMs: 1000, refillIntervalMs: 1000 },
+    { ...policies[2], limit: 2 },
+    { ...policies[2], windowMs: 1000 },
+  ])("rejects malformed policy before admission or refund storage access: %j", async (input) => {
+    const policy = input as unknown as RateLimitPolicy;
+    const store = createStore(policies[0]);
+    const check = vi.spyOn(store, "check");
+    const refund = vi.spyOn(store, "refund");
+    const keyBuilder = vi.fn(() => "key");
+    const onStoreError = vi.fn();
+    const limiter = new RateLimiter<Record<string, unknown>>(store, keyBuilder, { onStoreError });
+    await expect(limiter.check({}, policy)).rejects.toMatchObject(configProblem);
+    await expect(limiter.checkWithKey("key", policy)).rejects.toMatchObject(configProblem);
+    await expect(limiter.refund({}, policy)).rejects.toMatchObject(configProblem);
+    await expect(limiter.refundWithKey("key", policy)).rejects.toMatchObject(configProblem);
+    expect(check).not.toHaveBeenCalled();
+    expect(refund).not.toHaveBeenCalled();
+    expect(keyBuilder).not.toHaveBeenCalled();
+    expect(onStoreError).not.toHaveBeenCalled();
+  });
+
+  it("passes the same canonical legacy policy to admission and refund stores", async () => {
+    const store = new FixedWindowInMemoryStore({ now: () => 12_345, pruneIntervalMs: 0 });
+    const check = vi.spyOn(store, "check");
+    const refund = vi.spyOn(store, "refund");
+    const limiter = new RateLimiter<Record<string, unknown>>(store, () => "key");
+    const policy = Object.freeze({ name: "legacy", limit: 1, windowMs: 10_000 });
+    for (const withKey of [false, true]) {
+      const result = await (withKey
+        ? limiter.checkWithKey("key", policy)
+        : limiter.check({}, policy));
+      expect(result).toMatchObject({ success: true, remaining: 0, resetAtMs: 20_000 });
+      const refunded = await (withKey
+        ? limiter.refundWithKey("key", policy, result.refundReceipt)
+        : limiter.refund({}, policy, result.refundReceipt));
+      expect(refunded).toMatchObject({ refunded: true, remaining: 1 });
+      expect(check).toHaveBeenLastCalledWith("key", { ...policy, algorithm: "fixed" });
+      expect(refund).toHaveBeenLastCalledWith(
+        "key",
+        { ...policy, algorithm: "fixed" },
+        result.refundReceipt,
+      );
+    }
+  });
+
   it("validates legacy policies before store access", async () => {
     const store = new FixedWindowInMemoryStore({ pruneIntervalMs: 0 });
     const check = vi.spyOn(store, "check");

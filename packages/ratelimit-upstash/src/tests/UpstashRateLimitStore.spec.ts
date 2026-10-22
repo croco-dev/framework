@@ -1,4 +1,5 @@
 import {
+  RateLimiter,
   createFixedWindowPolicy,
   createSlidingWindowPolicy,
   createTokenBucketPolicy,
@@ -277,6 +278,114 @@ describe("UpstashFixedWindowStore", () => {
     };
     store = new UpstashFixedWindowStore({ redis: mockRedis as never });
   });
+
+  describe.each(["store", "limiter-key", "limiter-context"] as const)(
+    "legacy fixed via %s",
+    (path) => {
+      it.each([undefined, "fixed"] as const)(
+        "enforces quota and refunds with algorithm=%s",
+        async (algorithm) => {
+          const redis = createMockRedis();
+          redis.eval
+            .mockResolvedValueOnce([1, 1, 0])
+            .mockResolvedValueOnce([0, 1, 0])
+            .mockResolvedValueOnce([1, 0, 1])
+            .mockResolvedValueOnce([0, 0, 1]);
+          const fixed = new UpstashFixedWindowStore({ redis: redis as never, now: () => 12_345 });
+          const limiter = new RateLimiter<Record<string, unknown>>(fixed, () => "legacy-key");
+          const policy: RateLimitPolicy = {
+            name: "legacy",
+            limit: 1,
+            windowMs: 10_000,
+            ...(algorithm ? { algorithm } : {}),
+          };
+          const original = { ...policy };
+          const check = () =>
+            path === "store"
+              ? fixed.check("legacy-key", policy)
+              : path === "limiter-key"
+                ? limiter.checkWithKey("legacy-key", policy)
+                : limiter.check({}, policy);
+          const allowed = await check();
+          expect(allowed).toMatchObject({
+            success: true,
+            limit: 1,
+            remaining: 0,
+            resetAtMs: 20_000,
+            refundReceipt: { algorithm: "fixed", windowStart: 10_000 },
+          });
+          expect(allowed.degraded).toBeUndefined();
+          expect(await check()).toMatchObject({ success: false, remaining: 0, resetAtMs: 20_000 });
+          const refund = () =>
+            path === "store"
+              ? fixed.refund("legacy-key", policy, allowed.refundReceipt)
+              : path === "limiter-key"
+                ? limiter.refundWithKey("legacy-key", policy, allowed.refundReceipt)
+                : limiter.refund({}, policy, allowed.refundReceipt);
+          expect(await refund()).toMatchObject({ refunded: true, remaining: 1, resetAtMs: 20_000 });
+          expect(await refund()).toMatchObject({ refunded: false, remaining: 1 });
+          expect(redis.eval).toHaveBeenNthCalledWith(
+            1,
+            expect.any(String),
+            ["{ratelimit:fixed:legacy-key}", "{ratelimit:fixed:legacy-key}:receipts"],
+            [1, 10, 10_000, allowed.refundReceipt?.id],
+          );
+          expect(redis.eval).toHaveBeenNthCalledWith(
+            3,
+            expect.any(String),
+            ["{ratelimit:fixed:legacy-key}", "{ratelimit:fixed:legacy-key}:receipts"],
+            [1, 10, 10_000, allowed.refundReceipt?.id, 10_000],
+          );
+          expect(await fixed.getStats()).toEqual({ allowed: 0, denied: 1, total: 1 });
+          expect(policy).toEqual(original);
+        },
+      );
+    },
+  );
+
+  it.each([
+    { name: "invalid", limit: 0, windowMs: 10_000 },
+    { name: "invalid", algorithm: "unknown", limit: 1, windowMs: 10_000 },
+    { name: "invalid", algorithm: "fixed", limit: 1, windowMs: 10_000, capacity: 3 },
+  ])("rejects malformed direct store input before Redis admission or refund: %j", async (input) => {
+    const policy = input as unknown as RateLimitPolicy;
+    await expect(store.check("key", policy)).rejects.toMatchObject({
+      code: "ratelimit/invalid-policy",
+    });
+    await expect(
+      store.refund("key", policy, { algorithm: "fixed", id: "receipt", windowStart: 0 }),
+    ).rejects.toMatchObject({ code: "ratelimit/invalid-policy" });
+    expect(mockRedis.eval).not.toHaveBeenCalled();
+    expect(await store.getStats()).toEqual({ allowed: 0, denied: 0, total: 0 });
+  });
+
+  it.each([true, false])(
+    "retains legacy Redis failure behavior with failOpen=%s",
+    async (failOpen) => {
+      const redis = createMockRedis();
+      redis.eval.mockRejectedValue(createUpstreamError("unavailable", 503));
+      const onStoreError = vi.fn();
+      const limiter = new RateLimiter(
+        new UpstashFixedWindowStore({ redis: redis as never }),
+        () => "key",
+        { failOpen, onStoreError },
+      );
+      const policy = { name: "legacy", limit: 1, windowMs: 10_000 };
+      expect(await limiter.checkWithKey("key", policy)).toMatchObject({
+        success: failOpen,
+        degraded: true,
+        limit: 1,
+      });
+      expect(redis.eval).toHaveBeenCalledTimes(1);
+      expect(onStoreError.mock.calls[0]?.[0]).toMatchObject({
+        code: "ratelimit-upstash/upstream-failed",
+      });
+      await expect(
+        limiter.refundWithKey("key", policy, { algorithm: "fixed", id: "receipt", windowStart: 0 }),
+      ).rejects.toMatchObject({ code: "ratelimit-upstash/upstream-failed" });
+      expect(redis.eval).toHaveBeenCalledTimes(2);
+    },
+  );
 
   it("should allow requests within limit", async () => {
     mockRedis.eval.mockResolvedValue([1, 1, 9]);
