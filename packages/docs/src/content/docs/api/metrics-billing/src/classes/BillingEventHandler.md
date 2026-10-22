@@ -38,13 +38,15 @@ title: "BillingEventHandler"
 
 ## Methods
 
-### getPlan()
+### getPlanVersion()
 
-> **getPlan**(`planId`): `Promise`\<\{ `amount`: `number`; `currency`: `string`; `id`: `string`; `interval`: [`PlanInterval`](/api/billing-core/src/type-aliases/planinterval/); `intervalCount`: `number`; \} \| `null`\>
+> **getPlanVersion**(`pricingRef`): `Promise`\<\{ `amount`: `number`; `currency`: `string`; `id`: `string`; `interval`: [`PlanInterval`](/api/billing-core/src/type-aliases/planinterval/); `intervalCount`: `number`; \} \| `null`\>
+
+Resolve an immutable pricing reference, independent of the current time. Return null if unavailable.
 
 #### Parameters
 
-##### planId
+##### pricingRef
 
 `string`
 
@@ -54,7 +56,7 @@ title: "BillingEventHandler"
 
 #### Implementation of
 
-[`PlanProvider`](/api/metrics-core/src/interfaces/planprovider/).[`getPlan`](/api/metrics-core/src/interfaces/planprovider/#getplan)
+[`PlanProvider`](/api/metrics-core/src/interfaces/planprovider/).[`getPlanVersion`](/api/metrics-core/src/interfaces/planprovider/#getplanversion)
 
 ---
 

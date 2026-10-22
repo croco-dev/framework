@@ -3493,6 +3493,12 @@
       "owner": "@croco/integrations-posthog"
     },
     {
+      "path": "packages/integrations-posthog/src/tests/RedirectCredentials.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/integrations-posthog"
+    },
+    {
       "path": "packages/invitation-core/src/tests/DomainPolicyManager.spec.ts",
       "lane": "fast",
       "qualifiers": [],
@@ -4040,6 +4046,12 @@
     },
     {
       "path": "packages/metrics-billing/src/tests/OutcomeSourceMapping.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/metrics-billing"
+    },
+    {
+      "path": "packages/metrics-billing/src/tests/PinnedMrr.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/metrics-billing"

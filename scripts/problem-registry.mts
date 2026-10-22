@@ -4434,6 +4434,17 @@ const recoveryMetadataByCode = {
     redactionPolicy: "operator-only",
     severity: "error",
   }),
+  "metrics-core/subscription-pricing-unavailable": recovery({
+    cause:
+      "A subscription's immutable pricing reference is missing, unavailable, or belongs to another plan family.",
+    userAction:
+      "Supply the subscription's original immutable pricing reference and retry only after its retained price is available.",
+    operatorAction:
+      "Locate the missing pricingRef and restore its matching retained plan version for the subscription's plan family before recalculating MRR; never substitute the current plan price.",
+    retryability: "not-retryable",
+    redactionPolicy: "public",
+    severity: "info",
+  }),
   "metrics-billing/metric-dropped": recovery({
     cause:
       "Billing metrics could not be recorded because the referenced account, subscription, or plan evidence was missing.",

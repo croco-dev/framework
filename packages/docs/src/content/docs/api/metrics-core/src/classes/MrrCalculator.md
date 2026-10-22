@@ -41,6 +41,8 @@ Active subscriptions to calculate MRR from
 
 [`PlanProvider`](/api/metrics-core/src/interfaces/planprovider/)
 
+Provider resolving the subscription's immutable pricing reference
+
 #### Returns
 
 `Promise`\<[`Money`](/api/metrics-core/src/type-aliases/money/)\>

@@ -1,7 +1,10 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import type { PlanProvider } from "../libs/interfaces/PlanProvider";
 import { MrrCalculator } from "../libs/MrrCalculator";
-import { MixedCurrencyMRRProblem } from "../libs/problems/MetricsProblems";
+import {
+  MixedCurrencyMRRProblem,
+  SubscriptionPricingUnavailableProblem,
+} from "../libs/problems/MetricsProblems";
 import type { PlanSnapshot, SubscriptionSnapshot } from "../types";
 
 describe("MrrCalculator", () => {
@@ -12,7 +15,7 @@ describe("MrrCalculator", () => {
     calculator = new MrrCalculator();
 
     mockPlanProvider = {
-      getPlan: async (planId: string) => {
+      getPlanVersion: async (planId: string) => {
         const plans: Record<string, PlanSnapshot> = {
           plan_monthly_10: {
             id: "plan_monthly_10",
@@ -61,14 +64,17 @@ describe("MrrCalculator", () => {
         {
           id: "sub_1",
           planId: "plan_monthly_10",
+          pricingRef: "plan_monthly_10",
         },
         {
           id: "sub_2",
           planId: "plan_monthly_20",
+          pricingRef: "plan_monthly_20",
         },
         {
           id: "sub_3",
           planId: "plan_monthly_10",
+          pricingRef: "plan_monthly_10",
         },
       ];
 
@@ -159,7 +165,7 @@ describe("MrrCalculator", () => {
 
     it("should sum individually rounded subscription amounts", async () => {
       const annualPlanProvider: PlanProvider = {
-        getPlan: async () => ({
+        getPlanVersion: async () => ({
           id: "plan_yearly_199",
           amount: 19900,
           currency: "USD",
@@ -171,8 +177,8 @@ describe("MrrCalculator", () => {
       await expect(
         calculator.calculateMRR(
           [
-            { id: "sub-1", planId: "plan_yearly_199" },
-            { id: "sub-2", planId: "plan_yearly_199" },
+            { id: "sub-1", planId: "plan_yearly_199", pricingRef: "plan_yearly_199" },
+            { id: "sub-2", planId: "plan_yearly_199", pricingRef: "plan_yearly_199" },
           ],
           annualPlanProvider,
         ),
@@ -186,14 +192,17 @@ describe("MrrCalculator", () => {
         {
           id: "sub_1",
           planId: "plan_monthly_10",
+          pricingRef: "plan_monthly_10",
         },
         {
           id: "sub_2",
           planId: "plan_yearly_120",
+          pricingRef: "plan_yearly_120",
         },
         {
           id: "sub_3",
           planId: "plan_monthly_20",
+          pricingRef: "plan_monthly_20",
         },
       ];
 
@@ -215,16 +224,41 @@ describe("MrrCalculator", () => {
       });
     });
 
-    it("should skip subscriptions with unknown plans", async () => {
+    it("should reject subscriptions with unavailable pinned pricing", async () => {
       const subscriptions: SubscriptionSnapshot[] = [
         {
           id: "sub_1",
           planId: "unknown_plan",
+          pricingRef: "unknown_plan",
         },
       ];
 
-      const result = await calculator.calculateMRR(subscriptions, mockPlanProvider);
-      expect(result.amount).toBe(0);
+      await expect(calculator.calculateMRR(subscriptions, mockPlanProvider)).rejects.toBeInstanceOf(
+        SubscriptionPricingUnavailableProblem,
+      );
+    });
+
+    it.each([undefined, "", "   "])(
+      "should reject a missing pricing reference (%s)",
+      async (pricingRef) => {
+        const subscription = {
+          id: "sub-1",
+          planId: "plan_monthly_10",
+          pricingRef,
+        } as SubscriptionSnapshot;
+        await expect(
+          calculator.calculateMRR([subscription], mockPlanProvider),
+        ).rejects.toBeInstanceOf(SubscriptionPricingUnavailableProblem);
+      },
+    );
+
+    it("should reject pinned pricing from another plan family", async () => {
+      await expect(
+        calculator.calculateMRR(
+          [{ id: "sub-1", planId: "plan_monthly_10", pricingRef: "plan_monthly_20" }],
+          mockPlanProvider,
+        ),
+      ).rejects.toBeInstanceOf(SubscriptionPricingUnavailableProblem);
     });
 
     it("should classify equal amounts as unchanged", () => {
@@ -244,10 +278,12 @@ describe("MrrCalculator", () => {
         {
           id: "sub_usd",
           planId: "plan_monthly_10",
+          pricingRef: "plan_monthly_10",
         },
         {
           id: "sub_krw",
           planId: "plan_monthly_krw",
+          pricingRef: "plan_monthly_krw",
         },
       ];
 

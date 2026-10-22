@@ -94,6 +94,7 @@ export {
   InvalidRetentionMovementProblem,
   MixedCurrencyMRRProblem,
   RetentionMetricsUnavailableProblem,
+  SubscriptionPricingUnavailableProblem,
 } from "./libs/problems/MetricsProblems";
 /**
  * Logo Churn 계산을 위한 고객 수 기반 입력 타입입니다.

@@ -101,3 +101,15 @@ export class MixedCurrencyMRRProblem extends Problem {
     );
   }
 }
+
+export class SubscriptionPricingUnavailableProblem extends Problem {
+  readonly code = "metrics-core/subscription-pricing-unavailable";
+  readonly category = ProblemCategory.ValidationError;
+  constructor(subscriptionId: string, pricingRef: string | undefined) {
+    super(
+      undefined,
+      ProblemCategory.ValidationError,
+      `Subscription '${subscriptionId}' requires matching immutable pricing evidence for '${pricingRef ?? "missing"}'. Restore the pinned price before recalculating MRR.`,
+    );
+  }
+}

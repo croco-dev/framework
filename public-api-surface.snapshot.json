@@ -29907,6 +29907,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "SubscriptionPricingUnavailableProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/MetricsProblems",
+              "declarationKind": "class"
+            },
+            {
               "name": "and",
               "exportKind": "named",
               "source": "./libs/metric/MetricExpression",

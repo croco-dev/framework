@@ -164,7 +164,7 @@ describe.skipIf(!realResourcesEnabled).each(["PostgreSQL", "TimescaleDB"] as con
     it("stores the daily snapshot of a tenant on a USD 199/year plan", async () => {
       const [store] = stores();
       const annualPlanProvider: PlanProvider = {
-        getPlan: async () => ({
+        getPlanVersion: async () => ({
           id: "plan-pro-annual",
           amount: 19_900,
           currency: "USD",
@@ -175,7 +175,9 @@ describe.skipIf(!realResourcesEnabled).each(["PostgreSQL", "TimescaleDB"] as con
 
       await new SnapshotScheduler(store).captureSnapshot(
         {
-          subscriptions: [{ id: "sub-1", planId: "plan-pro-annual" }],
+          subscriptions: [
+            { id: "sub-1", planId: "plan-pro-annual", pricingRef: "plan-pro-annual@v1" },
+          ],
           planProvider: annualPlanProvider,
           activeCustomers: 1,
         },

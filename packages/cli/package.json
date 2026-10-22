@@ -68,14 +68,14 @@
     "@croco/seo-core": "workspace:*",
     "@croco/testing": "workspace:*",
     "@croco/warehouse-tooling": "workspace:*",
-    "@modelcontextprotocol/server": "2.3.0",
+    "@modelcontextprotocol/server": "2.3.1",
     "citty": "^0.1.6",
     "ts-morph": "^24.0.0",
     "zod": "3.25.76"
   },
   "devDependencies": {
     "@croco/execution-core": "workspace:*",
-    "@modelcontextprotocol/client": "2.3.0",
+    "@modelcontextprotocol/client": "2.3.1",
     "@types/node": "^24.0.0",
     "tsup": "^8.3.5",
     "vitest": "^4.1.8"

@@ -478,6 +478,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`PolicyReplayProblem`](/api/metrics-core/src/classes/policyreplayproblem/)
 - [`RetentionMetricsUnavailableProblem`](/api/metrics-core/src/classes/retentionmetricsunavailableproblem/)
 - [`SnapshotTenantRequiredProblem`](/api/metrics-core/src/classes/snapshottenantrequiredproblem/)
+- [`SubscriptionPricingUnavailableProblem`](/api/metrics-core/src/classes/subscriptionpricingunavailableproblem/)
 - [`DatabaseUrlRequiredProblem`](/api/migration-runner/src/classes/databaseurlrequiredproblem/)
 - [`InvalidMigrationCountProblem`](/api/migration-runner/src/classes/invalidmigrationcountproblem/)
 - [`InvalidMigrationTargetProblem`](/api/migration-runner/src/classes/invalidmigrationtargetproblem/)

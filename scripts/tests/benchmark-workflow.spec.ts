@@ -173,7 +173,7 @@ describe("benchmark workflow", () => {
     expect(workflow).not.toMatch(/^\s*node-version(?:-file)?\s*:/m);
   });
 
-  it("keeps PR-revision benchmark execution read-only and cache-isolated", () => {
+  it("keeps immutable event-revision benchmark execution read-only and cache-isolated", () => {
     const workflow = readBenchmarkWorkflow();
     const benchmark = workflow.slice(
       workflow.indexOf("  benchmark:\n"),
@@ -185,7 +185,8 @@ describe("benchmark workflow", () => {
     expect(benchmark).toContain("contents: read");
     expect(benchmark).toContain("timeout-minutes: 20");
     expect(benchmark).not.toContain("pull-requests: write");
-    expect(benchmark).toContain("ref: ${{ github.event.pull_request.head.sha || github.sha }}");
+    expect(benchmark).toContain("ref: ${{ github.sha }}");
+    expect(benchmark).not.toContain("github.event.pull_request.head.sha");
     expect(benchmark).toContain("persist-credentials: false");
     expect(benchmark).not.toContain("actions/cache@");
     expect(benchmark).not.toContain("cache: pnpm");

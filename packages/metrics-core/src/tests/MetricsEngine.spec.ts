@@ -68,6 +68,7 @@ describe("MetricsEngine", () => {
         {
           id: "sub_1",
           planId: "plan_monthly_10",
+          pricingRef: "plan_monthly_10",
         },
       ];
       const planProvider = {} as PlanProvider;

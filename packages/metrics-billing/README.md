@@ -151,3 +151,16 @@ event key, drop reason, resource id만 포함됩니다.
 - `@croco/events-core` - EventHandler 인터페이스
 - `@croco/metrics-core` - Metrics 계산 및 저장
 - `@croco/problems-core` - dropped/recording failure Problem
+
+## 고정 요금 기반 MRR snapshot
+
+`BillingEventHandler`는 중립 `PlanProvider.getPlanVersion(pricingRef)` 계약을 구현합니다.
+구독을 `{ id: subscription.id, planId: subscription.planId, pricingRef: subscription.planVersionRef }`로
+매핑해 `SnapshotScheduler` 또는 `MrrCalculator`에 전달하세요. adapter는
+`PlanRegistry.getPlanVersion`으로 정확한 버전을 조회하며 현재 유효 가격이나 계산 날짜로
+버전을 다시 선택하지 않습니다. 같은 plan family의 여러 버전을 함께 계산할 수 있고,
+새 버전이 활성화되어도 보관한 과거 입력의 가격 근거는 유지됩니다.
+
+기존 `getPlan(planId)` provider 호출은 `getPlanVersion(pricingRef)`로 마이그레이션해야 합니다.
+고정 버전이 없으면 `null`을 반환하며 계산기는 `metrics-core/subscription-pricing-unavailable`로
+실패합니다. 누락 버전을 복구하기 전에는 과거 snapshot을 현재 가격으로 다시 저장하지 마세요.

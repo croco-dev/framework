@@ -1,0 +1,168 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "metrics-core",
+      "classification": "pure-contract",
+      "reason": "Subscription snapshots carry immutable pricing references; exact-version resolution rejects missing or mismatched evidence instead of selecting current prices. This changes domain calculation and adapter mapping without infrastructure effects.",
+      "files": {
+        "packages/metrics-core/src/index.ts": "e415c5946525836ff6525eb2e6b98b8df856cf1c0de81ad85c1fae8c9c16d30d",
+        "packages/metrics-core/src/libs/MrrCalculator.ts": "253669aa56f8701fc957a7f4627dcd83f2827cb2f44360d896db8719cee70976",
+        "packages/metrics-core/src/libs/interfaces/PlanProvider.ts": "68c42b598b0b1d84f91e31f25effedec6f41819061fa3039dd1e7a224d6ab079",
+        "packages/metrics-core/src/libs/problems/MetricsProblems.ts": "e75a523de79ad3b520d2c72fce7806b39f3880127f254667ad35fe3a207fb6f6",
+        "packages/metrics-core/src/types.ts": "893a43b2a581c78280fe30b365f33615c39dd3f268a94aa70312c0a75dbf514e"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Immutable price lookup and pure MRR aggregation add no Kubernetes Node Host capability, storage, connection or invocation lifecycle requirement. Existing provider composition is reused without a deployment support claim.",
+          "providers": [],
+          "constraints": [
+            "Callers retain immutable pricing references and providers retain their historical prices. No live infrastructure or provider certification is claimed."
+          ],
+          "references": [
+            "packages/metrics-core/src/libs/interfaces/PlanProvider.ts",
+            "packages/metrics-billing/src/libs/BillingEventHandler.ts",
+            "packages/metrics-billing/src/tests/PinnedMrr.spec.ts",
+            "docs/package-catalog.json"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Immutable price lookup and pure MRR aggregation add no Lambda Host capability, storage, connection or invocation lifecycle requirement. Existing provider composition is reused without a deployment support claim.",
+          "providers": [],
+          "constraints": [
+            "Callers retain immutable pricing references and providers retain their historical prices. No live infrastructure or provider certification is claimed."
+          ],
+          "references": [
+            "packages/metrics-core/src/libs/interfaces/PlanProvider.ts",
+            "packages/metrics-billing/src/libs/BillingEventHandler.ts",
+            "packages/metrics-billing/src/tests/PinnedMrr.spec.ts",
+            "docs/package-catalog.json"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Immutable price lookup and pure MRR aggregation add no Workers Host capability, storage, connection or invocation lifecycle requirement. Existing provider composition is reused without a deployment support claim.",
+          "providers": [],
+          "constraints": [
+            "Callers retain immutable pricing references and providers retain their historical prices. No live infrastructure or provider certification is claimed."
+          ],
+          "references": [
+            "packages/metrics-core/src/libs/interfaces/PlanProvider.ts",
+            "packages/metrics-billing/src/libs/BillingEventHandler.ts",
+            "packages/metrics-billing/src/tests/PinnedMrr.spec.ts",
+            "docs/package-catalog.json"
+          ]
+        }
+      }
+    },
+    {
+      "package": "metrics-billing",
+      "classification": "pure-contract",
+      "reason": "Subscription snapshots carry immutable pricing references; exact-version resolution rejects missing or mismatched evidence instead of selecting current prices. This changes domain calculation and adapter mapping without infrastructure effects.",
+      "files": {
+        "packages/metrics-billing/src/libs/BillingEventHandler.ts": "27fc9add17f0d7f5f9fd6026b21d80c6679f2635dacfc7492b346706f6f31dd5"
+      },
+      "catalogRuntimes": ["node", "lambda", "cloudflare-workers"],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Immutable price lookup and pure MRR aggregation add no Kubernetes Node Host capability, storage, connection or invocation lifecycle requirement. Existing provider composition is reused without a deployment support claim.",
+          "providers": ["@croco/billing-core/PlanRegistry"],
+          "constraints": [
+            "Callers retain immutable pricing references and providers retain their historical prices. No live infrastructure or provider certification is claimed."
+          ],
+          "references": [
+            "packages/metrics-core/src/libs/interfaces/PlanProvider.ts",
+            "packages/metrics-billing/src/libs/BillingEventHandler.ts",
+            "packages/metrics-billing/src/tests/PinnedMrr.spec.ts",
+            "docs/package-catalog.json"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Immutable price lookup and pure MRR aggregation add no Lambda Host capability, storage, connection or invocation lifecycle requirement. Existing provider composition is reused without a deployment support claim.",
+          "providers": ["@croco/billing-core/PlanRegistry"],
+          "constraints": [
+            "Callers retain immutable pricing references and providers retain their historical prices. No live infrastructure or provider certification is claimed."
+          ],
+          "references": [
+            "packages/metrics-core/src/libs/interfaces/PlanProvider.ts",
+            "packages/metrics-billing/src/libs/BillingEventHandler.ts",
+            "packages/metrics-billing/src/tests/PinnedMrr.spec.ts",
+            "docs/package-catalog.json"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Immutable price lookup and pure MRR aggregation add no Workers Host capability, storage, connection or invocation lifecycle requirement. Existing provider composition is reused without a deployment support claim.",
+          "providers": ["@croco/billing-core/PlanRegistry"],
+          "constraints": [
+            "Callers retain immutable pricing references and providers retain their historical prices. No live infrastructure or provider certification is claimed."
+          ],
+          "references": [
+            "packages/metrics-core/src/libs/interfaces/PlanProvider.ts",
+            "packages/metrics-billing/src/libs/BillingEventHandler.ts",
+            "packages/metrics-billing/src/tests/PinnedMrr.spec.ts",
+            "docs/package-catalog.json"
+          ]
+        }
+      }
+    },
+    {
+      "package": "problems-core",
+      "classification": "pure-contract",
+      "reason": "Generated diagnostic metadata registers the subscription pricing failure; no error transport, Host capability, storage or lifecycle behavior changes.",
+      "files": {
+        "packages/problems-core/src/generated/problem-code-registry.ts": "8659f30d98a70373a28d63e67bbc446ea0191c1f9b9d81d47e195fbc83c49fbd"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Immutable price lookup and pure MRR aggregation add no Kubernetes Node Host capability, storage, connection or invocation lifecycle requirement. Existing provider composition is reused without a deployment support claim.",
+          "providers": [],
+          "constraints": [
+            "Callers retain immutable pricing references and providers retain their historical prices. No live infrastructure or provider certification is claimed."
+          ],
+          "references": [
+            "packages/metrics-core/src/libs/interfaces/PlanProvider.ts",
+            "packages/metrics-billing/src/libs/BillingEventHandler.ts",
+            "packages/metrics-billing/src/tests/PinnedMrr.spec.ts",
+            "docs/package-catalog.json"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Immutable price lookup and pure MRR aggregation add no Lambda Host capability, storage, connection or invocation lifecycle requirement. Existing provider composition is reused without a deployment support claim.",
+          "providers": [],
+          "constraints": [
+            "Callers retain immutable pricing references and providers retain their historical prices. No live infrastructure or provider certification is claimed."
+          ],
+          "references": [
+            "packages/metrics-core/src/libs/interfaces/PlanProvider.ts",
+            "packages/metrics-billing/src/libs/BillingEventHandler.ts",
+            "packages/metrics-billing/src/tests/PinnedMrr.spec.ts",
+            "docs/package-catalog.json"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Immutable price lookup and pure MRR aggregation add no Workers Host capability, storage, connection or invocation lifecycle requirement. Existing provider composition is reused without a deployment support claim.",
+          "providers": [],
+          "constraints": [
+            "Callers retain immutable pricing references and providers retain their historical prices. No live infrastructure or provider certification is claimed."
+          ],
+          "references": [
+            "packages/metrics-core/src/libs/interfaces/PlanProvider.ts",
+            "packages/metrics-billing/src/libs/BillingEventHandler.ts",
+            "packages/metrics-billing/src/tests/PinnedMrr.spec.ts",
+            "docs/package-catalog.json"
+          ]
+        }
+      }
+    }
+  ]
+}

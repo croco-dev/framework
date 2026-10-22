@@ -70,7 +70,7 @@ not thrown to the embedding caller.
 ### Authorized reads for coding agents
 
 `croco-agent` exposes the same application-owned `MetricReadService` through CLI JSON and
-local stdio MCP (official TypeScript SDK 2.3.0). It needs no LLM account or PostgreSQL server.
+local stdio MCP (official TypeScript SDK 2.3.1). It needs no LLM account or PostgreSQL server.
 The operator supplies an absolute `.mjs` application path at process startup:
 
 ```bash

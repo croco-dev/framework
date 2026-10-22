@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export type CrocoProblemRegistry = {
   readonly version: "croco.problem-code-registry.v1";
-  readonly problemCount: 1138;
+  readonly problemCount: 1139;
   readonly problems: readonly [
     {
       readonly code: "ACCESS_DENIED";
@@ -21140,7 +21140,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/metrics-billing/src/libs/BillingEventHandler.ts";
-          readonly line: 48;
+          readonly line: 49;
           readonly column: 13;
           readonly kind: "problem-factory";
         },
@@ -21673,6 +21673,34 @@ export type CrocoProblemRegistry = {
         {
           readonly file: "packages/metrics-core/src/libs/SnapshotScheduler.ts";
           readonly line: 18;
+          readonly column: 1;
+          readonly kind: "problem-class";
+        },
+      ];
+    },
+    {
+      readonly code: "metrics-core/subscription-pricing-unavailable";
+      readonly category: "ValidationError";
+      readonly status: 422;
+      readonly title: "Validation Error";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#metrics-core-subscription-pricing-unavailable";
+      readonly recovery: {
+        readonly cause: "A subscription's immutable pricing reference is missing, unavailable, or belongs to another plan family.";
+        readonly userAction: "Supply the subscription's original immutable pricing reference and retry only after its retained price is available.";
+        readonly operatorAction: "Locate the missing pricingRef and restore its matching retained plan version for the subscription's plan family before recalculating MRR; never substitute the current plan price.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "public";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.info";
+          readonly severity: "info";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/metrics-core/src/libs/problems/MetricsProblems.ts";
+          readonly line: 105;
           readonly column: 1;
           readonly kind: "problem-class";
         },
@@ -32168,7 +32196,7 @@ export type CrocoProblemRegistry = {
 
 export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 1138,
+  problemCount: 1139,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -55754,7 +55782,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/metrics-billing/src/libs/BillingEventHandler.ts",
-          line: 48,
+          line: 49,
           column: 13,
           kind: "problem-factory",
         },
@@ -56333,6 +56361,40 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
         {
           file: "packages/metrics-core/src/libs/SnapshotScheduler.ts",
           line: 18,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "metrics-core/subscription-pricing-unavailable",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#metrics-core-subscription-pricing-unavailable",
+      recovery: {
+        cause:
+          "A subscription's immutable pricing reference is missing, unavailable, or belongs to another plan family.",
+        userAction:
+          "Supply the subscription's original immutable pricing reference and retry only after its retained price is available.",
+        operatorAction:
+          "Locate the missing pricingRef and restore its matching retained plan version for the subscription's plan family before recalculating MRR; never substitute the current plan price.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/metrics-core/src/libs/problems/MetricsProblems.ts",
+          line: 105,
           column: 1,
           kind: "problem-class",
         },
