@@ -224,21 +224,22 @@ export async function createExample() {
     async function state(name: "captures" | "search") {
       const service = name === "captures" ? capture : search;
       const dataset = await service.catalog.describeDataset({ access: service.access });
-      const sample = dataset.head
-        ? await service.reader.read({
-            access: service.access,
-            snapshotId: dataset.head.id,
-            projection: Object.keys(service.descriptor.columns),
-            filters: [],
-            order: service.descriptor.grain.key.map((column) => ({
-              column,
-              direction: "asc" as const,
-            })),
-            maxRows: 10,
-            maxBytes: 16384,
-            timeoutMs: 5000,
-          })
-        : null;
+      const sample =
+        dataset.headStatus === "readable" && dataset.headId
+          ? await service.reader.read({
+              access: service.access,
+              snapshotId: dataset.headId,
+              projection: Object.keys(service.descriptor.columns),
+              filters: [],
+              order: service.descriptor.grain.key.map((column) => ({
+                column,
+                direction: "asc" as const,
+              })),
+              maxRows: 10,
+              maxBytes: 16384,
+              timeoutMs: 5000,
+            })
+          : null;
       return { kind: "ready" as const, dataset, sample, sampleLimit: 10 };
     }
     return {

@@ -24,6 +24,8 @@ const dataset: WarehouseDataset = {
     write: { mode: "append", duplicate: "ignore-identical", conflict: "reject" },
     sourceRefs: ["capture-api"],
   },
+  headId: "published-1",
+  headStatus: "readable",
   revision: 4,
   permissionEpoch: 1,
   privacyEpoch: 1,
@@ -141,9 +143,13 @@ describe("DatasetExplorer", () => {
     expect(html).toContain('type="submit" disabled=""');
   });
   it("distinguishes missing publication from an empty published sample", () => {
-    expect(render({ ...ready, dataset: { ...dataset, head: null }, sample: null })).toContain(
-      "Completed ingestion does not publish",
-    );
+    expect(
+      render({
+        ...ready,
+        dataset: { ...dataset, head: null, headId: null, headStatus: "empty" },
+        sample: null,
+      }),
+    ).toContain("Completed ingestion does not publish");
     if (!ready.sample) throw new Error("fixture needs sample");
     expect(render({ ...ready, sample: { ...ready.sample, rows: [] } })).toContain(
       "Published snapshot has no sample rows",
@@ -173,7 +179,11 @@ describe("DatasetExplorer", () => {
     const original = dataset.candidates[0];
     if (!original) throw new Error("fixture needs candidate");
     const sealed = { ...original, id: "sealed-stale", state: "sealed" as const, fence: 5 };
-    for (const patch of [{ head: null }, { privacyEpoch: 2 }, { revision: 5 }]) {
+    for (const patch of [
+      { head: null, headId: null, headStatus: "empty" as const },
+      { privacyEpoch: 2 },
+      { revision: 5 },
+    ]) {
       const html = render(
         { ...ready, dataset: { ...dataset, ...patch, candidates: [sealed] } },
         true,
@@ -182,6 +192,62 @@ describe("DatasetExplorer", () => {
       expect(html).not.toContain('value="sealed-stale"');
     }
   });
+  it.each(["stale", "unavailable"] as const)(
+    "retains the publication identity and recovery candidate while %s samples are unavailable",
+    (headStatus) => {
+      const original = dataset.candidates[0];
+      if (!original || !dataset.head) throw new Error("fixture needs publication metadata");
+      const candidate = {
+        ...original,
+        id: "recovery-candidate",
+        modelVersion: dataset.descriptor.semanticHash,
+        state: "sealed" as const,
+        expectedHead: dataset.headId,
+        fence: dataset.revision + 1,
+        quality: {
+          ...dataset.head.quality,
+          temporalCompleteness: "complete" as const,
+          populationCoverage: "complete" as const,
+          sourceCoverage: [
+            {
+              sourceRef: "capture-api",
+              from: "2026-09-27",
+              through: "2026-09-27",
+              state: "complete" as const,
+              gaps: [],
+              late: false,
+            },
+          ],
+        },
+      };
+      const html = render(
+        {
+          ...ready,
+          dataset: {
+            ...dataset,
+            headStatus,
+            head:
+              headStatus === "stale"
+                ? { ...dataset.head, permissionEpoch: 0, privacyEpoch: 0 }
+                : null,
+            candidates: [candidate],
+          },
+        },
+        true,
+      );
+      expect(html).toContain(
+        headStatus === "stale" ? "Stale publication" : "Publication unavailable",
+      );
+      expect(html).toContain("Published snapshot: published-1");
+      expect(html).not.toContain("Completed ingestion does not publish");
+      expect(html).toContain('value="recovery-candidate"');
+      expect(html).toContain("Fence 5");
+      expect(html).toContain("Sample unavailable");
+      expect(html).not.toContain("capture-1");
+      expect(html).not.toContain('value="remove" disabled=""');
+    },
+  );
+
   it("allows a sealed candidate to be selected before the first publication", () => {
     const original = dataset.candidates[0];
     if (!original) throw new Error("fixture needs candidate");
@@ -191,6 +257,8 @@ describe("DatasetExplorer", () => {
         dataset: {
           ...dataset,
           head: null,
+          headId: null,
+          headStatus: "empty",
           candidates: [{ ...original, state: "sealed", expectedHead: null, fence: 5 }],
         },
         sample: null,

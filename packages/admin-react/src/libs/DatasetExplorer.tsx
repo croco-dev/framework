@@ -74,11 +74,11 @@ function DatasetDetails({
   readonly state: Extract<DatasetExplorerState, { kind: "ready" }>;
 }): ReactElement {
   const { dataset, sample, sampleLimit } = state;
-  const { descriptor, head } = dataset;
+  const { descriptor, head, headId, headStatus } = dataset;
   const sealedCandidates = dataset.candidates.filter(
     (candidate) =>
       candidate.state === "sealed" &&
-      candidate.expectedHead === (head?.id ?? null) &&
+      candidate.expectedHead === headId &&
       candidate.fence === dataset.revision + 1 &&
       candidate.permissionEpoch === dataset.permissionEpoch &&
       candidate.privacyEpoch === dataset.privacyEpoch,
@@ -95,8 +95,10 @@ function DatasetDetails({
   const columns = Object.entries(descriptor.columns);
   const sampleValid =
     sample !== null &&
+    headStatus === "readable" &&
     head !== null &&
-    sample.snapshotId === head.id &&
+    head.id === headId &&
+    sample.snapshotId === headId &&
     sample.permissionEpoch === dataset.permissionEpoch &&
     sample.privacyEpoch === dataset.privacyEpoch &&
     Number.isSafeInteger(sampleLimit) &&
@@ -111,7 +113,7 @@ function DatasetDetails({
       !actor.trim() ||
       !reason.trim() ||
       !idempotencyKey.trim() ||
-      !(operation === "republish" ? canRepublish && selectedCandidate : canRemove && head)
+      !(operation === "republish" ? canRepublish && selectedCandidate : canRemove && headId)
     )
       return;
     pending.current = true;
@@ -129,8 +131,8 @@ function DatasetDetails({
           candidateId: selectedCandidate.id,
           fence: selectedCandidate.fence,
         });
-      } else if (operation === "remove" && head) {
-        await onRemove({ ...audit, snapshotId: head.id });
+      } else if (operation === "remove" && headId) {
+        await onRemove({ ...audit, snapshotId: headId });
       }
       setResult("success");
     } catch {
@@ -165,33 +167,48 @@ function DatasetDetails({
         ))}
       </dl>
       <h4>Last publication</h4>
-      {head ? (
+      {headId ? (
         <>
           <p>
-            Published snapshot: {head.id} · {head.createdAt}
+            Published snapshot: {headId}
+            {head && <> · {head.createdAt}</>}
           </p>
-          <dl>
-            <dt>Freshness observed</dt>
-            <dd>{head.quality.freshness.observedAt}</dd>
-            <dt>Newest event</dt>
-            <dd>{head.quality.freshness.newestEventAt ?? "Unknown"}</dd>
-            <dt>Temporal completeness</dt>
-            <dd>{head.quality.temporalCompleteness}</dd>
-            <dt>Population coverage</dt>
-            <dd>{head.quality.populationCoverage}</dd>
-            <dt>Validity</dt>
-            <dd>{head.quality.validity}</dd>
-            <dt>Reproducibility</dt>
-            <dd>{head.quality.reproducibility}</dd>
-          </dl>
-          <ul>
-            {head.quality.sourceCoverage.map((source, index) => (
-              <li key={index}>
-                {source.sourceRef}: {source.state} · {source.from} – {source.through} · Gaps:{" "}
-                {source.gaps.length} · Late: {source.late ? "yes" : "no"}
-              </li>
-            ))}
-          </ul>
+          {headStatus === "stale" && (
+            <p role="status">
+              Stale publication. A validated publication is required before reading samples.
+            </p>
+          )}
+          {headStatus === "unavailable" && (
+            <p role="status">
+              Publication unavailable. Its identity is retained for audited recovery.
+            </p>
+          )}
+          {head && (
+            <>
+              <dl>
+                <dt>Freshness observed</dt>
+                <dd>{head.quality.freshness.observedAt}</dd>
+                <dt>Newest event</dt>
+                <dd>{head.quality.freshness.newestEventAt ?? "Unknown"}</dd>
+                <dt>Temporal completeness</dt>
+                <dd>{head.quality.temporalCompleteness}</dd>
+                <dt>Population coverage</dt>
+                <dd>{head.quality.populationCoverage}</dd>
+                <dt>Validity</dt>
+                <dd>{head.quality.validity}</dd>
+                <dt>Reproducibility</dt>
+                <dd>{head.quality.reproducibility}</dd>
+              </dl>
+              <ul>
+                {head.quality.sourceCoverage.map((source, index) => (
+                  <li key={index}>
+                    {source.sourceRef}: {source.state} · {source.from} – {source.through} · Gaps:{" "}
+                    {source.gaps.length} · Late: {source.late ? "yes" : "no"}
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
         </>
       ) : (
         <p role="status">No published snapshot. Completed ingestion does not publish a dataset.</p>
@@ -206,7 +223,7 @@ function DatasetDetails({
         ))}
       </ul>
       <h4>Bounded sample</h4>
-      {!head ? (
+      {!headId ? (
         <p>No published sample.</p>
       ) : !sampleValid ? (
         <p role="alert">
@@ -282,7 +299,7 @@ function DatasetDetails({
                 <option value="republish" disabled={!canRepublish || sealedCandidates.length === 0}>
                   Republish snapshot
                 </option>
-                <option value="remove" disabled={!canRemove || !head}>
+                <option value="remove" disabled={!canRemove || !headId}>
                   Remove snapshot
                 </option>
               </select>
@@ -331,7 +348,9 @@ function DatasetDetails({
                 !actor.trim() ||
                 !reason.trim() ||
                 !idempotencyKey.trim() ||
-                !(operation === "republish" ? canRepublish && selectedCandidate : canRemove && head)
+                !(operation === "republish"
+                  ? canRepublish && selectedCandidate
+                  : canRemove && headId)
               }
             >
               Apply operation

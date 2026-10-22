@@ -126,6 +126,10 @@ export type WarehouseSnapshotRequest = {
 
 export type WarehouseDataset = {
   readonly descriptor: FactDescriptor;
+  /** Current publication identity for CAS, even when its snapshot metadata is unavailable. */
+  readonly headId: string | null;
+  readonly headStatus: "empty" | "readable" | "stale" | "unavailable";
+  /** Management metadata only. Use pinSnapshot/read to validate a readable snapshot. */
   readonly head: WarehouseSnapshot | null;
   readonly candidates: readonly WarehouseCandidate[];
   readonly revision: number;

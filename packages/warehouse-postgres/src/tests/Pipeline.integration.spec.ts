@@ -163,6 +163,9 @@ describe.skipIf(process.env.CROCO_TEST_REAL_RESOURCES !== "1")(
         manager,
         publication,
         resolveAccess,
+        setPermissionEpoch(epoch: number) {
+          access = { ...access, permissionEpoch: epoch };
+        },
         setPrivacyEpoch(epoch: number) {
           access = { ...access, privacyEpoch: epoch };
         },
@@ -526,7 +529,7 @@ describe.skipIf(process.env.CROCO_TEST_REAL_RESOURCES !== "1")(
 
     it("preserves privacy suppression when the file is imported again", async () => {
       const store = services();
-      await createPipelineOperations(definition, store.runtime).run();
+      const prior = await createPipelineOperations(definition, store.runtime).run();
       const identity = encodeIdentity(
         descriptor,
         validateRow(descriptor, rows[0]),
@@ -542,12 +545,53 @@ describe.skipIf(process.env.CROCO_TEST_REAL_RESOURCES !== "1")(
         },
       });
       store.setPrivacyEpoch(suppression.privacyEpoch);
-      await expect(createPipelineOperations(definition, store.runtime).run()).rejects.toThrow(
+      await expect(store.read(prior.snapshotId as string)).rejects.toThrow(
         "WAREHOUSE_EPOCH_CHANGED",
       );
       await expect(
-        store.runtime.catalog.describeDataset({ access: store.resolveAccess() }),
+        store.runtime.catalog.pinSnapshot({ access: store.resolveAccess() }),
       ).rejects.toThrow("WAREHOUSE_EPOCH_CHANGED");
+      const dataset = await store.runtime.catalog.describeDataset({
+        access: store.resolveAccess(),
+      });
+      expect(dataset).toMatchObject({
+        headId: prior.snapshotId,
+        headStatus: "stale",
+        revision: 2,
+        privacyEpoch: 1,
+      });
+      await expect(createPipelineOperations(definition, store.runtime).run()).rejects.toThrow(
+        "WAREHOUSE_IDENTITY_SUPPRESSED",
+      );
+      const content = JSON.stringify(rows[1]) + "\n";
+      const path = join(directory, `privacy-${randomUUID()}.jsonl`);
+      await writeFile(path, content);
+      const refreshed: PipelineDefinition = {
+        ...definition,
+        source: {
+          ...definition.source,
+          partitions: [
+            {
+              ...definition.source.partitions[0],
+              path,
+              revision: createHash("sha256").update(content).digest("hex"),
+            },
+          ],
+        },
+      };
+      const result = await createPipelineOperations(refreshed, store.runtime).run();
+      expect(result.state).toBe("published");
+      expect((await store.read(result.snapshotId as string)).rows).toEqual([rows[1]]);
+      expect(
+        await store.runtime.catalog.describeDataset({ access: store.resolveAccess() }),
+      ).toMatchObject({
+        headId: result.snapshotId,
+        headStatus: "readable",
+        revision: 3,
+      });
+      await expect(store.read(prior.snapshotId as string)).rejects.toThrow(
+        "WAREHOUSE_EPOCH_CHANGED",
+      );
       const binding = await connection.pool.query<{ table_name: string }>(
         "SELECT table_name FROM warehouse_models WHERE model_version=$1",
         [descriptor.semanticHash],
@@ -557,6 +601,89 @@ describe.skipIf(process.env.CROCO_TEST_REAL_RESOURCES !== "1")(
         [identity],
       );
       expect(remaining.rows[0].count).toBe("0");
+    });
+    it("republishes against the retained CAS identity when head snapshot metadata expires", async () => {
+      const store = services();
+      const operations = createPipelineOperations(definition, store.runtime);
+      const prior = await operations.run();
+      await connection.pool.query("UPDATE warehouse_snapshots SET expires_at=now() WHERE id=$1", [
+        prior.snapshotId,
+      ]);
+      expect(
+        await store.runtime.catalog.describeDataset({ access: store.resolveAccess() }),
+      ).toMatchObject({
+        headId: prior.snapshotId,
+        head: null,
+        headStatus: "unavailable",
+        revision: 1,
+      });
+      await expect(store.read(prior.snapshotId as string)).rejects.toThrow(
+        "WAREHOUSE_SNAPSHOT_UNAVAILABLE",
+      );
+      const result = await operations.run();
+      expect((await store.read(result.snapshotId as string)).rows).toEqual(rows);
+      expect(
+        await store.runtime.catalog.describeDataset({ access: store.resolveAccess() }),
+      ).toMatchObject({
+        headId: result.snapshotId,
+        headStatus: "readable",
+        revision: 2,
+      });
+    });
+    it("republishes after permission synchronization while retaining publication CAS fencing", async () => {
+      const store = services();
+      const operations = createPipelineOperations(definition, store.runtime);
+      const prior = await operations.run();
+      store.setPermissionEpoch(7);
+      await store.runtime.catalog.synchronizePermissionEpoch({
+        access: store.resolveAccess(),
+        audit: {
+          reason: "new permission policy",
+          expectedRevision: 1,
+          idempotencyKey: randomUUID(),
+        },
+      });
+      await expect(store.read(prior.snapshotId as string)).rejects.toThrow(
+        "WAREHOUSE_EPOCH_CHANGED",
+      );
+      await expect(
+        store.runtime.catalog.pinSnapshot({ access: store.resolveAccess() }),
+      ).rejects.toThrow("WAREHOUSE_EPOCH_CHANGED");
+      expect(
+        await store.runtime.catalog.describeDataset({ access: store.resolveAccess() }),
+      ).toMatchObject({
+        headId: prior.snapshotId,
+        headStatus: "stale",
+        revision: 2,
+        permissionEpoch: 7,
+      });
+      // Hold both runs after observing the same stale head/revision, before either creates a candidate.
+      const describeDataset = store.runtime.catalog.describeDataset.bind(store.runtime.catalog);
+      let release: () => void = () => undefined;
+      const bothObserved = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      let observed = 0;
+      vi.spyOn(store.runtime.catalog, "describeDataset").mockImplementation(async (request) => {
+        const dataset = await describeDataset(request);
+        if (++observed === 2) release();
+        await bothObserved;
+        return dataset;
+      });
+      const outcomes = await Promise.allSettled([operations.run(), operations.run()]);
+      expect(outcomes.filter((outcome) => outcome.status === "fulfilled")).toHaveLength(1);
+      const loser = outcomes.find((outcome) => outcome.status === "rejected");
+      expect(loser).toMatchObject({
+        status: "rejected",
+        reason: { code: "WAREHOUSE_REVISION_CONFLICT" },
+      });
+      const dataset = await describeDataset({ access: store.resolveAccess() });
+      expect(dataset).toMatchObject({ headStatus: "readable", revision: 3, permissionEpoch: 7 });
+      expect(dataset.head?.permissionEpoch).toBe(7);
+      expect((await store.read(dataset.headId as string)).rows).toEqual(rows);
+      await expect(store.read(prior.snapshotId as string)).rejects.toThrow(
+        "WAREHOUSE_EPOCH_CHANGED",
+      );
     });
   },
 );

@@ -5,6 +5,7 @@ import type {
   WarehouseAccess,
   WarehouseCandidate,
   WarehouseQuality,
+  WarehouseSnapshot,
 } from "@croco/warehouse-core/runtime";
 import { PostgresWarehouseCatalog } from "../facts/PostgresWarehouseCatalog";
 import type { WarehousePostgresPool } from "../facts/client";
@@ -163,13 +164,77 @@ describe("PostgresWarehouseCatalog", () => {
     await expect(catalog.suppress({ access, identities: ["identity"], audit })).rejects.toThrow(
       "WAREHOUSE_ACCESS_DENIED",
     );
+    await expect(catalog.describeDataset({ access })).rejects.toThrow("WAREHOUSE_ACCESS_DENIED");
     expect(query).not.toHaveBeenCalled();
   });
   it("rejects stale privacy epochs", async () => {
     head.privacy_epoch = 1;
+    await expect(catalog.describeDataset({ access })).rejects.toThrow("WAREHOUSE_EPOCH_CHANGED");
     await expect(catalog.pinSnapshot({ access, snapshotId: "old" })).rejects.toThrow(
       "WAREHOUSE_EPOCH_CHANGED",
     );
+  });
+  it.each(["privacy", "permission"] as const)(
+    "describes a %s-stale head without permitting snapshot pinning",
+    async (epoch) => {
+      const current = { ...access, [epoch === "privacy" ? "privacyEpoch" : "permissionEpoch"]: 5 };
+      head = {
+        snapshot_id: "old-head",
+        revision: 9,
+        permission_epoch: current.permissionEpoch,
+        privacy_epoch: current.privacyEpoch,
+      };
+      const snapshot: WarehouseSnapshot = {
+        id: "old-head",
+        revision: 8,
+        modelVersion: descriptor.semanticHash,
+        segmentRefs: ["table"],
+        partitionSelection: [],
+        quality,
+        createdAt: "2026-01-01T00:00:00Z",
+        permissionEpoch: 0,
+        privacyEpoch: 0,
+      };
+      const original = query.getMockImplementation();
+      query.mockImplementation(async (sql: string) => {
+        if (sql.startsWith("SELECT data FROM warehouse_snapshots"))
+          return { rows: [{ data: snapshot }] };
+        if (!original) throw new Error("Missing query mock");
+        return original(sql);
+      });
+      catalog = new PostgresWarehouseCatalog(
+        { query, connect: async () => ({ query, release }) } as WarehousePostgresPool,
+        descriptor,
+        () => current,
+      );
+      expect(await catalog.describeDataset({ access })).toMatchObject({
+        headId: "old-head",
+        headStatus: "stale",
+        head: snapshot,
+        revision: 9,
+        permissionEpoch: current.permissionEpoch,
+        privacyEpoch: current.privacyEpoch,
+      });
+      await expect(catalog.pinSnapshot({ access })).rejects.toThrow("WAREHOUSE_EPOCH_CHANGED");
+    },
+  );
+  it("preserves the CAS identity when head snapshot metadata is unavailable", async () => {
+    head = { ...head, snapshot_id: "missing-head", revision: 12 };
+    expect(await catalog.describeDataset({ access })).toMatchObject({
+      headId: "missing-head",
+      headStatus: "unavailable",
+      head: null,
+      revision: 12,
+    });
+    await expect(catalog.pinSnapshot({ access })).rejects.toThrow("WAREHOUSE_SNAPSHOT_UNAVAILABLE");
+  });
+  it("describes an unpublished dataset with an empty head", async () => {
+    expect(await catalog.describeDataset({ access })).toMatchObject({
+      headId: null,
+      head: null,
+      headStatus: "empty",
+      revision: 0,
+    });
   });
   it("destroys a connection when commit outcome is indeterminate", async () => {
     const original = query.getMockImplementation();

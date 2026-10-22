@@ -429,13 +429,30 @@ export class PostgresWarehouseCatalog implements CatalogStore {
     const access = this.access("read");
     return this.transaction(async (db) => {
       const head = await this.head(db, access);
+      const metadata = head.snapshot_id
+        ? await db.query<{ data: WarehouseSnapshot }>(
+            "SELECT data FROM warehouse_snapshots WHERE id=$1 AND scope_key=$2 AND model_version=$3 AND (expires_at IS NULL OR expires_at>now())",
+            [head.snapshot_id, scopeKey(access.scope), this.descriptor.semanticHash],
+          )
+        : null;
+      const snapshot = metadata?.rows[0]?.data ?? null;
+      const headStatus = !head.snapshot_id
+        ? "empty"
+        : !snapshot
+          ? "unavailable"
+          : snapshot.permissionEpoch !== access.permissionEpoch ||
+              snapshot.privacyEpoch !== access.privacyEpoch
+            ? "stale"
+            : "readable";
       const candidates = await db.query<{ data: WarehouseCandidate }>(
         "SELECT data FROM warehouse_candidates WHERE scope_key=$1 AND model_version=$2 ORDER BY id",
         [scopeKey(access.scope), this.descriptor.semanticHash],
       );
       return {
         descriptor: this.descriptor,
-        head: head.snapshot_id ? await this.snapshot(db, access, head.snapshot_id) : null,
+        headId: head.snapshot_id,
+        headStatus,
+        head: snapshot,
         candidates: candidates.rows.map((row) => row.data),
         revision: Number(head.revision),
         permissionEpoch: access.permissionEpoch,

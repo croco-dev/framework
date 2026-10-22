@@ -18,6 +18,8 @@ Open <http://127.0.0.1:4320>. The capture dataset preserves a 64-bit money amoun
 one published snapshot, an explicitly failed import candidate, and a sealed replacement candidate.
 The explorer can publish that replacement or remove the current publication using a reason,
 idempotency key, and expected revision. Reload after an operation to read the new publication.
+Stale or unavailable publications keep their head identity and current revision for audited recovery;
+samples are requested only from readable publications. A missing snapshot is not an unpublished dataset.
 The server resolves its synthetic operator identity and access scope; submitted actors cannot change it.
 
 `/?dataset=empty`, `/?dataset=denied`, and `/?dataset=unavailable` are explicitly synthetic
