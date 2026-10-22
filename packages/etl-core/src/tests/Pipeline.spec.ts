@@ -154,6 +154,8 @@ async function fixture(partitions = [[raw("a"), raw("b")]]) {
     }),
     describeDataset: vi.fn<CatalogStore["describeDataset"]>(async () => ({
       descriptor,
+      headId: head?.id ?? null,
+      headStatus: head ? "readable" : "empty",
       head,
       candidates: [...candidates.values()],
       revision: 0,
@@ -280,6 +282,25 @@ describe("pipeline operations", () => {
     expect(result).toMatchObject({ state: "published", inputCount: 2, outputCount: 2 });
     expect((await f.operations.status(result.executionId)).status).toBe("completed");
     expect(f.rows.size).toBe(2);
+  });
+
+  it("binds republication to the catalog identity and revision when snapshot metadata is unavailable", async () => {
+    const f = await fixture();
+    const dataset = await f.catalog.describeDataset({ access });
+    vi.mocked(f.catalog.describeDataset).mockResolvedValue({
+      ...dataset,
+      headId: "unavailable-head",
+      headStatus: "unavailable",
+      head: null,
+      revision: 17,
+    });
+    await f.operations.run();
+    expect(f.catalog.createCandidate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        expectedHead: "unavailable-head",
+        audit: expect.objectContaining({ expectedRevision: 17 }),
+      }),
+    );
   });
 
   it("rejects an unsafe numeric cast anywhere in strict input before durable writes", async () => {

@@ -71,6 +71,17 @@ Create an unpublished candidate with the current head and revision, write stable
 seal it with an explicit list of durable receipts and complete source coverage. A commit response
 failure returns an indeterminate receipt: call `reconcileReceipt` before retrying the same batch.
 Publication checks the candidate fence, quality, current head, and revision in one transaction.
+`describeDataset` returns management metadata under current server access. Its `headId` and
+`revision` are the publication CAS basis, including when `head` metadata is unavailable. `headStatus`
+is `empty` before publication, `stale` when retained metadata has old permission/privacy epochs,
+`unavailable` when the referenced snapshot is missing or expired, and `readable` when it matches the
+current epochs. `head` is metadata, not a pinned read authorization; always use `pinSnapshot` or the
+reader to validate reads. After suppression, update the server resolver to the returned privacy epoch;
+after an authorization change, synchronize the permission epoch first. ETL binds a new candidate to
+`headId` and the current revision and publishes only after normal receipts, quality and fence checks.
+Old snapshots remain unreadable after either epoch changes. A later concurrent publication or epoch
+change still rejects the stale CAS binding. No stored schema change or historical snapshot rewrite is needed.
+
 Aggregate replacements name a complete date/series range, including a verified empty range.
 Readers pin a snapshot ID and use an encrypted keyset cursor for later pages; an advanced head does not alter
 that snapshot. Changed permission/privacy epochs or expired snapshots fail explicitly. The reader

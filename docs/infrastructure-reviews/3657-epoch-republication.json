@@ -1,0 +1,209 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "warehouse-core",
+      "classification": "pure-contract",
+      "reason": "Separate management head identity and availability from pinned reads so epoch changes allow fenced republication while obsolete snapshots remain unreadable.",
+      "files": {
+        "packages/warehouse-core/src/libs/warehouseRuntime.ts": "5a7c92ac753f6dc0f00c32fd04a18386873ed4ac100a56de8c7425e48a2cd44f"
+      },
+      "catalogRuntimes": ["browser", "node", "lambda", "cloudflare-workers"],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Head identity and availability are host-independent metadata; the ETL binding adds no host capability, storage engine or lifecycle owner.",
+          "providers": [],
+          "constraints": [
+            "Preserve current server authorization, epoch checks, publication CAS and candidate fences. No deployed infrastructure or provider certification is claimed."
+          ],
+          "references": [
+            "packages/warehouse-postgres/src/facts/PostgresWarehouseCatalog.ts",
+            "packages/warehouse-postgres/src/tests/Pipeline.integration.spec.ts",
+            "docs/package-catalog.json"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Head identity and availability are host-independent metadata; the ETL binding adds no host capability, storage engine or lifecycle owner.",
+          "providers": [],
+          "constraints": [
+            "Preserve current server authorization, epoch checks, publication CAS and candidate fences. No deployed infrastructure or provider certification is claimed."
+          ],
+          "references": [
+            "packages/warehouse-postgres/src/facts/PostgresWarehouseCatalog.ts",
+            "packages/warehouse-postgres/src/tests/Pipeline.integration.spec.ts",
+            "docs/package-catalog.json"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Head identity and availability are host-independent metadata; the ETL binding adds no host capability, storage engine or lifecycle owner.",
+          "providers": [],
+          "constraints": [
+            "Preserve current server authorization, epoch checks, publication CAS and candidate fences. No deployed infrastructure or provider certification is claimed."
+          ],
+          "references": [
+            "packages/warehouse-postgres/src/facts/PostgresWarehouseCatalog.ts",
+            "packages/warehouse-postgres/src/tests/Pipeline.integration.spec.ts",
+            "docs/package-catalog.json"
+          ]
+        }
+      }
+    },
+    {
+      "package": "etl-core",
+      "classification": "pure-contract",
+      "reason": "Separate management head identity and availability from pinned reads so epoch changes allow fenced republication while obsolete snapshots remain unreadable.",
+      "files": {
+        "packages/etl-core/src/pipeline/definePipeline.ts": "05f590665b89d3c69b4c7bd390a4817296cf04ae31385fca95b29b81a381375c"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Head identity and availability are host-independent metadata; the ETL binding adds no host capability, storage engine or lifecycle owner.",
+          "providers": [],
+          "constraints": [
+            "Preserve current server authorization, epoch checks, publication CAS and candidate fences. No deployed infrastructure or provider certification is claimed."
+          ],
+          "references": [
+            "packages/warehouse-postgres/src/facts/PostgresWarehouseCatalog.ts",
+            "packages/warehouse-postgres/src/tests/Pipeline.integration.spec.ts",
+            "docs/package-catalog.json"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Head identity and availability are host-independent metadata; the ETL binding adds no host capability, storage engine or lifecycle owner.",
+          "providers": [],
+          "constraints": [
+            "Preserve current server authorization, epoch checks, publication CAS and candidate fences. No deployed infrastructure or provider certification is claimed."
+          ],
+          "references": [
+            "packages/warehouse-postgres/src/facts/PostgresWarehouseCatalog.ts",
+            "packages/warehouse-postgres/src/tests/Pipeline.integration.spec.ts",
+            "docs/package-catalog.json"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Head identity and availability are host-independent metadata; the ETL binding adds no host capability, storage engine or lifecycle owner.",
+          "providers": [],
+          "constraints": [
+            "Preserve current server authorization, epoch checks, publication CAS and candidate fences. No deployed infrastructure or provider certification is claimed."
+          ],
+          "references": [
+            "packages/warehouse-postgres/src/facts/PostgresWarehouseCatalog.ts",
+            "packages/warehouse-postgres/src/tests/Pipeline.integration.spec.ts",
+            "docs/package-catalog.json"
+          ]
+        }
+      }
+    },
+    {
+      "package": "warehouse-postgres",
+      "classification": "durable-provider",
+      "reason": "Separate management head identity and availability from pinned reads so epoch changes allow fenced republication while obsolete snapshots remain unreadable.",
+      "files": {
+        "packages/warehouse-postgres/src/facts/PostgresWarehouseCatalog.ts": "31fc04a90318d0d6821323b3bd25718779f5c3aafa46b60ad39f244626401a6a"
+      },
+      "catalogRuntimes": ["node", "lambda"],
+      "profiles": {
+        "kubernetes": {
+          "result": "unverified",
+          "reason": "Existing Node PostgreSQL transactions and head row locks are reused. Temporary PostgreSQL integration is planned; no Kubernetes deployment is verified.",
+          "providers": ["@croco/warehouse-postgres/facts"],
+          "constraints": [
+            "Preserve current server authorization, epoch checks, publication CAS and candidate fences. No deployed infrastructure or provider certification is claimed."
+          ],
+          "references": [
+            "packages/warehouse-postgres/src/facts/PostgresWarehouseCatalog.ts",
+            "packages/warehouse-postgres/src/tests/Pipeline.integration.spec.ts",
+            "docs/package-catalog.json"
+          ]
+        },
+        "aws-lambda": {
+          "result": "conditional",
+          "reason": "Existing Node PostgreSQL provider is reused with bounded invocation-owned connections and completed transactions.",
+          "providers": ["@croco/warehouse-postgres/facts"],
+          "constraints": [
+            "Preserve current server authorization, epoch checks, publication CAS and candidate fences. No deployed infrastructure or provider certification is claimed.",
+            "Finish transactions before invocation returns; pool sizing and disposal remain application-owned."
+          ],
+          "references": [
+            "packages/warehouse-postgres/src/facts/PostgresWarehouseCatalog.ts",
+            "packages/warehouse-postgres/src/tests/Pipeline.integration.spec.ts",
+            "docs/package-catalog.json"
+          ]
+        },
+        "cloudflare": {
+          "result": "unsupported",
+          "reason": "The existing pg pool and Node provider do not establish Workers isolate support; no Node Container deployment is introduced.",
+          "providers": ["@croco/warehouse-postgres/facts"],
+          "constraints": [
+            "Preserve current server authorization, epoch checks, publication CAS and candidate fences. No deployed infrastructure or provider certification is claimed."
+          ],
+          "references": [
+            "packages/warehouse-postgres/src/facts/PostgresWarehouseCatalog.ts",
+            "packages/warehouse-postgres/src/tests/Pipeline.integration.spec.ts",
+            "docs/package-catalog.json"
+          ]
+        }
+      }
+    },
+    {
+      "package": "admin-react",
+      "classification": "protocol-render",
+      "reason": "Dataset Explorer consumes canonical head identity and availability, preserving audited recovery controls without treating unreadable samples as published data or an unavailable head as unpublished.",
+      "files": {
+        "packages/admin-react/src/libs/DatasetExplorer.tsx": "766cd51b69ef69686634edd721136b10067237e2d0f42aae01c90fd3e09796a5"
+      },
+      "catalogRuntimes": ["browser", "node"],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "The existing browser/Node React component changes metadata presentation and audit-control identity only; it adds no Node Host capability, connection, storage or Kubernetes deployment wiring.",
+          "providers": ["@croco/admin-react/DatasetExplorer"],
+          "constraints": [
+            "Existing server callbacks retain authorization and publication CAS. Browser evidence is local presentation evidence, not deployed Host or provider certification."
+          ],
+          "references": [
+            "packages/admin-react/src/libs/DatasetExplorer.tsx",
+            "packages/admin-react/src/tests/DatasetExplorer.spec.ts",
+            "examples/warehouse-explorer/src/fixture.ts",
+            "docs/package-catalog.json"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Presentation conditions do not own invocation lifetime, connections or flush behavior; no Lambda Host support is introduced.",
+          "providers": ["@croco/admin-react/DatasetExplorer"],
+          "constraints": [
+            "Existing server callbacks retain authorization and publication CAS. Browser evidence is local presentation evidence, not deployed Host or provider certification."
+          ],
+          "references": [
+            "packages/admin-react/src/libs/DatasetExplorer.tsx",
+            "packages/admin-react/src/tests/DatasetExplorer.spec.ts",
+            "examples/warehouse-explorer/src/fixture.ts",
+            "docs/package-catalog.json"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Browser-rendered metadata and audit controls do not introduce Worker isolate capabilities, provider connections or deployment support.",
+          "providers": ["@croco/admin-react/DatasetExplorer"],
+          "constraints": [
+            "Existing server callbacks retain authorization and publication CAS. Browser evidence is local presentation evidence, not deployed Host or provider certification."
+          ],
+          "references": [
+            "packages/admin-react/src/libs/DatasetExplorer.tsx",
+            "packages/admin-react/src/tests/DatasetExplorer.spec.ts",
+            "examples/warehouse-explorer/src/fixture.ts",
+            "docs/package-catalog.json"
+          ]
+        }
+      }
+    }
+  ]
+}

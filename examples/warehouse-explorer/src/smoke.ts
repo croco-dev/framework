@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
+import { encodeIdentity } from "@croco/warehouse-core";
 import { createExample } from "./fixture";
 
 async function main() {
@@ -45,12 +46,32 @@ async function main() {
       }),
     );
     const current = await fixture.state("captures");
+    const row = current.sample?.rows[0];
+    assert.ok(row);
+    const suppressed = await service.catalog.suppress({
+      access: service.access,
+      identities: [encodeIdentity(service.descriptor, row, service.access.scope)],
+      audit: {
+        reason: "Smoke current privacy policy",
+        expectedRevision: current.dataset.revision,
+        idempotencyKey: randomUUID(),
+      },
+    });
+    service.setPrivacyEpoch(suppressed.privacyEpoch);
+    const stale = await fixture.state("captures");
+    assert.equal(stale.dataset.headStatus, "stale");
+    assert.equal(stale.dataset.headId, published.id);
+    assert.equal(stale.sample, null);
+    await assert.rejects(
+      service.catalog.pinSnapshot({ access: service.access, snapshotId: published.id }),
+      { code: "WAREHOUSE_EPOCH_CHANGED" },
+    );
     const removed = await service.catalog.removePublication({
       access: service.access,
       snapshotId: published.id,
       audit: {
         reason: "Smoke removal",
-        expectedRevision: current.dataset.revision,
+        expectedRevision: stale.dataset.revision,
         idempotencyKey: randomUUID(),
       },
     });

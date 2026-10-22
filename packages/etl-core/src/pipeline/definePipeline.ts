@@ -624,7 +624,7 @@ export function createPipelineOperations(input: PipelineDefinition, runtime: Pip
       pipelineId: definition.id,
       pipelineVersion: definition.version,
       ...identity,
-      expectedHead: dataset.head?.id ?? null,
+      expectedHead: dataset.headId,
       expectedRevision: dataset.revision,
       scope: access.scope,
       accessHash: digest(access),
