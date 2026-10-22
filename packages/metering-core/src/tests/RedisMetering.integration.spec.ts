@@ -74,6 +74,14 @@ function createRedisClient(
   };
 }
 
+function deferred() {
+  let resolve!: () => void;
+  const promise = new Promise<void>((complete) => {
+    resolve = complete;
+  });
+  return { promise, resolve };
+}
+
 function createUsageRecord(idempotencyKey: string): UsageRecord {
   return {
     id: `usage-${idempotencyKey}`,
@@ -1099,8 +1107,8 @@ describe.skipIf(!realResourcesEnabled)("Redis metering composition", () => {
       const storage = new RedisUsageStorage(redis);
       const meter = createMeter("billable-barrier", path === "quota" ? 4 : undefined);
       meter.billing = "required";
-      const entered = Promise.withResolvers<void>();
-      const release = Promise.withResolvers<void>();
+      const entered = deferred();
+      const release = deferred();
       const recordWithinQuota = storage.checkAndRecordWithinQuota.bind(storage);
       if (path === "record") {
         vi.spyOn(storage, "record").mockImplementation(async () => {
