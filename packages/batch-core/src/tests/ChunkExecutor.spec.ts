@@ -18,6 +18,7 @@ describe("ChunkExecutor", () => {
 
   beforeEach(() => {
     executionManager = {
+      get: vi.fn().mockResolvedValue({ id: "exec-1", status: "running" }),
       start: vi.fn().mockResolvedValue({ id: "exec-1", checkpoints: {} }),
       checkpoint: vi.fn().mockResolvedValue({}),
       complete: vi.fn().mockResolvedValue({}),
@@ -26,6 +27,187 @@ describe("ChunkExecutor", () => {
     } as unknown as ExecutionManager;
 
     executor = new ChunkExecutor(executionManager);
+  });
+
+  describe("cooperative cancellation", () => {
+    it.each([
+      [false, false],
+      [false, true],
+      [true, false],
+      [true, true],
+    ])(
+      "stops after an in-flight write and retains committed evidence (checkpoint=%s, total=%s)",
+      async (checkpointed, hasTotal) => {
+        const manager = new ExecutionManagerImpl(new TestExecutionStore());
+        const execution = await manager.create({ type: "batch-job", maxAttempts: 3 });
+        if (hasTotal) await manager.updateProgress(execution.id, { current: 0, total: 3 });
+        const source = createCheckpointReader([1, 2, 3]);
+        const reader = checkpointed ? source : { read: source.read };
+        const entered = createBarrier();
+        const release = createBarrier();
+        const written: number[] = [];
+        const writer = {
+          write: vi.fn(async (items: number[]) => {
+            entered.resolve();
+            await release.promise;
+            written.push(...items);
+          }),
+        };
+        const fail = vi.spyOn(manager, "fail");
+        const complete = vi.spyOn(manager, "complete");
+        const step = new Step({ name: "cancelled-step", reader, writer, chunkSize: 1 });
+        const running = new ChunkExecutor(manager).execute(execution.id, step);
+        await entered.promise;
+        const cancelled = await manager.cancel(execution.id, "operator request");
+        release.resolve();
+        await expect(running).resolves.toBeUndefined();
+        expect(written).toEqual([1]);
+        expect(writer.write).toHaveBeenCalledTimes(1);
+        expect(source.read).toHaveBeenCalledTimes(1);
+        expect(fail).not.toHaveBeenCalled();
+        expect(complete).not.toHaveBeenCalled();
+        const final = await manager.get(execution.id);
+        expect(final).toMatchObject({
+          status: "cancelled",
+          attempts: 1,
+          completedAt: cancelled.completedAt,
+          metadata: { cancellationReason: "operator request" },
+        });
+        expect(final.error).toBeUndefined();
+        expect(final.result).toBeUndefined();
+        if (checkpointed) {
+          expect(final.checkpoints).toEqual({
+            "cancelled-step.cursor": { offset: 1 },
+            "cancelled-step.processedCount": 1,
+          });
+        } else {
+          expect(final.checkpoints).toBeUndefined();
+        }
+        expect(final.progress).toEqual(
+          hasTotal ? { current: 1, total: 3, percent: 33 } : undefined,
+        );
+      },
+    );
+
+    it.each(["reader", "processor", "eof", "filtered"] as const)(
+      "discards uncommitted work cancelled during %s",
+      async (boundary) => {
+        const manager = new ExecutionManagerImpl(new TestExecutionStore());
+        const execution = await manager.create({ type: "batch-job" });
+        const entered = createBarrier();
+        const release = createBarrier();
+        let offset = 0;
+        const reader = {
+          read: vi.fn(async () => {
+            offset += 1;
+            if (boundary === "reader" || (boundary === "eof" && offset === 2)) {
+              entered.resolve();
+              await release.promise;
+            }
+            return offset === 1 ? 7 : null;
+          }),
+          getCheckpoint: () => ({ offset }),
+          restoreCheckpoint: vi.fn(),
+        };
+        const processor = {
+          process: vi.fn(async (item: number) => {
+            if (boundary === "processor" || boundary === "filtered") {
+              entered.resolve();
+              await release.promise;
+            }
+            return boundary === "filtered" ? null : item;
+          }),
+        };
+        const writer = { write: vi.fn() };
+        const running = new ChunkExecutor(manager).execute(
+          execution.id,
+          new Step({ name: "awaiting", reader, processor, writer, chunkSize: 2 }),
+        );
+        await entered.promise;
+        await manager.cancel(execution.id);
+        release.resolve();
+        await expect(running).resolves.toBeUndefined();
+        expect(writer.write).not.toHaveBeenCalled();
+        expect(await manager.get(execution.id)).toMatchObject({ status: "cancelled" });
+        expect((await manager.get(execution.id)).checkpoints).toBeUndefined();
+        if (boundary === "reader") expect(processor.process).not.toHaveBeenCalled();
+      },
+    );
+
+    it("preserves a failed in-flight write without recording failure over cancellation", async () => {
+      const manager = new ExecutionManagerImpl(new TestExecutionStore());
+      const execution = await manager.create({ type: "batch-job", maxAttempts: 3 });
+      const fail = vi.spyOn(manager, "fail");
+      const entered = createBarrier();
+      const release = createBarrier();
+      const writeError = new Error("sink rejected write");
+      const writer = {
+        write: vi.fn(async () => {
+          entered.resolve();
+          await release.promise;
+          throw writeError;
+        }),
+      };
+      const running = new ChunkExecutor(manager).execute(
+        execution.id,
+        new Step({
+          name: "failed-write",
+          reader: createCheckpointReader([1, 2]),
+          writer,
+          chunkSize: 1,
+        }),
+      );
+      const rejection = expect(running).rejects.toBe(writeError);
+      await entered.promise;
+      await manager.cancel(execution.id);
+      release.resolve();
+      await rejection;
+      expect(fail).not.toHaveBeenCalled();
+      expect(await manager.get(execution.id)).toMatchObject({ status: "cancelled" });
+      expect((await manager.get(execution.id)).checkpoints).toBeUndefined();
+      expect(writer.write).toHaveBeenCalledTimes(1);
+    });
+
+    it("treats cancellation racing with completion as a normal stop", async () => {
+      const manager = new ExecutionManagerImpl(new TestExecutionStore());
+      const execution = await manager.create({ type: "batch-job" });
+      const originalComplete = manager.complete.bind(manager);
+      vi.spyOn(manager, "complete").mockImplementation(async (id, result) => {
+        await manager.cancel(id);
+        return originalComplete(id, result);
+      });
+      const fail = vi.spyOn(manager, "fail");
+      await expect(
+        new ChunkExecutor(manager).execute(
+          execution.id,
+          new Step({
+            name: "empty",
+            reader: { read: async () => null },
+            writer: { write: vi.fn() },
+          }),
+        ),
+      ).resolves.toBeUndefined();
+      expect(fail).not.toHaveBeenCalled();
+      expect(await manager.get(execution.id)).toMatchObject({ status: "cancelled" });
+    });
+
+    it("does not start a later step after cancellation", async () => {
+      const manager = new ExecutionManagerImpl(new TestExecutionStore());
+      const execution = await manager.create({ type: "batch-job" });
+      await manager.start(execution.id);
+      await manager.cancel(execution.id);
+      const reader = { read: vi.fn() };
+      const writer = { write: vi.fn() };
+      await expect(
+        new ChunkExecutor(manager).execute(
+          execution.id,
+          new Step({ name: "later", reader, writer }),
+          { startExecution: false },
+        ),
+      ).resolves.toBeUndefined();
+      expect(reader.read).not.toHaveBeenCalled();
+      expect(writer.write).not.toHaveBeenCalled();
+    });
   });
 
   it.each([
@@ -1075,4 +1257,12 @@ function isOffsetCheckpoint(checkpoint: unknown): checkpoint is OffsetCheckpoint
     "offset" in checkpoint &&
     typeof checkpoint.offset === "number"
   );
+}
+
+function createBarrier(): { promise: Promise<void>; resolve: () => void } {
+  let resolve!: () => void;
+  const promise = new Promise<void>((release) => {
+    resolve = release;
+  });
+  return { promise, resolve };
 }
