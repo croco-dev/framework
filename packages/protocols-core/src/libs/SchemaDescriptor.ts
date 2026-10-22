@@ -32,6 +32,13 @@ export type ContractSchemaDescriptor = {
   readonly effectType?: string;
   readonly minLength?: number;
   readonly maxLength?: number;
+  readonly minimum?: number;
+  readonly maximum?: number;
+  readonly exclusiveMinimum?: boolean;
+  readonly exclusiveMaximum?: boolean;
+  readonly integer?: boolean;
+  readonly minItems?: number;
+  readonly maxItems?: number;
   readonly fields?: readonly ContractSchemaFieldDescriptor[];
   readonly element?: ContractSchemaDescriptor | null;
   readonly inner?: ContractSchemaDescriptor | null;
@@ -57,7 +64,7 @@ export const JSON_SAFE_ZOD_SCHEMA_SUPPORT_MATRIX = [
     typeName: "ZodNumber",
     kind: "number",
     jsonSafe: "supported",
-    note: "Emitted as a JSON number contract.",
+    note: "Emitted as a JSON number contract with finite minimum/maximum, exclusive bounds and integer checks. multipleOf and non-finite bounds are unsupported and produce diagnostics. Arbitrary refinements are not inferred.",
   },
   {
     typeName: "ZodBoolean",
@@ -99,7 +106,7 @@ export const JSON_SAFE_ZOD_SCHEMA_SUPPORT_MATRIX = [
     typeName: "ZodArray",
     kind: "array",
     jsonSafe: "supported",
-    note: "Supported when the element schema is JSON-safe.",
+    note: "Supported when the element schema is JSON-safe; min/max/length are normalized to minItems/maxItems. Cardinalities must be finite non-negative integers. Arbitrary refinements are not inferred.",
   },
   {
     typeName: "ZodRecord",
@@ -243,7 +250,14 @@ export const JSON_SAFE_ZOD_SCHEMA_SUPPORT_MATRIX = [
 
 type ZodDefinition = {
   readonly typeName?: unknown;
-  readonly checks?: readonly { readonly kind: string; readonly value?: unknown }[];
+  readonly checks?: readonly {
+    readonly kind: string;
+    readonly value?: unknown;
+    readonly inclusive?: boolean;
+  }[];
+  readonly minLength?: { readonly value: unknown } | null;
+  readonly maxLength?: { readonly value: unknown } | null;
+  readonly exactLength?: { readonly value: unknown } | null;
   readonly shape?: unknown;
   readonly in?: unknown;
   readonly innerType?: unknown;
@@ -760,7 +774,54 @@ function describeUnknownSchema(schema: unknown, seen: Set<unknown>): ContractSch
   }
 
   if (typeName === "ZodNumber") {
-    return supportedDescriptor("number", typeName);
+    const bounds: {
+      minimum?: number;
+      maximum?: number;
+      exclusiveMinimum?: boolean;
+      exclusiveMaximum?: boolean;
+      integer?: boolean;
+    } = {};
+    for (const check of definition?.checks ?? []) {
+      if (check.kind === "int") {
+        bounds.integer = true;
+      } else if (check.kind === "min" || check.kind === "max") {
+        if (typeof check.value !== "number" || !Number.isFinite(check.value)) {
+          return unsupportedDescriptor(
+            "number",
+            typeName,
+            "Numeric bounds must be finite numbers.",
+          );
+        }
+        const key = check.kind === "min" ? "minimum" : "maximum";
+        const exclusiveKey = check.kind === "min" ? "exclusiveMinimum" : "exclusiveMaximum";
+        const previous = bounds[key];
+        if (
+          previous === undefined ||
+          (key === "minimum" ? check.value > previous : check.value < previous)
+        ) {
+          bounds[key] = check.value;
+          bounds[exclusiveKey] = check.inclusive === false;
+        } else if (check.value === previous && check.inclusive === false) {
+          bounds[exclusiveKey] = true;
+        }
+      } else if (check.kind !== "finite") {
+        return unsupportedDescriptor(
+          "number",
+          typeName,
+          `Numeric check ${check.kind} is not represented by generated JSON contracts.`,
+        );
+      }
+    }
+    return {
+      ...supportedDescriptor("number", typeName),
+      ...(bounds.minimum !== undefined
+        ? { minimum: bounds.minimum, exclusiveMinimum: bounds.exclusiveMinimum }
+        : {}),
+      ...(bounds.maximum !== undefined
+        ? { maximum: bounds.maximum, exclusiveMaximum: bounds.exclusiveMaximum }
+        : {}),
+      ...(bounds.integer ? { integer: true } : {}),
+    };
   }
 
   if (typeName === "ZodBoolean") {
@@ -948,9 +1009,32 @@ function describeUnknownSchema(schema: unknown, seen: Set<unknown>): ContractSch
   if (typeName === "ZodArray") {
     const element = describeMaybeSchema(definition?.element ?? definition?.type, seen);
 
+    const bounds: { minItems?: number; maxItems?: number } = {};
+    for (const key of ["minLength", "maxLength", "exactLength"] as const) {
+      const check = definition?.[key];
+      if (check == null) continue;
+      if (
+        typeof check.value !== "number" ||
+        !Number.isFinite(check.value) ||
+        !Number.isInteger(check.value) ||
+        check.value < 0
+      ) {
+        return {
+          ...unsupportedDescriptor(
+            "array",
+            typeName,
+            "Array cardinalities must be finite non-negative integers.",
+          ),
+          element,
+        };
+      }
+      if (key !== "maxLength") bounds.minItems = Math.max(bounds.minItems ?? 0, check.value);
+      if (key !== "minLength") bounds.maxItems = Math.min(bounds.maxItems ?? Infinity, check.value);
+    }
     return {
       ...descriptorFromChildren("array", typeName, [element]),
       element,
+      ...bounds,
     };
   }
 

@@ -334,6 +334,21 @@ describe("contractsDiff", () => {
 
   it.each([
     {
+      name: "numeric minimum tightening",
+      baselineSchema: z.object({ value: z.number() }),
+      currentSchema: z.object({ value: z.number().min(10) }),
+    },
+    {
+      name: "integer restriction",
+      baselineSchema: z.object({ value: z.number() }),
+      currentSchema: z.object({ value: z.number().int() }),
+    },
+    {
+      name: "array minimum tightening",
+      baselineSchema: z.object({ value: z.array(z.string()) }),
+      currentSchema: z.object({ value: z.array(z.string()).min(2) }),
+    },
+    {
       name: "root optional request removal",
       baselineSchema: z.object({ name: z.string() }).optional(),
       currentSchema: z.object({ name: z.string() }),

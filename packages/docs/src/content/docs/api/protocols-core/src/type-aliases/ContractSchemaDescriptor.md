@@ -21,6 +21,18 @@ title: "ContractSchemaDescriptor"
 
 ---
 
+### exclusiveMaximum?
+
+> `readonly` `optional` **exclusiveMaximum?**: `boolean`
+
+---
+
+### exclusiveMinimum?
+
+> `readonly` `optional` **exclusiveMinimum?**: `boolean`
+
+---
+
 ### fields?
 
 > `readonly` `optional` **fields?**: readonly [`ContractSchemaFieldDescriptor`](/api/protocols-core/src/type-aliases/contractschemafielddescriptor/)[]
@@ -30,6 +42,12 @@ title: "ContractSchemaDescriptor"
 ### inner?
 
 > `readonly` `optional` **inner?**: `ContractSchemaDescriptor` \| `null`
+
+---
+
+### integer?
+
+> `readonly` `optional` **integer?**: `boolean`
 
 ---
 
@@ -45,9 +63,33 @@ title: "ContractSchemaDescriptor"
 
 ---
 
+### maximum?
+
+> `readonly` `optional` **maximum?**: `number`
+
+---
+
+### maxItems?
+
+> `readonly` `optional` **maxItems?**: `number`
+
+---
+
 ### maxLength?
 
 > `readonly` `optional` **maxLength?**: `number`
+
+---
+
+### minimum?
+
+> `readonly` `optional` **minimum?**: `number`
+
+---
+
+### minItems?
+
+> `readonly` `optional` **minItems?**: `number`
 
 ---
 

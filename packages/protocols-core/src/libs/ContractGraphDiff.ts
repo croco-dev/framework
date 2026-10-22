@@ -560,12 +560,27 @@ function isSchemaCompatible(
     );
   }
 
+  if (baseline.kind === "number" && current.kind === "number") {
+    return variance === "request"
+      ? isNumericSubset(baseline, current)
+      : isNumericSubset(current, baseline);
+  }
+
   if (baseline.kind === "object" && current.kind === "object") {
     return areObjectSchemasCompatible(baseline, current, variance);
   }
 
   if (baseline.kind === "array" && current.kind === "array") {
-    return isSchemaCompatible(baseline.element ?? null, current.element ?? null, variance);
+    const baselineMin = baseline.minItems ?? 0;
+    const baselineMax = baseline.maxItems ?? Infinity;
+    const currentMin = current.minItems ?? 0;
+    const currentMax = current.maxItems ?? Infinity;
+    return (
+      (variance === "request"
+        ? currentMin <= baselineMin && currentMax >= baselineMax
+        : currentMin >= baselineMin && currentMax <= baselineMax) &&
+      isSchemaCompatible(baseline.element ?? null, current.element ?? null, variance)
+    );
   }
 
   if (baseline.kind === "union" && current.kind === "union") {
@@ -573,6 +588,65 @@ function isSchemaCompatible(
   }
 
   return JSON.stringify(baseline) === JSON.stringify(current);
+}
+
+// Compatibility is set inclusion: accepted old inputs must still be accepted, while
+// produced new outputs must fit the old response contract. Omitted historical bounds
+// mean unconstrained; snapshots cannot recover checks that were never persisted.
+function isNumericSubset(source: ContractSchemaSnapshot, target: ContractSchemaSnapshot): boolean {
+  if (
+    source.typeName !== target.typeName ||
+    source.jsonSafe !== target.jsonSafe ||
+    source.unsupportedReason !== target.unsupportedReason
+  )
+    return false;
+  const sourceRange = numericRange(source);
+  const targetRange = numericRange(target);
+  const empty = (range: ReturnType<typeof numericRange>) =>
+    range.min > range.max ||
+    (range.min === range.max && (range.exclusiveMin || range.exclusiveMax));
+  if (empty(sourceRange)) return true;
+  if (empty(targetRange)) return false;
+  if (
+    target.integer &&
+    !source.integer &&
+    !(sourceRange.min === sourceRange.max && Number.isInteger(sourceRange.min))
+  )
+    return false;
+  return (
+    (sourceRange.min > targetRange.min ||
+      (sourceRange.min === targetRange.min &&
+        (sourceRange.exclusiveMin || !targetRange.exclusiveMin))) &&
+    (sourceRange.max < targetRange.max ||
+      (sourceRange.max === targetRange.max &&
+        (sourceRange.exclusiveMax || !targetRange.exclusiveMax)))
+  );
+}
+
+function numericRange(schema: ContractSchemaSnapshot) {
+  let min = schema.minimum ?? -Infinity;
+  let max = schema.maximum ?? Infinity;
+  let exclusiveMin = schema.exclusiveMinimum ?? false;
+  let exclusiveMax = schema.exclusiveMaximum ?? false;
+  if (schema.integer) {
+    // Outside the safe-integer range, +/- 1 can round back to the same number.
+    // Retain the original exclusive boundary there instead of admitting its endpoint.
+    if (
+      Number.isSafeInteger(Math.floor(min)) &&
+      (!exclusiveMin || Number.isSafeInteger(Math.floor(min) + 1))
+    ) {
+      min = exclusiveMin ? Math.floor(min) + 1 : Math.ceil(min);
+      exclusiveMin = false;
+    }
+    if (
+      Number.isSafeInteger(Math.ceil(max)) &&
+      (!exclusiveMax || Number.isSafeInteger(Math.ceil(max) - 1))
+    ) {
+      max = exclusiveMax ? Math.ceil(max) - 1 : Math.floor(max);
+      exclusiveMax = false;
+    }
+  }
+  return { min, max, exclusiveMin, exclusiveMax };
 }
 
 function areWrappedSchemasCompatible(
