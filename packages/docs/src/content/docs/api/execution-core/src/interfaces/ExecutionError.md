@@ -21,8 +21,8 @@ Optional error code for categorization
 
 > `optional` **indeterminate?**: `boolean`
 
-Whether the abandoned attempt may still commit side effects. The state clears when the handler
-settles, an idempotent or fenced retry contract is confirmed, or an operator records recovery.
+Whether external effects remain unresolved, regardless of execution status. Clear after confirmed
+settlement, a safe retry contract, or operator recovery; handler settlement is not receipt evidence.
 
 ---
 
