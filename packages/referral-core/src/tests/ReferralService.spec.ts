@@ -3,6 +3,7 @@ import { InMemoryReferralStore } from "../libs/InMemoryReferralStore";
 import { registerReferralProgram } from "../libs/ReferralProgram";
 import { ReferralService } from "../libs/ReferralService";
 import {
+  ReferralAttributionStateConflictProblem,
   ReferralBenefitFailedProblem,
   ReferralDuplicateClaimProblem,
   ReferralExistingCustomerProblem,
@@ -13,6 +14,7 @@ import {
   ReferralTenantMismatchProblem,
 } from "../libs/problems";
 import { generateReferralToken, hashReferralToken } from "../libs/linkToken";
+import type { ReferralTx } from "../libs/ReferralStore";
 import type {
   ReferralFulfillmentPort,
   ReferralSubject,
@@ -61,11 +63,31 @@ function fulfillmentOk(): ReferralFulfillmentPort {
   };
 }
 
+// Keep production in-memory rollback outside this fix, but run the service suite
+// with atomic test transactions so a callback throw cannot preserve writes.
+class RollbackReferralStore extends InMemoryReferralStore {
+  override async transact<T>(work: (tx: ReferralTx) => Promise<T>): Promise<T> {
+    return super.transact(async (tx) => {
+      const snapshot = Object.fromEntries(
+        Object.entries(this)
+          .filter(([, value]) => value instanceof Map || Array.isArray(value))
+          .map(([key, value]) => [key, structuredClone(value)]),
+      );
+      try {
+        return await work(tx);
+      } catch (error) {
+        Object.assign(this, snapshot);
+        throw error;
+      }
+    });
+  }
+}
+
 function serviceWith(overrides: Partial<ConstructorParameters<typeof ReferralService>[0]> = {}): {
   readonly service: ReferralService;
   readonly store: InMemoryReferralStore;
 } {
-  const store = new InMemoryReferralStore();
+  const store = new RollbackReferralStore();
   const service = new ReferralService({
     store,
     tokens: { generateToken: generateReferralToken, hashToken: hashReferralToken },
@@ -112,7 +134,7 @@ describe("ReferralService", () => {
   });
 
   it("claims first-valid attribution and holds a later duplicate without stealing", async () => {
-    const { service } = serviceWith();
+    const { service, store } = serviceWith();
     await service.registerProgram(programInput());
     const first = await service.createReferralLink({
       programId: "referral-welcome",
@@ -126,10 +148,35 @@ describe("ReferralService", () => {
     expect(won.firstValid).toBe(true);
     expect(won.attribution.state).toBe("claimed");
     await expect(
-      service.claimAttribution({ token: second.token, recipient: recipient() }),
+      service.claimAttribution({
+        token: second.token,
+        recipient: recipient(),
+        attributionId: "duplicate",
+      }),
     ).rejects.toBeInstanceOf(ReferralDuplicateClaimProblem);
     const kept = await service.getAttribution(won.attribution.id);
     expect(kept?.referrer.id).toBe("referrer-1");
+    expect(await store.getAttribution("duplicate")).toMatchObject({
+      state: "held",
+      holdReason: "duplicate-claim",
+    });
+    await expect(
+      service.qualifyAttribution({ attributionId: "duplicate", recipient: recipient() }),
+    ).rejects.toBeInstanceOf(ReferralDuplicateClaimProblem);
+    const replay = await service.claimAttribution({
+      token: second.token,
+      recipient: recipient(),
+      attributionId: "duplicate",
+    });
+    expect(replay).toMatchObject({
+      created: false,
+      firstValid: false,
+      attribution: { id: "duplicate" },
+    });
+    expect(
+      (await store.listAudits()).filter((entry) => entry.action === "attribution.held-duplicate"),
+    ).toHaveLength(1);
+    expect(await store.readBudgetReserved("referral-welcome", 1)).toBe("20");
   });
 
   it("rejects self-referral, other-tenant links, revoked links, and expired links distinctly", async () => {
@@ -274,6 +321,15 @@ describe("ReferralService", () => {
     ).rejects.toBeInstanceOf(ReferralQualificationRejectedProblem);
     const stored = await store.getAttribution(claimed.attribution.id);
     expect(stored?.state).toBe("rejected");
+    // A separate live reservation makes a second release observable.
+    await service.claimAttribution({ token, recipient: recipient("other") });
+    await expect(
+      service.qualifyAttribution({ attributionId: claimed.attribution.id, recipient: recipient() }),
+    ).rejects.toBeInstanceOf(ReferralAttributionStateConflictProblem);
+    expect(await store.readBudgetReserved("referral-welcome", 1)).toBe("20");
+    expect(
+      (await store.listAudits()).filter((entry) => entry.action === "attribution.rejected"),
+    ).toHaveLength(1);
   });
 
   it("recovers pending attributions after restart without duplicating benefits", async () => {

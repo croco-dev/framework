@@ -549,7 +549,11 @@ class PostgresReferralTx implements ReferralTx {
     fingerprint: string,
   ): Promise<{ readonly created: boolean; readonly attribution: ReferralAttribution }> {
     return run("save referral attribution", async () => {
-      const key = recipientKey(attribution.recipient);
+      // Duplicate holds retain recipient metadata but never compete for ownership.
+      const key =
+        attribution.state === "held" && attribution.holdReason === "duplicate-claim"
+          ? null
+          : recipientKey(attribution.recipient);
       try {
         const inserted = await this.executor.execute(sql`
           INSERT INTO croco_referral_attributions (
