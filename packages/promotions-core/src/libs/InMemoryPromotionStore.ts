@@ -104,25 +104,56 @@ type PolicyRecord = {
 };
 
 /**
- * Single-process promotion store. The store itself serves as the transaction
- * handle, and `transact` serializes work through a mutex so concurrent
- * reserves observe each other's budget reservations, matching the atomicity
- * contract PostgreSQL implementations provide with row locks.
+ * Single-process store with serialized, isolated transactions. Each callback
+ * works on a deep snapshot; only a successful callback publishes its state.
+ * Reads on the store see committed state while the callback is running.
  */
 export class InMemoryPromotionStore implements PromotionStore, PromotionTx {
-  private readonly policies = new Map<string, PolicyRecord>();
-  private readonly quotes = new Map<string, OfferQuote>();
-  private readonly claims = new Map<string, OfferClaim>();
-  private readonly claimsByLogicalKey = new Map<string, { claimId: string; fingerprint: string }>();
-  private readonly audits: OfferAuditEntry[] = [];
+  private state = {
+    policies: new Map<string, PolicyRecord>(),
+    quotes: new Map<string, OfferQuote>(),
+    claims: new Map<string, OfferClaim>(),
+    claimsByLogicalKey: new Map<string, { claimId: string; fingerprint: string }>(),
+    audits: [] as OfferAuditEntry[],
+  };
   private queue: Promise<unknown> = Promise.resolve();
+
+  private copyState() {
+    return {
+      policies: new Map(
+        [...this.state.policies].map(([key, record]) => [
+          key,
+          {
+            ...record,
+            policy: clonePolicy(record.policy),
+          },
+        ]),
+      ),
+      quotes: new Map([...this.state.quotes].map(([key, quote]) => [key, cloneQuote(quote)])),
+      claims: new Map([...this.state.claims].map(([key, claim]) => [key, cloneClaim(claim)])),
+      claimsByLogicalKey: new Map(
+        [...this.state.claimsByLogicalKey].map(([key, entry]) => [key, { ...entry }]),
+      ),
+      audits: this.state.audits.map((entry) => ({
+        ...entry,
+        recordedAt: cloneDate(entry.recordedAt),
+      })),
+    };
+  }
 
   private static policyKey(policyId: string, version: number): string {
     return `${policyId}@${version}`;
   }
 
   async transact<T>(work: (tx: PromotionTx) => Promise<T>): Promise<T> {
-    const run = this.queue.then(() => work(this));
+    const run = this.queue.then(async () => {
+      const staged = new InMemoryPromotionStore();
+      staged.state = this.copyState();
+      const result = await work(staged);
+      // Copy again so a retained transaction handle cannot mutate committed state.
+      this.state = staged.copyState();
+      return result;
+    });
     this.queue = run.then(
       () => undefined,
       () => undefined,
@@ -131,13 +162,13 @@ export class InMemoryPromotionStore implements PromotionStore, PromotionTx {
   }
 
   async getPolicy(policyId: string, version: number): Promise<RegisteredOfferPolicy | null> {
-    const record = this.policies.get(InMemoryPromotionStore.policyKey(policyId, version));
+    const record = this.state.policies.get(InMemoryPromotionStore.policyKey(policyId, version));
     return record ? clonePolicy(record.policy) : null;
   }
 
   async latestPolicyVersion(policyId: string): Promise<number | null> {
     let latest: number | null = null;
-    for (const record of this.policies.values()) {
+    for (const record of this.state.policies.values()) {
       if (record.policy.id === policyId && (latest === null || record.policy.version > latest)) {
         latest = record.policy.version;
       }
@@ -148,14 +179,14 @@ export class InMemoryPromotionStore implements PromotionStore, PromotionTx {
   async savePolicy(policy: RegisteredOfferPolicy): Promise<{ readonly created: boolean }> {
     const key = InMemoryPromotionStore.policyKey(policy.id, policy.version);
     const fingerprint = stablePromotionFingerprint(policy);
-    const existing = this.policies.get(key);
+    const existing = this.state.policies.get(key);
     if (existing) {
       if (existing.fingerprint !== fingerprint) {
         throw new OfferPolicyConflictProblem(policy.id, policy.version);
       }
       return { created: false };
     }
-    this.policies.set(key, {
+    this.state.policies.set(key, {
       policy: clonePolicy(policy),
       fingerprint,
       reserved: ZERO_OFFER_AMOUNT,
@@ -164,23 +195,23 @@ export class InMemoryPromotionStore implements PromotionStore, PromotionTx {
   }
 
   async getQuote(quoteId: string): Promise<OfferQuote | null> {
-    const quote = this.quotes.get(quoteId);
+    const quote = this.state.quotes.get(quoteId);
     return quote ? cloneQuote(quote) : null;
   }
 
   async saveQuote(quote: OfferQuote): Promise<void> {
-    if (!this.quotes.has(quote.id)) {
-      this.quotes.set(quote.id, cloneQuote(quote));
+    if (!this.state.quotes.has(quote.id)) {
+      this.state.quotes.set(quote.id, cloneQuote(quote));
     }
   }
 
   async getClaim(claimId: string): Promise<OfferClaim | null> {
-    const claim = this.claims.get(claimId);
+    const claim = this.state.claims.get(claimId);
     return claim ? cloneClaim(claim) : null;
   }
 
   async getClaimByLogicalKey(logicalKey: string): Promise<OfferClaim | null> {
-    const entry = this.claimsByLogicalKey.get(logicalKey);
+    const entry = this.state.claimsByLogicalKey.get(logicalKey);
     if (!entry) return null;
     return this.getClaim(entry.claimId);
   }
@@ -189,20 +220,20 @@ export class InMemoryPromotionStore implements PromotionStore, PromotionTx {
     claim: OfferClaim,
     fingerprint: string,
   ): Promise<{ readonly created: boolean; readonly claim: OfferClaim }> {
-    const existing = this.claimsByLogicalKey.get(claim.logicalKey);
+    const existing = this.state.claimsByLogicalKey.get(claim.logicalKey);
     if (existing) {
       if (existing.fingerprint !== fingerprint) {
         throw new OfferDuplicateClaimProblem(claim.logicalKey);
       }
-      const stored = this.claims.get(existing.claimId);
+      const stored = this.state.claims.get(existing.claimId);
       if (!stored) throw new OfferDuplicateClaimProblem(claim.logicalKey);
       return { created: false, claim: cloneClaim(stored) };
     }
-    if (this.claims.has(claim.id)) {
+    if (this.state.claims.has(claim.id)) {
       throw new OfferDuplicateClaimProblem(claim.logicalKey);
     }
-    this.claims.set(claim.id, cloneClaim(claim));
-    this.claimsByLogicalKey.set(claim.logicalKey, { claimId: claim.id, fingerprint });
+    this.state.claims.set(claim.id, cloneClaim(claim));
+    this.state.claimsByLogicalKey.set(claim.logicalKey, { claimId: claim.id, fingerprint });
     return { created: true, claim: cloneClaim(claim) };
   }
 
@@ -213,7 +244,7 @@ export class InMemoryPromotionStore implements PromotionStore, PromotionTx {
     patch: { readonly grantRef?: string } = {},
     now: Date = new Date(),
   ): Promise<OfferClaim> {
-    const stored = this.claims.get(claimId);
+    const stored = this.state.claims.get(claimId);
     if (!stored) throw new OfferClaimNotFoundProblem(claimId);
     if (!expected.includes(stored.state)) {
       throw new OfferClaimStateConflictProblem(
@@ -228,12 +259,12 @@ export class InMemoryPromotionStore implements PromotionStore, PromotionTx {
       grantRef: patch.grantRef ?? stored.grantRef,
       updatedAt: new Date(now.getTime()),
     };
-    this.claims.set(claimId, updated);
+    this.state.claims.set(claimId, updated);
     return cloneClaim(updated);
   }
 
   async addBudgetReservation(policyId: string, version: number, amount: string): Promise<void> {
-    const record = this.policies.get(InMemoryPromotionStore.policyKey(policyId, version));
+    const record = this.state.policies.get(InMemoryPromotionStore.policyKey(policyId, version));
     if (!record) throw new OfferPolicyNotFoundProblem(policyId, version);
     const next = addOfferAmounts(record.reserved, amount);
     if (compareOfferAmounts(next, record.policy.budget.total) > 0) {
@@ -243,7 +274,7 @@ export class InMemoryPromotionStore implements PromotionStore, PromotionTx {
   }
 
   async releaseBudgetReservation(policyId: string, version: number, amount: string): Promise<void> {
-    const record = this.policies.get(InMemoryPromotionStore.policyKey(policyId, version));
+    const record = this.state.policies.get(InMemoryPromotionStore.policyKey(policyId, version));
     if (!record) throw new OfferPolicyNotFoundProblem(policyId, version);
     record.reserved =
       compareOfferAmounts(amount, record.reserved) >= 0
@@ -252,7 +283,7 @@ export class InMemoryPromotionStore implements PromotionStore, PromotionTx {
   }
 
   async readBudgetReserved(policyId: string, version: number): Promise<string> {
-    const record = this.policies.get(InMemoryPromotionStore.policyKey(policyId, version));
+    const record = this.state.policies.get(InMemoryPromotionStore.policyKey(policyId, version));
     if (!record) throw new OfferPolicyNotFoundProblem(policyId, version);
     return record.reserved;
   }
@@ -264,7 +295,7 @@ export class InMemoryPromotionStore implements PromotionStore, PromotionTx {
     states: readonly OfferClaimState[],
   ): Promise<number> {
     let count = 0;
-    for (const claim of this.claims.values()) {
+    for (const claim of this.state.claims.values()) {
       if (
         claim.familyId === familyId &&
         claim.benefitCycleId === benefitCycleId &&
@@ -283,7 +314,7 @@ export class InMemoryPromotionStore implements PromotionStore, PromotionTx {
       throw new InvalidOfferPolicyProblem("list limit must be an integer between 1 and 1000");
     }
     const result: OfferClaim[] = [];
-    for (const claim of this.claims.values()) {
+    for (const claim of this.state.claims.values()) {
       if (filter.subject !== undefined && !matchesSubject(claim.subject, filter.subject)) continue;
       if (filter.familyId !== undefined && claim.familyId !== filter.familyId) continue;
       if (filter.benefitCycleId !== undefined && claim.benefitCycleId !== filter.benefitCycleId) {
@@ -300,12 +331,12 @@ export class InMemoryPromotionStore implements PromotionStore, PromotionTx {
   }
 
   async recordAudit(entry: OfferAuditEntry): Promise<void> {
-    this.audits.push({ ...entry, recordedAt: new Date(entry.recordedAt.getTime()) });
+    this.state.audits.push({ ...entry, recordedAt: new Date(entry.recordedAt.getTime()) });
   }
 
   /** Test and console support: read-only audit trail in insertion order. */
   async listAudits(): Promise<readonly OfferAuditEntry[]> {
-    return this.audits.map((entry) => ({
+    return this.state.audits.map((entry) => ({
       ...entry,
       recordedAt: new Date(entry.recordedAt.getTime()),
     }));
