@@ -147,6 +147,35 @@ describe("fresh scaffold contract artifacts", () => {
     },
   );
 
+  it("admin-console ships the nonnegative integer ledger position in both request representations", async () => {
+    const targetDir = await generatePreset("admin-console");
+    type RequestSchema = { fields?: { name: string; schema: Record<string, unknown> }[] };
+    const baseline = JSON.parse(
+      readFileSync(join(targetDir, "contract-graph.snapshot.json"), "utf8"),
+    ) as {
+      routes: {
+        routeId: string;
+        params: { kind: string; schema: RequestSchema }[];
+        request: { body: RequestSchema };
+      }[];
+    };
+    const route = baseline.routes.find(
+      ({ routeId }) => routeId === "AdminController.executeCreditOperation",
+    );
+    for (const schema of [
+      route?.request.body,
+      route?.params.find(({ kind }) => kind === "body")?.schema,
+    ]) {
+      expect(schema?.fields?.find(({ name }) => name === "expectedPosition")?.schema).toMatchObject(
+        {
+          kind: "number",
+          minimum: 0,
+          integer: true,
+        },
+      );
+    }
+  });
+
   it("saas ships the artifacts that its generated executable assurance test reads", async () => {
     const targetDir = await generatePreset("saas");
     const biome = readFileSync(join(targetDir, "biome.json"), "utf8");

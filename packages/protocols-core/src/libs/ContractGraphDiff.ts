@@ -522,10 +522,12 @@ function isRequestSchemaCompatible(
 }
 
 function isSchemaCompatible(
-  baseline: ContractSchemaSnapshot | null,
-  current: ContractSchemaSnapshot | null,
+  baselineSchema: ContractSchemaSnapshot | null,
+  currentSchema: ContractSchemaSnapshot | null,
   variance: "response" | "request",
 ): boolean {
+  const baseline = unwrapTransparentSchema(baselineSchema);
+  const current = unwrapTransparentSchema(currentSchema);
   if (!baseline) {
     return true;
   }
@@ -560,19 +562,124 @@ function isSchemaCompatible(
     );
   }
 
+  if (baseline.kind === "number" && current.kind === "number") {
+    return variance === "request"
+      ? isNumericSubset(baseline, current)
+      : isNumericSubset(current, baseline);
+  }
+
   if (baseline.kind === "object" && current.kind === "object") {
     return areObjectSchemasCompatible(baseline, current, variance);
   }
 
   if (baseline.kind === "array" && current.kind === "array") {
+    const source = variance === "request" ? baseline : current;
+    const target = variance === "request" ? current : baseline;
+    const sourceMin = source.minItems ?? 0;
+    const sourceMax = source.maxItems ?? Infinity;
+    const targetMin = target.minItems ?? 0;
+    const targetMax = target.maxItems ?? Infinity;
+    if (sourceMin > sourceMax) return true;
+    if (targetMin > targetMax || sourceMin < targetMin || sourceMax > targetMax) return false;
+    // No element can be present in a zero-only source value set.
+    return (
+      sourceMax === 0 ||
+      isSchemaCompatible(baseline.element ?? null, current.element ?? null, variance)
+    );
+  }
+
+  if (baseline.kind === "record" && current.kind === "record") {
     return isSchemaCompatible(baseline.element ?? null, current.element ?? null, variance);
   }
 
-  if (baseline.kind === "union" && current.kind === "union") {
-    return JSON.stringify(baseline.options ?? []) === JSON.stringify(current.options ?? []);
+  if (baseline.kind === "catch" && current.kind === "catch") {
+    return isSchemaCompatible(baseline.inner ?? null, current.inner ?? null, variance);
+  }
+
+  if (baseline.kind === "union" || current.kind === "union") {
+    const baselineOptions = baseline.kind === "union" ? (baseline.options ?? []) : [baseline];
+    const currentOptions = current.kind === "union" ? (current.options ?? []) : [current];
+    return variance === "request"
+      ? baselineOptions.every((before) =>
+          currentOptions.some((after) => isSchemaCompatible(before, after, variance)),
+        )
+      : currentOptions.every((after) =>
+          baselineOptions.some((before) => isSchemaCompatible(before, after, variance)),
+        );
   }
 
   return JSON.stringify(baseline) === JSON.stringify(current);
+}
+
+// Compatibility is set inclusion: accepted old inputs must still be accepted, while
+// produced new outputs must fit the old response contract. Omitted historical bounds
+// mean unconstrained; snapshots cannot recover checks that were never persisted.
+function isNumericSubset(source: ContractSchemaSnapshot, target: ContractSchemaSnapshot): boolean {
+  if (
+    source.typeName !== target.typeName ||
+    source.jsonSafe !== target.jsonSafe ||
+    source.unsupportedReason !== target.unsupportedReason
+  )
+    return false;
+  const sourceRange = numericRange(source);
+  const targetRange = numericRange(target);
+  const empty = (range: ReturnType<typeof numericRange>) => range.min > range.max;
+  if (empty(sourceRange)) return true;
+  if (empty(targetRange)) return false;
+  // At magnitudes >= 2^52 every representable float64 value is an integer.
+  const sourceOnlyIntegers =
+    source.integer ||
+    sourceRange.min >= 2 ** 52 ||
+    sourceRange.max <= -(2 ** 52) ||
+    (sourceRange.min === sourceRange.max && Number.isInteger(sourceRange.min));
+  if (target.integer && !sourceOnlyIntegers) return false;
+  return sourceRange.min >= targetRange.min && sourceRange.max <= targetRange.max;
+}
+
+function numericRange(schema: ContractSchemaSnapshot) {
+  // JSON numbers are finite float64 values, including when a historical bound
+  // was omitted. Closed representable endpoints make equivalent checks equal.
+  let min = schema.minimum ?? -Number.MAX_VALUE;
+  let max = schema.maximum ?? Number.MAX_VALUE;
+  if (schema.integer) {
+    const roundedMin = Math.ceil(min);
+    const roundedMax = Math.floor(max);
+    min =
+      schema.exclusiveMinimum && min === roundedMin
+        ? Number.isSafeInteger(min)
+          ? min + 1
+          : adjacentNumber(min, 1)
+        : roundedMin;
+    max =
+      schema.exclusiveMaximum && max === roundedMax
+        ? Number.isSafeInteger(max)
+          ? max - 1
+          : adjacentNumber(max, -1)
+        : roundedMax;
+  } else {
+    if (schema.exclusiveMinimum) min = adjacentNumber(min, 1);
+    if (schema.exclusiveMaximum) max = adjacentNumber(max, -1);
+  }
+  return { min, max };
+}
+
+// Move one representable float64 value in the requested direction. Uint32
+// carry/borrow preserves the ES2017 output target, including signed zero and
+// finite endpoint overflow (which produces an empty range).
+function adjacentNumber(value: number, direction: 1 | -1): number {
+  if (value === 0) return direction * Number.MIN_VALUE;
+  const bits = new DataView(new ArrayBuffer(8));
+  bits.setFloat64(0, value);
+  const low = bits.getUint32(4);
+  const high = bits.getUint32(0);
+  if (value > 0 === direction > 0) {
+    bits.setUint32(4, low + 1);
+    if (low === 0xffffffff) bits.setUint32(0, high + 1);
+  } else {
+    bits.setUint32(4, low - 1);
+    if (low === 0) bits.setUint32(0, high - 1);
+  }
+  return bits.getFloat64(0);
 }
 
 function areWrappedSchemasCompatible(
@@ -656,6 +763,8 @@ function unwrapSchema(schema: ContractSchemaSnapshot | null): ContractSchemaSnap
     (current.kind === "optional" ||
       current.kind === "default" ||
       current.kind === "nullable" ||
+      current.kind === "branded" ||
+      current.kind === "readonly" ||
       current.kind === "effects")
   ) {
     current = current.inner ?? null;
@@ -669,7 +778,10 @@ function unwrapTransparentSchema(
 ): ContractSchemaSnapshot | null {
   let current = schema;
 
-  while (current?.kind === "effects") {
+  while (
+    current &&
+    (current.kind === "effects" || current.kind === "branded" || current.kind === "readonly")
+  ) {
     current = current.inner ?? null;
   }
 

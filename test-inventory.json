@@ -4681,6 +4681,12 @@
       "owner": "@croco/protocols-core"
     },
     {
+      "path": "packages/protocols-core/src/tests/NumericArrayContracts.spec.ts",
+      "lane": "fast",
+      "qualifiers": ["coverage"],
+      "owner": "@croco/protocols-core"
+    },
+    {
       "path": "packages/protocols-core/src/tests/PublishedSchemaDescriptorBundle.spec.ts",
       "lane": "published",
       "qualifiers": [],

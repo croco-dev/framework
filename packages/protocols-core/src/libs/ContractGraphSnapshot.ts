@@ -724,7 +724,7 @@ function isLegacyContractSchemaSnapshot(
   const valid =
     typeof value["kind"] === "string" &&
     typeof value["typeName"] === "string" &&
-    hasValidStringLengthBounds(value) &&
+    hasValidSchemaBounds(value) &&
     value["jsonSafe"] === undefined &&
     value["unsupportedReason"] === undefined &&
     value["effectType"] === undefined &&
@@ -820,6 +820,13 @@ function normalizeLegacyContractSchemaSnapshot(
     ...(options ? { options } : {}),
     ...(schema.minLength !== undefined ? { minLength: schema.minLength } : {}),
     ...(schema.maxLength !== undefined ? { maxLength: schema.maxLength } : {}),
+    ...(schema.minimum !== undefined ? { minimum: schema.minimum } : {}),
+    ...(schema.maximum !== undefined ? { maximum: schema.maximum } : {}),
+    ...(schema.exclusiveMinimum !== undefined ? { exclusiveMinimum: schema.exclusiveMinimum } : {}),
+    ...(schema.exclusiveMaximum !== undefined ? { exclusiveMaximum: schema.exclusiveMaximum } : {}),
+    ...(schema.integer !== undefined ? { integer: schema.integer } : {}),
+    ...(schema.minItems !== undefined ? { minItems: schema.minItems } : {}),
+    ...(schema.maxItems !== undefined ? { maxItems: schema.maxItems } : {}),
     ...(schema.values ? { values: schema.values } : {}),
     ...(schema.value !== undefined ? { value: schema.value } : {}),
   };
@@ -963,7 +970,7 @@ function isContractSchemaSnapshot(
     typeof value["kind"] === "string" &&
     typeof value["typeName"] === "string" &&
     typeof value["jsonSafe"] === "boolean" &&
-    hasValidStringLengthBounds(value) &&
+    hasValidSchemaBounds(value) &&
     isOptionalString(value["unsupportedReason"]) &&
     isOptionalString(value["effectType"]) &&
     (value["fields"] === undefined ||
@@ -990,7 +997,31 @@ function isContractSchemaSnapshot(
   return valid;
 }
 
-function hasValidStringLengthBounds(value: Record<string, unknown>): boolean {
+function hasValidSchemaBounds(value: Record<string, unknown>): boolean {
+  const number = value["kind"] === "number" && value["typeName"] === "ZodNumber";
+  const array = value["kind"] === "array" && value["typeName"] === "ZodArray";
+  if (
+    !["minimum", "maximum"].every(
+      (key) =>
+        value[key] === undefined ||
+        (number && typeof value[key] === "number" && Number.isFinite(value[key])),
+    )
+  )
+    return false;
+  if (
+    !["exclusiveMinimum", "exclusiveMaximum", "integer"].every(
+      (key) => value[key] === undefined || (number && typeof value[key] === "boolean"),
+    )
+  )
+    return false;
+  if (value["exclusiveMinimum"] !== undefined && value["minimum"] === undefined) return false;
+  if (value["exclusiveMaximum"] !== undefined && value["maximum"] === undefined) return false;
+  if (
+    !["minItems", "maxItems"].every(
+      (key) => value[key] === undefined || (array && isNonNegativeInteger(value[key])),
+    )
+  )
+    return false;
   return (["minLength", "maxLength"] as const).every(
     (key) =>
       value[key] === undefined ||

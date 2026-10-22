@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "protocols-core",
+      "classification": "pure-contract",
+      "reason": "Persist static numeric and array validation constraints and compare their request/response variance. Pure schema metadata and set inclusion have no host, storage or lifecycle dependency.",
+      "files": {
+        "packages/protocols-core/src/libs/SchemaDescriptor.ts": "ee3b0328175113893bbbd8a0875f254272da784538a29de9dc947e1f5259eaf3",
+        "packages/protocols-core/src/libs/ContractGraphSnapshot.ts": "4938f7f8877e0a1841d2abf98564f9c87cf867ef0dbeeab216a443590a3595ef",
+        "packages/protocols-core/src/libs/ContractGraphDiff.ts": "80251e906082d93d54d0a3d191aec060314e60a37acc20469bea24373e99798e"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Node Host is not involved in schema description, snapshot parsing or compatibility comparison; no host capabilities, storage or lifecycle are added.",
+          "providers": ["@croco/protocols-core"],
+          "constraints": [
+            "Static contract evidence only; no deployed-host or provider certification claim."
+          ],
+          "references": [
+            "packages/protocols-core/src/libs/SchemaDescriptor.ts",
+            "packages/protocols-core/src/libs/ContractGraphSnapshot.ts",
+            "packages/protocols-core/src/libs/ContractGraphDiff.ts",
+            "packages/presentation-preset/runtime-profiles.json"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Lambda Host is not involved in schema description, snapshot parsing or compatibility comparison; no host capabilities, storage or lifecycle are added.",
+          "providers": ["@croco/protocols-core"],
+          "constraints": [
+            "Static contract evidence only; no deployed-host or provider certification claim."
+          ],
+          "references": [
+            "packages/protocols-core/src/libs/SchemaDescriptor.ts",
+            "packages/protocols-core/src/libs/ContractGraphSnapshot.ts",
+            "packages/protocols-core/src/libs/ContractGraphDiff.ts",
+            "packages/presentation-preset/runtime-profiles.json"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Workers or Node Container Host is not involved in schema description, snapshot parsing or compatibility comparison; no host capabilities, storage or lifecycle are added.",
+          "providers": ["@croco/protocols-core"],
+          "constraints": [
+            "Static contract evidence only; no deployed-host or provider certification claim."
+          ],
+          "references": [
+            "packages/protocols-core/src/libs/SchemaDescriptor.ts",
+            "packages/protocols-core/src/libs/ContractGraphSnapshot.ts",
+            "packages/protocols-core/src/libs/ContractGraphDiff.ts",
+            "packages/presentation-preset/runtime-profiles.json"
+          ]
+        }
+      }
+    }
+  ]
+}

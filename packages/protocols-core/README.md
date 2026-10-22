@@ -77,3 +77,23 @@ const snapshot = createContractGraphV1(graph);
 pnpm --filter @croco/protocols-core test
 pnpm --filter @croco/protocols-core typecheck
 ```
+
+### Numeric and array snapshot constraints
+
+Contract snapshots preserve Zod numeric `min`/`max` (including exclusive `gt`/`lt` bounds)
+with `minimum`, `maximum`, `exclusiveMinimum`, `exclusiveMaximum`, and `integer`.
+Array `min`/`max`/`length` checks use `minItems`/`maxItems`. Repeated numeric checks retain the
+strongest bound, and exact array lengths intersect with minimum/maximum checks.
+
+Request compatibility permits constraint relaxation; response compatibility permits constraint
+narrowing. The comparison recurses through object fields, records, transparent wrappers and array elements.
+Union compatibility matches each source branch to a compatible target branch in the relevant direction.
+Arrays with contradictory cardinalities have no values; zero-only arrays have no reachable element contract.
+Numeric comparisons use finite representable JSON numbers, including adjacent float64 values and
+integer-only high-magnitude ranges. Historical snapshots that omit constraints are treated as unconstrained: previously discarded checks cannot
+be recovered, so regenerate a baseline from its original schema to compare those checks accurately.
+
+Non-finite numeric bounds, numeric `multipleOf`, and non-integer or negative array cardinalities
+produce `contract-schema-json-unsafe` diagnostics instead of silently dropping the constraint.
+Numeric `finite` needs no extra snapshot field because JSON numbers are finite. Arbitrary refinement
+functions remain outside static compatibility inference.
