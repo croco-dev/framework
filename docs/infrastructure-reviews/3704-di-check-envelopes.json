@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "cli",
+      "classification": "pure-contract",
+      "reason": "Reject malformed or unsupported DI/module graph envelopes before diagnostic normalization; retain existing diagnostic compatibility and failed-state semantics.",
+      "files": {
+        "packages/cli/src/commands/diCheck.ts": "c383872e39ce6b5676bdc29a2d883c7caf251e04a39eb2283e6ea84f08cdcbdf"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "This validates local build-artifact envelopes in the existing CLI. It introduces no host capability, provider, storage or lifecycle change and does not claim deployment support.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/cli/src/commands/diCheck.ts",
+            "packages/framework-context/src/libs/types.ts",
+            "packages/framework-module/src/types.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "This validates local build-artifact envelopes in the existing CLI. It introduces no host capability, provider, storage or lifecycle change and does not claim deployment support.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/cli/src/commands/diCheck.ts",
+            "packages/framework-context/src/libs/types.ts",
+            "packages/framework-module/src/types.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "This validates local build-artifact envelopes in the existing CLI. It introduces no host capability, provider, storage or lifecycle change and does not claim deployment support.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/cli/src/commands/diCheck.ts",
+            "packages/framework-context/src/libs/types.ts",
+            "packages/framework-module/src/types.ts"
+          ]
+        }
+      }
+    }
+  ]
+}
