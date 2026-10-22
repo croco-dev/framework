@@ -4,6 +4,7 @@ export const apiDocCompilerOptions = {
   module: "ESNext",
   moduleResolution: "bundler",
   paths: {
+    "@croco/metrics-core/runtime": ["../metrics-core/src/runtime.ts"],
     "@croco/analytics-core/acquisition": ["../analytics-core/src/acquisition.ts"],
     "@croco/analytics-core/enrichment": ["../analytics-core/src/enrichment.ts"],
     "@croco/protocols-graphql/fetch": ["../protocols-graphql/src/fetch.ts"],
