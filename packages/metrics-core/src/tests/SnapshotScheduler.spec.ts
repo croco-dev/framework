@@ -3,7 +3,7 @@ import type { MetricsRepository } from "../libs/interfaces/MetricsRepository";
 import type { PlanProvider } from "../libs/interfaces/PlanProvider";
 import type { MrrCalculator } from "../libs/MrrCalculator";
 import { SnapshotScheduler, SnapshotTenantRequiredProblem } from "../libs/SnapshotScheduler";
-import type { MRRMovement, SubscriptionSnapshot } from "../types";
+import type { MetricsSnapshot, MRRMovement, PlanSnapshot, SubscriptionSnapshot } from "../types";
 
 describe("SnapshotScheduler", () => {
   let scheduler!: SnapshotScheduler;
@@ -175,5 +175,98 @@ describe("SnapshotScheduler", () => {
       SnapshotTenantRequiredProblem,
     );
     expect(mockRepository.recordSnapshot).not.toHaveBeenCalled();
+  });
+
+  describe("unavailable pricing with the real calculator", () => {
+    const priced = { id: "sub-priced", planId: "pro", pricingRef: "pro@v1" };
+    const unavailable = { id: "sub-missing", planId: "team", pricingRef: "team@v3" };
+    const pro: PlanSnapshot = {
+      id: "pro",
+      amount: 1700,
+      currency: "EUR",
+      interval: "month",
+      intervalCount: 1,
+    };
+    const team: PlanSnapshot = { ...pro, id: "team", amount: 2900 };
+
+    it.each([
+      ["all prices missing", [unavailable], 2900],
+      ["missing after a valid price", [priced, unavailable], 4600],
+      ["missing before a valid price", [unavailable, priced], 4600],
+    ] as const)(
+      "preserves the snapshot and permits recovery: %s",
+      async (_name, subscriptions, recoveredAmount) => {
+        const date = new Date("2026-02-01T00:00:00Z");
+        const plans = new Map<string, PlanSnapshot>([["pro@v1", pro]]);
+        const provider: PlanProvider = { getPlanVersion: async (ref) => plans.get(ref) ?? null };
+        const snapshots = new Map<string, MetricsSnapshot>();
+        vi.mocked(mockRepository.getMRRHistory).mockResolvedValue([]);
+        vi.mocked(mockRepository.recordSnapshot).mockImplementation(
+          async (tenant, snapshot, day) => {
+            snapshots.set(`${tenant}:${day.toISOString()}`, snapshot);
+          },
+        );
+        const realScheduler = new SnapshotScheduler(mockRepository);
+        const config = { tenantId: "tenant_123" };
+        await realScheduler.captureSnapshot(
+          { subscriptions: [priced], planProvider: provider, activeCustomers: 1 },
+          date,
+          config,
+        );
+        const previous = [...snapshots.values()][0];
+        expect(previous.totalMRR).toEqual({ amount: 1700, currency: "EUR" });
+        vi.mocked(mockRepository.recordSnapshot).mockClear();
+
+        const input = {
+          subscriptions: [...subscriptions],
+          planProvider: provider,
+          activeCustomers: subscriptions.length,
+        };
+        await expect(realScheduler.captureSnapshot(input, date, config)).rejects.toMatchObject({
+          code: "metrics-core/subscription-pricing-unavailable",
+          detail: expect.stringMatching(/sub-missing.*team@v3/),
+        });
+        expect(mockRepository.recordSnapshot).not.toHaveBeenCalled();
+        expect([...snapshots.values()]).toEqual([previous]);
+
+        plans.set("team@v3", team);
+        await realScheduler.captureSnapshot(input, date, config);
+        expect(mockRepository.recordSnapshot).toHaveBeenCalledTimes(1);
+        expect([...snapshots.values()]).toEqual([
+          expect.objectContaining({
+            totalMRR: { amount: recoveredAmount, currency: "EUR" },
+            activeCustomers: subscriptions.length,
+          }),
+        ]);
+      },
+    );
+
+    it.each([
+      ["empty subscriptions", [], "USD"],
+      ["an existing free plan", [priced], "EUR"],
+    ] as const)("publishes legitimate zero MRR for %s", async (_name, subscriptions, currency) => {
+      vi.mocked(mockRepository.getMRRHistory).mockResolvedValue([]);
+      const provider: PlanProvider = {
+        getPlanVersion: vi.fn().mockResolvedValue({ ...pro, amount: 0 }),
+      };
+      await new SnapshotScheduler(mockRepository).captureSnapshot(
+        {
+          subscriptions: [...subscriptions],
+          planProvider: provider,
+          activeCustomers: subscriptions.length,
+        },
+        new Date("2026-02-01T00:00:00Z"),
+        { tenantId: "tenant_123" },
+      );
+      expect(mockRepository.recordSnapshot).toHaveBeenCalledTimes(1);
+      expect(mockRepository.recordSnapshot).toHaveBeenCalledWith(
+        "tenant_123",
+        expect.objectContaining({
+          totalMRR: { amount: 0, currency },
+          activeCustomers: subscriptions.length,
+        }),
+        expect.any(Date),
+      );
+    });
   });
 });
