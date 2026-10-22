@@ -436,3 +436,113 @@ describe("representable integer boundaries", () => {
     },
   );
 });
+
+describe("finite numeric domain equivalence", () => {
+  it.each([
+    [
+      z.number().int(),
+      z.number().int().max(Number.MAX_VALUE),
+      [0, Number.MAX_VALUE],
+      [Infinity, 0.5],
+    ],
+    [
+      z.number().int(),
+      z.number().int().min(-Number.MAX_VALUE),
+      [0, -Number.MAX_VALUE],
+      [-Infinity, 0.5],
+    ],
+    [
+      z.number().finite(),
+      z.number().finite().max(Number.MAX_VALUE),
+      [0.5, Number.MAX_VALUE],
+      [Infinity],
+    ],
+    [
+      z.number().finite(),
+      z.number().finite().min(-Number.MAX_VALUE),
+      [-0.5, -Number.MAX_VALUE],
+      [-Infinity],
+    ],
+    [
+      z.number().finite().gt(1),
+      z
+        .number()
+        .finite()
+        .min(1 + Number.EPSILON),
+      [1 + Number.EPSILON, 2],
+      [1],
+    ],
+    [
+      z.number().finite().lt(-1),
+      z
+        .number()
+        .finite()
+        .max(-1 - Number.EPSILON),
+      [-1 - Number.EPSILON, -2],
+      [-1],
+    ],
+    [
+      z.number().finite().gt(0),
+      z.number().finite().min(Number.MIN_VALUE),
+      [Number.MIN_VALUE, 1],
+      [0, -Number.MIN_VALUE],
+    ],
+    [
+      z.number().finite().lt(0),
+      z.number().finite().max(-Number.MIN_VALUE),
+      [-Number.MIN_VALUE, -1],
+      [0, Number.MIN_VALUE],
+    ],
+    [
+      z
+        .number()
+        .finite()
+        .min(2 ** 52),
+      z
+        .number()
+        .int()
+        .min(2 ** 52),
+      [2 ** 52, Number.MAX_VALUE],
+      [2 ** 52 - 0.5],
+    ],
+    [
+      z
+        .number()
+        .finite()
+        .max(-(2 ** 52)),
+      z
+        .number()
+        .int()
+        .max(-(2 ** 52)),
+      [-(2 ** 52), -Number.MAX_VALUE],
+      [-(2 ** 52) + 0.5],
+    ],
+    [
+      z.number().finite().gt(Number.MAX_VALUE),
+      z.number().min(1).max(0),
+      [],
+      [-Number.MAX_VALUE, 0, Number.MAX_VALUE, Infinity],
+    ],
+    [
+      z.number().finite().lt(-Number.MAX_VALUE),
+      z.number().min(1).max(0),
+      [],
+      [-Number.MAX_VALUE, 0, Number.MAX_VALUE, -Infinity],
+    ],
+  ])("should preserve equivalent finite numeric sets %#", (before, after, accepted, rejected) => {
+    for (const value of accepted) {
+      expect(before.safeParse(value).success).toBe(true);
+      expect(after.safeParse(value).success).toBe(true);
+    }
+    for (const value of rejected) {
+      expect(before.safeParse(value).success).toBe(false);
+      expect(after.safeParse(value).success).toBe(false);
+    }
+    for (const direction of ["request", "response"] as const) {
+      const baseline = loaded(before, direction);
+      const current = loaded(after, direction);
+      expect(diffContractGraphSnapshots(baseline, current).hasBreakingChanges).toBe(false);
+      expect(diffContractGraphSnapshots(current, baseline).hasBreakingChanges).toBe(false);
+    }
+  });
+});

@@ -89,8 +89,8 @@ Request compatibility permits constraint relaxation; response compatibility perm
 narrowing. The comparison recurses through object fields, records, transparent wrappers and array elements.
 Union compatibility matches each source branch to a compatible target branch in the relevant direction.
 Arrays with contradictory cardinalities have no values; zero-only arrays have no reachable element contract.
-Historical
-snapshots that omit constraints are treated as unconstrained: previously discarded checks cannot
+Numeric comparisons use finite representable JSON numbers, including adjacent float64 values and
+integer-only high-magnitude ranges. Historical snapshots that omit constraints are treated as unconstrained: previously discarded checks cannot
 be recovered, so regenerate a baseline from its original schema to compare those checks accurately.
 
 Non-finite numeric bounds, numeric `multipleOf`, and non-integer or negative array cardinalities

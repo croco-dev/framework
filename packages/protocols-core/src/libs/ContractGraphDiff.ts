@@ -623,61 +623,51 @@ function isNumericSubset(source: ContractSchemaSnapshot, target: ContractSchemaS
     return false;
   const sourceRange = numericRange(source);
   const targetRange = numericRange(target);
-  const empty = (range: ReturnType<typeof numericRange>) =>
-    range.min > range.max ||
-    (range.min === range.max && (range.exclusiveMin || range.exclusiveMax));
+  const empty = (range: ReturnType<typeof numericRange>) => range.min > range.max;
   if (empty(sourceRange)) return true;
   if (empty(targetRange)) return false;
-  if (
-    target.integer &&
-    !source.integer &&
-    !(sourceRange.min === sourceRange.max && Number.isInteger(sourceRange.min))
-  )
-    return false;
-  return (
-    (sourceRange.min > targetRange.min ||
-      (sourceRange.min === targetRange.min &&
-        (sourceRange.exclusiveMin || !targetRange.exclusiveMin))) &&
-    (sourceRange.max < targetRange.max ||
-      (sourceRange.max === targetRange.max &&
-        (sourceRange.exclusiveMax || !targetRange.exclusiveMax)))
-  );
+  // At magnitudes >= 2^52 every representable float64 value is an integer.
+  const sourceOnlyIntegers =
+    source.integer ||
+    sourceRange.min >= 2 ** 52 ||
+    sourceRange.max <= -(2 ** 52) ||
+    (sourceRange.min === sourceRange.max && Number.isInteger(sourceRange.min));
+  if (target.integer && !sourceOnlyIntegers) return false;
+  return sourceRange.min >= targetRange.min && sourceRange.max <= targetRange.max;
 }
 
 function numericRange(schema: ContractSchemaSnapshot) {
-  let min = schema.minimum ?? -Infinity;
-  let max = schema.maximum ?? Infinity;
-  let exclusiveMin = schema.exclusiveMinimum ?? false;
-  let exclusiveMax = schema.exclusiveMaximum ?? false;
+  // JSON numbers are finite float64 values, including when a historical bound
+  // was omitted. Closed representable endpoints make equivalent checks equal.
+  let min = schema.minimum ?? -Number.MAX_VALUE;
+  let max = schema.maximum ?? Number.MAX_VALUE;
   if (schema.integer) {
-    if (Number.isFinite(min)) {
-      min = exclusiveMin
-        ? Number.isSafeInteger(min) && min < Number.MAX_SAFE_INTEGER
-          ? Math.floor(min) + 1
-          : Number.isInteger(min)
-            ? adjacentNumber(min, 1)
-            : Math.ceil(min)
-        : Math.ceil(min);
-      exclusiveMin = !Number.isFinite(min);
-    }
-    if (Number.isFinite(max)) {
-      max = exclusiveMax
-        ? Number.isSafeInteger(max) && max > Number.MIN_SAFE_INTEGER
-          ? Math.ceil(max) - 1
-          : Number.isInteger(max)
-            ? adjacentNumber(max, -1)
-            : Math.floor(max)
-        : Math.floor(max);
-      exclusiveMax = !Number.isFinite(max);
-    }
+    const roundedMin = Math.ceil(min);
+    const roundedMax = Math.floor(max);
+    min =
+      schema.exclusiveMinimum && min === roundedMin
+        ? Number.isSafeInteger(min)
+          ? min + 1
+          : adjacentNumber(min, 1)
+        : roundedMin;
+    max =
+      schema.exclusiveMaximum && max === roundedMax
+        ? Number.isSafeInteger(max)
+          ? max - 1
+          : adjacentNumber(max, -1)
+        : roundedMax;
+  } else {
+    if (schema.exclusiveMinimum) min = adjacentNumber(min, 1);
+    if (schema.exclusiveMaximum) max = adjacentNumber(max, -1);
   }
-  return { min, max, exclusiveMin, exclusiveMax };
+  return { min, max };
 }
 
-// Beyond the safe-integer range, adjacent float64 values are integers but +/- 1
-// can round back to the endpoint. Move one representable value in the requested
-// direction; infinity remains exclusive so a finite-number set can be empty.
+// Move one representable float64 value in the requested direction. Uint32
+// carry/borrow preserves the ES2017 output target, including signed zero and
+// finite endpoint overflow (which produces an empty range).
 function adjacentNumber(value: number, direction: 1 | -1): number {
+  if (value === 0) return direction * Number.MIN_VALUE;
   const bits = new DataView(new ArrayBuffer(8));
   bits.setFloat64(0, value);
   const low = bits.getUint32(4);

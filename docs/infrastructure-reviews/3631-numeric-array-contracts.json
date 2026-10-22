@@ -8,7 +8,7 @@
       "files": {
         "packages/protocols-core/src/libs/SchemaDescriptor.ts": "ee3b0328175113893bbbd8a0875f254272da784538a29de9dc947e1f5259eaf3",
         "packages/protocols-core/src/libs/ContractGraphSnapshot.ts": "4938f7f8877e0a1841d2abf98564f9c87cf867ef0dbeeab216a443590a3595ef",
-        "packages/protocols-core/src/libs/ContractGraphDiff.ts": "a0327c9fcc167bc160567e450e6c7ce105a0470f922e7fb739c16882aa713ca0"
+        "packages/protocols-core/src/libs/ContractGraphDiff.ts": "80251e906082d93d54d0a3d191aec060314e60a37acc20469bea24373e99798e"
       },
       "catalogRuntimes": [],
       "profiles": {
