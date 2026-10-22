@@ -1,0 +1,105 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "promotions-core",
+      "classification": "pure-contract",
+      "reason": "Enforce the existing atomic transact contract: serialize callbacks, stage deeply isolated maps, indexes, budget and audit state, and publish only on callback success. No public API or deployed runtime claim changes.",
+      "files": {
+        "packages/promotions-core/src/libs/InMemoryPromotionStore.ts": "85429f7712688bd21d22ca61aeb8e521f92b4d9f065a47cff762420b98e251aa"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "The Node Host is not involved in process-local snapshot publication. The existing atomic contract is enforced without host capabilities, external storage or lifecycle changes.",
+          "providers": ["@croco/promotions-core/InMemoryPromotionStore"],
+          "constraints": [
+            "Single-process, non-durable state; no live infrastructure or provider certification is claimed."
+          ],
+          "references": [
+            "packages/promotions-core/src/libs/InMemoryPromotionStore.ts",
+            "packages/promotions-core/src/libs/PromotionStore.ts",
+            "packages/promotions-core/src/tests/InMemoryPromotionStore.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "The Lambda Host is not involved in process-local snapshot publication. The existing atomic contract is enforced without host capabilities, external storage or lifecycle changes.",
+          "providers": ["@croco/promotions-core/InMemoryPromotionStore"],
+          "constraints": [
+            "Single-process, non-durable state; no live infrastructure or provider certification is claimed."
+          ],
+          "references": [
+            "packages/promotions-core/src/libs/InMemoryPromotionStore.ts",
+            "packages/promotions-core/src/libs/PromotionStore.ts",
+            "packages/promotions-core/src/tests/InMemoryPromotionStore.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "The Workers or Node Container Host is not involved in process-local snapshot publication. The existing atomic contract is enforced without host capabilities, external storage or lifecycle changes.",
+          "providers": ["@croco/promotions-core/InMemoryPromotionStore"],
+          "constraints": [
+            "Single-process, non-durable state; no live infrastructure or provider certification is claimed."
+          ],
+          "references": [
+            "packages/promotions-core/src/libs/InMemoryPromotionStore.ts",
+            "packages/promotions-core/src/libs/PromotionStore.ts",
+            "packages/promotions-core/src/tests/InMemoryPromotionStore.spec.ts"
+          ]
+        }
+      }
+    },
+    {
+      "package": "referral-core",
+      "classification": "pure-contract",
+      "reason": "Enforce the existing atomic transact contract: serialize callbacks, stage deeply isolated maps, indexes, budget and audit state, and publish only on callback success. No public API or deployed runtime claim changes.",
+      "files": {
+        "packages/referral-core/src/libs/InMemoryReferralStore.ts": "6776ac1beea2cc138b4678c0abd66e1ff44965febf07060d62d21976ebd87a4b"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "The Node Host is not involved in process-local snapshot publication. The existing atomic contract is enforced without host capabilities, external storage or lifecycle changes.",
+          "providers": ["@croco/referral-core/InMemoryReferralStore"],
+          "constraints": [
+            "Single-process, non-durable state; no live infrastructure or provider certification is claimed."
+          ],
+          "references": [
+            "packages/referral-core/src/libs/InMemoryReferralStore.ts",
+            "packages/referral-core/src/libs/ReferralStore.ts",
+            "packages/referral-core/src/tests/InMemoryReferralStore.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "The Lambda Host is not involved in process-local snapshot publication. The existing atomic contract is enforced without host capabilities, external storage or lifecycle changes.",
+          "providers": ["@croco/referral-core/InMemoryReferralStore"],
+          "constraints": [
+            "Single-process, non-durable state; no live infrastructure or provider certification is claimed."
+          ],
+          "references": [
+            "packages/referral-core/src/libs/InMemoryReferralStore.ts",
+            "packages/referral-core/src/libs/ReferralStore.ts",
+            "packages/referral-core/src/tests/InMemoryReferralStore.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "The Workers or Node Container Host is not involved in process-local snapshot publication. The existing atomic contract is enforced without host capabilities, external storage or lifecycle changes.",
+          "providers": ["@croco/referral-core/InMemoryReferralStore"],
+          "constraints": [
+            "Single-process, non-durable state; no live infrastructure or provider certification is claimed."
+          ],
+          "references": [
+            "packages/referral-core/src/libs/InMemoryReferralStore.ts",
+            "packages/referral-core/src/libs/ReferralStore.ts",
+            "packages/referral-core/src/tests/InMemoryReferralStore.spec.ts"
+          ]
+        }
+      }
+    }
+  ]
+}

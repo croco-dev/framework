@@ -1,0 +1,14 @@
+{
+  "extends": ["//"],
+  "tasks": {
+    "test": {
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/test-support/atomicStoreConformance.ts"]
+    },
+    "test:evidence": {
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/test-support/atomicStoreConformance.ts"]
+    },
+    "typecheck": {
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/test-support/atomicStoreConformance.ts"]
+    }
+  }
+}

@@ -4615,6 +4615,12 @@
       "owner": "@croco/promotions-core"
     },
     {
+      "path": "packages/promotions-core/src/tests/InMemoryPromotionStore.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/promotions-core"
+    },
+    {
       "path": "packages/promotions-core/src/tests/OfferPolicy.spec.ts",
       "lane": "fast",
       "qualifiers": [],
@@ -5015,6 +5021,12 @@
       "lane": "live",
       "qualifiers": [],
       "owner": "@croco/ratelimit-upstash"
+    },
+    {
+      "path": "packages/referral-core/src/tests/InMemoryReferralStore.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/referral-core"
     },
     {
       "path": "packages/referral-core/src/tests/ReferralCreditGrantAdapter.spec.ts",
