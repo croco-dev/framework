@@ -10,7 +10,7 @@
         "packages/metrics-core/src/runtime.ts": "db95824aaed27888348ee30156fc93d1b2e7ef77d178cc8bf582a6b955c57a95",
         "packages/metrics-core/src/libs/seo/SeoComparison.ts": "a0cba06436782d8d2df9df3d614cbfa45196803a5ae309f29a942cfcb2e739a4",
         "packages/metrics-core/src/libs/seo/SeoSources.ts": "1a9267c40c22c8d496aeb51860a5927346c5621a273678a6f0147b9a067c9c70",
-        "packages/metrics-core/src/libs/read/MetricReadService.ts": "fa442bea4a7a09610013f6483e69aa547a26e3d2ae72aaca83a497fbcb95ea15"
+        "packages/metrics-core/src/libs/read/MetricReadService.ts": "3b3d83212182cf88b922dd813d470c865082ba8fe8acede9d4fa37238ecfea63"
       },
       "catalogRuntimes": [],
       "profiles": {

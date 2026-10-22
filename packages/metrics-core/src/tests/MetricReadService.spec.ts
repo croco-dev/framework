@@ -67,6 +67,7 @@ const result: MetricReadResult = {
 function fixture(
   options: {
     report?: VerifiedMetricReport;
+    now?: () => Date;
     verified?: boolean;
     reader?: VerifiedReportReader;
     query?: Partial<RegisteredMetricQuery>;
@@ -125,6 +126,7 @@ function fixture(
       [query],
       authority,
       options.reader ?? reader,
+      options.now,
     ),
     executor,
     reader,
@@ -190,6 +192,36 @@ describe("MetricReadService", () => {
     );
     expect(release.authorize(null)).toBe(false);
   });
+
+  it.each(["complete", "partial"] as const)(
+    "withholds %s cached report data at its original expiration",
+    async (coverage) => {
+      const expiresAt = Date.parse("2026-09-03T00:00:00.000Z");
+      let currentTime = expiresAt - 1;
+      const { service } = fixture({
+        now: () => new Date(currentTime),
+        query: { partialDataPolicy: "authorized" },
+        report: report({
+          expiresAt: new Date(expiresAt).toISOString(),
+          result: { ...result, quality: { ...quality, populationCoverage: coverage } },
+        }),
+      });
+      const outcome = await service.runRegisteredQuery(
+        "captures_by_currency",
+        { currency: "USD" },
+        window,
+      );
+      expect(outcome.status).toBe(coverage === "complete" ? "verified" : "partial");
+      const release = service.prepareResultRelease(outcome);
+      if (!release) throw new TypeError("Expected a cached report release boundary");
+      const grant = { permissionEpoch: "permission-1", privacyEpoch: "privacy-1" };
+      expect(release.authorize(grant)).toBe(true);
+      currentTime = expiresAt;
+      expect(release.authorize(grant)).toBe(false);
+      currentTime = expiresAt + 1;
+      expect(release.authorize(grant)).toBe(false);
+    },
+  );
 
   it("rejects copied, foreign and replaced outcomes at release", async () => {
     const { service } = fixture();

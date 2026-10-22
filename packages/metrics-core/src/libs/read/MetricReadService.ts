@@ -312,6 +312,7 @@ export class MetricReadService {
   private readonly definitions: ReadonlyMap<string, RegisteredMetricDefinition>;
   private readonly queries: ReadonlyMap<string, RegisteredMetricQuery>;
   private readonly audit: MetricReadAuditEvent[] = [];
+  private readonly reportExpirations = new WeakMap<VerifiedReportOutcome, number>();
   private readonly releases = new WeakMap<
     RegisteredQueryOutcome,
     {
@@ -319,6 +320,7 @@ export class MetricReadService {
       action: MetricReadAction;
       grant: MetricReadGrant;
       deadline: number;
+      reportExpiresAt?: number;
       result: MetricReadResult;
     }
   >();
@@ -557,6 +559,7 @@ export class MetricReadService {
           action,
           grant,
           deadline,
+          this.reportExpirations.get(report),
         );
       }
       if (report.status === "partial")
@@ -571,6 +574,7 @@ export class MetricReadService {
           action,
           grant,
           deadline,
+          this.reportExpirations.get(report),
         );
       if (report.status === "denied")
         return { status: (status = "denied"), reportId: report.reportId };
@@ -675,7 +679,7 @@ export class MetricReadService {
    * authorization snapshot, then call authorize immediately before synchronously projecting data.
    * Only the original data-bearing outcome from this service is recognized; copied, serialized or
    * replaced results are rejected. Principal/source snapshots must still match the trusted context.
-   * The original query deadline and abort signal remain in force. An asynchronous store must enforce
+   * The original report expiration, query deadline and abort signal remain in force. A store must enforce
    * its own atomic authorization while a write is in flight.
    */
   prepareResultRelease(outcome: RegisteredQueryOutcome): MetricReadRelease | undefined {
@@ -694,6 +698,8 @@ export class MetricReadService {
         this.checkDeadline(release.deadline);
         if (
           !grant ||
+          (release.reportExpiresAt !== undefined &&
+            release.reportExpiresAt <= this.now().getTime()) ||
           !("result" in outcome) ||
           outcome.result !== release.result ||
           !samePrincipal(current.principal, release.context.principal) ||
@@ -719,6 +725,7 @@ export class MetricReadService {
     action: MetricReadAction,
     grant: MetricReadGrant,
     deadline: number,
+    reportExpiresAt?: number,
   ): RegisteredQueryOutcome {
     if ("result" in outcome && outcome.result)
       this.releases.set(outcome, {
@@ -726,6 +733,7 @@ export class MetricReadService {
         action,
         grant: { ...grant },
         deadline,
+        reportExpiresAt,
         result: outcome.result,
       });
     return outcome;
@@ -967,9 +975,12 @@ export class MetricReadService {
           evidence: metricEvidence(report.result),
           ...(query.partialDataPolicy === "authorized" ? { result: report.result } : {}),
         };
+        this.reportExpirations.set(degraded, Date.parse(report.expiresAt));
         continue;
       }
-      return { status: "verified", report };
+      const verified = { status: "verified", report } as const;
+      this.reportExpirations.set(verified, Date.parse(report.expiresAt));
+      return verified;
     }
     return degraded;
   }
