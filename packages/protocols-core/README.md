@@ -15,6 +15,57 @@ OpenAPI, RPC, and generated-client tooling.
 - Schema descriptor utilities for JSON-safe Zod support and diagnostics.
 - Controller discovery and route IR extraction helpers.
 
+## Authorized business operations
+
+`defineOperation` declares a domain input schema, output projection schema, explicit
+authorization and an optional input policy. `createOperation` binds a typed function
+handler. Calling `invoke(input, serverContext)` and dispatching an explicitly bound
+REST request use the same authorization → input validation → policy → handler → output
+projection path. Authorization completes before an adapter reads its input source.
+Authorization and policy callbacks complete without returning a value, or throw a
+`Problem`; boolean results fail closed.
+
+```typescript typecheck
+import { ProblemFactory } from "@croco/problems-core";
+import { createOperation, defineOperation } from "@croco/protocols-core";
+import { z } from "zod";
+
+type VerifiedContext = { tenantId: string; canPurchase: boolean };
+
+const checkout = createOperation(
+  defineOperation({
+    id: "checkout.start",
+    kind: "command",
+    input: z.object({ productId: z.string().min(1) }),
+    output: z.object({ productId: z.string(), tenantId: z.string() }),
+    authorize(context: VerifiedContext) {
+      if (!context.canPurchase) throw ProblemFactory.forbidden("checkout/denied");
+    },
+  }),
+  (input, context) => ({ productId: input.productId, tenantId: context.tenantId }),
+);
+
+await checkout.invoke(
+  { productId: "product_27" },
+  { tenantId: "tenant_verified", canPurchase: true },
+);
+```
+
+Schema input and parsed handler input remain distinct, as do handler output and
+projected output. Input failures use `protocols-core/operation-input-invalid` (422);
+invalid output uses `protocols-core/operation-output-invalid` (500) without embedding
+the returned value. Input is never merged into authority. The server caller owns
+credential verification and supplies context separately; do not construct it by
+copying arbitrary request headers or domain input. A function operation is not
+automatically public on any protocol.
+
+This is the function/REST stage of #2842. Decorated-class operation discovery,
+generated operation clients and native tRPC/GraphQL operation bindings are not
+implemented by this API yet. Existing decorated controllers and native GraphQL
+resolvers remain supported. Transaction, idempotency, cancellation and after-commit
+behavior remain owned by the existing application/handler policies; this stage does
+not introduce another transaction or execution engine.
+
 ## ContractGraph v1
 
 `ContractGraphV1` is the stable JSON-safe snapshot shape for REST contract consumers such as
@@ -97,3 +148,6 @@ Non-finite numeric bounds, numeric `multipleOf`, and non-integer or negative arr
 produce `contract-schema-json-unsafe` diagnostics instead of silently dropping the constraint.
 Numeric `finite` needs no extra snapshot field because JSON numbers are finite. Arbitrary refinement
 functions remain outside static compatibility inference.
+
+The operation executor does not create a process-global registry. Definitions are
+snapshotted when bound; each invocation uses its own explicit server context.

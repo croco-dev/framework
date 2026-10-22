@@ -12,3 +12,8 @@ export {
 export * from "./libs/schemas/index";
 export * from "./libs/types/index";
 export * from "./libs/validators/index";
+export { createRestOperationController } from "./libs/createRestOperationController";
+export type {
+  RestOperationBinding,
+  RestOperationRequest,
+} from "./libs/createRestOperationController";

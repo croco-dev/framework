@@ -43,6 +43,34 @@ title: "RouteIR"
 
 ---
 
+### operation?
+
+> `optional` **operation?**: `object`
+
+Explicit whole-source operation binding consumed by the existing contract graph.
+
+#### id
+
+> `readonly` **id**: `string`
+
+#### inputSchema
+
+> `readonly` **inputSchema**: `ZodType`
+
+#### inputSource
+
+> `readonly` **inputSource**: `"body"` \| `"query"` \| `"params"`
+
+#### kind
+
+> `readonly` **kind**: `"query"` \| `"command"`
+
+#### outputSchema
+
+> `readonly` **outputSchema**: `ZodType`
+
+---
+
 ### outputSchema
 
 > **outputSchema**: `ZodType`\<`any`, `ZodTypeDef`, `any`\> \| `null`

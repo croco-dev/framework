@@ -53,6 +53,8 @@ function isInternalRestDecoratorFrame(path: string): boolean {
     normalizedPath.endsWith("/HttpMethod.ts") ||
     normalizedPath.endsWith("/HttpMethod.js") ||
     normalizedPath.endsWith("/ResponseSchema.ts") ||
-    normalizedPath.endsWith("/ResponseSchema.js")
+    normalizedPath.endsWith("/ResponseSchema.js") ||
+    normalizedPath.endsWith("/createRestOperationController.ts") ||
+    normalizedPath.endsWith("/createRestOperationController.js")
   );
 }

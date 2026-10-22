@@ -1,0 +1,224 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "problems-core",
+      "classification": "pure-contract",
+      "reason": "Authorize and validate one domain operation across direct calls and an explicitly selected REST export; retain existing route contracts, HTTP status and application-owned execution policies. This is the first stage of #2842; decorated-class compilation and native tRPC/GraphQL bindings are deferred to its second stage.",
+      "files": {
+        "packages/problems-core/src/generated/problem-code-registry.ts": "3e8b50eb208764c65dd28101a5235049ef06f2f8a6bbe5bb0d9945e357c12a59"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Generated operation Problem-code declarations and recovery metadata have no host capabilities, storage, connections or lifecycle.",
+          "providers": [],
+          "constraints": [
+            "Application-owned callbacks retain their provider, transaction, cancellation and lifecycle requirements."
+          ],
+          "references": ["packages/protocols-core/src/libs/Operation.ts"]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Generated operation Problem-code declarations and recovery metadata have no host capabilities, storage, connections or lifecycle.",
+          "providers": [],
+          "constraints": [
+            "Application-owned callbacks retain their provider, transaction, cancellation and lifecycle requirements."
+          ],
+          "references": ["packages/protocols-core/src/libs/Operation.ts"]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Generated operation Problem-code declarations and recovery metadata have no host capabilities, storage, connections or lifecycle.",
+          "providers": [],
+          "constraints": [
+            "Application-owned callbacks retain their provider, transaction, cancellation and lifecycle requirements."
+          ],
+          "references": ["packages/protocols-core/src/libs/Operation.ts"]
+        }
+      }
+    },
+    {
+      "package": "protocols-core",
+      "classification": "pure-contract",
+      "reason": "Authorize and validate one domain operation across direct calls and an explicitly selected REST export; retain existing route contracts, HTTP status and application-owned execution policies. This is the first stage of #2842; decorated-class compilation and native tRPC/GraphQL bindings are deferred to its second stage.",
+      "files": {
+        "packages/protocols-core/src/index.ts": "72ff31aba0dc639d9efaf43d8f97fc039916da132a148b5412068c7ce43fff7b",
+        "packages/protocols-core/src/libs/Operation.ts": "00fcdacabbb4e3fedc864341f14916dab1c65e0a39fe1aa48001b0ef519e2d0e",
+        "packages/protocols-core/src/libs/RouteIR.ts": "2ae989c77334f76bb8d7144ab45ac037826a357f9db8446bb0f98f6d3c3ff1e7",
+        "packages/protocols-core/src/libs/extractRouteIR.ts": "8c1c19246773f037a33a129d2df1feb95d39e86cb6de16792c50a5c9fa284404",
+        "packages/protocols-core/src/libs/ContractGraph.ts": "5afcbfdb5a2e68b2c407c3202d3965cc4c713aa5e41e3f0823094e4966571363",
+        "packages/protocols-core/src/type-tests/OperationTypes.ts": "b25b0a85aa47f40e543b46b91b87433a1d787ebf272672b241542dc4d1c9a4ef",
+        "packages/protocols-core/src/libs/SchemaDescriptor.ts": "24683fc08bb2d1972a0dd03ca6b32d85247675f1ce329592e00fa00cd095b4e0",
+        "packages/protocols-core/src/libs/ContractGraphConsumerCoverage.ts": "8df1634b93e959d37bb2ec52020b0e373875d1b3e697072f659669789f0ef43d"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "The operation contract executes caller-provided authorization, schemas, policy and handler without owning host capabilities, storage, connections or lifecycle. Existing route graph validation consumes explicit operation input bindings.",
+          "providers": [],
+          "constraints": [
+            "Application-owned callbacks retain their provider, transaction, cancellation and lifecycle requirements."
+          ],
+          "references": ["packages/protocols-core/src/libs/Operation.ts"]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "The operation contract executes caller-provided authorization, schemas, policy and handler without owning host capabilities, storage, connections or lifecycle. Existing route graph validation consumes explicit operation input bindings.",
+          "providers": [],
+          "constraints": [
+            "Application-owned callbacks retain their provider, transaction, cancellation and lifecycle requirements."
+          ],
+          "references": ["packages/protocols-core/src/libs/Operation.ts"]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "The operation contract executes caller-provided authorization, schemas, policy and handler without owning host capabilities, storage, connections or lifecycle. Existing route graph validation consumes explicit operation input bindings.",
+          "providers": [],
+          "constraints": [
+            "Application-owned callbacks retain their provider, transaction, cancellation and lifecycle requirements."
+          ],
+          "references": ["packages/protocols-core/src/libs/Operation.ts"]
+        }
+      }
+    },
+    {
+      "package": "protocols-rest",
+      "classification": "protocol-render",
+      "reason": "Authorize and validate one domain operation across direct calls and an explicitly selected REST export; retain existing route contracts, HTTP status and application-owned execution policies. This is the first stage of #2842; decorated-class compilation and native tRPC/GraphQL bindings are deferred to its second stage.",
+      "files": {
+        "packages/protocols-rest/src/index.ts": "5d7731df696e6db2eba16a92242354712ceba3fa7647666aa03afdc6c27a4bba",
+        "packages/protocols-rest/src/libs/createRestOperationController.ts": "bd4db32d407e55b5e5d85b39993cb67701c31e44c5b1d2b2f36e16d34b24149a",
+        "packages/protocols-rest/src/libs/sourceLocation.ts": "992a02ab3bbbeaf7a7633708aaf0cbf8d1a7aeee91e98965113fc7172b7b8c0e",
+        "packages/protocols-rest/src/type-tests/OperationBindingTypes.ts": "5acacabd1d97eb6ee50752fe00c638b31224516b1ea4b47120b0dc12cb191e33"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "unverified",
+          "reason": "The explicit REST operation binding reuses the existing controller graph and HTTP pipeline on the Node Host. This change does not establish execution evidence on that host.",
+          "providers": ["@croco/transports-http", "@croco/protocols-rest"],
+          "constraints": [
+            "No live deployment or provider certification is claimed.",
+            "Authentication middleware and createContext must supply server-verified authority.",
+            "No new storage or lifecycle owner is introduced."
+          ],
+          "references": [
+            "packages/protocols-rest/src/libs/createRestOperationController.ts",
+            "packages/transports-http/src/libs/RouteCompiler.ts",
+            "packages/presentation-preset/runtime-profiles.json"
+          ]
+        },
+        "aws-lambda": {
+          "result": "unverified",
+          "reason": "The explicit REST operation binding reuses the existing controller graph and HTTP pipeline on the Lambda Host. This change does not establish execution evidence on that host.",
+          "providers": ["@croco/transports-http", "@croco/protocols-rest"],
+          "constraints": [
+            "No live deployment or provider certification is claimed.",
+            "Authentication middleware and createContext must supply server-verified authority.",
+            "Lambda callers retain responsibility for awaited work and invocation flush."
+          ],
+          "references": [
+            "packages/protocols-rest/src/libs/createRestOperationController.ts",
+            "packages/transports-http/src/libs/RouteCompiler.ts",
+            "packages/presentation-preset/runtime-profiles.json"
+          ]
+        },
+        "cloudflare": {
+          "result": "unverified",
+          "reason": "The explicit REST operation binding reuses the existing controller graph and HTTP pipeline on the Workers Host. This change does not establish execution evidence on that host.",
+          "providers": ["@croco/transports-http", "@croco/protocols-rest"],
+          "constraints": [
+            "No live deployment or provider certification is claimed.",
+            "Authentication middleware and createContext must supply server-verified authority.",
+            "No new storage or lifecycle owner is introduced."
+          ],
+          "references": [
+            "packages/protocols-rest/src/libs/createRestOperationController.ts",
+            "packages/transports-http/src/libs/RouteCompiler.ts",
+            "packages/presentation-preset/runtime-profiles.json"
+          ],
+          "host": "workers"
+        }
+      }
+    },
+    {
+      "package": "openapi-spec",
+      "classification": "protocol-render",
+      "reason": "OpenAPI renders the already validated whole-source operation schema in its existing build-time consumer, without execution, storage, host lifecycle or new runtime dependencies.",
+      "files": {
+        "packages/openapi-spec/src/libs/emitOpenAPI.ts": "906e223b4a51cfe1c669de1d3c4cd13cb44256fff34deecf854bc1612707b983"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "OpenAPI renders the already validated whole-source operation schema in its existing build-time consumer, without execution, storage, host lifecycle or new runtime dependencies.",
+          "providers": [],
+          "constraints": [
+            "No deployment host behavior, provider certification or production infrastructure claim changes."
+          ],
+          "references": ["packages/openapi-spec/src/index.ts"]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "OpenAPI renders the already validated whole-source operation schema in its existing build-time consumer, without execution, storage, host lifecycle or new runtime dependencies.",
+          "providers": [],
+          "constraints": [
+            "No deployment host behavior, provider certification or production infrastructure claim changes."
+          ],
+          "references": ["packages/openapi-spec/src/index.ts"]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "OpenAPI renders the already validated whole-source operation schema in its existing build-time consumer, without execution, storage, host lifecycle or new runtime dependencies.",
+          "providers": [],
+          "constraints": [
+            "No deployment host behavior, provider certification or production infrastructure claim changes."
+          ],
+          "references": ["packages/openapi-spec/src/index.ts"]
+        }
+      }
+    },
+    {
+      "package": "transports-http",
+      "classification": "protocol-render",
+      "reason": "Share schema-aware query cardinality validation with operation bindings. HTTP failure status and domain parsing policy remain unchanged; this pure query-input projection changes no host capabilities, storage or lifecycle.",
+      "files": {
+        "packages/transports-http/src/libs/ParamResolver.ts": "63e033b5643dd9b5b7fadfe87641cf487de5122be0e371f6ce41e95a16f44f4a"
+      },
+      "catalogRuntimes": ["node", "lambda"],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Query cardinality projection is pure schema/input logic. It adds no host capabilities, storage, connections or lifecycle behavior.",
+          "providers": [],
+          "constraints": [
+            "No deployment host behavior, provider certification or production infrastructure claim changes."
+          ],
+          "references": ["packages/transports-http/src/index.ts"]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Query cardinality projection is pure schema/input logic. It adds no host capabilities, storage, connections or lifecycle behavior.",
+          "providers": [],
+          "constraints": [
+            "No deployment host behavior, provider certification or production infrastructure claim changes."
+          ],
+          "references": ["packages/transports-http/src/index.ts"]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Query cardinality projection is pure schema/input logic. It adds no host capabilities, storage, connections or lifecycle behavior.",
+          "providers": [],
+          "constraints": [
+            "No deployment host behavior, provider certification or production infrastructure claim changes."
+          ],
+          "references": ["packages/transports-http/src/index.ts"]
+        }
+      }
+    }
+  ]
+}

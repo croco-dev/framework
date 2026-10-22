@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export type CrocoProblemRegistry = {
   readonly version: "croco.problem-code-registry.v1";
-  readonly problemCount: 1139;
+  readonly problemCount: 1147;
   readonly problems: readonly [
     {
       readonly code: "ACCESS_DENIED";
@@ -23520,7 +23520,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/openapi-spec/src/libs/emitOpenAPI.ts";
-          readonly line: 108;
+          readonly line: 109;
           readonly column: 5;
           readonly kind: "problem-constructor";
         },
@@ -24563,6 +24563,146 @@ export type CrocoProblemRegistry = {
       ];
     },
     {
+      readonly code: "protocols-core/invalid-operation-authorization";
+      readonly category: "InternalServerError";
+      readonly status: 500;
+      readonly title: "Internal Server Error";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#protocols-core-invalid-operation-authorization";
+      readonly recovery: {
+        readonly cause: "Croco or an upstream dependency failed after accepting the request.";
+        readonly userAction: "Retry later only when the operation is idempotent or the caller owns retry safety.";
+        readonly operatorAction: "Use traces, logs, and upstream diagnostics to isolate the failing boundary.";
+        readonly retryability: "conditional";
+        readonly redactionPolicy: "operator-only";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.error";
+          readonly severity: "error";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/protocols-core/src/libs/Operation.ts";
+          readonly line: 99;
+          readonly column: 13;
+          readonly kind: "problem-factory";
+        },
+      ];
+    },
+    {
+      readonly code: "protocols-core/invalid-operation-definition";
+      readonly category: "InternalServerError";
+      readonly status: 500;
+      readonly title: "Internal Server Error";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#protocols-core-invalid-operation-definition";
+      readonly recovery: {
+        readonly cause: "Croco or an upstream dependency failed after accepting the request.";
+        readonly userAction: "Retry later only when the operation is idempotent or the caller owns retry safety.";
+        readonly operatorAction: "Use traces, logs, and upstream diagnostics to isolate the failing boundary.";
+        readonly retryability: "conditional";
+        readonly redactionPolicy: "operator-only";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.error";
+          readonly severity: "error";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/protocols-core/src/libs/Operation.ts";
+          readonly line: 161;
+          readonly column: 10;
+          readonly kind: "problem-factory";
+        },
+      ];
+    },
+    {
+      readonly code: "protocols-core/invalid-operation-policy";
+      readonly category: "InternalServerError";
+      readonly status: 500;
+      readonly title: "Internal Server Error";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#protocols-core-invalid-operation-policy";
+      readonly recovery: {
+        readonly cause: "Croco or an upstream dependency failed after accepting the request.";
+        readonly userAction: "Retry later only when the operation is idempotent or the caller owns retry safety.";
+        readonly operatorAction: "Use traces, logs, and upstream diagnostics to isolate the failing boundary.";
+        readonly retryability: "conditional";
+        readonly redactionPolicy: "operator-only";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.error";
+          readonly severity: "error";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/protocols-core/src/libs/Operation.ts";
+          readonly line: 138;
+          readonly column: 13;
+          readonly kind: "problem-factory";
+        },
+      ];
+    },
+    {
+      readonly code: "protocols-core/operation-input-invalid";
+      readonly category: "ValidationError";
+      readonly status: 422;
+      readonly title: "Validation Error";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#protocols-core-operation-input-invalid";
+      readonly recovery: {
+        readonly cause: "The request or generated contract failed schema or semantic validation.";
+        readonly userAction: "Fix the invalid fields and retry with schema-conformant input.";
+        readonly operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "public";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.info";
+          readonly severity: "info";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/protocols-core/src/libs/Operation.ts";
+          readonly line: 125;
+          readonly column: 13;
+          readonly kind: "problem-factory";
+        },
+      ];
+    },
+    {
+      readonly code: "protocols-core/operation-output-invalid";
+      readonly category: "InternalServerError";
+      readonly status: 500;
+      readonly title: "Internal Server Error";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#protocols-core-operation-output-invalid";
+      readonly recovery: {
+        readonly cause: "Croco or an upstream dependency failed after accepting the request.";
+        readonly userAction: "Retry later only when the operation is idempotent or the caller owns retry safety.";
+        readonly operatorAction: "Use traces, logs, and upstream diagnostics to isolate the failing boundary.";
+        readonly retryability: "conditional";
+        readonly redactionPolicy: "operator-only";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.error";
+          readonly severity: "error";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/protocols-core/src/libs/Operation.ts";
+          readonly line: 146;
+          readonly column: 13;
+          readonly kind: "problem-factory";
+        },
+      ];
+    },
+    {
       readonly code: "protocols-graphql/auth-invalid-header-format";
       readonly category: "BadRequest";
       readonly status: 400;
@@ -24899,6 +25039,34 @@ export type CrocoProblemRegistry = {
       ];
     },
     {
+      readonly code: "protocols-rest/invalid-operation-binding";
+      readonly category: "InternalServerError";
+      readonly status: 500;
+      readonly title: "Internal Server Error";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#protocols-rest-invalid-operation-binding";
+      readonly recovery: {
+        readonly cause: "Croco or an upstream dependency failed after accepting the request.";
+        readonly userAction: "Retry later only when the operation is idempotent or the caller owns retry safety.";
+        readonly operatorAction: "Use traces, logs, and upstream diagnostics to isolate the failing boundary.";
+        readonly retryability: "conditional";
+        readonly redactionPolicy: "operator-only";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.error";
+          readonly severity: "error";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/protocols-rest/src/libs/createRestOperationController.ts";
+          readonly line: 70;
+          readonly column: 11;
+          readonly kind: "problem-factory";
+        },
+      ];
+    },
+    {
       readonly code: "protocols-rest/invalid-route-parameter-schema";
       readonly category: "InternalServerError";
       readonly status: 500;
@@ -24922,6 +25090,62 @@ export type CrocoProblemRegistry = {
           readonly file: "packages/protocols-rest/src/libs/internal/routeParameterSchema.ts";
           readonly line: 25;
           readonly column: 11;
+          readonly kind: "problem-factory";
+        },
+      ];
+    },
+    {
+      readonly code: "protocols-rest/operation-json-invalid";
+      readonly category: "BadRequest";
+      readonly status: 400;
+      readonly title: "Bad Request";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#protocols-rest-operation-json-invalid";
+      readonly recovery: {
+        readonly cause: "The caller sent malformed input or unsupported request options.";
+        readonly userAction: "Correct the request input and retry after validation passes.";
+        readonly operatorAction: "Inspect validation details and request logs; do not retry unchanged input.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "public";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.info";
+          readonly severity: "info";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/protocols-rest/src/libs/createRestOperationController.ts";
+          readonly line: 101;
+          readonly column: 19;
+          readonly kind: "problem-factory";
+        },
+      ];
+    },
+    {
+      readonly code: "protocols-rest/operation-media-type-invalid";
+      readonly category: "UnsupportedMediaType";
+      readonly status: 415;
+      readonly title: "Unsupported Media Type";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#protocols-rest-operation-media-type-invalid";
+      readonly recovery: {
+        readonly cause: "The request body uses a media type that the endpoint does not support.";
+        readonly userAction: "Send the request body with a supported Content-Type and retry.";
+        readonly operatorAction: "Confirm the route media-type contract and request Content-Type header.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "public";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.info";
+          readonly severity: "info";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/protocols-rest/src/libs/createRestOperationController.ts";
+          readonly line: 93;
+          readonly column: 19;
           readonly kind: "problem-factory";
         },
       ];
@@ -29782,7 +30006,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/transports-http/src/libs/ParamResolver.ts";
-          readonly line: 149;
+          readonly line: 115;
           readonly column: 13;
           readonly kind: "problem-factory";
         },
@@ -29810,7 +30034,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/transports-http/src/libs/ParamResolver.ts";
-          readonly line: 186;
+          readonly line: 146;
           readonly column: 13;
           readonly kind: "problem-factory";
         },
@@ -29866,7 +30090,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/transports-http/src/libs/ParamResolver.ts";
-          readonly line: 397;
+          readonly line: 357;
           readonly column: 13;
           readonly kind: "problem-factory";
         },
@@ -30095,7 +30319,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/transports-http/src/libs/ParamResolver.ts";
-          readonly line: 224;
+          readonly line: 184;
           readonly column: 13;
           readonly kind: "problem-factory";
         },
@@ -32196,7 +32420,7 @@ export type CrocoProblemRegistry = {
 
 export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 1139,
+  problemCount: 1147,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -58439,7 +58663,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/openapi-spec/src/libs/emitOpenAPI.ts",
-          line: 108,
+          line: 109,
           column: 5,
           kind: "problem-constructor",
         },
@@ -59606,6 +59830,166 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       ],
     },
     {
+      code: "protocols-core/invalid-operation-authorization",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#protocols-core-invalid-operation-authorization",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/protocols-core/src/libs/Operation.ts",
+          line: 99,
+          column: 13,
+          kind: "problem-factory",
+        },
+      ],
+    },
+    {
+      code: "protocols-core/invalid-operation-definition",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#protocols-core-invalid-operation-definition",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/protocols-core/src/libs/Operation.ts",
+          line: 161,
+          column: 10,
+          kind: "problem-factory",
+        },
+      ],
+    },
+    {
+      code: "protocols-core/invalid-operation-policy",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#protocols-core-invalid-operation-policy",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/protocols-core/src/libs/Operation.ts",
+          line: 138,
+          column: 13,
+          kind: "problem-factory",
+        },
+      ],
+    },
+    {
+      code: "protocols-core/operation-input-invalid",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#protocols-core-operation-input-invalid",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/protocols-core/src/libs/Operation.ts",
+          line: 125,
+          column: 13,
+          kind: "problem-factory",
+        },
+      ],
+    },
+    {
+      code: "protocols-core/operation-output-invalid",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#protocols-core-operation-output-invalid",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/protocols-core/src/libs/Operation.ts",
+          line: 146,
+          column: 13,
+          kind: "problem-factory",
+        },
+      ],
+    },
+    {
       code: "protocols-graphql/auth-invalid-header-format",
       category: "BadRequest",
       status: 400,
@@ -59981,6 +60365,39 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       ],
     },
     {
+      code: "protocols-rest/invalid-operation-binding",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#protocols-rest-invalid-operation-binding",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/protocols-rest/src/libs/createRestOperationController.ts",
+          line: 70,
+          column: 11,
+          kind: "problem-factory",
+        },
+      ],
+    },
+    {
       code: "protocols-rest/invalid-route-parameter-schema",
       category: "InternalServerError",
       status: 500,
@@ -60009,6 +60426,68 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
           file: "packages/protocols-rest/src/libs/internal/routeParameterSchema.ts",
           line: 25,
           column: 11,
+          kind: "problem-factory",
+        },
+      ],
+    },
+    {
+      code: "protocols-rest/operation-json-invalid",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath: "/reference/problem-recovery-cookbook/#protocols-rest-operation-json-invalid",
+      recovery: {
+        cause: "The caller sent malformed input or unsupported request options.",
+        userAction: "Correct the request input and retry after validation passes.",
+        operatorAction:
+          "Inspect validation details and request logs; do not retry unchanged input.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/protocols-rest/src/libs/createRestOperationController.ts",
+          line: 101,
+          column: 19,
+          kind: "problem-factory",
+        },
+      ],
+    },
+    {
+      code: "protocols-rest/operation-media-type-invalid",
+      category: "UnsupportedMediaType",
+      status: 415,
+      title: "Unsupported Media Type",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#protocols-rest-operation-media-type-invalid",
+      recovery: {
+        cause: "The request body uses a media type that the endpoint does not support.",
+        userAction: "Send the request body with a supported Content-Type and retry.",
+        operatorAction: "Confirm the route media-type contract and request Content-Type header.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/protocols-rest/src/libs/createRestOperationController.ts",
+          line: 93,
+          column: 19,
           kind: "problem-factory",
         },
       ],
@@ -65501,7 +65980,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/transports-http/src/libs/ParamResolver.ts",
-          line: 149,
+          line: 115,
           column: 13,
           kind: "problem-factory",
         },
@@ -65533,7 +66012,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/transports-http/src/libs/ParamResolver.ts",
-          line: 186,
+          line: 146,
           column: 13,
           kind: "problem-factory",
         },
@@ -65599,7 +66078,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/transports-http/src/libs/ParamResolver.ts",
-          line: 397,
+          line: 357,
           column: 13,
           kind: "problem-factory",
         },
@@ -65861,7 +66340,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/transports-http/src/libs/ParamResolver.ts",
-          line: 224,
+          line: 184,
           column: 13,
           kind: "problem-factory",
         },

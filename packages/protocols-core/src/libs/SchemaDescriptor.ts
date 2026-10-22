@@ -1403,3 +1403,54 @@ export function getUnsupportedZodMajor(
       : schema.constructor.name;
   return { major, kind };
 }
+
+function requiresQueryArrayInput(schema: ContractSchemaDescriptor | null): boolean {
+  if (!schema) {
+    return false;
+  }
+  switch (schema.kind) {
+    case "array":
+      return true;
+    case "union":
+      return (
+        schema.typeName === "ZodUnion" &&
+        !!schema.options?.length &&
+        schema.options.every(requiresQueryArrayInput)
+      );
+    case "optional":
+    case "nullable":
+    case "default":
+    case "catch":
+    case "branded":
+    case "readonly":
+      return !!schema.inner && requiresQueryArrayInput(schema.inner);
+    case "effects":
+      return (
+        schema.effectType === "refinement" &&
+        !!schema.inner &&
+        requiresQueryArrayInput(schema.inner)
+      );
+    default:
+      return false;
+  }
+}
+
+/** Normalize HTTP query cardinality without parsing domain values. */
+export function normalizeZodQueryInput(
+  schema: z.ZodType,
+  source: Readonly<Record<string, unknown>>,
+): { input: Record<string, unknown>; schema: z.ZodType; repeatedScalarFields: string[] } {
+  const input = { ...source };
+  const repeatedScalarFields: string[] = [];
+  for (const [name, field] of Object.entries(getZodInputObjectSchema(schema)?.shape ?? {})) {
+    const value = input[name];
+    if (Array.isArray(value) && !getZodArrayInputSchema(field)) repeatedScalarFields.push(name);
+    if (
+      typeof value === "string" &&
+      isZodType(field) &&
+      requiresQueryArrayInput(describeZodSchema(field))
+    )
+      input[name] = [value];
+  }
+  return { input, schema: getZodQueryInputSchema(schema, input), repeatedScalarFields };
+}
