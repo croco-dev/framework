@@ -6,14 +6,16 @@ import "reflect-metadata";
 import { Container } from "@croco/framework-context";
 import { Logger } from "@croco/framework-logger";
 import { ProblemCategory } from "@croco/problems-core";
-import { Body, Controller, Post } from "@croco/protocols-rest";
+import { buildContractGraph } from "@croco/protocols-core";
+import { Body, Controller, Delete, Param, Post, REST_ROUTES_KEY } from "@croco/protocols-rest";
 import { createFrontendTelemetryBridge } from "@croco/telemetry-api";
 import { createApp, ErrorHandler, HealthCheckRegistry } from "@croco/transports-http";
 import type { RouteIR } from "@croco/protocols-core";
+import type { RouteMetadata } from "@croco/protocols-rest";
 import ts from "typescript";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
-import { generateClientFiles } from "../libs/generate";
+import { generateClientFiles, generateClientFilesFromContractGraph } from "../libs/generate";
 import { restFormIssueCases } from "../../../../test-fixtures/restFormIssueCases";
 
 let outDir: string;
@@ -193,6 +195,43 @@ describe("rpc-codegen round trip", () => {
         problem,
       });
       expect(formProblem.fields).toEqual(expected);
+    },
+  );
+
+  it.each([204, 205])(
+    "handles strict bodyless status %i in throwing and Result clients",
+    async (status) => {
+      @Controller("/users")
+      class UserController {
+        @Delete("/:userId/sessions/:sessionId")
+        removeSession(
+          @Param("userId", z.string()) _userId: string,
+          @Param("sessionId", z.string()) _sessionId: string,
+        ): void {}
+      }
+      const metadata = Reflect.getMetadata(REST_ROUTES_KEY, UserController) as RouteMetadata[];
+      const route = metadata[0];
+      if (!route) throw new TypeError("Expected session route metadata.");
+      route.statusCode = status;
+
+      const graph = buildContractGraph([UserController], { strictSchemas: true });
+      const files = generateClientFilesFromContractGraph(graph, outDir);
+      const clientFile = files.find((file) => path.basename(file) === "user.ts");
+      if (!clientFile) throw new TypeError("Expected generated user client.");
+      const source = fs.readFileSync(clientFile, "utf-8");
+      const clientModule = await importGeneratedClient(`user-no-content-${status}.ts`, source);
+      const fetchMock = vi.fn(async () => new Response(null, { status }));
+      const client = clientModule.createUserClient({ fetch: fetchMock });
+      const input = { path: { userId: "user-17", sessionId: "session-83" } };
+
+      await expect(client.removeSession(input)).resolves.toBeUndefined();
+      const result = await client.removeSessionResult(input);
+      expect(result).toMatchObject({ ok: true, data: undefined });
+      if (result.ok) expect(result.response.status).toBe(status);
+      expect(fetchMock).toHaveBeenCalledWith(
+        "/users/user-17/sessions/session-83",
+        expect.objectContaining({ method: "DELETE" }),
+      );
     },
   );
 

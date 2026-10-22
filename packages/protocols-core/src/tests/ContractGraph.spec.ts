@@ -163,6 +163,53 @@ describe("buildContractGraph", () => {
     expect(buildContractGraph([UsersController]).diagnostics).toEqual([]);
   });
 
+  it.each([204, 205])(
+    "accepts explicit bodyless success status %i in strict schema mode",
+    (status) => {
+      @Controller("/orders")
+      class OrdersController {
+        @Post("/")
+        createOrder(): void {}
+      }
+
+      const metadata = Reflect.getMetadata(REST_ROUTES_KEY, OrdersController) as RouteMetadata[];
+      const route = metadata[0];
+      if (!route) throw new TypeError("Expected order route metadata.");
+      route.statusCode = status;
+
+      const graph = buildContractGraph([OrdersController], { strictSchemas: true });
+      expect(graph.diagnostics).toEqual([]);
+      expect(graph.routes[0]?.successStatus).toBe(status);
+      expect(graph.routes[0]?.outputSchema).toBeNull();
+      expect(createContractGraphConsumerCoverage(graph).diagnostics).toEqual([]);
+    },
+  );
+
+  it.each([undefined, 200, 201, 202])(
+    "requires a response schema for success status %s in strict mode",
+    (status) => {
+      @Controller("/orders")
+      class OrdersController {
+        @Post("/")
+        createOrder(): void {}
+      }
+
+      const metadata = Reflect.getMetadata(REST_ROUTES_KEY, OrdersController) as RouteMetadata[];
+      const route = metadata[0];
+      if (!route) throw new TypeError("Expected order route metadata.");
+      route.statusCode = status;
+
+      expect(
+        buildContractGraph([OrdersController], { strictSchemas: true }).diagnostics,
+      ).toContainEqual(
+        expect.objectContaining({
+          code: "contract-route-missing-response-schema",
+          severity: "error",
+        }),
+      );
+    },
+  );
+
   it.each([204, 205])("rejects response schemas for bodyless success status %i", (status) => {
     @Controller("/orders")
     class OrdersController {
@@ -176,7 +223,9 @@ describe("buildContractGraph", () => {
     if (!route) throw new TypeError("Expected order route metadata.");
     route.statusCode = status;
 
-    expect(buildContractGraph([OrdersController]).diagnostics).toContainEqual(
+    expect(
+      buildContractGraph([OrdersController], { strictSchemas: true }).diagnostics,
+    ).toContainEqual(
       expect.objectContaining({ code: "contract-route-body-forbidden-status", severity: "error" }),
     );
   });

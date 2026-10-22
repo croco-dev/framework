@@ -540,7 +540,7 @@ function validateStrictSchemas(
 
   const diagnostics: ContractDiagnostic[] = [];
 
-  if (!route.outputSchema) {
+  if (!route.outputSchema && route.successStatus !== 204 && route.successStatus !== 205) {
     diagnostics.push(
       createRouteDiagnostic(
         route,
