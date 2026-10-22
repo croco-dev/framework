@@ -6,7 +6,7 @@
       "classification": "pure-contract",
       "reason": "Subscription snapshots carry immutable pricing references; exact-version resolution rejects missing or mismatched evidence instead of selecting current prices. This changes domain calculation and adapter mapping without infrastructure effects.",
       "files": {
-        "packages/metrics-core/src/index.ts": "86d6c5baec3fb2eb696f51216514e71a9f4617335bd5d7e471a270d319121a83",
+        "packages/metrics-core/src/index.ts": "e415c5946525836ff6525eb2e6b98b8df856cf1c0de81ad85c1fae8c9c16d30d",
         "packages/metrics-core/src/libs/MrrCalculator.ts": "253669aa56f8701fc957a7f4627dcd83f2827cb2f44360d896db8719cee70976",
         "packages/metrics-core/src/libs/interfaces/PlanProvider.ts": "68c42b598b0b1d84f91e31f25effedec6f41819061fa3039dd1e7a224d6ab079",
         "packages/metrics-core/src/libs/problems/MetricsProblems.ts": "e75a523de79ad3b520d2c72fce7806b39f3880127f254667ad35fe3a207fb6f6",
@@ -116,7 +116,7 @@
       "classification": "pure-contract",
       "reason": "Generated diagnostic metadata registers the subscription pricing failure; no error transport, Host capability, storage or lifecycle behavior changes.",
       "files": {
-        "packages/problems-core/src/generated/problem-code-registry.ts": "3d83ba9970f818801b7f3c337f852b98d08cc699cb84cf5b5ef3bc655d80c0aa"
+        "packages/problems-core/src/generated/problem-code-registry.ts": "9e3d4b3761a148bc5638ddf5b5dc3f991418ac75e4a0e7a3316eb8d6c8c2188f"
       },
       "catalogRuntimes": [],
       "profiles": {
