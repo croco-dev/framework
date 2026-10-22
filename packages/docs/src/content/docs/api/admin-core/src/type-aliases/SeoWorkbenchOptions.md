@@ -83,7 +83,15 @@ title: "SeoWorkbenchOptions"
 
 ### authenticate()
 
-> **authenticate**(): `Promise`\<[`SeoAccess`](/api/admin-core/src/type-aliases/seoaccess/)\>
+> **authenticate**(`metricAction?`): `Promise`\<[`SeoAccess`](/api/admin-core/src/type-aliases/seoaccess/)\>
+
+Return scope/SEO permissions and the requested metric grant from one coherent authorization snapshot.
+
+#### Parameters
+
+##### metricAction?
+
+`MetricReadAction`
 
 #### Returns
 

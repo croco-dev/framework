@@ -9,6 +9,14 @@ title: "SeoAccess"
 
 ## Properties
 
+### metricGrant
+
+> **metricGrant**: `MetricReadGrant` \| `null`
+
+Fresh grant for the requested metric action from the reader's MetricReadAuthority, or null.
+
+---
+
 ### permissions
 
 > **permissions**: readonly [`SeoPermission`](/api/admin-core/src/type-aliases/seopermission/)[]

@@ -21588,7 +21588,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/metrics-core/src/libs/read/MetricReadService.ts";
-          readonly line: 195;
+          readonly line: 201;
           readonly column: 10;
           readonly kind: "problem-constructor";
         },
@@ -21616,7 +21616,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/metrics-core/src/libs/read/MetricReadService.ts";
-          readonly line: 199;
+          readonly line: 205;
           readonly column: 10;
           readonly kind: "problem-constructor";
         },
@@ -32255,7 +32255,7 @@ export type CrocoProblemRegistry = {
       readonly className: "SeoWorkbenchProblem";
       readonly source: {
         readonly file: "packages/admin-core/src/libs/SeoWorkbench.ts";
-        readonly line: 54;
+        readonly line: 65;
         readonly column: 1;
         readonly kind: "problem-class";
       };
@@ -32345,7 +32345,7 @@ export type CrocoProblemRegistry = {
       readonly className: "MetricReadProblem";
       readonly source: {
         readonly file: "packages/metrics-core/src/libs/read/MetricReadService.ts";
-        readonly line: 183;
+        readonly line: 189;
         readonly column: 1;
         readonly kind: "problem-class";
       };
@@ -56557,7 +56557,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/metrics-core/src/libs/read/MetricReadService.ts",
-          line: 195,
+          line: 201,
           column: 10,
           kind: "problem-constructor",
         },
@@ -56588,7 +56588,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/metrics-core/src/libs/read/MetricReadService.ts",
-          line: 199,
+          line: 205,
           column: 10,
           kind: "problem-constructor",
         },
@@ -68599,7 +68599,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       className: "SeoWorkbenchProblem",
       source: {
         file: "packages/admin-core/src/libs/SeoWorkbench.ts",
-        line: 54,
+        line: 65,
         column: 1,
         kind: "problem-class",
       },
@@ -68698,7 +68698,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       className: "MetricReadProblem",
       source: {
         file: "packages/metrics-core/src/libs/read/MetricReadService.ts",
-        line: 183,
+        line: 189,
         column: 1,
         kind: "problem-class",
       },

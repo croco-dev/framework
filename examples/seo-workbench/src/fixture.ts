@@ -3,7 +3,11 @@ import { MetricReadService, registerSeoQuery } from "@croco/metrics-core/runtime
 import { createSeoWorkbench } from "@croco/admin-core";
 import type { SeoComparisonInput } from "@croco/metrics-core";
 import type { SeoAccess, SeoSavedReport } from "@croco/admin-core";
-import type { MetricReadBudget, MetricReadQuality } from "@croco/metrics-core/runtime";
+import type {
+  MetricReadAction,
+  MetricReadBudget,
+  MetricReadQuality,
+} from "@croco/metrics-core/runtime";
 
 import { seoScope, seoFixtureInput } from "./input";
 export { seoScope, seoDefinition, seoFixtureInput } from "./input";
@@ -39,7 +43,7 @@ export function createSeoFixture() {
     );
   }
 
-  let access: SeoAccess = {
+  let access: Pick<SeoAccess, "scope" | "permissions"> = {
     scope: seoScope,
     permissions: ["seo.read", "seo.report", "seo.export", "seo.delete"],
   };
@@ -47,8 +51,16 @@ export function createSeoFixture() {
   let failure = false;
   const key = (scope: typeof seoScope, id: string) =>
     JSON.stringify([scope.app, scope.environment, scope.tenant, id]);
+  const metricGrant = (action: MetricReadAction) =>
+    access.permissions.includes("seo.read") &&
+    action.requiredFields.every((field) => ["seo.pages", "seo.sources"].includes(field))
+      ? { permissionEpoch: "p1", privacyEpoch: "v1" }
+      : null;
   const operations = createSeoWorkbench({
-    authenticate: async () => structuredClone(access),
+    authenticate: async (action) => ({
+      ...structuredClone(access),
+      metricGrant: action ? metricGrant(action) : null,
+    }),
     now: () => new Date("2026-10-20T00:00:00Z"),
     mask: (field, value) =>
       field === "pageId"
@@ -132,10 +144,7 @@ export function createSeoFixture() {
           sourceRevisions: revisions,
           snapshotRefs: ["search-snapshot", "event-snapshot"],
         }),
-        authorize: async () =>
-          access.permissions.includes("seo.read")
-            ? { permissionEpoch: "p1", privacyEpoch: "v1" }
-            : null,
+        authorize: async (_context, action) => metricGrant(action),
       });
       return {
         service,
@@ -161,7 +170,7 @@ export function createSeoFixture() {
     setInput: (next: SeoComparisonInput) => {
       input = next;
     },
-    setAccess: (next: SeoAccess) => {
+    setAccess: (next: Pick<SeoAccess, "scope" | "permissions">) => {
       access = next;
     },
     setFailure: (next: boolean) => {

@@ -27,6 +27,7 @@ export type {
   MetricReadContext,
   MetricReadEvidence,
   MetricReadGrant,
+  MetricReadRelease,
   MetricReadQuality,
   MetricReadResult,
   MetricWindow,

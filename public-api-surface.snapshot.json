@@ -31300,6 +31300,11 @@
               "source": "./libs/read/MetricReadService"
             },
             {
+              "name": "MetricReadRelease",
+              "exportKind": "named",
+              "source": "./libs/read/MetricReadService"
+            },
+            {
               "name": "MetricReadResult",
               "exportKind": "named",
               "source": "./libs/read/MetricReadService"

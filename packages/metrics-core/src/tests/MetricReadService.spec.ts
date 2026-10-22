@@ -154,6 +154,126 @@ function report(overrides: Partial<VerifiedMetricReport> = {}): VerifiedMetricRe
 }
 
 describe("MetricReadService", () => {
+  it.each(
+    (["executor", "report"] as const).flatMap((source) =>
+      (["complete", "partial"] as const).map((coverage) => ({ source, coverage })),
+    ),
+  )("revalidates $coverage $source data at the release boundary", async ({ source, coverage }) => {
+    const data = { ...result, quality: { ...quality, populationCoverage: coverage } };
+    const { service } = fixture({
+      query: { partialDataPolicy: "authorized" },
+      executor: async () => data,
+      ...(source === "report" ? { report: report({ result: data }) } : {}),
+    });
+    const outcome = await service.runRegisteredQuery(
+      "captures_by_currency",
+      { currency: "USD" },
+      window,
+    );
+    expect(outcome.status).toBe(coverage === "partial" ? "partial" : "verified");
+    const release = service.prepareResultRelease(outcome);
+    if (!release) throw new TypeError("Expected a release boundary for authorized data");
+    expect(release.action).toEqual({
+      definitionIds: ["captures_total"],
+      requiredFields: ["amountMinor"],
+      requiresRaw: false,
+      window,
+    });
+    expect(release.authorize({ permissionEpoch: "permission-1", privacyEpoch: "privacy-1" })).toBe(
+      true,
+    );
+    expect(release.authorize({ permissionEpoch: "permission-2", privacyEpoch: "privacy-1" })).toBe(
+      false,
+    );
+    expect(release.authorize({ permissionEpoch: "permission-1", privacyEpoch: "privacy-2" })).toBe(
+      false,
+    );
+    expect(release.authorize(null)).toBe(false);
+  });
+
+  it("rejects copied, foreign and replaced outcomes at release", async () => {
+    const { service } = fixture();
+    const outcome = await service.runRegisteredQuery(
+      "captures_by_currency",
+      { currency: "USD" },
+      window,
+    );
+    const release = service.prepareResultRelease(outcome);
+    if (!release) throw new TypeError("Expected a release boundary");
+    expect(service.prepareResultRelease(structuredClone(outcome))).toBeUndefined();
+    expect(fixture().service.prepareResultRelease(outcome)).toBeUndefined();
+    Object.assign(outcome, { result: { ...result, data: [{ amount: "1" }] } });
+    expect(service.prepareResultRelease(outcome)).toBeUndefined();
+    expect(release.authorize({ permissionEpoch: "permission-1", privacyEpoch: "privacy-1" })).toBe(
+      false,
+    );
+  });
+
+  it.each(["principal", "fields", "snapshot", "budget"] as const)(
+    "withholds data when the trusted %s context changes before release",
+    async (change) => {
+      const options = { context: structuredClone(context) };
+      const { service } = fixture(options);
+      const outcome = await service.runRegisteredQuery(
+        "captures_by_currency",
+        { currency: "USD" },
+        window,
+      );
+      const release = service.prepareResultRelease(outcome);
+      if (!release) throw new TypeError("Expected a release boundary");
+      if (change === "principal")
+        options.context = {
+          ...options.context,
+          principal: { ...context.principal, subject: "other-subject" },
+        };
+      if (change === "fields") options.context = { ...options.context, allowedFields: [] };
+      if (change === "snapshot")
+        options.context = { ...options.context, snapshotRefs: ["snapshot-2"] };
+      if (change === "budget")
+        options.context = { ...options.context, budget: { ...context.budget, maxBytes: 1 } };
+      expect(
+        release.authorize({ permissionEpoch: "permission-1", privacyEpoch: "privacy-1" }),
+      ).toBe(false);
+    },
+  );
+
+  it("keeps the original query deadline at release", async () => {
+    vi.useFakeTimers();
+    try {
+      const { service } = fixture();
+      const outcome = await service.runRegisteredQuery(
+        "captures_by_currency",
+        { currency: "USD" },
+        window,
+      );
+      const release = service.prepareResultRelease(outcome);
+      if (!release) throw new TypeError("Expected a release boundary");
+      vi.setSystemTime(Date.now() + context.budget.maxTimeMs);
+      expect(() =>
+        release.authorize({ permissionEpoch: "permission-1", privacyEpoch: "privacy-1" }),
+      ).toThrowError(expect.objectContaining({ code: "metrics-core/read-timeout" }));
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("honors cancellation after the query finishes and before release", async () => {
+    const { service } = fixture();
+    const controller = new AbortController();
+    const outcome = await service.runRegisteredQuery(
+      "captures_by_currency",
+      { currency: "USD" },
+      window,
+      { signal: controller.signal },
+    );
+    const release = service.prepareResultRelease(outcome);
+    if (!release) throw new TypeError("Expected a release boundary");
+    controller.abort();
+    expect(() =>
+      release.authorize({ permissionEpoch: "permission-1", privacyEpoch: "privacy-1" }),
+    ).toThrowError(expect.objectContaining({ code: "metrics-core/read-cancelled" }));
+  });
+
   it.each(["report", "query"] as const)(
     "sanitizes registered schema failures for %s input",
     async (kind) => {

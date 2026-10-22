@@ -80,6 +80,15 @@ all scope fields. Saved reads recompute using current authority, source identity
 expired/stale reports are unavailable. Deletion uses the same scoped repository. Exports contain the
 same masked aggregate evidence. Browser-provided permissions or tenant omission grant nothing.
 
+For final release, `authenticate(metricAction)` must return SEO permissions and `metricGrant` for that
+exact action from one coherent authorization snapshot using the reader's `MetricReadAuthority`.
+The fixture reuses one policy function for both paths. Missing or revoked metric grants fail closed.
+`MetricReadService.prepareResultRelease` binds the original in-process outcome, principal, source
+snapshots, permission/privacy epochs, budget, deadline and cancellation. After the combined authentication,
+the workbench validates this receipt and masks/projects synchronously, without another asynchronous
+authorization gap. Copied/serialized outcomes cannot acquire a receipt. Hosts must keep their own
+asynchronous store writes atomically authorized; the receipt does not create a storage transaction.
+
 `SeoWorkbench` applies filters through real server reads, shows denominators and coverage, opens page
 details with keyboard focus restoration, and exposes only explicitly registered diagnostic callbacks.
 Do not register an SEO/performance action unless that tool exists and enforces server authorization.

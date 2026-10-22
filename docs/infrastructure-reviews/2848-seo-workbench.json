@@ -4,18 +4,19 @@
     {
       "package": "metrics-core",
       "classification": "pure-contract",
-      "reason": "Pure normalized-row semantic comparison and registration of existing metric/ETL/warehouse contracts. Standard Intl and Web Crypto are required; no new provider, persistence or Host lifecycle is introduced.",
+      "reason": "Pure SEO comparison/registration and in-process authority receipts for release after consumer awaits. Final grants share one coherent host authorization snapshot; synchronous validation adds no provider, storage implementation or Host lifecycle. Standard Intl, Web Crypto and WeakMap are required.",
       "files": {
         "packages/metrics-core/src/index.ts": "64e85ea2b91a34670806f79185b635fe114d4b0c5329936dfb35157b5da1c7ed",
-        "packages/metrics-core/src/runtime.ts": "c3a11ce4ce49f610222f4387687e19964728deebe52c84f62e463b787429a77d",
+        "packages/metrics-core/src/runtime.ts": "db95824aaed27888348ee30156fc93d1b2e7ef77d178cc8bf582a6b955c57a95",
         "packages/metrics-core/src/libs/seo/SeoComparison.ts": "a0cba06436782d8d2df9df3d614cbfa45196803a5ae309f29a942cfcb2e739a4",
-        "packages/metrics-core/src/libs/seo/SeoSources.ts": "1a9267c40c22c8d496aeb51860a5927346c5621a273678a6f0147b9a067c9c70"
+        "packages/metrics-core/src/libs/seo/SeoSources.ts": "1a9267c40c22c8d496aeb51860a5927346c5621a273678a6f0147b9a067c9c70",
+        "packages/metrics-core/src/libs/read/MetricReadService.ts": "fa442bea4a7a09610013f6483e69aa547a26e3d2ae72aaca83a497fbcb95ea15"
       },
       "catalogRuntimes": [],
       "profiles": {
         "kubernetes": {
           "result": "not-applicable",
-          "reason": "Pure normalized-row semantic comparison and registration of existing metric/ETL/warehouse contracts. Standard Intl and Web Crypto are required; no new provider, persistence or Host lifecycle is introduced.",
+          "reason": "Pure SEO comparison/registration and in-process authority receipts for release after consumer awaits. Final grants share one coherent host authorization snapshot; synchronous validation adds no provider, storage implementation or Host lifecycle. Standard Intl, Web Crypto and WeakMap are required.",
           "providers": [],
           "constraints": [
             "Existing host/provider runtime support is unchanged.",
@@ -26,7 +27,7 @@
         },
         "aws-lambda": {
           "result": "not-applicable",
-          "reason": "Pure normalized-row semantic comparison and registration of existing metric/ETL/warehouse contracts. Standard Intl and Web Crypto are required; no new provider, persistence or Host lifecycle is introduced.",
+          "reason": "Pure SEO comparison/registration and in-process authority receipts for release after consumer awaits. Final grants share one coherent host authorization snapshot; synchronous validation adds no provider, storage implementation or Host lifecycle. Standard Intl, Web Crypto and WeakMap are required.",
           "providers": [],
           "constraints": [
             "Existing host/provider runtime support is unchanged.",
@@ -37,7 +38,7 @@
         },
         "cloudflare": {
           "result": "not-applicable",
-          "reason": "Pure normalized-row semantic comparison and registration of existing metric/ETL/warehouse contracts. Standard Intl and Web Crypto are required; no new provider, persistence or Host lifecycle is introduced.",
+          "reason": "Pure SEO comparison/registration and in-process authority receipts for release after consumer awaits. Final grants share one coherent host authorization snapshot; synchronous validation adds no provider, storage implementation or Host lifecycle. Standard Intl, Web Crypto and WeakMap are required.",
           "providers": [],
           "constraints": [
             "Existing host/provider runtime support is unchanged.",
@@ -54,7 +55,7 @@
       "reason": "Server authorization and aggregate report orchestration over existing host-provided authority, runner and scoped repository contracts. No storage implementation, network client or Host lifecycle is introduced.",
       "files": {
         "packages/admin-core/src/index.ts": "1c51def979aeee13770062a966148b703835b3e2d0f4c1d74c544c2e1304c987",
-        "packages/admin-core/src/libs/SeoWorkbench.ts": "dab18e08775bcd139f6f9fd59b687a1272f58e6185d085c2a6802b0fd231d44d"
+        "packages/admin-core/src/libs/SeoWorkbench.ts": "67f5a4d73067f1709ab340ccc09d28b24bfbe1c92e8e89c5806c6e1ce5b50d83"
       },
       "catalogRuntimes": [],
       "profiles": {
@@ -143,7 +144,7 @@
       "classification": "pure-contract",
       "reason": "Generated registry includes the new SEO validation Problem code and source location; no failure handling, Host lifecycle or provider behavior changes.",
       "files": {
-        "packages/problems-core/src/generated/problem-code-registry.ts": "e1bf70db5a2dd3e74076408e1b1b26e42647d0bc391583576c58eef1436b20b0"
+        "packages/problems-core/src/generated/problem-code-registry.ts": "074245e17ec97d691c979477f0f53822e22751f9f990f1bc834d9935a0146a55"
       },
       "catalogRuntimes": [],
       "profiles": {

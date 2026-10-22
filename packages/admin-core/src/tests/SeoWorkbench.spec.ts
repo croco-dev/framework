@@ -10,10 +10,14 @@ import {
   seoLimits,
   seoQuality,
 } from "../../../../examples/seo-workbench/src/fixture";
-import type { SeoWorkbenchOptions } from "../libs/SeoWorkbench";
+import type { SeoAccess, SeoWorkbenchOptions } from "../libs/SeoWorkbench";
+import type { MetricReadAction, MetricReadGrant } from "@croco/metrics-core/runtime";
 
 async function createRetainedReadFixture(
-  options: Pick<SeoWorkbenchOptions, "authenticate" | "mask" | "now">,
+  options: Pick<SeoWorkbenchOptions, "mask" | "now"> & {
+    authenticate(action?: MetricReadAction): Promise<Omit<SeoAccess, "metricGrant">>;
+  },
+  metricGrant: () => MetricReadGrant = () => ({ permissionEpoch: "p1", privacyEpoch: "v1" }),
 ) {
   const sourceRevisions = [
     { sourceRef: "search", revision: "snapshot-v1" },
@@ -38,8 +42,9 @@ async function createRetainedReadFixture(
       sourceRevisions,
       snapshotRefs: ["search", "events"],
     }),
-    authorize: async () => ({ permissionEpoch: "p1", privacyEpoch: "v1" }),
+    authorize: async () => metricGrant(),
   });
+  const write = vi.fn(async () => {});
   const record = {
     id: "retained",
     scope: seoScope,
@@ -48,14 +53,19 @@ async function createRetainedReadFixture(
   };
   return {
     record,
+    write,
     operations: createSeoWorkbench({
       ...options,
+      authenticate: async (action) => ({
+        ...(await options.authenticate(action)),
+        metricGrant: metricGrant(),
+      }),
       reader: async () => ({
         service,
         queryId: registration.query.id,
         window: { from: seoDefinition.baselineWindow.from, to: seoDefinition.currentWindow.to },
       }),
-      store: { read: async () => record, write: async () => {}, delete: async () => {} },
+      store: { read: async () => record, write, delete: async () => {} },
     }),
   };
 }
@@ -81,7 +91,7 @@ describe("SeoWorkbench", () => {
       throw new SeoComparisonProblem("source.metadata");
     });
     const operations = createSeoWorkbench({
-      authenticate: async () => ({ scope: seoScope, permissions: ["seo.read"] }),
+      authenticate: async () => ({ scope: seoScope, permissions: ["seo.read"], metricGrant: null }),
       reader,
       mask: (_field, value) => value,
       now: () => new Date("2026-10-20T00:00:00Z"),
@@ -125,7 +135,11 @@ describe("SeoWorkbench", () => {
       authorize: async () => ({ permissionEpoch: "p1", privacyEpoch: "v1" }),
     });
     const operations = createSeoWorkbench({
-      authenticate: async () => ({ scope: seoScope, permissions: ["seo.read"] }),
+      authenticate: async () => ({
+        scope: seoScope,
+        permissions: ["seo.read"],
+        metricGrant: { permissionEpoch: "p1", privacyEpoch: "v1" },
+      }),
       reader: async () => ({
         service,
         queryId: registration.query.id,
@@ -324,7 +338,7 @@ describe("SeoWorkbench period declaration boundary", () => {
       throw new TypeError("Reader must not run for an invalid declaration");
     });
     const operations = createSeoWorkbench({
-      authenticate: async () => ({ scope: seoScope, permissions: ["seo.read"] }),
+      authenticate: async () => ({ scope: seoScope, permissions: ["seo.read"], metricGrant: null }),
       reader,
       mask: (_field, value) => value,
       now: () => new Date("2026-10-20T00:00:00Z"),
@@ -360,6 +374,135 @@ describe("SeoWorkbench unavailable period source", () => {
 });
 
 describe("SeoWorkbench saved report release authority", () => {
+  it.each(["read", "readSaved", "export", "save"] as const)(
+    "uses the final combined operation and metric authorization for %s",
+    async (operation) => {
+      const { operations, record, write } = await createRetainedReadFixture({
+        authenticate: async (action) => {
+          await Promise.resolve();
+          if (action) expect(action.requiredFields).toEqual(["seo.pages"]);
+          return {
+            scope: seoScope,
+            permissions: action ? [] : ["seo.read", "seo.report", "seo.export"],
+          };
+        },
+        mask: (_field, value) => value,
+        now: () => new Date("2026-10-20T00:00:00.000Z"),
+      });
+      const pending =
+        operation === "read"
+          ? operations.read(seoDefinition)
+          : operation === "readSaved"
+            ? operations.readSaved(record.id)
+            : operation === "export"
+              ? operations.export(seoDefinition, record.report.inputHash)
+              : operations.save(
+                  record.id,
+                  seoDefinition,
+                  record.report.inputHash,
+                  record.expiresAt,
+                );
+      if (operation === "read")
+        expect(await pending).toEqual({ kind: "denied", code: "SEO_DENIED" });
+      else await expect(pending).rejects.toMatchObject({ reason: "denied" });
+      expect(write).not.toHaveBeenCalled();
+    },
+  );
+
+  it("withholds data when metric privacy changes during definition hashing", async () => {
+    let privacyEpoch = "privacy-before";
+    const { operations } = await createRetainedReadFixture(
+      {
+        authenticate: async () => ({ scope: seoScope, permissions: ["seo.read"] }),
+        mask: (_field, value) => value,
+        now: () => new Date("2026-10-20T00:00:00.000Z"),
+      },
+      () => ({ permissionEpoch: "permission-current", privacyEpoch }),
+    );
+    const original = globalThis.crypto.subtle.digest.bind(globalThis.crypto.subtle);
+    let changed = false;
+    const digest = vi
+      .spyOn(globalThis.crypto.subtle, "digest")
+      .mockImplementation(async (algorithm, data) => {
+        const value = await original(algorithm, data);
+        const input = JSON.parse(new TextDecoder().decode(data)) as {
+          id?: unknown;
+          baselineWindow?: unknown;
+        };
+        if (input.id === seoDefinition.id && input.baselineWindow) {
+          changed = true;
+          privacyEpoch = "privacy-after";
+        }
+        return value;
+      });
+    try {
+      expect(await operations.read(seoDefinition)).toEqual({ kind: "denied", code: "SEO_DENIED" });
+      expect(changed).toBe(true);
+    } finally {
+      digest.mockRestore();
+    }
+  });
+
+  it.each(
+    (["read", "readSaved", "export", "save"] as const).flatMap((operation) =>
+      (["unchanged", "privacyEpoch", "permissionEpoch"] as const).map((change) => ({
+        operation,
+        change,
+      })),
+    ),
+  )(
+    "checks metric authority before $operation release after $change refresh",
+    async ({ operation, change }) => {
+      let revision = 0;
+      const grant = { permissionEpoch: "p1", privacyEpoch: "v1" };
+      const { operations, record, write } = await createRetainedReadFixture(
+        {
+          authenticate: async () => {
+            await Promise.resolve();
+            if (change !== "unchanged") grant[change] = `revision-${++revision}`;
+            return { scope: seoScope, permissions: ["seo.read", "seo.report", "seo.export"] };
+          },
+          mask: (_field, value) => value,
+          now: () => new Date("2026-10-20T00:00:00.000Z"),
+        },
+        () => ({ ...grant }),
+      );
+      const pending =
+        operation === "read"
+          ? operations.read(seoDefinition)
+          : operation === "readSaved"
+            ? operations.readSaved(record.id)
+            : operation === "export"
+              ? operations.export(seoDefinition, record.report.inputHash)
+              : operations.save(
+                  record.id,
+                  seoDefinition,
+                  record.report.inputHash,
+                  record.expiresAt,
+                );
+      if (change !== "unchanged") {
+        if (operation === "read" || operation === "readSaved")
+          expect(await pending).toEqual({ kind: "denied", code: "SEO_DENIED" });
+        else await expect(pending).rejects.toMatchObject({ reason: "denied" });
+        expect(write).not.toHaveBeenCalled();
+      } else if (operation === "export") {
+        expect(JSON.parse((await pending) as string)).toMatchObject({
+          inputHash: record.report.inputHash,
+        });
+      } else if (operation === "save") {
+        await pending;
+        expect(write).toHaveBeenCalledWith(
+          seoScope,
+          expect.objectContaining({
+            id: record.id,
+            report: expect.objectContaining({ inputHash: record.report.inputHash }),
+          }),
+          undefined,
+        );
+      } else expect(await pending).toMatchObject({ kind: "ready", page: { total: 2 } });
+    },
+  );
+
   it.each([
     { releaseAt: "2026-10-20T00:00:00.999Z", expired: false },
     { releaseAt: "2026-10-20T00:00:01.000Z", expired: true },

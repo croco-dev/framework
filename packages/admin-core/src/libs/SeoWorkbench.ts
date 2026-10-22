@@ -13,10 +13,20 @@ import type {
   SeoComparisonRow,
   SeoWindow,
 } from "@croco/metrics-core";
-import type { MetricReadService } from "@croco/metrics-core/runtime";
+import type {
+  MetricReadAction,
+  MetricReadGrant,
+  MetricReadRelease,
+  MetricReadService,
+} from "@croco/metrics-core/runtime";
 
 export type SeoPermission = "seo.read" | "seo.report" | "seo.export" | "seo.delete";
-export type SeoAccess = { scope: SeoScope; permissions: readonly SeoPermission[] };
+export type SeoAccess = {
+  scope: SeoScope;
+  permissions: readonly SeoPermission[];
+  /** Fresh grant for the requested metric action from the reader's MetricReadAuthority, or null. */
+  metricGrant: MetricReadGrant | null;
+};
 export type SeoSavedReport = {
   id: string;
   scope: SeoScope;
@@ -35,7 +45,8 @@ export type SeoWorkbenchState =
   | { kind: "denied" | "error" | "unavailable"; code: string }
   | { kind: "ready" | "partial" | "empty"; page: SeoWorkbenchPage };
 export type SeoWorkbenchOptions = {
-  authenticate(): Promise<SeoAccess>;
+  /** Return scope/SEO permissions and the requested metric grant from one coherent authorization snapshot. */
+  authenticate(metricAction?: MetricReadAction): Promise<SeoAccess>;
   /** Bind definitions, source revisions and raw loader to registerSeoQuery + the shared MetricReadService. */
   reader(
     scope: SeoScope,
@@ -63,6 +74,10 @@ export class SeoWorkbenchProblem extends Problem {
 function check(condition: unknown, reason: string): asserts condition {
   if (!condition) throw new SeoWorkbenchProblem(reason);
 }
+type CalculatedSeoReport = {
+  report: SeoComparisonReport;
+  release: MetricReadRelease;
+};
 /** Scope is resolved on the server for every operation, including exports and retained report reads. */
 export function createSeoWorkbench(options: SeoWorkbenchOptions) {
   async function access(
@@ -73,6 +88,13 @@ export function createSeoWorkbench(options: SeoWorkbenchOptions) {
     signal?.throwIfAborted();
     const grant = await options.authenticate();
     signal?.throwIfAborted();
+    return validateAccess(grant, permission, expected);
+  }
+  function validateAccess(
+    grant: SeoAccess,
+    permission: SeoPermission,
+    expected?: SeoScope,
+  ): SeoScope {
     check(
       grant && grant.permissions.includes("seo.read") && grant.permissions.includes(permission),
       "denied",
@@ -136,7 +158,7 @@ export function createSeoWorkbench(options: SeoWorkbenchOptions) {
     scope: SeoScope,
     definition: SeoDefinition,
     signal?: AbortSignal,
-  ): Promise<SeoComparisonReport | SeoWorkbenchState> {
+  ): Promise<CalculatedSeoReport | SeoWorkbenchState> {
     validateSeoDefinition(definition);
     const { service, queryId, window } = await options.reader(
       scope,
@@ -159,7 +181,20 @@ export function createSeoWorkbench(options: SeoWorkbenchOptions) {
       "report-identity",
     );
     if (result.status === "partial") report.state = "partial";
-    return report;
+    const release = service.prepareResultRelease(result);
+    check(release, "release-authority");
+    return { report, release };
+  }
+  function authorizeRelease(
+    calculation: CalculatedSeoReport,
+    grant: SeoAccess,
+    permission: SeoPermission,
+    scope: SeoScope,
+    signal?: AbortSignal,
+  ): boolean {
+    signal?.throwIfAborted();
+    validateAccess(grant, permission, scope);
+    return calculation.release.authorize(grant.metricGrant);
   }
   const api = {
     async read(
@@ -178,9 +213,20 @@ export function createSeoWorkbench(options: SeoWorkbenchOptions) {
             return { kind: "error", code: "SEO_INVALID_REQUEST" };
           throw error;
         }
-        const report = await calculate(scope, definition, signal);
-        if ("kind" in report) return report;
-        await access("seo.read", scope, signal);
+        const calculation = await calculate(scope, definition, signal);
+        if ("kind" in calculation) return calculation;
+        signal?.throwIfAborted();
+        if (
+          !authorizeRelease(
+            calculation,
+            await options.authenticate(calculation.release.action),
+            "seo.read",
+            scope,
+            signal,
+          )
+        )
+          return { kind: "denied", code: "SEO_DENIED" };
+        const { report } = calculation;
         const result = page(masked(report, scope), offset, limit);
         return { kind: report.state, page: result };
       } catch (error) {
@@ -208,10 +254,21 @@ export function createSeoWorkbench(options: SeoWorkbenchOptions) {
         "retention",
       );
       const scope = await access("seo.report", undefined, signal);
-      const report = await calculate(scope, definition, signal);
-      check(!("kind" in report), "source-unavailable");
+      const calculation = await calculate(scope, definition, signal);
+      check(!("kind" in calculation), "source-unavailable");
+      const { report } = calculation;
       check(report.inputHash === expectedInputHash, "stale-input");
-      await access("seo.report", scope, signal);
+      signal?.throwIfAborted();
+      check(
+        authorizeRelease(
+          calculation,
+          await options.authenticate(calculation.release.action),
+          "seo.report",
+          scope,
+          signal,
+        ),
+        "denied",
+      );
       // Persist only masked aggregate evidence; the host owns durable, scope-isolated storage.
       await options.store.write(
         scope,
@@ -239,11 +296,22 @@ export function createSeoWorkbench(options: SeoWorkbenchOptions) {
       if (!(Date.parse(record.expiresAt) > options.now().getTime()))
         return { kind: "unavailable", code: "SEO_REPORT_EXPIRED" };
       // Re-read the immutable source with current authority, privacy and masking policies.
-      const current = await calculate(scope, record.report.definition, signal);
-      if ("kind" in current) return current;
+      const calculation = await calculate(scope, record.report.definition, signal);
+      if ("kind" in calculation) return calculation;
+      const current = calculation.report;
       if (current.inputHash !== record.report.inputHash)
         return { kind: "unavailable", code: "SEO_REPORT_STALE" };
-      await access("seo.read", scope, signal);
+      signal?.throwIfAborted();
+      if (
+        !authorizeRelease(
+          calculation,
+          await options.authenticate(calculation.release.action),
+          "seo.read",
+          scope,
+          signal,
+        )
+      )
+        return { kind: "denied", code: "SEO_DENIED" };
       const result = page(masked(current, scope), offset, limit);
       if (!(Date.parse(record.expiresAt) > options.now().getTime()))
         return { kind: "unavailable", code: "SEO_REPORT_EXPIRED" };
@@ -255,10 +323,21 @@ export function createSeoWorkbench(options: SeoWorkbenchOptions) {
       signal?: AbortSignal,
     ): Promise<string> {
       const scope = await access("seo.export", undefined, signal);
-      const report = await calculate(scope, definition, signal);
-      check(!("kind" in report), "source-unavailable");
+      const calculation = await calculate(scope, definition, signal);
+      check(!("kind" in calculation), "source-unavailable");
+      const { report } = calculation;
       check(report.inputHash === expectedInputHash, "stale-input");
-      await access("seo.export", scope, signal);
+      signal?.throwIfAborted();
+      check(
+        authorizeRelease(
+          calculation,
+          await options.authenticate(calculation.release.action),
+          "seo.export",
+          scope,
+          signal,
+        ),
+        "denied",
+      );
       return JSON.stringify(masked(report, scope));
     },
     async delete(id: string, signal?: AbortSignal): Promise<void> {

@@ -142,3 +142,10 @@ coverage and never receive purchaser outcomes; clicks and sessions remain distin
 Retain null denominators, missing/anonymous query evidence and provider failures. Candidate filters
 are observational definitions, not ranking predictions, causal effects or expected revenue. Register
 only existing authenticated SEO/performance diagnostic actions; no deployment certification is implied.
+
+For report release, `authenticate(metricAction)` must return SEO permissions and the matching
+`MetricReadGrant` from one coherent authorization snapshot using the reader's authority.
+`MetricReadService.prepareResultRelease` validates that grant synchronously against the original
+in-process outcome after consumer-side awaits. Perform no additional asynchronous work before
+masking/projecting the response. Host repositories own atomic authority during asynchronous writes;
+the release receipt does not create a storage transaction or authorize copied/serialized outcomes.
