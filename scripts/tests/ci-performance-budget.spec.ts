@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { parseDocument } from "yaml";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -26,6 +27,18 @@ const ROOT_DIR = resolve(__dirname, "../..");
 const WORKFLOW = readFileSync(resolve(ROOT_DIR, ".github/workflows/ci.yml"), "utf8");
 const ORDINARY_PR_MANIFEST = createOrdinaryPullRequestManifest();
 const MAINTENANCE_PR_MANIFEST = createMaintenancePullRequestManifest();
+const CACHEABLE_PRODUCER_CONDITION =
+  "github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && needs.changes.outputs.profile == 'publish')";
+const CACHEABLE_EXPERIMENT_JOBS = [
+  ["core-verification", CACHEABLE_PRODUCER_CONDITION],
+  ["generated-apps", CACHEABLE_PRODUCER_CONDITION],
+  ["package-artifacts", CACHEABLE_PRODUCER_CONDITION],
+  ["coverage-security", CACHEABLE_PRODUCER_CONDITION],
+  [
+    "split-validation-shadow",
+    `always() && (${CACHEABLE_PRODUCER_CONDITION}) && needs.changes.result == 'success'`,
+  ],
+] as const;
 
 const AS_OF = new Date("2026-08-10T12:00:00.000Z");
 
@@ -104,97 +117,78 @@ describe("pull-request CI performance budget", () => {
     ).toContain("generated API documentation drift checks must follow API-source changes");
   });
 
-  it.each([
-    [
-      "core-verification",
-      "  core-verification:\n    needs: changes\n    if: github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request'",
-      "  core-verification:\n    needs: changes",
-    ],
-    [
-      "generated-apps",
-      "  generated-apps:\n    needs: changes\n    if: github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request'",
-      "  generated-apps:\n    needs: changes",
-    ],
-    [
-      "package-artifacts",
-      "  package-artifacts:\n    needs: changes\n    if: github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request'",
-      "  package-artifacts:\n    needs: changes",
-    ],
-    [
-      "coverage-security",
-      "  coverage-security:\n    needs: changes\n    if: github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request'",
-      "  coverage-security:\n    needs: changes",
-    ],
-    [
-      "split-validation-shadow",
-      "if: always() && (github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request') && needs.changes.result == 'success'",
-      "if: always() && needs.changes.result == 'success'",
-    ],
-  ] as const)("rejects automatic %s cacheable experiments", (job, marker, replacement) => {
-    const mutant = WORKFLOW.replace(marker, replacement);
+  describe.each(CACHEABLE_EXPERIMENT_JOBS)("%s observation cohort", (job, condition) => {
+    it.each([
+      ["missing job condition", undefined],
+      [
+        "all pull requests",
+        condition.replace(
+          "(github.event_name == 'pull_request' && needs.changes.outputs.profile == 'publish')",
+          "github.event_name == 'pull_request'",
+        ),
+      ],
+      ["spine pull requests", condition.replace("profile == 'publish'", "profile != 'repo'")],
+      ["repo pull requests", condition.replace("profile == 'publish'", "profile != 'spine'")],
+      ["trunk pushes", `${condition} || github.event_name == 'push'`],
+      ["unconditional execution", `${condition} || true`],
+      ["missing publish pull requests", "github.event_name == 'workflow_dispatch'"],
+      [
+        "publish-only manual dispatches",
+        condition.replace(
+          CACHEABLE_PRODUCER_CONDITION,
+          "(github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request') && needs.changes.outputs.profile == 'publish'",
+        ),
+      ],
+    ] as const)("rejects %s", (_regression, replacement) => {
+      const document = parseDocument(WORKFLOW);
+      expect(document.getIn(["jobs", job, "if"])).toBe(condition);
+      if (replacement === undefined) {
+        document.deleteIn(["jobs", job, "if"]);
+      } else {
+        document.setIn(["jobs", job, "if"], replacement);
+      }
 
-    expect(mutant).not.toBe(WORKFLOW);
-    expect(
-      findCiPerformanceBudgetViolations({
-        maintenancePullRequestManifest: MAINTENANCE_PR_MANIFEST,
-        ordinaryPullRequestManifest: ORDINARY_PR_MANIFEST,
-        workflow: mutant,
-      }),
-    ).toContain(`${job} cacheable CI experiment must stay off automatic change runs`);
-  });
-
-  it.each([
-    "github.event_name == 'workflow_dispatch'",
-    "github.event_name == 'workflow_dispatch' || github.event_name == 'push'",
-    "github.event_name == 'workflow_dispatch' || true",
-  ])("rejects an expanded cacheable experiment condition: %s", (condition) => {
-    const mutant = WORKFLOW.replace(
-      "if: github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request'",
-      `if: ${condition}`,
-    );
-
-    expect(mutant).not.toBe(WORKFLOW);
-    expect(
-      findCiPerformanceBudgetViolations({
-        maintenancePullRequestManifest: MAINTENANCE_PR_MANIFEST,
-        ordinaryPullRequestManifest: ORDINARY_PR_MANIFEST,
-        workflow: mutant,
-      }),
-    ).toContain("core-verification cacheable CI experiment must stay off automatic change runs");
-  });
-
-  it.each([
-    [
-      "comment",
-      "if: github.event_name == 'push' # github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request'",
-      undefined,
-    ],
-    [
-      "step",
-      "if: github.event_name == 'push'",
-      "      - name: Resolve cacheable experiment identity\n        if: github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request'\n        id: split_identity",
-    ],
-  ] as const)("rejects a manual-only marker confined to a %s", (_location, jobIf, step) => {
-    let mutant = WORKFLOW.replace(
-      "if: github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request'",
-      jobIf,
-    );
-    if (step) {
-      mutant = mutant.replace(
-        "      - name: Resolve cacheable experiment identity\n        id: split_identity",
-        step,
+      expect(
+        findCiPerformanceBudgetViolations({
+          maintenancePullRequestManifest: MAINTENANCE_PR_MANIFEST,
+          ordinaryPullRequestManifest: ORDINARY_PR_MANIFEST,
+          workflow: document.toString(),
+        }),
+      ).toContain(
+        `${job} cacheable CI experiment must match the publish PR and manual observation cohort`,
       );
-    }
-
-    expect(mutant).not.toBe(WORKFLOW);
-    expect(
-      findCiPerformanceBudgetViolations({
-        maintenancePullRequestManifest: MAINTENANCE_PR_MANIFEST,
-        ordinaryPullRequestManifest: ORDINARY_PR_MANIFEST,
-        workflow: mutant,
-      }),
-    ).toContain("core-verification cacheable CI experiment must stay off automatic change runs");
+    });
   });
+
+  it.each(["comment", "step"] as const)(
+    "rejects an observation cohort marker confined to a %s",
+    (location) => {
+      let mutant = WORKFLOW.replace(
+        `if: ${CACHEABLE_PRODUCER_CONDITION}`,
+        `if: github.event_name == 'push'${location === "comment" ? ` # ${CACHEABLE_PRODUCER_CONDITION}` : ""}`,
+      );
+      if (location === "step") {
+        const marker =
+          "      - name: Create split verification identity\n        id: split_identity";
+        expect(mutant).toContain(marker);
+        mutant = mutant.replace(
+          marker,
+          `      - name: Create split verification identity\n        if: ${CACHEABLE_PRODUCER_CONDITION}\n        id: split_identity`,
+        );
+      }
+
+      expect(mutant).not.toBe(WORKFLOW);
+      expect(
+        findCiPerformanceBudgetViolations({
+          maintenancePullRequestManifest: MAINTENANCE_PR_MANIFEST,
+          ordinaryPullRequestManifest: ORDINARY_PR_MANIFEST,
+          workflow: mutant,
+        }),
+      ).toContain(
+        "core-verification cacheable CI experiment must match the publish PR and manual observation cohort",
+      );
+    },
+  );
 
   it("rejects an unfiltered ordinary package validation graph", () => {
     const manifest = ORDINARY_PR_MANIFEST.map((command) =>

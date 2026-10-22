@@ -408,14 +408,14 @@ describe("Phase B cacheable verification shadow", () => {
     }
   });
 
-  it("keeps the monolithic validate job authoritative while running cacheable lanes in parallel on pull requests and manual runs", () => {
+  it("keeps validate authoritative while shadowing publish pull requests and manual runs", () => {
     expect(VALIDATE_JOB).toContain("needs: changes");
     expect(VALIDATE_JOB).not.toContain("ci-cacheable-lanes:producer");
     for (const jobId of producerJobs) {
       const job = workflowJob(jobId);
       expect(job).toContain("needs: changes");
       expect(workflowJobCondition(jobId)).toBe(
-        "github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request'",
+        "github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && needs.changes.outputs.profile == 'publish')",
       );
       expect(job).toContain("scripts/ci-cacheable-experiment-identity.mts");
       expect(job).toContain("scripts/ci-cacheable-lane-runner.mts");
@@ -436,7 +436,7 @@ describe("Phase B cacheable verification shadow", () => {
       workflowJob("split-validation-shadow"),
     ].join("\n");
     expect(workflowJobCondition("split-validation-shadow")).toBe(
-      "always() && (github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request') && needs.changes.result == 'success'",
+      "always() && (github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && needs.changes.outputs.profile == 'publish')) && needs.changes.result == 'success'",
     );
     expect(findWorkflowVerificationViolations(cacheableJobs, ROOT_DIR)).toEqual([]);
   });
@@ -1365,7 +1365,7 @@ describe("CI verification profile contract", () => {
     expect(DOCS_SYNC_JOB_SOURCE).not.toContain("TURBO_TOKEN");
     expect(DOCS_BUILD_JOB).not.toContain("TURBO_TOKEN");
     expect(WORKFLOW).not.toContain("secrets.TURBO_TOKEN");
-    expect(DOCS_BUILD_JOB).toContain("needs: [changes, docs-sync-check]");
+    expect(workflowJobDefinition("docs-build").needs).toBe("changes");
     expect(DOCS_BUILD_JOB).not.toContain("-docs-sync-check-");
     expect(DOCS_BUILD_JOB).toContain(`key: ${CANONICAL_TURBO_CACHE_KEY}`);
     expect(DOCS_BUILD_JOB).toContain(
@@ -1375,8 +1375,9 @@ describe("CI verification profile contract", () => {
   });
 
   it("runs independent CI surfaces in parallel and restores content-addressed Turbo state", () => {
-    expect(WORKFLOW).toContain("docs-sync-check:\n    needs: changes");
-    expect(WORKFLOW).not.toContain("docs-sync-check:\n    needs: [validate, changes]");
+    expect(workflowJobDefinition("docs-sync-check").needs).toBe("changes");
+    expect(workflowJobDefinition("docs-build").needs).toBe("changes");
+    expect(workflowJobDefinition("docs-links").needs).toEqual(["changes", "docs-build"]);
     expect(WORKFLOW).toContain(`uses: actions/cache/restore@${CACHE_ACTION_REVISION} # v6.1.0`);
     expect(WORKFLOW).toContain(`key: ${CANONICAL_TURBO_CACHE_KEY}`);
     expect(WORKFLOW).not.toContain("pnpm turbo run build --filter=create-croco-app... --force");
