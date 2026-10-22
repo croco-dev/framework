@@ -121,8 +121,8 @@ return { 1, 'OK', updated }
   private static readonly CLAIM_SCRIPT = `
 local redisTime = redis.call('TIME')
 local nowMs = tonumber(redisTime[1]) * 1000 + math.floor(tonumber(redisTime[2]) / 1000)
--- Old writers may have indexed intents before local usage was committed. Prune
--- those index members without discarding their durable intent/backlog evidence.
+-- A stale delivery index can contain intents without local commit activation.
+-- Prune index members without discarding their durable intent/backlog evidence.
 while true do
   local candidates = redis.call('ZRANGEBYSCORE', KEYS[1], '-inf', nowMs, 'LIMIT', 0, 100)
   if #candidates == 0 then break end

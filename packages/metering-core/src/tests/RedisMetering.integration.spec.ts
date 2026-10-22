@@ -1052,7 +1052,7 @@ describe.skipIf(!realResourcesEnabled)("Redis metering composition", () => {
     });
   });
 
-  it("claims only activated billable entries beyond a full page of legacy inactive intents", async () => {
+  it("claims only activated billable entries beyond a full page of stale inactive intents", async () => {
     assert.isDefined(connection);
     const journal = new RedisBillableUsageJournal(createRedisClient(connection));
     const event: BillableUsageEvent = {
@@ -1067,7 +1067,7 @@ describe.skipIf(!realResourcesEnabled)("Redis metering composition", () => {
     for (let index = 0; index < 151; index += 1) {
       const eventId = `inactive-${index}`;
       await journal.append({ ...event, eventId });
-      // Earlier writers could expose intents in the delivery index before activation.
+      // Seed a stale delivery-index member without changing the durable intent.
       await connection.client.zadd("billable-journal:pending", 0, eventId);
     }
     await expect(
@@ -1078,7 +1078,7 @@ describe.skipIf(!realResourcesEnabled)("Redis metering composition", () => {
     await expect(
       journal.claimNext({ ownerId: "worker", leaseDurationMs: 10_000 }),
     ).resolves.toBeNull();
-    // Reintroduce legacy index entries so one claim must reach past the first 100.
+    // Reintroduce stale index entries so one claim must reach past the first 100.
     for (let index = 0; index < 151; index += 1) {
       await connection.client.zadd("billable-journal:pending", 0, `inactive-${index}`);
     }
@@ -1169,7 +1169,7 @@ describe.skipIf(!realResourcesEnabled)("Redis metering composition", () => {
   );
 
   it.each(["pending", "retryable-failed", "delivering"])(
-    "refuses legacy %s entries without activation evidence",
+    "refuses stale %s entries without activation evidence",
     async (state) => {
       assert.isDefined(connection);
       const journal = new RedisBillableUsageJournal(createRedisClient(connection));

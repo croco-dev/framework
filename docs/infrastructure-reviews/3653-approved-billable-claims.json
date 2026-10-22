@@ -6,7 +6,7 @@
       "classification": "durable-provider",
       "reason": "Require existing activation evidence before a Redis journal claim; discard stale delivery-index members while retaining durable intent/backlog entries and lease/retry scheduling. No public shape, stored entry format or runtime claim changes.",
       "files": {
-        "packages/metering-core/src/libs/RedisBillableUsageJournal.ts": "5b19b2e87fe9f32f6180f302aff41504782b7be7c3f01d5ecd50524e9fa4bef7"
+        "packages/metering-core/src/libs/RedisBillableUsageJournal.ts": "661e8b7a68ed665dc303c119999781e7b78d67c1a7fda4b47b947a952347445e"
       },
       "catalogRuntimes": [],
       "profiles": {
