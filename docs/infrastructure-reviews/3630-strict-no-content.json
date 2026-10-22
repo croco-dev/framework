@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "protocols-core",
+      "classification": "pure-contract",
+      "reason": "Explicit HTTP 204/205 success statuses satisfy strict response completeness without a body schema. All existing generators and coverage checks consume the same graph. No host, storage or lifecycle behavior changes.",
+      "files": {
+        "packages/protocols-core/src/libs/ContractGraph.ts": "1155c0bb52f3d9e8431bf9e473c0d1a6d1346da37b237a537b6c801648d72234"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Contract validation is host-neutral pure logic with no infrastructure capabilities, storage or lifecycle dependencies. Existing OpenAPI and RPC consumers are reused without deployment support changes.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/protocols-core/src/libs/ContractGraph.ts",
+            "packages/protocols-core/src/libs/ContractGraphConsumerCoverage.ts",
+            "packages/presentation-preset/runtime-profiles.json"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Contract validation is host-neutral pure logic with no infrastructure capabilities, storage or lifecycle dependencies. Existing OpenAPI and RPC consumers are reused without deployment support changes.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/protocols-core/src/libs/ContractGraph.ts",
+            "packages/protocols-core/src/libs/ContractGraphConsumerCoverage.ts",
+            "packages/presentation-preset/runtime-profiles.json"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Contract validation is host-neutral pure logic with no infrastructure capabilities, storage or lifecycle dependencies. Existing OpenAPI and RPC consumers are reused without deployment support changes.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/protocols-core/src/libs/ContractGraph.ts",
+            "packages/protocols-core/src/libs/ContractGraphConsumerCoverage.ts",
+            "packages/presentation-preset/runtime-profiles.json"
+          ]
+        }
+      }
+    }
+  ]
+}

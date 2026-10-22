@@ -742,6 +742,24 @@ describe("emitOpenAPI", () => {
     ).toThrow(/contract-route-invalid-success-status/);
   });
 
+  it.each([204, 205])("emits explicit bodyless status %i from a strict graph", (status) => {
+    @Controller("/orders")
+    class OrdersController {
+      @Post("/complete")
+      complete(): void {}
+    }
+    const metadata = Reflect.getMetadata(REST_ROUTES_KEY, OrdersController) as RouteMetadata[];
+    const route = metadata[0];
+    if (!route) throw new TypeError("Expected order route metadata.");
+    route.statusCode = status;
+
+    const graph = buildContractGraph([OrdersController], { strictSchemas: true });
+    const document = emitOpenAPIFromContractGraph(graph);
+    const responses = document.paths?.["/orders/complete"]?.post?.responses;
+    expect(responses?.[status]).toEqual({ description: "No content" });
+    expect(responses?.[200]).toBeUndefined();
+  });
+
   it("should keep a declared bodyless success status and reject a body on 204 or 205", () => {
     @Controller("/orders")
     class OrdersController {
