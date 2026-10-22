@@ -1,0 +1,64 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "billing-core",
+      "classification": "pure-contract",
+      "reason": "Preserve publication intent when registry evidence is present or unavailable, and serialize publish/cancel through the store contract. No persisted release format, deployed provider, host support or migration owner changes.",
+      "files": {
+        "packages/billing-core/src/libs/PlanRelease.ts": "99bbddb76929742f0ab1e687116036e560dec41c25d221f3551a584a973df0cd",
+        "packages/billing-core/src/libs/PlanReleaseService.ts": "1003e937896135e3b01d3fd084dc338db54a77068db6aed5b073d9be1abbc275",
+        "packages/billing-core/src/libs/InMemoryPlanReleaseStore.ts": "2b9a0939e397c0e994fdbbb4b2b34151b95a01ca3c2a69ae712f8a46b75c7b23",
+        "packages/billing-core/src/libs/PlanRegistry.ts": "f8d033c792d3a3aec685345bdf2e7c00099172c2b737385e9b4068a71d1b07f4"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "The Node host is not changed. Publication coordination is a billing store contract with a process-local reference implementation; no deployed storage provider or host capability is added.",
+          "providers": ["@croco/billing-core"],
+          "constraints": [
+            "Custom durable stores must serialize all workers per release and fence lost lock owners.",
+            "Registry absence must be authoritative after all publication effects settle; local evidence does not certify a remote provider."
+          ],
+          "references": [
+            "packages/billing-core/src/libs/PlanRelease.ts",
+            "packages/billing-core/src/libs/InMemoryPlanReleaseStore.ts",
+            "packages/billing-core/src/libs/PlanRegistry.ts",
+            "packages/billing-core/README.md"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "The Lambda host is not changed. Publication coordination is a billing store contract with a process-local reference implementation; no deployed storage provider or host capability is added.",
+          "providers": ["@croco/billing-core"],
+          "constraints": [
+            "Custom durable stores must serialize all workers per release and fence lost lock owners.",
+            "Registry absence must be authoritative after all publication effects settle; local evidence does not certify a remote provider."
+          ],
+          "references": [
+            "packages/billing-core/src/libs/PlanRelease.ts",
+            "packages/billing-core/src/libs/InMemoryPlanReleaseStore.ts",
+            "packages/billing-core/src/libs/PlanRegistry.ts",
+            "packages/billing-core/README.md"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "The Workers or Node Container host is not changed. Publication coordination is a billing store contract with a process-local reference implementation; no deployed storage provider or host capability is added.",
+          "providers": ["@croco/billing-core"],
+          "constraints": [
+            "Custom durable stores must serialize all workers per release and fence lost lock owners.",
+            "Registry absence must be authoritative after all publication effects settle; local evidence does not certify a remote provider."
+          ],
+          "references": [
+            "packages/billing-core/src/libs/PlanRelease.ts",
+            "packages/billing-core/src/libs/InMemoryPlanReleaseStore.ts",
+            "packages/billing-core/src/libs/PlanRegistry.ts",
+            "packages/billing-core/README.md"
+          ]
+        }
+      }
+    }
+  ]
+}

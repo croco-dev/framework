@@ -159,6 +159,13 @@ export interface PlanReleaseImpactAnalyzer {
 }
 
 export interface PlanReleaseStore {
+  /**
+   * Serialize publication and cancellation for one ref across all users of this store.
+   * Hold exclusivity until the callback settles; release it on both success and failure.
+   * Durable adapters must coordinate workers, not just instances in one process. A lost
+   * lease must fence the former owner before another callback can perform registry effects.
+   */
+  withPublicationLock<T>(ref: PlanVersionRef, operation: () => Promise<T>): Promise<T>;
   /** Atomically creates the draft and appends its lifecycle event to the durable outbox. */
   create(release: PlanRelease, event: PlanReleaseLifecycleEvent): Promise<void>;
   get(ref: PlanVersionRef): Promise<PlanRelease | null>;
