@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export type CrocoProblemRegistry = {
   readonly version: "croco.problem-code-registry.v1";
-  readonly problemCount: 1138;
+  readonly problemCount: 1139;
   readonly problems: readonly [
     {
       readonly code: "ACCESS_DENIED";
@@ -32196,7 +32196,7 @@ export type CrocoProblemRegistry = {
 
 export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 1138,
+  problemCount: 1139,
   problems: [
     {
       code: "ACCESS_DENIED",
