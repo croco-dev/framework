@@ -210,3 +210,125 @@ describe("numeric and array snapshot contracts", () => {
     expect(parseContractGraphSnapshot(historical)?.routes[0]?.response).toMatchObject(descriptor);
   });
 });
+
+describe("numeric and array constraints in supported containers", () => {
+  it.each([
+    { name: "record", wrap: (schema: z.ZodType) => z.record(schema), witness: { item: 7 } },
+    { name: "brand", wrap: (schema: z.ZodType) => schema.brand<"Value">(), witness: 7 },
+    { name: "readonly", wrap: (schema: z.ZodType) => schema.readonly(), witness: 7 },
+    {
+      name: "union",
+      wrap: (schema: z.ZodType) => z.union([schema, z.literal("unset")]),
+      witness: 7,
+    },
+    {
+      name: "readonly array element",
+      wrap: (schema: z.ZodType) => z.array(schema.readonly()),
+      witness: [7],
+    },
+    {
+      name: "record array element",
+      wrap: (schema: z.ZodType) => z.record(z.array(schema)),
+      witness: { item: [7] },
+    },
+  ])("should preserve variance inside $name", ({ wrap, witness }) => {
+    const before = wrap(z.number().min(10));
+    const after = wrap(z.number().min(5));
+    expect(before.safeParse(witness).success).toBe(false);
+    expect(after.safeParse(witness).success).toBe(true);
+    for (const direction of ["request", "response"] as const) {
+      const baseline = loaded(before, direction);
+      const current = loaded(after, direction);
+      expect(diffContractGraphSnapshots(baseline, current).hasBreakingChanges).toBe(
+        direction === "response",
+      );
+      expect(diffContractGraphSnapshots(current, baseline).hasBreakingChanges).toBe(
+        direction === "request",
+      );
+    }
+  });
+
+  it("should compare cardinality restrictions in record values", () => {
+    const before = z.record(z.array(z.number()).max(2));
+    const after = z.record(z.array(z.number()).max(4));
+    expect(before.safeParse({ item: [1, 2, 3] }).success).toBe(false);
+    expect(after.safeParse({ item: [1, 2, 3] }).success).toBe(true);
+    for (const direction of ["request", "response"] as const) {
+      expect(
+        diffContractGraphSnapshots(loaded(before, direction), loaded(after, direction))
+          .hasBreakingChanges,
+      ).toBe(direction === "response");
+    }
+  });
+
+  it("should compare union branch additions and removals directionally", () => {
+    const before = z.number().min(10);
+    const after = z.union([before, z.literal("unset")]);
+    expect(before.safeParse("unset").success).toBe(false);
+    expect(after.safeParse("unset").success).toBe(true);
+    for (const direction of ["request", "response"] as const) {
+      const baseline = loaded(before, direction);
+      const current = loaded(after, direction);
+      expect(diffContractGraphSnapshots(baseline, current).hasBreakingChanges).toBe(
+        direction === "response",
+      );
+      expect(diffContractGraphSnapshots(current, baseline).hasBreakingChanges).toBe(
+        direction === "request",
+      );
+    }
+  });
+
+  it("should preserve variance inside matching catch wrappers", () => {
+    const before = z.number().min(10).catch(10);
+    const after = z.number().min(5).catch(10);
+    expect(before.parse(7)).toBe(10);
+    expect(after.parse(7)).toBe(7);
+    for (const direction of ["request", "response"] as const) {
+      expect(
+        diffContractGraphSnapshots(loaded(before, direction), loaded(after, direction))
+          .hasBreakingChanges,
+      ).toBe(direction === "response");
+    }
+  });
+
+  it("should ignore unreachable element restrictions when only the empty array is allowed", () => {
+    const before = z.array(z.number()).max(0);
+    const after = z.array(z.number().int()).length(0);
+    for (const schema of [before, after]) {
+      expect(schema.safeParse([]).success).toBe(true);
+      expect(schema.safeParse([1]).success).toBe(false);
+      expect(schema.safeParse([1.5]).success).toBe(false);
+    }
+    for (const direction of ["request", "response"] as const) {
+      const baseline = loaded(before, direction);
+      const current = loaded(after, direction);
+      expect(diffContractGraphSnapshots(baseline, current).hasBreakingChanges).toBe(false);
+      expect(diffContractGraphSnapshots(current, baseline).hasBreakingChanges).toBe(false);
+    }
+  });
+
+  it("should treat contradictory array cardinalities as empty value sets", () => {
+    const empty = z.array(z.number()).min(2).max(1);
+    const alsoEmpty = z.array(z.number().int()).length(0).min(1);
+    const available = z.array(z.number());
+    for (const value of [[], [1], [1, 2]]) {
+      expect(empty.safeParse(value).success).toBe(false);
+      expect(alsoEmpty.safeParse(value).success).toBe(false);
+      expect(available.safeParse(value).success).toBe(true);
+    }
+    for (const direction of ["request", "response"] as const) {
+      expect(
+        diffContractGraphSnapshots(loaded(empty, direction), loaded(alsoEmpty, direction))
+          .hasBreakingChanges,
+      ).toBe(false);
+      expect(
+        diffContractGraphSnapshots(loaded(empty, direction), loaded(available, direction))
+          .hasBreakingChanges,
+      ).toBe(direction === "response");
+      expect(
+        diffContractGraphSnapshots(loaded(available, direction), loaded(empty, direction))
+          .hasBreakingChanges,
+      ).toBe(direction === "request");
+    }
+  });
+});

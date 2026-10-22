@@ -522,10 +522,12 @@ function isRequestSchemaCompatible(
 }
 
 function isSchemaCompatible(
-  baseline: ContractSchemaSnapshot | null,
-  current: ContractSchemaSnapshot | null,
+  baselineSchema: ContractSchemaSnapshot | null,
+  currentSchema: ContractSchemaSnapshot | null,
   variance: "response" | "request",
 ): boolean {
+  const baseline = unwrapTransparentSchema(baselineSchema);
+  const current = unwrapTransparentSchema(currentSchema);
   if (!baseline) {
     return true;
   }
@@ -571,20 +573,39 @@ function isSchemaCompatible(
   }
 
   if (baseline.kind === "array" && current.kind === "array") {
-    const baselineMin = baseline.minItems ?? 0;
-    const baselineMax = baseline.maxItems ?? Infinity;
-    const currentMin = current.minItems ?? 0;
-    const currentMax = current.maxItems ?? Infinity;
+    const source = variance === "request" ? baseline : current;
+    const target = variance === "request" ? current : baseline;
+    const sourceMin = source.minItems ?? 0;
+    const sourceMax = source.maxItems ?? Infinity;
+    const targetMin = target.minItems ?? 0;
+    const targetMax = target.maxItems ?? Infinity;
+    if (sourceMin > sourceMax) return true;
+    if (targetMin > targetMax || sourceMin < targetMin || sourceMax > targetMax) return false;
+    // No element can be present in a zero-only source value set.
     return (
-      (variance === "request"
-        ? currentMin <= baselineMin && currentMax >= baselineMax
-        : currentMin >= baselineMin && currentMax <= baselineMax) &&
+      sourceMax === 0 ||
       isSchemaCompatible(baseline.element ?? null, current.element ?? null, variance)
     );
   }
 
-  if (baseline.kind === "union" && current.kind === "union") {
-    return JSON.stringify(baseline.options ?? []) === JSON.stringify(current.options ?? []);
+  if (baseline.kind === "record" && current.kind === "record") {
+    return isSchemaCompatible(baseline.element ?? null, current.element ?? null, variance);
+  }
+
+  if (baseline.kind === "catch" && current.kind === "catch") {
+    return isSchemaCompatible(baseline.inner ?? null, current.inner ?? null, variance);
+  }
+
+  if (baseline.kind === "union" || current.kind === "union") {
+    const baselineOptions = baseline.kind === "union" ? (baseline.options ?? []) : [baseline];
+    const currentOptions = current.kind === "union" ? (current.options ?? []) : [current];
+    return variance === "request"
+      ? baselineOptions.every((before) =>
+          currentOptions.some((after) => isSchemaCompatible(before, after, variance)),
+        )
+      : currentOptions.every((after) =>
+          baselineOptions.some((before) => isSchemaCompatible(before, after, variance)),
+        );
   }
 
   return JSON.stringify(baseline) === JSON.stringify(current);
@@ -730,6 +751,8 @@ function unwrapSchema(schema: ContractSchemaSnapshot | null): ContractSchemaSnap
     (current.kind === "optional" ||
       current.kind === "default" ||
       current.kind === "nullable" ||
+      current.kind === "branded" ||
+      current.kind === "readonly" ||
       current.kind === "effects")
   ) {
     current = current.inner ?? null;
@@ -743,7 +766,10 @@ function unwrapTransparentSchema(
 ): ContractSchemaSnapshot | null {
   let current = schema;
 
-  while (current?.kind === "effects") {
+  while (
+    current &&
+    (current.kind === "effects" || current.kind === "branded" || current.kind === "readonly")
+  ) {
     current = current.inner ?? null;
   }
 
