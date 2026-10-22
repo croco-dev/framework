@@ -113,6 +113,57 @@ describe("MigrationRunner", () => {
     });
   });
 
+  describe.each(["up", "previewUp"] as const)("%s target validation", (operation) => {
+    it.each(["typo", "", "202610", "2026100100000x", "202610010000001", " 20261001000000"])(
+      "rejects malformed target %j before any database activity",
+      async (target) => {
+        const fixtures = createMigrationFixtures([
+          { id: "20261001000000", name: "create_accounts" },
+          { id: "20261003000000", name: "create_orders" },
+        ]);
+        const db = new DeterministicMigrationDatabase();
+        const before = db.snapshot();
+        const candidate = new MigrationRunner(db, fixtures.path);
+        try {
+          await expect(candidate[operation](target)).rejects.toMatchObject({
+            code: "migration-runner/invalid-target",
+            category: ProblemCategory.BadRequest,
+            extensions: { target, reason: "malformed" },
+          });
+          expect(db.events).toEqual([]);
+          expect(db.snapshot()).toEqual(before);
+        } finally {
+          fixtures.cleanup();
+        }
+      },
+    );
+
+    it.each([
+      ["20261001000000", ["20261001000000_create_accounts"]],
+      ["20261002000000", ["20261001000000_create_accounts"]],
+      ["20260930000000", []],
+      [undefined, ["20261001000000_create_accounts", "20261003000000_create_orders"]],
+    ])("preserves inclusive cutoff selection for %s", async (target, expected) => {
+      const fixtures = createMigrationFixtures([
+        { id: "20261001000000", name: "create_accounts" },
+        { id: "20261003000000", name: "create_orders" },
+      ]);
+      const db = new DeterministicMigrationDatabase();
+      const before = db.snapshot();
+      const candidate = new MigrationRunner(db, fixtures.path);
+      try {
+        await expect(candidate[operation](target)).resolves.toEqual(expected);
+        if (operation === "previewUp") {
+          expect(db.snapshot()).toEqual(before);
+        } else {
+          expect(db.snapshot().checkpoints).toEqual(expected);
+        }
+      } finally {
+        fixtures.cleanup();
+      }
+    });
+  });
+
   describe("down", () => {
     it.each([
       ["zero", 0],

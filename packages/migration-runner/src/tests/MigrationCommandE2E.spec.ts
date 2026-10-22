@@ -7,6 +7,24 @@ import { createMigrationFixtures } from "./helpers/createMigrationFixtures";
 import { DeterministicMigrationDatabase } from "./helpers/DeterministicMigrationDatabase";
 
 describe("migration command end-to-end", () => {
+  describe.each([false, true])("up dryRun=%s", (dryRun) => {
+    it.each(["typo", "", "202610"])(
+      "rejects malformed target %j before opening a database",
+      async (target) => {
+        const harness = createCommandHarness();
+        const before = harness.db.snapshot();
+        await harness.run(["up", "--target", target, ...(dryRun ? ["--dry-run"] : [])]);
+        expect(harness.exitCodes).toEqual([1]);
+        expect(harness.stderr).toEqual([
+          expect.stringContaining("migration-runner/invalid-target"),
+        ]);
+        expect(harness.lifecycle).toEqual(["exit:1"]);
+        expect(harness.db.events).toEqual([]);
+        expect(harness.db.snapshot()).toEqual(before);
+      },
+    );
+  });
+
   it("validates migration files without opening a database or running bodies", async () => {
     const fixtures = createMigrationFixtures([{ id: "20260711000001", name: "create_accounts" }]);
     const harness = createCommandHarness();

@@ -67,6 +67,9 @@ export async function runUp(
   let pool: MigrationCliPool | undefined;
   let exitCode = 0;
   try {
+    if (options.target !== undefined) {
+      assertValidMigrationTarget(options.target);
+    }
     const { db, pool: dbPool } = await runtime.createDbClient(options.connection, options.dialect);
     pool = dbPool;
     const runner = new MigrationRunner(db, options.dir, options.table);
