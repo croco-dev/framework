@@ -332,3 +332,85 @@ describe("numeric and array constraints in supported containers", () => {
     }
   });
 });
+
+describe("representable integer boundaries", () => {
+  it.each([
+    [
+      z
+        .number()
+        .int()
+        .gt(2 ** 53),
+      z
+        .number()
+        .int()
+        .min(2 ** 53 + 2),
+      [2 ** 53, 2 ** 53 + 2, 2 ** 54],
+    ],
+    [
+      z
+        .number()
+        .int()
+        .lt(-(2 ** 53)),
+      z
+        .number()
+        .int()
+        .max(-(2 ** 53) - 2),
+      [-(2 ** 53), -(2 ** 53) - 2, -(2 ** 54)],
+    ],
+    [
+      z
+        .number()
+        .int()
+        .gt(-(2 ** 54)),
+      z
+        .number()
+        .int()
+        .min(-(2 ** 54) + 2),
+      [-(2 ** 54), -(2 ** 54) + 2, 0],
+    ],
+    [
+      z
+        .number()
+        .int()
+        .lt(2 ** 54),
+      z
+        .number()
+        .int()
+        .max(2 ** 54 - 2),
+      [2 ** 54, 2 ** 54 - 2, 0],
+    ],
+  ])(
+    "should preserve equivalent exclusive and inclusive integer sets %#",
+    (before, after, values) => {
+      expect(before.safeParse(values[0]).success).toBe(false);
+      expect(after.safeParse(values[0]).success).toBe(false);
+      for (const value of values.slice(1)) {
+        expect(before.safeParse(value).success).toBe(true);
+        expect(after.safeParse(value).success).toBe(true);
+      }
+      for (const direction of ["request", "response"] as const) {
+        const baseline = loaded(before, direction);
+        const current = loaded(after, direction);
+        expect(diffContractGraphSnapshots(baseline, current).hasBreakingChanges).toBe(false);
+        expect(diffContractGraphSnapshots(current, baseline).hasBreakingChanges).toBe(false);
+      }
+    },
+  );
+
+  it.each([z.number().int().gt(Number.MAX_VALUE), z.number().int().lt(-Number.MAX_VALUE)])(
+    "should treat an exclusive bound beyond finite numbers as empty %#",
+    (empty) => {
+      const alsoEmpty = z.number().min(1).max(0);
+      for (const value of [-Number.MAX_VALUE, 0, Number.MAX_VALUE]) {
+        expect(empty.safeParse(value).success).toBe(false);
+        expect(alsoEmpty.safeParse(value).success).toBe(false);
+      }
+      for (const direction of ["request", "response"] as const) {
+        expect(
+          diffContractGraphSnapshots(loaded(empty, direction), loaded(alsoEmpty, direction))
+            .hasBreakingChanges,
+        ).toBe(false);
+      }
+    },
+  );
+});

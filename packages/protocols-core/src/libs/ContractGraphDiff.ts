@@ -650,24 +650,39 @@ function numericRange(schema: ContractSchemaSnapshot) {
   let exclusiveMin = schema.exclusiveMinimum ?? false;
   let exclusiveMax = schema.exclusiveMaximum ?? false;
   if (schema.integer) {
-    // Outside the safe-integer range, +/- 1 can round back to the same number.
-    // Retain the original exclusive boundary there instead of admitting its endpoint.
-    if (
-      Number.isSafeInteger(Math.floor(min)) &&
-      (!exclusiveMin || Number.isSafeInteger(Math.floor(min) + 1))
-    ) {
-      min = exclusiveMin ? Math.floor(min) + 1 : Math.ceil(min);
-      exclusiveMin = false;
+    if (Number.isFinite(min)) {
+      min = exclusiveMin
+        ? Number.isSafeInteger(min) && min < Number.MAX_SAFE_INTEGER
+          ? Math.floor(min) + 1
+          : Number.isInteger(min)
+            ? adjacentNumber(min, 1)
+            : Math.ceil(min)
+        : Math.ceil(min);
+      exclusiveMin = !Number.isFinite(min);
     }
-    if (
-      Number.isSafeInteger(Math.ceil(max)) &&
-      (!exclusiveMax || Number.isSafeInteger(Math.ceil(max) - 1))
-    ) {
-      max = exclusiveMax ? Math.ceil(max) - 1 : Math.floor(max);
-      exclusiveMax = false;
+    if (Number.isFinite(max)) {
+      max = exclusiveMax
+        ? Number.isSafeInteger(max) && max > Number.MIN_SAFE_INTEGER
+          ? Math.ceil(max) - 1
+          : Number.isInteger(max)
+            ? adjacentNumber(max, -1)
+            : Math.floor(max)
+        : Math.floor(max);
+      exclusiveMax = !Number.isFinite(max);
     }
   }
   return { min, max, exclusiveMin, exclusiveMax };
+}
+
+// Beyond the safe-integer range, adjacent float64 values are integers but +/- 1
+// can round back to the endpoint. Move one representable value in the requested
+// direction; infinity remains exclusive so a finite-number set can be empty.
+function adjacentNumber(value: number, direction: 1 | -1): number {
+  const bits = new DataView(new ArrayBuffer(8));
+  bits.setFloat64(0, value);
+  const step = value > 0 === direction > 0 ? 1n : -1n;
+  bits.setBigUint64(0, bits.getBigUint64(0) + step);
+  return bits.getFloat64(0);
 }
 
 function areWrappedSchemasCompatible(
