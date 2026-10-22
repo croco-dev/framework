@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "migration-runner",
+      "classification": "pure-contract",
+      "reason": "Reuse the existing 14-digit target contract for forward apply, preview and CLI before I/O; retain inclusive cutoff selection and all persistence and host lifecycle semantics.",
+      "files": {
+        "packages/migration-runner/src/libs/MigrationRunner.ts": "78f01b8949fc86f97adf11d31aa48cbafe5b5b0c5cb21d73f36791f64f0c4088",
+        "packages/migration-runner/src/cli.ts": "84420756dc463f91ea95834c8728c5cecb12d54358c68605f98600a3c557bfc4"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Target syntax validation is pure input checking before database or host access. It adds no capability, storage or lifecycle requirement and does not extend existing migration-runner deployment support.",
+          "providers": ["assertValidMigrationTarget"],
+          "constraints": [],
+          "references": [
+            "packages/migration-runner/src/libs/validateMigrationTarget.ts",
+            "packages/migration-runner/src/libs/MigrationRunner.ts",
+            "packages/migration-runner/src/cli.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Target syntax validation is pure input checking before database or host access. It adds no capability, storage or lifecycle requirement and does not extend existing migration-runner deployment support.",
+          "providers": ["assertValidMigrationTarget"],
+          "constraints": [],
+          "references": [
+            "packages/migration-runner/src/libs/validateMigrationTarget.ts",
+            "packages/migration-runner/src/libs/MigrationRunner.ts",
+            "packages/migration-runner/src/cli.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Target syntax validation is pure input checking before database or host access. It adds no capability, storage or lifecycle requirement and does not extend existing migration-runner deployment support.",
+          "providers": ["assertValidMigrationTarget"],
+          "constraints": [],
+          "references": [
+            "packages/migration-runner/src/libs/validateMigrationTarget.ts",
+            "packages/migration-runner/src/libs/MigrationRunner.ts",
+            "packages/migration-runner/src/cli.ts"
+          ]
+        }
+      }
+    }
+  ]
+}

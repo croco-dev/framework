@@ -78,6 +78,26 @@ describe("published migrate CLI", () => {
         const installedVersion = run("pnpm", ["exec", "migrate", "--version"], consumerRoot);
         expect(installedVersion.stdout.trim()).toBe(packageVersion);
 
+        for (const target of ["typo", "", "202610"]) {
+          for (const dryRun of [false, true]) {
+            const rejected = spawnSync(
+              "pnpm",
+              ["exec", "migrate", "up", "--target", target, ...(dryRun ? ["--dry-run"] : [])],
+              {
+                cwd: consumerRoot,
+                encoding: "utf-8",
+                timeout: spawnTimeoutMs,
+                env: { ...process.env, DATABASE_URL: "" },
+              },
+            );
+            expect(rejected.error).toBeUndefined();
+            expect(rejected.status).toBe(1);
+            expect(rejected.stderr).toContain("migration-runner/invalid-target");
+            expect(rejected.stderr).not.toContain("migration-runner/database-url-required");
+            expect(rejected.stderr).not.toContain("state is uncertain");
+          }
+        }
+
         writePackedCliMigrationSmoke(consumerRoot);
         const migrationSmoke = run("node", ["packed-cli-migration-smoke.cjs"], consumerRoot);
         expect(migrationSmoke.stdout).toContain("migration body executed");

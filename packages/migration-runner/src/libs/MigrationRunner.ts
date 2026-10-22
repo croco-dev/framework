@@ -50,6 +50,9 @@ export class MigrationRunner {
   }
 
   async up(targetId?: string): Promise<string[]> {
+    if (targetId !== undefined) {
+      assertValidMigrationTarget(targetId);
+    }
     await this.init();
     const toRun = await this.selectUpMigrations(this.db, targetId);
 
@@ -87,6 +90,9 @@ export class MigrationRunner {
   }
 
   async previewUp(targetId?: string): Promise<string[]> {
+    if (targetId !== undefined) {
+      assertValidMigrationTarget(targetId);
+    }
     return this.preview("up", async (db) => {
       const migrations = await this.selectUpMigrations(db, targetId);
       for (const migration of migrations) {
