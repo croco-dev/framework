@@ -680,8 +680,15 @@ function numericRange(schema: ContractSchemaSnapshot) {
 function adjacentNumber(value: number, direction: 1 | -1): number {
   const bits = new DataView(new ArrayBuffer(8));
   bits.setFloat64(0, value);
-  const step = value > 0 === direction > 0 ? 1n : -1n;
-  bits.setBigUint64(0, bits.getBigUint64(0) + step);
+  const low = bits.getUint32(4);
+  const high = bits.getUint32(0);
+  if (value > 0 === direction > 0) {
+    bits.setUint32(4, low + 1);
+    if (low === 0xffffffff) bits.setUint32(0, high + 1);
+  } else {
+    bits.setUint32(4, low - 1);
+    if (low === 0) bits.setUint32(0, high - 1);
+  }
   return bits.getFloat64(0);
 }
 
