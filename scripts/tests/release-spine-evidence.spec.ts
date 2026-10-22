@@ -1777,6 +1777,7 @@ describe("release-spine-evidence.mts", () => {
       rootDir: repo,
       outputDir: join(repo, "out"),
       totalTimeoutMs: 100,
+      clock: createFakeClock().clock,
       commands,
       runner,
     });
