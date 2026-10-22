@@ -77,6 +77,11 @@ const { build } = createRequire(require.resolve("tsup"))("esbuild");
           permissions: nextState === "denied" ? [] : ["seo.read", "seo.report", "seo.export"],
         });
         if (nextState === "partial") input.current.search.metadata.completeness = "partial";
+        if (nextState === "mapped-alias") {
+          input.mappings.push({ ...input.mappings[0], page: "landing-alias" });
+          for (const period of [input.baseline, input.current])
+            period.landing.rows[0].page = "landing-alias";
+        }
         if (nextState === "missing-source") {
           for (const period of [input.baseline, input.current])
             for (const dataset of [period.search, period.landing]) {
@@ -283,6 +288,25 @@ const { build } = createRequire(require.resolve("tsup"))("esbuild");
       false,
     );
     await page.screenshot({ path: join(evidenceDir, "ready-mobile.png"), fullPage: true });
+    await page.request.post(`http://127.0.0.1:${server.address().port}/state`, {
+      data: { kind: "mapped-alias" },
+    });
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.evaluate(() => window.render("mapped-alias"));
+    await page.getByText(/Population 2 · Included 2 · Excluded 0/).waitFor();
+    await page.getByRole("combobox", { name: "Candidate filter" }).selectOption("value-rate-down");
+    await page.getByRole("button", { name: "Apply definition" }).click();
+    await page.getByText(/Population 2 · Included 1 · Excluded 1/).waitFor();
+    const mappedRow = page
+      .getByRole("row")
+      .filter({ has: page.getByRole("button", { name: "start", exact: true }) });
+    assert.match(await mappedRow.innerText(), /Sessions 17/);
+    assert.match(await mappedRow.innerText(), /Sessions 13/);
+    assert.equal(
+      await page.evaluate(() => document.documentElement.scrollWidth > innerWidth),
+      false,
+    );
+    await page.screenshot({ path: join(evidenceDir, "mapped-alias.png"), fullPage: true });
     assert.deepEqual(errors, []);
     console.log(JSON.stringify({ saved, exported, errors, overflow: false, evidenceDir }));
   } finally {

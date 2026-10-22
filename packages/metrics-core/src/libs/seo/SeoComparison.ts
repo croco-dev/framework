@@ -382,7 +382,19 @@ export async function compareSeo(input: SeoComparisonInput): Promise<SeoComparis
               : "SEO_PARTIAL_COVERAGE",
         );
     }
-    const landingByKey = new Map<string, SeoLandingRow>();
+    const effectiveMapping = (page: string): SeoPageMapping | undefined => {
+      const maps = (mappingsByPage.get(page) ?? []).filter(
+        (m) =>
+          timestamp(m.effective.from) < timestamp(meta.window.to) &&
+          timestamp(meta.window.from) < timestamp(m.effective.to),
+      );
+      requireSeo(maps.length <= 1, "mapping.ambiguous");
+      return maps.find((m) => contains(m.effective, meta.window));
+    };
+    const mappedKey = (mapping: SeoPageMapping, device: string): string =>
+      JSON.stringify([mapping.pageId, mapping.template, mapping.locale, device]);
+    const landingKeys = new Set<string>();
+    const landingByKey = new Map<string, { rows: SeoLandingRow[]; refs: Set<string> }>();
     for (const row of landing?.rows ?? []) {
       requireSeo(
         row &&
@@ -398,12 +410,21 @@ export async function compareSeo(input: SeoComparisonInput): Promise<SeoComparis
         "landing.outcomes",
       );
       const k = JSON.stringify([row.page, row.device]);
-      requireSeo(!landingByKey.has(k), "landing.duplicate");
-      landingByKey.set(k, row);
+      requireSeo(!landingKeys.has(k), "landing.duplicate");
+      landingKeys.add(k);
+      if (!join) continue;
+      const mapping = effectiveMapping(row.page);
+      if (!mapping) {
+        diagnostics.add("SEO_MAPPING_UNAVAILABLE");
+        diagnostics.add("SEO_LANDING_ROWS_WITHOUT_SEARCH");
+        continue;
+      }
+      const key = mappedKey(mapping, row.device);
+      const group = landingByKey.get(key) ?? { rows: [], refs: new Set<string>() };
+      group.rows.push(row);
+      group.refs.add(mapping.sourceRef);
+      landingByKey.set(key, group);
     }
-    const searchKeys = new Set(search.rows.map((row) => JSON.stringify([row.page, row.device])));
-    if (join && [...landingByKey.keys()].some((key) => !searchKeys.has(key)))
-      diagnostics.add("SEO_LANDING_ROWS_WITHOUT_SEARCH");
     const seen = new Set<string>();
     const buckets = new Map<
       string,
@@ -442,19 +463,13 @@ export async function compareSeo(input: SeoComparisonInput): Promise<SeoComparis
       ]);
       requireSeo(!seen.has(identity), "search.duplicate");
       seen.add(identity);
-      const maps = (mappingsByPage.get(row.page) ?? []).filter(
-        (m) =>
-          timestamp(m.effective.from) < timestamp(meta.window.to) &&
-          timestamp(meta.window.from) < timestamp(m.effective.to),
-      );
-      requireSeo(maps.length <= 1, "mapping.ambiguous");
-      const mapping = maps.find((m) => contains(m.effective, meta.window));
+      const mapping = effectiveMapping(row.page);
       if (!mapping) {
         unmappedRows++;
         diagnostics.add("SEO_MAPPING_UNAVAILABLE");
         continue;
       }
-      const key = JSON.stringify([mapping.pageId, mapping.template, mapping.locale, row.device]);
+      const key = mappedKey(mapping, row.device);
       const bucket = buckets.get(key) ?? {
         mapping,
         device: row.device,
@@ -464,9 +479,15 @@ export async function compareSeo(input: SeoComparisonInput): Promise<SeoComparis
       };
       bucket.rows.push(row);
       bucket.refs.add(mapping.sourceRef);
-      const land = join ? landingByKey.get(JSON.stringify([row.page, row.device])) : undefined;
-      if (land) bucket.landings.push(land);
       buckets.set(key, bucket);
+    }
+    for (const [key, land] of landingByKey) {
+      const bucket = buckets.get(key);
+      if (!bucket) diagnostics.add("SEO_LANDING_ROWS_WITHOUT_SEARCH");
+      else {
+        bucket.landings = land.rows;
+        for (const ref of land.refs) bucket.refs.add(ref);
+      }
     }
     for (const [key, bucket] of buckets) {
       const reasons: string[] = [];
@@ -476,10 +497,7 @@ export async function compareSeo(input: SeoComparisonInput): Promise<SeoComparis
         clicks = sumNullable(bucket.rows.map((r) => r.clicks));
       if (impressions === 0) reasons.push("SEO_ZERO_IMPRESSIONS");
       if (impressions === null || clicks === null) reasons.push("SEO_SEARCH_MISSING");
-      const hasLanding =
-        join &&
-        landing?.metadata.state === "ready" &&
-        bucket.landings.length === bucket.rows.length;
+      const hasLanding = join && landing?.metadata.state === "ready" && bucket.landings.length > 0;
       if (!hasLanding) reasons.push("SEO_LANDING_UNAVAILABLE");
       else if (!complete(landing.metadata)) reasons.push("SEO_LANDING_PARTIAL");
       const sessions = hasLanding ? sumNullable(bucket.landings.map((r) => r.sessions)) : null;

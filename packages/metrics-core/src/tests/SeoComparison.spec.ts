@@ -213,6 +213,102 @@ describe("SeoComparison", () => {
 });
 
 describe("SeoComparison mapping and definition boundaries", () => {
+  it.each(["search", "landing"] as const)(
+    "joins a %s alias through the effective page mapping",
+    async (source) => {
+      const input = seoFixtureInput();
+      input.mappings = [
+        ...input.mappings,
+        { ...input.mappings[0], page: "alias", sourceRef: "alias-registry" },
+      ];
+      for (const period of [input.baseline, input.current]) {
+        if (source === "search")
+          period.search.rows = period.search.rows.map((row, i) =>
+            i === 0 ? { ...row, page: "alias" } : row,
+          );
+        else if (period.landing)
+          period.landing.rows = period.landing.rows.map((row, i) =>
+            i === 0 ? { ...row, page: "alias" } : row,
+          );
+      }
+      const report = await compareSeo(input);
+      expect(report.diagnostics).not.toContain("SEO_LANDING_ROWS_WITHOUT_SEARCH");
+      expect(report.rows.find((row) => row.pageId === "start")).toMatchObject({
+        baseline: {
+          sessions: 17,
+          outcomes: 5,
+          valueRate: 5 / 17,
+          mappingRefs: ["alias-registry", "registry-v3"],
+        },
+        current: { sessions: 13, outcomes: 1, valueRate: 1 / 13, lcpP75: 2800 },
+        candidates: ["impressions-up-clicks-down", "value-rate-down"],
+      });
+    },
+  );
+  it("aggregates each mapped landing row once independently of search alias counts", async () => {
+    const input = seoFixtureInput();
+    input.mappings = [...input.mappings, { ...input.mappings[0], page: "alias" }];
+    input.current.search.rows = [
+      ...input.current.search.rows,
+      { ...input.current.search.rows[0], page: "alias", impressions: 50, clicks: 2 },
+    ];
+    let row = (await compareSeo(input)).rows.find((r) => r.pageId === "start");
+    expect(row?.current).toMatchObject({
+      impressions: 250,
+      sessions: 13,
+      outcomes: 1,
+      lcpP75: 2800,
+    });
+    input.current.search.rows = input.current.search.rows.filter((r) => r.page !== "alias");
+    if (input.current.landing)
+      input.current.landing.rows = [
+        ...input.current.landing.rows,
+        { page: "alias", device: "MOBILE", sessions: 7, outcomes: 2, lcpP75: 700 },
+      ];
+    row = (await compareSeo(input)).rows.find((r) => r.pageId === "start");
+    expect(row?.current).toMatchObject({
+      impressions: 200,
+      sessions: 20,
+      outcomes: 3,
+      valueRate: 3 / 20,
+      lcpP75: null,
+    });
+    expect(row?.current?.reasons).toContain("SEO_PERCENTILE_GRAIN_UNAVAILABLE");
+  });
+  it.each(["device", "template", "locale", "expired"] as const)(
+    "does not join landing aliases across a different %s",
+    async (difference) => {
+      const input = seoFixtureInput();
+      const mapping = { ...input.mappings[0], page: "alias" };
+      if (difference === "template") mapping.template = "other";
+      if (difference === "locale") mapping.locale = "fr";
+      if (difference === "expired")
+        mapping.effective = { ...mapping.effective, to: input.definition.currentWindow.from };
+      input.mappings = [...input.mappings, mapping];
+      if (input.current.landing)
+        input.current.landing.rows = input.current.landing.rows.map((row, i) =>
+          i === 0
+            ? { ...row, page: "alias", device: difference === "device" ? "DESKTOP" : row.device }
+            : row,
+        );
+      const report = await compareSeo(input);
+      expect(report.rows.find((r) => r.pageId === "start")?.current?.sessions).toBeNull();
+      expect(report.diagnostics).toContain("SEO_LANDING_ROWS_WITHOUT_SEARCH");
+    },
+  );
+  it("rejects ambiguous mappings used only by landing aliases", async () => {
+    const input = seoFixtureInput();
+    input.mappings = [
+      ...input.mappings,
+      { ...input.mappings[0], page: "alias" },
+      { ...input.mappings[0], page: "alias", pageId: "other" },
+    ];
+    if (input.current.landing)
+      input.current.landing.rows = input.current.landing.rows.map((row, i) =>
+        i === 0 ? { ...row, page: "alias" } : row,
+      );
+    await expect(compareSeo(input)).rejects.toMatchObject({ field: "mapping.ambiguous" });
+  });
   it("excludes mappings that cannot cover a whole source window and shows unmatched landing coverage", async () => {
     const input = seoFixtureInput();
     input.mappings = input.mappings.map((m) =>
