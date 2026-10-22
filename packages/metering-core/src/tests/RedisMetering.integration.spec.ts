@@ -1192,6 +1192,9 @@ describe.skipIf(!realResourcesEnabled)("Redis metering composition", () => {
         journal.claimNext({ ownerId: "worker", leaseDurationMs: 10_000 }),
       ).resolves.toBeNull();
       expect(JSON.parse((await connection.client.get(key)) ?? "{}")).toEqual(stored);
+      await expect(
+        connection.client.zscore("billable-journal:pending", event.eventId),
+      ).resolves.toBeNull();
       await expect(journal.getDiagnostics()).resolves.toMatchObject({ backlogCount: 1 });
     },
   );
