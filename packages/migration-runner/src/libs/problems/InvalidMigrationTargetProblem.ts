@@ -11,7 +11,7 @@ export class InvalidMigrationTargetProblem extends Problem {
       undefined,
       undefined,
       reason === "malformed"
-        ? `Migration rollback target must be a 14-digit timestamp id: ${target}`
+        ? `Migration target must be a 14-digit timestamp id: ${target}`
         : `Migration rollback target is not in the applied history: ${target}`,
       { extensions: { target, reason } },
     );
