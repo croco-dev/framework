@@ -6,8 +6,8 @@
       "classification": "pure-contract",
       "reason": "Pure normalized-row semantic comparison and registration of existing metric/ETL/warehouse contracts. Standard Intl and Web Crypto are required; no new provider, persistence or Host lifecycle is introduced.",
       "files": {
-        "packages/metrics-core/src/index.ts": "ed1dc78dec90620d4b3ce523ba00926681bf267caddad47f7150db8c285c0bc4",
-        "packages/metrics-core/src/runtime.ts": "26ca0b4d13a84b21af9c310675611b2b78281d8b14db090913a1a30cfef40a50",
+        "packages/metrics-core/src/index.ts": "64e85ea2b91a34670806f79185b635fe114d4b0c5329936dfb35157b5da1c7ed",
+        "packages/metrics-core/src/runtime.ts": "c3a11ce4ce49f610222f4387687e19964728deebe52c84f62e463b787429a77d",
         "packages/metrics-core/src/libs/seo/SeoComparison.ts": "a0cba06436782d8d2df9df3d614cbfa45196803a5ae309f29a942cfcb2e739a4",
         "packages/metrics-core/src/libs/seo/SeoSources.ts": "1a9267c40c22c8d496aeb51860a5927346c5621a273678a6f0147b9a067c9c70"
       },
@@ -98,7 +98,7 @@
       "classification": "protocol-render",
       "reason": "Browser-only React comparison UI over authenticated server operations. No deployed server Host or infrastructure adapter is introduced.",
       "files": {
-        "packages/admin-react/src/index.ts": "21eacec5db587445470ba3273f338baa5b728764073c984a48f350cb8aeef102",
+        "packages/admin-react/src/index.ts": "c2b9588916eca3042527f6191bc5ca34e6dae5ddd9ffbd4ba8ea6cdd846777b2",
         "packages/admin-react/src/libs/SeoWorkbench.tsx": "a71340a0386c942be9ba889309738b8833d3e5685a763f67227787f48516f16f"
       },
       "catalogRuntimes": ["browser", "node"],
@@ -143,7 +143,7 @@
       "classification": "pure-contract",
       "reason": "Generated registry includes the new SEO validation Problem code and source location; no failure handling, Host lifecycle or provider behavior changes.",
       "files": {
-        "packages/problems-core/src/generated/problem-code-registry.ts": "aec0fb9602e808a03eca5b1539578fc489fbaf58063034c2d82079df5a7395bc"
+        "packages/problems-core/src/generated/problem-code-registry.ts": "ec70df027a18fd00211a652c492681904407cd87dda236cf237d162aa96a7ffa"
       },
       "catalogRuntimes": [],
       "profiles": {
