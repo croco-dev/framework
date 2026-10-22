@@ -18,6 +18,7 @@ export async function createS3Fixture() {
   let failCleanup = false;
   let stallCleanup = false;
   let forbidden = false;
+  let missingBucket = false;
   let onPart: (() => void) | undefined;
   const error = (response: ServerResponse, status: number, code: string) => {
     response.writeHead(status, { "content-type": "application/xml" });
@@ -31,6 +32,10 @@ export async function createS3Fixture() {
       requests.push({ method: request.method ?? "", key, headers: request.headers, query });
       if (forbidden) {
         error(response, 403, "AccessDenied");
+        return;
+      }
+      if (missingBucket) {
+        error(response, 404, "NoSuchBucket");
         return;
       }
       const chunks: Buffer[] = [];
@@ -172,6 +177,9 @@ export async function createS3Fixture() {
     },
     set forbidden(value: boolean) {
       forbidden = value;
+    },
+    set missingBucket(value: boolean) {
+      missingBucket = value;
     },
     set onPart(value: (() => void) | undefined) {
       onPart = value;

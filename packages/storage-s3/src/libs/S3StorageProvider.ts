@@ -451,7 +451,8 @@ export class S3StorageProvider extends BaseStorageProvider {
       error &&
       typeof error === "object" &&
       "$metadata" in error &&
-      (error.$metadata as { httpStatusCode?: number })?.httpStatusCode === 404
+      (error.$metadata as { httpStatusCode?: number })?.httpStatusCode === 404 &&
+      !("name" in error && error.name === "NoSuchBucket")
     )
       this.throwNotFound(key);
     throw new S3StorageProblem(operation, { cause: error });

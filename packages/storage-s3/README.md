@@ -39,6 +39,7 @@ await runtime.dispose();
 ## 객체와 실패 계약
 
 - `put/get/getStream/delete/exists/getMetadata/getSignedUrl/getPublicUrl`이 공통 계약입니다. Web stream과 `Uint8Array`를 사용합니다. AWS가 404로 확인한 미존재는 `FileNotFoundProblem`이며 `exists()`는 `false`를 반환합니다. 사전·실행 중 취소는 `StorageOperationAbortedProblem`입니다. 403은 미존재로 숨기지 않습니다.
+- `get/getStream`에서 SDK가 식별한 `NoSuchBucket`은 객체 미존재로 바꾸지 않고 `S3StorageProblem`으로 전달하며 원인은 비공개 `cause`에 보존합니다([AWS 오류 구분 계약](https://docs.aws.amazon.com/AmazonS3/latest/developerguide/ErrorBestPractices.html)). `exists/getMetadata`의 HeadObject 404에는 오류 본문이 없어 없는 버킷과 없는 객체를 구분할 수 없습니다. 이 경우 `exists()`는 `false`, `getMetadata()`는 `FileNotFoundProblem`을 반환하므로 이 두 메서드를 버킷 설정·준비 상태 검사로 사용하지 마세요.
 - namespace는 모든 원격 key와 URL에 literal prefix로 적용합니다. `/`로 끝나는 prefix와 유효한 상대 key를 사용하며 합친 UTF-8 key는 1,024 bytes 이하입니다. 잘못된 Unicode key·prefix는 네트워크 요청 전에 `InvalidKeyProblem`으로 거부합니다. prefix는 IAM/tenant authorization을 대체하지 않습니다.
 - `S3StorageProvider.get/getStream`의 `range: { start, end? }`는 inclusive byte range입니다. `get`은 결과 전체를 메모리에 모으므로 큰 객체에는 `getStream`을 사용하세요.
 - `contentType`, `cacheControl`, 사용자 metadata를 전송하고 S3 ETag를 그대로 반환합니다. ETag를 MD5나 무결성 증명으로 해석하지 않습니다.

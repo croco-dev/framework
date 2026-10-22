@@ -421,6 +421,34 @@ describe("S3StorageProvider HTTP conformance", () => {
     ).rejects.toBeInstanceOf(S3StorageProblem);
   });
 
+  it.each(["get", "getStream"] as const)(
+    "keeps NoSuchBucket distinct from a missing object in %s",
+    async (operation) => {
+      fixture.missingBucket = true;
+      try {
+        await expect(provider()[operation]("missing-bucket")).rejects.toMatchObject({
+          code: "STORAGE_S3_FAILED",
+          cause: { name: "NoSuchBucket" },
+        });
+      } finally {
+        fixture.missingBucket = false;
+      }
+    },
+  );
+
+  it("retains the bodyless HEAD ambiguity for a missing bucket", async () => {
+    fixture.missingBucket = true;
+    try {
+      const p = provider();
+      expect(await p.exists("missing-bucket")).toBe(false);
+      await expect(p.getMetadata("missing-bucket")).rejects.toMatchObject({
+        code: "STORAGE_FILE_NOT_FOUND",
+      });
+    } finally {
+      fixture.missingBucket = false;
+    }
+  });
+
   it("keeps AccessDenied distinct from missing and redacts the public Problem", async () => {
     fixture.forbidden = true;
     try {
