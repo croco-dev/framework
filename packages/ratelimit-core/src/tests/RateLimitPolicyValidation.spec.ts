@@ -209,6 +209,31 @@ describe("RateLimitPolicyValidation", () => {
     }
   });
 
+  it("preserves inherited legacy policy fields during normalization", async () => {
+    class LegacyPolicy {
+      get name(): string {
+        return "legacy";
+      }
+      get limit(): number {
+        return 1;
+      }
+      get windowMs(): number {
+        return 10_000;
+      }
+    }
+    const store = new FixedWindowInMemoryStore({ now: () => 12_345, pruneIntervalMs: 0 });
+    const limiter = new RateLimiter(store, () => "key");
+    const policy = new LegacyPolicy();
+    const result = await limiter.checkWithKey("key", policy);
+    expect(result).toMatchObject({ success: true, limit: 1, remaining: 0, resetAtMs: 20_000 });
+    expect(result.degraded).toBeUndefined();
+    expect(await limiter.refundWithKey("key", policy, result.refundReceipt)).toMatchObject({
+      refunded: true,
+      remaining: 1,
+      resetAtMs: 20_000,
+    });
+  });
+
   it("validates legacy policies before store access", async () => {
     const store = new FixedWindowInMemoryStore({ pruneIntervalMs: 0 });
     const check = vi.spyOn(store, "check");

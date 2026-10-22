@@ -65,7 +65,15 @@ export function normalizeRateLimitPolicy(
   policy: RateLimitPolicy,
 ): FixedWindowPolicy | SlidingWindowPolicy | TokenBucketPolicy {
   validateRateLimitPolicy(policy);
-  return policy.algorithm === undefined ? { ...policy, algorithm: "fixed" } : policy;
+  return policy.algorithm === undefined
+    ? {
+        ...policy,
+        name: policy.name,
+        algorithm: "fixed",
+        limit: policy.limit,
+        windowMs: policy.windowMs,
+      }
+    : policy;
 }
 
 function absent(field: string, value: unknown): void {

@@ -9,7 +9,7 @@
         "packages/ratelimit-core/src/index.ts": "8cbc5735c83aeb809cdcff65f7f34c3aec6c8370199dd4008aad9bc8f59403b5",
         "packages/ratelimit-core/src/libs/RateLimiter.ts": "11f84e7f0734112d3bebefb5c64d1a96ad0501ceb87a57ca9a366c3a6401f268",
         "packages/ratelimit-core/src/libs/problems/RateLimitConfigProblems.ts": "54a42ce5ecceb7cbffb86288321cbfd5246c7bedc9580cedf0abd5f8ad26cd90",
-        "packages/ratelimit-core/src/libs/validateRateLimitPolicy.ts": "0c1867b383ced4108af57af968e90369e8c5bf1c43c14353a7cc2fe930915383"
+        "packages/ratelimit-core/src/libs/validateRateLimitPolicy.ts": "54937f94afa6fdb7874a4908f7bb68ce5ffa10988d50f7091acea19921948300"
       },
       "catalogRuntimes": [],
       "profiles": {
