@@ -120,11 +120,7 @@ export class FirstPartyReferralCreditGrantAdapter implements ReferralFulfillment
       this.resolveAccount({ side: input.intent.side, subject: input.subject, benefit }),
     ).catch(() => null);
     if (!accountId) return null;
-    const page = await this.ledger.getHistory(accountId, { limit: HISTORY_CHECK_LIMIT });
-    const grant = page.transactions.find(
-      (transaction: CreditTransaction) =>
-        transaction.idempotencyKey === input.idempotencyKey && transaction.kind === "grant",
-    );
+    const grant = await this.findGrant(accountId, input.idempotencyKey);
     return grant ? { grantRef: grant.id } : null;
   }
 
@@ -192,11 +188,7 @@ export class FirstPartyReferralCreditGrantAdapter implements ReferralFulfillment
         `mapped credit account '${accountId}' belongs to another tenant`,
       );
     }
-    const page = await this.ledger.getHistory(accountId, { limit: HISTORY_CHECK_LIMIT });
-    const grant = page.transactions.find(
-      (transaction: CreditTransaction) =>
-        transaction.idempotencyKey === input.intent.idempotencyKey && transaction.kind === "grant",
-    );
+    const grant = await this.findGrant(accountId, input.intent.idempotencyKey);
     if (!grant) {
       throw new InvalidReferralBenefitReturnProblem(
         `no confirmed grant found for '${input.intent.idempotencyKey}'`,
@@ -218,6 +210,29 @@ export class FirstPartyReferralCreditGrantAdapter implements ReferralFulfillment
         error instanceof Error ? error.message : String(error),
         { cause: error instanceof Error ? error : undefined },
       );
+    }
+  }
+
+  private async findGrant(
+    accountId: CreditAccountId,
+    idempotencyKey: string,
+  ): Promise<CreditTransaction | undefined> {
+    let page = await this.ledger.getHistory(accountId, { limit: HISTORY_CHECK_LIMIT });
+    // Pin the first read's upper bound so concurrent appends cannot extend this scan.
+    const atPosition = page.position;
+    while (true) {
+      const grant = page.transactions.find(
+        (transaction) =>
+          transaction.idempotencyKey === idempotencyKey && transaction.kind === "grant",
+      );
+      if (grant) return grant;
+      const last = page.transactions.at(-1);
+      if (!last || last.position >= atPosition) return undefined;
+      page = await this.ledger.getHistory(accountId, {
+        limit: HISTORY_CHECK_LIMIT,
+        afterPosition: last.position,
+        atPosition,
+      });
     }
   }
 }
