@@ -1,4 +1,4 @@
-import type { CreditAccountId, CreditLedgerService } from "@croco/credits-core";
+import type { CreditAccountId, CreditLedgerService, CreditTransaction } from "@croco/credits-core";
 import { creditAmount } from "@croco/credits-core";
 import { canonicalOfferAmount } from "./amounts";
 import type {
@@ -108,11 +108,30 @@ export class FirstPartyCreditGrantAdapter implements OfferFulfillmentPort {
       this.resolveAccount({ subject: input.subject, benefit }),
     ).catch(() => null);
     if (!accountId) return null;
-    const page = await this.ledger.getHistory(accountId, { limit: HISTORY_CHECK_LIMIT });
-    const grant = page.transactions.find(
-      (transaction) =>
-        transaction.idempotencyKey === input.idempotencyKey && transaction.kind === "grant",
-    );
+    const grant = await this.findGrant(accountId, input.idempotencyKey);
     return grant ? { grantRef: grant.id } : null;
+  }
+
+  private async findGrant(
+    accountId: CreditAccountId,
+    idempotencyKey: string,
+  ): Promise<CreditTransaction | undefined> {
+    let page = await this.ledger.getHistory(accountId, { limit: HISTORY_CHECK_LIMIT });
+    // Pin the first read's upper bound so concurrent appends cannot extend this scan.
+    const atPosition = page.position;
+    while (true) {
+      const grant = page.transactions.find(
+        (transaction) =>
+          transaction.idempotencyKey === idempotencyKey && transaction.kind === "grant",
+      );
+      if (grant) return grant;
+      const last = page.transactions.at(-1);
+      if (!last || last.position >= atPosition) return undefined;
+      page = await this.ledger.getHistory(accountId, {
+        limit: HISTORY_CHECK_LIMIT,
+        afterPosition: last.position,
+        atPosition,
+      });
+    }
   }
 }

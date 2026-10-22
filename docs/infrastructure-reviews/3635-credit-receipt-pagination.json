@@ -1,0 +1,117 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "promotions-core",
+      "classification": "runtime-adapter",
+      "reason": "Find existing credit grant receipts past the first history page, pinning the initial read position while concurrent transactions append. Existing grant, missing-receipt and compensating debit semantics are preserved.",
+      "files": {
+        "packages/promotions-core/src/libs/CreditGrantAdapter.ts": "0a89aee6344d212d5a5b51731f1d4c3e422af323f3fb85c7ae9575398464a9bf"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "unverified",
+          "reason": "Reuse the existing injected CreditLedgerService and its fixed-position history contract on the Kubernetes Node Host; no deployment runtime is declared by this package and no host execution is claimed.",
+          "providers": ["@croco/credits-core/CreditLedgerService"],
+          "constraints": [
+            "The injected ledger store must preserve ascending history pagination and atPosition snapshots.",
+            "Receipt scans perform sequential reads through the fixed initial position; invocation time grows with pre-existing account history.",
+            "The adapter remains a server entry point; credits-core uses node:crypto. No new Workers, live infrastructure or provider certification claim."
+          ],
+          "references": [
+            "packages/promotions-core/src/libs/CreditGrantAdapter.ts",
+            "packages/credits-core/src/libs/CreditLedgerStore.ts",
+            "docs/package-catalog.json"
+          ]
+        },
+        "aws-lambda": {
+          "result": "unverified",
+          "reason": "Reuse the existing injected CreditLedgerService and its fixed-position history contract on the Lambda Host; no deployment runtime is declared by this package and no host execution is claimed.",
+          "providers": ["@croco/credits-core/CreditLedgerService"],
+          "constraints": [
+            "The injected ledger store must preserve ascending history pagination and atPosition snapshots.",
+            "Receipt scans perform sequential reads through the fixed initial position; invocation time grows with pre-existing account history.",
+            "The adapter remains a server entry point; credits-core uses node:crypto. No new Workers, live infrastructure or provider certification claim."
+          ],
+          "references": [
+            "packages/promotions-core/src/libs/CreditGrantAdapter.ts",
+            "packages/credits-core/src/libs/CreditLedgerStore.ts",
+            "docs/package-catalog.json"
+          ]
+        },
+        "cloudflare": {
+          "result": "unverified",
+          "reason": "Reuse the existing injected CreditLedgerService and its fixed-position history contract on the Workers or explicit Node Container Host; no deployment runtime is declared by this package and no host execution is claimed.",
+          "providers": ["@croco/credits-core/CreditLedgerService"],
+          "constraints": [
+            "The injected ledger store must preserve ascending history pagination and atPosition snapshots.",
+            "Receipt scans perform sequential reads through the fixed initial position; invocation time grows with pre-existing account history.",
+            "The adapter remains a server entry point; credits-core uses node:crypto. No new Workers, live infrastructure or provider certification claim."
+          ],
+          "references": [
+            "packages/promotions-core/src/libs/CreditGrantAdapter.ts",
+            "packages/credits-core/src/libs/CreditLedgerStore.ts",
+            "docs/package-catalog.json"
+          ]
+        }
+      }
+    },
+    {
+      "package": "referral-core",
+      "classification": "runtime-adapter",
+      "reason": "Find existing credit grant receipts past the first history page, pinning the initial read position while concurrent transactions append. Existing grant, missing-receipt and compensating debit semantics are preserved.",
+      "files": {
+        "packages/referral-core/src/libs/ReferralCreditGrantAdapter.ts": "6de974fe2d13b7474bcb122f5f14f215804405de8d22e2063a68c4ea0f4b068b"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "unverified",
+          "reason": "Reuse the existing injected CreditLedgerService and its fixed-position history contract on the Kubernetes Node Host; no deployment runtime is declared by this package and no host execution is claimed.",
+          "providers": ["@croco/credits-core/CreditLedgerService"],
+          "constraints": [
+            "The injected ledger store must preserve ascending history pagination and atPosition snapshots.",
+            "Receipt scans perform sequential reads through the fixed initial position; invocation time grows with pre-existing account history.",
+            "The adapter remains a server entry point; credits-core uses node:crypto. No new Workers, live infrastructure or provider certification claim."
+          ],
+          "references": [
+            "packages/referral-core/src/libs/ReferralCreditGrantAdapter.ts",
+            "packages/credits-core/src/libs/CreditLedgerStore.ts",
+            "docs/package-catalog.json"
+          ]
+        },
+        "aws-lambda": {
+          "result": "unverified",
+          "reason": "Reuse the existing injected CreditLedgerService and its fixed-position history contract on the Lambda Host; no deployment runtime is declared by this package and no host execution is claimed.",
+          "providers": ["@croco/credits-core/CreditLedgerService"],
+          "constraints": [
+            "The injected ledger store must preserve ascending history pagination and atPosition snapshots.",
+            "Receipt scans perform sequential reads through the fixed initial position; invocation time grows with pre-existing account history.",
+            "The adapter remains a server entry point; credits-core uses node:crypto. No new Workers, live infrastructure or provider certification claim."
+          ],
+          "references": [
+            "packages/referral-core/src/libs/ReferralCreditGrantAdapter.ts",
+            "packages/credits-core/src/libs/CreditLedgerStore.ts",
+            "docs/package-catalog.json"
+          ]
+        },
+        "cloudflare": {
+          "result": "unverified",
+          "reason": "Reuse the existing injected CreditLedgerService and its fixed-position history contract on the Workers or explicit Node Container Host; no deployment runtime is declared by this package and no host execution is claimed.",
+          "providers": ["@croco/credits-core/CreditLedgerService"],
+          "constraints": [
+            "The injected ledger store must preserve ascending history pagination and atPosition snapshots.",
+            "Receipt scans perform sequential reads through the fixed initial position; invocation time grows with pre-existing account history.",
+            "The adapter remains a server entry point; credits-core uses node:crypto. No new Workers, live infrastructure or provider certification claim."
+          ],
+          "references": [
+            "packages/referral-core/src/libs/ReferralCreditGrantAdapter.ts",
+            "packages/credits-core/src/libs/CreditLedgerStore.ts",
+            "docs/package-catalog.json"
+          ]
+        }
+      }
+    }
+  ]
+}
