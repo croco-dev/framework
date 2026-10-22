@@ -5,11 +5,9 @@ prev: false
 title: "InMemoryReferralStore"
 ---
 
-Single-process referral store. The store itself serves as the transaction
-handle, and `transact` serializes work through a mutex so concurrent
-claims observe each other's first-valid insertions and budget
-reservations, matching the atomicity contract PostgreSQL implementations
-provide with unique constraints and row locks.
+Single-process store with serialized, isolated transactions. Each callback
+works on a deep snapshot; only a successful callback publishes its state.
+Reads on the store see committed state while the callback is running.
 
 ## Implements
 

@@ -5,10 +5,9 @@ prev: false
 title: "InMemoryPromotionStore"
 ---
 
-Single-process promotion store. The store itself serves as the transaction
-handle, and `transact` serializes work through a mutex so concurrent
-reserves observe each other's budget reservations, matching the atomicity
-contract PostgreSQL implementations provide with row locks.
+Single-process store with serialized, isolated transactions. Each callback
+works on a deep snapshot; only a successful callback publishes its state.
+Reads on the store see committed state while the callback is running.
 
 ## Implements
 
