@@ -611,6 +611,10 @@ Error if execution not found or source execution is not replayable
 
 > **resolveIndeterminateTimeout**(`token`, `reason`): `Promise`\<[`Execution`](/api/execution-core/src/interfaces/execution/)\>
 
+Records operator-confirmed recovery for a failed, timed-out, or legacy retrying indeterminate outcome.
+The historical method name is retained; all accepted statuses require the current attempt token and a nonblank reason.
+A settled ETL handler alone does not prove that an external receipt is resolved.
+
 #### Parameters
 
 ##### token
@@ -652,7 +656,7 @@ The subsequent start() call transitions to 'running' and increments attempts exa
 
 #### Throws
 
-Error if execution not found, maxAttempts exhausted, or timeout outcome remains indeterminate
+Error if execution not found, maxAttempts exhausted, or the outcome remains indeterminate
 
 #### Implementation of
 

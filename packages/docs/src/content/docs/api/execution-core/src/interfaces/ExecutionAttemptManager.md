@@ -97,6 +97,10 @@ Optional manager capability for attempt-fenced task mutations.
 
 > **resolveIndeterminateTimeout**(`token`, `reason`): `Promise`\<[`Execution`](/api/execution-core/src/interfaces/execution/)\>
 
+Records operator-confirmed recovery for a failed, timed-out, or legacy retrying indeterminate outcome.
+The historical method name is retained; all accepted statuses require the current attempt token and a nonblank reason.
+A settled ETL handler alone does not prove that an external receipt is resolved.
+
 #### Parameters
 
 ##### token
