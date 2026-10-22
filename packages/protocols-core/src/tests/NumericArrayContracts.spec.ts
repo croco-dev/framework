@@ -339,6 +339,28 @@ describe("representable integer boundaries", () => {
       z
         .number()
         .int()
+        .gt(2 ** 54 - 2),
+      z
+        .number()
+        .int()
+        .min(2 ** 54),
+      [2 ** 54 - 2, 2 ** 54, 2 ** 55],
+    ],
+    [
+      z
+        .number()
+        .int()
+        .lt(-(2 ** 54) + 2),
+      z
+        .number()
+        .int()
+        .max(-(2 ** 54)),
+      [-(2 ** 54) + 2, -(2 ** 54), -(2 ** 55)],
+    ],
+    [
+      z
+        .number()
+        .int()
         .gt(2 ** 53),
       z
         .number()
