@@ -1,5 +1,7 @@
 import type {
   CreateExecutionRecordParams,
+  ClaimExecutionReplayIdentityInput,
+  ExecutionReplayIdentityStore,
   Execution,
   ExecutionInspectionManager,
   ExecutionLogEntry,
@@ -34,7 +36,10 @@ import {
   createWorkflowRetryConsoleSource,
 } from "../index";
 
-class MemoryExecutionStore extends ExecutionStore implements ExecutionLogStore {
+class MemoryExecutionStore
+  extends ExecutionStore
+  implements ExecutionLogStore, ExecutionReplayIdentityStore
+{
   private executions = new Map<string, Execution>();
   private idCounter = 0;
 
@@ -89,6 +94,26 @@ class MemoryExecutionStore extends ExecutionStore implements ExecutionLogStore {
       }
     }
     return null;
+  }
+
+  async claimReplayIdentity(
+    id: string,
+    input: ClaimExecutionReplayIdentityInput,
+  ): Promise<Execution | null> {
+    const existing = this.executions.get(id);
+    if (
+      !existing ||
+      (existing.idempotencyKey !== undefined &&
+        (existing.idempotencyKey !== input.idempotencyKey ||
+          existing.requestFingerprint !== input.requestFingerprint))
+    )
+      return null;
+    for (const execution of this.executions.values()) {
+      if (execution.id !== id && execution.idempotencyKey === input.idempotencyKey) return null;
+    }
+    const claimed = { ...existing, ...input };
+    this.executions.set(id, claimed);
+    return claimed;
   }
 
   async update(id: string, data: Partial<Execution>): Promise<Execution> {
@@ -738,7 +763,7 @@ describe("RetryConsole", () => {
     expect(result.providerResult).toMatchObject({ id: existingReplay?.id });
   });
 
-  it("reuses a matching metadata-only replay beyond the default page without creating another", async () => {
+  it("adopts a matching metadata-only replay beyond the default page without creating another", async () => {
     const source = execution({ attempts: 3, maxAttempts: 3 });
     const legacy = execution({
       id: "exec-101",
@@ -784,12 +809,91 @@ describe("RetryConsole", () => {
         status: "succeeded",
         providerResult: { id: legacy.id, status: "completed" },
       });
-    expect(await store.findById(legacy.id)).toEqual(originalReceipt);
+    const claimed = await store.findById(legacy.id);
+    expect(claimed).toMatchObject({
+      idempotencyKey: expect.any(String),
+      requestFingerprint: expect.any(String),
+    });
+    expect({ ...claimed, idempotencyKey: undefined, requestFingerprint: undefined }).toEqual({
+      ...originalReceipt,
+      idempotencyKey: undefined,
+      requestFingerprint: undefined,
+    });
     expect(await recover({ ...request, audit: { ...audit, reason: "different" } })).toMatchObject({
       status: "failed",
       problem: { code: "execution/idempotency-conflict" },
     });
     expect(await store.list({ offset: 101 })).toHaveLength(0);
+  });
+
+  it("requires reconciliation for multiple historical receipts under one recovery key", async () => {
+    const original = execution({ attempts: 3, maxAttempts: 3 });
+    const receipts = ["exec-2", "exec-3"].map((id) =>
+      execution({
+        id,
+        status: "completed",
+        idempotencyKey: undefined,
+        replayOf: original.id,
+        metadata: {
+          ...original.metadata,
+          replayOf: original.id,
+          replayReason: audit.reason,
+          recoveryActorId: audit.actorId,
+          recoveryAuditIdempotencyKey: audit.idempotencyKey,
+        },
+      }),
+    );
+    const store = new MemoryExecutionStore([original, ...receipts]);
+    const console = createRetryConsole([
+      createTaskRetryConsoleSource(new ExecutionManagerImpl(store)),
+    ]);
+    expect(
+      await console.recover({
+        itemId: original.id,
+        actionId: "replay",
+        permission: { granted: true, descriptor: permission("replay", "task", original.id) },
+        audit,
+      }),
+    ).toMatchObject({ status: "failed", problem: { code: "execution/idempotency-conflict" } });
+    expect((await store.list()).filter((item) => item.replayOf === original.id)).toHaveLength(2);
+    for (const receipt of receipts)
+      expect((await store.findById(receipt.id))?.idempotencyKey).toBeUndefined();
+  });
+
+  it("counts an overlapping page of the same historical receipt only once", async () => {
+    const original = execution({ attempts: 3, maxAttempts: 3 });
+    const legacy = execution({
+      id: "exec-2",
+      status: "completed",
+      idempotencyKey: undefined,
+      replayOf: original.id,
+      metadata: {
+        ...original.metadata,
+        replayOf: original.id,
+        replayReason: audit.reason,
+        recoveryActorId: audit.actorId,
+        recoveryAuditIdempotencyKey: audit.idempotencyKey,
+      },
+    });
+    class OverlappingStore extends MemoryExecutionStore {
+      override async list(options: ListExecutionsOptions = {}): Promise<Execution[]> {
+        if (options.replayOf === original.id) return (options.offset ?? 0) < 2 ? [legacy] : [];
+        return super.list(options);
+      }
+    }
+    const store = new OverlappingStore([original, legacy]);
+    const console = createRetryConsole([
+      createTaskRetryConsoleSource(new ExecutionManagerImpl(store)),
+    ]);
+    expect(
+      await console.recover({
+        itemId: original.id,
+        actionId: "replay",
+        permission: { granted: true, descriptor: permission("replay", "task", original.id) },
+        audit,
+      }),
+    ).toMatchObject({ status: "succeeded", providerResult: { id: legacy.id } });
+    expect((await store.findById(legacy.id))?.idempotencyKey).toBeTruthy();
   });
 
   it("keeps non-retryable failures distinct and preserves Problem details", async () => {

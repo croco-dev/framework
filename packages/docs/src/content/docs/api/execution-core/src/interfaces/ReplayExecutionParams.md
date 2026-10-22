@@ -19,13 +19,14 @@ Omitting the key preserves independent replay creation.
 
 ---
 
-### legacyReplayId?
+### legacyReplayIds?
 
-> `optional` **legacyReplayId?**: `string`
+> `optional` **legacyReplayIds?**: readonly `string`[]
 
-Optional pre-key replay receipt to reuse during migration. Requires idempotencyKey; the manager
-validates its source, payload and effective replay metadata without changing the receipt.
-A conflicting record is never overwritten.
+Existing replay receipt candidates for recovering a pre-key audit identity. A non-empty list
+requires idempotencyKey and an atomic replay-identity store. An existing key wins; otherwise
+exactly one distinct receipt must match source, payload and effective metadata.
+Only key/fingerprint are assigned; audit, payload and outcome remain unchanged.
 
 ---
 

@@ -90,3 +90,11 @@ scoped key 생성 사이에 두 실행이 만들어질 수 있으므로 혼합 �
 
 - `ExecutionRow`, 조회 결과 행 타입입니다.
 - `NewExecutionRow`, 삽입 입력 행 타입입니다.
+
+## Legacy replay identity claims
+
+`DrizzleExecutionStore` implements `ExecutionReplayIdentityStore` using the existing execution-key
+unique index and one conditional UPDATE. A pre-key replay can acquire one key/fingerprint, while
+matching claims reuse it and different bindings conflict. Payload, audit logs, metadata and execution
+state are preserved. No schema migration or separate transaction is introduced. A unique-write conflict
+raises `execution/idempotency-conflict`; a caller-owned transaction must roll back before retrying.

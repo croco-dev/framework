@@ -74,8 +74,10 @@ request fingerprint. Replay permission and audit checks still run for every requ
 Sources without that declaration and other recovery actions coalesce concurrent calls within one
 console by item, action and audit key.
 Their providers remain responsible for durable idempotency. Results leave the in-flight map as soon
-as they settle. Historical metadata-only replays are reused unchanged only after their source, payload and effective metadata
-match the request; differing or incomplete historical evidence conflicts without creating a replay.
+as they settle. Historical metadata-only replays are adopted only after their source, payload and effective metadata
+match the request. The provider atomically assigns key/fingerprint while preserving payload, audit and
+outcome; unsupported claims, conflicting evidence and multiple receipts require reconciliation without
+creating a replay. Every recovery writer must use the keyed path for cross-replica safety.
 
 ## Outbound webhook adapters
 

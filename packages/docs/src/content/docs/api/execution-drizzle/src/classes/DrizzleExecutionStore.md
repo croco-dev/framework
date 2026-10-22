@@ -22,6 +22,7 @@ title: "DrizzleExecutionStore"
 - [`ExecutionLogStore`](/api/execution-core/src/interfaces/executionlogstore/)
 - [`ExecutionContinuationStore`](/api/execution-core/src/interfaces/executioncontinuationstore/)
 - [`ExecutionAttemptStore`](/api/execution-core/src/interfaces/executionattemptstore/)
+- [`ExecutionReplayIdentityStore`](/api/execution-core/src/interfaces/executionreplayidentitystore/)
 
 ## Constructors
 
@@ -130,6 +131,32 @@ Drizzle 클라이언트를 받아 실행 저장소를 초기화합니다.
 #### Implementation of
 
 [`ExecutionAttemptStore`](/api/execution-core/src/interfaces/executionattemptstore/).[`appendLogIfStatusAndAttempt`](/api/execution-core/src/interfaces/executionattemptstore/#appendlogifstatusandattempt)
+
+---
+
+### claimReplayIdentity()
+
+> **claimReplayIdentity**(`id`, `input`): `Promise`\<[`Execution`](/api/execution-core/src/interfaces/execution/) \| `null`\>
+
+Bind a legacy receipt using the existing unique index, preserving its audit and execution state.
+
+#### Parameters
+
+##### id
+
+`string`
+
+##### input
+
+[`ClaimExecutionReplayIdentityInput`](/api/execution-core/src/type-aliases/claimexecutionreplayidentityinput/)
+
+#### Returns
+
+`Promise`\<[`Execution`](/api/execution-core/src/interfaces/execution/) \| `null`\>
+
+#### Implementation of
+
+[`ExecutionReplayIdentityStore`](/api/execution-core/src/interfaces/executionreplayidentitystore/).[`claimReplayIdentity`](/api/execution-core/src/interfaces/executionreplayidentitystore/#claimreplayidentity)
 
 ---
 

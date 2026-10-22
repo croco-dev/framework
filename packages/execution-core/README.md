@@ -327,8 +327,11 @@ console.log(replays[0].id === replayed.id); // true
 key는 원본 실행별로 분리되며 저장소의 원자적 create/reuse가 replay 하나만 보존합니다.
 같은 key에 payload·reason·metadata가 다르면 `execution/idempotency-conflict`가 발생합니다.
 생성 시각은 비교에서 제외하며, key를 생략하면 호출마다 독립 replay를 생성합니다.
-기존 replay를 이관할 때는 `legacyReplayId`를 함께 전달할 수 있습니다. 원본·payload·metadata가
-일치하는 기록은 key를 소급 부여하지 않고 그대로 재사용하며, 불일치는 충돌로 처리합니다.
+기존 replay를 이관할 때는 `legacyReplayIds`를 함께 전달할 수 있습니다. 기존 key 소유자를 먼저 확인하고,
+아직 소유자가 없으면 중복을 제거한 후보가 하나이며 원본·payload·metadata가 일치해야 합니다.
+`ExecutionReplayIdentityStore`를 구현한 저장소가 key·fingerprint만 원자적으로 연결하며 원래 payload·audit·상태는 유지합니다.
+기존 key의 의미가 다르거나 저장소가 원자적 연결을 지원하지 않으면 충돌로 처리합니다.
+Drizzle은 기존 unique index와 조건부 UPDATE를 사용합니다. unique 충돌이 난 caller-owned transaction은 rollback 후 재시도해야 합니다.
 
 ### Jobs v1 운영 표면
 

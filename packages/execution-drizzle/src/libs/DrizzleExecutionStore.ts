@@ -2,6 +2,7 @@ import {
   type AcquireExecutionContinuationInput,
   type AcquireExecutionContinuationResult,
   type CreateExecutionRecordParams,
+  type ClaimExecutionReplayIdentityInput,
   type Execution,
   type ExecutionAttemptStore,
   type ExecutionContinuationClaim,
@@ -9,6 +10,7 @@ import {
   type ExecutionContinuationStore,
   type ExecutionLogEntry,
   type ExecutionLogStore,
+  type ExecutionReplayIdentityStore,
   ExecutionProblems,
   type ExecutionStatus,
   ExecutionStore,
@@ -17,7 +19,7 @@ import {
   prepareExecutionCheckpoint,
   type UpdateClaimedExecutionContinuationInput,
 } from "@croco/execution-core";
-import { and, asc, eq, gt, isNull, sql } from "drizzle-orm";
+import { and, asc, eq, gt, isNull, or, sql } from "drizzle-orm";
 import { ulid } from "ulid";
 import type { ExecutionRow, NewExecutionRow } from "./schema";
 import { executions } from "./schema";
@@ -141,7 +143,11 @@ function logAppendSet(entry: ExecutionLogEntry): Record<string, unknown> {
  */
 export class DrizzleExecutionStore<TDb extends ExecutionDb>
   extends ExecutionStore
-  implements ExecutionLogStore, ExecutionContinuationStore, ExecutionAttemptStore
+  implements
+    ExecutionLogStore,
+    ExecutionContinuationStore,
+    ExecutionAttemptStore,
+    ExecutionReplayIdentityStore
 {
   /**
    * Drizzle 클라이언트를 받아 실행 저장소를 초기화합니다.
@@ -242,6 +248,39 @@ export class DrizzleExecutionStore<TDb extends ExecutionDb>
       .limit(1)) as ExecutionRow[];
 
     return result.length > 0 ? this.mapToExecution(result[0]) : null;
+  }
+
+  /** Bind a legacy receipt using the existing unique index, preserving its audit and execution state. */
+  async claimReplayIdentity(
+    id: string,
+    input: ClaimExecutionReplayIdentityInput,
+  ): Promise<Execution | null> {
+    try {
+      const rows = (await this.dbOp
+        .update(executions)
+        .set({ idempotencyKey: input.idempotencyKey, requestFingerprint: input.requestFingerprint })
+        .where(
+          and(
+            eq(executions.id, id),
+            or(
+              isNull(executions.idempotencyKey),
+              and(
+                eq(executions.idempotencyKey, input.idempotencyKey),
+                eq(executions.requestFingerprint, input.requestFingerprint),
+              ),
+            ),
+          ),
+        )
+        .returning()) as ExecutionRow[];
+      return rows.length === 0 ? null : this.mapToExecution(rows[0]);
+    } catch (error) {
+      if (isIdempotencyKeyUniqueViolation(error)) {
+        throw ExecutionProblems.idempotencyConflict(
+          "Replay identity is already owned by another execution; roll back the transaction before retrying",
+        );
+      }
+      throw error;
+    }
   }
 
   /**

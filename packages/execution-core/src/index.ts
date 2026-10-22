@@ -63,10 +63,12 @@ export type {
   AcquireExecutionContinuationInput,
   AcquireExecutionContinuationResult,
   ClaimedExecutionContinuationUpdate,
+  ClaimExecutionReplayIdentityInput,
   ExecutionContinuationAcquired,
   ExecutionContinuationStore,
   ExecutionAttemptStore,
   ExecutionLogStore,
+  ExecutionReplayIdentityStore,
   UpdateClaimedExecutionContinuationInput,
 } from "./libs/interfaces/ExecutionStore";
 export type {

@@ -14,6 +14,7 @@ import type {
   ExecutionAttemptStore,
   ExecutionContinuationStore,
   ExecutionLogStore,
+  ExecutionReplayIdentityStore,
   ExecutionStore,
 } from "./interfaces/ExecutionStore";
 import type {
@@ -121,6 +122,13 @@ function supportsExecutionLogStore(
 ): store is ExecutionStore & ExecutionLogStore {
   const candidate = store as ExecutionStore & { appendLog?: unknown };
   return typeof candidate.appendLog === "function";
+}
+
+function supportsExecutionReplayIdentityStore(
+  store: ExecutionStore,
+): store is ExecutionStore & ExecutionReplayIdentityStore {
+  const candidate = store as ExecutionStore & { claimReplayIdentity?: unknown };
+  return typeof candidate.claimReplayIdentity === "function";
 }
 
 function supportsExecutionContinuationStore(
@@ -915,19 +923,29 @@ export class ExecutionManagerImpl
           }),
         )
       : undefined;
-    if (params.legacyReplayId) {
+    const legacyReplayIds = [...new Set(params.legacyReplayIds ?? [])];
+    if (legacyReplayIds.length > 0) {
       if (!idempotencyKey || !requestFingerprint) {
         throw ExecutionProblems.idempotencyConflict(
           "Reusing a legacy replay requires an idempotency key",
         );
       }
-      const legacy = await this.findExisting(params.legacyReplayId);
-      if (
-        legacy.idempotencyKey === idempotencyKey &&
-        legacy.requestFingerprint === requestFingerprint &&
-        legacy.replayOf === id
-      )
+      const existing = await this.store.findByIdempotencyKey(idempotencyKey);
+      if (existing) {
+        this.assertMatchingReplayIdentity(existing, id, idempotencyKey, requestFingerprint);
+        return existing;
+      }
+      const [legacyReplayId] = legacyReplayIds;
+      if (legacyReplayIds.length !== 1 || legacyReplayId === undefined) {
+        throw ExecutionProblems.idempotencyConflict(
+          "Multiple replay receipts require reconciliation before this recovery key can be claimed",
+        );
+      }
+      const legacy = await this.findExisting(legacyReplayId);
+      if (legacy.idempotencyKey !== undefined) {
+        this.assertMatchingReplayIdentity(legacy, id, idempotencyKey, requestFingerprint);
         return legacy;
+      }
       const { replayedAt: _legacyTimestamp, ...legacyMetadata } = legacy.metadata ?? {};
       const { replayedAt: _sourceTimestamp, ...sourceMetadata } = execution.metadata ?? {};
       const { replayedAt: _requestTimestamp, ...requestMetadata } = params.metadata ?? {};
@@ -938,7 +956,6 @@ export class ExecutionManagerImpl
         ...(params.reason ? { replayReason: params.reason } : {}),
       };
       if (
-        legacy.idempotencyKey !== undefined ||
         legacy.replayOf !== id ||
         legacy.type !== execution.type ||
         (await legacyExecutionRequestFingerprint(legacy.type, {
@@ -954,9 +971,23 @@ export class ExecutionManagerImpl
           "Legacy replay does not match the recovery request",
         );
       }
-      // Pre-key receipts are immutable evidence: reuse after validation without re-keying a
-      // record that another caller may still address through its historical identity.
-      return legacy;
+      if (!supportsExecutionReplayIdentityStore(this.store)) {
+        throw ExecutionProblems.idempotencyConflict(
+          "This store cannot atomically claim a legacy replay identity; reconcile the receipt before retrying",
+        );
+      }
+      const claimed = await this.store.claimReplayIdentity(legacy.id, {
+        idempotencyKey,
+        requestFingerprint,
+      });
+      const winner = claimed ?? (await this.store.findByIdempotencyKey(idempotencyKey));
+      if (!winner) {
+        throw ExecutionProblems.idempotencyConflict(
+          "Legacy replay identity was claimed by another request",
+        );
+      }
+      this.assertMatchingReplayIdentity(winner, id, idempotencyKey, requestFingerprint);
+      return winner;
     }
     const replayed = await this.store.create({
       type: execution.type,
@@ -983,15 +1014,27 @@ export class ExecutionManagerImpl
         },
       ],
     });
-    if (
-      idempotencyKey &&
-      (replayed.replayOf !== id || replayed.requestFingerprint !== requestFingerprint)
-    ) {
-      throw ExecutionProblems.idempotencyConflict(
-        "Replay idempotency key was reused for a different recovery request",
-      );
+    if (idempotencyKey && requestFingerprint !== undefined) {
+      this.assertMatchingReplayIdentity(replayed, id, idempotencyKey, requestFingerprint);
     }
     return replayed;
+  }
+
+  private assertMatchingReplayIdentity(
+    execution: Execution,
+    sourceId: string,
+    idempotencyKey: string,
+    requestFingerprint: string,
+  ): void {
+    if (
+      execution.replayOf === sourceId &&
+      execution.idempotencyKey === idempotencyKey &&
+      execution.requestFingerprint === requestFingerprint
+    )
+      return;
+    throw ExecutionProblems.idempotencyConflict(
+      "Replay idempotency key was reused for a different recovery request",
+    );
   }
 
   private async findExisting(id: string): Promise<Execution> {

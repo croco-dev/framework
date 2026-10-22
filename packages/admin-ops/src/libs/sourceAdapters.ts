@@ -380,14 +380,14 @@ async function recoverExecution(
     }
 
     // Preserve pre-key recovery receipts, including those beyond a provider's default page.
-    const legacyReplay = (await listAllExecutions(manager, { replayOf: item.id })).find(
+    const receipts = (await listAllExecutions(manager, { replayOf: item.id })).filter(
       (execution) =>
-        execution.idempotencyKey === undefined &&
         metadataString(execution, "recoveryAuditIdempotencyKey") === request.audit.idempotencyKey,
     );
     const replayed = await manager.replay(item.id, {
       ...replayParams(request),
-      legacyReplayId: legacyReplay?.id,
+      legacyReplayIds:
+        receipts.length === 0 ? undefined : receipts.map((execution) => execution.id),
     });
     return {
       item: retryConsoleItemFromExecution(replayed, options, manager),
