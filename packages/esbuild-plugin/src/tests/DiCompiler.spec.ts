@@ -963,6 +963,7 @@ describe("compileDiGraph", () => {
         // repository dependency-audit-policy gate owns vulnerability checks.
         "--no-audit",
         "--no-package-lock",
+        "--offline",
         path.join(tarballDir, tarballName),
       ],
       { cwd: appDir, stdio: "pipe" },
