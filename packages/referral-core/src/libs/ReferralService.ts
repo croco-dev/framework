@@ -547,7 +547,8 @@ export class ReferralService {
    * Reconciles benefit intents whose grant outcome is unclear. A visible grant
    * completes the side; otherwise `granting` sides safely retry the idempotent
    * grant, while `unknown` sides stay locked for an explicit operator decision.
-   * Reconciliation never releases the budget or pays again on its own.
+   * Recovery retains the external idempotency key and fences superseded attempts.
+   * Reconciliation never releases the budget or retries unknown outcomes.
    */
   async reconcileBenefits(input: {
     readonly attributionId: string;
@@ -556,6 +557,13 @@ export class ReferralService {
     const now = input.now ?? this.now();
     const stored = await this.store.getAttribution(input.attributionId);
     if (!stored) throw new ReferralAttributionNotFoundProblem(input.attributionId);
+    if (
+      stored.state !== "qualified" &&
+      stored.state !== "benefits-pending" &&
+      stored.state !== "benefits-partial" &&
+      stored.state !== "indeterminate"
+    )
+      return stored;
     const intents = await this.store.transact((tx) =>
       tx.listBenefitIntentsForAttribution(stored.id),
     );
@@ -567,17 +575,18 @@ export class ReferralService {
         subject: intent.subject,
       });
       if (observed) {
-        await this.store.transact((tx) =>
-          tx.compareAndSetBenefitIntent(
-            intent.id,
-            ["granting", "unknown"],
-            { status: "granted", receipt: observed.grantRef, reason: undefined },
-            now,
-          ),
+        await this.transitionBenefitAttempt(
+          intent,
+          { status: "granted", receipt: observed.grantRef, reason: undefined },
+          now,
+          { action: "benefit.granted", reason: `grant ${observed.grantRef}` },
         );
       } else if (intent.status === "granting") {
-        await this.fulfillBenefitSide(stored.id, intent.side, now);
+        await this.fulfillBenefitSide(stored.id, intent.side, now, intent);
       }
+    }
+    for (const side of ["referrer", "recipient"] as const) {
+      await this.fulfillBenefitSide(stored.id, side, now);
     }
     await this.refreshAttributionState(stored.id, now);
     const refreshed = await this.store.getAttribution(stored.id);
@@ -1112,6 +1121,7 @@ export class ReferralService {
     attributionId: string,
     side: ReferralBenefitSide,
     now: Date,
+    recovery?: ReferralBenefitIntent,
   ): Promise<void> {
     const stored = await this.store.getAttribution(attributionId);
     if (!stored) throw new ReferralAttributionNotFoundProblem(attributionId);
@@ -1140,96 +1150,115 @@ export class ReferralService {
       await this.refreshAttributionState(attributionId, now);
       return;
     }
-    await this.store.transact((tx) =>
-      tx.compareAndSetBenefitIntent(intent.id, ["pending"], { status: "granting" }, now),
+    if (intent.status === "granting" && !recovery) return;
+    const claimed = await this.transitionBenefitAttempt(
+      recovery ?? intent,
+      {
+        status: "granting",
+        fulfillmentAttempt: ((recovery ?? intent).fulfillmentAttempt ?? 0) + 1,
+      },
+      now,
     );
+    if (!claimed) return;
     let result: Awaited<ReturnType<ReferralFulfillmentPort["fulfill"]>>;
     try {
       result = await this.fulfillment.fulfill({
         idempotencyKey: intent.idempotencyKey,
-        intent,
+        intent: claimed,
         attribution: stored,
         program,
         subject: intent.subject,
       });
     } catch (error) {
-      await this.store.transact((tx) =>
-        tx.compareAndSetBenefitIntent(
-          intent.id,
-          ["granting"],
-          {
-            status: "unknown",
-            reason: error instanceof Error ? error.message : String(error),
-          },
-          now,
-        ),
+      await this.transitionBenefitAttempt(
+        claimed,
+        {
+          status: "unknown",
+          reason: error instanceof Error ? error.message : String(error),
+        },
+        now,
       );
       await this.refreshAttributionState(attributionId, now);
       throw error;
     }
     switch (result.outcome) {
       case "granted":
-        await this.store.transact(async (tx) => {
-          await tx.compareAndSetBenefitIntent(
-            intent.id,
-            ["granting"],
-            { status: "granted", receipt: result.grantRef, reason: undefined },
-            now,
-          );
-          await tx.recordAudit(
-            this.audit("benefit", intent.id, "benefit.granted", program, {
-              actorId: intent.subject.id,
-              reason: `grant ${result.grantRef}`,
-              idempotencyKey: intent.idempotencyKey,
-            }),
-          );
-        });
+        await this.transitionBenefitAttempt(
+          claimed,
+          { status: "granted", receipt: result.grantRef, reason: undefined },
+          now,
+          { action: "benefit.granted", reason: `grant ${result.grantRef}` },
+        );
         break;
       case "skipped":
-        await this.store.transact((tx) =>
-          tx.compareAndSetBenefitIntent(
-            intent.id,
-            ["granting"],
-            { status: "skipped", reason: result.reason },
-            now,
-          ),
+      case "unknown":
+        await this.transitionBenefitAttempt(
+          claimed,
+          { status: result.outcome, reason: result.reason },
+          now,
         );
         break;
       case "failed":
-        await this.store.transact(async (tx) => {
-          await tx.compareAndSetBenefitIntent(
-            intent.id,
-            ["granting"],
-            { status: "failed", reason: result.reason },
-            now,
-          );
-          await tx.recordAudit(
-            this.audit("benefit", intent.id, "benefit.failed", program, {
-              actorId: intent.subject.id,
-              reason: result.reason,
-              idempotencyKey: intent.idempotencyKey,
-            }),
-          );
-        });
-        break;
-      case "unknown":
-        await this.store.transact((tx) =>
-          tx.compareAndSetBenefitIntent(
-            intent.id,
-            ["granting"],
-            { status: "unknown", reason: result.reason },
-            now,
-          ),
+        await this.transitionBenefitAttempt(
+          claimed,
+          { status: "failed", reason: result.reason },
+          now,
+          { action: "benefit.failed", reason: result.reason },
         );
         break;
     }
     await this.refreshAttributionState(attributionId, now);
   }
 
+  /** CAS fences both competing recovery claims and responses from a superseded owner. */
+  private async transitionBenefitAttempt(
+    intent: ReferralBenefitIntent,
+    patch: Parameters<ReferralTx["compareAndSetBenefitIntent"]>[2],
+    now: Date,
+    audit?: { readonly action: string; readonly reason: string },
+  ): Promise<ReferralBenefitIntent | null> {
+    try {
+      return await this.store.transact(async (tx) => {
+        const attribution = await tx.getAttribution(intent.attributionId);
+        if (!attribution) throw new ReferralAttributionNotFoundProblem(intent.attributionId);
+        if (
+          attribution.state !== "qualified" &&
+          attribution.state !== "benefits-pending" &&
+          attribution.state !== "benefits-partial" &&
+          attribution.state !== "indeterminate"
+        )
+          return null;
+        const updated = await tx.compareAndSetBenefitIntent(
+          intent.id,
+          [intent.status],
+          patch,
+          now,
+          intent.fulfillmentAttempt ?? 0,
+        );
+        if (audit) {
+          const program = await this.programFor(tx, attribution);
+          await tx.recordAudit(
+            this.audit("benefit", intent.id, audit.action, program, {
+              actorId: intent.subject.id,
+              reason: audit.reason,
+              idempotencyKey: intent.idempotencyKey,
+            }),
+          );
+        }
+        return updated;
+      });
+    } catch (error) {
+      if (error instanceof ReferralAttributionStateConflictProblem) return null;
+      throw error;
+    }
+  }
+
   private async refreshAttributionState(attributionId: string, now: Date): Promise<void> {
     await this.store.transact(async (tx) => {
       const stored = await tx.getAttribution(attributionId);
       if (!stored) throw new ReferralAttributionNotFoundProblem(attributionId);
+      if (stored.state === "fulfilled" || stored.state === "rejected" || stored.state === "expired")
+        return;
       const program = await this.programFor(tx, stored);
       const intents = await tx.listBenefitIntentsForAttribution(stored.id);
       if (intents.length === 0) return;

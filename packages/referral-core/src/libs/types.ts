@@ -177,6 +177,8 @@ export type ReferralBenefitIntent = {
   readonly subject: ReferralSubject;
   readonly benefit: ReferralBenefit;
   readonly status: ReferralBenefitIntentStatus;
+  /** Monotonic owner of an external fulfillment attempt; absent legacy values mean zero. */
+  readonly fulfillmentAttempt?: number;
   readonly accountRef?: string;
   readonly receipt?: string;
   readonly reason?: string;
@@ -233,7 +235,7 @@ export type ReferralFulfillmentResult =
 /**
  * External benefit boundary. `fulfill` must be idempotent on
  * `idempotencyKey`: a retry after response loss returns the original grant
- * instead of paying twice. `check` reports a previously completed grant or
+ * instead of paying twice, including overlapping attempts from separate processes. `check` reports a previously completed grant or
  * null when nothing durable is visible; it never pays. `reverse` posts a
  * compensating return for an already granted side; it never deletes history.
  */

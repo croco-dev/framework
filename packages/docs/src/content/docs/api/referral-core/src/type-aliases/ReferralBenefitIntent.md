@@ -33,6 +33,14 @@ title: "ReferralBenefitIntent"
 
 ---
 
+### fulfillmentAttempt?
+
+> `readonly` `optional` **fulfillmentAttempt?**: `number`
+
+Monotonic owner of an external fulfillment attempt; absent legacy values mean zero.
+
+---
+
 ### id
 
 > `readonly` **id**: `string`
