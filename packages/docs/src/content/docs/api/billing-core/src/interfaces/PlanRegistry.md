@@ -83,7 +83,9 @@ Get the identified plan version effective at a historical instant.
 
 > **getPlanVersion**(`ref`): `Promise`\<[`PlanVersionDefinition`](/api/billing-core/src/type-aliases/planversiondefinition/) \| `null`\>
 
-Get an immutable plan version by its pinned reference.
+Get an immutable plan version by its pinned reference from authoritative storage.
+A null result must establish absence after settled publication attempts; a stale
+replica/cache or an unresolved remote write must not be reported as absence.
 
 #### Parameters
 
@@ -101,7 +103,8 @@ Get an immutable plan version by its pinned reference.
 
 > **publishPlanVersion**(`planVersion`): `Promise`\<`void`\>
 
-Publish a plan version exactly once.
+Publish a plan version exactly once. Settle only after all writes have stopped;
+an ambiguous response must be reconciled before allowing cancellation.
 
 #### Parameters
 

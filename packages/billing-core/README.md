@@ -273,12 +273,22 @@ release store가 일시적으로 실패해도 같은 command가 intent와 이미
 publication evidence를 복구합니다. 종료 시점이 없는 기존 published version은 다음 version의
 `effectiveAt`에서 암시적으로 닫히므로, 기존 version을 수정하지 않고 successor를 게시할 수 있습니다.
 Registry가 deterministic validation/conflict Problem을 반환하면 intent는 audit failure로 전환되어 draft가
-복구됩니다. 결과가 불명확한 외부 registry failure는 intent를 유지하며, 운영자가 no-write를 확인한 뒤
-`cancelPublish()`로 명시적으로 해제할 수 있습니다.
+복구됩니다. 결과가 불명확한 registry failure는 intent를 유지합니다. `cancelPublish()`는 같은 release의
+publish가 끝날 때까지 기다린 뒤 authoritative `getPlanVersion()`으로 부재를 확인한 경우만 intent를
+해제합니다. 버전이 있으면 `PlanVersionAlreadyPublishedProblem`, 조회가 실패하면 그 오류를 반환하며
+intent를 보존합니다. 이 경우 원래 publish command를 재시도해 publication evidence를 복구합니다.
+registry adapter는 완료된 게시를 누락하는 replica/cache를 조회에 사용하면 안 되며, publish Promise가
+settle된 뒤 추적되지 않은 write를 계속 실행하면 안 됩니다. 이런 결과 확정 보장이 없는 원격 adapter는
+먼저 provider의 operation-status/fencing 경계에서 결과를 확정해야 합니다.
 
 `InMemoryPlanReleaseStore`는 테스트와 로컬 composition용입니다. 운영 adapter는 revision CAS, 동일 plan
 family의 effective-period 제약, transition과 event outbox append를 하나의 원자적 저장으로 구현해야 하며,
-transition history, publication intent/evidence, pending event를 audit record로 보존해야 합니다. 상태 변경은
+transition history, publication intent/evidence, pending event를 audit record로 보존해야 합니다.
+`withPublicationLock(ref, operation)`은 모든 service instance/worker 사이에서 해당 ref의 callback을
+직렬화하고, 성공·실패 모두에서 잠금을 해제해야 합니다. 프로세스 내부 mutex는 운영용 분산 잠금을
+대체하지 않습니다. lease를 잃은 worker는 다음 callback이 registry에 쓰기 전에 fencing되어야 합니다.
+기존 custom store는 이 메서드를 구현해야 합니다. callback은 잠금을 재진입하지 않습니다. event delivery는
+잠금 해제 후 실행됩니다. `InMemoryPlanReleaseStore`의 잠금은 같은 store instance에서만 유효합니다. 상태 변경은
 결정적인 event ID를 가진 `PlanReleaseTransitionedEvent`를 outbox에 먼저 기록하며,
 `deliverPendingEvents()`로 실패한 delivery를 재시도할 수 있습니다. `PlanReleaseEventPublisher` 구현은 동시
 worker와 retry가 같은 event ID를 전달해도 한 번만 적용하는 `publishIdempotently()` 계약을 지켜야 합니다.

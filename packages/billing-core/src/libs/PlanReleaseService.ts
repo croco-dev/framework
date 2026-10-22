@@ -196,6 +196,14 @@ export class PlanReleaseService {
   }
 
   async publishNow(command: PublishPlanReleaseCommand): Promise<PlanRelease> {
+    const release = await this.dependencies.store.withPublicationLock(command.ref, () =>
+      this.publishExclusively(command),
+    );
+    await this.deliverPendingEvents(release.ref);
+    return release;
+  }
+
+  private async publishExclusively(command: PublishPlanReleaseCommand): Promise<PlanRelease> {
     validateCommandContext(command.actor, command.reason);
     if (command.idempotencyKey.trim().length === 0) {
       throw new InvalidPlanVersionDefinitionProblem("publish idempotency key must not be empty");
@@ -208,7 +216,6 @@ export class PlanReleaseService {
         existingPublication.idempotencyKey === command.idempotencyKey &&
         existingPublication.commandFingerprint === fingerprint
       ) {
-        await this.deliverPendingEvents(current.ref);
         return current;
       }
       throw new PlanReleasePublishConflictProblem(command.ref, command.idempotencyKey);
@@ -326,10 +333,8 @@ export class PlanReleaseService {
       ) {
         throw new PlanReleasePublishConflictProblem(command.ref, command.idempotencyKey);
       }
-      await this.deliverPendingEvents(reconciled.ref);
       return reconciled;
     }
-    await this.deliverPendingEvents(published.ref);
     return published;
   }
 
@@ -349,6 +354,16 @@ export class PlanReleaseService {
   }
 
   async cancelPublish(command: PlanReleaseTransitionCommand): Promise<PlanRelease> {
+    const release = await this.dependencies.store.withPublicationLock(command.ref, () =>
+      this.cancelPublishExclusively(command),
+    );
+    await this.deliverPendingEvents(release.ref);
+    return release;
+  }
+
+  private async cancelPublishExclusively(
+    command: PlanReleaseTransitionCommand,
+  ): Promise<PlanRelease> {
     validateCommandContext(command.actor, command.reason);
     const current = await this.requireRelease(command.ref);
     this.assertRevision(current, command.expectedRevision);
@@ -356,21 +371,35 @@ export class PlanReleaseService {
     if (!intent) {
       throw new InvalidPlanReleaseTransitionProblem(current.ref, current.state, current.state);
     }
-    return this.saveTransition(current, current.state, command.actor, command.reason, {
-      publicationIntent: undefined,
-      publicationFailures: [
-        ...(current.publicationFailures ?? []),
-        {
-          idempotencyKey: intent.idempotencyKey,
-          commandFingerprint: intent.commandFingerprint,
-          code: "billing/plan-release-publication-cancelled",
-          detail: command.reason,
-          failedAt: this.now(),
-          actor: structuredClone(command.actor),
-          reason: command.reason,
-        },
-      ],
-    });
+    // A failed response or final store save does not imply that publication failed.
+    // Read under the same exclusion as publishNow so absence cannot race a writer.
+    const published = await this.dependencies.planRegistry.getPlanVersion(current.ref);
+    if (published) throw new PlanVersionAlreadyPublishedProblem(current.ref);
+    const cancelled = transition(
+      current,
+      current.state,
+      command.actor,
+      command.reason,
+      this.now(),
+      {
+        publicationIntent: undefined,
+        publicationFailures: [
+          ...(current.publicationFailures ?? []),
+          {
+            idempotencyKey: intent.idempotencyKey,
+            commandFingerprint: intent.commandFingerprint,
+            code: "billing/plan-release-publication-cancelled",
+            detail: command.reason,
+            failedAt: this.now(),
+            actor: structuredClone(command.actor),
+            reason: command.reason,
+          },
+        ],
+      },
+    );
+    const event = this.createEvent(cancelled, current.state, command.actor, command.reason);
+    await this.dependencies.store.save(cancelled, current.revision, { event });
+    return cancelled;
   }
 
   async supersede(command: SupersedePlanReleaseCommand): Promise<PlanRelease> {

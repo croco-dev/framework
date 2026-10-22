@@ -13,8 +13,25 @@ import {
 
 /** Process-local reference store whose outbox is non-durable and intended for tests and local composition. */
 export class InMemoryPlanReleaseStore implements PlanReleaseStore {
+  private readonly publicationLocks = new Map<PlanVersionRef, Promise<void>>();
   private readonly releases = new Map<PlanVersionRef, PlanRelease>();
   private readonly pendingEvents = new Map<string, PlanReleaseLifecycleEvent>();
+
+  async withPublicationLock<T>(ref: PlanVersionRef, operation: () => Promise<T>): Promise<T> {
+    const previous = this.publicationLocks.get(ref) ?? Promise.resolve();
+    let unlock = () => {};
+    const pending = new Promise<void>((resolve) => {
+      unlock = resolve;
+    });
+    this.publicationLocks.set(ref, pending);
+    await previous;
+    try {
+      return await operation();
+    } finally {
+      unlock();
+      if (this.publicationLocks.get(ref) === pending) this.publicationLocks.delete(ref);
+    }
+  }
 
   async create(release: PlanRelease, event: PlanReleaseLifecycleEvent): Promise<void> {
     if (this.releases.has(release.ref)) {

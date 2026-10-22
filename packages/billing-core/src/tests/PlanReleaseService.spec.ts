@@ -947,6 +947,240 @@ describe("PlanReleaseService", () => {
     ).rejects.toThrow(InvalidPlanVersionDefinitionProblem);
   });
 
+  it.each(["final-save", "write-then-throw"] as const)(
+    "preserves publication recovery evidence on cancellation after %s failure",
+    async (failure) => {
+      class FailingStore extends InMemoryPlanReleaseStore {
+        private failFinalSave = true;
+        override async save(...args: Parameters<InMemoryPlanReleaseStore["save"]>): Promise<void> {
+          if (failure === "final-save" && args[0].state === "published" && this.failFinalSave) {
+            this.failFinalSave = false;
+            throw new Error("final save failed");
+          }
+          return super.save(...args);
+        }
+      }
+      class AmbiguousRegistry extends InMemoryPlanRegistry {
+        override async publishPlanVersion(definition: PlanVersionDefinition): Promise<void> {
+          await super.publishPlanVersion(definition);
+          if (failure === "write-then-throw") throw new Error("publication response lost");
+        }
+      }
+      const { service, store, planRegistry } = createHarness({
+        store: new FailingStore(),
+        planRegistry: new AmbiguousRegistry(),
+      });
+      const reviewed = await reviewDraft(service);
+      const command = {
+        ref: reviewed.ref,
+        expectedRevision: reviewed.revision,
+        actor: ACTOR,
+        reason: "publish",
+        idempotencyKey: "retain-recovery",
+      } as const;
+      await expect(service.publishNow(command)).rejects.toThrow(
+        failure === "final-save" ? "final save failed" : "publication response lost",
+      );
+      const reserved = await store.get(reviewed.ref);
+      if (!reserved) throw new Error("expected reserved release");
+      await expect(
+        service.cancelPublish({
+          ref: reserved.ref,
+          expectedRevision: reserved.revision,
+          actor: ACTOR,
+          reason: "cancel",
+        }),
+      ).rejects.toBeInstanceOf(PlanVersionAlreadyPublishedProblem);
+      expect(await store.get(reviewed.ref)).toEqual(reserved);
+      await expect(
+        service.returnToDraft({
+          ref: reserved.ref,
+          expectedRevision: reserved.revision,
+          actor: ACTOR,
+          reason: "edit",
+        }),
+      ).rejects.toBeInstanceOf(PlanReleasePublishConflictProblem);
+      await expect(
+        service.abandon({
+          ref: reserved.ref,
+          expectedRevision: reserved.revision,
+          actor: ACTOR,
+          reason: "abandon",
+        }),
+      ).rejects.toBeInstanceOf(PlanReleasePublishConflictProblem);
+      expect(await planRegistry.getPlanVersion(reviewed.ref)).toMatchObject({
+        ref: reviewed.ref,
+        amount: 9_900,
+        usageTiers: [
+          { meterKey: "api.calls", upTo: 1_000, unitAmount: 0 },
+          { meterKey: "api.calls", upTo: null, unitAmount: 2 },
+        ],
+      });
+      await expect(service.publishNow(command)).resolves.toMatchObject({
+        state: "published",
+        publicationIntent: undefined,
+        publication: { idempotencyKey: command.idempotencyKey, actor: ACTOR, reason: "publish" },
+      });
+      expect(await planRegistry.getAllPlanVersions("pro")).toHaveLength(1);
+    },
+  );
+
+  it("preserves the intent when authoritative registry lookup fails", async () => {
+    class UnavailableRegistry extends InMemoryPlanRegistry {
+      override async publishPlanVersion(): Promise<void> {
+        throw new Error("unknown publish result");
+      }
+      override async getPlanVersion(): Promise<PlanVersionDefinition | null> {
+        throw new Error("registry lookup unavailable");
+      }
+    }
+    const { service, store } = createHarness({ planRegistry: new UnavailableRegistry() });
+    const reviewed = await reviewDraft(service);
+    await expect(
+      service.publishNow({
+        ref: reviewed.ref,
+        expectedRevision: reviewed.revision,
+        actor: ACTOR,
+        reason: "publish",
+        idempotencyKey: "unavailable",
+      }),
+    ).rejects.toThrow("unknown publish result");
+    const reserved = await store.get(reviewed.ref);
+    if (!reserved) throw new Error("expected reserved release");
+    await expect(
+      service.cancelPublish({
+        ref: reserved.ref,
+        expectedRevision: reserved.revision,
+        actor: ACTOR,
+        reason: "cancel",
+      }),
+    ).rejects.toThrow("registry lookup unavailable");
+    expect(await store.get(reviewed.ref)).toEqual(reserved);
+  });
+
+  it("coordinates cancellation with an in-flight publish across service instances", async () => {
+    let releasePublish = () => {};
+    let signalStarted = () => {};
+    const started = new Promise<void>((resolve) => {
+      signalStarted = resolve;
+    });
+    const gate = new Promise<void>((resolve) => {
+      releasePublish = resolve;
+    });
+    class DelayedRegistry extends InMemoryPlanRegistry {
+      override async publishPlanVersion(definition: PlanVersionDefinition): Promise<void> {
+        signalStarted();
+        await gate;
+        await super.publishPlanVersion(definition);
+      }
+    }
+    const store = new InMemoryPlanReleaseStore();
+    const planRegistry = new DelayedRegistry();
+    const { service } = createHarness({ store, planRegistry });
+    const other = createHarness({ store, planRegistry }).service;
+    const reviewed = await reviewDraft(service);
+    const publishing = service.publishNow({
+      ref: reviewed.ref,
+      expectedRevision: reviewed.revision,
+      actor: ACTOR,
+      reason: "publish",
+      idempotencyKey: "concurrent",
+    });
+    await started;
+    const reserved = await store.get(reviewed.ref);
+    if (!reserved) throw new Error("expected reserved release");
+    const cancelling = other
+      .cancelPublish({
+        ref: reserved.ref,
+        expectedRevision: reserved.revision,
+        actor: ACTOR,
+        reason: "cancel in flight",
+      })
+      .then(
+        () => "cancelled",
+        (error: unknown) => error,
+      );
+    releasePublish();
+    await expect(publishing).resolves.toMatchObject({ state: "published" });
+    expect(await cancelling).toBeInstanceOf(StalePlanReleaseRevisionProblem);
+    expect(await store.get(reviewed.ref)).toMatchObject({
+      state: "published",
+      publication: { idempotencyKey: "concurrent" },
+      publicationIntent: undefined,
+    });
+    expect(await planRegistry.getPlanVersion(reviewed.ref)).toMatchObject({
+      ref: reviewed.ref,
+      amount: 9_900,
+      usageTiers: [
+        { meterKey: "api.calls", upTo: 1_000, unitAmount: 0 },
+        { meterKey: "api.calls", upTo: null, unitAmount: 2 },
+      ],
+    });
+  });
+
+  it("fences a queued publish retry when cancellation confirms absence first", async () => {
+    let releaseLookup = () => {};
+    let signalLookup = () => {};
+    const lookupStarted = new Promise<void>((resolve) => {
+      signalLookup = resolve;
+    });
+    const gate = new Promise<void>((resolve) => {
+      releaseLookup = resolve;
+    });
+    class AbsentRegistry extends InMemoryPlanRegistry {
+      writes = 0;
+      override async publishPlanVersion(definition: PlanVersionDefinition): Promise<void> {
+        this.writes++;
+        if (this.writes === 1) throw new Error("no write performed");
+        await super.publishPlanVersion(definition);
+      }
+      override async getPlanVersion(ref: PlanVersionRef): Promise<PlanVersionDefinition | null> {
+        signalLookup();
+        await gate;
+        return super.getPlanVersion(ref);
+      }
+    }
+    const store = new InMemoryPlanReleaseStore();
+    const planRegistry = new AbsentRegistry();
+    const { service } = createHarness({ store, planRegistry });
+    const other = createHarness({ store, planRegistry }).service;
+    const reviewed = await reviewDraft(service);
+    const command = {
+      ref: reviewed.ref,
+      expectedRevision: reviewed.revision,
+      actor: ACTOR,
+      reason: "publish",
+      idempotencyKey: "cancel-first",
+    } as const;
+    await expect(service.publishNow(command)).rejects.toThrow("no write performed");
+    const reserved = await store.get(reviewed.ref);
+    if (!reserved) throw new Error("expected reserved release");
+    const cancelling = service.cancelPublish({
+      ref: reserved.ref,
+      expectedRevision: reserved.revision,
+      actor: ACTOR,
+      reason: "confirmed absent",
+    });
+    await lookupStarted;
+    const retry = other.publishNow(command).then(
+      () => "published",
+      (error: unknown) => error,
+    );
+    releaseLookup();
+    const cancelled = await cancelling;
+    expect(await retry).toBeInstanceOf(StalePlanReleaseRevisionProblem);
+    expect(planRegistry.writes).toBe(1);
+    await expect(
+      service.abandon({
+        ref: cancelled.ref,
+        expectedRevision: cancelled.revision,
+        actor: ACTOR,
+        reason: "abandon unpublished",
+      }),
+    ).resolves.toMatchObject({ state: "abandoned" });
+    expect(await planRegistry.getPlanVersion(reviewed.ref)).toBeNull();
+  });
+
   it("allows an operator to cancel an ambiguous publication reservation", async () => {
     class AmbiguousPlanRegistry extends InMemoryPlanRegistry {
       override async publishPlanVersion(): Promise<void> {
