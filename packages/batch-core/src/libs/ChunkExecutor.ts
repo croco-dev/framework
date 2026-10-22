@@ -1,5 +1,6 @@
 import {
   ExecutionProblems,
+  ExecutionProblem,
   type Execution,
   type ExecutionInspectionManager,
   type ExecutionManager,
@@ -69,6 +70,8 @@ export class ChunkExecutor {
     assertValidChunkSize(step?.chunkSize);
     const execution = await this.resolveExecution(executionId, options);
 
+    if (execution.status === "cancelled") return;
+
     try {
       // 2. Restore checkpoint if available
       const checkpointKey = `${step.name}.cursor`;
@@ -89,8 +92,11 @@ export class ChunkExecutor {
       const totalCount = execution.progress?.total;
 
       while (true) {
+        if (await this.isCancelled(executionId)) return;
+
         // Read
         const item = await step.reader.read();
+        if (await this.isCancelled(executionId)) return;
 
         if (item === null) {
           break; // End of data
@@ -108,6 +114,8 @@ export class ChunkExecutor {
           processedItem = item as unknown as O;
         }
 
+        if (await this.isCancelled(executionId)) return;
+
         if (processedItem !== null) {
           items.push(processedItem);
         }
@@ -115,15 +123,19 @@ export class ChunkExecutor {
 
         // Commit after processing a full input chunk, including filtered items.
         if (chunkInputCount >= step.chunkSize) {
-          await this.writeChunk(
-            executionId,
-            step,
-            items,
-            checkpointKey,
-            processedCountKey,
-            processedCount + chunkInputCount,
-            totalCount,
-          );
+          if (
+            !(await this.writeChunk(
+              executionId,
+              step,
+              items,
+              checkpointKey,
+              processedCountKey,
+              processedCount + chunkInputCount,
+              totalCount,
+            ))
+          ) {
+            return;
+          }
           processedCount += chunkInputCount;
           items = [];
           chunkInputCount = 0;
@@ -132,29 +144,46 @@ export class ChunkExecutor {
 
       // Commit the remaining input chunk even when all its items were filtered.
       if (chunkInputCount > 0) {
-        await this.writeChunk(
-          executionId,
-          step,
-          items,
-          checkpointKey,
-          processedCountKey,
-          processedCount + chunkInputCount,
-          totalCount,
-        );
+        if (
+          !(await this.writeChunk(
+            executionId,
+            step,
+            items,
+            checkpointKey,
+            processedCountKey,
+            processedCount + chunkInputCount,
+            totalCount,
+          ))
+        ) {
+          return;
+        }
         processedCount += chunkInputCount;
       }
 
+      if (await this.isCancelled(executionId)) return;
       if (options.completeExecution ?? true) {
-        await this.executionManager.complete(executionId, { processedCount });
+        try {
+          await this.executionManager.complete(executionId, { processedCount });
+        } catch (error) {
+          if (
+            error instanceof ExecutionProblem &&
+            error.code === "execution/invalid-state-transition" &&
+            (await this.isCancelled(executionId))
+          )
+            return;
+          throw error;
+        }
       }
     } catch (error) {
       try {
-        await this.executionManager.fail(executionId, {
-          ...createStepExecutionError(error, step.classifyFailure, {
-            executionId,
-            stepName: step.name,
-          }),
-        });
+        if (!(await this.isCancelled(executionId))) {
+          await this.executionManager.fail(executionId, {
+            ...createStepExecutionError(error, step.classifyFailure, {
+              executionId,
+              stepName: step.name,
+            }),
+          });
+        }
       } catch (failureRecordError) {
         reportFailureRecordError(executionId, error, failureRecordError);
       }
@@ -170,11 +199,16 @@ export class ChunkExecutor {
     processedCountKey: string,
     currentProcessedCount: number,
     totalCount?: number,
-  ): Promise<void> {
+  ): Promise<boolean> {
+    if (await this.isCancelled(executionId)) return false;
+
     if (items.length > 0) {
       await step.writer.write(items);
     }
 
+    // A successful in-flight write remains committed even if cancellation arrived
+    // while it was pending. Preserve its cursor/count evidence before stopping.
+    // These existing writes are not atomic with cancellation or the external sink.
     // Save checkpoint
     if (isCheckpointable(step.reader)) {
       const checkpoint = step.reader.getCheckpoint();
@@ -188,6 +222,11 @@ export class ChunkExecutor {
         total: totalCount,
       });
     }
+    return true;
+  }
+
+  private async isCancelled(executionId: string): Promise<boolean> {
+    return (await this.executionManager.get(executionId)).status === "cancelled";
   }
 
   private hasValidTotal(total: number | undefined): total is number {
@@ -237,7 +276,7 @@ export class ChunkExecutor {
     }
 
     const execution = await inspectionManager.get(executionId);
-    if (execution.status !== "running") {
+    if (execution.status !== "running" && execution.status !== "cancelled") {
       throw ExecutionProblems.invalidStateTransition(
         `Cannot continue batch execution from '${execution.status}' status`,
       );

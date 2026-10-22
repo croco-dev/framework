@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "batch-core",
+      "classification": "pure-contract",
+      "reason": "Observe existing execution cancellation at cooperative read/process/write boundaries, preserve evidence for successful in-flight writes, and leave cancelled lifecycle state intact. No host capability or provider is added.",
+      "files": {
+        "packages/batch-core/src/libs/ChunkExecutor.ts": "1eeb24c658ad1fa5b95a9550f7d339c90284de411e170895041f6fb4976aa521"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "The Node Host is not involved in provider-neutral execution-state polling; the existing ExecutionManager owns storage and lifecycle.",
+          "providers": ["@croco/execution-core/ExecutionManager"],
+          "constraints": [
+            "Cooperative polling cannot revoke an already-started external write or atomically couple cancellation, sink effects and checkpoints. No deployed-host or provider certification is claimed."
+          ],
+          "references": [
+            "packages/batch-core/src/libs/ChunkExecutor.ts",
+            "packages/execution-core/src/libs/interfaces/ExecutionManager.ts",
+            "packages/batch-core/src/tests/ChunkExecutor.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "The Lambda Host is not involved in provider-neutral execution-state polling; the existing ExecutionManager owns storage and lifecycle.",
+          "providers": ["@croco/execution-core/ExecutionManager"],
+          "constraints": [
+            "Cooperative polling cannot revoke an already-started external write or atomically couple cancellation, sink effects and checkpoints. No deployed-host or provider certification is claimed."
+          ],
+          "references": [
+            "packages/batch-core/src/libs/ChunkExecutor.ts",
+            "packages/execution-core/src/libs/interfaces/ExecutionManager.ts",
+            "packages/batch-core/src/tests/ChunkExecutor.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "The Workers or Node Container Host is not involved in provider-neutral execution-state polling; the existing ExecutionManager owns storage and lifecycle.",
+          "providers": ["@croco/execution-core/ExecutionManager"],
+          "constraints": [
+            "Cooperative polling cannot revoke an already-started external write or atomically couple cancellation, sink effects and checkpoints. No deployed-host or provider certification is claimed."
+          ],
+          "references": [
+            "packages/batch-core/src/libs/ChunkExecutor.ts",
+            "packages/execution-core/src/libs/interfaces/ExecutionManager.ts",
+            "packages/batch-core/src/tests/ChunkExecutor.spec.ts"
+          ]
+        }
+      }
+    }
+  ]
+}
