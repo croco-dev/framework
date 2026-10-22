@@ -121,31 +121,43 @@ return { 1, 'OK', updated }
   private static readonly CLAIM_SCRIPT = `
 local redisTime = redis.call('TIME')
 local nowMs = tonumber(redisTime[1]) * 1000 + math.floor(tonumber(redisTime[2]) / 1000)
-local candidates = redis.call('ZRANGEBYSCORE', KEYS[1], '-inf', nowMs, 'LIMIT', 0, 100)
-for _, eventId in ipairs(candidates) do
-  local entryKey = ARGV[3] .. eventId
-  local entryJson = redis.call('GET', entryKey)
-  if entryJson then
-    local entry = cjson.decode(entryJson)
-    local claimable = entry.state == 'pending'
-      or (entry.state == 'retryable-failed' and (not entry.retryAt or tonumber(entry.retryAt) <= nowMs))
-      or (entry.state == 'delivering' and entry.leaseExpiresAt and tonumber(entry.leaseExpiresAt) <= nowMs)
-    if claimable then
-      local fencingToken = redis.call('INCR', KEYS[2])
-      local leaseExpiresAt = nowMs + tonumber(ARGV[2])
-      entry.state = 'delivering'
-      entry.ownerId = ARGV[1]
-      entry.fencingToken = fencingToken
-      entry.leaseExpiresAt = leaseExpiresAt
-      entry.retryAt = nil
-      entry.updatedAt = nowMs
-      local updated = cjson.encode(entry)
-      redis.call('SET', entryKey, updated)
-      redis.call('ZADD', KEYS[1], leaseExpiresAt, eventId)
-      return { updated }
+-- A stale delivery index can contain intents without local commit activation.
+-- Prune index members without discarding their durable intent/backlog evidence.
+while true do
+  local candidates = redis.call('ZRANGEBYSCORE', KEYS[1], '-inf', nowMs, 'LIMIT', 0, 100)
+  if #candidates == 0 then break end
+  for _, eventId in ipairs(candidates) do
+    local entryKey = ARGV[3] .. eventId
+    local entryJson = redis.call('GET', entryKey)
+    if entryJson then
+      local entry = cjson.decode(entryJson)
+      local activated = entry.deliverableAt and entry.deliverableAt ~= cjson.null
+      local claimable = activated and (entry.state == 'pending'
+        or (entry.state == 'retryable-failed' and (not entry.retryAt or tonumber(entry.retryAt) <= nowMs))
+        or (entry.state == 'delivering' and entry.leaseExpiresAt and tonumber(entry.leaseExpiresAt) <= nowMs))
+      if claimable then
+        local fencingToken = redis.call('INCR', KEYS[2])
+        local leaseExpiresAt = nowMs + tonumber(ARGV[2])
+        entry.state = 'delivering'
+        entry.ownerId = ARGV[1]
+        entry.fencingToken = fencingToken
+        entry.leaseExpiresAt = leaseExpiresAt
+        entry.retryAt = nil
+        entry.updatedAt = nowMs
+        local updated = cjson.encode(entry)
+        redis.call('SET', entryKey, updated)
+        redis.call('ZADD', KEYS[1], leaseExpiresAt, eventId)
+        return { updated }
+      elseif activated and entry.state == 'retryable-failed' and entry.retryAt and tonumber(entry.retryAt) > nowMs then
+        redis.call('ZADD', KEYS[1], tonumber(entry.retryAt), eventId)
+      elseif activated and entry.state == 'delivering' and entry.leaseExpiresAt and tonumber(entry.leaseExpiresAt) > nowMs then
+        redis.call('ZADD', KEYS[1], tonumber(entry.leaseExpiresAt), eventId)
+      else
+        redis.call('ZREM', KEYS[1], eventId)
+      end
+    else
+      redis.call('ZREM', KEYS[1], eventId)
     end
-  else
-    redis.call('ZREM', KEYS[1], eventId)
   end
 end
 return { '' }

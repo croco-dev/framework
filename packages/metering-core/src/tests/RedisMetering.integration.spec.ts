@@ -74,6 +74,14 @@ function createRedisClient(
   };
 }
 
+function deferred() {
+  let resolve!: () => void;
+  const promise = new Promise<void>((complete) => {
+    resolve = complete;
+  });
+  return { promise, resolve };
+}
+
 function createUsageRecord(idempotencyKey: string): UsageRecord {
   return {
     id: `usage-${idempotencyKey}`,
@@ -1041,6 +1049,214 @@ describe.skipIf(!realResourcesEnabled)("Redis metering composition", () => {
     await expect(request).rejects.toMatchObject({
       code: "metering/redis-error",
       extensions: { operation: "EVAL" },
+    });
+  });
+
+  it("claims only activated billable entries beyond a full page of stale inactive intents", async () => {
+    assert.isDefined(connection);
+    const journal = new RedisBillableUsageJournal(createRedisClient(connection));
+    const event: BillableUsageEvent = {
+      eventId: "approved",
+      tenantId: "tenant-1",
+      meterId: "requests",
+      aggregation: "COUNT",
+      unit: "request",
+      value: 7,
+      dimensions: {},
+    };
+    for (let index = 0; index < 151; index += 1) {
+      const eventId = `inactive-${index}`;
+      await journal.append({ ...event, eventId });
+      // Seed a stale delivery-index member without changing the durable intent.
+      await connection.client.zadd("billable-journal:pending", 0, eventId);
+    }
+    await expect(
+      journal.claimNext({ ownerId: "worker", leaseDurationMs: 10_000 }),
+    ).resolves.toBeNull();
+    await journal.append(event);
+    await expect(journal.append(event)).resolves.toMatchObject({ outcome: "duplicate" });
+    await expect(
+      journal.claimNext({ ownerId: "worker", leaseDurationMs: 10_000 }),
+    ).resolves.toBeNull();
+    // Reintroduce stale index entries so one claim must reach past the first 100.
+    for (let index = 0; index < 151; index += 1) {
+      await connection.client.zadd("billable-journal:pending", 0, `inactive-${index}`);
+    }
+    await journal.markDeliverable(event.eventId);
+    const claim = await journal.claimNext({ ownerId: "worker", leaseDurationMs: 10_000 });
+    assert.isNotNull(claim);
+    expect(claim.event).toEqual(event);
+    await journal.markAccepted(claim);
+    await expect(journal.get("inactive-150")).resolves.toMatchObject({ state: "pending" });
+    await expect(journal.getDiagnostics()).resolves.toMatchObject({ backlogCount: 151 });
+    await journal.markDeliverable("inactive-150");
+    await expect(
+      journal.claimNext({ ownerId: "worker", leaseDurationMs: 10_000 }),
+    ).resolves.toMatchObject({
+      event: { eventId: "inactive-150" },
+      state: "delivering",
+    });
+  });
+
+  it.each(["record", "quota"] as const)(
+    "keeps billable %s persistence pending and rejected intents out of delivery",
+    async (path) => {
+      assert.isDefined(connection);
+      const redis = createRedisClient(connection);
+      const journal = new RedisBillableUsageJournal(redis);
+      const storage = new RedisUsageStorage(redis);
+      const meter = createMeter("billable-barrier", path === "quota" ? 4 : undefined);
+      meter.billing = "required";
+      const entered = deferred();
+      const release = deferred();
+      const recordWithinQuota = storage.checkAndRecordWithinQuota.bind(storage);
+      if (path === "record") {
+        vi.spyOn(storage, "record").mockImplementation(async () => {
+          entered.resolve();
+          await release.promise;
+          throw new Error("Injected storage rejection");
+        });
+      } else {
+        vi.spyOn(storage, "checkAndRecordWithinQuota").mockImplementation(async (options) => {
+          entered.resolve();
+          await release.promise;
+          return recordWithinQuota(options);
+        });
+      }
+      const service = new MeteringService({
+        idempotencyManager: new IdempotencyManager(redis),
+        meterRegistry: {
+          ...createMeterRegistry([meter]),
+          billableUsageJournal: journal,
+        } as unknown as MeterRegistry,
+        usageStorage: storage,
+      });
+      const input = {
+        tenantId: meter.tenantId,
+        meterId: meter.meterId,
+        value: 5,
+        idempotencyKey: "barrier-event",
+      };
+      const rejected = expect(service.record(input)).rejects.toThrow(
+        path === "record" ? "Injected storage rejection" : QuotaExceededProblem,
+      );
+      try {
+        await entered.promise;
+        await expect(
+          journal.claimNext({ ownerId: "worker", leaseDurationMs: 10_000 }),
+        ).resolves.toBeNull();
+        await connection.client.zadd("billable-journal:pending", 0, input.idempotencyKey);
+        await expect(
+          journal.claimNext({ ownerId: "worker", leaseDurationMs: 10_000 }),
+        ).resolves.toBeNull();
+      } finally {
+        release.resolve();
+        await rejected;
+        vi.restoreAllMocks();
+      }
+      await expect(
+        journal.claimNext({ ownerId: "worker", leaseDurationMs: 10_000 }),
+      ).resolves.toBeNull();
+      if (path === "quota") meter.allowOverQuota = true;
+      await service.record(input);
+      await expect(
+        journal.claimNext({ ownerId: "worker", leaseDurationMs: 10_000 }),
+      ).resolves.toMatchObject({
+        event: { eventId: input.idempotencyKey, value: 5 },
+        state: "delivering",
+      });
+    },
+  );
+
+  it.each(["pending", "retryable-failed", "delivering"])(
+    "refuses stale %s entries without activation evidence",
+    async (state) => {
+      assert.isDefined(connection);
+      const journal = new RedisBillableUsageJournal(createRedisClient(connection));
+      const event: BillableUsageEvent = {
+        eventId: "unapproved",
+        tenantId: "tenant-1",
+        meterId: "requests",
+        aggregation: "COUNT",
+        unit: "request",
+        value: 3,
+        dimensions: {},
+      };
+      await journal.append(event);
+      const key = "billable-journal:event:unapproved";
+      const stored = JSON.parse((await connection.client.get(key)) ?? "{}");
+      Object.assign(stored, { state, retryAt: 0, leaseExpiresAt: 0, deliverableAt: null });
+      await connection.client.set(key, JSON.stringify(stored));
+      await connection.client.zadd("billable-journal:pending", 0, event.eventId);
+      await expect(
+        journal.claimNext({ ownerId: "worker", leaseDurationMs: 10_000 }),
+      ).resolves.toBeNull();
+      expect(JSON.parse((await connection.client.get(key)) ?? "{}")).toEqual(stored);
+      await expect(
+        connection.client.zscore("billable-journal:pending", event.eventId),
+      ).resolves.toBeNull();
+      await expect(journal.getDiagnostics()).resolves.toMatchObject({ backlogCount: 1 });
+    },
+  );
+
+  it("preserves activated retry scheduling and leases while pruning stale delivery indexes", async () => {
+    assert.isDefined(connection);
+    const journal = new RedisBillableUsageJournal(createRedisClient(connection));
+    const event: BillableUsageEvent = {
+      eventId: "retry-schedule",
+      tenantId: "tenant-1",
+      meterId: "requests",
+      aggregation: "COUNT",
+      unit: "request",
+      value: 9,
+      dimensions: {},
+    };
+    await journal.append(event);
+    await journal.markDeliverable(event.eventId);
+    const first = await journal.claimNext({ ownerId: "worker-1", leaseDurationMs: 60_000 });
+    assert.isNotNull(first);
+    await connection.client.zadd("billable-journal:pending", 0, event.eventId);
+    await expect(
+      journal.claimNext({ ownerId: "worker-2", leaseDurationMs: 60_000 }),
+    ).resolves.toBeNull();
+    await expect(journal.get(event.eventId)).resolves.toEqual(first);
+    const retryAt = new Date(Date.now() + 60_000);
+    const failure = { code: "provider/unavailable", message: "Retry later" };
+    const retry = await journal.markRetryableFailed(first, failure, retryAt);
+    await expect(journal.markDeliverable(event.eventId)).resolves.toEqual(retry);
+    await expect(journal.append(event)).resolves.toMatchObject({
+      outcome: "duplicate",
+      entry: retry,
+    });
+    await connection.client.zadd("billable-journal:pending", 0, event.eventId);
+    await expect(
+      journal.claimNext({ ownerId: "worker-2", leaseDurationMs: 60_000 }),
+    ).resolves.toBeNull();
+    expect(Number(await connection.client.zscore("billable-journal:pending", event.eventId))).toBe(
+      retryAt.getTime(),
+    );
+    // Advance the stored retry deadline rather than sleeping on the worker clock.
+    const stored = JSON.parse(
+      (await connection.client.get("billable-journal:event:retry-schedule")) ?? "{}",
+    );
+    stored.retryAt = 0;
+    await connection.client.set("billable-journal:event:retry-schedule", JSON.stringify(stored));
+    await connection.client.zadd("billable-journal:pending", 0, event.eventId);
+    const second = await journal.claimNext({ ownerId: "worker-2", leaseDurationMs: 60_000 });
+    assert.isNotNull(second);
+    expect(second.fencingToken).toBeGreaterThan(first.fencingToken);
+    expect(second.retryCount).toBe(1);
+    await expect(journal.markAccepted(first)).rejects.toMatchObject({
+      code: "metering/transition-conflict",
+    });
+    await journal.markAccepted(second);
+    await connection.client.zadd("billable-journal:pending", 0, event.eventId);
+    await expect(
+      journal.claimNext({ ownerId: "worker-3", leaseDurationMs: 60_000 }),
+    ).resolves.toBeNull();
+    await expect(journal.getDiagnostics()).resolves.toMatchObject({
+      backlogCount: 0,
+      retryCount: 1,
     });
   });
 
