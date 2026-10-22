@@ -180,8 +180,8 @@ export function createSeoWorkbench(options: SeoWorkbenchOptions) {
         }
         const report = await calculate(scope, definition, signal);
         if ("kind" in report) return report;
-        const result = page(masked(report, scope), offset, limit);
         await access("seo.read", scope, signal);
+        const result = page(masked(report, scope), offset, limit);
         return { kind: report.state, page: result };
       } catch (error) {
         signal?.throwIfAborted();
@@ -243,8 +243,8 @@ export function createSeoWorkbench(options: SeoWorkbenchOptions) {
       if ("kind" in current) return current;
       if (current.inputHash !== record.report.inputHash)
         return { kind: "unavailable", code: "SEO_REPORT_STALE" };
-      const result = page(masked(current, scope), offset, limit);
       await access("seo.read", scope, signal);
+      const result = page(masked(current, scope), offset, limit);
       if (!(Date.parse(record.expiresAt) > options.now().getTime()))
         return { kind: "unavailable", code: "SEO_REPORT_EXPIRED" };
       return { kind: current.state, page: result };

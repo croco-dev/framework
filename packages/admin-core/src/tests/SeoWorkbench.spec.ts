@@ -10,6 +10,55 @@ import {
   seoLimits,
   seoQuality,
 } from "../../../../examples/seo-workbench/src/fixture";
+import type { SeoWorkbenchOptions } from "../libs/SeoWorkbench";
+
+async function createRetainedReadFixture(
+  options: Pick<SeoWorkbenchOptions, "authenticate" | "mask" | "now">,
+) {
+  const sourceRevisions = [
+    { sourceRef: "search", revision: "snapshot-v1" },
+    { sourceRef: "events", revision: "snapshot-v1" },
+  ];
+  const registration = await registerSeoQuery({
+    queryId: "retained-policies",
+    queryVersion: 1,
+    scope: seoScope,
+    definition: seoDefinition,
+    sourceRevisions,
+    limits: seoLimits,
+    requiredFields: ["seo.pages"],
+    source: async () => ({ input: seoFixtureInput(), quality: seoQuality }),
+  });
+  const service = new MetricReadService([registration.definition], [registration.query], {
+    currentContext: () => ({
+      principal: { ...seoScope, subject: "synthetic-operator" },
+      allowedFields: ["seo.pages"],
+      allowRaw: false,
+      budget: seoLimits,
+      sourceRevisions,
+      snapshotRefs: ["search", "events"],
+    }),
+    authorize: async () => ({ permissionEpoch: "p1", privacyEpoch: "v1" }),
+  });
+  const record = {
+    id: "retained",
+    scope: seoScope,
+    expiresAt: "2026-10-20T00:00:01.000Z",
+    report: await createSeoFixture().compare(),
+  };
+  return {
+    record,
+    operations: createSeoWorkbench({
+      ...options,
+      reader: async () => ({
+        service,
+        queryId: registration.query.id,
+        window: { from: seoDefinition.baselineWindow.from, to: seoDefinition.currentWindow.to },
+      }),
+      store: { read: async () => record, write: async () => {}, delete: async () => {} },
+    }),
+  };
+}
 
 describe("SeoWorkbench", () => {
   it("returns the denied code when read permission is absent", async () => {
@@ -315,39 +364,9 @@ describe("SeoWorkbench saved report release authority", () => {
     { releaseAt: "2026-10-20T00:00:00.999Z", expired: false },
     { releaseAt: "2026-10-20T00:00:01.000Z", expired: true },
   ])("checks expiry during final authorization at $releaseAt", async ({ releaseAt, expired }) => {
-    const sourceRevisions = [
-      { sourceRef: "search", revision: "snapshot-v1" },
-      { sourceRef: "events", revision: "snapshot-v1" },
-    ];
-    const registration = await registerSeoQuery({
-      queryId: "retained-expiry",
-      queryVersion: 1,
-      scope: seoScope,
-      definition: seoDefinition,
-      sourceRevisions,
-      limits: seoLimits,
-      requiredFields: ["seo.pages"],
-      source: async () => ({ input: seoFixtureInput(), quality: seoQuality }),
-    });
-    const service = new MetricReadService([registration.definition], [registration.query], {
-      currentContext: () => ({
-        principal: { ...seoScope, subject: "synthetic-operator" },
-        allowedFields: ["seo.pages"],
-        allowRaw: false,
-        budget: seoLimits,
-        sourceRevisions,
-        snapshotRefs: ["search", "events"],
-      }),
-      authorize: async () => ({ permissionEpoch: "p1", privacyEpoch: "v1" }),
-    });
-    const record = {
-      id: "expiring",
-      scope: seoScope,
-      expiresAt: "2026-10-20T00:00:01.000Z",
-      report: await createSeoFixture().compare(),
-    };
     let now = new Date("2026-10-20T00:00:00.000Z");
-    let masked = false;
+    let authenticationCount = 0;
+    let pauseAt = Infinity;
     let entered = () => {};
     let resume = () => {};
     const authenticationEntered = new Promise<void>((resolve) => {
@@ -356,26 +375,22 @@ describe("SeoWorkbench saved report release authority", () => {
     const authenticationResumed = new Promise<void>((resolve) => {
       resume = resolve;
     });
-    const operations = createSeoWorkbench({
+    const { operations, record } = await createRetainedReadFixture({
       authenticate: async () => {
-        if (masked) {
+        authenticationCount++;
+        if (authenticationCount === pauseAt) {
           entered();
           await authenticationResumed;
         }
         return { scope: seoScope, permissions: ["seo.read"] };
       },
-      reader: async () => ({
-        service,
-        queryId: registration.query.id,
-        window: { from: seoDefinition.baselineWindow.from, to: seoDefinition.currentWindow.to },
-      }),
-      mask: (_field, value) => {
-        masked = true;
-        return value;
-      },
+      mask: (_field, value) => value,
       now: () => now,
-      store: { read: async () => record, write: async () => {}, delete: async () => {} },
     });
+    expect(await operations.readSaved(record.id)).toMatchObject({ kind: "ready" });
+    // Observe the last public authentication boundary; do not pin an implementation call count.
+    pauseAt = authenticationCount;
+    authenticationCount = 0;
     const pending = operations.readSaved(record.id);
     await Promise.race([
       authenticationEntered,
@@ -389,6 +404,35 @@ describe("SeoWorkbench saved report release authority", () => {
     if (expired) expect(state).toEqual({ kind: "unavailable", code: "SEO_REPORT_EXPIRED" });
     else expect(state).toMatchObject({ kind: "ready", page: { total: 2 } });
   });
+
+  it.each(["read", "readSaved"] as const)(
+    "applies the current field policy after pending authentication for %s",
+    async (operation) => {
+      let policy = "initial-policy";
+      let revision = 0;
+      const { operations, record } = await createRetainedReadFixture({
+        authenticate: async () => {
+          await Promise.resolve();
+          policy = `[policy-${++revision}]`;
+          return { scope: seoScope, permissions: ["seo.read"] };
+        },
+        mask: () => policy,
+        now: () => new Date("2026-10-20T00:00:00.000Z"),
+      });
+      const state =
+        operation === "read"
+          ? await operations.read(seoDefinition)
+          : await operations.readSaved(record.id);
+      expect(state.kind).toBe("ready");
+      if (!("page" in state)) throw new TypeError(`Unexpected ${state.kind}`);
+      expect(state.page.rows.length).toBeGreaterThan(0);
+      for (const row of state.page.rows) expect(row.pageId).toBe(policy);
+      for (const source of state.page.report.sources) {
+        expect(source.source).toBe(policy);
+        expect(source.sourceRevision).toBe(policy);
+      }
+    },
+  );
 
   it.each(["permission", "scope", "abort"])(
     "rechecks %s after asynchronous definition identity validation",
