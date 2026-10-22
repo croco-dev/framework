@@ -191,6 +191,29 @@ describe("ChunkExecutor", () => {
       expect(await manager.get(execution.id)).toMatchObject({ status: "cancelled" });
     });
 
+    it("does not hide a completion storage failure when cancellation also arrives", async () => {
+      const manager = new ExecutionManagerImpl(new TestExecutionStore());
+      const execution = await manager.create({ type: "batch-job" });
+      const storageError = new Error("completion store unavailable");
+      vi.spyOn(manager, "complete").mockImplementation(async (id) => {
+        await manager.cancel(id);
+        throw storageError;
+      });
+      const fail = vi.spyOn(manager, "fail");
+      await expect(
+        new ChunkExecutor(manager).execute(
+          execution.id,
+          new Step({
+            name: "empty",
+            reader: { read: async () => null },
+            writer: { write: vi.fn() },
+          }),
+        ),
+      ).rejects.toBe(storageError);
+      expect(fail).not.toHaveBeenCalled();
+      expect(await manager.get(execution.id)).toMatchObject({ status: "cancelled" });
+    });
+
     it("does not start a later step after cancellation", async () => {
       const manager = new ExecutionManagerImpl(new TestExecutionStore());
       const execution = await manager.create({ type: "batch-job" });

@@ -6,7 +6,7 @@
       "classification": "pure-contract",
       "reason": "Observe existing execution cancellation at cooperative read/process/write boundaries, preserve evidence for successful in-flight writes, and leave cancelled lifecycle state intact. No host capability or provider is added.",
       "files": {
-        "packages/batch-core/src/libs/ChunkExecutor.ts": "60f0e08c8fadb8a1425c0c4197acab4f7e79262427571cb404d51eb3cfbcac21"
+        "packages/batch-core/src/libs/ChunkExecutor.ts": "1eeb24c658ad1fa5b95a9550f7d339c90284de411e170895041f6fb4976aa521"
       },
       "catalogRuntimes": [],
       "profiles": {

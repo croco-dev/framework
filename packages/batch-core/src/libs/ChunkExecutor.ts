@@ -1,5 +1,6 @@
 import {
   ExecutionProblems,
+  ExecutionProblem,
   type Execution,
   type ExecutionInspectionManager,
   type ExecutionManager,
@@ -164,7 +165,12 @@ export class ChunkExecutor {
         try {
           await this.executionManager.complete(executionId, { processedCount });
         } catch (error) {
-          if (await this.isCancelled(executionId)) return;
+          if (
+            error instanceof ExecutionProblem &&
+            error.code === "execution/invalid-state-transition" &&
+            (await this.isCancelled(executionId))
+          )
+            return;
           throw error;
         }
       }
