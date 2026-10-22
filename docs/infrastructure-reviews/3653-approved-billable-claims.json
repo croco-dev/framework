@@ -1,0 +1,64 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "metering-core",
+      "classification": "durable-provider",
+      "reason": "Require existing activation evidence before a Redis journal claim; discard stale delivery-index members while retaining durable intent/backlog entries and lease/retry scheduling. No public shape, stored entry format or runtime claim changes.",
+      "files": {
+        "packages/metering-core/src/libs/RedisBillableUsageJournal.ts": "5b19b2e87fe9f32f6180f302aff41504782b7be7c3f01d5ecd50524e9fa4bef7"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "unverified",
+          "reason": "Redis Lua claim gating is reused through the existing RedisClient; no Node Host or Kubernetes cluster execution was performed.",
+          "providers": [
+            "@croco/metering-core/RedisBillableUsageJournal",
+            "@croco/metering-upstash"
+          ],
+          "constraints": [
+            "Requires persistent Redis and atomic multi-key Lua; local container conformance is not cluster certification."
+          ],
+          "references": [
+            "packages/metering-core/src/libs/RedisBillableUsageJournal.ts",
+            "packages/metering-core/src/tests/RedisMetering.integration.spec.ts",
+            "packages/metering-upstash/README.md"
+          ]
+        },
+        "aws-lambda": {
+          "result": "unverified",
+          "reason": "The same RedisClient and server-time Lua are reused; no Lambda invocation/host execution was performed.",
+          "providers": [
+            "@croco/metering-core/RedisBillableUsageJournal",
+            "@croco/metering-upstash"
+          ],
+          "constraints": [
+            "Applications must await journal operations within invocation budgets; Redis connection/lifecycle ownership remains with the existing adapter."
+          ],
+          "references": [
+            "packages/metering-core/src/libs/RedisBillableUsageJournal.ts",
+            "packages/metering-core/src/tests/RedisMetering.integration.spec.ts",
+            "packages/metering-upstash/README.md"
+          ]
+        },
+        "cloudflare": {
+          "result": "unverified",
+          "reason": "No Workers or Node Container host execution is established by this Redis Lua fix.",
+          "providers": [
+            "@croco/metering-core/RedisBillableUsageJournal",
+            "@croco/metering-upstash"
+          ],
+          "constraints": [
+            "An independently compatible RedisClient and multi-key Lua service are required; the existing Upstash package does not claim Workers support."
+          ],
+          "references": [
+            "packages/metering-core/src/libs/RedisBillableUsageJournal.ts",
+            "packages/metering-core/src/tests/RedisMetering.integration.spec.ts",
+            "packages/metering-upstash/README.md"
+          ]
+        }
+      }
+    }
+  ]
+}
