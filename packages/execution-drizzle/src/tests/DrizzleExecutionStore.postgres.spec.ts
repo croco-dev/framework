@@ -1,7 +1,10 @@
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 import { afterAll, assert, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { createExecutionCheckpointStoreConformanceSuite } from "@croco/execution-core";
+import {
+  ExecutionManagerImpl,
+  createExecutionCheckpointStoreConformanceSuite,
+} from "@croco/execution-core";
 import { DrizzleExecutionStore } from "../libs/DrizzleExecutionStore";
 import type { PoolClient } from "pg";
 import type { Execution } from "@croco/execution-core";
@@ -195,6 +198,70 @@ describe.skipIf(connectionString.length === 0)(
 
       await expect(store.update(created.id, {})).resolves.toEqual(created);
       await expect(store.findById(created.id)).resolves.toEqual(created);
+    });
+
+    it("atomically reuses keyed replays across PostgreSQL connections and manager restarts", async () => {
+      const source = await store.create({ type: "task", payload: { recipient: "recipient-1" } });
+      await store.update(source.id, { status: "failed" });
+      const firstClient = await pool.connect();
+      const secondClient = await pool.connect();
+      let pending: Promise<unknown>[] = [];
+      try {
+        const firstStore = new DrizzleExecutionStore(drizzle(firstClient) as never);
+        const secondStore = new DrizzleExecutionStore(drizzle(secondClient) as never);
+        const firstManager = new ExecutionManagerImpl(firstStore);
+        const secondManager = new ExecutionManagerImpl(secondStore);
+        const params = {
+          idempotencyKey: "shared-key",
+          reason: "provider restored",
+          metadata: { recoveryActorId: "operator-1", recoveryAuditIdempotencyKey: "shared-key" },
+        };
+        // Hold the first insert uncommitted so the other connection reaches real unique-index contention.
+        await firstClient.query("begin");
+        const replay = await firstManager.replay(source.id, params);
+        const applicationName = `execution-replay-contender-${++contentionSequence}`;
+        await identify(secondClient, applicationName);
+        const contender = secondManager.replay(source.id, params);
+        pending = [contender];
+        void contender.catch(() => undefined);
+        await waitUntilCheckpointWriterBlocks(pool, applicationName);
+        await firstClient.query("commit");
+        expect(await contender).toEqual(replay);
+        expect(await new ExecutionManagerImpl(store).replay(source.id, params)).toEqual(replay);
+        await expect(
+          secondManager.replay(source.id, { ...params, payload: { recipient: "recipient-2" } }),
+        ).rejects.toMatchObject({ code: "execution/idempotency-conflict" });
+        const independent = await secondManager.replay(source.id, {
+          ...params,
+          idempotencyKey: "another-key",
+        });
+        expect(independent.id).not.toBe(replay.id);
+        expect(await store.list({ replayOf: source.id })).toHaveLength(2);
+      } finally {
+        await firstClient.query("rollback");
+        await Promise.allSettled(pending);
+        firstClient.release();
+        secondClient.release();
+      }
+    });
+
+    it("reuses JSON-persisted pre-key replay receipts without rewriting them", async () => {
+      const source = await store.create({ type: "task", payload: { account: "account-1" } });
+      await store.update(source.id, { status: "failed" });
+      const manager = new ExecutionManagerImpl(store);
+      const intent = {
+        reason: "provider restored",
+        metadata: { actor: "operator-1", ticket: undefined },
+      };
+      const legacy = await manager.replay(source.id, intent);
+      const before = await store.findById(legacy.id);
+      const params = { ...intent, idempotencyKey: "legacy-key", legacyReplayId: legacy.id };
+      expect(await new ExecutionManagerImpl(store).replay(source.id, params)).toEqual(before);
+      await expect(
+        manager.replay(source.id, { ...params, metadata: { actor: "operator-2" } }),
+      ).rejects.toMatchObject({ code: "execution/idempotency-conflict" });
+      expect(await store.findById(legacy.id)).toEqual(before);
+      expect(await store.list({ replayOf: source.id })).toHaveLength(1);
     });
 
     it("reports duplicate idempotency key updates as conflict Problems", async () => {

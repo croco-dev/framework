@@ -340,7 +340,11 @@ export function createRetryConsole(sources: readonly RetryConsoleSource[]): Retr
         );
       }
 
-      if (action.requiresIdempotencyKey) {
+      // Replay deduplication belongs to the durable execution store. Coalescing by key here
+      // would hide conflicting payload/audit requests before their fingerprints are checked.
+      const durableExecutionReplay =
+        action.kind === "replay" && ["task", "workflow", "batch"].includes(found.item.source.kind);
+      if (action.requiresIdempotencyKey && !durableExecutionReplay) {
         const key = recoveryResultKey(found.item, action, request);
         const existingResult = inFlightRecoveries.get(key);
         if (existingResult) {

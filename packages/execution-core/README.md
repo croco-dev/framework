@@ -323,6 +323,13 @@ console.log(replayed.idempotencyKey); // undefined - 리플레이는 원본 dedu
 console.log(replays[0].id === replayed.id); // true
 ```
 
+동일 복구 요청을 여러 프로세스에서 재사용하려면 `replay()`에 `idempotencyKey`를 전달합니다.
+key는 원본 실행별로 분리되며 저장소의 원자적 create/reuse가 replay 하나만 보존합니다.
+같은 key에 payload·reason·metadata가 다르면 `execution/idempotency-conflict`가 발생합니다.
+생성 시각은 비교에서 제외하며, key를 생략하면 호출마다 독립 replay를 생성합니다.
+기존 replay를 이관할 때는 `legacyReplayId`를 함께 전달할 수 있습니다. 원본·payload·metadata가
+일치하는 기록은 key를 소급 부여하지 않고 그대로 재사용하며, 불일치는 충돌로 처리합니다.
+
 ### Jobs v1 운영 표면
 
 `createExecutionJobsOperations`는 실행 매니저를 운영자가 쓰는 Jobs API로 감쌉니다. 목록과 상세 조회에는

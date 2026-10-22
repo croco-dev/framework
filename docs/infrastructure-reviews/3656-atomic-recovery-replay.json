@@ -1,0 +1,144 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "admin-ops",
+      "classification": "runtime-adapter",
+      "reason": "Bind recovery intent to source-scoped durable replay keys and canonical fingerprints, preserving validated pre-key receipts. Reuse the existing ExecutionStore unique-key create/reuse contract without a new persistence format or deployment provider.",
+      "files": {
+        "packages/admin-ops/src/libs/retryConsole.ts": "0a06f0ba87c980e43bda27bb854f4133e7752ba1e95118d219185537b5ccb4be",
+        "packages/admin-ops/src/libs/sourceAdapters.ts": "e30f33a24dbfbb82450bec4f2cd49543618983071995534a2ff6e31779aa8e26"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "unverified",
+          "reason": "The host delegates replay persistence to its existing injected ExecutionStore. This contract package declares no deployment runtime; no host-runtime or deployed infrastructure certification is claimed.",
+          "providers": [
+            "@croco/execution-core/ExecutionStore",
+            "@croco/execution-drizzle/DrizzleExecutionStore"
+          ],
+          "constraints": [
+            "Store create must atomically reuse unique keys and persist request fingerprints across replicas and restarts.",
+            "Existing metadata-only receipts are compared and reused without mutation; incomplete evidence conflicts.",
+            "Node/PostgreSQL contention is tested separately; provider connection and invocation lifecycle limits remain host responsibilities."
+          ],
+          "references": [
+            "packages/execution-core/src/libs/interfaces/ExecutionStore.ts",
+            "packages/execution-drizzle/src/libs/schema.ts",
+            "packages/execution-drizzle/src/tests/DrizzleExecutionStore.postgres.spec.ts",
+            "packages/presentation-preset/runtime-profiles.json"
+          ]
+        },
+        "aws-lambda": {
+          "result": "unverified",
+          "reason": "The host delegates replay persistence to its existing injected ExecutionStore. This contract package declares no deployment runtime; no host-runtime or deployed infrastructure certification is claimed.",
+          "providers": [
+            "@croco/execution-core/ExecutionStore",
+            "@croco/execution-drizzle/DrizzleExecutionStore"
+          ],
+          "constraints": [
+            "Store create must atomically reuse unique keys and persist request fingerprints across replicas and restarts.",
+            "Existing metadata-only receipts are compared and reused without mutation; incomplete evidence conflicts.",
+            "Node/PostgreSQL contention is tested separately; provider connection and invocation lifecycle limits remain host responsibilities."
+          ],
+          "references": [
+            "packages/execution-core/src/libs/interfaces/ExecutionStore.ts",
+            "packages/execution-drizzle/src/libs/schema.ts",
+            "packages/execution-drizzle/src/tests/DrizzleExecutionStore.postgres.spec.ts",
+            "packages/presentation-preset/runtime-profiles.json"
+          ]
+        },
+        "cloudflare": {
+          "result": "unverified",
+          "reason": "The host delegates replay persistence to its existing injected ExecutionStore. This contract package declares no deployment runtime; no host-runtime or deployed infrastructure certification is claimed.",
+          "providers": [
+            "@croco/execution-core/ExecutionStore",
+            "@croco/execution-drizzle/DrizzleExecutionStore"
+          ],
+          "constraints": [
+            "Store create must atomically reuse unique keys and persist request fingerprints across replicas and restarts.",
+            "Existing metadata-only receipts are compared and reused without mutation; incomplete evidence conflicts.",
+            "Node/PostgreSQL contention is tested separately; provider connection and invocation lifecycle limits remain host responsibilities."
+          ],
+          "references": [
+            "packages/execution-core/src/libs/interfaces/ExecutionStore.ts",
+            "packages/execution-drizzle/src/libs/schema.ts",
+            "packages/execution-drizzle/src/tests/DrizzleExecutionStore.postgres.spec.ts",
+            "packages/presentation-preset/runtime-profiles.json"
+          ]
+        }
+      }
+    },
+    {
+      "package": "execution-core",
+      "classification": "runtime-adapter",
+      "reason": "Bind recovery intent to source-scoped durable replay keys and canonical fingerprints, preserving validated pre-key receipts. Reuse the existing ExecutionStore unique-key create/reuse contract without a new persistence format or deployment provider.",
+      "files": {
+        "packages/execution-core/src/libs/ExecutionManagerImpl.ts": "2e4f04b3e8885ac2c3728b968ba6ada749e8a7ad4ad205251e0c57752535784f",
+        "packages/execution-core/src/libs/interfaces/ExecutionStore.ts": "d8b5611cff9a677c9acc32deb3320a6ec46828243f0a27041ea45f38ee099f13",
+        "packages/execution-core/src/libs/types.ts": "546e679da05e3bafeeb763498fd1f01e765c04daa5ab7288af1e8f46f34e472d"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "unverified",
+          "reason": "The host delegates replay persistence to its existing injected ExecutionStore. This contract package declares no deployment runtime; no host-runtime or deployed infrastructure certification is claimed.",
+          "providers": [
+            "@croco/execution-core/ExecutionStore",
+            "@croco/execution-drizzle/DrizzleExecutionStore"
+          ],
+          "constraints": [
+            "Store create must atomically reuse unique keys and persist request fingerprints across replicas and restarts.",
+            "Existing metadata-only receipts are compared and reused without mutation; incomplete evidence conflicts.",
+            "Node/PostgreSQL contention is tested separately; provider connection and invocation lifecycle limits remain host responsibilities."
+          ],
+          "references": [
+            "packages/execution-core/src/libs/interfaces/ExecutionStore.ts",
+            "packages/execution-drizzle/src/libs/schema.ts",
+            "packages/execution-drizzle/src/tests/DrizzleExecutionStore.postgres.spec.ts",
+            "packages/presentation-preset/runtime-profiles.json"
+          ]
+        },
+        "aws-lambda": {
+          "result": "unverified",
+          "reason": "The host delegates replay persistence to its existing injected ExecutionStore. This contract package declares no deployment runtime; no host-runtime or deployed infrastructure certification is claimed.",
+          "providers": [
+            "@croco/execution-core/ExecutionStore",
+            "@croco/execution-drizzle/DrizzleExecutionStore"
+          ],
+          "constraints": [
+            "Store create must atomically reuse unique keys and persist request fingerprints across replicas and restarts.",
+            "Existing metadata-only receipts are compared and reused without mutation; incomplete evidence conflicts.",
+            "Node/PostgreSQL contention is tested separately; provider connection and invocation lifecycle limits remain host responsibilities."
+          ],
+          "references": [
+            "packages/execution-core/src/libs/interfaces/ExecutionStore.ts",
+            "packages/execution-drizzle/src/libs/schema.ts",
+            "packages/execution-drizzle/src/tests/DrizzleExecutionStore.postgres.spec.ts",
+            "packages/presentation-preset/runtime-profiles.json"
+          ]
+        },
+        "cloudflare": {
+          "result": "unverified",
+          "reason": "The host delegates replay persistence to its existing injected ExecutionStore. This contract package declares no deployment runtime; no host-runtime or deployed infrastructure certification is claimed.",
+          "providers": [
+            "@croco/execution-core/ExecutionStore",
+            "@croco/execution-drizzle/DrizzleExecutionStore"
+          ],
+          "constraints": [
+            "Store create must atomically reuse unique keys and persist request fingerprints across replicas and restarts.",
+            "Existing metadata-only receipts are compared and reused without mutation; incomplete evidence conflicts.",
+            "Node/PostgreSQL contention is tested separately; provider connection and invocation lifecycle limits remain host responsibilities."
+          ],
+          "references": [
+            "packages/execution-core/src/libs/interfaces/ExecutionStore.ts",
+            "packages/execution-drizzle/src/libs/schema.ts",
+            "packages/execution-drizzle/src/tests/DrizzleExecutionStore.postgres.spec.ts",
+            "packages/presentation-preset/runtime-profiles.json"
+          ]
+        }
+      }
+    }
+  ]
+}

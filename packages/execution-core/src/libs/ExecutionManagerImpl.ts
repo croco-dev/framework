@@ -900,9 +900,69 @@ export class ExecutionManagerImpl
       ? { sourceExecutionId: execution.id, reason: params.reason }
       : { sourceExecutionId: execution.id };
 
-    return this.create({
+    const payload = params.payload !== undefined ? params.payload : execution.payload;
+    const idempotencyKey = params.idempotencyKey
+      ? `replay:${await sha256(canonicalStringify([execution.id, params.idempotencyKey]))}`
+      : undefined;
+    const requestFingerprint = idempotencyKey
+      ? await sha256(
+          canonicalStringify({
+            sourceExecutionId: execution.id,
+            type: execution.type,
+            payload,
+            reason: params.reason,
+            metadata: params.metadata,
+          }),
+        )
+      : undefined;
+    if (params.legacyReplayId) {
+      if (!idempotencyKey || !requestFingerprint) {
+        throw ExecutionProblems.idempotencyConflict(
+          "Reusing a legacy replay requires an idempotency key",
+        );
+      }
+      const legacy = await this.findExisting(params.legacyReplayId);
+      if (
+        legacy.idempotencyKey === idempotencyKey &&
+        legacy.requestFingerprint === requestFingerprint &&
+        legacy.replayOf === id
+      )
+        return legacy;
+      const { replayedAt: _legacyTimestamp, ...legacyMetadata } = legacy.metadata ?? {};
+      const { replayedAt: _sourceTimestamp, ...sourceMetadata } = execution.metadata ?? {};
+      const { replayedAt: _requestTimestamp, ...requestMetadata } = params.metadata ?? {};
+      const expectedMetadata = {
+        ...sourceMetadata,
+        ...requestMetadata,
+        replayOf: id,
+        ...(params.reason ? { replayReason: params.reason } : {}),
+      };
+      if (
+        legacy.idempotencyKey !== undefined ||
+        legacy.replayOf !== id ||
+        legacy.type !== execution.type ||
+        (await legacyExecutionRequestFingerprint(legacy.type, {
+          payload: legacy.payload,
+          metadata: legacyMetadata,
+        })) !==
+          (await legacyExecutionRequestFingerprint(execution.type, {
+            payload,
+            metadata: expectedMetadata,
+          }))
+      ) {
+        throw ExecutionProblems.idempotencyConflict(
+          "Legacy replay does not match the recovery request",
+        );
+      }
+      // Pre-key receipts are immutable evidence: reuse after validation without re-keying a
+      // record that another caller may still address through its historical identity.
+      return legacy;
+    }
+    const replayed = await this.store.create({
       type: execution.type,
-      payload: params.payload !== undefined ? params.payload : execution.payload,
+      payload,
+      idempotencyKey,
+      requestFingerprint,
       maxAttempts: execution.maxAttempts,
       timeout: execution.timeout,
       parentId: execution.parentId,
@@ -923,6 +983,15 @@ export class ExecutionManagerImpl
         },
       ],
     });
+    if (
+      idempotencyKey &&
+      (replayed.replayOf !== id || replayed.requestFingerprint !== requestFingerprint)
+    ) {
+      throw ExecutionProblems.idempotencyConflict(
+        "Replay idempotency key was reused for a different recovery request",
+      );
+    }
+    return replayed;
   }
 
   private async findExisting(id: string): Promise<Execution> {

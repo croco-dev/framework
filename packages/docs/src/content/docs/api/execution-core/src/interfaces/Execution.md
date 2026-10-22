@@ -133,7 +133,7 @@ Original execution ID when this execution was created by replay
 
 > `optional` **requestFingerprint?**: `string`
 
-Canonical fingerprint of the execution type and payload used for idempotency validation.
+Canonical request fingerprint; keyed replays also bind source, reason and caller metadata.
 
 ---
 

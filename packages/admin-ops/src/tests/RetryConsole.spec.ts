@@ -1,5 +1,5 @@
 import type {
-  CreateExecutionParams,
+  CreateExecutionRecordParams,
   Execution,
   ExecutionInspectionManager,
   ExecutionLogEntry,
@@ -47,7 +47,13 @@ class MemoryExecutionStore extends ExecutionStore implements ExecutionLogStore {
     }
   }
 
-  async create(params: CreateExecutionParams): Promise<Execution> {
+  async create(params: CreateExecutionRecordParams): Promise<Execution> {
+    // This synchronous section models the store's required atomic unique-key insertion.
+    if (params.idempotencyKey) {
+      for (const execution of this.executions.values()) {
+        if (execution.idempotencyKey === params.idempotencyKey) return execution;
+      }
+    }
     const id = `exec-${++this.idCounter}`;
     const execution: Execution = {
       id,
@@ -58,6 +64,7 @@ class MemoryExecutionStore extends ExecutionStore implements ExecutionLogStore {
       timeout: params.timeout,
       scheduledFor: params.scheduledFor,
       idempotencyKey: params.idempotencyKey,
+      requestFingerprint: params.requestFingerprint,
       replayOf: params.replayOf,
       logs: params.logs,
       parentId: params.parentId,
@@ -584,8 +591,89 @@ describe("RetryConsole", () => {
         recoveryAuditIdempotencyKey: "ops-recovery-1",
       },
     );
-    expect(replaySpy).toHaveBeenCalledTimes(1);
+    expect(replaySpy).toHaveBeenCalledTimes(3);
   });
+
+  it("atomically reuses a replay across independent consoles and restarted managers", async () => {
+    const store = new MemoryExecutionStore([execution({ attempts: 3, maxAttempts: 3 })]);
+    const request: RetryConsoleRecoveryInput = {
+      itemId: "exec-1",
+      actionId: "replay",
+      permission: { granted: true, descriptor: permission("replay", "task", "exec-1") },
+      audit,
+      payload: { recipient: "synthetic-recipient", template: "welcome" },
+    };
+    const recover = (input: RetryConsoleRecoveryInput) =>
+      createRetryConsole([createTaskRetryConsoleSource(new ExecutionManagerImpl(store))]).recover(
+        input,
+      );
+    const results = await Promise.all([recover(request), recover(request)]);
+    expect(results.map((result) => result.status)).toEqual(["succeeded", "succeeded"]);
+    const replays = (await store.list()).filter((item) => item.replayOf === "exec-1");
+    expect(replays).toHaveLength(1);
+    const restarted = await recover(request);
+    for (const result of [...results, restarted]) {
+      expect(result).toMatchObject({
+        status: "succeeded",
+        audit,
+        providerResult: {
+          id: replays[0]?.id,
+          payload: request.payload,
+          metadata: {
+            recoveryActorId: audit.actorId,
+            recoveryAuditIdempotencyKey: audit.idempotencyKey,
+            replayReason: audit.reason,
+          },
+          logs: [{ data: { sourceExecutionId: "exec-1", reason: audit.reason } }],
+        },
+      });
+    }
+    const independent = await recover({
+      ...request,
+      audit: { ...audit, idempotencyKey: "another-key" },
+    });
+    expect(independent.status).toBe("succeeded");
+    expect((await store.list()).filter((item) => item.replayOf === "exec-1")).toHaveLength(2);
+  });
+
+  it.each(["payload", "reason", "actorId", "ticketId", "metadata"] as const)(
+    "rejects concurrent and restarted same-key replay requests with different %s",
+    async (field) => {
+      const store = new MemoryExecutionStore([execution({ attempts: 3, maxAttempts: 3 })]);
+      const request: RetryConsoleRecoveryInput = {
+        itemId: "exec-1",
+        actionId: "replay",
+        permission: { granted: true, descriptor: permission("replay", "task", "exec-1") },
+        audit,
+        payload: { version: 1 },
+      };
+      const changed: RetryConsoleRecoveryInput =
+        field === "payload"
+          ? { ...request, payload: { version: 2 } }
+          : {
+              ...request,
+              audit: { ...audit, [field]: field === "metadata" ? { change: true } : "different" },
+            };
+      const console = createRetryConsole([
+        createTaskRetryConsoleSource(new ExecutionManagerImpl(store)),
+      ]);
+      const results = await Promise.all([console.recover(request), console.recover(changed)]);
+      expect(results.map((result) => result.status).sort()).toEqual(["failed", "succeeded"]);
+      const failed = results.find((result) => result.status === "failed");
+      expect(failed).toMatchObject({ problem: { code: "execution/idempotency-conflict" } });
+      expect((await store.list()).filter((item) => item.replayOf === "exec-1")).toHaveLength(1);
+      const winner = results[0].status === "succeeded" ? request : changed;
+      const loser = results[0].status === "succeeded" ? changed : request;
+      const restarted = createRetryConsole([
+        createTaskRetryConsoleSource(new ExecutionManagerImpl(store)),
+      ]);
+      expect(await restarted.recover(winner)).toMatchObject({ status: "succeeded" });
+      expect(await restarted.recover(loser)).toMatchObject({
+        status: "failed",
+        problem: { code: "execution/idempotency-conflict" },
+      });
+    },
+  );
 
   it("deduplicates a replay beyond the execution store default page", async () => {
     const sourceExecution = execution({
@@ -609,24 +697,18 @@ describe("RetryConsole", () => {
         createdAt: new Date(Date.UTC(2026, 0, 1, 0, 0, index + 1)),
       }),
     );
-    const existingReplay = execution({
-      id: "exec-101",
-      status: "pending",
-      replayOf: sourceExecution.id,
-      metadata: {
-        recoveryActorId: audit.actorId,
-        recoveryAuditIdempotencyKey: audit.idempotencyKey,
-      },
-      createdAt: new Date("2026-01-01T00:02:00.000Z"),
-    });
-    const manager = new ExecutionManagerImpl(
-      new TruncatingMemoryExecutionStore(
-        [sourceExecution, ...fillerExecutions, existingReplay],
-        40,
-      ),
-    );
-    const replaySpy = vi.spyOn(manager, "replay");
+    const store = new TruncatingMemoryExecutionStore([sourceExecution, ...fillerExecutions], 40);
+    const manager = new ExecutionManagerImpl(store);
     const console = createRetryConsole([createTaskRetryConsoleSource(manager)]);
+    const first = await console.recover({
+      itemId: sourceExecution.id,
+      actionId: "replay",
+      permission: { granted: true, descriptor: permission("replay", "task", sourceExecution.id) },
+      audit,
+    });
+    expect(first.status).toBe("succeeded");
+    const existingReplay = (await store.list({ offset: 100, limit: 1 }))[0];
+    expect(existingReplay).toBeDefined();
 
     const result = await console.recover({
       itemId: sourceExecution.id,
@@ -642,8 +724,60 @@ describe("RetryConsole", () => {
     if (result.status !== "succeeded") {
       return;
     }
-    expect(result.providerResult).toMatchObject({ id: existingReplay.id });
-    expect(replaySpy).not.toHaveBeenCalled();
+    expect(result.providerResult).toMatchObject({ id: existingReplay?.id });
+  });
+
+  it("reuses a matching metadata-only replay beyond the default page without creating another", async () => {
+    const source = execution({ attempts: 3, maxAttempts: 3 });
+    const legacy = execution({
+      id: "exec-101",
+      idempotencyKey: undefined,
+      status: "completed",
+      replayOf: source.id,
+      payload: source.payload,
+      metadata: {
+        ...source.metadata,
+        replayOf: source.id,
+        replayedAt: "2026-01-02T00:00:00.000Z",
+        replayReason: audit.reason,
+        recoveryActorId: audit.actorId,
+        recoveryAuditIdempotencyKey: audit.idempotencyKey,
+        recoveryTicketId: audit.ticketId,
+        recoveryMetadata: audit.metadata,
+      },
+    });
+    const store = new TruncatingMemoryExecutionStore(
+      [
+        source,
+        ...Array.from({ length: 99 }, (_, index) =>
+          execution({ id: `exec-${index + 2}`, status: "completed", replayOf: source.id }),
+        ),
+        legacy,
+      ],
+      40,
+    );
+    const recover = (input: RetryConsoleRecoveryInput) =>
+      createRetryConsole([createTaskRetryConsoleSource(new ExecutionManagerImpl(store))]).recover(
+        input,
+      );
+    const request: RetryConsoleRecoveryInput = {
+      itemId: source.id,
+      actionId: "replay",
+      permission: { granted: true, descriptor: permission("replay", "task", source.id) },
+      audit,
+    };
+    const results = await Promise.all([recover(request), recover(request)]);
+    for (const result of results)
+      expect(result).toMatchObject({
+        status: "succeeded",
+        providerResult: { id: legacy.id, status: "completed" },
+      });
+    expect(await store.findById(legacy.id)).toEqual(legacy);
+    expect(await recover({ ...request, audit: { ...audit, reason: "different" } })).toMatchObject({
+      status: "failed",
+      problem: { code: "execution/idempotency-conflict" },
+    });
+    expect(await store.list({ offset: 101 })).toHaveLength(0);
   });
 
   it("keeps non-retryable failures distinct and preserves Problem details", async () => {

@@ -21,7 +21,9 @@ export abstract class ExecutionStore {
    * Create a new execution record.
    *
    * If idempotencyKey is provided and an existing execution with the same key exists,
-   * implementations should return the existing execution instead of creating a new one.
+   * implementations must atomically return the existing execution instead of creating a new one,
+   * including when independent callers race. Persist requestFingerprint unchanged so the manager
+   * can reject a conflicting request after create/reuse.
    *
    * @throws Error if creation fails (excluding idempotency conflicts)
    */

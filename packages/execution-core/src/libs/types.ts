@@ -59,6 +59,18 @@ export interface AddExecutionLogParams {
  * Parameters for replaying a failed execution.
  */
 export interface ReplayExecutionParams {
+  /**
+   * Optional durable replay key, scoped to the source execution. Concurrent matching requests
+   * reuse one replay; different payload, reason or metadata with the same key conflicts.
+   * Omitting the key preserves independent replay creation.
+   */
+  idempotencyKey?: string;
+  /**
+   * Optional pre-key replay receipt to reuse during migration. Requires idempotencyKey; the manager
+   * validates its source, payload and effective replay metadata without changing the receipt.
+   * A conflicting record is never overwritten.
+   */
+  legacyReplayId?: string;
   /** Optional replay reason stored in metadata and initial log entry */
   reason?: string;
   /** Optional payload override. Defaults to the original execution payload. */
@@ -266,7 +278,7 @@ export interface Execution {
   timeout?: number;
   /** Optional idempotency key for deduplication */
   idempotencyKey?: string;
-  /** Canonical fingerprint of the execution type and payload used for idempotency validation. */
+  /** Canonical request fingerprint; keyed replays also bind source, reason and caller metadata. */
   requestFingerprint?: string;
   /** Original execution ID when this execution was created by replay */
   replayOf?: string;
