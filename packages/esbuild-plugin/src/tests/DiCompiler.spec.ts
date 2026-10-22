@@ -959,6 +959,9 @@ describe("compileDiGraph", () => {
         "install",
         "--silent",
         "--ignore-scripts",
+        // This dependency-free local tarball tests graph consumption. The
+        // repository dependency-audit-policy gate owns vulnerability checks.
+        "--no-audit",
         "--no-package-lock",
         path.join(tarballDir, tarballName),
       ],
