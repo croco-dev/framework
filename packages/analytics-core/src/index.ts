@@ -139,3 +139,12 @@ export type {
   AnalysisUsage,
   ProposeAnalysisPlan,
 } from "./libs/GrowthAnalysis";
+
+export {
+  PageExperienceCollection,
+  PageExperienceCollectionProblem,
+} from "./libs/PageExperienceCollection";
+export type {
+  PageExperienceBrowserObservation,
+  PageExperienceCollectionContext,
+} from "./libs/PageExperienceCollection";

@@ -290,3 +290,21 @@ export type {
   GrowthBacktest,
 } from "./libs/growth/GrowthModel";
 export type { GrowthHistoryMetadata, GrowthHistoryBinding } from "./libs/growth/GrowthSources";
+
+export {
+  PageExperienceProblem,
+  validatePageExperienceDefinition,
+  validatePageExperienceRow,
+  calculatePageExperience,
+  hashPageExperience,
+  importGa4Engagement,
+} from "./libs/PageExperience";
+export type {
+  PageExperienceScope,
+  PageExperienceDefinition,
+  PageExperienceRow,
+  PageExperienceInput,
+  PageExperienceRatio,
+  PageExperienceReport,
+  Ga4EngagementSnapshot,
+} from "./libs/PageExperience";

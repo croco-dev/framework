@@ -1,0 +1,210 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "metrics-core",
+      "classification": "pure-contract",
+      "reason": "Pure normalized calculation and semantic adapters reuse the existing ETL decoder, bounded warehouse reader and authorized MetricReadService. No provider, database engine or Host is introduced.",
+      "files": {
+        "packages/metrics-core/src/index.ts": "ddf6040e9d33ee5c7cd0479ab9b6449c2ee27204dd5b02566545608015f0df02",
+        "packages/metrics-core/src/libs/PageExperience.ts": "c2e79cb88ccb8b1825db732e174ad03aeaacaaf0626bad720bcaa9fefb2ef2b4",
+        "packages/metrics-core/src/libs/PageExperienceSources.ts": "ae63b380d94b5687d47cdc55a20a15bc6c1436aace46b60656dc5bdaac482f91",
+        "packages/metrics-core/src/runtime.ts": "ff7a6c15b9cfee654ef4ecaa0a838f52be2045b70b5ba25a1d8288cb9d4b64b0"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Pure normalized calculation and semantic adapters reuse the existing ETL decoder, bounded warehouse reader and authorized MetricReadService. No provider, database engine or Host is introduced.",
+          "providers": [],
+          "constraints": [
+            "Application owns current permissions, source/provider selection and shutdown/flush boundaries; no deployed infrastructure certification is claimed."
+          ],
+          "references": ["packages/metrics-core/README.md", "examples/page-experience/README.md"]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Pure normalized calculation and semantic adapters reuse the existing ETL decoder, bounded warehouse reader and authorized MetricReadService. No provider, database engine or Host is introduced.",
+          "providers": [],
+          "constraints": [
+            "Application owns current permissions, source/provider selection and shutdown/flush boundaries; no deployed infrastructure certification is claimed."
+          ],
+          "references": ["packages/metrics-core/README.md", "examples/page-experience/README.md"]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Pure normalized calculation and semantic adapters reuse the existing ETL decoder, bounded warehouse reader and authorized MetricReadService. No provider, database engine or Host is introduced.",
+          "providers": [],
+          "constraints": [
+            "Application owns current permissions, source/provider selection and shutdown/flush boundaries; no deployed infrastructure certification is claimed."
+          ],
+          "references": ["packages/metrics-core/README.md", "examples/page-experience/README.md"]
+        }
+      }
+    },
+    {
+      "package": "analytics-core",
+      "classification": "pure-contract",
+      "reason": "Server collection validates observations and delegates authorization, durable writes and receipt verification to existing application-owned contracts. No concrete provider or Host capability is introduced.",
+      "files": {
+        "packages/analytics-core/src/index.ts": "807d766b4a5c0b21d609bcdb80393ca344d2c8e4d9b53363763c67a9a94ac250",
+        "packages/analytics-core/src/libs/PageExperienceCollection.ts": "97f523e9c6a06070de21f283f5d0c970cdc26534e615badb5721d5ae6d66dd70"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Server collection validates observations and delegates authorization, durable writes and receipt verification to existing application-owned contracts. No concrete provider or Host capability is introduced.",
+          "providers": [],
+          "constraints": [
+            "Application owns current permissions, source/provider selection and shutdown/flush boundaries; no deployed infrastructure certification is claimed."
+          ],
+          "references": ["packages/analytics-core/README.md", "examples/page-experience/README.md"]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Server collection validates observations and delegates authorization, durable writes and receipt verification to existing application-owned contracts. No concrete provider or Host capability is introduced.",
+          "providers": [],
+          "constraints": [
+            "Application owns current permissions, source/provider selection and shutdown/flush boundaries; no deployed infrastructure certification is claimed."
+          ],
+          "references": ["packages/analytics-core/README.md", "examples/page-experience/README.md"]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Server collection validates observations and delegates authorization, durable writes and receipt verification to existing application-owned contracts. No concrete provider or Host capability is introduced.",
+          "providers": [],
+          "constraints": [
+            "Application owns current permissions, source/provider selection and shutdown/flush boundaries; no deployed infrastructure certification is claimed."
+          ],
+          "references": ["packages/analytics-core/README.md", "examples/page-experience/README.md"]
+        }
+      }
+    },
+    {
+      "package": "frontend-react",
+      "classification": "protocol-render",
+      "reason": "The opt-in browser collector and React lifecycle hook require browser visibility and application consent. They do not execute inside a server Host.",
+      "files": {
+        "packages/frontend-react/src/index.ts": "79ae02b7443cdb16afb50db714d521ef880138c19bc83bc1ef9d391589d30815",
+        "packages/frontend-react/src/libs/pageExperienceCollector.ts": "d6a58beed76cfa62863bf0f5a0ea82bc707cd34fae915e0e78e441193e1464aa"
+      },
+      "catalogRuntimes": ["browser", "node"],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "The opt-in browser collector and React lifecycle hook require browser visibility and application consent. They do not execute inside a server Host.",
+          "providers": [],
+          "constraints": [
+            "Application owns current permissions, source/provider selection and shutdown/flush boundaries; no deployed infrastructure certification is claimed."
+          ],
+          "references": ["packages/frontend-react/README.md", "examples/page-experience/README.md"]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "The opt-in browser collector and React lifecycle hook require browser visibility and application consent. They do not execute inside a server Host.",
+          "providers": [],
+          "constraints": [
+            "Application owns current permissions, source/provider selection and shutdown/flush boundaries; no deployed infrastructure certification is claimed."
+          ],
+          "references": ["packages/frontend-react/README.md", "examples/page-experience/README.md"]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "The opt-in browser collector and React lifecycle hook require browser visibility and application consent. They do not execute inside a server Host.",
+          "providers": [],
+          "constraints": [
+            "Application owns current permissions, source/provider selection and shutdown/flush boundaries; no deployed infrastructure certification is claimed."
+          ],
+          "references": ["packages/frontend-react/README.md", "examples/page-experience/README.md"]
+        }
+      }
+    },
+    {
+      "package": "admin-react",
+      "classification": "protocol-render",
+      "reason": "The aggregate React Panel consumes existing authorized results and has no server storage, Host or deployment dependency.",
+      "files": {
+        "packages/admin-react/src/index.ts": "0d746365c540dedba0fcb0cf1a11fc3281ad517f5dd8767a48a187c992604571",
+        "packages/admin-react/src/libs/PageExperiencePanel.tsx": "8a7ff0294fd0cf5bf584554fb93d81e119651bdee59b4736b61a317f99e669c0"
+      },
+      "catalogRuntimes": ["browser", "node"],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "The aggregate React Panel consumes existing authorized results and has no server storage, Host or deployment dependency.",
+          "providers": [],
+          "constraints": [
+            "Application owns current permissions, source/provider selection and shutdown/flush boundaries; no deployed infrastructure certification is claimed."
+          ],
+          "references": ["packages/admin-react/README.md", "examples/page-experience/README.md"]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "The aggregate React Panel consumes existing authorized results and has no server storage, Host or deployment dependency.",
+          "providers": [],
+          "constraints": [
+            "Application owns current permissions, source/provider selection and shutdown/flush boundaries; no deployed infrastructure certification is claimed."
+          ],
+          "references": ["packages/admin-react/README.md", "examples/page-experience/README.md"]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "The aggregate React Panel consumes existing authorized results and has no server storage, Host or deployment dependency.",
+          "providers": [],
+          "constraints": [
+            "Application owns current permissions, source/provider selection and shutdown/flush boundaries; no deployed infrastructure certification is claimed."
+          ],
+          "references": ["packages/admin-react/README.md", "examples/page-experience/README.md"]
+        }
+      }
+    },
+    {
+      "package": "problems-core",
+      "classification": "pure-contract",
+      "reason": "Generated Problem code declarations register the new page-experience validation failures. This adds typed identifiers and recovery metadata without any Host, storage or lifecycle behavior.",
+      "files": {
+        "packages/problems-core/src/generated/problem-code-registry.ts": "e0e07e377caec086319c1281deb49e19a289c6b01680fca35884874c35b0d5b3"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Generated Problem code declarations register the new page-experience validation failures. This adds typed identifiers and recovery metadata without any Host, storage or lifecycle behavior.",
+          "providers": [],
+          "constraints": [
+            "Generated identifiers do not certify infrastructure or introduce a provider."
+          ],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "docs/problem-code-registry.json"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Generated Problem code declarations register the new page-experience validation failures. This adds typed identifiers and recovery metadata without any Host, storage or lifecycle behavior.",
+          "providers": [],
+          "constraints": [
+            "Generated identifiers do not certify infrastructure or introduce a provider."
+          ],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "docs/problem-code-registry.json"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Generated Problem code declarations register the new page-experience validation failures. This adds typed identifiers and recovery metadata without any Host, storage or lifecycle behavior.",
+          "providers": [],
+          "constraints": [
+            "Generated identifiers do not certify infrastructure or introduce a provider."
+          ],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "docs/problem-code-registry.json"
+          ]
+        }
+      }
+    }
+  ]
+}

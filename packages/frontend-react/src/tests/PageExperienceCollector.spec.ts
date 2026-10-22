@@ -1,0 +1,272 @@
+import { describe, expect, it } from "vitest";
+import { createPageExperienceCollector } from "../libs/pageExperienceCollector";
+import type { PageExperienceObservation } from "../libs/pageExperienceCollector";
+describe("Page experience collector", () => {
+  it.each(["revoke", "consent"])(
+    "does not dispatch an extracted batch after %s withdrawal",
+    async (mode) => {
+      let consent = true;
+      const sent: PageExperienceObservation[] = [];
+      const collector = createPageExperienceCollector({
+        page: "product",
+        pageInstance: "nav1",
+        contentCondition: "hero",
+        contentMinIntersectionRatio: 0.5,
+        engagementActions: ["preview"],
+        valueAction: "purchase",
+        enabled: () => consent,
+        clock: () => 0,
+        monotonic: () => 0,
+        visible: () => true,
+        send: async (rows) => {
+          sent.push(...rows);
+        },
+        maxBuffer: 4,
+        maxAttempts: 2,
+      });
+      collector.start();
+      const pending = collector.flush();
+      if (mode === "revoke") collector.revoke();
+      else consent = false;
+      await pending;
+      expect(sent).toEqual([]);
+      expect(collector.status().queued).toBe(0);
+      expect(collector.status().dropped).toBe(1);
+    },
+  );
+  it("never restores a failed batch from before revocation after consent is granted again", async () => {
+    let rejectSend: (reason: Error) => void = () => {
+      throw new Error("send has not started");
+    };
+    let calls = 0;
+    const collector = createPageExperienceCollector({
+      page: "product",
+      pageInstance: "nav1",
+      contentCondition: "hero",
+      contentMinIntersectionRatio: 0.5,
+      engagementActions: ["preview"],
+      valueAction: "purchase",
+      enabled: () => true,
+      clock: () => 0,
+      monotonic: () => 0,
+      visible: () => true,
+      send: () => {
+        calls++;
+        return new Promise<void>((_resolve, reject) => {
+          rejectSend = reject;
+        });
+      },
+      maxBuffer: 4,
+      maxAttempts: 2,
+    });
+    collector.start();
+    const pending = collector.flush();
+    await Promise.resolve();
+    expect(calls).toBe(1);
+    collector.revoke();
+    collector.action("preview", "during-withdrawal");
+    expect(collector.status().queued).toBe(0);
+    collector.start();
+    rejectSend(new Error("late transport failure"));
+    await pending;
+    expect(collector.status().queued).toBe(0);
+    expect(collector.status().dropped).toBe(1);
+    await collector.flush();
+    expect(calls).toBe(1);
+  });
+  it("emits no prefetch view, deduplicates remount and counts only visible time after content", async () => {
+    let time = 0,
+      visible = true,
+      consent = true;
+    const sent: PageExperienceObservation[] = [];
+    const c = createPageExperienceCollector({
+      page: "product",
+      pageInstance: "nav1",
+      contentCondition: "hero",
+      contentMinIntersectionRatio: 0.5,
+      engagementActions: ["preview"],
+      valueAction: "purchase",
+      enabled: () => consent,
+      clock: () => time,
+      monotonic: () => time,
+      visible: () => visible,
+      send: async (rows) => {
+        sent.push(...rows);
+      },
+      maxBuffer: 20,
+      maxAttempts: 2,
+    });
+    expect(c.status().queued).toBe(0);
+    c.start();
+    c.start();
+    time = 500;
+    c.contentDisplayed(1);
+    time = 1500;
+    visible = false;
+    c.pause();
+    time = 5000;
+    visible = true;
+    c.resume();
+    time = 5500;
+    c.observe();
+    await c.flush();
+    expect(sent.filter((r) => r.kind === "view")).toHaveLength(1);
+    expect(sent.find((r) => r.kind === "visible")?.value).toBe("1500");
+    consent = false;
+    c.action("preview", "click1");
+    await c.flush();
+    expect(sent).toHaveLength(3);
+  });
+  it.each(["in-flight", "settling"])(
+    "drains the final visibility observation during %s send completion",
+    async (phase) => {
+      let time = 0;
+      let finish: () => void = () => {
+        throw new Error("send has not started");
+      };
+      const batches: PageExperienceObservation[][] = [];
+      const collector = createPageExperienceCollector({
+        page: "product",
+        pageInstance: "nav1",
+        contentCondition: "hero",
+        contentMinIntersectionRatio: 0.5,
+        engagementActions: ["preview"],
+        valueAction: "purchase",
+        enabled: () => true,
+        clock: () => time,
+        monotonic: () => time,
+        visible: () => true,
+        send: async (rows) => {
+          batches.push([...rows]);
+          if (batches.length === 1)
+            await new Promise<void>((resolve) => {
+              finish = resolve;
+            });
+        },
+        maxBuffer: 4,
+        maxAttempts: 2,
+      });
+      collector.start();
+      collector.contentDisplayed(1);
+      const pending = collector.flush();
+      await Promise.resolve();
+      const sample = () => {
+        time = 1750;
+        collector.pause();
+        collector.observe();
+        return collector.flush();
+      };
+      let finalFlush: Promise<void>;
+      if (phase === "in-flight") {
+        finalFlush = sample();
+        finish();
+      } else {
+        finish();
+        finalFlush = Promise.resolve()
+          .then(() => {})
+          .then(() => {})
+          .then(sample);
+      }
+      await Promise.all([pending, finalFlush]);
+      expect(batches.map((batch) => batch.map((r) => r.kind))).toEqual([
+        ["view", "content"],
+        ["visible"],
+      ]);
+      expect(batches[1]?.[0]?.value).toBe("1750");
+      expect(collector.status().queued).toBe(0);
+    },
+  );
+  it("bounds the buffer and retries the same event identities, then explicitly drops", async () => {
+    let calls = 0;
+    const ids: string[][] = [];
+    const c = createPageExperienceCollector({
+      page: "product",
+      pageInstance: "nav1",
+      contentCondition: "hero",
+      contentMinIntersectionRatio: 0.5,
+      engagementActions: ["preview"],
+      valueAction: "purchase",
+      enabled: () => true,
+      clock: () => 0,
+      monotonic: () => 0,
+      visible: () => true,
+      send: async (rows) => {
+        ids.push(rows.map((r) => r.id));
+        calls++;
+        throw new Error("offline");
+      },
+      maxBuffer: 2,
+      maxAttempts: 2,
+    });
+    c.start();
+    c.contentDisplayed(1);
+    c.action("preview", "click1");
+    expect(c.status().dropped).toBe(1);
+    await c.flush();
+    expect(c.status().queued).toBe(2);
+    await c.flush();
+    expect(c.status().queued).toBe(0);
+    expect(c.status().dropped).toBe(3);
+    expect(ids[0]).toEqual(ids[1]);
+    expect(calls).toBe(2);
+  });
+  it("revokes buffered data and allocates a distinct view for an actual navigation", async () => {
+    const sent: PageExperienceObservation[] = [];
+    const make = (pageInstance: string) =>
+      createPageExperienceCollector({
+        page: "product",
+        pageInstance,
+        contentCondition: "hero",
+        contentMinIntersectionRatio: 0.5,
+        engagementActions: ["preview"],
+        valueAction: "purchase",
+        enabled: () => true,
+        clock: () => 0,
+        monotonic: () => 0,
+        visible: () => true,
+        send: async (rows) => {
+          sent.push(...rows);
+        },
+        maxBuffer: 2,
+        maxAttempts: 1,
+      });
+    const first = make("nav1");
+    first.start();
+    first.revoke();
+    await first.flush();
+    expect(sent).toEqual([]);
+    const next = make("nav2");
+    next.start();
+    await next.flush();
+    expect(sent[0]?.pageInstance).toBe("nav2");
+  });
+  it("separates an engagement and attempt sharing one interaction reference and rejects raw URL configuration", async () => {
+    const sent: PageExperienceObservation[] = [];
+    const policy = {
+      page: "product",
+      pageInstance: "nav1",
+      contentCondition: "hero",
+      contentMinIntersectionRatio: 0.5,
+      engagementActions: ["preview"],
+      valueAction: "purchase",
+      enabled: () => true,
+      clock: () => 0,
+      monotonic: () => 0,
+      visible: () => true,
+      send: async (rows: readonly PageExperienceObservation[]) => {
+        sent.push(...rows);
+      },
+      maxBuffer: 20,
+      maxAttempts: 2,
+    };
+    const collector = createPageExperienceCollector(policy);
+    collector.start();
+    collector.action("preview", "interaction1");
+    collector.attempt("purchase", "interaction1");
+    await collector.flush();
+    expect(sent.map((row) => row.kind)).toEqual(["view", "action", "attempt"]);
+    expect(() =>
+      createPageExperienceCollector({ ...policy, page: "https://shop.test/?email=private" }),
+    ).toThrow();
+  });
+});

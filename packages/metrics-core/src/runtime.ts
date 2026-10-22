@@ -63,3 +63,12 @@ export type {
   BehaviorQuerySelection,
   BehaviorQueryResult,
 } from "./libs/BehaviorSources";
+
+export {
+  PAGE_EXPERIENCE_FIELDS,
+  normalizePageExperienceRow,
+  collectPageExperienceSource,
+  importPageExperienceSource,
+  readPageExperienceWarehouse,
+  registerPageExperienceQuery,
+} from "./libs/PageExperienceSources";
