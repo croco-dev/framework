@@ -224,18 +224,38 @@ describe("MrrCalculator", () => {
       });
     });
 
-    it("should reject subscriptions with unavailable pinned pricing", async () => {
-      const subscriptions: SubscriptionSnapshot[] = [
-        {
-          id: "sub_1",
-          planId: "unknown_plan",
-          pricingRef: "unknown_plan",
-        },
-      ];
+    it.each([false, true])(
+      "should reject unavailable pricing with a valid preceding plan: %s",
+      async (includeValid) => {
+        const subscriptions: SubscriptionSnapshot[] = [
+          ...(includeValid
+            ? [{ id: "sub_valid", planId: "plan_monthly_10", pricingRef: "plan_monthly_10" }]
+            : []),
+          { id: "sub_1", planId: "unknown_plan", pricingRef: "unknown_plan" },
+        ];
 
-      await expect(calculator.calculateMRR(subscriptions, mockPlanProvider)).rejects.toBeInstanceOf(
-        SubscriptionPricingUnavailableProblem,
-      );
+        await expect(
+          calculator.calculateMRR(subscriptions, mockPlanProvider),
+        ).rejects.toBeInstanceOf(SubscriptionPricingUnavailableProblem);
+      },
+    );
+
+    it("should retain the currency of an existing free plan", async () => {
+      const provider: PlanProvider = {
+        getPlanVersion: async () => ({
+          id: "free",
+          amount: 0,
+          currency: "EUR",
+          interval: "month",
+          intervalCount: 1,
+        }),
+      };
+      await expect(
+        calculator.calculateMRR(
+          [{ id: "sub_free", planId: "free", pricingRef: "free@v1" }],
+          provider,
+        ),
+      ).resolves.toEqual({ amount: 0, currency: "EUR" });
     });
 
     it.each([undefined, "", "   "])(
