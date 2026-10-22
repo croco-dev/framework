@@ -45,6 +45,13 @@ import type {
   ReferralSubject,
 } from "./types";
 
+type CommittedOutcome<T> =
+  | { readonly kind: "success"; readonly value: T }
+  | {
+      readonly kind: "rejected";
+      readonly problem: ReferralDuplicateClaimProblem | ReferralQualificationRejectedProblem;
+    };
+
 const COUNTED_RECEIPT_STATES: readonly ReferralAttribution["state"][] = [
   "qualified",
   "benefits-pending",
@@ -261,7 +268,7 @@ export class ReferralService {
     assertReferralSubject(input.recipient);
     const now = input.now ?? this.now();
     const tokenHash = this.tokens.hashToken(input.token);
-    return this.store.transact(async (tx) => {
+    const claim = async (tx: ReferralTx): Promise<CommittedOutcome<ClaimReferralResult>> => {
       const link = await tx.getLinkByTokenHash(tokenHash);
       if (!link) throw new ReferralLinkNotFoundProblem();
       if (link.revokedAt !== undefined) throw new ReferralLinkRevokedProblem(link.id);
@@ -284,7 +291,16 @@ export class ReferralService {
       const first = await tx.getFirstAttributionForRecipient(program.familyId, input.recipient);
       if (first) {
         const held = await this.holdDuplicateClaim(tx, program, first, input, now);
-        return { attribution: held, created: false, firstValid: false };
+        if (held.created) {
+          return {
+            kind: "rejected",
+            problem: new ReferralDuplicateClaimProblem(input.recipient.id),
+          };
+        }
+        return {
+          kind: "success",
+          value: { attribution: held.attribution, created: false, firstValid: false },
+        };
       }
       const verdict = await this.novelty({
         recipient: input.recipient,
@@ -326,7 +342,10 @@ export class ReferralService {
       const fingerprint = attributionFingerprint(candidate);
       const saved = await tx.saveAttribution(candidate, fingerprint);
       if (!saved.created) {
-        return { attribution: saved.attribution, created: false, firstValid: true };
+        return {
+          kind: "success",
+          value: { attribution: saved.attribution, created: false, firstValid: true },
+        };
       }
       await this.reserveAttributionBudget(tx, program, candidate);
       await tx.recordAudit(
@@ -345,8 +364,22 @@ export class ReferralService {
           }),
         );
       }
-      return { attribution: saved.attribution, created: true, firstValid: true };
-    });
+      return {
+        kind: "success",
+        value: { attribution: saved.attribution, created: true, firstValid: true },
+      };
+    };
+    let outcome: CommittedOutcome<ClaimReferralResult>;
+    try {
+      outcome = await this.store.transact(claim);
+    } catch (error) {
+      if (!(error instanceof ReferralDuplicateClaimProblem)) throw error;
+      // A first-valid unique-key race aborts its transaction. Read the committed
+      // winner and persist the losing hold in a fresh transaction, once.
+      outcome = await this.store.transact(claim);
+    }
+    if (outcome.kind === "rejected") throw outcome.problem;
+    return outcome.value;
   }
 
   /**
@@ -357,7 +390,7 @@ export class ReferralService {
   async qualifyAttribution(input: QualifyReferralAttributionInput): Promise<ReferralAttribution> {
     assertReferralSubject(input.recipient);
     const now = input.now ?? this.now();
-    return this.store.transact(async (tx) => {
+    const outcome = await this.store.transact<CommittedOutcome<ReferralAttribution>>(async (tx) => {
       const stored = await tx.getAttribution(input.attributionId);
       if (!stored) throw new ReferralAttributionNotFoundProblem(input.attributionId);
       if (!stored.recipient || !sameReferralSubject(stored.recipient, input.recipient)) {
@@ -367,7 +400,11 @@ export class ReferralService {
           "only the attributed recipient can qualify this attribution",
         );
       }
-      if (stored.state === "qualified" || stored.state === "benefits-pending") return stored;
+      if (stored.state === "qualified" || stored.state === "benefits-pending")
+        return { kind: "success", value: stored };
+      if (stored.state === "held" && stored.holdReason === "duplicate-claim") {
+        throw new ReferralDuplicateClaimProblem(input.recipient.id);
+      }
       if (stored.state !== "claimed" && stored.state !== "held") {
         throw new ReferralAttributionStateConflictProblem(
           stored.id,
@@ -396,7 +433,7 @@ export class ReferralService {
             idempotencyKey: `expire:${stored.id}`,
           }),
         );
-        return expired;
+        return { kind: "success", value: expired };
       }
       const verdict = await this.qualification({
         recipient: input.recipient,
@@ -425,7 +462,10 @@ export class ReferralService {
             idempotencyKey: `reject:${stored.id}`,
           }),
         );
-        throw new ReferralQualificationRejectedProblem(stored.id, verdict.reason);
+        return {
+          kind: "rejected",
+          problem: new ReferralQualificationRejectedProblem(stored.id, verdict.reason),
+        };
       }
       const qualified: ReferralAttribution = {
         ...stored,
@@ -454,8 +494,10 @@ export class ReferralService {
         updatedAt: new Date(now.getTime()),
       };
       await tx.compareAndSetAttribution(stored.id, ["qualified"], pending);
-      return pending;
+      return { kind: "success", value: pending };
     });
+    if (outcome.kind === "rejected") throw outcome.problem;
+    return outcome.value;
   }
 
   /**
@@ -941,7 +983,7 @@ export class ReferralService {
     first: ReferralAttribution,
     input: ClaimReferralAttributionInput,
     now: Date,
-  ): Promise<ReferralAttribution> {
+  ): Promise<{ readonly attribution: ReferralAttribution; readonly created: boolean }> {
     const held: ReferralAttribution = {
       id: input.attributionId ?? this.idGenerator(),
       linkId: first.linkId,
@@ -977,9 +1019,8 @@ export class ReferralService {
           idempotencyKey: `hold-duplicate:${held.id}`,
         }),
       );
-      throw new ReferralDuplicateClaimProblem(input.recipient.id);
     }
-    return saved.attribution;
+    return saved;
   }
 
   private async nextCycleIndex(
