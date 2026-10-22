@@ -1,6 +1,6 @@
 {
   "version": "croco.problem-code-registry.v1",
-  "problemCount": 1148,
+  "problemCount": 1149,
   "problems": [
     {
       "code": "ACCESS_DENIED",
@@ -23053,7 +23053,7 @@
       "sources": [
         {
           "file": "packages/metrics-core/src/libs/read/MetricReadService.ts",
-          "line": 195,
+          "line": 201,
           "column": 10,
           "kind": "problem-constructor"
         }
@@ -23083,7 +23083,7 @@
       "sources": [
         {
           "file": "packages/metrics-core/src/libs/read/MetricReadService.ts",
-          "line": 199,
+          "line": 205,
           "column": 10,
           "kind": "problem-constructor"
         }
@@ -23116,6 +23116,36 @@
           "line": 65,
           "column": 1,
           "kind": "problem-class"
+        }
+      ]
+    },
+    {
+      "code": "metrics-core/seo-invalid-input",
+      "category": "ValidationError",
+      "status": 422,
+      "title": "Validation Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#metrics-core-seo-invalid-input",
+      "recovery": {
+        "cause": "The request or generated contract failed schema or semantic validation.",
+        "userAction": "Fix the invalid fields and retry with schema-conformant input.",
+        "operatorAction": "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "public",
+        "telemetry": {
+          "eventName": "croco.problem.info",
+          "severity": "info",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/metrics-core/src/libs/seo/SeoComparison.ts",
+          "line": 107,
+          "column": 5,
+          "kind": "problem-constructor"
         }
       ]
     },
@@ -34437,6 +34467,16 @@
       "reason": "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged."
     },
     {
+      "className": "SeoWorkbenchProblem",
+      "source": {
+        "file": "packages/admin-core/src/libs/SeoWorkbench.ts",
+        "line": 65,
+        "column": 1,
+        "kind": "problem-class"
+      },
+      "reason": "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged."
+    },
+    {
       "className": "TargetingImpactProblem",
       "source": {
         "file": "packages/admin-core/src/libs/TargetingImpactOperations.ts",
@@ -34520,7 +34560,7 @@
       "className": "MetricReadProblem",
       "source": {
         "file": "packages/metrics-core/src/libs/read/MetricReadService.ts",
-        "line": 183,
+        "line": 189,
         "column": 1,
         "kind": "problem-class"
       },

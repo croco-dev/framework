@@ -23,7 +23,10 @@
             "Synthetic standalone and local browser evidence does not certify a deployed profile.",
             "Host repositories must isolate scope and enforce retention; invocation I/O lifecycle remains host-owned."
           ],
-          "references": ["examples/seo-workbench/README.md", "packages/metrics-core/src/index.ts"]
+          "references": [
+            "examples/seo-workbench/README.md",
+            "packages/metrics-core/src/index.ts"
+          ]
         },
         "aws-lambda": {
           "result": "not-applicable",
@@ -34,7 +37,10 @@
             "Synthetic standalone and local browser evidence does not certify a deployed profile.",
             "Host repositories must isolate scope and enforce retention; invocation I/O lifecycle remains host-owned."
           ],
-          "references": ["examples/seo-workbench/README.md", "packages/metrics-core/src/index.ts"]
+          "references": [
+            "examples/seo-workbench/README.md",
+            "packages/metrics-core/src/index.ts"
+          ]
         },
         "cloudflare": {
           "result": "not-applicable",
@@ -45,7 +51,10 @@
             "Synthetic standalone and local browser evidence does not certify a deployed profile.",
             "Host repositories must isolate scope and enforce retention; invocation I/O lifecycle remains host-owned."
           ],
-          "references": ["examples/seo-workbench/README.md", "packages/metrics-core/src/index.ts"]
+          "references": [
+            "examples/seo-workbench/README.md",
+            "packages/metrics-core/src/index.ts"
+          ]
         }
       }
     },
@@ -68,7 +77,10 @@
             "Synthetic standalone and local browser evidence does not certify a deployed profile.",
             "Host repositories must isolate scope and enforce retention; invocation I/O lifecycle remains host-owned."
           ],
-          "references": ["examples/seo-workbench/README.md", "packages/admin-core/src/index.ts"]
+          "references": [
+            "examples/seo-workbench/README.md",
+            "packages/admin-core/src/index.ts"
+          ]
         },
         "aws-lambda": {
           "result": "not-applicable",
@@ -79,7 +91,10 @@
             "Synthetic standalone and local browser evidence does not certify a deployed profile.",
             "Host repositories must isolate scope and enforce retention; invocation I/O lifecycle remains host-owned."
           ],
-          "references": ["examples/seo-workbench/README.md", "packages/admin-core/src/index.ts"]
+          "references": [
+            "examples/seo-workbench/README.md",
+            "packages/admin-core/src/index.ts"
+          ]
         },
         "cloudflare": {
           "result": "not-applicable",
@@ -90,7 +105,10 @@
             "Synthetic standalone and local browser evidence does not certify a deployed profile.",
             "Host repositories must isolate scope and enforce retention; invocation I/O lifecycle remains host-owned."
           ],
-          "references": ["examples/seo-workbench/README.md", "packages/admin-core/src/index.ts"]
+          "references": [
+            "examples/seo-workbench/README.md",
+            "packages/admin-core/src/index.ts"
+          ]
         }
       }
     },
@@ -102,7 +120,10 @@
         "packages/admin-react/src/index.ts": "c2b9588916eca3042527f6191bc5ca34e6dae5ddd9ffbd4ba8ea6cdd846777b2",
         "packages/admin-react/src/libs/SeoWorkbench.tsx": "a71340a0386c942be9ba889309738b8833d3e5685a763f67227787f48516f16f"
       },
-      "catalogRuntimes": ["browser", "node"],
+      "catalogRuntimes": [
+        "browser",
+        "node"
+      ],
       "profiles": {
         "kubernetes": {
           "result": "not-applicable",
@@ -113,7 +134,10 @@
             "Synthetic standalone and local browser evidence does not certify a deployed profile.",
             "Host repositories must isolate scope and enforce retention; invocation I/O lifecycle remains host-owned."
           ],
-          "references": ["examples/seo-workbench/README.md", "packages/admin-react/src/index.ts"]
+          "references": [
+            "examples/seo-workbench/README.md",
+            "packages/admin-react/src/index.ts"
+          ]
         },
         "aws-lambda": {
           "result": "not-applicable",
@@ -124,7 +148,10 @@
             "Synthetic standalone and local browser evidence does not certify a deployed profile.",
             "Host repositories must isolate scope and enforce retention; invocation I/O lifecycle remains host-owned."
           ],
-          "references": ["examples/seo-workbench/README.md", "packages/admin-react/src/index.ts"]
+          "references": [
+            "examples/seo-workbench/README.md",
+            "packages/admin-react/src/index.ts"
+          ]
         },
         "cloudflare": {
           "result": "not-applicable",
@@ -135,7 +162,10 @@
             "Synthetic standalone and local browser evidence does not certify a deployed profile.",
             "Host repositories must isolate scope and enforce retention; invocation I/O lifecycle remains host-owned."
           ],
-          "references": ["examples/seo-workbench/README.md", "packages/admin-react/src/index.ts"]
+          "references": [
+            "examples/seo-workbench/README.md",
+            "packages/admin-react/src/index.ts"
+          ]
         }
       }
     },
@@ -144,7 +174,7 @@
       "classification": "pure-contract",
       "reason": "Generated registry includes the new SEO validation Problem code and source location; no failure handling, Host lifecycle or provider behavior changes.",
       "files": {
-        "packages/problems-core/src/generated/problem-code-registry.ts": "3e4052f84fa1cb53bdd1e938ed9e660a2cd0e69bd5dcf2929e5c08fa3cc61f9a"
+        "packages/problems-core/src/generated/problem-code-registry.ts": "32fbd867bc9d30114596c741549913c08d390f33431de8410aa6e0e81586cebb"
       },
       "catalogRuntimes": [],
       "profiles": {
