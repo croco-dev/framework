@@ -955,8 +955,8 @@ function writeModuleBoundaries(
 }
 
 function sourceUsesEsmBoundary(sourcePath: string): boolean {
-  if (sourcePath.endsWith(".mts")) return true;
-  if (sourcePath.endsWith(".cts")) return false;
+  if (sourcePath.endsWith(".mts") || sourcePath.endsWith(".mjs")) return true;
+  if (sourcePath.endsWith(".cts") || sourcePath.endsWith(".cjs")) return false;
   let directory = path.dirname(sourcePath);
   while (true) {
     const packagePath = path.join(directory, "package.json");
@@ -994,7 +994,7 @@ function findModuleResolutionRoot(sourceDirectory: string, fallback: string): st
 
 function isEmittableSourcePath(filePath: string): boolean {
   return (
-    /(?:\.[cm]?tsx?|\.json)$/.test(filePath) &&
+    /(?:\.[cm]?(?:tsx?|js)|\.json)$/.test(filePath) &&
     !/\.d\.[cm]?ts$/.test(filePath) &&
     !filePath.split(path.sep).includes("node_modules")
   );
