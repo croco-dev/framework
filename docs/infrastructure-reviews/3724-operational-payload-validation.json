@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "cli",
+      "classification": "pure-contract",
+      "reason": "The CLI validates the minimum JSON envelope and known endpoint state before reporting an operational endpoint as available. The remote Host, Provider and deployment contracts do not change.",
+      "files": {
+        "packages/cli/src/libs/ops.ts": "5f7cdcd60cddceb18de7d304345d9715ad9e942e17a10e48ad7ba892c90fffcd"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Local CLI payload validation only; no Node Host, cluster, storage or application lifecycle behavior changes.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/cli/src/libs/ops.ts",
+            "packages/transports-http/src/libs/operationalEndpoints.ts",
+            "packages/transports-http/src/libs/CrocoApp.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "The CLI inspects an existing HTTP response; Lambda invocation, initialization and flush ownership are unchanged.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/cli/src/libs/ops.ts",
+            "packages/transports-http/src/libs/operationalEndpoints.ts",
+            "packages/transports-http/src/libs/CrocoApp.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "The CLI inspects an existing HTTP response; no Workers isolate capability, binding or Node Container support is introduced.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/cli/src/libs/ops.ts",
+            "packages/transports-http/src/libs/operationalEndpoints.ts",
+            "packages/transports-http/src/libs/CrocoApp.ts"
+          ]
+        }
+      }
+    }
+  ]
+}

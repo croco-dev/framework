@@ -193,13 +193,18 @@ async function fetchOperationalEndpoint({
     });
     const body = await readResponseBody(response);
 
+    const validBody = isOperationalPayload(endpoint.name, body);
+
     return {
       name: endpoint.name,
       url,
       required,
       httpStatus: response.status,
-      ok: response.ok,
+      ok: response.ok && validBody,
       body,
+      ...(response.ok && !validBody
+        ? { error: `Invalid ${endpoint.name} operational response payload` }
+        : {}),
     };
   } catch (error) {
     return {
@@ -236,6 +241,31 @@ async function readResponseBody(response: Response): Promise<unknown> {
   } catch {
     return text;
   }
+}
+
+// Metrics may use Prometheus text or the application's JSON metrics format.
+// The JSON endpoints must identify their own operational contract, not just return HTTP 2xx.
+function isOperationalPayload(name: OpsEndpointName, body: unknown): boolean {
+  if (name === "metrics") {
+    return true;
+  }
+  if (!isRecord(body)) {
+    return false;
+  }
+  if (name === "diagnostics") {
+    return (
+      (body["summary"] === "all_healthy" ||
+        body["summary"] === "degraded" ||
+        body["summary"] === "issues_detected") &&
+      Array.isArray(body["components"]) &&
+      Array.isArray(body["recentErrors"])
+    );
+  }
+  // Preserve the existing minimal liveness response accepted by ops status/check.
+  if (name === "health" && body["status"] === "ok") {
+    return true;
+  }
+  return (body["status"] === "up" || body["status"] === "down") && Array.isArray(body["results"]);
 }
 
 function selectOpsEndpoints(includeMetrics: boolean): readonly (typeof OPS_ENDPOINTS)[number][] {
@@ -322,5 +352,5 @@ function readStringField(value: unknown, key: string): string | undefined {
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
