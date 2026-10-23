@@ -1,0 +1,87 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "architecture-policy",
+      "classification": "pure-contract",
+      "reason": "Reject malformed policy manifests before normalization can widen import exemptions or drop rules.",
+      "files": {
+        "packages/architecture-policy/src/index.ts": "558ad944939fd7f4cb1eddb824dd1ef7f78e97ebf4daf95d18f5c314ad1f4aae"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Manifest schema validation is build-time Tooling input processing. It adds no Host capability, provider, storage or lifecycle dependency.",
+          "providers": [],
+          "constraints": ["No deployment support or provider certification claim."],
+          "references": [
+            "packages/architecture-policy/src/index.ts",
+            "packages/architecture-policy/README.md"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Manifest schema validation is build-time Tooling input processing. It adds no Host capability, provider, storage or lifecycle dependency.",
+          "providers": [],
+          "constraints": ["No deployment support or provider certification claim."],
+          "references": [
+            "packages/architecture-policy/src/index.ts",
+            "packages/architecture-policy/README.md"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Manifest schema validation is build-time Tooling input processing. It adds no Host capability, provider, storage or lifecycle dependency.",
+          "providers": [],
+          "constraints": ["No deployment support or provider certification claim."],
+          "references": [
+            "packages/architecture-policy/src/index.ts",
+            "packages/architecture-policy/README.md"
+          ]
+        }
+      }
+    },
+    {
+      "package": "problems-core",
+      "classification": "pure-contract",
+      "reason": "Regenerate existing Problem source locations after architecture policy diagnostics change. Only three line-number values change in the exported registry and declaration.",
+      "files": {
+        "packages/problems-core/src/generated/problem-code-registry.ts": "f9fe55adf6c11c4045eb7ae6ea97336dc409d8d76c95962be1e3ec9db394f63d"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Generated Problem source-location metadata only; no Host, provider, storage or lifecycle behavior changes.",
+          "providers": [],
+          "constraints": ["No runtime support or provider certification claim."],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "scripts/problem-registry.mts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Generated Problem source-location metadata only; no Host, provider, storage or lifecycle behavior changes.",
+          "providers": [],
+          "constraints": ["No runtime support or provider certification claim."],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "scripts/problem-registry.mts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Generated Problem source-location metadata only; no Host, provider, storage or lifecycle behavior changes.",
+          "providers": [],
+          "constraints": ["No runtime support or provider certification claim."],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "scripts/problem-registry.mts"
+          ]
+        }
+      }
+    }
+  ]
+}

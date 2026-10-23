@@ -7727,7 +7727,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/architecture-policy/src/index.ts";
-          readonly line: 19;
+          readonly line: 29;
           readonly column: 5;
           readonly kind: "problem-constructor";
         },
@@ -7755,7 +7755,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/architecture-policy/src/index.ts";
-          readonly line: 30;
+          readonly line: 40;
           readonly column: 5;
           readonly kind: "problem-constructor";
         },
@@ -7811,7 +7811,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/architecture-policy/src/index.ts";
-          readonly line: 46;
+          readonly line: 56;
           readonly column: 5;
           readonly kind: "problem-constructor";
         },
@@ -41038,7 +41038,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/architecture-policy/src/index.ts",
-          line: 19,
+          line: 29,
           column: 5,
           kind: "problem-constructor",
         },
@@ -41069,7 +41069,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/architecture-policy/src/index.ts",
-          line: 30,
+          line: 40,
           column: 5,
           kind: "problem-constructor",
         },
@@ -41129,7 +41129,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/architecture-policy/src/index.ts",
-          line: 46,
+          line: 56,
           column: 5,
           kind: "problem-constructor",
         },

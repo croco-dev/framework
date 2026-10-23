@@ -15,7 +15,17 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 
 ### Constructor
 
-> **new ArchitecturePolicyManifestShapeProblem**(): `ArchitecturePolicyManifestShapeProblem`
+> **new ArchitecturePolicyManifestShapeProblem**(`field?`, `expected?`): `ArchitecturePolicyManifestShapeProblem`
+
+#### Parameters
+
+##### field?
+
+`string`
+
+##### expected?
+
+`string`
 
 #### Returns
 
