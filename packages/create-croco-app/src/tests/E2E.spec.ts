@@ -1740,9 +1740,7 @@ describe("E2E: generate()", () => {
     expect(apiPackageJson.scripts?.["demo:scenario"]).toBe(
       "pnpm di:generate && tsx src/demo/scenario.ts",
     );
-    expect(apiPackageJson.scripts?.["demo:usage-recover"]).toBe(
-      "pnpm di:generate && tsx src/demo/usage-recover.ts",
-    );
+    expect(apiPackageJson.scripts?.["demo:usage-recover"]).toBe("tsx src/demo/usage-recover.ts");
     expect(apiPackageJson.scripts?.["failure-drill:smoke"]).toBe(
       "pnpm di:generate && tsx src/demo/failure-drill-smoke.ts",
     );
@@ -3255,9 +3253,7 @@ describe("E2E: generate()", () => {
       expect(apiPackageJson.scripts?.["demo:scenario"]).toBe(
         "pnpm di:generate && tsx src/demo/scenario.ts",
       );
-      expect(apiPackageJson.scripts?.["demo:usage-recover"]).toBe(
-        "pnpm di:generate && tsx src/demo/usage-recover.ts",
-      );
+      expect(apiPackageJson.scripts?.["demo:usage-recover"]).toBe("tsx src/demo/usage-recover.ts");
       expect(apiPackageJson.scripts?.["jobs:smoke"]).toBe(
         "pnpm di:generate && tsx src/demo/jobs-smoke.ts",
       );

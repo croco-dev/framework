@@ -3,10 +3,10 @@
   "version": "0.0.1",
   "private": true,
   "scripts": {
-    "build": "pnpm contract:check && next build",
+    "build": "pnpm contract:check && next build --webpack",
     "contract:check": "tsx src/server/graphql-contract.ts --check",
     "contract:snapshot": "tsx src/server/graphql-contract.ts --write",
-    "dev": "next dev",
+    "dev": "next dev --webpack",
     "start": "next start",
     "typecheck": "pnpm contract:check && tsc --noEmit"
   },
@@ -19,7 +19,7 @@
     "graphql": "^16.0.0",
     "type-graphql": "^2.0.0-rc.3",
     "reflect-metadata": "^0.2.0",
-    "next": "^15.5.28",
+    "next": "^16.4.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "sharp": "^0.35.5",

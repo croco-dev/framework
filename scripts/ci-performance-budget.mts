@@ -183,23 +183,23 @@ const BUILD_ARTIFACT_MAINTENANCE_CHECKS = [
 const CACHEABLE_CI_EXPERIMENT_JOBS = [
   [
     "core-verification",
-    "github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request'",
+    "github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && needs.changes.outputs.profile == 'publish')",
   ],
   [
     "generated-apps",
-    "github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request'",
+    "github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && needs.changes.outputs.profile == 'publish')",
   ],
   [
     "package-artifacts",
-    "github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request'",
+    "github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && needs.changes.outputs.profile == 'publish')",
   ],
   [
     "coverage-security",
-    "github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request'",
+    "github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && needs.changes.outputs.profile == 'publish')",
   ],
   [
     "split-validation-shadow",
-    "always() && (github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request') && needs.changes.result == 'success'",
+    "always() && (github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && needs.changes.outputs.profile == 'publish')) && needs.changes.result == 'success'",
   ],
 ] as const;
 
@@ -299,7 +299,9 @@ export function findCiPerformanceBudgetViolations(
   }
   for (const [job, expectedCondition] of CACHEABLE_CI_EXPERIMENT_JOBS) {
     if (workflowJobCondition(jobs, job) !== expectedCondition) {
-      violations.push(`${job} cacheable CI experiment must stay off automatic change runs`);
+      violations.push(
+        `${job} cacheable CI experiment must match the publish PR and manual observation cohort`,
+      );
     }
   }
   if (

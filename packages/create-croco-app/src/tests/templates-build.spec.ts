@@ -1071,7 +1071,7 @@ function checkSaasStructure() {
       "demo:seed": "pnpm di:generate && tsx src/demo/seed.ts",
       "demo:smoke": "pnpm di:generate && tsx src/demo/smoke.ts",
       "demo:scenario": "pnpm di:generate && tsx src/demo/scenario.ts",
-      "demo:usage-recover": "pnpm di:generate && tsx src/demo/usage-recover.ts",
+      "demo:usage-recover": "tsx src/demo/usage-recover.ts",
       "ops:smoke": "pnpm di:generate && tsx src/demo/ops-smoke.ts",
       "jobs:smoke": "pnpm di:generate && tsx src/demo/jobs-smoke.ts",
       "failure-drill:smoke": "pnpm di:generate && tsx src/demo/failure-drill-smoke.ts",
@@ -1512,7 +1512,7 @@ function checkAiSaasStructure() {
       dev: expect.stringContaining("tsup --config tsup.config.ts --watch"),
       "ai:smoke": "pnpm di:generate && tsx src/demo/ai-smoke.ts",
       "demo:scenario": "pnpm di:generate && tsx src/demo/scenario.ts",
-      "demo:usage-recover": "pnpm di:generate && tsx src/demo/usage-recover.ts",
+      "demo:usage-recover": "tsx src/demo/usage-recover.ts",
       "ops:smoke": "pnpm di:generate && tsx src/demo/ops-smoke.ts",
       "jobs:smoke": "pnpm di:generate && tsx src/demo/jobs-smoke.ts",
       "failure-drill:smoke": "pnpm di:generate && tsx src/demo/failure-drill-smoke.ts",
@@ -1647,7 +1647,7 @@ describe("GraphQL addon templates", () => {
     );
     expect(nextjsPackageJson).toMatchObject({
       scripts: expect.objectContaining({
-        build: "pnpm contract:check && next build",
+        build: "pnpm contract:check && next build --webpack",
         "contract:check": "tsx src/server/graphql-contract.ts --check",
         "contract:snapshot": "tsx src/server/graphql-contract.ts --write",
         typecheck: "pnpm contract:check && tsc --noEmit",

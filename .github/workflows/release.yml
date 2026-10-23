@@ -158,7 +158,8 @@ jobs:
 
       - name: Install Playwright Chromium
         if: steps.release_execution.outputs.should_run_verification == 'true'
-        run: pnpm --dir packages/docs run playwright:install
+        timeout-minutes: 10
+        run: bash scripts/ci-install-playwright.sh
 
       # Release reruns the complete publish profile as defense in depth. Tokens,
       # provenance permissions, summaries, uploads, and Changesets remain Actions-owned.

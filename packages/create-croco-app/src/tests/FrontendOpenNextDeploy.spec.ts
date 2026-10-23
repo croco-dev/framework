@@ -56,10 +56,10 @@ describe.each([
       expect(manifest.scripts.deploy).toBe("pnpm build:worker && opennextjs-cloudflare deploy");
       expect(manifest.scripts.build).toBe(
         apiHosting === "standalone"
-          ? "next build"
+          ? "next build --webpack"
           : api === "graphql"
-            ? "pnpm contract:check && next build"
-            : "pnpm di:generate && next build",
+            ? "pnpm contract:check && next build --webpack"
+            : "pnpm di:generate && next build --webpack",
       );
       expect(manifest.dependencies.next).toBeTruthy();
       const nextConfig = readFileSync(join(appDir, "next.config.ts"), "utf8");
@@ -99,9 +99,13 @@ it.each(["opennext", "vercel"] as const)(
       { outputMode: "json" },
     );
     const workspace = parseYaml(readFileSync(join(targetDir, "pnpm-workspace.yaml"), "utf8")) as {
+      packages: string[];
       allowBuilds: Record<string, boolean>;
       onlyBuiltDependencies: string[];
     };
+    expect(workspace.packages.includes("!apps/**/.open-next/**")).toBe(
+      frontendDeploy === "opennext",
+    );
     expect(workspace.allowBuilds.workerd === true).toBe(frontendDeploy === "opennext");
     expect(workspace.onlyBuiltDependencies.includes("workerd")).toBe(frontendDeploy === "opennext");
     expect(workspace.allowBuilds.esbuild).toBe(true);

@@ -20,14 +20,17 @@ describe("Next.js addon templates", () => {
     },
   );
 
-  it.each(NEXT_ADDONS)("pins %s to a Server Actions and Sharp-safe release", (addon) => {
+  it.each(NEXT_ADDONS)("pins %s to a supported Server Actions and Sharp-safe release", (addon) => {
     const manifestPath = join(TEMPLATES_DIR, "addons", addon, "apps", "web", "package.json.hbs");
     const manifest = JSON.parse(readFileSync(manifestPath, "utf8")) as {
       dependencies?: Record<string, string>;
+      scripts?: Record<string, string>;
     };
 
-    expect(manifest.dependencies?.next).toMatch(/^\^?15\.5\.28$/);
+    expect(manifest.dependencies?.next).toMatch(/^\^?16\.4\.1$/);
     expect(manifest.dependencies?.sharp).toBe("^0.35.5");
+    expect(manifest.scripts?.build).toContain("next build --webpack");
+    expect(manifest.scripts?.dev).toContain("next dev --webpack");
   });
 
   it.each(["graphql-nextjs", "trpc-nextjs"] as const)(

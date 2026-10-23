@@ -113,7 +113,8 @@ jobs:
             ci-reports/benchmark/latest-five-green-runs.md
           if-no-files-found: warn
       - name: Install Playwright Chromium
-        run: pnpm --dir packages/docs run playwright:install
+        timeout-minutes: 10
+        run: bash scripts/ci-install-playwright.sh
       - name: Build the production PDP fixture
         run: pnpm build --filter=@croco-example/rsc-node...
       - name: Measure PDP configurations and intentional regressions

@@ -1,4 +1,5 @@
-import { mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { chmodSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { isNode, parseDocument } from "yaml";
@@ -408,14 +409,14 @@ describe("Phase B cacheable verification shadow", () => {
     }
   });
 
-  it("keeps the monolithic validate job authoritative while running cacheable lanes in parallel on pull requests and manual runs", () => {
+  it("keeps validate authoritative while shadowing publish pull requests and manual runs", () => {
     expect(VALIDATE_JOB).toContain("needs: changes");
     expect(VALIDATE_JOB).not.toContain("ci-cacheable-lanes:producer");
     for (const jobId of producerJobs) {
       const job = workflowJob(jobId);
       expect(job).toContain("needs: changes");
       expect(workflowJobCondition(jobId)).toBe(
-        "github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request'",
+        "github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && needs.changes.outputs.profile == 'publish')",
       );
       expect(job).toContain("scripts/ci-cacheable-experiment-identity.mts");
       expect(job).toContain("scripts/ci-cacheable-lane-runner.mts");
@@ -436,7 +437,7 @@ describe("Phase B cacheable verification shadow", () => {
       workflowJob("split-validation-shadow"),
     ].join("\n");
     expect(workflowJobCondition("split-validation-shadow")).toBe(
-      "always() && (github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request') && needs.changes.result == 'success'",
+      "always() && (github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && needs.changes.outputs.profile == 'publish')) && needs.changes.result == 'success'",
     );
     expect(findWorkflowVerificationViolations(cacheableJobs, ROOT_DIR)).toEqual([]);
   });
@@ -928,8 +929,137 @@ describe("CI verification profile contract", () => {
 
     expect(playwright).toBeGreaterThan(install);
     expect(playwright).toBeLessThan(verification);
-    expect(VALIDATE_JOB).toContain("pnpm --dir packages/docs run playwright:install");
+    expect(VALIDATE_JOB).toContain("bash scripts/ci-install-playwright.sh");
   });
+
+  it("bounds every CI browser installation without allowing a failed setup to pass", () => {
+    const installs = Object.entries(WORKFLOWS).flatMap(([workflow, source]) => {
+      const { jobs } = parseDocument(source).toJS() as {
+        readonly jobs: Readonly<Record<string, { readonly steps?: readonly WorkflowStep[] }>>;
+      };
+      return Object.entries(jobs).flatMap(([job, definition]) =>
+        (definition.steps ?? [])
+          .filter((step) => step.name === "Install Playwright Chromium")
+          .map((step) => ({ id: `${workflow}:${job}`, step })),
+      );
+    });
+
+    expect(installs.map(({ id }) => id).sort()).toEqual([
+      "benchmark.yml:benchmark",
+      "ci.yml:core-verification",
+      "ci.yml:generated-apps",
+      "ci.yml:turbo-cache",
+      "ci.yml:validate",
+      "release.yml:release",
+    ]);
+    for (const { id, step } of installs) {
+      expect(step.run, id).toBe("bash scripts/ci-install-playwright.sh");
+      expect(step["timeout-minutes"], id).toBe(10);
+      expect(step["continue-on-error"], id).toBeUndefined();
+    }
+  });
+
+  it.each([
+    { mirror: true, mirrorExit: 0, configExit: 0, installExit: 0, expectedExit: 0 },
+    { mirror: true, mirrorExit: 43, configExit: 0, installExit: 0, expectedExit: 43 },
+    { mirror: true, mirrorExit: 0, configExit: 42, installExit: 0, expectedExit: 42 },
+    { mirror: true, mirrorExit: 0, configExit: 0, installExit: 23, expectedExit: 23 },
+    { mirror: false, mirrorExit: 0, configExit: 0, installExit: 0, expectedExit: 0 },
+  ])(
+    "preserves browser setup failures (mirror=$mirror, $mirrorExit, $configExit, $installExit)",
+    ({ mirror, mirrorExit, configExit, installExit, expectedExit }) => {
+      const fixture = mkdtempSync(join(tmpdir(), "croco-playwright-install-"));
+      try {
+        const configPath = join(fixture, "apt.conf");
+        const mirrorsPath = join(fixture, "apt-mirrors.txt");
+        const invocationPath = join(fixture, "install-args");
+        const originalMirrors =
+          "http://azure.archive.ubuntu.com/ubuntu/\tpriority:1\nhttps://archive.ubuntu.com/ubuntu/\tpriority:2\nhttps://security.ubuntu.com/ubuntu/\tpriority:3\n";
+        if (mirror) writeFileSync(mirrorsPath, originalMirrors);
+        const scriptPath = join(fixture, "install.sh");
+        writeFileSync(
+          scriptPath,
+          readFileSync(join(ROOT_DIR, "scripts/ci-install-playwright.sh"), "utf8").replaceAll(
+            "/etc/apt/apt-mirrors.txt",
+            mirrorsPath,
+          ),
+        );
+        const commands = {
+          sudo: `#!/bin/sh
+if [ "$1" = "sed" ]; then
+  [ "$2" = "-i" ] || exit 64
+  [ "$CI_MIRROR_EXIT" = "0" ] || exit "$CI_MIRROR_EXIT"
+  sed "$3" "$4" > "$4.tmp" && mv "$4.tmp" "$4"
+  exit $?
+fi
+[ "$*" = "tee /etc/apt/apt.conf.d/99-croco-playwright" ] || exit 64
+cat > "$CI_APT_CONFIG_CAPTURE"
+exit "$CI_APT_CONFIG_EXIT"
+`,
+          pnpm: `#!/bin/sh
+printf '%s\\n' "$*" > "$CI_INSTALL_ARGS_CAPTURE"
+exit "$CI_INSTALL_EXIT"
+`,
+        };
+        for (const [name, command] of Object.entries(commands)) {
+          const path = join(fixture, name);
+          writeFileSync(path, command);
+          chmodSync(path, 0o700);
+        }
+
+        const runInstall = () =>
+          spawnSync("bash", [scriptPath], {
+            cwd: ROOT_DIR,
+            encoding: "utf8",
+            timeout: 5_000,
+            env: {
+              ...process.env,
+              PATH: `${fixture}:${process.env.PATH}`,
+              CI_MIRROR_EXIT: String(mirrorExit),
+              CI_APT_CONFIG_CAPTURE: configPath,
+              CI_APT_CONFIG_EXIT: String(configExit),
+              CI_INSTALL_ARGS_CAPTURE: invocationPath,
+              CI_INSTALL_EXIT: String(installExit),
+            },
+          });
+        const result = runInstall();
+
+        expect(result.error).toBeUndefined();
+        expect(result.status, result.stderr).toBe(expectedExit);
+        if (expectedExit === 0) {
+          const repeated = runInstall();
+          expect(repeated.error).toBeUndefined();
+          expect(repeated.status, repeated.stderr).toBe(0);
+        }
+        if (mirrorExit !== 0) {
+          expect(readFileSync(mirrorsPath, "utf8")).toBe(originalMirrors);
+          expect(readdirSync(fixture)).not.toContain("apt.conf");
+          expect(readdirSync(fixture)).not.toContain("install-args");
+          return;
+        }
+        if (mirror) {
+          expect(readFileSync(mirrorsPath, "utf8")).toBe(
+            "https://archive.ubuntu.com/ubuntu/\tpriority:1\nhttp://azure.archive.ubuntu.com/ubuntu/\tpriority:2\nhttps://security.ubuntu.com/ubuntu/\tpriority:3\n",
+          );
+        } else {
+          expect(readdirSync(fixture)).not.toContain("apt-mirrors.txt");
+        }
+        const config = readFileSync(configPath, "utf8");
+        expect(config).toContain('Acquire::http::Timeout "30";');
+        expect(config).toContain('Acquire::https::Timeout "30";');
+        expect(config).toContain('Acquire::Retries "2";');
+        if (configExit === 0) {
+          expect(readFileSync(invocationPath, "utf8")).toBe(
+            "--dir packages/docs run playwright:install\n",
+          );
+        } else {
+          expect(readdirSync(fixture)).not.toContain("install-args");
+        }
+      } finally {
+        rmSync(fixture, { recursive: true, force: true });
+      }
+    },
+  );
 
   it("fails publish shadow reuse with an explicit missing-evidence diagnostic", () => {
     const shadow = workflowStep("Run full test suite for changed-test shadow");
@@ -1365,7 +1495,7 @@ describe("CI verification profile contract", () => {
     expect(DOCS_SYNC_JOB_SOURCE).not.toContain("TURBO_TOKEN");
     expect(DOCS_BUILD_JOB).not.toContain("TURBO_TOKEN");
     expect(WORKFLOW).not.toContain("secrets.TURBO_TOKEN");
-    expect(DOCS_BUILD_JOB).toContain("needs: [changes, docs-sync-check]");
+    expect(workflowJobDefinition("docs-build").needs).toBe("changes");
     expect(DOCS_BUILD_JOB).not.toContain("-docs-sync-check-");
     expect(DOCS_BUILD_JOB).toContain(`key: ${CANONICAL_TURBO_CACHE_KEY}`);
     expect(DOCS_BUILD_JOB).toContain(
@@ -1375,8 +1505,9 @@ describe("CI verification profile contract", () => {
   });
 
   it("runs independent CI surfaces in parallel and restores content-addressed Turbo state", () => {
-    expect(WORKFLOW).toContain("docs-sync-check:\n    needs: changes");
-    expect(WORKFLOW).not.toContain("docs-sync-check:\n    needs: [validate, changes]");
+    expect(workflowJobDefinition("docs-sync-check").needs).toBe("changes");
+    expect(workflowJobDefinition("docs-build").needs).toBe("changes");
+    expect(workflowJobDefinition("docs-links").needs).toEqual(["changes", "docs-build"]);
     expect(WORKFLOW).toContain(`uses: actions/cache/restore@${CACHE_ACTION_REVISION} # v6.1.0`);
     expect(WORKFLOW).toContain(`key: ${CANONICAL_TURBO_CACHE_KEY}`);
     expect(WORKFLOW).not.toContain("pnpm turbo run build --filter=create-croco-app... --force");
@@ -1552,7 +1683,7 @@ describe("canonical Turbo cache producer", () => {
     expect(pnpmStoreCache?.with).toEqual({ cache: "pnpm" });
     expect(restore?.id).toBe("restore");
     expect(install?.run).toBe("pnpm install --frozen-lockfile");
-    expect(playwright?.run).toBe("pnpm --dir packages/docs run playwright:install");
+    expect(playwright?.run).toBe("bash scripts/ci-install-playwright.sh");
     expect(warm).toEqual({
       name: "Warm Turbo cache",
       run: `${TURBO_CACHE_COMMAND} warm --cache-dir .turbo/cache`,

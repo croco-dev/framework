@@ -590,7 +590,7 @@ describe("Release verification profile contract", () => {
     const verificationStep = stepByName(steps, "Release publish verification");
     const verificationIndex = steps.indexOf(verificationStep);
 
-    expect(playwrightStep.run).toBe("pnpm --dir packages/docs run playwright:install");
+    expect(playwrightStep.run).toBe("bash scripts/ci-install-playwright.sh");
     expect(releaseExecutionStep.id).toBe("release_execution");
     expect(releaseExecutionStep.if).toBe("steps.release_state.outputs.is_current == 'true'");
     expect(releaseExecutionStep.run).toContain("scripts/release-reconciliation-state.mts");

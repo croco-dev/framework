@@ -1,6 +1,9 @@
 packages:
   - "apps/**/*"
   - "!apps/**/.next/**"
+#{{#if opennext}}
+  - "!apps/**/.open-next/**"
+#{{/if}}
   - "libs/**/*"
 
 overrides:

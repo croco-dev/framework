@@ -211,15 +211,45 @@ describe("infrastructure review gate", () => {
     expect(result.diagnostics).toEqual([]);
     expect(result.reviews[0]?.package).toBe("sample");
   });
-  it("reports a Git read failure instead of treating a tracked blob as missing", () => {
-    const input = changed();
-    const head = commitReview(input);
-    const blob = git(input.root, "rev-parse", `${head}:docs/package-catalog.json`);
-    rmSync(join(input.root, ".git/objects", blob.slice(0, 2), blob.slice(2)));
-    expect(() => inspectInfrastructureReview(input.root, input.base, head)).toThrow(
-      expect.objectContaining({ code: "INFRA_GIT_FAILED" }),
-    );
-  });
+  it.each(["loose", "packed"])(
+    "reports a Git read failure for a tracked blob with %s objects",
+    (storage) => {
+      const input = changed();
+      const head = commitReview(input);
+      if (storage === "packed") git(input.root, "repack", "-ad");
+      const missingBlob = execFileSync("git", ["hash-object", "--stdin"], {
+        cwd: input.root,
+        encoding: "utf8",
+        input: `Missing catalog object for ${input.root}`,
+      }).trim();
+      git(
+        input.root,
+        "update-index",
+        "--cacheinfo",
+        `100644,${missingBlob},docs/package-catalog.json`,
+      );
+      const tree = git(input.root, "write-tree", "--missing-ok");
+      const brokenHead = git(
+        input.root,
+        "-c",
+        "user.name=Fixture",
+        "-c",
+        "user.email=fixture@example.invalid",
+        "commit-tree",
+        tree,
+        "-p",
+        head,
+        "-m",
+        "tracked catalog with missing object",
+      );
+      expect(
+        git(input.root, "ls-tree", "-r", brokenHead, "--", "docs/package-catalog.json"),
+      ).toContain(missingBlob);
+      expect(() => inspectInfrastructureReview(input.root, input.base, brokenHead)).toThrow(
+        expect.objectContaining({ code: "INFRA_GIT_FAILED" }),
+      );
+    },
+  );
   it.each(["legacy", "split"])(
     "executes supported evidence with the real %s CI reporting runner",
     async (mode) => {
