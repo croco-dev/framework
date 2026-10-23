@@ -1226,8 +1226,19 @@ export class ReferralService {
           attribution.state !== "benefits-pending" &&
           attribution.state !== "benefits-partial" &&
           attribution.state !== "indeterminate"
-        )
+        ) {
+          if (patch.status === "granted" && patch.receipt !== undefined) {
+            const program = await this.programFor(tx, attribution);
+            await tx.recordAudit(
+              this.audit("benefit", intent.id, "benefit.grant-superseded", program, {
+                actorId: intent.subject.id,
+                reason: `late grant ${patch.receipt} after attribution ${attribution.state}`,
+                idempotencyKey: intent.idempotencyKey,
+              }),
+            );
+          }
           return null;
+        }
         const updated = await tx.compareAndSetBenefitIntent(
           intent.id,
           [intent.status],

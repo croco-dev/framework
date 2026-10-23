@@ -6,7 +6,7 @@
       "classification": "pure-contract",
       "reason": "Recover interrupted granting with an attempt-fenced CAS and unchanged external idempotency key. Missing legacy attempts are zero; completed and unknown outcomes retain their existing budget semantics.",
       "files": {
-        "packages/referral-core/src/libs/ReferralService.ts": "6374b7168b87b82daf16704c8c2538d2fd9346fbfe2bf58785dbad20b3bc4c2f",
+        "packages/referral-core/src/libs/ReferralService.ts": "c1f7d984a613f54a38cb62b6e997d164e6f82931eca57396db3674041f6d22cb",
         "packages/referral-core/src/libs/ReferralStore.ts": "965071ed2e3b97e1b2f434a49f411f349a81cf10c088527a92c2ff4587ec80dd",
         "packages/referral-core/src/libs/InMemoryReferralStore.ts": "da9079425d0df0abc681ffd4940fc69e5aebbf500386ec0619df087197900803",
         "packages/referral-core/src/libs/types.ts": "28ab850c929c789f7f03d9726b2a6554b063afe3e9fbda6c1b178c0c576a34cd"

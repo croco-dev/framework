@@ -5035,12 +5035,6 @@
       "owner": "@croco/referral-core"
     },
     {
-      "path": "packages/referral-core/src/tests/ReferralRecovery.spec.ts",
-      "lane": "fast",
-      "qualifiers": [],
-      "owner": "@croco/referral-core"
-    },
-    {
       "path": "packages/referral-core/src/tests/ReferralService.spec.ts",
       "lane": "fast",
       "qualifiers": [],

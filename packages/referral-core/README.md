@@ -34,6 +34,9 @@ grant references.
 `reconcileBenefits` also resumes an interrupted `granting` intent and completes
 remaining pending sides. Each external attempt claims a monotonic
 `fulfillmentAttempt`; superseded responses cannot change the current outcome.
+A granted response observed after a terminal operator decision is retained as a
+`benefit.grant-superseded` audit entry with its receipt and original idempotency key
+for reconciliation; the decision and its budget accounting remain unchanged.
 The external fulfillment port must deduplicate overlapping calls with the same
 idempotency key. A visible receipt completes its side without another grant;
 `unknown` without a receipt remains locked for an operator decision. No new
