@@ -2,7 +2,9 @@
 
 PostgreSQL persistence for `BillingStore` and `CancellationStore`, using a caller-owned Drizzle node-postgres database.
 
-Apply `migrations/0001_billing.up.sql` through your migration runner before constructing either store. Construction performs no DDL. The paired down migration removes the tables and their data; use it only under your application's reviewed migration policy.
+Apply `migrations/0001_billing.up.sql` and then `migrations/0002_subscription_replacements.up.sql` through your migration runner before constructing either store. Existing installations apply only the new migration. Construction performs no DDL. The paired down migrations remove tables and their data; use them only under your application's reviewed migration policy.
+
+Subscription webhooks retain the replaced external identity, previous snapshot, replacement snapshot and event ID in the same transaction as the current subscription and event intents. Later observations of that retired identity cannot reclaim the account, even with a newer or missing provider timestamp. New identities and newer same-identity observations retain their existing behavior. History is scoped by application, environment and billing account and survives store restarts and current-subscription deletion. The new migration backfills replacements recorded in existing webhook transitions; it cannot reconstruct overwritten subscriptions that have no transition evidence or repair already incorrect current state. Direct `saveSubscription` calls remain explicit administrative writes and do not create webhook replacement evidence; explicitly restoring an identity permits its same-identity observations again. Rolling back the new migration removes this protection and its history.
 
 ```ts typecheck
 import { drizzle } from "drizzle-orm/node-postgres";

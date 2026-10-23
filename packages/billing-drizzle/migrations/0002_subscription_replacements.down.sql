@@ -1,0 +1,1 @@
+DROP TABLE croco_billing_subscription_replacements;

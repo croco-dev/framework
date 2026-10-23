@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 import {
   BillingService,
+  InMemoryBillingStore,
   CancellationService,
   BillingCancellationAction,
   planVersionRef,
@@ -88,9 +89,21 @@ describe.skipIf(!connectionString)("PostgreSQL billing persistence", () => {
     await pool.query(
       await readFile(new URL("../../migrations/0001_billing.up.sql", import.meta.url), "utf8"),
     );
+    await pool.query(
+      await readFile(
+        new URL("../../migrations/0002_subscription_replacements.up.sql", import.meta.url),
+        "utf8",
+      ),
+    );
   });
   afterAll(async () => {
     if (pool) {
+      await pool.query(
+        await readFile(
+          new URL("../../migrations/0002_subscription_replacements.down.sql", import.meta.url),
+          "utf8",
+        ),
+      );
       await pool.query(
         await readFile(new URL("../../migrations/0001_billing.down.sql", import.meta.url), "utf8"),
       );
@@ -99,7 +112,7 @@ describe.skipIf(!connectionString)("PostgreSQL billing persistence", () => {
   });
   beforeEach(async () => {
     await pool.query(
-      "TRUNCATE croco_billing_accounts, croco_billing_subscriptions, croco_billing_commands, croco_billing_orders, croco_billing_webhooks, croco_billing_transitions, croco_cancellation_sessions, croco_cancellation_policies, croco_cancellation_policy_audits",
+      "TRUNCATE croco_billing_subscription_replacements, croco_billing_accounts, croco_billing_subscriptions, croco_billing_commands, croco_billing_orders, croco_billing_webhooks, croco_billing_transitions, croco_cancellation_sessions, croco_cancellation_policies, croco_cancellation_policy_audits",
     );
     first = new DrizzleBillingStore(drizzle(pool), scope);
     second = new DrizzleBillingStore(drizzle(secondPool), scope);
@@ -383,6 +396,185 @@ describe.skipIf(!connectionString)("PostgreSQL billing persistence", () => {
     await expect(first.reserveWebhook("rollback", "subscription")).rejects.toBeInstanceOf(
       WebhookAlreadyProcessedProblem,
     );
+  });
+
+  it("matches in-memory replacement fencing across connections, restart, late timestamps, and replay", async () => {
+    const memory = new InMemoryBillingStore();
+    await memory.saveSubscription(subscription);
+    const replacement: Subscription = {
+      ...subscription,
+      id: "new-sub",
+      externalSubscriptionId: "replacement",
+      planId: "new-plan",
+      providerModifiedAt: new Date("2026-10-03T00:00:00Z"),
+    };
+    for (const store of [memory, first]) {
+      const committed = await store.commitSubscriptionWebhook({
+        eventId: "replace",
+        eventType: "subscription.updated",
+        subscription: replacement,
+        createEventIntents: () => [],
+      });
+      expect(committed.previousSubscription).toEqual(subscription);
+      await store.reserveWebhook("retained", "subscription.past_due");
+    }
+    const restarted = new DrizzleBillingStore(drizzle(secondPool), scope);
+    const updated = {
+      ...replacement,
+      status: "past_due" as const,
+      providerModifiedAt: new Date("2026-10-04T00:00:00Z"),
+    };
+    const input = (eventId: string, observed: Subscription) => ({
+      eventId,
+      eventType: "subscription.updated",
+      subscription: observed,
+      clearWebhookReservationId: "retained",
+      createEventIntents: () => [
+        {
+          eventId: `intent-${eventId}`,
+          eventType: "billing.changed",
+          occurredAt: instant.toISOString(),
+          payload: {},
+        },
+      ],
+    });
+    for (const [index, providerModifiedAt] of [
+      new Date("2026-10-02T00:00:00Z"),
+      new Date("2026-11-01T00:00:00Z"),
+      undefined,
+    ].entries()) {
+      const late = input(`late-${index}`, {
+        ...subscription,
+        status: "revoked",
+        providerModifiedAt,
+      });
+      const [durable, reference] = await Promise.all([
+        restarted.commitSubscriptionWebhook(late),
+        memory.commitSubscriptionWebhook(late),
+      ]);
+      expect(durable).toEqual(reference);
+      expect(durable.intents).toEqual([]);
+      expect(await first.findSubscription("account")).toEqual(replacement);
+      expect(await first.commitSubscriptionWebhook(late)).toEqual(durable);
+      await first.completeWebhook(late.eventId);
+      expect((await restarted.commitSubscriptionWebhook(late)).state).toBe("completed");
+    }
+    await expect(first.reserveWebhook("retained", "subscription.past_due")).rejects.toBeInstanceOf(
+      WebhookAlreadyProcessedProblem,
+    );
+    const [accepted, ignored] = await Promise.all([
+      first.commitSubscriptionWebhook({
+        ...input("update", updated),
+        clearWebhookReservationId: undefined,
+      }),
+      restarted.commitSubscriptionWebhook(input("late-concurrent", subscription)),
+    ]);
+    expect(accepted.intents).toHaveLength(1);
+    expect(ignored.intents).toEqual([]);
+    expect(await restarted.findSubscription("account")).toEqual(updated);
+    const [a, b] = await Promise.all([
+      memory.commitSubscriptionWebhook(input("update", updated)),
+      memory.commitSubscriptionWebhook(input("late-concurrent", subscription)),
+    ]);
+    expect(a.intents).toEqual(accepted.intents);
+    expect(b.intents).toEqual(ignored.intents);
+    expect(await memory.findSubscription("account")).toEqual(updated);
+  });
+
+  it("rolls back retirement evidence and reservation clearing when replacement persistence fails", async () => {
+    await second.saveSubscription({
+      ...subscription,
+      billingAccountId: "other",
+      externalSubscriptionId: "occupied",
+    });
+    await first.reserveWebhook("keep", "subscription.past_due");
+    await expect(
+      first.commitSubscriptionWebhook({
+        eventId: "collision",
+        eventType: "subscription.updated",
+        subscription: { ...subscription, externalSubscriptionId: "occupied" },
+        clearWebhookReservationId: "keep",
+        createEventIntents: () => [],
+      }),
+    ).rejects.toMatchObject({ cause: { code: "23505" } });
+    expect(await second.findSubscription("account")).toEqual(subscription);
+    expect(
+      (await pool.query("SELECT data FROM croco_billing_subscription_replacements")).rows,
+    ).toEqual([]);
+    await expect(second.reserveWebhook("keep", "subscription.past_due")).rejects.toBeInstanceOf(
+      WebhookAlreadyProcessedProblem,
+    );
+    await second.reserveWebhook("collision", "subscription.updated");
+  });
+
+  it("backfills replacement evidence from legacy transitions with escaped identities", async () => {
+    const original = {
+      ...subscription,
+      billingAccountId: "account, 한글",
+      externalSubscriptionId: 'old"\\한글',
+    };
+    const replacement = { ...original, externalSubscriptionId: "new", planId: "replacement-plan" };
+    await first.saveSubscription(original);
+    await first.commitSubscriptionWebhook({
+      eventId: "legacy-replacement",
+      eventType: "subscription.updated",
+      subscription: replacement,
+      createEventIntents: () => [],
+    });
+    await pool.query("DROP TABLE croco_billing_subscription_replacements");
+    await pool.query(
+      await readFile(
+        new URL("../../migrations/0002_subscription_replacements.up.sql", import.meta.url),
+        "utf8",
+      ),
+    );
+    const rows = await pool.query("SELECT id, data FROM croco_billing_subscription_replacements");
+    expect(rows.rows).toEqual([
+      {
+        id: JSON.stringify([original.billingAccountId, original.externalSubscriptionId]),
+        data: {
+          eventId: "legacy-replacement",
+          previousSubscription: JSON.parse(JSON.stringify(original)),
+          subscription: JSON.parse(JSON.stringify(replacement)),
+        },
+      },
+    ]);
+    const ignored = await second.commitSubscriptionWebhook({
+      eventId: "legacy-late",
+      eventType: "subscription.updated",
+      subscription: original,
+      createEventIntents: () => [
+        {
+          eventId: "unexpected",
+          eventType: "billing.changed",
+          occurredAt: instant.toISOString(),
+          payload: {},
+        },
+      ],
+    });
+    expect(ignored.intents).toEqual([]);
+    expect(await second.findSubscription(original.billingAccountId)).toEqual(replacement);
+    const other = new DrizzleBillingStore(drizzle(secondPool), {
+      ...scope,
+      environment: "isolated",
+    });
+    expect(
+      (
+        await other.commitSubscriptionWebhook({
+          eventId: "legacy-late",
+          eventType: "subscription.updated",
+          subscription: original,
+          createEventIntents: () => [
+            {
+              eventId: "accepted",
+              eventType: "billing.changed",
+              occurredAt: instant.toISOString(),
+              payload: {},
+            },
+          ],
+        })
+      ).intents,
+    ).toHaveLength(1);
   });
 
   it("keeps apps and environments isolated and upserts order identities", async () => {

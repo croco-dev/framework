@@ -43,6 +43,10 @@ export class InMemoryBillingStore extends BillingStore {
     string,
     BillingSubscriptionWebhookTransition
   >();
+  private readonly subscriptionReplacements = new Map<
+    string,
+    BillingSubscriptionWebhookTransition
+  >();
   private webhookDeliveryClaimSequence = 0;
 
   constructor(private readonly clock: () => Date = () => new Date()) {
@@ -325,13 +329,21 @@ export class InMemoryBillingStore extends BillingStore {
 
     const previousSubscription = this.subscriptions.get(input.subscription.billingAccountId);
     const previousEvidence = previousSubscription ? cloneSubscription(previousSubscription) : null;
+    const replacementKey = JSON.stringify([
+      input.subscription.billingAccountId,
+      input.subscription.externalSubscriptionId,
+    ]);
+    const isReplaced =
+      previousSubscription?.externalSubscriptionId !== input.subscription.externalSubscriptionId &&
+      this.subscriptionReplacements.has(replacementKey);
     const isOlder =
       previousSubscription?.externalSubscriptionId === input.subscription.externalSubscriptionId &&
       previousSubscription.providerModifiedAt !== undefined &&
       input.subscription.providerModifiedAt !== undefined &&
       previousSubscription.providerModifiedAt.getTime() >
         input.subscription.providerModifiedAt.getTime();
-    const intents = isOlder
+    const ignored = isReplaced || isOlder;
+    const intents = ignored
       ? []
       : input.createEventIntents(previousEvidence).map((event) => ({
           event: structuredClone(event),
@@ -347,20 +359,32 @@ export class InMemoryBillingStore extends BillingStore {
     };
 
     const clearedReservationState =
-      !isOlder && input.clearWebhookReservationId
+      !ignored && input.clearWebhookReservationId
         ? this.processedWebhooks.get(input.clearWebhookReservationId)
         : undefined;
-    if (!isOlder && input.clearWebhookReservationId) {
+    if (!ignored && input.clearWebhookReservationId) {
       this.processedWebhooks.delete(input.clearWebhookReservationId);
     }
     this.processedWebhooks.set(input.eventId, { state: "RESERVED" });
     this.subscriptionWebhookTransitions.set(input.eventId, transition);
-    if (isOlder) {
+    if (ignored) {
       return cloneSubscriptionWebhookTransition(transition);
+    }
+    const retiredKey =
+      previousSubscription &&
+      previousSubscription.externalSubscriptionId !== input.subscription.externalSubscriptionId
+        ? JSON.stringify([
+            previousSubscription.billingAccountId,
+            previousSubscription.externalSubscriptionId,
+          ])
+        : undefined;
+    if (retiredKey) {
+      this.subscriptionReplacements.set(retiredKey, cloneSubscriptionWebhookTransition(transition));
     }
     try {
       await this.saveSubscription(input.subscription);
     } catch (error) {
+      if (retiredKey) this.subscriptionReplacements.delete(retiredKey);
       this.processedWebhooks.delete(input.eventId);
       this.subscriptionWebhookTransitions.delete(input.eventId);
       if (input.clearWebhookReservationId && clearedReservationState) {
@@ -480,6 +504,7 @@ export class InMemoryBillingStore extends BillingStore {
     this.orders.clear();
     this.processedWebhooks.clear();
     this.subscriptionWebhookTransitions.clear();
+    this.subscriptionReplacements.clear();
     this.webhookDeliveryClaimSequence = 0;
   }
 }

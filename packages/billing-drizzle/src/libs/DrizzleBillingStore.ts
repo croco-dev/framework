@@ -301,22 +301,51 @@ export class DrizzleBillingStore extends BillingStore {
         input.subscription.billingAccountId,
       );
       const previous = saved ? subscriptionDates(saved) : null;
+      const replaced = await read(
+        tx,
+        "croco_billing_subscription_replacements",
+        this.namespace,
+        JSON.stringify([
+          input.subscription.billingAccountId,
+          input.subscription.externalSubscriptionId,
+        ]),
+      );
       const older =
         previous?.externalSubscriptionId === input.subscription.externalSubscriptionId &&
         previous.providerModifiedAt !== undefined &&
         input.subscription.providerModifiedAt !== undefined &&
         previous.providerModifiedAt.getTime() > input.subscription.providerModifiedAt.getTime();
+      const ignored =
+        (previous?.externalSubscriptionId !== input.subscription.externalSubscriptionId &&
+          replaced !== undefined) ||
+        older;
       const transition: BillingSubscriptionWebhookTransition = {
         eventId: input.eventId,
         eventType: input.eventType,
         previousSubscription: previous,
         subscription: input.subscription,
-        intents: older
+        intents: ignored
           ? []
           : input.createEventIntents(previous).map((event) => ({ event, publishedAt: null })),
         state: "pending",
       };
-      if (!older) {
+      if (!ignored) {
+        if (
+          previous &&
+          previous.externalSubscriptionId !== input.subscription.externalSubscriptionId
+        ) {
+          await write(
+            tx,
+            "croco_billing_subscription_replacements",
+            this.namespace,
+            JSON.stringify([previous.billingAccountId, previous.externalSubscriptionId]),
+            {
+              eventId: input.eventId,
+              previousSubscription: previous,
+              subscription: input.subscription,
+            },
+          );
+        }
         if (input.clearWebhookReservationId)
           await remove(
             tx,
