@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "lifecycle-core",
+      "classification": "pure-contract",
+      "reason": "A failed duplicate receipt save must not abort the original run. Claim ownership and pre-dispatch cleanup stay within evaluateRule; no provider or host behavior is added.",
+      "files": {
+        "packages/lifecycle-core/src/libs/LifecycleRuleEvaluator.ts": "ec2f54eaea0cf1c1aa56a09b3fedd7270d7e6d8007ad8204b6c6f5935df61cb2"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "This provider-neutral evaluator correction only removes cleanup of a claim the evaluation did not acquire. It introduces no host capability, storage implementation, or process/invocation lifecycle requirement.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/lifecycle-core/src/libs/LifecycleRuleEvaluator.ts",
+            "packages/lifecycle-core/src/libs/types.ts",
+            "packages/lifecycle-core/src/tests/LifecycleRuleVersioning.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "This provider-neutral evaluator correction only removes cleanup of a claim the evaluation did not acquire. It introduces no host capability, storage implementation, or process/invocation lifecycle requirement.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/lifecycle-core/src/libs/LifecycleRuleEvaluator.ts",
+            "packages/lifecycle-core/src/libs/types.ts",
+            "packages/lifecycle-core/src/tests/LifecycleRuleVersioning.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "This provider-neutral evaluator correction only removes cleanup of a claim the evaluation did not acquire. It introduces no host capability, storage implementation, or process/invocation lifecycle requirement.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/lifecycle-core/src/libs/LifecycleRuleEvaluator.ts",
+            "packages/lifecycle-core/src/libs/types.ts",
+            "packages/lifecycle-core/src/tests/LifecycleRuleVersioning.spec.ts"
+          ]
+        }
+      }
+    }
+  ]
+}

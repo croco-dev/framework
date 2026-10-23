@@ -299,12 +299,8 @@ export class LifecycleRuleEvaluator {
       try {
         const evaluation = await this.evaluateRule(registration, context);
         if (!evaluation.persisted) {
-          try {
-            await this.runStore.save(evaluation.run);
-          } catch (error) {
-            await this.runStore.abortClaim(evaluation.run.id, evaluation.run.idempotencyKey);
-            throw error;
-          }
+          // evaluateRule owns claim cleanup; an unpersisted result may reference another run.
+          await this.runStore.save(evaluation.run);
         }
         runs.push(evaluation.run);
       } catch (error) {
