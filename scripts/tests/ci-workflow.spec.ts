@@ -960,18 +960,38 @@ describe("CI verification profile contract", () => {
   });
 
   it.each([
-    { configExit: 0, installExit: 0, expectedExit: 0 },
-    { configExit: 42, installExit: 0, expectedExit: 42 },
-    { configExit: 0, installExit: 23, expectedExit: 23 },
+    { mirror: true, mirrorExit: 0, configExit: 0, installExit: 0, expectedExit: 0 },
+    { mirror: true, mirrorExit: 43, configExit: 0, installExit: 0, expectedExit: 43 },
+    { mirror: true, mirrorExit: 0, configExit: 42, installExit: 0, expectedExit: 42 },
+    { mirror: true, mirrorExit: 0, configExit: 0, installExit: 23, expectedExit: 23 },
+    { mirror: false, mirrorExit: 0, configExit: 0, installExit: 0, expectedExit: 0 },
   ])(
-    "preserves browser setup failure codes ($configExit, $installExit)",
-    ({ configExit, installExit, expectedExit }) => {
+    "preserves browser setup failures (mirror=$mirror, $mirrorExit, $configExit, $installExit)",
+    ({ mirror, mirrorExit, configExit, installExit, expectedExit }) => {
       const fixture = mkdtempSync(join(tmpdir(), "croco-playwright-install-"));
       try {
         const configPath = join(fixture, "apt.conf");
+        const mirrorsPath = join(fixture, "apt-mirrors.txt");
         const invocationPath = join(fixture, "install-args");
+        const originalMirrors =
+          "http://azure.archive.ubuntu.com/ubuntu/ priority:1\nhttps://security.ubuntu.com/ubuntu/ priority:2\n";
+        if (mirror) writeFileSync(mirrorsPath, originalMirrors);
+        const scriptPath = join(fixture, "install.sh");
+        writeFileSync(
+          scriptPath,
+          readFileSync(join(ROOT_DIR, "scripts/ci-install-playwright.sh"), "utf8").replaceAll(
+            "/etc/apt/apt-mirrors.txt",
+            mirrorsPath,
+          ),
+        );
         const commands = {
           sudo: `#!/bin/sh
+if [ "$1" = "sed" ]; then
+  [ "$2" = "-i" ] || exit 64
+  [ "$CI_MIRROR_EXIT" = "0" ] || exit "$CI_MIRROR_EXIT"
+  sed "$3" "$4" > "$4.tmp" && mv "$4.tmp" "$4"
+  exit $?
+fi
 [ "$*" = "tee /etc/apt/apt.conf.d/99-croco-playwright" ] || exit 64
 cat > "$CI_APT_CONFIG_CAPTURE"
 exit "$CI_APT_CONFIG_EXIT"
@@ -987,13 +1007,14 @@ exit "$CI_INSTALL_EXIT"
           chmodSync(path, 0o700);
         }
 
-        const result = spawnSync("bash", ["scripts/ci-install-playwright.sh"], {
+        const result = spawnSync("bash", [scriptPath], {
           cwd: ROOT_DIR,
           encoding: "utf8",
           timeout: 5_000,
           env: {
             ...process.env,
             PATH: `${fixture}:${process.env.PATH}`,
+            CI_MIRROR_EXIT: String(mirrorExit),
             CI_APT_CONFIG_CAPTURE: configPath,
             CI_APT_CONFIG_EXIT: String(configExit),
             CI_INSTALL_ARGS_CAPTURE: invocationPath,
@@ -1003,6 +1024,19 @@ exit "$CI_INSTALL_EXIT"
 
         expect(result.error).toBeUndefined();
         expect(result.status, result.stderr).toBe(expectedExit);
+        if (mirrorExit !== 0) {
+          expect(readFileSync(mirrorsPath, "utf8")).toBe(originalMirrors);
+          expect(readdirSync(fixture)).not.toContain("apt.conf");
+          expect(readdirSync(fixture)).not.toContain("install-args");
+          return;
+        }
+        if (mirror) {
+          expect(readFileSync(mirrorsPath, "utf8")).toBe(
+            "https://archive.ubuntu.com/ubuntu/ priority:1\nhttps://security.ubuntu.com/ubuntu/ priority:2\n",
+          );
+        } else {
+          expect(readdirSync(fixture)).not.toContain("apt-mirrors.txt");
+        }
         const config = readFileSync(configPath, "utf8");
         expect(config).toContain('Acquire::http::Timeout "30";');
         expect(config).toContain('Acquire::https::Timeout "30";');
