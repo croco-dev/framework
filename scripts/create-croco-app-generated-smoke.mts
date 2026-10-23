@@ -646,6 +646,18 @@ const turboPath = join(rootDir, "node_modules", "turbo", "bin", "turbo");
 const corepackCommand = process.platform === "win32" ? "corepack.cmd" : "corepack";
 let smokeRoot: string | undefined;
 const commandTimeoutMs = 600_000;
+const NEXT_IMAGE_DEPENDENCY_VALIDATION: SmokeValidation = {
+  label: "Next image optimizer resolves patched Sharp",
+  readOnly: true,
+  packagePath: ["apps", "web"],
+  args: [
+    "exec",
+    "node",
+    "-e",
+    'const { createRequire } = require("node:module"); const fromNext = createRequire(require.resolve("next/package.json")); const version = fromNext("sharp").versions.sharp; require("node:assert/strict").equal(version, "0.35.5", "Next image optimizer must resolve patched Sharp"); console.log(`Next image optimizer Sharp: ${version}`);',
+  ],
+};
+
 const commandCaptureMaxBytes = 64 * 1024 * 1024;
 const commandCaptureHeadBytes = 1024 * 1024;
 const smokeCaseOutputBuffers = new Map<
@@ -1322,6 +1334,7 @@ const smokeCaseDefinitionsWithoutLint: readonly Omit<SmokeCase, "tier" | "adviso
     runtimeTarget: "lambda+opennext",
     matrixTargets: ["base-ddd"],
     validations: [
+      NEXT_IMAGE_DEPENDENCY_VALIDATION,
       {
         label: GRAPHQL_CONTRACT_CHECK_LABEL,
         packagePath: GRAPHQL_STANDALONE_CONTRACT_PACKAGE_PATH,
@@ -1360,6 +1373,7 @@ const smokeCaseDefinitionsWithoutLint: readonly Omit<SmokeCase, "tier" | "adviso
     runtimeTarget: "lambda+opennext",
     matrixTargets: ["base-ddd"],
     validations: [
+      NEXT_IMAGE_DEPENDENCY_VALIDATION,
       { label: "typecheck", args: ["typecheck"] },
       { label: "build", args: ["build"] },
     ],
@@ -1385,6 +1399,7 @@ const smokeCaseDefinitionsWithoutLint: readonly Omit<SmokeCase, "tier" | "adviso
     runtimeTarget: "node+browser",
     matrixTargets: ["base-ddd"],
     validations: [
+      NEXT_IMAGE_DEPENDENCY_VALIDATION,
       { label: "test", args: ["test"] },
       { label: "product typecheck", packagePath: ["apps", "web"], args: ["typecheck"] },
       { label: "build", args: ["build"] },
@@ -1412,6 +1427,7 @@ const smokeCaseDefinitionsWithoutLint: readonly Omit<SmokeCase, "tier" | "adviso
     runtimeTarget: "opennext",
     matrixTargets: ["base-ddd"],
     validations: [
+      NEXT_IMAGE_DEPENDENCY_VALIDATION,
       {
         label: GRAPHQL_CONTRACT_CHECK_LABEL,
         packagePath: GRAPHQL_NEXTJS_CONTRACT_PACKAGE_PATH,
@@ -1453,6 +1469,7 @@ const smokeCaseDefinitionsWithoutLint: readonly Omit<SmokeCase, "tier" | "adviso
     runtimeTarget: "container+browser",
     matrixTargets: ["base-ddd"],
     validations: [
+      NEXT_IMAGE_DEPENDENCY_VALIDATION,
       { label: "build", args: ["build"] },
       {
         label: "frontend Docker output",

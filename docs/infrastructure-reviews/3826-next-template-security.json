@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "create-croco-app",
+      "classification": "deployment-profile",
+      "reason": "The existing OpenNext adapter advances from 1.19.11 to 1.20.13 to retain patched Next.js 15 builds through the upstream support-policy correction, without an unsupported-version bypass, new host, or changed deployment configuration. Generated smoke checks verify the Sharp version loaded by Next.js. Next.js 15.5.28 and Sharp 0.35.5 declarations already belong to the base branch.",
+      "files": {
+        "packages/create-croco-app/src/installers/frontend-deploy.ts": "3d1bc685458fe626d0f42fe66256d04b4d9962f1e48850144c394f173bfd28a2"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Patched frontend dependency bounds and OpenNext build tooling add no Kubernetes Node host behavior or container configuration. Existing Docker standalone artifacts are checked separately.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/create-croco-app/src/installers/frontend-deploy.ts",
+            "packages/create-croco-app/src/installers/kubernetes.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "The frontend dependency update does not change Lambda API packaging, invocation or flush ownership. Existing standalone API plus Next frontend builds are checked separately.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/create-croco-app/src/installers/frontend-deploy.ts",
+            "packages/create-croco-app/src/installers/lambda-api.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "unverified",
+          "host": "workers",
+          "reason": "The addon prepares OpenNext Worker and assets output using the existing Cloudflare adapter. Local artifact generation is distinct from executing the application in Workers.",
+          "providers": ["@opennextjs/cloudflare"],
+          "constraints": [
+            "No live Cloudflare deployment or Worker host conformance is claimed.",
+            "Application database and other provider compatibility must be verified separately.",
+            "The generator catalog runtime list remains unclaimed; installing the builder does not certify generated applications."
+          ],
+          "references": [
+            "packages/create-croco-app/templates/addons/frontend-opennext/open-next.config.ts",
+            "packages/create-croco-app/templates/addons/frontend-opennext/wrangler.toml.hbs",
+            "packages/create-croco-app/templates/addons/frontend-opennext/OPENNEXT.md",
+            "scripts/create-croco-app-generated-smoke.mts"
+          ]
+        }
+      }
+    }
+  ]
+}
