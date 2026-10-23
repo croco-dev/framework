@@ -21,7 +21,9 @@ export abstract class ExecutionStore {
    * Create a new execution record.
    *
    * If idempotencyKey is provided and an existing execution with the same key exists,
-   * implementations should return the existing execution instead of creating a new one.
+   * implementations must atomically return the existing execution instead of creating a new one,
+   * including when independent callers race. Persist requestFingerprint unchanged so the manager
+   * can reject a conflicting request after create/reuse.
    *
    * @throws Error if creation fails (excluding idempotency conflicts)
    */
@@ -208,5 +210,26 @@ export interface ExecutionContinuationStore {
   updateClaimedContinuation(
     id: string,
     input: UpdateClaimedExecutionContinuationInput,
+  ): Promise<Execution | null>;
+}
+
+/** Identity assigned when adopting a replay created before durable recovery keys. */
+export type ClaimExecutionReplayIdentityInput = {
+  readonly idempotencyKey: string;
+  readonly requestFingerprint: string;
+};
+
+/**
+ * Optional capability for atomically binding an existing replay to its durable identity.
+ * Preserve every other field. Return the record only when its key is unassigned or already
+ * matches both requested values; return null for a different binding or a missing record.
+ * Enforce the same global key uniqueness as create(), including concurrent creates/claims.
+ * A conflicting unique write throws an idempotency-conflict Problem; a caller-owned transaction
+ * must roll back before retrying. Never overwrite another binding or start a separate transaction.
+ */
+export interface ExecutionReplayIdentityStore {
+  claimReplayIdentity(
+    id: string,
+    input: ClaimExecutionReplayIdentityInput,
   ): Promise<Execution | null>;
 }

@@ -65,7 +65,19 @@ await retryConsole.recover({
 
 Recovery requests require permission and audit descriptors. Execution retries require an audit log sink so the operator action is not silently lost.
 
-The console deduplicates only concurrent recovery calls with the same item, action, and audit idempotency key. It removes both successful and failed results immediately after settlement, so providers remain responsible for durable idempotency and cross-process replay behavior.
+Execution-backed sources, including custom `kind` labels, declare `replayIdempotency: "provider"`
+automatically and pass the audit key to the execution manager's durable create/reuse boundary. Matching requests reuse one replay across consoles and restarts; a changed
+payload, reason, actor, ticket or caller metadata with the same source/key returns
+`execution/idempotency-conflict`. Providers must atomically enforce the execution key and retain its
+request fingerprint. Replay permission and audit checks still run for every request.
+
+Sources without that declaration and other recovery actions coalesce concurrent calls within one
+console by item, action and audit key.
+Their providers remain responsible for durable idempotency. Results leave the in-flight map as soon
+as they settle. Historical metadata-only replays are adopted only after their source, payload and effective metadata
+match the request. The provider atomically assigns key/fingerprint while preserving payload, audit and
+outcome; unsupported claims, conflicting evidence and multiple receipts require reconciliation without
+creating a replay. Every recovery writer must use the keyed path for cross-replica safety.
 
 ## Outbound webhook adapters
 

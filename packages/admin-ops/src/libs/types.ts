@@ -392,6 +392,11 @@ export type RetryConsoleRecoveryResult =
 
 export interface RetryConsoleSource {
   readonly kind: RetryConsoleSourceKind;
+  /**
+   * Delegate every replay request to a provider that atomically validates its durable key and intent.
+   * When omitted, the console retains in-flight coalescing; the provider still owns durable safety.
+   */
+  readonly replayIdempotency?: "provider";
   list(options?: RetryConsoleListOptions): Promise<readonly RetryConsoleItem[]>;
   recover(
     item: RetryConsoleItem,

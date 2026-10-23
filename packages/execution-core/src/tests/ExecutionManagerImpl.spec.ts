@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type {
   CreateExecutionRecordParams,
+  ClaimExecutionReplayIdentityInput,
+  ExecutionReplayIdentityStore,
   Execution,
   ExecutionAttemptStore,
   ExecutionError,
@@ -20,11 +22,18 @@ import {
   prepareExecutionCheckpoint,
 } from "../index";
 
-class MockExecutionStore implements ExecutionStore, ExecutionLogStore, ExecutionAttemptStore {
+class MockExecutionStore
+  implements ExecutionStore, ExecutionLogStore, ExecutionAttemptStore, ExecutionReplayIdentityStore
+{
   private executions: Map<string, Execution> = new Map();
   private idCounter = 0;
 
   async create(params: CreateExecutionRecordParams): Promise<Execution> {
+    if (params.idempotencyKey) {
+      for (const execution of this.executions.values()) {
+        if (execution.idempotencyKey === params.idempotencyKey) return execution;
+      }
+    }
     const id = `exec-${++this.idCounter}`;
     const now = new Date();
 
@@ -61,6 +70,26 @@ class MockExecutionStore implements ExecutionStore, ExecutionLogStore, Execution
       }
     }
     return null;
+  }
+
+  async claimReplayIdentity(
+    id: string,
+    input: ClaimExecutionReplayIdentityInput,
+  ): Promise<Execution | null> {
+    const existing = this.executions.get(id);
+    if (
+      !existing ||
+      (existing.idempotencyKey !== undefined &&
+        (existing.idempotencyKey !== input.idempotencyKey ||
+          existing.requestFingerprint !== input.requestFingerprint))
+    )
+      return null;
+    for (const execution of this.executions.values()) {
+      if (execution.id !== id && execution.idempotencyKey === input.idempotencyKey) return null;
+    }
+    const claimed = { ...existing, ...input };
+    this.executions.set(id, claimed);
+    return claimed;
   }
 
   async update(id: string, data: Partial<Execution>): Promise<Execution> {
@@ -1774,6 +1803,154 @@ describe("ExecutionManagerImpl", () => {
         },
       ]);
       await expect(manager.list({ replayOf: execution.id })).resolves.toEqual([replayed]);
+    });
+
+    it("scopes durable keys to their source and compares the complete stable replay intent", async () => {
+      const source = await manager.create({ type: "task", payload: { first: 1, second: 2 } });
+      await store.update(source.id, { status: "failed" });
+      const params = {
+        idempotencyKey: "operator-key",
+        reason: "provider restored",
+        metadata: { actor: "operator-1", ticket: "ticket-7" },
+      };
+      const first = await manager.replay(source.id, params);
+      const restarted = new ExecutionManagerImpl(store, { clock: () => new Date("2027-01-01") });
+      expect(
+        await restarted.replay(source.id, {
+          ...params,
+          metadata: { ticket: "ticket-7", actor: "operator-1" },
+          payload: { second: 2, first: 1 },
+        }),
+      ).toEqual(first);
+      await expect(
+        restarted.replay(source.id, { ...params, reason: "different reason" }),
+      ).rejects.toMatchObject({ code: "execution/idempotency-conflict" });
+      const secondSource = await manager.create({ type: "task", payload: source.payload });
+      await store.update(secondSource.id, { status: "failed" });
+      const second = await restarted.replay(secondSource.id, params);
+      expect(second.id).not.toBe(first.id);
+      expect(second.replayOf).toBe(secondSource.id);
+      expect(second.idempotencyKey).not.toBe(first.idempotencyKey);
+      const unkeyed = await Promise.all([manager.replay(source.id), manager.replay(source.id)]);
+      expect(unkeyed[0].id).not.toBe(unkeyed[1].id);
+    });
+
+    it("cannot bypass an owned replay key by selecting a different pre-key receipt", async () => {
+      const source = await manager.create({ type: "task", payload: { version: 0 } });
+      await store.update(source.id, { status: "failed" });
+      const intent = { reason: "provider restored", metadata: { actor: "operator-1" } };
+      const owned = await manager.replay(source.id, {
+        ...intent,
+        idempotencyKey: "owned-key",
+        payload: { version: 1 },
+      });
+      const legacy = await manager.replay(source.id, { ...intent, payload: { version: 2 } });
+      await expect(
+        manager.replay(source.id, {
+          ...intent,
+          idempotencyKey: "owned-key",
+          payload: { version: 2 },
+          legacyReplayIds: [legacy.id],
+        }),
+      ).rejects.toMatchObject({ code: "execution/idempotency-conflict" });
+      expect(
+        await manager.replay(source.id, {
+          ...intent,
+          idempotencyKey: "owned-key",
+          payload: { version: 1 },
+          legacyReplayIds: [legacy.id],
+        }),
+      ).toEqual(owned);
+    });
+
+    it("binds a pre-key receipt to only one recovery key under concurrent claims", async () => {
+      const source = await manager.create({ type: "task", payload: { version: 1 } });
+      await store.update(source.id, { status: "failed" });
+      const intent = { reason: "provider restored", metadata: { actor: "operator-1" } };
+      const legacy = await manager.replay(source.id, intent);
+      const results = await Promise.allSettled(
+        ["first-key", "second-key"].map((idempotencyKey) =>
+          new ExecutionManagerImpl(store).replay(source.id, {
+            ...intent,
+            idempotencyKey,
+            legacyReplayIds: [legacy.id],
+          }),
+        ),
+      );
+      expect(results.map((result) => result.status).sort()).toEqual(["fulfilled", "rejected"]);
+      const rejected = results.find((result) => result.status === "rejected");
+      expect(rejected).toMatchObject({ reason: { code: "execution/idempotency-conflict" } });
+      expect((await store.findById(legacy.id))?.idempotencyKey).toBeTruthy();
+      const independentKey = results[0].status === "fulfilled" ? "second-key" : "first-key";
+      expect(
+        (await manager.replay(source.id, { ...intent, idempotencyKey: independentKey })).id,
+      ).not.toBe(legacy.id);
+    });
+
+    it("fails closed when a store cannot atomically adopt a pre-key receipt", async () => {
+      const source = await manager.create({ type: "task", payload: { version: 1 } });
+      await store.update(source.id, { status: "failed" });
+      const intent = { reason: "provider restored", metadata: { actor: "operator-1" } };
+      const legacy = await manager.replay(source.id, intent);
+      const before = structuredClone(await store.findById(legacy.id));
+      const withoutClaims: ExecutionStore = {
+        create: store.create.bind(store),
+        findById: store.findById.bind(store),
+        findByIdempotencyKey: store.findByIdempotencyKey.bind(store),
+        update: store.update.bind(store),
+        updateIfStatus: store.updateIfStatus.bind(store),
+        mergeCheckpoint: store.mergeCheckpoint.bind(store),
+        listRunning: store.listRunning.bind(store),
+        list: store.list.bind(store),
+        delete: store.delete.bind(store),
+      };
+      const unsupported = new ExecutionManagerImpl(withoutClaims);
+      await expect(
+        unsupported.replay(source.id, {
+          ...intent,
+          idempotencyKey: "legacy-key",
+          legacyReplayIds: [legacy.id],
+        }),
+      ).rejects.toMatchObject({ code: "execution/idempotency-conflict" });
+      expect(await store.findById(legacy.id)).toEqual(before);
+      expect(
+        (await unsupported.replay(source.id, { ...intent, idempotencyKey: "normal-key" })).id,
+      ).not.toBe(legacy.id);
+    });
+
+    it("atomically adopts a pre-key receipt while preserving payload, audit and outcome", async () => {
+      const source = await manager.create({ type: "task", payload: { account: "account-1" } });
+      await store.update(source.id, { status: "failed" });
+      const intent = {
+        reason: "provider restored",
+        metadata: { actor: "operator-1", ticket: undefined },
+      };
+      const legacy = await manager.replay(source.id, intent);
+      await store.update(legacy.id, { status: "completed" });
+      const before = structuredClone(await store.findById(legacy.id));
+      const params = { ...intent, idempotencyKey: "migrated-key", legacyReplayIds: [legacy.id] };
+      const claimed = await manager.replay(source.id, params);
+      expect(claimed).toMatchObject({
+        idempotencyKey: expect.any(String),
+        requestFingerprint: expect.any(String),
+      });
+      expect({ ...claimed, idempotencyKey: undefined, requestFingerprint: undefined }).toEqual({
+        ...before,
+        idempotencyKey: undefined,
+        requestFingerprint: undefined,
+      });
+      expect(await store.findById(legacy.id)).toEqual(claimed);
+      await expect(
+        manager.replay(source.id, { ...params, metadata: { actor: "operator-2" } }),
+      ).rejects.toMatchObject({ code: "execution/idempotency-conflict" });
+      await expect(
+        manager.replay(source.id, { ...params, idempotencyKey: undefined }),
+      ).rejects.toMatchObject({ code: "execution/idempotency-conflict" });
+      const other = await manager.create({ type: source.type, payload: source.payload });
+      await store.update(other.id, { status: "failed" });
+      await expect(manager.replay(other.id, params)).rejects.toMatchObject({
+        code: "execution/idempotency-conflict",
+      });
     });
 
     it("allows payload override when replaying a failed execution", async () => {

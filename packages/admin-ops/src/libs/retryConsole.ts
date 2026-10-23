@@ -340,7 +340,11 @@ export function createRetryConsole(sources: readonly RetryConsoleSource[]): Retr
         );
       }
 
-      if (action.requiresIdempotencyKey) {
+      // Provider-owned replay validation must see every request, including conflicting intent.
+      // A source label does not determine which provider owns that boundary.
+      const providerOwnsReplay =
+        action.kind === "replay" && found.source.replayIdempotency === "provider";
+      if (action.requiresIdempotencyKey && !providerOwnsReplay) {
         const key = recoveryResultKey(found.item, action, request);
         const existingResult = inFlightRecoveries.get(key);
         if (existingResult) {

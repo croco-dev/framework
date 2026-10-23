@@ -337,6 +337,7 @@ function auditLogData(
 
 function replayParams(request: RetryConsoleRecoveryInput): ReplayExecutionParams {
   return {
+    idempotencyKey: request.audit.idempotencyKey,
     reason: request.audit.reason,
     payload: request.payload,
     metadata: {
@@ -347,28 +348,6 @@ function replayParams(request: RetryConsoleRecoveryInput): ReplayExecutionParams
       recoveryMetadata: request.audit.metadata,
     },
   };
-}
-
-function isRecoveryReplay(
-  execution: Execution,
-  sourceExecutionId: string,
-  idempotencyKey: string,
-): boolean {
-  return (
-    execution.replayOf === sourceExecutionId &&
-    metadataString(execution, "recoveryAuditIdempotencyKey") === idempotencyKey
-  );
-}
-
-async function findExistingRecoveryReplay(
-  manager: ExecutionAdminManager,
-  item: RetryConsoleItem,
-  request: RetryConsoleRecoveryInput,
-): Promise<Execution | undefined> {
-  const executions = await listAllExecutions(manager, { replayOf: item.id });
-  return executions.find((execution) =>
-    isRecoveryReplay(execution, item.id, request.audit.idempotencyKey),
-  );
 }
 
 async function recoverExecution(
@@ -396,19 +375,20 @@ async function recoverExecution(
   }
 
   if (action.kind === "replay") {
-    const existingReplay = await findExistingRecoveryReplay(manager, item, request);
-    if (existingReplay) {
-      return {
-        item: retryConsoleItemFromExecution(existingReplay, options, manager),
-        providerResult: existingReplay,
-      };
-    }
-
     if (!manager.replay) {
       throw new Error("Execution manager does not support replay");
     }
 
-    const replayed = await manager.replay(item.id, replayParams(request));
+    // Preserve pre-key recovery receipts, including those beyond a provider's default page.
+    const receipts = (await listAllExecutions(manager, { replayOf: item.id })).filter(
+      (execution) =>
+        metadataString(execution, "recoveryAuditIdempotencyKey") === request.audit.idempotencyKey,
+    );
+    const replayed = await manager.replay(item.id, {
+      ...replayParams(request),
+      legacyReplayIds:
+        receipts.length === 0 ? undefined : receipts.map((execution) => execution.id),
+    });
     return {
       item: retryConsoleItemFromExecution(replayed, options, manager),
       providerResult: replayed,
@@ -424,6 +404,7 @@ export function createExecutionRetryConsoleSource(
 ): RetryConsoleSource {
   return {
     kind: options.kind,
+    replayIdempotency: "provider",
 
     async list(listOptions: RetryConsoleListOptions = {}): Promise<readonly RetryConsoleItem[]> {
       const executions = await listAllExecutions(manager);

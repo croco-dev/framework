@@ -17434,6 +17434,11 @@
               "source": "./libs/interfaces/ExecutionManager"
             },
             {
+              "name": "ClaimExecutionReplayIdentityInput",
+              "exportKind": "named",
+              "source": "./libs/interfaces/ExecutionStore"
+            },
+            {
               "name": "ClaimedExecutionContinuationUpdate",
               "exportKind": "named",
               "source": "./libs/interfaces/ExecutionStore"
@@ -17577,6 +17582,11 @@
               "name": "ExecutionProblemCode",
               "exportKind": "named",
               "source": "./libs/ExecutionProblem"
+            },
+            {
+              "name": "ExecutionReplayIdentityStore",
+              "exportKind": "named",
+              "source": "./libs/interfaces/ExecutionStore"
             },
             {
               "name": "ExecutionReplayManager",
