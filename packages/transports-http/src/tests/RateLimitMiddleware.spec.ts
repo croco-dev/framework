@@ -12,6 +12,7 @@ import {
   createTokenBucketPolicy,
   RATE_LIMIT_CLIENT_IDENTITY_CONTEXT_KEY,
   RateLimitExceededProblem,
+  RateLimitRefundUnsupportedProblem,
   RateLimiter,
   RateLimitKeyBuilder,
   SlidingWindowInMemoryStore,
@@ -284,6 +285,8 @@ describe("RateLimitMiddleware", () => {
       const middleware = rateLimitHttpMiddleware({
         rateLimiter: degradedRateLimiter,
         policy: createSlidingWindowPolicy("degraded-open", 10, 60_000),
+        skipSuccessfulRequests: true,
+        skipFailedRequests: true,
         failOpen: true,
       });
       const { ctx } = createRateLimitTestContext();
@@ -643,6 +646,147 @@ describe("RateLimitMiddleware", () => {
 
       expect(nextCalls).toBe(2);
     });
+
+    it.each([
+      ["direct", 201],
+      ["direct", 503],
+      ["factory", 201],
+      ["factory", 503],
+    ] as const)(
+      "should preserve a %s response with status %i when refund fails",
+      async (path, status) => {
+        const store = new SlidingWindowInMemoryStore();
+        let rejectRefund: (error: Error) => void = () => {};
+        let refundStarted: () => void = () => {};
+        const started = new Promise<void>((resolve) => {
+          refundStarted = resolve;
+        });
+        const pending = new Promise<never>((_resolve, reject) => {
+          rejectRefund = reject;
+        });
+        const refund = vi.spyOn(store, "refund").mockImplementation(() => {
+          refundStarted();
+          return pending;
+        });
+        const limiter = new RateLimiter(store, new RateLimitKeyBuilder(["ip"]));
+        const policy = createSlidingWindowPolicy("refund-outage", 1, 60_000);
+        const options = {
+          rateLimiter: limiter,
+          skipSuccessfulRequests: true,
+          skipFailedRequests: true,
+        };
+        const middleware =
+          path === "factory"
+            ? createRateLimitMiddlewareFactory({ ...options, defaultPolicy: policy })()
+            : rateLimitHttpMiddleware({ ...options, policy });
+        const { ctx, headers } = createRateLimitTestContext();
+        const body = { receipt: "committed-order-17" };
+        const response = new Response(JSON.stringify(body), {
+          status,
+          headers: { "content-type": "application/json" },
+        });
+        const next = vi.fn(async () => {
+          ctx.res.status = status;
+          ctx.raw.res = response;
+        });
+        const recordEvent = vi.fn();
+        const request = FrameworkContext.run(
+          { requestId: "refund-outage", runtimeInspector: { recordEvent } },
+          () => middleware(ctx, next),
+        );
+        // Attach the assertion before releasing the rejection, including on the pre-fix implementation.
+        const completion = expect(request).resolves.toBeUndefined();
+        await started;
+        expect(ctx.raw.res).toBe(response);
+        rejectRefund(new Error("refund store offline"));
+        await completion;
+
+        expect(next).toHaveBeenCalledOnce();
+        expect(refund).toHaveBeenCalledOnce();
+        expect(ctx.res.status).toBe(status);
+        expect(ctx.raw.res).toBe(response);
+        expect(ctx.raw.res.status).toBe(status);
+        expect(await ctx.raw.res.json()).toEqual(body);
+        expect(headers.get("X-RateLimit-Remaining")).toBe("0");
+        expect(recordEvent).toHaveBeenCalledWith(
+          expect.objectContaining({
+            kind: "rate-limit.refund-failed",
+            outcome: "failed",
+            details: {
+              policy: "refund-outage",
+              phase: "refund",
+              error: { name: "Error", message: "refund store offline" },
+            },
+          }),
+        );
+        const { ctx: retry } = createRateLimitTestContext();
+        await expect(middleware(retry, next)).rejects.toBeInstanceOf(RateLimitExceededProblem);
+        expect(next).toHaveBeenCalledOnce();
+      },
+    );
+
+    it.each(["direct", "factory"] as const)(
+      "should preserve a thrown handler error through %s when refund fails",
+      async (path) => {
+        const store = new SlidingWindowInMemoryStore();
+        vi.spyOn(store, "refund").mockRejectedValue(new Error("refund store offline"));
+        const limiter = new RateLimiter(store, new RateLimitKeyBuilder(["ip"]));
+        const policy = createSlidingWindowPolicy("handler-and-refund-failure", 1, 60_000);
+        const options = { rateLimiter: limiter, skipFailedRequests: true };
+        const middleware =
+          path === "factory"
+            ? createRateLimitMiddlewareFactory({ ...options, defaultPolicy: policy })()
+            : rateLimitHttpMiddleware({ ...options, policy });
+        const { ctx } = createRateLimitTestContext();
+        const handlerError = new Error("original handler failure");
+        const next = vi.fn(async () => {
+          throw handlerError;
+        });
+        const recordEvent = vi.fn();
+        await expect(
+          FrameworkContext.run(
+            { requestId: "handler-and-refund-failure", runtimeInspector: { recordEvent } },
+            () => middleware(ctx, next),
+          ),
+        ).rejects.toBe(handlerError);
+        expect(next).toHaveBeenCalledOnce();
+        expect(recordEvent).toHaveBeenCalledWith(
+          expect.objectContaining({
+            kind: "rate-limit.refund-failed",
+            outcome: "failed",
+            details: expect.objectContaining({
+              policy: policy.name,
+              phase: "refund",
+              error: { name: "Error", message: "refund store offline" },
+            }),
+          }),
+        );
+      },
+    );
+
+    it.each(["skipSuccessfulRequests", "skipFailedRequests"] as const)(
+      "should reject missing refund receipts before running a handler with %s",
+      async (option) => {
+        const store = new SlidingWindowInMemoryStore();
+        vi.spyOn(store, "check").mockResolvedValue({
+          success: true,
+          limit: 1,
+          remaining: 0,
+          resetAtMs: Date.now() + 60_000,
+        });
+        const middleware = rateLimitHttpMiddleware({
+          rateLimiter: new RateLimiter(store, new RateLimitKeyBuilder(["ip"])),
+          policy: createSlidingWindowPolicy("no-refund-receipt", 1, 60_000),
+          [option]: true,
+        });
+        const { ctx } = createRateLimitTestContext();
+        const next = vi.fn(async () => {});
+        await expect(middleware(ctx, next)).rejects.toBeInstanceOf(
+          RateLimitRefundUnsupportedProblem,
+        );
+        expect(next).not.toHaveBeenCalled();
+      },
+    );
 
     it("should keep rate limit headers for outcomes that remain counted", async () => {
       const middleware = rateLimitHttpMiddleware({
