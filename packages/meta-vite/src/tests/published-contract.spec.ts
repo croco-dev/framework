@@ -40,7 +40,7 @@ type PackageTarballs = {
   readonly presentationPreset: string;
   readonly problemsCore: string;
   readonly storageCore: string;
-  readonly transportsHttp: string;
+  readonly transportDependencies: Readonly<Record<string, string>>;
 };
 
 type CommandInvocation = {
@@ -64,7 +64,7 @@ const buildTargets: readonly BuildTarget[] = [
   libraryBuildTarget("cache-core"),
   libraryBuildTarget("storage-core"),
   libraryBuildTarget("presentation-preset"),
-  libraryBuildTarget("transports-http"),
+  ...transportDependencyNames().map((name) => libraryBuildTarget(name.slice("@croco/".length))),
   {
     packageName: "@croco/meta-vite",
     sourceDir: join(packageDir, "src"),
@@ -357,11 +357,9 @@ function packPackages(packRoot: string): PackageTarballs {
   run("pnpm", ["--filter", "@croco/storage-core", "pack", "--pack-destination", packRoot], rootDir);
 
   run("pnpm", ["--filter", "@croco/seo-core", "pack", "--pack-destination", packRoot], rootDir);
-  run(
-    "pnpm",
-    ["--filter", "@croco/transports-http", "pack", "--pack-destination", packRoot],
-    rootDir,
-  );
+  for (const name of transportDependencyNames()) {
+    run("pnpm", ["--filter", name, "pack", "--pack-destination", packRoot], rootDir);
+  }
   run("pnpm", ["--filter", "@croco/meta-vite", "pack", "--pack-destination", packRoot], rootDir);
 
   return {
@@ -374,7 +372,12 @@ function packPackages(packRoot: string): PackageTarballs {
     presentationPreset: findTarball(packRoot, "croco-presentation-preset-"),
     problemsCore: findTarball(packRoot, "croco-problems-core-"),
     storageCore: findTarball(packRoot, "croco-storage-core-"),
-    transportsHttp: findTarball(packRoot, "croco-transports-http-"),
+    transportDependencies: Object.fromEntries(
+      transportDependencyNames().map((name) => [
+        name,
+        findTarball(packRoot, `croco-${name.slice("@croco/".length)}-`),
+      ]),
+    ),
   };
 }
 
@@ -493,7 +496,12 @@ function writeConsumerPackageJson(consumerRoot: string, tarballs: PackageTarball
     "@croco/presentation-preset": `file:${tarballs.presentationPreset}`,
     "@croco/problems-core": `file:${tarballs.problemsCore}`,
     "@croco/storage-core": `file:${tarballs.storageCore}`,
-    "@croco/transports-http": `file:${tarballs.transportsHttp}`,
+    ...Object.fromEntries(
+      Object.entries(tarballs.transportDependencies).map(([name, tarball]) => [
+        name,
+        `file:${tarball}`,
+      ]),
+    ),
     postcss: supportedPostcssVersion,
   });
 }
@@ -653,4 +661,22 @@ function formatCommandFailure(
   ]
     .filter(Boolean)
     .join("\n");
+}
+
+// The new transport subpath must be tested with the current workspace dependency
+// closure, including versions that have not yet been released to the registry.
+function transportDependencyNames(): readonly string[] {
+  const names = new Set<string>();
+  function visit(name: string): void {
+    if (names.has(name)) return;
+    names.add(name);
+    const manifest = JSON.parse(
+      readFileSync(join(rootDir, "packages", name.slice("@croco/".length), "package.json"), "utf8"),
+    ) as { dependencies?: Record<string, string> };
+    for (const dependency of Object.keys(manifest.dependencies ?? {})) {
+      if (dependency.startsWith("@croco/")) visit(dependency);
+    }
+  }
+  visit("@croco/transports-http");
+  return [...names].sort();
 }
