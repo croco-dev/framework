@@ -18,8 +18,10 @@ describe("ChunkExecutor", () => {
 
   beforeEach(() => {
     executionManager = {
-      get: vi.fn().mockResolvedValue({ id: "exec-1", status: "running" }),
-      start: vi.fn().mockResolvedValue({ id: "exec-1", checkpoints: {} }),
+      get: vi.fn().mockResolvedValue({ id: "exec-1", status: "running", attempts: 1 }),
+      start: vi
+        .fn()
+        .mockResolvedValue({ id: "exec-1", status: "running", attempts: 1, checkpoints: {} }),
       checkpoint: vi.fn().mockResolvedValue({}),
       complete: vi.fn().mockResolvedValue({}),
       fail: vi.fn().mockResolvedValue({}),
@@ -134,85 +136,100 @@ describe("ChunkExecutor", () => {
       },
     );
 
-    it("preserves a failed in-flight write without recording failure over cancellation", async () => {
-      const manager = new ExecutionManagerImpl(new TestExecutionStore());
-      const execution = await manager.create({ type: "batch-job", maxAttempts: 3 });
-      const fail = vi.spyOn(manager, "fail");
-      const entered = createBarrier();
-      const release = createBarrier();
-      const writeError = new Error("sink rejected write");
-      const writer = {
-        write: vi.fn(async () => {
-          entered.resolve();
-          await release.promise;
-          throw writeError;
-        }),
-      };
-      const running = new ChunkExecutor(manager).execute(
-        execution.id,
-        new Step({
-          name: "failed-write",
-          reader: createCheckpointReader([1, 2]),
-          writer,
-          chunkSize: 1,
-        }),
-      );
-      const rejection = expect(running).rejects.toBe(writeError);
-      await entered.promise;
-      await manager.cancel(execution.id);
-      release.resolve();
-      await rejection;
-      expect(fail).not.toHaveBeenCalled();
-      expect(await manager.get(execution.id)).toMatchObject({ status: "cancelled" });
-      expect((await manager.get(execution.id)).checkpoints).toBeUndefined();
-      expect(writer.write).toHaveBeenCalledTimes(1);
-    });
-
-    it("treats cancellation racing with completion as a normal stop", async () => {
-      const manager = new ExecutionManagerImpl(new TestExecutionStore());
-      const execution = await manager.create({ type: "batch-job" });
-      const originalComplete = manager.complete.bind(manager);
-      vi.spyOn(manager, "complete").mockImplementation(async (id, result) => {
-        await manager.cancel(id);
-        return originalComplete(id, result);
-      });
-      const fail = vi.spyOn(manager, "fail");
-      await expect(
-        new ChunkExecutor(manager).execute(
+    it.each(["cancel", "timeout"] as const)(
+      "preserves a failed in-flight write without recording failure over %s",
+      async (terminate) => {
+        const manager = new ExecutionManagerImpl(new TestExecutionStore());
+        const execution = await manager.create({ type: "batch-job", maxAttempts: 3 });
+        const fail = vi.spyOn(manager, "fail");
+        const entered = createBarrier();
+        const release = createBarrier();
+        const writeError = new Error("sink rejected write");
+        const writer = {
+          write: vi.fn(async () => {
+            entered.resolve();
+            await release.promise;
+            throw writeError;
+          }),
+        };
+        const running = new ChunkExecutor(manager).execute(
           execution.id,
           new Step({
-            name: "empty",
-            reader: { read: async () => null },
-            writer: { write: vi.fn() },
+            name: "failed-write",
+            reader: createCheckpointReader([1, 2]),
+            writer,
+            chunkSize: 1,
           }),
-        ),
-      ).resolves.toBeUndefined();
-      expect(fail).not.toHaveBeenCalled();
-      expect(await manager.get(execution.id)).toMatchObject({ status: "cancelled" });
-    });
+        );
+        const rejection = expect(running).rejects.toBe(writeError);
+        await entered.promise;
+        await manager[terminate](execution.id);
+        release.resolve();
+        await rejection;
+        expect(fail).not.toHaveBeenCalled();
+        expect(await manager.get(execution.id)).toMatchObject({
+          status: terminate === "cancel" ? "cancelled" : "timed_out",
+        });
+        expect((await manager.get(execution.id)).checkpoints).toBeUndefined();
+        expect(writer.write).toHaveBeenCalledTimes(1);
+      },
+    );
 
-    it("does not hide a completion storage failure when cancellation also arrives", async () => {
-      const manager = new ExecutionManagerImpl(new TestExecutionStore());
-      const execution = await manager.create({ type: "batch-job" });
-      const storageError = new Error("completion store unavailable");
-      vi.spyOn(manager, "complete").mockImplementation(async (id) => {
-        await manager.cancel(id);
-        throw storageError;
-      });
-      const fail = vi.spyOn(manager, "fail");
-      await expect(
-        new ChunkExecutor(manager).execute(
-          execution.id,
-          new Step({
-            name: "empty",
-            reader: { read: async () => null },
-            writer: { write: vi.fn() },
-          }),
-        ),
-      ).rejects.toBe(storageError);
-      expect(fail).not.toHaveBeenCalled();
-      expect(await manager.get(execution.id)).toMatchObject({ status: "cancelled" });
-    });
+    it.each(["cancel", "timeout"] as const)(
+      "treats %s racing with completion as a normal stop",
+      async (terminate) => {
+        const manager = new ExecutionManagerImpl(new TestExecutionStore());
+        const execution = await manager.create({ type: "batch-job" });
+        const originalComplete = manager.complete.bind(manager);
+        vi.spyOn(manager, "complete").mockImplementation(async (id, result) => {
+          await manager[terminate](id);
+          return originalComplete(id, result);
+        });
+        const fail = vi.spyOn(manager, "fail");
+        await expect(
+          new ChunkExecutor(manager).execute(
+            execution.id,
+            new Step({
+              name: "empty",
+              reader: { read: async () => null },
+              writer: { write: vi.fn() },
+            }),
+          ),
+        ).resolves.toBeUndefined();
+        expect(fail).not.toHaveBeenCalled();
+        expect(await manager.get(execution.id)).toMatchObject({
+          status: terminate === "cancel" ? "cancelled" : "timed_out",
+        });
+      },
+    );
+
+    it.each(["cancel", "timeout"] as const)(
+      "does not hide a completion storage failure when %s also arrives",
+      async (terminate) => {
+        const manager = new ExecutionManagerImpl(new TestExecutionStore());
+        const execution = await manager.create({ type: "batch-job" });
+        const storageError = new Error("completion store unavailable");
+        vi.spyOn(manager, "complete").mockImplementation(async (id) => {
+          await manager[terminate](id);
+          throw storageError;
+        });
+        const fail = vi.spyOn(manager, "fail");
+        await expect(
+          new ChunkExecutor(manager).execute(
+            execution.id,
+            new Step({
+              name: "empty",
+              reader: { read: async () => null },
+              writer: { write: vi.fn() },
+            }),
+          ),
+        ).rejects.toBe(storageError);
+        expect(fail).not.toHaveBeenCalled();
+        expect(await manager.get(execution.id)).toMatchObject({
+          status: terminate === "cancel" ? "cancelled" : "timed_out",
+        });
+      },
+    );
 
     it("does not start a later step after cancellation", async () => {
       const manager = new ExecutionManagerImpl(new TestExecutionStore());
@@ -230,6 +247,168 @@ describe("ChunkExecutor", () => {
       ).resolves.toBeUndefined();
       expect(reader.read).not.toHaveBeenCalled();
       expect(writer.write).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("attempt lifecycle admission", () => {
+    it.each([
+      [false, false],
+      [false, true],
+      [true, false],
+      [true, true],
+    ])(
+      "retains a successful timed-out write without starting another (checkpoint=%s, total=%s)",
+      async (checkpointed, hasTotal) => {
+        const manager = new ExecutionManagerImpl(new TestExecutionStore());
+        const execution = await manager.create({ type: "batch-job", maxAttempts: 3 });
+        if (hasTotal) await manager.updateProgress(execution.id, { current: 0, total: 3 });
+        const source = createCheckpointReader([11, 22, 33]);
+        const reader = checkpointed ? source : { read: source.read };
+        const entered = createBarrier();
+        const release = createBarrier();
+        const written: number[] = [];
+        const writer = {
+          write: vi.fn(async (items: number[]) => {
+            entered.resolve();
+            await release.promise;
+            written.push(...items);
+          }),
+        };
+        const fail = vi.spyOn(manager, "fail");
+        const complete = vi.spyOn(manager, "complete");
+        const running = new ChunkExecutor(manager).execute(
+          execution.id,
+          new Step({ name: "timed", reader, writer, chunkSize: 1 }),
+        );
+        await entered.promise;
+        const terminal = await manager.timeout(execution.id);
+        release.resolve();
+        await expect(running).resolves.toBeUndefined();
+        expect(written).toEqual([11]);
+        expect(reader.read).toHaveBeenCalledTimes(1);
+        expect(fail).not.toHaveBeenCalled();
+        expect(complete).not.toHaveBeenCalled();
+        expect(await manager.get(execution.id)).toMatchObject({
+          status: "timed_out",
+          attempts: 1,
+          error: terminal.error,
+          completedAt: terminal.completedAt,
+        });
+        expect((await manager.get(execution.id)).checkpoints).toEqual(
+          checkpointed ? { "timed.cursor": { offset: 1 }, "timed.processedCount": 1 } : undefined,
+        );
+        expect((await manager.get(execution.id)).progress).toEqual(
+          hasTotal ? { current: 1, total: 3, percent: 33 } : undefined,
+        );
+      },
+    );
+
+    it.each(["reader", "processor", "eof", "filtered"] as const)(
+      "does not commit uncommitted work timed out during %s",
+      async (boundary) => {
+        const manager = new ExecutionManagerImpl(new TestExecutionStore());
+        const execution = await manager.create({ type: "batch-job" });
+        const entered = createBarrier();
+        const release = createBarrier();
+        let offset = 0;
+        const reader = {
+          read: vi.fn(async () => {
+            offset += 1;
+            if (boundary === "reader" || (boundary === "eof" && offset === 2)) {
+              entered.resolve();
+              await release.promise;
+            }
+            return offset === 1 ? 7 : null;
+          }),
+          getCheckpoint: () => ({ offset }),
+          restoreCheckpoint: vi.fn(),
+        };
+        const processor = {
+          process: vi.fn(async (item: number) => {
+            if (boundary === "processor" || boundary === "filtered") {
+              entered.resolve();
+              await release.promise;
+            }
+            return boundary === "filtered" ? null : item;
+          }),
+        };
+        const writer = { write: vi.fn() };
+        const running = new ChunkExecutor(manager).execute(
+          execution.id,
+          new Step({ name: "waiting", reader, processor, writer, chunkSize: 2 }),
+        );
+        await entered.promise;
+        const terminal = await manager.timeout(execution.id);
+        release.resolve();
+        await expect(running).resolves.toBeUndefined();
+        expect(writer.write).not.toHaveBeenCalled();
+        expect(await manager.get(execution.id)).toEqual(terminal);
+        if (boundary === "reader") expect(processor.process).not.toHaveBeenCalled();
+      },
+    );
+
+    it.each([
+      "failed",
+      "retrying",
+      "replacement-reader",
+      "replacement-writer",
+      "replacement-error",
+    ] as const)("preserves %s execution state when the old attempt resumes", async (boundary) => {
+      const store = new TestExecutionStore();
+      const manager = new ExecutionManagerImpl(store);
+      const execution = await manager.create({ type: "batch-job", maxAttempts: 3 });
+      const entered = createBarrier();
+      const release = createBarrier();
+      const source = createCheckpointReader([11, 22]);
+      const sinkError = new Error("old sink failure");
+      const reader = {
+        ...source,
+        read: vi.fn(async () => {
+          if (boundary !== "replacement-writer" && boundary !== "replacement-error") {
+            entered.resolve();
+            await release.promise;
+          }
+          return source.read();
+        }),
+      };
+      const writer = {
+        write: vi.fn(async () => {
+          if (boundary === "replacement-writer" || boundary === "replacement-error") {
+            entered.resolve();
+            await release.promise;
+            if (boundary === "replacement-error") throw sinkError;
+          }
+        }),
+      };
+      const running = new ChunkExecutor(manager).execute(
+        execution.id,
+        new Step({ name: "old", reader, writer, chunkSize: 1 }),
+      );
+      const settled =
+        boundary === "replacement-error"
+          ? expect(running).rejects.toBe(sinkError)
+          : expect(running).resolves.toBeUndefined();
+      await entered.promise;
+      await manager.fail(execution.id, {
+        message: "external failure",
+        retryable: boundary !== "failed",
+      });
+      if (boundary.startsWith("replacement")) {
+        await manager.start(execution.id);
+        await manager.checkpoint(execution.id, "old.cursor", { offset: 99 });
+        await manager.updateProgress(execution.id, { current: 99, total: 100 });
+      }
+      const replacement = await manager.get(execution.id);
+      const fail = vi.spyOn(manager, "fail");
+      const complete = vi.spyOn(manager, "complete");
+      release.resolve();
+      await settled;
+      expect(await manager.get(execution.id)).toEqual(replacement);
+      expect(fail).not.toHaveBeenCalled();
+      expect(complete).not.toHaveBeenCalled();
+      expect(writer.write).toHaveBeenCalledTimes(
+        boundary === "replacement-writer" || boundary === "replacement-error" ? 1 : 0,
+      );
     });
   });
 
@@ -357,6 +536,8 @@ describe("ChunkExecutor", () => {
   it("should update progress after each successful chunk when total is available", async () => {
     (executionManager.start as Mock).mockResolvedValue({
       id: "exec-1",
+      status: "running",
+      attempts: 1,
       checkpoints: {},
       progress: { current: 0, total: 3 },
     });
@@ -404,6 +585,8 @@ describe("ChunkExecutor", () => {
 
     (executionManager.start as Mock).mockResolvedValue({
       id: "exec-1",
+      status: "running",
+      attempts: 1,
       checkpoints: { "test-step.cursor": { offset: 5 } },
     });
 
@@ -507,6 +690,8 @@ describe("ChunkExecutor", () => {
     async (count) => {
       (executionManager.start as Mock).mockResolvedValue({
         id: "exec-1",
+        status: "running",
+        attempts: 1,
         checkpoints: {},
         progress: { current: 0, total: 5 },
       });
