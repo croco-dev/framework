@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "architecture-policy",
+      "classification": "pure-contract",
+      "reason": "Reject malformed policy manifests before normalization can widen import exemptions or drop rules.",
+      "files": {
+        "packages/architecture-policy/src/index.ts": "7e5adfca368b64dc687399fa917217200e04d3e459714d3be777e6ea446f6f6c"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Manifest schema validation is build-time Tooling input processing. It adds no Host capability, provider, storage or lifecycle dependency.",
+          "providers": [],
+          "constraints": ["No deployment support or provider certification claim."],
+          "references": [
+            "packages/architecture-policy/src/index.ts",
+            "packages/architecture-policy/README.md"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Manifest schema validation is build-time Tooling input processing. It adds no Host capability, provider, storage or lifecycle dependency.",
+          "providers": [],
+          "constraints": ["No deployment support or provider certification claim."],
+          "references": [
+            "packages/architecture-policy/src/index.ts",
+            "packages/architecture-policy/README.md"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Manifest schema validation is build-time Tooling input processing. It adds no Host capability, provider, storage or lifecycle dependency.",
+          "providers": [],
+          "constraints": ["No deployment support or provider certification claim."],
+          "references": [
+            "packages/architecture-policy/src/index.ts",
+            "packages/architecture-policy/README.md"
+          ]
+        }
+      }
+    }
+  ]
+}

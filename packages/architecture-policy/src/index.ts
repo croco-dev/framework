@@ -5,11 +5,21 @@ import { Problem, ProblemCategory } from "@croco/problems-core";
 export const ARCHITECTURE_POLICY_SCHEMA_VERSION = "croco.architecture-policy/v1";
 
 export class ArchitecturePolicyManifestShapeProblem extends Problem {
-  constructor() {
+  constructor(field?: string, expected?: string) {
     super(
       "architecture-policy/manifest-shape",
       ProblemCategory.ValidationError,
-      "Architecture policy manifest must be a JSON object.",
+      field
+        ? `Architecture policy manifest field '${field}' must be ${expected}.`
+        : "Architecture policy manifest must be a JSON object.",
+      field
+        ? {
+            extensions: {
+              field,
+              recovery: `Set ${field} to ${expected}; do not omit invalid policy conditions.`,
+            },
+          }
+        : undefined,
     );
   }
 }
@@ -219,6 +229,8 @@ export function parseArchitecturePolicyManifest(content: string): ArchitecturePo
     throw new ArchitecturePolicyManifestSchemaVersionProblem(parsed.schemaVersion);
   }
 
+  validateManifestFields(parsed);
+
   return {
     schemaVersion: ARCHITECTURE_POLICY_SCHEMA_VERSION,
     policyName: readOptionalString(parsed.policyName),
@@ -288,6 +300,222 @@ function normalizePolicy(options: ArchitecturePolicyCheckOptions): NormalizedPol
     ignorePatterns: options.manifest.ignore ?? [],
     packageGroups: options.manifest.packageGroups ?? {},
   };
+}
+
+// Validate before normalization: dropping an invalid selector can broaden an exemption.
+function validateManifestFields(manifest: Record<string, unknown>): void {
+  validateKnownFields(manifest, "", [
+    "schemaVersion",
+    "policyName",
+    "packageRoots",
+    "include",
+    "ignore",
+    "packageGroups",
+    "packageCatalogGroupOverrides",
+    "rules",
+  ]);
+  validateFields(manifest, "", {
+    policyName: "string",
+    packageRoots: "strings",
+    include: "strings",
+    ignore: "strings",
+  });
+  if (manifest.packageGroups !== undefined) {
+    const groups = requireRecord(manifest.packageGroups, "packageGroups");
+    for (const [name, group] of Object.entries(groups)) {
+      const path = `packageGroups.${name}`;
+      validateKnownFields(requireRecord(group, path), path, ["description", "packages", "paths"]);
+      validateFields(requireRecord(group, path), path, {
+        description: "string",
+        packages: "strings",
+        paths: "strings",
+      });
+    }
+  }
+  if (manifest.rules === undefined) return;
+  const rules = requireRecord(manifest.rules, "rules");
+  validateKnownFields(rules, "rules", [
+    "forbiddenImports",
+    "allowedGroupImports",
+    "publicEntrypoints",
+  ]);
+  for (const kind of ["forbiddenImports", "allowedGroupImports"] as const) {
+    if (rules[kind] === undefined) continue;
+    const entries = requireArray(rules[kind], `rules.${kind}`);
+    entries.forEach((value, index) => {
+      const path = `rules.${kind}[${index}]`;
+      const rule = requireRecord(value, path);
+      validateKnownFields(rule, path, [
+        "id",
+        "description",
+        "message",
+        "recovery",
+        "appliesTo",
+        ...(kind === "forbiddenImports"
+          ? ["from", "to"]
+          : [
+              "fromGroups",
+              "allowGroups",
+              "allowPackages",
+              "allowSpecifiers",
+              "allowExternal",
+              "allowSameGroup",
+            ]),
+      ]);
+      validateFields(
+        rule,
+        path,
+        {
+          id: "string",
+          description: "string",
+          message: "string",
+          recovery: "string",
+          appliesTo: "strings",
+        },
+        ["id"],
+      );
+      if (
+        rule.appliesTo !== undefined &&
+        ((rule.appliesTo as string[]).length === 0 ||
+          (rule.appliesTo as string[]).some(
+            (entry) => entry !== "source" && entry !== "package-manifest",
+          ))
+      ) {
+        throw new ArchitecturePolicyManifestShapeProblem(
+          `${path}.appliesTo`,
+          "a non-empty array containing only source or package-manifest",
+        );
+      }
+      if (kind === "forbiddenImports") {
+        for (const side of ["from", "to"]) {
+          validateKnownFields(requireRecord(rule[side], `${path}.${side}`), `${path}.${side}`, [
+            "groups",
+            "packages",
+            "paths",
+            "specifiers",
+          ]);
+          validateFields(requireRecord(rule[side], `${path}.${side}`), `${path}.${side}`, {
+            groups: "strings",
+            packages: "strings",
+            paths: "strings",
+            specifiers: "strings",
+          });
+        }
+      } else {
+        validateFields(
+          rule,
+          path,
+          {
+            fromGroups: "strings",
+            allowGroups: "strings",
+            allowPackages: "strings",
+            allowSpecifiers: "strings",
+            allowExternal: "boolean",
+            allowSameGroup: "boolean",
+          },
+          ["fromGroups", "allowGroups"],
+        );
+      }
+    });
+  }
+  if (rules.publicEntrypoints === undefined) return;
+  const path = "rules.publicEntrypoints";
+  const rule = requireRecord(rules.publicEntrypoints, path);
+  validateKnownFields(rule, path, [
+    "id",
+    "description",
+    "includePackages",
+    "message",
+    "recovery",
+    "ignoreImports",
+  ]);
+  validateFields(
+    rule,
+    path,
+    {
+      id: "string",
+      description: "string",
+      includePackages: "strings",
+      message: "string",
+      recovery: "string",
+    },
+    ["id"],
+  );
+  if (rule.ignoreImports === undefined) return;
+  requireArray(rule.ignoreImports, `${path}.ignoreImports`).forEach((value, index) => {
+    const ignorePath = `${path}.ignoreImports[${index}]`;
+    const ignore = requireRecord(value, ignorePath);
+    validateKnownFields(ignore, ignorePath, ["paths", "packages", "specifiers"]);
+    validateFields(ignore, ignorePath, {
+      paths: "strings",
+      packages: "strings",
+      specifiers: "strings",
+    });
+    if (
+      ![ignore.paths, ignore.packages, ignore.specifiers].some(
+        (entry) => Array.isArray(entry) && entry.length > 0,
+      )
+    ) {
+      throw new ArchitecturePolicyManifestShapeProblem(
+        ignorePath,
+        "an ignore with at least one non-empty paths, packages or specifiers array",
+      );
+    }
+  });
+}
+
+function validateKnownFields(
+  value: Record<string, unknown>,
+  path: string,
+  allowed: readonly string[],
+): void {
+  for (const key of Object.keys(value)) {
+    if (!allowed.includes(key)) {
+      throw new ArchitecturePolicyManifestShapeProblem(
+        path ? `${path}.${key}` : key,
+        `a recognized field (${allowed.join(", ")})`,
+      );
+    }
+  }
+}
+
+function requireRecord(value: unknown, path: string): Record<string, unknown> {
+  if (!isRecord(value)) throw new ArchitecturePolicyManifestShapeProblem(path, "a JSON object");
+  return value;
+}
+
+function requireArray(value: unknown, path: string): unknown[] {
+  if (!Array.isArray(value)) throw new ArchitecturePolicyManifestShapeProblem(path, "an array");
+  return value;
+}
+
+function validateFields(
+  value: Record<string, unknown>,
+  path: string,
+  fields: Readonly<Record<string, "string" | "strings" | "boolean">>,
+  required: readonly string[] = [],
+): void {
+  for (const [key, kind] of Object.entries(fields)) {
+    const field = value[key];
+    if (field === undefined && !required.includes(key)) continue;
+    const valid =
+      kind === "strings"
+        ? Array.isArray(field) &&
+          field.every((entry) => typeof entry === "string" && entry.trim().length > 0)
+        : kind === "string"
+          ? typeof field === "string" && field.trim().length > 0
+          : typeof field === "boolean";
+    if (!valid) {
+      throw new ArchitecturePolicyManifestShapeProblem(
+        path ? `${path}.${key}` : key,
+        kind === "strings"
+          ? "an array of non-empty strings"
+          : kind === "string"
+            ? "a non-empty string"
+            : "a boolean",
+      );
+    }
+  }
 }
 
 function readRules(value: unknown): ArchitecturePolicyManifest["rules"] {

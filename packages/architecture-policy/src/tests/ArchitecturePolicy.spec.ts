@@ -1019,6 +1019,129 @@ describe("architecture policy engine", () => {
     ]);
   });
 
+  it.each([
+    [
+      { rules: { publicEntrypoints: { id: "public", ignoreImports: [{ paths: 123 }] } } },
+      "rules.publicEntrypoints.ignoreImports[0].paths",
+    ],
+    [
+      { rules: { publicEntrypoints: { id: "public", ignoreImports: [{}] } } },
+      "rules.publicEntrypoints.ignoreImports[0]",
+    ],
+    [
+      { rules: { publicEntrypoints: { id: "public", ignoreImports: [{ specifiers: [] }] } } },
+      "rules.publicEntrypoints.ignoreImports[0]",
+    ],
+    [
+      {
+        rules: { publicEntrypoints: { id: "public", ignoreImports: [{ specifiers: ["ok", 1] }] } },
+      },
+      "rules.publicEntrypoints.ignoreImports[0].specifiers",
+    ],
+    [{ rules: { publicEntrypoints: { ignoreImports: [] } } }, "rules.publicEntrypoints.id"],
+    [{ rules: { forbiddenImports: [{}] } }, "rules.forbiddenImports[0].id"],
+    [{ rules: { forbiddenImports: {} } }, "rules.forbiddenImports"],
+    [
+      { rules: { forbiddenImports: [{ id: "edge", from: { paths: 1 }, to: {} }] } },
+      "rules.forbiddenImports[0].from.paths",
+    ],
+    [
+      { rules: { forbiddenImports: [{ id: "edge", from: {}, to: {}, appliesTo: ["typo"] }] } },
+      "rules.forbiddenImports[0].appliesTo",
+    ],
+    [
+      { rules: { allowedGroupImports: [{ id: "edge", fromGroups: ["core"] }] } },
+      "rules.allowedGroupImports[0].allowGroups",
+    ],
+    [
+      {
+        rules: {
+          allowedGroupImports: [
+            { id: "edge", fromGroups: [], allowGroups: [], allowExternal: "yes" },
+          ],
+        },
+      },
+      "rules.allowedGroupImports[0].allowExternal",
+    ],
+    [{ include: ["packages/**", null] }, "include"],
+    [{ packageGroups: { core: { packages: 123 } } }, "packageGroups.core.packages"],
+    [{ rules: [] }, "rules"],
+    [{ rules: { forbiddenImports: [{ id: "edge", to: {} }] } }, "rules.forbiddenImports[0].from"],
+    [{ rules: { forbiddenImports: [false] } }, "rules.forbiddenImports[0]"],
+    [
+      { rules: { forbiddenImports: [{ id: "edge", from: {}, to: {}, appliesTo: [] }] } },
+      "rules.forbiddenImports[0].appliesTo",
+    ],
+    [{ rules: { forbiddenImport: [] } }, "rules.forbiddenImport"],
+    [
+      {
+        rules: {
+          publicEntrypoints: { id: "public", ignoreImports: [{ paths: ["**"], specifiers: null }] },
+        },
+      },
+      "rules.publicEntrypoints.ignoreImports[0].specifiers",
+    ],
+  ])("rejects malformed policy field %j at %s", (fields, field) => {
+    const error = captureError(() =>
+      parseArchitecturePolicyManifest(
+        JSON.stringify({
+          schemaVersion: ARCHITECTURE_POLICY_SCHEMA_VERSION,
+          ...fields,
+        }),
+      ),
+    );
+    expect(error).toBeInstanceOf(ArchitecturePolicyManifestShapeProblem);
+    expect(error).toMatchObject({
+      code: "architecture-policy/manifest-shape",
+      extensions: { field, recovery: expect.any(String) },
+    });
+  });
+
+  it.each([
+    ["@demo/provider", "@demo/provider/private", ["blocked"]],
+    ["@demo/other", "@demo/provider/private", ["allowed", "blocked"]],
+    ["@demo/provider", "@demo/provider/other", ["allowed", "blocked"]],
+  ])(
+    "only excludes private imports matching every ignore condition (%s, %s)",
+    (targetPackage, specifier, files) => {
+      const repo = createTempRepo();
+      writePackage(repo, "packages/consumer", "@demo/consumer");
+      writePackage(repo, "packages/provider", "@demo/provider", {
+        exports: { ".": "./src/index.ts" },
+      });
+      for (const file of ["allowed", "blocked"]) {
+        writeFile(repo, `packages/consumer/src/${file}.ts`, 'import "@demo/provider/private";\n');
+      }
+      const manifest = parseArchitecturePolicyManifest(
+        JSON.stringify({
+          schemaVersion: ARCHITECTURE_POLICY_SCHEMA_VERSION,
+          rules: {
+            publicEntrypoints: {
+              id: "public",
+              ignoreImports: [
+                {
+                  paths: ["**/allowed.ts"],
+                  packages: [targetPackage],
+                  specifiers: [specifier],
+                },
+              ],
+            },
+          },
+        }),
+      );
+      const report = checkArchitecturePolicy({ rootDir: repo, manifest });
+      expect(report.status).toBe("fail");
+      expect(
+        report.diagnostics.map(({ file, importSpecifier }) => ({ file, importSpecifier })),
+      ).toEqual(
+        files.map((name) => ({
+          file: `packages/consumer/src/${name}.ts`,
+          importSpecifier: "@demo/provider/private",
+        })),
+      );
+    },
+  );
+
   it("parses the manifest schema version explicitly", () => {
     expect(
       captureError(() =>
