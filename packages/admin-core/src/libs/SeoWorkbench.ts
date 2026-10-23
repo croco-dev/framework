@@ -269,6 +269,7 @@ export function createSeoWorkbench(options: SeoWorkbenchOptions) {
         ),
         "denied",
       );
+      check(Date.parse(expiresAt) > options.now().getTime(), "retention");
       // Persist only masked aggregate evidence; the host owns durable, scope-isolated storage.
       await options.store.write(
         scope,

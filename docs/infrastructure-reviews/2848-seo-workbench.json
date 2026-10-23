@@ -55,7 +55,7 @@
       "reason": "Server authorization and aggregate report orchestration over existing host-provided authority, runner and scoped repository contracts. No storage implementation, network client or Host lifecycle is introduced.",
       "files": {
         "packages/admin-core/src/index.ts": "1c51def979aeee13770062a966148b703835b3e2d0f4c1d74c544c2e1304c987",
-        "packages/admin-core/src/libs/SeoWorkbench.ts": "67f5a4d73067f1709ab340ccc09d28b24bfbe1c92e8e89c5806c6e1ce5b50d83"
+        "packages/admin-core/src/libs/SeoWorkbench.ts": "ed68bb27e0d0e912ff0709cd19c7c951d6eaf913b2aba86e69f3cc501ec6be39"
       },
       "catalogRuntimes": [],
       "profiles": {

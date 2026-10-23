@@ -548,6 +548,68 @@ describe("SeoWorkbench saved report release authority", () => {
     else expect(state).toMatchObject({ kind: "ready", page: { total: 2 } });
   });
 
+  it.each([
+    { releaseAt: "2026-10-20T00:00:00.999Z", expired: false },
+    { releaseAt: "2026-10-20T00:00:01.000Z", expired: true },
+    { releaseAt: "2026-10-20T00:00:01.001Z", expired: true },
+  ])(
+    "checks saved retention during final authorization at $releaseAt",
+    async ({ releaseAt, expired }) => {
+      let now = new Date("2026-10-20T00:00:00.000Z");
+      let authenticationCount = 0;
+      let pauseAt = Infinity;
+      let entered = () => {};
+      let resume = () => {};
+      const authenticationEntered = new Promise<void>((resolve) => {
+        entered = resolve;
+      });
+      const authenticationResumed = new Promise<void>((resolve) => {
+        resume = resolve;
+      });
+      const { operations, record, write } = await createRetainedReadFixture({
+        authenticate: async () => {
+          authenticationCount++;
+          if (authenticationCount === pauseAt) {
+            entered();
+            await authenticationResumed;
+          }
+          return { scope: seoScope, permissions: ["seo.read", "seo.report"] };
+        },
+        mask: (_field, value) => value,
+        now: () => now,
+      });
+      const expiresAt = "2026-10-20T00:00:01.000Z";
+      let beforeWriteAuthenticationCount = 0;
+      write.mockImplementationOnce(async () => {
+        beforeWriteAuthenticationCount = authenticationCount;
+      });
+      await operations.save("probe", seoDefinition, record.report.inputHash, expiresAt);
+      // Observe the public write boundary without pinning an authentication call count.
+      pauseAt = beforeWriteAuthenticationCount;
+      authenticationCount = 0;
+      write.mockClear();
+      const pending = operations.save(
+        "retention-race",
+        seoDefinition,
+        record.report.inputHash,
+        expiresAt,
+      );
+      await Promise.race([
+        authenticationEntered,
+        pending.then(() => {
+          throw new TypeError("Saved report did not reach final authorization");
+        }),
+      ]);
+      now = new Date(releaseAt);
+      const result = expired
+        ? expect(pending).rejects.toMatchObject({ reason: "retention" })
+        : expect(pending).resolves.toBeUndefined();
+      resume();
+      await result;
+      expect(write).toHaveBeenCalledTimes(expired ? 0 : 1);
+    },
+  );
+
   it.each(["read", "readSaved"] as const)(
     "applies the current field policy after pending authentication for %s",
     async (operation) => {
