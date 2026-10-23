@@ -266,3 +266,5 @@ export type { CrocoMetaVitePluginOptions, EnvironmentName } from "./libs/vite/cr
 export { crocoMetaVitePlugin, MissingRscPeerProblem } from "./libs/vite/crocoMetaVitePlugin";
 
 export { createPublicPageHandler } from "./libs/seo/publicPageHandler";
+
+export type { LambdaProxyResponse } from "@croco/transports-http/lambda-response";

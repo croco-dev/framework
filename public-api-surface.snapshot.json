@@ -28362,6 +28362,11 @@
               "source": "./libs/isr/runtimeSupport"
             },
             {
+              "name": "LambdaProxyResponse",
+              "exportKind": "named",
+              "source": "@croco/transports-http/lambda-response"
+            },
+            {
               "name": "MetaDeployTarget",
               "exportKind": "named",
               "source": "./libs/output/outputContract"
@@ -45887,6 +45892,45 @@
               "name": "TypedLambdaHandler",
               "exportKind": "named",
               "source": "./libs/CrocoLambdaAdapter"
+            }
+          ]
+        },
+        {
+          "exportPath": "./lambda-response",
+          "kind": "code",
+          "targets": [
+            {
+              "conditions": ["types", "import"],
+              "target": "./dist/lambda-response.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
+              "target": "./dist/lambda-response.d.ts"
+            },
+            {
+              "conditions": ["import"],
+              "target": "./dist/lambda-response.mjs"
+            },
+            {
+              "conditions": ["require"],
+              "target": "./dist/lambda-response.js"
+            }
+          ],
+          "sourceEntrypoint": "packages/transports-http/src/lambda-response.ts",
+          "runtimeExports": [
+            {
+              "name": "toLambdaProxyResponse",
+              "exportKind": "declaration",
+              "source": null,
+              "declarationKind": "function"
+            }
+          ],
+          "typeExports": [
+            {
+              "name": "LambdaProxyResponse",
+              "exportKind": "declaration",
+              "source": null,
+              "declarationKind": "type"
             }
           ]
         }

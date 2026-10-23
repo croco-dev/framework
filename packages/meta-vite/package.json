@@ -73,7 +73,8 @@
     "@croco/presentation-preset": "workspace:*",
     "@croco/problems-core": "workspace:*",
     "@croco/seo-core": "workspace:*",
-    "@croco/storage-core": "workspace:*"
+    "@croco/storage-core": "workspace:*",
+    "@croco/transports-http": "workspace:*"
   },
   "devDependencies": {
     "@types/react": "^19.2.0",

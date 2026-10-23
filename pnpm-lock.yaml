@@ -4821,6 +4821,9 @@ importers:
       '@croco/storage-core':
         specifier: workspace:*
         version: link:../storage-core
+      '@croco/transports-http':
+        specifier: workspace:*
+        version: link:../transports-http
     devDependencies:
       '@types/react':
         specifier: ^19.2.0

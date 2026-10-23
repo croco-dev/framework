@@ -1,111 +1,10 @@
+import { toLambdaProxyResponse } from "../lambda-response";
 import type { ILogger } from "@croco/framework-context";
 import type { Hono } from "hono";
 import { type RuntimeContextInit, withRuntimeContextEnv } from "./runtimeContext";
 import type { LambdaContext, LambdaEvent, LambdaHandler } from "./types";
 
 type FetchDispatcher = Pick<Hono, "fetch">;
-
-type HeadersWithSetCookie = Headers & {
-  getSetCookie?: () => string[];
-};
-
-type LambdaResponseHeaders = {
-  headers: Record<string, string>;
-  cookies: string[];
-};
-
-type LambdaResponseBody = {
-  body: string;
-  isBase64Encoded: boolean;
-};
-
-const UTF8_DECODER = new TextDecoder("utf-8", { fatal: true });
-
-function isBinaryContentType(contentType: string): boolean {
-  const mimeType = contentType.split(";", 1)[0]?.trim().toLowerCase() ?? "";
-
-  if (mimeType === "") {
-    return false;
-  }
-
-  if (mimeType.startsWith("text/")) {
-    return false;
-  }
-
-  if (
-    mimeType.includes("json") ||
-    mimeType.includes("xml") ||
-    mimeType.includes("javascript") ||
-    mimeType === "application/x-www-form-urlencoded"
-  ) {
-    return false;
-  }
-
-  return true;
-}
-
-function hasContentCoding(headers: Headers): boolean {
-  const contentEncoding = headers.get("content-encoding")?.toLowerCase() ?? "";
-  return contentEncoding !== "" && contentEncoding !== "identity";
-}
-
-function decodeUtf8Text(bytes: Uint8Array): string | undefined {
-  try {
-    return UTF8_DECODER.decode(bytes);
-  } catch (error) {
-    if (error instanceof TypeError) {
-      return undefined;
-    }
-    throw error;
-  }
-}
-
-async function toLambdaResponseBody(response: Response): Promise<LambdaResponseBody> {
-  const bytes = Buffer.from(await response.arrayBuffer());
-  const text =
-    hasContentCoding(response.headers) ||
-    isBinaryContentType(response.headers.get("content-type") ?? "")
-      ? undefined
-      : decodeUtf8Text(bytes);
-
-  return text === undefined
-    ? { body: bytes.toString("base64"), isBase64Encoded: true }
-    : { body: text, isBase64Encoded: false };
-}
-
-function getSetCookieHeaders(headers: Headers): string[] {
-  const getSetCookie = (headers as HeadersWithSetCookie).getSetCookie;
-  if (typeof getSetCookie === "function") {
-    const cookies = getSetCookie.call(headers);
-    if (cookies.length > 0) {
-      return cookies;
-    }
-  }
-
-  const cookies: string[] = [];
-  headers.forEach((value, key) => {
-    if (key.toLowerCase() === "set-cookie") {
-      cookies.push(value);
-    }
-  });
-
-  return cookies;
-}
-
-function toLambdaResponseHeaders(headers: Headers): LambdaResponseHeaders {
-  const responseHeaders: Record<string, string> = {};
-  const cookies = getSetCookieHeaders(headers);
-
-  headers.forEach((value, key) => {
-    if (key.toLowerCase() === "set-cookie") {
-      return;
-    }
-
-    responseHeaders[key] = value;
-  });
-
-  return { headers: responseHeaders, cookies };
-}
 
 export interface LambdaExecutionEnv {
   event: LambdaEvent;
@@ -655,16 +554,7 @@ export class CrocoLambdaAdapter {
           });
 
           const response = await this.dispatcher.fetch(request, executionEnv);
-          const { body: responseBody, isBase64Encoded } = await toLambdaResponseBody(response);
-          const { headers: responseHeaders, cookies } = toLambdaResponseHeaders(response.headers);
-
-          return {
-            statusCode: response.status,
-            headers: responseHeaders,
-            ...(cookies.length > 0 ? { cookies } : {}),
-            body: responseBody,
-            isBase64Encoded,
-          };
+          return toLambdaProxyResponse(response);
         },
         runtimeContext,
         options,

@@ -40,6 +40,7 @@ type PackageTarballs = {
   readonly presentationPreset: string;
   readonly problemsCore: string;
   readonly storageCore: string;
+  readonly transportsHttp: string;
 };
 
 type CommandInvocation = {
@@ -63,6 +64,7 @@ const buildTargets: readonly BuildTarget[] = [
   libraryBuildTarget("cache-core"),
   libraryBuildTarget("storage-core"),
   libraryBuildTarget("presentation-preset"),
+  libraryBuildTarget("transports-http"),
   {
     packageName: "@croco/meta-vite",
     sourceDir: join(packageDir, "src"),
@@ -248,7 +250,9 @@ describe("published @croco/meta-vite contract", () => {
         writeFileSync(
           join(rootConsumerRoot, "index.ts"),
           [
-            "import type { MetaViteRouteManifest, ServerActionConfig } from '@croco/meta-vite';",
+            "import type { MetaViteRouteManifest, ServerActionConfig, LambdaProxyResponse } from '@croco/meta-vite';",
+            "import { createLambdaHandler } from '@croco/meta-vite';",
+            "export const lambdaResult: Promise<LambdaProxyResponse> = createLambdaHandler(async () => new Response('created', { status: 201 }))({ version: '2.0', rawPath: '/' }, {});",
             "import { createMetaViteRouteManifest, createServerActionSuccess, serializeMetaViteRouteManifest, type ServerActionResult } from '@croco/meta-vite';",
             "",
             "export const action: ServerActionConfig<{ email: string }, { accepted: boolean }> = {",
@@ -353,6 +357,11 @@ function packPackages(packRoot: string): PackageTarballs {
   run("pnpm", ["--filter", "@croco/storage-core", "pack", "--pack-destination", packRoot], rootDir);
 
   run("pnpm", ["--filter", "@croco/seo-core", "pack", "--pack-destination", packRoot], rootDir);
+  run(
+    "pnpm",
+    ["--filter", "@croco/transports-http", "pack", "--pack-destination", packRoot],
+    rootDir,
+  );
   run("pnpm", ["--filter", "@croco/meta-vite", "pack", "--pack-destination", packRoot], rootDir);
 
   return {
@@ -365,6 +374,7 @@ function packPackages(packRoot: string): PackageTarballs {
     presentationPreset: findTarball(packRoot, "croco-presentation-preset-"),
     problemsCore: findTarball(packRoot, "croco-problems-core-"),
     storageCore: findTarball(packRoot, "croco-storage-core-"),
+    transportsHttp: findTarball(packRoot, "croco-transports-http-"),
   };
 }
 
@@ -483,6 +493,7 @@ function writeConsumerPackageJson(consumerRoot: string, tarballs: PackageTarball
     "@croco/presentation-preset": `file:${tarballs.presentationPreset}`,
     "@croco/problems-core": `file:${tarballs.problemsCore}`,
     "@croco/storage-core": `file:${tarballs.storageCore}`,
+    "@croco/transports-http": `file:${tarballs.transportsHttp}`,
     postcss: supportedPostcssVersion,
   });
 }

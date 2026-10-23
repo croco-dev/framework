@@ -71,8 +71,8 @@ describe("ISR runtime support", () => {
     expect(report.supported).toBe(true);
     expect(report.durable).toBe(true);
     expect(report.diagnostics).toEqual([]);
-    await expect(first.text()).resolves.toBe("lambda-render-1:/cached");
-    await expect(second.text()).resolves.toBe("lambda-render-1:/cached");
+    expect(first.body).toBe("lambda-render-1:/cached");
+    expect(second.body).toBe("lambda-render-1:/cached");
     expect(state.renderCount).toBe(1);
     expect(redis.setex).toHaveBeenCalledOnce();
   });
