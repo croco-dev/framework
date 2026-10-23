@@ -121,6 +121,11 @@ await chunkExecutor.execute(executionId, loadStep, { startExecution: false });
 남깁니다. 운영자는 실패한 실행을 조회해 `status`, `error`, `progress`, `checkpoints`를 확인한 뒤 같은
 실행 ID로 다시 실행할 수 있습니다.
 
+- 새 read/process/write와 완료·실패 기록 전에 시작한 attempt 번호와 현재 `running` 상태를 확인합니다.
+  `timed_out`, `failed`, `retrying`, `cancelled` 상태이거나 attempt가 달라지면 후속 작업을 시작하지 않습니다.
+  같은 attempt에서 이미 시작해 성공한 쓰기는 종료 상태와 오류를 유지하며 체크포인트·진행률을 남깁니다.
+  새 attempt로 넘어간 뒤 완료된 이전 쓰기는 새 attempt의 체크포인트·진행률을 갱신하지 않습니다.
+  상태 조회와 외부 효과·체크포인트는 원자적이지 않으며, 실행 중인 외부 쓰기를 강제로 중단하지 않습니다.
 - `chunkSize`는 성공적으로 처리한 입력 수를 기준으로 하며, processor가 `null`을 반환한 항목도 포함합니다.
   각 청크와 마지막 남은 입력의 처리가 끝나면 `step.name.cursor` 체크포인트를 갱신한 뒤
   `step.name.processedCount` 체크포인트에 누적 입력 건수를 저장합니다. 출력이 있는
