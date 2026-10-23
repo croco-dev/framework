@@ -52,7 +52,7 @@
   "scripts": {
     "build": "tsup src/index.ts src/postgres.ts --format esm,cjs --minify --clean --dts",
     "lint": "oxlint .",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsrs --noEmit",
     "test": "vitest run --exclude src/tests/OutboxFactSource.integration.spec.ts",
     "test:integration": "CROCO_TEST_REAL_RESOURCES=1 vitest run src/tests/OutboxFactSource.integration.spec.ts",
     "test:real": "CROCO_TEST_REAL_RESOURCES=1 vitest run src/tests/OutboxFactSource.integration.spec.ts",

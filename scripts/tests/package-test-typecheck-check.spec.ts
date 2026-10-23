@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { collectPackageTestTypecheckDiagnostics } from "../package-test-typecheck-check.mts";
 
 const roots: string[] = [];
-function fixture(config: unknown, command = "tsc --noEmit"): string {
+function fixture(config: unknown, command = "tsrs --noEmit"): string {
   const root = mkdtempSync(join(tmpdir(), "croco-test-typecheck-"));
   roots.push(root);
   write(root, "packages/example/package.json", {
@@ -64,17 +64,28 @@ describe("package test typecheck membership", () => {
   });
 
   it("uses the selected project and resolves its paths relative to that config", () => {
-    const root = fixture({ exclude: ["src"] }, "tsc --noEmit --project configs/check.json");
+    const root = fixture({ exclude: ["src"] }, "tsrs --noEmit --project configs/check.json");
     write(root, "packages/example/configs/check.json", { include: ["../src"] });
     expect(collectPackageTestTypecheckDiagnostics(root)).toEqual([]);
     write(root, "packages/example/configs/check.json", { include: ["../src/index.ts"] });
     expect(collectPackageTestTypecheckDiagnostics(root)).toHaveLength(2);
   });
 
-  it("accepts the repository's explicit node TypeScript invocation", () => {
+  it.each([
+    "tsc --noEmit",
+    "node ../../node_modules/typescript/bin/tsc --noEmit",
+    "tsrs --noEmit || tsc --noEmit",
+    "tsrs --noEmit\ntsc --noEmit",
+  ])("rejects a fallback to the TypeScript compiler: %s", (command) => {
+    expect(collectPackageTestTypecheckDiagnostics(fixture({ include: ["src"] }, command))).toEqual([
+      expect.stringContaining("unsupported typecheck command"),
+    ]);
+  });
+
+  it("accepts explicit no-emit project options for tsrs", () => {
     expect(
       collectPackageTestTypecheckDiagnostics(
-        fixture({ include: ["src"] }, "node ../../node_modules/typescript/bin/tsc --noEmit"),
+        fixture({ include: ["src"] }, "tsrs --pretty false --noEmit --project ./tsconfig.json"),
       ),
     ).toEqual([]);
   });
@@ -98,14 +109,17 @@ describe("package test typecheck membership", () => {
     );
   });
 
-  it.each(["tsc --noEmit src/index.ts", "tsc --noEmit --exclude src/tests", "tsc --noEmit false"])(
-    "rejects commands that do not check a supported no-emit project: %s",
-    (command) => {
-      expect(
-        collectPackageTestTypecheckDiagnostics(fixture({ include: ["src"] }, command)),
-      ).toEqual([expect.stringContaining("typecheck must run tsc --noEmit with a project config")]);
-    },
-  );
+  it.each([
+    "tsrs --noEmit src/index.ts",
+    "tsrs --noEmit --exclude src/tests",
+    "tsrs --noEmit false",
+    "tsrs --project tsconfig.json",
+    "tsrs --noEmit --noEmit false",
+  ])("rejects commands that do not check a supported no-emit project: %s", (command) => {
+    expect(collectPackageTestTypecheckDiagnostics(fixture({ include: ["src"] }, command))).toEqual([
+      expect.stringContaining("typecheck must run tsrs --noEmit with a project config"),
+    ]);
+  });
 
   it("does not impose typecheck on tooling packages without that script", () => {
     const root = fixture({ include: ["src"] });

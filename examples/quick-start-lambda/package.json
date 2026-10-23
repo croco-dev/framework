@@ -6,8 +6,8 @@
   "main": "./dist/index.js",
   "scripts": {
     "dev": "tsx scripts/build.ts --watch",
-    "build": "tsx scripts/build.ts && tsc --noEmit",
-    "typecheck": "tsx scripts/build.ts && tsc --noEmit"
+    "build": "tsx scripts/build.ts && tsrs --noEmit",
+    "typecheck": "tsx scripts/build.ts && tsrs --noEmit"
   },
   "dependencies": {
     "@croco/auth-core": "workspace:*",

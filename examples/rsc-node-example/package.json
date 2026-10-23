@@ -6,7 +6,7 @@
   "scripts": {
     "build": "NODE_ENV=production vite build",
     "serve": "NODE_ENV=production node ./serve.mjs",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsrs --noEmit",
     "test:performance": "node performance/measure.mjs"
   },
   "dependencies": {

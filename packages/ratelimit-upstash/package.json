@@ -46,7 +46,7 @@
     "lint": "oxlint .",
     "test": "vitest run src/tests/UpstashRateLimitClient.spec.ts src/tests/UpstashRateLimitStore.spec.ts src/tests/WorkersAdapter.spec.ts",
     "test:evidence": "pnpm run test --maxWorkers=1 --reporter=json --outputFile=.turbo/croco-test-evidence.json",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsrs --noEmit",
     "docs:api:model": "node --experimental-strip-types ../docs/scripts/generate-package-api-model.mts",
     "test:real": "CROCO_TEST_REAL_RESOURCES=1 vitest run src/tests/WorkersRedisLiveSmoke.spec.ts"
   },

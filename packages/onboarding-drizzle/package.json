@@ -49,7 +49,7 @@
     "test": "vitest run --exclude src/tests/DrizzleGoalStore.postgres.spec.ts --exclude src/tests/DrizzleOnboardingStore.postgres.spec.ts",
     "test:live": "TZ=Asia/Seoul vitest run src/tests/DrizzleGoalStore.postgres.spec.ts src/tests/DrizzleOnboardingStore.postgres.spec.ts",
     "test:evidence": "pnpm run test --maxWorkers=1 --reporter=json --outputFile=.turbo/croco-test-evidence.json",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsrs --noEmit",
     "lint": "oxlint .",
     "docs:api:model": "node --experimental-strip-types ../docs/scripts/generate-package-api-model.mts"
   },

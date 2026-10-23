@@ -4855,6 +4855,12 @@
       "owner": "@croco/protocols-rest"
     },
     {
+      "path": "packages/protocols-rest/src/tests/RouteParameterSchemaCompatibility.spec.ts",
+      "lane": "fast",
+      "qualifiers": ["coverage"],
+      "owner": "@croco/protocols-rest"
+    },
+    {
       "path": "packages/protocols-rest/src/tests/RouteSchema.spec.ts",
       "lane": "fast",
       "qualifiers": ["coverage"],

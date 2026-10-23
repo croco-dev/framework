@@ -7,6 +7,7 @@ import { pathToFileURL } from "node:url";
 import { parse as parseYaml } from "yaml";
 
 export const TYPESCRIPT_BASELINE = "6.0.3";
+export const TYPECHECK_BASELINE = "0.18.0-ts7.1.0-dev.20260929";
 export const PROTOCOL_TYPESCRIPT_BASELINE = "6.0.2";
 export const GENERATED_TYPESCRIPT_RANGE = `^${TYPESCRIPT_BASELINE}`;
 export const TSUP_COMPATIBILITY_VERSION = "8.5.1";
@@ -24,6 +25,12 @@ export function collectWorkspaceCompilerDiagnostics(
     "package.json devDependencies.typescript",
     nestedString(rootPackage, "devDependencies", "typescript"),
     TYPESCRIPT_BASELINE,
+  );
+  checkValue(
+    diagnostics,
+    "package.json devDependencies.tsrs",
+    nestedString(rootPackage, "devDependencies", "tsrs"),
+    TYPECHECK_BASELINE,
   );
   checkValue(
     diagnostics,
@@ -46,6 +53,17 @@ export function collectWorkspaceCompilerDiagnostics(
   return diagnostics;
 }
 
+export function collectWorkspaceTypecheckDiagnostics(
+  manifest: JsonRecord,
+  manifestPath: string,
+): string[] {
+  const command = nestedString(manifest, "scripts", "typecheck");
+  if (command === undefined || /(?:^| && )tsrs --noEmit$/.test(command)) return [];
+  return [
+    `${manifestPath} scripts.typecheck: must end with tsrs --noEmit, received ${JSON.stringify(command)}`,
+  ];
+}
+
 export function collectCompilerBaselineDiagnostics(rootDir: string): string[] {
   const diagnostics: string[] = [];
   const rootPackage = readJson(join(rootDir, "package.json"));
@@ -54,6 +72,33 @@ export function collectCompilerBaselineDiagnostics(rootDir: string): string[] {
   ) as JsonRecord;
 
   diagnostics.push(...collectWorkspaceCompilerDiagnostics(rootPackage, workspace));
+
+  const workspaceRequire = createRequire(join(rootDir, "package.json"));
+  checkValue(
+    diagnostics,
+    "installed TypeScript Compiler API",
+    (workspaceRequire("typescript") as { version: string }).version,
+    TYPESCRIPT_BASELINE,
+  );
+  checkValue(
+    diagnostics,
+    "installed tsrs typechecker",
+    (workspaceRequire("tsrs/package.json") as { version: string }).version,
+    TYPECHECK_BASELINE,
+  );
+  for (const directory of ["packages", "examples"]) {
+    for (const entry of readdirSync(join(rootDir, directory), { withFileTypes: true })) {
+      if (!entry.isDirectory()) continue;
+      const manifestPath = join(rootDir, directory, entry.name, "package.json");
+      if (!existsSync(manifestPath)) continue;
+      diagnostics.push(
+        ...collectWorkspaceTypecheckDiagnostics(
+          readJson(manifestPath),
+          relative(rootDir, manifestPath),
+        ),
+      );
+    }
+  }
 
   // ts-morph embeds its compiler; the workspace typescript override cannot replace it.
   const protocolRequire = createRequire(join(rootDir, "packages/protocol-codegen/package.json"));
@@ -344,7 +389,7 @@ function main(): void {
     return;
   }
   console.log(
-    `compiler-baseline-check: TypeScript ${TYPESCRIPT_BASELINE}, legacy decorators, tsconfig migration, and generated consumers verified`,
+    `compiler-baseline-check: tsrs ${TYPECHECK_BASELINE} typechecking, TypeScript ${TYPESCRIPT_BASELINE} Compiler API/emission, legacy decorators, tsconfig migration, and generated consumers verified`,
   );
 }
 

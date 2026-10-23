@@ -96,7 +96,7 @@
     "test:integration": "CROCO_TEST_REAL_RESOURCES=1 vitest run src/tests/AssignedOutcome.integration.spec.ts src/tests/PageExperience.integration.spec.ts src/tests/Pipeline.integration.spec.ts src/tests/PostgresMetricRead.integration.spec.ts src/tests/PostgresWarehouseFacts.integration.spec.ts src/tests/PostgresWarehouseReader.integration.spec.ts",
     "test:live": "CROCO_TEST_REAL_RESOURCES=1 vitest run src/tests/PostgresMetricsStore.integration.spec.ts",
     "test:real": "CROCO_TEST_REAL_RESOURCES=1 vitest run src/tests/*.integration.spec.ts",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsrs --noEmit",
     "lint": "oxlint .",
     "docs:api:model": "node --experimental-strip-types ../docs/scripts/generate-package-api-model.mts"
   },

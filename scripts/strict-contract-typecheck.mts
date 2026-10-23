@@ -483,7 +483,7 @@ function runTypecheck(
   rootDir: string,
   pkg: StrictContractPackage,
 ): readonly StrictContractDiagnostic[] {
-  const result = spawnSync("pnpm", ["exec", "tsc", "--pretty", "false", "-p", pkg.tsconfig], {
+  const result = spawnSync("pnpm", ["exec", "tsrs", "--pretty", "false", "-p", pkg.tsconfig], {
     cwd: rootDir,
     encoding: "utf-8",
     shell: process.platform === "win32",
@@ -501,12 +501,12 @@ function runTypecheck(
       console.error(`fatal ${diagnostic}`);
     }
     throw new Error(
-      `tsc exited ${result.status} for ${pkg.name} with unclassified diagnostic output`,
+      `tsrs exited ${result.status} for ${pkg.name} with unclassified diagnostic output`,
     );
   }
 
   if (result.status !== 0 && diagnostics.targetDiagnostics.length === 0 && output.trim() === "") {
-    throw new Error(`tsc exited ${result.status} for ${pkg.name} without diagnostic output`);
+    throw new Error(`tsrs exited ${result.status} for ${pkg.name} without diagnostic output`);
   }
 
   return diagnostics.targetDiagnostics;

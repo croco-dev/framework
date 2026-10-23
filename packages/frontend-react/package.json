@@ -81,7 +81,7 @@
     "build": "tsup src/apollo.ts src/index.ts src/acquisition.ts src/experience-slot.ts src/surveys.ts src/experiments.ts --format esm,cjs --minify --clean --dts --external react --external react-dom --external @croco/meta-vite --external @croco/problems-core --external @croco/onboarding-core --external @croco/promotions-core --external @croco/gamification-core --external @croco/referral-core --external @apollo/client --external @apollo/client/*",
     "test": "vitest run",
     "test:evidence": "pnpm run test --maxWorkers=1 --reporter=json --outputFile=.turbo/croco-test-evidence.json",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsrs --noEmit",
     "lint": "oxlint .",
     "docs:api:model": "node --experimental-strip-types ../docs/scripts/generate-package-api-model.mts"
   },
