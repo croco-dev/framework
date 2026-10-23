@@ -109,6 +109,16 @@ export function rateLimitHttpMiddleware(options: RateLimitHttpOptions): Middlewa
     const adapter = createContextAdapter(ctx as CrocoHttpContextAdapter);
     const wrappedNext = async (): Promise<void> => {
       recordStoreUnavailable(ctx, createOptions.policy);
+      if (skipSuccessfulRequests || skipFailedRequests) {
+        const result = ctx.get<RateLimitResult>("rateLimitResult");
+        if (
+          result?.success &&
+          !result.degraded &&
+          (!ctx.get<string>("rateLimitKey") || !result.refundReceipt)
+        ) {
+          throw new RateLimitRefundUnsupportedProblem();
+        }
+      }
 
       try {
         await next();
@@ -181,7 +191,24 @@ async function refundRateLimit(
     throw new RateLimitRefundUnsupportedProblem();
   }
 
-  await rateLimiter.refundWithKey(key, policy, receipt);
+  try {
+    await rateLimiter.refundWithKey(key, policy, receipt);
+  } catch (error) {
+    recordRuntimeInspectionEvent(FrameworkContext.get()?.runtimeInspector, {
+      kind: "rate-limit.refund-failed",
+      outcome: "failed",
+      details: {
+        policy: policy.name,
+        phase: "refund",
+        error:
+          error instanceof Error
+            ? { name: error.name, message: error.message }
+            : { name: "Error", message: String(error) },
+      },
+    });
+    // The charge may remain after a store failure; keep the admission headers conservative.
+    applyRateLimitHeaders(ctx);
+  }
 }
 
 export type RateLimitMiddlewareFactoryOptions = {

@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "transports-http",
+      "classification": "pure-contract",
+      "reason": "Preserve the completed handler outcome when quota refund fails, record a separate runtime inspection event and reject missing refund receipts before handler execution. No host or store implementation changes.",
+      "files": {
+        "packages/transports-http/src/libs/middleware/RateLimitMiddleware.ts": "c2a82308943a64371dc838ea5232c54deae72d8836fe422592d0034917b7b606"
+      },
+      "catalogRuntimes": ["node", "lambda"],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Provider-neutral HTTP outcome reconciliation only. The existing Node Host and rate-limit store contract are reused without cluster, storage or shutdown changes.",
+          "providers": ["@croco/ratelimit-core/RateLimiter"],
+          "constraints": [],
+          "references": [
+            "packages/transports-http/src/libs/middleware/RateLimitMiddleware.ts",
+            "packages/ratelimit-core/src/libs/RateLimiter.ts",
+            "packages/transports-http/src/tests/RateLimitMiddleware.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Provider-neutral HTTP outcome reconciliation only. Refund is still awaited inside the existing middleware promise; Lambda invocation and flush ownership do not change.",
+          "providers": ["@croco/ratelimit-core/RateLimiter"],
+          "constraints": [],
+          "references": [
+            "packages/transports-http/src/libs/middleware/RateLimitMiddleware.ts",
+            "packages/ratelimit-core/src/libs/RateLimiter.ts",
+            "packages/transports-http/src/tests/RateLimitMiddleware.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Provider-neutral HTTP outcome reconciliation only. No Workers bindings, isolate capabilities or Node Container support are added; transports-http retains its node/lambda catalog claims.",
+          "providers": ["@croco/ratelimit-core/RateLimiter"],
+          "constraints": [],
+          "references": [
+            "packages/transports-http/src/libs/middleware/RateLimitMiddleware.ts",
+            "packages/ratelimit-core/src/libs/RateLimiter.ts",
+            "packages/transports-http/src/tests/RateLimitMiddleware.spec.ts"
+          ]
+        }
+      }
+    }
+  ]
+}
