@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "protocol-codegen",
+      "classification": "protocol-render",
+      "reason": "Include local .js, .mjs and .cjs source dependencies in the existing source ownership, emission and runtime output mapping so allowJs controllers load their application dependencies. This is shared RPC/OpenAPI build tooling; catalog runtime claims remain empty.",
+      "files": {
+        "packages/protocol-codegen/src/libs/ControllerProject.ts": "c698eed505d2e5353b5b0beded0027af0f1ae59d500e9d0c16c9fb9a2fb0bb75"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Controller dependency analysis and temporary emission run in the Node build process before deployment to the Kubernetes Node Host. Including local allowJs JavaScript sources changes no deployed provider, storage, capability or lifecycle ownership.",
+          "providers": [],
+          "constraints": [
+            "Requires filesystem and child-process access in the build environment; no deployment compatibility or certification is claimed."
+          ],
+          "references": [
+            "packages/protocol-codegen/README.md",
+            "packages/protocol-codegen/src/libs/ControllerProject.ts",
+            "packages/protocol-codegen/src/tests/ControllerProject.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Controller dependency analysis and temporary emission run in the Node build process before deployment to the Lambda Host. Including local allowJs JavaScript sources changes no deployed provider, storage, capability or lifecycle ownership.",
+          "providers": [],
+          "constraints": [
+            "Requires filesystem and child-process access in the build environment; no deployment compatibility or certification is claimed."
+          ],
+          "references": [
+            "packages/protocol-codegen/README.md",
+            "packages/protocol-codegen/src/libs/ControllerProject.ts",
+            "packages/protocol-codegen/src/tests/ControllerProject.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Controller dependency analysis and temporary emission run in the Node build process before deployment to the Workers or Node Container Host. Including local allowJs JavaScript sources changes no deployed provider, storage, capability or lifecycle ownership.",
+          "providers": [],
+          "constraints": [
+            "Requires filesystem and child-process access in the build environment; no deployment compatibility or certification is claimed."
+          ],
+          "references": [
+            "packages/protocol-codegen/README.md",
+            "packages/protocol-codegen/src/libs/ControllerProject.ts",
+            "packages/protocol-codegen/src/tests/ControllerProject.spec.ts"
+          ]
+        }
+      }
+    }
+  ]
+}

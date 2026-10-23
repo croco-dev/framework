@@ -994,7 +994,7 @@ function findModuleResolutionRoot(sourceDirectory: string, fallback: string): st
 
 function isEmittableSourcePath(filePath: string): boolean {
   return (
-    /(?:\.[cm]?tsx?|\.json)$/.test(filePath) &&
+    /(?:\.[cm]?(?:tsx?|js)|\.json)$/.test(filePath) &&
     !/\.d\.[cm]?ts$/.test(filePath) &&
     !filePath.split(path.sep).includes("node_modules")
   );
