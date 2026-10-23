@@ -28,6 +28,7 @@
             "packages/tx-core/src/libs/TxAdapter.ts",
             "packages/tx-drizzle/src/libs/DrizzleTransactionPlugin.ts",
             "packages/tx-drizzle/src/tests/DrizzleTxAdapter.spec.ts",
+            "packages/tx-drizzle/src/tests/DrizzleTxAdapter.postgres.spec.ts",
             "packages/presentation-preset/runtime-profiles.json"
           ]
         },
@@ -49,6 +50,7 @@
             "packages/tx-core/src/libs/TxAdapter.ts",
             "packages/tx-drizzle/src/libs/DrizzleTransactionPlugin.ts",
             "packages/tx-drizzle/src/tests/DrizzleTxAdapter.spec.ts",
+            "packages/tx-drizzle/src/tests/DrizzleTxAdapter.postgres.spec.ts",
             "packages/presentation-preset/runtime-profiles.json"
           ]
         },
@@ -70,6 +72,7 @@
             "packages/tx-core/src/libs/TxAdapter.ts",
             "packages/tx-drizzle/src/libs/DrizzleTransactionPlugin.ts",
             "packages/tx-drizzle/src/tests/DrizzleTxAdapter.spec.ts",
+            "packages/tx-drizzle/src/tests/DrizzleTxAdapter.postgres.spec.ts",
             "packages/presentation-preset/runtime-profiles.json"
           ],
           "host": "workers"
