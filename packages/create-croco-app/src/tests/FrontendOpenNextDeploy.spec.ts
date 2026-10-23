@@ -49,7 +49,7 @@ describe.each([
         devDependencies: Record<string, string>;
       };
       expect(manifest.name).toBe(`@acme/${app}`);
-      expect(manifest.dependencies["@opennextjs/cloudflare"]).toBeTruthy();
+      expect(manifest.dependencies["@opennextjs/cloudflare"]).toBe("1.20.13");
       expect(manifest.devDependencies.wrangler).toBeTruthy();
       expect(manifest.scripts["build:worker"]).toBe("opennextjs-cloudflare build");
       expect(manifest.scripts.preview).toBe("pnpm build:worker && opennextjs-cloudflare preview");

@@ -69,7 +69,7 @@ export function installFrontendDeploy(
         deploy: "pnpm build:worker && opennextjs-cloudflare deploy",
       },
       dependencies: {
-        "@opennextjs/cloudflare": "1.19.11",
+        "@opennextjs/cloudflare": "1.20.13",
       },
       devDependencies: {
         wrangler: "^4.86.0",
