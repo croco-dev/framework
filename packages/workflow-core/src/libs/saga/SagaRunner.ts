@@ -133,7 +133,24 @@ function canonicalOutboxValue(
           ? canonicalOutboxValue(sagaName, value[index], ancestors)
           : '["hole"]',
       );
-      return `["array",[${entries.join(",")}]]`;
+      const properties = Object.keys(value)
+        .filter((key) => {
+          const index = Number(key);
+          return !(
+            Number.isInteger(index) &&
+            index >= 0 &&
+            index < value.length &&
+            String(index) === key
+          );
+        })
+        .sort()
+        .map(
+          (key) =>
+            `[${JSON.stringify(key)},${canonicalOutboxValue(sagaName, (value as unknown as Record<string, unknown>)[key], ancestors)}]`,
+        );
+      return properties.length === 0
+        ? `["array",[${entries.join(",")}]]`
+        : `["array",[${entries.join(",")}],[${properties.join(",")}]]`;
     }
     const prototype = Object.getPrototypeOf(value);
     if (prototype !== Object.prototype && prototype !== null) {

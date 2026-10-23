@@ -197,7 +197,8 @@ If identity finalization fails after a forward handler succeeds, the successful 
 for compensation; unverified outbox messages are not published.
 
 Canonical values distinguish primitive types, undefined, non-finite numbers, negative zero,
-bigints, Date timestamps, array positions (including holes) and sorted plain-object properties.
+bigints, Date timestamps, array positions (including holes), sorted enumerable array properties
+and sorted plain-object properties.
 Functions, symbols, enumerable symbol keys, cycles, invalid dates and other object types cannot
 be fingerprinted and produce a Saga definition failure. This does not provide durable publishing
 or repair previously ambiguous downstream receipts; existing store and publisher guarantees still apply.

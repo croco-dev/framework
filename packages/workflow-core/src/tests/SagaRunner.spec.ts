@@ -1023,6 +1023,7 @@ describe("SagaRunner", () => {
     { idempotencyKey: "refund-B" },
     { metadata: { destination: "account-B" } },
     { payload: [null] },
+    { payload: Object.assign([undefined], { account: "account-B" }) },
     { payload: { amount: BigInt(12) } },
     { payload: new Date("2026-01-02T03:04:05Z") },
   ])("distinguishes semantic message changes %o", async (change) => {
