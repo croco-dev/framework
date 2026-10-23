@@ -541,6 +541,170 @@ describe("test lane runner", () => {
     rmSync(root, { recursive: true, force: true });
   });
 
+  it("requires every spec and attempt in a normalized Playwright file to pass", () => {
+    const root = mkdtempSync(join(tmpdir(), "croco-playwright-file-evidence-"));
+    const reportPath = join(root, "playwright.json");
+    try {
+      writeFileSync(
+        reportPath,
+        JSON.stringify({
+          suites: [
+            {
+              specs: [
+                { file: "partial.spec.ts", tests: [{ results: [{ status: "passed" }] }] },
+                { file: "passed.spec.ts", tests: [{ results: [{ status: "passed" }] }] },
+                {
+                  file: "flaky.spec.ts",
+                  tests: [{ results: [{ status: "failed" }, { status: "passed" }] }],
+                },
+              ],
+              suites: [
+                {
+                  specs: [
+                    {
+                      file: join(root, "partial.spec.ts"),
+                      title: "nested skip",
+                      tests: [{ results: [{ status: "skipped" }] }],
+                    },
+                    { file: "passed.spec.ts", tests: [{ results: [{ status: "passed" }] }] },
+                  ],
+                },
+              ],
+            },
+          ],
+        }),
+      );
+      expect(readCompletedPlaywrightPaths(reportPath, root)).toEqual(["passed.spec.ts"]);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects partial files from real no-browser Playwright execution", () => {
+    const root = mkdtempSync(join(tmpdir(), "croco-playwright-lane-"));
+    const packageRoot = join(root, "packages", "a");
+    const names = ["all-skipped", "failed", "partial", "passed", "project-skip"];
+    try {
+      mkdirSync(packageRoot, { recursive: true });
+      writeFileSync(
+        join(root, "package.json"),
+        JSON.stringify({ private: true, packageManager: PACKAGE_MANAGER }),
+      );
+      writeFileSync(join(root, "pnpm-workspace.yaml"), "packages:\n  - packages/*\n");
+      symlinkSync(
+        resolve(import.meta.dirname, "../../packages/docs/node_modules"),
+        join(root, "node_modules"),
+        "dir",
+      );
+      writeFileSync(
+        join(packageRoot, "package.json"),
+        JSON.stringify({
+          name: "@croco/a",
+          private: true,
+          scripts: {
+            "test:integration": `playwright test ${names.map((name) => `${name}.spec.cjs`).join(" ")}`,
+          },
+        }),
+      );
+      writeFileSync(
+        join(packageRoot, "playwright.config.cjs"),
+        `module.exports = {
+        workers: 1, projects: [{ name: 'first' }, { name: 'second' }],
+      };`,
+      );
+      const prelude = "const { test, expect } = require('@playwright/test');\n";
+      const sources = [
+        "test.skip('all skipped', () => {});",
+        "test('fails', () => expect(1).toBe(2)); test.skip('failure skip', () => {});",
+        "test('passes', () => expect(1).toBe(1)); test.describe('nested', () => { test.skip('not executed', () => {}); });",
+        "test('passes', () => expect(1).toBe(1));",
+        "test('project-specific', ({}, info) => { test.skip(info.project.name === 'second', 'project skip'); expect(1).toBe(1); });",
+      ];
+      names.forEach((name, index) =>
+        writeFileSync(join(packageRoot, `${name}.spec.cjs`), prelude + sources[index]),
+      );
+      const report = runTestLane({
+        rootDir: root,
+        lane: "integration",
+        inventory: {
+          version: 1,
+          exceptions: [],
+          tests: names.map((name) => ({
+            path: `packages/a/${name}.spec.cjs`,
+            lane: "integration" as const,
+            qualifiers: [],
+            owner: "@croco/a",
+          })),
+        },
+      });
+      expect(report.status).toBe("failed");
+      expect(report.executedPaths).toEqual(["packages/a/passed.spec.cjs"]);
+      expect(report.skippedFiles).toEqual([
+        expect.objectContaining({
+          path: "packages/a/all-skipped.spec.cjs",
+          status: "skipped",
+          passedAssertions: 0,
+        }),
+        expect.objectContaining({
+          path: "packages/a/failed.spec.cjs",
+          status: "failed-with-skips",
+          passedAssertions: 0,
+        }),
+        expect.objectContaining({
+          path: "packages/a/partial.spec.cjs",
+          status: "partially-executed",
+          passedAssertions: 2,
+          skippedAssertions: [
+            { name: "nested > not executed [first]", status: "skipped" },
+            { name: "nested > not executed [second]", status: "skipped" },
+          ],
+        }),
+        expect.objectContaining({
+          path: "packages/a/project-skip.spec.cjs",
+          status: "partially-executed",
+          passedAssertions: 1,
+        }),
+      ]);
+      expect(report.diagnostics).toContainEqual(
+        expect.objectContaining({ code: "TEST_LANE_EXECUTION_SKIPPED" }),
+      );
+      assertLaneReportShape(report);
+      // A successful Playwright process with skips still produces incomplete lane evidence.
+      writeFileSync(
+        join(packageRoot, "package.json"),
+        JSON.stringify({
+          name: "@croco/a",
+          private: true,
+          scripts: { "test:integration": "playwright test partial.spec.cjs" },
+        }),
+      );
+      const partial = runTestLane({
+        rootDir: root,
+        lane: "integration",
+        inventory: {
+          version: 1,
+          exceptions: [],
+          tests: [
+            {
+              path: "packages/a/partial.spec.cjs",
+              lane: "integration",
+              qualifiers: [],
+              owner: "@croco/a",
+            },
+          ],
+        },
+        scriptResolver: () => "playwright test partial.spec.cjs",
+      });
+      expect(partial.commands[0]?.exitCode).toBe(0);
+      expect(partial.status).toBe("failed");
+      expect(partial.diagnostics).toContainEqual(
+        expect.objectContaining({ code: "TEST_LANE_EXECUTION_INCOMPLETE" }),
+      );
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  }, 30_000);
+
   it("does not credit an ambiguous Playwright basename", () => {
     const root = mkdtempSync(join(tmpdir(), "croco-playwright-report-"));
     const reportPath = join(root, "playwright.json");

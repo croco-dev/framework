@@ -177,10 +177,14 @@ type VitestJsonReport = {
 };
 
 type PlaywrightJsonSuite = {
+  readonly title?: string;
+  readonly line?: number;
   readonly suites?: readonly PlaywrightJsonSuite[];
   readonly specs?: readonly {
     readonly file?: string;
+    readonly title?: string;
     readonly tests?: readonly {
+      readonly projectName?: string;
       readonly results?: readonly { readonly status?: string }[];
     }[];
   }[];
@@ -435,37 +439,68 @@ export function readCompletedPlaywrightPaths(
   workspaceRoot: string,
   expectedPaths: readonly string[] = [],
 ): readonly string[] {
+  return readPlaywrightExecutionEvidence(reportPath, workspaceRoot, expectedPaths).executedPaths;
+}
+
+export function readPlaywrightExecutionEvidence(
+  reportPath: string,
+  workspaceRoot: string,
+  expectedPaths: readonly string[] = [],
+): {
+  readonly executedPaths: readonly string[];
+  readonly skippedFiles: readonly TestLaneSkippedFile[];
+} {
   const report = JSON.parse(readFileSync(reportPath, "utf8")) as PlaywrightJsonSuite;
-  const visit = (suite: PlaywrightJsonSuite): readonly string[] => [
-    ...(suite.specs ?? []).flatMap(({ file, tests }) =>
-      file &&
-      Boolean(tests?.length) &&
-      tests?.every(
-        ({ results }) =>
-          Boolean(results?.length) && results?.every(({ status }) => status === "passed"),
+  const files = new Map<string, { status?: string; fullName: string }[]>();
+  const visit = (suite: PlaywrightJsonSuite, parents: readonly string[] = []): void => {
+    const titles =
+      suite.title && suite.line && suite.line > 0 ? [...parents, suite.title] : parents;
+    for (const spec of suite.specs ?? []) {
+      if (!spec.file) continue;
+      const observedPath = relative(
+        workspaceRoot,
+        isAbsolute(spec.file) ? spec.file : resolve(workspaceRoot, spec.file),
       )
-        ? [
-            relative(workspaceRoot, isAbsolute(file) ? file : resolve(workspaceRoot, file))
-              .split(sep)
-              .join("/"),
-          ]
-        : [],
-    ),
-    ...(suite.suites ?? []).flatMap(visit),
-  ];
-  return [
-    ...new Set(
-      visit(report).flatMap((observedPath) => {
-        if (expectedPaths.length === 0 || expectedPaths.includes(observedPath)) {
-          return [observedPath];
+        .split(sep)
+        .join("/");
+      const matches =
+        expectedPaths.length === 0 || expectedPaths.includes(observedPath)
+          ? [observedPath]
+          : expectedPaths.filter((expectedPath) => expectedPath.endsWith(`/${observedPath}`));
+      if (matches.length !== 1) continue;
+      const path = matches[0];
+      if (!path) continue;
+      const assertions = files.get(path) ?? [];
+      const name = [...titles, spec.title ?? "<unnamed spec>"].join(" > ");
+      // Empty tests/results cannot establish completion for any spec in the file.
+      if (!spec.tests?.length) assertions.push({ fullName: name });
+      for (const test of spec.tests ?? []) {
+        const fullName = `${name}${test.projectName ? ` [${test.projectName}]` : ""}`;
+        if (!test.results?.length) assertions.push({ fullName });
+        for (const result of test.results ?? []) {
+          assertions.push({ status: result.status, fullName });
         }
-        const matches = expectedPaths.filter((expectedPath) =>
-          expectedPath.endsWith(`/${observedPath}`),
-        );
-        return matches.length === 1 ? matches : [];
-      }),
-    ),
-  ].sort(compareText);
+      }
+      files.set(path, assertions);
+    }
+    for (const child of suite.suites ?? []) visit(child, titles);
+  };
+  visit(report);
+  const executedPaths: string[] = [];
+  const skippedFiles: TestLaneSkippedFile[] = [];
+  for (const [path, assertions] of files) {
+    if (assertions.length > 0 && assertions.every(({ status }) => status === "passed")) {
+      executedPaths.push(path);
+      continue;
+    }
+    const failed = assertions.some(({ status }) => status !== "passed" && status !== "skipped");
+    const skippedFile = skippedVitestFile(failed ? "failed" : undefined, assertions, path);
+    if (skippedFile) skippedFiles.push(skippedFile);
+  }
+  return {
+    executedPaths: executedPaths.sort(compareText),
+    skippedFiles: skippedFiles.sort((left, right) => compareText(left.path, right.path)),
+  };
 }
 
 function evidencePath(rootDir: string, command: TestLaneCommand): string {
@@ -808,14 +843,11 @@ function defaultRunner(
       }
       const evidence = existsSync(reportPath)
         ? playwright
-          ? {
-              executedPaths: readCompletedPlaywrightPaths(
-                reportPath,
-                resolve(rootDir, command.cwd),
-                command.paths,
-              ),
-              skippedFiles: [],
-            }
+          ? readPlaywrightExecutionEvidence(
+              reportPath,
+              resolve(rootDir, command.cwd),
+              command.paths,
+            )
           : readVitestExecutionEvidence(reportPath, resolve(rootDir, command.cwd))
         : { executedPaths: [], skippedFiles: [] };
       return {
