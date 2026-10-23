@@ -16,6 +16,14 @@ the same artifacts.
 - Intent-map helpers such as `createProjectIntentMap`.
 - Metadata readers for controller constructors and route metadata.
 
+When supplied a `ContractGraph`, `assertRouteRegistrationTable` and
+`createRouteRegistrationTable` validate method, runtime and authored paths, and
+controller/handler bindings as well as route ID coverage. Drift fails with
+`route-registration-contract-drift`, listing the mismatched fields and the contract
+source location when available. Legacy v1 entries without `contractPath` compare
+their normalized runtime path; entries with `contractPath` retain the exact authored
+path check.
+
 ## Generated artifact ignore policy
 
 The default artifact policy inspects the project and ancestor `.gitignore` files.

@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "framework-routes",
+      "classification": "pure-contract",
+      "reason": "Reject same-ID registration drift in HTTP method, authored/runtime paths and controller/handler bindings; retain normalized legacy v1 paths. No host execution or provider support changes.",
+      "files": {
+        "packages/framework-routes/src/compiler.ts": "b2a722bb8b39943fd5dfeab601ec9943a8180332f773b2fb9bc3966141b4286b"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "This build-time ContractGraph/table comparison requires no Node/Kubernetes capability, storage adapter or request/process lifecycle. It validates existing artifacts without changing host support.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/framework-routes/src/compiler.ts",
+            "packages/framework-routes/src/tests/RouteRegistrationContract.spec.ts",
+            "docs/package-catalog.json"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "This build-time ContractGraph/table comparison requires no Lambda capability, storage adapter or request/process lifecycle. It validates existing artifacts without changing host support.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/framework-routes/src/compiler.ts",
+            "packages/framework-routes/src/tests/RouteRegistrationContract.spec.ts",
+            "docs/package-catalog.json"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "This build-time ContractGraph/table comparison requires no Workers or Node Container capability, storage adapter or request/process lifecycle. It validates existing artifacts without changing host support.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/framework-routes/src/compiler.ts",
+            "packages/framework-routes/src/tests/RouteRegistrationContract.spec.ts",
+            "docs/package-catalog.json"
+          ]
+        }
+      }
+    }
+  ]
+}

@@ -533,7 +533,39 @@ function validateContractGraphCoverage(
   }
 
   for (const entry of table.entries) {
-    if (graphRoutesById.has(entry.id)) {
+    const route = graphRoutesById.get(entry.id);
+    if (route) {
+      const expectedRuntimePath = toRuntimeRoutePath(route.path);
+      const fields = {
+        method: [entry.method, route.httpMethod.toUpperCase()],
+        path: [toRuntimeRoutePath(entry.path), expectedRuntimePath],
+        contractPath: [
+          entry.contractPath ?? toRuntimeRoutePath(getRouteRegistrationContractPath(entry)),
+          entry.contractPath === undefined ? expectedRuntimePath : route.path,
+        ],
+        controllerName: [entry.controllerName, route.controllerName],
+        controllerPath: [entry.controllerPath, route.controllerPath],
+        handlerName: [entry.handlerName, route.methodName],
+      };
+      const mismatches = Object.entries(fields)
+        .filter(([, [actual, expected]]) => actual !== expected)
+        .map(
+          ([field, [actual, expected]]) =>
+            `${field}: expected ${JSON.stringify(expected)}, received ${JSON.stringify(actual)}`,
+        );
+
+      if (mismatches.length > 0) {
+        const sourceLocation = route.routeContract?.sourceLocation ?? route.sourceLocation;
+        diagnostics.push({
+          ...createRouteRegistrationDiagnostic(
+            entry,
+            "route-registration-contract-drift",
+            `Route registration '${entry.id}' differs from the contract graph (${mismatches.join("; ")}). ` +
+              "Regenerate the route registration table from controller metadata.",
+          ),
+          ...(sourceLocation ? { sourceLocation } : {}),
+        });
+      }
       continue;
     }
 
