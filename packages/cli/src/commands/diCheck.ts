@@ -1,6 +1,7 @@
 import { dirname, resolve } from "node:path";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { defineCommand } from "citty";
+import { z } from "zod";
 import {
   CLI_DIAGNOSTIC_CODES,
   CLI_LEGACY_DIAGNOSTIC_CODES,
@@ -8,6 +9,48 @@ import {
 } from "../libs/diagnosticCodes.js";
 import { GLOBAL_OPTIONS } from "./options.js";
 import { getCrocoCommandRuntime } from "../libs/cliRuntime.js";
+
+import type { DependencyGraphManifest } from "@croco/framework-context";
+import type { ModuleGraphManifest } from "@croco/framework-module";
+
+const diagnosticSchema = z.object({
+  code: z.string().optional(),
+  legacyCode: z.string().optional(),
+  severity: z.enum(["error", "warning"]),
+  message: z.string(),
+  token: z.string().optional(),
+  moduleName: z.string().optional(),
+  path: z.array(z.string()).optional(),
+  sourceLocation: z
+    .object({ file: z.string(), line: z.number().optional(), column: z.number().optional() })
+    .optional(),
+});
+const commonEnvelope = {
+  status: z.enum(["ready", "failed"]),
+  diagnostics: z.array(diagnosticSchema),
+};
+const dependencyEnvelope = z.object({
+  ...commonEnvelope,
+  version: z.literal("croco.di-graph.manifest.v1"),
+  roots: z.array(z.string()),
+  rootIds: z.array(z.string()),
+  providers: z.array(z.object({}).passthrough()),
+}) satisfies z.ZodType<
+  Pick<DependencyGraphManifest, "version" | "status" | "roots" | "rootIds"> & {
+    providers: object[];
+    diagnostics: unknown[];
+  }
+>;
+const moduleEnvelope = z.object({
+  ...commonEnvelope,
+  version: z.literal("croco.module-graph.manifest.v1"),
+  modules: z.array(z.object({}).passthrough()),
+}) satisfies z.ZodType<
+  Pick<ModuleGraphManifest, "version" | "status"> & { modules: object[]; diagnostics: unknown[] }
+>;
+const manifestEnvelope = z.discriminatedUnion("version", [dependencyEnvelope, moduleEnvelope]);
+
+type ManifestReadResult = { readonly manifest: unknown } | { readonly error: string };
 
 type DiCheckStatus = "passed" | "failed";
 
@@ -146,42 +189,43 @@ export function parseDiCheckArgs(args: readonly string[]): DiCheckParseResult {
   };
 }
 
-function readJsonManifest(path: string, io: DiCheckIo): unknown {
+function readJsonManifest(path: string, io: DiCheckIo): ManifestReadResult {
   try {
-    return JSON.parse(io.readFile(path)) as unknown;
+    return { manifest: JSON.parse(io.readFile(path)) as unknown };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    return {
-      version: "unknown",
-      status: "failed",
-      diagnostics: [
-        {
-          code: CLI_DIAGNOSTIC_CODES.diCheckManifestInvalid,
-          legacyCode: CLI_LEGACY_DIAGNOSTIC_CODES.diCheckManifestInvalid,
-          severity: "error",
-          message: `Unable to read DI graph manifest '${path}': ${message}`,
-        },
-      ],
-    };
+    return { error: `Unable to read DI graph manifest '${path}': ${message}` };
   }
 }
 
-function createDiCheckReport(manifest: unknown): DiCheckReport {
-  const manifestRecord = asRecord(manifest);
-  const manifestVersion =
-    typeof manifestRecord?.version === "string" ? manifestRecord.version : "unknown";
-  const diagnostics = readManifestDiagnostics(manifestRecord);
-  const manifestStatus = manifestRecord?.status;
-
-  if (manifestStatus === "failed" && diagnostics.length === 0) {
+function createDiCheckReport(input: ManifestReadResult): DiCheckReport {
+  if ("error" in input) {
+    return invalidManifestReport("unknown", input.error);
+  }
+  const manifestVersion = readString(asRecord(input.manifest), "version", "unknown");
+  const parsed = manifestEnvelope.safeParse(input.manifest);
+  if (!parsed.success) {
+    const reasons = parsed.error.issues.map(
+      (issue) => `${issue.path.join(".") || "manifest"}: ${issue.message}`,
+    );
+    return invalidManifestReport(
+      manifestVersion,
+      `Invalid DI graph manifest: ${reasons.join("; ")}`,
+    );
+  }
+  const manifest = parsed.data;
+  const diagnostics = manifest.diagnostics.map(normalizeDiagnostic);
+  if (
+    manifest.status === "failed" &&
+    !diagnostics.some((diagnostic) => diagnostic.severity === "error")
+  ) {
     diagnostics.push({
       code: CLI_DIAGNOSTIC_CODES.diCheckManifestFailed,
       legacyCode: CLI_LEGACY_DIAGNOSTIC_CODES.diCheckManifestFailed,
       severity: "error",
-      message: "DI graph manifest is failed but does not include diagnostics.",
+      message: "DI graph manifest is failed but does not include error diagnostics.",
     });
   }
-
   return {
     version: "croco.di-check.report.v1",
     manifestVersion,
@@ -190,33 +234,27 @@ function createDiCheckReport(manifest: unknown): DiCheckReport {
   };
 }
 
-function readManifestDiagnostics(
-  manifest: Readonly<Record<string, unknown>> | null,
-): DiCheckDiagnostic[] {
-  if (!manifest) {
-    return [
+function invalidManifestReport(manifestVersion: string, message: string): DiCheckReport {
+  return {
+    version: "croco.di-check.report.v1",
+    manifestVersion,
+    status: "failed",
+    diagnostics: [
       {
         code: CLI_DIAGNOSTIC_CODES.diCheckManifestInvalid,
         legacyCode: CLI_LEGACY_DIAGNOSTIC_CODES.diCheckManifestInvalid,
         severity: "error",
-        message: "DI graph manifest must be a JSON object.",
+        message,
       },
-    ];
-  }
-
-  const diagnostics = manifest.diagnostics;
-  if (!Array.isArray(diagnostics)) {
-    return [];
-  }
-
-  return diagnostics.map(normalizeDiagnostic);
+    ],
+  };
 }
 
 function normalizeDiagnostic(value: unknown): DiCheckDiagnostic {
   const record = asRecord(value);
-  const sourceLocation = asSourceLocation(record?.sourceLocation);
-  const path = Array.isArray(record?.path)
-    ? record.path.filter((entry): entry is string => typeof entry === "string")
+  const sourceLocation = asSourceLocation(record?.["sourceLocation"]);
+  const path = Array.isArray(record?.["path"])
+    ? record["path"].filter((entry): entry is string => typeof entry === "string")
     : undefined;
   const token = readOptionalString(record, "token");
   const moduleName = readOptionalString(record, "moduleName");
@@ -242,7 +280,7 @@ function normalizeDiagnostic(value: unknown): DiCheckDiagnostic {
   return {
     code,
     ...(legacyCode ? { legacyCode } : {}),
-    severity: readSeverity(record?.severity),
+    severity: readSeverity(record?.["severity"]),
     message: readString(record, "message", "DI graph manifest reported an error."),
     ...(token ? { token } : {}),
     ...(moduleName ? { moduleName } : {}),
@@ -271,14 +309,14 @@ function getStableDiGraphDiagnosticCodeForLegacyCode(code: string): string | und
 
 function asSourceLocation(value: unknown): DiCheckDiagnostic["sourceLocation"] | undefined {
   const record = asRecord(value);
-  if (!record || typeof record.file !== "string") {
+  if (!record || typeof record["file"] !== "string") {
     return undefined;
   }
 
   return {
-    file: record.file,
-    ...(typeof record.line === "number" ? { line: record.line } : {}),
-    ...(typeof record.column === "number" ? { column: record.column } : {}),
+    file: record["file"],
+    ...(typeof record["line"] === "number" ? { line: record["line"] } : {}),
+    ...(typeof record["column"] === "number" ? { column: record["column"] } : {}),
   };
 }
 
