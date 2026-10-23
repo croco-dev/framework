@@ -122,4 +122,4 @@ export type {
   RateLimitPruneScheduler,
 } from "./libs/InMemoryRateLimitStore";
 
-export { validateRateLimitPolicy } from "./libs/validateRateLimitPolicy";
+export { normalizeRateLimitPolicy, validateRateLimitPolicy } from "./libs/validateRateLimitPolicy";

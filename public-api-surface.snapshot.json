@@ -37699,6 +37699,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "normalizeRateLimitPolicy",
+              "exportKind": "named",
+              "source": "./libs/validateRateLimitPolicy",
+              "declarationKind": "function"
+            },
+            {
               "name": "parseWindowMs",
               "exportKind": "named",
               "source": "./libs/types",
