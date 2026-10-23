@@ -6184,7 +6184,7 @@ Sources:
 
 Sources:
 
-- `packages/architecture-policy/src/index.ts:19:5` (problem-constructor)
+- `packages/architecture-policy/src/index.ts:29:5` (problem-constructor)
 
 <a id="architecture-policy-manifest-schema-version"></a>
 
@@ -6202,7 +6202,7 @@ Sources:
 
 Sources:
 
-- `packages/architecture-policy/src/index.ts:30:5` (problem-constructor)
+- `packages/architecture-policy/src/index.ts:40:5` (problem-constructor)
 
 <a id="architecture-policy-manifest-shape"></a>
 
@@ -6238,7 +6238,7 @@ Sources:
 
 Sources:
 
-- `packages/architecture-policy/src/index.ts:46:5` (problem-constructor)
+- `packages/architecture-policy/src/index.ts:56:5` (problem-constructor)
 
 <a id="audit-core-auditable-decorator-misuse"></a>
 

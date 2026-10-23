@@ -8258,7 +8258,7 @@
       "sources": [
         {
           "file": "packages/architecture-policy/src/index.ts",
-          "line": 19,
+          "line": 29,
           "column": 5,
           "kind": "problem-constructor"
         }
@@ -8288,7 +8288,7 @@
       "sources": [
         {
           "file": "packages/architecture-policy/src/index.ts",
-          "line": 30,
+          "line": 40,
           "column": 5,
           "kind": "problem-constructor"
         }
@@ -8348,7 +8348,7 @@
       "sources": [
         {
           "file": "packages/architecture-policy/src/index.ts",
-          "line": 46,
+          "line": 56,
           "column": 5,
           "kind": "problem-constructor"
         }

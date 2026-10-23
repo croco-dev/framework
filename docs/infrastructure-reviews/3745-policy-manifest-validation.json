@@ -41,6 +41,47 @@
           ]
         }
       }
+    },
+    {
+      "package": "problems-core",
+      "classification": "pure-contract",
+      "reason": "Regenerate existing Problem source locations after architecture policy diagnostics change. Only three line-number values change in the exported registry and declaration.",
+      "files": {
+        "packages/problems-core/src/generated/problem-code-registry.ts": "3debd94b3aaf080059b3ef4a67152097408b3364657c2356ff1827db4a019866"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Generated Problem source-location metadata only; no Host, provider, storage or lifecycle behavior changes.",
+          "providers": [],
+          "constraints": ["No runtime support or provider certification claim."],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "scripts/problem-registry.mts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Generated Problem source-location metadata only; no Host, provider, storage or lifecycle behavior changes.",
+          "providers": [],
+          "constraints": ["No runtime support or provider certification claim."],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "scripts/problem-registry.mts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Generated Problem source-location metadata only; no Host, provider, storage or lifecycle behavior changes.",
+          "providers": [],
+          "constraints": ["No runtime support or provider certification claim."],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "scripts/problem-registry.mts"
+          ]
+        }
+      }
     }
   ]
 }
