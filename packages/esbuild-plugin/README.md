@@ -36,6 +36,10 @@ server entry는 `createApplicationRuntime(...)`을 composition root로 사용해
 
 ## 지원되는 작성 패턴
 
+`@Component({ scope: "request" })`와 `@Controller` 또는 `@GraphQLResolver`를 조합하면 선언 순서와 무관하게
+protocol 역할과 명시한 scope를 생성합니다. 같은 클래스에 `@Controller`와 `@GraphQLResolver`를 함께 선언하면
+소스 위치를 포함한 `CROCO_DI_COMPILE_002`로 build가 실패합니다.
+
 ```typescript
 import { Component, Inject, Token } from "@croco/framework-context";
 

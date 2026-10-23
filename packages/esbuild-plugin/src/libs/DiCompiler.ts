@@ -297,7 +297,7 @@ export function compileDiGraph(options: DiCompilerOptions = {}): DiCompilerResul
       if (!ts.isClassDeclaration(statement)) {
         continue;
       }
-      const stereotype = getStereotype(statement, checker);
+      const stereotype = getStereotype(statement, checker, baseDir);
       if (!stereotype) {
         continue;
       }
@@ -1096,14 +1096,28 @@ function getInjectionDecorator(
 function getStereotype(
   declaration: ts.ClassDeclaration,
   checker: ts.TypeChecker,
+  baseDir: string,
 ): string | undefined {
+  const stereotypes = new Set<string>();
   for (const decorator of ts.getDecorators(declaration) ?? []) {
     const name = getCrocoDecoratorName(decorator, checker);
     if (name && STEREOTYPES.has(name)) {
-      return name;
+      stereotypes.add(name);
     }
   }
-  return undefined;
+  const protocols = [...stereotypes].filter((name) => name !== "Component").sort();
+  if (protocols.length > 1) {
+    throw new DiCompilerError([
+      createDiagnostic(
+        declaration,
+        declaration.getSourceFile(),
+        "CROCO_DI_COMPILE_002",
+        `Provider declares conflicting protocol stereotypes: ${protocols.join(", ")}. Use one protocol role per provider.`,
+        baseDir,
+      ),
+    ]);
+  }
+  return protocols[0] ?? (stereotypes.has("Component") ? "Component" : undefined);
 }
 
 function getCrocoDecoratorName(
