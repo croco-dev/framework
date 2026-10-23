@@ -8,6 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ErrorHandler } from "../libs/ErrorHandler";
 import { HealthCheckRegistry } from "../libs/HealthCheckRegistry";
 import {
+  bindGracefulShutdownServer,
   createGracefulShutdownController,
   type GracefulShutdownOptions,
   getActiveRequestCount,
@@ -728,6 +729,127 @@ describe("GracefulShutdownMiddleware", () => {
       });
     });
 
+    it.each([
+      "Graceful shutdown initiated",
+      "Active requests completed",
+      "Event bus drained successfully",
+      "Custom shutdown hook completed",
+      "Graceful shutdown completed",
+    ])("should finish cleanup before rejecting a failure from %s", async (failedMessage) => {
+      const failure = new Error("diagnostic sink unavailable");
+      const logger = Container.get(Logger);
+      vi.spyOn(logger, "info").mockImplementation((message) => {
+        if (message === failedMessage) throw failure;
+      });
+      const fallback = vi.spyOn(console, "error").mockImplementation(() => {});
+      const getRunningHandlerCount = vi.fn(() => 0);
+      vi.spyOn(EventBusConfig.getInstance(), "getEventBus").mockReturnValue({
+        getRunningHandlerCount,
+      } as never);
+      const onShutdown = vi.fn();
+      const signal = "SIGUSR2";
+      const baseline = process.listeners(signal);
+      const controller = createGracefulShutdownController({
+        logger,
+        signals: [signal],
+        isLambdaEnvironment: false,
+        onShutdown,
+      });
+      const close = vi.fn((callback: (error?: Error) => void) => callback());
+      bindGracefulShutdownServer(controller.middleware, { listening: true, close } as never);
+
+      const first = controller.shutdown();
+      expect(controller.shutdown()).toBe(first);
+      await expect(first).rejects.toBe(failure);
+      await expect(controller.shutdown()).rejects.toBe(failure);
+
+      expect(close).toHaveBeenCalledOnce();
+      expect(getRunningHandlerCount).toHaveBeenCalled();
+      expect(onShutdown).toHaveBeenCalledOnce();
+      expect(process.listeners(signal)).toEqual(baseline);
+      expect(fallback).toHaveBeenCalledWith("Graceful shutdown logging failed", {
+        failures: [expect.objectContaining({ message: failedMessage, error: failure })],
+      });
+    });
+
+    it("should preserve a hook failure when both diagnostic sinks throw", async () => {
+      const failure = new Error("cleanup failed");
+      const logger = Container.get(Logger);
+      vi.spyOn(logger, "info").mockImplementation(() => {
+        throw new Error("logger failed");
+      });
+      vi.spyOn(console, "error").mockImplementation(() => {
+        throw new Error("fallback failed");
+      });
+      const onShutdown = vi.fn(() => {
+        throw failure;
+      });
+      const controller = createGracefulShutdownController({ logger, signals: [], onShutdown });
+      await expect(controller.shutdown()).rejects.toBe(failure);
+      expect(onShutdown).toHaveBeenCalledOnce();
+    });
+
+    it("should retain drain failure evidence and run the hook when its warning fails", async () => {
+      const drainFailure = new Error("event accessor failed");
+      const loggingFailure = new Error("warning sink failed");
+      const logger = Container.get(Logger);
+      vi.spyOn(logger, "warn").mockImplementation(() => {
+        throw loggingFailure;
+      });
+      const fallback = vi.spyOn(console, "error").mockImplementation(() => {});
+      vi.spyOn(EventBusConfig.getInstance(), "getEventBus").mockImplementation(() => {
+        throw drainFailure;
+      });
+      const onShutdown = vi.fn();
+      const controller = createGracefulShutdownController({ logger, signals: [], onShutdown });
+      await expect(controller.shutdown()).rejects.toBe(loggingFailure);
+      expect(onShutdown).toHaveBeenCalledOnce();
+      expect(fallback).toHaveBeenCalledWith("Graceful shutdown logging failed", {
+        failures: [
+          {
+            message: "Event bus drain failed",
+            context: { error: drainFailure },
+            error: loggingFailure,
+          },
+        ],
+      });
+    });
+
+    it.each(["on-shutdown", "event-bus"] as const)(
+      "should retain the %s deadline after a logger failure",
+      async (phase) => {
+        vi.useFakeTimers();
+        const logger = Container.get(Logger);
+        vi.spyOn(logger, "info").mockImplementation(() => {
+          throw new Error("logger failed");
+        });
+        vi.spyOn(console, "error").mockImplementation(() => {});
+        const hook = deferred();
+        const onShutdown = vi.fn((signal: AbortSignal) => {
+          hookSignal = signal;
+          return hook.promise;
+        });
+        vi.spyOn(EventBusConfig.getInstance(), "getEventBus").mockReturnValue({
+          getRunningHandlerCount: () => (phase === "event-bus" ? 1 : 0),
+        } as never);
+        let hookSignal: AbortSignal | undefined;
+        const controller = createGracefulShutdownController({
+          logger,
+          signals: [],
+          timeoutMs: 100,
+          onShutdown,
+        });
+        const first = controller.shutdown();
+        expect(controller.shutdown()).toBe(first);
+        const outcome = first.catch((error: unknown) => error);
+        await vi.advanceTimersByTimeAsync(100);
+        expect(await outcome).toMatchObject({ phase, timeoutMs: 100 });
+        if (phase === "on-shutdown") expect(hookSignal?.aborted).toBe(true);
+        else expect(onShutdown).not.toHaveBeenCalled();
+        hook.resolve();
+      },
+    );
+
     it("should remove owned listeners when the initial logger call throws", async () => {
       const signal = "SIGUSR2";
       const externalListener = vi.fn();
@@ -785,10 +907,7 @@ describe("GracefulShutdownMiddleware", () => {
 
       await expect(controller.shutdown()).rejects.toBe(failure);
       expect(logger.warn).not.toHaveBeenCalledWith("Event bus drain failed", expect.anything());
-      expect(logger.info).not.toHaveBeenCalledWith(
-        "Graceful shutdown completed",
-        expect.anything(),
-      );
+      expect(logger.info).toHaveBeenCalledWith("Graceful shutdown completed", expect.anything());
       expect(process.listeners(signal)).toHaveLength(listenerCount);
     });
 
@@ -849,7 +968,7 @@ describe("GracefulShutdownMiddleware", () => {
       expect(logger.info).toHaveBeenCalledWith("Graceful shutdown completed", expect.anything());
     });
 
-    it("should reject and finalize when the event-drain skip logger throws", async () => {
+    it("should run the hook and finalize before rejecting an event-drain skip logging failure", async () => {
       const signal = "SIGUSR2";
       const externalListener = vi.fn();
       const failure = new Error("event drain skip logging failed");
@@ -866,18 +985,18 @@ describe("GracefulShutdownMiddleware", () => {
       vi.spyOn(EventBusConfig.getInstance(), "getEventBus").mockReturnValue(undefined as never);
       process.on(signal, externalListener);
       const listenerCount = process.listeners(signal).length;
+      const onShutdown = vi.fn();
       const controller = createGracefulShutdownController({
         signals: [signal],
         isLambdaEnvironment: false,
         logger,
+        onShutdown,
       });
 
       await expect(controller.shutdown()).rejects.toBe(failure);
+      expect(onShutdown).toHaveBeenCalledOnce();
       expect(logger.warn).toHaveBeenCalledOnce();
-      expect(logger.info).not.toHaveBeenCalledWith(
-        "Graceful shutdown completed",
-        expect.anything(),
-      );
+      expect(logger.info).toHaveBeenCalledWith("Graceful shutdown completed", expect.anything());
       expect(process.listeners(signal)).toHaveLength(listenerCount);
       expect(process.listeners(signal)).toContain(externalListener);
 

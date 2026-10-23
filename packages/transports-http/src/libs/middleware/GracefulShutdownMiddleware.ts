@@ -287,7 +287,7 @@ type EventBusDrainOutcome =
     };
 
 async function drainEventBus(
-  logger: ILogger,
+  logger: Pick<ILogger, "info" | "warn">,
   deadline: ShutdownDeadline,
   eventBusDrainTimeoutMs: number,
 ): Promise<void> {
@@ -391,8 +391,24 @@ async function runShutdownLifecycle(
   log: ILogger,
   eventBusDrainTimeoutMs: number,
 ): Promise<void> {
+  const loggingFailures: {
+    message: string;
+    context: Record<string, unknown> | undefined;
+    error: unknown;
+  }[] = [];
+  const recordLog =
+    (level: "info" | "warn"): ILogger["info"] =>
+    (...args) => {
+      try {
+        log[level](...args);
+      } catch (error) {
+        loggingFailures.push({ message: args[0], context: args[1], error });
+      }
+    };
+  const lifecycleLog = { info: recordLog("info"), warn: recordLog("warn") };
+
   try {
-    log.info("Graceful shutdown initiated", { timeoutMs: deadline.timeoutMs });
+    lifecycleLog.info("Graceful shutdown initiated", { timeoutMs: deadline.timeoutMs });
 
     await waitForCondition(
       () => state.activeRequests.size === 0,
@@ -400,11 +416,11 @@ async function runShutdownLifecycle(
       deadline,
       deadline.deadline,
     );
-    log.info("Active requests completed", { elapsedMs: elapsedMs(deadline) });
+    lifecycleLog.info("Active requests completed", { elapsedMs: elapsedMs(deadline) });
 
     await closeNodeListeners(state, deadline);
 
-    await drainEventBus(log, deadline, eventBusDrainTimeoutMs);
+    await drainEventBus(lifecycleLog, deadline, eventBusDrainTimeoutMs);
 
     if (onShutdown) {
       const hookResult = onShutdown(deadline.controller.signal);
@@ -413,13 +429,38 @@ async function runShutdownLifecycle(
       } else {
         assertPhaseWithinDeadline("on-shutdown", deadline);
       }
-      log.info("Custom shutdown hook completed");
+      lifecycleLog.info("Custom shutdown hook completed");
     }
 
-    log.info("Graceful shutdown completed", { elapsedMs: elapsedMs(deadline) });
+    lifecycleLog.info("Graceful shutdown completed", { elapsedMs: elapsedMs(deadline) });
   } finally {
     forceCloseNodeListeners(state);
     removeOwnedSignalHandlers(state);
+    if (loggingFailures.length > 0) {
+      reportShutdownLoggingFailures(loggingFailures);
+    }
+  }
+
+  const firstLoggingFailure = loggingFailures[0];
+  if (firstLoggingFailure) {
+    throw firstLoggingFailure.error;
+  }
+}
+
+function reportShutdownLoggingFailures(
+  failures: readonly {
+    message: string;
+    context: Record<string, unknown> | undefined;
+    error: unknown;
+  }[],
+): void {
+  try {
+    // Keep diagnostic evidence separate from the lifecycle's primary failure.
+    // eslint-disable-next-line no-console
+    console.error("Graceful shutdown logging failed", { failures });
+  } catch {
+    // Both sinks are unavailable; the original lifecycle result still takes precedence.
+    return;
   }
 }
 
