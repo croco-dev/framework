@@ -5,10 +5,10 @@ prev: false
 title: "createLambdaHandler"
 ---
 
-> **createLambdaHandler**(`handler`): (`event`, `context`) => `Promise`\<`Response`\>
+> **createLambdaHandler**(`handler`): (`event`, `context`) => `Promise`\<[`LambdaProxyResponse`](/api/meta-vite/src/type-aliases/lambdaproxyresponse/)\>
 
 AWS Lambda adapter.
-Wraps a CrocoFetchHandler for Lambda API Gateway v2 events.
+Wraps a CrocoFetchHandler for Lambda API Gateway v1/v2 events.
 Lambda uses a buffered Response by default; streaming responses are not supported by this adapter.
 
 ## Parameters
@@ -19,4 +19,4 @@ Lambda uses a buffered Response by default; streaming responses are not supporte
 
 ## Returns
 
-(`event`, `context`) => `Promise`\<`Response`\>
+(`event`, `context`) => `Promise`\<[`LambdaProxyResponse`](/api/meta-vite/src/type-aliases/lambdaproxyresponse/)\>
