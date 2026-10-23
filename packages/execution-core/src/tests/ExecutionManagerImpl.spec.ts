@@ -929,6 +929,82 @@ describe("ExecutionManagerImpl", () => {
   });
 
   describe("indeterminate failure recovery", () => {
+    it.each([
+      ["failed", "failed"],
+      ["timed_out", "timed_out"],
+      ["failed", "timed_out"],
+    ] as const)(
+      "preserves operator recovery evidence across %s and %s attempts",
+      async (firstStatus, secondStatus) => {
+        let now = new Date("2030-01-01T00:00:00.000Z");
+        const clockManager = new ExecutionManagerImpl(store, { clock: () => now });
+        const execution = await clockManager.create({
+          type: "etl",
+          maxAttempts: 3,
+          metadata: { receipt: "provider-42" },
+        });
+        const statuses = [firstStatus, secondStatus];
+        const expectedHistory = [];
+        for (const [index, status] of statuses.entries()) {
+          const started = await clockManager.start(execution.id);
+          const token = { executionId: execution.id, attempt: started.attempts };
+          if (status === "failed") {
+            await clockManager.failAttempt(token, {
+              message: "receipt unresolved",
+              code: "etl/receipt-unresolved",
+              retryable: false,
+              indeterminate: true,
+            });
+          } else {
+            await clockManager.timeoutAttempt(token, { retryable: false });
+          }
+          now = new Date(`2030-01-0${index + 2}T00:00:00.000Z`);
+          const reason = `provider confirms attempt ${token.attempt} rolled back`;
+          expectedHistory.push({
+            attempt: token.attempt,
+            status,
+            reason,
+            resolvedAt: now.toISOString(),
+          });
+          await clockManager.resolveIndeterminateTimeout(token, reason);
+          await expect(clockManager.get(execution.id)).resolves.toMatchObject({
+            metadata: {
+              receipt: "provider-42",
+              indeterminateRecoveryHistory: expectedHistory,
+            },
+          });
+          if (index === 0) await clockManager.retry(execution.id);
+        }
+        const recovered = await clockManager.get(execution.id);
+        expect(recovered?.metadata?.indeterminateRecoveryHistory).toEqual(expectedHistory);
+        expect(
+          recovered?.metadata?.[
+            secondStatus === "timed_out" ? "timeoutRecovery" : "indeterminateRecovery"
+          ],
+        ).toEqual({
+          reason: "provider confirms attempt 2 rolled back",
+          resolvedAt: now.toISOString(),
+        });
+      },
+    );
+    it("does not erase malformed recovery history or release its uncertainty", async () => {
+      const execution = await manager.create({
+        type: "etl",
+        metadata: { indeterminateRecoveryHistory: { reason: "existing evidence" } },
+      });
+      const started = await manager.start(execution.id);
+      const token = { executionId: execution.id, attempt: started.attempts };
+      await manager.failAttempt(token, {
+        message: "receipt unresolved",
+        retryable: false,
+        indeterminate: true,
+      });
+      const before = await manager.get(execution.id);
+      await expect(
+        manager.resolveIndeterminateTimeout(token, "provider confirms rollback"),
+      ).rejects.toMatchObject({ code: "execution/conflict" });
+      await expect(manager.get(execution.id)).resolves.toEqual(before);
+    });
     it("does not restart a legacy retrying execution with an unresolved outcome", async () => {
       const execution = await manager.create({ type: "etl", maxAttempts: 3 });
       await store.update(execution.id, {

@@ -4,9 +4,9 @@
     {
       "package": "execution-core",
       "classification": "pure-contract",
-      "reason": "Unresolved execution outcomes block retry and replay regardless of status. Existing attempt-fenced operator recovery accepts failed outcomes; no host, storage schema or lifecycle adapter changes.",
+      "reason": "Unresolved outcomes require attempt-fenced recovery before retry or replay. Existing recovery metadata also retains attempt-bound operator evidence across retries; no host, storage schema or lifecycle adapter changes.",
       "files": {
-        "packages/execution-core/src/libs/ExecutionManagerImpl.ts": "779f19e0db647ccfc92c193c9f6483d0d4edabefe4f7b5dc78589abcbf5a18b2",
+        "packages/execution-core/src/libs/ExecutionManagerImpl.ts": "926c9f61065680b2ec258718dae59e1fd3411bebbef61f8597c67036a04e9b91",
         "packages/execution-core/src/libs/JobsOperations.ts": "71640a42ecb9a24da9325647cf985e45a23606672488d0404b7bbfdf5eac8f12",
         "packages/execution-core/src/libs/interfaces/ExecutionManager.ts": "dcbc58d54527fa8d705ed5d4d37cdac488be1c31c29db66a455a934215f1a84f"
       },

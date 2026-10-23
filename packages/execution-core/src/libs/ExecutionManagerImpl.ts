@@ -672,6 +672,11 @@ export class ExecutionManagerImpl
       throw ExecutionProblems.conflict("Indeterminate outcome recovery requires a reason");
     }
 
+    const recoveryHistory = execution.metadata?.indeterminateRecoveryHistory;
+    if (recoveryHistory !== undefined && !Array.isArray(recoveryHistory)) {
+      throw ExecutionProblems.conflict("Indeterminate outcome recovery history must be an array");
+    }
+    const resolvedAt = this.clock().toISOString();
     const store = this.attemptStore(token.executionId);
     const updated = await store.updateIfStatusAndAttempt(
       token.executionId,
@@ -695,8 +700,12 @@ export class ExecutionManagerImpl
           ...execution.metadata,
           [execution.status === "timed_out" ? "timeoutRecovery" : "indeterminateRecovery"]: {
             reason,
-            resolvedAt: this.clock().toISOString(),
+            resolvedAt,
           },
+          indeterminateRecoveryHistory: [
+            ...(recoveryHistory ?? []),
+            { attempt: token.attempt, status: execution.status, reason, resolvedAt },
+          ],
         },
       },
     );
