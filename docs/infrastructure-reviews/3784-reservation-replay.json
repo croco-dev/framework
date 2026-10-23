@@ -1,0 +1,102 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "credits-core",
+      "classification": "pure-contract",
+      "reason": "Exclude generated reservation IDs from semantic comparison and verify replay, caller conflicts and settlement identity through shared service conformance.",
+      "files": {
+        "packages/credits-core/src/libs/InMemoryCreditLedgerStore.ts": "383c9ab7ad99b61fdd97e9ada827c11961e76bdcf27cec3e2749c8fca06494fd",
+        "packages/credits-core/src/libs/conformance.ts": "0647e94dd64e91366085b0cb01cba205f96d6a87dd044e54a6ef28f2b0efd04f"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Semantic reservation comparison and provider conformance add no host capability, storage or lifecycle requirement. Existing runtime claims are unchanged.",
+          "providers": ["@croco/credits-core/CreditLedgerStore"],
+          "constraints": [],
+          "references": [
+            "packages/credits-core/src/index.ts",
+            "packages/credits-core/src/libs/CreditLedgerService.ts",
+            "docs/package-catalog.json"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Semantic reservation comparison and provider conformance add no host capability, storage or lifecycle requirement. Existing runtime claims are unchanged.",
+          "providers": ["@croco/credits-core/CreditLedgerStore"],
+          "constraints": [],
+          "references": [
+            "packages/credits-core/src/index.ts",
+            "packages/credits-core/src/libs/CreditLedgerService.ts",
+            "docs/package-catalog.json"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Semantic reservation comparison and provider conformance add no host capability, storage or lifecycle requirement. Existing runtime claims are unchanged.",
+          "providers": ["@croco/credits-core/CreditLedgerStore"],
+          "constraints": [],
+          "references": [
+            "packages/credits-core/src/index.ts",
+            "packages/credits-core/src/libs/CreditLedgerService.ts",
+            "docs/package-catalog.json"
+          ]
+        }
+      }
+    },
+    {
+      "package": "credits-drizzle",
+      "classification": "durable-provider",
+      "reason": "Identical reservation retries ignore generated reservation IDs; caller fields and settlement targets remain semantic. Existing persisted reserve fingerprints are compared using their original reservation ID without schema or receipt rewrites.",
+      "files": {
+        "packages/credits-drizzle/src/libs/DrizzleCreditLedgerStore.ts": "aaa51ccbc75f77b96c1a2809571ef0593fe4921d7ff1dd193449bc4f281733fc"
+      },
+      "catalogRuntimes": ["node", "lambda"],
+      "profiles": {
+        "kubernetes": {
+          "result": "unverified",
+          "reason": "Reuse the existing Node PostgreSQL adapter and its transaction lock; this comparison change does not alter the Host integration. No deployed infrastructure execution is claimed.",
+          "providers": ["@croco/credits-drizzle/DrizzleCreditLedgerStore"],
+          "constraints": [
+            "Application supplies PostgreSQL and the transaction manager.",
+            "Connections and transactions must finish within the selected Host lifecycle.",
+            "Local PostgreSQL conformance is not Kubernetes or AWS deployment certification."
+          ],
+          "references": [
+            "packages/credits-drizzle/src/index.ts",
+            "packages/credits-core/src/libs/CreditLedgerService.ts",
+            "docs/package-catalog.json"
+          ]
+        },
+        "aws-lambda": {
+          "result": "unverified",
+          "reason": "Reuse the existing Node PostgreSQL adapter and its transaction lock; this comparison change does not alter the Host integration. No deployed infrastructure execution is claimed.",
+          "providers": ["@croco/credits-drizzle/DrizzleCreditLedgerStore"],
+          "constraints": [
+            "Application supplies PostgreSQL and the transaction manager.",
+            "Connections and transactions must finish within the selected Host lifecycle.",
+            "Local PostgreSQL conformance is not Kubernetes or AWS deployment certification."
+          ],
+          "references": [
+            "packages/credits-drizzle/src/index.ts",
+            "packages/credits-core/src/libs/CreditLedgerService.ts",
+            "docs/package-catalog.json"
+          ]
+        },
+        "cloudflare": {
+          "result": "unsupported",
+          "reason": "The existing PostgreSQL Node adapter has no Workers runtime claim. Receipt compatibility adds no Worker implementation.",
+          "providers": ["@croco/credits-drizzle/DrizzleCreditLedgerStore"],
+          "constraints": ["No Workers isolate or Hyperdrive certification is claimed."],
+          "references": [
+            "packages/credits-drizzle/src/index.ts",
+            "packages/credits-core/src/libs/CreditLedgerService.ts",
+            "docs/package-catalog.json"
+          ]
+        }
+      }
+    }
+  ]
+}

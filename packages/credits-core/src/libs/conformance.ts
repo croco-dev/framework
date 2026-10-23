@@ -1,6 +1,6 @@
 import * as assert from "node:assert/strict";
 import { addCreditAmounts, creditAmount } from "./amount";
-import { CreditLedgerService } from "./CreditLedgerService";
+import { CreditLedgerService, type CommitCreditsInput } from "./CreditLedgerService";
 import type { CreditLedgerStore } from "./CreditLedgerStore";
 import {
   CreditDuplicateConflictProblem,
@@ -47,6 +47,119 @@ export function createCreditLedgerStoreConformanceSuite(
 
   return {
     cases: [
+      {
+        name: "recovers one reservation across sequential and concurrent service retries",
+        run: async () => {
+          let now = new Date("2026-07-26T00:00:00.000Z");
+          const store = await options.createStore();
+          const service = new CreditLedgerService({
+            store,
+            eventDelivery: store.eventIntentDurability === "persistent" ? "durable" : "development",
+            clock: () => now,
+            idGenerator: () => `${options.storeName}-${++sequence}`,
+          });
+          const metadata = (id: string) => ({ idempotencyKey: id, reference: reference(id) });
+          const opened = await service.openAccount({
+            tenantId: "reserve-replay",
+            ...metadata("open"),
+          });
+          const second = await service.openAccount({
+            tenantId: "reserve-replay",
+            walletKey: "second",
+            ...metadata("open-second"),
+          });
+          await service.grantCredits({
+            accountId: opened.account.id,
+            amount: creditAmount("13"),
+            ...metadata("grant"),
+          });
+          const input = {
+            accountId: opened.account.id,
+            amount: creditAmount("5"),
+            meterKey: "tokens",
+            expectedPosition: 1,
+            ...metadata("reserve"),
+          };
+          const results = await Promise.all([
+            service.reserveCredits(input),
+            service.reserveCredits(input),
+          ]);
+          const original = results.find((result) => !result.replayed);
+          assert.ok(original?.reservation);
+          assert.equal(results.filter((result) => result.replayed).length, 1);
+          now = new Date("2026-07-27T00:00:00.000Z");
+          results.push(await service.reserveCredits(input));
+          for (const result of results) {
+            // Persistent JSON receipts omit undefined optional fields.
+            assert.deepEqual(
+              JSON.parse(JSON.stringify(result)),
+              JSON.parse(
+                JSON.stringify({
+                  ...original,
+                  replayed: result !== original,
+                }),
+              ),
+            );
+          }
+          const balance = await service.getBalance(opened.account.id);
+          assert.equal(balance.position, 2);
+          assert.equal(balance.available, "8");
+          assert.equal(balance.reserved, "5");
+          const intents = await store.listPendingEventIntents();
+          assert.equal(intents.filter((intent) => intent.idempotencyKey === "reserve").length, 1);
+          for (const conflicting of [
+            { ...input, amount: creditAmount("6") },
+            { ...input, meterKey: "requests" },
+            { ...input, accountId: second.account.id },
+            { ...input, expectedPosition: 2 },
+            { ...input, reference: reference("different") },
+          ]) {
+            await assert.rejects(
+              () => service.reserveCredits(conflicting),
+              CreditDuplicateConflictProblem,
+            );
+          }
+          assert.deepEqual(await service.getBalance(opened.account.id), balance);
+          const other = await service.reserveCredits({
+            ...input,
+            expectedPosition: 2,
+            ...metadata("other-reserve"),
+          });
+          assert.ok(other.reservation);
+          const originalId = original.reservation.id;
+          const otherId = other.reservation.id;
+          for (const operation of ["commit", "release"] as const) {
+            const settlement: CommitCreditsInput = {
+              accountId: opened.account.id,
+              reservationId: operation === "commit" ? originalId : otherId,
+              amount: creditAmount("3"),
+              ...metadata(operation),
+            };
+            const execute =
+              operation === "commit"
+                ? service.commitCredits.bind(service)
+                : service.releaseCredits.bind(service);
+            const settled = await execute(settlement);
+            assert.deepEqual(
+              JSON.parse(JSON.stringify(await execute(settlement))),
+              JSON.parse(
+                JSON.stringify({
+                  ...settled,
+                  replayed: true,
+                }),
+              ),
+            );
+            await assert.rejects(
+              () =>
+                execute({
+                  ...settlement,
+                  reservationId: operation === "commit" ? otherId : originalId,
+                }),
+              CreditDuplicateConflictProblem,
+            );
+          }
+        },
+      },
       {
         name: "replays semantic commands without duplicate balance movement and rejects conflicts",
         run: async () => {

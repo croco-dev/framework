@@ -363,6 +363,96 @@ describePostgres("DrizzleCreditLedgerStore PostgreSQL conformance", () => {
     createStore: () => new DrizzleCreditLedgerStore(db, txManager),
   });
 
+  it.each([false, true])(
+    "recovers a reservation after reconnect with legacy fingerprint=%s",
+    async (legacy) => {
+      await reset();
+      let sequence = 0;
+      const store = new DrizzleCreditLedgerStore(db, txManager);
+      const service = new CreditLedgerService({
+        store,
+        clock: () => new Date("2026-07-30T00:00:00.000Z"),
+        idGenerator: () => `reserve-original-${++sequence}`,
+      });
+      const metadata = (id: string) => ({ idempotencyKey: id, reference: { type: "test", id } });
+      const opened = await service.openAccount({
+        tenantId: "reserve-reconnect",
+        ...metadata("open"),
+      });
+      await service.grantCredits({
+        accountId: opened.account.id,
+        amount: creditAmount("13"),
+        ...metadata("grant"),
+      });
+      const input = {
+        accountId: opened.account.id,
+        amount: creditAmount("5"),
+        meterKey: "tokens",
+        expectedPosition: 1,
+        ...metadata("reserve"),
+      };
+      const original = await service.reserveCredits(input);
+      expect(original.reservation).toBeDefined();
+      if (legacy) {
+        // Historical stable serialization, including the generated reservation ID.
+        const fingerprint = JSON.stringify({
+          accountId: input.accountId,
+          amount: "5",
+          expectedPosition: 1,
+          idempotencyKey: "reserve",
+          meterKey: "tokens",
+          operation: "reserve",
+          reference: { id: "reserve", type: "test" },
+          reservationId: original.reservation?.id,
+        });
+        await db
+          .update(creditIdempotencyRecords)
+          .set({ fingerprint })
+          .where(eq(creditIdempotencyRecords.key, "reserve"));
+      }
+      const balance = await service.getBalance(opened.account.id);
+      const history = await service.getHistory(opened.account.id);
+      const intents = await store.listPendingEventIntents();
+      const receipts = await db.select().from(creditIdempotencyRecords);
+      const reconnectedPool = new Pool({ connectionString, max: 2 });
+      try {
+        const reconnectedDb = drizzle(reconnectedPool, { schema });
+        const manager = new TxManager(
+          createDrizzleTxAdapter(
+            reconnectedDb as unknown as Parameters<typeof createDrizzleTxAdapter>[0],
+          ),
+        ) as unknown as TxManager<DrizzleCreditTransaction>;
+        const reconnected = new CreditLedgerService({
+          store: new DrizzleCreditLedgerStore(reconnectedDb, manager),
+          clock: () => new Date("2026-08-02T00:00:00.000Z"),
+          idGenerator: () => `reserve-reconnected-${++sequence}`,
+        });
+        for (const conflicting of [
+          { ...input, amount: creditAmount("6") },
+          { ...input, meterKey: "requests" },
+          { ...input, expectedPosition: 2 },
+          { ...input, reference: { type: "test", id: "changed" } },
+        ]) {
+          await expect(reconnected.reserveCredits(conflicting)).rejects.toBeInstanceOf(
+            CreditDuplicateConflictProblem,
+          );
+        }
+        for (const replay of await Promise.all([
+          reconnected.reserveCredits(input),
+          reconnected.reserveCredits(input),
+        ])) {
+          expect(replay).toEqual({ ...original, replayed: true });
+        }
+      } finally {
+        await reconnectedPool.end();
+      }
+      expect(await service.getBalance(opened.account.id)).toEqual(balance);
+      expect(await service.getHistory(opened.account.id)).toEqual(history);
+      expect(await store.listPendingEventIntents()).toEqual(intents);
+      expect(await db.select().from(creditIdempotencyRecords)).toEqual(receipts);
+    },
+  );
+
   for (const testCase of suite.cases) {
     // oxlint-disable-next-line jest/valid-title -- exported conformance cases own stable names
     it(testCase.name, async () => {
