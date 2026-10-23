@@ -1,7 +1,7 @@
 import type { IsrMiddleware, IsrMiddlewareOptions } from "./types";
 
 const CACHEABLE_METHODS = new Set(["GET", "HEAD"]);
-const PERSONALIZED_HEADERS = ["authorization", "cookie"] as const;
+const BYPASS_HEADERS = ["authorization", "cookie", "range", "if-range"] as const;
 
 class NonCacheableResponseError extends Error {
   constructor(readonly response: Response) {
@@ -37,6 +37,12 @@ export function createIsrMiddleware(options: IsrMiddlewareOptions): IsrMiddlewar
         throw new Error("CacheStore returned no ISR response");
       }
 
+      // Older writers may have persisted a partial response under the full-response key.
+      // The store only exposes getOrSet here, so bypass that entry until it expires.
+      if (isPartialResponse(response)) {
+        return render(request);
+      }
+
       return response.clone();
     } catch (error) {
       if (error instanceof NonCacheableResponseError) {
@@ -53,11 +59,11 @@ function isCacheableRequest(request: Request): boolean {
     return false;
   }
 
-  return PERSONALIZED_HEADERS.every((header) => !request.headers.has(header));
+  return BYPASS_HEADERS.every((header) => !request.headers.has(header));
 }
 
 function isCacheableResponse(response: Response): boolean {
-  if (response.status < 200 || response.status >= 300) {
+  if (response.status < 200 || response.status >= 300 || isPartialResponse(response)) {
     return false;
   }
 
@@ -89,4 +95,8 @@ function isCacheableResponse(response: Response): boolean {
   }
 
   return true;
+}
+
+function isPartialResponse(response: Response): boolean {
+  return response.status === 206 || response.headers.has("content-range");
 }
