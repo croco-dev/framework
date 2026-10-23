@@ -602,26 +602,64 @@ describe("test lane runner", () => {
           name: "@croco/a",
           private: true,
           scripts: {
-            "test:integration": `playwright test ${names.map((name) => `${name}.spec.cjs`).join(" ")}`,
+            "test:integration": "playwright test partial.spec.cjs",
           },
         }),
       );
       writeFileSync(
         join(packageRoot, "playwright.config.cjs"),
         `module.exports = {
-        workers: 1, projects: [{ name: 'first' }, { name: 'second' }],
+        workers: 1, retries: 1, projects: [{ name: 'first' }, { name: 'second' }],
       };`,
       );
       const prelude = "const { test, expect } = require('@playwright/test');\n";
       const sources = [
         "test.skip('all skipped', () => {});",
         "test('fails', () => expect(1).toBe(2)); test.skip('failure skip', () => {});",
-        "test('passes', () => expect(1).toBe(1)); test.describe('nested', () => { test.skip('not executed', () => {}); });",
+        "test('passes', () => expect(1).toBe(1)); test('retry succeeds', ({}, info) => expect(info.retry).toBe(1)); test('expected failure', () => { test.fail(); expect(1).toBe(2); }); test.describe('nested', () => { test.skip('not executed', () => {}); });",
         "test('passes', () => expect(1).toBe(1));",
         "test('project-specific', ({}, info) => { test.skip(info.project.name === 'second', 'project skip'); expect(1).toBe(1); });",
       ];
       names.forEach((name, index) =>
         writeFileSync(join(packageRoot, `${name}.spec.cjs`), prelude + sources[index]),
+      );
+      // A successful Playwright process with skips still produces incomplete lane evidence.
+      const partial = runTestLane({
+        rootDir: root,
+        lane: "integration",
+        inventory: {
+          version: 1,
+          exceptions: [],
+          tests: [
+            {
+              path: "packages/a/partial.spec.cjs",
+              lane: "integration",
+              qualifiers: [],
+              owner: "@croco/a",
+            },
+          ],
+        },
+        scriptResolver: () => "playwright test partial.spec.cjs",
+      });
+      expect(partial.commands[0]?.exitCode).toBe(0);
+      assertLaneReportShape(partial);
+      expect(partial.executedPaths).toEqual([]);
+      expect(partial.skippedFiles).toEqual([
+        expect.objectContaining({ status: "partially-executed", passedAssertions: 4 }),
+      ]);
+      expect(partial.status).toBe("failed");
+      expect(partial.diagnostics).toContainEqual(
+        expect.objectContaining({ code: "TEST_LANE_EXECUTION_INCOMPLETE" }),
+      );
+      writeFileSync(
+        join(packageRoot, "package.json"),
+        JSON.stringify({
+          name: "@croco/a",
+          private: true,
+          scripts: {
+            "test:integration": `playwright test ${names.map((name) => `${name}.spec.cjs`).join(" ")}`,
+          },
+        }),
       );
       const report = runTestLane({
         rootDir: root,
@@ -653,7 +691,7 @@ describe("test lane runner", () => {
         expect.objectContaining({
           path: "packages/a/partial.spec.cjs",
           status: "partially-executed",
-          passedAssertions: 2,
+          passedAssertions: 4,
           skippedAssertions: [
             { name: "nested > not executed [first]", status: "skipped" },
             { name: "nested > not executed [second]", status: "skipped" },
@@ -669,37 +707,6 @@ describe("test lane runner", () => {
         expect.objectContaining({ code: "TEST_LANE_EXECUTION_SKIPPED" }),
       );
       assertLaneReportShape(report);
-      // A successful Playwright process with skips still produces incomplete lane evidence.
-      writeFileSync(
-        join(packageRoot, "package.json"),
-        JSON.stringify({
-          name: "@croco/a",
-          private: true,
-          scripts: { "test:integration": "playwright test partial.spec.cjs" },
-        }),
-      );
-      const partial = runTestLane({
-        rootDir: root,
-        lane: "integration",
-        inventory: {
-          version: 1,
-          exceptions: [],
-          tests: [
-            {
-              path: "packages/a/partial.spec.cjs",
-              lane: "integration",
-              qualifiers: [],
-              owner: "@croco/a",
-            },
-          ],
-        },
-        scriptResolver: () => "playwright test partial.spec.cjs",
-      });
-      expect(partial.commands[0]?.exitCode).toBe(0);
-      expect(partial.status).toBe("failed");
-      expect(partial.diagnostics).toContainEqual(
-        expect.objectContaining({ code: "TEST_LANE_EXECUTION_INCOMPLETE" }),
-      );
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
