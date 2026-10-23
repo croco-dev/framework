@@ -68,7 +68,7 @@ const CLIENT_STATE_KEY = Symbol.for("@croco/tx-drizzle/client-state");
 interface ClientState {
   coordinatorStack: TxAbortCoordinator[];
   taintedReason: Error | null;
-  releaseWrapped: boolean;
+  releaseWrapper?: (err?: unknown) => unknown;
 }
 
 function getClientState(rawClient: unknown): ClientState | undefined {
@@ -88,7 +88,6 @@ function getOrCreateClientState(rawClient: unknown): ClientState | undefined {
       state = {
         coordinatorStack: [],
         taintedReason: null,
-        releaseWrapped: false,
       };
       record[CLIENT_STATE_KEY] = state;
     }
@@ -279,11 +278,12 @@ class TxAbortCoordinator {
       release?: (err?: unknown) => unknown;
     };
 
-    if (typeof clientWithRelease.release === "function" && !state.releaseWrapped) {
+    if (
+      typeof clientWithRelease.release === "function" &&
+      clientWithRelease.release !== state.releaseWrapper
+    ) {
       const originalRelease = clientWithRelease.release.bind(this.rawClient);
-      state.releaseWrapped = true;
-
-      clientWithRelease.release = (err?: unknown) => {
+      const releaseWrapper = (err?: unknown) => {
         const currentState = getClientState(this.rawClient);
         const taint = currentState?.taintedReason ?? null;
 
@@ -297,6 +297,8 @@ class TxAbortCoordinator {
         }
         return originalRelease(err);
       };
+      state.releaseWrapper = releaseWrapper;
+      clientWithRelease.release = releaseWrapper;
     }
   }
 

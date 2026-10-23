@@ -1,7 +1,11 @@
 import { setImmediate } from "node:timers/promises";
 import { TransactionRollbackConfirmedProblem } from "@croco/tx-core";
 import type { TxAdapter } from "@croco/tx-core";
+import { sql } from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
+import { drizzle } from "drizzle-orm/node-postgres";
+import { Pool } from "pg";
+import { GenericContainer, Wait } from "testcontainers";
 import { PgDialect } from "drizzle-orm/pg-core";
 import { describe, expect, it, vi } from "vitest";
 import {
@@ -452,58 +456,49 @@ describe("DrizzleTxAdapter", () => {
       expect(reasons[0]).toBe(timeout);
     });
 
-    it("should discard reused connection from pool if a subsequent transaction times out", async () => {
-      const releaseCalls: unknown[] = [];
-      const execute = vi.fn(async (_query: string) => {
-        await new Promise((resolve) => setTimeout(resolve, 30));
-        return "ok";
-      });
-
+    it("should guard each replacement release function without retaining checkout taint", async () => {
+      const releases: { checkout: number; reason: unknown; receiver: unknown }[] = [];
+      let checkout = 0;
       const rawConnection = {
-        id: "pooled-conn",
-        execute,
-        release: (err?: unknown) => {
-          releaseCalls.push(err ?? null);
-        },
+        release(_reason?: unknown) {},
       };
-
+      type Client = { session: { client: typeof rawConnection } };
       const db = {
-        transaction: async <T>(fn: (tx: any) => Promise<T>): Promise<T> => {
-          const tx = { session: { client: rawConnection }, execute: rawConnection.execute };
+        transaction: async <T>(fn: (tx: Client) => Promise<T>): Promise<T> => {
+          const currentCheckout = ++checkout;
+          rawConnection.release = function (reason?: unknown) {
+            releases.push({ checkout: currentCheckout, reason, receiver: this });
+          };
           try {
-            return await fn(tx);
+            return await fn({ session: { client: rawConnection } });
           } finally {
             rawConnection.release();
           }
         },
       };
-
-      const adapter = createDrizzleTxAdapter(db as any);
-
-      // Tx 1: Succeeds normally on rawConnection
-      await adapter.transaction(async (tx: any) => {
-        await tx.execute("SELECT 1");
-      });
-      expect(releaseCalls).toEqual([null]);
-
-      // Tx 2: Times out on the SAME reused rawConnection
+      const adapter = createDrizzleTxAdapter(db);
+      const healthy = () =>
+        adapter.transaction(async () => "ok", undefined, new AbortController().signal);
+      await healthy();
+      await healthy();
       const controller = new AbortController();
-      const timeout = new Error("Tx 2 timeout");
-      const tx2Promise = adapter.transaction(
-        async (tx: any) => {
-          await tx.execute("SELECT 2");
-        },
-        undefined,
-        controller.signal,
-      );
-
-      await new Promise((resolve) => setTimeout(resolve, 10));
-      controller.abort(timeout);
-
-      await expect(tx2Promise).rejects.toThrow(TransactionRollbackConfirmedProblem);
-      // Tx 2 must have called release with the taint error!
-      expect(releaseCalls.length).toBe(2);
-      expect(releaseCalls[1]).toBe(timeout);
+      const reason = new Error("Reused checkout aborted");
+      await expect(
+        adapter.transaction(
+          async () => {
+            controller.abort(reason);
+          },
+          undefined,
+          controller.signal,
+        ),
+      ).rejects.toThrow(TransactionRollbackConfirmedProblem);
+      await healthy();
+      expect(releases).toEqual([
+        { checkout: 1, reason: undefined, receiver: rawConnection },
+        { checkout: 2, reason: undefined, receiver: rawConnection },
+        { checkout: 3, reason, receiver: rawConnection },
+        { checkout: 4, reason: undefined, receiver: rawConnection },
+      ]);
     });
 
     it("should prevent unhandled promise rejections when an in-flight query rejects after abort", async () => {
@@ -1157,6 +1152,111 @@ describe("DrizzleTxAdapter", () => {
     });
   });
 });
+
+describe.skipIf(process.env.CROCO_TEST_REAL_RESOURCES !== "1")(
+  "DrizzleTxAdapter PostgreSQL pool",
+  () => {
+    it("should reuse healthy checkouts and discard an aborted replacement checkout exactly once", async () => {
+      const container = await new GenericContainer("postgres:17-alpine")
+        .withEnvironment({
+          POSTGRES_USER: "fixture",
+          POSTGRES_PASSWORD: "fixture-secret",
+          POSTGRES_DB: "fixture",
+        })
+        .withExposedPorts(5432)
+        .withWaitStrategy(Wait.forLogMessage("database system is ready to accept connections", 2))
+        .start();
+      const pool = new Pool({
+        host: container.getHost(),
+        port: container.getMappedPort(5432),
+        user: "fixture",
+        password: "fixture-secret",
+        database: "fixture",
+        max: 1,
+      });
+      const releases: unknown[] = [];
+      pool.on("release", (error) => releases.push(error ?? undefined));
+      try {
+        const adapter = createDrizzleTxAdapter(drizzle(pool));
+        const firstPid = await adapter.transaction(
+          async (tx) => {
+            const result = await tx.execute<{ pid: number }>(sql`select pg_backend_pid() as pid`);
+            return result.rows[0]?.pid;
+          },
+          undefined,
+          new AbortController().signal,
+        );
+        expect(firstPid).toBeTypeOf("number");
+
+        // A child abort rolls back its savepoint without poisoning the root checkout.
+        await adapter.transaction(
+          async (tx) => {
+            const child = new AbortController();
+            await expect(
+              adapter.savepoint(
+                tx,
+                async (nested) => {
+                  await nested.execute(sql`select 1`);
+                  child.abort(new Error("Savepoint cancelled"));
+                },
+                undefined,
+                child.signal,
+              ),
+            ).rejects.toThrow(TransactionRollbackConfirmedProblem);
+            const result = await tx.execute<{ pid: number }>(sql`select pg_backend_pid() as pid`);
+            expect(result.rows[0]?.pid).toBe(firstPid);
+          },
+          undefined,
+          new AbortController().signal,
+        );
+        expect(releases).toEqual([undefined, undefined]);
+
+        // pg-pool installs a new release function on this same physical connection.
+        const root = new AbortController();
+        const reason = new Error("Reused root checkout cancelled");
+        await expect(
+          adapter.transaction(
+            async (tx) => {
+              await adapter.savepoint(
+                tx,
+                async (nested) => {
+                  const result = await nested.execute<{ pid: number }>(
+                    sql`select pg_backend_pid() as pid`,
+                  );
+                  expect(result.rows[0]?.pid).toBe(firstPid);
+                },
+                undefined,
+                new AbortController().signal,
+              );
+              root.abort(reason);
+            },
+            undefined,
+            root.signal,
+          ),
+        ).rejects.toThrow(TransactionRollbackConfirmedProblem);
+        expect(releases).toEqual([undefined, undefined, reason]);
+        expect(pool.totalCount).toBe(0);
+
+        await adapter.transaction(
+          async (tx) => {
+            const result = await tx.execute<{ pid: number }>(sql`select pg_backend_pid() as pid`);
+            expect(result.rows[0]?.pid).not.toBe(firstPid);
+          },
+          undefined,
+          new AbortController().signal,
+        );
+        expect(releases).toEqual([undefined, undefined, reason, undefined]);
+        expect(pool.idleCount).toBe(1);
+      } finally {
+        try {
+          await pool.end();
+        } finally {
+          await container.stop();
+        }
+      }
+    }, 120_000);
+  },
+);
 
 describe("RlsTxAdapter", () => {
   function createMockRlsDrizzleDb() {

@@ -1,0 +1,80 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "tx-drizzle",
+      "classification": "runtime-adapter",
+      "reason": "Track release wrapper identity rather than a permanent client boolean so pg-pool replacement release functions receive the current checkout abort reason without wrapping nested savepoints again. Public transaction contracts and runtime claims are unchanged.",
+      "files": {
+        "packages/tx-drizzle/src/libs/DrizzleTxAdapter.ts": "750c331654fa09033105ed4ee3209003ee5a1000c45ac4fe27cd2a715ad85a77"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "unverified",
+          "reason": "The existing Node Drizzle adapter must guard the current pg-pool checkout release function. Local PostgreSQL verifies reuse and discard, but no Kubernetes Host or cluster execution is claimed.",
+          "providers": [
+            "@croco/tx-core/TxAdapter",
+            "@croco/tx-drizzle/createDrizzleTxAdapter",
+            "drizzle-orm/node-postgres",
+            "pg"
+          ],
+          "constraints": [
+            "The catalog runtime list remains unclaimed.",
+            "Finish rollback and drain before release; only the current checkout receives its taint.",
+            "Local Docker PostgreSQL is not live infrastructure or provider certification."
+          ],
+          "references": [
+            "packages/tx-core/src/libs/TxAdapter.ts",
+            "packages/tx-drizzle/src/libs/DrizzleTransactionPlugin.ts",
+            "packages/tx-drizzle/src/tests/DrizzleTxAdapter.spec.ts",
+            "packages/presentation-preset/runtime-profiles.json"
+          ]
+        },
+        "aws-lambda": {
+          "result": "unverified",
+          "reason": "The same adapter may be reused across invocations, so checkout-specific release guards must remain effective. No Lambda invocation or deployed pool lifecycle was exercised.",
+          "providers": [
+            "@croco/tx-core/TxAdapter",
+            "@croco/tx-drizzle/createDrizzleTxAdapter",
+            "drizzle-orm/node-postgres",
+            "pg"
+          ],
+          "constraints": [
+            "The catalog runtime list remains unclaimed.",
+            "Finish rollback and drain before release; only the current checkout receives its taint.",
+            "Local Docker PostgreSQL is not live infrastructure or provider certification."
+          ],
+          "references": [
+            "packages/tx-core/src/libs/TxAdapter.ts",
+            "packages/tx-drizzle/src/libs/DrizzleTransactionPlugin.ts",
+            "packages/tx-drizzle/src/tests/DrizzleTxAdapter.spec.ts",
+            "packages/presentation-preset/runtime-profiles.json"
+          ]
+        },
+        "cloudflare": {
+          "result": "unverified",
+          "reason": "The changed root adapter is not the request-owned Hyperdrive entrypoint. No Workers host, deployed Hyperdrive pooling or Node Container execution is claimed.",
+          "providers": [
+            "@croco/tx-core/TxAdapter",
+            "@croco/tx-drizzle/createDrizzleTxAdapter",
+            "drizzle-orm/node-postgres",
+            "pg"
+          ],
+          "constraints": [
+            "The catalog runtime list remains unclaimed.",
+            "Finish rollback and drain before release; only the current checkout receives its taint.",
+            "Local Docker PostgreSQL is not live infrastructure or provider certification."
+          ],
+          "references": [
+            "packages/tx-core/src/libs/TxAdapter.ts",
+            "packages/tx-drizzle/src/libs/DrizzleTransactionPlugin.ts",
+            "packages/tx-drizzle/src/tests/DrizzleTxAdapter.spec.ts",
+            "packages/presentation-preset/runtime-profiles.json"
+          ],
+          "host": "workers"
+        }
+      }
+    }
+  ]
+}
