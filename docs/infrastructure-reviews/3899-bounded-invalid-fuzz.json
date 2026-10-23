@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "testing",
+      "classification": "pure-contract",
+      "reason": "Bound automatic invalid-body generation and report the existing unsupported diagnostic when no input group has a rejected sentinel. No Host, Provider, runtime manifest or public type changes.",
+      "files": {
+        "packages/testing/src/libs/contract-testing.ts": "044136472340c23a45b43ebde575af03289c312a4329b6144ef3fbd6fd119a45"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Invalid fuzz input selection is pure in-process schema validation and has no Kubernetes Node Host capability, storage or lifecycle dependency. The existing generator and transport normalization are reused.",
+          "providers": [],
+          "constraints": [
+            "No deployment support, live infrastructure verification or provider certification is claimed."
+          ],
+          "references": [
+            "packages/testing/src/libs/contract-testing.ts",
+            "packages/testing/src/tests/ContractTesting.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Invalid fuzz input selection is pure in-process schema validation and has no AWS Lambda Host capability, storage or lifecycle dependency. The existing generator and transport normalization are reused.",
+          "providers": [],
+          "constraints": [
+            "No deployment support, live infrastructure verification or provider certification is claimed."
+          ],
+          "references": [
+            "packages/testing/src/libs/contract-testing.ts",
+            "packages/testing/src/tests/ContractTesting.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Invalid fuzz input selection is pure in-process schema validation and has no Cloudflare Workers or explicit Node Container Host capability, storage or lifecycle dependency. The existing generator and transport normalization are reused.",
+          "providers": [],
+          "constraints": [
+            "No deployment support, live infrastructure verification or provider certification is claimed."
+          ],
+          "references": [
+            "packages/testing/src/libs/contract-testing.ts",
+            "packages/testing/src/tests/ContractTesting.spec.ts"
+          ]
+        }
+      }
+    }
+  ]
+}

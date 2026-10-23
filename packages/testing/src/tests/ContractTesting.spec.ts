@@ -1,3 +1,6 @@
+import { spawnSync } from "node:child_process";
+import { createRequire } from "node:module";
+import { dirname, join } from "node:path";
 import {
   createRuntimeCapabilityManifest,
   type RuntimeCapabilityManifest,
@@ -274,6 +277,126 @@ describe("contract testing", () => {
     expect(cases.every(({ canarySecret }) => /^croco-canary-[0-9a-f-]+$/.test(canarySecret))).toBe(
       true,
     );
+  });
+
+  it("rejects universally accepting body generation within a child process deadline", async () => {
+    if (process.env["CROCO_FUZZ_TERMINATION_CHILD"] !== "1") {
+      const require = createRequire(import.meta.url);
+      const child = spawnSync(
+        process.execPath,
+        [
+          join(dirname(require.resolve("vitest/package.json")), "vitest.mjs"),
+          "run",
+          "src/tests/ContractTesting.spec.ts",
+          "--pool=threads",
+          "--reporter=default",
+          "-t",
+          "rejects universally accepting body generation within a child process deadline",
+        ],
+        {
+          cwd: join(import.meta.dirname, "../.."),
+          env: { ...process.env, CROCO_FUZZ_TERMINATION_CHILD: "1" },
+          encoding: "utf8",
+          timeout: 15_000,
+          killSignal: "SIGKILL",
+        },
+      );
+      expect(child.error, child.stderr).toBeUndefined();
+      expect(child.status, child.stdout + child.stderr).toBe(0);
+      return;
+    }
+    const universalRoute = {
+      ...route,
+      inputSchemas: { ...route.inputSchemas, body: z.coerce.boolean() },
+    } satisfies ContractGraphRoute;
+    await expect(
+      runContractFuzz({
+        route: universalRoute,
+        runtime: "node",
+        seed: 1489,
+        execute: () => successObservation,
+      }),
+    ).rejects.toMatchObject({
+      code: "testing/contract-generation-unsupported",
+      extensions: { path: "input.body" },
+    });
+  }, 20_000);
+
+  it.each([
+    ["boolean", z.boolean()],
+    ["number", z.number()],
+    ["object", z.object({ value: z.string() })],
+  ])("completes valid and invalid body fuzz cases for %s", async (_name, body) => {
+    const kinds = new Set<string>();
+    const report = await runContractFuzz({
+      route: { ...route, inputSchemas: { ...route.inputSchemas, body } },
+      runtime: "node",
+      seed: 1489,
+      failureSink: { persist: async () => {} },
+      execute: (testCase) => {
+        kinds.add(testCase.kind);
+        expect(body.safeParse(testCase.input.body).success).toBe(testCase.kind === "valid");
+        return testCase.kind === "valid"
+          ? successObservation
+          : {
+              status: 422,
+              body: { code: "users/invalid", type: "about:blank", title: "Invalid", status: 422 },
+            };
+      },
+    });
+    expect(report).toMatchObject({ status: "passed", numRuns: 32 });
+    expect(kinds).toEqual(new Set(["valid", "invalid"]));
+  });
+
+  it("invalidates transport while retaining a universally accepting body", () => {
+    const mixedRoute = {
+      ...route,
+      inputSchemas: {
+        ...route.inputSchemas,
+        body: z.coerce.boolean(),
+        query: z.object({ mode: z.literal("read") }),
+      },
+    } satisfies ContractGraphRoute;
+    const cases = fc.sample(createContractCaseArbitrary(mixedRoute), { seed: 1489, numRuns: 100 });
+    expect(cases.some(({ kind }) => kind === "invalid")).toBe(true);
+    for (const testCase of cases) {
+      expect(mixedRoute.inputSchemas.body.safeParse(testCase.input.body).success).toBe(true);
+      expect(mixedRoute.inputSchemas.query.safeParse(testCase.input.query).success).toBe(
+        testCase.kind === "valid",
+      );
+    }
+  });
+
+  it("accepts a caller-owned valid-only corpus for a universally accepting body", async () => {
+    const report = await runContractFuzz({
+      route: { ...route, inputSchemas: { ...route.inputSchemas, body: z.coerce.boolean() } },
+      runtime: "node",
+      arbitrary: fc.constant({ ...validCase, input: { body: false } }),
+      execute: () => successObservation,
+    });
+    expect(report).toMatchObject({ status: "passed", numRuns: 32 });
+  });
+
+  it("replays an automatically generated invalid body from its seed and shrink path", async () => {
+    const artifacts: ContractFailureArtifact[] = [];
+    const options = {
+      route,
+      runtime: "node",
+      seed: 1489,
+      execute: () => successObservation,
+      failureSink: {
+        persist: (artifact: ContractFailureArtifact) => void artifacts.push(artifact),
+      },
+    };
+    await expect(runContractFuzz(options)).rejects.toThrow("Schema-invalid input");
+    const original = artifacts[0];
+    if (!original) throw new TypeError("Expected an automatic generation failure artifact.");
+    await expect(
+      runContractFuzz({ ...options, seed: original.seed, path: original.counterexamplePath }),
+    ).rejects.toThrow("Schema-invalid input");
+    expect(original.minimalInput.kind).toBe("invalid");
+    expect(artifacts[1]?.minimalInput).toEqual(original.minimalInput);
+    expect(artifacts[1]?.counterexamplePath).toBe(original.counterexamplePath);
   });
 
   it("generates only accepted numeric native-enum values", () => {

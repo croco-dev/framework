@@ -677,8 +677,8 @@ function createInvalidInputArbitrary(
   });
   if (mutations.length === 0) {
     throw new UnsupportedContractGenerationProblem(
-      "input",
-      "schemas accepting every transport-representable invalid sentinel",
+      entries.length === 1 ? `input.${entries[0]?.[0]}` : "input",
+      "schemas accepting every JSON or transport-representable invalid sentinel",
     );
   }
   return fc.oneof(...mutations);
@@ -905,10 +905,17 @@ function numberArbitrary(schema: z.ZodNumber, path: string): fc.Arbitrary<number
   return arbitrary.filter((value) => !Object.is(value, -0) && schema.safeParse(value).success);
 }
 
-function invalidValueForSchema(schema: z.ZodType): fc.Arbitrary<unknown> {
+function invalidValueForSchema(schema: z.ZodType): fc.Arbitrary<unknown> | undefined {
+  const sentinels: readonly unknown[] = [null, false, true, 0, 1, "", "__croco_invalid__", [], {}];
+  const invalidSentinels = sentinels.filter((candidate) => !schema.safeParse(candidate).success);
+  if (invalidSentinels.length === 0) return undefined;
+
+  // Keep random JSON exploration without rejection sampling: schemas may accept every JSON value.
   return fc
-    .jsonValue({ maxDepth: 2 })
-    .filter((candidate) => isJsonSafeLossless(candidate) && !schema.safeParse(candidate).success);
+    .tuple(fc.jsonValue({ maxDepth: 2 }), fc.constantFrom(...invalidSentinels))
+    .map(([candidate, fallback]) =>
+      isJsonSafeLossless(candidate) && !schema.safeParse(candidate).success ? candidate : fallback,
+    );
 }
 
 function invalidTransportValueForSchema(
