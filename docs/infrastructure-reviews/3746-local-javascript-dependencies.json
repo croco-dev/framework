@@ -4,9 +4,9 @@
     {
       "package": "protocol-codegen",
       "classification": "protocol-render",
-      "reason": "Include local .js, .mjs and .cjs source dependencies in the existing source ownership, emission and runtime output mapping so allowJs controllers load their application dependencies. This is shared RPC/OpenAPI build tooling; catalog runtime claims remain empty.",
+      "reason": "Include local .js, .mjs and .cjs source dependencies in the existing source ownership, emission and runtime output mapping, preserving explicit module extensions and application export conditions. This is shared RPC/OpenAPI build tooling; catalog runtime claims remain empty.",
       "files": {
-        "packages/protocol-codegen/src/libs/ControllerProject.ts": "c698eed505d2e5353b5b0beded0027af0f1ae59d500e9d0c16c9fb9a2fb0bb75"
+        "packages/protocol-codegen/src/libs/ControllerProject.ts": "3e00661699c5adaeceb90643c1ef5ba0d398f4009e754f723d8206d0e306fa0a"
       },
       "catalogRuntimes": [],
       "profiles": {

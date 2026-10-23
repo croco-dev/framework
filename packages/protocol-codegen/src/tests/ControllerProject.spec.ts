@@ -553,6 +553,70 @@ describe("createControllerProject", () => {
     },
   );
 
+  it.each([
+    { extension: "mjs", packageType: "commonjs", controllerExtension: "mts", expected: 42 },
+    { extension: "cjs", packageType: "module", controllerExtension: "cts", expected: 24 },
+  ] as const)(
+    "preserves .$extension dependency export conditions inside a $packageType package",
+    async ({ extension, packageType, controllerExtension, expected }) => {
+      const root = createTemporaryDirectory();
+      writeJson(path.join(root, "package.json"), { type: packageType });
+      writeJson(path.join(root, "tsconfig.json"), {
+        compilerOptions: {
+          target: "ES2022",
+          module: "NodeNext",
+          moduleResolution: "NodeNext",
+          allowJs: true,
+          checkJs: false,
+          outDir: "dist",
+        },
+      });
+      writeJson(path.join(root, "node_modules", "dual-marker", "package.json"), {
+        name: "dual-marker",
+        exports: { import: "./import.mjs", require: "./require.cjs" },
+      });
+      writeFile(
+        path.join(root, "node_modules", "dual-marker", "import.mjs"),
+        "export const value = 42;",
+      );
+      writeFile(
+        path.join(root, "node_modules", "dual-marker", "require.cjs"),
+        "exports.value = 24;",
+      );
+      writeFile(
+        path.join(root, "helpers", `value.${extension}`),
+        extension === "mjs"
+          ? "export { value } from 'dual-marker';"
+          : "exports.value = require('dual-marker').value;",
+      );
+      const controllerPath = `src/Controller.${controllerExtension}`;
+      writeFile(
+        path.join(root, controllerPath),
+        `import { value } from '../helpers/value.${extension}'; export class Controller { static value = value; }`,
+      );
+      const session = createControllerProject({ cwd: root, controllers: controllerPath });
+      try {
+        expect(session.getPreEmitDiagnostics()).toEqual([]);
+        session.emit();
+        const [moduleExports] = await session.importControllerModules();
+        expect((moduleExports.Controller as { value: number }).value).toBe(expected);
+        const nativeValue = execFileSync(
+          process.execPath,
+          [
+            "--input-type=module",
+            "-e",
+            "import { pathToFileURL } from 'node:url'; const module = await import(pathToFileURL(process.argv[1]).href); process.stdout.write(JSON.stringify(module.Controller.value));",
+            path.join(session.emitDir, "src", `Controller.${extension}`),
+          ],
+          { encoding: "utf8" },
+        );
+        expect(JSON.parse(nativeValue)).toBe(expected);
+      } finally {
+        session.dispose();
+      }
+    },
+  );
+
   it("emits a same-directory CommonJS JSON dependency and removes it on dispose", async () => {
     const root = createTemporaryDirectory();
     writeJson(path.join(root, "tsconfig.json"), {
