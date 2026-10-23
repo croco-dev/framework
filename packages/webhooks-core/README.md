@@ -199,6 +199,14 @@ await runtime.publish({
 });
 ```
 
+Delivery IDs are opaque. `InMemoryOutboundWebhookStore` encodes the tenant, event and endpoint IDs
+as a JSON string tuple so delimiter-containing IDs cannot overwrite another delivery. Dispatch intent,
+idempotency and execution IDs derive from that delivery ID; retry, replay and resume keep their existing
+suffixes. This replaces the previous colon-joined format for newly committed in-memory deliveries.
+Pass IDs returned by the store to runtime operations rather than constructing or splitting them.
+The in-memory store has no durable migration path and this change cannot recover overwritten records;
+custom durable stores retain responsibility for their own identity format and migration policy.
+
 `commitEvent()` is the transaction boundary: the immutable event, endpoint deliveries, and dispatch
 intents are stored together before a task is published. `publish()` publishes only the unpublished
 intents returned for that event, so older failed intents cannot block a new event. Publishing the same

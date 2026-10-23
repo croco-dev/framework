@@ -76,7 +76,7 @@ export class InMemoryOutboundWebhookStore implements OutboundWebhookStore {
       }
       seenEndpoints.add(endpoint.id);
 
-      const deliveryId = `${event.tenantId}:${event.id}:${endpoint.id}`;
+      const deliveryId = JSON.stringify([event.tenantId, event.id, endpoint.id]);
       const status: OutboundWebhookDeliveryStatus =
         endpoint.status === "disabled" ? "canceled" : "pending";
       const delivery: OutboundWebhookDelivery = {

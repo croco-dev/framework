@@ -80,6 +80,80 @@ export function createOutboundWebhookStoreConformanceSuite(
         },
       },
       {
+        name: "isolates delimiter-containing event and endpoint identities",
+        run: async () => {
+          const store = await options.createStore();
+          const firstEvent = { ...options.event, id: "a:b" };
+          const secondEvent = { ...options.event, id: "a" };
+          const firstEndpoint = { ...options.endpoint, id: "c", status: "active" as const };
+          const secondEndpoint = { ...options.endpoint, id: "b:c", status: "active" as const };
+          const first = await store.commitEvent({ event: firstEvent, endpoints: [firstEndpoint] });
+          const second = await store.commitEvent({
+            event: secondEvent,
+            endpoints: [secondEndpoint],
+          });
+          const firstDelivery = first.deliveries[0];
+          const secondDelivery = second.deliveries[0];
+          assert(
+            firstDelivery !== undefined && secondDelivery !== undefined,
+            "both deliveries must exist",
+          );
+          assert(
+            firstDelivery.id !== secondDelivery.id,
+            "distinct tuples must have distinct delivery IDs",
+          );
+          const reopened =
+            options.reopenStore === undefined ? store : await options.reopenStore(store);
+          for (const [event, endpoint, delivery, committed] of [
+            [firstEvent, firstEndpoint, firstDelivery, first],
+            [secondEvent, secondEndpoint, secondDelivery, second],
+          ] as const) {
+            const listed = await reopened.listDeliveries(event.tenantId, event.id);
+            assert(
+              listed.length === 1 &&
+                listed[0]?.eventId === event.id &&
+                listed[0]?.endpointId === endpoint.id,
+              "event lookup must retain its own endpoint delivery",
+            );
+            await recordClaimedAttempt(reopened, options, {
+              tenantId: event.tenantId,
+              attempt: { ...createAttempt(delivery.id, 1, options, "delivered"), id: event.id },
+              status: "delivered",
+            });
+            const duplicate = await reopened.commitEvent({ event, endpoints: [endpoint] });
+            assert(
+              duplicate.duplicate &&
+                duplicate.deliveries.length === 1 &&
+                duplicate.deliveries[0]?.id === delivery.id,
+              "recommit must reuse only the original delivery",
+            );
+            assert(
+              duplicate.intents.length === 1 &&
+                duplicate.intents[0]?.id === committed.intents[0]?.id,
+              "recommit must reuse only the original dispatch intent",
+            );
+          }
+          for (const [event, delivery] of [
+            [firstEvent, firstDelivery],
+            [secondEvent, secondDelivery],
+          ] as const) {
+            const attempts = await reopened.listAttempts(event.tenantId, delivery.id);
+            assert(
+              attempts.length === 1 && attempts[0]?.id === event.id,
+              "attempt histories must remain independent after both deliveries complete",
+            );
+          }
+          const intents = await reopened.listUnpublishedIntents(options.event.tenantId);
+          assert(intents.length === 2, "both dispatch intents must survive");
+          for (const field of ["id", "idempotencyKey", "executionId"] as const) {
+            assert(
+              new Set(intents.map((intent) => intent[field])).size === 2,
+              `distinct deliveries must retain distinct ${field} values`,
+            );
+          }
+        },
+      },
+      {
         name: "preserves attempt ordering and exact event payload bytes",
         run: async () => {
           const store = await options.createStore();

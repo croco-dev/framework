@@ -122,7 +122,9 @@ describe("OutboundWebhookRuntime", () => {
     const store = new InMemoryOutboundWebhookStore();
     const publisher: OutboundWebhookTaskPublisher = {
       publish: vi.fn(async ({ deliveryId }) => {
-        if (deliveryId.endsWith(ACTIVE_ENDPOINT.id)) {
+        if (
+          (await store.getDelivery(EVENT.tenantId, deliveryId))?.endpointId === ACTIVE_ENDPOINT.id
+        ) {
           throw new OutboundWebhookPermanentProblem(deliveryId, "task rejected");
         }
       }),
@@ -138,7 +140,9 @@ describe("OutboundWebhookRuntime", () => {
     expect(publisher.publish).toHaveBeenCalledTimes(2);
     expect(await store.listUnpublishedIntents(EVENT.tenantId)).toEqual([
       expect.objectContaining({
-        deliveryId: `${EVENT.tenantId}:${EVENT.id}:${ACTIVE_ENDPOINT.id}`,
+        deliveryId: (await store.listDeliveries(EVENT.tenantId, EVENT.id)).find(
+          (delivery) => delivery.endpointId === ACTIVE_ENDPOINT.id,
+        )?.id,
       }),
     ]);
   });
@@ -196,7 +200,8 @@ describe("OutboundWebhookRuntime", () => {
       });
       expect(await store.listUnpublishedIntents(EVENT.tenantId)).toEqual([
         expect.objectContaining({
-          deliveryId: `${EVENT.tenantId}:event_poisoned:${ACTIVE_ENDPOINT.id}`,
+          deliveryId: (await store.listDeliveries(EVENT.tenantId, "event_poisoned"))[0]?.id,
+          eventId: "event_poisoned",
         }),
       ]);
     });
@@ -213,7 +218,8 @@ describe("OutboundWebhookRuntime", () => {
       });
       expect(await store.listUnpublishedIntents(EVENT.tenantId)).toEqual([
         expect.objectContaining({
-          deliveryId: `${EVENT.tenantId}:event_poisoned:${ACTIVE_ENDPOINT.id}`,
+          deliveryId: (await store.listDeliveries(EVENT.tenantId, "event_poisoned"))[0]?.id,
+          eventId: "event_poisoned",
         }),
       ]);
     });
@@ -229,7 +235,8 @@ describe("OutboundWebhookRuntime", () => {
       });
       expect(await store.listUnpublishedIntents(EVENT.tenantId)).toEqual([
         expect.objectContaining({
-          deliveryId: `${EVENT.tenantId}:event_poisoned:${ACTIVE_ENDPOINT.id}`,
+          deliveryId: (await store.listDeliveries(EVENT.tenantId, "event_poisoned"))[0]?.id,
+          eventId: "event_poisoned",
         }),
       ]);
     });
@@ -294,7 +301,10 @@ describe("OutboundWebhookRuntime", () => {
     let unavailable = true;
     const publisher: OutboundWebhookTaskPublisher = {
       publish: vi.fn(async ({ deliveryId }) => {
-        if (unavailable && deliveryId.endsWith(ACTIVE_ENDPOINT.id)) {
+        if (
+          unavailable &&
+          (await store.getDelivery(EVENT.tenantId, deliveryId))?.endpointId === ACTIVE_ENDPOINT.id
+        ) {
           throw new Error("broker unavailable");
         }
       }),
@@ -1218,7 +1228,7 @@ describe("OutboundWebhookRuntime", () => {
     expect(
       await store.getDelivery(
         EVENT.tenantId,
-        `${EVENT.tenantId}:${EVENT.id}:${ACTIVE_ENDPOINT.id}`,
+        JSON.stringify([EVENT.tenantId, EVENT.id, ACTIVE_ENDPOINT.id]),
       ),
     ).toBeUndefined();
   });
