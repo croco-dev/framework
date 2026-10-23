@@ -1100,7 +1100,14 @@ export class ExecutionManagerImpl
     targetStatus: ExecutionStatus,
     data: Partial<Execution>,
   ): Promise<Execution> {
-    const updated = await this.store.updateIfStatus(execution.id, execution.status, data);
+    const updated = this.supportsAttemptFencing()
+      ? await this.attemptStore(execution.id).updateIfStatusAndAttempt(
+          execution.id,
+          execution.status,
+          execution.attempts,
+          data,
+        )
+      : await this.store.updateIfStatus(execution.id, execution.status, data);
 
     if (updated) {
       return updated;
