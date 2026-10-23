@@ -69,10 +69,14 @@ type FixtureOptions = {
 
 describe("first-success-verify.mts", () => {
   beforeAll(() => {
-    const result = spawnSync("pnpm", ["--filter", "create-croco-app...", "build"], {
-      cwd: resolve(__dirname, "../.."),
-      encoding: "utf-8",
-    });
+    const result = spawnSync(
+      "pnpm",
+      ["exec", "turbo", "run", "build", "--filter=create-croco-app..."],
+      {
+        cwd: resolve(__dirname, "../.."),
+        encoding: "utf-8",
+      },
+    );
 
     expect(result.status, result.stderr || result.stdout).toBe(0);
   }, createCrocoAppBuildTimeoutMs);
@@ -90,6 +94,25 @@ describe("first-success-verify.mts", () => {
 
     expect(result.status, result.stderr || result.stdout).toBe(0);
     expect(result.stdout).toContain("first-success contract verification PASSED");
+  });
+
+  it.each([
+    ["typecheck", "tsc --noEmit", "S2c"],
+    ["build", "tsc --noEmit", "S2d"],
+    ["typecheck", "tsrs", "S2c"],
+    ["build", "tsrs --noEmit false", "S2d"],
+  ])("rejects SaaS %s command %s outside the native no-emit contract", (name, command, code) => {
+    const root = createFixture();
+    const manifestPath = join(root, "examples/saas-billing-golden-path/package.json");
+    const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
+    manifest.scripts[name] = command;
+    writeFileSync(manifestPath, JSON.stringify(manifest));
+
+    const result = runScript(root);
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain(`${code}: scripts.${name}=`);
+    expect(result.stdout).toContain('does not match expected "tsrs --noEmit"');
   });
 
   it("fails when quick-start development bypasses the compiler", () => {
@@ -682,10 +705,10 @@ function createFixture(options: FixtureOptions = {}): string {
       {
         dependencies: { "@croco/ratelimit-core": "workspace:*" },
         scripts: {
-          build: "tsc --noEmit",
+          build: "tsrs --noEmit",
           dev: "tsx src/index.ts",
           test: "vitest run src/tests",
-          typecheck: "tsc --noEmit",
+          typecheck: "tsrs --noEmit",
         },
       },
       null,
