@@ -609,14 +609,14 @@ describe("test lane runner", () => {
       writeFileSync(
         join(packageRoot, "playwright.config.cjs"),
         `module.exports = {
-        workers: 1, retries: 1, projects: [{ name: 'first' }, { name: 'second' }],
+        workers: 1, projects: [{ name: 'first' }, { name: 'second' }],
       };`,
       );
       const prelude = "const { test, expect } = require('@playwright/test');\n";
       const sources = [
         "test.skip('all skipped', () => {});",
         "test('fails', () => expect(1).toBe(2)); test.skip('failure skip', () => {});",
-        "test('passes', () => expect(1).toBe(1)); test('retry succeeds', ({}, info) => expect(info.retry).toBe(1)); test('expected failure', () => { test.fail(); expect(1).toBe(2); }); test.describe('nested', () => { test.skip('not executed', () => {}); });",
+        "test.describe.configure({ retries: 1 }); test('passes', () => expect(1).toBe(1)); test('retry succeeds', ({}, info) => expect(info.retry).toBe(1)); test('expected failure', () => { test.fail(); expect(1).toBe(2); }); test.describe('nested', () => { test.skip('not executed', () => {}); });",
         "test('passes', () => expect(1).toBe(1));",
         "test('project-specific', ({}, info) => { test.skip(info.project.name === 'second', 'project skip'); expect(1).toBe(1); });",
       ];
@@ -650,6 +650,12 @@ describe("test lane runner", () => {
       expect(partial.status).toBe("failed");
       expect(partial.diagnostics).toContainEqual(
         expect.objectContaining({ code: "TEST_LANE_EXECUTION_INCOMPLETE" }),
+      );
+      // Retry semantics were checked above; keep the full-file matrix free of duplicate retries.
+      writeFileSync(
+        join(packageRoot, "partial.spec.cjs"),
+        prelude +
+          "test('passes', () => expect(1).toBe(1)); test.describe('nested', () => { test.skip('not executed', () => {}); });",
       );
       writeFileSync(
         join(packageRoot, "package.json"),
@@ -691,7 +697,7 @@ describe("test lane runner", () => {
         expect.objectContaining({
           path: "packages/a/partial.spec.cjs",
           status: "partially-executed",
-          passedAssertions: 4,
+          passedAssertions: 2,
           skippedAssertions: [
             { name: "nested > not executed [first]", status: "skipped" },
             { name: "nested > not executed [second]", status: "skipped" },
