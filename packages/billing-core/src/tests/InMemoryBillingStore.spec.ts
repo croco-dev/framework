@@ -925,6 +925,16 @@ describe("InMemoryBillingStore", () => {
       await store.deleteSubscription(original.billingAccountId);
       expect((await commit("late-after-delete", original)).intents).toEqual([]);
       expect(await store.findSubscription(original.billingAccountId)).toBeNull();
+      await store.saveSubscription(original);
+      vi.spyOn(store, "saveSubscription").mockRejectedValueOnce(
+        new WebhookAlreadyProcessedProblem("write-failed-again"),
+      );
+      await expect(commit("failed-after-restore", newest)).rejects.toBeInstanceOf(
+        WebhookAlreadyProcessedProblem,
+      );
+      await store.deleteSubscription(original.billingAccountId);
+      expect((await commit("late-after-failed-restore", original)).intents).toEqual([]);
+      expect(await store.findSubscription(original.billingAccountId)).toBeNull();
     });
 
     it("accepts equal, newer, legacy, and replacement subscription timestamps", async () => {

@@ -378,13 +378,19 @@ export class InMemoryBillingStore extends BillingStore {
             previousSubscription.externalSubscriptionId,
           ])
         : undefined;
+    const previousReplacement = retiredKey
+      ? this.subscriptionReplacements.get(retiredKey)
+      : undefined;
     if (retiredKey) {
       this.subscriptionReplacements.set(retiredKey, cloneSubscriptionWebhookTransition(transition));
     }
     try {
       await this.saveSubscription(input.subscription);
     } catch (error) {
-      if (retiredKey) this.subscriptionReplacements.delete(retiredKey);
+      if (retiredKey) {
+        if (previousReplacement) this.subscriptionReplacements.set(retiredKey, previousReplacement);
+        else this.subscriptionReplacements.delete(retiredKey);
+      }
       this.processedWebhooks.delete(input.eventId);
       this.subscriptionWebhookTransitions.delete(input.eventId);
       if (input.clearWebhookReservationId && clearedReservationState) {
