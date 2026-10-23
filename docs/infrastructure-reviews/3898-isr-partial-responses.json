@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "meta-vite",
+      "classification": "protocol-render",
+      "reason": "Keep Range and If-Range requests out of shared TTL cache/single-flight, reject partial responses on write, and bypass legacy partial entries on read. No range assembly, routing, UI rendering, adapter or durability changes.",
+      "files": {
+        "packages/meta-vite/src/libs/isr/isrMiddleware.ts": "b9cbae71e2a352502b7e0de96df73e6aa010b4a5b1d31ec9456cdf5da9082f9d"
+      },
+      "catalogRuntimes": ["node", "lambda", "cloudflare-workers", "browser"],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "This HTTP cacheability decision uses only standard Request/Response status and headers and the existing getOrSet contract. It adds no Node API, provider, storage or lifecycle requirement; existing host and durable-store limits remain unchanged.",
+          "providers": [],
+          "constraints": [
+            "Local Request/Response regression tests do not certify live infrastructure or a durable cache provider."
+          ],
+          "references": [
+            "packages/meta-vite/src/libs/isr/isrMiddleware.ts",
+            "packages/meta-vite/src/libs/isr/types.ts",
+            "packages/meta-vite/src/libs/isr/runtimeSupport.ts",
+            "packages/presentation-preset/runtime-profiles.json"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "This HTTP cacheability decision uses only standard Request/Response status and headers and the existing getOrSet contract. It adds no Lambda API, provider, storage or lifecycle requirement; existing host and durable-store limits remain unchanged.",
+          "providers": [],
+          "constraints": [
+            "Local Request/Response regression tests do not certify live infrastructure or a durable cache provider."
+          ],
+          "references": [
+            "packages/meta-vite/src/libs/isr/isrMiddleware.ts",
+            "packages/meta-vite/src/libs/isr/types.ts",
+            "packages/meta-vite/src/libs/isr/runtimeSupport.ts",
+            "packages/presentation-preset/runtime-profiles.json"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "This HTTP cacheability decision uses only standard Request/Response status and headers and the existing getOrSet contract. It adds no Workers API, provider, storage or lifecycle requirement; existing host and durable-store limits remain unchanged.",
+          "providers": [],
+          "constraints": [
+            "Local Request/Response regression tests do not certify live infrastructure or a durable cache provider."
+          ],
+          "references": [
+            "packages/meta-vite/src/libs/isr/isrMiddleware.ts",
+            "packages/meta-vite/src/libs/isr/types.ts",
+            "packages/meta-vite/src/libs/isr/runtimeSupport.ts",
+            "packages/presentation-preset/runtime-profiles.json"
+          ]
+        }
+      }
+    }
+  ]
+}
