@@ -11,6 +11,7 @@ import {
   SagaRunner,
   type SagaDefinition,
   type SagaStore,
+  type SagaOutboxMessage,
 } from "../index";
 
 class ProviderProblem extends Problem {
@@ -801,6 +802,155 @@ describe("SagaRunner", () => {
     expect(replayed.steps[0]?.outboxMessages.map((message) => message.deliveryId)).toEqual(
       failed.steps[0]?.outboxMessages.map((message) => message.deliveryId),
     );
+  });
+
+  it("delivers changed replay messages while preserving legacy identities for equal content", async () => {
+    const store = new InMemorySagaStore();
+    const runner = new SagaRunner(store);
+    const delivered = new Map<string, unknown>();
+    const definition: SagaDefinition = {
+      name: "semantic-replay-outbox",
+      outbox: {
+        publish: (message) => {
+          if (!delivered.has(message.deliveryId))
+            delivered.set(message.deliveryId, message.payload);
+        },
+      },
+      steps: [
+        {
+          id: "reserve",
+          run: () => "reserved",
+          compensate: (_input, { payload, enqueueOutbox }) => {
+            enqueueOutbox({ id: "refund", topic: "refunds", payload });
+          },
+        },
+        {
+          id: "fail",
+          run: () => {
+            throw new ProviderProblem("unavailable");
+          },
+        },
+      ],
+    };
+    await expect(runner.execute(definition, { orderId: "order-A", amount: 12 })).rejects.toThrow(
+      SagaExecutionFailedProblem,
+    );
+    const [original] = await runner.listExecutions({ replayOf: null });
+    // An independently constructed historical record, before content-aware identities existed.
+    const legacyId = `${original.id}:reserve:compensation:0:refund`;
+    await store.update(original.id, {
+      steps: original.steps.map((step) => ({
+        ...step,
+        outboxMessages: step.outboxMessages.map((message) => ({
+          ...message,
+          deliveryId: legacyId,
+        })),
+      })),
+    });
+    delivered.clear();
+    delivered.set(legacyId, original.payload);
+    await runner.dispatchOutbox(definition, original.id);
+
+    await expect(
+      runner.replay(definition, original.id, { payload: { amount: 12, orderId: "order-A" } }),
+    ).rejects.toThrow(SagaExecutionFailedProblem);
+    const [same] = await runner.listExecutions({ replayOf: original.id });
+    expect(same.steps[0]?.outboxMessages[0]?.deliveryId).toBe(legacyId);
+    await runner.dispatchOutbox(definition, same.id);
+    expect(delivered.size).toBe(1);
+
+    await expect(
+      runner.replay(definition, same.id, { payload: { orderId: "order-B", amount: 23 } }),
+    ).rejects.toThrow(SagaExecutionFailedProblem);
+    const [changed] = await runner.listExecutions({ replayOf: same.id });
+    const changedId = changed.steps[0]?.outboxMessages[0]?.deliveryId;
+    expect(changedId).not.toBe(legacyId);
+    await runner.dispatchOutbox(definition, changed.id);
+    await runner.dispatchOutbox(definition, changed.id);
+    expect([...delivered.values()]).toEqual([
+      { orderId: "order-A", amount: 12 },
+      { orderId: "order-B", amount: 23 },
+    ]);
+    expect((await runner.getExecution(changed.id)).steps[0]?.outboxMessages[0]?.status).toBe(
+      "published",
+    );
+
+    await expect(runner.replay(definition, changed.id)).rejects.toThrow(SagaExecutionFailedProblem);
+    const [repeated] = await runner.listExecutions({ replayOf: changed.id });
+    expect(repeated.steps[0]?.outboxMessages[0]?.deliveryId).toBe(changedId);
+    await runner.dispatchOutbox(definition, repeated.id);
+    expect(delivered.size).toBe(2);
+
+    // Historical buggy replays could already have assigned one legacy ID to different content.
+    await store.update(repeated.id, {
+      steps: repeated.steps.map((step) => ({
+        ...step,
+        outboxMessages: step.outboxMessages.map((message) => ({
+          ...message,
+          deliveryId: legacyId,
+        })),
+      })),
+    });
+    await expect(
+      runner.replay(definition, repeated.id, { payload: original.payload }),
+    ).rejects.toThrow(SagaExecutionFailedProblem);
+    const [conflicted] = await runner.listExecutions({ replayOf: repeated.id });
+    expect(conflicted.compensationFailures).toEqual([
+      expect.objectContaining({ message: expect.stringContaining("conflicting message content") }),
+    ]);
+    expect(delivered.size).toBe(2);
+  });
+
+  it.each([
+    { topic: "refunds.changed" },
+    { idempotencyKey: "refund-B" },
+    { metadata: { destination: "account-B" } },
+    { payload: [null] },
+    { payload: { amount: BigInt(12) } },
+    { payload: new Date("2026-01-02T03:04:05Z") },
+  ])("distinguishes semantic message changes %o", async (change) => {
+    const runner = new SagaRunner();
+    const delivered = new Set<string>();
+    let message: SagaOutboxMessage = {
+      id: "refund",
+      topic: "refunds",
+      payload: [undefined],
+      idempotencyKey: "refund-A",
+      metadata: { destination: "account-A" },
+    };
+    const definition: SagaDefinition = {
+      name: "changed-message-content",
+      outbox: {
+        publish: (record) => {
+          delivered.add(record.deliveryId);
+        },
+      },
+      steps: [
+        {
+          id: "reserve",
+          run: () => "reserved",
+          compensate: (_input, context) => {
+            context.enqueueOutbox(message);
+          },
+        },
+        {
+          id: "fail",
+          run: () => {
+            throw new ProviderProblem("unavailable");
+          },
+        },
+      ],
+    };
+    await expect(runner.execute(definition, {})).rejects.toThrow(SagaExecutionFailedProblem);
+    const [original] = await runner.listExecutions({ replayOf: null });
+    message = { ...message, ...change };
+    await expect(runner.replay(definition, original.id)).rejects.toThrow(
+      SagaExecutionFailedProblem,
+    );
+    const [changed] = await runner.listExecutions({ replayOf: original.id });
+    expect(delivered.size).toBe(2);
+    await expect(runner.replay(definition, changed.id)).rejects.toThrow(SagaExecutionFailedProblem);
+    expect(delivered.size).toBe(2);
   });
 
   it("records compensation failures separately from the original step failure", async () => {
