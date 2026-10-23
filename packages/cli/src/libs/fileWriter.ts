@@ -79,7 +79,14 @@ export async function write(
 
   await mkdir(dirname(targetPath), { recursive: true });
   const diff = exists ? await generateDiff(targetPath, content) : undefined;
-  await writeFile(targetPath, content, "utf-8");
+  try {
+    await writeFile(targetPath, content, { encoding: "utf-8", flag: overwrite ? "w" : "wx" });
+  } catch (error) {
+    if (!overwrite && error instanceof Error && "code" in error && error.code === "EEXIST") {
+      return { status: "exists-no-overwrite", path: targetPath };
+    }
+    throw error;
+  }
   return {
     status: exists ? "overwritten" : "created",
     path: targetPath,

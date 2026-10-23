@@ -336,6 +336,13 @@ commonly share these options:
 | `--dryRun`    | `boolean` | Preview changes without writing files        |
 | `--overwrite` | `boolean` | Overwrite existing files                     |
 
+Generated-file writes without `--overwrite` use exclusive creation: concurrent attempts at the same
+path produce one `created` result and skip the others without replacing the winning content.
+`--dryRun` only previews content and diffs. Explicit `--overwrite` retains direct replacement and diff
+reporting; it is not an atomic replacement or rollback operation. A filesystem error is propagated and
+can leave a partial file for either write mode. Inspect that file before retrying: default creation skips
+it, while `--overwrite` explicitly permits replacing it. An error does not report a successful write.
+
 ## Workspace Detection
 
 Commands call `detect()` from `@croco/cli`, which walks up the directory tree looking for `pnpm-workspace.yaml`. When found, it checks for:

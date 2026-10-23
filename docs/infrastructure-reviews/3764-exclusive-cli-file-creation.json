@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "cli",
+      "classification": "runtime-adapter",
+      "reason": "Use exclusive local file creation to preserve another scaffold writer when overwrite is disabled; retain explicit direct-overwrite and error recovery semantics.",
+      "files": {
+        "packages/cli/src/libs/fileWriter.ts": "2921e2207b036b0099195bdce169704c542d207983ed5b5677c732c86f268850"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "This change protects local CLI scaffold files using the existing Node filesystem API. It does not execute in an application Host, alter deployed storage or lifecycle contracts, or introduce a Provider or deployment support claim.",
+          "providers": [],
+          "constraints": [
+            "Exclusive creation depends on the filesystem honoring the existing Node wx open flag; direct writes are not atomic replacement or rollback."
+          ],
+          "references": ["packages/cli/src/libs/fileWriter.ts", "packages/cli/README.md"]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "This change protects local CLI scaffold files using the existing Node filesystem API. It does not execute in an application Host, alter deployed storage or lifecycle contracts, or introduce a Provider or deployment support claim.",
+          "providers": [],
+          "constraints": [
+            "Exclusive creation depends on the filesystem honoring the existing Node wx open flag; direct writes are not atomic replacement or rollback."
+          ],
+          "references": ["packages/cli/src/libs/fileWriter.ts", "packages/cli/README.md"]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "This change protects local CLI scaffold files using the existing Node filesystem API. It does not execute in an application Host, alter deployed storage or lifecycle contracts, or introduce a Provider or deployment support claim.",
+          "providers": [],
+          "constraints": [
+            "Exclusive creation depends on the filesystem honoring the existing Node wx open flag; direct writes are not atomic replacement or rollback."
+          ],
+          "references": ["packages/cli/src/libs/fileWriter.ts", "packages/cli/README.md"]
+        }
+      }
+    }
+  ]
+}

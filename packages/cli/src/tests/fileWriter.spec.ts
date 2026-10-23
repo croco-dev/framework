@@ -1,5 +1,6 @@
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { writeFile, rm, mkdir } from "node:fs/promises";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import * as fsPromises from "node:fs/promises";
+import { writeFile, readFile, rm, mkdir, access, symlink } from "node:fs/promises";
 import { join } from "node:path";
 import {
   createCrocoCommandRuntime,
@@ -8,6 +9,10 @@ import {
   runWithCrocoCommandRuntime,
 } from "../libs/cliRuntime.js";
 import { write } from "../libs/fileWriter.js";
+
+vi.mock("node:fs/promises", async (importOriginal) => ({
+  ...(await importOriginal<typeof fsPromises>()),
+}));
 
 describe("write", () => {
   const tmpDir = "/tmp/croco-fw-test-" + Date.now();
@@ -52,6 +57,116 @@ describe("write", () => {
     await writeFile(targetPath, "old");
     const result = await write(targetPath, "new", { overwrite: true });
     expect(result.status).toBe("overwritten");
+  });
+
+  it("should preserve exactly one complete writer when creating the same file concurrently", async () => {
+    const contents = ["first-owner:한글\n".repeat(8193), "second-owner:終\n".repeat(4097)];
+    const results = await Promise.all(
+      contents.map((content) => write(targetPath, content, { overwrite: false })),
+    );
+
+    expect(results.map((result) => result.status).sort()).toEqual([
+      "created",
+      "exists-no-overwrite",
+    ]);
+    const winner = results.findIndex((result) => result.status === "created");
+    expect(await readFile(targetPath)).toEqual(Buffer.from(contents[winner] ?? ""));
+    expect(results.every((result) => result.diff === undefined)).toBe(true);
+
+    expect(await write(targetPath, "retry must not replace the winner")).toEqual({
+      status: "exists-no-overwrite",
+      path: targetPath,
+    });
+    expect(await readFile(targetPath)).toEqual(Buffer.from(contents[winner] ?? ""));
+  });
+
+  it("should leave existing user content unchanged when overwrite is false", async () => {
+    const original = Buffer.from("user-owned:α\n".repeat(71));
+    await mkdir(join(tmpDir, "nested"), { recursive: true });
+    await writeFile(targetPath, original);
+
+    await expect(write(targetPath, "replacement", { overwrite: false })).resolves.toEqual({
+      status: "exists-no-overwrite",
+      path: targetPath,
+    });
+    expect(await readFile(targetPath)).toEqual(original);
+  });
+
+  it("should propagate filesystem failure and allow retry after its cause is removed", async () => {
+    await mkdir(tmpDir, { recursive: true });
+    await writeFile(join(tmpDir, "nested"), "parent is a user file");
+
+    await expect(write(targetPath, "generated")).rejects.toMatchObject({ code: "EEXIST" });
+    expect(await readFile(join(tmpDir, "nested"), "utf-8")).toBe("parent is a user file");
+    await rm(join(tmpDir, "nested"));
+
+    await expect(write(targetPath, "generated")).resolves.toMatchObject({ status: "created" });
+    expect(await readFile(targetPath, "utf-8")).toBe("generated");
+  });
+
+  it("should preserve a dangling symlink instead of writing through it", async () => {
+    await mkdir(join(tmpDir, "nested"), { recursive: true });
+    const destination = join(tmpDir, "user-target.txt");
+    await symlink(destination, targetPath);
+
+    await expect(write(targetPath, "generated")).resolves.toEqual({
+      status: "exists-no-overwrite",
+      path: targetPath,
+    });
+    expect(await fsPromises.readlink(targetPath)).toBe(destination);
+    await expect(access(destination)).rejects.toMatchObject({ code: "ENOENT" });
+  });
+
+  it.each([false, true])(
+    "should propagate a partial write failure with overwrite=%s and require explicit recovery",
+    async (overwrite) => {
+      if (overwrite) await writeExistingFile("previous user content");
+      const failure = Object.assign(new Error("storage exhausted"), { code: "ENOSPC" });
+      const realWriteFile = fsPromises.writeFile;
+      const writer = vi.spyOn(fsPromises, "writeFile").mockImplementationOnce(async (path) => {
+        await realWriteFile(path, "partial bytes");
+        throw failure;
+      });
+      try {
+        await expect(write(targetPath, "complete generated content", { overwrite })).rejects.toBe(
+          failure,
+        );
+      } finally {
+        writer.mockRestore();
+      }
+
+      expect(await readFile(targetPath, "utf-8")).toBe("partial bytes");
+      await expect(write(targetPath, "implicit retry")).resolves.toMatchObject({
+        status: "exists-no-overwrite",
+      });
+      expect(await readFile(targetPath, "utf-8")).toBe("partial bytes");
+      await expect(
+        write(targetPath, "recovered content", { overwrite: true }),
+      ).resolves.toMatchObject({
+        status: "overwritten",
+      });
+      expect(await readFile(targetPath, "utf-8")).toBe("recovered content");
+    },
+  );
+
+  it("should keep dry-run read-only for a missing file", async () => {
+    await expect(write(targetPath, "preview\n", { dryRun: true })).resolves.toEqual({
+      status: "skipped-dry-run",
+      path: targetPath,
+      diff: "+2 lines",
+    });
+    await expect(access(tmpDir)).rejects.toMatchObject({ code: "ENOENT" });
+  });
+
+  it("should preserve the explicit overwrite content and diff contract", async () => {
+    await writeExistingFile("old\n");
+    const preview = await write(targetPath, "replacement\n", { dryRun: true });
+    expect(await readFile(targetPath, "utf-8")).toBe("old\n");
+
+    const result = await write(targetPath, "replacement\n", { overwrite: true });
+    expect(result).toEqual({ status: "overwritten", path: targetPath, diff: preview.diff });
+    expect(result.diff).toContain("-old\n+replacement\n");
+    expect(await readFile(targetPath, "utf-8")).toBe("replacement\n");
   });
 
   it("should render an inserted line without changing the following lines", async () => {
