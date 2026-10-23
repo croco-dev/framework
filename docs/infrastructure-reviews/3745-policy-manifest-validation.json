@@ -47,7 +47,7 @@
       "classification": "pure-contract",
       "reason": "Regenerate existing Problem source locations after architecture policy diagnostics change. Only three line-number values change in the exported registry and declaration.",
       "files": {
-        "packages/problems-core/src/generated/problem-code-registry.ts": "3debd94b3aaf080059b3ef4a67152097408b3364657c2356ff1827db4a019866"
+        "packages/problems-core/src/generated/problem-code-registry.ts": "f9fe55adf6c11c4045eb7ae6ea97336dc409d8d76c95962be1e3ec9db394f63d"
       },
       "catalogRuntimes": [],
       "profiles": {
