@@ -78,6 +78,13 @@ function originOf(policy: SitemapPolicy): string {
   return url.origin;
 }
 
+function hasControlCharacter(value: string): boolean {
+  for (let index = 0; index < value.length; index++) {
+    if (value.charCodeAt(index) < 32) return true;
+  }
+  return false;
+}
+
 function publicUrl(raw: string, origin: string, policy: SitemapPolicy): string | null {
   if (typeof raw !== "string" || raw.length >= 2048) return null;
   let url: URL;
@@ -86,8 +93,7 @@ function publicUrl(raw: string, origin: string, policy: SitemapPolicy): string |
   } catch {
     return null;
   }
-  if (Array.from(raw).some((char) => char.charCodeAt(0) <= 32 || char.charCodeAt(0) === 127))
-    return null;
+  if (hasControlCharacter(raw) || raw.includes(" ") || raw.includes("\u007f")) return null;
   if (
     url.href.length >= 2048 ||
     url.origin !== origin ||
@@ -106,7 +112,7 @@ function publicUrl(raw: string, origin: string, policy: SitemapPolicy): string |
       seen.has(key) ||
       /token|secret|password|email|session|credential|authorization|user|customer/i.test(key) ||
       value.includes("@") ||
-      Array.from(value).some((char) => char.charCodeAt(0) < 32) ||
+      hasControlCharacter(value) ||
       !Array.isArray(allowed) ||
       !allowed.includes(value)
     )
@@ -286,28 +292,30 @@ export async function generateSitemap(
     group.push({ ...entry, url });
     candidates.set(url, group);
   }
-  const identity = (entry: SitemapEntry) =>
-    JSON.stringify([entry.resourceId, entry.locale || null]);
-  const canonicalByIdentity = new Map<string, Set<string>>();
+  const canonicalByIdentity = new Map<string, Map<string, Set<string>>>();
   for (const [url, group] of candidates) {
     for (const entry of group) {
-      const key = identity(entry);
-      const urls = canonicalByIdentity.get(key) ?? new Set<string>();
+      const locales = canonicalByIdentity.get(entry.resourceId) ?? new Map<string, Set<string>>();
+      const locale = entry.locale || "";
+      const urls = locales.get(locale) ?? new Set<string>();
       urls.add(url);
-      canonicalByIdentity.set(key, urls);
+      locales.set(locale, urls);
+      canonicalByIdentity.set(entry.resourceId, locales);
     }
   }
   const accepted: SitemapEntry[] = [];
   for (const [, group] of candidates) {
     const first = group[0];
     if (!first) continue;
-    const signature = (entry: SitemapEntry) =>
-      JSON.stringify([entry.resourceId, lastmod(entry), entry.locale, entry.localeGroup]);
+    const modified = lastmod(first);
     if (
       group.some(
         (entry) =>
-          signature(entry) !== signature(first) ||
-          (canonicalByIdentity.get(identity(entry))?.size ?? 0) > 1,
+          entry.resourceId !== first.resourceId ||
+          lastmod(entry) !== modified ||
+          entry.locale !== first.locale ||
+          entry.localeGroup !== first.localeGroup ||
+          (canonicalByIdentity.get(entry.resourceId)?.get(entry.locale || "")?.size ?? 0) > 1,
       )
     ) {
       for (const entry of group) exclude(entry, "canonical-conflict");

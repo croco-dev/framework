@@ -1647,7 +1647,7 @@ describe("GraphQL addon templates", () => {
     );
     expect(nextjsPackageJson).toMatchObject({
       scripts: expect.objectContaining({
-        build: "pnpm contract:check && next build",
+        build: "pnpm contract:check && next build --webpack",
         "contract:check": "tsx src/server/graphql-contract.ts --check",
         "contract:snapshot": "tsx src/server/graphql-contract.ts --write",
         typecheck: "pnpm contract:check && tsc --noEmit",

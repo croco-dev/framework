@@ -179,6 +179,28 @@ describe("Sitemap", () => {
     );
   });
 
+  it("rejects raw control characters and decoded query controls while allowing approved query spaces", async () => {
+    const rawControls = ["\u0000", "\u0001", "\u001f", " ", "\u007f"];
+    const queryControls = ["\u0000", "\u0001", "\u001f"];
+    const queryValues = [...queryControls.map((char) => `blue${char}sky`), "blue sky"];
+    const urls = [
+      ...rawControls.map((char) => `https://shop.example/products/a${char}b`),
+      ...queryValues.map(
+        (value) => `https://shop.example/products/query?edition=${encodeURIComponent(value)}`,
+      ),
+    ];
+    const generated = await generateSitemap(
+      source(urls.map((url, index) => entry(String(index), { url, canonical: url }))),
+      { ...policy, queryValues: { edition: queryValues } },
+    );
+
+    expect(generated.report.included).toBe(1);
+    expect(generated.report.excluded.url).toBe(rawControls.length + queryControls.length);
+    expect(parser.parse(generated.files[0]?.xml ?? "").urlset.url.loc).toBe(
+      "https://shop.example/products/query?edition=blue%20sky",
+    );
+  });
+
   it("sorts before partitioning, round-trips escaped XML and emits only real locale alternates", async () => {
     const rows = [
       entry("z", { locale: "ko", localeGroup: "product-7" }),
