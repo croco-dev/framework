@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "esbuild-plugin",
+      "classification": "pure-contract",
+      "reason": "Select the protocol role independently of Component decorator order and reject conflicting protocol roles at build time. No provider, storage, deployment resource or runtime lifecycle is introduced.",
+      "files": {
+        "packages/esbuild-plugin/src/libs/DiCompiler.ts": "f4cca4f40572fcbbc7d90c56a1921546adbf33b7c0c7840fff5841b3bafa8e77"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Stereotype selection happens at build time before deployment; no Kubernetes resources or Node Host lifecycle change.",
+          "providers": [],
+          "constraints": [
+            "The DI compiler uses the existing Node build toolchain and filesystem; applications retain their selected runtime capabilities."
+          ],
+          "references": [
+            "packages/esbuild-plugin/src/libs/DiCompiler.ts",
+            "docs/architecture/compile-time-di.md",
+            "packages/transports-http/src/libs/CrocoApp.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Generated provider roles are selected before packaging; Lambda invocation scope and flush ownership remain with the existing Host.",
+          "providers": [],
+          "constraints": [
+            "The DI compiler uses the existing Node build toolchain and filesystem; applications retain their selected runtime capabilities."
+          ],
+          "references": [
+            "packages/esbuild-plugin/src/libs/DiCompiler.ts",
+            "docs/architecture/compile-time-di.md",
+            "packages/transports-http/src/libs/CrocoApp.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "This compiler change adds no Workers or Node Container capability and makes no runtime support claim.",
+          "providers": [],
+          "constraints": [
+            "The DI compiler uses the existing Node build toolchain and filesystem; applications retain their selected runtime capabilities."
+          ],
+          "references": [
+            "packages/esbuild-plugin/src/libs/DiCompiler.ts",
+            "docs/architecture/compile-time-di.md",
+            "packages/transports-http/src/libs/CrocoApp.ts"
+          ]
+        }
+      }
+    }
+  ]
+}

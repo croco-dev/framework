@@ -32,6 +32,10 @@ function writeProjectAt(projectDir: string, files: Readonly<Record<string, strin
         baseUrl: repositoryRoot,
         paths: {
           "@croco/framework-context": ["packages/framework-context/src/index.ts"],
+          "@croco/protocols-rest": ["packages/protocols-rest/src/index.ts"],
+          "@croco/protocols-graphql": [
+            "packages/protocols-graphql/src/libs/decorators/GraphQLResolver.ts",
+          ],
         },
       },
     }),
@@ -389,6 +393,142 @@ describe("compileDiGraph", () => {
 
   afterEach(() => {
     fs.rmSync(TEMP_DIR, { recursive: true, force: true });
+  });
+
+  it("preserves protocol roles and request scope in either decorator order", async () => {
+    writeProject({
+      "src/Controllers.ts": `
+        import { Component } from "@croco/framework-context";
+        import { Controller, Get } from "@croco/protocols-rest";
+        @Component({ scope: "request" })
+        @Controller("/component-first")
+        export class ComponentFirst {
+          @Get("/") read() { return { order: "component-first" }; }
+        }
+        @Controller("/controller-first")
+        @Component({ scope: "request" })
+        export class ControllerFirst {
+          @Get("/") read() { return { order: "controller-first" }; }
+        }
+        @Component() export class Service {}
+        @Controller("/standalone") export class Standalone {}
+      `,
+    });
+    const result = compileDiGraph({ baseDir: TEMP_DIR });
+    writeDiGraph(result);
+    fs.writeFileSync(
+      path.join(TEMP_DIR, "runtime.ts"),
+      `
+      import { strict as assert } from "node:assert";
+      import { Container } from "@croco/framework-context";
+      import { createApp } from "@croco/transports-http";
+      import { generatedDiGraph } from "./.croco/di.generated";
+      const scope = Container.createScope();
+      async function main() {
+        try {
+          await scope.run(async () => {
+            Container.installGeneratedGraph(generatedDiGraph);
+            const app = createApp({ controllers: [], securityValidation: "off" });
+            for (const order of ["component-first", "controller-first"]) {
+              const response = await app.fetch(new Request("http://localhost/" + order));
+              assert.equal(response.status, 200, order);
+              assert.deepEqual(await response.json(), { order });
+            }
+          });
+        } finally { await scope.dispose(); }
+      }
+      main().catch(error => { console.error(error); process.exitCode = 1; });
+    `,
+    );
+    const bundleFile = path.join(TEMP_DIR, "runtime.cjs");
+    await esbuild.build({
+      entryPoints: [path.join(TEMP_DIR, "runtime.ts")],
+      outfile: bundleFile,
+      alias: Object.fromEntries(
+        ["framework-context", "protocols-rest", "transports-http"].map((name) => [
+          `@croco/${name}`,
+          path.resolve(__dirname, `../../../${name}/src/index.ts`),
+        ]),
+      ),
+      bundle: true,
+      format: "cjs",
+      platform: "node",
+      tsconfig: path.join(TEMP_DIR, "tsconfig.json"),
+    });
+    execFileSync(process.execPath, [bundleFile], { cwd: TEMP_DIR, stdio: "pipe" });
+    for (const exportName of ["ComponentFirst", "ControllerFirst"]) {
+      expect(
+        result.manifest.providers.find((provider) => provider.exportName === exportName),
+      ).toMatchObject({
+        stereotype: "Controller",
+        scope: "request",
+      });
+    }
+    expect(result.code.match(/kind: "rest-controller"/g)).toHaveLength(3);
+    expect(
+      result.manifest.providers.find((provider) => provider.exportName === "Service"),
+    ).toMatchObject({
+      stereotype: "Component",
+      scope: "singleton",
+    });
+    expect(
+      result.manifest.providers.find((provider) => provider.exportName === "Standalone"),
+    ).toMatchObject({
+      stereotype: "Controller",
+      scope: "singleton",
+    });
+  }, 30_000);
+
+  it("keeps GraphQL resolver roles independent of Component order", () => {
+    writeProject({
+      "src/Resolvers.ts": `
+        import { Component } from "@croco/framework-context";
+        import { GraphQLResolver } from "@croco/protocols-graphql";
+        @Component({ scope: "request" }) @GraphQLResolver()
+        export class ComponentFirst {}
+        @GraphQLResolver() @Component({ scope: "request" })
+        export class ResolverFirst {}
+      `,
+    });
+    const result = compileDiGraph({ baseDir: TEMP_DIR });
+    expect(
+      result.manifest.providers.map((provider) => ({
+        name: provider.exportName,
+        stereotype: provider.stereotype,
+        scope: provider.scope,
+      })),
+    ).toEqual([
+      { name: "ComponentFirst", stereotype: "GraphQLResolver", scope: "request" },
+      { name: "ResolverFirst", stereotype: "GraphQLResolver", scope: "request" },
+    ]);
+    expect(result.code.match(/kind: "graphql-resolver"/g)).toHaveLength(2);
+  });
+
+  it.each([
+    '@Controller("/conflict") @GraphQLResolver()',
+    '@GraphQLResolver() @Controller("/conflict")',
+  ])("rejects conflicting protocol roles with a source diagnostic: %s", (decorators) => {
+    writeProject({
+      "src/Conflict.ts": `import { Controller } from "@croco/protocols-rest";
+import { GraphQLResolver } from "@croco/protocols-graphql";
+${decorators}
+export class Conflict {}`,
+    });
+    let failure: unknown;
+    try {
+      compileDiGraph({ baseDir: TEMP_DIR });
+    } catch (error) {
+      failure = error;
+    }
+    expect(failure).toBeInstanceOf(DiCompilerError);
+    expect((failure as DiCompilerError).diagnostics).toEqual([
+      expect.objectContaining({
+        code: "CROCO_DI_COMPILE_002",
+        file: "src/Conflict.ts",
+        line: 3,
+        message: expect.stringContaining("Controller, GraphQLResolver"),
+      }),
+    ]);
   });
 
   it("discovers unimported decorated providers and generates explicit factories", async () => {
