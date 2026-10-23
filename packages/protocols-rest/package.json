@@ -35,7 +35,7 @@
   "scripts": {
     "build": "tsup src/index.ts --format esm,cjs --minify --clean --dts",
     "lint": "oxlint .",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsrs --noEmit",
     "test": "vitest run",
     "test:evidence": "pnpm run test --maxWorkers=1 --reporter=json --outputFile=.turbo/croco-test-evidence.json",
     "test:watch": "vitest",
@@ -49,6 +49,7 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "typescript": "6.0.3",
     "vitest": "4.1.8"
   },
   "vitest": {

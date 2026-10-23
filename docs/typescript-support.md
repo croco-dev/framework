@@ -1,15 +1,36 @@
 # TypeScript compiler support
 
-Croco 1.x is built, typechecked, tested, and published with TypeScript 6.0.3. The workspace pins that exact
-compiler and forces dependencies on the `typescript` package to the same version through the pnpm override. Generated
-`create-croco-app` projects declare `^6.0.3`, so consumers receive TypeScript 6 while retaining compatible patch
-updates.
+Repository typechecks use exactly `tsrs@0.18.0-ts7.1.0-dev.20260929`, which targets a TypeScript 7.1 development
+build. The pinned prerelease has been checked against all 179 workspace typecheck tasks. Upgrades must rerun
+the full task graph and strict contract diagnostic baseline before changing the pin.
+
+TypeScript 6.0.3 remains the Compiler API and emission baseline. The workspace pins `typescript` to that exact
+version and forces dependencies on it to the same version through the pnpm override. DI compilation, code
+generation, repository AST/config analysis, tsup declaration builds, TypeDoc and tests that use the Compiler API
+continue to load TypeScript 6. Generated `create-croco-app` projects declare `^6.0.3` and keep their `tsc`
+commands, so published consumer support remains on TypeScript 6 with compatible patch updates.
 
 Protocol project analysis and temporary emission use the TypeScript 6.0.2 compiler embedded in pinned
 `ts-morph` 28.0.0; pnpm's `typescript` override cannot replace an embedded compiler. Protocol regression tests
 check that actual compiler identity and compare Node18, Node20 and NodeNext analysis/emission with the workspace
 TypeScript 6.0.3 CLI, including ESM and CommonJS package boundaries. Updating this dependency requires rerunning
 those tests; accepting unknown compiler options or suppressing diagnostics is not a compatibility strategy.
+
+## Typecheck commands and CI
+
+- `pnpm typecheck`, `pnpm --filter <workspace> typecheck`, pre-push, and CI's guarded Turbo typecheck task
+  run the same workspace `tsrs --noEmit` scripts. Quick-start Lambda keeps its generated build preparation.
+- Example build scripts that only check types also use tsrs. JavaScript and declaration emit retain the existing
+  TypeScript 6/tsup pipeline and decorator configuration.
+- `pnpm strict-contract-typecheck` uses tsrs against the existing strict configs and diagnostic baseline.
+- CI installs the exact compiler from `pnpm-lock.yaml` with `--frozen-lockfile`. Turbo retains build dependencies,
+  tracked-file mutation checks and lockfile cache invalidation.
+- Packed consumer and decorator emission smokes deliberately invoke TypeScript 6 to verify the supported
+  consumer ABI. Their compiler identity and diagnostics remain separate from native repository typechecking.
+
+The pinned tsrs package supplies macOS ARM64 and Linux ARM64/x64 binaries; the repository's local macOS and
+Ubuntu CI paths use those binaries. It does not supply a Windows binary. See the
+[upstream compatibility contract](https://github.com/oxc-project/tsrs/blob/main/docs/COMPATIBILITY.md).
 
 ## Decorator contract
 
@@ -30,8 +51,8 @@ factory resolution.
 - The shared config explicitly owns the repository `rootDir`, uses bundler module resolution, and declares Node
   ambient types. Runtime-specific configs such as Cloudflare may replace that `types` list.
 - `ignoreDeprecations` is prohibited. Removed or deprecated compiler options must be migrated instead of hidden.
-- `pnpm compiler-baseline:check` enforces the compiler pin, decorator settings, generated-project range, and
-  tsconfig migration rules.
+- `pnpm compiler-baseline:check` enforces the tsrs and TypeScript 6 pins and installed identities, workspace
+  typecheck commands, decorator settings, generated-project range, and tsconfig migration rules.
 
 ## Contract-bound decorator signatures
 

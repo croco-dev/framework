@@ -43,7 +43,7 @@
     "build": "tsup",
     "example:build": "tsup --config examples/tsup.config.ts",
     "lint": "oxlint .",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsrs --noEmit",
     "test": "vitest run src/tests/DataCompiler.spec.ts src/tests/Generation.spec.ts",
     "test:integration": "CROCO_TEST_REAL_RESOURCES=1 vitest run src/tests/DataCompiler.integration.spec.ts",
     "test:evidence": "pnpm run test --maxWorkers=1 --reporter=json --outputFile=.turbo/croco-test-evidence.json",

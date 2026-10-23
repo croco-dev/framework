@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "protocols-rest",
+      "classification": "internal-pure-refactor",
+      "reason": "Move recursive pipeline schema references from eagerly resolved base type arguments into the definition member while preserving the historical unknown input and bidirectional schema assignability. This is a type-only representation change with identical emitted runtime code.",
+      "files": {
+        "packages/protocols-rest/src/libs/internal/routeParameterSchema.ts": "a6e3cc258a5921eb5d1175c5665e2cf83ff99ed486f97ae281ed01da4d067f17"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "This change only changes recursive TypeScript schema declarations. Existing input/output constraints and legacy assignability are preserved; it adds no Node Host API, provider, storage, lifecycle or emitted runtime behavior.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/protocols-rest/src/libs/internal/routeParameterSchema.ts",
+            "packages/protocols-rest/src/tests/RouteParameterSchemaCompatibility.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "This change only changes recursive TypeScript schema declarations. Existing input/output constraints and legacy assignability are preserved; it adds no Lambda Host API, provider, storage, lifecycle or emitted runtime behavior.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/protocols-rest/src/libs/internal/routeParameterSchema.ts",
+            "packages/protocols-rest/src/tests/RouteParameterSchemaCompatibility.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "This change only changes recursive TypeScript schema declarations. Existing input/output constraints and legacy assignability are preserved; it adds no Workers or Node Container Host API, provider, storage, lifecycle or emitted runtime behavior.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/protocols-rest/src/libs/internal/routeParameterSchema.ts",
+            "packages/protocols-rest/src/tests/RouteParameterSchemaCompatibility.spec.ts"
+          ]
+        }
+      }
+    }
+  ]
+}

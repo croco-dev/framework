@@ -28,6 +28,10 @@ pnpm typecheck          # 전체 패키지
 pnpm --filter @croco/events-core typecheck  # 단일 패키지
 ```
 
+기본 typecheck와 CI의 동일 Turbo task는 고정된 tsrs 버전을 사용한다. TypeScript Compiler API,
+JavaScript·declaration emit, 생성 앱의 소비자 검증은 TypeScript 6을 유지한다.
+정확한 버전과 경계는 [TypeScript support](docs/typescript-support.md)를 따른다.
+
 `pnpm check`의 로컬 Markdown/JSON 검증 보고서는 작업트리를 변경하지 않도록 OS 임시 디렉터리에 저장한다.
 CI와 release workflow는 업로드할 보고서 경로를 `--output-dir`로 명시한다.
 

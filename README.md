@@ -883,7 +883,7 @@ pnpm first-success:verify    # README, getting-started, examples, and first-succ
 pnpm release-docs:check      # release guide and Changesets config drift
 pnpm release:spine-evidence  # consolidated release spine evidence gate
 pnpm test             # 테스트 실행
-pnpm typecheck        # TypeScript 타입 검사
+pnpm typecheck        # tsrs 타입 검사 (Compiler API·빌드는 TypeScript 6 유지)
 ```
 
 ### Git Hooks (Lefthook)

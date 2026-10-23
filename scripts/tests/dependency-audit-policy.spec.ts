@@ -982,6 +982,7 @@ describe("dependency-audit-policy.mts", () => {
     writePackage(repo, "package.json", {
       devDependencies: {
         "@changesets/cli": "2.29.8",
+        tsrs: "0.18.0-ts7.1.0-dev.20260929",
         vitest: "4.0.16",
       },
       name: "croco",
@@ -999,6 +1000,11 @@ describe("dependency-audit-policy.mts", () => {
         path: ".>vitest>vite",
         severity: "critical",
       }),
+      advisory({
+        ghsa: "GHSA-2357-2357-2357",
+        path: ".>tsrs>@tsrs/linux-x64",
+        severity: "high",
+      }),
     ]);
 
     const result = runDependencyAuditPolicy({
@@ -1012,6 +1018,10 @@ describe("dependency-audit-policy.mts", () => {
         expect.objectContaining({
           classification: "release-evidence",
           directDependency: "@changesets/cli",
+        }),
+        expect.objectContaining({
+          classification: "release-evidence",
+          directDependency: "tsrs",
         }),
         expect.objectContaining({
           classification: "dev-test",

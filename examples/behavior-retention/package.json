@@ -5,8 +5,8 @@
   "type": "commonjs",
   "scripts": {
     "start": "tsx src/index.ts",
-    "build": "tsc --noEmit",
-    "typecheck": "tsc --noEmit",
+    "build": "tsrs --noEmit",
+    "typecheck": "tsrs --noEmit",
     "dev": "pnpm build:browser && tsx src/server.ts",
     "build:browser": "tsup",
     "smoke": "tsx src/smoke.ts",

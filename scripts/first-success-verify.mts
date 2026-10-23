@@ -1088,8 +1088,8 @@ console.log("\n📋 D. SaaS billing golden-path contract\n");
     const script = pkg.scripts?.[scriptName];
     if (!script) {
       fail(label, `example saas-billing-golden-path/package.json missing scripts.${scriptName}`);
-    } else if (script !== "tsc --noEmit") {
-      fail(label, `scripts.${scriptName}="${script}" does not match expected "tsc --noEmit"`);
+    } else if (script !== "tsrs --noEmit") {
+      fail(label, `scripts.${scriptName}="${script}" does not match expected "tsrs --noEmit"`);
     } else {
       pass(label, `SaaS scripts.${scriptName} matches expected typecheck command`);
     }

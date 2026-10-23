@@ -26,8 +26,8 @@ describe("Next.js addon templates", () => {
       dependencies?: Record<string, string>;
     };
 
-    expect(manifest.dependencies?.next).toMatch(/^\^?15\.5\.25$/);
-    expect(manifest.dependencies?.sharp).toBe("^0.35.4");
+    expect(manifest.dependencies?.next).toMatch(/^\^?15\.5\.28$/);
+    expect(manifest.dependencies?.sharp).toBe("^0.35.5");
   });
 
   it.each(["graphql-nextjs", "trpc-nextjs"] as const)(
@@ -57,7 +57,7 @@ describe("Next.js addon templates", () => {
         template === "blank" ? "pnpm-workspace.yaml" : "pnpm-workspace.yaml.hbs";
       const workspace = readFileSync(join(TEMPLATES_DIR, template, workspaceName), "utf8");
 
-      expect(workspace).toMatch(/overrides:\n(?:  .*\n)*  sharp: 0\.35\.4/);
+      expect(workspace).toMatch(/overrides:\n(?:  .*\n)*  sharp: 0\.35\.5/);
     },
   );
 });

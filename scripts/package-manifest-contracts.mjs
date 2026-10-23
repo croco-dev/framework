@@ -248,12 +248,23 @@ export function isCiScriptOnlyManifestChange(baseManifest, headManifest) {
 
   const originalScripts = baseScripts ?? {};
 
-  let addedCiScript = false;
+  let changedCiScript = false;
   for (const scriptName of new Set([
     ...Object.keys(originalScripts),
     ...Object.keys(headScripts),
   ])) {
     if (valuesMatch(originalScripts[scriptName], headScripts[scriptName])) {
+      continue;
+    }
+    // Replacing a no-emit checker leaves JavaScript and declaration generation unchanged.
+    if (
+      scriptName === "typecheck" &&
+      headScripts[scriptName] === "tsrs --noEmit" &&
+      ["tsc --noEmit", "node ../../node_modules/typescript/bin/tsc --noEmit"].includes(
+        originalScripts[scriptName],
+      )
+    ) {
+      changedCiScript = true;
       continue;
     }
     if (
@@ -263,10 +274,10 @@ export function isCiScriptOnlyManifestChange(baseManifest, headManifest) {
     ) {
       return false;
     }
-    addedCiScript = true;
+    changedCiScript = true;
   }
 
-  return addedCiScript;
+  return changedCiScript;
 }
 
 function isRecord(value) {

@@ -19,7 +19,7 @@ export function collectPackageTestTypecheckDiagnostics(rootDir: string): string[
     const command = manifest.scripts?.typecheck;
     if (command === undefined) continue;
     const label = `${manifest.name ?? entry.name} (${relative(rootDir, manifestPath)})`;
-    const match = /^(?:tsc|node\s+\S*typescript\/bin\/tsc)\s+(.+)$/.exec(command);
+    const match = /^tsrs[ \t]+(.+)$/.exec(command);
     if (!match?.[1] || /[;&|`$"']/.test(match[1])) {
       diagnostics.push(`${label}: unsupported typecheck command ${JSON.stringify(command)}`);
       continue;
@@ -30,7 +30,7 @@ export function collectPackageTestTypecheckDiagnostics(rootDir: string): string[
       parsedCommand.fileNames.length > 0 ||
       !parsedCommand.options.noEmit
     ) {
-      diagnostics.push(`${label}: typecheck must run tsc --noEmit with a project config`);
+      diagnostics.push(`${label}: typecheck must run tsrs --noEmit with a project config`);
       continue;
     }
     const project = resolve(packageDir, parsedCommand.options.project ?? "tsconfig.json");

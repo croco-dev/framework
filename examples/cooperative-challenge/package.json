@@ -4,8 +4,8 @@
   "private": true,
   "type": "commonjs",
   "scripts": {
-    "build": "tsc --noEmit",
-    "typecheck": "tsc --noEmit",
+    "build": "tsrs --noEmit",
+    "typecheck": "tsrs --noEmit",
     "build:browser": "tsup",
     "dev": "pnpm build:browser && tsx src/server.ts",
     "migrate": "tsx src/server.ts --migrate"

@@ -170,6 +170,7 @@ const releaseEvidenceDirectDependencyNames = new Set([
   "@changesets/cli",
   "oxfmt",
   "oxlint",
+  "tsrs",
   "tsup",
   "turbo",
   "typescript",

@@ -890,6 +890,24 @@ describe("changeset-required-check.mts", () => {
     },
   );
 
+  it("passes a native typecheck migration without requiring a package release", () => {
+    const repo = createTempRepo();
+    const packagePath = join(repo, "packages/public/package.json");
+    const pkg = JSON.parse(readFileSync(packagePath, "utf-8"));
+    pkg.scripts = { typecheck: "tsc --noEmit" };
+    commitFile(repo, "packages/public/package.json", JSON.stringify(pkg), "chore: seed typecheck");
+    checkoutBranch(repo, "chore/native-typecheck");
+    pkg.scripts.typecheck = "tsrs --noEmit";
+    commitFile(repo, "packages/public/package.json", JSON.stringify(pkg), "chore: use tsrs");
+
+    const result = runScript(repo);
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain(
+      "changeset-required: no publishable package behavior changes detected (passing)",
+    );
+  });
+
   it("passes generated Changesets version metadata that consumes pending changesets", () => {
     const repo = createTempRepo();
     commitFile(

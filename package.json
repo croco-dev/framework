@@ -121,6 +121,7 @@
     "remark-parse": "11.0.0",
     "semver": "7.7.4",
     "smol-toml": "1.7.0",
+    "tsrs": "0.18.0-ts7.1.0-dev.20260929",
     "tsup": "8.5.1",
     "turbo": "2.10.2",
     "typescript": "6.0.3",
