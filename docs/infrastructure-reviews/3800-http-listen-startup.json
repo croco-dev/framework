@@ -1,0 +1,102 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "transports-http",
+      "classification": "runtime-adapter",
+      "reason": "Node listen waits for listening or a startup error before resolving; startup failures close the listener and preserve the Node cause. Reuses the Hono Node adapter and existing graceful-shutdown binding.",
+      "files": {
+        "packages/transports-http/src/libs/CrocoApp.ts": "cd20004be3fed9498d3c53a0f3afa4d69bb839e50ff73b4cd1e18515f9b23513"
+      },
+      "catalogRuntimes": ["node", "lambda"],
+      "profiles": {
+        "kubernetes": {
+          "result": "supported",
+          "reason": "The existing Node HTTP adapter is exercised with real local sockets for port collision, retry and graceful shutdown.",
+          "providers": ["@hono/node-server", "@croco/transports-http", "@croco/preset-node"],
+          "constraints": [
+            "Local Node host-runtime evidence only; no live Kubernetes deployment or provider certification."
+          ],
+          "references": [
+            "packages/transports-http/src/libs/CrocoApp.ts",
+            "packages/transports-http/src/tests/NodeAdapterSmoke.spec.ts",
+            "packages/preset-node/src/entry.ts",
+            "packages/presentation-preset/runtime-profiles.json"
+          ],
+          "evidence": {
+            "kind": "host-runtime",
+            "runtime": "node",
+            "path": "packages/transports-http/src/tests/NodeAdapterSmoke.spec.ts",
+            "testName": "NodeAdapter real server smoke rejects an occupied port and can retry with graceful shutdown on another port",
+            "sha256": "7e8dc6d5101bbf06e965e5fe7fd975e9b29c78ad7c43b928c16e1cfd6babad84"
+          }
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Lambda invokes the existing fetch/Lambda adapter without opening a TCP listener; listen startup and its error listeners are not used.",
+          "providers": ["@croco/transports-http", "@croco/preset-lambda"],
+          "constraints": [],
+          "references": [
+            "packages/transports-http/src/libs/CrocoLambdaAdapter.ts",
+            "packages/presentation-preset/runtime-profiles.json"
+          ]
+        },
+        "cloudflare": {
+          "result": "unsupported",
+          "host": "workers",
+          "reason": "This Node TCP listener requires node:http and the Hono Node adapter; Worker isolates use their separate fetch transport.",
+          "providers": ["@croco/transports-cloudflare-workers"],
+          "constraints": [
+            "No Node TCP listen support is claimed for Workers; no Node Container profile is introduced."
+          ],
+          "references": [
+            "packages/transports-http/src/libs/CrocoApp.ts",
+            "packages/transports-cloudflare-workers/src/index.ts",
+            "packages/presentation-preset/runtime-profiles.json"
+          ]
+        }
+      }
+    },
+    {
+      "package": "problems-core",
+      "classification": "pure-contract",
+      "reason": "Canonical generated Problem metadata recognizes the Node HTTP listen-failed code. No execution, storage or host lifecycle is introduced by this metadata.",
+      "files": {
+        "packages/problems-core/src/generated/problem-code-registry.ts": "20a7cb1da12801350d878fb53da5ff1b33530635f2bef9076af9ec911df4d63c"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Generated diagnostic metadata only; no host capabilities, storage or lifecycle dependencies.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "docs/problem-code-registry.json"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Generated diagnostic metadata only; no host capabilities, storage or lifecycle dependencies.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "docs/problem-code-registry.json"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Generated diagnostic metadata only; no host capabilities, storage or lifecycle dependencies.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "docs/problem-code-registry.json"
+          ]
+        }
+      }
+    }
+  ]
+}

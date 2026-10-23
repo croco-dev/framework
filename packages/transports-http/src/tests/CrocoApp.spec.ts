@@ -1,4 +1,5 @@
 import "reflect-metadata";
+import { EventEmitter } from "node:events";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
@@ -47,7 +48,7 @@ import {
   RateLimitKeyBuilder,
   SlidingWindowInMemoryStore,
 } from "@croco/ratelimit-core";
-import { serve, type Http2Bindings, type HttpBindings } from "@hono/node-server";
+import { createAdaptorServer, type Http2Bindings, type HttpBindings } from "@hono/node-server";
 import { Hono, type Context } from "hono";
 import { setCookie } from "hono/cookie";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -76,9 +77,13 @@ import { getRuntimeContextInitFromEnv } from "../libs/runtimeContext";
 import type { LambdaContext, LambdaEvent, MiddlewareFunction } from "../libs/types";
 
 vi.mock("@hono/node-server", () => ({
-  serve: vi.fn((_options: unknown, callback?: () => void) => {
-    callback?.();
-    return {};
+  createAdaptorServer: vi.fn((_options: unknown) => {
+    const server = new EventEmitter();
+    return Object.assign(server, {
+      listen: () => {
+        server.emit("listening");
+      },
+    });
   }),
 }));
 
@@ -115,7 +120,7 @@ describe("CrocoApp", () => {
   beforeEach(() => {
     Container.reset();
     lambdaWaitUntilCompleted = false;
-    vi.mocked(serve).mockClear();
+    vi.mocked(createAdaptorServer).mockClear();
     const logger = {
       info: () => {},
       warn: () => {},
@@ -2476,7 +2481,9 @@ describe("CrocoApp", () => {
 
     await app.listen(3000);
 
-    const serveOptions = vi.mocked(serve).mock.calls[0]?.[0] as NodeServerOptions | undefined;
+    const serveOptions = vi.mocked(createAdaptorServer).mock.calls[0]?.[0] as
+      | NodeServerOptions
+      | undefined;
     expect(serveOptions).toBeDefined();
 
     if (!serveOptions) {
@@ -2593,12 +2600,12 @@ describe("CrocoApp", () => {
     try {
       await app.listen(3000, callback);
 
-      expect(vi.mocked(serve)).toHaveBeenCalledTimes(1);
+      expect(vi.mocked(createAdaptorServer)).toHaveBeenCalledTimes(1);
       expect(callback).toHaveBeenCalledTimes(1);
 
       await app.listen(3001, { staticDir, spaFallback: true }, callback);
 
-      expect(vi.mocked(serve)).toHaveBeenCalledTimes(2);
+      expect(vi.mocked(createAdaptorServer)).toHaveBeenCalledTimes(2);
       expect(callback).toHaveBeenCalledTimes(2);
 
       const assetResponse = await app.fetch(new Request("http://localhost/assets/app.js"));
