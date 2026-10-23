@@ -557,6 +557,10 @@ describe("test lane runner", () => {
                   file: "flaky.spec.ts",
                   tests: [{ results: [{ status: "failed" }, { status: "passed" }] }],
                 },
+                {
+                  file: "unexpected-pass.spec.ts",
+                  tests: [{ expectedStatus: "failed", results: [{ status: "passed" }] }],
+                },
               ],
               suites: [
                 {
@@ -583,7 +587,7 @@ describe("test lane runner", () => {
   it("rejects partial files from real no-browser Playwright execution", () => {
     const root = mkdtempSync(join(tmpdir(), "croco-playwright-lane-"));
     const packageRoot = join(root, "packages", "a");
-    const names = ["all-skipped", "failed", "partial", "passed", "project-skip"];
+    const names = ["all-skipped", "failed", "partial", "passed", "project-skip", "unexpected-pass"];
     try {
       mkdirSync(packageRoot, { recursive: true });
       writeFileSync(
@@ -619,6 +623,7 @@ describe("test lane runner", () => {
         "test.describe.configure({ retries: 1 }); test('passes', () => expect(1).toBe(1)); test('retry succeeds', ({}, info) => expect(info.retry).toBe(1)); test('expected failure', () => { test.fail(); expect(1).toBe(2); }); test.describe('nested', () => { test.skip('not executed', () => {}); });",
         "test('passes', () => expect(1).toBe(1));",
         "test('project-specific', ({}, info) => { test.skip(info.project.name === 'second', 'project skip'); expect(1).toBe(1); });",
+        "test('unexpectedly passes', () => { test.fail(); expect(1).toBe(1); });",
       ];
       names.forEach((name, index) =>
         writeFileSync(join(packageRoot, `${name}.spec.cjs`), prelude + sources[index]),

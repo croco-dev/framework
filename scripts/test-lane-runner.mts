@@ -505,7 +505,7 @@ export function readPlaywrightExecutionEvidence(
   const executedPaths: string[] = [];
   const skippedFiles: TestLaneSkippedFile[] = [];
   for (const [path, { assertions, failed }] of files) {
-    if (assertions.length > 0 && assertions.every(({ status }) => status === "passed")) {
+    if (!failed && assertions.length > 0 && assertions.every(({ status }) => status === "passed")) {
       executedPaths.push(path);
       continue;
     }
