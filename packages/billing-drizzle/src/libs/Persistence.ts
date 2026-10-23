@@ -9,7 +9,8 @@ export type BillingTable =
   | "commands"
   | "orders"
   | "webhooks"
-  | "transitions";
+  | "transitions"
+  | "subscription_replacements";
 export type CancellationTable = "sessions" | "policies" | "policy_audits";
 export type Table = `croco_billing_${BillingTable}` | `croco_cancellation_${CancellationTable}`;
 

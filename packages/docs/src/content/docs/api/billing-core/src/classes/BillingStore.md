@@ -90,7 +90,10 @@ must return the original transition without recomputing intents from current sub
 state. For the same external subscription, an input with an older providerModifiedAt than the
 stored value must record an empty-intent transition without saving the input subscription,
 deriving intents, or clearing another webhook reservation. Missing or equal timestamps do not
-suppress the input.
+suppress the input. When a new external identity replaces the current subscription, retain
+the previous identity and replacement evidence atomically. Later observations for that retired
+identity must record an empty-intent transition while it is no longer current, regardless of
+its timestamps. Previously unseen identities remain eligible for first acceptance.
 
 #### Parameters
 
@@ -527,6 +530,10 @@ reopen or rewrite a completed command. Once local reconciliation runs, the comma
 ### saveSubscription()
 
 > `abstract` **saveSubscription**(`subscription`): `Promise`\<`void`\>
+
+Atomically saves an authoritative snapshot and retains evidence when replacing a different
+external identity. Explicit saves may restore a retired identity; webhook observations may
+not reclaim it while it is no longer current.
 
 #### Parameters
 

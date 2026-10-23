@@ -1,0 +1,103 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "billing-core",
+      "classification": "pure-contract",
+      "reason": "Retain replaced subscription identities across webhook commits and authoritative saves so delayed observations cannot overwrite the current subscription; preserve explicit restoration, retries and same-identity ordering.",
+      "files": {
+        "packages/billing-core/src/libs/BillingStore.ts": "8966ec184a8d368454213499eec5cd7e9e7bd6831f88561b47d3cde2f41928ea",
+        "packages/billing-core/src/libs/InMemoryBillingStore.ts": "724909836ecc5ff7e5658113f183b103bf0ffa13ba4abcd40969f94f2aaadd41"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Subscription identity retirement is an infrastructure-independent billing store contract and process-local reference implementation; no host capability or deployed provider is added.",
+          "providers": ["@croco/billing-core/BillingStore"],
+          "constraints": [
+            "InMemoryBillingStore is process-local and does not provide durable multi-instance persistence."
+          ],
+          "references": [
+            "packages/billing-core/src/libs/BillingStore.ts",
+            "packages/billing-core/src/libs/InMemoryBillingStore.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Subscription identity retirement is an infrastructure-independent billing store contract and process-local reference implementation; no host capability or deployed provider is added.",
+          "providers": ["@croco/billing-core/BillingStore"],
+          "constraints": [
+            "InMemoryBillingStore is process-local and does not provide durable multi-instance persistence."
+          ],
+          "references": [
+            "packages/billing-core/src/libs/BillingStore.ts",
+            "packages/billing-core/src/libs/InMemoryBillingStore.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Subscription identity retirement is an infrastructure-independent billing store contract and process-local reference implementation; no host capability or deployed provider is added.",
+          "providers": ["@croco/billing-core/BillingStore"],
+          "constraints": [
+            "InMemoryBillingStore is process-local and does not provide durable multi-instance persistence."
+          ],
+          "references": [
+            "packages/billing-core/src/libs/BillingStore.ts",
+            "packages/billing-core/src/libs/InMemoryBillingStore.ts"
+          ]
+        }
+      }
+    },
+    {
+      "package": "billing-drizzle",
+      "classification": "durable-provider",
+      "reason": "Retain replaced subscription identities across webhook commits and authoritative saves so delayed observations cannot overwrite the current subscription; preserve explicit restoration, retries and same-identity ordering.",
+      "files": {
+        "packages/billing-drizzle/src/libs/DrizzleBillingStore.ts": "24a5016c1dad53359dda9f3092bc3487a1bfd604aa2998b5dc896e3948797b61",
+        "packages/billing-drizzle/src/libs/Persistence.ts": "2e8477864325be75af87bd5292a6334be6268acd8927a7a0d29f71d8f69545f9"
+      },
+      "catalogRuntimes": ["node", "lambda"],
+      "profiles": {
+        "kubernetes": {
+          "result": "conditional",
+          "reason": "Reuse the existing Node PostgreSQL adapter and namespace transaction lock for replacement history.",
+          "providers": ["@croco/billing-drizzle/DrizzleBillingStore"],
+          "constraints": [
+            "Apply the additive 0002 migration through the application migration runner before upgrading the adapter.",
+            "Caller owns PostgreSQL connection lifecycle. Local disposable PostgreSQL tests do not certify a Kubernetes deployment."
+          ],
+          "references": [
+            "packages/billing-drizzle/README.md",
+            "packages/billing-drizzle/src/libs/Persistence.ts",
+            "packages/billing-drizzle/src/tests/DrizzleBillingStore.postgres.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "conditional",
+          "reason": "The existing Node PostgreSQL adapter retains its transaction and persistence behavior under Lambda.",
+          "providers": ["@croco/billing-drizzle/DrizzleBillingStore"],
+          "constraints": [
+            "Apply the reviewed migration before deploying the new adapter.",
+            "Bound connection counts and await database transactions before invocation return. Lambda deployment is not verified by local PostgreSQL execution."
+          ],
+          "references": [
+            "packages/billing-drizzle/README.md",
+            "packages/billing-drizzle/src/libs/Persistence.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "unsupported",
+          "host": "workers",
+          "reason": "The existing adapter requires node-postgres; this change adds no Workers-native database transport.",
+          "providers": ["@croco/billing-drizzle/DrizzleBillingStore"],
+          "constraints": ["No Worker isolate support is claimed."],
+          "references": [
+            "packages/billing-drizzle/README.md",
+            "packages/billing-drizzle/src/libs/Persistence.ts"
+          ]
+        }
+      }
+    }
+  ]
+}

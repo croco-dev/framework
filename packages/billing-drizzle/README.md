@@ -2,7 +2,9 @@
 
 PostgreSQL persistence for `BillingStore` and `CancellationStore`, using a caller-owned Drizzle node-postgres database.
 
-Apply `migrations/0001_billing.up.sql` through your migration runner before constructing either store. Construction performs no DDL. The paired down migration removes the tables and their data; use it only under your application's reviewed migration policy.
+Apply `migrations/0001_billing.up.sql` and then `migrations/0002_subscription_replacements.up.sql` through your migration runner before constructing either store. Existing installations apply only the new migration. Construction performs no DDL. The paired down migrations remove tables and their data; use them only under your application's reviewed migration policy.
+
+Subscription replacements retain the previous external identity and both snapshots atomically with the current subscription. Webhook commits also retain the event ID and event intents in that transaction. Later observations of that retired identity cannot reclaim the account, even with a newer or missing provider timestamp. New identities and newer same-identity observations retain their existing behavior. History is scoped by application, environment and billing account and survives store restarts and current-subscription deletion. The new migration backfills applied replacements recorded in existing webhook transitions and excludes suppressed observations; it cannot reconstruct overwritten subscriptions that have no transition evidence or repair already incorrect current state. Direct `saveSubscription` calls remain authoritative and record replaced identities too; explicitly restoring an identity permits its same-identity observations again. Rolling back the new migration removes this protection and its history.
 
 ```ts typecheck
 import { drizzle } from "drizzle-orm/node-postgres";
@@ -18,6 +20,8 @@ const billingStore = new DrizzleBillingStore(database, {
 });
 const cancellationStore = new DrizzleCancellationStore(database);
 ```
+
+The replacement table indexes fixed-size SHA-256 digests of the namespace and identity tuple, retaining the original namespace and snapshots in JSONB. The backfill uses [PostgreSQL's built-in binary-string functions](https://www.postgresql.org/docs/12/functions-binarystring.html); it requires no extension. A private projection marker distinguishes applied snapshots from suppressed receipts without changing public transition results.
 
 `DrizzleBillingStore` requires an explicit app/environment namespace; tenant lookups and provider webhook IDs remain inside that namespace. Cancellation sessions, policies, and policy audit keys include application, environment, and tenant. Use a BillingService with the matching namespace when composing cancellation actions.
 
