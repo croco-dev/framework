@@ -974,7 +974,7 @@ describe("CI verification profile contract", () => {
         const mirrorsPath = join(fixture, "apt-mirrors.txt");
         const invocationPath = join(fixture, "install-args");
         const originalMirrors =
-          "http://azure.archive.ubuntu.com/ubuntu/ priority:1\nhttps://security.ubuntu.com/ubuntu/ priority:2\n";
+          "http://azure.archive.ubuntu.com/ubuntu/\tpriority:1\nhttps://archive.ubuntu.com/ubuntu/\tpriority:2\nhttps://security.ubuntu.com/ubuntu/\tpriority:3\n";
         if (mirror) writeFileSync(mirrorsPath, originalMirrors);
         const scriptPath = join(fixture, "install.sh");
         writeFileSync(
@@ -1007,23 +1007,30 @@ exit "$CI_INSTALL_EXIT"
           chmodSync(path, 0o700);
         }
 
-        const result = spawnSync("bash", [scriptPath], {
-          cwd: ROOT_DIR,
-          encoding: "utf8",
-          timeout: 5_000,
-          env: {
-            ...process.env,
-            PATH: `${fixture}:${process.env.PATH}`,
-            CI_MIRROR_EXIT: String(mirrorExit),
-            CI_APT_CONFIG_CAPTURE: configPath,
-            CI_APT_CONFIG_EXIT: String(configExit),
-            CI_INSTALL_ARGS_CAPTURE: invocationPath,
-            CI_INSTALL_EXIT: String(installExit),
-          },
-        });
+        const runInstall = () =>
+          spawnSync("bash", [scriptPath], {
+            cwd: ROOT_DIR,
+            encoding: "utf8",
+            timeout: 5_000,
+            env: {
+              ...process.env,
+              PATH: `${fixture}:${process.env.PATH}`,
+              CI_MIRROR_EXIT: String(mirrorExit),
+              CI_APT_CONFIG_CAPTURE: configPath,
+              CI_APT_CONFIG_EXIT: String(configExit),
+              CI_INSTALL_ARGS_CAPTURE: invocationPath,
+              CI_INSTALL_EXIT: String(installExit),
+            },
+          });
+        const result = runInstall();
 
         expect(result.error).toBeUndefined();
         expect(result.status, result.stderr).toBe(expectedExit);
+        if (expectedExit === 0) {
+          const repeated = runInstall();
+          expect(repeated.error).toBeUndefined();
+          expect(repeated.status, repeated.stderr).toBe(0);
+        }
         if (mirrorExit !== 0) {
           expect(readFileSync(mirrorsPath, "utf8")).toBe(originalMirrors);
           expect(readdirSync(fixture)).not.toContain("apt.conf");
@@ -1032,7 +1039,7 @@ exit "$CI_INSTALL_EXIT"
         }
         if (mirror) {
           expect(readFileSync(mirrorsPath, "utf8")).toBe(
-            "https://archive.ubuntu.com/ubuntu/ priority:1\nhttps://security.ubuntu.com/ubuntu/ priority:2\n",
+            "https://archive.ubuntu.com/ubuntu/\tpriority:1\nhttp://azure.archive.ubuntu.com/ubuntu/\tpriority:2\nhttps://security.ubuntu.com/ubuntu/\tpriority:3\n",
           );
         } else {
           expect(readdirSync(fixture)).not.toContain("apt-mirrors.txt");

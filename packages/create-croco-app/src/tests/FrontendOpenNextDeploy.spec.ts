@@ -99,9 +99,13 @@ it.each(["opennext", "vercel"] as const)(
       { outputMode: "json" },
     );
     const workspace = parseYaml(readFileSync(join(targetDir, "pnpm-workspace.yaml"), "utf8")) as {
+      packages: string[];
       allowBuilds: Record<string, boolean>;
       onlyBuiltDependencies: string[];
     };
+    expect(workspace.packages.includes("!apps/**/.open-next/**")).toBe(
+      frontendDeploy === "opennext",
+    );
     expect(workspace.allowBuilds.workerd === true).toBe(frontendDeploy === "opennext");
     expect(workspace.onlyBuiltDependencies.includes("workerd")).toBe(frontendDeploy === "opennext");
     expect(workspace.allowBuilds.esbuild).toBe(true);

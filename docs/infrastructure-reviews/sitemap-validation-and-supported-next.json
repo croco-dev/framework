@@ -54,18 +54,19 @@
     {
       "package": "create-croco-app",
       "classification": "deployment-profile",
-      "reason": "Generated Next.js applications use supported Next.js 16.4.1 and patched Sharp 0.35.5. Explicit Webpack commands retain existing Babel transforms; the OpenNext version-support guard remains enforced. The generator adds no Host or provider and has no catalog runtime claims. Generated SaaS and AI SaaS usage recovery now invokes its existing separate Node process directly; recovery constructs the SQLite journal, gateway and delivery worker without an application DI graph, so recompiling that graph on every recovery was unrelated work. Journal state, delivery policy, replay and error semantics are unchanged.",
+      "reason": "Generated Next.js applications use supported Next.js 16.4.1 and patched Sharp 0.35.5. Explicit Webpack commands retain existing Babel transforms; OpenNext 1.20.13 explicitly supports the generated Next.js 16.4 version and keeps its version-support guard enforced. The generator adds no Host or provider and has no catalog runtime claims. Generated SaaS and AI SaaS usage recovery now invokes its existing separate Node process directly; recovery constructs the SQLite journal, gateway and delivery worker without an application DI graph, so recompiling that graph on every recovery was unrelated work. Journal state, delivery policy, replay and error semantics are unchanged. Generated OpenNext output is excluded from pnpm workspace discovery so copied package manifests cannot change the authored workspace graph after a Worker build.",
       "files": {
         "packages/create-croco-app/templates/addons/graphql-nextjs/apps/web/package.json.hbs": "8ad6a45d2ff27ac6ec42522c2c2f0ed4a412839b0d3431e2568dd3ebc3c02a02",
         "packages/create-croco-app/templates/addons/trpc-nextjs/apps/web/package.json.hbs": "b445a51138131c6c70d6d6ad009d6f64d3674288d7b097eb85ae05165780c69c",
         "packages/create-croco-app/templates/addons/web-graphql/apps/web/package.json.hbs": "a54b1f552c4f2c7af7a23ac8987b27ec744aff454f4ad32e5168e13298da8c55",
         "packages/create-croco-app/templates/addons/web-trpc/apps/web/package.json.hbs": "b817358ebc08456ca297bdba4da98fced007a0b3ee1c900dbfc219c0f4282eb1",
         "packages/create-croco-app/templates/blank/pnpm-workspace.yaml": "8f4a911b59aae84cf4f54bebee212f424732161c188e30ee9deb0218bf70fdf0",
-        "packages/create-croco-app/templates/base-ddd/pnpm-workspace.yaml.hbs": "c16ebb3cbfca753784f68632713f2d707199d1f3057ddf0c95416b91205cbeed",
+        "packages/create-croco-app/templates/base-ddd/pnpm-workspace.yaml.hbs": "9fc420f38e0627b30f86433b4f571f612ef61823a0764ac2c0aae4474e407663",
         "packages/create-croco-app/templates/spa-be-split/pnpm-workspace.yaml.hbs": "134b4e1fe4b8b049cbe12ea638cf6347b03a2ddfb9ff27d04beec3bbec3d9733",
         "packages/create-croco-app/templates/saas/pnpm-workspace.yaml.hbs": "51440625cebed12b171ff6ac34f1c2572c3eb270d160a7f3d22b2fcd38014479",
         "packages/create-croco-app/templates/saas/apps/api-server/package.json.hbs": "9d7ec8a30202887c5e25b9f85446a1529fa482fba30bbc8cc73de9dc25f8ecaa",
-        "packages/create-croco-app/templates/ai-saas/apps/api-server/package.json.hbs": "36f94ce9dfc30b91e2f3c71ce8971799702502a36079d5f008116f16acdb5615"
+        "packages/create-croco-app/templates/ai-saas/apps/api-server/package.json.hbs": "36f94ce9dfc30b91e2f3c71ce8971799702502a36079d5f008116f16acdb5615",
+        "packages/create-croco-app/src/installers/frontend-deploy.ts": "3d1bc685458fe626d0f42fe66256d04b4d9962f1e48850144c394f173bfd28a2"
       },
       "catalogRuntimes": [],
       "profiles": {
@@ -102,7 +103,7 @@
         "cloudflare": {
           "result": "unverified",
           "host": "workers",
-          "reason": "The generated OpenNext app uses Next.js 16 within the existing adapter support range and keeps the adapter support check enabled. Worker artifact builds are distinct from deployed Worker and provider conformance.",
+          "reason": "The shared frontend installer pins OpenNext 1.20.13, whose adapter release supports Next.js 16.4, and keeps the support check enabled. Worker artifact builds are distinct from deployed Worker and provider conformance.",
           "providers": ["@opennextjs/cloudflare"],
           "constraints": [
             "No unsupported-version bypass is generated.",
