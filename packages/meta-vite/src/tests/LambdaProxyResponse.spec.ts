@@ -87,6 +87,7 @@ describe.each(["standalone", "API", "page"])("Lambda proxy %s", (path) => {
     ])("serializes $name without losing response semantics", async (test) => {
       const source = test.response();
       source.headers.set("x-trace", "trace-73");
+      source.headers.set("__proto__", "opaque-header");
       for (const cookie of cookies) source.headers.append("set-cookie", cookie);
       const result = JSON.parse(
         JSON.stringify(await adapt(path, async () => source)(event(version), {})),
@@ -97,6 +98,7 @@ describe.each(["standalone", "API", "page"])("Lambda proxy %s", (path) => {
         isBase64Encoded: test.base64,
         headers: { "x-trace": "trace-73" },
       });
+      expect(result.headers["__proto__"]).toBe("opaque-header");
       expect(result.headers["set-cookie"]).toBeUndefined();
       if (version === "2.0") {
         expect(result.cookies).toEqual(cookies);
@@ -124,8 +126,8 @@ describe.each(["standalone", "API", "page"])("Lambda proxy %s", (path) => {
     });
 
     it("keeps callback completion pending until the body has been consumed", async () => {
-      const body = Promise.withResolvers<Uint8Array>();
-      const reading = Promise.withResolvers<void>();
+      const body = deferred<Uint8Array>();
+      const reading = deferred<void>();
       const source = new Response(
         new ReadableStream({
           async pull(controller) {
@@ -148,3 +150,11 @@ describe.each(["standalone", "API", "page"])("Lambda proxy %s", (path) => {
     });
   });
 });
+
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((complete) => {
+    resolve = complete;
+  });
+  return { promise, resolve };
+}

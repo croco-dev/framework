@@ -86,16 +86,10 @@ function getSetCookieHeaders(headers: Headers): string[] {
 }
 
 function toLambdaResponseHeaders(headers: Headers): LambdaResponseHeaders {
-  const responseHeaders: Record<string, string> = {};
   const cookies = getSetCookieHeaders(headers);
-
-  headers.forEach((value, key) => {
-    if (key.toLowerCase() === "set-cookie") {
-      return;
-    }
-
-    responseHeaders[key] = value;
-  });
+  const responseHeaders = Object.fromEntries(
+    [...headers].filter(([key]) => key.toLowerCase() !== "set-cookie"),
+  );
 
   return { headers: responseHeaders, cookies };
 }
