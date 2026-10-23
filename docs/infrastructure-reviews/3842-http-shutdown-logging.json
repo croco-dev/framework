@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "transports-http",
+      "classification": "runtime-adapter",
+      "reason": "HTTP shutdown defers diagnostic sink failures until cleanup finishes and preserves lifecycle failures. Reuses the existing Node listener, event drain and hook deadline.",
+      "files": {
+        "packages/transports-http/src/libs/middleware/GracefulShutdownMiddleware.ts": "b01287b6febddc21ff4b886af7203be2cc1961445882df7cb381d21aec34d1a2"
+      },
+      "catalogRuntimes": ["node", "lambda"],
+      "profiles": {
+        "kubernetes": {
+          "result": "unverified",
+          "reason": "Reuses the existing Node shutdown controller; focused controller tests do not certify a deployed host.",
+          "providers": ["@croco/transports-http"],
+          "constraints": [
+            "Existing total deadline and event-drain cap remain in force; no live infrastructure or provider certification."
+          ],
+          "references": [
+            "packages/transports-http/src/libs/middleware/GracefulShutdownMiddleware.ts",
+            "packages/transports-http/src/tests/GracefulShutdownMiddleware.spec.ts",
+            "packages/presentation-preset/runtime-profiles.json"
+          ]
+        },
+        "aws-lambda": {
+          "result": "unverified",
+          "reason": "Explicit controller shutdown shares this behavior; automatic process signal registration remains disabled in Lambda. No live invocation verification.",
+          "providers": ["@croco/transports-http"],
+          "constraints": [
+            "Existing total deadline and event-drain cap remain in force; no live infrastructure or provider certification."
+          ],
+          "references": [
+            "packages/transports-http/src/libs/middleware/GracefulShutdownMiddleware.ts",
+            "packages/transports-http/src/tests/GracefulShutdownMiddleware.spec.ts",
+            "packages/presentation-preset/runtime-profiles.json"
+          ]
+        },
+        "cloudflare": {
+          "result": "unsupported",
+          "host": "workers",
+          "reason": "This controller owns Node process signals and Node listeners. Workers use a separate fetch transport.",
+          "providers": ["@croco/transports-cloudflare-workers"],
+          "constraints": ["No Worker isolate or Node Container support is introduced."],
+          "references": [
+            "packages/transports-cloudflare-workers/src/index.ts",
+            "packages/transports-http/src/libs/middleware/GracefulShutdownMiddleware.ts"
+          ]
+        }
+      }
+    }
+  ]
+}

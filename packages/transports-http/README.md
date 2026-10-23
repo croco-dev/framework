@@ -605,6 +605,10 @@ Node apps that pass a middleware from `createGracefulShutdownController()` or
 rejects new work, drains active requests, closes the Node listener, drains the event bus, and then runs the
 configured shutdown hook. Listener or hook timeout failures are logged once by the signal handler.
 Signal failures set `process.exitCode` to `1`, including when no application logger is configured.
+Shutdown log failures do not interrupt remaining cleanup. Their messages, contexts and errors are
+reported through a best-effort console fallback. If cleanup succeeds, shutdown rejects with the first
+log failure; a listener, drain timeout or hook failure takes precedence. Concurrent callers share the
+same shutdown promise, and logging failures do not restart the total deadline.
 
 `await app.listen(port)` resolves after the Node listener reaches `listening` and the optional callback
 runs once. A startup error rejects with `transports-http/listen-failed`, preserving the original Node
