@@ -11,6 +11,8 @@ import {
   createMetaViteRouteManifest,
   createMetaViteRouteManifestFromRegistry,
   createNodeComposedHandler,
+  createLambdaHandler,
+  createLambdaComposedHandler,
 } from "@croco/meta-vite";
 import { setImmediate } from "node:timers/promises";
 import { createElement } from "react";
@@ -116,6 +118,42 @@ const host = createNodeComposedHandler({
 });
 
 try {
+  for (const version of ["1.0", "2.0"]) {
+    for (const adapt of [
+      (pageHandler) => createLambdaHandler(pageHandler),
+      (pageHandler) => createLambdaComposedHandler({ apiHandlers: [], pageHandler }),
+      (pageHandler) =>
+        createLambdaComposedHandler({
+          apiHandlers: [
+            {
+              match: () => true,
+              handle: (request) => pageHandler(request, { platform: "lambda" }),
+            },
+          ],
+          pageHandler: async () => new Response("wrong fallback"),
+        }),
+    ]) {
+      const event =
+        version === "2.0"
+          ? { version, rawPath: "/page", requestContext: { http: { method: "GET" } } }
+          : { version, path: "/page", httpMethod: "GET" };
+      const response = JSON.parse(
+        JSON.stringify(
+          await adapt(
+            async () =>
+              new Response("<main>Lambda café</main>", {
+                status: 201,
+                headers: { "content-type": "text/html; charset=utf-8" },
+              }),
+          )(event, {}),
+        ),
+      );
+      assert.equal(response.statusCode, 201);
+      assert.equal(response.headers["content-type"], "text/html; charset=utf-8");
+      assert.equal(response.body, "<main>Lambda café</main>");
+      assert.equal(response.isBase64Encoded, false);
+    }
+  }
   const responses = await Promise.all(
     ["first", "second"].map((requestId) =>
       host.fetch(

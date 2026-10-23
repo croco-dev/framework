@@ -277,7 +277,18 @@ Adapter preservation of externally supplied streams is a separate capability fro
 ## Provider Adapters
 
 - **Cloudflare**: `createCloudflareComposedHandler({ apiHandlers, pageHandler })` — API-first, page fallback. Uses `RuntimeContext.platform: 'cloudflare'`.
-- **Lambda**: `createLambdaComposedHandler({ apiHandlers, pageHandler })` — API Gateway v2/v1 event conversion. Response is buffered (no streaming).
+- **Lambda**: `createLambdaComposedHandler({ apiHandlers, pageHandler })` — API Gateway v2/v1 event conversion. Returns a buffered, JSON-serializable `LambdaProxyResponse` (no streaming).
+
+Both `createLambdaHandler()` and `createLambdaComposedHandler()` return Lambda callbacks whose
+result is `Promise<LambdaProxyResponse>`, rather than a Web `Response`. Read `statusCode`, `headers`
+and `body` from the result; callers that previously used `.text()` or `.json()` must read `body`
+(and decode base64 when `isBase64Encoded` is true). The callback consumes the complete body before
+returning and rejects if that read fails. Payload 2.0 uses `cookies`; payload 1.0 and legacy events
+without a version use `multiValueHeaders['set-cookie']`. Binary, compressed and invalid UTF-8 bodies
+use base64 without changing their bytes. API Gateway REST APIs must configure binary media types
+for binary delivery. This buffered contract does not provide Lambda response streaming or establish
+live AWS deployment certification.
+
 - **Node**: `createNodeComposedHandler({ apiHandlers, pageHandler })` — Returns `{ fetch }` for `@hono/node-server` or Node.js `http.createServer`.
 
 ## Production Runtime Matrix

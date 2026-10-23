@@ -40,6 +40,7 @@ type PackageTarballs = {
   readonly presentationPreset: string;
   readonly problemsCore: string;
   readonly storageCore: string;
+  readonly transportDependencies: Readonly<Record<string, string>>;
 };
 
 type CommandInvocation = {
@@ -63,6 +64,7 @@ const buildTargets: readonly BuildTarget[] = [
   libraryBuildTarget("cache-core"),
   libraryBuildTarget("storage-core"),
   libraryBuildTarget("presentation-preset"),
+  ...transportDependencyNames().map((name) => libraryBuildTarget(name.slice("@croco/".length))),
   {
     packageName: "@croco/meta-vite",
     sourceDir: join(packageDir, "src"),
@@ -248,7 +250,9 @@ describe("published @croco/meta-vite contract", () => {
         writeFileSync(
           join(rootConsumerRoot, "index.ts"),
           [
-            "import type { MetaViteRouteManifest, ServerActionConfig } from '@croco/meta-vite';",
+            "import type { MetaViteRouteManifest, ServerActionConfig, LambdaProxyResponse } from '@croco/meta-vite';",
+            "import { createLambdaHandler } from '@croco/meta-vite';",
+            "export const lambdaResult: Promise<LambdaProxyResponse> = createLambdaHandler(async () => new Response('created', { status: 201 }))({ version: '2.0', rawPath: '/' }, {});",
             "import { createMetaViteRouteManifest, createServerActionSuccess, serializeMetaViteRouteManifest, type ServerActionResult } from '@croco/meta-vite';",
             "",
             "export const action: ServerActionConfig<{ email: string }, { accepted: boolean }> = {",
@@ -353,6 +357,9 @@ function packPackages(packRoot: string): PackageTarballs {
   run("pnpm", ["--filter", "@croco/storage-core", "pack", "--pack-destination", packRoot], rootDir);
 
   run("pnpm", ["--filter", "@croco/seo-core", "pack", "--pack-destination", packRoot], rootDir);
+  for (const name of transportDependencyNames()) {
+    run("pnpm", ["--filter", name, "pack", "--pack-destination", packRoot], rootDir);
+  }
   run("pnpm", ["--filter", "@croco/meta-vite", "pack", "--pack-destination", packRoot], rootDir);
 
   return {
@@ -365,6 +372,12 @@ function packPackages(packRoot: string): PackageTarballs {
     presentationPreset: findTarball(packRoot, "croco-presentation-preset-"),
     problemsCore: findTarball(packRoot, "croco-problems-core-"),
     storageCore: findTarball(packRoot, "croco-storage-core-"),
+    transportDependencies: Object.fromEntries(
+      transportDependencyNames().map((name) => [
+        name,
+        findTarball(packRoot, `croco-${name.slice("@croco/".length)}-`),
+      ]),
+    ),
   };
 }
 
@@ -483,6 +496,12 @@ function writeConsumerPackageJson(consumerRoot: string, tarballs: PackageTarball
     "@croco/presentation-preset": `file:${tarballs.presentationPreset}`,
     "@croco/problems-core": `file:${tarballs.problemsCore}`,
     "@croco/storage-core": `file:${tarballs.storageCore}`,
+    ...Object.fromEntries(
+      Object.entries(tarballs.transportDependencies).map(([name, tarball]) => [
+        name,
+        `file:${tarball}`,
+      ]),
+    ),
     postcss: supportedPostcssVersion,
   });
 }
@@ -642,4 +661,22 @@ function formatCommandFailure(
   ]
     .filter(Boolean)
     .join("\n");
+}
+
+// The new transport subpath must be tested with the current workspace dependency
+// closure, including versions that have not yet been released to the registry.
+function transportDependencyNames(): readonly string[] {
+  const names = new Set<string>();
+  function visit(name: string): void {
+    if (names.has(name)) return;
+    names.add(name);
+    const manifest = JSON.parse(
+      readFileSync(join(rootDir, "packages", name.slice("@croco/".length), "package.json"), "utf8"),
+    ) as { dependencies?: Record<string, string> };
+    for (const dependency of Object.keys(manifest.dependencies ?? {})) {
+      if (dependency.startsWith("@croco/")) visit(dependency);
+    }
+  }
+  visit("@croco/transports-http");
+  return [...names].sort();
 }

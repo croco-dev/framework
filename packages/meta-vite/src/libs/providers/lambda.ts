@@ -1,3 +1,5 @@
+import { toLambdaProxyResponse } from "@croco/transports-http/lambda-response";
+import type { LambdaProxyResponse } from "@croco/transports-http/lambda-response";
 import type { CrocoFetchHandler, RuntimeContext } from "../render/types";
 
 type LambdaApiHandler = {
@@ -12,12 +14,12 @@ type LambdaComposedOptions = {
 
 /**
  * AWS Lambda adapter.
- * Wraps a CrocoFetchHandler for Lambda API Gateway v2 events.
+ * Wraps a CrocoFetchHandler for Lambda API Gateway v1/v2 events.
  * Lambda uses a buffered Response by default; streaming responses are not supported by this adapter.
  */
 export function createLambdaHandler(
   handler: CrocoFetchHandler,
-): (event: unknown, context: unknown) => Promise<Response> {
+): (event: unknown, context: unknown) => Promise<LambdaProxyResponse> {
   return async (event: unknown, lambdaContext: unknown) => {
     const request = convertApiGatewayEventToRequest(event);
     const ctx: RuntimeContext = {
@@ -25,7 +27,7 @@ export function createLambdaHandler(
       event,
       lambdaContext,
     };
-    return handler(request, ctx);
+    return toLambdaProxyResponse(await handler(request, ctx), getPayloadFormat(event));
   };
 }
 
@@ -35,13 +37,16 @@ export function createLambdaHandler(
  */
 export function createLambdaComposedHandler(
   options: LambdaComposedOptions,
-): (event: unknown, context: unknown) => Promise<Response> {
+): (event: unknown, context: unknown) => Promise<LambdaProxyResponse> {
   return async (event: unknown, lambdaContext: unknown) => {
     const request = convertApiGatewayEventToRequest(event);
 
     for (const apiHandler of options.apiHandlers) {
       if (apiHandler.match(request)) {
-        return apiHandler.handle(request, event, lambdaContext);
+        return toLambdaProxyResponse(
+          await apiHandler.handle(request, event, lambdaContext),
+          getPayloadFormat(event),
+        );
       }
     }
 
@@ -51,7 +56,7 @@ export function createLambdaComposedHandler(
       lambdaContext,
     };
 
-    return options.pageHandler(request, ctx);
+    return toLambdaProxyResponse(await options.pageHandler(request, ctx), getPayloadFormat(event));
   };
 }
 
@@ -122,4 +127,8 @@ function convertApiGatewayEventToRequest(event: unknown): Request {
     headers: requestHeaders,
     body: requestBody,
   });
+}
+
+function getPayloadFormat(event: unknown): "1.0" | "2.0" {
+  return (event as Record<string, unknown>).version === "2.0" ? "2.0" : "1.0";
 }

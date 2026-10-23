@@ -1,0 +1,109 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "meta-vite",
+      "classification": "runtime-adapter",
+      "reason": "Preserve status, headers, cookies and buffered body through Lambda callback JSON serialization; share the existing HTTP byte/header conversion through an isolated entrypoint.",
+      "files": {
+        "packages/meta-vite/package.json": "01046f75e95546112203f15deef6446fca6c9302b13f6e7e0bd91f326036ebad",
+        "packages/meta-vite/src/index.ts": "8d6a4c52c56e1c028b65a97dd63bf5b424d57bcda3042d02483f982ee89de016",
+        "packages/meta-vite/src/libs/providers/lambda.ts": "d999c067c92f8e8b1664e56e4073aad6b4adb0236e592beef2051c53d19ee155"
+      },
+      "catalogRuntimes": ["node", "lambda", "cloudflare-workers", "browser"],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "The change is limited to Lambda proxy output. The Node Host HTTP response path is unchanged; no cluster, storage or Node listener capability is introduced.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/meta-vite/src/libs/providers/lambda.ts",
+            "packages/transports-http/src/lambda-response.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "This is a Lambda-only converter and callback contract. Workers fetch still returns Web Response and does not execute the converter; no Worker binding or Node Container support is claimed.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/meta-vite/src/libs/providers/lambda.ts",
+            "packages/transports-http/src/lambda-response.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "conditional",
+          "reason": "Reuse the HTTP transport buffered response converter for API Gateway payload 1.0/2.0 callbacks, retaining byte encoding and separate cookies. Local callback and packed consumer tests exercise serialization, not a deployed AWS integration.",
+          "providers": [
+            "@croco/transports-http/lambda-response",
+            "@croco/meta-vite/createLambdaComposedHandler"
+          ],
+          "constraints": [
+            "Buffered responses only; consume the complete response body before callback completion and propagate read failures.",
+            "REST API binary media types must be configured by the deployment owner.",
+            "Live AWS API Gateway deployment, streaming, invocation deadlines and provider certification are not established by local tests."
+          ],
+          "references": [
+            "packages/meta-vite/src/tests/LambdaProxyResponse.spec.ts",
+            "packages/meta-vite/src/tests/published-contract.spec.ts",
+            "packages/transports-http/src/tests/CrocoLambdaAdapter.spec.ts",
+            "packages/preset-lambda/src/handler.ts"
+          ]
+        }
+      }
+    },
+    {
+      "package": "transports-http",
+      "classification": "runtime-adapter",
+      "reason": "Preserve status, headers, cookies and buffered body through Lambda callback JSON serialization; share the existing HTTP byte/header conversion through an isolated entrypoint.",
+      "files": {
+        "packages/transports-http/package.json": "e58be4f025304b1e44f0a95b4e62102e7d0562964a6910fc4bdd3801a47e5050",
+        "packages/transports-http/src/libs/CrocoLambdaAdapter.ts": "8515bddfc961171f20323568feba66ad58b8ff0f6da0d6185545d9038ce8e008",
+        "packages/transports-http/src/lambda-response.ts": "924595eae303ad1f90b6d7a52a8e9e3f92a59b844016f3464c40e2684d3c78e6"
+      },
+      "catalogRuntimes": ["node", "lambda"],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "The change is limited to Lambda proxy output. The Node Host HTTP response path is unchanged; no cluster, storage or Node listener capability is introduced.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/meta-vite/src/libs/providers/lambda.ts",
+            "packages/transports-http/src/lambda-response.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "This is a Lambda-only converter and callback contract. Workers fetch still returns Web Response and does not execute the converter; no Worker binding or Node Container support is claimed.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/meta-vite/src/libs/providers/lambda.ts",
+            "packages/transports-http/src/lambda-response.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "conditional",
+          "reason": "Reuse the HTTP transport buffered response converter for API Gateway payload 1.0/2.0 callbacks, retaining byte encoding and separate cookies. Local callback and packed consumer tests exercise serialization, not a deployed AWS integration.",
+          "providers": [
+            "@croco/transports-http/lambda-response",
+            "@croco/meta-vite/createLambdaComposedHandler"
+          ],
+          "constraints": [
+            "Buffered responses only; consume the complete response body before callback completion and propagate read failures.",
+            "REST API binary media types must be configured by the deployment owner.",
+            "Live AWS API Gateway deployment, streaming, invocation deadlines and provider certification are not established by local tests."
+          ],
+          "references": [
+            "packages/meta-vite/src/tests/LambdaProxyResponse.spec.ts",
+            "packages/meta-vite/src/tests/published-contract.spec.ts",
+            "packages/transports-http/src/tests/CrocoLambdaAdapter.spec.ts",
+            "packages/preset-lambda/src/handler.ts"
+          ]
+        }
+      }
+    }
+  ]
+}

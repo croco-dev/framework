@@ -5,7 +5,7 @@ prev: false
 title: "createLambdaComposedHandler"
 ---
 
-> **createLambdaComposedHandler**(`options`): (`event`, `context`) => `Promise`\<`Response`\>
+> **createLambdaComposedHandler**(`options`): (`event`, `context`) => `Promise`\<[`LambdaProxyResponse`](/api/meta-vite/src/type-aliases/lambdaproxyresponse/)\>
 
 AWS Lambda composed adapter for API routes and page fallback.
 Lambda requires buffered responses; streaming responses should be handled before returning from this adapter.
@@ -18,4 +18,4 @@ Lambda requires buffered responses; streaming responses should be handled before
 
 ## Returns
 
-(`event`, `context`) => `Promise`\<`Response`\>
+(`event`, `context`) => `Promise`\<[`LambdaProxyResponse`](/api/meta-vite/src/type-aliases/lambdaproxyresponse/)\>

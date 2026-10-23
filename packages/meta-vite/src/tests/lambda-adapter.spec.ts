@@ -31,7 +31,7 @@ describe("lambda adapter", () => {
     expect(request?.method).toBe("POST");
     expect(request?.url).toBe("https://example.com/api/items");
     expect(request?.headers.get("content-type")).toBe("application/json");
-    await expect(response.json()).resolves.toEqual({ name: "croco" });
+    expect(JSON.parse(response.body)).toEqual({ name: "croco" });
   });
 
   describe.each(["standalone", "composed API", "composed page"] as const)(
@@ -100,7 +100,7 @@ describe("lambda adapter", () => {
 
         const response = await handler(event, {});
 
-        await expect(response.text()).resolves.toBe(expectedUrl);
+        expect(response.body).toBe(expectedUrl);
       });
     },
   );
@@ -115,7 +115,7 @@ describe("lambda adapter", () => {
 
     const response = await handler(createHttpApiEvent({ rawPath: "/api/hello" }), {});
 
-    await expect(response.text()).resolves.toBe("api");
+    expect(response.body).toBe("api");
     expect(apiHandler.handle).toHaveBeenCalledOnce();
     expect(pageHandler).not.toHaveBeenCalled();
   });
@@ -138,7 +138,7 @@ describe("lambda adapter", () => {
     const response = await handler(event, lambdaContext);
 
     expect(pageHandler).not.toHaveBeenCalled();
-    await expect(response.json()).resolves.toEqual({
+    expect(JSON.parse(response.body)).toEqual({
       eventMatches: true,
       contextMatches: true,
     });
@@ -154,7 +154,7 @@ describe("lambda adapter", () => {
 
     const response = await handler(createHttpApiEvent({ rawPath: "/products" }), {});
 
-    await expect(response.text()).resolves.toBe("page");
+    expect(response.body).toBe("page");
     expect(apiHandler.handle).not.toHaveBeenCalled();
     expect(pageHandler).toHaveBeenCalledOnce();
   });
@@ -191,7 +191,7 @@ describe("lambda adapter", () => {
 
     const response = await handler(event, {});
 
-    await expect(response.text()).resolves.toBe("hello lambda");
+    expect(response.body).toBe("hello lambda");
   });
 
   it("uses API Gateway v1 method and path as fallback", async () => {
