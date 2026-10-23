@@ -182,12 +182,20 @@ function semanticCommand(command: CreditLedgerCommand): unknown {
       return semantic;
     }
     case "grant":
-    case "reserve":
     case "consume":
     case "refund":
     case "adjust":
     case "release": {
       const { transactionId: _transactionId, occurredAt: _occurredAt, ...semantic } = command;
+      return semantic;
+    }
+    case "reserve": {
+      const {
+        transactionId: _transactionId,
+        reservationId: _reservationId,
+        occurredAt: _occurredAt,
+        ...semantic
+      } = command;
       return semantic;
     }
     case "commit": {

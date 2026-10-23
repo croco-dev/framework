@@ -153,12 +153,20 @@ function semanticCommand(command: CreditLedgerCommand): unknown {
       return semantic;
     }
     case "grant":
-    case "reserve":
     case "consume":
     case "refund":
     case "adjust":
     case "release": {
       const { transactionId: _transactionId, occurredAt: _occurredAt, ...semantic } = command;
+      return semantic;
+    }
+    case "reserve": {
+      const {
+        transactionId: _transactionId,
+        reservationId: _reservationId,
+        occurredAt: _occurredAt,
+        ...semantic
+      } = command;
       return semantic;
     }
     case "commit": {
@@ -374,10 +382,27 @@ export class DrizzleCreditLedgerStore extends CreditLedgerStore {
             )
             .limit(1);
           if (existing[0]) {
-            if (existing[0].fingerprint !== fingerprint) {
+            const result = deserializeResult(existing[0].result);
+            // Old reserve receipts included the generated ID. Compare every caller field
+            // against that exact receipt, substituting only its original reservation ID.
+            let legacyReserveFingerprint: string | undefined;
+            if (command.operation === "reserve" && result.reservation) {
+              const {
+                transactionId: _transactionId,
+                occurredAt: _occurredAt,
+                ...legacySemantic
+              } = command;
+              legacyReserveFingerprint = stableSerialize({
+                ...legacySemantic,
+                reservationId: result.reservation.id,
+              });
+            }
+            if (
+              existing[0].fingerprint !== fingerprint &&
+              existing[0].fingerprint !== legacyReserveFingerprint
+            ) {
               throw new CreditDuplicateConflictProblem(command.idempotencyKey);
             }
-            const result = deserializeResult(existing[0].result);
             await this.insertEventIntent(tx, command, result);
             return result;
           }

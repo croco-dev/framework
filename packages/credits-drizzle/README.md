@@ -98,6 +98,10 @@ cross-account reservation, refund, lot, and allocation references.
 
 ## Amounts and ordering
 
+Reservation retries recover the original reservation and transaction across connections, including
+receipts written before generated reservation IDs were excluded from semantic comparison. Existing
+receipts remain unchanged; amount, account, meter, reference and settlement target conflicts still fail.
+
 Amounts use arbitrary-precision PostgreSQL `numeric` values and are mapped to the canonical decimal-string
 contract from `credits-core` (up to 18 fractional digits, no JavaScript floating point). Ledger positions
 are monotonically assigned while the account row is locked; timestamps never determine history order.

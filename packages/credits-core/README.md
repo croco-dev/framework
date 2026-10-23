@@ -86,6 +86,8 @@ same allocation order. Meter restrictions still apply to reservations and usage.
 - Replaying the same semantic command returns its original identifiers and result without another
   balance movement. Reusing the key for different input raises
   `CreditDuplicateConflictProblem`.
+- Reservation retries ignore service-generated reservation IDs and timestamps, returning the original
+  reservation and transaction. Commit and release still compare the caller's target reservation ID.
 - Store implementations serialize commands per account, check `expectedPosition` when provided, and
   atomically persist all transactions produced by one command.
 - Grant allocation order is earliest expiry, then ledger position, then transaction ID. Restricted or
