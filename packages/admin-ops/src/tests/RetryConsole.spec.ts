@@ -336,15 +336,20 @@ describe("RetryConsole", () => {
     expect(listSpy).toHaveBeenCalledWith({ limit: 100, offset: 101 });
   });
 
-  it("routes indeterminate timeouts to inspection instead of an invalid retry", async () => {
+  it.each([
+    ["failed", false],
+    ["failed", true],
+    ["timed_out", false],
+    ["timed_out", true],
+  ] as const)("routes indeterminate %s (retryable=%s) to inspection", async (status, retryable) => {
     const manager = new ExecutionManagerImpl(
       new MemoryExecutionStore([
         execution({
-          status: "timed_out",
+          status,
           error: {
             code: "execution/timeout-indeterminate",
             message: "Execution timed out with an indeterminate outcome",
-            retryable: false,
+            retryable,
             indeterminate: true,
           },
         }),

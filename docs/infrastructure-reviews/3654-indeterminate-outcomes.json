@@ -1,0 +1,95 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "execution-core",
+      "classification": "pure-contract",
+      "reason": "Unresolved outcomes require attempt-fenced recovery before retry or replay. Existing atomic execution logs retain attempt-bound operator evidence before uncertainty is released; no host, storage schema or lifecycle adapter changes.",
+      "files": {
+        "packages/execution-core/src/libs/ExecutionManagerImpl.ts": "382d54bc89c8a3d5a3af751ec606cb57adbdbaf9543005660c03cc47e5998ef2",
+        "packages/execution-core/src/libs/JobsOperations.ts": "fd56d3a99e6ac85ce1044e645566a9486a76ddd7d45b2c46c4b3569770c859bc",
+        "packages/execution-core/src/libs/interfaces/ExecutionManager.ts": "dcbc58d54527fa8d705ed5d4d37cdac488be1c31c29db66a455a934215f1a84f"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Host-independent execution policy and recovery projection. No platform capability, storage migration or host lifecycle change.",
+          "providers": ["@croco/execution-core"],
+          "constraints": [
+            "External receipt resolution remains the provider/operator responsibility; no deployment certification is claimed."
+          ],
+          "references": [
+            "packages/execution-core/src/libs/ExecutionManagerImpl.ts",
+            "packages/execution-core/src/libs/JobsOperations.ts",
+            "packages/execution-core/src/libs/interfaces/ExecutionManager.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Host-independent execution policy and recovery projection. No platform capability, storage migration or host lifecycle change.",
+          "providers": ["@croco/execution-core"],
+          "constraints": [
+            "External receipt resolution remains the provider/operator responsibility; no deployment certification is claimed."
+          ],
+          "references": [
+            "packages/execution-core/src/libs/ExecutionManagerImpl.ts",
+            "packages/execution-core/src/libs/JobsOperations.ts",
+            "packages/execution-core/src/libs/interfaces/ExecutionManager.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Host-independent execution policy and recovery projection. No platform capability, storage migration or host lifecycle change.",
+          "providers": ["@croco/execution-core"],
+          "constraints": [
+            "External receipt resolution remains the provider/operator responsibility; no deployment certification is claimed."
+          ],
+          "references": [
+            "packages/execution-core/src/libs/ExecutionManagerImpl.ts",
+            "packages/execution-core/src/libs/JobsOperations.ts",
+            "packages/execution-core/src/libs/interfaces/ExecutionManager.ts"
+          ]
+        }
+      }
+    },
+    {
+      "package": "admin-ops",
+      "classification": "pure-contract",
+      "reason": "Unresolved execution outcomes block retry and replay regardless of status. Existing attempt-fenced operator recovery accepts failed outcomes; no host, storage schema or lifecycle adapter changes.",
+      "files": {
+        "packages/admin-ops/src/libs/sourceAdapters.ts": "cd02151fa38bb95613346612bad1ad951f105708e4fcbb2d031d4c5c98977bc2"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Host-independent execution policy and recovery projection. No platform capability, storage migration or host lifecycle change.",
+          "providers": ["@croco/execution-core"],
+          "constraints": [
+            "External receipt resolution remains the provider/operator responsibility; no deployment certification is claimed."
+          ],
+          "references": ["packages/admin-ops/src/libs/sourceAdapters.ts"]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Host-independent execution policy and recovery projection. No platform capability, storage migration or host lifecycle change.",
+          "providers": ["@croco/execution-core"],
+          "constraints": [
+            "External receipt resolution remains the provider/operator responsibility; no deployment certification is claimed."
+          ],
+          "references": ["packages/admin-ops/src/libs/sourceAdapters.ts"]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Host-independent execution policy and recovery projection. No platform capability, storage migration or host lifecycle change.",
+          "providers": ["@croco/execution-core"],
+          "constraints": [
+            "External receipt resolution remains the provider/operator responsibility; no deployment certification is claimed."
+          ],
+          "references": ["packages/admin-ops/src/libs/sourceAdapters.ts"]
+        }
+      }
+    }
+  ]
+}

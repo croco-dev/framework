@@ -34,6 +34,11 @@ export interface ExecutionAttemptManager {
   checkpointAttempt(token: ExecutionAttemptToken, key: string, value: unknown): Promise<Execution>;
   recordLogAttempt(token: ExecutionAttemptToken, params: AddExecutionLogParams): Promise<Execution>;
   settleTimedOutAttempt(token: ExecutionAttemptToken): Promise<Execution>;
+  /**
+   * Records operator-confirmed recovery for a failed, timed-out, or legacy retrying indeterminate outcome.
+   * The historical method name is retained; all accepted statuses require the current attempt token and a nonblank reason.
+   * A settled ETL handler alone does not prove that an external receipt is resolved.
+   */
   resolveIndeterminateTimeout(token: ExecutionAttemptToken, reason: string): Promise<Execution>;
 }
 
@@ -148,7 +153,7 @@ export interface ExecutionManager {
    * Preserves the consumed attempt count and transitions to 'retrying' status.
    * The subsequent start() call transitions to 'running' and increments attempts exactly once.
    *
-   * @throws Error if execution not found, maxAttempts exhausted, or timeout outcome remains indeterminate
+   * @throws Error if execution not found, maxAttempts exhausted, or the outcome remains indeterminate
    */
   retry(id: string): Promise<Execution>;
 

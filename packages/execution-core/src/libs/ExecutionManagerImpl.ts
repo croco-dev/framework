@@ -396,6 +396,11 @@ export class ExecutionManagerImpl
 
   async start(id: string): Promise<Execution> {
     const execution = await this.findExisting(id);
+    if (execution.error?.indeterminate === true) {
+      throw ExecutionProblems.indeterminateRetryBlocked(
+        `Execution '${id}' has an indeterminate outcome; record recovery before starting another attempt`,
+      );
+    }
 
     // Allow: pending → running, retrying → running
     const targetStatus: ExecutionStatus = "running";
@@ -440,7 +445,11 @@ export class ExecutionManagerImpl
     const execution = await this.findExisting(id);
 
     // Check if should retry
-    if (error.retryable && execution.attempts < execution.maxAttempts) {
+    if (
+      error.retryable &&
+      error.indeterminate !== true &&
+      execution.attempts < execution.maxAttempts
+    ) {
       const targetStatus: ExecutionStatus = "retrying";
       validateTransition(execution.status, targetStatus);
 
@@ -463,7 +472,11 @@ export class ExecutionManagerImpl
   async failAttempt(token: ExecutionAttemptToken, error: ExecutionError): Promise<Execution> {
     const execution = await this.findExisting(token.executionId);
 
-    if (error.retryable && execution.attempts < execution.maxAttempts) {
+    if (
+      error.retryable &&
+      error.indeterminate !== true &&
+      execution.attempts < execution.maxAttempts
+    ) {
       validateTransition(execution.status, "retrying");
       return this.transitionAttempt(execution, token, "retrying", {
         status: "retrying",
@@ -498,9 +511,9 @@ export class ExecutionManagerImpl
   async retry(id: string): Promise<Execution> {
     const execution = await this.findExisting(id);
 
-    if (execution.status === "timed_out" && execution.error?.indeterminate === true) {
+    if (execution.error?.indeterminate === true) {
       throw ExecutionProblems.indeterminateRetryBlocked(
-        `Execution '${id}' timed out with an indeterminate outcome; inspect external effects and resolve the timeout before retry`,
+        `Execution '${id}' has an indeterminate outcome; inspect external effects and record recovery before retry`,
       );
     }
 
@@ -645,33 +658,62 @@ export class ExecutionManagerImpl
     reason: string,
   ): Promise<Execution> {
     const execution = await this.findExisting(token.executionId);
-    if (execution.status !== "timed_out" || execution.error?.indeterminate !== true) {
+    if (
+      (execution.status !== "timed_out" &&
+        execution.status !== "failed" &&
+        execution.status !== "retrying") ||
+      execution.error?.indeterminate !== true
+    ) {
       throw ExecutionProblems.attemptFenceConflict(
-        `Execution '${token.executionId}' is not an indeterminate timeout requiring operator recovery`,
+        `Execution '${token.executionId}' is not an indeterminate outcome requiring operator recovery`,
       );
     }
     if (reason.trim().length === 0) {
-      throw ExecutionProblems.conflict("Indeterminate timeout recovery requires a reason");
+      throw ExecutionProblems.conflict("Indeterminate outcome recovery requires a reason");
     }
 
+    const resolvedAt = this.clock().toISOString();
     const store = this.attemptStore(token.executionId);
+    // This records evidence, not completion of the subsequent recovery status update.
+    const recorded = await store.appendLogIfStatusAndAttempt(
+      token.executionId,
+      execution.status,
+      token.attempt,
+      {
+        timestamp: resolvedAt,
+        level: "info",
+        message: "Operator recovery evidence recorded",
+        data: { attempt: token.attempt, status: execution.status, reason },
+      },
+    );
+    if (!recorded) {
+      throw ExecutionProblems.attemptFenceConflict(
+        `Attempt ${token.attempt} lost ownership before recovery evidence for execution '${token.executionId}' could be recorded`,
+      );
+    }
     const updated = await store.updateIfStatusAndAttempt(
       token.executionId,
-      "timed_out",
+      execution.status,
       token.attempt,
       {
         error: {
           ...execution.error,
-          message: "Execution timeout was resolved by an operator",
-          code: "execution/timeout-operator-resolved",
+          message:
+            execution.status === "timed_out"
+              ? "Execution timeout was resolved by an operator"
+              : "Execution failure was resolved by an operator",
+          code:
+            execution.status === "timed_out"
+              ? "execution/timeout-operator-resolved"
+              : execution.error.code,
           retryable: true,
           indeterminate: false,
         },
         metadata: {
-          ...execution.metadata,
-          timeoutRecovery: {
+          ...recorded.metadata,
+          [execution.status === "timed_out" ? "timeoutRecovery" : "indeterminateRecovery"]: {
             reason,
-            resolvedAt: this.clock().toISOString(),
+            resolvedAt,
           },
         },
       },
@@ -679,7 +721,7 @@ export class ExecutionManagerImpl
     if (updated) return updated;
 
     throw ExecutionProblems.attemptFenceConflict(
-      `Attempt ${token.attempt} lost ownership before indeterminate timeout recovery for execution '${token.executionId}' could be recorded`,
+      `Attempt ${token.attempt} lost ownership before indeterminate outcome recovery for execution '${token.executionId}' could be recorded`,
     );
   }
 
@@ -841,9 +883,9 @@ export class ExecutionManagerImpl
   async replay(id: string, params: ReplayExecutionParams = {}): Promise<Execution> {
     const execution = await this.findExisting(id);
 
-    if (execution.status === "timed_out" && execution.error?.indeterminate === true) {
+    if (execution.error?.indeterminate === true) {
       throw ExecutionProblems.indeterminateRetryBlocked(
-        `Execution '${id}' timed out with an indeterminate outcome; resolve it before replay`,
+        `Execution '${id}' has an indeterminate outcome; resolve it before replay`,
       );
     }
 

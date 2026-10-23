@@ -132,6 +132,17 @@ function hasAttemptsRemaining(execution: Execution): boolean {
 }
 
 export function getJobFailurePolicy(execution: Execution): JobFailurePolicy {
+  if (execution.error?.indeterminate === true) {
+    return {
+      state: execution.status === "timed_out" ? "timed_out" : "dead_lettered",
+      needsAttention: true,
+      retryable: false,
+      replayable: false,
+      recoveryAction: "inspect",
+      reason:
+        "Job has an indeterminate outcome; inspect external effects and record recovery before retry or replay",
+    };
+  }
   switch (execution.status) {
     case "pending":
       return {
@@ -179,17 +190,6 @@ export function getJobFailurePolicy(execution: Execution): JobFailurePolicy {
         reason: "Job failed a retryable attempt and is waiting for another run",
       };
     case "timed_out": {
-      if (execution.error?.indeterminate === true) {
-        return {
-          state: "timed_out",
-          needsAttention: true,
-          retryable: false,
-          replayable: false,
-          recoveryAction: "inspect",
-          reason:
-            "Job timed out with an indeterminate outcome; inspect external effects before operator replay",
-        };
-      }
       const retryable = execution.error?.retryable === true && hasAttemptsRemaining(execution);
       return {
         state: "timed_out",
@@ -215,11 +215,11 @@ export function getJobFailurePolicy(execution: Execution): JobFailurePolicy {
       return {
         state: "dead_lettered",
         needsAttention: true,
-        retryable: false,
+        retryable: execution.error?.retryable === true,
         replayable: true,
-        recoveryAction: "replay",
+        recoveryAction: execution.error?.retryable === true ? "retry" : "replay",
         reason: execution.error?.retryable
-          ? "Job failed and requires operator replay"
+          ? "Job failed and can be retried by an operator"
           : "Job failed with a non-retryable error",
       };
   }

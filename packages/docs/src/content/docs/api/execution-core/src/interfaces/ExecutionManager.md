@@ -230,7 +230,7 @@ The subsequent start() call transitions to 'running' and increments attempts exa
 
 #### Throws
 
-Error if execution not found, maxAttempts exhausted, or timeout outcome remains indeterminate
+Error if execution not found, maxAttempts exhausted, or the outcome remains indeterminate
 
 ---
 
