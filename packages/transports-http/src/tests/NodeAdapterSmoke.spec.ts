@@ -6,6 +6,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Container, type ILogger, LOGGER_TOKEN } from "@croco/framework-context";
 import { Logger } from "@croco/framework-logger";
+import { Problem } from "@croco/problems-core";
 import { Body, Controller, Get, Post, Raw, RequestValidationProblem } from "@croco/protocols-rest";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
@@ -131,6 +132,64 @@ describe("NodeAdapter real server smoke", () => {
     if (cleanupFailures.length > 0) {
       throw new Error(`Node smoke cleanup failed: ${cleanupFailures.join("; ")}`);
     }
+  });
+
+  it("rejects an occupied port and can retry with graceful shutdown on another port", async () => {
+    const occupied = await createNodeSmokeApp().listen(0);
+    servers.push(occupied);
+    await waitForListening(occupied, "occupied port");
+    const address = occupied.address();
+    if (!address || typeof address === "string") throw new Error("Expected a TCP address");
+
+    const graceful = createGracefulShutdownController({ isLambdaEnvironment: false });
+    const app = createApp({
+      controllers: [NodeSmokeController],
+      middlewares: [graceful.middleware],
+      securityValidation: "off",
+      diValidation: "off",
+    });
+    const callback = vi.fn();
+    const outcome = await app.listen(address.port, callback).then(
+      (server) => {
+        servers.push(server);
+        return server;
+      },
+      (error: unknown) => error,
+    );
+    expect(outcome).toBeInstanceOf(Problem);
+    expect(outcome).toMatchObject({
+      code: "transports-http/listen-failed",
+      cause: { code: "EADDRINUSE" },
+    });
+    expect(callback).not.toHaveBeenCalled();
+
+    const server = await app.listen(0, callback);
+    servers.push(server);
+    expect(server.listening).toBe(true);
+    expect(server.listenerCount("error")).toBe(0);
+    expect(callback).toHaveBeenCalledTimes(1);
+    expect(
+      (await fetchWithTimeout(`${getBaseUrl(server, "retry")}/node-smoke/json`, "retry request"))
+        .status,
+    ).toBe(200);
+    await graceful.shutdown();
+    expect(server.listening).toBe(false);
+    expect(occupied.listening).toBe(true);
+    expect(callback).toHaveBeenCalledTimes(1);
+  });
+
+  it("rejects synchronous listen errors as Problems and allows a subsequent start", async () => {
+    const app = createNodeSmokeApp();
+    const callback = vi.fn();
+    await expect(app.listen(-1, callback)).rejects.toMatchObject({
+      code: "transports-http/listen-failed",
+      cause: { code: "ERR_SOCKET_BAD_PORT" },
+    });
+    expect(callback).not.toHaveBeenCalled();
+    const server = await app.listen(0, callback);
+    servers.push(server);
+    expect(server.listening).toBe(true);
+    expect(callback).toHaveBeenCalledTimes(1);
   });
 
   it("serves routes, operational endpoints, headers, statuses, and Problem responses over startServer(app, 0)", async () => {

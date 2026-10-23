@@ -655,25 +655,50 @@ export class CrocoApp {
 
     this.registerNodeStaticRoutes(listenOptions);
 
-    const { serve } = await import("@hono/node-server");
-    const handler = this.nodeHandler();
-
-    const server = serve(
-      {
-        fetch: (request: Request, env: NodeServerEnv) =>
-          handler(request, env as Record<string, unknown> | undefined),
-        port,
-      },
-      () => {
-        this.logger.info(`Server running on http://localhost:${port}`);
-        onListen?.();
-      },
-    );
-
+    const { createAdaptorServer } = await import("@hono/node-server");
     const { bindGracefulShutdownServer } =
       await import("./middleware/GracefulShutdownMiddleware.js");
-    for (const middleware of this.config.middlewares ?? []) {
-      bindGracefulShutdownServer(middleware, server);
+    const handler = this.nodeHandler();
+    const server = createAdaptorServer({
+      fetch: (request: Request, env: NodeServerEnv) =>
+        handler(request, env as Record<string, unknown> | undefined),
+    });
+
+    try {
+      await new Promise<void>((resolve, reject) => {
+        const cleanup = () => {
+          server.off("error", onError);
+          server.off("listening", onListening);
+        };
+        const onError = (error: unknown) => {
+          cleanup();
+          reject(error);
+        };
+        const onListening = () => {
+          cleanup();
+          resolve();
+        };
+        server.once("error", onError);
+        server.once("listening", onListening);
+        try {
+          server.listen(port);
+        } catch (error) {
+          onError(error);
+        }
+      });
+
+      for (const middleware of this.config.middlewares ?? []) {
+        bindGracefulShutdownServer(middleware, server);
+      }
+      this.logger.info(`Server running on http://localhost:${port}`);
+      onListen?.();
+    } catch (error) {
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+      throw ProblemFactory.internalServerError(
+        "transports-http/listen-failed",
+        "The Node HTTP listener could not start.",
+        { cause: error instanceof Error ? error : undefined },
+      );
     }
 
     return server;

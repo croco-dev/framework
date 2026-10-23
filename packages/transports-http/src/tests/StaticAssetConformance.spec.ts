@@ -1,20 +1,25 @@
 import "reflect-metadata";
+import { EventEmitter } from "node:events";
 
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { basename, dirname, join } from "node:path";
 import { Container } from "@croco/framework-context";
 import { Logger } from "@croco/framework-logger";
-import { serve } from "@hono/node-server";
+import { createAdaptorServer } from "@hono/node-server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createApp as createCrocoApp } from "../libs/CrocoApp";
 import { ErrorHandler } from "../libs/ErrorHandler";
 import { HealthCheckRegistry } from "../libs/HealthCheckRegistry";
 
 vi.mock("@hono/node-server", () => ({
-  serve: vi.fn((_options: unknown, callback?: () => void) => {
-    callback?.();
-    return {};
+  createAdaptorServer: vi.fn((_options: unknown) => {
+    const server = new EventEmitter();
+    return Object.assign(server, {
+      listen: () => {
+        server.emit("listening");
+      },
+    });
   }),
 }));
 
@@ -119,7 +124,7 @@ function classifyBody(body: string): string {
 describe("Static asset and SPA fallback conformance", () => {
   beforeEach(() => {
     Container.reset();
-    vi.mocked(serve).mockClear();
+    vi.mocked(createAdaptorServer).mockClear();
 
     const logger = {
       info: () => {},
@@ -136,7 +141,7 @@ describe("Static asset and SPA fallback conformance", () => {
   });
 
   afterEach(() => {
-    vi.mocked(serve).mockClear();
+    vi.mocked(createAdaptorServer).mockClear();
   });
 
   it("serves normal and nested static assets with conditional-request headers", async () => {

@@ -1,6 +1,6 @@
 {
   "version": "croco.problem-code-registry.v1",
-  "problemCount": 1147,
+  "problemCount": 1148,
   "problems": [
     {
       "code": "ACCESS_DENIED",
@@ -32094,6 +32094,36 @@
         {
           "file": "packages/transports-http/src/libs/ParamResolver.ts",
           "line": 146,
+          "column": 13,
+          "kind": "problem-factory"
+        }
+      ]
+    },
+    {
+      "code": "transports-http/listen-failed",
+      "category": "InternalServerError",
+      "status": 500,
+      "title": "Internal Server Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#transports-http-listen-failed",
+      "recovery": {
+        "cause": "Croco or an upstream dependency failed after accepting the request.",
+        "userAction": "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        "operatorAction": "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        "retryability": "conditional",
+        "redactionPolicy": "operator-only",
+        "telemetry": {
+          "eventName": "croco.problem.error",
+          "severity": "error",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/transports-http/src/libs/CrocoApp.ts",
+          "line": 697,
           "column": 13,
           "kind": "problem-factory"
         }

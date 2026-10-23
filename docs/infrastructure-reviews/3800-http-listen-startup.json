@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "transports-http",
+      "classification": "runtime-adapter",
+      "reason": "Node listen waits for listening or a startup error before resolving; startup failures close the listener and preserve the Node cause. Reuses the Hono Node adapter and existing graceful-shutdown binding.",
+      "files": {
+        "packages/transports-http/src/libs/CrocoApp.ts": "7965dea259cc86976bbc502262f39cfa53bb5d8fda4daa2ebbd53d40bcc10dbc"
+      },
+      "catalogRuntimes": ["node", "lambda"],
+      "profiles": {
+        "kubernetes": {
+          "result": "supported",
+          "reason": "The existing Node HTTP adapter is exercised with real local sockets for port collision, retry and graceful shutdown.",
+          "providers": ["@hono/node-server", "@croco/transports-http", "@croco/preset-node"],
+          "constraints": [
+            "Local Node host-runtime evidence only; no live Kubernetes deployment or provider certification."
+          ],
+          "references": [
+            "packages/transports-http/src/libs/CrocoApp.ts",
+            "packages/transports-http/src/tests/NodeAdapterSmoke.spec.ts",
+            "packages/preset-node/src/entry.ts",
+            "packages/presentation-preset/runtime-profiles.json"
+          ],
+          "evidence": {
+            "kind": "host-runtime",
+            "runtime": "node",
+            "path": "packages/transports-http/src/tests/NodeAdapterSmoke.spec.ts",
+            "testName": "NodeAdapter real server smoke rejects an occupied port and can retry with graceful shutdown on another port",
+            "sha256": "7e8dc6d5101bbf06e965e5fe7fd975e9b29c78ad7c43b928c16e1cfd6babad84"
+          }
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Lambda invokes the existing fetch/Lambda adapter without opening a TCP listener; listen startup and its error listeners are not used.",
+          "providers": ["@croco/transports-http", "@croco/preset-lambda"],
+          "constraints": [],
+          "references": [
+            "packages/transports-http/src/libs/CrocoLambdaAdapter.ts",
+            "packages/presentation-preset/runtime-profiles.json"
+          ]
+        },
+        "cloudflare": {
+          "result": "unsupported",
+          "host": "workers",
+          "reason": "This Node TCP listener requires node:http and the Hono Node adapter; Worker isolates use their separate fetch transport.",
+          "providers": ["@croco/transports-cloudflare-workers"],
+          "constraints": [
+            "No Node TCP listen support is claimed for Workers; no Node Container profile is introduced."
+          ],
+          "references": [
+            "packages/transports-http/src/libs/CrocoApp.ts",
+            "packages/transports-cloudflare-workers/src/index.ts",
+            "packages/presentation-preset/runtime-profiles.json"
+          ]
+        }
+      }
+    }
+  ]
+}
