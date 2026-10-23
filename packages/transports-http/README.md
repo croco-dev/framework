@@ -496,7 +496,6 @@ status/body 또는 handler가 던진 오류를 유지하며 handler나 환급을
 기록합니다. 이 경우 quota가 남아 있을 수 있으므로 admission 시점의 보수적인 rate-limit headers를 유지합니다.
 환급 저장소의 오류 보고는 기존 `RateLimiter`의 `onStoreError` 경로도 따릅니다.
 
-
 Node 서버에서 `clientIdentity`를 생략하면 기본 정책은 연결의 소켓 peer 주소를 사용합니다. 리버스 프록시나 로드 밸런서 뒤에서는 이 주소가 프록시의 주소이므로, 실제 클라이언트별로 제한하려면 신뢰할 수 있는 헤더를 `trustedProxyHeaders`로 지정하거나 커스텀 `clientIdentity` 정책을 제공해야 합니다.
 
 `rateLimitHttpMiddleware({ failOpen })`는 quota 결과 처리와 저장소 장애 시 허용 여부에 사용하는 단일 HTTP 정책입니다.
