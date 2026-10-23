@@ -904,6 +904,88 @@ describe("LifecycleRuleEvaluator versioned execution", () => {
     ).resolves.toMatchObject({ id: indeterminate.id, status: "succeeded" });
   });
 
+  it.each([false, true])(
+    "preserves an in-flight dispatch when duplicate save fails (persisted first: %s)",
+    async (persistBeforeFailure) => {
+      const saveError = new Error("duplicate receipt store outage");
+      class FailingDuplicateRunStore extends InMemoryLifecycleRunStore {
+        private failNextDuplicateSave = true;
+
+        override async save(run: LifecycleFinalizedRun) {
+          if (run.skipReason === "idempotency_key_reused" && this.failNextDuplicateSave) {
+            this.failNextDuplicateSave = false;
+            if (persistBeforeFailure) {
+              await super.save(run);
+            }
+            throw saveError;
+          }
+          return super.save(run);
+        }
+      }
+
+      const registry = new LifecycleRuleRegistry();
+      await registerVersion(registry, "1.0.0", { activate: true });
+      const runStore = new FailingDuplicateRunStore();
+      const sink = new InMemoryLifecycleActionSink();
+      let signalStarted: (() => void) | undefined;
+      const started = new Promise<void>((resolve) => {
+        signalStarted = resolve;
+      });
+      let releaseAction: (() => void) | undefined;
+      const released = new Promise<void>((resolve) => {
+        releaseAction = resolve;
+      });
+      const evaluator = new LifecycleRuleEvaluator({
+        registry,
+        runStore,
+        actionAdapter: {
+          async execute(action, context, run) {
+            const result = await sink.execute(action, context, run);
+            signalStarted?.();
+            await released;
+            return result;
+          },
+        },
+      });
+      const context = createContext("in-flight-duplicate");
+      const original = evaluator.evaluate(context);
+      await started;
+      const [dispatch] = await runStore.list();
+      if (!dispatch) {
+        throw new Error("expected in-flight dispatch evidence");
+      }
+
+      try {
+        await expect(evaluator.evaluate(context)).rejects.toBe(saveError);
+        await expect(runStore.findByIdempotencyKey(dispatch.idempotencyKey)).resolves.toEqual(
+          dispatch,
+        );
+        const duplicate = await evaluator.evaluate(context);
+        expect(duplicate.runs).toMatchObject([
+          { id: dispatch.id, status: "skipped", skipReason: "idempotency_key_reused" },
+        ]);
+        expect(sink.getEmissions()).toHaveLength(1);
+      } finally {
+        releaseAction?.();
+        await original;
+      }
+
+      await expect(original).resolves.toMatchObject({
+        runs: [{ id: dispatch.id, status: "succeeded" }],
+      });
+      await expect(runStore.findByIdempotencyKey(dispatch.idempotencyKey)).resolves.toMatchObject({
+        id: dispatch.id,
+        status: "succeeded",
+        actionResults: [{ status: "success" }],
+      });
+      const replay = await evaluator.evaluate(context);
+      expect(replay.runs).toMatchObject([
+        { status: "skipped", skipReason: "idempotency_key_reused" },
+      ]);
+      expect(sink.getEmissions()).toHaveLength(1);
+    },
+  );
+
   it("keeps a pre-dispatch persistence failure safely retryable", async () => {
     class FailingDispatchClaimRunStore extends InMemoryLifecycleRunStore {
       private failNextClaim = true;
