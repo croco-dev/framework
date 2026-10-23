@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { chmodSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -454,6 +454,76 @@ describe("auto-changeset.mts", () => {
     );
     expect(listChangesets(repo)).toEqual([]);
   });
+
+  it.each(["success", "write failure", "commit failure"])(
+    "preserves unrelated staged and working changes after %s",
+    (outcome) => {
+      const repo = createTempRepo();
+      commitFile(repo, "modified.txt", "original", "chore: seed modified file");
+      commitFile(repo, "partial.txt", "original", "chore: seed partial file");
+      commitFile(repo, "deleted.txt", "remove me", "chore: seed deleted file");
+      checkoutBranch(repo, "fix/index-preservation");
+      commitFile(
+        repo,
+        "packages/frontend-vite/src/fix.ts",
+        "export const fixed = true;",
+        "fix: preserve index",
+      );
+      writeFileSync(join(repo, "modified.txt"), "staged modification\n");
+      writeFileSync(join(repo, "partial.txt"), "staged portion\n");
+      writeFileSync(join(repo, "new file.txt"), "staged new file\n");
+      git(repo, ["add", "modified.txt", "partial.txt", "new file.txt"]);
+      git(repo, ["rm", "deleted.txt"]);
+      writeFileSync(join(repo, "partial.txt"), "staged portion\nunstaged portion\n");
+      writeFileSync(join(repo, "unstaged.txt"), "untracked content\n");
+      const paths = ["modified.txt", "partial.txt", "new file.txt", "deleted.txt", "unstaged.txt"];
+      const snapshot = () => ({
+        index: git(repo, ["ls-files", "--stage", "--", ...paths]),
+        staged: git(repo, ["diff", "--cached", "--binary", "--", ...paths]),
+        unstaged: git(repo, ["diff", "--binary", "--", ...paths]),
+        status: git(repo, ["status", "--porcelain=v1", "--", ...paths]),
+        contents: paths
+          .filter((path) => path !== "deleted.txt")
+          .map((path) => readFileSync(join(repo, path))),
+      });
+      const before = snapshot();
+      const head = git(repo, ["rev-parse", "HEAD"]);
+      if (outcome === "write failure") {
+        rmSync(join(repo, ".changeset"), { recursive: true });
+      } else if (outcome === "commit failure") {
+        const hooks = join(repo, ".git", "failing-hooks");
+        mkdirSync(hooks);
+        writeFileSync(
+          join(hooks, "prepare-commit-msg"),
+          "#!/bin/sh\necho rejected-commit >&2\nexit 1\n",
+        );
+        chmodSync(join(hooks, "prepare-commit-msg"), 0o755);
+        git(repo, ["config", "core.hooksPath", hooks]);
+      }
+
+      const result = runScript(newBranchStdin("fix/index-preservation", head), repo);
+
+      expect(result.status).toBe(1);
+      expect(snapshot()).toEqual(before);
+      if (outcome === "success") {
+        expect(result.stdout).toContain("auto-changeset: created and committed");
+        expect(result.stdout).toContain("push aborted");
+        const changedPaths = git(repo, [
+          "diff-tree",
+          "--no-commit-id",
+          "--name-only",
+          "-r",
+          "HEAD",
+        ]);
+        expect(changedPaths).toMatch(/^\.changeset\/[a-f0-9]+\.md$/);
+        expect(readOnlyChangeset(repo)).toContain("'@croco/frontend-vite': patch");
+      } else {
+        expect(result.stdout).toContain("auto-changeset: failed:");
+        expect(git(repo, ["rev-parse", "HEAD"])).toBe(head);
+        if (outcome === "commit failure") expect(result.stdout).toContain("rejected-commit");
+      }
+    },
+  );
 
   it("fails when git inspection fails unexpectedly", () => {
     const repo = mkdtempSync(join(tmpdir(), "croco-auto-changeset-not-git-"));
