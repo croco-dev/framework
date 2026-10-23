@@ -533,14 +533,16 @@ describe("workflow-core", () => {
     }
     instances.set(FailureRaceTasks, new FailureRaceTasks());
     const runner = createWorkflowRunner(manager, WorkflowRegistry.fromMetadata());
-    const updateIfStatus = store.updateIfStatus.bind(store);
+    const updateIfStatusAndAttempt = store.updateIfStatusAndAttempt.bind(store);
     let cancelled: Execution | undefined;
-    vi.spyOn(store, "updateIfStatus").mockImplementation(async (id, status, data) => {
-      if (id === "exec-1" && data.status === "failed") {
-        cancelled = await runner.cancel(id, "operator won failure race");
-      }
-      return updateIfStatus(id, status, data);
-    });
+    vi.spyOn(store, "updateIfStatusAndAttempt").mockImplementation(
+      async (id, status, attempt, data) => {
+        if (id === "exec-1" && data.status === "failed") {
+          cancelled = await runner.cancel(id, "operator won failure race");
+        }
+        return updateIfStatusAndAttempt(id, status, attempt, data);
+      },
+    );
     const mockSpan = createMockSpan();
     vi.spyOn(trace, "getTracer").mockReturnValue(createMockTracer(mockSpan.span));
 
@@ -584,14 +586,16 @@ describe("workflow-core", () => {
     }
     instances.set(StartRaceTasks, new StartRaceTasks());
     const runner = createWorkflowRunner(manager, WorkflowRegistry.fromMetadata());
-    const updateIfStatus = store.updateIfStatus.bind(store);
+    const updateIfStatusAndAttempt = store.updateIfStatusAndAttempt.bind(store);
     let cancelled: Execution | undefined;
-    vi.spyOn(store, "updateIfStatus").mockImplementation(async (id, status, data) => {
-      if (id === "exec-1" && status === "pending" && data.status === "running") {
-        cancelled = await runner.cancel(id, "operator won start race");
-      }
-      return updateIfStatus(id, status, data);
-    });
+    vi.spyOn(store, "updateIfStatusAndAttempt").mockImplementation(
+      async (id, status, attempt, data) => {
+        if (id === "exec-1" && status === "pending" && data.status === "running") {
+          cancelled = await runner.cancel(id, "operator won start race");
+        }
+        return updateIfStatusAndAttempt(id, status, attempt, data);
+      },
+    );
 
     await expect(runner.execute("start-race", {})).rejects.toMatchObject({
       code: "workflow-core/workflow-execution-cancelled",

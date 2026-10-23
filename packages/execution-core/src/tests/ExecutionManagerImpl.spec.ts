@@ -224,12 +224,20 @@ class MockExecutionStore
 
 class InterleavingStore extends MockExecutionStore {
   beforeFirstTimeoutWrite?: () => Promise<void>;
+  beforeNextWrite?: () => Promise<void>;
+
+  private async interleave(): Promise<void> {
+    const hook = this.beforeNextWrite;
+    this.beforeNextWrite = undefined;
+    await hook?.();
+  }
 
   override async updateIfStatus(
     id: string,
     expectedStatus: ExecutionStatus,
     data: Partial<Execution>,
   ): Promise<Execution | null> {
+    await this.interleave();
     const hook = this.beforeFirstTimeoutWrite;
     if (data.status === "timed_out" && hook) {
       this.beforeFirstTimeoutWrite = undefined;
@@ -244,6 +252,7 @@ class InterleavingStore extends MockExecutionStore {
     expectedAttempt: number,
     data: Partial<Execution>,
   ): Promise<Execution | null> {
+    await this.interleave();
     const hook = this.beforeFirstTimeoutWrite;
     if (data.status === "timed_out" && hook) {
       this.beforeFirstTimeoutWrite = undefined;
@@ -823,9 +832,9 @@ describe("ExecutionManagerImpl", () => {
     it("cannot overwrite a timeout that wins the lifecycle race", async () => {
       const execution = await manager.create({ type: "task", timeout: 1 });
       await manager.start(execution.id);
-      const originalUpdateIfStatus = store.updateIfStatus.bind(store);
-      vi.spyOn(store, "updateIfStatus").mockImplementationOnce(async () => {
-        await originalUpdateIfStatus(execution.id, "running", {
+      const originalUpdate = store.updateIfStatusAndAttempt.bind(store);
+      vi.spyOn(store, "updateIfStatusAndAttempt").mockImplementationOnce(async () => {
+        await originalUpdate(execution.id, "running", 1, {
           status: "timed_out",
           completedAt: new Date(),
         });
@@ -838,6 +847,127 @@ describe("ExecutionManagerImpl", () => {
       const persisted = await manager.get(execution.id);
       expect(persisted.status).toBe("timed_out");
       expect(persisted.result).toBeUndefined();
+    });
+  });
+
+  describe("lifecycle attempt fencing", () => {
+    const transientError: ExecutionError = { message: "try again", retryable: true };
+
+    it("rejects an ABA start without reusing an attempt near maxAttempts", async () => {
+      const interleaved = new InterleavingStore();
+      const subject = new ExecutionManagerImpl(interleaved);
+      const execution = await subject.create({ type: "task", maxAttempts: 3 });
+      const first = await subject.start(execution.id);
+      await subject.failAttempt(
+        { executionId: execution.id, attempt: first.attempts },
+        transientError,
+      );
+      interleaved.beforeNextWrite = async () => {
+        const second = await subject.start(execution.id);
+        expect(second.attempts).toBe(2);
+        await subject.failAttempt({ executionId: execution.id, attempt: 2 }, transientError);
+      };
+
+      await expect(subject.start(execution.id)).rejects.toMatchObject({
+        code: "execution/invalid-state-transition",
+      });
+      await expect(subject.get(execution.id)).resolves.toMatchObject({
+        status: "retrying",
+        attempts: 2,
+      });
+      const third = await subject.start(execution.id);
+      expect(third.attempts).toBe(3);
+      const before = structuredClone(await subject.get(execution.id));
+      const oldToken = { executionId: execution.id, attempt: 2 };
+      await expect(subject.completeAttempt(oldToken, "old result")).rejects.toMatchObject({
+        code: "execution/attempt-fence-conflict",
+      });
+      await expect(subject.failAttempt(oldToken, transientError)).rejects.toMatchObject({
+        code: "execution/attempt-fence-conflict",
+      });
+      await expect(
+        subject.checkpointAttempt(oldToken, "cursor", "old cursor"),
+      ).rejects.toMatchObject({
+        code: "execution/attempt-fence-conflict",
+      });
+      await expect(subject.get(execution.id)).resolves.toEqual(before);
+      await expect(
+        subject.failAttempt({ executionId: execution.id, attempt: 3 }, transientError),
+      ).resolves.toMatchObject({ status: "failed", attempts: 3 });
+      await expect(subject.retry(execution.id)).rejects.toMatchObject({
+        code: "execution/max-retries-exceeded",
+      });
+    });
+
+    it.each(["complete", "fail", "cancel", "timeout", "retry"] as const)(
+      "rejects a stale %s after the status returns on another attempt",
+      async (operation) => {
+        const interleaved = new InterleavingStore();
+        const subject = new ExecutionManagerImpl(interleaved);
+        const execution = await subject.create({ type: "task", maxAttempts: 3 });
+        await subject.start(execution.id);
+        if (operation === "retry") {
+          await subject.failAttempt(
+            { executionId: execution.id, attempt: 1 },
+            { message: "failed", retryable: false },
+          );
+        }
+        let winner: Execution | undefined;
+        interleaved.beforeNextWrite = async () => {
+          if (operation === "retry") {
+            await subject.retry(execution.id);
+          } else {
+            await subject.failAttempt({ executionId: execution.id, attempt: 1 }, transientError);
+          }
+          await subject.start(execution.id);
+          if (operation === "retry") {
+            await subject.failAttempt(
+              { executionId: execution.id, attempt: 2 },
+              { message: "new failure", retryable: false },
+            );
+          }
+          winner = structuredClone(await subject.get(execution.id));
+        };
+        const staleMutation =
+          operation === "complete"
+            ? subject.complete(execution.id, "stale result")
+            : operation === "fail"
+              ? subject.fail(execution.id, transientError)
+              : operation === "cancel"
+                ? subject.cancel(execution.id, "stale cancellation")
+                : operation === "timeout"
+                  ? subject.timeout(execution.id)
+                  : subject.retry(execution.id);
+
+        await expect(staleMutation).rejects.toMatchObject({
+          code: "execution/invalid-state-transition",
+        });
+        expect(winner?.attempts).toBe(2);
+        await expect(subject.get(execution.id)).resolves.toEqual(winner);
+      },
+    );
+
+    it("preserves lifecycle compatibility for status-only stores", async () => {
+      const plain = new MockExecutionStore();
+      Object.assign(plain, {
+        updateIfStatusAndAttempt: undefined,
+        mergeCheckpointIfStatusAndAttempt: undefined,
+        appendLogIfStatusAndAttempt: undefined,
+      });
+      const subject = new ExecutionManagerImpl(plain);
+      expect(subject.supportsAttemptFencing()).toBe(false);
+      const execution = await subject.create({ type: "task", maxAttempts: 2 });
+      await subject.start(execution.id);
+      await subject.fail(execution.id, transientError);
+      await expect(subject.start(execution.id)).resolves.toMatchObject({
+        status: "running",
+        attempts: 2,
+      });
+      await expect(subject.complete(execution.id, "current result")).resolves.toMatchObject({
+        status: "completed",
+        attempts: 2,
+        result: "current result",
+      });
     });
   });
 

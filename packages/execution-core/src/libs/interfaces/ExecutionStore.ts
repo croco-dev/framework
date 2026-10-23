@@ -72,7 +72,9 @@ export abstract class ExecutionStore {
   /**
    * Update an execution only when its persisted status still matches the expected status.
    *
-   * This is the required atomic boundary for lifecycle transitions that may race across workers.
+   * This is the minimum atomic boundary for lifecycle transitions that may race across workers.
+   * Status-only comparison cannot detect a status that changes and then returns on a newer attempt.
+   * Implement ExecutionAttemptStore for lifecycle comparisons of both status and attempt number.
    *
    * @returns Updated execution, or null when another actor changed the status first
    */
@@ -114,6 +116,8 @@ export interface ExecutionLogStore {
 
 /**
  * Optional store capability for atomically fencing mutations to one execution attempt.
+ * Lifecycle transitions, including start, compare the status and attempt number read by the manager.
+ * Return null if either differs, even when the status has returned to its earlier value.
  */
 export interface ExecutionAttemptStore {
   updateIfStatusAndAttempt(

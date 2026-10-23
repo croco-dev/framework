@@ -6,6 +6,8 @@ title: "ExecutionAttemptStore"
 ---
 
 Optional store capability for atomically fencing mutations to one execution attempt.
+Lifecycle transitions, including start, compare the status and attempt number read by the manager.
+Return null if either differs, even when the status has returned to its earlier value.
 
 ## Methods
 

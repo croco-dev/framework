@@ -374,6 +374,14 @@ await jobs.replay("exec_456", { reason: "provider restored" });
 | `get(id)`                      | 실행 ID로 단일 실행 조회                                                                                                                       |
 | `reconcileTimedOut(options?)`  | 저장된 deadline이 지난 `running` 실행을 안정적인 키셋 순회로 조정. attempt fencing 저장소에서만 목록 조회 뒤 시작된 새 attempt와의 경합을 차단 |
 
+`ExecutionAttemptStore`를 구현한 저장소에서는 `start`, `complete`, `fail`, `cancel`, `retry`,
+`timeout`이 읽은 status와 attempts를 함께 원자적으로 비교합니다. 읽기와 쓰기 사이에 다른
+attempt가 시작되어 상태가 원래 값으로 돌아와도 오래된 갱신은
+`execution/invalid-state-transition`으로 거절됩니다. 성공한 `start`만 attempts를 증가시키며,
+이전 attempt token은 이후 attempt의 완료·실패·체크포인트를 변경할 수 없습니다.
+기본 `ExecutionStore`만 구현하면 상태만 비교하므로 이러한 상태 순환 경합을 감지하지 못합니다.
+분산 worker는 attempt-capable 저장소와 `completeAttempt` 등 token 기반 API를 사용해야 합니다.
+
 ### ExecutionInspectionManager
 
 | 메서드                  | 설명                                                 |

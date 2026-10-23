@@ -228,7 +228,9 @@ Error if execution not found or update fails
 
 Update an execution only when its persisted status still matches the expected status.
 
-This is the required atomic boundary for lifecycle transitions that may race across workers.
+This is the minimum atomic boundary for lifecycle transitions that may race across workers.
+Status-only comparison cannot detect a status that changes and then returns on a newer attempt.
+Implement ExecutionAttemptStore for lifecycle comparisons of both status and attempt number.
 
 #### Parameters
 

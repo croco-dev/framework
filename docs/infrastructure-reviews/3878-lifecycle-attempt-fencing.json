@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "execution-core",
+      "classification": "pure-contract",
+      "reason": "Lifecycle compare-and-set reuses the existing optional attempt-store capability to reject stale snapshots. No host, storage schema, provider wiring or deployment support changes.",
+      "files": {
+        "packages/execution-core/src/libs/ExecutionManagerImpl.ts": "5270fc31bb9d41a1e5a608b3ac682a92d7142730f3315fac53055b5971bc62eb",
+        "packages/execution-core/src/libs/interfaces/ExecutionStore.ts": "ce3f0b7293f9efeed7c35ab7043805387ed86863bcb7989488f80e35fc244fcb"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Infrastructure-independent lifecycle logic delegates atomic persistence to the existing ExecutionStore or ExecutionAttemptStore contract; it uses no host capabilities and changes no provider lifecycle.",
+          "providers": ["ExecutionStore", "ExecutionAttemptStore"],
+          "constraints": [
+            "Attempt-number ABA protection requires the existing optional ExecutionAttemptStore capability; status-only stores retain weaker guarantees. No live infrastructure or provider certification is claimed."
+          ],
+          "references": [
+            "packages/execution-core/src/libs/ExecutionManagerImpl.ts",
+            "packages/execution-core/src/libs/interfaces/ExecutionStore.ts",
+            "packages/execution-drizzle/src/libs/DrizzleExecutionStore.ts",
+            "docs/package-catalog.json"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Infrastructure-independent lifecycle logic delegates atomic persistence to the existing ExecutionStore or ExecutionAttemptStore contract; it uses no host capabilities and changes no provider lifecycle.",
+          "providers": ["ExecutionStore", "ExecutionAttemptStore"],
+          "constraints": [
+            "Attempt-number ABA protection requires the existing optional ExecutionAttemptStore capability; status-only stores retain weaker guarantees. No live infrastructure or provider certification is claimed."
+          ],
+          "references": [
+            "packages/execution-core/src/libs/ExecutionManagerImpl.ts",
+            "packages/execution-core/src/libs/interfaces/ExecutionStore.ts",
+            "packages/execution-drizzle/src/libs/DrizzleExecutionStore.ts",
+            "docs/package-catalog.json"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Infrastructure-independent lifecycle logic delegates atomic persistence to the existing ExecutionStore or ExecutionAttemptStore contract; it uses no host capabilities and changes no provider lifecycle.",
+          "providers": ["ExecutionStore", "ExecutionAttemptStore"],
+          "constraints": [
+            "Attempt-number ABA protection requires the existing optional ExecutionAttemptStore capability; status-only stores retain weaker guarantees. No live infrastructure or provider certification is claimed."
+          ],
+          "references": [
+            "packages/execution-core/src/libs/ExecutionManagerImpl.ts",
+            "packages/execution-core/src/libs/interfaces/ExecutionStore.ts",
+            "packages/execution-drizzle/src/libs/DrizzleExecutionStore.ts",
+            "docs/package-catalog.json"
+          ]
+        }
+      }
+    }
+  ]
+}
