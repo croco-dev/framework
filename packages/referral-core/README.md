@@ -17,7 +17,7 @@ IP/device similarity. Self-referrals are rejected, and claiming never joins
 the recipient to any organization.
 
 Benefits pin the program snapshot, and each side fulfills with a
-deterministic idempotency key (`referral:{familyId}:{cycleId}:{linkId}:{side}`),
+deterministic idempotency key (`referral-benefit:<attributionId>:<side>`),
 so one side may succeed while the other stays pending without re-paying the
 completed side on retry. Budgets lock per qualified attribution against the
 program total. Per-subject receipt counts by family and explicit benefit
@@ -30,6 +30,22 @@ belong to the benefit subject tenant. Grants whose outcome stays unclear
 become `indeterminate` with their budget locked until `reconcileBenefits`
 observes the grant or an operator resolves the attribution with verified
 grant references.
+
+`reconcileBenefits` also resumes an interrupted `granting` intent and completes
+remaining pending sides. Each external attempt claims a monotonic
+`fulfillmentAttempt`; superseded responses cannot change the current outcome.
+A granted response observed after a terminal operator decision is retained as a
+`benefit.grant-superseded` audit entry with its receipt and original idempotency key
+for reconciliation; the decision and its budget accounting remain unchanged.
+The external fulfillment port must deduplicate overlapping calls with the same
+idempotency key. A visible receipt completes its side without another grant;
+`unknown` without a receipt remains locked for an operator decision. No new
+storage migration is required: missing attempt values are treated as zero.
+Custom `ReferralTx` providers must implement the optional attempt predicate in
+`compareAndSetBenefitIntent` atomically with the status predicate and serialize
+attribution lifecycle reads inside transactions with lifecycle writes. Deploy
+that provider support with the updated service; older providers that ignore the
+predicate cannot fence recovery safely.
 
 Link tokens are issued via `@croco/referral-core/link-token`; only the
 SHA-256 hash is persisted. Use `@croco/referral-drizzle` for PostgreSQL

@@ -84,7 +84,9 @@ readonly [`ReferralAttributionState`](/api/referral-core/src/type-aliases/referr
 
 ### compareAndSetBenefitIntent()
 
-> **compareAndSetBenefitIntent**(`intentId`, `expected`, `patch`, `now`): `Promise`\<[`ReferralBenefitIntent`](/api/referral-core/src/type-aliases/referralbenefitintent/)\>
+> **compareAndSetBenefitIntent**(`intentId`, `expected`, `patch`, `now`, `expectedAttempt?`): `Promise`\<[`ReferralBenefitIntent`](/api/referral-core/src/type-aliases/referralbenefitintent/)\>
+
+Atomically checks status and, when supplied, the attempt (missing stored attempt is zero).
 
 #### Parameters
 
@@ -102,6 +104,10 @@ readonly [`ReferralBenefitIntentStatus`](/api/referral-core/src/type-aliases/ref
 
 `string`
 
+###### fulfillmentAttempt?
+
+`number`
+
 ###### reason?
 
 `string`
@@ -117,6 +123,10 @@ readonly [`ReferralBenefitIntentStatus`](/api/referral-core/src/type-aliases/ref
 ##### now
 
 `Date`
+
+##### expectedAttempt?
+
+`number`
 
 #### Returns
 
@@ -203,6 +213,8 @@ readonly [`ReferralAttributionState`](/api/referral-core/src/type-aliases/referr
 ### getAttribution()
 
 > **getAttribution**(`attributionId`): `Promise`\<[`ReferralAttribution`](/api/referral-core/src/type-aliases/referralattribution/) \| `null`\>
+
+Serializes this lifecycle read with attribution transitions until the transaction ends.
 
 #### Parameters
 

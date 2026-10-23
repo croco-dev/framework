@@ -505,7 +505,7 @@ class PostgresReferralTx implements ReferralTx {
   async getAttribution(attributionId: string): Promise<ReferralAttribution | null> {
     return run("read referral attribution", async () => {
       const result = await this.executor.execute(sql`
-        SELECT document FROM croco_referral_attributions WHERE attribution_id = ${attributionId}
+        SELECT document FROM croco_referral_attributions WHERE attribution_id = ${attributionId} FOR UPDATE
       `);
       const row = result.rows[0];
       return row ? reviveAttribution(row.document) : null;
@@ -711,22 +711,28 @@ class PostgresReferralTx implements ReferralTx {
       readonly receipt?: string;
       readonly reason?: string;
       readonly accountRef?: string;
+      readonly fulfillmentAttempt?: number;
     },
     now: Date,
+    expectedAttempt?: number,
   ): Promise<ReferralBenefitIntent> {
     return run("transition referral benefit intent", async () => {
       const current = await this.getBenefitIntent(intentId);
       if (!current) throw new ReferralAttributionNotFoundProblem(intentId);
-      if (!expected.includes(current.status)) {
+      if (
+        !expected.includes(current.status) ||
+        (expectedAttempt !== undefined && (current.fulfillmentAttempt ?? 0) !== expectedAttempt)
+      ) {
         throw new ReferralAttributionStateConflictProblem(
           intentId,
           current.status,
-          `expected one of ${expected.join(", ")}`,
+          `expected one of ${expected.join(", ")}${expectedAttempt === undefined ? "" : ` with fulfillment attempt ${expectedAttempt}`}`,
         );
       }
       const updated: ReferralBenefitIntent = {
         ...current,
         status: patch.status,
+        fulfillmentAttempt: patch.fulfillmentAttempt ?? current.fulfillmentAttempt,
         receipt: patch.receipt ?? current.receipt,
         reason: patch.reason,
         accountRef: patch.accountRef ?? current.accountRef,
@@ -741,6 +747,7 @@ class PostgresReferralTx implements ReferralTx {
         SET document = ${JSON.stringify(updated)}::jsonb, status = ${updated.status},
             updated_at = ${updated.updatedAt}
         WHERE intent_id = ${intentId} AND status IN (${expectedList})
+          ${expectedAttempt === undefined ? sql`` : sql`AND COALESCE((document->>'fulfillmentAttempt')::bigint, 0) = ${expectedAttempt}`}
         RETURNING intent_id
       `);
       if (moved.rows.length === 0) {
@@ -748,7 +755,7 @@ class PostgresReferralTx implements ReferralTx {
         throw new ReferralAttributionStateConflictProblem(
           intentId,
           latest?.status ?? current.status,
-          `expected one of ${expected.join(", ")}`,
+          `expected one of ${expected.join(", ")}${expectedAttempt === undefined ? "" : ` with fulfillment attempt ${expectedAttempt}`}`,
         );
       }
       return reviveIntent(updated);

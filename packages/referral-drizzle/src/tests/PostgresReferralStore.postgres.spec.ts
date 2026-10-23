@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { describe, expect, it } from "vitest";
 import { PgDialect } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { PostgresReferralStore, ReferralPersistenceProblem } from "../index";
 import type { ReferralPgDatabase, ReferralPgExecutor } from "../index";
 import { ReferralService } from "@croco/referral-core";
@@ -137,6 +138,274 @@ async function seed(service: ReferralService): Promise<{ programId: string; toke
 }
 
 describe.skipIf(!url)("PostgreSQL referral budgets and attribution recovery", () => {
+  it("serializes recovery ownership with an operator decision that releases the budget", async () => {
+    await withStores(async (pool, a, b) => {
+      const service = serviceFor(a, () => ({
+        qualified: true,
+        sourceEventId: "purchase",
+        qualifyingAction: "purchase",
+        eligibleReason: "paid",
+      }));
+      const { token, programId } = await seed(service);
+      const { attribution } = await service.claimAttribution({
+        token,
+        recipient: subject("recipient"),
+      });
+      const qualified = await service.qualifyAttribution({
+        attributionId: attribution.id,
+        recipient: subject("recipient"),
+      });
+      const intents = await service.listBenefitIntents({ attributionId: attribution.id });
+      const referrer = intents.find((intent) => intent.side === "referrer")!;
+      const recipient = intents.find((intent) => intent.side === "recipient")!;
+      const now = new Date("2026-02-01T00:00:00Z");
+      await a.transact(async (tx) => {
+        await tx.compareAndSetBenefitIntent(referrer.id, ["pending"], { status: "granting" }, now);
+        await tx.compareAndSetBenefitIntent(recipient.id, ["pending"], { status: "unknown" }, now);
+        await tx.compareAndSetAttribution(attribution.id, [qualified.state], {
+          ...qualified,
+          state: "indeterminate",
+        });
+      });
+      let read!: () => void;
+      let release!: () => void;
+      const readBarrier = new Promise<void>((resolve) => {
+        read = resolve;
+      });
+      const writeBarrier = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      const claim = a.transact(async (tx) => {
+        await tx.getAttribution(attribution.id);
+        read();
+        await writeBarrier;
+        return tx.compareAndSetBenefitIntent(
+          referrer.id,
+          ["granting"],
+          { status: "granting", fulfillmentAttempt: 1 },
+          now,
+          0,
+        );
+      });
+      await readBarrier;
+      const db = database(pool);
+      const timedStore = new PostgresReferralStore({
+        ...db,
+        transaction: (work) =>
+          db.transaction(async (tx) => {
+            // A native lock deadline proves contention while the recovery read remains held.
+            await tx.execute(sql`SET LOCAL lock_timeout = '100ms'`);
+            return work(tx);
+          }),
+      });
+      const decision = {
+        attributionId: attribution.id,
+        decision: "rejected" as const,
+        actorId: "operator",
+        reason: "verified no external grant",
+      };
+      try {
+        await expect(
+          serviceFor(timedStore).resolveIndeterminateBenefits(decision),
+        ).rejects.toMatchObject({
+          code: "referral-drizzle/persistence-failure",
+          cause: { code: "55P03" },
+        });
+        expect((await b.getAttribution(attribution.id))?.state).toBe("indeterminate");
+        expect(await b.transact((tx) => tx.readBudgetReserved(programId, 1))).toBe("10");
+      } finally {
+        release();
+        await claim;
+      }
+      expect((await b.getBenefitIntent(referrer.id))?.fulfillmentAttempt).toBe(1);
+      expect((await serviceFor(b).resolveIndeterminateBenefits(decision)).state).toBe("rejected");
+      expect(await b.transact((tx) => tx.readBudgetReserved(programId, 1))).toBe("0");
+    });
+  });
+
+  it("checks attempt ownership atomically when two SQL writers read the same granting status", async () => {
+    await withStores(async (pool, a) => {
+      const service = serviceFor(a, () => ({
+        qualified: true,
+        sourceEventId: "purchase",
+        qualifyingAction: "purchase",
+        eligibleReason: "paid",
+      }));
+      const { token } = await seed(service);
+      const { attribution } = await service.claimAttribution({
+        token,
+        recipient: subject("recipient"),
+      });
+      await service.qualifyAttribution({
+        attributionId: attribution.id,
+        recipient: subject("recipient"),
+      });
+      const intent = (await service.listBenefitIntents({ attributionId: attribution.id })).find(
+        (entry) => entry.side === "referrer",
+      )!;
+      const now = new Date("2026-02-01T00:00:00Z");
+      await a.transact((tx) =>
+        tx.compareAndSetBenefitIntent(intent.id, ["pending"], { status: "granting" }, now),
+      );
+      let bothRead!: () => void;
+      let release!: () => void;
+      const readBarrier = new Promise<void>((resolve) => {
+        bothRead = resolve;
+      });
+      const writeBarrier = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      let reads = 0;
+      const db = database(pool);
+      const racing = new PostgresReferralStore({
+        ...db,
+        transaction: (work) =>
+          db.transaction((tx) =>
+            work({
+              execute: async (statement) => {
+                const query = dialect.sqlToQuery(statement);
+                const result = await tx.execute(statement);
+                if (
+                  query.sql.includes(
+                    "SELECT document FROM croco_referral_benefit_intents WHERE intent_id",
+                  )
+                ) {
+                  if (++reads === 2) bothRead();
+                  if (reads <= 2) await writeBarrier;
+                }
+                return result;
+              },
+            }),
+          ),
+      });
+      const writes = [1, 2].map((attempt) =>
+        racing
+          .transact((tx) =>
+            tx.compareAndSetBenefitIntent(
+              intent.id,
+              ["granting"],
+              { status: "granting", fulfillmentAttempt: attempt },
+              now,
+              0,
+            ),
+          )
+          .catch((error: unknown) => {
+            bothRead();
+            release();
+            throw error;
+          }),
+      );
+      const resultsPromise = Promise.allSettled(writes);
+      await readBarrier;
+      release();
+      const results = await resultsPromise;
+      expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(1);
+      expect(
+        results.filter((result) => result.status === "rejected").map((result) => result.reason),
+      ).toEqual([expect.any(ReferralAttributionStateConflictProblem)]);
+      const winner = results.find((result) => result.status === "fulfilled");
+      expect((await a.getBenefitIntent(intent.id))?.fulfillmentAttempt).toBe(
+        winner?.status === "fulfilled" ? winner.value.fulfillmentAttempt : undefined,
+      );
+    });
+  });
+
+  it("fences overlapping recovery and stale completions across PostgreSQL connections", async () => {
+    await withStores(async (_pool, a, b) => {
+      let start!: () => void;
+      let finish!: () => void;
+      const started = new Promise<void>((resolve) => {
+        start = resolve;
+      });
+      const release = new Promise<void>((resolve) => {
+        finish = resolve;
+      });
+      let first = true;
+      const calls: string[] = [];
+      const payments = new Map<string, string>();
+      const fulfillment: ReferralFulfillmentPort = {
+        check: async () => null,
+        fulfill: async ({ idempotencyKey, intent }) => {
+          calls.push(idempotencyKey);
+          const grantRef = payments.get(idempotencyKey) ?? `grant:${idempotencyKey}`;
+          payments.set(idempotencyKey, grantRef);
+          if (intent.side === "referrer" && first) {
+            first = false;
+            start();
+            await release;
+            return { outcome: "unknown", reason: "late lost response" };
+          }
+          return { outcome: "granted", grantRef };
+        },
+      };
+      const recover = (store: PostgresReferralStore) =>
+        new ReferralService({
+          store,
+          tokens: {
+            generateToken: () => randomUUID(),
+            hashToken: (token) => createHash("sha256").update(token).digest("hex"),
+          },
+          novelty: () => ({ novelty: "new", reason: "signup" }),
+          qualification: () => ({
+            qualified: true,
+            sourceEventId: "purchase",
+            qualifyingAction: "purchase",
+            eligibleReason: "paid",
+          }),
+          fulfillment,
+          clock: () => new Date("2026-02-01T00:00:00Z"),
+        });
+      const service = recover(a);
+      const { token, programId } = await seed(service);
+      const { attribution } = await service.claimAttribution({
+        token,
+        recipient: subject("recipient"),
+      });
+      await service.qualifyAttribution({
+        attributionId: attribution.id,
+        recipient: subject("recipient"),
+      });
+      const intents = await service.listBenefitIntents({ attributionId: attribution.id });
+      const referrer = intents.find((intent) => intent.side === "referrer")!;
+      await a.transact((tx) =>
+        tx.compareAndSetBenefitIntent(
+          referrer.id,
+          ["pending"],
+          { status: "granting" },
+          new Date("2026-02-01Z"),
+        ),
+      );
+      const old = recover(a).reconcileBenefits({ attributionId: attribution.id });
+      await started;
+      try {
+        expect((await recover(b).reconcileBenefits({ attributionId: attribution.id })).state).toBe(
+          "fulfilled",
+        );
+      } finally {
+        finish();
+        await old;
+      }
+      expect((await b.getBenefitIntent(referrer.id))?.status).toBe("granted");
+      expect((await b.getAttribution(attribution.id))?.state).toBe("fulfilled");
+      expect(payments.size).toBe(2);
+      expect(calls.filter((key) => key === referrer.idempotencyKey)).toHaveLength(2);
+      expect(await b.transact((tx) => tx.readBudgetReserved(programId, 1))).toBe("10");
+      const recipient = intents.find((intent) => intent.side === "recipient")!;
+      await expect(
+        b.transact((tx) =>
+          tx.compareAndSetBenefitIntent(
+            recipient.id,
+            ["granted"],
+            { status: "unknown" },
+            new Date("2026-02-01Z"),
+            0,
+          ),
+        ),
+      ).rejects.toBeInstanceOf(ReferralAttributionStateConflictProblem);
+      expect((await b.getBenefitIntent(recipient.id))?.status).toBe("granted");
+    });
+  });
+
   it("caps concurrent reserves, replays logical keys, and recovers pending attributions", async () => {
     const require = createRequire(import.meta.url);
     const { Pool: PgPool } = require("pg") as {

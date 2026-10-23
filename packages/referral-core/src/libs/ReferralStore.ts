@@ -77,6 +77,7 @@ export interface ReferralTx {
   recordClick(linkId: string, occurredAt: Date): Promise<void>;
   listLinks(filter: ListReferralLinksFilter): Promise<readonly ReferralLink[]>;
   countClicksForProgram(programId: string): Promise<number>;
+  /** Serializes this lifecycle read with attribution transitions until the transaction ends. */
   getAttribution(attributionId: string): Promise<ReferralAttribution | null>;
   /** First-valid lookup: the earliest claimed attribution for a recipient in a family. */
   getFirstAttributionForRecipient(
@@ -110,6 +111,7 @@ export interface ReferralTx {
   saveBenefitIntent(
     intent: ReferralBenefitIntent,
   ): Promise<{ readonly created: boolean; readonly intent: ReferralBenefitIntent }>;
+  /** Atomically checks status and, when supplied, the attempt (missing stored attempt is zero). */
   compareAndSetBenefitIntent(
     intentId: string,
     expected: readonly ReferralBenefitIntentStatus[],
@@ -118,8 +120,10 @@ export interface ReferralTx {
       readonly receipt?: string;
       readonly reason?: string;
       readonly accountRef?: string;
+      readonly fulfillmentAttempt?: number;
     },
     now: Date,
+    expectedAttempt?: number,
   ): Promise<ReferralBenefitIntent>;
   addBudgetReservation(programId: string, version: number, amount: string): Promise<void>;
   releaseBudgetReservation(programId: string, version: number, amount: string): Promise<void>;

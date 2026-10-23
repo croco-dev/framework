@@ -228,7 +228,8 @@ windows and rejected qualifications keep distinct states and problems.
 Reconciles benefit intents whose grant outcome is unclear. A visible grant
 completes the side; otherwise `granting` sides safely retry the idempotent
 grant, while `unknown` sides stay locked for an explicit operator decision.
-Reconciliation never releases the budget or pays again on its own.
+Recovery retains the external idempotency key and fences superseded attempts.
+Reconciliation never releases the budget or retries unknown outcomes.
 
 #### Parameters
 

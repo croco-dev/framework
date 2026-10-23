@@ -386,21 +386,27 @@ export class InMemoryReferralStore implements ReferralStore, ReferralTx {
       readonly receipt?: string;
       readonly reason?: string;
       readonly accountRef?: string;
+      readonly fulfillmentAttempt?: number;
     },
     now: Date,
+    expectedAttempt?: number,
   ): Promise<ReferralBenefitIntent> {
     const stored = this.state.intents.get(intentId);
     if (!stored) throw new ReferralAttributionNotFoundProblem(intentId);
-    if (!expected.includes(stored.status)) {
+    if (
+      !expected.includes(stored.status) ||
+      (expectedAttempt !== undefined && (stored.fulfillmentAttempt ?? 0) !== expectedAttempt)
+    ) {
       throw new ReferralAttributionStateConflictProblem(
         intentId,
         stored.status,
-        `expected one of ${expected.join(", ")}`,
+        `expected one of ${expected.join(", ")}${expectedAttempt === undefined ? "" : ` with fulfillment attempt ${expectedAttempt}`}`,
       );
     }
     const updated: ReferralBenefitIntent = {
       ...cloneIntent(stored),
       status: patch.status,
+      fulfillmentAttempt: patch.fulfillmentAttempt ?? stored.fulfillmentAttempt,
       receipt: patch.receipt ?? stored.receipt,
       reason: patch.reason,
       accountRef: patch.accountRef ?? stored.accountRef,
