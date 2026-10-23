@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "webhooks-core",
+      "classification": "pure-contract",
+      "reason": "Collision-free in-memory delivery identity and store conformance change only pure string computation. Existing dispatch intent, retry, replay and resume boundaries consume opaque delivery IDs. No host, storage adapter or lifecycle capability changes.",
+      "files": {
+        "packages/webhooks-core/src/libs/outbound/InMemoryOutboundWebhookStore.ts": "d4b6c72c73d2e15e82547fc969dc1ad65aa2ea44a2e820819dd6c708a86e7f82",
+        "packages/webhooks-core/src/libs/outbound/conformance.ts": "48cf8994f5270dee5c0a8eaf137fcfb4fe92b4478eb0e8b4d87433e8d6c31ed3"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Tuple encoding and conformance are infrastructure-independent; no host capabilities, durable storage or lifecycle changes are required. Existing provider support is not expanded.",
+          "providers": [],
+          "constraints": ["No deployment or durable provider certification is claimed."],
+          "references": [
+            "packages/webhooks-core/src/libs/outbound/InMemoryOutboundWebhookStore.ts",
+            "packages/webhooks-core/src/libs/outbound/conformance.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Tuple encoding and conformance are infrastructure-independent; no host capabilities, durable storage or lifecycle changes are required. Existing provider support is not expanded.",
+          "providers": [],
+          "constraints": ["No deployment or durable provider certification is claimed."],
+          "references": [
+            "packages/webhooks-core/src/libs/outbound/InMemoryOutboundWebhookStore.ts",
+            "packages/webhooks-core/src/libs/outbound/conformance.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Tuple encoding and conformance are infrastructure-independent; no host capabilities, durable storage or lifecycle changes are required. Existing provider support is not expanded.",
+          "providers": [],
+          "constraints": ["No deployment or durable provider certification is claimed."],
+          "references": [
+            "packages/webhooks-core/src/libs/outbound/InMemoryOutboundWebhookStore.ts",
+            "packages/webhooks-core/src/libs/outbound/conformance.ts"
+          ]
+        }
+      }
+    }
+  ]
+}
