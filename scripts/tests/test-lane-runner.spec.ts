@@ -1328,6 +1328,26 @@ it('retains the assertion failure', () => expect('actual-fixture-value').toBe('e
     );
   });
 
+  it("accepts every real integration script against the authoritative inventory", () => {
+    const root = resolve(import.meta.dirname, "../..");
+    const repositoryInventory = readTestInventory(resolve(root, "test-inventory.json")).inventory;
+    const report = runTestLane({
+      inventory: repositoryInventory,
+      lane: "integration",
+      rootDir: root,
+      runner: (command) => ({
+        exitCode: 0,
+        durationMs: 1,
+        executionState: "executed",
+        executedPaths: command.paths,
+      }),
+    });
+
+    expect(report.diagnostics).toEqual([]);
+    expect(report.commands).not.toHaveLength(0);
+    expect(() => assertLaneReportShape(report)).not.toThrow();
+  });
+
   it("accepts every real fast script and resolves inventory owners to workspace package filters", () => {
     const root = resolve(import.meta.dirname, "../..");
     const repositoryInventory = readTestInventory(resolve(root, "test-inventory.json")).inventory;
@@ -1358,6 +1378,7 @@ it('retains the assertion failure', () => expect('actual-fixture-value').toBe('e
       "@croco-example/research-recruitment",
       "@croco-example/saas-billing-golden-path",
       "@croco-example/saved-intents",
+      "@croco-example/seo-workbench",
       "@croco-example/targeting-impact",
       "@croco-example/workers-protocols",
     ]);

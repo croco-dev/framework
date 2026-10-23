@@ -631,3 +631,13 @@ export type { SurveyAdminAccess, SurveyPublishRequest } from "./libs/surveyOpera
 export { createPublicPageOperations } from "./libs/PublicPageOperations";
 
 export { EnrichmentOperations } from "./libs/EnrichmentOperations";
+
+export { createSeoWorkbench, SeoWorkbenchProblem } from "./libs/SeoWorkbench";
+export type {
+  SeoPermission,
+  SeoAccess,
+  SeoSavedReport,
+  SeoWorkbenchPage,
+  SeoWorkbenchState,
+  SeoWorkbenchOptions,
+} from "./libs/SeoWorkbench";

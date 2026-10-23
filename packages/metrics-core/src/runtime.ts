@@ -27,6 +27,7 @@ export type {
   MetricReadContext,
   MetricReadEvidence,
   MetricReadGrant,
+  MetricReadRelease,
   MetricReadQuality,
   MetricReadResult,
   MetricWindow,
@@ -72,3 +73,14 @@ export {
   readPageExperienceWarehouse,
   registerPageExperienceQuery,
 } from "./libs/PageExperienceSources";
+
+export {
+  normalizeSeoRow,
+  collectSeoSource,
+  importSeoSearch,
+  importSeoLanding,
+  readSeoWarehouse,
+  registerSeoQuery,
+  parseSeoReport,
+} from "./libs/seo/SeoSources";
+export type { SeoColumnBinding } from "./libs/seo/SeoSources";

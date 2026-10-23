@@ -43,6 +43,19 @@ source revision·snapshot ref에 연결됩니다.
 DB 없는 실제 계산과 관리 화면 예제는 `examples/assigned-outcomes`에 있습니다. 원문 보관·삭제·masking·접근 권한은
 기존 host의 source boundary가 소유하며, 관리 화면에는 원 배정 subject와 원천 사건 식별자가 전달되지 않습니다.
 
+## 비동기 소비 이후의 조회 결과 공개
+
+`@croco/metrics-core/runtime`의 `MetricReadService.prepareResultRelease(outcome)`는 원본 등록 쿼리 결과에
+대한 `MetricReadRelease`를 반환합니다. 데이터가 없거나 다른 service의 결과·복사본이면 `undefined`입니다.
+소비자가 조회 이후 다른 비동기 검증을 수행한다면, `release.action`에 대한 metric grant와 소비자의 작업 권한을
+같은 신뢰된 인가 snapshot에서 얻어야 합니다. 이후 `release.authorize(metricGrant)`를 동기 호출하고 추가 await 없이
+응답을 마스킹·투영합니다. 별도 비동기 권한 검사를 연달아 호출하면 두 검사 사이에 다른 권한이 폐기될 수 있습니다.
+
+새 grant는 원래 reader의 `MetricReadAuthority`에서 받아야 합니다. 권한·privacy epoch, principal, source snapshot이
+바뀌거나 필요한 필드가 폐기되거나 현재 예산을 넘으면 공개를 차단합니다. 원래 조회의 deadline과 취소 신호도 계속 적용됩니다.
+이 receipt는 직렬화하거나 저장하는 인증 토큰이 아니며, 비동기 저장 중의 원자적 권한 검증·보관·삭제는 host가
+소유합니다. 실제 조합은 `examples/seo-workbench`의 공통 policy 함수와 `authenticate(metricAction)`에서 확인합니다.
+
 ## 설치
 
 ```bash

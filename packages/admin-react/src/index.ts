@@ -403,3 +403,6 @@ export type {
 
 export { PageExperiencePanel } from "./libs/PageExperiencePanel";
 export type { PageExperiencePanelState } from "./libs/PageExperiencePanel";
+
+export { SeoWorkbench } from "./libs/SeoWorkbench";
+export type { SeoWorkbenchProps } from "./libs/SeoWorkbench";

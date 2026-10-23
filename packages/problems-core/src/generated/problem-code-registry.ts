@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export type CrocoProblemRegistry = {
   readonly version: "croco.problem-code-registry.v1";
-  readonly problemCount: 1148;
+  readonly problemCount: 1149;
   readonly problems: readonly [
     {
       readonly code: "ACCESS_DENIED";
@@ -21588,7 +21588,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/metrics-core/src/libs/read/MetricReadService.ts";
-          readonly line: 195;
+          readonly line: 201;
           readonly column: 10;
           readonly kind: "problem-constructor";
         },
@@ -21616,7 +21616,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/metrics-core/src/libs/read/MetricReadService.ts";
-          readonly line: 199;
+          readonly line: 205;
           readonly column: 10;
           readonly kind: "problem-constructor";
         },
@@ -21647,6 +21647,34 @@ export type CrocoProblemRegistry = {
           readonly line: 65;
           readonly column: 1;
           readonly kind: "problem-class";
+        },
+      ];
+    },
+    {
+      readonly code: "metrics-core/seo-invalid-input";
+      readonly category: "ValidationError";
+      readonly status: 422;
+      readonly title: "Validation Error";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#metrics-core-seo-invalid-input";
+      readonly recovery: {
+        readonly cause: "The request or generated contract failed schema or semantic validation.";
+        readonly userAction: "Fix the invalid fields and retry with schema-conformant input.";
+        readonly operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "public";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.info";
+          readonly severity: "info";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/metrics-core/src/libs/seo/SeoComparison.ts";
+          readonly line: 107;
+          readonly column: 5;
+          readonly kind: "problem-constructor";
         },
       ];
     },
@@ -32224,6 +32252,16 @@ export type CrocoProblemRegistry = {
       readonly reason: "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged.";
     },
     {
+      readonly className: "SeoWorkbenchProblem";
+      readonly source: {
+        readonly file: "packages/admin-core/src/libs/SeoWorkbench.ts";
+        readonly line: 65;
+        readonly column: 1;
+        readonly kind: "problem-class";
+      };
+      readonly reason: "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged.";
+    },
+    {
       readonly className: "TargetingImpactProblem";
       readonly source: {
         readonly file: "packages/admin-core/src/libs/TargetingImpactOperations.ts";
@@ -32307,7 +32345,7 @@ export type CrocoProblemRegistry = {
       readonly className: "MetricReadProblem";
       readonly source: {
         readonly file: "packages/metrics-core/src/libs/read/MetricReadService.ts";
-        readonly line: 183;
+        readonly line: 189;
         readonly column: 1;
         readonly kind: "problem-class";
       };
@@ -32448,7 +32486,7 @@ export type CrocoProblemRegistry = {
 
 export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 1148,
+  problemCount: 1149,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -56519,7 +56557,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/metrics-core/src/libs/read/MetricReadService.ts",
-          line: 195,
+          line: 201,
           column: 10,
           kind: "problem-constructor",
         },
@@ -56550,7 +56588,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/metrics-core/src/libs/read/MetricReadService.ts",
-          line: 199,
+          line: 205,
           column: 10,
           kind: "problem-constructor",
         },
@@ -56585,6 +56623,36 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
           line: 65,
           column: 1,
           kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "metrics-core/seo-invalid-input",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#metrics-core-seo-invalid-input",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/metrics-core/src/libs/seo/SeoComparison.ts",
+          line: 107,
+          column: 5,
+          kind: "problem-constructor",
         },
       ],
     },
@@ -68528,6 +68596,17 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
         "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged.",
     },
     {
+      className: "SeoWorkbenchProblem",
+      source: {
+        file: "packages/admin-core/src/libs/SeoWorkbench.ts",
+        line: 65,
+        column: 1,
+        kind: "problem-class",
+      },
+      reason:
+        "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged.",
+    },
+    {
       className: "TargetingImpactProblem",
       source: {
         file: "packages/admin-core/src/libs/TargetingImpactOperations.ts",
@@ -68619,7 +68698,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       className: "MetricReadProblem",
       source: {
         file: "packages/metrics-core/src/libs/read/MetricReadService.ts",
-        line: 183,
+        line: 189,
         column: 1,
         kind: "problem-class",
       },

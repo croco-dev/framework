@@ -173,6 +173,12 @@ export type RegisteredQueryReadOptions = {
   readonly expectedVersion?: number;
   readonly signal?: AbortSignal;
 };
+/** In-process release boundary for an original registered-query outcome. */
+export type MetricReadRelease = {
+  readonly action: MetricReadAction;
+  /** Validate a fresh grant for action from the same MetricReadAuthority, without another await. */
+  authorize(grant: MetricReadGrant | null): boolean;
+};
 export type MetricReadAuditEvent = {
   readonly queryId: string;
   readonly sourceRefs: readonly string[];
@@ -306,6 +312,18 @@ export class MetricReadService {
   private readonly definitions: ReadonlyMap<string, RegisteredMetricDefinition>;
   private readonly queries: ReadonlyMap<string, RegisteredMetricQuery>;
   private readonly audit: MetricReadAuditEvent[] = [];
+  private readonly reportExpirations = new WeakMap<VerifiedReportOutcome, number>();
+  private readonly releases = new WeakMap<
+    RegisteredQueryOutcome,
+    {
+      context: MetricReadContext;
+      action: MetricReadAction;
+      grant: MetricReadGrant;
+      deadline: number;
+      reportExpiresAt?: number;
+      result: MetricReadResult;
+    }
+  >();
   private active = 0;
 
   constructor(
@@ -535,15 +553,29 @@ export class MetricReadService {
         return { status: (status = "denied") };
       if (report.status === "verified") {
         status = "verified";
-        return { status, source: "report", result: report.report.result };
+        return this.rememberRelease(
+          { status, source: "report", result: report.report.result },
+          context,
+          action,
+          grant,
+          deadline,
+          this.reportExpirations.get(report),
+        );
       }
       if (report.status === "partial")
-        return {
-          status: (status = "partial"),
-          reportId: report.reportId,
-          evidence: report.evidence,
-          ...(report.result ? { result: report.result } : {}),
-        };
+        return this.rememberRelease(
+          {
+            status: (status = "partial"),
+            reportId: report.reportId,
+            evidence: report.evidence,
+            ...(report.result ? { result: report.result } : {}),
+          },
+          context,
+          action,
+          grant,
+          deadline,
+          this.reportExpirations.get(report),
+        );
       if (report.status === "denied")
         return { status: (status = "denied"), reportId: report.reportId };
       if (this.active >= Math.min(context.budget.maxConcurrency, query.limits.maxConcurrency)) {
@@ -610,13 +642,25 @@ export class MetricReadService {
         if (result.quality.freshness === "stale")
           return { status: (status = "stale"), evidence: metricEvidence(result) };
         if (!sufficientQuality(result.quality))
-          return {
-            status: (status = "partial"),
-            evidence: metricEvidence(result),
-            ...(query.partialDataPolicy === "authorized" ? { result } : {}),
-          };
+          return this.rememberRelease(
+            {
+              status: (status = "partial"),
+              evidence: metricEvidence(result),
+              ...(query.partialDataPolicy === "authorized" ? { result } : {}),
+            },
+            context,
+            action,
+            grant,
+            deadline,
+          );
         status = "verified";
-        return { status, source: "executor", result };
+        return this.rememberRelease(
+          { status, source: "executor", result },
+          context,
+          action,
+          grant,
+          deadline,
+        );
       } catch (error) {
         if (controller.signal.aborted) throw controller.signal.reason;
         throw error;
@@ -627,6 +671,72 @@ export class MetricReadService {
     } finally {
       this.record(query.id, definition.sourceRefs, status);
     }
+  }
+
+  /**
+   * Prepare a synchronous check of a registered query's original permission/privacy grant.
+   * Obtain a fresh grant for action together with any consumer operation grant in one coherent
+   * authorization snapshot, then call authorize immediately before synchronously projecting data.
+   * Only the original data-bearing outcome from this service is recognized; copied, serialized or
+   * replaced results are rejected. Principal/source snapshots must still match the trusted context.
+   * The original report expiration, query deadline and abort signal remain in force. A store must enforce
+   * its own atomic authorization while a write is in flight.
+   */
+  prepareResultRelease(outcome: RegisteredQueryOutcome): MetricReadRelease | undefined {
+    const release = this.releases.get(outcome);
+    if (!release || !("result" in outcome) || outcome.result !== release.result) return undefined;
+    return {
+      action: Object.freeze({
+        ...release.action,
+        definitionIds: Object.freeze([...release.action.definitionIds]),
+        requiredFields: Object.freeze([...release.action.requiredFields]),
+        ...(release.action.window ? { window: Object.freeze({ ...release.action.window }) } : {}),
+      }),
+      authorize: (grant) => {
+        const current = this.readContext(release.context.signal);
+        this.checkAbort(current.signal);
+        this.checkDeadline(release.deadline);
+        if (
+          !grant ||
+          (release.reportExpiresAt !== undefined &&
+            release.reportExpiresAt <= this.now().getTime()) ||
+          !("result" in outcome) ||
+          outcome.result !== release.result ||
+          !samePrincipal(current.principal, release.context.principal) ||
+          !sameRevisions(current.sourceRevisions, release.context.sourceRevisions) ||
+          !sameStrings(current.snapshotRefs, release.context.snapshotRefs) ||
+          (release.action.requiresRaw && !current.allowRaw) ||
+          release.action.requiredFields.some((field) => !current.allowedFields.includes(field))
+        )
+          return false;
+        this.checkBudget(current.budget, release.context.budget, release.result.window);
+        return (
+          this.withinResultBudget(release.result, current.budget, release.context.budget) &&
+          grant.permissionEpoch === release.grant.permissionEpoch &&
+          grant.privacyEpoch === release.grant.privacyEpoch
+        );
+      },
+    };
+  }
+
+  private rememberRelease(
+    outcome: RegisteredQueryOutcome,
+    context: MetricReadContext,
+    action: MetricReadAction,
+    grant: MetricReadGrant,
+    deadline: number,
+    reportExpiresAt?: number,
+  ): RegisteredQueryOutcome {
+    if ("result" in outcome && outcome.result)
+      this.releases.set(outcome, {
+        context,
+        action,
+        grant: { ...grant },
+        deadline,
+        reportExpiresAt,
+        result: outcome.result,
+      });
+    return outcome;
   }
 
   private parseInput(query: RegisteredMetricQuery, input: unknown): unknown {
@@ -865,9 +975,12 @@ export class MetricReadService {
           evidence: metricEvidence(report.result),
           ...(query.partialDataPolicy === "authorized" ? { result: report.result } : {}),
         };
+        this.reportExpirations.set(degraded, Date.parse(report.expiresAt));
         continue;
       }
-      return { status: "verified", report };
+      const verified = { status: "verified", report } as const;
+      this.reportExpirations.set(verified, Date.parse(report.expiresAt));
+      return verified;
     }
     return degraded;
   }

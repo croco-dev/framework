@@ -1,0 +1,20 @@
+{
+  "name": "@croco-example/seo-workbench",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsrs --noEmit",
+    "typecheck": "tsrs --noEmit",
+    "test": "vitest run",
+    "lint": "oxlint .",
+    "test:evidence": "pnpm run test --maxWorkers=1 --reporter=json --outputFile=.turbo/croco-test-evidence.json"
+  },
+  "dependencies": {
+    "@croco/admin-core": "workspace:*",
+    "@croco/metrics-core": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^6.0.3",
+    "vitest": "4.1.8"
+  }
+}
