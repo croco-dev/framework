@@ -944,7 +944,7 @@ describe("ExecutionManagerImpl", () => {
           metadata: { receipt: "provider-42" },
         });
         const statuses = [firstStatus, secondStatus];
-        const expectedHistory = [];
+        const expectedHistory: Partial<ExecutionLogEntry>[] = [];
         for (const [index, status] of statuses.entries()) {
           const started = await clockManager.start(execution.id);
           const token = { executionId: execution.id, attempt: started.attempts };
@@ -961,22 +961,22 @@ describe("ExecutionManagerImpl", () => {
           now = new Date(`2030-01-0${index + 2}T00:00:00.000Z`);
           const reason = `provider confirms attempt ${token.attempt} rolled back`;
           expectedHistory.push({
-            attempt: token.attempt,
-            status,
-            reason,
-            resolvedAt: now.toISOString(),
+            timestamp: now.toISOString(),
+            data: { attempt: token.attempt, status, reason },
           });
           await clockManager.resolveIndeterminateTimeout(token, reason);
           await expect(clockManager.get(execution.id)).resolves.toMatchObject({
-            metadata: {
-              receipt: "provider-42",
-              indeterminateRecoveryHistory: expectedHistory,
-            },
+            metadata: { receipt: "provider-42" },
           });
+          await expect(
+            createExecutionJobsOperations(clockManager).logs(execution.id),
+          ).resolves.toMatchObject(expectedHistory);
           if (index === 0) await clockManager.retry(execution.id);
         }
         const recovered = await clockManager.get(execution.id);
-        expect(recovered?.metadata?.indeterminateRecoveryHistory).toEqual(expectedHistory);
+        await expect(
+          createExecutionJobsOperations(clockManager).logs(execution.id),
+        ).resolves.toMatchObject(expectedHistory);
         expect(
           recovered?.metadata?.[
             secondStatus === "timed_out" ? "timeoutRecovery" : "indeterminateRecovery"
@@ -987,11 +987,8 @@ describe("ExecutionManagerImpl", () => {
         });
       },
     );
-    it("does not erase malformed recovery history or release its uncertainty", async () => {
-      const execution = await manager.create({
-        type: "etl",
-        metadata: { indeterminateRecoveryHistory: { reason: "existing evidence" } },
-      });
+    it("requires attempt-owned evidence before releasing uncertainty", async () => {
+      const execution = await manager.create({ type: "etl" });
       const started = await manager.start(execution.id);
       const token = { executionId: execution.id, attempt: started.attempts };
       await manager.failAttempt(token, {
@@ -1000,10 +997,34 @@ describe("ExecutionManagerImpl", () => {
         indeterminate: true,
       });
       const before = await manager.get(execution.id);
+      vi.spyOn(store, "appendLogIfStatusAndAttempt").mockResolvedValueOnce(null);
       await expect(
         manager.resolveIndeterminateTimeout(token, "provider confirms rollback"),
-      ).rejects.toMatchObject({ code: "execution/conflict" });
+      ).rejects.toMatchObject({ code: "execution/attempt-fence-conflict" });
       await expect(manager.get(execution.id)).resolves.toEqual(before);
+    });
+    it("keeps recorded evidence when the recovery status update loses ownership", async () => {
+      const execution = await manager.create({ type: "etl" });
+      const started = await manager.start(execution.id);
+      const token = { executionId: execution.id, attempt: started.attempts };
+      await manager.failAttempt(token, {
+        message: "receipt unresolved",
+        retryable: false,
+        indeterminate: true,
+      });
+      vi.spyOn(store, "updateIfStatusAndAttempt").mockResolvedValueOnce(null);
+      await expect(
+        manager.resolveIndeterminateTimeout(token, "provider confirms rollback"),
+      ).rejects.toMatchObject({ code: "execution/attempt-fence-conflict" });
+      await expect(manager.get(execution.id)).resolves.toMatchObject({
+        status: "failed",
+        error: { indeterminate: true },
+      });
+      await expect(
+        createExecutionJobsOperations(manager).logs(execution.id),
+      ).resolves.toMatchObject([
+        { data: { attempt: 1, status: "failed", reason: "provider confirms rollback" } },
+      ]);
     });
     it("does not restart a legacy retrying execution with an unresolved outcome", async () => {
       const execution = await manager.create({ type: "etl", maxAttempts: 3 });
@@ -1104,6 +1125,18 @@ describe("ExecutionManagerImpl", () => {
         },
       });
       expect(recovered.metadata?.indeterminateRecovery).toHaveProperty("resolvedAt");
+      const jobs = createExecutionJobsOperations(manager);
+      await expect(jobs.show(execution.id)).resolves.toMatchObject({
+        failurePolicy: { retryable: true, replayable: true, recoveryAction: "retry" },
+      });
+      await expect(jobs.list()).resolves.toMatchObject({
+        jobs: [
+          {
+            id: execution.id,
+            failurePolicy: expect.objectContaining({ retryable: true, recoveryAction: "retry" }),
+          },
+        ],
+      });
       await expect(manager.replay(execution.id)).resolves.toMatchObject({
         status: "pending",
         replayOf: execution.id,
@@ -1112,6 +1145,27 @@ describe("ExecutionManagerImpl", () => {
         status: "retrying",
         error: undefined,
       });
+    });
+    it("retains both acknowledged concurrent operator recoveries", async () => {
+      const execution = await manager.create({ type: "etl" });
+      const started = await manager.start(execution.id);
+      const token = { executionId: execution.id, attempt: started.attempts };
+      await manager.failAttempt(token, {
+        message: "receipt unresolved",
+        retryable: false,
+        indeterminate: true,
+      });
+      const recovered = await Promise.all([
+        manager.resolveIndeterminateTimeout(token, "provider rollback confirmed by operator A"),
+        manager.resolveIndeterminateTimeout(token, "provider rollback confirmed by operator B"),
+      ]);
+      expect(recovered).toHaveLength(2);
+      await expect(
+        createExecutionJobsOperations(manager).logs(execution.id),
+      ).resolves.toMatchObject([
+        { data: { attempt: 1, reason: "provider rollback confirmed by operator A" } },
+        { data: { attempt: 1, reason: "provider rollback confirmed by operator B" } },
+      ]);
     });
     it.each([false, true])(
       "preserves failed uncertainty when retryable is %s",

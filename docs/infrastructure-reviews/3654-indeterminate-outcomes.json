@@ -4,10 +4,10 @@
     {
       "package": "execution-core",
       "classification": "pure-contract",
-      "reason": "Unresolved outcomes require attempt-fenced recovery before retry or replay. Existing recovery metadata also retains attempt-bound operator evidence across retries; no host, storage schema or lifecycle adapter changes.",
+      "reason": "Unresolved outcomes require attempt-fenced recovery before retry or replay. Existing atomic execution logs retain attempt-bound operator evidence before uncertainty is released; no host, storage schema or lifecycle adapter changes.",
       "files": {
-        "packages/execution-core/src/libs/ExecutionManagerImpl.ts": "926c9f61065680b2ec258718dae59e1fd3411bebbef61f8597c67036a04e9b91",
-        "packages/execution-core/src/libs/JobsOperations.ts": "71640a42ecb9a24da9325647cf985e45a23606672488d0404b7bbfdf5eac8f12",
+        "packages/execution-core/src/libs/ExecutionManagerImpl.ts": "382d54bc89c8a3d5a3af751ec606cb57adbdbaf9543005660c03cc47e5998ef2",
+        "packages/execution-core/src/libs/JobsOperations.ts": "fd56d3a99e6ac85ce1044e645566a9486a76ddd7d45b2c46c4b3569770c859bc",
         "packages/execution-core/src/libs/interfaces/ExecutionManager.ts": "dcbc58d54527fa8d705ed5d4d37cdac488be1c31c29db66a455a934215f1a84f"
       },
       "catalogRuntimes": [],

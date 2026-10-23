@@ -215,11 +215,11 @@ export function getJobFailurePolicy(execution: Execution): JobFailurePolicy {
       return {
         state: "dead_lettered",
         needsAttention: true,
-        retryable: false,
+        retryable: execution.error?.retryable === true,
         replayable: true,
-        recoveryAction: "replay",
+        recoveryAction: execution.error?.retryable === true ? "retry" : "replay",
         reason: execution.error?.retryable
-          ? "Job failed and requires operator replay"
+          ? "Job failed and can be retried by an operator"
           : "Job failed with a non-retryable error",
       };
   }

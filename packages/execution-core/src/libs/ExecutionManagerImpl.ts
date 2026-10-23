@@ -672,12 +672,25 @@ export class ExecutionManagerImpl
       throw ExecutionProblems.conflict("Indeterminate outcome recovery requires a reason");
     }
 
-    const recoveryHistory = execution.metadata?.indeterminateRecoveryHistory;
-    if (recoveryHistory !== undefined && !Array.isArray(recoveryHistory)) {
-      throw ExecutionProblems.conflict("Indeterminate outcome recovery history must be an array");
-    }
     const resolvedAt = this.clock().toISOString();
     const store = this.attemptStore(token.executionId);
+    // This records evidence, not completion of the subsequent recovery status update.
+    const recorded = await store.appendLogIfStatusAndAttempt(
+      token.executionId,
+      execution.status,
+      token.attempt,
+      {
+        timestamp: resolvedAt,
+        level: "info",
+        message: "Operator recovery evidence recorded",
+        data: { attempt: token.attempt, status: execution.status, reason },
+      },
+    );
+    if (!recorded) {
+      throw ExecutionProblems.attemptFenceConflict(
+        `Attempt ${token.attempt} lost ownership before recovery evidence for execution '${token.executionId}' could be recorded`,
+      );
+    }
     const updated = await store.updateIfStatusAndAttempt(
       token.executionId,
       execution.status,
@@ -697,15 +710,11 @@ export class ExecutionManagerImpl
           indeterminate: false,
         },
         metadata: {
-          ...execution.metadata,
+          ...recorded.metadata,
           [execution.status === "timed_out" ? "timeoutRecovery" : "indeterminateRecovery"]: {
             reason,
             resolvedAt,
           },
-          indeterminateRecoveryHistory: [
-            ...(recoveryHistory ?? []),
-            { attempt: token.attempt, status: execution.status, reason, resolvedAt },
-          ],
         },
       },
     );
