@@ -4,9 +4,9 @@
     {
       "package": "workflow-core",
       "classification": "pure-contract",
-      "reason": "Bind new Saga outbox delivery IDs to message content and preserve matching stored ancestor identities without rewriting history or changing store/provider wiring.",
+      "reason": "Bind Saga outbox delivery IDs to detached message snapshots, preserve matching ancestor identities, reject historical dispatch conflicts and retain successful-step evidence through identity finalization. Store/provider wiring and schema remain unchanged.",
       "files": {
-        "packages/workflow-core/src/libs/saga/SagaRunner.ts": "75ede1cf40d7163e40312952703f449fce035ba3b7efe8b8eaf5daac2007bbde",
+        "packages/workflow-core/src/libs/saga/SagaRunner.ts": "4f5343a28e45d5d47ae46e8e66360193173b893f162fb99c9253e9d52159f794",
         "packages/workflow-core/src/libs/saga/types.ts": "1bf23dbc0554bd2fffd65c77e48505e40a4610097c6c9ba6fcf337dee4f20e28"
       },
       "catalogRuntimes": [],

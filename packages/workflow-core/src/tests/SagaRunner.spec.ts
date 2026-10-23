@@ -808,10 +808,12 @@ describe("SagaRunner", () => {
     const store = new InMemorySagaStore();
     const runner = new SagaRunner(store);
     const delivered = new Map<string, unknown>();
+    const publishAttempts: string[] = [];
     const definition: SagaDefinition = {
       name: "semantic-replay-outbox",
       outbox: {
         publish: (message) => {
+          publishAttempts.push(message.deliveryId);
           if (!delivered.has(message.deliveryId))
             delivered.set(message.deliveryId, message.payload);
         },
@@ -899,6 +901,121 @@ describe("SagaRunner", () => {
       expect.objectContaining({ message: expect.stringContaining("conflicting message content") }),
     ]);
     expect(delivered.size).toBe(2);
+
+    // A pre-upgrade replay may already contain a pending conflicting legacy delivery.
+    await store.update(changed.id, {
+      steps: changed.steps.map((step) => ({
+        ...step,
+        outboxMessages: step.outboxMessages.map((message) => ({
+          ...message,
+          deliveryId: legacyId,
+          status: "pending" as const,
+        })),
+      })),
+    });
+    const attemptsBeforeConflict = publishAttempts.length;
+    await expect(runner.dispatchOutbox(definition, changed.id)).rejects.toThrow(
+      "conflicting message content",
+    );
+    expect(publishAttempts).toHaveLength(attemptsBeforeConflict);
+    expect((await runner.getExecution(changed.id)).steps[0]?.outboxMessages[0]?.status).toBe(
+      "pending",
+    );
+  });
+
+  it("snapshots message content independently of mutable execution input and metadata", async () => {
+    const runner = new SagaRunner();
+    const delivered = new Map<string, { payload: unknown; metadata: unknown }>();
+    const input = { amount: 12 };
+    const metadata = { account: "account-A" };
+    const definition: SagaDefinition = {
+      name: "snapshot-replay-content",
+      outbox: {
+        publish: (message) => {
+          if (!delivered.has(message.deliveryId)) {
+            delivered.set(message.deliveryId, {
+              payload: structuredClone(message.payload),
+              metadata: structuredClone(message.metadata),
+            });
+          }
+        },
+      },
+      steps: [
+        {
+          id: "mutate-input-after-enqueue",
+          run: () => "prepared",
+          compensate: () => {
+            input.amount = 99;
+            metadata.account = "changed-by-later-compensation";
+          },
+        },
+        {
+          id: "reserve",
+          run: () => "reserved",
+          compensate: (_input, context) => {
+            context.enqueueOutbox({
+              id: "refund",
+              topic: "refunds",
+              payload: context.payload,
+              metadata,
+            });
+          },
+        },
+        {
+          id: "fail",
+          run: () => {
+            throw new ProviderProblem("unavailable");
+          },
+        },
+      ],
+    };
+    await expect(runner.execute(definition, input)).rejects.toThrow(SagaExecutionFailedProblem);
+    const [original] = await runner.listExecutions({ replayOf: null });
+    input.amount = 23;
+    metadata.account = "account-B";
+    expect(original.steps[1]?.outboxMessages[0]?.payload).toEqual({ amount: 12 });
+    expect(original.steps[1]?.outboxMessages[0]?.metadata).toEqual({ account: "account-A" });
+    await expect(runner.replay(definition, original.id, { payload: input })).rejects.toThrow(
+      SagaExecutionFailedProblem,
+    );
+    expect([...delivered.values()]).toEqual([
+      { payload: { amount: 12 }, metadata: { account: "account-A" } },
+      { payload: { amount: 23 }, metadata: { account: "account-B" } },
+    ]);
+  });
+
+  it("compensates a successful forward effect when outbox identity validation fails", async () => {
+    const runner = new SagaRunner();
+    const effects: string[] = [];
+    const publish = vi.fn();
+    const definition: SagaDefinition = {
+      name: "identity-finalization-failure",
+      outbox: { publish },
+      steps: [
+        {
+          id: "charge",
+          run: (_input, context) => {
+            effects.push("charge");
+            context.enqueueOutbox({
+              id: "charged",
+              topic: "charges",
+              payload: new Map([["amount", 12]]),
+            });
+            return { charged: true };
+          },
+          compensate: () => {
+            effects.push("refund");
+          },
+        },
+      ],
+    };
+    await expect(runner.execute(definition, {})).rejects.toThrow(SagaExecutionFailedProblem);
+    const [execution] = await runner.listExecutions({ replayOf: null });
+    expect(effects).toEqual(["charge", "refund"]);
+    expect(execution.status).toBe("compensated");
+    expect(execution.steps[0]?.result).toEqual({ charged: true });
+    expect(execution.steps[0]?.outboxMessages).toEqual([]);
+    expect(publish).not.toHaveBeenCalled();
   });
 
   it.each([

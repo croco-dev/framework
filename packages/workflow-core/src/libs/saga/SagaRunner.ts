@@ -70,6 +70,22 @@ function canonicalOutboxMessage(sagaName: string, message: SagaOutboxMessage): s
   ]);
 }
 
+function snapshotOutboxMessage(sagaName: string, message: SagaOutboxMessage): SagaOutboxMessage {
+  // Validate before cloning: structuredClone alone would erase unsupported class prototypes.
+  canonicalOutboxMessage(sagaName, message);
+  try {
+    return {
+      id: message.id,
+      topic: message.topic,
+      payload: structuredClone(message.payload),
+      ...(message.idempotencyKey === undefined ? {} : { idempotencyKey: message.idempotencyKey }),
+      ...(message.metadata === undefined ? {} : { metadata: structuredClone(message.metadata) }),
+    };
+  } catch {
+    throw new SagaDefinitionProblem(sagaName, "outbox message content could not be snapshotted");
+  }
+}
+
 function canonicalOutboxValue(
   sagaName: string,
   value: unknown,
@@ -659,7 +675,6 @@ export class SagaRunner {
           name: `saga:${definition.name}:step:${step.id}`,
           attributes: getStepRecordAttributes(definition, execution.id, step),
         });
-        await this.assignOutboxIdentities(definition.name, outboxIdentity, outboxMessages);
       } catch (error) {
         const failure = toSagaFailure(error);
         record = await this.replaceStepRecord(execution.id, {
@@ -685,14 +700,16 @@ export class SagaRunner {
         throw error;
       }
 
-      const completedRecord: SagaStepExecutionRecord = {
+      let completedRecord: SagaStepExecutionRecord = {
         ...record,
         status: "completed",
         result,
-        outboxMessages,
+        outboxMessages: [],
         completedAt: this.clock(),
       };
       try {
+        await this.assignOutboxIdentities(definition.name, outboxIdentity, outboxMessages);
+        completedRecord = { ...completedRecord, outboxMessages };
         await this.replaceStepRecord(execution.id, completedRecord);
       } catch (error) {
         await this.replaceStepRecord(execution.id, {
@@ -906,6 +923,7 @@ export class SagaRunner {
       return execution;
     }
 
+    const outboxIdentity = await this.resolveOutboxIdentity(execution);
     const outboxRecords = [
       ...execution.steps.map((record) => ({ record, phase: "step" as const })),
       ...[...execution.steps]
@@ -931,11 +949,16 @@ export class SagaRunner {
           continue;
         }
 
-        await definition.outbox.publish(message, {
+        const delivery = { ...message, ...snapshotOutboxMessage(definition.name, message) };
+        this.assertOutboxIdentityCompatible(definition.name, delivery, [
+          execution,
+          ...outboxIdentity.ancestors,
+        ]);
+        await definition.outbox.publish(delivery, {
           saga: definition,
           executionId,
           step,
-          message,
+          message: delivery,
         });
         execution = await this.markOutboxPublished(executionId, record.id, message.deliveryId);
       }
@@ -967,7 +990,8 @@ export class SagaRunner {
     messages: SagaOutboxRecord[],
   ): Promise<void> {
     for (const [index, message] of messages.entries()) {
-      const semantic = canonicalOutboxMessage(sagaName, message);
+      const snapshot = { ...message, ...snapshotOutboxMessage(sagaName, message) };
+      const semantic = canonicalOutboxMessage(sagaName, snapshot);
       let previous: SagaOutboxRecord | undefined;
       // Search the full replay ancestry, including pre-fingerprint records. Compare content,
       // never just the old slot ID, before preserving an already delivered identity.
@@ -984,22 +1008,12 @@ export class SagaRunner {
         }
       }
       if (previous) {
-        const conflicting = identity.ancestors.some((ancestor) =>
-          ancestor.steps.some((step) =>
-            step.outboxMessages.some(
-              (candidate) =>
-                candidate.deliveryId === previous.deliveryId &&
-                canonicalOutboxMessage(sagaName, candidate) !== semantic,
-            ),
-          ),
+        this.assertOutboxIdentityCompatible(
+          sagaName,
+          { ...snapshot, deliveryId: previous.deliveryId },
+          identity.ancestors,
         );
-        if (conflicting) {
-          throw new SagaDefinitionProblem(
-            sagaName,
-            "stored outbox delivery identity has conflicting message content",
-          );
-        }
-        messages[index] = { ...message, deliveryId: previous.deliveryId };
+        messages[index] = { ...snapshot, deliveryId: previous.deliveryId };
         continue;
       }
       const digest = await globalThis.crypto.subtle.digest(
@@ -1009,7 +1023,30 @@ export class SagaRunner {
       const fingerprint = Array.from(new Uint8Array(digest))
         .map((byte) => byte.toString(16).padStart(2, "0"))
         .join("");
-      messages[index] = { ...message, deliveryId: `saga-outbox:v2:${fingerprint}` };
+      messages[index] = { ...snapshot, deliveryId: `saga-outbox:v2:${fingerprint}` };
+    }
+  }
+
+  private assertOutboxIdentityCompatible(
+    sagaName: string,
+    message: SagaOutboxRecord,
+    executions: readonly SagaExecution[],
+  ): void {
+    const semantic = canonicalOutboxMessage(sagaName, message);
+    const conflicting = executions.some((execution) =>
+      execution.steps.some((step) =>
+        step.outboxMessages.some(
+          (candidate) =>
+            candidate.deliveryId === message.deliveryId &&
+            canonicalOutboxMessage(sagaName, candidate) !== semantic,
+        ),
+      ),
+    );
+    if (conflicting) {
+      throw new SagaDefinitionProblem(
+        sagaName,
+        "stored outbox delivery identity has conflicting message content",
+      );
     }
   }
 
