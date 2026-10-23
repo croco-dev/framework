@@ -531,6 +531,10 @@ reopen or rewrite a completed command. Once local reconciliation runs, the comma
 
 > `abstract` **saveSubscription**(`subscription`): `Promise`\<`void`\>
 
+Atomically saves an authoritative snapshot and retains evidence when replacing a different
+external identity. Explicit saves may restore a retired identity; webhook observations may
+not reclaim it while it is no longer current.
+
 #### Parameters
 
 ##### subscription

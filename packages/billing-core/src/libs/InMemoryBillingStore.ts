@@ -25,6 +25,11 @@ type WebhookState =
   | { readonly state: "RESERVED"; readonly leaseUntil?: Date; readonly claimToken?: string }
   | { readonly state: "COMPLETED" };
 
+type SubscriptionReplacementEvidence = {
+  readonly previousSubscription: Subscription;
+  readonly subscription: Subscription;
+};
+
 /**
  * In-memory billing store for testing and development.
  * NOT suitable for production multi-instance deployments.
@@ -43,10 +48,7 @@ export class InMemoryBillingStore extends BillingStore {
     string,
     BillingSubscriptionWebhookTransition
   >();
-  private readonly subscriptionReplacements = new Map<
-    string,
-    BillingSubscriptionWebhookTransition
-  >();
+  private readonly subscriptionReplacements = new Map<string, SubscriptionReplacementEvidence>();
   private webhookDeliveryClaimSequence = 0;
 
   constructor(private readonly clock: () => Date = () => new Date()) {
@@ -108,18 +110,27 @@ export class InMemoryBillingStore extends BillingStore {
   }
 
   async saveSubscription(subscription: Subscription): Promise<void> {
-    const existingSubscription = this.subscriptions.get(subscription.billingAccountId);
-
+    const storedSubscription = Object.freeze(cloneSubscription(subscription));
+    const existingSubscription = this.subscriptions.get(storedSubscription.billingAccountId);
     if (
       existingSubscription &&
-      existingSubscription.externalSubscriptionId !== subscription.externalSubscriptionId
+      existingSubscription.externalSubscriptionId !== storedSubscription.externalSubscriptionId
     ) {
+      const retiredKey = JSON.stringify([
+        existingSubscription.billingAccountId,
+        existingSubscription.externalSubscriptionId,
+      ]);
+      this.subscriptionReplacements.set(retiredKey, {
+        previousSubscription: cloneSubscription(existingSubscription),
+        subscription: cloneSubscription(storedSubscription),
+      });
       this.subscriptionsByExternalId.delete(existingSubscription.externalSubscriptionId);
     }
-
-    const storedSubscription = Object.freeze(cloneSubscription(subscription));
-    this.subscriptions.set(subscription.billingAccountId, storedSubscription);
-    this.subscriptionsByExternalId.set(subscription.externalSubscriptionId, storedSubscription);
+    this.subscriptions.set(storedSubscription.billingAccountId, storedSubscription);
+    this.subscriptionsByExternalId.set(
+      storedSubscription.externalSubscriptionId,
+      storedSubscription,
+    );
   }
 
   async deleteSubscription(billingAccountId: string): Promise<void> {
@@ -370,27 +381,9 @@ export class InMemoryBillingStore extends BillingStore {
     if (ignored) {
       return cloneSubscriptionWebhookTransition(transition);
     }
-    const retiredKey =
-      previousSubscription &&
-      previousSubscription.externalSubscriptionId !== input.subscription.externalSubscriptionId
-        ? JSON.stringify([
-            previousSubscription.billingAccountId,
-            previousSubscription.externalSubscriptionId,
-          ])
-        : undefined;
-    const previousReplacement = retiredKey
-      ? this.subscriptionReplacements.get(retiredKey)
-      : undefined;
-    if (retiredKey) {
-      this.subscriptionReplacements.set(retiredKey, cloneSubscriptionWebhookTransition(transition));
-    }
     try {
-      await this.saveSubscription(input.subscription);
+      await this.saveSubscription(transition.subscription);
     } catch (error) {
-      if (retiredKey) {
-        if (previousReplacement) this.subscriptionReplacements.set(retiredKey, previousReplacement);
-        else this.subscriptionReplacements.delete(retiredKey);
-      }
       this.processedWebhooks.delete(input.eventId);
       this.subscriptionWebhookTransitions.delete(input.eventId);
       if (input.clearWebhookReservationId && clearedReservationState) {

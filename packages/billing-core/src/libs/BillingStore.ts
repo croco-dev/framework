@@ -53,6 +53,11 @@ export abstract class BillingStore {
   abstract findSubscriptionByExternalId(
     externalSubscriptionId: string,
   ): Promise<Subscription | null>;
+  /**
+   * Atomically saves an authoritative snapshot and retains evidence when replacing a different
+   * external identity. Explicit saves may restore a retired identity; webhook observations may
+   * not reclaim it while it is no longer current.
+   */
   abstract saveSubscription(subscription: Subscription): Promise<void>;
   abstract deleteSubscription(billingAccountId: string): Promise<void>;
   /**

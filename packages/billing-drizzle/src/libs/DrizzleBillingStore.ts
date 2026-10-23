@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import {
   BillingStore,
   BillingAccountTenantConflictProblem,
@@ -29,12 +29,14 @@ type Webhook = { state: "RESERVED" | "COMPLETED"; token?: string; leaseUntil?: s
 /** PostgreSQL persistence with transactional serialization across cooperating store instances. */
 export class DrizzleBillingStore extends BillingStore {
   private readonly namespace: string;
+  private readonly replacementNamespace: string;
   constructor(
     private readonly db: BillingDatabase,
     scope: BillingPersistenceScope,
   ) {
     super();
     this.namespace = JSON.stringify([scope.appId, scope.environment]);
+    this.replacementNamespace = createHash("sha256").update(this.namespace, "utf8").digest("hex");
   }
 
   async findAccountByTenantId(tenantId: string): Promise<BillingAccount | null> {
@@ -85,15 +87,29 @@ export class DrizzleBillingStore extends BillingStore {
     return result.rows[0] ? subscriptionDates(result.rows[0].data) : null;
   }
   async saveSubscription(subscription: Subscription): Promise<void> {
-    await atomic(this.db, this.namespace, (tx) =>
-      write(
+    const next = subscriptionDates(subscription);
+    await atomic(this.db, this.namespace, async (tx) => {
+      const previous = await read<Subscription>(
         tx,
         "croco_billing_subscriptions",
         this.namespace,
-        subscription.billingAccountId,
-        subscription,
-      ),
-    );
+        next.billingAccountId,
+      );
+      if (previous && previous.externalSubscriptionId !== next.externalSubscriptionId) {
+        await write(
+          tx,
+          "croco_billing_subscription_replacements",
+          this.replacementNamespace,
+          subscriptionReplacementId(previous),
+          {
+            namespace: this.namespace,
+            previousSubscription: subscriptionDates(previous),
+            subscription: next,
+          },
+        );
+      }
+      await write(tx, "croco_billing_subscriptions", this.namespace, next.billingAccountId, next);
+    });
   }
   async deleteSubscription(accountId: string): Promise<void> {
     await atomic(this.db, this.namespace, (tx) =>
@@ -304,11 +320,8 @@ export class DrizzleBillingStore extends BillingStore {
       const replaced = await read(
         tx,
         "croco_billing_subscription_replacements",
-        this.namespace,
-        JSON.stringify([
-          input.subscription.billingAccountId,
-          input.subscription.externalSubscriptionId,
-        ]),
+        this.replacementNamespace,
+        subscriptionReplacementId(input.subscription),
       );
       const older =
         previous?.externalSubscriptionId === input.subscription.externalSubscriptionId &&
@@ -337,9 +350,10 @@ export class DrizzleBillingStore extends BillingStore {
           await write(
             tx,
             "croco_billing_subscription_replacements",
-            this.namespace,
-            JSON.stringify([previous.billingAccountId, previous.externalSubscriptionId]),
+            this.replacementNamespace,
+            subscriptionReplacementId(previous),
             {
+              namespace: this.namespace,
               eventId: input.eventId,
               previousSubscription: previous,
               subscription: input.subscription,
@@ -364,7 +378,10 @@ export class DrizzleBillingStore extends BillingStore {
       await write(tx, "croco_billing_webhooks", this.namespace, input.eventId, {
         state: "RESERVED",
       });
-      await write(tx, "croco_billing_transitions", this.namespace, input.eventId, transition);
+      await write(tx, "croco_billing_transitions", this.namespace, input.eventId, {
+        ...transition,
+        projectionApplied: !ignored,
+      });
       return transitionDates(transition);
     });
   }
@@ -471,6 +488,17 @@ export class DrizzleBillingStore extends BillingStore {
 function accountDates(value: BillingAccount): BillingAccount {
   return { ...value, createdAt: new Date(value.createdAt) };
 }
+function subscriptionReplacementId(
+  subscription: Pick<Subscription, "billingAccountId" | "externalSubscriptionId">,
+): string {
+  return createHash("sha256")
+    .update(
+      JSON.stringify([subscription.billingAccountId, subscription.externalSubscriptionId]),
+      "utf8",
+    )
+    .digest("hex");
+}
+
 function subscriptionDates(value: Subscription): Subscription {
   return {
     ...value,
@@ -499,17 +527,20 @@ function transitionDates(
   value: BillingSubscriptionWebhookTransition,
 ): BillingSubscriptionWebhookTransition {
   return {
-    ...value,
-    subscription: subscriptionDates(value.subscription),
+    eventId: value.eventId,
+    eventType: value.eventType,
     previousSubscription: value.previousSubscription
       ? subscriptionDates(value.previousSubscription)
       : null,
+    subscription: subscriptionDates(value.subscription),
     intents: value.intents.map((intent) => ({
       event: structuredClone(intent.event),
       publishedAt: intent.publishedAt ? new Date(intent.publishedAt) : null,
     })),
+    state: value.state,
   };
 }
+
 function sameIntent(a: BillingLifecycleCommand, b: BillingLifecycleCommand): boolean {
   return (
     a.tenantId === b.tenantId &&

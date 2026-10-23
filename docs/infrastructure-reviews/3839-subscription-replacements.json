@@ -4,10 +4,10 @@
     {
       "package": "billing-core",
       "classification": "pure-contract",
-      "reason": "Prevent retired webhook subscription identities from replacing the current account subscription while preserving accepted replacement evidence, retry results and same-identity ordering.",
+      "reason": "Retain replaced subscription identities across webhook commits and authoritative saves so delayed observations cannot overwrite the current subscription; preserve explicit restoration, retries and same-identity ordering.",
       "files": {
-        "packages/billing-core/src/libs/BillingStore.ts": "5cbda0e55b693b48dff832589665dbf3fd6d000610ea1396ee04b387a5fc0120",
-        "packages/billing-core/src/libs/InMemoryBillingStore.ts": "ee37933d6e7ed87d2b0c98ff18e845f689ce9a81e3d319e792260788233744ba"
+        "packages/billing-core/src/libs/BillingStore.ts": "8966ec184a8d368454213499eec5cd7e9e7bd6831f88561b47d3cde2f41928ea",
+        "packages/billing-core/src/libs/InMemoryBillingStore.ts": "724909836ecc5ff7e5658113f183b103bf0ffa13ba4abcd40969f94f2aaadd41"
       },
       "catalogRuntimes": [],
       "profiles": {
@@ -52,9 +52,9 @@
     {
       "package": "billing-drizzle",
       "classification": "durable-provider",
-      "reason": "Prevent retired webhook subscription identities from replacing the current account subscription while preserving accepted replacement evidence, retry results and same-identity ordering.",
+      "reason": "Retain replaced subscription identities across webhook commits and authoritative saves so delayed observations cannot overwrite the current subscription; preserve explicit restoration, retries and same-identity ordering.",
       "files": {
-        "packages/billing-drizzle/src/libs/DrizzleBillingStore.ts": "82526681bc929fa3e9bb2afbc4fd4e65826134e9848c14e769ff5ae1a09fe9ac",
+        "packages/billing-drizzle/src/libs/DrizzleBillingStore.ts": "24a5016c1dad53359dda9f3092bc3487a1bfd604aa2998b5dc896e3948797b61",
         "packages/billing-drizzle/src/libs/Persistence.ts": "2e8477864325be75af87bd5292a6334be6268acd8927a7a0d29f71d8f69545f9"
       },
       "catalogRuntimes": ["node", "lambda"],

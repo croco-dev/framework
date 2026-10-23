@@ -937,6 +937,132 @@ describe("InMemoryBillingStore", () => {
       expect(await store.findSubscription(original.billingAccountId)).toBeNull();
     });
 
+    it("retires identities replaced by direct saves and permits explicit restoration", async () => {
+      const original: Subscription = {
+        id: "direct-A",
+        billingAccountId: "direct-account",
+        externalSubscriptionId: "direct-A",
+        planId: "old-plan",
+        planVersionRef: "old:v1" as Subscription["planVersionRef"],
+        status: "active",
+        currentPeriodEnd: new Date("2026-03-01T00:00:00Z"),
+        cancelAtPeriodEnd: false,
+        providerModifiedAt: new Date("2026-01-01T00:00:00Z"),
+        lastSyncedAt: new Date("2026-02-01T00:00:00Z"),
+      };
+      const replacement: Subscription = {
+        ...original,
+        id: "direct-B",
+        externalSubscriptionId: "direct-B",
+        planId: "new-plan",
+        planVersionRef: "new:v1" as Subscription["planVersionRef"],
+        providerModifiedAt: new Date("2026-02-01T00:00:00Z"),
+      };
+      const derive = vi.fn(() => [
+        {
+          eventId: "direct-intent",
+          eventType: "billing.changed",
+          occurredAt: "2026-03-02T00:00:00Z",
+          payload: {},
+        },
+      ]);
+      const commit = (eventId: string, subscription: Subscription) =>
+        store.commitSubscriptionWebhook({
+          eventId,
+          eventType: "subscription.updated",
+          subscription,
+          createEventIntents: derive,
+        });
+      await store.saveSubscription(original);
+      await store.saveSubscription(replacement);
+      expect(
+        (
+          await commit("direct-late-A", {
+            ...original,
+            status: "revoked",
+            providerModifiedAt: new Date("2026-01-15T00:00:00Z"),
+          })
+        ).intents,
+      ).toEqual([]);
+      expect(await store.findSubscription(original.billingAccountId)).toEqual(replacement);
+      expect(derive).not.toHaveBeenCalled();
+      await store.saveSubscription(original);
+      const restored = {
+        ...original,
+        status: "past_due" as const,
+        providerModifiedAt: new Date("2026-03-01T00:00:00Z"),
+      };
+      expect((await commit("direct-restored-A", restored)).intents).toHaveLength(1);
+      expect(
+        (
+          await commit("direct-late-B", {
+            ...replacement,
+            providerModifiedAt: new Date("2026-04-01T00:00:00Z"),
+          })
+        ).intents,
+      ).toEqual([]);
+      expect(await store.findSubscription(original.billingAccountId)).toEqual(restored);
+      expect(derive).toHaveBeenCalledTimes(1);
+    });
+
+    it("preserves a concurrent save's retirement evidence when a pending webhook save fails", async () => {
+      const original: Subscription = {
+        id: "race-A",
+        billingAccountId: "race-account",
+        externalSubscriptionId: "race-A",
+        planId: "old-plan",
+        planVersionRef: "old:v1" as Subscription["planVersionRef"],
+        status: "active",
+        currentPeriodEnd: new Date("2026-03-01T00:00:00Z"),
+        cancelAtPeriodEnd: false,
+        providerModifiedAt: new Date("2026-01-01T00:00:00Z"),
+        lastSyncedAt: new Date("2026-02-01T00:00:00Z"),
+      };
+      await store.saveSubscription(original);
+      let rejectSave!: (reason: unknown) => void;
+      const pendingSave = new Promise<void>((_resolve, reject) => {
+        rejectSave = reject;
+      });
+      vi.spyOn(store, "saveSubscription").mockReturnValueOnce(pendingSave);
+      const failed = store.commitSubscriptionWebhook({
+        eventId: "race-failed-B",
+        eventType: "subscription.updated",
+        subscription: {
+          ...original,
+          id: "race-B",
+          externalSubscriptionId: "race-B",
+          planId: "failed-plan",
+        },
+        createEventIntents: () => [],
+      });
+      const replacement = {
+        ...original,
+        id: "race-C",
+        externalSubscriptionId: "race-C",
+        planId: "successful-plan",
+        planVersionRef: "new:v1" as Subscription["planVersionRef"],
+      };
+      await store.saveSubscription(replacement);
+      const failure = new WebhookAlreadyProcessedProblem("deferred-save-failed");
+      rejectSave(failure);
+      await expect(failed).rejects.toBe(failure);
+      const ignored = await store.commitSubscriptionWebhook({
+        eventId: "race-late-A",
+        eventType: "subscription.updated",
+        subscription: { ...original, status: "revoked" },
+        createEventIntents: () => [
+          {
+            eventId: "race-unexpected",
+            eventType: "billing.changed",
+            occurredAt: "2026-02-02T00:00:00Z",
+            payload: {},
+          },
+        ],
+      });
+      expect(ignored.intents).toEqual([]);
+      expect(await store.findSubscription(original.billingAccountId)).toEqual(replacement);
+    });
+
     it("accepts equal, newer, legacy, and replacement subscription timestamps", async () => {
       const base: Subscription = {
         id: "sub-timestamp",
