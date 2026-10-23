@@ -17,6 +17,7 @@ import type {
   SagaExecution,
   SagaExecutionStatus,
   SagaFailure,
+  SagaOutboxMessage,
   SagaOutboxRecord,
   SagaRunResult,
   SagaStepContext,
@@ -52,7 +53,124 @@ class StepCompletionPersistenceError extends Error {
   }
 }
 
+type OutboxIdentity = {
+  readonly root: string;
+  readonly ancestors: readonly SagaExecution[];
+};
+
 type SagaOutboxPhase = SagaOutboxRecord["phase"];
+
+function canonicalOutboxMessage(sagaName: string, message: SagaOutboxMessage): string {
+  return canonicalOutboxValue(sagaName, [
+    message.id,
+    message.topic,
+    message.payload,
+    message.idempotencyKey,
+    message.metadata,
+  ]);
+}
+
+function snapshotOutboxMessage(sagaName: string, message: SagaOutboxMessage): SagaOutboxMessage {
+  // Validate before cloning: structuredClone alone would erase unsupported class prototypes.
+  canonicalOutboxMessage(sagaName, message);
+  try {
+    return {
+      id: message.id,
+      topic: message.topic,
+      payload: structuredClone(message.payload),
+      ...(message.idempotencyKey === undefined ? {} : { idempotencyKey: message.idempotencyKey }),
+      ...(message.metadata === undefined ? {} : { metadata: structuredClone(message.metadata) }),
+    };
+  } catch {
+    throw new SagaDefinitionProblem(sagaName, "outbox message content could not be snapshotted");
+  }
+}
+
+function canonicalOutboxValue(
+  sagaName: string,
+  value: unknown,
+  ancestors = new Set<object>(),
+): string {
+  if (value === null) return '["null"]';
+  switch (typeof value) {
+    case "undefined":
+      return '["undefined"]';
+    case "string":
+    case "boolean":
+      return JSON.stringify([typeof value, value]);
+    case "number":
+      return JSON.stringify(["number", Object.is(value, -0) ? "-0" : String(value)]);
+    case "bigint":
+      return JSON.stringify(["bigint", String(value)]);
+    case "symbol":
+    case "function":
+      throw new SagaDefinitionProblem(
+        sagaName,
+        `outbox message contains unsupported ${typeof value} data`,
+      );
+  }
+  if (ancestors.has(value)) {
+    throw new SagaDefinitionProblem(sagaName, "outbox message contains a circular reference");
+  }
+  ancestors.add(value);
+  try {
+    if (value instanceof Date) {
+      if (!Number.isFinite(value.getTime())) {
+        throw new SagaDefinitionProblem(sagaName, "outbox message contains an invalid date");
+      }
+      return JSON.stringify(["date", value.toISOString()]);
+    }
+    if (
+      Object.getOwnPropertySymbols(value).some((key) =>
+        Object.prototype.propertyIsEnumerable.call(value, key),
+      )
+    ) {
+      throw new SagaDefinitionProblem(sagaName, "outbox message contains symbol-keyed data");
+    }
+    if (Array.isArray(value)) {
+      const entries = Array.from({ length: value.length }, (_, index) =>
+        Object.hasOwn(value, index)
+          ? canonicalOutboxValue(sagaName, value[index], ancestors)
+          : '["hole"]',
+      );
+      const properties = Object.keys(value)
+        .filter((key) => {
+          const index = Number(key);
+          return !(
+            Number.isInteger(index) &&
+            index >= 0 &&
+            index < value.length &&
+            String(index) === key
+          );
+        })
+        .sort()
+        .map(
+          (key) =>
+            `[${JSON.stringify(key)},${canonicalOutboxValue(sagaName, (value as unknown as Record<string, unknown>)[key], ancestors)}]`,
+        );
+      return properties.length === 0
+        ? `["array",[${entries.join(",")}]]`
+        : `["array",[${entries.join(",")}],[${properties.join(",")}]]`;
+    }
+    const prototype = Object.getPrototypeOf(value);
+    if (prototype !== Object.prototype && prototype !== null) {
+      throw new SagaDefinitionProblem(
+        sagaName,
+        "outbox message contains an unsupported object type",
+      );
+    }
+    const record = value as Record<string, unknown>;
+    const entries = Object.keys(record)
+      .sort()
+      .map(
+        (key) =>
+          `[${JSON.stringify(key)},${canonicalOutboxValue(sagaName, record[key], ancestors)}]`,
+      );
+    return `["object",[${entries.join(",")}]]`;
+  } finally {
+    ancestors.delete(value);
+  }
+}
 
 function toSagaFailure(error: unknown): SagaFailure {
   let message: string;
@@ -343,7 +461,7 @@ export class SagaRunner {
   ): Promise<SagaRunResult> {
     let current = execution;
     const previousResults: SagaStepResult[] = [];
-    const outboxIdentityRoot = await this.resolveOutboxIdentityRoot(execution);
+    const outboxIdentity = await this.resolveOutboxIdentity(execution);
 
     try {
       for (const step of definition.steps) {
@@ -352,7 +470,7 @@ export class SagaRunner {
           current,
           step,
           previousResults,
-          outboxIdentityRoot,
+          outboxIdentity,
         );
         current = await this.getExecution(current.id);
         previousResults.push(executed.result);
@@ -490,7 +608,7 @@ export class SagaRunner {
     execution: SagaExecution,
     step: SagaStepDefinition,
     previousResults: readonly SagaStepResult[],
-    outboxIdentityRoot: string,
+    outboxIdentity: OutboxIdentity,
   ): Promise<StepExecutionResult> {
     const maxAttempts = getMaxAttempts(step);
     let stepInput: unknown;
@@ -560,7 +678,7 @@ export class SagaRunner {
           outboxMessages.push(
             this.createOutboxRecord(
               message,
-              outboxIdentityRoot,
+              outboxIdentity,
               step.id,
               "step",
               outboxMessages.length,
@@ -599,14 +717,16 @@ export class SagaRunner {
         throw error;
       }
 
-      const completedRecord: SagaStepExecutionRecord = {
+      let completedRecord: SagaStepExecutionRecord = {
         ...record,
         status: "completed",
         result,
-        outboxMessages,
+        outboxMessages: [],
         completedAt: this.clock(),
       };
       try {
+        await this.assignOutboxIdentities(definition.name, outboxIdentity, outboxMessages);
+        completedRecord = { ...completedRecord, outboxMessages };
         await this.replaceStepRecord(execution.id, completedRecord);
       } catch (error) {
         await this.replaceStepRecord(execution.id, {
@@ -648,7 +768,7 @@ export class SagaRunner {
           ),
         }
       : execution;
-    const outboxIdentityRoot = await this.resolveOutboxIdentityRoot(execution);
+    const outboxIdentity = await this.resolveOutboxIdentity(execution);
     let compensatedStepCount = 0;
 
     for (const record of [...compensationExecution.steps].reverse()) {
@@ -689,7 +809,7 @@ export class SagaRunner {
                 outboxMessages.push(
                   this.createOutboxRecord(
                     message,
-                    outboxIdentityRoot,
+                    outboxIdentity,
                     step.id,
                     "compensation",
                     outboxMessages.length,
@@ -701,6 +821,7 @@ export class SagaRunner {
             attributes: getStepRecordAttributes(definition, executionId, step),
           },
         );
+        await this.assignOutboxIdentities(definition.name, outboxIdentity, outboxMessages);
         await this.replaceStepRecord(executionId, {
           ...record,
           status: "compensated",
@@ -819,6 +940,7 @@ export class SagaRunner {
       return execution;
     }
 
+    const outboxIdentity = await this.resolveOutboxIdentity(execution);
     const outboxRecords = [
       ...execution.steps.map((record) => ({ record, phase: "step" as const })),
       ...[...execution.steps]
@@ -844,11 +966,16 @@ export class SagaRunner {
           continue;
         }
 
-        await definition.outbox.publish(message, {
+        const delivery = { ...message, ...snapshotOutboxMessage(definition.name, message) };
+        this.assertOutboxIdentityCompatible(definition.name, delivery, [
+          execution,
+          ...outboxIdentity.ancestors,
+        ]);
+        await definition.outbox.publish(delivery, {
           saga: definition,
           executionId,
           step,
-          message,
+          message: delivery,
         });
         execution = await this.markOutboxPublished(executionId, record.id, message.deliveryId);
       }
@@ -859,19 +986,85 @@ export class SagaRunner {
 
   private createOutboxRecord(
     message: Parameters<SagaStepContext["enqueueOutbox"]>[0],
-    outboxIdentityRoot: string,
+    outboxIdentity: OutboxIdentity,
     stepId: string,
     phase: SagaOutboxPhase,
     index: number,
   ): SagaOutboxRecord {
     return {
       ...message,
-      deliveryId: `${outboxIdentityRoot}:${stepId}:${phase}:${index}:${message.id}`,
+      deliveryId: JSON.stringify([outboxIdentity.root, stepId, phase, index, message.id]),
       stepId,
       phase,
       status: "pending",
       enqueuedAt: this.clock().toISOString(),
     };
+  }
+
+  private async assignOutboxIdentities(
+    sagaName: string,
+    identity: OutboxIdentity,
+    messages: SagaOutboxRecord[],
+  ): Promise<void> {
+    for (const [index, message] of messages.entries()) {
+      const snapshot = { ...message, ...snapshotOutboxMessage(sagaName, message) };
+      const semantic = canonicalOutboxMessage(sagaName, snapshot);
+      let previous: SagaOutboxRecord | undefined;
+      // Search the full replay ancestry, including pre-fingerprint records. Compare content,
+      // never just the old slot ID, before preserving an already delivered identity.
+      for (const ancestor of identity.ancestors) {
+        const candidate = ancestor.steps
+          .find((step) => step.id === message.stepId)
+          ?.outboxMessages.filter((item) => item.phase === message.phase)[index];
+        if (
+          candidate?.id === message.id &&
+          canonicalOutboxMessage(sagaName, candidate) === semantic
+        ) {
+          previous = candidate;
+          break;
+        }
+      }
+      if (previous) {
+        this.assertOutboxIdentityCompatible(
+          sagaName,
+          { ...snapshot, deliveryId: previous.deliveryId },
+          identity.ancestors,
+        );
+        messages[index] = { ...snapshot, deliveryId: previous.deliveryId };
+        continue;
+      }
+      const digest = await globalThis.crypto.subtle.digest(
+        "SHA-256",
+        new TextEncoder().encode(JSON.stringify([message.deliveryId, semantic])),
+      );
+      const fingerprint = Array.from(new Uint8Array(digest))
+        .map((byte) => byte.toString(16).padStart(2, "0"))
+        .join("");
+      messages[index] = { ...snapshot, deliveryId: `saga-outbox:v2:${fingerprint}` };
+    }
+  }
+
+  private assertOutboxIdentityCompatible(
+    sagaName: string,
+    message: SagaOutboxRecord,
+    executions: readonly SagaExecution[],
+  ): void {
+    const semantic = canonicalOutboxMessage(sagaName, message);
+    const conflicting = executions.some((execution) =>
+      execution.steps.some((step) =>
+        step.outboxMessages.some(
+          (candidate) =>
+            candidate.deliveryId === message.deliveryId &&
+            canonicalOutboxMessage(sagaName, candidate) !== semantic,
+        ),
+      ),
+    );
+    if (conflicting) {
+      throw new SagaDefinitionProblem(
+        sagaName,
+        "stored outbox delivery identity has conflicting message content",
+      );
+    }
   }
 
   private async markOutboxPublished(
@@ -896,9 +1089,10 @@ export class SagaRunner {
     return this.getExecution(executionId);
   }
 
-  private async resolveOutboxIdentityRoot(execution: SagaExecution): Promise<string> {
+  private async resolveOutboxIdentity(execution: SagaExecution): Promise<OutboxIdentity> {
     let current = execution;
     const visited = new Set<string>();
+    const ancestors: SagaExecution[] = [];
     while (current.replayOf !== undefined) {
       if (visited.has(current.id)) {
         throw new SagaDefinitionProblem(
@@ -908,9 +1102,10 @@ export class SagaRunner {
       }
       visited.add(current.id);
       current = await this.getExecution(current.replayOf);
+      ancestors.push(current);
     }
 
-    return current.id;
+    return { root: current.id, ancestors };
   }
 
   private throwStoredExecutionFailure(sagaName: string, execution: SagaExecution): never {

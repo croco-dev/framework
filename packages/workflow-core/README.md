@@ -179,3 +179,26 @@ retain their random suffix. Execution records, logs, and delegated replay retain
 manager/store's time ownership; configure `ExecutionManagerImpl` with `{ clock }` and configure the
 execution store's clock as supported. Task timing remains owned by `TaskRunner`, whose runtime accepts
 `{ now: () => clock().getTime() }` independently. Clock injection does not change timeout scheduling.
+
+### Saga outbox replay identity
+
+Publishers must deduplicate by the opaque `SagaOutboxRecord.deliveryId`. New IDs bind the
+original execution, step, phase, message position and canonical message content (`id`, `topic`,
+`payload`, `idempotencyKey`, `metadata`) using SHA-256. Changed content receives a different ID;
+equal content retains its ID across retries and the entire replay chain, even when object keys
+are reordered. Execution timestamps and publication status do not participate. Payload and metadata are detached
+snapshots when the identity is bound, so later input mutations cannot change the recorded effect.
+
+Replay searches its recorded ancestors before issuing a new ID. An equal message in the same
+step/phase/position retains its stored ID, including IDs written before content fingerprinting.
+Existing records are not rewritten. If that stored ID already identifies conflicting content in
+the ancestry, replay and direct pending-message dispatch fail instead of publishing an unverified duplicate.
+If identity finalization fails after a forward handler succeeds, the successful result remains eligible
+for compensation; unverified outbox messages are not published.
+
+Canonical values distinguish primitive types, undefined, non-finite numbers, negative zero,
+bigints, Date timestamps, array positions (including holes), sorted enumerable array properties
+and sorted plain-object properties.
+Functions, symbols, enumerable symbol keys, cycles, invalid dates and other object types cannot
+be fingerprinted and produce a Saga definition failure. This does not provide durable publishing
+or repair previously ambiguous downstream receipts; existing store and publisher guarantees still apply.

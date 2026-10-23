@@ -97,7 +97,7 @@ export type SagaOutboxMessage = {
 export type SagaOutboxStatus = "pending" | "published";
 
 export type SagaOutboxRecord = SagaOutboxMessage & {
-  /** Stable across retries and replays. Publishers must use this value to deduplicate delivery. */
+  /** Stable across retries and replays of the same message content. Publishers must deduplicate by this opaque value. */
   readonly deliveryId: string;
   readonly stepId: string;
   readonly phase: "step" | "compensation";

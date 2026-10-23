@@ -13,7 +13,7 @@ title: "SagaOutboxRecord"
 
 > `readonly` **deliveryId**: `string`
 
-Stable across retries and replays. Publishers must use this value to deduplicate delivery.
+Stable across retries and replays of the same message content. Publishers must deduplicate by this opaque value.
 
 ### enqueuedAt
 

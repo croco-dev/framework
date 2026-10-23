@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "workflow-core",
+      "classification": "pure-contract",
+      "reason": "Bind Saga outbox delivery IDs to detached message snapshots, preserve matching ancestor identities, reject historical dispatch conflicts and retain successful-step evidence through identity finalization. Store/provider wiring and schema remain unchanged.",
+      "files": {
+        "packages/workflow-core/src/libs/saga/SagaRunner.ts": "4e0e54272f3e8af4546596085734368e4379c1d8a016b91a0efd1a4ea111d4db",
+        "packages/workflow-core/src/libs/saga/types.ts": "1bf23dbc0554bd2fffd65c77e48505e40a4610097c6c9ba6fcf337dee4f20e28"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Message canonicalization, Web Crypto SHA-256 and replay ancestry comparison are infrastructure-independent domain logic. No host, storage or lifecycle capability changes.",
+          "providers": [],
+          "constraints": [
+            "Existing SagaStore and publisher durability requirements remain. No deployment or provider certification is claimed."
+          ],
+          "references": [
+            "packages/workflow-core/src/libs/saga/SagaRunner.ts",
+            "packages/workflow-core/src/libs/saga/types.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Message canonicalization, Web Crypto SHA-256 and replay ancestry comparison are infrastructure-independent domain logic. No host, storage or lifecycle capability changes.",
+          "providers": [],
+          "constraints": [
+            "Existing SagaStore and publisher durability requirements remain. No deployment or provider certification is claimed."
+          ],
+          "references": [
+            "packages/workflow-core/src/libs/saga/SagaRunner.ts",
+            "packages/workflow-core/src/libs/saga/types.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Message canonicalization, Web Crypto SHA-256 and replay ancestry comparison are infrastructure-independent domain logic. No host, storage or lifecycle capability changes.",
+          "providers": [],
+          "constraints": [
+            "Existing SagaStore and publisher durability requirements remain. No deployment or provider certification is claimed."
+          ],
+          "references": [
+            "packages/workflow-core/src/libs/saga/SagaRunner.ts",
+            "packages/workflow-core/src/libs/saga/types.ts"
+          ]
+        }
+      }
+    }
+  ]
+}
