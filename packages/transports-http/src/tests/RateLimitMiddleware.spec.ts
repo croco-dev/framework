@@ -681,9 +681,13 @@ describe("RateLimitMiddleware", () => {
             : rateLimitHttpMiddleware({ ...options, policy });
         const { ctx, headers } = createRateLimitTestContext();
         const body = { receipt: "committed-order-17" };
+        const response = new Response(JSON.stringify(body), {
+          status,
+          headers: { "content-type": "application/json" },
+        });
         const next = vi.fn(async () => {
           ctx.res.status = status;
-          ctx.res.body = body;
+          ctx.raw.res = response;
         });
         const recordEvent = vi.fn();
         const request = FrameworkContext.run(
@@ -693,14 +697,16 @@ describe("RateLimitMiddleware", () => {
         // Attach the assertion before releasing the rejection, including on the pre-fix implementation.
         const completion = expect(request).resolves.toBeUndefined();
         await started;
-        expect(ctx.res.body).toBe(body);
+        expect(ctx.raw.res).toBe(response);
         rejectRefund(new Error("refund store offline"));
         await completion;
 
         expect(next).toHaveBeenCalledOnce();
         expect(refund).toHaveBeenCalledOnce();
         expect(ctx.res.status).toBe(status);
-        expect(ctx.res.body).toBe(body);
+        expect(ctx.raw.res).toBe(response);
+        expect(ctx.raw.res.status).toBe(status);
+        expect(await ctx.raw.res.json()).toEqual(body);
         expect(headers.get("X-RateLimit-Remaining")).toBe("0");
         expect(recordEvent).toHaveBeenCalledWith(
           expect.objectContaining({
