@@ -231,7 +231,7 @@
     {
       "package": "@croco/transports-http",
       "file": "packages/transports-http/src/libs/CrocoLambdaAdapter.ts",
-      "line": 170,
+      "line": 69,
       "excerpt": "class LambdaFlushBoundaryError extends Error {",
       "reason": "Lambda boundary carries a stable code plus original handler and flush failure evidence.",
       "owner": "framework-error-handling",
@@ -240,7 +240,7 @@
     {
       "package": "@croco/transports-http",
       "file": "packages/transports-http/src/libs/CrocoLambdaAdapter.ts",
-      "line": 193,
+      "line": 92,
       "excerpt": "class LambdaEventValidationError extends Error {",
       "reason": "Lambda adapter validates the external event shape with a stable diagnostic code.",
       "owner": "framework-error-handling",
@@ -249,7 +249,7 @@
     {
       "package": "@croco/transports-http",
       "file": "packages/transports-http/src/libs/CrocoLambdaAdapter.ts",
-      "line": 202,
+      "line": 101,
       "excerpt": "class LambdaWaitUntilDeadlineError extends Error {",
       "reason": "Lambda deadline boundary carries a stable code, reason, and outstanding-task evidence.",
       "owner": "framework-error-handling",
