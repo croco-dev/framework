@@ -18,7 +18,7 @@ The `publicEntrypoints` rule checks all scoped and unscoped workspace packages w
 `includePackages` is omitted. An explicit filter keeps the existing glob semantics: `*` selects
 unscoped names, `@croco/*` selects that scope, and an empty array selects no packages.
 
-Manifest parsing rejects malformed fields before normalization with
+Manifest parsing and direct `checkArchitecturePolicy` calls reject malformed fields before normalization with
 `architecture-policy/manifest-shape`. The Problem includes `extensions.field` and
 `extensions.recovery` so callers can locate and correct the declaration. Rule IDs must be non-empty,
 selectors must be arrays of non-empty strings, and `appliesTo`, when present, must contain only

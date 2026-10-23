@@ -250,6 +250,7 @@ export function readArchitecturePolicyManifest(path: string): ArchitecturePolicy
 export function checkArchitecturePolicy(
   options: ArchitecturePolicyCheckOptions,
 ): ArchitecturePolicyReport {
+  validateManifestFields(options.manifest);
   const normalized = normalizePolicy(options);
   const packages = readPackages(normalized);
   const imports = [

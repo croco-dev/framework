@@ -1097,6 +1097,23 @@ describe("architecture policy engine", () => {
     });
   });
 
+  it("rejects an empty ignore passed directly to the typed checker", () => {
+    const repo = createTempRepo();
+    writePackage(repo, "packages/consumer", "@demo/consumer");
+    writePackage(repo, "packages/provider", "@demo/provider", {
+      exports: { ".": "./src/index.ts" },
+    });
+    writeFile(repo, "packages/consumer/src/index.ts", 'import "@demo/provider/private";\n');
+    const manifest: ArchitecturePolicyManifest = {
+      schemaVersion: ARCHITECTURE_POLICY_SCHEMA_VERSION,
+      rules: { publicEntrypoints: { id: "public", ignoreImports: [{}] } },
+    };
+    expect(captureError(() => checkArchitecturePolicy({ rootDir: repo, manifest }))).toMatchObject({
+      code: "architecture-policy/manifest-shape",
+      extensions: { field: "rules.publicEntrypoints.ignoreImports[0]" },
+    });
+  });
+
   it.each([
     ["@demo/provider", "@demo/provider/private", ["blocked"]],
     ["@demo/other", "@demo/provider/private", ["allowed", "blocked"]],

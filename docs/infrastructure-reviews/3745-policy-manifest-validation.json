@@ -6,7 +6,7 @@
       "classification": "pure-contract",
       "reason": "Reject malformed policy manifests before normalization can widen import exemptions or drop rules.",
       "files": {
-        "packages/architecture-policy/src/index.ts": "7e5adfca368b64dc687399fa917217200e04d3e459714d3be777e6ea446f6f6c"
+        "packages/architecture-policy/src/index.ts": "c8307b8172607e8cc65d85964fd58d58911adc634ebaee717294915bdfbc0b8f"
       },
       "catalogRuntimes": [],
       "profiles": {
