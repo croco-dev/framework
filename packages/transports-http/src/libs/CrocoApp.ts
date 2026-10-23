@@ -697,7 +697,7 @@ export class CrocoApp {
       throw ProblemFactory.internalServerError(
         "transports-http/listen-failed",
         "The Node HTTP listener could not start.",
-        { cause: error instanceof Error ? error : undefined },
+        error instanceof Error ? { cause: error } : {},
       );
     }
 

@@ -6,7 +6,7 @@
       "classification": "runtime-adapter",
       "reason": "Node listen waits for listening or a startup error before resolving; startup failures close the listener and preserve the Node cause. Reuses the Hono Node adapter and existing graceful-shutdown binding.",
       "files": {
-        "packages/transports-http/src/libs/CrocoApp.ts": "7965dea259cc86976bbc502262f39cfa53bb5d8fda4daa2ebbd53d40bcc10dbc"
+        "packages/transports-http/src/libs/CrocoApp.ts": "cd20004be3fed9498d3c53a0f3afa4d69bb839e50ff73b4cd1e18515f9b23513"
       },
       "catalogRuntimes": ["node", "lambda"],
       "profiles": {
