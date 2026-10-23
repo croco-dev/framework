@@ -1,4 +1,5 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { runCroco } from "../index.js";
 import {
   formatOpsStatusReport,
   getOpsStatusExitCode,
@@ -11,6 +12,7 @@ import { CLI_DIAGNOSTIC_CODES, CLI_LEGACY_DIAGNOSTIC_CODES } from "../libs/diagn
 
 describe("ops status", () => {
   beforeEach(() => {});
+  afterEach(() => vi.unstubAllGlobals());
 
   it("fetches the standard operational endpoints and summarizes a healthy app", async () => {
     const calls: FetchCall[] = [];
@@ -90,7 +92,7 @@ describe("ops status", () => {
         return Response.json({ status: "up", results: [] });
       }
 
-      return Response.json({ summary: "issues_detected", components: [] });
+      return Response.json({ summary: "issues_detected", components: [], recentErrors: [] });
     };
 
     const report = await runOpsStatus("http://localhost:3000", { fetch: fetchStatus });
@@ -185,7 +187,7 @@ describe("ops status", () => {
         return Response.json({ status: "up", results: [] });
       }
 
-      return Response.json({ summary: "issues_detected", components: [] });
+      return Response.json({ summary: "issues_detected", components: [], recentErrors: [] });
     };
 
     const report = await runOpsCheck("http://localhost:3000", { fetch: fetchStatus });
@@ -205,6 +207,96 @@ describe("ops status", () => {
     const report = await runOpsStatus("http://localhost:3000", { fetch: fetchStatus });
 
     expect(report.summary).toBe("unhealthy");
+  });
+
+  for (const name of ["health", "ready", "diagnostics"] as const) {
+    it.each([
+      ["HTML fallback", "<html>SPA fallback</html>"],
+      ["empty body", ""],
+      ["malformed JSON", '{"status":'],
+      ["null", "null"],
+      ["array", "[]"],
+      ["empty object", "{}"],
+      [
+        "unknown state",
+        '{"status":"surprise","summary":"surprise","results":[],"components":[],"recentErrors":[]}',
+      ],
+      [
+        "wrong endpoint payload",
+        name === "diagnostics"
+          ? '{"status":"ok"}'
+          : '{"summary":"all_healthy","components":[],"recentErrors":[]}',
+      ],
+    ])(`rejects ${name} with %s despite HTTP 200`, async (_label, body) => {
+      const report = await runOpsCheck("http://localhost:3000", {
+        fetch: async (input) =>
+          input.endsWith(`/${name}`)
+            ? new Response(body, { status: 200 })
+            : healthyOperationalResponse(input),
+      });
+
+      expect(report.summary).toBe("unhealthy");
+      expect(getOpsStatusExitCode(report.summary)).toBe(1);
+      expect(report.endpoints.find((endpoint) => endpoint.name === name)).toMatchObject({
+        httpStatus: 200,
+        ok: false,
+        error: expect.stringContaining(name),
+      });
+    });
+  }
+
+  it.each([
+    ["ready", { status: "up" }],
+    ["ready", { status: "up", results: {} }],
+    ["diagnostics", { summary: "all_healthy" }],
+    ["diagnostics", { summary: "all_healthy", components: {}, recentErrors: [] }],
+    ["diagnostics", { summary: "all_healthy", components: [], recentErrors: null }],
+  ])("rejects malformed %s payload structure %j", async (name, body) => {
+    const report = await runOpsCheck("http://localhost:3000", {
+      fetch: async (input) =>
+        input.endsWith(`/${name}`) ? Response.json(body) : healthyOperationalResponse(input),
+    });
+    expect(report.summary).toBe("unhealthy");
+  });
+
+  it("accepts current health results and plain-text metrics", async () => {
+    const report = await runOpsCheck("http://localhost:3000", {
+      includeMetrics: true,
+      fetch: async (input) =>
+        input.endsWith("/metrics")
+          ? new Response("# TYPE requests_total counter\nrequests_total 42\n")
+          : healthyOperationalResponse(input),
+    });
+    expect(report.summary).toBe("healthy");
+    expect(report.endpoints.every((endpoint) => endpoint.ok)).toBe(true);
+  });
+
+  it("marks invalid optional diagnostics as degraded", async () => {
+    const report = await runOpsStatus("http://localhost:3000", {
+      includeMetrics: false,
+      fetch: async (input) =>
+        input.endsWith("/diagnostics") ? Response.json({}) : healthyOperationalResponse(input),
+    });
+    expect(report.summary).toBe("degraded");
+    expect(getOpsStatusExitCode(report.summary)).toBe(1);
+  });
+
+  it.each([
+    ["HTML fallback", "<html>SPA fallback</html>", 1],
+    ["empty JSON", "{}", 1],
+    ["healthy contracts", null, 0],
+  ])("returns the command exit code for %s", async (_label, body, exitCode) => {
+    vi.stubGlobal("fetch", async (input: string) =>
+      body === null ? healthyOperationalResponse(input) : new Response(body),
+    );
+    const stdout: string[] = [];
+    const result = await runCroco(["ops", "check", "http://localhost:3000", "--json"], {
+      stdout: (message) => stdout.push(message),
+    });
+    expect(result).toEqual({ exitCode });
+    expect(JSON.parse(stdout.join(""))).toMatchObject({
+      summary: exitCode === 0 ? "healthy" : "unhealthy",
+    });
   });
 
   it("registers the status subcommand under ops", () => {
@@ -239,3 +331,10 @@ type FetchCall = {
   readonly input: string;
   readonly init?: RequestInit;
 };
+
+function healthyOperationalResponse(input: string): Response {
+  if (input.endsWith("/diagnostics")) {
+    return Response.json({ summary: "all_healthy", components: [], recentErrors: [] });
+  }
+  return Response.json({ status: "up", results: [{ name: "database", status: "up" }] });
+}
