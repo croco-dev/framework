@@ -158,7 +158,8 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Install Playwright Chromium
-        run: pnpm --dir packages/docs run playwright:install
+        timeout-minutes: 10
+        run: bash scripts/ci-install-playwright.sh
 
       - name: Production dependency audit report
         id: security_audit_advisory
@@ -892,7 +893,8 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
       - name: Install Playwright Chromium
-        run: pnpm --dir packages/docs run playwright:install
+        timeout-minutes: 10
+        run: bash scripts/ci-install-playwright.sh
       - name: Create split verification identity
         id: split_identity
         env:
@@ -1007,7 +1009,8 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
       - name: Install Playwright Chromium
-        run: pnpm --dir packages/docs run playwright:install
+        timeout-minutes: 10
+        run: bash scripts/ci-install-playwright.sh
       - name: Create split verification identity
         id: split_identity
         env:
@@ -1791,7 +1794,8 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Install Playwright Chromium
-        run: pnpm --dir packages/docs run playwright:install
+        timeout-minutes: 10
+        run: bash scripts/ci-install-playwright.sh
 
       - name: Warm Turbo cache
         run: node --experimental-strip-types scripts/turbo-canonical-cache.mts warm --cache-dir .turbo/cache

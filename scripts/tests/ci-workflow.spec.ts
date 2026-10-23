@@ -1,4 +1,5 @@
-import { mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { chmodSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { isNode, parseDocument } from "yaml";
@@ -928,8 +929,96 @@ describe("CI verification profile contract", () => {
 
     expect(playwright).toBeGreaterThan(install);
     expect(playwright).toBeLessThan(verification);
-    expect(VALIDATE_JOB).toContain("pnpm --dir packages/docs run playwright:install");
+    expect(VALIDATE_JOB).toContain("bash scripts/ci-install-playwright.sh");
   });
+
+  it("bounds every CI browser installation without allowing a failed setup to pass", () => {
+    const installs = Object.entries(WORKFLOWS).flatMap(([workflow, source]) => {
+      const { jobs } = parseDocument(source).toJS() as {
+        readonly jobs: Readonly<Record<string, { readonly steps?: readonly WorkflowStep[] }>>;
+      };
+      return Object.entries(jobs).flatMap(([job, definition]) =>
+        (definition.steps ?? [])
+          .filter((step) => step.name === "Install Playwright Chromium")
+          .map((step) => ({ id: `${workflow}:${job}`, step })),
+      );
+    });
+
+    expect(installs.map(({ id }) => id).sort()).toEqual([
+      "benchmark.yml:benchmark",
+      "ci.yml:core-verification",
+      "ci.yml:generated-apps",
+      "ci.yml:turbo-cache",
+      "ci.yml:validate",
+      "release.yml:release",
+    ]);
+    for (const { id, step } of installs) {
+      expect(step.run, id).toBe("bash scripts/ci-install-playwright.sh");
+      expect(step["timeout-minutes"], id).toBe(10);
+      expect(step["continue-on-error"], id).toBeUndefined();
+    }
+  });
+
+  it.each([
+    { configExit: 0, installExit: 0, expectedExit: 0 },
+    { configExit: 42, installExit: 0, expectedExit: 42 },
+    { configExit: 0, installExit: 23, expectedExit: 23 },
+  ])(
+    "preserves browser setup failure codes ($configExit, $installExit)",
+    ({ configExit, installExit, expectedExit }) => {
+      const fixture = mkdtempSync(join(tmpdir(), "croco-playwright-install-"));
+      try {
+        const configPath = join(fixture, "apt.conf");
+        const invocationPath = join(fixture, "install-args");
+        const commands = {
+          sudo: `#!/bin/sh
+[ "$*" = "tee /etc/apt/apt.conf.d/99-croco-playwright" ] || exit 64
+cat > "$CI_APT_CONFIG_CAPTURE"
+exit "$CI_APT_CONFIG_EXIT"
+`,
+          pnpm: `#!/bin/sh
+printf '%s\\n' "$*" > "$CI_INSTALL_ARGS_CAPTURE"
+exit "$CI_INSTALL_EXIT"
+`,
+        };
+        for (const [name, command] of Object.entries(commands)) {
+          const path = join(fixture, name);
+          writeFileSync(path, command);
+          chmodSync(path, 0o700);
+        }
+
+        const result = spawnSync("bash", ["scripts/ci-install-playwright.sh"], {
+          cwd: ROOT_DIR,
+          encoding: "utf8",
+          timeout: 5_000,
+          env: {
+            ...process.env,
+            PATH: `${fixture}:${process.env.PATH}`,
+            CI_APT_CONFIG_CAPTURE: configPath,
+            CI_APT_CONFIG_EXIT: String(configExit),
+            CI_INSTALL_ARGS_CAPTURE: invocationPath,
+            CI_INSTALL_EXIT: String(installExit),
+          },
+        });
+
+        expect(result.error).toBeUndefined();
+        expect(result.status, result.stderr).toBe(expectedExit);
+        const config = readFileSync(configPath, "utf8");
+        expect(config).toContain('Acquire::http::Timeout "30";');
+        expect(config).toContain('Acquire::https::Timeout "30";');
+        expect(config).toContain('Acquire::Retries "2";');
+        if (configExit === 0) {
+          expect(readFileSync(invocationPath, "utf8")).toBe(
+            "--dir packages/docs run playwright:install\n",
+          );
+        } else {
+          expect(readdirSync(fixture)).not.toContain("install-args");
+        }
+      } finally {
+        rmSync(fixture, { recursive: true, force: true });
+      }
+    },
+  );
 
   it("fails publish shadow reuse with an explicit missing-evidence diagnostic", () => {
     const shadow = workflowStep("Run full test suite for changed-test shadow");
@@ -1553,7 +1642,7 @@ describe("canonical Turbo cache producer", () => {
     expect(pnpmStoreCache?.with).toEqual({ cache: "pnpm" });
     expect(restore?.id).toBe("restore");
     expect(install?.run).toBe("pnpm install --frozen-lockfile");
-    expect(playwright?.run).toBe("pnpm --dir packages/docs run playwright:install");
+    expect(playwright?.run).toBe("bash scripts/ci-install-playwright.sh");
     expect(warm).toEqual({
       name: "Warm Turbo cache",
       run: `${TURBO_CACHE_COMMAND} warm --cache-dir .turbo/cache`,
