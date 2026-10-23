@@ -12,7 +12,7 @@ import {
 } from "../package-manifest-contracts.mjs";
 
 describe("package-manifest-contracts", () => {
-  it("exempts only additions of canonical CI scripts while preserving all existing scripts", () => {
+  it("exempts additions of canonical CI scripts while preserving existing commands", () => {
     const base = { name: "@croco/example", scripts: { test: "vitest run" } };
     const head = {
       ...base,
@@ -42,6 +42,43 @@ describe("package-manifest-contracts", () => {
       isCiScriptOnlyManifestChange(
         { ...head, scripts: { ...head.scripts, "test:evidence": "echo old" } },
         head,
+      ),
+    ).toBe(false);
+  });
+
+  it.each(["tsc --noEmit", "node ../../node_modules/typescript/bin/tsc --noEmit"])(
+    "exempts a native typecheck migration from %s without exempting published changes",
+    (command) => {
+      const base = {
+        name: "@croco/example",
+        scripts: { build: "tsup src/index.ts --dts", typecheck: command },
+      };
+      const head = { ...base, scripts: { ...base.scripts, typecheck: "tsrs --noEmit" } };
+
+      expect(isCiScriptOnlyManifestChange(base, head)).toBe(true);
+      expect(isCiScriptOnlyManifestChange(head, base)).toBe(false);
+      for (const change of [
+        { main: "./dist/other.js" },
+        { dependencies: { typescript: "6.0.3" } },
+        { scripts: { ...head.scripts, build: "tsrs" } },
+      ]) {
+        expect(isCiScriptOnlyManifestChange(base, { ...head, ...change })).toBe(false);
+      }
+    },
+  );
+
+  it.each([
+    [undefined, "tsrs --noEmit"],
+    ["tsc", "tsrs --noEmit"],
+    ["tsc --noEmit", undefined],
+    ["tsc --noEmit", "tsrs"],
+    ["tsc --noEmit", "tsrs --noEmit false"],
+    ["tsc --noEmit", "tsrs --noEmit || tsc --noEmit"],
+  ])("keeps other native typecheck changes release-significant: %s → %s", (before, after) => {
+    expect(
+      isCiScriptOnlyManifestChange(
+        { scripts: { typecheck: before } },
+        { scripts: { typecheck: after } },
       ),
     ).toBe(false);
   });

@@ -11,7 +11,8 @@ import { compareStrings } from "../tooling/compareStrings.mjs";
  * - package README.md, CHANGELOG.md, docs/, and test files do not require a changeset;
  * - root vitest.config.*, vitest.setup.*, tsconfig.contract-strict.json, and
  *   test-fixtures/ are test/check-only inputs and do not require a changeset;
- * - adding the canonical CI-only API model script does not change published behavior;
+ * - canonical CI-only script additions and the exact tsc-to-tsrs no-emit typecheck
+ *   migration do not change published behavior;
  * - private packages do not require a changeset;
  * - root-only lockfile/package-manager changes do not require a changeset here;
  * - public API snapshot-only changes may instead carry an explicit no-release reason;

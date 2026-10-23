@@ -334,6 +334,32 @@ describe("auto-changeset.mts", () => {
     expect(listChangesets(repo)).toEqual([]);
   });
 
+  it("does not publish a package for a native typecheck migration", () => {
+    const repo = createTempRepo();
+    const directory = "packages/telemetry-sdk-node";
+    const name = "@croco/telemetry-sdk-node";
+    writePackageManifest(repo, directory, name, false, {
+      typecheck: "node ../../node_modules/typescript/bin/tsc --noEmit",
+    });
+    git(repo, ["add", `${directory}/package.json`]);
+    git(repo, ["commit", "-m", "chore: seed typecheck"]);
+    checkoutBranch(repo, "chore/native-typecheck");
+    writePackageManifest(repo, directory, name, false, { typecheck: "tsrs --noEmit" });
+    git(repo, ["add", `${directory}/package.json`]);
+    git(repo, ["commit", "-m", "chore: use tsrs"]);
+
+    const result = runScript(
+      newBranchStdin("chore/native-typecheck", git(repo, ["rev-parse", "HEAD"])),
+      repo,
+    );
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain(
+      "auto-changeset: no publishable package changes found (skipping)",
+    );
+    expect(listChangesets(repo)).toEqual([]);
+  });
+
   it.each([
     [
       "docs:api:model",
