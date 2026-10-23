@@ -343,7 +343,7 @@ function validateManifestFields(manifest: Record<string, unknown>): void {
   for (const kind of ["forbiddenImports", "allowedGroupImports"] as const) {
     if (rules[kind] === undefined) continue;
     const entries = requireArray(rules[kind], `rules.${kind}`);
-    entries.forEach((value, index) => {
+    Array.from(entries).forEach((value, index) => {
       const path = `rules.${kind}[${index}]`;
       const rule = requireRecord(value, path);
       validateKnownFields(rule, path, [
@@ -443,7 +443,7 @@ function validateManifestFields(manifest: Record<string, unknown>): void {
     ["id"],
   );
   if (rule.ignoreImports === undefined) return;
-  requireArray(rule.ignoreImports, `${path}.ignoreImports`).forEach((value, index) => {
+  Array.from(requireArray(rule.ignoreImports, `${path}.ignoreImports`)).forEach((value, index) => {
     const ignorePath = `${path}.ignoreImports[${index}]`;
     const ignore = requireRecord(value, ignorePath);
     validateKnownFields(ignore, ignorePath, ["paths", "packages", "specifiers"]);
@@ -502,7 +502,7 @@ function validateFields(
     const valid =
       kind === "strings"
         ? Array.isArray(field) &&
-          field.every((entry) => typeof entry === "string" && entry.trim().length > 0)
+          Array.from(field).every((entry) => typeof entry === "string" && entry.trim().length > 0)
         : kind === "string"
           ? typeof field === "string" && field.trim().length > 0
           : typeof field === "boolean";

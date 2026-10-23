@@ -14,6 +14,8 @@ import {
   checkArchitecturePolicy,
   formatArchitecturePolicyDiagnostic,
   parseArchitecturePolicyManifest,
+  type ArchitectureAllowedGroupImportRule,
+  type ArchitectureForbiddenImportRule,
   type ArchitecturePolicyManifest,
 } from "../index.js";
 
@@ -1094,6 +1096,35 @@ describe("architecture policy engine", () => {
     expect(error).toMatchObject({
       code: "architecture-policy/manifest-shape",
       extensions: { field, recovery: expect.any(String) },
+    });
+  });
+
+  it.each([
+    [
+      { forbiddenImports: [{ id: "blocked", from: {}, to: { specifiers: new Array<string>(1) } }] },
+      "rules.forbiddenImports[0].to.specifiers",
+    ],
+    [
+      { forbiddenImports: new Array<ArchitectureForbiddenImportRule>(1) },
+      "rules.forbiddenImports[0]",
+    ],
+    [
+      { allowedGroupImports: new Array<ArchitectureAllowedGroupImportRule>(1) },
+      "rules.allowedGroupImports[0]",
+    ],
+    [
+      { publicEntrypoints: { id: "public", ignoreImports: new Array<{ paths?: string[] }>(1) } },
+      "rules.publicEntrypoints.ignoreImports[0]",
+    ],
+  ])("rejects sparse arrays passed directly to the typed checker (%j)", (rules, field) => {
+    const repo = createTempRepo();
+    const manifest: ArchitecturePolicyManifest = {
+      schemaVersion: ARCHITECTURE_POLICY_SCHEMA_VERSION,
+      rules,
+    };
+    expect(captureError(() => checkArchitecturePolicy({ rootDir: repo, manifest }))).toMatchObject({
+      code: "architecture-policy/manifest-shape",
+      extensions: { field },
     });
   });
 
