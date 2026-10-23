@@ -56,6 +56,47 @@
           ]
         }
       }
+    },
+    {
+      "package": "problems-core",
+      "classification": "pure-contract",
+      "reason": "Canonical generated Problem metadata recognizes the Node HTTP listen-failed code. No execution, storage or host lifecycle is introduced by this metadata.",
+      "files": {
+        "packages/problems-core/src/generated/problem-code-registry.ts": "20a7cb1da12801350d878fb53da5ff1b33530635f2bef9076af9ec911df4d63c"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Generated diagnostic metadata only; no host capabilities, storage or lifecycle dependencies.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "docs/problem-code-registry.json"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Generated diagnostic metadata only; no host capabilities, storage or lifecycle dependencies.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "docs/problem-code-registry.json"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Generated diagnostic metadata only; no host capabilities, storage or lifecycle dependencies.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "docs/problem-code-registry.json"
+          ]
+        }
+      }
     }
   ]
 }
