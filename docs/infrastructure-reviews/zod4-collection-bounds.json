@@ -1,0 +1,193 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "auth-better-auth",
+      "classification": "pure-contract",
+      "reason": "Raise the existing Zod 4 dependency floor to 4.6.6 so constrained collections reject excess entries before parsing elements. No schema major migration or Host/provider integration is introduced.",
+      "files": {
+        "packages/auth-better-auth/package.json": "56b30aa5de1c02b65d6994385ae2fdad949e878c7be91a9039e7208e7c24e73d"
+      },
+      "catalogRuntimes": ["node", "lambda"],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "The change updates pure in-process Zod collection validation used by the existing package. It adds no Node Host capability, storage or lifecycle requirement; deployment support is unchanged.",
+          "providers": [],
+          "constraints": [
+            "Dependency-level validation evidence does not certify a deployment Host or live infrastructure. Zod 3 route contracts remain outside this dependency patch."
+          ],
+          "references": [
+            "packages/auth-better-auth/package.json",
+            "packages/framework-config/src/tests/CollectionValidationBounds.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "The change updates pure in-process Zod collection validation used by the existing package. It adds no Lambda Host capability, storage or lifecycle requirement; deployment support is unchanged.",
+          "providers": [],
+          "constraints": [
+            "Dependency-level validation evidence does not certify a deployment Host or live infrastructure. Zod 3 route contracts remain outside this dependency patch."
+          ],
+          "references": [
+            "packages/auth-better-auth/package.json",
+            "packages/framework-config/src/tests/CollectionValidationBounds.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "The change updates pure in-process Zod collection validation used by the existing package. It adds no Workers Host capability, storage or lifecycle requirement; deployment support is unchanged.",
+          "providers": [],
+          "constraints": [
+            "Dependency-level validation evidence does not certify a deployment Host or live infrastructure. Zod 3 route contracts remain outside this dependency patch."
+          ],
+          "references": [
+            "packages/auth-better-auth/package.json",
+            "packages/framework-config/src/tests/CollectionValidationBounds.spec.ts"
+          ]
+        }
+      }
+    },
+    {
+      "package": "billing-polar",
+      "classification": "pure-contract",
+      "reason": "Raise the existing Zod 4 dependency floor to 4.6.6 so constrained collections reject excess entries before parsing elements. No schema major migration or Host/provider integration is introduced.",
+      "files": {
+        "packages/billing-polar/package.json": "c06482ce3f32f16b45b0f17fa42879cac56cc36dd776a09005c0e1b4e7bb8408"
+      },
+      "catalogRuntimes": ["node", "lambda"],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "The change updates pure in-process Zod collection validation used by the existing package. It adds no Node Host capability, storage or lifecycle requirement; deployment support is unchanged.",
+          "providers": [],
+          "constraints": [
+            "Dependency-level validation evidence does not certify a deployment Host or live infrastructure. Zod 3 route contracts remain outside this dependency patch."
+          ],
+          "references": [
+            "packages/billing-polar/package.json",
+            "packages/framework-config/src/tests/CollectionValidationBounds.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "The change updates pure in-process Zod collection validation used by the existing package. It adds no Lambda Host capability, storage or lifecycle requirement; deployment support is unchanged.",
+          "providers": [],
+          "constraints": [
+            "Dependency-level validation evidence does not certify a deployment Host or live infrastructure. Zod 3 route contracts remain outside this dependency patch."
+          ],
+          "references": [
+            "packages/billing-polar/package.json",
+            "packages/framework-config/src/tests/CollectionValidationBounds.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "The change updates pure in-process Zod collection validation used by the existing package. It adds no Workers Host capability, storage or lifecycle requirement; deployment support is unchanged.",
+          "providers": [],
+          "constraints": [
+            "Dependency-level validation evidence does not certify a deployment Host or live infrastructure. Zod 3 route contracts remain outside this dependency patch."
+          ],
+          "references": [
+            "packages/billing-polar/package.json",
+            "packages/framework-config/src/tests/CollectionValidationBounds.spec.ts"
+          ]
+        }
+      }
+    },
+    {
+      "package": "framework-config",
+      "classification": "pure-contract",
+      "reason": "Raise the existing Zod 4 dependency floor to 4.6.6 so constrained collections reject excess entries before parsing elements. No schema major migration or Host/provider integration is introduced.",
+      "files": {
+        "packages/framework-config/package.json": "4b257268ecc67d9fcc2452243637d6fc2d5380c127bd0c80536393c71f118ade"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "The change updates pure in-process Zod collection validation used by the existing package. It adds no Node Host capability, storage or lifecycle requirement; deployment support is unchanged.",
+          "providers": [],
+          "constraints": [
+            "Dependency-level validation evidence does not certify a deployment Host or live infrastructure. Zod 3 route contracts remain outside this dependency patch."
+          ],
+          "references": [
+            "packages/framework-config/package.json",
+            "packages/framework-config/src/tests/CollectionValidationBounds.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "The change updates pure in-process Zod collection validation used by the existing package. It adds no Lambda Host capability, storage or lifecycle requirement; deployment support is unchanged.",
+          "providers": [],
+          "constraints": [
+            "Dependency-level validation evidence does not certify a deployment Host or live infrastructure. Zod 3 route contracts remain outside this dependency patch."
+          ],
+          "references": [
+            "packages/framework-config/package.json",
+            "packages/framework-config/src/tests/CollectionValidationBounds.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "The change updates pure in-process Zod collection validation used by the existing package. It adds no Workers Host capability, storage or lifecycle requirement; deployment support is unchanged.",
+          "providers": [],
+          "constraints": [
+            "Dependency-level validation evidence does not certify a deployment Host or live infrastructure. Zod 3 route contracts remain outside this dependency patch."
+          ],
+          "references": [
+            "packages/framework-config/package.json",
+            "packages/framework-config/src/tests/CollectionValidationBounds.spec.ts"
+          ]
+        }
+      }
+    },
+    {
+      "package": "pagination-core",
+      "classification": "pure-contract",
+      "reason": "Raise the existing Zod 4 dependency floor to 4.6.6 so constrained collections reject excess entries before parsing elements. No schema major migration or Host/provider integration is introduced.",
+      "files": {
+        "packages/pagination-core/package.json": "560f3ca96545e16639f64245bfb8b7e316eb424b1573dfa8486dd1e2b94664c9"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "The change updates pure in-process Zod collection validation used by the existing package. It adds no Node Host capability, storage or lifecycle requirement; deployment support is unchanged.",
+          "providers": [],
+          "constraints": [
+            "Dependency-level validation evidence does not certify a deployment Host or live infrastructure. Zod 3 route contracts remain outside this dependency patch."
+          ],
+          "references": [
+            "packages/pagination-core/package.json",
+            "packages/framework-config/src/tests/CollectionValidationBounds.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "The change updates pure in-process Zod collection validation used by the existing package. It adds no Lambda Host capability, storage or lifecycle requirement; deployment support is unchanged.",
+          "providers": [],
+          "constraints": [
+            "Dependency-level validation evidence does not certify a deployment Host or live infrastructure. Zod 3 route contracts remain outside this dependency patch."
+          ],
+          "references": [
+            "packages/pagination-core/package.json",
+            "packages/framework-config/src/tests/CollectionValidationBounds.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "The change updates pure in-process Zod collection validation used by the existing package. It adds no Workers Host capability, storage or lifecycle requirement; deployment support is unchanged.",
+          "providers": [],
+          "constraints": [
+            "Dependency-level validation evidence does not certify a deployment Host or live infrastructure. Zod 3 route contracts remain outside this dependency patch."
+          ],
+          "references": [
+            "packages/pagination-core/package.json",
+            "packages/framework-config/src/tests/CollectionValidationBounds.spec.ts"
+          ]
+        }
+      }
+    }
+  ]
+}

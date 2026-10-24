@@ -45,7 +45,7 @@
     "@croco/problems-core": "workspace:*",
     "@t3-oss/env-core": "0.13.10",
     "reflect-metadata": "^0.2.2",
-    "zod": "4.3.6"
+    "zod": "4.6.6"
   },
   "devDependencies": {}
 }
