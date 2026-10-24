@@ -2941,6 +2941,12 @@
       "owner": "@croco/features-posthog"
     },
     {
+      "path": "packages/framework-config/src/tests/CollectionValidationBounds.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/framework-config"
+    },
+    {
       "path": "packages/framework-config/src/tests/ConfigProblems.spec.ts",
       "lane": "fast",
       "qualifiers": [],
