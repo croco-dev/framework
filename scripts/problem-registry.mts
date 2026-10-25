@@ -9,12 +9,13 @@ import {
   mkdtempSync,
   readdirSync,
   readFileSync,
+  realpathSync,
   rmSync,
   statSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, isAbsolute, join, relative, resolve } from "node:path";
+import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { argv, env, exit, stdout } from "node:process";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import ts from "typescript";
@@ -2023,7 +2024,8 @@ function forwardsCauseValue(
       ts.isPropertyAccessExpression(message.arguments[0]) &&
       ts.isIdentifier(message.arguments[0].expression) &&
       message.arguments[0].expression.text === parameter &&
-      message.arguments[0].name.text === "message"
+      message.arguments[0].name.text === "message" &&
+      hasVerifiedRedactionHelper(message)
     ) {
       return true;
     }
@@ -2113,6 +2115,211 @@ function forwardsCauseValue(
     });
   }
   return false;
+}
+
+function hasVerifiedRedactionHelper(call: ts.CallExpression): boolean {
+  if (!ts.isIdentifier(call.expression)) return false;
+  const name = call.expression.text;
+  const source = call.getSourceFile();
+  const containsName = (binding: ts.BindingName, expected = name): boolean =>
+    ts.isIdentifier(binding)
+      ? binding.text === expected
+      : binding.elements.some(
+          (entry) => ts.isBindingElement(entry) && containsName(entry.name, expected),
+        );
+  const shadowsName = (node: ts.Node, expected = name): boolean => {
+    if (ts.isVariableDeclaration(node) && containsName(node.name, expected)) return true;
+    if (
+      (ts.isFunctionDeclaration(node) || ts.isClassDeclaration(node)) &&
+      node.name?.text === expected
+    )
+      return true;
+    if (
+      (ts.isImportSpecifier(node) || ts.isImportClause(node) || ts.isNamespaceImport(node)) &&
+      node.name?.text === expected
+    )
+      return true;
+    if (ts.isFunctionLike(node) || ts.isClassDeclaration(node) || ts.isClassExpression(node))
+      return false;
+    return ts.forEachChild(node, (child) => shadowsName(child, expected)) === true;
+  };
+  for (
+    let scope: ts.Node | undefined = call.parent;
+    scope && !ts.isSourceFile(scope);
+    scope = scope.parent
+  ) {
+    if (
+      ts.isFunctionLike(scope) &&
+      scope.parameters.some(
+        (entry) => containsName(entry.name) || containsName(entry.name, "Error"),
+      )
+    )
+      return false;
+    if (
+      ts.isBlock(scope) &&
+      scope.statements.some(
+        (statement) => shadowsName(statement) || shadowsName(statement, "Error"),
+      )
+    )
+      return false;
+  }
+  if (source.statements.some((statement) => shadowsName(statement, "Error"))) return false;
+
+  let helperSource = source;
+  let helperName = name;
+  const imports = source.statements.flatMap((statement) => {
+    if (!ts.isImportDeclaration(statement) || !ts.isStringLiteral(statement.moduleSpecifier))
+      return [];
+    const bindings = statement.importClause?.namedBindings;
+    if (!bindings || !ts.isNamedImports(bindings)) return [];
+    const module = statement.moduleSpecifier.text;
+    return bindings.elements
+      .filter(
+        (entry) =>
+          entry.name.text === name && !entry.isTypeOnly && !statement.importClause?.isTypeOnly,
+      )
+      .map((entry) => ({
+        module,
+        name: entry.propertyName?.text ?? entry.name.text,
+      }));
+  });
+  if (imports.length > 1) return false;
+  if (imports.length === 1) {
+    const imported = imports[0];
+    if (!imported || !imported.module.startsWith(".")) return false;
+    let sourceRoot = dirname(source.fileName);
+    while (basename(sourceRoot) !== "src" && dirname(sourceRoot) !== sourceRoot) {
+      sourceRoot = dirname(sourceRoot);
+    }
+    if (basename(sourceRoot) !== "src") return false;
+    const path = resolve(dirname(source.fileName), imported.module);
+    if (!isPathInsideRoot(sourceRoot, path)) return false;
+    const file = [path + ".ts", path + ".mts", path + ".tsx"].find(isFile);
+    if (!file) return false;
+    if (!isPathInsideRoot(realpathSync(sourceRoot), realpathSync(file))) return false;
+    helperSource = ts.createSourceFile(
+      file,
+      readFileSync(file, "utf-8"),
+      ts.ScriptTarget.Latest,
+      true,
+    );
+    helperName = imported.name;
+  }
+  const helpers = helperSource.statements.filter(
+    (statement): statement is ts.FunctionDeclaration =>
+      ts.isFunctionDeclaration(statement) && statement.name?.text === helperName,
+  );
+  if (
+    helpers.length !== 1 ||
+    (imports.length > 0 &&
+      source.statements.some(
+        (statement) => ts.isFunctionDeclaration(statement) && statement.name?.text === name,
+      ))
+  )
+    return false;
+  const helper = helpers[0];
+  if (
+    !helper?.body ||
+    (imports.length > 0 &&
+      !helper.modifiers?.some((entry) => entry.kind === ts.SyntaxKind.ExportKeyword))
+  )
+    return false;
+  let reassigned = false;
+  const findReassignment = (node: ts.Node): void => {
+    if (ts.isVariableDeclaration(node) && node.initializer && containsName(node.name, helperName))
+      reassigned = true;
+    if (
+      ts.isBinaryExpression(node) &&
+      node.operatorToken.kind >= ts.SyntaxKind.FirstAssignment &&
+      node.operatorToken.kind <= ts.SyntaxKind.LastAssignment &&
+      ts.isIdentifier(node.left) &&
+      node.left.text === helperName
+    )
+      reassigned = true;
+    ts.forEachChild(node, findReassignment);
+  };
+  findReassignment(helperSource);
+  if (reassigned) return false;
+
+  const input = helper.parameters[0]?.name;
+  if (!input || !ts.isIdentifier(input)) return false;
+  const parameterNames = new Set<string>();
+  for (const [index, parameter] of helper.parameters.entries()) {
+    if (
+      !ts.isIdentifier(parameter.name) ||
+      parameter.dotDotDotToken ||
+      parameterNames.has(parameter.name.text)
+    )
+      return false;
+    parameterNames.add(parameter.name.text);
+    // Defaults execute before the body and must not replace or mutate the source message.
+    const initializer = parameter.initializer;
+    if (
+      initializer &&
+      (index === 0 ||
+        (!ts.isStringLiteral(initializer) &&
+          !ts.isNumericLiteral(initializer) &&
+          initializer.kind !== ts.SyntaxKind.TrueKeyword &&
+          initializer.kind !== ts.SyntaxKind.FalseKeyword &&
+          initializer.kind !== ts.SyntaxKind.NullKeyword))
+    )
+      return false;
+  }
+  const isReplaceChain = (expression: ts.Expression, replaced = false): boolean => {
+    const value = unwrapExpression(expression);
+    if (!value) return false;
+    if (ts.isIdentifier(value)) return replaced && value.text === input.text;
+    return (
+      ts.isCallExpression(value) &&
+      value.arguments.length === 2 &&
+      ts.isPropertyAccessExpression(value.expression) &&
+      value.expression.name.text === "replace" &&
+      isReplaceChain(value.expression.expression, true)
+    );
+  };
+  const statements = helper.body.statements;
+  const result = statements.at(-1);
+  if (
+    !result ||
+    !ts.isReturnStatement(result) ||
+    !result.expression ||
+    !isReplaceChain(result.expression)
+  )
+    return false;
+  if (statements.length === 1) return true;
+  // The shared auth sanitizer may intentionally suppress the entire message.
+  // Require its explicit, default-off flag and replacement parameter; no arbitrary body is accepted.
+  const suppression = statements[0];
+  const replacement = helper.parameters[1];
+  const flag = helper.parameters[2];
+  if (
+    statements.length !== 2 ||
+    !suppression ||
+    !ts.isIfStatement(suppression) ||
+    suppression.elseStatement ||
+    !replacement ||
+    !ts.isIdentifier(replacement.name) ||
+    !replacement.initializer ||
+    !ts.isStringLiteral(replacement.initializer) ||
+    !flag ||
+    !ts.isIdentifier(flag.name) ||
+    flag.initializer?.kind !== ts.SyntaxKind.FalseKeyword ||
+    !ts.isIdentifier(suppression.expression) ||
+    suppression.expression.text !== flag.name.text
+  )
+    return false;
+  const branch = ts.isBlock(suppression.thenStatement)
+    ? suppression.thenStatement.statements.length === 1
+      ? suppression.thenStatement.statements[0]
+      : undefined
+    : suppression.thenStatement;
+  return (
+    branch !== undefined &&
+    ts.isReturnStatement(branch) &&
+    branch.expression !== undefined &&
+    ts.isIdentifier(branch.expression) &&
+    branch.expression.text === replacement.name.text
+  );
 }
 
 function isErrorGuard(expression: ts.Expression, parameter: string): boolean {

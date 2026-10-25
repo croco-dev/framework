@@ -591,6 +591,82 @@ class Missing extends Base { constructor() { super("literal"); } }`,
     expect(runProblemRegistryCheck(repo, "write").status).toBe("pass");
   }, 30_000);
 
+  it("accepts a resolved package-local sanitizer message transform", () => {
+    const repo = createTempRepo();
+    writeFile(
+      repo,
+      "packages/alpha/src/redaction.ts",
+      "export function redactSensitiveValue(value: string): string { return value.replace(/token=\\S+/g, 'token=[Redacted]'); }",
+    );
+    writeFile(
+      repo,
+      "packages/alpha/src/problems.ts",
+      [
+        'import { Problem, ProblemCategory } from "@croco/problems-core";',
+        'import { redactSensitiveValue } from "./redaction";',
+        "export class ImportedRedactedProblem extends Problem {",
+        "  constructor(error: unknown) {",
+        '    super("alpha/imported-redacted", ProblemCategory.InternalServerError, "failed", { cause: error instanceof Error ? new Error(redactSensitiveValue(error.message)) : undefined });',
+        "  }",
+        "}",
+      ].join("\n"),
+    );
+    expect(runProblemRegistryCheck(repo, "write").status).toBe("pass");
+  }, 30_000);
+
+  it.each([
+    "constant",
+    "shadowed",
+    "imported-constant",
+    "mutated",
+    "rebound",
+    "shadowed-error",
+    "parameter-initializer",
+  ] as const)(
+    "rejects redaction helpers that discard or shadow the source message: %s",
+    (kind) => {
+      const repo = createTempRepo();
+      const declaration =
+        kind === "constant" || kind === "imported-constant"
+          ? "function redactSensitiveValue(_value: string): string { return 'unrelated'; }"
+          : kind === "mutated"
+            ? "function redactSensitiveValue(value: string): string { value = 'unrelated'; return value.replace(/token=\\S+/g, 'token=[Redacted]'); }"
+            : kind === "parameter-initializer"
+              ? "function redactSensitiveValue(value: string, _replacement = (value = 'unrelated')): string { return value.replace(/token=\\S+/g, 'token=[Redacted]'); }"
+              : kind === "rebound"
+                ? "function redactSensitiveValue(value: string): string { return value.replace(/token=\\S+/g, 'token=[Redacted]'); }\nredactSensitiveValue = (_value: string) => 'unrelated';"
+                : "function redactSensitiveValue(value: string): string { return value.replace(/token=\\S+/g, 'token=[Redacted]'); }";
+      if (kind === "imported-constant") {
+        writeFile(repo, "packages/alpha/src/redaction.ts", `export ${declaration}`);
+      }
+      writeFile(
+        repo,
+        "packages/alpha/src/problems.ts",
+        [
+          'import { Problem, ProblemCategory } from "@croco/problems-core";',
+          kind === "imported-constant"
+            ? 'import { redactSensitiveValue } from "./redaction";'
+            : declaration,
+          "export class BogusRedactedProblem extends Problem {",
+          kind === "shadowed"
+            ? "  constructor(error: unknown, redactSensitiveValue: (value: string) => string) {"
+            : kind === "shadowed-error"
+              ? "  constructor(error: unknown, Error: typeof globalThis.Error) {"
+              : "  constructor(error: unknown) {",
+          '    super("alpha/bogus-redaction", ProblemCategory.InternalServerError, "failed", { cause: error instanceof Error ? new Error(redactSensitiveValue(error.message)) : undefined });',
+          "  }",
+          "}",
+        ].join("\n"),
+      );
+      const result = runProblemRegistryCheck(repo, "write");
+      expect(result.status).toBe("fail");
+      expect(result.diagnostics).toContainEqual(
+        expect.stringContaining("BogusRedactedProblem must forward 'error'"),
+      );
+    },
+    30_000,
+  );
+
   it("rejects cause forwarding hidden by overloads, overwritten options, unrelated branches, and mutable aliases", () => {
     const repo = createTempRepo();
     writeFile(
