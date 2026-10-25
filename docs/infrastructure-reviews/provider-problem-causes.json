@@ -2,56 +2,6 @@
   "schemaVersion": 1,
   "changes": [
     {
-      "package": "auth-better-auth",
-      "classification": "pure-contract",
-      "reason": "Retain upstream Error identity for internal diagnostics without changing serialized Problem contracts or infrastructure requirements.",
-      "files": {
-        "packages/auth-better-auth/src/libs/problems/BetterAuthAuthenticationProblem.ts": "2e617b6ffdbb9d9b97bd9bc70abf932b21306ff94219d04dc7a3fa9f52e3f98b"
-      },
-      "catalogRuntimes": ["node", "lambda"],
-      "profiles": {
-        "kubernetes": {
-          "result": "not-applicable",
-          "reason": "This preserves an existing Error reference as a non-enumerable Problem cause without changing public serialization, Node Host capabilities, storage, provider calls or lifecycle ownership.",
-          "providers": [],
-          "constraints": [
-            "No new platform support or live-provider certification is claimed. Public Problem JSON continues to omit Error causes."
-          ],
-          "references": [
-            "packages/auth-better-auth/src/libs/problems/BetterAuthAuthenticationProblem.ts",
-            "packages/problems-core/src/libs/Problem.ts",
-            "scripts/tests/ProviderProblemCauses.spec.ts"
-          ]
-        },
-        "aws-lambda": {
-          "result": "not-applicable",
-          "reason": "This preserves an existing Error reference as a non-enumerable Problem cause without changing public serialization, Lambda Host capabilities, storage, provider calls or lifecycle ownership.",
-          "providers": [],
-          "constraints": [
-            "No new platform support or live-provider certification is claimed. Public Problem JSON continues to omit Error causes."
-          ],
-          "references": [
-            "packages/auth-better-auth/src/libs/problems/BetterAuthAuthenticationProblem.ts",
-            "packages/problems-core/src/libs/Problem.ts",
-            "scripts/tests/ProviderProblemCauses.spec.ts"
-          ]
-        },
-        "cloudflare": {
-          "result": "not-applicable",
-          "reason": "This preserves an existing Error reference as a non-enumerable Problem cause without changing public serialization, Workers Host or Node Container Host capabilities, storage, provider calls or lifecycle ownership.",
-          "providers": [],
-          "constraints": [
-            "No new platform support or live-provider certification is claimed. Public Problem JSON continues to omit Error causes."
-          ],
-          "references": [
-            "packages/auth-better-auth/src/libs/problems/BetterAuthAuthenticationProblem.ts",
-            "packages/problems-core/src/libs/Problem.ts",
-            "scripts/tests/ProviderProblemCauses.spec.ts"
-          ]
-        }
-      }
-    },
-    {
       "package": "auth-clerk",
       "classification": "pure-contract",
       "reason": "Retain upstream Error identity for internal diagnostics without changing serialized Problem contracts or infrastructure requirements.",

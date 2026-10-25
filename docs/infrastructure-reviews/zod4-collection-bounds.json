@@ -42,38 +42,54 @@
     {
       "package": "auth-better-auth",
       "classification": "pure-contract",
-      "reason": "Use patched Zod 4 schema contracts and introspection without changing Host, storage or provider lifecycle requirements.",
+      "reason": "Use patched Zod 4 schemas and retain upstream Error identity internally without changing public Problem JSON, Host capabilities, storage or provider lifecycle ownership.",
       "files": {
-        "packages/auth-better-auth/package.json": "56b30aa5de1c02b65d6994385ae2fdad949e878c7be91a9039e7208e7c24e73d"
+        "packages/auth-better-auth/package.json": "56b30aa5de1c02b65d6994385ae2fdad949e878c7be91a9039e7208e7c24e73d",
+        "packages/auth-better-auth/src/libs/problems/BetterAuthAuthenticationProblem.ts": "2e617b6ffdbb9d9b97bd9bc70abf932b21306ff94219d04dc7a3fa9f52e3f98b"
       },
       "catalogRuntimes": ["node", "lambda"],
       "profiles": {
         "kubernetes": {
           "result": "not-applicable",
-          "reason": "The change concerns schema validation, contract generation or derived diagnostics. It introduces no Node Host capability, external storage or lifecycle dependency; existing deployment support remains unchanged.",
+          "reason": "The change concerns schema validation, contract generation or derived diagnostics. It introduces no Node Host capability, external storage or lifecycle dependency; existing deployment support remains unchanged. Upstream Error causes are retained internally as non-enumerable properties and omitted from public Problem JSON.",
           "providers": [],
           "constraints": [
             "Pure schema and generated-artifact evidence does not certify a Host deployment or live provider. Zod 3 route schemas are intentionally unsupported."
           ],
-          "references": ["packages/auth-better-auth/package.json", "docs/zod-support.md"]
+          "references": [
+            "packages/auth-better-auth/package.json",
+            "docs/zod-support.md",
+            "packages/auth-better-auth/src/libs/problems/BetterAuthAuthenticationProblem.ts",
+            "scripts/tests/ProviderProblemCauses.spec.ts"
+          ]
         },
         "aws-lambda": {
           "result": "not-applicable",
-          "reason": "The change concerns schema validation, contract generation or derived diagnostics. It introduces no Lambda Host capability, external storage or lifecycle dependency; existing deployment support remains unchanged.",
+          "reason": "The change concerns schema validation, contract generation or derived diagnostics. It introduces no Lambda Host capability, external storage or lifecycle dependency; existing deployment support remains unchanged. Upstream Error causes are retained internally as non-enumerable properties and omitted from public Problem JSON.",
           "providers": [],
           "constraints": [
             "Pure schema and generated-artifact evidence does not certify a Host deployment or live provider. Zod 3 route schemas are intentionally unsupported."
           ],
-          "references": ["packages/auth-better-auth/package.json", "docs/zod-support.md"]
+          "references": [
+            "packages/auth-better-auth/package.json",
+            "docs/zod-support.md",
+            "packages/auth-better-auth/src/libs/problems/BetterAuthAuthenticationProblem.ts",
+            "scripts/tests/ProviderProblemCauses.spec.ts"
+          ]
         },
         "cloudflare": {
           "result": "not-applicable",
-          "reason": "The change concerns schema validation, contract generation or derived diagnostics. It introduces no Workers Host or Node Container Host capability, external storage or lifecycle dependency; existing deployment support remains unchanged.",
+          "reason": "The change concerns schema validation, contract generation or derived diagnostics. It introduces no Workers Host or Node Container Host capability, external storage or lifecycle dependency; existing deployment support remains unchanged. Upstream Error causes are retained internally as non-enumerable properties and omitted from public Problem JSON.",
           "providers": [],
           "constraints": [
             "Pure schema and generated-artifact evidence does not certify a Host deployment or live provider. Zod 3 route schemas are intentionally unsupported."
           ],
-          "references": ["packages/auth-better-auth/package.json", "docs/zod-support.md"]
+          "references": [
+            "packages/auth-better-auth/package.json",
+            "docs/zod-support.md",
+            "packages/auth-better-auth/src/libs/problems/BetterAuthAuthenticationProblem.ts",
+            "scripts/tests/ProviderProblemCauses.spec.ts"
+          ]
         }
       }
     },
