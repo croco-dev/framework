@@ -22,6 +22,20 @@ class LoggedNotFoundProblem extends Problem {
   }
 }
 
+class LoggedUpstreamProblem extends Problem {
+  constructor(cause: Error) {
+    super(
+      "provider/upstream-failed",
+      ProblemCategory.InternalServerError,
+      "Upstream request failed",
+      {
+        cause,
+        extensions: { provider: "test-provider", retryable: true },
+      },
+    );
+  }
+}
+
 class ThrowingTitleProblem extends Problem {
   public titleReads = 0;
 
@@ -336,6 +350,25 @@ describe("Logger serialized redaction", () => {
           userId: "user-2504",
         },
       });
+    },
+  );
+
+  it.each([
+    { wrap: false, expectedMessage: "Upstream request failed" },
+    { wrap: true, expectedMessage: "Request failed: Upstream request failed" },
+  ])(
+    "keeps private Problem causes out of log text (wrapped=$wrap)",
+    ({ wrap, expectedMessage }) => {
+      const { logger, raw, records } = createCapturedLogger();
+      const upstream = new Error("token=private-provider-cause-canary");
+      const problem = new LoggedUpstreamProblem(upstream);
+      const error = wrap ? new Error("Request failed", { cause: problem }) : problem;
+
+      logger.error("provider request failed", error);
+
+      expect(problem.cause).toBe(upstream);
+      expect(raw()).not.toContain("private-provider-cause-canary");
+      expect(records()[0]).toMatchObject({ err: { message: expectedMessage } });
     },
   );
 

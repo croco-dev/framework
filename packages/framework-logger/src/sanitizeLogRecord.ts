@@ -137,6 +137,8 @@ function getErrorTextWithCauses(
 ): string | undefined {
   const value = getErrorDiagnosticProperty(error, key);
   const text = typeof value === "string" ? value : undefined;
+  // A Problem's text is intentional diagnostic output; its SDK cause may contain credentials.
+  if (error instanceof Problem) return text;
   const cause = getDataProperty(error, "cause");
 
   if (!cause || typeof cause !== "object") {

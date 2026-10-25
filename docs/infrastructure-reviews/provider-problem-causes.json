@@ -102,6 +102,56 @@
       }
     },
     {
+      "package": "framework-logger",
+      "classification": "pure-contract",
+      "reason": "Keep internal Problem causes out of emitted log text while retaining Problem diagnostics and ordinary Error cause chains.",
+      "files": {
+        "packages/framework-logger/src/sanitizeLogRecord.ts": "7267ae312edca294472608c9c8fc4ef722316de59e1ba7eb0ca03fd18a8b9196"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "This changes only structured Error serialization: Problem text stops private cause expansion, without changing Node Host capabilities, storage, provider calls or lifecycle ownership.",
+          "providers": [],
+          "constraints": [
+            "No new platform support or live-provider certification is claimed. Ordinary Error cause diagnostics remain available."
+          ],
+          "references": [
+            "packages/framework-logger/src/sanitizeLogRecord.ts",
+            "packages/framework-logger/src/tests/LoggerRedaction.spec.ts",
+            "packages/framework-logger/README.md"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "This changes only structured Error serialization: Problem text stops private cause expansion, without changing Lambda Host capabilities, storage, provider calls or lifecycle ownership.",
+          "providers": [],
+          "constraints": [
+            "No new platform support or live-provider certification is claimed. Ordinary Error cause diagnostics remain available."
+          ],
+          "references": [
+            "packages/framework-logger/src/sanitizeLogRecord.ts",
+            "packages/framework-logger/src/tests/LoggerRedaction.spec.ts",
+            "packages/framework-logger/README.md"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "This changes only structured Error serialization: Problem text stops private cause expansion, without changing Workers Host or Node Container Host capabilities, storage, provider calls or lifecycle ownership.",
+          "providers": [],
+          "constraints": [
+            "No new platform support or live-provider certification is claimed. Ordinary Error cause diagnostics remain available."
+          ],
+          "references": [
+            "packages/framework-logger/src/sanitizeLogRecord.ts",
+            "packages/framework-logger/src/tests/LoggerRedaction.spec.ts",
+            "packages/framework-logger/README.md"
+          ]
+        }
+      }
+    },
+    {
       "package": "metering-core",
       "classification": "pure-contract",
       "reason": "Retain upstream Error identity for internal diagnostics without changing serialized Problem contracts or infrastructure requirements.",

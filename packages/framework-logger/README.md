@@ -67,6 +67,10 @@ import { LogLevel } from "@croco/framework-logger";
 불변식 위반에는 `fatal`을 사용합니다. `fatal`은 종료 동작을 수행하지 않으며 `error`와 같은 `Error` 직렬화 및
 민감 정보 제거 경로를 사용합니다. `child()`가 반환한 로거에서도 두 메서드를 동일하게 사용할 수 있습니다.
 
+일반 `Error`는 원인 체인의 진단 정보를 유지합니다. `Problem`은 자체 message·stack과 Problem 필드를
+기록하며, 내부 `cause`의 문구나 stack은 이어붙이지 않습니다. 다른 `Error`가 `Problem`을 감싸도 이 경계를
+유지합니다. `Problem.cause`의 원본 Error 참조는 변경하지 않습니다.
+
 ### LogLevel
 
 | 값               | 설명             |
