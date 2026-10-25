@@ -44,6 +44,7 @@ export class UpstashRateLimitUpstreamProblem extends Problem {
       mapUpstreamProblemCategory(status, retryable),
       `Upstash Redis ${operation} failed: ${message}`,
       {
+        ...(error instanceof Error ? { cause: error } : {}),
         extensions: {
           operation,
           provider: "upstash-redis",

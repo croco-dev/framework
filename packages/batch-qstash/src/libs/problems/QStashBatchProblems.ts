@@ -40,6 +40,7 @@ export class QStashBatchPublishProblem extends Problem {
       mapUpstreamProblemCategory(status, retryable),
       `QStash batch ${operation} failed: ${message}`,
       {
+        ...(error instanceof Error ? { cause: error } : {}),
         extensions: {
           operation,
           provider: "qstash",

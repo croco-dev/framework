@@ -6455,7 +6455,7 @@ Sources:
 
 Sources:
 
-- `packages/auth-clerk/src/libs/problems/ClerkProblems.ts:131:1` (problem-class)
+- `packages/auth-clerk/src/libs/problems/ClerkProblems.ts:133:1` (problem-class)
 
 <a id="auth-clerk-external-service-error"></a>
 
@@ -6473,7 +6473,7 @@ Sources:
 
 Sources:
 
-- `packages/auth-clerk/src/libs/problems/ClerkProblems.ts:171:5` (problem-constructor)
+- `packages/auth-clerk/src/libs/problems/ClerkProblems.ts:173:5` (problem-constructor)
 
 <a id="auth-clerk-invalid-webhook-payload"></a>
 
@@ -6509,7 +6509,7 @@ Sources:
 
 Sources:
 
-- `packages/auth-clerk/src/libs/problems/ClerkProblems.ts:120:1` (problem-class)
+- `packages/auth-clerk/src/libs/problems/ClerkProblems.ts:122:1` (problem-class)
 
 <a id="auth-clerk-public-user-data-missing"></a>
 
@@ -6527,7 +6527,7 @@ Sources:
 
 Sources:
 
-- `packages/auth-clerk/src/libs/problems/ClerkProblems.ts:158:1` (problem-class)
+- `packages/auth-clerk/src/libs/problems/ClerkProblems.ts:160:1` (problem-class)
 
 <a id="auth-clerk-token-verification-failed"></a>
 
@@ -6563,7 +6563,7 @@ Sources:
 
 Sources:
 
-- `packages/auth-clerk/src/libs/problems/ClerkProblems.ts:97:1` (problem-class)
+- `packages/auth-clerk/src/libs/problems/ClerkProblems.ts:98:1` (problem-class)
 
 <a id="auth-clerk-unexpected-tenant-mapping-claim"></a>
 
@@ -6581,7 +6581,7 @@ Sources:
 
 Sources:
 
-- `packages/auth-clerk/src/libs/problems/ClerkProblems.ts:146:1` (problem-class)
+- `packages/auth-clerk/src/libs/problems/ClerkProblems.ts:148:1` (problem-class)
 
 <a id="auth-clerk-webhook-delivery-failed"></a>
 

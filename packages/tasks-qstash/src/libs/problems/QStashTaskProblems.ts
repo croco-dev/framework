@@ -40,6 +40,7 @@ export class QStashTaskPublishProblem extends Problem {
       mapUpstreamProblemCategory(status, retryable),
       `QStash task publish failed: ${message}`,
       {
+        ...(error instanceof Error ? { cause: error } : {}),
         extensions: {
           provider: "qstash",
           retryable,

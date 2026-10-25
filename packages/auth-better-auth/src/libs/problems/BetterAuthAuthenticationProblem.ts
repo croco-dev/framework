@@ -20,6 +20,7 @@ export class BetterAuthAuthenticationProblem extends Problem {
         : redactSensitiveValue(getErrorMessage(error), "[Redacted]");
 
     super(undefined, undefined, `Better Auth ${operation} failed: ${message}`, {
+      ...(error instanceof Error ? { cause: error } : {}),
       extensions: {
         operation,
         provider: "better-auth",

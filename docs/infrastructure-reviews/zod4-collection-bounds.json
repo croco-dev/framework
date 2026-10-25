@@ -348,7 +348,7 @@
       "classification": "pure-contract",
       "reason": "Refresh generated recovery instructions and source locations for the Zod 4 contract boundary; error transport and Host behavior are unchanged.",
       "files": {
-        "packages/problems-core/src/generated/problem-code-registry.ts": "3b026975d69cc1597419cb182f6a24086a6963197d57847f450322b4fe6eaf5a"
+        "packages/problems-core/src/generated/problem-code-registry.ts": "1ff76bdd3f1f0ec3e4bafad0a58271f8788f42304cd32c70e7cdf38469837398"
       },
       "catalogRuntimes": [],
       "profiles": {
