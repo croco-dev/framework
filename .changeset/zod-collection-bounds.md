@@ -2,6 +2,8 @@
 "@croco/auth-better-auth": patch
 "@croco/billing-polar": patch
 "@croco/framework-config": patch
+"@croco/framework-context": patch
+"@croco/problems-core": patch
 "@croco/pagination-core": patch
 ---
 

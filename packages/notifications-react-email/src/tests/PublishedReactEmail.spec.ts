@@ -89,7 +89,7 @@ describe("published React Email adapter", () => {
             "@types/react-dom@19",
             "react@19.2.5",
             "react-dom@19.2.5",
-            "zod@3.25.76",
+            "zod@4.6.6",
             "--ignore-scripts",
           ],
           consumerRoot,

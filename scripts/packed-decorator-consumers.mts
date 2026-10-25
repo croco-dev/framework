@@ -245,7 +245,7 @@ function verifyConsumer(
       `file:${requireTarball(tarballs, packageName)}`,
     ]),
     ["reflect-metadata", "0.2.2"],
-    ["zod", "3.25.76"],
+    ["zod", "4.6.6"],
   ]);
   const internalOverrides = Object.fromEntries(
     [...tarballs.entries()].map(([packageName, tarballPath]) => [
