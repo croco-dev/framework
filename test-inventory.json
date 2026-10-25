@@ -1022,6 +1022,12 @@
       "owner": "@croco/auth-better-auth"
     },
     {
+      "path": "packages/auth-better-auth/src/tests/UpstreamProblemCauses.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/auth-better-auth"
+    },
+    {
       "path": "packages/auth-clerk/src/tests/AuthConformance.spec.ts",
       "lane": "fast",
       "qualifiers": [],
@@ -1089,6 +1095,12 @@
     },
     {
       "path": "packages/auth-clerk/src/tests/ProviderNoCredentialConformance.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/auth-clerk"
+    },
+    {
+      "path": "packages/auth-clerk/src/tests/UpstreamProblemCauses.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/auth-clerk"
@@ -1227,6 +1239,12 @@
     },
     {
       "path": "packages/batch-qstash/src/tests/QStashChunkExecutor.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/batch-qstash"
+    },
+    {
+      "path": "packages/batch-qstash/src/tests/UpstreamProblemCauses.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/batch-qstash"
@@ -4015,6 +4033,12 @@
       "owner": "@croco/metering-core"
     },
     {
+      "path": "packages/metering-core/src/tests/UpstreamProblemCauses.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/metering-core"
+    },
+    {
       "path": "packages/metering-core/src/tests/UsageAggregator.spec.ts",
       "lane": "fast",
       "qualifiers": [],
@@ -4076,6 +4100,12 @@
     },
     {
       "path": "packages/metering-upstash/src/tests/UpstashRedisClient.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/metering-upstash"
+    },
+    {
+      "path": "packages/metering-upstash/src/tests/UpstreamProblemCauses.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/metering-upstash"
@@ -5077,6 +5107,12 @@
       "owner": "@croco/ratelimit-upstash"
     },
     {
+      "path": "packages/ratelimit-upstash/src/tests/UpstreamProblemCauses.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/ratelimit-upstash"
+    },
+    {
       "path": "packages/ratelimit-upstash/src/tests/WorkersAdapter.spec.ts",
       "lane": "fast",
       "qualifiers": [],
@@ -5654,6 +5690,12 @@
     },
     {
       "path": "packages/tasks-qstash/src/tests/QStashTasksPlugin.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/tasks-qstash"
+    },
+    {
+      "path": "packages/tasks-qstash/src/tests/UpstreamProblemCauses.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/tasks-qstash"

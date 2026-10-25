@@ -1201,6 +1201,176 @@ describe("SagaRunner", () => {
   });
 
   it.each([
+    { firstFails: false, terminalWriteFails: false },
+    { firstFails: true, terminalWriteFails: false },
+    { firstFails: true, terminalWriteFails: true },
+  ])(
+    "continues reverse compensation after recording failures ($firstFails, $terminalWriteFails)",
+    async ({ firstFails, terminalWriteFails }) => {
+      const delegate = new InMemorySagaStore();
+      const effects: string[] = [];
+      const recordErrors = [
+        new ProviderProblem("second compensation record unavailable"),
+        new ProviderProblem("first compensation record unavailable"),
+      ];
+      const terminalError = new ProviderProblem("terminal record unavailable");
+      const store: SagaStore = {
+        create: (params) => delegate.create(params),
+        findById: (id) => delegate.findById(id),
+        findByIdempotencyKey: (name, key) => delegate.findByIdempotencyKey(name, key),
+        list: (options) => delegate.list(options),
+        update: (id, data) => {
+          const failedStep = data.steps?.find((step) => step.status === "compensation_failed");
+          if (failedStep) {
+            throw recordErrors[failedStep.id === "second" ? 0 : 1];
+          }
+          if (terminalWriteFails && data.status === "failed") {
+            throw terminalError;
+          }
+          return delegate.update(id, data);
+        },
+      };
+      const runner = new SagaRunner(store);
+      const definition: SagaDefinition = {
+        name: "compensation-record-failures",
+        steps: [
+          ...["first", "second"].map((id) => ({
+            id,
+            run: () => `${id}-result`,
+            compensate: () => {
+              effects.push(id);
+              if (id === "second" || firstFails) {
+                throw new CompensationProblem(`${id} refund unavailable`);
+              }
+              return "first-refunded";
+            },
+          })),
+          {
+            id: "third",
+            run: () => {
+              throw new ProviderProblem("third business failure");
+            },
+          },
+        ],
+      };
+
+      const problem = await runner.execute(definition, {}).catch((error: unknown) => error);
+      expect(effects).toEqual(["second", "first"]);
+      expect(problem).toBeInstanceOf(SagaExecutionFailedProblem);
+      expect(problem).toHaveProperty("extensions.originalFailureMessage", "third business failure");
+      expect(problem).toHaveProperty("extensions.sagaStatus", "failed");
+      expect(problem).toHaveProperty("extensions.compensationFailures", [
+        {
+          code: "workflow-core/test-compensation-problem",
+          message: "second refund unavailable",
+          retryable: false,
+        },
+        ...(firstFails
+          ? [
+              {
+                code: "workflow-core/test-compensation-problem",
+                message: "first refund unavailable",
+                retryable: false,
+              },
+            ]
+          : []),
+      ]);
+      if (firstFails) {
+        expect(problem).toHaveProperty("sagaFailureRecordError", expect.any(AggregateError));
+        const recordingError = (problem as { sagaFailureRecordError: AggregateError })
+          .sagaFailureRecordError;
+        expect(recordingError.errors).toEqual(
+          terminalWriteFails ? [...recordErrors, terminalError] : recordErrors,
+        );
+      } else {
+        expect(problem).toHaveProperty("sagaFailureRecordError", recordErrors[0]);
+      }
+      const [execution] = await runner.listExecutions({ sagaName: definition.name });
+      expect(execution.status).toBe(terminalWriteFails ? "running" : "failed");
+      expect(execution.steps.map((step) => [step.id, step.status])).toEqual([
+        ["first", firstFails ? "compensating" : "compensated"],
+        ["second", "compensating"],
+        ["third", "failed"],
+      ]);
+      if (!terminalWriteFails) {
+        expect(execution.error?.message).toBe("third business failure");
+        expect(execution.compensationFailures.map((failure) => failure.message)).toEqual([
+          "second refund unavailable",
+          ...(firstFails ? ["first refund unavailable"] : []),
+        ]);
+      }
+    },
+  );
+
+  it("defers outbox dispatch until recording failures have been reported", async () => {
+    const delegate = new InMemorySagaStore();
+    const recordError = new ProviderProblem("compensation record unavailable");
+    const publishError = new ProviderProblem("outbox publisher unavailable");
+    const publish = vi.fn().mockRejectedValue(publishError);
+    const store: SagaStore = {
+      create: (params) => delegate.create(params),
+      findById: (id) => delegate.findById(id),
+      findByIdempotencyKey: (name, key) => delegate.findByIdempotencyKey(name, key),
+      list: (options) => delegate.list(options),
+      update: (id, data) => {
+        if (data.steps?.some((step) => step.status === "compensation_failed")) {
+          throw recordError;
+        }
+        return delegate.update(id, data);
+      },
+    };
+    const runner = new SagaRunner(store);
+    const definition: SagaDefinition = {
+      name: "recording-failure-with-outbox",
+      outbox: { publish },
+      steps: [
+        {
+          id: "first",
+          run: () => "payment",
+          compensate: (_input, context) => {
+            context.enqueueOutbox({ id: "refund", topic: "refund", payload: { amount: 42 } });
+          },
+        },
+        {
+          id: "second",
+          run: () => "inventory",
+          compensate: () => {
+            throw new CompensationProblem("release failed");
+          },
+        },
+        {
+          id: "third",
+          run: () => {
+            throw new ProviderProblem("business failure");
+          },
+        },
+      ],
+    };
+    const problem = await runner.execute(definition, {}).catch((error: unknown) => error);
+    expect(problem).toBeInstanceOf(SagaExecutionFailedProblem);
+    expect(problem).toHaveProperty("extensions.originalFailureMessage", "business failure");
+    expect(problem).toHaveProperty("extensions.compensationFailures", [
+      {
+        code: "workflow-core/test-compensation-problem",
+        message: "release failed",
+        retryable: false,
+      },
+    ]);
+    expect(problem).toHaveProperty("sagaFailureRecordError", recordError);
+    expect(publish).not.toHaveBeenCalled();
+    const [execution] = await runner.listExecutions({ sagaName: definition.name });
+    expect(execution.status).toBe("failed");
+    expect(execution.steps[0]?.outboxMessages[0]?.status).toBe("pending");
+    await expect(runner.dispatchOutbox(definition, execution.id)).rejects.toBe(publishError);
+    expect((await runner.getExecution(execution.id)).steps[0]?.outboxMessages[0]?.status).toBe(
+      "pending",
+    );
+    publish.mockResolvedValue(undefined);
+    const recovered = await runner.dispatchOutbox(definition, execution.id);
+    expect(recovered.steps[0]?.outboxMessages[0]?.status).toBe("published");
+  });
+
+  it.each([
     ["compensation bookkeeping", "compensating", "failed", undefined],
     [
       "compensation failure recording",
