@@ -534,7 +534,7 @@ describe("Framework integration", () => {
     expect(problem.issues).toEqual([
       {
         path: "body.value",
-        message: "Required",
+        message: "Invalid input: expected object, received undefined",
       },
     ]);
   });

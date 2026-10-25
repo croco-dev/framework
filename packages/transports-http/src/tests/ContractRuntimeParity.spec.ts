@@ -486,7 +486,7 @@ describe("REST contract-to-runtime parity", () => {
     expect(rejected.status).toBe(422);
     expect(await rejected.json()).toMatchObject({
       code: "protocols-rest/request-validation-failed",
-      issues: [{ path: "query.extra", message: "Invalid" }],
+      issues: [{ path: "query.extra", message: "Invalid string: must match pattern /^\\d+$/" }],
     });
     expect(catchall).toHaveBeenCalledTimes(1);
   });
