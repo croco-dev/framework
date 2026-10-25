@@ -161,7 +161,7 @@ describe("compileDiGraph", () => {
     ).toThrow("duplicate module ownership");
   });
 
-  it("validates module factory contracts without generating their providers", () => {
+  function moduleFactoryFixture() {
     writeBindingFixture();
     const token = { moduleSpecifier: "./src/Service.ts", exportName: "SERVICE" };
     const service = { moduleSpecifier: "./src/Service.ts", exportName: "Service" };
@@ -175,6 +175,11 @@ describe("compileDiGraph", () => {
       { id: "app", providers: ["app:src/Service#Consumer"], imports: ["library"] },
     ];
     const options = { baseDir: TEMP_DIR, modules, moduleProviders: [moduleProvider] };
+    return { token, service, moduleProvider, modules, options };
+  }
+
+  it("emits module factory ownership without generating its provider", () => {
+    const { options, modules } = moduleFactoryFixture();
     const result = compileDiGraph(options);
     expect(
       result.manifest.providers.find((provider) => provider.stereotype === "module-provider"),
@@ -193,24 +198,48 @@ describe("compileDiGraph", () => {
       soleModule.manifest.providers.every((provider) => provider.moduleName === "library"),
     ).toBe(true);
     expect(soleModule.code).toContain('moduleName: "library"');
+  });
+
+  it("rejects access to private module factory providers", () => {
+    const { options, modules } = moduleFactoryFixture();
     expect(() =>
       compileDiGraph({ ...options, modules: [{ ...modules[0]!, exports: [] }, modules[1]!] }),
     ).toThrow("private provider");
+  });
+
+  it("rejects module factory providers without an owner", () => {
+    const { options, moduleProvider } = moduleFactoryFixture();
     expect(() =>
       compileDiGraph({ ...options, moduleProviders: [{ ...moduleProvider, moduleId: "unknown" }] }),
     ).toThrow("must be owned");
+  });
+
+  it("rejects duplicate module factory providers", () => {
+    const { options, moduleProvider } = moduleFactoryFixture();
     expect(() =>
       compileDiGraph({ ...options, moduleProviders: [moduleProvider, moduleProvider] }),
     ).toThrow("declared by both");
+  });
+
+  it("rejects a binding that duplicates a module factory provider", () => {
+    const { options } = moduleFactoryFixture();
     expect(() => compileDiGraph({ ...options, bindings: [binding("Service")] })).toThrow(
       "declared by both",
     );
+  });
+
+  it("rejects module factory tokens without an exported runtime value", () => {
+    const { options, moduleProvider, token } = moduleFactoryFixture();
     expect(() =>
       compileDiGraph({
         ...options,
         moduleProviders: [{ ...moduleProvider, token: { ...token, exportName: "Missing" } }],
       }),
     ).toThrow("exported runtime value");
+  });
+
+  it("rejects unresolved module factory token modules", () => {
+    const { options, moduleProvider, token } = moduleFactoryFixture();
     expect(() =>
       compileDiGraph({
         ...options,
@@ -219,6 +248,10 @@ describe("compileDiGraph", () => {
         ],
       }),
     ).toThrow("Cannot resolve");
+  });
+
+  it("rejects non-singleton module factory providers", () => {
+    const { options, moduleProvider } = moduleFactoryFixture();
     expect(() =>
       compileDiGraph({
         ...options,
@@ -227,18 +260,31 @@ describe("compileDiGraph", () => {
         ],
       }),
     ).toThrow("must use singleton scope");
+  });
+
+  it("rejects module factory dependency cycles", () => {
+    const { options, moduleProvider, token } = moduleFactoryFixture();
     expect(() =>
       compileDiGraph({
         ...options,
         moduleProviders: [{ ...moduleProvider, dependencies: [{ token }] }],
       }),
     ).toThrow("cycle");
+  });
+
+  it("includes module factory dependencies in its input hash", () => {
+    const { options, moduleProvider, service } = moduleFactoryFixture();
+    const result = compileDiGraph(options);
     expect(
       compileDiGraph({
         ...options,
         moduleProviders: [{ ...moduleProvider, dependencies: [{ token: service }] }],
       }).manifest.inputHash,
     ).not.toBe(result.manifest.inputHash);
+  });
+
+  it("distinguishes required and optional missing module factory dependencies", () => {
+    const { options, moduleProvider, token } = moduleFactoryFixture();
     writeBindingFixture(
       "Inject",
       "Service",
@@ -263,6 +309,10 @@ describe("compileDiGraph", () => {
         ],
       }),
     ).not.toThrow();
+  });
+
+  it("rejects request scope captured by a singleton module factory", () => {
+    const { options, moduleProvider, service } = moduleFactoryFixture();
     writeProject({
       "src/Service.ts": `import { Component, Token } from "@croco/framework-context";
         export const SERVICE = new Token<Service>("service");
@@ -275,7 +325,7 @@ describe("compileDiGraph", () => {
         moduleProviders: [{ ...moduleProvider, dependencies: [{ token: service }] }],
       }),
     ).toThrow("cannot capture request");
-  }, 30_000);
+  });
 
   it("reads scope only from the Croco decorator", () => {
     writeProject({
