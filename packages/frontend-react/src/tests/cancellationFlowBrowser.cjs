@@ -1,4 +1,5 @@
 const assert = require("node:assert/strict");
+const { Module } = require("node:module");
 const { createRequire } = require("node:module");
 const { resolve, join } = require("node:path");
 const { mkdir } = require("node:fs/promises");
@@ -33,6 +34,23 @@ window.mount = (mode, restriction = '') => {
     onDecide:decision => {window.probe.decisions.push(decision); return restriction === 'command-pending' ? new Promise(r => {window.finishCommand=r;}) : restriction === 'command-unknown' ? Promise.reject(new Error('outcome unknown')) : Promise.resolve();},
     onRefresh:async() => {window.probe.refreshes++;}
   }));
+};
+window.mountServiceRace = async () => {
+  const session = await fetch('/create').then(response => response.json());
+  window.probe = {decisions: [], displays: 0, serviceId: session.id};
+  const key = ++generation;
+  const send = async (path, body) => {
+    const response = await fetch(path, {method:'POST', body:body ? JSON.stringify(body) : undefined});
+    if (!response.ok) throw new Error('fixture request failed: '+path);
+    return response.json();
+  };
+  const props = {
+    onDisplayed:async () => {window.probe.displays++; await send('/display/'+session.id);},
+    onDecide:async decision => {window.probe.decisions.push(decision); render(await send('/decide/'+session.id, decision));},
+    onRefresh:async () => {const result=await fetch('/state/'+session.id).then(response=>response.json()); render(result.session);}
+  };
+  function render(value) {root.render(h(CancellationFlow, {...props, key, state:{kind:'ready',session:value}}));}
+  render(session);
 };`,
       resolveDir: __dirname,
       loader: "ts",
@@ -43,9 +61,22 @@ window.mount = (mode, restriction = '') => {
     format: "iife",
     define: { "process.env.NODE_ENV": '"development"' },
   });
-  const browser = await chromium.launch({ headless: true });
+  const serverPath = resolve(__dirname, "fixtures/cancellationFlowServer.cjs");
+  const serverBundle = await build({
+    entryPoints: [serverPath],
+    bundle: true,
+    write: false,
+    platform: "node",
+    format: "cjs",
+  });
+  const serverModule = new Module(serverPath, module);
+  serverModule.paths = module.paths;
+  serverModule._compile(serverBundle.outputFiles[0].text, serverPath);
+  const fixture = await serverModule.exports.startCancellationFlowServer();
+  let browser;
   const results = [];
   try {
+    browser = await chromium.launch({ headless: true });
     for (const viewport of [
       { width: 1280, height: 720 },
       { width: 390, height: 844 },
@@ -57,10 +88,7 @@ window.mount = (mode, restriction = '') => {
       page.on("console", (message) => {
         if (message.type() === "error") errors.push(message.text());
       });
-      await page.route("https://cancellation.test/", (route) =>
-        route.fulfill({ contentType: "text/html", body: '<div id="root"></div>' }),
-      );
-      await page.goto("https://cancellation.test/");
+      await page.goto(fixture.url);
       await page.addScriptTag({ content: bundle.outputFiles[0].text });
       const cancel = page.getByRole("button", { name: "Confirm cancellation", exact: true });
       const refresh = page.getByRole("button", { name: "Refresh current state", exact: true });
@@ -141,13 +169,38 @@ window.mount = (mode, restriction = '') => {
         "accept_registered_offer",
       );
       assert.equal(await page.evaluate(() => window.probe.decisions[0].choiceId), "lower");
+      await page.evaluate(() => window.mountServiceRace());
+      await page.waitForFunction(() => window.probe.displays === 1);
+      await expect(cancel).toBeEnabled();
+      await cancel.click();
+      await page
+        .getByText("Cancellation is scheduled. Your subscription has not ended.", { exact: false })
+        .waitFor();
+      const stored = await page.evaluate(async () =>
+        fetch("/state/" + window.probe.serviceId).then((response) => response.json()),
+      );
+      assert.equal(stored.executions, 1);
+      assert.equal(stored.session.commandReceipt.providerOutcome, "confirmed");
+      assert.deepEqual(
+        stored.session.evidence.map((entry) => entry.kind),
+        ["intent", "displayed", "decision", "command", "provider"],
+      );
+      assert.equal(await page.evaluate(() => window.probe.decisions.length), 1);
+      await expect(cancel).toBeDisabled();
       assert.deepEqual(errors, []);
-      results.push({ viewport, displayFailureIsolation: true, commandGuards: true, errors });
+      results.push({
+        viewport,
+        displayFailureIsolation: true,
+        commandGuards: true,
+        sharedServiceRace: true,
+        errors,
+      });
       await page.close();
     }
     console.log(JSON.stringify(results));
   } finally {
-    await browser.close();
+    if (browser) await browser.close();
+    await fixture.close();
   }
 })().catch((error) => {
   console.error(error);

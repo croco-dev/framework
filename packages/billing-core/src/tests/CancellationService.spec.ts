@@ -29,7 +29,7 @@ const identity: CancellationIdentity = {
   subscriptionRef: "sub",
 };
 const now = new Date("2026-10-01T00:00:00Z");
-function fixture() {
+function fixture(clock: () => Date = () => now) {
   let snapshot: CancellationSnapshot = {
     ...identity,
     revision: "1",
@@ -108,7 +108,7 @@ function fixture() {
     authority,
     actions: [action],
     choices: [],
-    clock: () => now,
+    clock,
   });
   return {
     service,
@@ -298,6 +298,262 @@ describe("CancellationService", () => {
     expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(1);
     expect(action.execute).toHaveBeenCalledTimes(1);
   });
+  it.each(["snapshot", "reservation"] as const)(
+    "preserves direct cancellation when display recording wins during %s",
+    async (boundary) => {
+      const f = fixture();
+      await f.service.createSession(identity, "one");
+      if (boundary === "snapshot") {
+        const snapshot = f.authority.snapshot.bind(f.authority);
+        f.authority.snapshot = async (input) => {
+          await f.service.markDisplayed(identity, "one");
+          return snapshot(input);
+        };
+      } else {
+        const save = f.store.saveSession.bind(f.store);
+        let interleaved = false;
+        f.store.saveSession = async (value, revision) => {
+          if (value.state === "decided" && !interleaved) {
+            interleaved = true;
+            await f.service.markDisplayed(identity, "one");
+          }
+          return save(value, revision);
+        };
+      }
+      const result = await f.service.decide(identity, "one", {
+        kind: "continue_cancel",
+        decisionId: "cancel-after-display",
+      });
+      expect(result.commandReceipt).toMatchObject({
+        providerOutcome: "confirmed",
+        effect: "cancellation_scheduled",
+      });
+      expect(result.displayedAt).toBe(now.toISOString());
+      expect(result.evidence.map((entry) => entry.kind)).toEqual([
+        "intent",
+        "displayed",
+        "decision",
+        "command",
+        "provider",
+      ]);
+      expect(await f.store.getSession(identity, "one")).toEqual(result);
+      expect(f.action.execute).toHaveBeenCalledTimes(1);
+    },
+  );
+
+  it.each(["quote", "choice", "policy", "evidence"] as const)(
+    "does not mistake a changed %s for a display-only revision",
+    async (change) => {
+      const f = fixture();
+      await f.service.createSession(identity, "one");
+      const save = f.store.saveSession.bind(f.store);
+      let interleaved = false;
+      f.store.saveSession = async (value, revision) => {
+        if (value.state === "decided" && !interleaved) {
+          interleaved = true;
+          const original = await f.store.getSession(identity, "one");
+          if (!original) throw new CancellationConflictProblem();
+          const displayed: CancellationSession = {
+            ...original,
+            revision: original.revision + 1,
+            displayedAt: now.toISOString(),
+            evidence: [...original.evidence, { kind: "displayed", at: now.toISOString() }],
+          };
+          const changed = {
+            ...displayed,
+            ...(change === "quote" ? { quoteRef: "changed-quote" } : {}),
+            ...(change === "choice"
+              ? { choices: displayed.choices.map((choice) => ({ ...choice, available: false })) }
+              : {}),
+            ...(change === "policy" ? { policyVersion: 2 } : {}),
+            ...(change === "evidence"
+              ? {
+                  evidence: [
+                    { kind: "intent" as const, at: "2026-09-30T00:00:00Z" },
+                    ...displayed.evidence.slice(1),
+                  ],
+                }
+              : {}),
+          };
+          await save(changed, revision);
+        }
+        return save(value, revision);
+      };
+      await expect(
+        f.service.decide(identity, "one", { kind: "continue_cancel", decisionId: "cancel" }),
+      ).rejects.toBeInstanceOf(CancellationConflictProblem);
+      expect(f.action.execute).not.toHaveBeenCalled();
+    },
+  );
+
+  it("rechecks quote expiry after a display-only reservation conflict", async () => {
+    let currentTime = now;
+    const f = fixture(() => currentTime);
+    await f.service.createSession(identity, "one");
+    const save = f.store.saveSession.bind(f.store);
+    let interleaved = false;
+    f.store.saveSession = async (value, revision) => {
+      if (value.state === "decided" && !interleaved) {
+        interleaved = true;
+        await f.service.markDisplayed(identity, "one");
+        currentTime = new Date("2026-10-02T00:00:00Z");
+      }
+      return save(value, revision);
+    };
+    await expect(
+      f.service.decide(identity, "one", { kind: "continue_cancel", decisionId: "cancel" }),
+    ).rejects.toBeInstanceOf(CancellationConflictProblem);
+    expect(f.action.execute).not.toHaveBeenCalled();
+  });
+
+  it("does not overwrite a competing decision that wins the single display-only retry", async () => {
+    const f = fixture();
+    await f.service.createSession(identity, "one");
+    const save = f.store.saveSession.bind(f.store);
+    let interleaved = false;
+    f.store.saveSession = async (value, revision) => {
+      if (value.state === "decided") {
+        if (!interleaved) {
+          interleaved = true;
+          await f.service.markDisplayed(identity, "one");
+        } else {
+          const current = await f.store.getSession(identity, "one");
+          if (!current) throw new CancellationConflictProblem();
+          await save(
+            {
+              ...current,
+              revision: current.revision + 1,
+              state: "decided",
+              decision: { kind: "keep_subscription", decisionId: "other" },
+              evidence: [
+                ...current.evidence,
+                { kind: "decision", at: now.toISOString(), decisionId: "other" },
+              ],
+            },
+            current.revision,
+          );
+        }
+      }
+      return save(value, revision);
+    };
+    await expect(
+      f.service.decide(identity, "one", { kind: "continue_cancel", decisionId: "cancel" }),
+    ).rejects.toBeInstanceOf(CancellationConflictProblem);
+    expect((await f.store.getSession(identity, "one"))?.decision?.decisionId).toBe("other");
+    expect(f.action.execute).not.toHaveBeenCalled();
+  });
+
+  it("preserves provider confirmation when display recording completes during dispatch", async () => {
+    const f = fixture();
+    await f.service.createSession(identity, "one");
+    f.action.execute = vi.fn<CancellationAction["execute"]>(async ({ commandId }) => {
+      await f.service.markDisplayed(identity, "one");
+      return {
+        commandId,
+        providerOutcome: "confirmed" as const,
+        effect: "cancellation_scheduled" as const,
+        refundOutcome: "not_requested" as const,
+      };
+    });
+    const result = await f.service.decide(identity, "one", {
+      kind: "continue_cancel",
+      decisionId: "cancel",
+    });
+    expect(result.commandReceipt?.providerOutcome).toBe("confirmed");
+    expect(result.evidence.map((entry) => entry.kind)).toEqual([
+      "intent",
+      "decision",
+      "command",
+      "displayed",
+      "provider",
+    ]);
+    expect(await f.store.getSession(identity, "one")).toEqual(result);
+    expect(f.action.execute).toHaveBeenCalledTimes(1);
+  });
+
+  it("retains reconciliation evidence across a concurrent display write without resending", async () => {
+    const f = fixture();
+    await f.service.createSession(identity, "one");
+    f.action.execute = vi.fn<CancellationAction["execute"]>(async ({ commandId }) => ({
+      commandId,
+      providerOutcome: "pending" as const,
+      effect: "none" as const,
+      refundOutcome: "not_requested" as const,
+    }));
+    const pending = await f.service.decide(identity, "one", {
+      kind: "continue_cancel",
+      decisionId: "cancel",
+    });
+    f.action.lookup = vi.fn<CancellationAction["lookup"]>(async ({ commandId }) => {
+      await f.service.markDisplayed(identity, "one");
+      return {
+        commandId,
+        providerOutcome: "confirmed" as const,
+        effect: "cancellation_scheduled" as const,
+        refundOutcome: "not_requested" as const,
+      };
+    });
+    const result = await f.service.reconcile(identity, "one");
+    expect(result.commandReceipt).toMatchObject({
+      commandId: pending.commandReceipt?.commandId,
+      providerOutcome: "confirmed",
+    });
+    expect(result.evidence.map((entry) => entry.kind)).toEqual([
+      "intent",
+      "decision",
+      "command",
+      "provider",
+      "displayed",
+      "provider",
+    ]);
+    expect(await f.store.getSession(identity, "one")).toEqual(result);
+    expect(f.action.execute).toHaveBeenCalledTimes(1);
+    expect(f.action.lookup).toHaveBeenCalledTimes(1);
+  });
+
+  it("retains a reserved command when its provider fails after a display-only retry", async () => {
+    const f = fixture();
+    await f.service.createSession(identity, "one");
+    const snapshot = f.authority.snapshot.bind(f.authority);
+    f.authority.snapshot = async (input) => {
+      await f.service.markDisplayed(identity, "one");
+      return snapshot(input);
+    };
+    const failure = new CancellationUnavailableProblem();
+    f.action.execute = vi.fn<CancellationAction["execute"]>(async () => {
+      throw failure;
+    });
+    await expect(
+      f.service.decide(identity, "one", { kind: "continue_cancel", decisionId: "cancel" }),
+    ).rejects.toBe(failure);
+    const stored = await f.store.getSession(identity, "one");
+    expect(stored?.decision?.decisionId).toBe("cancel");
+    expect(stored?.commandReceipt?.providerOutcome).toBe("pending");
+    expect(stored?.evidence.map((entry) => entry.kind)).toEqual([
+      "intent",
+      "displayed",
+      "decision",
+      "command",
+    ]);
+    expect(f.action.execute).toHaveBeenCalledTimes(1);
+  });
+
+  it("rechecks authorization before merging display evidence into a reservation", async () => {
+    const f = fixture();
+    await f.service.createSession(identity, "one");
+    const snapshot = f.authority.snapshot.bind(f.authority);
+    f.authority.snapshot = async (input) => {
+      await f.service.markDisplayed(identity, "one");
+      f.authorize.mockRejectedValue(new CancellationAuthorizationProblem());
+      return snapshot(input);
+    };
+    await expect(
+      f.service.decide(identity, "one", { kind: "continue_cancel", decisionId: "cancel" }),
+    ).rejects.toBeInstanceOf(CancellationAuthorizationProblem);
+    expect((await f.store.getSession(identity, "one"))?.state).toBe("open");
+    expect(f.action.execute).not.toHaveBeenCalled();
+  });
+
   it("retains command reservation when observation persistence fails and only looks up after restart", async () => {
     const f = fixture();
     await f.service.createSession(identity, "one");

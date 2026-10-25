@@ -50,6 +50,56 @@
           ]
         }
       }
+    },
+    {
+      "package": "billing-core",
+      "classification": "pure-contract",
+      "reason": "Preserve cancellation reservation, provider receipt and reconciliation writes across one proven display-only CAS conflict without changing schemas, providers or host lifecycle. Protected state changes and a second CAS loss remain conflicts; provider execution is never repeated.",
+      "files": {
+        "packages/billing-core/src/libs/CancellationService.ts": "50026369ed88cba2a1b1a65befb6a0554228f5c10b9b1d6a29f384f79993d6aa"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "The Node Host uses the existing CancellationStore atomic revision contract. The bounded domain-level reservation retry adds no infrastructure requirement or provider path.",
+          "providers": ["CancellationStore", "DrizzleCancellationStore"],
+          "constraints": [
+            "Existing adapters must preserve atomic CAS and durable command reservation. Local tests do not certify live billing or deployed infrastructure."
+          ],
+          "references": [
+            "packages/billing-core/src/libs/CancellationService.ts",
+            "packages/billing-core/src/libs/Cancellation.ts",
+            "packages/billing-drizzle/src/libs/DrizzleCancellationStore.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "The Lambda Host uses the existing CancellationStore atomic revision contract. The bounded domain-level reservation retry adds no infrastructure requirement or provider path.",
+          "providers": ["CancellationStore", "DrizzleCancellationStore"],
+          "constraints": [
+            "Existing adapters must preserve atomic CAS and durable command reservation. Local tests do not certify live billing or deployed infrastructure."
+          ],
+          "references": [
+            "packages/billing-core/src/libs/CancellationService.ts",
+            "packages/billing-core/src/libs/Cancellation.ts",
+            "packages/billing-drizzle/src/libs/DrizzleCancellationStore.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "The Workers or Node Container Host uses the existing CancellationStore atomic revision contract. The bounded domain-level reservation retry adds no infrastructure requirement or provider path.",
+          "providers": ["CancellationStore", "DrizzleCancellationStore"],
+          "constraints": [
+            "Existing adapters must preserve atomic CAS and durable command reservation. Local tests do not certify live billing or deployed infrastructure."
+          ],
+          "references": [
+            "packages/billing-core/src/libs/CancellationService.ts",
+            "packages/billing-core/src/libs/Cancellation.ts",
+            "packages/billing-drizzle/src/libs/DrizzleCancellationStore.ts"
+          ]
+        }
+      }
     }
   ]
 }
