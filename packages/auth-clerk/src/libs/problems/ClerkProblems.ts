@@ -78,7 +78,15 @@ export class ClerkTokenVerificationProblem extends Problem {
     const status = getUpstreamStatus(error);
     const detail = redactSensitiveValue(getErrorMessage(error));
 
+    // Retain diagnostic cause evidence without retaining upstream payloads or secrets.
+    if (error instanceof Error) {
+      const safeCause = new Error(detail);
+      if (error.stack !== undefined) safeCause.stack = redactSensitiveValue(error.stack);
+      error = safeCause;
+    }
+
     super(undefined, undefined, detail, {
+      cause: error instanceof Error ? error : undefined,
       extensions: {
         operation,
         provider: "clerk",
@@ -103,7 +111,15 @@ export class ClerkTokenVerificationUpstreamProblem extends Problem {
     const retryable = isRetryableClerkAuthError(error);
     const detail = redactSensitiveValue(getErrorMessage(error));
 
+    // Retain diagnostic cause evidence without retaining upstream payloads or secrets.
+    if (error instanceof Error) {
+      const safeCause = new Error(detail);
+      if (error.stack !== undefined) safeCause.stack = redactSensitiveValue(error.stack);
+      error = safeCause;
+    }
+
     super(undefined, undefined, `Clerk ${operation} failed: ${detail}`, {
+      cause: error instanceof Error ? error : undefined,
       extensions: {
         operation,
         provider: "clerk",
@@ -293,8 +309,10 @@ function asRecord(value: unknown): Record<string, unknown> | undefined {
 }
 
 function redactSensitiveValue(value: string): string {
-  return value.replace(
-    /(authorization|cookie|credential|password|secret|token|api[-_]?key|private[-_]?key|access[-_]?key|connection[-_]?string|clerk[-_]?secret[-_]?key|dsn)(\s*[:=]\s*)([^,\s;]+)/gi,
-    "$1$2[Redacted]",
-  );
+  return value
+    .replace(/\b(authorization|cookie)(\s*[:=]\s*)[^\r\n]+/gi, "$1$2[Redacted]")
+    .replace(
+      /(authorization|cookie|credential|password|secret|token|api[-_]?key|private[-_]?key|access[-_]?key|connection[-_]?string|clerk[-_]?secret[-_]?key|dsn)(\s*[:=]\s*)([^,\s;]+)/gi,
+      "$1$2[Redacted]",
+    );
 }

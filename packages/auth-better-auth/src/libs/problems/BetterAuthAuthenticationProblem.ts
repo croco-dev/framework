@@ -19,7 +19,21 @@ export class BetterAuthAuthenticationProblem extends Problem {
         ? "upstream revocation failed"
         : redactSensitiveValue(getErrorMessage(error), "[Redacted]");
 
+    // Retain diagnostic cause evidence without retaining upstream payloads or secrets.
+    if (error instanceof Error) {
+      const safeCause = new Error(message);
+      if (
+        error.stack !== undefined &&
+        operation !== "revokeSession" &&
+        operation !== "revokeUserSessions"
+      ) {
+        safeCause.stack = redactSensitiveValue(error.stack, "[Redacted]");
+      }
+      error = safeCause;
+    }
+
     super(undefined, undefined, `Better Auth ${operation} failed: ${message}`, {
+      cause: error instanceof Error ? error : undefined,
       extensions: {
         operation,
         provider: "better-auth",

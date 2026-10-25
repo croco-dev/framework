@@ -122,6 +122,10 @@ describe("Problems", () => {
       expect(problem.detail).toContain("Connection refused");
 
       const json = problem.toJSON();
+      expect(problem.cause).toBe(originalError);
+      expect(Object.getOwnPropertyDescriptor(problem, "cause")?.enumerable).toBe(false);
+      expect(json).not.toHaveProperty("cause");
+      expect(JSON.stringify({ ...problem })).not.toContain('"cause"');
       expect(json.operation).toBe("ZADD");
       expect(json.originalMessage).toBe("Connection refused");
     });
@@ -129,6 +133,7 @@ describe("Problems", () => {
     it("should handle missing original error", () => {
       const problem = new RedisProblem("SET");
 
+      expect(problem.cause).toBeUndefined();
       expect(problem.detail).toContain("Unknown error");
       expect(problem.toJSON()).not.toHaveProperty("originalMessage");
     });
@@ -139,6 +144,7 @@ describe("Problems", () => {
         "WITHSCORES returned an odd number of values",
       );
 
+      expect(problem.cause).toBeUndefined();
       expect(problem.code).toBe("metering/redis-error");
       expect(problem.detail).toContain("WITHSCORES returned an odd number of values");
       expect(problem.toJSON().originalMessage).toBe("WITHSCORES returned an odd number of values");

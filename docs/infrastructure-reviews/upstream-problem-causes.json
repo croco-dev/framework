@@ -1,0 +1,334 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "auth-better-auth",
+      "classification": "pure-contract",
+      "reason": "Preserve Error diagnostics as an existing non-enumerable Problem cause; provider causes copy redacted message and stack without retaining arbitrary upstream payloads. Redis keeps its original Error. No runtime or host requirement changes.",
+      "files": {
+        "packages/auth-better-auth/src/libs/problems/BetterAuthAuthenticationProblem.ts": "74c9001d99b73b8a02adae9b80d4325b8b253e86867d94a6088ff274b11bae93",
+        "packages/auth-better-auth/src/libs/redaction.ts": "43349f4a6ccb8a29bfb179a193b61f2c04b2d3979db27d0d80f4351c0c67dbbb"
+      },
+      "catalogRuntimes": ["node", "lambda"],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Only synchronous Error-to-Problem cause propagation changes. No host capability, storage, SDK request, connection, scheduling or lifecycle requirement changes; the existing non-enumerable Problem cause remains outside public JSON.",
+          "providers": ["@croco/problems-core"],
+          "constraints": ["No new host support or live provider certification is claimed."],
+          "references": [
+            "packages/auth-better-auth/src/libs/problems/BetterAuthAuthenticationProblem.ts",
+            "packages/problems-core/src/libs/Problem.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Only synchronous Error-to-Problem cause propagation changes. No host capability, storage, SDK request, connection, scheduling or lifecycle requirement changes; the existing non-enumerable Problem cause remains outside public JSON.",
+          "providers": ["@croco/problems-core"],
+          "constraints": ["No new host support or live provider certification is claimed."],
+          "references": [
+            "packages/auth-better-auth/src/libs/problems/BetterAuthAuthenticationProblem.ts",
+            "packages/problems-core/src/libs/Problem.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Only synchronous Error-to-Problem cause propagation changes. No host capability, storage, SDK request, connection, scheduling or lifecycle requirement changes; the existing non-enumerable Problem cause remains outside public JSON.",
+          "providers": ["@croco/problems-core"],
+          "constraints": ["No new host support or live provider certification is claimed."],
+          "references": [
+            "packages/auth-better-auth/src/libs/problems/BetterAuthAuthenticationProblem.ts",
+            "packages/problems-core/src/libs/Problem.ts"
+          ]
+        }
+      }
+    },
+    {
+      "package": "auth-clerk",
+      "classification": "pure-contract",
+      "reason": "Preserve Error diagnostics as an existing non-enumerable Problem cause; provider causes copy redacted message and stack without retaining arbitrary upstream payloads. Redis keeps its original Error. No runtime or host requirement changes.",
+      "files": {
+        "packages/auth-clerk/src/libs/problems/ClerkProblems.ts": "7c54aafafc866c0e9b265a07398d6eaa9e67d68aa6a08dc32a73f8730c2efcae"
+      },
+      "catalogRuntimes": ["node", "lambda"],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Only synchronous Error-to-Problem cause propagation changes. No host capability, storage, SDK request, connection, scheduling or lifecycle requirement changes; the existing non-enumerable Problem cause remains outside public JSON.",
+          "providers": ["@croco/problems-core"],
+          "constraints": ["No new host support or live provider certification is claimed."],
+          "references": [
+            "packages/auth-clerk/src/libs/problems/ClerkProblems.ts",
+            "packages/problems-core/src/libs/Problem.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Only synchronous Error-to-Problem cause propagation changes. No host capability, storage, SDK request, connection, scheduling or lifecycle requirement changes; the existing non-enumerable Problem cause remains outside public JSON.",
+          "providers": ["@croco/problems-core"],
+          "constraints": ["No new host support or live provider certification is claimed."],
+          "references": [
+            "packages/auth-clerk/src/libs/problems/ClerkProblems.ts",
+            "packages/problems-core/src/libs/Problem.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Only synchronous Error-to-Problem cause propagation changes. No host capability, storage, SDK request, connection, scheduling or lifecycle requirement changes; the existing non-enumerable Problem cause remains outside public JSON.",
+          "providers": ["@croco/problems-core"],
+          "constraints": ["No new host support or live provider certification is claimed."],
+          "references": [
+            "packages/auth-clerk/src/libs/problems/ClerkProblems.ts",
+            "packages/problems-core/src/libs/Problem.ts"
+          ]
+        }
+      }
+    },
+    {
+      "package": "batch-qstash",
+      "classification": "pure-contract",
+      "reason": "Preserve Error diagnostics as an existing non-enumerable Problem cause; provider causes copy redacted message and stack without retaining arbitrary upstream payloads. Redis keeps its original Error. No runtime or host requirement changes.",
+      "files": {
+        "packages/batch-qstash/src/libs/problems/QStashBatchProblems.ts": "431d74375fd54b8d7e5f487153358a1e4cf8f085ecd7e6639c6041b72586ca1e"
+      },
+      "catalogRuntimes": ["node", "lambda"],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Only synchronous Error-to-Problem cause propagation changes. No host capability, storage, SDK request, connection, scheduling or lifecycle requirement changes; the existing non-enumerable Problem cause remains outside public JSON.",
+          "providers": ["@croco/problems-core"],
+          "constraints": ["No new host support or live provider certification is claimed."],
+          "references": [
+            "packages/batch-qstash/src/libs/problems/QStashBatchProblems.ts",
+            "packages/problems-core/src/libs/Problem.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Only synchronous Error-to-Problem cause propagation changes. No host capability, storage, SDK request, connection, scheduling or lifecycle requirement changes; the existing non-enumerable Problem cause remains outside public JSON.",
+          "providers": ["@croco/problems-core"],
+          "constraints": ["No new host support or live provider certification is claimed."],
+          "references": [
+            "packages/batch-qstash/src/libs/problems/QStashBatchProblems.ts",
+            "packages/problems-core/src/libs/Problem.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Only synchronous Error-to-Problem cause propagation changes. No host capability, storage, SDK request, connection, scheduling or lifecycle requirement changes; the existing non-enumerable Problem cause remains outside public JSON.",
+          "providers": ["@croco/problems-core"],
+          "constraints": ["No new host support or live provider certification is claimed."],
+          "references": [
+            "packages/batch-qstash/src/libs/problems/QStashBatchProblems.ts",
+            "packages/problems-core/src/libs/Problem.ts"
+          ]
+        }
+      }
+    },
+    {
+      "package": "metering-core",
+      "classification": "pure-contract",
+      "reason": "Preserve Error diagnostics as an existing non-enumerable Problem cause; provider causes copy redacted message and stack without retaining arbitrary upstream payloads. Redis keeps its original Error. No runtime or host requirement changes.",
+      "files": {
+        "packages/metering-core/src/libs/problems/RedisProblem.ts": "b4c34c76e824cd0a20d46bb1d3eda68ff8d5e4ab2d5857ff82970bfac1cea632"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Only synchronous Error-to-Problem cause propagation changes. No host capability, storage, SDK request, connection, scheduling or lifecycle requirement changes; the existing non-enumerable Problem cause remains outside public JSON.",
+          "providers": ["@croco/problems-core"],
+          "constraints": ["No new host support or live provider certification is claimed."],
+          "references": [
+            "packages/metering-core/src/libs/problems/RedisProblem.ts",
+            "packages/problems-core/src/libs/Problem.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Only synchronous Error-to-Problem cause propagation changes. No host capability, storage, SDK request, connection, scheduling or lifecycle requirement changes; the existing non-enumerable Problem cause remains outside public JSON.",
+          "providers": ["@croco/problems-core"],
+          "constraints": ["No new host support or live provider certification is claimed."],
+          "references": [
+            "packages/metering-core/src/libs/problems/RedisProblem.ts",
+            "packages/problems-core/src/libs/Problem.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Only synchronous Error-to-Problem cause propagation changes. No host capability, storage, SDK request, connection, scheduling or lifecycle requirement changes; the existing non-enumerable Problem cause remains outside public JSON.",
+          "providers": ["@croco/problems-core"],
+          "constraints": ["No new host support or live provider certification is claimed."],
+          "references": [
+            "packages/metering-core/src/libs/problems/RedisProblem.ts",
+            "packages/problems-core/src/libs/Problem.ts"
+          ]
+        }
+      }
+    },
+    {
+      "package": "metering-upstash",
+      "classification": "pure-contract",
+      "reason": "Preserve Error diagnostics as an existing non-enumerable Problem cause; provider causes copy redacted message and stack without retaining arbitrary upstream payloads. Redis keeps its original Error. No runtime or host requirement changes.",
+      "files": {
+        "packages/metering-upstash/src/libs/problems/UpstashMeteringProblems.ts": "d801cabef9590ab985af56ca8975c878ebedcd50ddf89c9810cf2d1bcad5fd96"
+      },
+      "catalogRuntimes": ["node", "lambda"],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Only synchronous Error-to-Problem cause propagation changes. No host capability, storage, SDK request, connection, scheduling or lifecycle requirement changes; the existing non-enumerable Problem cause remains outside public JSON.",
+          "providers": ["@croco/problems-core"],
+          "constraints": ["No new host support or live provider certification is claimed."],
+          "references": [
+            "packages/metering-upstash/src/libs/problems/UpstashMeteringProblems.ts",
+            "packages/problems-core/src/libs/Problem.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Only synchronous Error-to-Problem cause propagation changes. No host capability, storage, SDK request, connection, scheduling or lifecycle requirement changes; the existing non-enumerable Problem cause remains outside public JSON.",
+          "providers": ["@croco/problems-core"],
+          "constraints": ["No new host support or live provider certification is claimed."],
+          "references": [
+            "packages/metering-upstash/src/libs/problems/UpstashMeteringProblems.ts",
+            "packages/problems-core/src/libs/Problem.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Only synchronous Error-to-Problem cause propagation changes. No host capability, storage, SDK request, connection, scheduling or lifecycle requirement changes; the existing non-enumerable Problem cause remains outside public JSON.",
+          "providers": ["@croco/problems-core"],
+          "constraints": ["No new host support or live provider certification is claimed."],
+          "references": [
+            "packages/metering-upstash/src/libs/problems/UpstashMeteringProblems.ts",
+            "packages/problems-core/src/libs/Problem.ts"
+          ]
+        }
+      }
+    },
+    {
+      "package": "ratelimit-upstash",
+      "classification": "pure-contract",
+      "reason": "Preserve Error diagnostics as an existing non-enumerable Problem cause; provider causes copy redacted message and stack without retaining arbitrary upstream payloads. Redis keeps its original Error. No runtime or host requirement changes.",
+      "files": {
+        "packages/ratelimit-upstash/src/libs/problems/RateLimitUpstashProblems.ts": "00494a43d199c7f8da7a98732094dd11930927b6ddb3a7a46ea3889a5e315e02"
+      },
+      "catalogRuntimes": ["node", "lambda", "cloudflare-workers"],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Only synchronous Error-to-Problem cause propagation changes. No host capability, storage, SDK request, connection, scheduling or lifecycle requirement changes; the existing non-enumerable Problem cause remains outside public JSON.",
+          "providers": ["@croco/problems-core"],
+          "constraints": ["No new host support or live provider certification is claimed."],
+          "references": [
+            "packages/ratelimit-upstash/src/libs/problems/RateLimitUpstashProblems.ts",
+            "packages/problems-core/src/libs/Problem.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Only synchronous Error-to-Problem cause propagation changes. No host capability, storage, SDK request, connection, scheduling or lifecycle requirement changes; the existing non-enumerable Problem cause remains outside public JSON.",
+          "providers": ["@croco/problems-core"],
+          "constraints": ["No new host support or live provider certification is claimed."],
+          "references": [
+            "packages/ratelimit-upstash/src/libs/problems/RateLimitUpstashProblems.ts",
+            "packages/problems-core/src/libs/Problem.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Only synchronous Error-to-Problem cause propagation changes. No host capability, storage, SDK request, connection, scheduling or lifecycle requirement changes; the existing non-enumerable Problem cause remains outside public JSON.",
+          "providers": ["@croco/problems-core"],
+          "constraints": ["No new host support or live provider certification is claimed."],
+          "references": [
+            "packages/ratelimit-upstash/src/libs/problems/RateLimitUpstashProblems.ts",
+            "packages/problems-core/src/libs/Problem.ts"
+          ]
+        }
+      }
+    },
+    {
+      "package": "tasks-qstash",
+      "classification": "pure-contract",
+      "reason": "Preserve Error diagnostics as an existing non-enumerable Problem cause; provider causes copy redacted message and stack without retaining arbitrary upstream payloads. Redis keeps its original Error. No runtime or host requirement changes.",
+      "files": {
+        "packages/tasks-qstash/src/libs/problems/QStashTaskProblems.ts": "144f56e1e8497ae079bfe3734f0f5f849c7024f7effe93a0b83bc2fd7b2e7ef1"
+      },
+      "catalogRuntimes": ["node", "lambda"],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Only synchronous Error-to-Problem cause propagation changes. No host capability, storage, SDK request, connection, scheduling or lifecycle requirement changes; the existing non-enumerable Problem cause remains outside public JSON.",
+          "providers": ["@croco/problems-core"],
+          "constraints": ["No new host support or live provider certification is claimed."],
+          "references": [
+            "packages/tasks-qstash/src/libs/problems/QStashTaskProblems.ts",
+            "packages/problems-core/src/libs/Problem.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Only synchronous Error-to-Problem cause propagation changes. No host capability, storage, SDK request, connection, scheduling or lifecycle requirement changes; the existing non-enumerable Problem cause remains outside public JSON.",
+          "providers": ["@croco/problems-core"],
+          "constraints": ["No new host support or live provider certification is claimed."],
+          "references": [
+            "packages/tasks-qstash/src/libs/problems/QStashTaskProblems.ts",
+            "packages/problems-core/src/libs/Problem.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Only synchronous Error-to-Problem cause propagation changes. No host capability, storage, SDK request, connection, scheduling or lifecycle requirement changes; the existing non-enumerable Problem cause remains outside public JSON.",
+          "providers": ["@croco/problems-core"],
+          "constraints": ["No new host support or live provider certification is claimed."],
+          "references": [
+            "packages/tasks-qstash/src/libs/problems/QStashTaskProblems.ts",
+            "packages/problems-core/src/libs/Problem.ts"
+          ]
+        }
+      }
+    },
+    {
+      "package": "problems-core",
+      "classification": "pure-contract",
+      "reason": "Regenerate source-location metadata after provider constructors move; no Problem code, response or host capability changes.",
+      "files": {
+        "packages/problems-core/src/generated/problem-code-registry.ts": "41208fb296efbaa29122e7c7fbdd19bddecff148342cdcb2a656012cf980b31b"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Only generated source coordinates change. No host capability, storage, SDK request, connection or lifecycle requirement changes.",
+          "providers": ["@croco/problems-core"],
+          "constraints": ["No new host support or live provider certification is claimed."],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "scripts/problem-registry.mts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Only generated source coordinates change. No host capability, storage, SDK request, connection or lifecycle requirement changes.",
+          "providers": ["@croco/problems-core"],
+          "constraints": ["No new host support or live provider certification is claimed."],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "scripts/problem-registry.mts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Only generated source coordinates change. No host capability, storage, SDK request, connection or lifecycle requirement changes.",
+          "providers": ["@croco/problems-core"],
+          "constraints": ["No new host support or live provider certification is claimed."],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "scripts/problem-registry.mts"
+          ]
+        }
+      }
+    }
+  ]
+}

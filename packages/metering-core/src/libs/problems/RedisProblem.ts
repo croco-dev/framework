@@ -10,6 +10,7 @@ export class RedisProblem extends Problem {
       ProblemCategory.InternalServerError,
       `Redis operation '${operation}' failed: ${originalMessage ?? "Unknown error"}`,
       {
+        cause: originalError instanceof Error ? originalError : undefined,
         extensions: {
           operation,
           ...(originalMessage === undefined ? {} : { originalMessage }),

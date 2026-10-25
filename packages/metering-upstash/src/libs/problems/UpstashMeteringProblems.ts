@@ -33,11 +33,19 @@ export class UpstashMeteringUpstreamProblem extends Problem {
     const retryable = isRetryableUpstashMeteringError(error);
     const message = redactSensitiveValue(getErrorMessage(error));
 
+    // Retain diagnostic cause evidence without retaining upstream payloads or secrets.
+    if (error instanceof Error) {
+      const safeCause = new Error(message);
+      if (error.stack !== undefined) safeCause.stack = redactSensitiveValue(error.stack);
+      error = safeCause;
+    }
+
     super(
       "metering-upstash/upstream-failed",
       mapUpstreamProblemCategory(status, retryable),
       `Upstash Redis metering ${operation} failed: ${message}`,
       {
+        cause: error instanceof Error ? error : undefined,
         extensions: {
           operation,
           provider: "upstash-redis",
