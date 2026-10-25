@@ -828,6 +828,41 @@ class Missing extends Base { constructor() { super("literal"); } }`,
     ["block shadow", "{ const error = new Error('unrelated');", "}"],
     ["catch shadow", "try { throw new Error('unrelated'); } catch (error) {", "}"],
     ["loop shadow", "for (const error of [new Error('unrelated')]) {", "break; }"],
+    [
+      "array property assignment",
+      "if (error instanceof Error) [error.message] = ['unrelated'];",
+      "",
+    ],
+    [
+      "object property assignment",
+      "if (error instanceof Error) ({ message: error.message } = { message: 'unrelated' });",
+      "",
+    ],
+    [
+      "element property assignment",
+      "if (error instanceof Error) [error['message']] = ['unrelated'];",
+      "",
+    ],
+    [
+      "aliased array property assignment",
+      "if (error instanceof Error) { const alias = error; [alias.message] = ['unrelated']; }",
+      "",
+    ],
+    [
+      "loop property assignment",
+      "if (error instanceof Error) { for (error.message of ['unrelated']) {} }",
+      "",
+    ],
+    [
+      "aliased loop property assignment",
+      "if (error instanceof Error) { const alias = error; for (alias.message of ['unrelated']) {} }",
+      "",
+    ],
+    [
+      "captured parameter assignment",
+      "const normalize = () => { error = new Error('unrelated'); }; normalize();",
+      "",
+    ],
     ["parameter initializer", "", ""],
   ])("rejects overwritten or shadowed constructor input: %s", (kind, prefix, suffix) => {
     const repo = createTempRepo();
@@ -884,6 +919,28 @@ class Missing extends Base { constructor() { super("literal"); } }`,
         "class Wrapped extends Problem { constructor(error: unknown) {",
         'super("alpha/wrapped", ProblemCategory.InternalServerError, "failed", { cause: error instanceof Error ? new Error(redactSensitiveValue(error.message)) : undefined });',
         "} } }",
+      ].join("\n"),
+    );
+    expect(runProblemRegistryCheck(repo, "write").status).toBe("pass");
+  });
+
+  it.each([
+    "function normalize(error: string) { error = error.trim(); }",
+    "function normalize() { let error = 'other'; error = error.trim(); }",
+    "{ let error = 'other'; error = error.trim(); }",
+    "function normalize(error: Error) { const alias = error; alias.message = 'other'; }",
+  ])("preserves constructor input across unrelated lexical mutations: %s", (declaration) => {
+    const repo = createTempRepo();
+    writeFile(
+      repo,
+      "packages/alpha/src/problems.ts",
+      [
+        'import { Problem, ProblemCategory } from "@croco/problems-core";',
+        "function redactSensitiveValue(value: string): string { return value.replace(/token/g, '[Redacted]'); }",
+        "class Wrapped extends Problem { constructor(error: unknown) {",
+        declaration,
+        'super("alpha/wrapped", ProblemCategory.InternalServerError, "failed", { cause: error instanceof Error ? new Error(redactSensitiveValue(error.message)) : undefined });',
+        "} }",
       ].join("\n"),
     );
     expect(runProblemRegistryCheck(repo, "write").status).toBe("pass");
