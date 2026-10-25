@@ -593,7 +593,7 @@
       "reason": "Use patched Zod 4 schema contracts and introspection without changing Host, storage or provider lifecycle requirements.",
       "files": {
         "packages/testing/package.json": "7b72b8417cde4011344a30ac2d9f62dc23ee5e1726443078dc1be1ca2ab59b12",
-        "packages/testing/src/libs/contract-testing.ts": "c286d0098144a789cc51aa439ca5654f0f3109e4f023a14dcfc2edbd21d43768"
+        "packages/testing/src/libs/contract-testing.ts": "6b79de05d35deea219b609fa2eb6ac226f8ed5fd3c6b4355a98528e3d3f0b341"
       },
       "catalogRuntimes": [],
       "profiles": {

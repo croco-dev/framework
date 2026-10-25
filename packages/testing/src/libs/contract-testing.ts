@@ -852,6 +852,9 @@ function arbitraryForSchema(schema: z.ZodType, path: string): fc.Arbitrary<unkno
 }
 
 function stringArbitrary(schema: z.ZodString, path: string): fc.Arbitrary<string> {
+  if ("format" in schema.def) {
+    throw new UnsupportedContractGenerationProblem(path, `ZodString.${String(schema.def.format)}`);
+  }
   let minLength = 0;
   let explicitMaxLength: number | undefined;
   for (const rawCheck of schema.def.checks ?? []) {

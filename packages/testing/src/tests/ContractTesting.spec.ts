@@ -413,14 +413,21 @@ describe("contract testing", () => {
     expect(cases.every(({ input }) => enumSchema.safeParse(input.body).success)).toBe(true);
   });
 
-  it("fails clearly when a route uses an unsupported generation shape", () => {
+  it.each([
+    ["z.email()", "email", z.email()],
+    ["z.string().email()", "email", z.string().email()],
+    ["z.uuid()", "uuid", z.uuid()],
+    ["z.string().uuid()", "uuid", z.string().uuid()],
+    ["z.iso.datetime()", "datetime", z.iso.datetime()],
+    ["z.string().datetime()", "datetime", z.string().datetime()],
+  ] as const)("rejects unsupported %s formats before sampling", (_label, format, schema) => {
     const unsupported = {
       ...route,
-      inputSchemas: { ...route.inputSchemas, body: z.string().email() },
+      inputSchemas: { ...route.inputSchemas, body: z.object({ id: schema }) },
     } satisfies ContractGraphRoute;
 
     expect(() => createContractCaseArbitrary(unsupported)).toThrow(
-      "Contract generation does not support ZodString.email at 'input.body'",
+      `Contract generation does not support ZodString.${format} at 'input.body.id'`,
     );
   });
 
