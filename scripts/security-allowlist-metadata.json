@@ -34,6 +34,13 @@
           "owner": "kang-heewon",
           "reason": "Reviewed infrastructure evidence record contains source SHA-256 digests, independently recomputed and equal to tracked files, that generic-api-key misclassifies. Exact file path remains stable after squash merge; this record must contain public evidence only and no credentials. Re-review the entire file by the deadline.",
           "reviewBy": "2026-11-30"
+        },
+        {
+          "kind": "path",
+          "value": "^docs/infrastructure-reviews/zod4-collection-bounds\\.json$",
+          "owner": "kang-heewon",
+          "reason": "Public infrastructure evidence contains SHA-256 digests, not credentials. BetterAuthAuthenticationProblem.ts digests in e7bb918 and c0e681d were independently recomputed from their tracked source blobs and trigger generic-api-key. This exact record path survives squash; all production source and other records remain scanned. Re-review the entire public-evidence record by the deadline.",
+          "reviewBy": "2026-11-30"
         }
       ],
       "ignoreFingerprints": [
@@ -42,6 +49,12 @@
           "owner": "kang-heewon",
           "reason": "Historical planning evidence artifact in git history triggers generic-api-key detection; current source tree does not include the artifact and the exact fingerprint is tracked for future history-cleanup review.",
           "reviewBy": "2026-10-31"
+        },
+        {
+          "fingerprint": "6b3f29a98a27a18552ae2ee45d25c3a2d1de6a3d:docs/infrastructure-reviews/provider-problem-causes.json:generic-api-key:9",
+          "owner": "kang-heewon",
+          "reason": "Historical source-digest false positive from the provider cause review before its Better Auth entry was consolidated into the Zod review. Its SHA-256 exactly matches the tracked BetterAuthAuthenticationProblem.ts blob at 6b3f29a. Only this immutable commit/path/rule/line is ignored; the current provider review remains scanned.",
+          "reviewBy": "2026-11-30"
         }
       ]
     },
