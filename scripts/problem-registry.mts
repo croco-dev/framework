@@ -2119,6 +2119,23 @@ function forwardsCauseValue(
 
 function hasVerifiedRedactionHelper(call: ts.CallExpression): boolean {
   if (!ts.isIdentifier(call.expression)) return false;
+  const isBoundedReplacement = (expression: ts.Expression): boolean => {
+    const value = unwrapExpression(expression);
+    if (!value) return false;
+    if (ts.isConditionalExpression(value)) {
+      return isBoundedReplacement(value.whenTrue) && isBoundedReplacement(value.whenFalse);
+    }
+    return (
+      ts.isStringLiteral(value) ||
+      ts.isNoSubstitutionTemplateLiteral(value) ||
+      ts.isNumericLiteral(value) ||
+      value.kind === ts.SyntaxKind.TrueKeyword ||
+      value.kind === ts.SyntaxKind.FalseKeyword ||
+      value.kind === ts.SyntaxKind.NullKeyword
+    );
+  };
+  const replacementArgument = call.arguments[1];
+  if (replacementArgument && !isBoundedReplacement(replacementArgument)) return false;
   const name = call.expression.text;
   const source = call.getSourceFile();
   const containsName = (binding: ts.BindingName, expected = name): boolean =>
@@ -2135,7 +2152,10 @@ function hasVerifiedRedactionHelper(call: ts.CallExpression): boolean {
     )
       return true;
     if (
-      (ts.isImportSpecifier(node) || ts.isImportClause(node) || ts.isNamespaceImport(node)) &&
+      (ts.isImportSpecifier(node) ||
+        ts.isImportClause(node) ||
+        ts.isNamespaceImport(node) ||
+        ts.isImportEqualsDeclaration(node)) &&
       node.name?.text === expected
     )
       return true;
@@ -2149,6 +2169,11 @@ function hasVerifiedRedactionHelper(call: ts.CallExpression): boolean {
     scope = scope.parent
   ) {
     if (
+      (ts.isClassExpression(scope) || ts.isFunctionExpression(scope)) &&
+      (scope.name?.text === name || scope.name?.text === "Error")
+    )
+      return false;
+    if (
       ts.isFunctionLike(scope) &&
       scope.parameters.some(
         (entry) => containsName(entry.name) || containsName(entry.name, "Error"),
@@ -2156,9 +2181,34 @@ function hasVerifiedRedactionHelper(call: ts.CallExpression): boolean {
     )
       return false;
     if (
-      ts.isBlock(scope) &&
+      ts.isCatchClause(scope) &&
+      scope.variableDeclaration &&
+      (containsName(scope.variableDeclaration.name) ||
+        containsName(scope.variableDeclaration.name, "Error"))
+    )
+      return false;
+    if (
+      (ts.isForStatement(scope) || ts.isForOfStatement(scope) || ts.isForInStatement(scope)) &&
+      scope.initializer &&
+      ts.isVariableDeclarationList(scope.initializer) &&
+      scope.initializer.declarations.some(
+        (entry) => containsName(entry.name) || containsName(entry.name, "Error"),
+      )
+    )
+      return false;
+    if (
+      (ts.isBlock(scope) || ts.isModuleBlock(scope)) &&
       scope.statements.some(
         (statement) => shadowsName(statement) || shadowsName(statement, "Error"),
+      )
+    )
+      return false;
+    if (
+      ts.isCaseBlock(scope) &&
+      scope.clauses.some((clause) =>
+        clause.statements.some(
+          (statement) => shadowsName(statement) || shadowsName(statement, "Error"),
+        ),
       )
     )
       return false;
@@ -2225,6 +2275,26 @@ function hasVerifiedRedactionHelper(call: ts.CallExpression): boolean {
   )
     return false;
   let reassigned = false;
+  const assignsHelper = (target: ts.Expression): boolean => {
+    const value = unwrapExpression(target);
+    if (!value) return false;
+    if (ts.isIdentifier(value)) return value.text === helperName;
+    if (ts.isSpreadElement(value)) return assignsHelper(value.expression);
+    if (ts.isArrayLiteralExpression(value)) return value.elements.some(assignsHelper);
+    if (ts.isObjectLiteralExpression(value)) {
+      return value.properties.some((property) => {
+        if (ts.isPropertyAssignment(property)) return assignsHelper(property.initializer);
+        if (ts.isShorthandPropertyAssignment(property)) return property.name.text === helperName;
+        if (ts.isSpreadAssignment(property)) return assignsHelper(property.expression);
+        return false;
+      });
+    }
+    return (
+      ts.isBinaryExpression(value) &&
+      value.operatorToken.kind === ts.SyntaxKind.EqualsToken &&
+      assignsHelper(value.left)
+    );
+  };
   const findReassignment = (node: ts.Node): void => {
     if (ts.isVariableDeclaration(node) && node.initializer && containsName(node.name, helperName))
       reassigned = true;
@@ -2232,8 +2302,13 @@ function hasVerifiedRedactionHelper(call: ts.CallExpression): boolean {
       ts.isBinaryExpression(node) &&
       node.operatorToken.kind >= ts.SyntaxKind.FirstAssignment &&
       node.operatorToken.kind <= ts.SyntaxKind.LastAssignment &&
-      ts.isIdentifier(node.left) &&
-      node.left.text === helperName
+      assignsHelper(node.left)
+    )
+      reassigned = true;
+    if (
+      (ts.isForOfStatement(node) || ts.isForInStatement(node)) &&
+      !ts.isVariableDeclarationList(node.initializer) &&
+      assignsHelper(node.initializer)
     )
       reassigned = true;
     ts.forEachChild(node, findReassignment);
