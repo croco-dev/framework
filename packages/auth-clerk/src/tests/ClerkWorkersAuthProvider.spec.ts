@@ -2,6 +2,7 @@ import { resolve } from "node:path";
 import { generateKeyPairSync, sign } from "node:crypto";
 import { build } from "esbuild";
 import { Miniflare } from "miniflare";
+import type { Request as MiniflareRequest } from "miniflare";
 import { describe, expect, it } from "vitest";
 
 const { privateKey, publicKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
@@ -110,7 +111,7 @@ async function fixture(
     compatibilityDate: "2026-03-12",
     compatibilityFlags: ["nodejs_compat"],
     bindings: { CLERK_JWT_KEY: jwtKey, CLERK_SECRET_KEY: secretKey },
-    outboundService: async (request) => {
+    outboundService: async (request: MiniflareRequest) => {
       const url = new URL(request.url);
       if (request.headers.get("Authorization") !== `Bearer ${secretKey}`) {
         return new Response("Missing secret binding", { status: 401 });
