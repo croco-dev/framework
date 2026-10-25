@@ -7,6 +7,14 @@ const { chromium, expect } = createRequire(resolve(__dirname, "../../../docs/pac
   "@playwright/test",
 );
 const { build } = createRequire(require.resolve("tsup"))("esbuild");
+// Compile both fixtures from current billing sources, independently of existing build output.
+const billingSourceAliases = {
+  "@croco/billing-core": resolve(__dirname, "../../../billing-core/src/index.ts"),
+  "@croco/billing-core/cancellation": resolve(
+    __dirname,
+    "../../../billing-core/src/cancellation.ts",
+  ),
+};
 
 (async () => {
   // In-memory callbacks only: this fixture has no billing provider or network backend.
@@ -56,6 +64,7 @@ window.mountServiceRace = async () => {
       loader: "ts",
     },
     bundle: true,
+    alias: billingSourceAliases,
     write: false,
     platform: "browser",
     format: "iife",
@@ -65,6 +74,7 @@ window.mountServiceRace = async () => {
   const serverBundle = await build({
     entryPoints: [serverPath],
     bundle: true,
+    alias: billingSourceAliases,
     write: false,
     platform: "node",
     format: "cjs",
