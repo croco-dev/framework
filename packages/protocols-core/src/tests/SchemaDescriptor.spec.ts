@@ -42,6 +42,22 @@ describe("SchemaDescriptor", () => {
     expect(z.int().safeParse(Number.MAX_SAFE_INTEGER + 1).success).toBe(false);
   });
 
+  it("keeps safe-integer clamps inclusive after wider exclusive checks", () => {
+    const schema = z
+      .number()
+      .gt(Number.MIN_SAFE_INTEGER - 2)
+      .lt(Number.MAX_SAFE_INTEGER + 2)
+      .int();
+    expect(schema.safeParse(Number.MIN_SAFE_INTEGER).success).toBe(true);
+    expect(schema.safeParse(Number.MAX_SAFE_INTEGER).success).toBe(true);
+    expect(describeZodSchema(schema)).toMatchObject({
+      minimum: Number.MIN_SAFE_INTEGER,
+      maximum: Number.MAX_SAFE_INTEGER,
+      exclusiveMinimum: false,
+      exclusiveMaximum: false,
+    });
+  });
+
   it("rejects multi-value literals instead of silently narrowing their generated type", () => {
     expect(describeZodSchema(z.literal(["one", "two"]))).toMatchObject({
       jsonSafe: false,

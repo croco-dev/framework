@@ -760,8 +760,14 @@ function describeUnknownSchema(
       if (check.kind === "custom") continue;
       if (check.kind === "int") {
         bounds.integer = true;
-        bounds.minimum = Math.max(bounds.minimum ?? -Infinity, Number.MIN_SAFE_INTEGER);
-        bounds.maximum = Math.min(bounds.maximum ?? Infinity, Number.MAX_SAFE_INTEGER);
+        if (bounds.minimum === undefined || bounds.minimum < Number.MIN_SAFE_INTEGER) {
+          bounds.minimum = Number.MIN_SAFE_INTEGER;
+          bounds.exclusiveMinimum = false;
+        }
+        if (bounds.maximum === undefined || bounds.maximum > Number.MAX_SAFE_INTEGER) {
+          bounds.maximum = Number.MAX_SAFE_INTEGER;
+          bounds.exclusiveMaximum = false;
+        }
       } else if (check.kind === "min" || check.kind === "max") {
         if (typeof check.value !== "number" || !Number.isFinite(check.value)) {
           return unsupportedDescriptor(

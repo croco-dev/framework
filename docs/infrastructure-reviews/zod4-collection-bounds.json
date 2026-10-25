@@ -398,7 +398,7 @@
         "packages/protocols-core/package.json": "bc05be2cbdd53da0bf3e186d5e0617048e43bc59aa0a6afcb83e05f231189384",
         "packages/protocols-core/src/libs/ContractGraph.ts": "517ef43c4840aa7dc40367b13639f2bdfcb9f44203797cfb8697e085454504ca",
         "packages/protocols-core/src/libs/Operation.ts": "5167f28e256bf6b5188e765c6e72f5c2a9bd69029703d80e8a0748864e7873cd",
-        "packages/protocols-core/src/libs/SchemaDescriptor.ts": "a5b8c8555b9f25889d8397ea36bf7c200d57b2ef6ab43dbbb3d5db0ffb72ad91"
+        "packages/protocols-core/src/libs/SchemaDescriptor.ts": "e4ce63bb6c8da3542a7eb69c3a0b3c0b17d77a3467d3352ea4c70aa337975ead"
       },
       "catalogRuntimes": [],
       "profiles": {
