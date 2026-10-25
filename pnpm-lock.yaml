@@ -1763,8 +1763,8 @@ importers:
         specifier: ^0.2.2
         version: 0.2.2
       zod:
-        specifier: ^3.23.8
-        version: 3.25.76
+        specifier: 4.6.6
+        version: 4.6.6
     devDependencies:
       tsup:
         specifier: ^8.4.0
@@ -2097,8 +2097,8 @@ importers:
         specifier: ^0.2.2
         version: 0.2.2
       zod:
-        specifier: ^3.23.8
-        version: 3.25.76
+        specifier: 4.6.6
+        version: 4.6.6
     devDependencies:
       '@types/node':
         specifier: ^24
@@ -2238,8 +2238,8 @@ importers:
         specifier: 4.1.8
         version: 4.1.8(@opentelemetry/api@1.9.0)(@types/node@24.13.2)(@vitest/coverage-v8@4.1.8)(vite@7.3.7(@types/node@24.13.2)(jiti@2.6.1)(terser@5.51.2)(tsx@4.21.0)(yaml@2.9.0))
       zod:
-        specifier: ^3.23.8
-        version: 3.25.76
+        specifier: 4.6.6
+        version: 4.6.6
 
   packages/access-core:
     dependencies:
@@ -2377,8 +2377,8 @@ importers:
         specifier: 4.1.8
         version: 4.1.8(@opentelemetry/api@1.9.0)(@types/node@24.13.2)(@vitest/coverage-v8@4.1.8)(vite@7.3.7(@types/node@24.13.2)(jiti@2.6.1)(terser@5.51.2)(tsx@4.21.0)(yaml@2.9.0))
       zod:
-        specifier: ^3.23.8
-        version: 3.25.76
+        specifier: 4.6.6
+        version: 4.6.6
 
   packages/admin-ops:
     dependencies:
@@ -3120,8 +3120,8 @@ importers:
         specifier: ^24.0.0
         version: 24.0.0
       zod:
-        specifier: 3.25.76
-        version: 3.25.76
+        specifier: 4.6.6
+        version: 4.6.6
     devDependencies:
       '@croco/execution-core':
         specifier: workspace:*
@@ -3394,8 +3394,8 @@ importers:
         specifier: 4.12.0
         version: 4.12.0(typedoc@0.28.19(typescript@6.0.3))
       zod:
-        specifier: ^3.25.76
-        version: 3.25.76
+        specifier: 4.6.6
+        version: 4.6.6
     devDependencies:
       '@croco/access-core':
         specifier: workspace:*
@@ -3858,8 +3858,8 @@ importers:
         specifier: 4.1.8
         version: 4.1.8(@opentelemetry/api@1.9.0)(@types/node@24.13.2)(@vitest/coverage-v8@4.1.8)(vite@7.3.7(@types/node@24.13.2)(jiti@2.6.1)(terser@5.51.2)(tsx@4.21.0)(yaml@2.9.0))
       zod:
-        specifier: ^3.23.8
-        version: 3.25.76
+        specifier: 4.6.6
+        version: 4.6.6
 
   packages/engagement-drizzle:
     dependencies:
@@ -4873,8 +4873,8 @@ importers:
         specifier: 4.1.8
         version: 4.1.8(@opentelemetry/api@1.9.0)(@types/node@24.13.2)(@vitest/coverage-v8@4.1.8)(vite@6.4.4(@types/node@24.13.2)(jiti@2.6.1)(terser@5.51.2)(tsx@4.21.0)(yaml@2.9.0))
       zod:
-        specifier: ^3.23.8
-        version: 3.25.76
+        specifier: 4.6.6
+        version: 4.6.6
 
   packages/metering-core:
     dependencies:
@@ -5311,8 +5311,8 @@ importers:
   packages/openapi-spec:
     dependencies:
       '@asteasolutions/zod-to-openapi':
-        specifier: ^7.3.4
-        version: 7.3.4(zod@3.25.76)
+        specifier: 8.5.0
+        version: 8.5.0(zod@4.6.6)
       '@croco/problems-core':
         specifier: workspace:*
         version: link:../problems-core
@@ -5323,8 +5323,8 @@ importers:
         specifier: workspace:*
         version: link:../protocols-core
       zod:
-        specifier: ^3.23.8
-        version: 3.25.76
+        specifier: 4.6.6
+        version: 4.6.6
     devDependencies:
       '@croco/protocols-rest':
         specifier: workspace:*
@@ -5541,8 +5541,8 @@ importers:
         specifier: ^0.2.2
         version: 0.2.2
       zod:
-        specifier: ^3.23.8
-        version: 3.25.76
+        specifier: 4.6.6
+        version: 4.6.6
     devDependencies:
       vitest:
         specifier: 4.1.8
@@ -5584,8 +5584,8 @@ importers:
         specifier: ^0.2.2
         version: 0.2.2
       zod:
-        specifier: ^3.23.8
-        version: 3.25.76
+        specifier: 4.6.6
+        version: 4.6.6
     devDependencies:
       typescript:
         specifier: 6.0.3
@@ -5612,8 +5612,8 @@ importers:
         specifier: ^11.6.0
         version: 11.17.0(typescript@6.0.3)
       zod:
-        specifier: ^3.23.8
-        version: 3.25.76
+        specifier: 4.6.6
+        version: 4.6.6
     devDependencies:
       '@croco/auth-core':
         specifier: workspace:*
@@ -5784,8 +5784,8 @@ importers:
         specifier: 4.1.8
         version: 4.1.8(@opentelemetry/api@1.9.0)(@types/node@24.13.2)(@vitest/coverage-v8@4.1.8)(vite@7.3.7(@types/node@24.13.2)(jiti@2.6.1)(terser@5.51.2)(tsx@4.21.0)(yaml@2.9.0))
       zod:
-        specifier: ^3.23.8
-        version: 3.25.76
+        specifier: 4.6.6
+        version: 4.6.6
 
   packages/research-drizzle:
     dependencies:
@@ -5843,8 +5843,8 @@ importers:
   packages/rpc-codegen:
     dependencies:
       '@asteasolutions/zod-to-openapi':
-        specifier: ^7.3.4
-        version: 7.3.4(zod@3.25.76)
+        specifier: 8.5.0
+        version: 8.5.0(zod@4.6.6)
       '@croco/presentation-preset':
         specifier: workspace:*
         version: link:../presentation-preset
@@ -5864,8 +5864,8 @@ importers:
         specifier: 6.0.3
         version: 6.0.3
       zod:
-        specifier: ^3.23.8
-        version: 3.25.76
+        specifier: 4.6.6
+        version: 4.6.6
     devDependencies:
       '@croco/diagnostics-core':
         specifier: workspace:*
@@ -6348,8 +6348,8 @@ importers:
         specifier: ^0.2.2
         version: 0.2.2
       zod:
-        specifier: ^3.23.8
-        version: 3.25.76
+        specifier: 4.6.6
+        version: 4.6.6
     devDependencies:
       '@croco/framework-module':
         specifier: workspace:*
@@ -6543,8 +6543,8 @@ importers:
         specifier: ^0.2.2
         version: 0.2.2
       zod:
-        specifier: ^3.23.8
-        version: 3.25.76
+        specifier: 4.6.6
+        version: 4.6.6
     devDependencies:
       '@croco/framework-routes':
         specifier: workspace:*
@@ -6891,10 +6891,10 @@ packages:
     peerDependencies:
       graphql: '*'
 
-  '@asteasolutions/zod-to-openapi@7.3.4':
-    resolution: {integrity: sha512-/2rThQ5zPi9OzVwes6U7lK1+Yvug0iXu25olp7S0XsYmOqnyMfxH7gdSQjn/+DSOHRg7wnotwGJSyL+fBKdnEA==}
+  '@asteasolutions/zod-to-openapi@8.5.0':
+    resolution: {integrity: sha512-SABbKiObg5dLRiTFnqiW1WWwGcg1BJfmHtT2asIBnBHg6Smy/Ms2KHc650+JI4Hw7lSkdiNebEGXpwoxfben8Q==}
     peerDependencies:
-      zod: ^3.20.2
+      zod: 4.6.6
 
   '@astrojs/compiler@4.0.0':
     resolution: {integrity: sha512-eouss7G8ygdZqHuke033VMcVw5HTZUu+PXd/h06DGDUg/jt5btPYPqh66ENWw/mU78rBrf/oeC4oqoBwMtDMNA==}
@@ -15048,9 +15048,6 @@ packages:
     resolution: {integrity: sha512-zK7YHHz4ZXpW89AHXUPbQVGKI7uvkd3hzusTdotCg1UxyaVtg0zFJSTfW/Dq5f7OBBVnq6cZIaC8Ti4hb6dtCA==}
     engines: {node: '>= 14'}
 
-  zod@3.25.76:
-    resolution: {integrity: sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ==}
-
   zod@4.6.6:
     resolution: {integrity: sha512-4UmzQUF5fxvfcYHlbjBmejU+w+hbDnWFx4aS8kBx7nPBHcO2SqPbpAG8snbdg+Xse4pRefR98hgjFgIMCI/UhA==}
 
@@ -15081,10 +15078,10 @@ snapshots:
       immutable: 5.1.9
       invariant: 2.2.4
 
-  '@asteasolutions/zod-to-openapi@7.3.4(zod@3.25.76)':
+  '@asteasolutions/zod-to-openapi@8.5.0(zod@4.6.6)':
     dependencies:
       openapi3-ts: 4.5.0
-      zod: 3.25.76
+      zod: 4.6.6
 
   '@astrojs/compiler@4.0.0': {}
 
@@ -24193,8 +24190,6 @@ snapshots:
       archiver-utils: 5.0.2
       compress-commons: 6.0.2
       readable-stream: 4.7.0
-
-  zod@3.25.76: {}
 
   zod@4.6.6: {}
 

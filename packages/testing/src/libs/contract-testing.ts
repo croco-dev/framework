@@ -9,11 +9,12 @@ import {
 } from "@croco/problems-core";
 import {
   getZodObjectShape,
+  describeZodSchema,
   isZodArraySchema,
   type ContractGraphRoute,
 } from "@croco/protocols-core";
 import * as fc from "fast-check";
-import { z } from "zod";
+import type { z } from "zod";
 
 export const CONTRACT_TEST_PROFILES = {
   pr: { numRuns: 32, seed: 1489 },
@@ -24,7 +25,7 @@ export const CONTRACT_TEST_PROFILES = {
 export type ContractTestProfile = keyof typeof CONTRACT_TEST_PROFILES;
 
 /**
- * Generation intentionally supports only deterministic, transport-safe Zod v3 constructs.
+ * Generation intentionally supports only deterministic, transport-safe Zod 4 constructs.
  * Refinements, transforms, records, maps, sets, promises, lazy schemas, `any`, and `unknown`
  * must be represented by explicit caller-owned arbitraries instead of guessed by this package.
  */
@@ -34,7 +35,6 @@ export const CONTRACT_TEST_SUPPORTED_ZOD_TYPES = [
   "ZodBoolean",
   "ZodLiteral",
   "ZodEnum",
-  "ZodNativeEnum",
   "ZodObject",
   "ZodArray",
   "ZodTuple",
@@ -689,8 +689,8 @@ function invalidInputGroupValueArbitrary(
   schema: z.ZodType,
 ): fc.Arbitrary<unknown> | undefined {
   if (key === "body") return invalidValueForSchema(schema);
-  const typeName = (schema._def as { readonly typeName?: z.ZodFirstPartyTypeKind }).typeName;
-  if (typeName !== z.ZodFirstPartyTypeKind.ZodObject) {
+  const typeName = schema.type;
+  if (typeName !== "object") {
     throw new UnsupportedContractGenerationProblem(
       `input.${key}`,
       "a non-object transport input schema",
@@ -762,33 +762,36 @@ function isContractInputValid(route: ContractGraphRoute, input: ContractRequestI
 }
 
 function arbitraryForSchema(schema: z.ZodType, path: string): fc.Arbitrary<unknown> {
-  const definition = schema._def as { typeName?: string; [key: string]: unknown };
-  switch (definition.typeName) {
-    case z.ZodFirstPartyTypeKind.ZodString:
+  const definition = schema.def;
+  if (
+    definition.checks?.some(
+      (check) => check._zod.def.check === "custom" || check._zod.def.check === "overwrite",
+    )
+  ) {
+    throw new UnsupportedContractGenerationProblem(path, "a refinement or value-changing check");
+  }
+  switch (definition.type) {
+    case "string":
       return stringArbitrary(schema as z.ZodString, path);
-    case z.ZodFirstPartyTypeKind.ZodNumber:
+    case "number":
       return numberArbitrary(schema as z.ZodNumber, path);
-    case z.ZodFirstPartyTypeKind.ZodBoolean:
+    case "boolean":
       return fc.boolean();
-    case z.ZodFirstPartyTypeKind.ZodLiteral:
-      return fc.constant(readJsonLiteral(schema as z.ZodLiteral<unknown>, path));
-    case z.ZodFirstPartyTypeKind.ZodEnum:
-      return fc.constantFrom(...(schema as z.ZodEnum<[string, ...string[]]>)._def.values);
-    case z.ZodFirstPartyTypeKind.ZodNativeEnum: {
-      const values = [
-        ...new Set(Object.values((schema as z.ZodNativeEnum<z.EnumLike>)._def.values)),
-      ].filter(
+    case "literal":
+      return fc.constant(readJsonLiteral(schema as z.ZodLiteral, path));
+    case "enum": {
+      const values = [...new Set(Object.values((schema as z.ZodEnum).enum))].filter(
         (value): value is string | number =>
           (typeof value === "string" || typeof value === "number") &&
           schema.safeParse(value).success,
       );
       if (values.length === 0) {
-        throw new UnsupportedContractGenerationProblem(path, "an empty ZodNativeEnum");
+        throw new UnsupportedContractGenerationProblem(path, "an empty ZodEnum");
       }
       return fc.constantFrom(...values);
     }
-    case z.ZodFirstPartyTypeKind.ZodObject: {
-      const shape = (schema as z.AnyZodObject).shape as Record<string, z.ZodType>;
+    case "object": {
+      const shape = (schema as z.ZodObject).shape as Record<string, z.ZodType>;
       const requiredKeys = Object.entries(shape)
         .filter(([, child]) => !child.isOptional())
         .map(([key]) => key);
@@ -802,10 +805,10 @@ function arbitraryForSchema(schema: z.ZodType, path: string): fc.Arbitrary<unkno
         { requiredKeys, noNullPrototype: true },
       );
     }
-    case z.ZodFirstPartyTypeKind.ZodArray: {
+    case "array": {
       const array = schema as z.ZodArray<z.ZodType>;
-      const minimum = array._def.minLength?.value ?? 0;
-      const maximum = array._def.maxLength?.value ?? Math.max(minimum, 5);
+      const minimum = describeZodSchema(array)?.minItems ?? 0;
+      const maximum = describeZodSchema(array)?.maxItems ?? Math.max(minimum, 5);
       if (minimum > maximum) {
         throw new UnsupportedContractGenerationProblem(
           path,
@@ -817,15 +820,14 @@ function arbitraryForSchema(schema: z.ZodType, path: string): fc.Arbitrary<unkno
         maxLength: maximum,
       });
     }
-    case z.ZodFirstPartyTypeKind.ZodTuple:
+    case "tuple":
       return fc.tuple(
         ...((schema as z.ZodTuple<[z.ZodType, ...z.ZodType[]]>)._def.items.map((item, index) =>
           arbitraryForSchema(item, `${path}[${index}]`),
         ) as [fc.Arbitrary<unknown>, ...fc.Arbitrary<unknown>[]]),
       );
-    case z.ZodFirstPartyTypeKind.ZodUnion:
-    case z.ZodFirstPartyTypeKind.ZodDiscriminatedUnion: {
-      const options = Array.from((definition["options"] as Iterable<z.ZodType>) ?? []);
+    case "union": {
+      const options = Array.from((schema as z.ZodUnion<readonly z.ZodType[]>).options);
       if (options.length === 0) {
         throw new UnsupportedContractGenerationProblem(path, "a union without options");
       }
@@ -833,18 +835,18 @@ function arbitraryForSchema(schema: z.ZodType, path: string): fc.Arbitrary<unkno
         ...options.map((option, index) => arbitraryForSchema(option, `${path}|${index}`)),
       );
     }
-    case z.ZodFirstPartyTypeKind.ZodOptional:
+    case "optional":
       return arbitraryForSchema((schema as z.ZodOptional<z.ZodType>).unwrap(), path);
-    case z.ZodFirstPartyTypeKind.ZodNullable:
+    case "nullable":
       return fc.option(arbitraryForSchema((schema as z.ZodNullable<z.ZodType>).unwrap(), path), {
         nil: null,
       });
-    case z.ZodFirstPartyTypeKind.ZodDefault:
+    case "default":
       return arbitraryForSchema((schema as z.ZodDefault<z.ZodType>)._def.innerType, path);
     default:
       throw new UnsupportedContractGenerationProblem(
         path,
-        definition.typeName ?? schema.constructor.name,
+        definition.type ?? schema.constructor.name,
       );
   }
 }
@@ -852,11 +854,16 @@ function arbitraryForSchema(schema: z.ZodType, path: string): fc.Arbitrary<unkno
 function stringArbitrary(schema: z.ZodString, path: string): fc.Arbitrary<string> {
   let minLength = 0;
   let explicitMaxLength: number | undefined;
-  for (const check of schema._def.checks) {
-    if (check.kind === "min") minLength = Math.max(minLength, check.value);
-    else if (check.kind === "max") {
-      explicitMaxLength = Math.min(explicitMaxLength ?? check.value, check.value);
-    } else throw new UnsupportedContractGenerationProblem(path, `ZodString.${check.kind}`);
+  for (const rawCheck of schema.def.checks ?? []) {
+    const check = (rawCheck as z.core.$ZodChecks)._zod.def;
+    if (check.check === "min_length") minLength = Math.max(minLength, check.minimum);
+    else if (check.check === "max_length") {
+      explicitMaxLength = Math.min(explicitMaxLength ?? check.maximum, check.maximum);
+    } else
+      throw new UnsupportedContractGenerationProblem(
+        path,
+        `ZodString.${check.check === "string_format" && "format" in check ? check.format : check.check}`,
+      );
   }
   const maxLength = explicitMaxLength ?? Math.max(minLength, 32);
   if (minLength > maxLength) {
@@ -871,23 +878,32 @@ function stringArbitrary(schema: z.ZodString, path: string): fc.Arbitrary<string
 function numberArbitrary(schema: z.ZodNumber, path: string): fc.Arbitrary<number> {
   let explicitMinimum: number | undefined;
   let explicitMaximum: number | undefined;
-  let integer = false;
-  for (const check of schema._def.checks) {
-    if (check.kind === "min" && check.inclusive) {
-      explicitMinimum = Math.max(explicitMinimum ?? check.value, check.value);
-    } else if (check.kind === "max" && check.inclusive) {
-      explicitMaximum = Math.min(explicitMaximum ?? check.value, check.value);
-    } else if (check.kind === "min") {
+  let integer = schema.isInt;
+  if ("format" in schema.def && schema.def.format !== "safeint") {
+    throw new UnsupportedContractGenerationProblem(path, `ZodNumber.${String(schema.def.format)}`);
+  }
+  for (const rawCheck of schema.def.checks ?? []) {
+    const check = (rawCheck as z.core.$ZodChecks)._zod.def;
+    if (check.check === "greater_than" && check.inclusive) {
+      explicitMinimum = Math.max(explicitMinimum ?? Number(check.value), Number(check.value));
+    } else if (check.check === "less_than" && check.inclusive) {
+      explicitMaximum = Math.min(explicitMaximum ?? Number(check.value), Number(check.value));
+    } else if (check.check === "greater_than") {
       throw new UnsupportedContractGenerationProblem(path, "ZodNumber.gt");
-    } else if (check.kind === "max") {
+    } else if (check.check === "less_than") {
       throw new UnsupportedContractGenerationProblem(path, "ZodNumber.lt");
-    } else if (check.kind === "int") integer = true;
-    else throw new UnsupportedContractGenerationProblem(path, `ZodNumber.${check.kind}`);
+    } else if (check.check === "number_format" && "format" in check && check.format === "safeint")
+      integer = true;
+    else throw new UnsupportedContractGenerationProblem(path, `ZodNumber.${check.check}`);
   }
   const minimum = explicitMinimum ?? Math.min(explicitMaximum ?? 0, -1_000);
   const maximum = explicitMaximum ?? Math.max(explicitMinimum ?? 0, 1_000);
-  const generatedMinimum = integer ? Math.ceil(minimum) : minimum;
-  const generatedMaximum = integer ? Math.floor(maximum) : maximum;
+  const generatedMinimum = integer
+    ? Math.max(Number.MIN_SAFE_INTEGER, Math.ceil(minimum))
+    : minimum;
+  const generatedMaximum = integer
+    ? Math.min(Number.MAX_SAFE_INTEGER, Math.floor(maximum))
+    : maximum;
   if (generatedMinimum > generatedMaximum) {
     throw new UnsupportedContractGenerationProblem(
       path,
@@ -1296,11 +1312,11 @@ function sanitize(value: string): string {
   return value.replace(/[^a-zA-Z0-9._-]/g, "-");
 }
 
-function readJsonLiteral(
-  schema: z.ZodLiteral<unknown>,
-  path: string,
-): string | number | boolean | null {
-  const value = schema._def.value;
+function readJsonLiteral(schema: z.ZodLiteral, path: string): string | number | boolean | null {
+  const values = [...schema.values];
+  if (values.length !== 1)
+    throw new UnsupportedContractGenerationProblem(path, "a multi-value ZodLiteral");
+  const value = values[0];
   if (
     value === null ||
     typeof value === "string" ||

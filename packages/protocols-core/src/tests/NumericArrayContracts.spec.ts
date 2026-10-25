@@ -73,7 +73,7 @@ describe("numeric and array snapshot contracts", () => {
         .number()
         .int()
         .gt(2 ** 53),
-      true,
+      false,
       false,
     ],
     [
@@ -85,7 +85,7 @@ describe("numeric and array snapshot contracts", () => {
         .number()
         .int()
         .lt(-(2 ** 53)),
-      true,
+      false,
       false,
     ],
     [z.number().min(4).max(4), z.number().int().min(4).max(4), false, false],
@@ -213,7 +213,11 @@ describe("numeric and array snapshot contracts", () => {
 
 describe("numeric and array constraints in supported containers", () => {
   it.each([
-    { name: "record", wrap: (schema: z.ZodType) => z.record(schema), witness: { item: 7 } },
+    {
+      name: "record",
+      wrap: (schema: z.ZodType) => z.record(z.string(), schema),
+      witness: { item: 7 },
+    },
     { name: "brand", wrap: (schema: z.ZodType) => schema.brand<"Value">(), witness: 7 },
     { name: "readonly", wrap: (schema: z.ZodType) => schema.readonly(), witness: 7 },
     {
@@ -228,7 +232,7 @@ describe("numeric and array constraints in supported containers", () => {
     },
     {
       name: "record array element",
-      wrap: (schema: z.ZodType) => z.record(z.array(schema)),
+      wrap: (schema: z.ZodType) => z.record(z.string(), z.array(schema)),
       witness: { item: [7] },
     },
   ])("should preserve variance inside $name", ({ wrap, witness }) => {
@@ -249,8 +253,8 @@ describe("numeric and array constraints in supported containers", () => {
   });
 
   it("should compare cardinality restrictions in record values", () => {
-    const before = z.record(z.array(z.number()).max(2));
-    const after = z.record(z.array(z.number()).max(4));
+    const before = z.record(z.string(), z.array(z.number()).max(2));
+    const after = z.record(z.string(), z.array(z.number()).max(4));
     expect(before.safeParse({ item: [1, 2, 3] }).success).toBe(false);
     expect(after.safeParse({ item: [1, 2, 3] }).success).toBe(true);
     for (const direction of ["request", "response"] as const) {
@@ -407,8 +411,8 @@ describe("representable integer boundaries", () => {
       expect(before.safeParse(values[0]).success).toBe(false);
       expect(after.safeParse(values[0]).success).toBe(false);
       for (const value of values.slice(1)) {
-        expect(before.safeParse(value).success).toBe(true);
-        expect(after.safeParse(value).success).toBe(true);
+        expect(before.safeParse(value).success).toBe(Number.isSafeInteger(value));
+        expect(after.safeParse(value).success).toBe(Number.isSafeInteger(value));
       }
       for (const direction of ["request", "response"] as const) {
         const baseline = loaded(before, direction);
@@ -442,14 +446,14 @@ describe("finite numeric domain equivalence", () => {
     [
       z.number().int(),
       z.number().int().max(Number.MAX_VALUE),
-      [0, Number.MAX_VALUE],
-      [Infinity, 0.5],
+      [0, Number.MAX_SAFE_INTEGER],
+      [Infinity, Number.MAX_VALUE, 0.5],
     ],
     [
       z.number().int(),
       z.number().int().min(-Number.MAX_VALUE),
-      [0, -Number.MAX_VALUE],
-      [-Infinity, 0.5],
+      [0, Number.MIN_SAFE_INTEGER],
+      [-Infinity, -Number.MAX_VALUE, 0.5],
     ],
     [
       z.number().finite(),
@@ -497,24 +501,26 @@ describe("finite numeric domain equivalence", () => {
       z
         .number()
         .finite()
-        .min(2 ** 52),
+        .min(2 ** 52)
+        .max(Number.MAX_SAFE_INTEGER),
       z
         .number()
         .int()
         .min(2 ** 52),
-      [2 ** 52, Number.MAX_VALUE],
+      [2 ** 52, Number.MAX_SAFE_INTEGER],
       [2 ** 52 - 0.5],
     ],
     [
       z
         .number()
         .finite()
-        .max(-(2 ** 52)),
+        .max(-(2 ** 52))
+        .min(Number.MIN_SAFE_INTEGER),
       z
         .number()
         .int()
         .max(-(2 ** 52)),
-      [-(2 ** 52), -Number.MAX_VALUE],
+      [-(2 ** 52), Number.MIN_SAFE_INTEGER],
       [-(2 ** 52) + 0.5],
     ],
     [

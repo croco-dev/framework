@@ -425,7 +425,7 @@ describe("contract testing", () => {
   });
 
   it("fails clearly when a union has no generation options", () => {
-    const emptyUnion = z.ZodUnion.create([] as unknown as readonly [z.ZodTypeAny, z.ZodTypeAny]);
+    const emptyUnion = z.union([] as unknown as readonly [z.ZodTypeAny, z.ZodTypeAny]);
     const unsupported = {
       ...route,
       inputSchemas: { ...route.inputSchemas, body: emptyUnion },
@@ -569,6 +569,20 @@ describe("contract testing", () => {
         inputSchemas: { ...route.inputSchemas, body: z.string().min(10).max(5) },
       }),
     ).toThrow("impossible ZodString length range (10..5)");
+  });
+
+  it("rejects an integer generation range outside Zod 4 safe-integer bounds", () => {
+    const impossible = {
+      ...route,
+      inputSchemas: {
+        ...route.inputSchemas,
+        body: z
+          .number()
+          .int()
+          .min(Number.MAX_SAFE_INTEGER + 1),
+      },
+    } satisfies ContractGraphRoute;
+    expect(() => createContractCaseArbitrary(impossible)).toThrow("an impossible ZodNumber range");
   });
 
   it.each(["path", "query", "headers"] as const)(

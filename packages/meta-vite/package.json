@@ -87,7 +87,7 @@
     "react-server-dom-webpack": "19.2.6",
     "vite": "^6.4.3",
     "vitest": "4.1.8",
-    "zod": "^3.23.8"
+    "zod": "4.6.6"
   },
   "peerDependencies": {
     "@vitejs/plugin-rsc": "^0.5.26",
@@ -96,7 +96,7 @@
     "react-dom": "^19.2.6",
     "react-server-dom-webpack": "^19.2.6",
     "vite": "^6.4.3",
-    "zod": "^3.23.8"
+    "zod": "^4.6.6"
   },
   "peerDependenciesMeta": {
     "@vitejs/plugin-rsc": {

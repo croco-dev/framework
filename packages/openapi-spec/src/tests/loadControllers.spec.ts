@@ -417,10 +417,8 @@ function writeZodFixture(projectDir: string): void {
 
 function getZodOpenApiMethod(sourcePath: string): unknown {
   const applicationRequire = createRequire(sourcePath);
-  const zodModule = applicationRequire("zod") as {
-    readonly ZodObject: { readonly prototype: { readonly openapi?: unknown } };
-  };
-  return zodModule.ZodObject.prototype.openapi;
+  const zodModule = applicationRequire("zod") as typeof Zod;
+  return zodModule.z.object({}).openapi;
 }
 
 function getImportedControllerSource(): string {

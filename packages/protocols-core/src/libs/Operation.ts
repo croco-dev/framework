@@ -69,7 +69,7 @@ export function defineOperation<
     (definition.policy !== undefined && typeof definition.policy !== "function")
   ) {
     throw invalidOperationDefinition(
-      "Operations require Zod 3 input/output schemas and an explicit authorization function",
+      "Operations require Zod 4 input/output schemas and an explicit authorization function",
     );
   }
   return Object.freeze({ ...definition });

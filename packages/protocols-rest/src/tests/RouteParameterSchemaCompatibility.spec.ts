@@ -8,45 +8,25 @@ import { describe, expect, it } from "vitest";
 const require = createRequire(import.meta.url);
 
 describe("route parameter schema compatibility", () => {
-  it("preserves legacy recursive schemas and their unknown input in both assignment directions", () => {
+  it("accepts object-rooted Zod 4 pipelines and rejects scalar inputs or outputs", () => {
     const directory = mkdtempSync(join(tmpdir(), "croco-route-parameter-compatibility-"));
     const sourcePath = join(directory, "compatibility.ts");
     const schemaPath = resolve(import.meta.dirname, "../libs/internal/routeParameterSchema.ts");
     const zodPath = require.resolve("zod");
 
-    // Compile the historical declaration with the pinned TypeScript 6 API. Putting
-    // it directly in a test module would reintroduce TS5114 in native typechecks.
+    // Check the recursive public schema boundary with the consumer TypeScript compiler.
     const source = `
 import { z } from ${JSON.stringify(zodPath)};
 import type { RouteParameterSchema } from ${JSON.stringify(schemaPath)};
 
-type ParameterObject = Record<string, unknown>;
-type LegacySchema =
-  | z.AnyZodObject
-  | z.ZodEffects<LegacySchema, ParameterObject, ParameterObject>
-  | z.ZodPipeline<LegacySchema, z.ZodType<ParameterObject>>;
-
-declare const legacy: LegacySchema;
-declare const current: RouteParameterSchema;
-const currentFromLegacy: RouteParameterSchema = legacy;
-const legacyFromCurrent: LegacySchema = current;
-
-declare const legacyEffect: z.ZodEffects<LegacySchema, ParameterObject, ParameterObject>;
-declare const legacyPipeline: z.ZodPipeline<LegacySchema, z.ZodType<ParameterObject>>;
-const currentFromLegacyEffect: RouteParameterSchema = legacyEffect;
-const currentFromLegacyPipeline: RouteParameterSchema = legacyPipeline;
-
-type CurrentPipeline = Extract<RouteParameterSchema, {
-  readonly _def: { readonly typeName: z.ZodFirstPartyTypeKind.ZodPipeline };
-}>;
+type CurrentPipeline = Extract<RouteParameterSchema, { readonly def: { readonly type: "pipe" } }>;
 declare const currentPipeline: CurrentPipeline;
-const pipelineDefinition = currentPipeline._def;
-// @ts-expect-error Pipeline definitions retain Zod's readonly contract.
-currentPipeline._def = pipelineDefinition;
+const pipelineDefinition = currentPipeline.def;
+// @ts-expect-error Pipeline definitions retain the readonly contract.
+currentPipeline.def = pipelineDefinition;
 
 type IsUnknown<T> = unknown extends T ? ([keyof T] extends [never] ? true : false) : false;
 type Assert<T extends true> = T;
-type LegacyInputIsUnknown = Assert<IsUnknown<z.input<LegacySchema>>>;
 type CurrentInputIsUnknown = Assert<IsUnknown<z.input<RouteParameterSchema>>>;
 
 function accept<Schema extends RouteParameterSchema>(schema: Schema): Schema { return schema; }

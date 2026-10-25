@@ -44,7 +44,7 @@
     "@croco/protocols-core": "workspace:*",
     "@croco/protocols-rest": "workspace:*",
     "@trpc/server": "^11.6.0",
-    "zod": "^3.23.8"
+    "zod": "4.6.6"
   },
   "devDependencies": {
     "@croco/auth-core": "workspace:*",

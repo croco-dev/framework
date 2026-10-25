@@ -3605,7 +3605,7 @@ const recoveryMetadataByCode = {
     userAction:
       "Correct the target identified by each diagnostic before generating contracts or starting the application.",
     operatorAction:
-      "Inspect diagnostic codes, route IDs, and source locations. For contract-schema-unsupported-zod-major, replace the identified schema with a Zod 3 route contract schema.",
+      "Inspect diagnostic codes, route IDs, and source locations. For contract-schema-unsupported-zod-major, replace the identified schema with a Zod 4 route contract schema.",
     retryability: "not-retryable",
     redactionPolicy: "public",
     severity: "info",

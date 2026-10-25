@@ -1,7 +1,7 @@
 import { Problem, ProblemCategory } from "@croco/problems-core";
 import { describe, expect, expectTypeOf, it } from "vitest";
 import { z } from "zod";
-import { z as z4 } from "zod/v4";
+import { z as z3 } from "zod/v3";
 import {
   All,
   Body,
@@ -277,7 +277,7 @@ describe("route contract lifecycle types", () => {
     expectTypeOf<RouteHandlerPathParams<typeof lifecycleContract>["id"]>().toEqualTypeOf<
       z.output<typeof lifecycleContract.params.shape.id>
     >();
-    expectTypeOf<RouteClientQuery<typeof lifecycleContract>["coerced"]>().toEqualTypeOf<number>();
+    expectTypeOf<RouteClientQuery<typeof lifecycleContract>["coerced"]>().toEqualTypeOf<unknown>();
     expectTypeOf<RouteHandlerQuery<typeof lifecycleContract>["coerced"]>().toEqualTypeOf<number>();
     expectTypeOf<RouteClientQuery<typeof lifecycleContract>["defaulted"]>().toEqualTypeOf<
       string | undefined
@@ -309,7 +309,7 @@ describe("route contract lifecycle types", () => {
     expectTypeOf<RouteHandlerQuery<typeof lifecycleContract>["nullable"]>().toEqualTypeOf<
       string | null
     >();
-    expectTypeOf<RouteClientQuery<typeof lifecycleContract>["caught"]>().toEqualTypeOf<unknown>();
+    expectTypeOf<RouteClientQuery<typeof lifecycleContract>["caught"]>().toEqualTypeOf<string>();
     expectTypeOf<RouteHandlerQuery<typeof lifecycleContract>["caught"]>().toEqualTypeOf<string>();
     expectTypeOf<RouteClientBody<typeof lifecycleContract>>().toEqualTypeOf<{ name: string }>();
     expectTypeOf<RouteHandlerBody<typeof lifecycleContract>>().toEqualTypeOf<{
@@ -319,7 +319,7 @@ describe("route contract lifecycle types", () => {
     const clientRequest: RouteClientRequest<typeof lifecycleContract> = {
       params: { id: "user_1" },
       query: {
-        caught: 42,
+        caught: "42",
         coerced: 42,
         nullable: null,
         preprocessed: 7,
@@ -336,7 +336,7 @@ describe("route contract lifecycle types", () => {
     expect(handlerRequest).toEqual({
       params: { id: "user_1" },
       query: {
-        caught: "fallback",
+        caught: "42",
         coerced: 42,
         defaulted: "default",
         nullable: null,
@@ -1242,30 +1242,30 @@ function invalidRenamedPathBindings(): void {
 void invalidRenamedPathBindings;
 
 describe("route contract Zod major type boundary", () => {
-  it("requires Zod 3 in every schema slot", () => {
-    const schema = z4.object({ id: z4.string() });
+  it("requires Zod 4 in every schema slot", () => {
+    const schema = z3.object({ id: z3.string() });
     defineRouteContract({
       method: HttpMethod.GET,
       path: "/users/:id",
-      // @ts-expect-error Route contracts support Zod 3, not Zod 4 params.
+      // @ts-expect-error Route contracts support Zod 4, not Zod 3 params.
       params: schema,
     });
     defineRouteContract({
       method: HttpMethod.GET,
       path: "/users",
-      // @ts-expect-error Route contracts support Zod 3, not Zod 4 query.
+      // @ts-expect-error Route contracts support Zod 4, not Zod 3 query.
       query: schema,
     });
     defineRouteContract({
       method: HttpMethod.POST,
       path: "/users",
-      // @ts-expect-error Route contracts support Zod 3, not Zod 4 body.
+      // @ts-expect-error Route contracts support Zod 4, not Zod 3 body.
       body: schema,
     });
     defineRouteContract({
       method: HttpMethod.GET,
       path: "/users",
-      // @ts-expect-error Route contracts support Zod 3, not Zod 4 response.
+      // @ts-expect-error Route contracts support Zod 4, not Zod 3 response.
       response: schema,
     });
     expectTypeOf<typeof schema>().not.toExtend<NonNullable<RouteContractSpec["body"]>>();

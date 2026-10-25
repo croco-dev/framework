@@ -227,7 +227,7 @@ describe("admin-generated", () => {
     }
   });
 
-  it.each<{ name: string; values: z.EnumLike; expected: string }>([
+  it.each<{ name: string; values: Record<string, string | number>; expected: string }>([
     {
       name: "numeric",
       values: { 0: "Active", 1: "Inactive", Active: 0, Inactive: 1 },
@@ -278,7 +278,7 @@ describe("admin-generated", () => {
     const schema = z.object({
       label: z.string().default("all"),
       pageSize: z.number().default(20),
-      settings: z.object({ enabled: z.boolean().default(true) }).default({}),
+      settings: z.object({ enabled: z.boolean().default(true) }).default({ enabled: true }),
       nested: z.object({ count: z.number().default(1) }),
       optional: z.string().optional(),
       optionalDefault: z.string().optional().default("value"),
@@ -295,7 +295,7 @@ describe("admin-generated", () => {
       numbers: z.array(z.number().default(6)),
       legacyNullableItems: z.array(z.string().nullable()),
       variants: z.union([z.object({ size: z.number().default(4) }), z.string()]),
-      values: z.record(z.object({ size: z.number().default(5) })),
+      values: z.record(z.string(), z.object({ size: z.number().default(5) })),
     });
 
     @Controller("/defaults")
@@ -321,6 +321,8 @@ describe("admin-generated", () => {
       settings: { enabled: true },
       nested: { count: 1 },
       optionalDefault: "value",
+      defaultOptional: "value",
+      wrappedDefaultOptional: "value",
       nullable: "value",
       readonly: 2,
       refined: "value",
@@ -334,7 +336,7 @@ describe("admin-generated", () => {
       buildContractGraph([DefaultsController]),
     );
     expect(source).toContain(
-      "export type DefaultsControllerCreateDefaultsInput = { defaultOptional?: string | undefined; items: { size?: number; }[]; label?: string; legacyNullableItems: (string | null)[]; nested: { count?: number; }; nullable?: string | undefined | null; numbers: (number | undefined)[]; optional?: string; optionalDefault?: string | undefined; pageSize?: number; readonly?: number | undefined; refined?: string | undefined; settings?: { enabled?: boolean; }; values: Record<string, { size?: number; }>; variants: { size?: number; } | string; wrappedDefaultOptional?: string | undefined | undefined; wrappedOptional: string | undefined; };",
+      "export type DefaultsControllerCreateDefaultsInput = { defaultOptional?: string | undefined; items: { size?: number; }[]; label?: string; legacyNullableItems: (string | null)[]; nested: { count?: number; }; nullable?: string | undefined | null; numbers: (number | undefined)[]; optional?: string; optionalDefault?: string | undefined; pageSize?: number; readonly?: number | undefined; refined?: string; settings?: { enabled?: boolean; }; values: Record<string, { size?: number; }>; variants: { size?: number; } | string; wrappedDefaultOptional?: string | undefined | undefined; wrappedOptional: string | undefined; };",
     );
     expect(source).toContain(
       "export type DefaultsControllerCreateDefaultsOutput = { defaultOptional?: string; items: { size: number; }[]; label: string; legacyNullableItems: (string | null)[]; nested: { count: number; }; nullable: string | null; numbers: number[]; optional?: string; optionalDefault: string | undefined; pageSize: number; readonly: number; refined: string; settings: { enabled: boolean; }; values: Record<string, { size: number; }>; variants: { size: number; } | string; wrappedDefaultOptional: string | undefined; wrappedOptional: string | undefined; };",

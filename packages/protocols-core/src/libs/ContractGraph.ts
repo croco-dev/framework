@@ -453,10 +453,10 @@ export function getRouteContractSchemaDiagnostics(route: RouteIR): ContractDiagn
         route,
         "contract-schema-unsupported-zod-major",
         "error",
-        `Route contract ${slot} uses unsupported Zod major ${major} (schema kind: ${kind}); Croco route contracts require Zod 3.`,
+        `Route contract ${slot} uses unsupported Zod major ${major} (schema kind: ${kind}); Croco route contracts require Zod 4.`,
       ),
       recoveryAction:
-        "Declare this route contract schema with Zod 3; Zod 4 schemas cannot be used in Croco route contracts.",
+        "Declare this route contract schema with Zod 4; Zod 3 schemas cannot be used in Croco route contracts.",
     });
   }
 

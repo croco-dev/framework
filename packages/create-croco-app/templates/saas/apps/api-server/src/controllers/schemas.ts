@@ -57,7 +57,7 @@ export const healthSchema = z.object({
     z.object({
       name: z.string(),
       status: z.enum(["up", "down"]),
-      details: z.record(z.unknown()).optional(),
+      details: z.record(z.string(), z.unknown()).optional(),
     }),
   ),
 });
@@ -70,7 +70,7 @@ export const diagnosticsSchema = z.object({
       status: z.enum(["healthy", "degraded", "unhealthy"]),
       component: z.string(),
       message: z.string().optional(),
-      details: z.record(z.unknown()).optional(),
+      details: z.record(z.string(), z.unknown()).optional(),
       lastChecked: z.string(),
     }),
   ),
@@ -216,15 +216,15 @@ export const jobLogEntrySchema = z.object({
   timestamp: z.string(),
   level: z.string(),
   message: z.string(),
-  data: z.record(z.unknown()).optional(),
+  data: z.record(z.string(), z.unknown()).optional(),
 });
 
 export const jobDetailsSchema = jobSummarySchema.extend({
   payload: z.unknown().optional(),
   result: z.unknown().optional(),
   error: z.unknown().optional(),
-  metadata: z.record(z.unknown()).optional(),
-  checkpoints: z.record(z.unknown()).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
+  checkpoints: z.record(z.string(), z.unknown()).optional(),
   progress: z.unknown().optional(),
   logs: z.array(jobLogEntrySchema),
 });

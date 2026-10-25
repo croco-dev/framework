@@ -46,7 +46,7 @@
     "@croco/problems-core": "workspace:*",
     "@croco/protocols-core": "workspace:*",
     "reflect-metadata": "^0.2.2",
-    "zod": "^3.23.8"
+    "zod": "4.6.6"
   },
   "devDependencies": {
     "typescript": "6.0.3",

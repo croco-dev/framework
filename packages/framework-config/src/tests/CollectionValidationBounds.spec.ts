@@ -37,6 +37,13 @@ describe("collection validation bounds", () => {
       ]);
     }
     expect(visit).not.toHaveBeenCalled();
+    const invalidElements = await schema.safeParseAsync([1, 2, 3]);
+    expect(invalidElements.success).toBe(false);
+    if (!invalidElements.success) {
+      expect(invalidElements.error.issues).toEqual([
+        expect.objectContaining({ code: "too_big", maximum: 2, path: [] }),
+      ]);
+    }
   });
 
   it("rejects oversized sets and maps before visiting their entries", () => {

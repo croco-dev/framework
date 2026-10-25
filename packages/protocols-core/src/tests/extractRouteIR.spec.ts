@@ -194,8 +194,8 @@ describe("extractRouteIR", () => {
     expect(routes).toHaveLength(1);
     expect(routes[0]?.inputSchemas.body).toBeNull();
     expect(routes[0]?.inputSchemas.path).toBeTruthy();
-    expect((routes[0]?.inputSchemas.path as z.AnyZodObject).shape).toHaveProperty("id");
-    expect((routes[0]?.inputSchemas.path as z.AnyZodObject).shape.id).toBeInstanceOf(z.ZodString);
+    expect((routes[0]?.inputSchemas.path as z.ZodObject).shape).toHaveProperty("id");
+    expect((routes[0]?.inputSchemas.path as z.ZodObject).shape.id).toBeInstanceOf(z.ZodString);
     expect(routes[0]?.inputSchemas.query).toBeNull();
     expect(routes[0]?.inputSchemas.headers).toBeNull();
     expect(routes[0]?.params).toEqual([{ index: 0, kind: "path", name: "id", schema: null }]);
@@ -216,7 +216,7 @@ describe("extractRouteIR", () => {
       { index: 0, kind: "path", name: "id", schema: null },
       { index: 1, kind: "query", name: "filter", schema: null },
     ]);
-    expect((routes[0]?.inputSchemas.query as z.AnyZodObject).shape.filter.isOptional()).toBe(true);
+    expect((routes[0]?.inputSchemas.query as z.ZodObject).shape.filter.isOptional()).toBe(true);
   });
 
   it("should set inputSchemas for body, path, and query params", () => {
@@ -237,11 +237,9 @@ describe("extractRouteIR", () => {
     expect(routes).toHaveLength(1);
     expect(routes[0]?.inputSchemas.body).toBe(updateItemSchema);
     expect(routes[0]?.inputSchemas.path).toBeTruthy();
-    expect((routes[0]?.inputSchemas.path as z.AnyZodObject).shape.id).toBeInstanceOf(z.ZodString);
+    expect((routes[0]?.inputSchemas.path as z.ZodObject).shape.id).toBeInstanceOf(z.ZodString);
     expect(routes[0]?.inputSchemas.query).toBeTruthy();
-    expect((routes[0]?.inputSchemas.query as z.AnyZodObject).shape.filter).toBeInstanceOf(
-      z.ZodString,
-    );
+    expect((routes[0]?.inputSchemas.query as z.ZodObject).shape.filter).toBeInstanceOf(z.ZodString);
     expect(routes[0]?.inputSchema).toBe(updateItemSchema);
   });
 
@@ -259,9 +257,9 @@ describe("extractRouteIR", () => {
     expect(routes[0]?.inputSchemas.path).toBeNull();
     expect(routes[0]?.inputSchemas.query).toBeNull();
     expect(routes[0]?.inputSchemas.headers).toBeTruthy();
-    expect(
-      (routes[0]?.inputSchemas.headers as z.AnyZodObject).shape["x-tenant-id"].isOptional(),
-    ).toBe(true);
+    expect((routes[0]?.inputSchemas.headers as z.ZodObject).shape["x-tenant-id"].isOptional()).toBe(
+      true,
+    );
     expect(routes[0]?.params).toEqual([
       { index: 0, kind: "header", name: "x-tenant-id", schema: null },
     ]);
@@ -351,7 +349,7 @@ describe("extractRouteIR", () => {
     });
     expect(routes[0]?.inputSchemas.path).toBe(paramsSchema);
     expect(routes[0]?.inputSchemas.query).toBe(querySchema);
-    expect((routes[0]?.inputSchemas.headers as z.AnyZodObject).shape["x-tenant-id"]).toBe(
+    expect((routes[0]?.inputSchemas.headers as z.ZodObject).shape["x-tenant-id"]).toBe(
       tenantIdSchema,
     );
     expect(routes[0]?.outputSchema).toBe(userSchema);
@@ -404,18 +402,16 @@ describe("extractRouteIR", () => {
       if (contract.params) {
         expect(route?.inputSchemas.path).toBe(contract.params);
       } else {
-        expect((route?.inputSchemas.path as z.AnyZodObject).shape.id).toBe(idSchema);
+        expect((route?.inputSchemas.path as z.ZodObject).shape.id).toBe(idSchema);
         expect(route?.inputSchemas.path?.safeParse({ id: "invalid" }).success).toBe(false);
       }
       if (contract.query) {
         expect(route?.inputSchemas.query).toBe(contract.query);
       } else {
-        expect((route?.inputSchemas.query as z.AnyZodObject).shape.filter).toBe(filterSchema);
+        expect((route?.inputSchemas.query as z.ZodObject).shape.filter).toBe(filterSchema);
         expect(route?.inputSchemas.query?.safeParse({ filter: "" }).success).toBe(false);
       }
-      expect((route?.inputSchemas.headers as z.AnyZodObject).shape["x-tenant-id"]).toBe(
-        headerSchema,
-      );
+      expect((route?.inputSchemas.headers as z.ZodObject).shape["x-tenant-id"]).toBe(headerSchema);
       expect(route?.params).toEqual(decoratorRoute?.params);
       expect(route?.outputSchema).toBe(responseSchema);
       expect(route?.routeContract?.inputSchemas).toEqual({

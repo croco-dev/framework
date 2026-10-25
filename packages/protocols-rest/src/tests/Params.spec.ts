@@ -89,7 +89,7 @@ describe("Param decorators", () => {
     ["refine", z.object({ id: z.string() }).refine(({ id }) => id.length > 0)],
     ["superRefine", z.object({ id: z.string() }).superRefine(() => undefined)],
     ["transform", z.object({ id: z.string() }).transform(({ id }) => ({ id: id.length }))],
-    ["pipe", z.object({ id: z.string() }).pipe(z.object({ id: z.coerce.number() }))],
+    ["pipe", z.object({ id: z.string() }).pipe(z.object({ id: z.coerce.number<string>() }))],
     [
       "nested effects",
       z

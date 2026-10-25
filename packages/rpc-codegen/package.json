@@ -56,14 +56,14 @@
     "docs:api:model": "node --experimental-strip-types ../docs/scripts/generate-package-api-model.mts"
   },
   "dependencies": {
-    "@asteasolutions/zod-to-openapi": "^7.3.4",
+    "@asteasolutions/zod-to-openapi": "8.5.0",
     "@croco/presentation-preset": "workspace:*",
     "@croco/problems-core": "workspace:*",
     "@croco/protocol-codegen": "workspace:*",
     "@croco/protocols-core": "workspace:*",
     "prettier": "^3.0.0",
     "typescript": "^5.0.0",
-    "zod": "^3.23.8"
+    "zod": "4.6.6"
   },
   "devDependencies": {
     "@croco/diagnostics-core": "workspace:*",
