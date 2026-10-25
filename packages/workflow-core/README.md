@@ -217,3 +217,7 @@ remain `compensating` because their failure writes were not confirmed. If the te
 fails, durable execution state may remain `running`; the returned Problem reports failure and
 retains the recording evidence. Reconcile uncertain records using the store and external compensation
 receipts before replaying. This does not provide durable recovery when the store cannot write.
+
+When compensation-failure recording errors were collected, automatic outbox dispatch is deferred
+so a publisher failure cannot mask that evidence. Successfully recorded compensation messages remain
+pending and can be delivered through `SagaRunner.dispatchOutbox()` after handling the failure.

@@ -602,8 +602,6 @@ export class SagaRunner {
       "saga.compensation.failure_count": compensationFailures.length,
     });
 
-    await this.dispatchOutbox(definition, failed.id);
-
     const problem = new SagaExecutionFailedProblem(definition.name, failed.id, failure, {
       status: failed.status,
       compensationFailures,
@@ -622,7 +620,9 @@ export class SagaRunner {
               "Saga compensation failure records could not be persisted",
             ),
       );
+      throw problem;
     }
+    await this.dispatchOutbox(definition, failed.id);
     throw problem;
   }
 

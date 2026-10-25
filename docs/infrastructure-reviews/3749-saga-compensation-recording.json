@@ -6,7 +6,7 @@
       "classification": "pure-contract",
       "reason": "Isolate compensation-failure recording errors so reverse compensation continues and the terminal Problem retains business, compensation and recording evidence. No provider, schema or host lifecycle changes.",
       "files": {
-        "packages/workflow-core/src/libs/saga/SagaRunner.ts": "84be9206ce7f967e93b28824c56ebf6951f805f244b8bd20d41eff8a118865b9"
+        "packages/workflow-core/src/libs/saga/SagaRunner.ts": "5d19c34db5cff8c6205032af8474ebdc4f586de1b318070245dc3b3833590f81"
       },
       "catalogRuntimes": [],
       "profiles": {

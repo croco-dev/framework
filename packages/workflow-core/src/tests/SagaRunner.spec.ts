@@ -1302,6 +1302,74 @@ describe("SagaRunner", () => {
     },
   );
 
+  it("defers outbox dispatch until recording failures have been reported", async () => {
+    const delegate = new InMemorySagaStore();
+    const recordError = new ProviderProblem("compensation record unavailable");
+    const publishError = new ProviderProblem("outbox publisher unavailable");
+    const publish = vi.fn().mockRejectedValue(publishError);
+    const store: SagaStore = {
+      create: (params) => delegate.create(params),
+      findById: (id) => delegate.findById(id),
+      findByIdempotencyKey: (name, key) => delegate.findByIdempotencyKey(name, key),
+      list: (options) => delegate.list(options),
+      update: (id, data) => {
+        if (data.steps?.some((step) => step.status === "compensation_failed")) {
+          throw recordError;
+        }
+        return delegate.update(id, data);
+      },
+    };
+    const runner = new SagaRunner(store);
+    const definition: SagaDefinition = {
+      name: "recording-failure-with-outbox",
+      outbox: { publish },
+      steps: [
+        {
+          id: "first",
+          run: () => "payment",
+          compensate: (_input, context) => {
+            context.enqueueOutbox({ id: "refund", topic: "refund", payload: { amount: 42 } });
+          },
+        },
+        {
+          id: "second",
+          run: () => "inventory",
+          compensate: () => {
+            throw new CompensationProblem("release failed");
+          },
+        },
+        {
+          id: "third",
+          run: () => {
+            throw new ProviderProblem("business failure");
+          },
+        },
+      ],
+    };
+    const problem = await runner.execute(definition, {}).catch((error: unknown) => error);
+    expect(problem).toBeInstanceOf(SagaExecutionFailedProblem);
+    expect(problem).toHaveProperty("extensions.originalFailureMessage", "business failure");
+    expect(problem).toHaveProperty("extensions.compensationFailures", [
+      {
+        code: "workflow-core/test-compensation-problem",
+        message: "release failed",
+        retryable: false,
+      },
+    ]);
+    expect(problem).toHaveProperty("sagaFailureRecordError", recordError);
+    expect(publish).not.toHaveBeenCalled();
+    const [execution] = await runner.listExecutions({ sagaName: definition.name });
+    expect(execution.status).toBe("failed");
+    expect(execution.steps[0]?.outboxMessages[0]?.status).toBe("pending");
+    await expect(runner.dispatchOutbox(definition, execution.id)).rejects.toBe(publishError);
+    expect((await runner.getExecution(execution.id)).steps[0]?.outboxMessages[0]?.status).toBe(
+      "pending",
+    );
+    publish.mockResolvedValue(undefined);
+    const recovered = await runner.dispatchOutbox(definition, execution.id);
+    expect(recovered.steps[0]?.outboxMessages[0]?.status).toBe("published");
+  });
+
   it.each([
     ["compensation bookkeeping", "compensating", "failed", undefined],
     [
