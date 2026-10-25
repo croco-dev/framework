@@ -959,6 +959,7 @@
         "query": null,
         "headers": null
       },
+      "successStatus": 200,
       "response": {
         "kind": "object",
         "typeName": "ZodObject",
@@ -1066,12 +1067,7 @@
         {
           "kind": "query",
           "name": "tenantId",
-          "schema": {
-            "kind": "string",
-            "typeName": "ZodString",
-            "jsonSafe": true,
-            "minLength": 1
-          }
+          "schema": null
         }
       ],
       "request": {
@@ -1096,6 +1092,7 @@
         },
         "headers": null
       },
+      "successStatus": 200,
       "response": {
         "kind": "object",
         "typeName": "ZodObject",
@@ -1181,6 +1178,8 @@
                     "jsonSafe": true,
                     "minimum": 0,
                     "exclusiveMinimum": false,
+                    "maximum": 9007199254740991,
+                    "exclusiveMaximum": false,
                     "integer": true
                   }
                 },
@@ -1417,6 +1416,8 @@
                         "jsonSafe": true,
                         "minimum": 0,
                         "exclusiveMinimum": true,
+                        "maximum": 9007199254740991,
+                        "exclusiveMaximum": false,
                         "integer": true
                       }
                     },
@@ -1785,6 +1786,8 @@
                       "jsonSafe": true,
                       "minimum": 0,
                       "exclusiveMinimum": false,
+                      "maximum": 9007199254740991,
+                      "exclusiveMaximum": false,
                       "integer": true
                     }
                   },
@@ -2060,6 +2063,8 @@
                   "jsonSafe": true,
                   "minimum": 0,
                   "exclusiveMinimum": false,
+                  "maximum": 9007199254740991,
+                  "exclusiveMaximum": false,
                   "integer": true
                 }
               },
@@ -2292,6 +2297,8 @@
                 "jsonSafe": true,
                 "minimum": 0,
                 "exclusiveMinimum": false,
+                "maximum": 9007199254740991,
+                "exclusiveMaximum": false,
                 "integer": true
               }
             },
@@ -2423,6 +2430,7 @@
         "query": null,
         "headers": null
       },
+      "successStatus": 200,
       "response": {
         "kind": "union",
         "typeName": "ZodUnion",
@@ -2513,6 +2521,10 @@
                           "kind": "number",
                           "typeName": "ZodNumber",
                           "jsonSafe": true,
+                          "minimum": -9007199254740991,
+                          "exclusiveMinimum": false,
+                          "maximum": 9007199254740991,
+                          "exclusiveMaximum": false,
                           "integer": true
                         }
                       }
@@ -2575,6 +2587,8 @@
                   "jsonSafe": true,
                   "minimum": 0,
                   "exclusiveMinimum": false,
+                  "maximum": 9007199254740991,
+                  "exclusiveMaximum": false,
                   "integer": true
                 }
               },
@@ -2674,27 +2688,12 @@
         {
           "kind": "path",
           "name": "id",
-          "schema": {
-            "kind": "string",
-            "typeName": "ZodString",
-            "jsonSafe": true,
-            "minLength": 1
-          }
+          "schema": null
         },
         {
           "kind": "query",
           "name": "tenantId",
-          "schema": {
-            "kind": "optional",
-            "typeName": "ZodOptional",
-            "jsonSafe": true,
-            "inner": {
-              "kind": "string",
-              "typeName": "ZodString",
-              "jsonSafe": true,
-              "minLength": 1
-            }
-          }
+          "schema": null
         }
       ],
       "request": {
@@ -2740,6 +2739,7 @@
         },
         "headers": null
       },
+      "successStatus": 200,
       "response": {
         "kind": "object",
         "typeName": "ZodObject",
@@ -2855,17 +2855,7 @@
         {
           "kind": "query",
           "name": "tenantId",
-          "schema": {
-            "kind": "optional",
-            "typeName": "ZodOptional",
-            "jsonSafe": true,
-            "inner": {
-              "kind": "string",
-              "typeName": "ZodString",
-              "jsonSafe": true,
-              "minLength": 1
-            }
-          }
+          "schema": null
         }
       ],
       "request": {
@@ -2895,6 +2885,7 @@
         },
         "headers": null
       },
+      "successStatus": 200,
       "response": {
         "kind": "array",
         "typeName": "ZodArray",
@@ -3011,17 +3002,7 @@
         {
           "kind": "query",
           "name": "tenantId",
-          "schema": {
-            "kind": "optional",
-            "typeName": "ZodOptional",
-            "jsonSafe": true,
-            "inner": {
-              "kind": "string",
-              "typeName": "ZodString",
-              "jsonSafe": true,
-              "minLength": 1
-            }
-          }
+          "schema": null
         }
       ],
       "request": {
@@ -3051,6 +3032,7 @@
         },
         "headers": null
       },
+      "successStatus": 200,
       "response": {
         "kind": "array",
         "typeName": "ZodArray",
@@ -3163,17 +3145,7 @@
         {
           "kind": "query",
           "name": "tenantId",
-          "schema": {
-            "kind": "optional",
-            "typeName": "ZodOptional",
-            "jsonSafe": true,
-            "inner": {
-              "kind": "string",
-              "typeName": "ZodString",
-              "jsonSafe": true,
-              "minLength": 1
-            }
-          }
+          "schema": null
         }
       ],
       "request": {
@@ -3203,6 +3175,7 @@
         },
         "headers": null
       },
+      "successStatus": 200,
       "response": {
         "kind": "object",
         "typeName": "ZodObject",
@@ -3522,6 +3495,7 @@
         "query": null,
         "headers": null
       },
+      "successStatus": 200,
       "response": {
         "kind": "object",
         "typeName": "ZodObject",
@@ -3582,11 +3556,7 @@
         {
           "kind": "path",
           "name": "id",
-          "schema": {
-            "kind": "string",
-            "typeName": "ZodString",
-            "jsonSafe": true
-          }
+          "schema": null
         }
       ],
       "request": {
@@ -3610,6 +3580,7 @@
         "query": null,
         "headers": null
       },
+      "successStatus": 200,
       "response": {
         "kind": "object",
         "typeName": "ZodObject",
@@ -3660,11 +3631,7 @@
         {
           "kind": "path",
           "name": "id",
-          "schema": {
-            "kind": "string",
-            "typeName": "ZodString",
-            "jsonSafe": true
-          }
+          "schema": null
         }
       ],
       "request": {
@@ -3688,6 +3655,7 @@
         "query": null,
         "headers": null
       },
+      "successStatus": 200,
       "response": {
         "kind": "object",
         "typeName": "ZodObject",
@@ -3759,6 +3727,7 @@
         "query": null,
         "headers": null
       },
+      "successStatus": 200,
       "response": {
         "kind": "array",
         "typeName": "ZodArray",
@@ -3824,11 +3793,7 @@
         {
           "kind": "path",
           "name": "id",
-          "schema": {
-            "kind": "string",
-            "typeName": "ZodString",
-            "jsonSafe": true
-          }
+          "schema": null
         },
         {
           "kind": "body",
@@ -3907,6 +3872,7 @@
         "query": null,
         "headers": null
       },
+      "successStatus": 200,
       "response": {
         "kind": "object",
         "typeName": "ZodObject",
