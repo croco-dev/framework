@@ -63,7 +63,7 @@
     "@croco/webhooks-core": "workspace:*",
     "better-auth": "^1.6.23",
     "drizzle-orm": "catalog:",
-    "zod": "4.3.6"
+    "zod": "4.6.6"
   },
   "devDependencies": {
     "@croco/testing": "workspace:*",

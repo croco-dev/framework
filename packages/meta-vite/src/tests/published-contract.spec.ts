@@ -100,7 +100,7 @@ describe("published @croco/meta-vite contract", () => {
           "react-dom@19.2.6",
           "react-server-dom-webpack@19.2.6",
           "vite@6.4.3",
-          "zod@^3.23.8",
+          "zod@^4.6.6",
         ]);
         writeFileSync(
           join(consumerRoot, "runtime.mjs"),
@@ -179,7 +179,7 @@ describe("published @croco/meta-vite contract", () => {
           rootDir,
         ).stdout;
 
-        expect(packedManifest.peerDependencies?.zod).toBe("^3.23.8");
+        expect(packedManifest.peerDependencies?.zod).toBe("^4.6.6");
         expect(packedManifest.peerDependencies?.ioredis).toBe("5.10.1");
         expect(packedManifest.peerDependencies?.["react-dom"]).toBe("^19.2.6");
         expect(packedManifest.peerDependencies?.vite).toBe("^6.4.3");
@@ -243,7 +243,7 @@ describe("published @croco/meta-vite contract", () => {
           "@types/react@^19",
           "react@19.2.6",
           "vite@6.4.3",
-          "zod@^3.23.8",
+          "zod@^4.6.6",
         ]);
         expect(installedPackageVersion(rootConsumerRoot, "vite")).toBe("6.4.3");
         expect(installedVitePostcssVersion(rootConsumerRoot)).toBe(supportedPostcssVersion);
@@ -280,7 +280,7 @@ describe("published @croco/meta-vite contract", () => {
           "ioredis@5.10.1",
           "react@19.2.6",
           "vite@6.4.3",
-          "zod@^3.23.8",
+          "zod@^4.6.6",
         ]);
         expect(installedPackageVersion(redisConsumerRoot, "vite")).toBe("6.4.3");
         expect(installedVitePostcssVersion(redisConsumerRoot)).toBe(supportedPostcssVersion);

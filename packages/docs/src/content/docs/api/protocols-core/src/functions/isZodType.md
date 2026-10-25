@@ -5,7 +5,7 @@ prev: false
 title: "isZodType"
 ---
 
-> **isZodType**(`value`): `value is ZodType<any, ZodTypeDef, any>`
+> **isZodType**(`value`): `value is ZodType<unknown, unknown, $ZodTypeInternals<unknown, unknown>>`
 
 ## Parameters
 
@@ -15,4 +15,4 @@ title: "isZodType"
 
 ## Returns
 
-`value is ZodType<any, ZodTypeDef, any>`
+`value is ZodType<unknown, unknown, $ZodTypeInternals<unknown, unknown>>`

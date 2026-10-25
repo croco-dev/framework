@@ -319,7 +319,7 @@ async function createProductionAppWorkspace(): Promise<string> {
         "@croco/protocols-rest": "workspace:*",
         "@croco/repository-core": "workspace:*",
         "@croco/transports-http": "workspace:*",
-        zod: "^3.23.8",
+        zod: "^4.6.6",
       },
     }),
   );

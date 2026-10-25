@@ -1,0 +1,688 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "admin-generated",
+      "classification": "protocol-render",
+      "reason": "Use patched Zod 4 schema contracts and introspection without changing Host, storage or provider lifecycle requirements.",
+      "files": {
+        "packages/admin-generated/src/libs/generate.ts": "7b093778c98a6d1860bc56c65fe4488cebc0e178741600e3fe485a946a6c1832"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "The change concerns schema validation, contract generation or derived diagnostics. It introduces no Node Host capability, external storage or lifecycle dependency; existing deployment support remains unchanged.",
+          "providers": [],
+          "constraints": [
+            "Pure schema and generated-artifact evidence does not certify a Host deployment or live provider. Zod 3 route schemas are intentionally unsupported."
+          ],
+          "references": ["packages/admin-generated/src/libs/generate.ts", "docs/zod-support.md"]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "The change concerns schema validation, contract generation or derived diagnostics. It introduces no Lambda Host capability, external storage or lifecycle dependency; existing deployment support remains unchanged.",
+          "providers": [],
+          "constraints": [
+            "Pure schema and generated-artifact evidence does not certify a Host deployment or live provider. Zod 3 route schemas are intentionally unsupported."
+          ],
+          "references": ["packages/admin-generated/src/libs/generate.ts", "docs/zod-support.md"]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "The change concerns schema validation, contract generation or derived diagnostics. It introduces no Workers Host or Node Container Host capability, external storage or lifecycle dependency; existing deployment support remains unchanged.",
+          "providers": [],
+          "constraints": [
+            "Pure schema and generated-artifact evidence does not certify a Host deployment or live provider. Zod 3 route schemas are intentionally unsupported."
+          ],
+          "references": ["packages/admin-generated/src/libs/generate.ts", "docs/zod-support.md"]
+        }
+      }
+    },
+    {
+      "package": "auth-better-auth",
+      "classification": "pure-contract",
+      "reason": "Use patched Zod 4 schemas and redacted upstream Error messages without changing public Problem JSON, Host capabilities, storage or provider lifecycle ownership.",
+      "files": {
+        "packages/auth-better-auth/package.json": "56b30aa5de1c02b65d6994385ae2fdad949e878c7be91a9039e7208e7c24e73d",
+        "packages/auth-better-auth/src/libs/problems/BetterAuthAuthenticationProblem.ts": "c746f52f9d82c3d14309321e2e5d56957d2696d47d4de0c280eab7f2f9d8e5e3",
+        "packages/auth-better-auth/src/libs/redaction.ts": "362afe535c7ce0b5b4a707baddac7c06d513647405ff0414560c07883a2ea2b6"
+      },
+      "catalogRuntimes": ["node", "lambda"],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "The change concerns schema validation, contract generation or derived diagnostics. It introduces no Node Host capability, external storage or lifecycle dependency; existing deployment support remains unchanged. Redacted upstream Error messages are retained as non-enumerable causes and omitted from public Problem JSON.",
+          "providers": [],
+          "constraints": [
+            "Pure schema and generated-artifact evidence does not certify a Host deployment or live provider. Zod 3 route schemas are intentionally unsupported."
+          ],
+          "references": [
+            "packages/auth-better-auth/package.json",
+            "docs/zod-support.md",
+            "packages/auth-better-auth/src/libs/problems/BetterAuthAuthenticationProblem.ts",
+            "scripts/tests/ProviderProblemCauses.spec.ts",
+            "packages/auth-better-auth/src/libs/redaction.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "The change concerns schema validation, contract generation or derived diagnostics. It introduces no Lambda Host capability, external storage or lifecycle dependency; existing deployment support remains unchanged. Redacted upstream Error messages are retained as non-enumerable causes and omitted from public Problem JSON.",
+          "providers": [],
+          "constraints": [
+            "Pure schema and generated-artifact evidence does not certify a Host deployment or live provider. Zod 3 route schemas are intentionally unsupported."
+          ],
+          "references": [
+            "packages/auth-better-auth/package.json",
+            "docs/zod-support.md",
+            "packages/auth-better-auth/src/libs/problems/BetterAuthAuthenticationProblem.ts",
+            "scripts/tests/ProviderProblemCauses.spec.ts",
+            "packages/auth-better-auth/src/libs/redaction.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "The change concerns schema validation, contract generation or derived diagnostics. It introduces no Workers Host or Node Container Host capability, external storage or lifecycle dependency; existing deployment support remains unchanged. Redacted upstream Error messages are retained as non-enumerable causes and omitted from public Problem JSON.",
+          "providers": [],
+          "constraints": [
+            "Pure schema and generated-artifact evidence does not certify a Host deployment or live provider. Zod 3 route schemas are intentionally unsupported."
+          ],
+          "references": [
+            "packages/auth-better-auth/package.json",
+            "docs/zod-support.md",
+            "packages/auth-better-auth/src/libs/problems/BetterAuthAuthenticationProblem.ts",
+            "scripts/tests/ProviderProblemCauses.spec.ts",
+            "packages/auth-better-auth/src/libs/redaction.ts"
+          ]
+        }
+      }
+    },
+    {
+      "package": "billing-polar",
+      "classification": "pure-contract",
+      "reason": "Use patched Zod 4 schema contracts and introspection without changing Host, storage or provider lifecycle requirements.",
+      "files": {
+        "packages/billing-polar/package.json": "c06482ce3f32f16b45b0f17fa42879cac56cc36dd776a09005c0e1b4e7bb8408"
+      },
+      "catalogRuntimes": ["node", "lambda"],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "The change concerns schema validation, contract generation or derived diagnostics. It introduces no Node Host capability, external storage or lifecycle dependency; existing deployment support remains unchanged.",
+          "providers": [],
+          "constraints": [
+            "Pure schema and generated-artifact evidence does not certify a Host deployment or live provider. Zod 3 route schemas are intentionally unsupported."
+          ],
+          "references": ["packages/billing-polar/package.json", "docs/zod-support.md"]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "The change concerns schema validation, contract generation or derived diagnostics. It introduces no Lambda Host capability, external storage or lifecycle dependency; existing deployment support remains unchanged.",
+          "providers": [],
+          "constraints": [
+            "Pure schema and generated-artifact evidence does not certify a Host deployment or live provider. Zod 3 route schemas are intentionally unsupported."
+          ],
+          "references": ["packages/billing-polar/package.json", "docs/zod-support.md"]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "The change concerns schema validation, contract generation or derived diagnostics. It introduces no Workers Host or Node Container Host capability, external storage or lifecycle dependency; existing deployment support remains unchanged.",
+          "providers": [],
+          "constraints": [
+            "Pure schema and generated-artifact evidence does not certify a Host deployment or live provider. Zod 3 route schemas are intentionally unsupported."
+          ],
+          "references": ["packages/billing-polar/package.json", "docs/zod-support.md"]
+        }
+      }
+    },
+    {
+      "package": "cli",
+      "classification": "pure-contract",
+      "reason": "Use patched Zod 4 schema contracts and introspection without changing Host, storage or provider lifecycle requirements.",
+      "files": {
+        "packages/cli/package.json": "91d2fdefc5459ccd0d9bcb865552410dd3b10c54c0433ed7bae9160e22214995"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "The change concerns schema validation, contract generation or derived diagnostics. It introduces no Node Host capability, external storage or lifecycle dependency; existing deployment support remains unchanged.",
+          "providers": [],
+          "constraints": [
+            "Pure schema and generated-artifact evidence does not certify a Host deployment or live provider. Zod 3 route schemas are intentionally unsupported."
+          ],
+          "references": ["packages/cli/package.json", "docs/zod-support.md"]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "The change concerns schema validation, contract generation or derived diagnostics. It introduces no Lambda Host capability, external storage or lifecycle dependency; existing deployment support remains unchanged.",
+          "providers": [],
+          "constraints": [
+            "Pure schema and generated-artifact evidence does not certify a Host deployment or live provider. Zod 3 route schemas are intentionally unsupported."
+          ],
+          "references": ["packages/cli/package.json", "docs/zod-support.md"]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "The change concerns schema validation, contract generation or derived diagnostics. It introduces no Workers Host or Node Container Host capability, external storage or lifecycle dependency; existing deployment support remains unchanged.",
+          "providers": [],
+          "constraints": [
+            "Pure schema and generated-artifact evidence does not certify a Host deployment or live provider. Zod 3 route schemas are intentionally unsupported."
+          ],
+          "references": ["packages/cli/package.json", "docs/zod-support.md"]
+        }
+      }
+    },
+    {
+      "package": "engagement-core",
+      "classification": "pure-contract",
+      "reason": "Use patched Zod 4 schema contracts and introspection without changing Host, storage or provider lifecycle requirements.",
+      "files": {
+        "packages/engagement-core/package.json": "1e1078cbeebb845f921a99ce0e2b6b9bcf9553430834a0d10d90e4c1d79d2ab9"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "The change concerns schema validation, contract generation or derived diagnostics. It introduces no Node Host capability, external storage or lifecycle dependency; existing deployment support remains unchanged.",
+          "providers": [],
+          "constraints": [
+            "Pure schema and generated-artifact evidence does not certify a Host deployment or live provider. Zod 3 route schemas are intentionally unsupported."
+          ],
+          "references": ["packages/engagement-core/package.json", "docs/zod-support.md"]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "The change concerns schema validation, contract generation or derived diagnostics. It introduces no Lambda Host capability, external storage or lifecycle dependency; existing deployment support remains unchanged.",
+          "providers": [],
+          "constraints": [
+            "Pure schema and generated-artifact evidence does not certify a Host deployment or live provider. Zod 3 route schemas are intentionally unsupported."
+          ],
+          "references": ["packages/engagement-core/package.json", "docs/zod-support.md"]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "The change concerns schema validation, contract generation or derived diagnostics. It introduces no Workers Host or Node Container Host capability, external storage or lifecycle dependency; existing deployment support remains unchanged.",
+          "providers": [],
+          "constraints": [
+            "Pure schema and generated-artifact evidence does not certify a Host deployment or live provider. Zod 3 route schemas are intentionally unsupported."
+          ],
+          "references": ["packages/engagement-core/package.json", "docs/zod-support.md"]
+        }
+      }
+    },
+    {
+      "package": "framework-config",
+      "classification": "pure-contract",
+      "reason": "Use patched Zod 4 schema contracts and introspection without changing Host, storage or provider lifecycle requirements.",
+      "files": {
+        "packages/framework-config/package.json": "4b257268ecc67d9fcc2452243637d6fc2d5380c127bd0c80536393c71f118ade"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "The change concerns schema validation, contract generation or derived diagnostics. It introduces no Node Host capability, external storage or lifecycle dependency; existing deployment support remains unchanged.",
+          "providers": [],
+          "constraints": [
+            "Pure schema and generated-artifact evidence does not certify a Host deployment or live provider. Zod 3 route schemas are intentionally unsupported."
+          ],
+          "references": ["packages/framework-config/package.json", "docs/zod-support.md"]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "The change concerns schema validation, contract generation or derived diagnostics. It introduces no Lambda Host capability, external storage or lifecycle dependency; existing deployment support remains unchanged.",
+          "providers": [],
+          "constraints": [
+            "Pure schema and generated-artifact evidence does not certify a Host deployment or live provider. Zod 3 route schemas are intentionally unsupported."
+          ],
+          "references": ["packages/framework-config/package.json", "docs/zod-support.md"]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "The change concerns schema validation, contract generation or derived diagnostics. It introduces no Workers Host or Node Container Host capability, external storage or lifecycle dependency; existing deployment support remains unchanged.",
+          "providers": [],
+          "constraints": [
+            "Pure schema and generated-artifact evidence does not certify a Host deployment or live provider. Zod 3 route schemas are intentionally unsupported."
+          ],
+          "references": ["packages/framework-config/package.json", "docs/zod-support.md"]
+        }
+      }
+    },
+    {
+      "package": "meta-vite",
+      "classification": "pure-contract",
+      "reason": "Use patched Zod 4 schema contracts and introspection without changing Host, storage or provider lifecycle requirements.",
+      "files": {
+        "packages/meta-vite/package.json": "f6f03cdd23f7a520395e0eaef7e733e524d012f09438db3b97f6e0f63f97e1a5"
+      },
+      "catalogRuntimes": ["node", "lambda", "cloudflare-workers", "browser"],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "The change concerns schema validation, contract generation or derived diagnostics. It introduces no Node Host capability, external storage or lifecycle dependency; existing deployment support remains unchanged.",
+          "providers": [],
+          "constraints": [
+            "Pure schema and generated-artifact evidence does not certify a Host deployment or live provider. Zod 3 route schemas are intentionally unsupported."
+          ],
+          "references": ["packages/meta-vite/package.json", "docs/zod-support.md"]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "The change concerns schema validation, contract generation or derived diagnostics. It introduces no Lambda Host capability, external storage or lifecycle dependency; existing deployment support remains unchanged.",
+          "providers": [],
+          "constraints": [
+            "Pure schema and generated-artifact evidence does not certify a Host deployment or live provider. Zod 3 route schemas are intentionally unsupported."
+          ],
+          "references": ["packages/meta-vite/package.json", "docs/zod-support.md"]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "The change concerns schema validation, contract generation or derived diagnostics. It introduces no Workers Host or Node Container Host capability, external storage or lifecycle dependency; existing deployment support remains unchanged.",
+          "providers": [],
+          "constraints": [
+            "Pure schema and generated-artifact evidence does not certify a Host deployment or live provider. Zod 3 route schemas are intentionally unsupported."
+          ],
+          "references": ["packages/meta-vite/package.json", "docs/zod-support.md"]
+        }
+      }
+    },
+    {
+      "package": "openapi-spec",
+      "classification": "protocol-render",
+      "reason": "Use patched Zod 4 schema contracts and introspection without changing Host, storage or provider lifecycle requirements.",
+      "files": {
+        "packages/openapi-spec/package.json": "3e9a2cee82552f806ab7e0904e17d6ffa0eb2bfdac7be64661ee10964906c65c"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "The change concerns schema validation, contract generation or derived diagnostics. It introduces no Node Host capability, external storage or lifecycle dependency; existing deployment support remains unchanged.",
+          "providers": [],
+          "constraints": [
+            "Pure schema and generated-artifact evidence does not certify a Host deployment or live provider. Zod 3 route schemas are intentionally unsupported."
+          ],
+          "references": ["packages/openapi-spec/package.json", "docs/zod-support.md"]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "The change concerns schema validation, contract generation or derived diagnostics. It introduces no Lambda Host capability, external storage or lifecycle dependency; existing deployment support remains unchanged.",
+          "providers": [],
+          "constraints": [
+            "Pure schema and generated-artifact evidence does not certify a Host deployment or live provider. Zod 3 route schemas are intentionally unsupported."
+          ],
+          "references": ["packages/openapi-spec/package.json", "docs/zod-support.md"]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "The change concerns schema validation, contract generation or derived diagnostics. It introduces no Workers Host or Node Container Host capability, external storage or lifecycle dependency; existing deployment support remains unchanged.",
+          "providers": [],
+          "constraints": [
+            "Pure schema and generated-artifact evidence does not certify a Host deployment or live provider. Zod 3 route schemas are intentionally unsupported."
+          ],
+          "references": ["packages/openapi-spec/package.json", "docs/zod-support.md"]
+        }
+      }
+    },
+    {
+      "package": "pagination-core",
+      "classification": "pure-contract",
+      "reason": "Use patched Zod 4 schema contracts and introspection without changing Host, storage or provider lifecycle requirements.",
+      "files": {
+        "packages/pagination-core/package.json": "560f3ca96545e16639f64245bfb8b7e316eb424b1573dfa8486dd1e2b94664c9"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "The change concerns schema validation, contract generation or derived diagnostics. It introduces no Node Host capability, external storage or lifecycle dependency; existing deployment support remains unchanged.",
+          "providers": [],
+          "constraints": [
+            "Pure schema and generated-artifact evidence does not certify a Host deployment or live provider. Zod 3 route schemas are intentionally unsupported."
+          ],
+          "references": ["packages/pagination-core/package.json", "docs/zod-support.md"]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "The change concerns schema validation, contract generation or derived diagnostics. It introduces no Lambda Host capability, external storage or lifecycle dependency; existing deployment support remains unchanged.",
+          "providers": [],
+          "constraints": [
+            "Pure schema and generated-artifact evidence does not certify a Host deployment or live provider. Zod 3 route schemas are intentionally unsupported."
+          ],
+          "references": ["packages/pagination-core/package.json", "docs/zod-support.md"]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "The change concerns schema validation, contract generation or derived diagnostics. It introduces no Workers Host or Node Container Host capability, external storage or lifecycle dependency; existing deployment support remains unchanged.",
+          "providers": [],
+          "constraints": [
+            "Pure schema and generated-artifact evidence does not certify a Host deployment or live provider. Zod 3 route schemas are intentionally unsupported."
+          ],
+          "references": ["packages/pagination-core/package.json", "docs/zod-support.md"]
+        }
+      }
+    },
+    {
+      "package": "problems-core",
+      "classification": "pure-contract",
+      "reason": "Refresh generated recovery instructions and source locations for the Zod 4 contract boundary; error transport and Host behavior are unchanged.",
+      "files": {
+        "packages/problems-core/src/generated/problem-code-registry.ts": "1ff76bdd3f1f0ec3e4bafad0a58271f8788f42304cd32c70e7cdf38469837398"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "The change concerns schema validation, contract generation or derived diagnostics. It introduces no Node Host capability, external storage or lifecycle dependency; existing deployment support remains unchanged.",
+          "providers": [],
+          "constraints": [
+            "Pure schema and generated-artifact evidence does not certify a Host deployment or live provider. Zod 3 route schemas are intentionally unsupported."
+          ],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "docs/zod-support.md"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "The change concerns schema validation, contract generation or derived diagnostics. It introduces no Lambda Host capability, external storage or lifecycle dependency; existing deployment support remains unchanged.",
+          "providers": [],
+          "constraints": [
+            "Pure schema and generated-artifact evidence does not certify a Host deployment or live provider. Zod 3 route schemas are intentionally unsupported."
+          ],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "docs/zod-support.md"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "The change concerns schema validation, contract generation or derived diagnostics. It introduces no Workers Host or Node Container Host capability, external storage or lifecycle dependency; existing deployment support remains unchanged.",
+          "providers": [],
+          "constraints": [
+            "Pure schema and generated-artifact evidence does not certify a Host deployment or live provider. Zod 3 route schemas are intentionally unsupported."
+          ],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "docs/zod-support.md"
+          ]
+        }
+      }
+    },
+    {
+      "package": "protocols-core",
+      "classification": "pure-contract",
+      "reason": "Use patched Zod 4 schema contracts and introspection without changing Host, storage or provider lifecycle requirements.",
+      "files": {
+        "packages/protocols-core/package.json": "bc05be2cbdd53da0bf3e186d5e0617048e43bc59aa0a6afcb83e05f231189384",
+        "packages/protocols-core/src/libs/ContractGraph.ts": "517ef43c4840aa7dc40367b13639f2bdfcb9f44203797cfb8697e085454504ca",
+        "packages/protocols-core/src/libs/Operation.ts": "5167f28e256bf6b5188e765c6e72f5c2a9bd69029703d80e8a0748864e7873cd",
+        "packages/protocols-core/src/libs/SchemaDescriptor.ts": "890a5e54ddd7e04405c1ef27fabb80755109d5c370527110f8c15cfed6a45e6d"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "The change concerns schema validation, contract generation or derived diagnostics. It introduces no Node Host capability, external storage or lifecycle dependency; existing deployment support remains unchanged.",
+          "providers": [],
+          "constraints": [
+            "Pure schema and generated-artifact evidence does not certify a Host deployment or live provider. Zod 3 route schemas are intentionally unsupported."
+          ],
+          "references": ["packages/protocols-core/package.json", "docs/zod-support.md"]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "The change concerns schema validation, contract generation or derived diagnostics. It introduces no Lambda Host capability, external storage or lifecycle dependency; existing deployment support remains unchanged.",
+          "providers": [],
+          "constraints": [
+            "Pure schema and generated-artifact evidence does not certify a Host deployment or live provider. Zod 3 route schemas are intentionally unsupported."
+          ],
+          "references": ["packages/protocols-core/package.json", "docs/zod-support.md"]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "The change concerns schema validation, contract generation or derived diagnostics. It introduces no Workers Host or Node Container Host capability, external storage or lifecycle dependency; existing deployment support remains unchanged.",
+          "providers": [],
+          "constraints": [
+            "Pure schema and generated-artifact evidence does not certify a Host deployment or live provider. Zod 3 route schemas are intentionally unsupported."
+          ],
+          "references": ["packages/protocols-core/package.json", "docs/zod-support.md"]
+        }
+      }
+    },
+    {
+      "package": "protocols-rest",
+      "classification": "pure-contract",
+      "reason": "Use patched Zod 4 schema contracts and introspection without changing Host, storage or provider lifecycle requirements.",
+      "files": {
+        "packages/protocols-rest/package.json": "dbd3cb9a2b0953b71c17a905c9ec128465fd4271e99b6886911342fb667e44ff",
+        "packages/protocols-rest/src/libs/internal/routeParameterSchema.ts": "045b9b34ae24906f878f6b6f02875574d30af93beea3011be7039b26b46280e7",
+        "packages/protocols-rest/src/libs/types/RouteContract.ts": "a44ac1faacdd6429eb4edf4bd963b35c06676be2890ee26ae786c164f58dbe2c"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "The change concerns schema validation, contract generation or derived diagnostics. It introduces no Node Host capability, external storage or lifecycle dependency; existing deployment support remains unchanged.",
+          "providers": [],
+          "constraints": [
+            "Pure schema and generated-artifact evidence does not certify a Host deployment or live provider. Zod 3 route schemas are intentionally unsupported."
+          ],
+          "references": ["packages/protocols-rest/package.json", "docs/zod-support.md"]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "The change concerns schema validation, contract generation or derived diagnostics. It introduces no Lambda Host capability, external storage or lifecycle dependency; existing deployment support remains unchanged.",
+          "providers": [],
+          "constraints": [
+            "Pure schema and generated-artifact evidence does not certify a Host deployment or live provider. Zod 3 route schemas are intentionally unsupported."
+          ],
+          "references": ["packages/protocols-rest/package.json", "docs/zod-support.md"]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "The change concerns schema validation, contract generation or derived diagnostics. It introduces no Workers Host or Node Container Host capability, external storage or lifecycle dependency; existing deployment support remains unchanged.",
+          "providers": [],
+          "constraints": [
+            "Pure schema and generated-artifact evidence does not certify a Host deployment or live provider. Zod 3 route schemas are intentionally unsupported."
+          ],
+          "references": ["packages/protocols-rest/package.json", "docs/zod-support.md"]
+        }
+      }
+    },
+    {
+      "package": "protocols-trpc",
+      "classification": "pure-contract",
+      "reason": "Use patched Zod 4 schema contracts and introspection without changing Host, storage or provider lifecycle requirements.",
+      "files": {
+        "packages/protocols-trpc/package.json": "55edeaa49e9c5866ea9ded3aa8dac3e1d515fe407dc9c3ff1733e8a4a25d18b2",
+        "packages/protocols-trpc/src/libs/TrpcParamResolver.ts": "fd28fa8f99bdf46b097c3efcbef4f50bfe8fea9abaa4d3df85992b657d1b8ae2"
+      },
+      "catalogRuntimes": ["node", "cloudflare-workers"],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "The change concerns schema validation, contract generation or derived diagnostics. It introduces no Node Host capability, external storage or lifecycle dependency; existing deployment support remains unchanged.",
+          "providers": [],
+          "constraints": [
+            "Pure schema and generated-artifact evidence does not certify a Host deployment or live provider. Zod 3 route schemas are intentionally unsupported."
+          ],
+          "references": ["packages/protocols-trpc/package.json", "docs/zod-support.md"]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "The change concerns schema validation, contract generation or derived diagnostics. It introduces no Lambda Host capability, external storage or lifecycle dependency; existing deployment support remains unchanged.",
+          "providers": [],
+          "constraints": [
+            "Pure schema and generated-artifact evidence does not certify a Host deployment or live provider. Zod 3 route schemas are intentionally unsupported."
+          ],
+          "references": ["packages/protocols-trpc/package.json", "docs/zod-support.md"]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "The change concerns schema validation, contract generation or derived diagnostics. It introduces no Workers Host or Node Container Host capability, external storage or lifecycle dependency; existing deployment support remains unchanged.",
+          "providers": [],
+          "constraints": [
+            "Pure schema and generated-artifact evidence does not certify a Host deployment or live provider. Zod 3 route schemas are intentionally unsupported."
+          ],
+          "references": ["packages/protocols-trpc/package.json", "docs/zod-support.md"]
+        }
+      }
+    },
+    {
+      "package": "research-core",
+      "classification": "pure-contract",
+      "reason": "Use patched Zod 4 schema contracts and introspection without changing Host, storage or provider lifecycle requirements.",
+      "files": {
+        "packages/research-core/package.json": "695cceb10621cc2673ff961e7fe6234a19c79af1b76da9b70380da675638e9d9"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "The change concerns schema validation, contract generation or derived diagnostics. It introduces no Node Host capability, external storage or lifecycle dependency; existing deployment support remains unchanged.",
+          "providers": [],
+          "constraints": [
+            "Pure schema and generated-artifact evidence does not certify a Host deployment or live provider. Zod 3 route schemas are intentionally unsupported."
+          ],
+          "references": ["packages/research-core/package.json", "docs/zod-support.md"]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "The change concerns schema validation, contract generation or derived diagnostics. It introduces no Lambda Host capability, external storage or lifecycle dependency; existing deployment support remains unchanged.",
+          "providers": [],
+          "constraints": [
+            "Pure schema and generated-artifact evidence does not certify a Host deployment or live provider. Zod 3 route schemas are intentionally unsupported."
+          ],
+          "references": ["packages/research-core/package.json", "docs/zod-support.md"]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "The change concerns schema validation, contract generation or derived diagnostics. It introduces no Workers Host or Node Container Host capability, external storage or lifecycle dependency; existing deployment support remains unchanged.",
+          "providers": [],
+          "constraints": [
+            "Pure schema and generated-artifact evidence does not certify a Host deployment or live provider. Zod 3 route schemas are intentionally unsupported."
+          ],
+          "references": ["packages/research-core/package.json", "docs/zod-support.md"]
+        }
+      }
+    },
+    {
+      "package": "rpc-codegen",
+      "classification": "protocol-render",
+      "reason": "Use patched Zod 4 schema contracts and introspection without changing Host, storage or provider lifecycle requirements.",
+      "files": {
+        "packages/rpc-codegen/package.json": "aa753f6229ff89e0bb051b80614c43e95dae1efa78a115c78cae839a4a34b16f",
+        "packages/rpc-codegen/src/libs/generate.ts": "dd724e0536a00d0402d0a68e21a094691f84285aeb17a028d16f0b3be0f4c2b7"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "The change concerns schema validation, contract generation or derived diagnostics. It introduces no Node Host capability, external storage or lifecycle dependency; existing deployment support remains unchanged.",
+          "providers": [],
+          "constraints": [
+            "Pure schema and generated-artifact evidence does not certify a Host deployment or live provider. Zod 3 route schemas are intentionally unsupported."
+          ],
+          "references": ["packages/rpc-codegen/package.json", "docs/zod-support.md"]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "The change concerns schema validation, contract generation or derived diagnostics. It introduces no Lambda Host capability, external storage or lifecycle dependency; existing deployment support remains unchanged.",
+          "providers": [],
+          "constraints": [
+            "Pure schema and generated-artifact evidence does not certify a Host deployment or live provider. Zod 3 route schemas are intentionally unsupported."
+          ],
+          "references": ["packages/rpc-codegen/package.json", "docs/zod-support.md"]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "The change concerns schema validation, contract generation or derived diagnostics. It introduces no Workers Host or Node Container Host capability, external storage or lifecycle dependency; existing deployment support remains unchanged.",
+          "providers": [],
+          "constraints": [
+            "Pure schema and generated-artifact evidence does not certify a Host deployment or live provider. Zod 3 route schemas are intentionally unsupported."
+          ],
+          "references": ["packages/rpc-codegen/package.json", "docs/zod-support.md"]
+        }
+      }
+    },
+    {
+      "package": "testing",
+      "classification": "pure-contract",
+      "reason": "Use patched Zod 4 schema contracts and introspection without changing Host, storage or provider lifecycle requirements.",
+      "files": {
+        "packages/testing/package.json": "7b72b8417cde4011344a30ac2d9f62dc23ee5e1726443078dc1be1ca2ab59b12",
+        "packages/testing/src/libs/contract-testing.ts": "6b79de05d35deea219b609fa2eb6ac226f8ed5fd3c6b4355a98528e3d3f0b341"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "The change concerns schema validation, contract generation or derived diagnostics. It introduces no Node Host capability, external storage or lifecycle dependency; existing deployment support remains unchanged.",
+          "providers": [],
+          "constraints": [
+            "Pure schema and generated-artifact evidence does not certify a Host deployment or live provider. Zod 3 route schemas are intentionally unsupported."
+          ],
+          "references": ["packages/testing/package.json", "docs/zod-support.md"]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "The change concerns schema validation, contract generation or derived diagnostics. It introduces no Lambda Host capability, external storage or lifecycle dependency; existing deployment support remains unchanged.",
+          "providers": [],
+          "constraints": [
+            "Pure schema and generated-artifact evidence does not certify a Host deployment or live provider. Zod 3 route schemas are intentionally unsupported."
+          ],
+          "references": ["packages/testing/package.json", "docs/zod-support.md"]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "The change concerns schema validation, contract generation or derived diagnostics. It introduces no Workers Host or Node Container Host capability, external storage or lifecycle dependency; existing deployment support remains unchanged.",
+          "providers": [],
+          "constraints": [
+            "Pure schema and generated-artifact evidence does not certify a Host deployment or live provider. Zod 3 route schemas are intentionally unsupported."
+          ],
+          "references": ["packages/testing/package.json", "docs/zod-support.md"]
+        }
+      }
+    },
+    {
+      "package": "transports-http",
+      "classification": "pure-contract",
+      "reason": "Use patched Zod 4 schema contracts and introspection without changing Host, storage or provider lifecycle requirements.",
+      "files": {
+        "packages/transports-http/package.json": "67a506ac5ba443f9a52f62118b30e04948aa393c41c7f3f7c8d371aafeedfa86"
+      },
+      "catalogRuntimes": ["node", "lambda"],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "The change concerns schema validation, contract generation or derived diagnostics. It introduces no Node Host capability, external storage or lifecycle dependency; existing deployment support remains unchanged.",
+          "providers": [],
+          "constraints": [
+            "Pure schema and generated-artifact evidence does not certify a Host deployment or live provider. Zod 3 route schemas are intentionally unsupported."
+          ],
+          "references": ["packages/transports-http/package.json", "docs/zod-support.md"]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "The change concerns schema validation, contract generation or derived diagnostics. It introduces no Lambda Host capability, external storage or lifecycle dependency; existing deployment support remains unchanged.",
+          "providers": [],
+          "constraints": [
+            "Pure schema and generated-artifact evidence does not certify a Host deployment or live provider. Zod 3 route schemas are intentionally unsupported."
+          ],
+          "references": ["packages/transports-http/package.json", "docs/zod-support.md"]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "The change concerns schema validation, contract generation or derived diagnostics. It introduces no Workers Host or Node Container Host capability, external storage or lifecycle dependency; existing deployment support remains unchanged.",
+          "providers": [],
+          "constraints": [
+            "Pure schema and generated-artifact evidence does not certify a Host deployment or live provider. Zod 3 route schemas are intentionally unsupported."
+          ],
+          "references": ["packages/transports-http/package.json", "docs/zod-support.md"]
+        }
+      }
+    }
+  ]
+}

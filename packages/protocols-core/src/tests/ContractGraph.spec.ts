@@ -606,11 +606,9 @@ describe("buildContractGraph", () => {
       { index: 1, kind: "query", name: "include", schema: null },
       { index: 2, kind: "header", name: "x-request-id", schema: null },
     ]);
-    expect((getUserRoute?.inputSchemas.query as z.AnyZodObject).shape.include.isOptional()).toBe(
-      true,
-    );
+    expect((getUserRoute?.inputSchemas.query as z.ZodObject).shape.include.isOptional()).toBe(true);
     expect(
-      (getUserRoute?.inputSchemas.headers as z.AnyZodObject).shape["x-request-id"].isOptional(),
+      (getUserRoute?.inputSchemas.headers as z.ZodObject).shape["x-request-id"].isOptional(),
     ).toBe(true);
 
     expect(graph.diagnostics).toHaveLength(6);

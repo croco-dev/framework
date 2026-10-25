@@ -5011,7 +5011,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/admin-generated/src/libs/generate.ts";
-          readonly line: 57;
+          readonly line: 61;
           readonly column: 5;
           readonly kind: "problem-constructor";
         },
@@ -8147,7 +8147,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/auth-clerk/src/libs/problems/ClerkProblems.ts";
-          readonly line: 131;
+          readonly line: 133;
           readonly column: 1;
           readonly kind: "problem-class";
         },
@@ -8175,7 +8175,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/auth-clerk/src/libs/problems/ClerkProblems.ts";
-          readonly line: 171;
+          readonly line: 173;
           readonly column: 5;
           readonly kind: "problem-constructor";
         },
@@ -8231,7 +8231,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/auth-clerk/src/libs/problems/ClerkProblems.ts";
-          readonly line: 120;
+          readonly line: 122;
           readonly column: 1;
           readonly kind: "problem-class";
         },
@@ -8259,7 +8259,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/auth-clerk/src/libs/problems/ClerkProblems.ts";
-          readonly line: 158;
+          readonly line: 160;
           readonly column: 1;
           readonly kind: "problem-class";
         },
@@ -8315,7 +8315,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/auth-clerk/src/libs/problems/ClerkProblems.ts";
-          readonly line: 97;
+          readonly line: 98;
           readonly column: 1;
           readonly kind: "problem-class";
         },
@@ -8343,7 +8343,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/auth-clerk/src/libs/problems/ClerkProblems.ts";
-          readonly line: 146;
+          readonly line: 148;
           readonly column: 1;
           readonly kind: "problem-class";
         },
@@ -24571,7 +24571,7 @@ export type CrocoProblemRegistry = {
       readonly recovery: {
         readonly cause: "The collected contract graph contains blocking diagnostics, including route-contract validation errors and unsupported Zod majors.";
         readonly userAction: "Correct the target identified by each diagnostic before generating contracts or starting the application.";
-        readonly operatorAction: "Inspect diagnostic codes, route IDs, and source locations. For contract-schema-unsupported-zod-major, replace the identified schema with a Zod 3 route contract schema.";
+        readonly operatorAction: "Inspect diagnostic codes, route IDs, and source locations. For contract-schema-unsupported-zod-major, replace the identified schema with a Zod 4 route contract schema.";
         readonly retryability: "not-retryable";
         readonly redactionPolicy: "public";
         readonly telemetry: {
@@ -25116,7 +25116,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/protocols-rest/src/libs/internal/routeParameterSchema.ts";
-          readonly line: 25;
+          readonly line: 22;
           readonly column: 11;
           readonly kind: "problem-factory";
         },
@@ -38025,7 +38025,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/admin-generated/src/libs/generate.ts",
-          line: 57,
+          line: 61,
           column: 5,
           kind: "problem-constructor",
         },
@@ -41548,7 +41548,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/auth-clerk/src/libs/problems/ClerkProblems.ts",
-          line: 131,
+          line: 133,
           column: 1,
           kind: "problem-class",
         },
@@ -41580,7 +41580,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/auth-clerk/src/libs/problems/ClerkProblems.ts",
-          line: 171,
+          line: 173,
           column: 5,
           kind: "problem-constructor",
         },
@@ -41640,7 +41640,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/auth-clerk/src/libs/problems/ClerkProblems.ts",
-          line: 120,
+          line: 122,
           column: 1,
           kind: "problem-class",
         },
@@ -41672,7 +41672,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/auth-clerk/src/libs/problems/ClerkProblems.ts",
-          line: 158,
+          line: 160,
           column: 1,
           kind: "problem-class",
         },
@@ -41735,7 +41735,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/auth-clerk/src/libs/problems/ClerkProblems.ts",
-          line: 97,
+          line: 98,
           column: 1,
           kind: "problem-class",
         },
@@ -41768,7 +41768,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/auth-clerk/src/libs/problems/ClerkProblems.ts",
-          line: 146,
+          line: 148,
           column: 1,
           kind: "problem-class",
         },
@@ -59904,7 +59904,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
         userAction:
           "Correct the target identified by each diagnostic before generating contracts or starting the application.",
         operatorAction:
-          "Inspect diagnostic codes, route IDs, and source locations. For contract-schema-unsupported-zod-major, replace the identified schema with a Zod 3 route contract schema.",
+          "Inspect diagnostic codes, route IDs, and source locations. For contract-schema-unsupported-zod-major, replace the identified schema with a Zod 4 route contract schema.",
         retryability: "not-retryable",
         redactionPolicy: "public",
         telemetry: {
@@ -60520,7 +60520,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/protocols-rest/src/libs/internal/routeParameterSchema.ts",
-          line: 25,
+          line: 22,
           column: 11,
           kind: "problem-factory",
         },

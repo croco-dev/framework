@@ -31,6 +31,40 @@ const MIXED_NATIVE_ENUM = {
 } as const;
 
 describe("SchemaDescriptor", () => {
+  it("preserves Zod 4 safe-integer limits in contract comparisons", () => {
+    expect(describeZodSchema(z.int())).toMatchObject({
+      kind: "number",
+      integer: true,
+      minimum: Number.MIN_SAFE_INTEGER,
+      maximum: Number.MAX_SAFE_INTEGER,
+    });
+    expect(z.int().safeParse(Number.MAX_SAFE_INTEGER).success).toBe(true);
+    expect(z.int().safeParse(Number.MAX_SAFE_INTEGER + 1).success).toBe(false);
+  });
+
+  it("keeps safe-integer clamps inclusive after wider exclusive checks", () => {
+    const schema = z
+      .number()
+      .gt(Number.MIN_SAFE_INTEGER - 2)
+      .lt(Number.MAX_SAFE_INTEGER + 2)
+      .int();
+    expect(schema.safeParse(Number.MIN_SAFE_INTEGER).success).toBe(true);
+    expect(schema.safeParse(Number.MAX_SAFE_INTEGER).success).toBe(true);
+    expect(describeZodSchema(schema)).toMatchObject({
+      minimum: Number.MIN_SAFE_INTEGER,
+      maximum: Number.MAX_SAFE_INTEGER,
+      exclusiveMinimum: false,
+      exclusiveMaximum: false,
+    });
+  });
+
+  it("rejects multi-value literals instead of silently narrowing their generated type", () => {
+    expect(describeZodSchema(z.literal(["one", "two"]))).toMatchObject({
+      jsonSafe: false,
+      unsupportedReason: expect.stringContaining("Multi-value literals"),
+    });
+  });
+
   it("should inspect wrapped input presence without executing defaults or effects", () => {
     const defaultValue = vi.fn(() => "fallback");
     const transform = vi.fn((value: string | undefined) => value ?? "transformed");
@@ -245,9 +279,17 @@ describe("SchemaDescriptor", () => {
       expect.objectContaining({
         code: CONTRACT_SCHEMA_JSON_UNSAFE_DIAGNOSTIC_CODE,
         schemaPath: ["trimmed"],
-        typeName: "ZodEffects",
+        typeName: "ZodPipeline",
       }),
     ]);
+  });
+
+  it("retains numeric string enum values and rejects unrepresented number formats", () => {
+    expect(describeZodSchema(z.enum(["0", "1"]))?.values).toEqual(["0", "1"]);
+    expect(describeZodSchema(z.int32())).toMatchObject({
+      jsonSafe: false,
+      unsupportedReason: expect.stringContaining("int32"),
+    });
   });
 
   it("should ignore TypeScript native enum reverse mappings", () => {
@@ -321,7 +363,6 @@ describe("SchemaDescriptor", () => {
       [z.number(), "ZodNumber"],
       [z.enum(["first", "second"]), "ZodEnum"],
       [z.union([z.literal("first"), z.literal("second")]), "ZodUnion"],
-      [z.string().brand<"RecordKey">(), "ZodBranded"],
     ] as const;
 
     for (const [keySchema, keyTypeName] of unsupportedKeySchemas) {
@@ -382,15 +423,8 @@ describe("SchemaDescriptor", () => {
 
   it("should recognize Zod schemas structurally without accepting parse-like objects", () => {
     const schema = z.string();
-    const foreignSchema = Object.assign(
-      Object.create({ constructor: schema.constructor }),
-      schema,
-      {
-        safeParse: schema.safeParse.bind(schema),
-      },
-    );
-
-    expect(foreignSchema).not.toBeInstanceOf(z.ZodType);
+    const foreignSchema = { _zod: schema._zod, safeParse: schema.safeParse.bind(schema) };
+    expect(Object.getPrototypeOf(foreignSchema)).not.toBe(Object.getPrototypeOf(schema));
     expect(isZodType(schema)).toBe(true);
     expect(isZodType(foreignSchema)).toBe(true);
     expect(isZodType({ safeParse: () => ({ success: true }) })).toBe(false);
@@ -431,6 +465,15 @@ describe("SchemaDescriptor", () => {
     expect(acceptsZodArrayInput(z.coerce.boolean())).toBe(false);
     expect(acceptsZodArrayInput(z.preprocess((value) => value, z.string()))).toBe(false);
     expect(acceptsZodArrayInput(z.preprocess((value) => value, tags))).toBe(false);
+  });
+
+  it("retains union refinements when query projection removes scalar branches", () => {
+    const source = z
+      .union([z.coerce.string(), z.array(z.string())])
+      .refine((value) => Array.isArray(value) && value.length === 1, "exactly one tag");
+    const projected = getZodArrayInputSchema(source);
+    expect(projected?.safeParse(["one"]).success).toBe(true);
+    expect(projected?.safeParse(["one", "two"]).success).toBe(false);
   });
 
   it("should project unions to array-preserving parameter branches", () => {

@@ -13,7 +13,7 @@ title: "validateRequest"
 
 ### TSchema
 
-`TSchema` _extends_ `ZodType`\<`any`, `ZodTypeDef`, `any`\>
+`TSchema` _extends_ `ZodType`\<`unknown`, `unknown`, `$ZodTypeInternals`\<`unknown`, `unknown`\>\>
 
 ## Parameters
 

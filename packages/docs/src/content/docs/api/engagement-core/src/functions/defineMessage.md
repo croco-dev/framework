@@ -19,7 +19,7 @@ title: "defineMessage"
 
 ### TData
 
-`TData` _extends_ `ZodTypeAny`
+`TData` _extends_ `ZodTypeAny`\<`unknown`, `unknown`, `$ZodTypeInternals`\<`unknown`, `unknown`\>\>
 
 ### TChannels
 

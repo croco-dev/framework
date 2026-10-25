@@ -47,11 +47,11 @@
     "docs:api:model": "node --experimental-strip-types ../docs/scripts/generate-package-api-model.mts"
   },
   "dependencies": {
-    "@asteasolutions/zod-to-openapi": "^7.3.4",
+    "@asteasolutions/zod-to-openapi": "8.5.0",
     "@croco/problems-core": "workspace:*",
     "@croco/protocol-codegen": "workspace:*",
     "@croco/protocols-core": "workspace:*",
-    "zod": "^3.23.8"
+    "zod": "4.6.6"
   },
   "devDependencies": {
     "@croco/protocols-rest": "workspace:*",

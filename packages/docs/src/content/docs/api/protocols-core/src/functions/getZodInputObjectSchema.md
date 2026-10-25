@@ -5,7 +5,7 @@ prev: false
 title: "getZodInputObjectSchema"
 ---
 
-> **getZodInputObjectSchema**(`schema`): `AnyZodObject` \| `undefined`
+> **getZodInputObjectSchema**(`schema`): `ZodObject`\<`$ZodLooseShape`, `$strip`\> \| `undefined`
 
 ## Parameters
 
@@ -15,4 +15,4 @@ title: "getZodInputObjectSchema"
 
 ## Returns
 
-`AnyZodObject` \| `undefined`
+`ZodObject`\<`$ZodLooseShape`, `$strip`\> \| `undefined`

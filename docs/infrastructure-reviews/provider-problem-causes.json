@@ -1,0 +1,355 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "auth-clerk",
+      "classification": "pure-contract",
+      "reason": "Preserve redacted upstream causal diagnostics without mutating SDK errors or changing public Problem JSON or infrastructure requirements.",
+      "files": {
+        "packages/auth-clerk/src/libs/problems/ClerkProblems.ts": "31f567d183fcbf917e045cdd5ae83c87ec713b111994f79865d223101fba2190"
+      },
+      "catalogRuntimes": ["node", "lambda"],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "This copies redacted Error diagnostics into a non-enumerable Problem cause without changing Host capabilities, storage, provider calls or lifecycle ownership.",
+          "providers": [],
+          "constraints": [
+            "No new platform support or live-provider certification is claimed. Public Problem JSON continues to omit Error causes."
+          ],
+          "references": [
+            "packages/auth-clerk/src/libs/problems/ClerkProblems.ts",
+            "packages/problems-core/src/libs/Problem.ts",
+            "scripts/tests/ProviderProblemCauses.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "This copies redacted Error diagnostics into a non-enumerable Problem cause without changing Host capabilities, storage, provider calls or lifecycle ownership.",
+          "providers": [],
+          "constraints": [
+            "No new platform support or live-provider certification is claimed. Public Problem JSON continues to omit Error causes."
+          ],
+          "references": [
+            "packages/auth-clerk/src/libs/problems/ClerkProblems.ts",
+            "packages/problems-core/src/libs/Problem.ts",
+            "scripts/tests/ProviderProblemCauses.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "This copies redacted Error diagnostics into a non-enumerable Problem cause without changing Host capabilities, storage, provider calls or lifecycle ownership.",
+          "providers": [],
+          "constraints": [
+            "No new platform support or live-provider certification is claimed. Public Problem JSON continues to omit Error causes."
+          ],
+          "references": [
+            "packages/auth-clerk/src/libs/problems/ClerkProblems.ts",
+            "packages/problems-core/src/libs/Problem.ts",
+            "scripts/tests/ProviderProblemCauses.spec.ts"
+          ]
+        }
+      }
+    },
+    {
+      "package": "batch-qstash",
+      "classification": "pure-contract",
+      "reason": "Preserve redacted upstream causal diagnostics without mutating SDK errors or changing public Problem JSON or infrastructure requirements.",
+      "files": {
+        "packages/batch-qstash/src/libs/problems/QStashBatchProblems.ts": "b8a2b6b6051635dfac19e5fcd16dc5aaa0a893922c774843cea570016d5e905c"
+      },
+      "catalogRuntimes": ["node", "lambda"],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "This copies redacted Error diagnostics into a non-enumerable Problem cause without changing Host capabilities, storage, provider calls or lifecycle ownership.",
+          "providers": [],
+          "constraints": [
+            "No new platform support or live-provider certification is claimed. Public Problem JSON continues to omit Error causes."
+          ],
+          "references": [
+            "packages/batch-qstash/src/libs/problems/QStashBatchProblems.ts",
+            "packages/problems-core/src/libs/Problem.ts",
+            "scripts/tests/ProviderProblemCauses.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "This copies redacted Error diagnostics into a non-enumerable Problem cause without changing Host capabilities, storage, provider calls or lifecycle ownership.",
+          "providers": [],
+          "constraints": [
+            "No new platform support or live-provider certification is claimed. Public Problem JSON continues to omit Error causes."
+          ],
+          "references": [
+            "packages/batch-qstash/src/libs/problems/QStashBatchProblems.ts",
+            "packages/problems-core/src/libs/Problem.ts",
+            "scripts/tests/ProviderProblemCauses.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "This copies redacted Error diagnostics into a non-enumerable Problem cause without changing Host capabilities, storage, provider calls or lifecycle ownership.",
+          "providers": [],
+          "constraints": [
+            "No new platform support or live-provider certification is claimed. Public Problem JSON continues to omit Error causes."
+          ],
+          "references": [
+            "packages/batch-qstash/src/libs/problems/QStashBatchProblems.ts",
+            "packages/problems-core/src/libs/Problem.ts",
+            "scripts/tests/ProviderProblemCauses.spec.ts"
+          ]
+        }
+      }
+    },
+    {
+      "package": "framework-logger",
+      "classification": "pure-contract",
+      "reason": "Keep internal Problem causes out of emitted log text while retaining Problem diagnostics and ordinary Error cause chains.",
+      "files": {
+        "packages/framework-logger/src/sanitizeLogRecord.ts": "7267ae312edca294472608c9c8fc4ef722316de59e1ba7eb0ca03fd18a8b9196"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "This changes only structured Error serialization: Problem text stops private cause expansion, without changing Node Host capabilities, storage, provider calls or lifecycle ownership.",
+          "providers": [],
+          "constraints": [
+            "No new platform support or live-provider certification is claimed. Ordinary Error cause diagnostics remain available."
+          ],
+          "references": [
+            "packages/framework-logger/src/sanitizeLogRecord.ts",
+            "packages/framework-logger/src/tests/LoggerRedaction.spec.ts",
+            "packages/framework-logger/README.md"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "This changes only structured Error serialization: Problem text stops private cause expansion, without changing Lambda Host capabilities, storage, provider calls or lifecycle ownership.",
+          "providers": [],
+          "constraints": [
+            "No new platform support or live-provider certification is claimed. Ordinary Error cause diagnostics remain available."
+          ],
+          "references": [
+            "packages/framework-logger/src/sanitizeLogRecord.ts",
+            "packages/framework-logger/src/tests/LoggerRedaction.spec.ts",
+            "packages/framework-logger/README.md"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "This changes only structured Error serialization: Problem text stops private cause expansion, without changing Workers Host or Node Container Host capabilities, storage, provider calls or lifecycle ownership.",
+          "providers": [],
+          "constraints": [
+            "No new platform support or live-provider certification is claimed. Ordinary Error cause diagnostics remain available."
+          ],
+          "references": [
+            "packages/framework-logger/src/sanitizeLogRecord.ts",
+            "packages/framework-logger/src/tests/LoggerRedaction.spec.ts",
+            "packages/framework-logger/README.md"
+          ]
+        }
+      }
+    },
+    {
+      "package": "metering-core",
+      "classification": "pure-contract",
+      "reason": "Retain upstream Error identity for internal diagnostics without changing serialized Problem contracts or infrastructure requirements.",
+      "files": {
+        "packages/metering-core/src/libs/problems/RedisProblem.ts": "b4c34c76e824cd0a20d46bb1d3eda68ff8d5e4ab2d5857ff82970bfac1cea632"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "This preserves an existing Error reference as a non-enumerable Problem cause without changing public serialization, Node Host capabilities, storage, provider calls or lifecycle ownership.",
+          "providers": [],
+          "constraints": [
+            "No new platform support or live-provider certification is claimed. Public Problem JSON continues to omit Error causes."
+          ],
+          "references": [
+            "packages/metering-core/src/libs/problems/RedisProblem.ts",
+            "packages/problems-core/src/libs/Problem.ts",
+            "scripts/tests/ProviderProblemCauses.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "This preserves an existing Error reference as a non-enumerable Problem cause without changing public serialization, Lambda Host capabilities, storage, provider calls or lifecycle ownership.",
+          "providers": [],
+          "constraints": [
+            "No new platform support or live-provider certification is claimed. Public Problem JSON continues to omit Error causes."
+          ],
+          "references": [
+            "packages/metering-core/src/libs/problems/RedisProblem.ts",
+            "packages/problems-core/src/libs/Problem.ts",
+            "scripts/tests/ProviderProblemCauses.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "This preserves an existing Error reference as a non-enumerable Problem cause without changing public serialization, Workers Host or Node Container Host capabilities, storage, provider calls or lifecycle ownership.",
+          "providers": [],
+          "constraints": [
+            "No new platform support or live-provider certification is claimed. Public Problem JSON continues to omit Error causes."
+          ],
+          "references": [
+            "packages/metering-core/src/libs/problems/RedisProblem.ts",
+            "packages/problems-core/src/libs/Problem.ts",
+            "scripts/tests/ProviderProblemCauses.spec.ts"
+          ]
+        }
+      }
+    },
+    {
+      "package": "metering-upstash",
+      "classification": "pure-contract",
+      "reason": "Preserve redacted upstream causal diagnostics without mutating SDK errors or changing public Problem JSON or infrastructure requirements.",
+      "files": {
+        "packages/metering-upstash/src/libs/problems/UpstashMeteringProblems.ts": "f92fed72dd430d73d6e5a57d8262bde370ab4d0711f08b47813d1d1415eb893d"
+      },
+      "catalogRuntimes": ["node", "lambda"],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "This copies redacted Error diagnostics into a non-enumerable Problem cause without changing Host capabilities, storage, provider calls or lifecycle ownership.",
+          "providers": [],
+          "constraints": [
+            "No new platform support or live-provider certification is claimed. Public Problem JSON continues to omit Error causes."
+          ],
+          "references": [
+            "packages/metering-upstash/src/libs/problems/UpstashMeteringProblems.ts",
+            "packages/problems-core/src/libs/Problem.ts",
+            "scripts/tests/ProviderProblemCauses.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "This copies redacted Error diagnostics into a non-enumerable Problem cause without changing Host capabilities, storage, provider calls or lifecycle ownership.",
+          "providers": [],
+          "constraints": [
+            "No new platform support or live-provider certification is claimed. Public Problem JSON continues to omit Error causes."
+          ],
+          "references": [
+            "packages/metering-upstash/src/libs/problems/UpstashMeteringProblems.ts",
+            "packages/problems-core/src/libs/Problem.ts",
+            "scripts/tests/ProviderProblemCauses.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "This copies redacted Error diagnostics into a non-enumerable Problem cause without changing Host capabilities, storage, provider calls or lifecycle ownership.",
+          "providers": [],
+          "constraints": [
+            "No new platform support or live-provider certification is claimed. Public Problem JSON continues to omit Error causes."
+          ],
+          "references": [
+            "packages/metering-upstash/src/libs/problems/UpstashMeteringProblems.ts",
+            "packages/problems-core/src/libs/Problem.ts",
+            "scripts/tests/ProviderProblemCauses.spec.ts"
+          ]
+        }
+      }
+    },
+    {
+      "package": "ratelimit-upstash",
+      "classification": "pure-contract",
+      "reason": "Preserve redacted upstream causal diagnostics without mutating SDK errors or changing public Problem JSON or infrastructure requirements.",
+      "files": {
+        "packages/ratelimit-upstash/src/libs/problems/RateLimitUpstashProblems.ts": "5340445f7f2c342417c7a3048f3d9500f7fd46abf4ee875449d7a23e78e913cf"
+      },
+      "catalogRuntimes": ["node", "lambda", "cloudflare-workers"],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "This copies redacted Error diagnostics into a non-enumerable Problem cause without changing Host capabilities, storage, provider calls or lifecycle ownership.",
+          "providers": [],
+          "constraints": [
+            "No new platform support or live-provider certification is claimed. Public Problem JSON continues to omit Error causes."
+          ],
+          "references": [
+            "packages/ratelimit-upstash/src/libs/problems/RateLimitUpstashProblems.ts",
+            "packages/problems-core/src/libs/Problem.ts",
+            "scripts/tests/ProviderProblemCauses.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "This copies redacted Error diagnostics into a non-enumerable Problem cause without changing Host capabilities, storage, provider calls or lifecycle ownership.",
+          "providers": [],
+          "constraints": [
+            "No new platform support or live-provider certification is claimed. Public Problem JSON continues to omit Error causes."
+          ],
+          "references": [
+            "packages/ratelimit-upstash/src/libs/problems/RateLimitUpstashProblems.ts",
+            "packages/problems-core/src/libs/Problem.ts",
+            "scripts/tests/ProviderProblemCauses.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "This copies redacted Error diagnostics into a non-enumerable Problem cause without changing Host capabilities, storage, provider calls or lifecycle ownership.",
+          "providers": [],
+          "constraints": [
+            "No new platform support or live-provider certification is claimed. Public Problem JSON continues to omit Error causes."
+          ],
+          "references": [
+            "packages/ratelimit-upstash/src/libs/problems/RateLimitUpstashProblems.ts",
+            "packages/problems-core/src/libs/Problem.ts",
+            "scripts/tests/ProviderProblemCauses.spec.ts"
+          ]
+        }
+      }
+    },
+    {
+      "package": "tasks-qstash",
+      "classification": "pure-contract",
+      "reason": "Preserve redacted upstream causal diagnostics without mutating SDK errors or changing public Problem JSON or infrastructure requirements.",
+      "files": {
+        "packages/tasks-qstash/src/libs/problems/QStashTaskProblems.ts": "ba4f50c6ca46d7ba8b8fb5ad925d964a12539dfdc0b267653b4395ceaeea59c8"
+      },
+      "catalogRuntimes": ["node", "lambda"],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "This copies redacted Error diagnostics into a non-enumerable Problem cause without changing Host capabilities, storage, provider calls or lifecycle ownership.",
+          "providers": [],
+          "constraints": [
+            "No new platform support or live-provider certification is claimed. Public Problem JSON continues to omit Error causes."
+          ],
+          "references": [
+            "packages/tasks-qstash/src/libs/problems/QStashTaskProblems.ts",
+            "packages/problems-core/src/libs/Problem.ts",
+            "scripts/tests/ProviderProblemCauses.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "This copies redacted Error diagnostics into a non-enumerable Problem cause without changing Host capabilities, storage, provider calls or lifecycle ownership.",
+          "providers": [],
+          "constraints": [
+            "No new platform support or live-provider certification is claimed. Public Problem JSON continues to omit Error causes."
+          ],
+          "references": [
+            "packages/tasks-qstash/src/libs/problems/QStashTaskProblems.ts",
+            "packages/problems-core/src/libs/Problem.ts",
+            "scripts/tests/ProviderProblemCauses.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "This copies redacted Error diagnostics into a non-enumerable Problem cause without changing Host capabilities, storage, provider calls or lifecycle ownership.",
+          "providers": [],
+          "constraints": [
+            "No new platform support or live-provider certification is claimed. Public Problem JSON continues to omit Error causes."
+          ],
+          "references": [
+            "packages/tasks-qstash/src/libs/problems/QStashTaskProblems.ts",
+            "packages/problems-core/src/libs/Problem.ts",
+            "scripts/tests/ProviderProblemCauses.spec.ts"
+          ]
+        }
+      }
+    }
+  ]
+}

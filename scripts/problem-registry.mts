@@ -9,12 +9,13 @@ import {
   mkdtempSync,
   readdirSync,
   readFileSync,
+  realpathSync,
   rmSync,
   statSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, isAbsolute, join, relative, resolve } from "node:path";
+import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { argv, env, exit, stdout } from "node:process";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import ts from "typescript";
@@ -1555,23 +1556,25 @@ function getProblemCauseDiagnostics(rootDir: string): readonly string[] {
         if (constructor) {
           const superCalls: ts.CallExpression[] = [];
           const aliases = new Map<string, ts.Expression>();
-          const objectIds = new Map<string, ReadonlySet<number>>();
-          const mutatedAliases = new Set<string>();
+          const aliasBindings = new Map<string, ts.Symbol | string>();
+          const objectIds = new Map<ts.Symbol | string, ReadonlySet<number>>();
+          const mutatedBindings = new Set<ts.Symbol | string>();
           let nextObjectId = 0;
-          function getObjectIds(name: string): ReadonlySet<number> {
-            const existing = objectIds.get(name);
+          function getObjectIds(identifier: ts.Identifier): ReadonlySet<number> {
+            const key = getLocalBindingKey(identifier);
+            const existing = objectIds.get(key);
             if (existing !== undefined) {
               return existing;
             }
             const ids = new Set([++nextObjectId]);
-            objectIds.set(name, ids);
+            objectIds.set(key, ids);
             return ids;
           }
-          function markObjectMutation(name: string): void {
-            const ids = getObjectIds(name);
+          function markObjectMutation(identifier: ts.Identifier): void {
+            const ids = getObjectIds(identifier);
             for (const [alias, aliasIds] of objectIds) {
               if ([...ids].some((id) => aliasIds.has(id))) {
-                mutatedAliases.add(alias);
+                mutatedBindings.add(alias);
               }
             }
           }
@@ -1607,9 +1610,9 @@ function getProblemCauseDiagnostics(rootDir: string): readonly string[] {
             if (ts.isVariableDeclaration(child) && ts.isIdentifier(child.name)) {
               const source = unwrapExpression(child.initializer);
               objectIds.set(
-                child.name.text,
+                getLocalBindingKey(child.name),
                 source && ts.isIdentifier(source)
-                  ? getObjectIds(source.text)
+                  ? getObjectIds(source)
                   : new Set([++nextObjectId]),
               );
             }
@@ -1618,15 +1621,16 @@ function getProblemCauseDiagnostics(rootDir: string): readonly string[] {
               child.operatorToken.kind >= ts.SyntaxKind.FirstAssignment &&
               child.operatorToken.kind <= ts.SyntaxKind.LastAssignment
             ) {
+              forEachAssignedBinding(child.left, (target, mutatesObject) => {
+                mutatedBindings.add(getLocalBindingKey(target));
+                if (mutatesObject) markObjectMutation(target);
+              });
               const mutatesObject =
                 ts.isPropertyAccessExpression(child.left) ||
                 ts.isElementAccessExpression(child.left);
               const target = mutatesObject ? unwrapExpression(child.left.expression) : child.left;
               if (target && ts.isIdentifier(target)) {
-                mutatedAliases.add(target.text);
-                if (mutatesObject) {
-                  markObjectMutation(target.text);
-                } else {
+                if (!mutatesObject) {
                   const source = unwrapExpression(child.right);
                   const isLogicalAssignment =
                     child.operatorToken.kind === ts.SyntaxKind.BarBarEqualsToken ||
@@ -1637,16 +1641,25 @@ function getProblemCauseDiagnostics(rootDir: string): readonly string[] {
                       isLogicalAssignment) &&
                     source &&
                     ts.isIdentifier(source)
-                      ? getObjectIds(source.text)
+                      ? getObjectIds(source)
                       : new Set([++nextObjectId]);
                   objectIds.set(
-                    target.text,
+                    getLocalBindingKey(target),
                     isLogicalAssignment || isConditionalRebinding(child)
-                      ? new Set([...getObjectIds(target.text), ...updatedIds])
+                      ? new Set([...getObjectIds(target), ...updatedIds])
                       : updatedIds,
                   );
                 }
               }
+            }
+            if (
+              (ts.isForOfStatement(child) || ts.isForInStatement(child)) &&
+              !ts.isVariableDeclarationList(child.initializer)
+            ) {
+              forEachAssignedBinding(child.initializer, (target, mutatesObject) => {
+                mutatedBindings.add(getLocalBindingKey(target));
+                if (mutatesObject) markObjectMutation(target);
+              });
             }
             if (ts.isDeleteExpression(child)) {
               const target = child.expression;
@@ -1655,7 +1668,7 @@ function getProblemCauseDiagnostics(rootDir: string): readonly string[] {
                   ? unwrapExpression(target.expression)
                   : undefined;
               if (object && ts.isIdentifier(object)) {
-                markObjectMutation(object.text);
+                markObjectMutation(object);
               }
             }
             if (
@@ -1666,20 +1679,24 @@ function getProblemCauseDiagnostics(rootDir: string): readonly string[] {
             }
             ts.forEachChild(child, collectSuperCalls);
           }
+          for (const parameter of constructor.parameters) {
+            if (parameter.initializer) collectSuperCalls(parameter.initializer);
+          }
           for (const statement of constructor.body?.statements ?? []) {
             if (ts.isVariableStatement(statement)) {
               for (const declaration of statement.declarationList.declarations) {
                 if (ts.isIdentifier(declaration.name) && declaration.initializer) {
                   if ((statement.declarationList.flags & ts.NodeFlags.Const) !== 0) {
                     aliases.set(declaration.name.text, declaration.initializer);
+                    aliasBindings.set(declaration.name.text, getLocalBindingKey(declaration.name));
                   }
                 }
               }
             }
             collectSuperCalls(statement);
           }
-          for (const name of mutatedAliases) {
-            aliases.delete(name);
+          for (const [name, binding] of aliasBindings) {
+            if (mutatedBindings.has(binding)) aliases.delete(name);
           }
 
           if (superCalls.length === 0) {
@@ -1696,7 +1713,15 @@ function getProblemCauseDiagnostics(rootDir: string): readonly string[] {
             const parameterName = parameter.name.text;
             if (
               superCalls.every((call) =>
-                forwardsProblemCause(call.arguments[3], parameterName, kind, aliases),
+                forwardsProblemCause(
+                  call.arguments[3],
+                  parameterName,
+                  kind,
+                  aliases,
+                  false,
+                  new Set(),
+                  !mutatedBindings.has(getLocalBindingKey(parameter.name)),
+                ),
               )
             ) {
               continue;
@@ -1750,6 +1775,63 @@ function getProblemCauseDiagnostics(rootDir: string): readonly string[] {
   return diagnostics;
 }
 
+const localBindingCheckers = new WeakMap<ts.SourceFile, ts.TypeChecker>();
+
+function getLocalBindingKey(identifier: ts.Identifier): ts.Symbol | string {
+  const source = identifier.getSourceFile();
+  let checker = localBindingCheckers.get(source);
+  if (!checker) {
+    // Local binding identity needs neither dependency resolution nor standard libraries.
+    const options: ts.CompilerOptions = { noResolve: true, noLib: true };
+    const host = ts.createCompilerHost(options);
+    host.getSourceFile = (path) => (path === source.fileName ? source : undefined);
+    checker = ts.createProgram([source.fileName], options, host).getTypeChecker();
+    localBindingCheckers.set(source, checker);
+  }
+  if (
+    ts.isShorthandPropertyAssignment(identifier.parent) &&
+    identifier.parent.name === identifier
+  ) {
+    return checker.getShorthandAssignmentValueSymbol(identifier.parent) ?? identifier.text;
+  }
+  return checker.getSymbolAtLocation(identifier) ?? identifier.text;
+}
+
+function forEachAssignedBinding(
+  target: ts.Expression,
+  visit: (target: ts.Identifier, mutatesObject: boolean) => void,
+): void {
+  const value = unwrapExpression(target);
+  if (!value) return;
+  if (ts.isIdentifier(value)) {
+    visit(value, false);
+  } else if (ts.isPropertyAccessExpression(value) || ts.isElementAccessExpression(value)) {
+    let receiver = unwrapExpression(value.expression);
+    while (
+      receiver &&
+      (ts.isPropertyAccessExpression(receiver) || ts.isElementAccessExpression(receiver))
+    ) {
+      receiver = unwrapExpression(receiver.expression);
+    }
+    if (receiver && ts.isIdentifier(receiver)) visit(receiver, true);
+  } else if (ts.isArrayLiteralExpression(value)) {
+    for (const entry of value.elements) forEachAssignedBinding(entry, visit);
+  } else if (ts.isObjectLiteralExpression(value)) {
+    for (const property of value.properties) {
+      if (ts.isPropertyAssignment(property)) forEachAssignedBinding(property.initializer, visit);
+      else if (ts.isShorthandPropertyAssignment(property)) visit(property.name, false);
+      else if (ts.isSpreadAssignment(property)) forEachAssignedBinding(property.expression, visit);
+    }
+  } else if (ts.isSpreadElement(value)) {
+    forEachAssignedBinding(value.expression, visit);
+  } else if (
+    ts.isBinaryExpression(value) &&
+    value.operatorToken.kind === ts.SyntaxKind.EqualsToken
+  ) {
+    forEachAssignedBinding(value.left, visit);
+  }
+}
+
 function isProblemSubclass(node: ts.ClassDeclaration | ts.ClassExpression): boolean {
   return (
     node.heritageClauses?.some(
@@ -1799,6 +1881,7 @@ function forwardsProblemCause(
   aliases: ReadonlyMap<string, ts.Expression>,
   guarded = false,
   visited = new Set<string>(),
+  inputUnchanged = true,
 ): boolean {
   if (!expression) {
     return false;
@@ -1808,7 +1891,15 @@ function forwardsProblemCause(
     ts.isAsExpression(expression) ||
     ts.isSatisfiesExpression(expression)
   ) {
-    return forwardsProblemCause(expression.expression, parameter, kind, aliases, guarded, visited);
+    return forwardsProblemCause(
+      expression.expression,
+      parameter,
+      kind,
+      aliases,
+      guarded,
+      visited,
+      inputUnchanged,
+    );
   }
   if (
     ts.isIdentifier(expression) &&
@@ -1823,6 +1914,7 @@ function forwardsProblemCause(
       aliases,
       guarded,
       visited,
+      inputUnchanged,
     );
   }
   if (ts.isConditionalExpression(expression)) {
@@ -1834,6 +1926,7 @@ function forwardsProblemCause(
       aliases,
       guarded || isErrorGuard(expression.condition, parameter),
       new Set(visited),
+      inputUnchanged,
     );
     const falseForwarded = forwardsProblemCause(
       expression.whenFalse,
@@ -1842,6 +1935,7 @@ function forwardsProblemCause(
       aliases,
       guarded,
       new Set(visited),
+      inputUnchanged,
     );
     return branch === "true"
       ? trueForwarded
@@ -1862,6 +1956,7 @@ function forwardsProblemCause(
         aliases,
         guarded || isErrorGuard(expression.left, parameter),
         visited,
+        inputUnchanged,
       )
     );
   }
@@ -1879,6 +1974,7 @@ function forwardsProblemCause(
         aliases,
         guarded,
         new Set(visited),
+        inputUnchanged,
       );
       if (spreadForwarded) {
         forwarded = true;
@@ -1896,6 +1992,7 @@ function forwardsProblemCause(
           aliases,
           guarded,
           new Set(visited),
+          inputUnchanged,
         );
       }
       continue;
@@ -1915,6 +2012,7 @@ function forwardsProblemCause(
       aliases,
       guarded,
       new Set(visited),
+      inputUnchanged,
     );
   }
   return forwarded;
@@ -1995,13 +2093,49 @@ function forwardsCauseValue(
   aliases: ReadonlyMap<string, ts.Expression>,
   guarded: boolean,
   visited: Set<string>,
+  inputUnchanged = true,
 ): boolean {
   if (
     ts.isParenthesizedExpression(expression) ||
     ts.isAsExpression(expression) ||
     ts.isSatisfiesExpression(expression)
   ) {
-    return forwardsCauseValue(expression.expression, parameter, kind, aliases, guarded, visited);
+    return forwardsCauseValue(
+      expression.expression,
+      parameter,
+      kind,
+      aliases,
+      guarded,
+      visited,
+      inputUnchanged,
+    );
+  }
+  // Provider boundaries retain a redacted Error message instead of upstream secrets.
+  // Require an unchanged, unshadowed input; saved native aliases keep their existing handling.
+  if (
+    inputUnchanged &&
+    (kind === "error" || guarded) &&
+    ts.isNewExpression(expression) &&
+    ts.isIdentifier(expression.expression) &&
+    expression.expression.text === "Error" &&
+    expression.arguments?.length === 1
+  ) {
+    const message = expression.arguments[0];
+    if (
+      message &&
+      ts.isCallExpression(message) &&
+      ts.isIdentifier(message.expression) &&
+      message.expression.text === "redactSensitiveValue" &&
+      !aliases.has("redactSensitiveValue") &&
+      message.arguments.length >= 1 &&
+      ts.isPropertyAccessExpression(message.arguments[0]) &&
+      ts.isIdentifier(message.arguments[0].expression) &&
+      message.arguments[0].expression.text === parameter &&
+      message.arguments[0].name.text === "message" &&
+      hasVerifiedRedactionHelper(message, parameter)
+    ) {
+      return true;
+    }
   }
   if (ts.isIdentifier(expression)) {
     if (expression.text === parameter) {
@@ -2010,7 +2144,7 @@ function forwardsCauseValue(
     const alias = aliases.get(expression.text);
     if (alias && !visited.has(expression.text)) {
       visited.add(expression.text);
-      return forwardsCauseValue(alias, parameter, kind, aliases, guarded, visited);
+      return forwardsCauseValue(alias, parameter, kind, aliases, guarded, visited, inputUnchanged);
     }
     return false;
   }
@@ -2023,6 +2157,7 @@ function forwardsCauseValue(
       aliases,
       guarded || isErrorGuard(expression.condition, parameter),
       new Set(visited),
+      inputUnchanged,
     );
     const falseForwarded = forwardsCauseValue(
       expression.whenFalse,
@@ -2031,6 +2166,7 @@ function forwardsCauseValue(
       aliases,
       guarded,
       new Set(visited),
+      inputUnchanged,
     );
     return branch === "true"
       ? trueForwarded
@@ -2051,6 +2187,7 @@ function forwardsCauseValue(
         aliases,
         guarded || isErrorGuard(expression.left, parameter),
         visited,
+        inputUnchanged,
       )
     );
   }
@@ -2088,6 +2225,296 @@ function forwardsCauseValue(
     });
   }
   return false;
+}
+
+function hasVerifiedRedactionHelper(call: ts.CallExpression, parameter: string): boolean {
+  if (!ts.isIdentifier(call.expression)) return false;
+  const callInput = unwrapExpression(call.arguments[0]);
+  if (
+    !callInput ||
+    !ts.isPropertyAccessExpression(callInput) ||
+    !ts.isIdentifier(callInput.expression)
+  )
+    return false;
+  let owner: ts.Node | undefined = call.parent;
+  while (owner && !ts.isConstructorDeclaration(owner)) owner = owner.parent;
+  const declaredInput = owner?.parameters.find(
+    (entry) => ts.isIdentifier(entry.name) && entry.name.text === parameter,
+  );
+  if (
+    !declaredInput ||
+    !ts.isIdentifier(declaredInput.name) ||
+    getLocalBindingKey(callInput.expression) !== getLocalBindingKey(declaredInput.name)
+  )
+    return false;
+  const isBoundedReplacement = (expression: ts.Expression): boolean => {
+    const value = unwrapExpression(expression);
+    if (!value) return false;
+    if (ts.isConditionalExpression(value)) {
+      return isBoundedReplacement(value.whenTrue) && isBoundedReplacement(value.whenFalse);
+    }
+    return (
+      ts.isStringLiteral(value) ||
+      ts.isNoSubstitutionTemplateLiteral(value) ||
+      ts.isNumericLiteral(value) ||
+      value.kind === ts.SyntaxKind.TrueKeyword ||
+      value.kind === ts.SyntaxKind.FalseKeyword ||
+      value.kind === ts.SyntaxKind.NullKeyword
+    );
+  };
+  const replacementArgument = call.arguments[1];
+  if (replacementArgument && !isBoundedReplacement(replacementArgument)) return false;
+  const name = call.expression.text;
+  const source = call.getSourceFile();
+  const containsName = (binding: ts.BindingName, expected = name): boolean =>
+    ts.isIdentifier(binding)
+      ? binding.text === expected
+      : binding.elements.some(
+          (entry) => ts.isBindingElement(entry) && containsName(entry.name, expected),
+        );
+  const shadowsName = (node: ts.Node, expected = name): boolean => {
+    if (ts.isVariableDeclaration(node) && containsName(node.name, expected)) return true;
+    if (
+      (ts.isFunctionDeclaration(node) || ts.isClassDeclaration(node)) &&
+      node.name?.text === expected
+    )
+      return true;
+    if (
+      (ts.isImportSpecifier(node) ||
+        ts.isImportClause(node) ||
+        ts.isNamespaceImport(node) ||
+        ts.isImportEqualsDeclaration(node)) &&
+      node.name?.text === expected
+    )
+      return true;
+    if (ts.isFunctionLike(node) || ts.isClassDeclaration(node) || ts.isClassExpression(node))
+      return false;
+    return ts.forEachChild(node, (child) => shadowsName(child, expected)) === true;
+  };
+  for (
+    let scope: ts.Node | undefined = call.parent;
+    scope && !ts.isSourceFile(scope);
+    scope = scope.parent
+  ) {
+    const protectedNames = [name, "Error"];
+    if (
+      (ts.isClassExpression(scope) || ts.isFunctionExpression(scope)) &&
+      scope.name !== undefined &&
+      protectedNames.includes(scope.name.text)
+    )
+      return false;
+    if (
+      ts.isFunctionLike(scope) &&
+      scope.parameters.some((entry) =>
+        protectedNames.some((expected) => containsName(entry.name, expected)),
+      )
+    )
+      return false;
+    if (ts.isCatchClause(scope) && scope.variableDeclaration) {
+      const binding = scope.variableDeclaration.name;
+      if (protectedNames.some((expected) => containsName(binding, expected))) return false;
+    }
+    if (
+      (ts.isForStatement(scope) || ts.isForOfStatement(scope) || ts.isForInStatement(scope)) &&
+      scope.initializer &&
+      ts.isVariableDeclarationList(scope.initializer) &&
+      scope.initializer.declarations.some((entry) =>
+        protectedNames.some((expected) => containsName(entry.name, expected)),
+      )
+    )
+      return false;
+    if (
+      (ts.isBlock(scope) || ts.isModuleBlock(scope)) &&
+      scope.statements.some((statement) =>
+        protectedNames.some((expected) => shadowsName(statement, expected)),
+      )
+    )
+      return false;
+    if (
+      ts.isCaseBlock(scope) &&
+      scope.clauses.some((clause) =>
+        clause.statements.some((statement) =>
+          protectedNames.some((expected) => shadowsName(statement, expected)),
+        ),
+      )
+    )
+      return false;
+  }
+  if (source.statements.some((statement) => shadowsName(statement, "Error"))) return false;
+
+  let helperSource = source;
+  let helperName = name;
+  const imports = source.statements.flatMap((statement) => {
+    if (!ts.isImportDeclaration(statement) || !ts.isStringLiteral(statement.moduleSpecifier))
+      return [];
+    const bindings = statement.importClause?.namedBindings;
+    if (!bindings || !ts.isNamedImports(bindings)) return [];
+    const module = statement.moduleSpecifier.text;
+    return bindings.elements
+      .filter(
+        (entry) =>
+          entry.name.text === name && !entry.isTypeOnly && !statement.importClause?.isTypeOnly,
+      )
+      .map((entry) => ({
+        module,
+        name: entry.propertyName?.text ?? entry.name.text,
+      }));
+  });
+  if (imports.length > 1) return false;
+  if (imports.length === 1) {
+    const imported = imports[0];
+    if (!imported || !imported.module.startsWith(".")) return false;
+    let sourceRoot = dirname(source.fileName);
+    while (basename(sourceRoot) !== "src" && dirname(sourceRoot) !== sourceRoot) {
+      sourceRoot = dirname(sourceRoot);
+    }
+    if (basename(sourceRoot) !== "src") return false;
+    const path = resolve(dirname(source.fileName), imported.module);
+    if (!isPathInsideRoot(sourceRoot, path)) return false;
+    const file = [path + ".ts", path + ".mts", path + ".tsx"].find(isFile);
+    if (!file) return false;
+    if (!isPathInsideRoot(realpathSync(sourceRoot), realpathSync(file))) return false;
+    helperSource = ts.createSourceFile(
+      file,
+      readFileSync(file, "utf-8"),
+      ts.ScriptTarget.Latest,
+      true,
+    );
+    helperName = imported.name;
+  }
+  const helpers = helperSource.statements.filter(
+    (statement): statement is ts.FunctionDeclaration =>
+      ts.isFunctionDeclaration(statement) && statement.name?.text === helperName,
+  );
+  if (
+    helpers.length !== 1 ||
+    (imports.length > 0 &&
+      source.statements.some(
+        (statement) => ts.isFunctionDeclaration(statement) && statement.name?.text === name,
+      ))
+  )
+    return false;
+  const helper = helpers[0];
+  if (
+    !helper?.body ||
+    !helper.name ||
+    (imports.length > 0 &&
+      !helper.modifiers?.some((entry) => entry.kind === ts.SyntaxKind.ExportKeyword))
+  )
+    return false;
+  const helperBinding = getLocalBindingKey(helper.name);
+  const declaresHelper = (binding: ts.BindingName): boolean =>
+    ts.isIdentifier(binding)
+      ? getLocalBindingKey(binding) === helperBinding
+      : binding.elements.some((entry) => ts.isBindingElement(entry) && declaresHelper(entry.name));
+  let reassigned = false;
+  const assignsHelper = (target: ts.Expression): boolean => {
+    let assigned = false;
+    forEachAssignedBinding(target, (binding, mutatesObject) => {
+      if (!mutatesObject && getLocalBindingKey(binding) === helperBinding) assigned = true;
+    });
+    return assigned;
+  };
+  const findReassignment = (node: ts.Node): void => {
+    if (ts.isVariableDeclaration(node) && node.initializer && declaresHelper(node.name))
+      reassigned = true;
+    if (
+      ts.isBinaryExpression(node) &&
+      node.operatorToken.kind >= ts.SyntaxKind.FirstAssignment &&
+      node.operatorToken.kind <= ts.SyntaxKind.LastAssignment &&
+      assignsHelper(node.left)
+    )
+      reassigned = true;
+    if (
+      (ts.isForOfStatement(node) || ts.isForInStatement(node)) &&
+      !ts.isVariableDeclarationList(node.initializer) &&
+      assignsHelper(node.initializer)
+    )
+      reassigned = true;
+    ts.forEachChild(node, findReassignment);
+  };
+  findReassignment(helperSource);
+  if (reassigned) return false;
+
+  const input = helper.parameters[0]?.name;
+  if (!input || !ts.isIdentifier(input)) return false;
+  const parameterNames = new Set<string>();
+  for (const [index, parameter] of helper.parameters.entries()) {
+    if (
+      !ts.isIdentifier(parameter.name) ||
+      parameter.dotDotDotToken ||
+      parameterNames.has(parameter.name.text)
+    )
+      return false;
+    parameterNames.add(parameter.name.text);
+    // Defaults execute before the body and must not replace or mutate the source message.
+    const initializer = parameter.initializer;
+    if (
+      initializer &&
+      (index === 0 ||
+        (!ts.isStringLiteral(initializer) &&
+          !ts.isNumericLiteral(initializer) &&
+          initializer.kind !== ts.SyntaxKind.TrueKeyword &&
+          initializer.kind !== ts.SyntaxKind.FalseKeyword &&
+          initializer.kind !== ts.SyntaxKind.NullKeyword))
+    )
+      return false;
+  }
+  const isReplaceChain = (expression: ts.Expression, replaced = false): boolean => {
+    const value = unwrapExpression(expression);
+    if (!value) return false;
+    if (ts.isIdentifier(value)) return replaced && value.text === input.text;
+    return (
+      ts.isCallExpression(value) &&
+      value.arguments.length === 2 &&
+      ts.isPropertyAccessExpression(value.expression) &&
+      value.expression.name.text === "replace" &&
+      isReplaceChain(value.expression.expression, true)
+    );
+  };
+  const statements = helper.body.statements;
+  const result = statements.at(-1);
+  if (
+    !result ||
+    !ts.isReturnStatement(result) ||
+    !result.expression ||
+    !isReplaceChain(result.expression)
+  )
+    return false;
+  if (statements.length === 1) return true;
+  // The shared auth sanitizer may intentionally suppress the entire message.
+  // Require its explicit, default-off flag and replacement parameter; no arbitrary body is accepted.
+  const suppression = statements[0];
+  const replacement = helper.parameters[1];
+  const flag = helper.parameters[2];
+  if (
+    statements.length !== 2 ||
+    !suppression ||
+    !ts.isIfStatement(suppression) ||
+    suppression.elseStatement ||
+    !replacement ||
+    !ts.isIdentifier(replacement.name) ||
+    !replacement.initializer ||
+    !ts.isStringLiteral(replacement.initializer) ||
+    !flag ||
+    !ts.isIdentifier(flag.name) ||
+    flag.initializer?.kind !== ts.SyntaxKind.FalseKeyword ||
+    !ts.isIdentifier(suppression.expression) ||
+    suppression.expression.text !== flag.name.text
+  )
+    return false;
+  const branch = ts.isBlock(suppression.thenStatement)
+    ? suppression.thenStatement.statements.length === 1
+      ? suppression.thenStatement.statements[0]
+      : undefined
+    : suppression.thenStatement;
+  return (
+    branch !== undefined &&
+    ts.isReturnStatement(branch) &&
+    branch.expression !== undefined &&
+    ts.isIdentifier(branch.expression) &&
+    branch.expression.text === replacement.name.text
+  );
 }
 
 function isErrorGuard(expression: ts.Expression, parameter: string): boolean {
@@ -3605,7 +4032,7 @@ const recoveryMetadataByCode = {
     userAction:
       "Correct the target identified by each diagnostic before generating contracts or starting the application.",
     operatorAction:
-      "Inspect diagnostic codes, route IDs, and source locations. For contract-schema-unsupported-zod-major, replace the identified schema with a Zod 3 route contract schema.",
+      "Inspect diagnostic codes, route IDs, and source locations. For contract-schema-unsupported-zod-major, replace the identified schema with a Zod 4 route contract schema.",
     retryability: "not-retryable",
     redactionPolicy: "public",
     severity: "info",

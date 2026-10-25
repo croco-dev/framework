@@ -2941,6 +2941,12 @@
       "owner": "@croco/features-posthog"
     },
     {
+      "path": "packages/framework-config/src/tests/CollectionValidationBounds.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/framework-config"
+    },
+    {
       "path": "packages/framework-config/src/tests/ConfigProblems.spec.ts",
       "lane": "fast",
       "qualifiers": [],
@@ -3248,6 +3254,12 @@
     },
     {
       "path": "packages/frontend-react/src/tests/ExperienceSlotProcess.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/frontend-react"
+    },
+    {
+      "path": "packages/frontend-react/src/tests/ExperienceSlotProcessDeadline.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/frontend-react"
@@ -6578,6 +6590,12 @@
     },
     {
       "path": "scripts/tests/PdpPerformance.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "repo:ci"
+    },
+    {
+      "path": "scripts/tests/ProviderProblemCauses.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "repo:ci"

@@ -66,7 +66,7 @@ describe("published message contracts", () => {
         );
         run(
           "pnpm",
-          ["add", "--prod", engagementCore, "zod@3.25.76", "--ignore-scripts"],
+          ["add", "--prod", engagementCore, "zod@4.6.6", "--ignore-scripts"],
           consumerRoot,
         );
         writeConsumerTypecheck(consumerRoot);

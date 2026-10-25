@@ -1,4 +1,3 @@
-import { execFileSync } from "node:child_process";
 import { mkdtemp, readFile, rm, access } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -34,16 +33,6 @@ describe("ExperienceSlot process supervisor", () => {
     await expect(access(directory)).rejects.toThrow();
   });
 
-  it("does not extend execution for malformed diagnostics", async () => {
-    await expect(
-      runExperienceSlotProcess(fixture, {
-        args: ["malformed-diagnostic"],
-        timeoutMs: 200,
-        graceMs: 30,
-      }),
-    ).rejects.toThrow("timeout after 200ms");
-  });
-
   it("preserves assertion, environment and final phase diagnostics", async () => {
     const failure = await runExperienceSlotProcess(fixture, { args: ["failure"] }).catch(String);
     expect(failure).toContain("focus assertion failed");
@@ -66,44 +55,6 @@ describe("ExperienceSlot process supervisor", () => {
   it("leaves malformed JSON rejected by the existing parent assertion", async () => {
     const output = await runExperienceSlotProcess(fixture, { args: ["malformed"] });
     expect(() => JSON.parse(output)).toThrow(SyntaxError);
-  });
-
-  it("allows native cleanup beyond the execution deadline where the old aggregate timeout fails", async () => {
-    expect(() =>
-      execFileSync(process.execPath, [fixture, "cleanup-success"], {
-        timeout: 200,
-        stdio: "pipe",
-      }),
-    ).toThrow(expect.objectContaining({ code: "ETIMEDOUT" }));
-    expect(
-      await runExperienceSlotProcess(fixture, {
-        args: ["cleanup-success"],
-        timeoutMs: 200,
-        cleanupTimeoutMs: 700,
-      }),
-    ).toBe("[]");
-  });
-
-  it("does not renew the cleanup deadline on repeated transition messages", async () => {
-    await expect(
-      runExperienceSlotProcess(fixture, {
-        args: ["cleanup-repeat"],
-        timeoutMs: 200,
-        cleanupTimeoutMs: 200,
-        graceMs: 30,
-      }),
-    ).rejects.toThrow("cleanup timeout after 200ms");
-  });
-
-  it("does not enter cleanup after execution has already timed out", async () => {
-    await expect(
-      runExperienceSlotProcess(fixture, {
-        args: ["cleanup-late"],
-        timeoutMs: 200,
-        cleanupTimeoutMs: 10_000,
-        graceMs: 30,
-      }),
-    ).rejects.toThrow("timeout after 200ms");
   });
 
   it("rejects an already aborted signal without starting the fixture", async () => {

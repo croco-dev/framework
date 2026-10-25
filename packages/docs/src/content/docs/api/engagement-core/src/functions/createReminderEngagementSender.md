@@ -17,7 +17,7 @@ Uses the existing recipient/preference/notification path; each binding has one d
 
 ### bindings
 
-readonly `Readonly`\<\{ `message`: `TMessage`; `data`: `Promise`\<`any`\>; \}\>[]
+readonly `Readonly`\<\{ `message`: `TMessage`; `data`: `Promise`\<`unknown`\>; \}\>[]
 
 ## Returns
 

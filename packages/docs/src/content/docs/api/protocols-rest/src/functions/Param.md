@@ -49,7 +49,7 @@ title: "Param"
 
 #### schema?
 
-`ZodType`\<`any`, `ZodTypeDef`, `any`\>
+`ZodType`\<`unknown`, `unknown`, `$ZodTypeInternals`\<`unknown`, `unknown`\>\>
 
 ### Returns
 

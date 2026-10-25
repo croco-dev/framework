@@ -553,6 +553,12 @@ class Missing extends Base { constructor() { super("literal"); } }`,
         '    super("alpha/normalized", ProblemCategory.InternalServerError, "failed", { cause: causeError });',
         "  }",
         "}",
+        "function redactSensitiveValue(value: string): string { return value.replace(/token=\\S+/g, 'token=[Redacted]'); }",
+        "export class RedactedCauseProblem extends Problem {",
+        "  constructor(error: unknown) {",
+        '    super("alpha/redacted", ProblemCategory.InternalServerError, "failed", { cause: error instanceof Error ? new Error(redactSensitiveValue(error.message)) : undefined });',
+        "  }",
+        "}",
         "export class OptionsAliasProblem extends Problem {",
         "  constructor(cause?: Error) {",
         "    const options = cause ? ({ cause } satisfies ProblemOptions) : undefined;",
@@ -585,6 +591,413 @@ class Missing extends Base { constructor() { super("literal"); } }`,
     expect(runProblemRegistryCheck(repo, "write").status).toBe("pass");
   }, 30_000);
 
+  it("accepts a resolved package-local sanitizer message transform", () => {
+    const repo = createTempRepo();
+    writeFile(
+      repo,
+      "packages/alpha/src/redaction.ts",
+      "export function redactSensitiveValue(value: string): string { return value.replace(/token=\\S+/g, 'token=[Redacted]'); }",
+    );
+    writeFile(
+      repo,
+      "packages/alpha/src/problems.ts",
+      [
+        'import { Problem, ProblemCategory } from "@croco/problems-core";',
+        'import { redactSensitiveValue } from "./redaction";',
+        "export class ImportedRedactedProblem extends Problem {",
+        "  constructor(error: unknown) {",
+        '    super("alpha/imported-redacted", ProblemCategory.InternalServerError, "failed", { cause: error instanceof Error ? new Error(redactSensitiveValue(error.message)) : undefined });',
+        "  }",
+        "}",
+      ].join("\n"),
+    );
+    expect(runProblemRegistryCheck(repo, "write").status).toBe("pass");
+  }, 30_000);
+
+  it.each([
+    "constant",
+    "shadowed",
+    "imported-constant",
+    "mutated",
+    "rebound",
+    "array-rebound",
+    "object-rebound",
+    "loop-rebound",
+    "shadowed-error",
+    "parameter-initializer",
+  ] as const)(
+    "rejects redaction helpers that discard or shadow the source message: %s",
+    (kind) => {
+      const repo = createTempRepo();
+      const declaration =
+        kind === "constant" || kind === "imported-constant"
+          ? "function redactSensitiveValue(_value: string): string { return 'unrelated'; }"
+          : kind === "mutated"
+            ? "function redactSensitiveValue(value: string): string { value = 'unrelated'; return value.replace(/token=\\S+/g, 'token=[Redacted]'); }"
+            : kind === "parameter-initializer"
+              ? "function redactSensitiveValue(value: string, _replacement = (value = 'unrelated')): string { return value.replace(/token=\\S+/g, 'token=[Redacted]'); }"
+              : kind === "rebound"
+                ? "function redactSensitiveValue(value: string): string { return value.replace(/token=\\S+/g, 'token=[Redacted]'); }\nredactSensitiveValue = (_value: string) => 'unrelated';"
+                : kind === "array-rebound"
+                  ? "function redactSensitiveValue(value: string): string { return value.replace(/token=\\S+/g, 'token=[Redacted]'); }\n[redactSensitiveValue] = [(_value: string) => 'unrelated'];"
+                  : kind === "object-rebound"
+                    ? "function redactSensitiveValue(value: string): string { return value.replace(/token=\\S+/g, 'token=[Redacted]'); }\n({ redactSensitiveValue } = { redactSensitiveValue: (_value: string) => 'unrelated' });"
+                    : kind === "loop-rebound"
+                      ? "function redactSensitiveValue(value: string): string { return value.replace(/token=\\S+/g, 'token=[Redacted]'); }\nfor (redactSensitiveValue of [(_value: string) => 'unrelated']) {}"
+                      : "function redactSensitiveValue(value: string): string { return value.replace(/token=\\S+/g, 'token=[Redacted]'); }";
+      if (kind === "imported-constant") {
+        writeFile(repo, "packages/alpha/src/redaction.ts", `export ${declaration}`);
+      }
+      writeFile(
+        repo,
+        "packages/alpha/src/problems.ts",
+        [
+          'import { Problem, ProblemCategory } from "@croco/problems-core";',
+          kind === "imported-constant"
+            ? 'import { redactSensitiveValue } from "./redaction";'
+            : declaration,
+          "export class BogusRedactedProblem extends Problem {",
+          kind === "shadowed"
+            ? "  constructor(error: unknown, redactSensitiveValue: (value: string) => string) {"
+            : kind === "shadowed-error"
+              ? "  constructor(error: unknown, Error: typeof globalThis.Error) {"
+              : "  constructor(error: unknown) {",
+          '    super("alpha/bogus-redaction", ProblemCategory.InternalServerError, "failed", { cause: error instanceof Error ? new Error(redactSensitiveValue(error.message)) : undefined });',
+          "  }",
+          "}",
+        ].join("\n"),
+      );
+      const result = runProblemRegistryCheck(repo, "write");
+      expect(result.status).toBe("fail");
+      expect(result.diagnostics).toContainEqual(
+        expect.stringContaining("BogusRedactedProblem must forward 'error'"),
+      );
+    },
+    30_000,
+  );
+
+  it("rejects native Error shadowing by a named class expression", () => {
+    const repo = createTempRepo();
+    writeFile(
+      repo,
+      "packages/alpha/src/problems.ts",
+      [
+        'import { Problem, ProblemCategory } from "@croco/problems-core";',
+        "function redactSensitiveValue(value: string): string { return value.replace(/token/g, '[Redacted]'); }",
+        "const Wrapped = class Error extends Problem {",
+        "  constructor(error: unknown) {",
+        '    super("alpha/wrapped", ProblemCategory.InternalServerError, "failed", { cause: error instanceof Error ? new Error(redactSensitiveValue(error.message)) : undefined });',
+        "  }",
+        "};",
+      ].join("\n"),
+    );
+    const result = runProblemRegistryCheck(repo, "write");
+    expect(result.status).toBe("fail");
+    expect(result.diagnostics).toContainEqual(
+      expect.stringContaining("Error must forward 'error'"),
+    );
+  });
+
+  it.each([
+    [
+      "catch",
+      "try { throw (_value: string) => 'unrelated'; } catch (redactSensitiveValue) { if (typeof redactSensitiveValue === 'function') {",
+      "}}",
+    ],
+    ["loop", "for (const redactSensitiveValue of [(_value: string) => 'unrelated']) {", "}"],
+    [
+      "switch",
+      "switch ('x') { case 'x': const redactSensitiveValue = (_value: string) => 'unrelated';",
+      "}",
+    ],
+    [
+      "namespace",
+      "namespace Scope { function redactSensitiveValue(_value: string): string { return 'unrelated'; }",
+      "}",
+    ],
+  ])("rejects sanitizer shadowing in a %s scope", (_kind, prefix, suffix) => {
+    const repo = createTempRepo();
+    writeFile(
+      repo,
+      "packages/alpha/src/problems.ts",
+      [
+        'import { Problem, ProblemCategory } from "@croco/problems-core";',
+        "function redactSensitiveValue(value: string): string { return value.replace(/token/g, '[Redacted]'); }",
+        prefix,
+        "class Wrapped extends Problem {",
+        "  constructor(error: unknown) {",
+        "    if (typeof redactSensitiveValue !== 'function') throw error;",
+        '    super("alpha/wrapped", ProblemCategory.InternalServerError, "failed", { cause: error instanceof Error ? new Error(redactSensitiveValue(error.message)) : undefined });',
+        "  }",
+        "}",
+        suffix,
+      ].join("\n"),
+    );
+    const result = runProblemRegistryCheck(repo, "write");
+    expect(result.status).toBe("fail");
+    expect(result.diagnostics).toContainEqual(
+      expect.stringContaining("Wrapped must forward 'error'"),
+    );
+  });
+
+  it.each([
+    ["for", "for (let redactSensitiveValue = (_value: string) => 'unrelated'; ; ) {", "break; }"],
+    [
+      "switch",
+      "switch ('x') { case 'x': const redactSensitiveValue = (_value: string) => 'unrelated';",
+      "break; }",
+    ],
+    [
+      "namespace alias",
+      "namespace Other { export const transform = (_value: string) => 'unrelated'; } namespace Scope { import redactSensitiveValue = Other.transform;",
+      "}",
+    ],
+  ])("rejects shadowing of an imported sanitizer in a %s scope", (_kind, prefix, suffix) => {
+    const repo = createTempRepo();
+    writeFile(
+      repo,
+      "packages/alpha/src/redaction.ts",
+      "export function redactSensitiveValue(value: string): string { return value.replace(/token/g, '[Redacted]'); }",
+    );
+    writeFile(
+      repo,
+      "packages/alpha/src/problems.ts",
+      [
+        'import { Problem, ProblemCategory } from "@croco/problems-core";',
+        'import { redactSensitiveValue } from "./redaction";',
+        prefix,
+        "class Wrapped extends Problem {",
+        "  constructor(error: unknown) {",
+        '    super("alpha/wrapped", ProblemCategory.InternalServerError, "failed", { cause: error instanceof Error ? new Error(redactSensitiveValue(error.message)) : undefined });',
+        "  }",
+        "}",
+        suffix,
+      ].join("\n"),
+    );
+    const result = runProblemRegistryCheck(repo, "write");
+    expect(result.status).toBe("fail");
+    expect(result.diagnostics).toContainEqual(
+      expect.stringContaining("Wrapped must forward 'error'"),
+    );
+  });
+
+  it.each([
+    ["literal", "'suppressed'", "suppress", "pass"],
+    ["literal with true flag", "'suppressed'", "true", "pass"],
+    ["conditional", "suppress ? 'suppressed' : '[Redacted]'", "suppress", "pass"],
+    ["dynamic", "replacement", "true", "fail"],
+    ["conditional-dynamic", "suppress ? replacement : 'suppressed'", "true", "fail"],
+  ] as const)(
+    "checks suppression replacement arguments: %s",
+    (_kind, replacement, flag, expected) => {
+      const repo = createTempRepo();
+      writeFile(
+        repo,
+        "packages/alpha/src/problems.ts",
+        [
+          'import { Problem, ProblemCategory } from "@croco/problems-core";',
+          "function redactSensitiveValue(value: string, replacement = 'suppressed', suppress = false): string { if (suppress) return replacement; return value.replace(/token/g, '[Redacted]'); }",
+          "class Wrapped extends Problem {",
+          "  constructor(error: unknown, replacement: string, suppress: boolean) {",
+          `    super("alpha/wrapped", ProblemCategory.InternalServerError, "failed", { cause: error instanceof Error ? new Error(redactSensitiveValue(error.message, ${replacement}, ${flag})) : undefined });`,
+          "  }",
+          "}",
+        ].join("\n"),
+      );
+      const result = runProblemRegistryCheck(repo, "write");
+      expect(result.status).toBe(expected);
+      if (expected === "fail") {
+        expect(result.diagnostics).toContainEqual(
+          expect.stringContaining("Wrapped must forward 'error'"),
+        );
+      }
+    },
+  );
+
+  it.each([
+    ["assignment", "error = new Error('unrelated');", ""],
+    ["array assignment", "[error] = [new Error('unrelated')];", ""],
+    ["object assignment", "({ error } = { error: new Error('unrelated') });", ""],
+    ["loop assignment", "for (error of [new Error('unrelated')]) {", "break; }"],
+    ["message mutation", "if (error instanceof Error) error.message = 'unrelated';", ""],
+    [
+      "aliased message mutation",
+      "if (error instanceof Error) { const alias = error; alias.message = 'unrelated'; }",
+      "",
+    ],
+    ["block shadow", "{ const error = new Error('unrelated');", "}"],
+    ["catch shadow", "try { throw new Error('unrelated'); } catch (error) {", "}"],
+    ["loop shadow", "for (const error of [new Error('unrelated')]) {", "break; }"],
+    [
+      "array property assignment",
+      "if (error instanceof Error) [error.message] = ['unrelated'];",
+      "",
+    ],
+    [
+      "object property assignment",
+      "if (error instanceof Error) ({ message: error.message } = { message: 'unrelated' });",
+      "",
+    ],
+    [
+      "element property assignment",
+      "if (error instanceof Error) [error['message']] = ['unrelated'];",
+      "",
+    ],
+    [
+      "aliased array property assignment",
+      "if (error instanceof Error) { const alias = error; [alias.message] = ['unrelated']; }",
+      "",
+    ],
+    [
+      "loop property assignment",
+      "if (error instanceof Error) { for (error.message of ['unrelated']) {} }",
+      "",
+    ],
+    [
+      "aliased loop property assignment",
+      "if (error instanceof Error) { const alias = error; for (alias.message of ['unrelated']) {} }",
+      "",
+    ],
+    [
+      "captured parameter assignment",
+      "const normalize = () => { error = new Error('unrelated'); }; normalize();",
+      "",
+    ],
+    ["parameter initializer", "", ""],
+  ])("rejects overwritten or shadowed constructor input: %s", (kind, prefix, suffix) => {
+    const repo = createTempRepo();
+    writeFile(
+      repo,
+      "packages/alpha/src/problems.ts",
+      [
+        'import { Problem, ProblemCategory } from "@croco/problems-core";',
+        "function redactSensitiveValue(value: string): string { return value.replace(/token/g, '[Redacted]'); }",
+        "class Wrapped extends Problem {",
+        'readonly code = "alpha/wrapped";',
+        "readonly category = ProblemCategory.InternalServerError;",
+        `constructor(error: unknown${kind === "parameter initializer" ? ", fallback = (error = new Error('unrelated'))" : ""}) {`,
+        prefix,
+        'super(undefined, ProblemCategory.InternalServerError, "failed", { cause: error instanceof Error ? new Error(redactSensitiveValue(error.message)) : undefined });',
+        suffix,
+        "}",
+        "}",
+      ].join("\n"),
+    );
+    const result = runProblemRegistryCheck(repo, "write");
+    expect(result.status).toBe("fail");
+    expect(result.diagnostics).toContainEqual(
+      expect.stringContaining("Wrapped must forward 'error'"),
+    );
+  });
+
+  it("retains a saved native constructor input when its parameter is later rebound", () => {
+    const repo = createTempRepo();
+    writeFile(
+      repo,
+      "packages/alpha/src/problems.ts",
+      [
+        'import { Problem, ProblemCategory } from "@croco/problems-core";',
+        "class Wrapped extends Problem {",
+        "constructor(error: Error) { const original = error; error = new Error('other');",
+        'super("alpha/saved", ProblemCategory.InternalServerError, "failed", { cause: original });',
+        "}",
+        "}",
+      ].join("\n"),
+    );
+    expect(runProblemRegistryCheck(repo, "write").status).toBe("pass");
+  });
+
+  it("resolves constructor input independently of an outer error binding", () => {
+    const repo = createTempRepo();
+    writeFile(
+      repo,
+      "packages/alpha/src/problems.ts",
+      [
+        'import { Problem, ProblemCategory } from "@croco/problems-core";',
+        "function redactSensitiveValue(value: string): string { return value.replace(/token/g, '[Redacted]'); }",
+        "function wrap(error: Error) {",
+        "class Wrapped extends Problem { constructor(error: unknown) {",
+        'super("alpha/wrapped", ProblemCategory.InternalServerError, "failed", { cause: error instanceof Error ? new Error(redactSensitiveValue(error.message)) : undefined });',
+        "} } }",
+      ].join("\n"),
+    );
+    expect(runProblemRegistryCheck(repo, "write").status).toBe("pass");
+  });
+
+  it.each([
+    "function normalize(error: string) { error = error.trim(); }",
+    "function normalize() { let error = 'other'; error = error.trim(); }",
+    "{ let error = 'other'; error = error.trim(); }",
+    "function normalize(error: Error) { const alias = error; alias.message = 'other'; }",
+  ])("preserves constructor input across unrelated lexical mutations: %s", (declaration) => {
+    const repo = createTempRepo();
+    writeFile(
+      repo,
+      "packages/alpha/src/problems.ts",
+      [
+        'import { Problem, ProblemCategory } from "@croco/problems-core";',
+        "function redactSensitiveValue(value: string): string { return value.replace(/token/g, '[Redacted]'); }",
+        "class Wrapped extends Problem { constructor(error: unknown) {",
+        declaration,
+        'super("alpha/wrapped", ProblemCategory.InternalServerError, "failed", { cause: error instanceof Error ? new Error(redactSensitiveValue(error.message)) : undefined });',
+        "} }",
+      ].join("\n"),
+    );
+    expect(runProblemRegistryCheck(repo, "write").status).toBe("pass");
+  });
+
+  it.each([
+    [
+      "array parameter",
+      "function unrelated(redactSensitiveValue: string) { [redactSensitiveValue] = ['other']; }",
+      "pass",
+    ],
+    [
+      "object parameter",
+      "function unrelated(redactSensitiveValue: string) { ({ redactSensitiveValue } = { redactSensitiveValue: 'other' }); }",
+      "pass",
+    ],
+    [
+      "loop parameter",
+      "function unrelated(redactSensitiveValue: string) { for (redactSensitiveValue of ['other']) {} }",
+      "pass",
+    ],
+    [
+      "local declaration",
+      "function unrelated() { let redactSensitiveValue = 'before'; redactSensitiveValue = 'other'; }",
+      "pass",
+    ],
+    [
+      "captured helper",
+      "function unrelated() { [redactSensitiveValue] = [(_value: string) => 'other']; } unrelated();",
+      "fail",
+    ],
+  ] as const)(
+    "tracks the actual sanitizer binding across scopes: %s",
+    (_kind, declaration, expected) => {
+      const repo = createTempRepo();
+      writeFile(
+        repo,
+        "packages/alpha/src/problems.ts",
+        [
+          'import { Problem, ProblemCategory } from "@croco/problems-core";',
+          "function redactSensitiveValue(value: string): string { return value.replace(/token/g, '[Redacted]'); }",
+          declaration,
+          "class Wrapped extends Problem { constructor(error: unknown) {",
+          'super("alpha/wrapped", ProblemCategory.InternalServerError, "failed", { cause: error instanceof Error ? new Error(redactSensitiveValue(error.message)) : undefined });',
+          "} }",
+        ].join("\n"),
+      );
+      const result = runProblemRegistryCheck(repo, "write");
+      expect(result.status).toBe(expected);
+      if (expected === "fail") {
+        expect(result.diagnostics).toContainEqual(
+          expect.stringContaining("Wrapped must forward 'error'"),
+        );
+      }
+    },
+  );
+
   it("rejects cause forwarding hidden by overloads, overwritten options, unrelated branches, and mutable aliases", () => {
     const repo = createTempRepo();
     writeFile(
@@ -593,6 +1006,12 @@ class Missing extends Base { constructor() { super("literal"); } }`,
       [
         'import { Problem, ProblemCategory } from "@croco/problems-core";',
         'import type { ProblemOptions } from "@croco/problems-core";',
+        "function redactSensitiveValue(value: string): string { return value; }",
+        "export class UnrelatedRedactedProblem extends Problem {",
+        "  constructor(error: Error, other: Error) {",
+        '    super("alpha/unrelated-redacted", ProblemCategory.InternalServerError, "failed", { cause: new Error(redactSensitiveValue(other.message)) });',
+        "  }",
+        "}",
         "export class OverloadedProblem extends Problem {",
         "  constructor(cause: Error);",
         "  constructor(cause: Error) {",
@@ -777,6 +1196,7 @@ class Missing extends Base { constructor() { super("literal"); } }`,
 
     expect(result.status).toBe("fail");
     for (const className of [
+      "UnrelatedRedactedProblem",
       "OverloadedProblem",
       "OverwrittenSpreadProblem",
       "FalseConditionalProblem",

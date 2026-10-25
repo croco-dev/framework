@@ -91,12 +91,6 @@ export const JSON_SAFE_ZOD_SCHEMA_SUPPORT_MATRIX = [
     note: "Supported for string enum values.",
   },
   {
-    typeName: "ZodNativeEnum",
-    kind: "enum",
-    jsonSafe: "supported",
-    note: "Supported for string and number enum values.",
-  },
-  {
     typeName: "ZodObject",
     kind: "object",
     jsonSafe: "supported",
@@ -154,13 +148,7 @@ export const JSON_SAFE_ZOD_SCHEMA_SUPPORT_MATRIX = [
     typeName: "ZodEffects",
     kind: "effects",
     jsonSafe: "supported",
-    note: "Refinements unwrap to the inner schema with a diagnostic warning; transforms and preprocessors are rejected.",
-  },
-  {
-    typeName: "ZodBranded",
-    kind: "branded",
-    jsonSafe: "supported",
-    note: "Unwraps to the inner schema.",
+    note: "Zod 4 custom refinement checks normalize to an effects descriptor with a warning; transforms and preprocessors are rejected.",
   },
   {
     typeName: "ZodReadonly",
@@ -249,20 +237,15 @@ export const JSON_SAFE_ZOD_SCHEMA_SUPPORT_MATRIX = [
 ] as const satisfies readonly ContractSchemaSupportMatrixEntry[];
 
 type ZodDefinition = {
-  readonly typeName?: unknown;
-  readonly checks?: readonly {
-    readonly kind: string;
-    readonly value?: unknown;
-    readonly inclusive?: boolean;
-  }[];
-  readonly minLength?: { readonly value: unknown } | null;
-  readonly maxLength?: { readonly value: unknown } | null;
-  readonly exactLength?: { readonly value: unknown } | null;
+  readonly checks?: readonly { readonly _zod: { readonly def: Record<string, unknown> } }[];
   readonly shape?: unknown;
   readonly in?: unknown;
+  readonly out?: unknown;
+  readonly discriminator?: unknown;
   readonly innerType?: unknown;
-  readonly schema?: unknown;
   readonly type?: unknown;
+  readonly check?: unknown;
+  readonly format?: unknown;
   readonly element?: unknown;
   readonly keyType?: unknown;
   readonly valueType?: unknown;
@@ -272,13 +255,9 @@ type ZodDefinition = {
   readonly value?: unknown;
   readonly defaultValue?: unknown | (() => unknown);
   readonly catchall?: unknown;
-  readonly unknownKeys?: unknown;
-  readonly effect?: {
-    readonly type?: unknown;
-  };
 };
 
-type TransparentZodWrapperChildKey = "innerType" | "type";
+type TransparentZodWrapperChildKey = "innerType";
 
 const TRANSPARENT_ZOD_WRAPPER_CHILD_KEYS: Readonly<Record<string, TransparentZodWrapperChildKey>> =
   {
@@ -286,7 +265,6 @@ const TRANSPARENT_ZOD_WRAPPER_CHILD_KEYS: Readonly<Record<string, TransparentZod
     ZodNullable: "innerType",
     ZodDefault: "innerType",
     ZodCatch: "innerType",
-    ZodBranded: "type",
     ZodReadonly: "innerType",
   };
 
@@ -322,9 +300,8 @@ export function formatSchemaDiagnostic(diagnostic: ContractSchemaDiagnostic): st
 export function unwrapZodEffectsSchema<TSchema extends z.ZodType | null | undefined>(
   schema: TSchema,
 ): TSchema {
-  const unwrapped = unwrapUnknownZodEffectsSchema(schema);
-
-  return unwrapped as TSchema;
+  // Refinements are checks on the original schema in Zod 4, not a wrapper to remove.
+  return schema;
 }
 
 export function getZodSchemaTypeName(schema: unknown): string {
@@ -334,7 +311,7 @@ export function getZodSchemaTypeName(schema: unknown): string {
 export function getZodInnerSchema(schema: unknown): unknown {
   const definition = getZodDefinition(schema);
 
-  return definition?.innerType ?? definition?.schema ?? definition?.type;
+  return definition?.innerType ?? definition?.in;
 }
 
 /**
@@ -408,7 +385,7 @@ function projectZodArrayInputSchema(
     return undefined;
   }
 
-  const childKey = getCatchRewriteChildKey(typeName, schema);
+  const childKey = getCatchRewriteChildKey(typeName);
   if (childKey) {
     const child = definition[childKey];
     const projectedChild = projectZodArrayInputSchema(child, projectedSchemas);
@@ -418,11 +395,10 @@ function projectZodArrayInputSchema(
 
     const projected =
       typeName === "ZodCatch"
-        ? projectedChild
+        ? removeCatchFallback(schema, projectedChild)
         : projectedChild === child
           ? schema
           : reconstructZodSchema(schema, {
-              ...definition,
               [childKey]: projectedChild,
             });
     projectedSchemas.set(schema, projected);
@@ -443,13 +419,12 @@ function projectZodArrayInputSchema(
     }
 
     const projected =
-      projectedOptions.length === 1
+      projectedOptions.length === 1 && !definition.checks?.length
         ? projectedOptions[0]
         : definition.options.length === projectedOptions.length &&
             definition.options.every((option, index) => option === projectedOptions[index])
           ? schema
           : reconstructZodSchema(schema, {
-              ...definition,
               options: projectedOptions,
             });
     projectedSchemas.set(schema, projected);
@@ -486,7 +461,7 @@ export function getZodArrayElementSchema(schema: unknown): unknown {
   const arraySchema = getTransparentZodArraySchema(schema);
   const definition = getZodDefinition(arraySchema);
 
-  return definition?.element ?? definition?.type;
+  return definition?.element;
 }
 
 function getTransparentZodArraySchema(schema: unknown): unknown | undefined {
@@ -503,10 +478,7 @@ function getTransparentZodSchema(schema: unknown): unknown {
     seen.add(current);
 
     const typeName = getSchemaTypeName(current);
-    if (
-      isTransparentArrayWrapper(typeName) ||
-      (typeName === "ZodEffects" && isZodRefinementEffect(current))
-    ) {
+    if (isTransparentArrayWrapper(typeName)) {
       current = getZodInnerSchema(current);
       continue;
     }
@@ -534,21 +506,21 @@ function rewriteZodCatchSchemas(schema: unknown, rewrittenSchemas: Map<object, u
     return schema;
   }
 
-  const childKey = getCatchRewriteChildKey(typeName, schema);
+  const childKey = getCatchRewriteChildKey(typeName);
   if (childKey) {
     const child = definition[childKey];
     const rewrittenChild = rewriteZodCatchSchemas(child, rewrittenSchemas);
 
     if (typeName === "ZodCatch") {
-      rewrittenSchemas.set(schema, rewrittenChild);
-      return rewrittenChild;
+      const withoutFallback = removeCatchFallback(schema, rewrittenChild);
+      rewrittenSchemas.set(schema, withoutFallback);
+      return withoutFallback;
     }
 
     const rewritten =
       rewrittenChild === child
         ? schema
         : reconstructZodSchema(schema, {
-            ...definition,
             [childKey]: rewrittenChild,
           });
     rewrittenSchemas.set(schema, rewritten);
@@ -564,7 +536,6 @@ function rewriteZodCatchSchemas(schema: unknown, rewrittenSchemas: Map<object, u
     )
       ? schema
       : reconstructZodSchema(schema, {
-          ...definition,
           options: rewrittenOptions,
         });
     rewrittenSchemas.set(schema, rewritten);
@@ -574,24 +545,28 @@ function rewriteZodCatchSchemas(schema: unknown, rewrittenSchemas: Map<object, u
   return schema;
 }
 
-function getCatchRewriteChildKey(
-  typeName: string,
-  schema: unknown,
-): "innerType" | "schema" | "type" | undefined {
-  const wrapperChildKey = TRANSPARENT_ZOD_WRAPPER_CHILD_KEYS[typeName];
-  if (wrapperChildKey) {
-    return wrapperChildKey;
-  }
-
-  if (typeName === "ZodEffects" && isZodRefinementEffect(schema)) {
-    return "schema";
-  }
-
-  return undefined;
+function getCatchRewriteChildKey(typeName: string): TransparentZodWrapperChildKey | undefined {
+  return TRANSPARENT_ZOD_WRAPPER_CHILD_KEYS[typeName];
 }
 
-function reconstructZodSchema(schema: object, definition: ZodDefinition): unknown {
+function reconstructZodSchema(schema: object, changes: ZodDefinition): unknown {
+  // Preserve lazy default/shape getters without evaluating them while projecting input branches.
+  const definition = Object.defineProperties(
+    {},
+    {
+      ...Object.getOwnPropertyDescriptors(getZodDefinition(schema)),
+      ...Object.getOwnPropertyDescriptors(changes),
+    },
+  );
   return Reflect.construct(schema.constructor, [definition]);
+}
+
+function removeCatchFallback(schema: object, inner: unknown): unknown {
+  const checks = getZodDefinition(schema)?.checks;
+  if (!isZodType(inner) || !checks?.length) return inner;
+  return reconstructZodSchema(inner, {
+    checks: [...(getZodDefinition(inner)?.checks ?? []), ...checks],
+  });
 }
 
 export function getZodDefaultValue(schema: unknown): unknown {
@@ -600,7 +575,7 @@ export function getZodDefaultValue(schema: unknown): unknown {
   return typeof defaultValue === "function" ? defaultValue() : defaultValue;
 }
 
-export function getZodInputObjectSchema(schema: z.ZodType): z.AnyZodObject | undefined {
+export function getZodInputObjectSchema(schema: z.ZodType): z.ZodObject | undefined {
   const visited = new Set<z.ZodType>();
   let current: z.ZodType = schema;
 
@@ -609,14 +584,9 @@ export function getZodInputObjectSchema(schema: z.ZodType): z.AnyZodObject | und
     const definition = getZodDefinition(current);
     const typeName = getSchemaTypeName(current);
     if (typeName === "ZodObject") {
-      return current as z.AnyZodObject;
+      return current as z.ZodObject;
     }
-    const inner =
-      typeName === "ZodEffects"
-        ? definition?.schema
-        : typeName === "ZodPipeline"
-          ? definition?.in
-          : undefined;
+    const inner = typeName === "ZodPipeline" ? definition?.in : undefined;
     if (!isZodType(inner)) {
       return undefined;
     }
@@ -635,8 +605,7 @@ export function getZodQueryInputSchema(
     return schema;
   }
 
-  const childKey =
-    typeName === "ZodEffects" ? "schema" : typeName === "ZodPipeline" ? "in" : undefined;
+  const childKey = typeName === "ZodPipeline" ? "in" : undefined;
   if (childKey) {
     const child = definition[childKey];
     if (!isZodType(child)) {
@@ -645,7 +614,7 @@ export function getZodQueryInputSchema(
     const projected = getZodQueryInputSchema(child, input);
     return projected === child
       ? schema
-      : (reconstructZodSchema(schema, { ...definition, [childKey]: projected }) as z.ZodType);
+      : (reconstructZodSchema(schema, { [childKey]: projected }) as z.ZodType);
   }
 
   if (typeName !== "ZodObject") {
@@ -665,8 +634,7 @@ export function getZodQueryInputSchema(
   return Object.keys(projectedFields).length === 0
     ? schema
     : (reconstructZodSchema(schema, {
-        ...definition,
-        shape: () => ({ ...shape, ...projectedFields }),
+        shape: { ...shape, ...projectedFields },
       }) as z.ZodType);
 }
 
@@ -689,10 +657,6 @@ export function getZodObjectUnsupportedDynamicKeyMode(
 ): "catchall" | "passthrough" | undefined {
   const definition = getZodDefinition(schema);
 
-  if (definition?.unknownKeys === "passthrough") {
-    return "passthrough";
-  }
-
   if (definition?.catchall === undefined) {
     return undefined;
   }
@@ -706,9 +670,23 @@ export function getZodObjectUnsupportedDynamicKeyMode(
   return catchallSchemaName === "ZodUnknown" ? "passthrough" : "catchall";
 }
 
-function describeUnknownSchema(schema: unknown, seen: Set<unknown>): ContractSchemaDescriptor {
+function describeUnknownSchema(
+  schema: unknown,
+  seen: Set<unknown>,
+  refinementUnwrapped = false,
+): ContractSchemaDescriptor {
   if (!isZodType(schema)) {
     return unsupportedDescriptor("unknown", typeof schema, "Schema value is not a Zod schema.");
+  }
+
+  const checks = getSchemaChecks(getZodDefinition(schema));
+  if (!refinementUnwrapped && checks.some((check) => check.kind === "custom")) {
+    const inner = describeUnknownSchema(schema, seen, true);
+    return {
+      ...descriptorFromChildren("effects", "ZodEffects", [inner]),
+      effectType: "refinement",
+      inner,
+    };
   }
 
   if (seen.has(schema)) {
@@ -725,15 +703,12 @@ function describeUnknownSchema(schema: unknown, seen: Set<unknown>): ContractSch
   const definition = getZodDefinition(schema);
 
   if (typeName === "ZodString") {
-    const checks = definition?.checks ?? [];
+    const checks = getSchemaChecks(definition);
     if (
       checks.some(
         (check) => check.kind === "min" || check.kind === "max" || check.kind === "length",
       ) &&
-      checks.some(
-        (check) =>
-          check.kind === "trim" || check.kind === "toLowerCase" || check.kind === "toUpperCase",
-      )
+      checks.some((check) => check.kind === "overwrite")
     ) {
       return unsupportedDescriptor(
         "string",
@@ -781,9 +756,18 @@ function describeUnknownSchema(schema: unknown, seen: Set<unknown>): ContractSch
       exclusiveMaximum?: boolean;
       integer?: boolean;
     } = {};
-    for (const check of definition?.checks ?? []) {
+    for (const check of getSchemaChecks(definition)) {
+      if (check.kind === "custom") continue;
       if (check.kind === "int") {
         bounds.integer = true;
+        if (bounds.minimum === undefined || bounds.minimum < Number.MIN_SAFE_INTEGER) {
+          bounds.minimum = Number.MIN_SAFE_INTEGER;
+          bounds.exclusiveMinimum = false;
+        }
+        if (bounds.maximum === undefined || bounds.maximum > Number.MAX_SAFE_INTEGER) {
+          bounds.maximum = Number.MAX_SAFE_INTEGER;
+          bounds.exclusiveMaximum = false;
+        }
       } else if (check.kind === "min" || check.kind === "max") {
         if (typeof check.value !== "number" || !Number.isFinite(check.value)) {
           return unsupportedDescriptor(
@@ -905,6 +889,13 @@ function describeUnknownSchema(schema: unknown, seen: Set<unknown>): ContractSch
   }
 
   if (typeName === "ZodLiteral") {
+    if (Array.isArray(definition?.values) && definition.values.length !== 1) {
+      return unsupportedDescriptor(
+        "literal",
+        typeName,
+        "Multi-value literals are not represented by generated contracts; use z.union() of single-value literals.",
+      );
+    }
     const value = normalizeLiteralValue(getLiteralValue(definition));
 
     return value.supported
@@ -913,23 +904,7 @@ function describeUnknownSchema(schema: unknown, seen: Set<unknown>): ContractSch
   }
 
   if (typeName === "ZodEnum") {
-    const enumValues = getEnumValues(definition?.values ?? definition?.entries);
-
-    if (enumValues.unsupportedReason) {
-      return {
-        ...unsupportedDescriptor("enum", typeName, enumValues.unsupportedReason),
-        values: enumValues.values,
-      };
-    }
-
-    return {
-      ...supportedDescriptor("enum", typeName),
-      values: enumValues.values.sort(comparePrimitiveValues),
-    };
-  }
-
-  if (typeName === "ZodNativeEnum") {
-    const enumValues = getNativeEnumValues(definition?.values);
+    const enumValues = getEnumValues(schema);
 
     if (enumValues.unsupportedReason) {
       return {
@@ -972,10 +947,10 @@ function describeUnknownSchema(schema: unknown, seen: Set<unknown>): ContractSch
     };
   }
 
-  if (typeName === "ZodEffects") {
-    const effectType =
-      typeof definition?.effect?.type === "string" ? definition.effect.type : "unknown";
-    const inner = describeMaybeSchema(definition?.schema ?? definition?.innerType, seen);
+  if (typeName === "ZodPipeline") {
+    const preprocess = getSchemaTypeName(definition?.in) === "ZodTransform";
+    const effectType = preprocess ? "preprocess" : "transform";
+    const inner = describeMaybeSchema(preprocess ? definition?.out : definition?.in, seen);
 
     if (effectType === "transform" || effectType === "preprocess" || effectType === "unknown") {
       return {
@@ -996,9 +971,9 @@ function describeUnknownSchema(schema: unknown, seen: Set<unknown>): ContractSch
     };
   }
 
-  if (typeName === "ZodBranded" || typeName === "ZodReadonly") {
-    const inner = describeMaybeSchema(definition?.type ?? definition?.innerType, seen);
-    const kind = typeName === "ZodBranded" ? "branded" : "readonly";
+  if (typeName === "ZodReadonly") {
+    const inner = describeMaybeSchema(definition?.innerType, seen);
+    const kind = "readonly";
 
     return {
       ...descriptorFromChildren(kind, typeName, [inner]),
@@ -1007,13 +982,13 @@ function describeUnknownSchema(schema: unknown, seen: Set<unknown>): ContractSch
   }
 
   if (typeName === "ZodArray") {
-    const element = describeMaybeSchema(definition?.element ?? definition?.type, seen);
+    const element = describeMaybeSchema(definition?.element, seen);
 
     const bounds: { minItems?: number; maxItems?: number } = {};
-    for (const key of ["minLength", "maxLength", "exactLength"] as const) {
-      const check = definition?.[key];
-      if (check == null) continue;
+    for (const check of getSchemaChecks(definition)) {
+      if (check.kind === "custom") continue;
       if (
+        !["min", "max", "length"].includes(check.kind) ||
         typeof check.value !== "number" ||
         !Number.isFinite(check.value) ||
         !Number.isInteger(check.value) ||
@@ -1028,8 +1003,9 @@ function describeUnknownSchema(schema: unknown, seen: Set<unknown>): ContractSch
           element,
         };
       }
-      if (key !== "maxLength") bounds.minItems = Math.max(bounds.minItems ?? 0, check.value);
-      if (key !== "minLength") bounds.maxItems = Math.min(bounds.maxItems ?? Infinity, check.value);
+      if (check.kind !== "max") bounds.minItems = Math.max(bounds.minItems ?? 0, check.value);
+      if (check.kind !== "min")
+        bounds.maxItems = Math.min(bounds.maxItems ?? Infinity, check.value);
     }
     return {
       ...descriptorFromChildren("array", typeName, [element]),
@@ -1187,15 +1163,15 @@ function isOptionalInputSchema(schema: unknown): boolean {
     return true;
   }
 
-  if (typeName === "ZodEffects") {
+  if (typeName === "ZodPipeline") {
     const definition = getZodDefinition(schema);
 
-    return isOptionalInputSchema(definition?.schema ?? definition?.innerType);
+    return isOptionalInputSchema(definition?.in);
   }
 
-  if (typeName === "ZodNullable" || typeName === "ZodBranded" || typeName === "ZodReadonly") {
+  if (typeName === "ZodNullable" || typeName === "ZodReadonly") {
     const definition = getZodDefinition(schema);
-    const inner = typeName === "ZodBranded" ? definition?.type : definition?.innerType;
+    const inner = definition?.innerType;
 
     return isOptionalInputSchema(inner);
   }
@@ -1207,36 +1183,63 @@ function isTransparentArrayWrapper(typeName: string): boolean {
   return TRANSPARENT_ZOD_WRAPPER_CHILD_KEYS[typeName] !== undefined;
 }
 
-function isZodRefinementEffect(schema: unknown): boolean {
-  return getZodDefinition(schema)?.effect?.type === "refinement";
-}
-
-function unwrapUnknownZodEffectsSchema(schema: unknown): unknown {
-  if (!isZodType(schema) || getSchemaTypeName(schema) !== "ZodEffects") {
-    return schema;
-  }
-
-  const definition = getZodDefinition(schema);
-
-  return unwrapUnknownZodEffectsSchema(definition?.schema ?? definition?.innerType);
-}
-
 function getSchemaTypeName(schema: unknown): string {
   if (!schema || typeof schema !== "object") {
     return typeof schema;
   }
 
-  // Zod 3 stores its kind independently of constructor names, which bundlers rewrite.
-  const typeName = getZodDefinition(schema)?.typeName;
-  return typeof typeName === "string" ? typeName : schema.constructor.name;
+  const definition = getZodDefinition(schema);
+  const type = definition?.type;
+  if (typeof type !== "string") return schema.constructor.name;
+  if (type === "union" && definition?.discriminator !== undefined) return "ZodDiscriminatedUnion";
+  const names: Readonly<Record<string, string>> = {
+    bigint: "ZodBigInt",
+    nan: "ZodNaN",
+    pipe: "ZodPipeline",
+    readonly: "ZodReadonly",
+  };
+  return names[type] ?? `Zod${type[0]?.toUpperCase()}${type.slice(1)}`;
 }
 
 function getZodDefinition(schema: unknown): ZodDefinition | undefined {
-  if (!schema || typeof schema !== "object" || !("_def" in schema)) {
-    return undefined;
-  }
+  if (!isRecord(schema) || !isRecord(schema["_zod"])) return undefined;
+  return schema["_zod"]["def"] as ZodDefinition;
+}
 
-  return schema._def as ZodDefinition;
+type SchemaCheck = {
+  readonly kind: string;
+  readonly value?: unknown;
+  readonly inclusive?: boolean;
+};
+
+function getSchemaChecks(definition: ZodDefinition | undefined): readonly SchemaCheck[] {
+  const checks = (definition?.checks ?? []).map((check) => {
+    const def = check._zod.def;
+    switch (def["check"]) {
+      case "min_length":
+        return { kind: "min", value: def["minimum"] };
+      case "max_length":
+        return { kind: "max", value: def["maximum"] };
+      case "length_equals":
+        return { kind: "length", value: def["length"] };
+      case "greater_than":
+        return { kind: "min", value: def["value"], inclusive: def["inclusive"] === true };
+      case "less_than":
+        return { kind: "max", value: def["value"], inclusive: def["inclusive"] === true };
+      case "number_format":
+        return {
+          kind: def["format"] === "safeint" ? "int" : String(def["format"]),
+        };
+      default:
+        return { kind: String(def["check"]) };
+    }
+  });
+  if (definition?.check === "number_format") {
+    checks.unshift({
+      kind: definition.format === "safeint" ? "int" : String(definition.format),
+    });
+  }
+  return checks;
 }
 
 function getObjectShape(schema: unknown): Record<string, unknown> {
@@ -1281,7 +1284,13 @@ export function isZodType(value: unknown): value is z.ZodType {
 
   const candidate = value as { readonly safeParse?: unknown };
 
-  return "_def" in value && typeof candidate.safeParse === "function";
+  return (
+    isRecord(value) &&
+    isRecord(value["_zod"]) &&
+    isRecord(value["_zod"]["version"]) &&
+    value["_zod"]["version"]["major"] === 4 &&
+    typeof candidate.safeParse === "function"
+  );
 }
 
 function normalizeLiteralValue(value: unknown):
@@ -1309,28 +1318,19 @@ type EnumValuesResult = {
   readonly unsupportedReason?: string;
 };
 
-function getEnumValues(value: unknown): EnumValuesResult {
-  if (!Array.isArray(value)) {
-    return getNativeEnumValues(value);
+function getEnumValues(schema: unknown): EnumValuesResult {
+  if (
+    !isRecord(schema) ||
+    !isRecord(schema["_zod"]) ||
+    !(schema["_zod"]["values"] instanceof Set)
+  ) {
+    return { values: [] };
   }
-
-  return toEnumValuesResult(value);
+  return toEnumValuesResult([...schema["_zod"]["values"]]);
 }
 
 function getFirstArrayValue(value: unknown): unknown {
   return Array.isArray(value) ? value[0] : undefined;
-}
-
-function getNativeEnumValues(value: unknown): EnumValuesResult {
-  if (!isRecord(value)) {
-    return { values: [] };
-  }
-
-  return toEnumValuesResult(
-    Object.entries(value)
-      .filter(([key]) => !isNumericEnumReverseMappingKey(key))
-      .map(([, enumValue]) => enumValue),
-  );
 }
 
 function toEnumValuesResult(values: readonly unknown[]): EnumValuesResult {
@@ -1349,10 +1349,6 @@ function toEnumValuesResult(values: readonly unknown[]): EnumValuesResult {
 
 function isJsonEnumValue(value: unknown): value is string | number {
   return typeof value === "string" || (typeof value === "number" && Number.isFinite(value));
-}
-
-function isNumericEnumReverseMappingKey(key: string): boolean {
-  return key.length > 0 && Number.isFinite(Number(key)) && String(Number(key)) === key;
 }
 
 function compareSchemaFields(
@@ -1385,6 +1381,14 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 export function getUnsupportedZodMajor(
   schema: unknown,
 ): { readonly major: number; readonly kind: string } | undefined {
+  if (
+    isRecord(schema) &&
+    isRecord(schema["_def"]) &&
+    typeof schema["_def"]["typeName"] === "string" &&
+    !("_zod" in schema)
+  ) {
+    return { major: 3, kind: schema["_def"]["typeName"] };
+  }
   if (typeof schema !== "object" || schema === null || !("_zod" in schema)) return undefined;
   const internals = schema._zod;
   if (typeof internals !== "object" || internals === null || !("version" in internals))
@@ -1392,7 +1396,7 @@ export function getUnsupportedZodMajor(
   const version = internals.version;
   if (typeof version !== "object" || version === null || !("major" in version)) return undefined;
   const major = version.major;
-  if (typeof major !== "number" || major === 3) return undefined;
+  if (typeof major !== "number" || major === 4) return undefined;
   const definition = "def" in internals ? internals.def : undefined;
   const kind =
     typeof definition === "object" &&
@@ -1436,10 +1440,10 @@ function requiresQueryArrayInput(schema: ContractSchemaDescriptor | null): boole
 }
 
 /** Normalize HTTP query cardinality without parsing domain values. */
-export function normalizeZodQueryInput(
-  schema: z.ZodType,
+export function normalizeZodQueryInput<TSchema extends z.ZodType>(
+  schema: TSchema,
   source: Readonly<Record<string, unknown>>,
-): { input: Record<string, unknown>; schema: z.ZodType; repeatedScalarFields: string[] } {
+): { input: Record<string, unknown>; schema: TSchema; repeatedScalarFields: string[] } {
   const input = { ...source };
   const repeatedScalarFields: string[] = [];
   for (const [name, field] of Object.entries(getZodInputObjectSchema(schema)?.shape ?? {})) {
@@ -1452,5 +1456,5 @@ export function normalizeZodQueryInput(
     )
       input[name] = [value];
   }
-  return { input, schema: getZodQueryInputSchema(schema, input), repeatedScalarFields };
+  return { input, schema: getZodQueryInputSchema(schema, input) as TSchema, repeatedScalarFields };
 }

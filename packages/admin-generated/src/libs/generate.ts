@@ -4,6 +4,10 @@ import * as path from "node:path";
 import { Problem, ProblemCategory } from "@croco/problems-core";
 import {
   assertContractGraphConsumerRouteCoverage,
+  getZodSchemaTypeName,
+  describeZodSchema,
+  getZodInnerSchema,
+  getZodArrayElementSchema,
   assertContractGraphHasNoErrors,
   type ContractGraph,
   type ContractGraphConsumerRouteField,
@@ -870,10 +874,6 @@ function zodTypeToTypeScript(schema: unknown, mode: "input" | "output" = "output
     return unionTypes(getEnumValues(schema).map(literalValueToTypeScript));
   }
 
-  if (schemaName === "ZodNativeEnum") {
-    return unionTypes(getNativeEnumValues(schema).map(literalValueToTypeScript));
-  }
-
   if (schemaName === "ZodUnion" || schemaName === "ZodDiscriminatedUnion") {
     return unionTypes(getUnionOptions(schema).map((option) => zodTypeToTypeScript(option, mode)));
   }
@@ -891,7 +891,7 @@ function zodTypeToTypeScript(schema: unknown, mode: "input" | "output" = "output
     return mode === "input" ? `${innerType} | undefined` : innerType;
   }
 
-  if (schemaName === "ZodEffects" || schemaName === "ZodBranded" || schemaName === "ZodReadonly") {
+  if (schemaName === "ZodReadonly") {
     return zodTypeToTypeScript(getInnerSchema(schema), mode);
   }
 
@@ -919,38 +919,15 @@ function zodTypeToTypeScript(schema: unknown, mode: "input" | "output" = "output
 }
 
 function getSchemaName(schema: unknown): string {
-  if (!schema || typeof schema !== "object") {
-    return "";
-  }
-
-  return schema.constructor.name;
+  return getZodSchemaTypeName(schema);
 }
 
 function getInnerSchema(schema: unknown): unknown {
-  if (!schema || typeof schema !== "object" || !("_def" in schema)) {
-    return undefined;
-  }
-
-  const definition = schema._def as {
-    readonly innerType?: unknown;
-    readonly schema?: unknown;
-    readonly type?: unknown;
-  };
-
-  return definition.innerType ?? definition.schema ?? definition.type;
+  return getZodInnerSchema(schema);
 }
 
 function getArrayElementSchema(schema: unknown): unknown {
-  if (!schema || typeof schema !== "object" || !("_def" in schema)) {
-    return undefined;
-  }
-
-  const definition = schema._def as {
-    readonly element?: unknown;
-    readonly type?: unknown;
-  };
-
-  return definition.element ?? definition.type;
+  return getZodArrayElementSchema(schema);
 }
 
 function getRecordValueSchema(schema: unknown): unknown {
@@ -977,39 +954,9 @@ function getLiteralValue(schema: unknown): unknown {
 }
 
 function getEnumValues(schema: unknown): unknown[] {
-  if (!schema || typeof schema !== "object" || !("_def" in schema)) {
-    return [];
-  }
-
-  const definition = schema._def as {
-    readonly entries?: Record<string, unknown>;
-    readonly values?: readonly unknown[];
-  };
-
-  return definition.values ? [...definition.values] : Object.values(definition.entries ?? {});
-}
-
-function getNativeEnumValues(schema: unknown): unknown[] {
-  if (!schema || typeof schema !== "object" || !("_def" in schema)) {
-    return [];
-  }
-
-  const definition = schema._def as {
-    readonly values?: Record<string, unknown>;
-  };
-
-  const nativeEnum = schema as {
-    readonly _def: unknown;
-    safeParse(value: unknown): { success: boolean };
-  };
-
-  return [
-    ...new Set(
-      Object.values(definition.values ?? {}).filter(
-        (value) => isLiteralTypeValue(value) && nativeEnum.safeParse(value).success,
-      ),
-    ),
-  ];
+  let descriptor = describeZodSchema(schema as Parameters<typeof describeZodSchema>[0]);
+  while (descriptor?.kind === "effects") descriptor = descriptor.inner ?? null;
+  return [...(descriptor?.values ?? [])];
 }
 
 function getUnionOptions(schema: unknown): unknown[] {
@@ -1071,18 +1018,7 @@ function getOptionalObjectFieldSchema(
       : undefined;
   }
 
-  const effectType =
-    schemaName === "ZodEffects" && schema && typeof schema === "object" && "_def" in schema
-      ? (schema._def as { readonly effect?: { readonly type?: string } }).effect?.type
-      : undefined;
-
-  if (
-    mode === "input" &&
-    (schemaName === "ZodNullable" ||
-      schemaName === "ZodBranded" ||
-      schemaName === "ZodReadonly" ||
-      effectType === "refinement")
-  ) {
+  if (mode === "input" && (schemaName === "ZodNullable" || schemaName === "ZodReadonly")) {
     return getOptionalObjectFieldSchema(getInnerSchema(schema), mode, true) !== undefined
       ? schema
       : undefined;
@@ -1160,15 +1096,6 @@ function stringValueToTypeScript(value: string): string {
     .replace(/\t/g, "\\t")
     .replace(/\u2028/g, "\\u2028")
     .replace(/\u2029/g, "\\u2029")}'`;
-}
-
-function isLiteralTypeValue(value: unknown): value is string | number | boolean | null {
-  return (
-    typeof value === "string" ||
-    typeof value === "number" ||
-    typeof value === "boolean" ||
-    value === null
-  );
 }
 
 function isJavaScriptIdentifier(value: string): boolean {

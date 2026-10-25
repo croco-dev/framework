@@ -9,6 +9,26 @@ const HEADER_METADATA = { type: "header", name: "x-tenant-id" } as const;
 const ARRAY_QUERY_METADATA = { type: "query", name: "tags" } as const;
 
 describe("ValidationPipe", () => {
+  it("rejects oversized request collections before validating any element", async () => {
+    let visits = 0;
+    const pipe = new ValidationPipe(
+      z
+        .array(
+          z.string().refine(() => {
+            visits += 1;
+            return true;
+          }),
+        )
+        .max(2),
+    );
+    await expect(pipe.transform(["one", "two", "three"], { type: "body" })).rejects.toBeInstanceOf(
+      RequestValidationProblem,
+    );
+    expect(visits).toBe(0);
+    await expect(pipe.transform(["one", "two"], { type: "body" })).resolves.toEqual(["one", "two"]);
+    expect(visits).toBe(2);
+  });
+
   it("should parse async refinements and map rejection to request issues", async () => {
     const pipe = new ValidationPipe(
       z.string().refine(async (value) => value !== "taken", "name is taken"),
@@ -28,12 +48,17 @@ describe("ValidationPipe", () => {
 
     await expect(paramPipe.transform("first", PARAM_METADATA)).rejects.toThrowError(
       expect.objectContaining({
-        issues: [{ path: "params.id", message: "Expected number, received string" }],
+        issues: [{ path: "params.id", message: "Invalid input: expected number, received string" }],
       }),
     );
     await expect(headerPipe.transform("first", HEADER_METADATA)).rejects.toThrowError(
       expect.objectContaining({
-        issues: [{ path: "headers.x-tenant-id", message: "Expected number, received string" }],
+        issues: [
+          {
+            path: "headers.x-tenant-id",
+            message: "Invalid input: expected number, received string",
+          },
+        ],
       }),
     );
   });
@@ -44,7 +69,9 @@ describe("ValidationPipe", () => {
 
     await expect(unnamedPipe.transform("first", { type: "query" })).rejects.toThrowError(
       expect.objectContaining({
-        issues: [{ path: "query.value", message: "Expected number, received string" }],
+        issues: [
+          { path: "query.value", message: "Invalid input: expected number, received string" },
+        ],
       }),
     );
     await expect(bodyPipe.transform({}, { type: "body" })).rejects.toThrowError(
@@ -96,7 +123,7 @@ describe("ValidationPipe", () => {
   ])(
     "should reject repeated values before a %s schema can reinterpret them",
     async (_name, schema) => {
-      const pipe = new ValidationPipe(schema);
+      const pipe = new ValidationPipe<unknown>(schema);
 
       await expect(pipe.transform(["first", "second"], QUERY_METADATA)).rejects.toThrowError(
         expect.objectContaining({
@@ -121,7 +148,9 @@ describe("ValidationPipe", () => {
 
     await expect(pipe.transform("first", QUERY_METADATA)).rejects.toThrowError(
       expect.objectContaining({
-        issues: [{ path: "query.size", message: "Expected number, received string" }],
+        issues: [
+          { path: "query.size", message: "Invalid input: expected number, received string" },
+        ],
       }),
     );
   });
@@ -177,7 +206,7 @@ describe("ValidationPipe", () => {
   ])(
     "should parse repeated values through catch unions without using fallbacks",
     async (schema) => {
-      const pipe = new ValidationPipe(schema);
+      const pipe = new ValidationPipe<unknown>(schema);
 
       await expect(pipe.transform("first", QUERY_METADATA)).resolves.toBe("first");
       await expect(pipe.transform(["first", "second"], QUERY_METADATA)).resolves.toEqual([
@@ -190,7 +219,7 @@ describe("ValidationPipe", () => {
   it.each([z.union([z.string(), z.array(z.string())]), z.any(), z.unknown()])(
     "should preserve repeated values for schemas that accept arrays directly",
     async (schema) => {
-      const pipe = new ValidationPipe(schema);
+      const pipe = new ValidationPipe<unknown>(schema);
 
       await expect(pipe.transform(["first", "second"], QUERY_METADATA)).resolves.toEqual([
         "first",
@@ -206,7 +235,7 @@ describe("ValidationPipe", () => {
       z.array(z.string()),
     ]),
   ])("should bypass scalar value-changing union branches for repeated values", async (schema) => {
-    const pipe = new ValidationPipe(schema);
+    const pipe = new ValidationPipe<unknown>(schema);
 
     await expect(pipe.transform(["first", "second"], QUERY_METADATA)).resolves.toEqual([
       "first",

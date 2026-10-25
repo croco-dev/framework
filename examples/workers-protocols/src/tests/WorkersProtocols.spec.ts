@@ -8,6 +8,7 @@ import { createGraphQLFixture } from "../graphqlFixture";
 import { getSdk } from "../generated/graphql";
 import { execFileSync } from "node:child_process";
 import { Miniflare, Response as MiniflareResponse } from "miniflare";
+import type { Request as MiniflareRequest } from "miniflare";
 import { createTRPCUntypedClient, httpLink } from "@trpc/client";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
@@ -21,7 +22,7 @@ beforeAll(async () => {
     release = resolve;
   });
   worker = new Miniflare({
-    outboundService: async (request) => {
+    outboundService: async (request: MiniflareRequest) => {
       if (request.url !== "https://request-overlap.invalid/rendezvous") {
         throw new Error("Unexpected outbound request in the local protocol fixture");
       }

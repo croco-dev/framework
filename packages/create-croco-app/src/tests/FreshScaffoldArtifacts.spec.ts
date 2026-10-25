@@ -147,7 +147,7 @@ describe("fresh scaffold contract artifacts", () => {
     },
   );
 
-  it("admin-console ships the nonnegative integer ledger position in both request representations", async () => {
+  it("admin-console ships the nonnegative safe integer ledger position in both request representations", async () => {
     const targetDir = await generatePreset("admin-console");
     type RequestSchema = { fields?: { name: string; schema: Record<string, unknown> }[] };
     const baseline = JSON.parse(
@@ -170,6 +170,8 @@ describe("fresh scaffold contract artifacts", () => {
         {
           kind: "number",
           minimum: 0,
+          maximum: Number.MAX_SAFE_INTEGER,
+          exclusiveMaximum: false,
           integer: true,
         },
       );

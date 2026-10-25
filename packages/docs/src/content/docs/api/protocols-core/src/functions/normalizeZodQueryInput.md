@@ -5,15 +5,21 @@ prev: false
 title: "normalizeZodQueryInput"
 ---
 
-> **normalizeZodQueryInput**(`schema`, `source`): `object`
+> **normalizeZodQueryInput**\<`TSchema`\>(`schema`, `source`): `object`
 
 Normalize HTTP query cardinality without parsing domain values.
+
+## Type Parameters
+
+### TSchema
+
+`TSchema` _extends_ `ZodType`\<`unknown`, `unknown`, `$ZodTypeInternals`\<`unknown`, `unknown`\>\>
 
 ## Parameters
 
 ### schema
 
-`ZodType`
+`TSchema`
 
 ### source
 
@@ -33,4 +39,4 @@ Normalize HTTP query cardinality without parsing domain values.
 
 ### schema
 
-> **schema**: `ZodType`
+> **schema**: `TSchema`

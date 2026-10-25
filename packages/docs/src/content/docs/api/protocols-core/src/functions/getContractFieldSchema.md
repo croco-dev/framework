@@ -5,13 +5,13 @@ prev: false
 title: "getContractFieldSchema"
 ---
 
-> **getContractFieldSchema**(`contractSchema`, `fieldName`): `ZodType`\<`any`, `ZodTypeDef`, `any`\> \| `null`
+> **getContractFieldSchema**(`contractSchema`, `fieldName`): `ZodType`\<`unknown`, `unknown`, `$ZodTypeInternals`\<`unknown`, `unknown`\>\> \| `null`
 
 ## Parameters
 
 ### contractSchema
 
-`ZodType`\<`any`, `ZodTypeDef`, `any`\> \| `null` \| `undefined`
+`ZodType`\<`unknown`, `unknown`, `$ZodTypeInternals`\<`unknown`, `unknown`\>\> \| `null` \| `undefined`
 
 ### fieldName
 
@@ -19,4 +19,4 @@ title: "getContractFieldSchema"
 
 ## Returns
 
-`ZodType`\<`any`, `ZodTypeDef`, `any`\> \| `null`
+`ZodType`\<`unknown`, `unknown`, `$ZodTypeInternals`\<`unknown`, `unknown`\>\> \| `null`

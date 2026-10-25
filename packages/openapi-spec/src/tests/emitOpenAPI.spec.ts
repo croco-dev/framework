@@ -33,17 +33,17 @@ import {
 } from "@croco/protocols-rest";
 import { beforeEach, describe, expect, it } from "vitest";
 import { z } from "zod";
-import { z as z4 } from "zod/v4";
+import { z as z3 } from "zod/v3";
 import { emitOpenAPI, emitOpenAPIFromContractGraph } from "../libs/emitOpenAPI";
 
 describe("emitOpenAPI", () => {
   beforeEach(() => {});
 
   it.each(["params", "query", "body", "response"] as const)(
-    "rejects a Zod 4 route-contract %s schema with its source diagnostic",
+    "rejects a Zod 3 route-contract %s schema with its source diagnostic",
     (schemaKind) => {
       const supportedSchema = z.object({ id: z.string() });
-      const unsupportedSchema = z4.object({ id: z4.string() }) as unknown as typeof supportedSchema;
+      const unsupportedSchema = z3.object({ id: z3.string() }) as unknown as typeof supportedSchema;
       const contract = defineRouteContract({
         method: HttpMethod.POST,
         path: "/unsupported-zod/:id",
@@ -75,7 +75,7 @@ describe("emitOpenAPI", () => {
               sourceLocation: expect.objectContaining({
                 path: expect.stringContaining("emitOpenAPI.spec.ts"),
               }),
-              message: `Route contract ${schemaKind} uses unsupported Zod major 4 (schema kind: object); Croco route contracts require Zod 3.`,
+              message: `Route contract ${schemaKind} uses unsupported Zod major 3 (schema kind: ZodObject); Croco route contracts require Zod 4.`,
             }),
           ],
         }),

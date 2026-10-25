@@ -4433,7 +4433,7 @@ Sources:
 
 Sources:
 
-- `packages/admin-generated/src/libs/generate.ts:57:5` (problem-constructor)
+- `packages/admin-generated/src/libs/generate.ts:61:5` (problem-constructor)
 
 <a id="ai-saas-model-not-found"></a>
 
@@ -6455,7 +6455,7 @@ Sources:
 
 Sources:
 
-- `packages/auth-clerk/src/libs/problems/ClerkProblems.ts:131:1` (problem-class)
+- `packages/auth-clerk/src/libs/problems/ClerkProblems.ts:133:1` (problem-class)
 
 <a id="auth-clerk-external-service-error"></a>
 
@@ -6473,7 +6473,7 @@ Sources:
 
 Sources:
 
-- `packages/auth-clerk/src/libs/problems/ClerkProblems.ts:171:5` (problem-constructor)
+- `packages/auth-clerk/src/libs/problems/ClerkProblems.ts:173:5` (problem-constructor)
 
 <a id="auth-clerk-invalid-webhook-payload"></a>
 
@@ -6509,7 +6509,7 @@ Sources:
 
 Sources:
 
-- `packages/auth-clerk/src/libs/problems/ClerkProblems.ts:120:1` (problem-class)
+- `packages/auth-clerk/src/libs/problems/ClerkProblems.ts:122:1` (problem-class)
 
 <a id="auth-clerk-public-user-data-missing"></a>
 
@@ -6527,7 +6527,7 @@ Sources:
 
 Sources:
 
-- `packages/auth-clerk/src/libs/problems/ClerkProblems.ts:158:1` (problem-class)
+- `packages/auth-clerk/src/libs/problems/ClerkProblems.ts:160:1` (problem-class)
 
 <a id="auth-clerk-token-verification-failed"></a>
 
@@ -6563,7 +6563,7 @@ Sources:
 
 Sources:
 
-- `packages/auth-clerk/src/libs/problems/ClerkProblems.ts:97:1` (problem-class)
+- `packages/auth-clerk/src/libs/problems/ClerkProblems.ts:98:1` (problem-class)
 
 <a id="auth-clerk-unexpected-tenant-mapping-claim"></a>
 
@@ -6581,7 +6581,7 @@ Sources:
 
 Sources:
 
-- `packages/auth-clerk/src/libs/problems/ClerkProblems.ts:146:1` (problem-class)
+- `packages/auth-clerk/src/libs/problems/ClerkProblems.ts:148:1` (problem-class)
 
 <a id="auth-clerk-webhook-delivery-failed"></a>
 
@@ -17136,7 +17136,7 @@ Sources:
 - Lifecycle: `active`
 - Cause: The collected contract graph contains blocking diagnostics, including route-contract validation errors and unsupported Zod majors.
 - User action: Correct the target identified by each diagnostic before generating contracts or starting the application.
-- Operator action: Inspect diagnostic codes, route IDs, and source locations. For contract-schema-unsupported-zod-major, replace the identified schema with a Zod 3 route contract schema.
+- Operator action: Inspect diagnostic codes, route IDs, and source locations. For contract-schema-unsupported-zod-major, replace the identified schema with a Zod 4 route contract schema.
 - Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
 
 Sources:
@@ -17483,7 +17483,7 @@ Sources:
 
 Sources:
 
-- `packages/protocols-rest/src/libs/internal/routeParameterSchema.ts:25:11` (problem-factory)
+- `packages/protocols-rest/src/libs/internal/routeParameterSchema.ts:22:11` (problem-factory)
 
 <a id="protocols-rest-operation-json-invalid"></a>
 

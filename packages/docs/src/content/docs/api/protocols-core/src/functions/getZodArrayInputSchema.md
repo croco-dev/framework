@@ -5,7 +5,7 @@ prev: false
 title: "getZodArrayInputSchema"
 ---
 
-> **getZodArrayInputSchema**(`schema`): `ZodType`\<`any`, `ZodTypeDef`, `any`\> \| `undefined`
+> **getZodArrayInputSchema**(`schema`): `ZodType`\<`unknown`, `unknown`, `$ZodTypeInternals`\<`unknown`, `unknown`\>\> \| `undefined`
 
 Projects a parameter schema to the branches that preserve array input.
 
@@ -21,4 +21,4 @@ The projection is cached by source schema for request-path reuse.
 
 ## Returns
 
-`ZodType`\<`any`, `ZodTypeDef`, `any`\> \| `undefined`
+`ZodType`\<`unknown`, `unknown`, `$ZodTypeInternals`\<`unknown`, `unknown`\>\> \| `undefined`

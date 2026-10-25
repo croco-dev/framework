@@ -2,7 +2,7 @@ import { createRequire } from "node:module";
 import { Problem, ProblemCategory } from "@croco/problems-core";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
-import { z as z4 } from "zod/v4";
+import { z as z3 } from "zod/v3";
 import { HttpMethod, isRouteContractSpec } from "../index";
 
 class UserNotFoundProblem extends Problem {
@@ -159,7 +159,7 @@ describe("wrapped route parameter schemas", () => {
 });
 
 describe("route contract Zod major boundary", () => {
-  it("accepts Zod 3 body and response from another module instance", () => {
+  it("accepts Zod 4 body and response from another module instance", () => {
     const cjsZod = createRequire(import.meta.url)("zod") as { readonly z: typeof z };
     const schema = cjsZod.z.object({ id: cjsZod.z.string() });
     expect(
@@ -171,12 +171,12 @@ describe("route contract Zod major boundary", () => {
       }),
     ).toBe(true);
   });
-  it.each(["params", "query", "body", "response"])("rejects Zod 4 in %s", (slot) => {
+  it.each(["params", "query", "body", "response"])("rejects Zod 3 in %s", (slot) => {
     expect(
       isRouteContractSpec({
         method: HttpMethod.GET,
         path: "/users/:id",
-        [slot]: z4.object({ id: z4.string() }),
+        [slot]: z3.object({ id: z3.string() }),
       }),
     ).toBe(false);
   });

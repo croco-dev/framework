@@ -1,14 +1,14 @@
 import "reflect-metadata";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
-import { z as z4 } from "zod/v4";
+import { z as z3 } from "zod/v3";
 import { assertContractGraphHasNoErrors, buildContractGraph } from "../libs/ContractGraph";
 import { REST_ROUTES_KEY, type RouteContractMetadata } from "../libs/sharedTypes";
 import { Controller, Get, Query } from "./helpers/test-decorators";
 
 describe("unsupported route contract Zod majors", () => {
   it.each(["params", "query", "body", "response"] as const)(
-    "rejects Zod 4 %s before misleading binding diagnostics",
+    "rejects Zod 3 %s before misleading binding diagnostics",
     (slot) => {
       @Controller("/posts")
       class PostsController {
@@ -20,7 +20,7 @@ describe("unsupported route contract Zod majors", () => {
         path: "/posts",
         sourceLocation: { path: "src/posts.ts", line: 12, column: 3 },
         query: z.object({ missing: z.string() }),
-        [slot]: z4.object({ offset: z4.number() }),
+        [slot]: z3.object({ offset: z3.number() }),
       } as unknown as RouteContractMetadata;
       Reflect.defineMetadata(
         REST_ROUTES_KEY,
@@ -36,7 +36,7 @@ describe("unsupported route contract Zod majors", () => {
           target: "schema",
           routeId: "PostsController.list",
           sourceLocation: contract.sourceLocation,
-          message: expect.stringMatching(new RegExp(`${slot}.*Zod major 4.*object`)),
+          message: expect.stringMatching(new RegExp(`${slot}.*Zod major 3.*ZodObject`)),
         }),
       ]);
       expect(() => assertContractGraphHasNoErrors(graph)).toThrow(

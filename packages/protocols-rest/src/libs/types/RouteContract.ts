@@ -1,4 +1,5 @@
 import { Problem, ProblemCategory, ProblemCategoryMapper } from "@croco/problems-core";
+import { isZodType } from "@croco/protocols-core";
 import { HttpMethod } from "../constants";
 import { attachRouteContractProblems } from "../internal/routeContractProblemMetadata";
 import { getRouteParameterObject, isRouteParameterSchema } from "../internal/routeParameterSchema";
@@ -523,16 +524,6 @@ function isRouteProblemDeclaration(value: unknown): value is RouteProblemDeclara
 
 function isProblemCategory(value: unknown): value is ProblemCategory {
   return typeof value === "string" && PROBLEM_CATEGORIES.has(value);
-}
-
-function isZodType(value: unknown): value is z.ZodType {
-  if (!value || typeof value !== "object") {
-    return false;
-  }
-
-  const candidate = value as { readonly safeParse?: unknown; readonly _parse?: unknown };
-
-  return typeof candidate.safeParse === "function" && typeof candidate._parse === "function";
 }
 
 const HTTP_METHODS = new Set<string>(Object.values(HttpMethod));

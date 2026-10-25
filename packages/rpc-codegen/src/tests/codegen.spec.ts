@@ -2613,7 +2613,7 @@ void handleMissingProblemBranch;
     ["passthrough", z.object({}).passthrough()],
     ["wrapped", z.object({}).catchall(z.number()).optional().nullable().readonly()],
     ["nested array", z.object({ counters: z.array(z.object({}).catchall(z.number())) })],
-    ["record value", z.record(z.object({}).catchall(z.number()))],
+    ["record value", z.record(z.string(), z.object({}).catchall(z.number()))],
     ["union branch", z.union([z.string(), z.object({}).catchall(z.number())])],
     [
       "discriminated union",
@@ -2670,7 +2670,9 @@ void handleMissingProblemBranch;
   it(
     "should retain fixed and record output field types",
     () => {
-      const outputSchema = z.object({ id: z.string(), counters: z.record(z.number()) }).strict();
+      const outputSchema = z
+        .object({ id: z.string(), counters: z.record(z.string(), z.number()) })
+        .strict();
       expect(outputSchema.parse({ id: "stats", counters: { widgets: 7 } })).toEqual({
         id: "stats",
         counters: { widgets: 7 },

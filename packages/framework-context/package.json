@@ -46,6 +46,6 @@
     "reflect-metadata": "^0.2.2"
   },
   "devDependencies": {
-    "zod": "4.3.6"
+    "zod": "4.6.6"
   }
 }

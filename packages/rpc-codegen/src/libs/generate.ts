@@ -2877,7 +2877,7 @@ function assertOutputObjectKeysSupported(
   } else if (typeName === "ZodRecord") {
     assertOutputObjectKeysSupported(
       route,
-      (schema as { readonly valueSchema: unknown }).valueSchema,
+      (schema as { readonly valueType: unknown }).valueType,
       `${schemaPath}[]`,
       seen,
     );

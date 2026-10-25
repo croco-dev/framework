@@ -413,19 +413,26 @@ describe("contract testing", () => {
     expect(cases.every(({ input }) => enumSchema.safeParse(input.body).success)).toBe(true);
   });
 
-  it("fails clearly when a route uses an unsupported generation shape", () => {
+  it.each([
+    ["z.email()", "email", z.email()],
+    ["z.string().email()", "email", z.string().email()],
+    ["z.uuid()", "uuid", z.uuid()],
+    ["z.string().uuid()", "uuid", z.string().uuid()],
+    ["z.iso.datetime()", "datetime", z.iso.datetime()],
+    ["z.string().datetime()", "datetime", z.string().datetime()],
+  ] as const)("rejects unsupported %s formats before sampling", (_label, format, schema) => {
     const unsupported = {
       ...route,
-      inputSchemas: { ...route.inputSchemas, body: z.string().email() },
+      inputSchemas: { ...route.inputSchemas, body: z.object({ id: schema }) },
     } satisfies ContractGraphRoute;
 
     expect(() => createContractCaseArbitrary(unsupported)).toThrow(
-      "Contract generation does not support ZodString.email at 'input.body'",
+      `Contract generation does not support ZodString.${format} at 'input.body.id'`,
     );
   });
 
   it("fails clearly when a union has no generation options", () => {
-    const emptyUnion = z.ZodUnion.create([] as unknown as readonly [z.ZodTypeAny, z.ZodTypeAny]);
+    const emptyUnion = z.union([] as unknown as readonly [z.ZodTypeAny, z.ZodTypeAny]);
     const unsupported = {
       ...route,
       inputSchemas: { ...route.inputSchemas, body: emptyUnion },
@@ -569,6 +576,20 @@ describe("contract testing", () => {
         inputSchemas: { ...route.inputSchemas, body: z.string().min(10).max(5) },
       }),
     ).toThrow("impossible ZodString length range (10..5)");
+  });
+
+  it("rejects an integer generation range outside Zod 4 safe-integer bounds", () => {
+    const impossible = {
+      ...route,
+      inputSchemas: {
+        ...route.inputSchemas,
+        body: z
+          .number()
+          .int()
+          .min(Number.MAX_SAFE_INTEGER + 1),
+      },
+    } satisfies ContractGraphRoute;
+    expect(() => createContractCaseArbitrary(impossible)).toThrow("an impossible ZodNumber range");
   });
 
   it.each(["path", "query", "headers"] as const)(

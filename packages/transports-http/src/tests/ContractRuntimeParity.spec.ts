@@ -35,7 +35,7 @@ import {
 import ts from "typescript";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
-import { z as z4 } from "zod/v4";
+import { z as z3 } from "zod/v3";
 import { emitOpenAPIFromContractGraph } from "../../../openapi-spec/src/index";
 import { generateClientFilesFromContractGraph } from "../../../rpc-codegen/src/index";
 import { createTrpcRouter } from "../../../protocols-trpc/src/index";
@@ -486,7 +486,7 @@ describe("REST contract-to-runtime parity", () => {
     expect(rejected.status).toBe(422);
     expect(await rejected.json()).toMatchObject({
       code: "protocols-rest/request-validation-failed",
-      issues: [{ path: "query.extra", message: "Invalid" }],
+      issues: [{ path: "query.extra", message: "Invalid string: must match pattern /^\\d+$/" }],
     });
     expect(catchall).toHaveBeenCalledTimes(1);
   });
@@ -547,11 +547,52 @@ describe("REST contract-to-runtime parity", () => {
     }
   });
 
+  it("rejects oversized HTTP collections before element validation or handler execution", async () => {
+    const visit = vi.fn(() => true);
+    const handle = vi.fn();
+    const contract = defineRouteContract({
+      method: HttpMethod.POST,
+      path: "/bounded-items",
+      body: z.object({ items: z.array(z.string().refine(visit)).max(2) }),
+      response: z.object({ count: z.number() }),
+    });
+    @Controller("/bounded-items")
+    class BoundedItemsController {
+      @Post(contract)
+      create(@Body(contract) body: z.output<typeof contract.body>) {
+        handle();
+        return { count: body.items.length };
+      }
+    }
+    const app = createApp({
+      controllers: [BoundedItemsController],
+      securityValidation: "off",
+    }).getHono();
+    const request = (items: string[]) =>
+      new Request("http://localhost/bounded-items", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ items }),
+      });
+    const rejected = await app.fetch(request(["one", "two", "three"]));
+    expect(rejected.status).toBe(422);
+    expect(await rejected.json()).toMatchObject({
+      code: "protocols-rest/request-validation-failed",
+    });
+    expect(visit).not.toHaveBeenCalled();
+    expect(handle).not.toHaveBeenCalled();
+    const accepted = await app.fetch(request(["one", "two"]));
+    expect(accepted.status).toBe(200);
+    expect(await accepted.json()).toEqual({ count: 2 });
+    expect(visit).toHaveBeenCalledTimes(2);
+    expect(handle).toHaveBeenCalledTimes(1);
+  });
+
   it.each(["params", "query", "body", "response"] as const)(
-    "rejects a Zod 4 route-contract %s schema with its source diagnostic",
+    "rejects a Zod 3 route-contract %s schema with its source diagnostic",
     (schemaKind) => {
       const supportedSchema = z.object({ id: z.string() });
-      const unsupportedSchema = z4.object({ id: z4.string() }) as unknown as typeof supportedSchema;
+      const unsupportedSchema = z3.object({ id: z3.string() }) as unknown as typeof supportedSchema;
       const contract = defineRouteContract({
         method: HttpMethod.POST,
         path: "/unsupported-zod/:id",
@@ -585,7 +626,7 @@ describe("REST contract-to-runtime parity", () => {
               sourceLocation: expect.objectContaining({
                 path: expect.stringContaining("ContractRuntimeParity.spec.ts"),
               }),
-              message: `Route contract ${schemaKind} uses unsupported Zod major 4 (schema kind: object); Croco route contracts require Zod 3.`,
+              message: `Route contract ${schemaKind} uses unsupported Zod major 3 (schema kind: ZodObject); Croco route contracts require Zod 4.`,
             }),
           ],
         }),

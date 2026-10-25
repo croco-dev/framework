@@ -103,8 +103,8 @@ describe("published RPC codegen CLI", () => {
           [
             "add",
             "--prod",
-            "zod@3.25.76",
-            "@asteasolutions/zod-to-openapi@7.3.4",
+            "zod@4.6.6",
+            "@asteasolutions/zod-to-openapi@8.5.0",
             "--ignore-scripts",
           ],
           consumerRoot,

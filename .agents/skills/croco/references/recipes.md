@@ -20,6 +20,14 @@ row downloads. The CLI package remains beta and this path carries no provider ce
 
 Use these as navigation routes, not copy-paste implementations. Open the linked executable example from the generated [package selection](package-selection.md), inspect its current plugin factory, and adapt the application's explicit composition root.
 
+## Route and operation schemas
+
+Use Zod 4.6.6 or later in major 4 from `zod` for route and operation schemas. Zod 3 and
+`zod/v3` are rejected at contract collection. Follow the source-owned
+[Zod migration contract](https://github.com/croco-dev/framework/blob/trunk/docs/zod-support.md)
+for record keys, coercion inputs, safe integers, lazy defaults and supported generated schemas.
+Regenerate and review application contracts before accepting changed snapshots.
+
 ## Authentication
 
 ### Local SSR product example

@@ -1,6 +1,7 @@
 import { resolve } from "node:path";
 import { build } from "esbuild";
 import { Miniflare, Response } from "miniflare";
+import type { Request as MiniflareRequest } from "miniflare";
 
 export async function createWorker(
   execute: (command: string[]) => Promise<unknown>,
@@ -33,7 +34,7 @@ export async function createWorker(
       UPSTASH_REDIS_REST_URL: "https://redis.fixture",
       UPSTASH_REDIS_REST_TOKEN: "fixture-secret-token",
     },
-    outboundService: async (request) => {
+    outboundService: async (request: MiniflareRequest) => {
       if (new URL(request.url).origin !== "https://redis.fixture")
         throw new Error("Unexpected upstream");
       if (request.headers.get("authorization") !== "Bearer fixture-secret-token") {
