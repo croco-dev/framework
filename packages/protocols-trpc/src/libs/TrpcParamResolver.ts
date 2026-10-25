@@ -24,7 +24,7 @@ export function createTrpcInputSchema(route: RouteIR): z.ZodType | null {
   const shape: Record<string, z.ZodType> = {};
 
   if (hasBodyParam(route) || route.inputSchemas.body !== null) {
-    shape.body = route.inputSchemas.body ?? z.unknown();
+    shape.body = route.inputSchemas.body ?? z.unknown().optional();
   }
 
   for (const key of LOCATION_KEYS) {

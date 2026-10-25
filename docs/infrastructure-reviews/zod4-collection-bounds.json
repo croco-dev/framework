@@ -477,7 +477,7 @@
       "reason": "Use patched Zod 4 schema contracts and introspection without changing Host, storage or provider lifecycle requirements.",
       "files": {
         "packages/protocols-trpc/package.json": "55edeaa49e9c5866ea9ded3aa8dac3e1d515fe407dc9c3ff1733e8a4a25d18b2",
-        "packages/protocols-trpc/src/libs/TrpcParamResolver.ts": "33c958f41b7583985bb4223aa4156d614c24e87da15fd275c67cee8d55f5c6f0"
+        "packages/protocols-trpc/src/libs/TrpcParamResolver.ts": "fd28fa8f99bdf46b097c3efcbef4f50bfe8fea9abaa4d3df85992b657d1b8ae2"
       },
       "catalogRuntimes": ["node", "cloudflare-workers"],
       "profiles": {
