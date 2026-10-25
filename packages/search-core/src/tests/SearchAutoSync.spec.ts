@@ -263,6 +263,36 @@ describe("SearchAutoSync", () => {
       ]);
     });
 
+    it("should allow an awaited corrective effect from a failure notification", async () => {
+      mockUserAutoSyncMetadata();
+      const error = new Error("Index unavailable");
+      const effects: string[] = [];
+      (searchEngine.indexDocument as Mock).mockRejectedValue(error);
+      (searchEngine.deleteDocument as Mock).mockImplementation(async (_index, id) => {
+        effects.push(id);
+      });
+      let correction: Promise<void> | undefined;
+      let correctedDuringNotification = false;
+      eventBusMock.publishNow.mockImplementation(async () => {
+        correction = searchAutoSync.handle(new DocumentDeletedEvent("users", "user-1", "tenant-1"));
+        // An independent effect probes progress without waiting on the original document's tail.
+        await searchAutoSync.handle(new DocumentDeletedEvent("users", "probe", "tenant-1"));
+        correctedDuringNotification = effects.includes("user-1");
+        if (correctedDuringNotification) await correction;
+        effects.push("notified");
+      });
+
+      await expect(
+        searchAutoSync.handle(
+          new DocumentIndexedEvent("users", "user-1", "tenant-1", { name: "failed" }),
+        ),
+      ).rejects.toBe(error);
+      await correction;
+      expect(correctedDuringNotification).toBe(true);
+      expect(effects).toEqual(["user-1", "probe", "notified"]);
+      expect(eventBusMock.publishNow).toHaveBeenCalledTimes(1);
+    });
+
     it("should advance past a failed effect and coalesce queued duplicates before retry", async () => {
       mockUserAutoSyncMetadata();
       const write = deferred();

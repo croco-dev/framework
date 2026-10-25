@@ -6,7 +6,7 @@
       "classification": "pure-contract",
       "reason": "Serialize overlapping automatic index/delete effects for the same tenant, index and document within one instance, preserving duplicate coalescing, failure reporting and independent-document progress.",
       "files": {
-        "packages/search-core/src/libs/sync/SearchAutoSync.ts": "d8dcb8cf4cfbc703366b9457ce2b5300b4c5a7e2f5101cbf30c8080a3143519e"
+        "packages/search-core/src/libs/sync/SearchAutoSync.ts": "f92ed8b6270825ac3885221d0db25dc4cb7acca4f1fd04680bbed41073bd6a79"
       },
       "catalogRuntimes": [],
       "profiles": {
