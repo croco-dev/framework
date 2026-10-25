@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "workflow-core",
+      "classification": "pure-contract",
+      "reason": "Isolate compensation-failure recording errors so reverse compensation continues and the terminal Problem retains business, compensation and recording evidence. No provider, schema or host lifecycle changes.",
+      "files": {
+        "packages/workflow-core/src/libs/saga/SagaRunner.ts": "84be9206ce7f967e93b28824c56ebf6951f805f244b8bd20d41eff8a118865b9"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Saga error collection and compensation sequencing use the existing SagaStore contract and require no new host, storage or lifecycle capability.",
+          "providers": [],
+          "constraints": [
+            "Store write failures still require external reconciliation; no deployment or provider certification is claimed."
+          ],
+          "references": [
+            "packages/workflow-core/src/libs/saga/SagaRunner.ts",
+            "packages/workflow-core/src/libs/saga/types.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Saga error collection and compensation sequencing use the existing SagaStore contract and require no new host, storage or lifecycle capability.",
+          "providers": [],
+          "constraints": [
+            "Store write failures still require external reconciliation; no deployment or provider certification is claimed."
+          ],
+          "references": [
+            "packages/workflow-core/src/libs/saga/SagaRunner.ts",
+            "packages/workflow-core/src/libs/saga/types.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Saga error collection and compensation sequencing use the existing SagaStore contract and require no new host, storage or lifecycle capability.",
+          "providers": [],
+          "constraints": [
+            "Store write failures still require external reconciliation; no deployment or provider certification is claimed."
+          ],
+          "references": [
+            "packages/workflow-core/src/libs/saga/SagaRunner.ts",
+            "packages/workflow-core/src/libs/saga/types.ts"
+          ]
+        }
+      }
+    }
+  ]
+}

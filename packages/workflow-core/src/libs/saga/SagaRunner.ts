@@ -554,6 +554,7 @@ export class SagaRunner {
   ): Promise<never> {
     const failure = toSagaFailure(error);
     const compensationFailures: SagaFailure[] = [];
+    const compensationRecordErrors: unknown[] = [];
     let finalStatus: SagaExecutionStatus = "failed";
     let failed: SagaExecution;
     try {
@@ -562,6 +563,7 @@ export class SagaRunner {
         executionId,
         failure,
         compensationFailures,
+        compensationRecordErrors,
         completedRecord,
       );
       finalStatus =
@@ -583,7 +585,12 @@ export class SagaRunner {
         executionId,
         failure,
         problem,
-        failureRecordError,
+        compensationRecordErrors.length === 0
+          ? failureRecordError
+          : new AggregateError(
+              [...compensationRecordErrors, failureRecordError],
+              "Saga compensation and terminal failure records could not be persisted",
+            ),
       );
       throw problem;
     }
@@ -597,10 +604,26 @@ export class SagaRunner {
 
     await this.dispatchOutbox(definition, failed.id);
 
-    throw new SagaExecutionFailedProblem(definition.name, failed.id, failure, {
+    const problem = new SagaExecutionFailedProblem(definition.name, failed.id, failure, {
       status: failed.status,
       compensationFailures,
     });
+    if (compensationRecordErrors.length > 0) {
+      reportSagaFailureRecordError(
+        span,
+        definition.name,
+        executionId,
+        failure,
+        problem,
+        compensationRecordErrors.length === 1
+          ? compensationRecordErrors[0]
+          : new AggregateError(
+              compensationRecordErrors,
+              "Saga compensation failure records could not be persisted",
+            ),
+      );
+    }
+    throw problem;
   }
 
   private async runStep(
@@ -757,6 +780,7 @@ export class SagaRunner {
     executionId: string,
     failure: SagaFailure,
     compensationFailures: SagaFailure[],
+    compensationRecordErrors: unknown[],
     completedRecord?: SagaStepExecutionRecord,
   ): Promise<number> {
     const execution = await this.getExecution(executionId);
@@ -833,13 +857,17 @@ export class SagaRunner {
       } catch (error) {
         const compensationFailure = toSagaFailure(error);
         compensationFailures.push(compensationFailure);
-        await this.replaceStepRecord(executionId, {
-          ...record,
-          status: "compensation_failed",
-          compensationError: compensationFailure,
-          compensationStartedAt: record.compensationStartedAt ?? this.clock(),
-          compensationCompletedAt: this.clock(),
-        });
+        try {
+          await this.replaceStepRecord(executionId, {
+            ...record,
+            status: "compensation_failed",
+            compensationError: compensationFailure,
+            compensationStartedAt: record.compensationStartedAt ?? this.clock(),
+            compensationCompletedAt: this.clock(),
+          });
+        } catch (recordError) {
+          compensationRecordErrors.push(recordError);
+        }
       }
     }
 

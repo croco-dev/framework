@@ -202,3 +202,18 @@ and sorted plain-object properties.
 Functions, symbols, enumerable symbol keys, cycles, invalid dates and other object types cannot
 be fingerprinted and produce a Saga definition failure. This does not provide durable publishing
 or repair previously ambiguous downstream receipts; existing store and publisher guarantees still apply.
+
+### Saga compensation recording failures
+
+If saving a `compensation_failed` step record fails, the runner still attempts the remaining
+completed steps' compensations in reverse order. Business and compensation errors remain separate
+in `SagaExecutionFailedProblem`. Recording errors are attached as its non-enumerable
+`sagaFailureRecordError`: the original error for one failure, or an `AggregateError` containing
+all recording errors in order, including a later terminal-write error. The existing failure-record
+telemetry event reports this attachment.
+
+A successful terminal write records the execution as `failed`, even when individual step records
+remain `compensating` because their failure writes were not confirmed. If the terminal write also
+fails, durable execution state may remain `running`; the returned Problem reports failure and
+retains the recording evidence. Reconcile uncertain records using the store and external compensation
+receipts before replaying. This does not provide durable recovery when the store cannot write.
