@@ -96,10 +96,8 @@ export class SearchAutoSync implements EventHandler<DocumentIndexedEvent | Docum
     }
 
     const documentKey = JSON.stringify([event.tenantId, event.indexName, event.documentId]);
-    const previous = this.documentTails.get(documentKey);
-    const operation = previous
-      ? previous.then(() => this.process(event, eventKey))
-      : this.process(event, eventKey);
+    const previous = this.documentTails.get(documentKey) ?? Promise.resolve();
+    const operation = previous.then(() => this.process(event, eventKey));
     const release = (): void => {
       if (this.documentTails.get(documentKey) === tail) {
         this.documentTails.delete(documentKey);

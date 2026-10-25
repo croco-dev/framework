@@ -160,6 +160,29 @@ describe("SearchAutoSync", () => {
   );
 
   describe("document effect ordering", () => {
+    it("should reserve the document before a provider synchronously admits a reentrant event", async () => {
+      mockUserAutoSyncMetadata();
+      const write = deferred();
+      let stored: string | undefined;
+      let nested: Promise<void> | undefined;
+      (searchEngine.indexDocument as Mock).mockImplementation(async (_index, document) => {
+        if (document.name === "old") {
+          nested = searchAutoSync.handle(
+            new DocumentIndexedEvent("users", "user-1", "tenant-1", { name: "new" }),
+          );
+          await write.promise;
+        }
+        stored = document.name;
+      });
+      const first = searchAutoSync.handle(
+        new DocumentIndexedEvent("users", "user-1", "tenant-1", { name: "old" }),
+      );
+      write.resolve();
+      await first;
+      await nested;
+      expect(stored).toBe("new");
+    });
+
     it.each(["index", "delete"] as const)(
       "should finish a delayed index before a later %s for the same document",
       async (operation) => {
