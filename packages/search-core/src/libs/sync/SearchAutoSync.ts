@@ -62,6 +62,7 @@ export type SearchSyncFailedEventPublisher = {
 export class SearchAutoSync implements EventHandler<DocumentIndexedEvent | DocumentDeletedEvent> {
   private processedEvents = new LRUCache<void>(10000);
   private readonly inFlightEvents = new Map<string, Promise<void>>();
+  private readonly documentTails = new Map<string, Promise<void>>();
 
   constructor(
     private readonly failedEventPublisher: SearchSyncFailedEventPublisher | undefined = undefined,
@@ -94,7 +95,19 @@ export class SearchAutoSync implements EventHandler<DocumentIndexedEvent | Docum
       return;
     }
 
-    const operation = this.process(event, eventKey);
+    const documentKey = JSON.stringify([event.tenantId, event.indexName, event.documentId]);
+    const previous = this.documentTails.get(documentKey);
+    const operation = previous
+      ? previous.then(() => this.process(event, eventKey))
+      : this.process(event, eventKey);
+    const release = (): void => {
+      if (this.documentTails.get(documentKey) === tail) {
+        this.documentTails.delete(documentKey);
+      }
+    };
+    // Only the queue tail absorbs failure; callers still receive the original operation's rejection.
+    const tail = operation.then(release, release);
+    this.documentTails.set(documentKey, tail);
     this.inFlightEvents.set(eventKey, operation);
 
     try {
