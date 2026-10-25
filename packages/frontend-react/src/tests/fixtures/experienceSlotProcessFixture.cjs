@@ -66,8 +66,6 @@ if (mode === "experiment-region-cleanup") {
 } else if (mode === "tmp-success") {
   writeFileSync(join(tmpdir(), "owned-file"), "owned");
   process.stdout.write(tmpdir());
-} else if (mode === "malformed-diagnostic") {
-  setInterval(() => process.stderr.write("{malformed diagnostic}\n"), 30);
 } else if (mode === "malformed") {
   process.stdout.write("invalid JSON");
 } else if (mode === "signal") {
@@ -77,17 +75,6 @@ if (mode === "experiment-region-cleanup") {
   diagnostic("assertion", "failed");
   process.stderr.write("focus assertion failed\n");
   process.exitCode = 1;
-} else if (mode.startsWith("cleanup-")) {
-  const emit = () => diagnostic("cleanup", "start");
-  if (mode === "cleanup-late") {
-    process.on("SIGTERM", emit);
-    setInterval(() => {}, 10_000);
-  } else {
-    process.stderr.write("{malformed diagnostic}\n");
-    emit();
-    if (mode === "cleanup-success") setTimeout(() => process.stdout.write("[]"), 400);
-    else setInterval(emit, 30);
-  }
 } else {
   writeFileSync(join(tmpdir(), `owned-${role}`), "owned");
   appendFileSync(join(directory, "pids"), `${process.pid}\n`);

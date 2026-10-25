@@ -3259,6 +3259,12 @@
       "owner": "@croco/frontend-react"
     },
     {
+      "path": "packages/frontend-react/src/tests/ExperienceSlotProcessDeadline.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/frontend-react"
+    },
+    {
       "path": "packages/frontend-react/src/tests/ExperimentRegion.spec.tsx",
       "lane": "fast",
       "qualifiers": [],
