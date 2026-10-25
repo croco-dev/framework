@@ -60,13 +60,13 @@ describe("REST form validation Problem", () => {
     expect(formProblem).toMatchObject({
       kind: "field-validation",
       fields: {
-        name: ["String must contain at least 1 character(s)"],
-        email: ["Invalid email"],
+        name: ["Too small: expected string to have >=1 characters"],
+        email: ["Invalid email address"],
       },
       problem: {
         issues: [
-          { path: "body.name", message: "String must contain at least 1 character(s)" },
-          { path: "body.email", message: "Invalid email" },
+          { path: "body.name", message: "Too small: expected string to have >=1 characters" },
+          { path: "body.email", message: "Invalid email address" },
         ],
       },
     });

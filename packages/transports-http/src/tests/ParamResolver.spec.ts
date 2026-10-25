@@ -361,14 +361,15 @@ describe("ParamResolver", () => {
     }
 
     const schema = z.string().trim().min(2);
-    const foreignSchema = Object.assign(
-      Object.create({ constructor: schema.constructor }),
-      schema,
+    const foreignSchema = Object.create(
+      { constructor: schema.constructor },
       {
-        safeParse: schema.safeParse.bind(schema),
+        ...Object.getOwnPropertyDescriptors(schema),
+        safeParse: { value: schema.safeParse.bind(schema) },
+        safeParseAsync: { value: schema.safeParseAsync.bind(schema) },
       },
     ) as z.ZodType;
-    expect(foreignSchema).not.toBeInstanceOf(z.ZodType);
+    expect(Object.getPrototypeOf(foreignSchema)).not.toBe(Object.getPrototypeOf(schema));
     defineNamedParamMetadata(TestController, "read", ParamType.QUERY, foreignSchema);
 
     const ctx = createMockHttpContext(vi.fn() as CrocoHttpContext["json"]);
@@ -1167,7 +1168,7 @@ describe("wrapped contract HTTP requests", () => {
     expect(rejected.status).toBe(422);
     expect(await rejected.json()).toMatchObject({
       code: "protocols-rest/request-validation-failed",
-      issues: [{ path: "query.count", message: "Invalid" }],
+      issues: [{ path: "query.count", message: "Invalid string: must match pattern /^\\d+$/" }],
     });
   });
 });
