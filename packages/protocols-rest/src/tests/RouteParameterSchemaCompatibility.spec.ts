@@ -51,6 +51,8 @@ accept(z.string());
       writeFileSync(sourcePath, source);
       const program = ts.createProgram([sourcePath], {
         allowImportingTsExtensions: true,
+        // This fixture exercises schema types and needs only the ES2022 standard library.
+        lib: ["lib.es2022.d.ts"],
         module: ts.ModuleKind.ESNext,
         moduleResolution: ts.ModuleResolutionKind.Bundler,
         noEmit: true,
