@@ -101,7 +101,7 @@ test.expectClean();
 | `updateChangedTestSelectionBaseline(plan, evidence)`  | Records shadow-run coverage and selection misses across a bounded observation window.                                                        |
 | `assertChangedTestSelectionBaseline(value)`           | Validates restored changed-test baseline artifacts before they influence shadow or enforcement decisions.                                    |
 | `assertChangedTestPlanEnforceable(baseline)`          | Rejects enforcement until the configured complete observation window and miss threshold are satisfied.                                       |
-| `createContractCaseArbitrary(route)`                  | Builds a bounded fast-check arbitrary from a supported ContractGraph route and its Zod 4 input schemas.                                     |
+| `createContractCaseArbitrary(route)`                  | Builds a bounded fast-check arbitrary from a supported ContractGraph route and its Zod 4 input schemas.                                      |
 | `createFileContractFailureSink(directory)`            | Persists shrunk contract-fuzz failures as JSON artifacts in a deterministic local directory.                                                 |
 | `runContractFuzz(options)`                            | Runs a bounded deterministic fast-check profile against ContractGraph request and response/Problem schemas and persists replayable failures. |
 | `runContractRuntimeDifferential(options)`             | Compares one scenario across Node, Lambda, and Cloudflare observations, allowing lifecycle differences only through capability declarations. |

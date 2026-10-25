@@ -1202,8 +1202,8 @@ function getSchemaTypeName(schema: unknown): string {
 }
 
 function getZodDefinition(schema: unknown): ZodDefinition | undefined {
-  if (!isRecord(schema) || !isRecord(schema._zod)) return undefined;
-  return schema._zod.def as ZodDefinition;
+  if (!isRecord(schema) || !isRecord(schema["_zod"])) return undefined;
+  return schema["_zod"]["def"] as ZodDefinition;
 }
 
 type SchemaCheck = {
@@ -1215,23 +1215,23 @@ type SchemaCheck = {
 function getSchemaChecks(definition: ZodDefinition | undefined): readonly SchemaCheck[] {
   const checks = (definition?.checks ?? []).map((check) => {
     const def = check._zod.def;
-    switch (def.check) {
+    switch (def["check"]) {
       case "min_length":
-        return { kind: "min", value: def.minimum };
+        return { kind: "min", value: def["minimum"] };
       case "max_length":
-        return { kind: "max", value: def.maximum };
+        return { kind: "max", value: def["maximum"] };
       case "length_equals":
-        return { kind: "length", value: def.length };
+        return { kind: "length", value: def["length"] };
       case "greater_than":
-        return { kind: "min", value: def.value, inclusive: def.inclusive === true };
+        return { kind: "min", value: def["value"], inclusive: def["inclusive"] === true };
       case "less_than":
-        return { kind: "max", value: def.value, inclusive: def.inclusive === true };
+        return { kind: "max", value: def["value"], inclusive: def["inclusive"] === true };
       case "number_format":
         return {
-          kind: def.format === "safeint" ? "int" : String(def.format),
+          kind: def["format"] === "safeint" ? "int" : String(def["format"]),
         };
       default:
-        return { kind: String(def.check) };
+        return { kind: String(def["check"]) };
     }
   });
   if (definition?.check === "number_format") {
@@ -1286,9 +1286,9 @@ export function isZodType(value: unknown): value is z.ZodType {
 
   return (
     isRecord(value) &&
-    isRecord(value._zod) &&
-    isRecord(value._zod.version) &&
-    value._zod.version.major === 4 &&
+    isRecord(value["_zod"]) &&
+    isRecord(value["_zod"]["version"]) &&
+    value["_zod"]["version"]["major"] === 4 &&
     typeof candidate.safeParse === "function"
   );
 }
@@ -1319,10 +1319,14 @@ type EnumValuesResult = {
 };
 
 function getEnumValues(schema: unknown): EnumValuesResult {
-  if (!isRecord(schema) || !isRecord(schema._zod) || !(schema._zod.values instanceof Set)) {
+  if (
+    !isRecord(schema) ||
+    !isRecord(schema["_zod"]) ||
+    !(schema["_zod"]["values"] instanceof Set)
+  ) {
     return { values: [] };
   }
-  return toEnumValuesResult([...schema._zod.values]);
+  return toEnumValuesResult([...schema["_zod"]["values"]]);
 }
 
 function getFirstArrayValue(value: unknown): unknown {
@@ -1379,11 +1383,11 @@ export function getUnsupportedZodMajor(
 ): { readonly major: number; readonly kind: string } | undefined {
   if (
     isRecord(schema) &&
-    isRecord(schema._def) &&
-    typeof schema._def.typeName === "string" &&
+    isRecord(schema["_def"]) &&
+    typeof schema["_def"]["typeName"] === "string" &&
     !("_zod" in schema)
   ) {
-    return { major: 3, kind: schema._def.typeName };
+    return { major: 3, kind: schema["_def"]["typeName"] };
   }
   if (typeof schema !== "object" || schema === null || !("_zod" in schema)) return undefined;
   const internals = schema._zod;
