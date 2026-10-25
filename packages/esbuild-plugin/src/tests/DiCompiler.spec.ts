@@ -25,6 +25,8 @@ function writeProjectAt(projectDir: string, files: Readonly<Record<string, strin
     JSON.stringify({
       compilerOptions: {
         target: "ES2022",
+        // These compiler fixtures use Node services, not browser DOM declarations.
+        lib: ["ES2022"],
         module: "NodeNext",
         moduleResolution: "NodeNext",
         experimentalDecorators: true,
@@ -179,7 +181,7 @@ describe("compileDiGraph", () => {
   }
 
   it("emits module factory ownership without generating its provider", () => {
-    const { options, modules } = moduleFactoryFixture();
+    const { options } = moduleFactoryFixture();
     const result = compileDiGraph(options);
     expect(
       result.manifest.providers.find((provider) => provider.stereotype === "module-provider"),
@@ -192,7 +194,16 @@ describe("compileDiGraph", () => {
     });
     expect(result.code).toContain("moduleProviders: [");
     expect(result.code.match(/tokenId: "app:src\/Service#SERVICE"/g)).toHaveLength(2);
+  });
+
+  it("preserves the input hash across repeated module factory compilation", () => {
+    const { options } = moduleFactoryFixture();
+    const result = compileDiGraph(options);
     expect(compileDiGraph(options).manifest.inputHash).toBe(result.manifest.inputHash);
+  });
+
+  it("keeps generated providers within the selected factory module", () => {
+    const { options, modules } = moduleFactoryFixture();
     const soleModule = compileDiGraph({ ...options, modules: [modules[0]!] });
     expect(
       soleModule.manifest.providers.every((provider) => provider.moduleName === "library"),
