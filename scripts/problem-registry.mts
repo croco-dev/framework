@@ -1619,6 +1619,7 @@ function getProblemCauseDiagnostics(rootDir: string): readonly string[] {
               child.operatorToken.kind >= ts.SyntaxKind.FirstAssignment &&
               child.operatorToken.kind <= ts.SyntaxKind.LastAssignment
             ) {
+              forEachAssignedBinding(child.left, (name) => mutatedAliases.add(name));
               const mutatesObject =
                 ts.isPropertyAccessExpression(child.left) ||
                 ts.isElementAccessExpression(child.left);
@@ -1649,6 +1650,12 @@ function getProblemCauseDiagnostics(rootDir: string): readonly string[] {
                 }
               }
             }
+            if (
+              (ts.isForOfStatement(child) || ts.isForInStatement(child)) &&
+              !ts.isVariableDeclarationList(child.initializer)
+            ) {
+              forEachAssignedBinding(child.initializer, (name) => mutatedAliases.add(name));
+            }
             if (ts.isDeleteExpression(child)) {
               const target = child.expression;
               const object =
@@ -1666,6 +1673,9 @@ function getProblemCauseDiagnostics(rootDir: string): readonly string[] {
               superCalls.push(child);
             }
             ts.forEachChild(child, collectSuperCalls);
+          }
+          for (const parameter of constructor.parameters) {
+            if (parameter.initializer) collectSuperCalls(parameter.initializer);
           }
           for (const statement of constructor.body?.statements ?? []) {
             if (ts.isVariableStatement(statement)) {
@@ -1697,7 +1707,15 @@ function getProblemCauseDiagnostics(rootDir: string): readonly string[] {
             const parameterName = parameter.name.text;
             if (
               superCalls.every((call) =>
-                forwardsProblemCause(call.arguments[3], parameterName, kind, aliases),
+                forwardsProblemCause(
+                  call.arguments[3],
+                  parameterName,
+                  kind,
+                  aliases,
+                  false,
+                  new Set(),
+                  !mutatedAliases.has(parameterName),
+                ),
               )
             ) {
               continue;
@@ -1751,6 +1769,29 @@ function getProblemCauseDiagnostics(rootDir: string): readonly string[] {
   return diagnostics;
 }
 
+function forEachAssignedBinding(target: ts.Expression, visit: (name: string) => void): void {
+  const value = unwrapExpression(target);
+  if (!value) return;
+  if (ts.isIdentifier(value)) {
+    visit(value.text);
+  } else if (ts.isArrayLiteralExpression(value)) {
+    for (const entry of value.elements) forEachAssignedBinding(entry, visit);
+  } else if (ts.isObjectLiteralExpression(value)) {
+    for (const property of value.properties) {
+      if (ts.isPropertyAssignment(property)) forEachAssignedBinding(property.initializer, visit);
+      else if (ts.isShorthandPropertyAssignment(property)) visit(property.name.text);
+      else if (ts.isSpreadAssignment(property)) forEachAssignedBinding(property.expression, visit);
+    }
+  } else if (ts.isSpreadElement(value)) {
+    forEachAssignedBinding(value.expression, visit);
+  } else if (
+    ts.isBinaryExpression(value) &&
+    value.operatorToken.kind === ts.SyntaxKind.EqualsToken
+  ) {
+    forEachAssignedBinding(value.left, visit);
+  }
+}
+
 function isProblemSubclass(node: ts.ClassDeclaration | ts.ClassExpression): boolean {
   return (
     node.heritageClauses?.some(
@@ -1800,6 +1841,7 @@ function forwardsProblemCause(
   aliases: ReadonlyMap<string, ts.Expression>,
   guarded = false,
   visited = new Set<string>(),
+  inputUnchanged = true,
 ): boolean {
   if (!expression) {
     return false;
@@ -1809,7 +1851,15 @@ function forwardsProblemCause(
     ts.isAsExpression(expression) ||
     ts.isSatisfiesExpression(expression)
   ) {
-    return forwardsProblemCause(expression.expression, parameter, kind, aliases, guarded, visited);
+    return forwardsProblemCause(
+      expression.expression,
+      parameter,
+      kind,
+      aliases,
+      guarded,
+      visited,
+      inputUnchanged,
+    );
   }
   if (
     ts.isIdentifier(expression) &&
@@ -1824,6 +1874,7 @@ function forwardsProblemCause(
       aliases,
       guarded,
       visited,
+      inputUnchanged,
     );
   }
   if (ts.isConditionalExpression(expression)) {
@@ -1835,6 +1886,7 @@ function forwardsProblemCause(
       aliases,
       guarded || isErrorGuard(expression.condition, parameter),
       new Set(visited),
+      inputUnchanged,
     );
     const falseForwarded = forwardsProblemCause(
       expression.whenFalse,
@@ -1843,6 +1895,7 @@ function forwardsProblemCause(
       aliases,
       guarded,
       new Set(visited),
+      inputUnchanged,
     );
     return branch === "true"
       ? trueForwarded
@@ -1863,6 +1916,7 @@ function forwardsProblemCause(
         aliases,
         guarded || isErrorGuard(expression.left, parameter),
         visited,
+        inputUnchanged,
       )
     );
   }
@@ -1880,6 +1934,7 @@ function forwardsProblemCause(
         aliases,
         guarded,
         new Set(visited),
+        inputUnchanged,
       );
       if (spreadForwarded) {
         forwarded = true;
@@ -1897,6 +1952,7 @@ function forwardsProblemCause(
           aliases,
           guarded,
           new Set(visited),
+          inputUnchanged,
         );
       }
       continue;
@@ -1916,6 +1972,7 @@ function forwardsProblemCause(
       aliases,
       guarded,
       new Set(visited),
+      inputUnchanged,
     );
   }
   return forwarded;
@@ -1996,17 +2053,27 @@ function forwardsCauseValue(
   aliases: ReadonlyMap<string, ts.Expression>,
   guarded: boolean,
   visited: Set<string>,
+  inputUnchanged = true,
 ): boolean {
   if (
     ts.isParenthesizedExpression(expression) ||
     ts.isAsExpression(expression) ||
     ts.isSatisfiesExpression(expression)
   ) {
-    return forwardsCauseValue(expression.expression, parameter, kind, aliases, guarded, visited);
+    return forwardsCauseValue(
+      expression.expression,
+      parameter,
+      kind,
+      aliases,
+      guarded,
+      visited,
+      inputUnchanged,
+    );
   }
   // Provider boundaries retain a redacted Error message instead of upstream secrets.
-  // Require the guarded parameter's own message; unrelated replacement errors do not qualify.
+  // Require an unchanged, unshadowed input; saved native aliases keep their existing handling.
   if (
+    inputUnchanged &&
     (kind === "error" || guarded) &&
     ts.isNewExpression(expression) &&
     ts.isIdentifier(expression.expression) &&
@@ -2025,7 +2092,7 @@ function forwardsCauseValue(
       ts.isIdentifier(message.arguments[0].expression) &&
       message.arguments[0].expression.text === parameter &&
       message.arguments[0].name.text === "message" &&
-      hasVerifiedRedactionHelper(message)
+      hasVerifiedRedactionHelper(message, parameter)
     ) {
       return true;
     }
@@ -2037,7 +2104,7 @@ function forwardsCauseValue(
     const alias = aliases.get(expression.text);
     if (alias && !visited.has(expression.text)) {
       visited.add(expression.text);
-      return forwardsCauseValue(alias, parameter, kind, aliases, guarded, visited);
+      return forwardsCauseValue(alias, parameter, kind, aliases, guarded, visited, inputUnchanged);
     }
     return false;
   }
@@ -2050,6 +2117,7 @@ function forwardsCauseValue(
       aliases,
       guarded || isErrorGuard(expression.condition, parameter),
       new Set(visited),
+      inputUnchanged,
     );
     const falseForwarded = forwardsCauseValue(
       expression.whenFalse,
@@ -2058,6 +2126,7 @@ function forwardsCauseValue(
       aliases,
       guarded,
       new Set(visited),
+      inputUnchanged,
     );
     return branch === "true"
       ? trueForwarded
@@ -2078,6 +2147,7 @@ function forwardsCauseValue(
         aliases,
         guarded || isErrorGuard(expression.left, parameter),
         visited,
+        inputUnchanged,
       )
     );
   }
@@ -2117,7 +2187,7 @@ function forwardsCauseValue(
   return false;
 }
 
-function hasVerifiedRedactionHelper(call: ts.CallExpression): boolean {
+function hasVerifiedRedactionHelper(call: ts.CallExpression, parameter: string): boolean {
   if (!ts.isIdentifier(call.expression)) return false;
   const isBoundedReplacement = (expression: ts.Expression): boolean => {
     const value = unwrapExpression(expression);
@@ -2163,51 +2233,52 @@ function hasVerifiedRedactionHelper(call: ts.CallExpression): boolean {
       return false;
     return ts.forEachChild(node, (child) => shadowsName(child, expected)) === true;
   };
+  let inputScope = true;
   for (
     let scope: ts.Node | undefined = call.parent;
     scope && !ts.isSourceFile(scope);
     scope = scope.parent
   ) {
+    if (ts.isConstructorDeclaration(scope)) inputScope = false;
+    const protectedNames = inputScope ? [name, "Error", parameter] : [name, "Error"];
     if (
       (ts.isClassExpression(scope) || ts.isFunctionExpression(scope)) &&
-      (scope.name?.text === name || scope.name?.text === "Error")
+      scope.name !== undefined &&
+      protectedNames.includes(scope.name.text)
     )
       return false;
     if (
       ts.isFunctionLike(scope) &&
-      scope.parameters.some(
-        (entry) => containsName(entry.name) || containsName(entry.name, "Error"),
+      scope.parameters.some((entry) =>
+        protectedNames.some((expected) => containsName(entry.name, expected)),
       )
     )
       return false;
-    if (
-      ts.isCatchClause(scope) &&
-      scope.variableDeclaration &&
-      (containsName(scope.variableDeclaration.name) ||
-        containsName(scope.variableDeclaration.name, "Error"))
-    )
-      return false;
+    if (ts.isCatchClause(scope) && scope.variableDeclaration) {
+      const binding = scope.variableDeclaration.name;
+      if (protectedNames.some((expected) => containsName(binding, expected))) return false;
+    }
     if (
       (ts.isForStatement(scope) || ts.isForOfStatement(scope) || ts.isForInStatement(scope)) &&
       scope.initializer &&
       ts.isVariableDeclarationList(scope.initializer) &&
-      scope.initializer.declarations.some(
-        (entry) => containsName(entry.name) || containsName(entry.name, "Error"),
+      scope.initializer.declarations.some((entry) =>
+        protectedNames.some((expected) => containsName(entry.name, expected)),
       )
     )
       return false;
     if (
       (ts.isBlock(scope) || ts.isModuleBlock(scope)) &&
-      scope.statements.some(
-        (statement) => shadowsName(statement) || shadowsName(statement, "Error"),
+      scope.statements.some((statement) =>
+        protectedNames.some((expected) => shadowsName(statement, expected)),
       )
     )
       return false;
     if (
       ts.isCaseBlock(scope) &&
       scope.clauses.some((clause) =>
-        clause.statements.some(
-          (statement) => shadowsName(statement) || shadowsName(statement, "Error"),
+        clause.statements.some((statement) =>
+          protectedNames.some((expected) => shadowsName(statement, expected)),
         ),
       )
     )

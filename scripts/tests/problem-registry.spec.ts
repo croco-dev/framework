@@ -814,6 +814,81 @@ class Missing extends Base { constructor() { super("literal"); } }`,
     },
   );
 
+  it.each([
+    ["assignment", "error = new Error('unrelated');", ""],
+    ["array assignment", "[error] = [new Error('unrelated')];", ""],
+    ["object assignment", "({ error } = { error: new Error('unrelated') });", ""],
+    ["loop assignment", "for (error of [new Error('unrelated')]) {", "break; }"],
+    ["message mutation", "if (error instanceof Error) error.message = 'unrelated';", ""],
+    [
+      "aliased message mutation",
+      "if (error instanceof Error) { const alias = error; alias.message = 'unrelated'; }",
+      "",
+    ],
+    ["block shadow", "{ const error = new Error('unrelated');", "}"],
+    ["catch shadow", "try { throw new Error('unrelated'); } catch (error) {", "}"],
+    ["loop shadow", "for (const error of [new Error('unrelated')]) {", "break; }"],
+    ["parameter initializer", "", ""],
+  ])("rejects overwritten or shadowed constructor input: %s", (kind, prefix, suffix) => {
+    const repo = createTempRepo();
+    writeFile(
+      repo,
+      "packages/alpha/src/problems.ts",
+      [
+        'import { Problem, ProblemCategory } from "@croco/problems-core";',
+        "function redactSensitiveValue(value: string): string { return value.replace(/token/g, '[Redacted]'); }",
+        "class Wrapped extends Problem {",
+        'readonly code = "alpha/wrapped";',
+        "readonly category = ProblemCategory.InternalServerError;",
+        `constructor(error: unknown${kind === "parameter initializer" ? ", fallback = (error = new Error('unrelated'))" : ""}) {`,
+        prefix,
+        'super(undefined, ProblemCategory.InternalServerError, "failed", { cause: error instanceof Error ? new Error(redactSensitiveValue(error.message)) : undefined });',
+        suffix,
+        "}",
+        "}",
+      ].join("\n"),
+    );
+    const result = runProblemRegistryCheck(repo, "write");
+    expect(result.status).toBe("fail");
+    expect(result.diagnostics).toContainEqual(
+      expect.stringContaining("Wrapped must forward 'error'"),
+    );
+  });
+
+  it("retains a saved native constructor input when its parameter is later rebound", () => {
+    const repo = createTempRepo();
+    writeFile(
+      repo,
+      "packages/alpha/src/problems.ts",
+      [
+        'import { Problem, ProblemCategory } from "@croco/problems-core";',
+        "class Wrapped extends Problem {",
+        "constructor(error: Error) { const original = error; error = new Error('other');",
+        'super("alpha/saved", ProblemCategory.InternalServerError, "failed", { cause: original });',
+        "}",
+        "}",
+      ].join("\n"),
+    );
+    expect(runProblemRegistryCheck(repo, "write").status).toBe("pass");
+  });
+
+  it("resolves constructor input independently of an outer error binding", () => {
+    const repo = createTempRepo();
+    writeFile(
+      repo,
+      "packages/alpha/src/problems.ts",
+      [
+        'import { Problem, ProblemCategory } from "@croco/problems-core";',
+        "function redactSensitiveValue(value: string): string { return value.replace(/token/g, '[Redacted]'); }",
+        "function wrap(error: Error) {",
+        "class Wrapped extends Problem { constructor(error: unknown) {",
+        'super("alpha/wrapped", ProblemCategory.InternalServerError, "failed", { cause: error instanceof Error ? new Error(redactSensitiveValue(error.message)) : undefined });',
+        "} } }",
+      ].join("\n"),
+    );
+    expect(runProblemRegistryCheck(repo, "write").status).toBe("pass");
+  });
+
   it("rejects cause forwarding hidden by overloads, overwritten options, unrelated branches, and mutable aliases", () => {
     const repo = createTempRepo();
     writeFile(
