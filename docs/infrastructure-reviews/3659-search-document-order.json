@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "search-core",
+      "classification": "pure-contract",
+      "reason": "Preserve per-document index/delete effect admission order while retaining event singleflight, failure redelivery and independent document progress. Reuse the existing SearchEngine and tenant Context boundaries.",
+      "files": {
+        "packages/search-core/src/libs/sync/SearchAutoSync.ts": "469e067aa02f927233b0b0b31105cb3e7c020c51ed17717b6f5ff92524b9c115"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Per-instance document effect ordering uses only promises and an in-memory map, without Kubernetes Node Host capabilities, provider I/O changes or storage requirements.",
+          "providers": [],
+          "constraints": [
+            "Ordering applies only within one SearchAutoSync instance and follows handle admission order; no broker reordering, cross-process serialization, deployed-host verification or provider certification is claimed."
+          ],
+          "references": [
+            "packages/search-core/src/libs/sync/SearchAutoSync.ts",
+            "packages/search-core/src/tests/SearchAutoSync.spec.ts",
+            "packages/search-core/README.md"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Per-instance document effect ordering uses only promises and an in-memory map, without AWS Lambda Host capabilities, provider I/O changes or storage requirements.",
+          "providers": [],
+          "constraints": [
+            "Ordering applies only within one SearchAutoSync instance and follows handle admission order; no broker reordering, cross-process serialization, deployed-host verification or provider certification is claimed."
+          ],
+          "references": [
+            "packages/search-core/src/libs/sync/SearchAutoSync.ts",
+            "packages/search-core/src/tests/SearchAutoSync.spec.ts",
+            "packages/search-core/README.md"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Per-instance document effect ordering uses only promises and an in-memory map, without Cloudflare Workers or explicit Node Container Host capabilities, provider I/O changes or storage requirements.",
+          "providers": [],
+          "constraints": [
+            "Ordering applies only within one SearchAutoSync instance and follows handle admission order; no broker reordering, cross-process serialization, deployed-host verification or provider certification is claimed."
+          ],
+          "references": [
+            "packages/search-core/src/libs/sync/SearchAutoSync.ts",
+            "packages/search-core/src/tests/SearchAutoSync.spec.ts",
+            "packages/search-core/README.md"
+          ]
+        }
+      }
+    }
+  ]
+}

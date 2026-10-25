@@ -62,6 +62,7 @@ export type SearchSyncFailedEventPublisher = {
 export class SearchAutoSync implements EventHandler<DocumentIndexedEvent | DocumentDeletedEvent> {
   private processedEvents = new LRUCache<void>(10000);
   private readonly inFlightEvents = new Map<string, Promise<void>>();
+  private readonly documentOperations = new Map<string, Promise<void>>();
 
   constructor(
     private readonly failedEventPublisher: SearchSyncFailedEventPublisher | undefined = undefined,
@@ -94,13 +95,22 @@ export class SearchAutoSync implements EventHandler<DocumentIndexedEvent | Docum
       return;
     }
 
-    const operation = this.process(event, eventKey);
+    const documentKey = JSON.stringify([event.tenantId, event.indexName, event.documentId]);
+    const previous = this.documentOperations.get(documentKey);
+    const process = (): Promise<void> => this.process(event, eventKey);
+    // A failed effect still releases the next delivery; its own caller retains the rejection.
+    // Defer the first effect too, so synchronous provider reentry sees its in-flight delivery.
+    const operation = previous ? previous.then(process, process) : Promise.resolve().then(process);
+    this.documentOperations.set(documentKey, operation);
     this.inFlightEvents.set(eventKey, operation);
 
     try {
       await operation;
     } finally {
       this.inFlightEvents.delete(eventKey);
+      if (this.documentOperations.get(documentKey) === operation) {
+        this.documentOperations.delete(documentKey);
+      }
     }
   }
 

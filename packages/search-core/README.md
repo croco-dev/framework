@@ -122,6 +122,11 @@ best-effort 계약입니다. `failedEventPublisher.publishNow()`가 reject되면
 성공한 동기화만 중복 처리 캐시에 기록합니다. 실패한 이벤트는 이후 delivery에서 다시 시도할 수 있으며, 같은
 이벤트가 동시에 전달되면 진행 중인 작업을 공유하여 중복 어댑터 호출을 방지합니다.
 
+한 `SearchAutoSync` 인스턴스에서는 `(tenantId, indexName, documentId)`가 같은 색인·삭제 작업을 `handle()`에
+접수한 순서대로 실행합니다. 다른 문서·인덱스·tenant의 작업은 독립적으로 진행하며, 완료된 대기열은 제거합니다.
+선행 작업이 실패해도 뒤의 이벤트는 실행하고, 실패한 이벤트의 재전달은 새 접수 순서에 따라 실행합니다.
+이 순서 보장은 broker의 역순 전달을 재정렬하거나 여러 프로세스의 작업을 직렬화하지 않습니다.
+
 대신 운영 신호는 `LOGGER_TOKEN` 로거의 `error()` 호출로 남깁니다. 로그 컨텍스트의 `searchSyncFailedEvent`에는
 `eventName`, `indexName`, `documentId`, `tenantId`, `operation`, `syncErrorName`, `syncErrorMessage`가 포함됩니다.
 초기 부트스트랩처럼 로거를 조회할 수 없는 경우에만 같은 컨텍스트와 publisher 오류를 `console.error`로 남깁니다.
