@@ -63,7 +63,6 @@ function CancellationFlowView({
     shouldRecordDisplay && (displayState === "idle" || displayState === "pending");
   const displayFailed = shouldRecordDisplay && displayState === "failed";
   const [commandPending, setPending] = useState(false);
-  const pending = commandPending || displayPending;
   const [error, setError] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const busy = useRef(false);
@@ -95,7 +94,7 @@ function CancellationFlowView({
     if (error || displayFailed || submitted || state.kind === "conflict") status.current?.focus();
   }, [error, displayFailed, submitted, state.kind]);
   const run = async (operation: () => Promise<void>, deciding: boolean) => {
-    if (displayPending || busy.current || (deciding && (submitted || displayFailed))) return;
+    if (busy.current || (deciding && submitted)) return;
     busy.current = true;
     setPending(true);
     setError("");
@@ -113,7 +112,7 @@ function CancellationFlowView({
     }
   };
   const choose = (kind: CancellationDecision["kind"], choiceId?: string) => {
-    if (!session) return;
+    if (!session || (kind !== "continue_cancel" && (displayPending || displayFailed))) return;
     void run(async () => {
       const decision: CancellationDecision = {
         decisionId: crypto.randomUUID(),
@@ -128,8 +127,7 @@ function CancellationFlowView({
   const expired =
     session?.state === "open" && Date.parse(session.snapshot.quote.expiresAt) <= now.getTime();
   const blocked =
-    pending ||
-    displayFailed ||
+    commandPending ||
     submitted ||
     !!error ||
     expired ||
@@ -170,7 +168,7 @@ function CancellationFlowView({
         : "";
   return h(
     "section",
-    { "aria-label": "Cancel subscription", "aria-busy": pending, "data-state": state.kind },
+    { "aria-label": "Cancel subscription", "aria-busy": commandPending, "data-state": state.kind },
     h("h2", null, "Cancel subscription"),
     state.kind === "partial"
       ? h(
@@ -239,7 +237,7 @@ function CancellationFlowView({
             "button",
             {
               type: "button",
-              disabled: blocked || !session.keepAvailable,
+              disabled: blocked || displayPending || displayFailed || !session.keepAvailable,
               onClick: () => choose("keep_subscription"),
             },
             "Keep subscription",
@@ -260,7 +258,7 @@ function CancellationFlowView({
                         "button",
                         {
                           type: "button",
-                          disabled: blocked || !choice.available,
+                          disabled: blocked || displayPending || displayFailed || !choice.available,
                           onClick: () => choose("accept_registered_offer", choice.id),
                         },
                         choice.available ? `Accept ${choice.label}` : `${choice.label} unavailable`,
@@ -292,22 +290,24 @@ function CancellationFlowView({
         role: error || displayFailed || expired || state.kind === "conflict" ? "alert" : "status",
       },
       error ||
-        (displayFailed ? "Offer display could not be recorded. Refresh before continuing." : "") ||
         (state.kind === "conflict"
           ? "Subscription or quote changed. Review fresh state before choosing again."
           : expired
             ? "Quote expired. Refresh current terms before choosing."
-            : displayPending
-              ? "Recording offer display…"
-              : commandPending
-                ? "Submitting decision…"
-                : outcome),
+            : commandPending
+              ? "Submitting decision…"
+              : outcome ||
+                (displayFailed
+                  ? "Offer display could not be recorded. You can still cancel or decline offers."
+                  : displayPending
+                    ? "Recording offer display…"
+                    : "")),
     ),
     h(
       "button",
       {
         type: "button",
-        disabled: pending,
+        disabled: commandPending,
         onClick: () =>
           void run(async () => {
             await onRefresh();

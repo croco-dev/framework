@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "frontend-react",
+      "classification": "protocol-render",
+      "reason": "Keep direct cancellation, offer decline and refresh available while optional display evidence is pending or failed; preserve command and quote guards. No infrastructure capability changes.",
+      "files": {
+        "packages/frontend-react/src/libs/CancellationFlow.ts": "d9c05fd66b7ef1efb52dff5b3294e898f500982a49d07310d993eee6ecc432ea"
+      },
+      "catalogRuntimes": ["browser", "node"],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "The Node Host is not involved in browser-only cancellation button and display-evidence state. Existing billing callbacks retain authority and lifecycle ownership.",
+          "providers": [],
+          "constraints": [
+            "No host, storage, provider or runtime support claim changes. Browser interactions use in-memory callbacks; no live billing is performed."
+          ],
+          "references": [
+            "packages/frontend-react/src/libs/CancellationFlow.ts",
+            "packages/billing-core/src/libs/cancellationValidation.ts",
+            "examples/cancellation-flow/src/browser.tsx"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "The Lambda Host is not involved in browser-only cancellation button and display-evidence state. Existing billing callbacks retain authority and lifecycle ownership.",
+          "providers": [],
+          "constraints": [
+            "No host, storage, provider or runtime support claim changes. Browser interactions use in-memory callbacks; no live billing is performed."
+          ],
+          "references": [
+            "packages/frontend-react/src/libs/CancellationFlow.ts",
+            "packages/billing-core/src/libs/cancellationValidation.ts",
+            "examples/cancellation-flow/src/browser.tsx"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "The Workers or Node Container Host is not involved in browser-only cancellation button and display-evidence state. Existing billing callbacks retain authority and lifecycle ownership.",
+          "providers": [],
+          "constraints": [
+            "No host, storage, provider or runtime support claim changes. Browser interactions use in-memory callbacks; no live billing is performed."
+          ],
+          "references": [
+            "packages/frontend-react/src/libs/CancellationFlow.ts",
+            "packages/billing-core/src/libs/cancellationValidation.ts",
+            "examples/cancellation-flow/src/browser.tsx"
+          ]
+        }
+      }
+    }
+  ]
+}
