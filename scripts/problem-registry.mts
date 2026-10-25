@@ -2003,6 +2003,31 @@ function forwardsCauseValue(
   ) {
     return forwardsCauseValue(expression.expression, parameter, kind, aliases, guarded, visited);
   }
+  // Provider boundaries retain a redacted Error message instead of upstream secrets.
+  // Require the guarded parameter's own message; unrelated replacement errors do not qualify.
+  if (
+    (kind === "error" || guarded) &&
+    ts.isNewExpression(expression) &&
+    ts.isIdentifier(expression.expression) &&
+    expression.expression.text === "Error" &&
+    expression.arguments?.length === 1
+  ) {
+    const message = expression.arguments[0];
+    if (
+      message &&
+      ts.isCallExpression(message) &&
+      ts.isIdentifier(message.expression) &&
+      message.expression.text === "redactSensitiveValue" &&
+      !aliases.has("redactSensitiveValue") &&
+      message.arguments.length >= 1 &&
+      ts.isPropertyAccessExpression(message.arguments[0]) &&
+      ts.isIdentifier(message.arguments[0].expression) &&
+      message.arguments[0].expression.text === parameter &&
+      message.arguments[0].name.text === "message"
+    ) {
+      return true;
+    }
+  }
   if (ts.isIdentifier(expression)) {
     if (expression.text === parameter) {
       return kind === "error" || guarded;

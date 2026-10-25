@@ -79,7 +79,7 @@ export class ClerkTokenVerificationProblem extends Problem {
     const detail = redactSensitiveValue(getErrorMessage(error));
 
     super(undefined, undefined, detail, {
-      ...(error instanceof Error ? { cause: error } : {}),
+      cause: error instanceof Error ? new Error(redactSensitiveValue(error.message)) : undefined,
       extensions: {
         operation,
         provider: "clerk",
@@ -105,7 +105,7 @@ export class ClerkTokenVerificationUpstreamProblem extends Problem {
     const detail = redactSensitiveValue(getErrorMessage(error));
 
     super(undefined, undefined, `Clerk ${operation} failed: ${detail}`, {
-      ...(error instanceof Error ? { cause: error } : {}),
+      cause: error instanceof Error ? new Error(redactSensitiveValue(error.message)) : undefined,
       extensions: {
         operation,
         provider: "clerk",

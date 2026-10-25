@@ -38,7 +38,7 @@ export class UpstashMeteringUpstreamProblem extends Problem {
       mapUpstreamProblemCategory(status, retryable),
       `Upstash Redis metering ${operation} failed: ${message}`,
       {
-        ...(error instanceof Error ? { cause: error } : {}),
+        cause: error instanceof Error ? new Error(redactSensitiveValue(error.message)) : undefined,
         extensions: {
           operation,
           provider: "upstash-redis",
