@@ -946,6 +946,58 @@ class Missing extends Base { constructor() { super("literal"); } }`,
     expect(runProblemRegistryCheck(repo, "write").status).toBe("pass");
   });
 
+  it.each([
+    [
+      "array parameter",
+      "function unrelated(redactSensitiveValue: string) { [redactSensitiveValue] = ['other']; }",
+      "pass",
+    ],
+    [
+      "object parameter",
+      "function unrelated(redactSensitiveValue: string) { ({ redactSensitiveValue } = { redactSensitiveValue: 'other' }); }",
+      "pass",
+    ],
+    [
+      "loop parameter",
+      "function unrelated(redactSensitiveValue: string) { for (redactSensitiveValue of ['other']) {} }",
+      "pass",
+    ],
+    [
+      "local declaration",
+      "function unrelated() { let redactSensitiveValue = 'before'; redactSensitiveValue = 'other'; }",
+      "pass",
+    ],
+    [
+      "captured helper",
+      "function unrelated() { [redactSensitiveValue] = [(_value: string) => 'other']; } unrelated();",
+      "fail",
+    ],
+  ] as const)(
+    "tracks the actual sanitizer binding across scopes: %s",
+    (_kind, declaration, expected) => {
+      const repo = createTempRepo();
+      writeFile(
+        repo,
+        "packages/alpha/src/problems.ts",
+        [
+          'import { Problem, ProblemCategory } from "@croco/problems-core";',
+          "function redactSensitiveValue(value: string): string { return value.replace(/token/g, '[Redacted]'); }",
+          declaration,
+          "class Wrapped extends Problem { constructor(error: unknown) {",
+          'super("alpha/wrapped", ProblemCategory.InternalServerError, "failed", { cause: error instanceof Error ? new Error(redactSensitiveValue(error.message)) : undefined });',
+          "} }",
+        ].join("\n"),
+      );
+      const result = runProblemRegistryCheck(repo, "write");
+      expect(result.status).toBe(expected);
+      if (expected === "fail") {
+        expect(result.diagnostics).toContainEqual(
+          expect.stringContaining("Wrapped must forward 'error'"),
+        );
+      }
+    },
+  );
+
   it("rejects cause forwarding hidden by overloads, overwritten options, unrelated branches, and mutable aliases", () => {
     const repo = createTempRepo();
     writeFile(

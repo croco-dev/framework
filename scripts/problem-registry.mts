@@ -2397,33 +2397,26 @@ function hasVerifiedRedactionHelper(call: ts.CallExpression, parameter: string):
   const helper = helpers[0];
   if (
     !helper?.body ||
+    !helper.name ||
     (imports.length > 0 &&
       !helper.modifiers?.some((entry) => entry.kind === ts.SyntaxKind.ExportKeyword))
   )
     return false;
+  const helperBinding = getLocalBindingKey(helper.name);
+  const declaresHelper = (binding: ts.BindingName): boolean =>
+    ts.isIdentifier(binding)
+      ? getLocalBindingKey(binding) === helperBinding
+      : binding.elements.some((entry) => ts.isBindingElement(entry) && declaresHelper(entry.name));
   let reassigned = false;
   const assignsHelper = (target: ts.Expression): boolean => {
-    const value = unwrapExpression(target);
-    if (!value) return false;
-    if (ts.isIdentifier(value)) return value.text === helperName;
-    if (ts.isSpreadElement(value)) return assignsHelper(value.expression);
-    if (ts.isArrayLiteralExpression(value)) return value.elements.some(assignsHelper);
-    if (ts.isObjectLiteralExpression(value)) {
-      return value.properties.some((property) => {
-        if (ts.isPropertyAssignment(property)) return assignsHelper(property.initializer);
-        if (ts.isShorthandPropertyAssignment(property)) return property.name.text === helperName;
-        if (ts.isSpreadAssignment(property)) return assignsHelper(property.expression);
-        return false;
-      });
-    }
-    return (
-      ts.isBinaryExpression(value) &&
-      value.operatorToken.kind === ts.SyntaxKind.EqualsToken &&
-      assignsHelper(value.left)
-    );
+    let assigned = false;
+    forEachAssignedBinding(target, (binding, mutatesObject) => {
+      if (!mutatesObject && getLocalBindingKey(binding) === helperBinding) assigned = true;
+    });
+    return assigned;
   };
   const findReassignment = (node: ts.Node): void => {
-    if (ts.isVariableDeclaration(node) && node.initializer && containsName(node.name, helperName))
+    if (ts.isVariableDeclaration(node) && node.initializer && declaresHelper(node.name))
       reassigned = true;
     if (
       ts.isBinaryExpression(node) &&
