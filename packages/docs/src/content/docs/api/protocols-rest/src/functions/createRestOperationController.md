@@ -14,11 +14,11 @@ Creating an operation alone never exposes a network surface.
 
 ### Input
 
-`Input` _extends_ `ZodType`\<`any`, `ZodTypeDef`, `any`\>
+`Input` _extends_ `ZodType`\<`unknown`, `unknown`, `$ZodTypeInternals`\<`unknown`, `unknown`\>\>
 
 ### Output
 
-`Output` _extends_ `ZodType`\<`any`, `ZodTypeDef`, `any`\>
+`Output` _extends_ `ZodType`\<`unknown`, `unknown`, `$ZodTypeInternals`\<`unknown`, `unknown`\>\>
 
 ### Context
 

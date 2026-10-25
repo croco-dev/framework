@@ -27,7 +27,7 @@ title: "RouteIR"
 
 ### inputSchema
 
-> **inputSchema**: `ZodType`\<`any`, `ZodTypeDef`, `any`\> \| `null`
+> **inputSchema**: `ZodType`\<`unknown`, `unknown`, `$ZodTypeInternals`\<`unknown`, `unknown`\>\> \| `null`
 
 ---
 
@@ -73,7 +73,7 @@ Explicit whole-source operation binding consumed by the existing contract graph.
 
 ### outputSchema
 
-> **outputSchema**: `ZodType`\<`any`, `ZodTypeDef`, `any`\> \| `null`
+> **outputSchema**: `ZodType`\<`unknown`, `unknown`, `$ZodTypeInternals`\<`unknown`, `unknown`\>\> \| `null`
 
 ---
 

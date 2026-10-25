@@ -11,7 +11,7 @@ title: "snapshotZodSchema"
 
 ### schema
 
-`ZodType`\<`any`, `ZodTypeDef`, `any`\> \| `null` \| `undefined`
+`ZodType`\<`unknown`, `unknown`, `$ZodTypeInternals`\<`unknown`, `unknown`\>\> \| `null` \| `undefined`
 
 ## Returns
 

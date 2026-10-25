@@ -9,7 +9,7 @@ title: "ParamIR"
 
 ### contractSchema?
 
-> `optional` **contractSchema?**: `ZodType`\<`any`, `ZodTypeDef`, `any`\>
+> `optional` **contractSchema?**: `ZodType`\<`unknown`, `unknown`, `$ZodTypeInternals`\<`unknown`, `unknown`\>\>
 
 ---
 
@@ -36,7 +36,7 @@ pre-existing serialized RouteIR artifacts that only preserve declaration order.
 
 ### schema
 
-> **schema**: `ZodType`\<`any`, `ZodTypeDef`, `any`\> \| `null`
+> **schema**: `ZodType`\<`unknown`, `unknown`, `$ZodTypeInternals`\<`unknown`, `unknown`\>\> \| `null`
 
 ---
 

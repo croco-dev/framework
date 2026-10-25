@@ -9,7 +9,7 @@ title: "ParamMetadata"
 
 ### contractSchema?
 
-> `optional` **contractSchema?**: `ZodType`\<`any`, `ZodTypeDef`, `any`\>
+> `optional` **contractSchema?**: `ZodType`\<`unknown`, `unknown`, `$ZodTypeInternals`\<`unknown`, `unknown`\>\>
 
 ---
 

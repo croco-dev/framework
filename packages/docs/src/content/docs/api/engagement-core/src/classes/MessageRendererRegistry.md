@@ -41,7 +41,7 @@ Validates all explicit registrations without constructing renderer classes.
 
 ### parseData()
 
-> **parseData**\<`TMessage`\>(`message`, `input`): [`MessageData`](/api/engagement-core/src/type-aliases/messagedata/)\<`TMessage`\>
+> **parseData**\<`TMessage`\>(`message`, `input`): `output`\<`TMessage`\[`"data"`\]\>
 
 #### Type Parameters
 
@@ -61,7 +61,7 @@ Validates all explicit registrations without constructing renderer classes.
 
 #### Returns
 
-[`MessageData`](/api/engagement-core/src/type-aliases/messagedata/)\<`TMessage`\>
+`output`\<`TMessage`\[`"data"`\]\>
 
 ---
 
