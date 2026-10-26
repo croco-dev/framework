@@ -1,4 +1,4 @@
-import { hashCheckoutValue } from "./BillingService";
+import { hashCheckoutValue, stableStringify } from "./BillingService";
 import {
   CancellationAuthorizationProblem,
   CancellationConflictProblem,
@@ -145,7 +145,9 @@ export class CancellationService {
     if (action && !action.available(fresh)) throw new CancellationUnavailableProblem();
     return this.dependencies.authority.admit(identity, fresh, async () => {
       const commandId = `cancellation:${hashCheckoutValue(JSON.stringify([identity.appId, identity.environment, identity.tenantId, id]))}`;
-      const reserved = await this.save(
+      const reserved = await this.saveAfterDisplay(
+        identity,
+        session,
         {
           ...session,
           revision: session.revision + 1,
@@ -180,7 +182,7 @@ export class CancellationService {
               }
             : {}),
         },
-        session.revision,
+        (latest) => validateCancellationDecision(latest, decision, this.clock()),
       );
       if (!action) return reserved;
       const receipt = await action.execute({
@@ -190,18 +192,15 @@ export class CancellationService {
       });
       if (receipt.commandId !== commandId)
         throw new CancellationInputProblem("Action returned a different command identity");
-      return this.save(
-        {
-          ...reserved,
-          revision: reserved.revision + 1,
-          commandReceipt: receipt,
-          evidence: [
-            ...reserved.evidence,
-            { kind: "provider", at: this.clock().toISOString(), commandReceipt: receipt },
-          ],
-        },
-        reserved.revision,
-      );
+      return this.saveAfterDisplay(identity, reserved, {
+        ...reserved,
+        revision: reserved.revision + 1,
+        commandReceipt: receipt,
+        evidence: [
+          ...reserved.evidence,
+          { kind: "provider", at: this.clock().toISOString(), commandReceipt: receipt },
+        ],
+      });
     });
   }
   async reconcile(identity: CancellationIdentity, id: string): Promise<CancellationSession> {
@@ -218,18 +217,15 @@ export class CancellationService {
       receipt.refundOutcome === session.commandReceipt.refundOutcome
     )
       return session;
-    return this.save(
-      {
-        ...session,
-        revision: session.revision + 1,
-        commandReceipt: receipt,
-        evidence: [
-          ...session.evidence,
-          { kind: "provider", at: this.clock().toISOString(), commandReceipt: receipt },
-        ],
-      },
-      session.revision,
-    );
+    return this.saveAfterDisplay(identity, session, {
+      ...session,
+      revision: session.revision + 1,
+      commandReceipt: receipt,
+      evidence: [
+        ...session.evidence,
+        { kind: "provider", at: this.clock().toISOString(), commandReceipt: receipt },
+      ],
+    });
   }
   async updatePolicy(
     scope: CancellationScope,
@@ -296,9 +292,55 @@ export class CancellationService {
     if (!action) throw new CancellationUnavailableProblem();
     return action;
   }
+  private async saveAfterDisplay(
+    identity: CancellationIdentity,
+    previous: CancellationSession,
+    next: CancellationSession,
+    validate?: (latest: CancellationSession) => void,
+  ): Promise<CancellationSession> {
+    if (await this.dependencies.store.saveSession(next, previous.revision)) return next;
+    // Retry only a definitive CAS loss to the one display write. Never repeat
+    // provider execution or retry a thrown/unknown persistence outcome.
+    const latest = await this.session(identity, previous.id);
+    if (!isDisplayOnlyUpdate(previous, latest)) throw new CancellationConflictProblem();
+    validate?.(latest);
+    return this.save(
+      {
+        ...next,
+        revision: latest.revision + 1,
+        displayedAt: latest.displayedAt,
+        evidence: [...latest.evidence, ...next.evidence.slice(previous.evidence.length)],
+      },
+      latest.revision,
+    );
+  }
   private async save(session: CancellationSession, revision: number) {
     if (!(await this.dependencies.store.saveSession(session, revision)))
       throw new CancellationConflictProblem();
     return session;
   }
+}
+
+function isDisplayOnlyUpdate(before: CancellationSession, after: CancellationSession): boolean {
+  const display = after.evidence.at(-1);
+  if (
+    before.displayedAt !== undefined ||
+    after.displayedAt === undefined ||
+    !Number.isFinite(Date.parse(after.displayedAt)) ||
+    after.revision !== before.revision + 1 ||
+    after.evidence.length !== before.evidence.length + 1 ||
+    !display ||
+    display.kind !== "displayed" ||
+    !Number.isFinite(Date.parse(display.at)) ||
+    stableStringify(display) !== stableStringify({ kind: "displayed", at: display.at }) ||
+    stableStringify(after.evidence.slice(0, -1)) !== stableStringify(before.evidence)
+  )
+    return false;
+  const withoutDisplay = (value: CancellationSession) => ({
+    ...value,
+    revision: 0,
+    displayedAt: null,
+    evidence: [],
+  });
+  return stableStringify(withoutDisplay(before)) === stableStringify(withoutDisplay(after));
 }

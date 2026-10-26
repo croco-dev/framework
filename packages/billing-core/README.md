@@ -22,6 +22,12 @@ app/environment/tenant와 인증된 subject의 구독 소유권을 검증하고,
 명령 응답을 잃었을 때 `reconcile()`은 기존 command ID를 조회합니다. 취소 예약, 실제 종료, 환불 확인은
 서로 다른 receipt이며 기본 action은 환불을 요청하지 않습니다.
 
+표시 기록이 결정 예약·provider 결과 저장·결과 조회와 겹치면, 표시 시각과 마지막 표시 증거만 추가된
+revision인지 확인하고 CAS 저장을 한 번 더 시도합니다. 기존 증거와 command ID를 보존하며 provider
+명령을 다시 실행하지 않습니다. 예약 전 재시도는 quote 만료를 다시 검사하고, 권한 재검증 실패나
+다른 상태 변경·두 번째 CAS 충돌은 기존 오류로 보고합니다. 저장소가 예외를 던져 결과가 불명확한
+경우에는 자동 재시도하지 않습니다.
+
 `@croco/billing-drizzle`은 session·policy audit와 기존 billing 저장 계약의 PostgreSQL adapter 및 검토 후
 적용하는 migration을 제공합니다. 실제 조합과 고객/운영자 UI는
 [cancellation-flow 예제](../../examples/cancellation-flow/README.md)를 따릅니다.

@@ -1,3 +1,5 @@
+import { execFileSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
 import { createElement as h } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, it, expect } from "vitest";
@@ -61,6 +63,17 @@ const render = (value: CancellationSession) =>
     }),
   );
 describe("CancellationFlow", () => {
+  it("keeps cancellation, decline and refresh usable independently of display evidence in Chromium", () => {
+    execFileSync(
+      process.execPath,
+      [fileURLToPath(new URL("./cancellationFlowBrowser.cjs", import.meta.url))],
+      {
+        timeout: 45000,
+        stdio: "pipe",
+      },
+    );
+  }, 50000);
+
   it("explains partial choice availability while preserving supported direct cancellation", () => {
     const markup = renderToStaticMarkup(
       h(CancellationFlow, {
@@ -76,7 +89,7 @@ describe("CancellationFlow", () => {
     expect(markup).toContain('disabled="">Lower plan unavailable');
   });
 
-  it("blocks decisions on the first render while recording an optional display receipt", () => {
+  it("preserves direct cancellation on the first render while awaiting optional display evidence", () => {
     const markup = renderToStaticMarkup(
       h(CancellationFlow, {
         state: { kind: "ready", session },
@@ -85,9 +98,9 @@ describe("CancellationFlow", () => {
         onDisplayed: async () => {},
       }),
     );
-    expect(markup).toContain('aria-busy="true"');
-    expect(markup).toContain('disabled="">Confirm cancellation');
-    expect(markup).toContain('disabled="">Keep subscription');
+    expect(markup).toContain('aria-busy="false"');
+    expect(markup).toContain('<button type="button">Confirm cancellation</button>');
+    expect(markup).toContain('disabled="">Lower plan unavailable');
     expect(markup).toContain("Recording offer display");
   });
   it("does not block initial decisions when display evidence is already recorded", () => {
