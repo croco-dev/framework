@@ -167,6 +167,8 @@ export type SagaExecution = {
   readonly error?: SagaFailure;
   readonly compensationFailures: readonly SagaFailure[];
   readonly idempotencyKey?: string;
+  /** Versioned canonical name/payload identity; absent on legacy records. */
+  readonly requestFingerprint?: string;
   readonly replayOf?: string;
   readonly metadata?: Record<string, unknown>;
   readonly createdAt: Date;
@@ -178,6 +180,8 @@ export type CreateSagaExecutionParams = {
   readonly sagaName: string;
   readonly payload: unknown;
   readonly idempotencyKey?: string;
+  /** Versioned canonical name/payload identity; absent on legacy records. */
+  readonly requestFingerprint?: string;
   readonly replayOf?: string;
   readonly metadata?: Record<string, unknown>;
 };
@@ -208,6 +212,7 @@ export type SagaRunResult = {
 };
 
 export interface SagaStore {
+  /** Atomically return the existing (sagaName, idempotencyKey) record or persist all input fields. */
   create(params: CreateSagaExecutionParams): Promise<SagaExecution>;
   findById(id: string): Promise<SagaExecution | null>;
   findByIdempotencyKey(sagaName: string, key: string): Promise<SagaExecution | null>;

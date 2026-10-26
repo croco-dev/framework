@@ -180,6 +180,25 @@ manager/store's time ownership; configure `ExecutionManagerImpl` with `{ clock }
 execution store's clock as supported. Task timing remains owned by `TaskRunner`, whose runtime accepts
 `{ now: () => clock().getTime() }` independently. Clock injection does not change timeout scheduling.
 
+### Saga request identity
+
+A keyed `SagaRunner.execute()` binds the saga name and a detached canonical payload snapshot to a
+versioned SHA-256 `requestFingerprint`. Equal payloads reuse the execution (or retain its existing
+in-flight/failure behavior); a different payload produces non-retryable
+`workflow-core/saga-store-conflict` before recovery, outbox dispatch or step execution.
+Object insertion order does not affect identity. Canonical values and unsupported data follow the
+Saga outbox rules below. Unkeyed execution and explicit `replay()` payload overrides keep their
+existing semantics; replay does not reuse the original request key.
+
+`SagaStore.create()` must atomically return the winning `(sagaName, idempotencyKey)` record and
+persist `requestFingerprint` alongside its payload and metadata. The runner checks both lookup and
+create-race results. Existing records without a fingerprint are compared against their recorded
+payload without rewriting history; unsupported legacy payloads fail closed with a Saga definition
+Problem. Adapters may deploy the optional field additively; this package supplies only an in-memory
+Saga store and performs no database migration. A legacy adapter that drops the field retains payload
+comparison but must preserve the original payload as immutable evidence. New adapters must persist
+the fingerprint so later handler mutation cannot redefine the accepted request.
+
 ### Saga outbox replay identity
 
 Publishers must deduplicate by the opaque `SagaOutboxRecord.deliveryId`. New IDs bind the

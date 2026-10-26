@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "workflow-core",
+      "classification": "pure-contract",
+      "reason": "Bind keyed Saga requests to canonical name/payload fingerprints before lookup/create reuse and preserve explicit replay semantics. Optional stored identity is additive; no durable Saga adapter or database schema exists in this package.",
+      "files": {
+        "packages/workflow-core/src/libs/saga/InMemorySagaStore.ts": "02b1fec472480ca5824f39ce1a781e709e90cd6b8865f895feeda07eaf6fe042",
+        "packages/workflow-core/src/libs/saga/SagaRunner.ts": "0fbc4902f26d930580b6cbe170d96dfc485ff28d33af63569b0eb7f29601fefc",
+        "packages/workflow-core/src/libs/saga/types.ts": "98f494934032c6fb100605482ea65897a40c5bd6232f23d3ca37454e7fbb524e"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Canonical Saga request identity uses the existing provider-neutral SagaStore and Web Crypto already used by Saga outbox identities; it adds no host, storage engine or deployment lifecycle requirement.",
+          "providers": ["@croco/workflow-core/SagaStore"],
+          "constraints": [
+            "Stores must atomically reserve saga name/key and persist the optional requestFingerprint field. Legacy records compare their recorded payload without rewriting history. No deployed-host or provider certification is claimed."
+          ],
+          "references": [
+            "packages/workflow-core/src/libs/saga/SagaRunner.ts",
+            "packages/workflow-core/src/libs/saga/types.ts",
+            "packages/workflow-core/src/tests/SagaRunner.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Canonical Saga request identity uses the existing provider-neutral SagaStore and Web Crypto already used by Saga outbox identities; it adds no host, storage engine or deployment lifecycle requirement.",
+          "providers": ["@croco/workflow-core/SagaStore"],
+          "constraints": [
+            "Stores must atomically reserve saga name/key and persist the optional requestFingerprint field. Legacy records compare their recorded payload without rewriting history. No deployed-host or provider certification is claimed."
+          ],
+          "references": [
+            "packages/workflow-core/src/libs/saga/SagaRunner.ts",
+            "packages/workflow-core/src/libs/saga/types.ts",
+            "packages/workflow-core/src/tests/SagaRunner.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Canonical Saga request identity uses the existing provider-neutral SagaStore and Web Crypto already used by Saga outbox identities; it adds no host, storage engine or deployment lifecycle requirement.",
+          "providers": ["@croco/workflow-core/SagaStore"],
+          "constraints": [
+            "Stores must atomically reserve saga name/key and persist the optional requestFingerprint field. Legacy records compare their recorded payload without rewriting history. No deployed-host or provider certification is claimed."
+          ],
+          "references": [
+            "packages/workflow-core/src/libs/saga/SagaRunner.ts",
+            "packages/workflow-core/src/libs/saga/types.ts",
+            "packages/workflow-core/src/tests/SagaRunner.spec.ts"
+          ]
+        }
+      }
+    }
+  ]
+}

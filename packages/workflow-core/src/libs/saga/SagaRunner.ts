@@ -6,6 +6,7 @@ import {
   SagaExecutionInFlightProblem,
   SagaExecutionNotFoundProblem,
   SagaFinalizationProblem,
+  SagaStoreConflictProblem,
   SagaReplayProblem,
 } from "../problems/WorkflowProblems";
 import { InMemorySagaStore } from "./InMemorySagaStore";
@@ -62,7 +63,7 @@ type OutboxIdentity = {
 type SagaOutboxPhase = SagaOutboxRecord["phase"];
 
 function canonicalOutboxMessage(sagaName: string, message: SagaOutboxMessage): string {
-  return canonicalOutboxValue(sagaName, [
+  return canonicalSagaValue(sagaName, [
     message.id,
     message.topic,
     message.payload,
@@ -87,10 +88,11 @@ function snapshotOutboxMessage(sagaName: string, message: SagaOutboxMessage): Sa
   }
 }
 
-function canonicalOutboxValue(
+function canonicalSagaValue(
   sagaName: string,
   value: unknown,
   ancestors = new Set<object>(),
+  subject = "outbox message",
 ): string {
   if (value === null) return '["null"]';
   switch (typeof value) {
@@ -107,17 +109,17 @@ function canonicalOutboxValue(
     case "function":
       throw new SagaDefinitionProblem(
         sagaName,
-        `outbox message contains unsupported ${typeof value} data`,
+        `${subject} contains unsupported ${typeof value} data`,
       );
   }
   if (ancestors.has(value)) {
-    throw new SagaDefinitionProblem(sagaName, "outbox message contains a circular reference");
+    throw new SagaDefinitionProblem(sagaName, `${subject} contains a circular reference`);
   }
   ancestors.add(value);
   try {
     if (value instanceof Date) {
       if (!Number.isFinite(value.getTime())) {
-        throw new SagaDefinitionProblem(sagaName, "outbox message contains an invalid date");
+        throw new SagaDefinitionProblem(sagaName, `${subject} contains an invalid date`);
       }
       return JSON.stringify(["date", value.toISOString()]);
     }
@@ -126,12 +128,12 @@ function canonicalOutboxValue(
         Object.prototype.propertyIsEnumerable.call(value, key),
       )
     ) {
-      throw new SagaDefinitionProblem(sagaName, "outbox message contains symbol-keyed data");
+      throw new SagaDefinitionProblem(sagaName, `${subject} contains symbol-keyed data`);
     }
     if (Array.isArray(value)) {
       const entries = Array.from({ length: value.length }, (_, index) =>
         Object.hasOwn(value, index)
-          ? canonicalOutboxValue(sagaName, value[index], ancestors)
+          ? canonicalSagaValue(sagaName, value[index], ancestors, subject)
           : '["hole"]',
       );
       const properties = Object.keys(value)
@@ -147,7 +149,7 @@ function canonicalOutboxValue(
         .sort()
         .map(
           (key) =>
-            `[${JSON.stringify(key)},${canonicalOutboxValue(sagaName, (value as unknown as Record<string, unknown>)[key], ancestors)}]`,
+            `[${JSON.stringify(key)},${canonicalSagaValue(sagaName, (value as unknown as Record<string, unknown>)[key], ancestors, subject)}]`,
         );
       return properties.length === 0
         ? `["array",[${entries.join(",")}]]`
@@ -155,22 +157,30 @@ function canonicalOutboxValue(
     }
     const prototype = Object.getPrototypeOf(value);
     if (prototype !== Object.prototype && prototype !== null) {
-      throw new SagaDefinitionProblem(
-        sagaName,
-        "outbox message contains an unsupported object type",
-      );
+      throw new SagaDefinitionProblem(sagaName, `${subject} contains an unsupported object type`);
     }
     const record = value as Record<string, unknown>;
     const entries = Object.keys(record)
       .sort()
       .map(
         (key) =>
-          `[${JSON.stringify(key)},${canonicalOutboxValue(sagaName, record[key], ancestors)}]`,
+          `[${JSON.stringify(key)},${canonicalSagaValue(sagaName, record[key], ancestors, subject)}]`,
       );
     return `["object",[${entries.join(",")}]]`;
   } finally {
     ancestors.delete(value);
   }
+}
+
+async function fingerprintSagaRequest(sagaName: string, payload: unknown): Promise<string> {
+  const canonical = canonicalSagaValue(sagaName, [sagaName, payload], new Set(), "saga payload");
+  const digest = await globalThis.crypto.subtle.digest(
+    "SHA-256",
+    new TextEncoder().encode(canonical),
+  );
+  return `saga-request:v1:${Array.from(new Uint8Array(digest))
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("")}`;
 }
 
 function toSagaFailure(error: unknown): SagaFailure {
@@ -374,6 +384,17 @@ export class SagaRunner {
       options.replayOf === undefined
         ? this.resolveSagaIdempotencyKey(definition, payload)
         : undefined;
+    let requestFingerprint: string | undefined;
+    if (idempotencyKey !== undefined) {
+      // Bind a detached snapshot before the first asynchronous store or hash operation.
+      canonicalSagaValue(definition.name, payload, new Set(), "saga payload");
+      try {
+        payload = structuredClone(payload);
+      } catch {
+        throw new SagaDefinitionProblem(definition.name, "saga payload could not be snapshotted");
+      }
+      requestFingerprint = await fingerprintSagaRequest(definition.name, payload);
+    }
     const invocationId =
       idempotencyKey !== undefined
         ? createSagaInvocationId(definition.name, this.clock())
@@ -382,6 +403,7 @@ export class SagaRunner {
     if (idempotencyKey !== undefined) {
       const existing = await this.store.findByIdempotencyKey(definition.name, idempotencyKey);
       if (existing) {
+        await this.assertRequestMatches(existing, requestFingerprint);
         return this.reuseExistingExecution(definition, existing, span);
       }
     }
@@ -390,6 +412,7 @@ export class SagaRunner {
       sagaName: definition.name,
       payload,
       idempotencyKey,
+      requestFingerprint,
       replayOf: options.replayOf,
       metadata: {
         ...definition.metadata,
@@ -397,6 +420,9 @@ export class SagaRunner {
         ...(invocationId !== undefined ? { sagaInvocationId: invocationId } : {}),
       },
     });
+    if (idempotencyKey !== undefined) {
+      await this.assertRequestMatches(created, requestFingerprint);
+    }
     if (idempotencyKey !== undefined && created.metadata?.sagaInvocationId !== invocationId) {
       return this.reuseExistingExecution(definition, created, span);
     }
@@ -416,6 +442,22 @@ export class SagaRunner {
     });
 
     return this.runSteps(definition, running, span);
+  }
+
+  private async assertRequestMatches(
+    execution: SagaExecution,
+    requestFingerprint: string | undefined,
+  ): Promise<void> {
+    // Legacy records bind to their recorded payload without rewriting historical evidence.
+    const storedFingerprint =
+      execution.requestFingerprint ??
+      (await fingerprintSagaRequest(execution.sagaName, execution.payload));
+    if (storedFingerprint !== requestFingerprint) {
+      throw new SagaStoreConflictProblem(
+        execution.id,
+        `Saga '${execution.sagaName}' idempotency key is already bound to a different payload`,
+      );
+    }
   }
 
   private async reuseExistingExecution(

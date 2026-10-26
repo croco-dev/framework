@@ -1867,6 +1867,212 @@ describe("SagaRunner", () => {
     expect(attempts).toBe(expectedAttempts);
   });
 
+  it("rejects changed payloads instead of reusing a completed execution", async () => {
+    const run = vi.fn((input) => input);
+    const runner = new SagaRunner();
+    const definition: SagaDefinition = {
+      name: "payload-binding",
+      idempotencyKey: "order-123",
+      steps: [{ id: "charge", run }],
+    };
+    const first = await runner.execute(definition, { quantity: 1, product: "seat" });
+    await expect(
+      runner.execute(definition, { product: "seat", quantity: 1 }),
+    ).resolves.toMatchObject({
+      executionId: first.executionId,
+      reused: true,
+    });
+    await expect(
+      runner.execute(definition, { quantity: 99, product: "seat" }),
+    ).rejects.toMatchObject({
+      code: "workflow-core/saga-store-conflict",
+      category: ProblemCategory.Conflict,
+      extensions: { executionId: first.executionId, retryable: false },
+    });
+    expect(run).toHaveBeenCalledTimes(1);
+  });
+
+  it.each(["pending", "running", "completing", "completed", "failed", "compensated"] as const)(
+    "rejects a changed payload before recovering a legacy %s execution",
+    async (status) => {
+      const store = new InMemorySagaStore();
+      const execution = await store.create({
+        sagaName: "legacy-binding",
+        idempotencyKey: "key",
+        payload: { quantity: 1 },
+      });
+      await store.update(execution.id, { status });
+      const before = structuredClone(await store.findById(execution.id));
+      const run = vi.fn();
+      const publish = vi.fn();
+      const definition: SagaDefinition = {
+        name: execution.sagaName,
+        idempotencyKey: "key",
+        outbox: { publish },
+        steps: [{ id: "charge", run }],
+      };
+      await expect(
+        new SagaRunner(store).execute(definition, { quantity: 99 }),
+      ).rejects.toMatchObject({
+        code: "workflow-core/saga-store-conflict",
+        extensions: { retryable: false },
+      });
+      expect(await store.findById(execution.id)).toEqual(before);
+      expect(run).not.toHaveBeenCalled();
+      expect(publish).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each(["pending", "running", "completing", "completed", "failed", "compensated"] as const)(
+    "checks persisted identity before reusing a %s execution",
+    async (status) => {
+      const store = new InMemorySagaStore();
+      const runner = new SagaRunner(store);
+      const run = vi.fn(() => "charged");
+      const definition: SagaDefinition = {
+        name: "persisted-binding",
+        idempotencyKey: "key",
+        steps: [{ id: "charge", run }],
+      };
+      const first = await runner.execute(definition, { quantity: 1 });
+      await store.update(first.executionId, { status });
+      const before = structuredClone(await store.findById(first.executionId));
+      await expect(runner.execute(definition, { quantity: 99 })).rejects.toMatchObject({
+        code: "workflow-core/saga-store-conflict",
+      });
+      expect(await store.findById(first.executionId)).toEqual(before);
+      expect(run).toHaveBeenCalledTimes(1);
+    },
+  );
+
+  it("reuses an equal legacy payload without rewriting the record", async () => {
+    const store = new InMemorySagaStore();
+    const execution = await store.create({
+      sagaName: "legacy-equal",
+      idempotencyKey: "key",
+      payload: { quantity: 3, product: "seat" },
+    });
+    await store.update(execution.id, { status: "completed", result: "old-result" });
+    const before = structuredClone(await store.findById(execution.id));
+    const run = vi.fn();
+    await expect(
+      new SagaRunner(store).execute(
+        {
+          name: execution.sagaName,
+          idempotencyKey: "key",
+          steps: [{ id: "charge", run }],
+        },
+        { product: "seat", quantity: 3 },
+      ),
+    ).resolves.toMatchObject({ reused: true, result: "old-result" });
+    expect(await store.findById(execution.id)).toEqual(before);
+    expect(run).not.toHaveBeenCalled();
+  });
+
+  it.each(["", "order-123"])(
+    "rejects different payloads in a create race for key %j",
+    async (key) => {
+      const store = new InMemorySagaStore();
+      const lookups = createGate();
+      let count = 0;
+      vi.spyOn(store, "findByIdempotencyKey").mockImplementation(async () => {
+        if (++count === 2) lookups.release();
+        await lookups.promise;
+        return null;
+      });
+      const run = vi.fn((input) => input);
+      const definition: SagaDefinition = {
+        name: "racing-payloads",
+        idempotencyKey: key,
+        steps: [{ id: "charge", run }],
+      };
+      const results = await Promise.allSettled([
+        new SagaRunner(store).execute(definition, { quantity: 1 }),
+        new SagaRunner(store).execute(definition, { quantity: 99 }),
+      ]);
+      expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(1);
+      const failure = results.find((result) => result.status === "rejected");
+      expect(failure).toMatchObject({
+        status: "rejected",
+        reason: {
+          code: "workflow-core/saga-store-conflict",
+          extensions: { retryable: false },
+        },
+      });
+      expect(run).toHaveBeenCalledTimes(1);
+      expect(await store.list()).toHaveLength(1);
+      const [execution] = await store.list();
+      expect(execution.requestFingerprint).toMatch(/^saga-request:v1:[0-9a-f]{64}$/);
+      expect(run).toHaveBeenCalledWith(execution.payload, expect.anything());
+    },
+  );
+
+  it("binds the original snapshot even when the caller and handler mutate their payloads", async () => {
+    const payload = { quantity: 3 };
+    const store = new InMemorySagaStore();
+    const runner = new SagaRunner(store);
+    const run = vi.fn((input: unknown) => {
+      (input as { quantity: number }).quantity = 5;
+      return "charged";
+    });
+    const definition: SagaDefinition = {
+      name: "snapshot-binding",
+      idempotencyKey: "key",
+      steps: [{ id: "charge", run }],
+    };
+    const primary = runner.execute(definition, payload);
+    payload.quantity = 99;
+    const first = await primary;
+    expect(first.execution.payload).toEqual({ quantity: 5 });
+    await expect(runner.execute(definition, { quantity: 3 })).resolves.toMatchObject({
+      reused: true,
+    });
+    await expect(runner.execute(definition, { quantity: 5 })).rejects.toMatchObject({
+      code: "workflow-core/saga-store-conflict",
+    });
+    expect(run).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    [undefined, null],
+    [0, -0],
+    [NaN, "NaN"],
+    [BigInt(1), "1"],
+    [new Date("2030-01-01"), "2030-01-01T00:00:00.000Z"],
+    [
+      [1, 2],
+      [2, 1],
+    ],
+    [Array(1), [undefined]],
+  ])("distinguishes canonical payload values %#", async (first, changed) => {
+    const runner = new SagaRunner();
+    const definition: SagaDefinition = {
+      name: "typed-payload",
+      idempotencyKey: "key",
+      steps: [{ id: "charge", run: () => "charged" }],
+    };
+    await runner.execute(definition, first);
+    await expect(runner.execute(definition, changed)).rejects.toMatchObject({
+      code: "workflow-core/saga-store-conflict",
+    });
+  });
+
+  it.each([() => {}, Symbol("payload"), new Map([["quantity", 3]]), new Date(NaN)])(
+    "rejects unsupported keyed payload %# before creating an execution",
+    async (payload) => {
+      const store = new InMemorySagaStore();
+      const run = vi.fn();
+      await expect(
+        new SagaRunner(store).execute(
+          { name: "unsupported-payload", idempotencyKey: "key", steps: [{ id: "charge", run }] },
+          payload,
+        ),
+      ).rejects.toThrow(SagaDefinitionProblem);
+      expect(await store.list()).toEqual([]);
+      expect(run).not.toHaveBeenCalled();
+    },
+  );
+
   it("scopes saga idempotency keys by saga name", async () => {
     const events: string[] = [];
     const runner = new SagaRunner();
@@ -1911,6 +2117,13 @@ describe("SagaRunner", () => {
       const gate = createGate();
       const store = new InMemorySagaStore();
       const create = vi.spyOn(store, "create");
+      const lookups = createGate();
+      let lookupCount = 0;
+      vi.spyOn(store, "findByIdempotencyKey").mockImplementation(async () => {
+        if (++lookupCount === 2) lookups.release();
+        await lookups.promise;
+        return null;
+      });
       const run = vi.fn(async () => {
         await gate.promise;
         return { handled: true };

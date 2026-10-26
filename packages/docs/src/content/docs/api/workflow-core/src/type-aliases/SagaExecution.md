@@ -63,6 +63,14 @@ title: "SagaExecution"
 
 ---
 
+### requestFingerprint?
+
+> `readonly` `optional` **requestFingerprint?**: `string`
+
+Versioned canonical name/payload identity; absent on legacy records.
+
+---
+
 ### result?
 
 > `readonly` `optional` **result?**: `unknown`

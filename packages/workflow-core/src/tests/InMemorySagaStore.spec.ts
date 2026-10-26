@@ -22,6 +22,26 @@ const INVALID_PAGINATION_VALUES: ReadonlyArray<{
 ];
 
 describe("InMemorySagaStore", () => {
+  it("persists request identity and returns the winning create record intact", async () => {
+    const store = new InMemorySagaStore();
+    const first = await store.create({
+      sagaName: "checkout",
+      idempotencyKey: "order-123",
+      payload: { quantity: 1 },
+      requestFingerprint: "saga-request:v1:first",
+    });
+    const duplicate = await store.create({
+      sagaName: "checkout",
+      idempotencyKey: "order-123",
+      payload: { quantity: 99 },
+      requestFingerprint: "saga-request:v1:second",
+    });
+    expect(duplicate).toEqual(first);
+    expect((await store.findByIdempotencyKey("checkout", "order-123"))?.requestFingerprint).toBe(
+      "saga-request:v1:first",
+    );
+  });
+
   it.each(INVALID_PAGINATION_VALUES)(
     "rejects invalid $field value $value with a stable pagination Problem",
     async ({ field, value }) => {
