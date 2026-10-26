@@ -7,7 +7,13 @@ import {
   TokenBucketInMemoryStore,
 } from "../libs/InMemoryRateLimitStore";
 import { RateLimitPruneIntervalProblem } from "../libs/problems/RateLimitConfigProblems";
-import type { FixedWindowPolicy, SlidingWindowPolicy, TokenBucketPolicy } from "../libs/types";
+import type { DistributedRateLimitStore } from "../libs/RateLimitStore";
+import type {
+  FixedWindowPolicy,
+  SlidingWindowPolicy,
+  TokenBucketPolicy,
+  RateLimitPolicy,
+} from "../libs/types";
 
 describe("InMemoryRateLimitStore", () => {
   let store!: InMemoryRateLimitStore;
@@ -873,4 +879,230 @@ describe("InMemoryRateLimitStore", () => {
       expect(result.remaining).toBe(2);
     });
   });
+});
+
+describe.each([
+  {
+    name: "fixed",
+    create: (now: () => number, beforeRead: (key: string) => Promise<void> = async () => {}) =>
+      new (class extends FixedWindowInMemoryStore {
+        protected async getWindowEntry(key: string, policy: FixedWindowPolicy) {
+          await beforeRead(key);
+          return super.getWindowEntry(key, policy);
+        }
+      })({ now, pruneIntervalMs: 0 }),
+    policy: { name: "concurrent", algorithm: "fixed", limit: 3, windowMs: 1000 },
+  },
+  {
+    name: "sliding",
+    create: (now: () => number, beforeRead: (key: string) => Promise<void> = async () => {}) =>
+      new (class extends SlidingWindowInMemoryStore {
+        protected async removeTimestamps(key: string, before: number) {
+          await beforeRead(key);
+          return super.removeTimestamps(key, before);
+        }
+      })({ now, pruneIntervalMs: 0 }),
+    policy: { name: "concurrent", algorithm: "sliding", limit: 3, windowMs: 1000 },
+  },
+  {
+    name: "token-bucket",
+    create: (now: () => number, beforeRead: (key: string) => Promise<void> = async () => {}) =>
+      new (class extends TokenBucketInMemoryStore {
+        protected async getBucket(key: string) {
+          await beforeRead(key);
+          return super.getBucket(key);
+        }
+      })({ now, pruneIntervalMs: 0 }),
+    policy: {
+      name: "concurrent",
+      algorithm: "token-bucket",
+      capacity: 3,
+      refillRate: 3,
+      refillIntervalMs: 1000,
+    },
+  },
+] satisfies Array<{
+  name: string;
+  create: (
+    now: () => number,
+    beforeRead?: (key: string) => Promise<void>,
+  ) => DistributedRateLimitStore;
+  policy: RateLimitPolicy;
+}>)("$name concurrent admission", ({ create, policy }) => {
+  function setup() {
+    let now = 10_000;
+    const store: DistributedRateLimitStore = create(() => now);
+    return {
+      store,
+      advance: () => {
+        now += 1000;
+      },
+    };
+  }
+
+  it.each([0, 2])("admits only remaining quota after %i prior requests", async (used) => {
+    const { store, advance } = setup();
+    for (let i = 0; i < used; i++) await store.check("key", policy);
+    const results = await Promise.all(Array.from({ length: 10 }, () => store.check("key", policy)));
+    expect(results.filter((result) => result.success)).toHaveLength(3 - used);
+    expect(results.filter((result) => result.success).map((result) => result.remaining)).toEqual(
+      Array.from({ length: 3 - used }, (_, i) => 2 - used - i),
+    );
+    expect((await store.check("key", policy)).success).toBe(false);
+    advance();
+    const renewed = await Promise.all(Array.from({ length: 5 }, () => store.check("key", policy)));
+    expect(renewed.filter((result) => result.success)).toHaveLength(3);
+  });
+
+  it("consumes a receipt once before admitting only the refunded capacity", async () => {
+    const { store } = setup();
+    const first = await store.check("key", policy);
+    await store.check("key", policy);
+    await store.check("key", policy);
+    const refunds = Array.from({ length: 5 }, () =>
+      store.refund("key", policy, first.refundReceipt),
+    );
+    const checks = Array.from({ length: 5 }, () => store.check("key", policy));
+    expect((await Promise.all(refunds)).filter((result) => result.refunded)).toHaveLength(1);
+    expect((await Promise.all(checks)).filter((result) => result.success)).toHaveLength(1);
+    expect((await store.check("key", policy)).remaining).toBe(0);
+  });
+
+  it("orders reset after pending admission and invalidates its receipt", async () => {
+    const { store } = setup();
+    const pending = store.check("key", policy);
+    const reset = store.reset("key");
+    const afterReset = Array.from({ length: 5 }, () => store.check("key", policy));
+    const prior = await pending;
+    await reset;
+    expect((await Promise.all(afterReset)).filter((result) => result.success)).toHaveLength(3);
+    expect((await store.refund("key", policy, prior.refundReceipt)).refunded).toBe(false);
+    expect((await store.check("key", policy)).success).toBe(false);
+  });
+
+  it("does not resurrect pre-reset quota or receipts when refund is already pending", async () => {
+    const { store } = setup();
+    const first = await store.check("key", policy);
+    const second = await store.check("key", policy);
+    await store.check("key", policy);
+    const refund = store.refund("key", policy, first.refundReceipt);
+    const reset = store.reset("key");
+    const checks = Array.from({ length: 5 }, () => store.check("key", policy));
+    await refund;
+    await reset;
+    expect((await Promise.all(checks)).filter((result) => result.success)).toHaveLength(3);
+    expect((await store.refund("key", policy, second.refundReceipt)).refunded).toBe(false);
+    expect((await store.check("key", policy)).success).toBe(false);
+  });
+
+  it("keeps another key moving while one admission is suspended", async () => {
+    let signalStarted = () => {};
+    let releaseRead = () => {};
+    const started = new Promise<void>((resolve) => {
+      signalStarted = resolve;
+    });
+    const release = new Promise<void>((resolve) => {
+      releaseRead = resolve;
+    });
+    const store: DistributedRateLimitStore = create(
+      () => 10_000,
+      async (key) => {
+        if (key === "slow") {
+          signalStarted();
+          await release;
+        }
+      },
+    );
+    const slow = store.check("slow", policy);
+    await started;
+    try {
+      const fast = await store.check("fast", policy);
+      expect(fast.success).toBe(true);
+      expect(fast.remaining).toBe(2);
+    } finally {
+      releaseRead();
+      await slow;
+    }
+  });
+
+  it("recovers the key queue after a rejected policy", async () => {
+    const { store } = setup();
+    const invalid =
+      policy.algorithm === "token-bucket" ? { ...policy, capacity: 0 } : { ...policy, limit: 0 };
+    const rejected = store.check("key", invalid);
+    const valid = store.check("key", policy);
+    await expect(rejected).rejects.toMatchObject({ code: "ratelimit/invalid-policy" });
+    expect((await valid).remaining).toBe(2);
+  });
+
+  it("orders pruning after pending admission without deleting active quota", async () => {
+    const { store } = setup();
+    const checks = Array.from({ length: 5 }, () => store.check("key", policy));
+    const pruned = store.pruneExpired();
+    expect((await Promise.all(checks)).filter((result) => result.success)).toHaveLength(3);
+    expect(await pruned).toBe(0);
+    expect((await store.check("key", policy)).success).toBe(false);
+  });
+
+  it("serializes the public algorithm entrypoint with ordinary admission", async () => {
+    const store: DistributedRateLimitStore = create(() => 10_000);
+    const direct = () => {
+      if (store instanceof FixedWindowInMemoryStore && policy.algorithm === "fixed")
+        return store.checkFixedWindow("key", policy);
+      if (store instanceof SlidingWindowInMemoryStore && policy.algorithm === "sliding")
+        return store.checkSlidingWindow("key", policy);
+      if (store instanceof TokenBucketInMemoryStore && policy.algorithm === "token-bucket")
+        return store.checkTokenBucket("key", policy);
+      throw new Error("fixture algorithm mismatch");
+    };
+    const results = await Promise.all(
+      Array.from({ length: 10 }, (_, index) => (index % 2 ? direct() : store.check("key", policy))),
+    );
+    expect(results.filter((result) => result.success)).toHaveLength(3);
+  });
+
+  it("finishes a last-unit refund without blocking later requests", async () => {
+    const { store } = setup();
+    const first = await store.check("key", policy);
+    expect((await store.refund("key", policy, first.refundReceipt)).refunded).toBe(true);
+    const results = await Promise.all(Array.from({ length: 5 }, () => store.check("key", policy)));
+    expect(results.filter((result) => result.success)).toHaveLength(3);
+  });
+});
+
+it("resets all sliding keys including an admission that has not stored its first timestamp", async () => {
+  const store = new SlidingWindowInMemoryStore({ now: () => 10_000, pruneIntervalMs: 0 });
+  const policy: SlidingWindowPolicy = {
+    name: "all",
+    algorithm: "sliding",
+    limit: 1,
+    windowMs: 1000,
+  };
+  const before = store.check("new-key", policy);
+  const reset = store.reset();
+  const after = store.check("new-key", policy);
+  const receipt = (await before).refundReceipt;
+  await reset;
+  expect((await after).success).toBe(true);
+  expect((await store.refund("new-key", policy, receipt)).refunded).toBe(false);
+  expect((await store.check("new-key", policy)).success).toBe(false);
+});
+
+it("expires a token bucket after pending admission without reviving its receipt", async () => {
+  const store = new TokenBucketInMemoryStore({ now: () => 10_000, pruneIntervalMs: 0 });
+  const policy: TokenBucketPolicy = {
+    name: "expire",
+    algorithm: "token-bucket",
+    capacity: 1,
+    refillRate: 1,
+    refillIntervalMs: 1000,
+  };
+  const before = store.check("key", policy);
+  const expired = store.expire("key", 0);
+  const after = store.check("key", policy);
+  const receipt = (await before).refundReceipt;
+  await expired;
+  expect((await after).success).toBe(true);
+  expect((await store.refund("key", policy, receipt)).refunded).toBe(false);
+  expect((await store.check("key", policy)).success).toBe(false);
 });

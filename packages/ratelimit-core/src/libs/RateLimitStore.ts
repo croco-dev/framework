@@ -151,7 +151,7 @@ export abstract class FixedWindowStore extends DistributedRateLimitStore {
 
     const nextCount = Math.max(0, entry.count - 1);
     if (nextCount === 0) {
-      await this.reset(key);
+      await this.resetFixedWindowEntry(key);
     } else {
       await this.setWindowEntry(key, { ...entry, count: nextCount }, policy.windowMs);
     }
@@ -163,6 +163,11 @@ export abstract class FixedWindowStore extends DistributedRateLimitStore {
       resetAtMs: receipt.windowStart + policy.windowMs,
       refunded: true,
     };
+  }
+
+  /** Clears an empty window during refund; implementations may already own the key's mutation boundary. */
+  protected async resetFixedWindowEntry(key: string): Promise<void> {
+    await this.reset(key);
   }
 
   private recordFixedWindowRefundReceipt(
