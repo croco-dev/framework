@@ -47,7 +47,6 @@ describe("Turbo task contract", () => {
 
   it("keeps test evidence options out of Turbo passthrough arguments", () => {
     expect(turbo.tasks["test:evidence"]).toEqual(turbo.tasks.test);
-    expect(turbo.tasks["test:evidence"]?.inputs).toBeUndefined();
     for (const owner of ["@croco/docs", "@croco/oxlint-rules"]) {
       expect(turbo.tasks[`${owner}#test:evidence`]).toEqual(turbo.tasks[`${owner}#test`]);
     }
@@ -295,4 +294,168 @@ describe("Turbo compiler configuration cache inputs", () => {
       rmSync(root, { recursive: true, force: true });
     }
   }, 120_000);
+});
+
+describe("Turbo shared test cache inputs", () => {
+  it("reruns normal and evidence tests for shared inputs without rebuilding, including task overrides", () => {
+    const root = mkdtempSync(resolve(tmpdir(), "croco-test-input-cache-"));
+    const packages = [
+      ["app", "@fixture/app"],
+      ["dependency", "@fixture/dependency"],
+      ["docs", "@croco/docs"],
+      ["oxlint-rules", "@croco/oxlint-rules"],
+      ["referral-core", "@croco/referral-core"],
+      ["promotions-core", "@croco/promotions-core"],
+    ] as const;
+    const sharedInputs = [
+      "vitest.config.ts",
+      "scripts/core-coverage-config.mts",
+      "test-support/authGuardConformance.ts",
+      "test-support/atomicStoreConformance.ts",
+    ];
+    const write = (path: string, contents: string) => {
+      mkdirSync(resolve(root, path, ".."), { recursive: true });
+      writeFileSync(resolve(root, path), contents);
+    };
+    const isolatedEnv = Object.fromEntries(
+      Object.entries(process.env).filter(([key]) => !key.startsWith("GIT_")),
+    );
+    try {
+      cpSync(resolve(repositoryRoot, "turbo.json"), resolve(root, "turbo.json"));
+      write(
+        "package.json",
+        JSON.stringify({
+          name: "test-input-cache-fixture",
+          private: true,
+          packageManager: "pnpm@10.15.0",
+        }),
+      );
+      write("pnpm-workspace.yaml", "packages:\n  - packages/*\n");
+      write(
+        "pnpm-lock.yaml",
+        "lockfileVersion: '9.0'\nimporters:\n  .: {}\n" +
+          packages.map(([directory]) => `  packages/${directory}: {}\n`).join(""),
+      );
+      write(".gitignore", ".turbo\n**/.turbo\n**/dist\nexecutions.log\n");
+      for (const path of sharedInputs) write(path, `// baseline ${path}\n`);
+      for (const [directory, name] of packages) {
+        write(
+          `packages/${directory}/package.json`,
+          JSON.stringify({
+            name,
+            private: true,
+            scripts: {
+              build: "node runner.mjs build",
+              test: "node runner.mjs test",
+              "test:evidence": "node runner.mjs test:evidence",
+            },
+          }),
+        );
+        const override = resolve(repositoryRoot, "packages", directory, "turbo.json");
+        if (existsSync(override))
+          cpSync(override, resolve(root, "packages", directory, "turbo.json"));
+        write(`packages/${directory}/src/index.ts`, "export const value = 1;\n");
+        write(
+          `packages/${directory}/runner.mjs`,
+          "import { appendFileSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';\n" +
+            "const task = process.argv[2];\n" +
+            "appendFileSync('../../executions.log', " +
+            JSON.stringify(name) +
+            " + '#' + task + '\\n');\n" +
+            "if (task === 'build') { mkdirSync('dist', { recursive: true }); writeFileSync('dist/result.txt', 'built'); }\n" +
+            "else { mkdirSync('.turbo', { recursive: true }); writeFileSync('.turbo/croco-test-evidence.json', JSON.stringify(" +
+            JSON.stringify(sharedInputs) +
+            ".map(path => readFileSync('../../' + path, 'utf8')))); }\n",
+        );
+      }
+      execFileSync("git", ["init", "--quiet"], { cwd: root, env: isolatedEnv });
+      execFileSync("git", ["add", "."], { cwd: root, env: isolatedEnv });
+      const run = () => {
+        const previous = new Set(
+          existsSync(resolve(root, ".turbo/runs")) ? readdirSync(resolve(root, ".turbo/runs")) : [],
+        );
+        execFileSync(
+          resolve(repositoryRoot, "node_modules/.bin/turbo"),
+          [
+            "run",
+            "build",
+            "test",
+            "test:evidence",
+            "--cache=local:rw",
+            "--cache-dir=.turbo/cache",
+            "--summarize",
+            "--no-daemon",
+          ],
+          {
+            cwd: root,
+            env: { ...isolatedEnv, TURBO_TELEMETRY_DISABLED: "1" },
+            encoding: "utf8",
+            stdio: "pipe",
+            timeout: 60_000,
+          },
+        );
+        const summary = readdirSync(resolve(root, ".turbo/runs")).find(
+          (file) => !previous.has(file),
+        );
+        expect(summary).toBeDefined();
+        return JSON.parse(readFileSync(resolve(root, ".turbo/runs", summary ?? ""), "utf8")) as {
+          tasks: { taskId: string; hash: string; cache: { status: string } }[];
+        };
+      };
+      const executions = () => readFileSync(resolve(root, "executions.log"), "utf8");
+      const baseline = run();
+      expect(baseline.tasks.map((task) => task.taskId).sort()).toEqual(
+        packages
+          .flatMap(([, name]) =>
+            ["build", "test", "test:evidence"].map((task) => `${name}#${task}`),
+          )
+          .sort(),
+      );
+      expect(baseline.tasks.every((task) => task.cache.status === "MISS")).toBe(true);
+      const coldExecutions = executions();
+      const warm = run();
+      expect(warm.tasks.map((task) => task.hash)).toEqual(baseline.tasks.map((task) => task.hash));
+      expect(warm.tasks.every((task) => task.cache.status === "HIT")).toBe(true);
+      expect(executions()).toBe(coldExecutions);
+      for (const path of sharedInputs) {
+        const original = readFileSync(resolve(root, path), "utf8");
+        write(path, original + "// changed shared assertion or configuration\n");
+        const before = executions();
+        const changed = run();
+        for (const task of changed.tasks) {
+          const old = baseline.tasks.find((candidate) => candidate.taskId === task.taskId);
+          if (task.taskId.endsWith("#build")) {
+            expect(task.hash, `${path}: ${task.taskId}`).toBe(old?.hash);
+            expect(task.cache.status, `${path}: ${task.taskId}`).toBe("HIT");
+          } else {
+            expect(task.hash, `${path}: ${task.taskId}`).not.toBe(old?.hash);
+            expect(task.cache.status, `${path}: ${task.taskId}`).toBe("MISS");
+          }
+        }
+        expect(executions().slice(before.length).trim().split("\n").sort(), path).toEqual(
+          packages.flatMap(([, name]) => [`${name}#test`, `${name}#test:evidence`]).sort(),
+        );
+        for (const [directory] of packages) {
+          expect(
+            JSON.parse(
+              readFileSync(
+                resolve(root, "packages", directory, ".turbo/croco-test-evidence.json"),
+                "utf8",
+              ),
+            ),
+            directory,
+          ).toContain(original + "// changed shared assertion or configuration\n");
+        }
+        const after = executions();
+        expect(
+          run().tasks.every((task) => task.cache.status === "HIT"),
+          path,
+        ).toBe(true);
+        expect(executions()).toBe(after);
+        write(path, original);
+      }
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  }, 180_000);
 });

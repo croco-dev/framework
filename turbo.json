@@ -92,35 +92,71 @@
       "cache": true,
       "dependsOn": ["build", "^build"],
       "env": ["NODE_ENV", "VITEST_MAX_WORKERS"],
-      "outputs": [".turbo/croco-test-evidence.json"]
+      "outputs": [".turbo/croco-test-evidence.json"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/vitest.config.ts",
+        "$TURBO_ROOT$/scripts/core-coverage-config.mts",
+        "$TURBO_ROOT$/test-support/**"
+      ]
     },
     "@croco/docs#test": {
       "cache": true,
       "dependsOn": ["^build"],
       "outputs": [".turbo/croco-test-evidence.json"],
-      "env": ["VITEST_MAX_WORKERS"]
+      "env": ["VITEST_MAX_WORKERS"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/vitest.config.ts",
+        "$TURBO_ROOT$/scripts/core-coverage-config.mts",
+        "$TURBO_ROOT$/test-support/**"
+      ]
     },
     "@croco/oxlint-rules#test": {
       "cache": true,
       "outputs": [".turbo/croco-test-evidence.json"],
-      "env": ["VITEST_MAX_WORKERS"]
+      "env": ["VITEST_MAX_WORKERS"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/vitest.config.ts",
+        "$TURBO_ROOT$/scripts/core-coverage-config.mts",
+        "$TURBO_ROOT$/test-support/**"
+      ]
     },
     "test:evidence": {
       "cache": true,
       "dependsOn": ["build", "^build"],
       "env": ["NODE_ENV", "VITEST_MAX_WORKERS"],
-      "outputs": [".turbo/croco-test-evidence.json"]
+      "outputs": [".turbo/croco-test-evidence.json"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/vitest.config.ts",
+        "$TURBO_ROOT$/scripts/core-coverage-config.mts",
+        "$TURBO_ROOT$/test-support/**"
+      ]
     },
     "@croco/docs#test:evidence": {
       "cache": true,
       "dependsOn": ["^build"],
       "outputs": [".turbo/croco-test-evidence.json"],
-      "env": ["VITEST_MAX_WORKERS"]
+      "env": ["VITEST_MAX_WORKERS"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/vitest.config.ts",
+        "$TURBO_ROOT$/scripts/core-coverage-config.mts",
+        "$TURBO_ROOT$/test-support/**"
+      ]
     },
     "@croco/oxlint-rules#test:evidence": {
       "cache": true,
       "outputs": [".turbo/croco-test-evidence.json"],
-      "env": ["VITEST_MAX_WORKERS"]
+      "env": ["VITEST_MAX_WORKERS"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/vitest.config.ts",
+        "$TURBO_ROOT$/scripts/core-coverage-config.mts",
+        "$TURBO_ROOT$/test-support/**"
+      ]
     },
     "typecheck": {
       "cache": true,

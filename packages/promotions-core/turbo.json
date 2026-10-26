@@ -2,10 +2,20 @@
   "extends": ["//"],
   "tasks": {
     "test": {
-      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/test-support/atomicStoreConformance.ts"]
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/vitest.config.ts",
+        "$TURBO_ROOT$/scripts/core-coverage-config.mts",
+        "$TURBO_ROOT$/test-support/**"
+      ]
     },
     "test:evidence": {
-      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/test-support/atomicStoreConformance.ts"]
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/vitest.config.ts",
+        "$TURBO_ROOT$/scripts/core-coverage-config.mts",
+        "$TURBO_ROOT$/test-support/**"
+      ]
     },
     "typecheck": {
       "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/test-support/atomicStoreConformance.ts"]
