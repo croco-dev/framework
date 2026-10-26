@@ -326,7 +326,8 @@ export class WorkflowRunner {
     try {
       for (const [stepIndex, step] of workflow.steps.entries()) {
         stepExecutionId = undefined;
-        await this.assertRunningAttempt(workflow.name, running);
+        const beforeStep = await this.getInterruptedAttempt(running);
+        if (beforeStep) return this.rejectInterruptedWorkflow(workflow, beforeStep, span);
         const stepAttributes = {
           "workflow.name": workflow.name,
           "workflow.execution.id": running.id,
@@ -348,7 +349,8 @@ export class WorkflowRunner {
           });
           throw error;
         }
-        await this.assertRunningAttempt(workflow.name, running);
+        const beforeDispatch = await this.getInterruptedAttempt(running);
+        if (beforeDispatch) return this.rejectInterruptedWorkflow(workflow, beforeDispatch, span);
         span.addEvent("workflow.step.started", stepAttributes);
         let result: unknown;
         try {
@@ -394,7 +396,8 @@ export class WorkflowRunner {
         workflowName: workflow.name,
         steps,
       };
-      await this.assertRunningAttempt(workflow.name, running);
+      const beforeCompletion = await this.getInterruptedAttempt(running);
+      if (beforeCompletion) return this.rejectInterruptedWorkflow(workflow, beforeCompletion, span);
       const completed = await this.executionManager.complete(running.id, result);
       span.addEvent(
         "workflow.execution.completed",
@@ -509,11 +512,11 @@ export class WorkflowRunner {
     throw new WorkflowExecutionCancelledProblem(workflow.name, execution.id);
   }
 
-  private async assertRunningAttempt(workflowName: string, running: Execution): Promise<void> {
+  private async getInterruptedAttempt(running: Execution): Promise<Execution | undefined> {
     const execution = await this.executionManager.get(running.id);
-    if (execution.status !== "running" || execution.attempts !== running.attempts) {
-      throw this.interruptionProblem(workflowName, execution);
-    }
+    return execution.status !== "running" || execution.attempts !== running.attempts
+      ? execution
+      : undefined;
   }
 
   private interruptionProblem(workflowName: string, execution: Execution) {

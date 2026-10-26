@@ -425,15 +425,16 @@ describe("workflow-core", () => {
   );
 
   it.each([
-    ["timed_out", false],
-    ["timed_out", true],
-    ["failed", false],
-    ["completed", false],
-    ["retrying", false],
-    ["replacement", false],
+    ["timed_out", false, false],
+    ["timed_out", true, false],
+    ["failed", false, false],
+    ["completed", false, false],
+    ["retrying", false, false],
+    ["replacement", false, false],
+    ["replacement", false, true],
   ] as const)(
-    "stops dispatch after the parent becomes %s (last step: %s)",
-    async (status, lastStep) => {
+    "stops dispatch after the parent becomes %s (last step: %s, inspection fails: %s)",
+    async (status, lastStep, failInspection) => {
       const calls: string[] = [];
       let stopped!: Execution;
       @Component()
@@ -473,7 +474,17 @@ describe("workflow-core", () => {
       }
       instances.set(StoppedTasks, new StoppedTasks());
       const runner = createWorkflowRunner(manager, WorkflowRegistry.fromMetadata());
+      const get = manager.get.bind(manager);
+      let observedInterruption = false;
+      const getSpy = vi.spyOn(manager, "get").mockImplementation(async (id) => {
+        if (failInspection && id === stopped?.id) {
+          if (observedInterruption) throw new TestWorkflowProblem("parent inspection unavailable");
+          observedInterruption = true;
+        }
+        return get(id);
+      });
       const outcome = await runner.execute("stopped", {}).catch((error: unknown) => error);
+      getSpy.mockRestore();
 
       expect(calls).toEqual(["first"]);
       expect(outcome).toBeInstanceOf(Problem);

@@ -6,7 +6,7 @@
       "classification": "pure-contract",
       "reason": "Require the original running workflow attempt before admitting another task or finalizing; preserve persisted timeout and failure evidence when execution is interrupted. No host capability, provider or runtime support claim changes.",
       "files": {
-        "packages/workflow-core/src/libs/WorkflowRunner.ts": "27d265303d6dea64861a98d8415ce6e800e376f82d8f186065ea38621c87d669"
+        "packages/workflow-core/src/libs/WorkflowRunner.ts": "7abc542097ad311023f0991bec4bf2b484af35f1c9b3c75c9daf2497edbae640"
       },
       "catalogRuntimes": [],
       "profiles": {
