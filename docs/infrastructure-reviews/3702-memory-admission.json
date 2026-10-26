@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "ratelimit-core",
+      "classification": "pure-contract",
+      "reason": "Serialize in-memory admission, refund and key cleanup without changing external providers or host lifecycle. Idle-key pruning runs synchronously; active keys retain the same mutation boundary. Reuse the existing algorithms and give fixed-window refund an unlocked cleanup hook.",
+      "files": {
+        "packages/ratelimit-core/src/libs/InMemoryRateLimitStore.ts": "c5c306bf4c39f0dfcdfdb543b750cce92116a56b1a1aa9ab441025d293b39f1e",
+        "packages/ratelimit-core/src/libs/RateLimitStore.ts": "50b7d70823e152c04349f27a89d51143d93744a8a7a60557c3b925fb87702371"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Per-instance JavaScript promise ordering and Map state use no host-specific capability, external storage or new lifecycle boundary. Existing Profile and provider selection remain unchanged.",
+          "providers": [],
+          "constraints": [
+            "Atomicity covers only one store instance; it is not a quota shared across processes, Lambda instances or Workers isolates. No deployment or provider certification is claimed."
+          ],
+          "references": [
+            "packages/ratelimit-core/src/libs/InMemoryRateLimitStore.ts",
+            "packages/ratelimit-core/src/libs/RateLimitStore.ts",
+            "packages/ratelimit-core/README.md"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Per-instance JavaScript promise ordering and Map state use no host-specific capability, external storage or new lifecycle boundary. Existing Profile and provider selection remain unchanged.",
+          "providers": [],
+          "constraints": [
+            "Atomicity covers only one store instance; it is not a quota shared across processes, Lambda instances or Workers isolates. No deployment or provider certification is claimed."
+          ],
+          "references": [
+            "packages/ratelimit-core/src/libs/InMemoryRateLimitStore.ts",
+            "packages/ratelimit-core/src/libs/RateLimitStore.ts",
+            "packages/ratelimit-core/README.md"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Per-instance JavaScript promise ordering and Map state use no host-specific capability, external storage or new lifecycle boundary. Existing Profile and provider selection remain unchanged.",
+          "providers": [],
+          "constraints": [
+            "Atomicity covers only one store instance; it is not a quota shared across processes, Lambda instances or Workers isolates. No deployment or provider certification is claimed."
+          ],
+          "references": [
+            "packages/ratelimit-core/src/libs/InMemoryRateLimitStore.ts",
+            "packages/ratelimit-core/src/libs/RateLimitStore.ts",
+            "packages/ratelimit-core/README.md"
+          ]
+        }
+      }
+    }
+  ]
+}

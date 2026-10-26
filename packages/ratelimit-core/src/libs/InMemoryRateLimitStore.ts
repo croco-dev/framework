@@ -93,17 +93,6 @@ function expireCounter(
   entry.expiresAtMs = now + ttlMs;
 }
 
-function pruneExpiredCounters(counters: Map<string, InMemoryCounterEntry>, now: number): number {
-  let deletedCount = 0;
-  for (const [key, entry] of counters) {
-    if (entry.expiresAtMs !== undefined && entry.expiresAtMs <= now) {
-      counters.delete(key);
-      deletedCount++;
-    }
-  }
-  return deletedCount;
-}
-
 function recordRefund(stats: MutableRateLimitStats): void {
   stats.allowed = Math.max(0, stats.allowed - 1);
   stats.total = Math.max(0, stats.total - 1);
@@ -137,7 +126,46 @@ function schedulePruning(
   };
 }
 
+// One queue per key: asynchronous storage steps must finish before the next mutation starts.
+// Rejections reach the caller but do not poison subsequent operations or retain idle keys.
+class KeyedOperations {
+  private readonly pending = new Map<string, Promise<void>>();
+
+  run<T>(key: string, operation: () => T | Promise<T>): Promise<T> {
+    const result = (this.pending.get(key) ?? Promise.resolve()).then(operation);
+    const settled = result.then(
+      () => undefined,
+      () => undefined,
+    );
+    this.pending.set(key, settled);
+    void settled.then(() => {
+      if (this.pending.get(key) === settled) this.pending.delete(key);
+    });
+    return result;
+  }
+
+  async prune(keys: Iterable<string>, cleanup: (key: string) => number): Promise<number> {
+    let deletedCount = 0;
+    const queued: Promise<number>[] = [];
+    for (const key of keys) {
+      if (this.pending.has(key)) {
+        queued.push(this.run(key, () => cleanup(key)));
+      } else {
+        // Synchronous cleanup cannot interleave with a new operation on an idle key.
+        deletedCount += cleanup(key);
+      }
+    }
+    for (const count of await Promise.all(queued)) deletedCount += count;
+    return deletedCount;
+  }
+
+  keys(): IterableIterator<string> {
+    return this.pending.keys();
+  }
+}
+
 export class FixedWindowInMemoryStore extends FixedWindowStore {
+  private readonly operations = new KeyedOperations();
   private readonly windows = new Map<
     string,
     { count: number; windowStart: number; windowMs: number }
@@ -162,16 +190,18 @@ export class FixedWindowInMemoryStore extends FixedWindowStore {
     this.close();
   }
 
+  async checkFixedWindow(key: string, policy: FixedWindowPolicy): Promise<RateLimitResult> {
+    return this.operations.run(key, () => super.checkFixedWindow(key, policy));
+  }
+
   async check(key: string, policy: FixedWindowPolicy): Promise<RateLimitResult> {
     const result = await this.checkFixedWindow(key, policy);
-
     if (result.success) {
       this.globalStats.allowed++;
     } else {
       this.globalStats.denied++;
     }
     this.globalStats.total++;
-
     return result;
   }
 
@@ -180,11 +210,13 @@ export class FixedWindowInMemoryStore extends FixedWindowStore {
     policy: RateLimitPolicy,
     receipt?: RateLimitRefundReceipt,
   ): Promise<RateLimitRefundResult> {
-    const result = await super.refund(key, policy, receipt);
-    if (result.refunded) {
-      recordRefund(this.globalStats);
-    }
-    return result;
+    return this.operations.run(key, async () => {
+      const result = await super.refund(key, policy, receipt);
+      if (result.refunded) {
+        recordRefund(this.globalStats);
+      }
+      return result;
+    });
   }
 
   protected async getWindowEntry(
@@ -211,44 +243,64 @@ export class FixedWindowInMemoryStore extends FixedWindowStore {
   }
 
   async increment(key: string, amount = 1): Promise<number> {
-    const entry = this.windows.get(key);
-    if (entry) {
-      entry.count += amount;
-      return entry.count;
-    }
-    return incrementCounter(this.counters, key, amount, this.now());
+    return this.operations.run(key, async () => {
+      const entry = this.windows.get(key);
+      if (entry) {
+        entry.count += amount;
+        return entry.count;
+      }
+      return incrementCounter(this.counters, key, amount, this.now());
+    });
   }
 
   async getCount(key: string): Promise<number> {
-    return (
-      this.windows.get(key)?.count ?? getActiveCounter(this.counters, key, this.now())?.count ?? 0
-    );
+    return this.operations.run(key, async () => {
+      return (
+        this.windows.get(key)?.count ?? getActiveCounter(this.counters, key, this.now())?.count ?? 0
+      );
+    });
   }
 
   async reset(key: string): Promise<void> {
+    return this.operations.run(key, async () => {
+      await this.resetFixedWindowEntry(key);
+    });
+  }
+
+  protected async resetFixedWindowEntry(key: string): Promise<void> {
     this.windows.delete(key);
     this.counters.delete(key);
     this.clearFixedWindowRefundReceipts(key);
   }
 
   async expire(key: string, ttlMs: number): Promise<void> {
-    expireCounter(this.counters, key, ttlMs, this.now());
+    return this.operations.run(key, async () => {
+      expireCounter(this.counters, key, ttlMs, this.now());
+    });
   }
 
   async pruneExpired(): Promise<number> {
-    const now = this.now();
-    let deletedCount = 0;
-
-    for (const [key, entry] of this.windows.entries()) {
-      const windowEnd = entry.windowStart + entry.windowMs;
-      if (now > windowEnd) {
+    const keys = new Set([
+      ...this.windows.keys(),
+      ...this.counters.keys(),
+      ...this.operations.keys(),
+    ]);
+    return this.operations.prune(keys, (key) => {
+      const now = this.now();
+      let deletedCount = 0;
+      const entry = this.windows.get(key);
+      if (entry && now > entry.windowStart + entry.windowMs) {
         this.windows.delete(key);
         this.clearFixedWindowRefundReceipts(key);
         deletedCount++;
       }
-    }
-
-    return deletedCount + pruneExpiredCounters(this.counters, now);
+      const counter = this.counters.get(key);
+      if (counter?.expiresAtMs !== undefined && counter.expiresAtMs <= now) {
+        this.counters.delete(key);
+        deletedCount++;
+      }
+      return deletedCount;
+    });
   }
 
   async getStats(): Promise<{ allowed: number; denied: number; total: number }> {
@@ -257,6 +309,7 @@ export class FixedWindowInMemoryStore extends FixedWindowStore {
 }
 
 export class SlidingWindowInMemoryStore extends SlidingWindowStore {
+  private readonly operations = new KeyedOperations();
   private readonly windows = new Map<
     string,
     { entries: Array<{ timestamp: number; receiptId: string }>; windowMs: number }
@@ -282,19 +335,31 @@ export class SlidingWindowInMemoryStore extends SlidingWindowStore {
     this.close();
   }
 
-  async check(key: string, policy: SlidingWindowPolicy): Promise<RateLimitResult> {
+  async checkSlidingWindow(key: string, policy: SlidingWindowPolicy): Promise<RateLimitResult> {
+    return this.operations.run(key, () => this.checkSlidingWindowUnlocked(key, policy));
+  }
+
+  private async checkSlidingWindowUnlocked(
+    key: string,
+    policy: SlidingWindowPolicy,
+  ): Promise<RateLimitResult> {
     validateRateLimitPolicy(policy);
     this._windowMsCache.set(key, policy.windowMs);
-    const result = await this.checkSlidingWindow(key, policy);
-    this._windowMsCache.delete(key);
+    try {
+      return await super.checkSlidingWindow(key, policy);
+    } finally {
+      this._windowMsCache.delete(key);
+    }
+  }
 
+  async check(key: string, policy: SlidingWindowPolicy): Promise<RateLimitResult> {
+    const result = await this.checkSlidingWindow(key, policy);
     if (result.success) {
       this.globalStats.allowed++;
     } else {
       this.globalStats.denied++;
     }
     this.globalStats.total++;
-
     return result;
   }
 
@@ -303,32 +368,54 @@ export class SlidingWindowInMemoryStore extends SlidingWindowStore {
     policy: RateLimitPolicy,
     receipt?: RateLimitRefundReceipt,
   ): Promise<RateLimitRefundResult> {
-    if (policy.algorithm !== undefined && policy.algorithm !== "sliding") {
-      throw new RateLimitRefundUnsupportedProblem();
-    }
-    if (!receipt || receipt.algorithm !== "sliding") {
-      throw new RateLimitRefundUnsupportedProblem();
-    }
+    return this.operations.run(key, async () => {
+      if (policy.algorithm !== undefined && policy.algorithm !== "sliding") {
+        throw new RateLimitRefundUnsupportedProblem();
+      }
+      if (!receipt || receipt.algorithm !== "sliding") {
+        throw new RateLimitRefundUnsupportedProblem();
+      }
 
-    validateRateLimitPolicy(policy);
-    const now = this.now();
-    const windowStart = now - policy.windowMs;
+      validateRateLimitPolicy(policy);
+      const now = this.now();
+      const windowStart = now - policy.windowMs;
 
-    await this.removeTimestamps(key, windowStart);
-    const entry = this.windows.get(key);
+      await this.removeTimestamps(key, windowStart);
+      const entry = this.windows.get(key);
 
-    if (!entry || entry.entries.length === 0) {
-      return {
-        success: true,
-        limit: policy.limit,
-        remaining: policy.limit,
-        resetAtMs: now + policy.windowMs,
-        refunded: false,
-      };
-    }
+      if (!entry || entry.entries.length === 0) {
+        return {
+          success: true,
+          limit: policy.limit,
+          remaining: policy.limit,
+          resetAtMs: now + policy.windowMs,
+          refunded: false,
+        };
+      }
 
-    const refundIndex = entry.entries.findIndex((item) => item.receiptId === receipt.id);
-    if (refundIndex < 0) {
+      const refundIndex = entry.entries.findIndex((item) => item.receiptId === receipt.id);
+      if (refundIndex < 0) {
+        const oldestTimestamp = entry.entries[0]?.timestamp ?? now;
+
+        return {
+          success: true,
+          limit: policy.limit,
+          remaining: Math.max(0, policy.limit - entry.entries.length),
+          resetAtMs: oldestTimestamp + policy.windowMs,
+          refunded: false,
+        };
+      }
+
+      entry.entries.splice(refundIndex, 1);
+
+      if (entry.entries.length === 0) {
+        this.windows.delete(key);
+      } else {
+        this.windows.set(key, entry);
+      }
+
+      recordRefund(this.globalStats);
+
       const oldestTimestamp = entry.entries[0]?.timestamp ?? now;
 
       return {
@@ -336,29 +423,9 @@ export class SlidingWindowInMemoryStore extends SlidingWindowStore {
         limit: policy.limit,
         remaining: Math.max(0, policy.limit - entry.entries.length),
         resetAtMs: oldestTimestamp + policy.windowMs,
-        refunded: false,
+        refunded: true,
       };
-    }
-
-    entry.entries.splice(refundIndex, 1);
-
-    if (entry.entries.length === 0) {
-      this.windows.delete(key);
-    } else {
-      this.windows.set(key, entry);
-    }
-
-    recordRefund(this.globalStats);
-
-    const oldestTimestamp = entry.entries[0]?.timestamp ?? now;
-
-    return {
-      success: true,
-      limit: policy.limit,
-      remaining: Math.max(0, policy.limit - entry.entries.length),
-      resetAtMs: oldestTimestamp + policy.windowMs,
-      refunded: true,
-    };
+    });
   }
 
   protected async addTimestamp(
@@ -393,46 +460,61 @@ export class SlidingWindowInMemoryStore extends SlidingWindowStore {
   }
 
   async increment(key: string, amount = 1): Promise<number> {
-    return incrementCounter(this.counters, key, amount, this.now());
+    return this.operations.run(key, async () => {
+      return incrementCounter(this.counters, key, amount, this.now());
+    });
   }
 
   async getCount(key: string): Promise<number> {
-    return getActiveCounter(this.counters, key, this.now())?.count ?? 0;
+    return this.operations.run(key, async () => {
+      return getActiveCounter(this.counters, key, this.now())?.count ?? 0;
+    });
   }
 
   async reset(key?: string): Promise<void> {
-    if (key !== undefined) {
-      this.windows.delete(key);
-      this.counters.delete(key);
-    } else {
-      this.windows.clear();
-      this.counters.clear();
-    }
+    const keys =
+      key === undefined
+        ? new Set([...this.windows.keys(), ...this.counters.keys(), ...this.operations.keys()])
+        : new Set([key]);
+    await Promise.all(
+      [...keys].map((currentKey) =>
+        this.operations.run(currentKey, () => {
+          this.windows.delete(currentKey);
+          this.counters.delete(currentKey);
+        }),
+      ),
+    );
   }
 
   async expire(key: string, ttlMs: number): Promise<void> {
-    expireCounter(this.counters, key, ttlMs, this.now());
+    return this.operations.run(key, async () => {
+      expireCounter(this.counters, key, ttlMs, this.now());
+    });
   }
 
   async pruneExpired(): Promise<number> {
-    const now = this.now();
-    let deletedCount = 0;
-
-    for (const [key, entry] of this.windows.entries()) {
-      const windowStart = now - entry.windowMs;
-      const originalLength = entry.entries.length;
-      entry.entries = entry.entries.filter((item) => item.timestamp > windowStart);
-
-      if (entry.entries.length === 0) {
-        this.windows.delete(key);
-      } else {
-        this.windows.set(key, entry);
+    const keys = new Set([
+      ...this.windows.keys(),
+      ...this.counters.keys(),
+      ...this.operations.keys(),
+    ]);
+    return this.operations.prune(keys, (key) => {
+      const now = this.now();
+      let deletedCount = 0;
+      const entry = this.windows.get(key);
+      if (entry) {
+        const originalLength = entry.entries.length;
+        entry.entries = entry.entries.filter((item) => item.timestamp > now - entry.windowMs);
+        if (entry.entries.length === 0) this.windows.delete(key);
+        deletedCount += originalLength - entry.entries.length;
       }
-
-      deletedCount += originalLength - entry.entries.length;
-    }
-
-    return deletedCount + pruneExpiredCounters(this.counters, now);
+      const counter = this.counters.get(key);
+      if (counter?.expiresAtMs !== undefined && counter.expiresAtMs <= now) {
+        this.counters.delete(key);
+        deletedCount++;
+      }
+      return deletedCount;
+    });
   }
 
   async getStats(): Promise<{ allowed: number; denied: number; total: number }> {
@@ -441,6 +523,7 @@ export class SlidingWindowInMemoryStore extends SlidingWindowStore {
 }
 
 export class TokenBucketInMemoryStore extends TokenBucketStore {
+  private readonly operations = new KeyedOperations();
   private readonly buckets = new Map<
     string,
     { tokens: number; lastRefill: number; ttlMs: number }
@@ -465,16 +548,18 @@ export class TokenBucketInMemoryStore extends TokenBucketStore {
     this.close();
   }
 
+  async checkTokenBucket(key: string, policy: TokenBucketPolicy): Promise<RateLimitResult> {
+    return this.operations.run(key, () => super.checkTokenBucket(key, policy));
+  }
+
   async check(key: string, policy: TokenBucketPolicy): Promise<RateLimitResult> {
     const result = await this.checkTokenBucket(key, policy);
-
     if (result.success) {
       this.globalStats.allowed++;
     } else {
       this.globalStats.denied++;
     }
     this.globalStats.total++;
-
     return result;
   }
 
@@ -483,11 +568,13 @@ export class TokenBucketInMemoryStore extends TokenBucketStore {
     policy: RateLimitPolicy,
     receipt?: RateLimitRefundReceipt,
   ): Promise<RateLimitRefundResult> {
-    const result = await super.refund(key, policy, receipt);
-    if (result.refunded) {
-      recordRefund(this.globalStats);
-    }
-    return result;
+    return this.operations.run(key, async () => {
+      const result = await super.refund(key, policy, receipt);
+      if (result.refunded) {
+        recordRefund(this.globalStats);
+      }
+      return result;
+    });
   }
 
   protected async getBucket(key: string): Promise<{ tokens: number; lastRefill: number } | null> {
@@ -503,40 +590,55 @@ export class TokenBucketInMemoryStore extends TokenBucketStore {
   }
 
   async increment(key: string, amount = 1): Promise<number> {
-    return incrementCounter(this.counters, key, amount, this.now());
+    return this.operations.run(key, async () => {
+      return incrementCounter(this.counters, key, amount, this.now());
+    });
   }
 
   async getCount(key: string): Promise<number> {
-    return getActiveCounter(this.counters, key, this.now())?.count ?? 0;
+    return this.operations.run(key, async () => {
+      return getActiveCounter(this.counters, key, this.now())?.count ?? 0;
+    });
   }
 
   async reset(key: string): Promise<void> {
-    this.buckets.delete(key);
-    this.counters.delete(key);
-    this.clearTokenBucketRefundReceipts(key);
+    return this.operations.run(key, async () => {
+      this.buckets.delete(key);
+      this.counters.delete(key);
+      this.clearTokenBucketRefundReceipts(key);
+    });
   }
 
   async expire(key: string, ttlMs: number): Promise<void> {
-    this.buckets.delete(key);
-    expireCounter(this.counters, key, ttlMs, this.now());
-    this.clearTokenBucketRefundReceipts(key);
+    return this.operations.run(key, async () => {
+      this.buckets.delete(key);
+      expireCounter(this.counters, key, ttlMs, this.now());
+      this.clearTokenBucketRefundReceipts(key);
+    });
   }
 
   async pruneExpired(): Promise<number> {
-    const now = this.now();
-    let deletedCount = 0;
-
-    for (const [key, entry] of this.buckets.entries()) {
-      if (now <= entry.lastRefill + entry.ttlMs) {
-        continue;
+    const keys = new Set([
+      ...this.buckets.keys(),
+      ...this.counters.keys(),
+      ...this.operations.keys(),
+    ]);
+    return this.operations.prune(keys, (key) => {
+      const now = this.now();
+      let deletedCount = 0;
+      const entry = this.buckets.get(key);
+      if (entry && now > entry.lastRefill + entry.ttlMs) {
+        this.buckets.delete(key);
+        this.clearTokenBucketRefundReceipts(key);
+        deletedCount++;
       }
-
-      this.buckets.delete(key);
-      this.clearTokenBucketRefundReceipts(key);
-      deletedCount++;
-    }
-
-    return deletedCount + pruneExpiredCounters(this.counters, now);
+      const counter = this.counters.get(key);
+      if (counter?.expiresAtMs !== undefined && counter.expiresAtMs <= now) {
+        this.counters.delete(key);
+        deletedCount++;
+      }
+      return deletedCount;
+    });
   }
 
   async getStats(): Promise<{ allowed: number; denied: number; total: number }> {
