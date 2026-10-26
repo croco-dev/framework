@@ -33,6 +33,14 @@ title: "CreateSagaExecutionParams"
 
 ---
 
+### requestFingerprint?
+
+> `readonly` `optional` **requestFingerprint?**: `string`
+
+Versioned canonical name/payload identity; absent on legacy records.
+
+---
+
 ### sagaName
 
 > `readonly` **sagaName**: `string`

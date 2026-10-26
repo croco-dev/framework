@@ -29,6 +29,9 @@ export class InMemorySagaStore implements SagaStore {
       sagaName: params.sagaName,
       status: "pending",
       payload: params.payload,
+      ...(params.requestFingerprint !== undefined
+        ? { requestFingerprint: params.requestFingerprint }
+        : {}),
       steps: [],
       compensationFailures: [],
       createdAt: this.clock(),

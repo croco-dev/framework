@@ -267,7 +267,7 @@
     {
       "package": "@croco/workflow-core",
       "file": "packages/workflow-core/src/libs/saga/SagaRunner.ts",
-      "line": 47,
+      "line": 48,
       "excerpt": "class StepCompletionPersistenceError extends Error {",
       "reason": "Internal saga signal preserves the persistence cause and completed-step record for failure handling.",
       "owner": "framework-error-handling",

@@ -11,6 +11,8 @@ title: "SagaStore"
 
 > **create**(`params`): `Promise`\<[`SagaExecution`](/api/workflow-core/src/type-aliases/sagaexecution/)\>
 
+Atomically return the existing (sagaName, idempotencyKey) record or persist all input fields.
+
 #### Parameters
 
 ##### params
