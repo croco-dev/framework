@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "workflow-core",
+      "classification": "pure-contract",
+      "reason": "Preserve the completed external effect and original completion-write failure when the fallback step-state write also fails; collect secondary recording errors through compensation. This changes no host, provider, schema or lifecycle contract.",
+      "files": {
+        "packages/workflow-core/src/libs/saga/SagaRunner.ts": "ae80d8b469d7c3e13c9e309d24eafc45ea9b3681ccb96636986e5b328d18f72a"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Completed-step evidence and failure collection are host-independent logic on the existing SagaStore contract; no new capability, storage or lifecycle requirement is introduced.",
+          "providers": [],
+          "constraints": [
+            "Store write failures still require external reconciliation; no deployment or provider certification is claimed."
+          ],
+          "references": [
+            "packages/workflow-core/src/libs/saga/SagaRunner.ts",
+            "packages/workflow-core/src/libs/saga/types.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Completed-step evidence and failure collection are host-independent logic on the existing SagaStore contract; no new capability, storage or lifecycle requirement is introduced.",
+          "providers": [],
+          "constraints": [
+            "Store write failures still require external reconciliation; no deployment or provider certification is claimed."
+          ],
+          "references": [
+            "packages/workflow-core/src/libs/saga/SagaRunner.ts",
+            "packages/workflow-core/src/libs/saga/types.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Completed-step evidence and failure collection are host-independent logic on the existing SagaStore contract; no new capability, storage or lifecycle requirement is introduced.",
+          "providers": [],
+          "constraints": [
+            "Store write failures still require external reconciliation; no deployment or provider certification is claimed."
+          ],
+          "references": [
+            "packages/workflow-core/src/libs/saga/SagaRunner.ts",
+            "packages/workflow-core/src/libs/saga/types.ts"
+          ]
+        }
+      }
+    }
+  ]
+}

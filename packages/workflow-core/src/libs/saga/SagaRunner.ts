@@ -48,6 +48,7 @@ class StepCompletionPersistenceError extends Error {
   constructor(
     readonly cause: unknown,
     readonly completedRecord: SagaStepExecutionRecord,
+    readonly failureRecordErrors: readonly unknown[] = [],
   ) {
     super("Saga step completion could not be persisted");
   }
@@ -477,7 +478,14 @@ export class SagaRunner {
       }
     } catch (error) {
       if (error instanceof StepCompletionPersistenceError) {
-        return this.failExecution(definition, current.id, error.cause, span, error.completedRecord);
+        return this.failExecution(
+          definition,
+          current.id,
+          error.cause,
+          span,
+          error.completedRecord,
+          error.failureRecordErrors,
+        );
       }
       return this.failExecution(definition, current.id, error, span);
     }
@@ -551,10 +559,11 @@ export class SagaRunner {
     error: unknown,
     span: SagaTelemetrySpan,
     completedRecord?: SagaStepExecutionRecord,
+    failureRecordErrors: readonly unknown[] = [],
   ): Promise<never> {
     const failure = toSagaFailure(error);
     const compensationFailures: SagaFailure[] = [];
-    const compensationRecordErrors: unknown[] = [];
+    const compensationRecordErrors: unknown[] = [...failureRecordErrors];
     let finalStatus: SagaExecutionStatus = "failed";
     let failed: SagaExecution;
     try {
@@ -752,14 +761,19 @@ export class SagaRunner {
         completedRecord = { ...completedRecord, outboxMessages };
         await this.replaceStepRecord(execution.id, completedRecord);
       } catch (error) {
-        await this.replaceStepRecord(execution.id, {
-          ...record,
-          status: "failed",
-          attempts: attempt,
-          error: toSagaFailure(error),
-          completedAt: this.clock(),
-        });
-        throw new StepCompletionPersistenceError(error, completedRecord);
+        const failureRecordErrors: unknown[] = [];
+        try {
+          await this.replaceStepRecord(execution.id, {
+            ...record,
+            status: "failed",
+            attempts: attempt,
+            error: toSagaFailure(error),
+            completedAt: this.clock(),
+          });
+        } catch (failureRecordError) {
+          failureRecordErrors.push(failureRecordError);
+        }
+        throw new StepCompletionPersistenceError(error, completedRecord, failureRecordErrors);
       }
       return {
         result: {

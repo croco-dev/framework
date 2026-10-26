@@ -542,6 +542,95 @@ describe("SagaRunner", () => {
     expect(execution.steps.map((step) => step.status)).toEqual(["compensated", "compensated"]);
   });
 
+  it.each([
+    { fallbackRejectsUndefined: false, terminalWriteFails: false },
+    { fallbackRejectsUndefined: true, terminalWriteFails: false },
+    { fallbackRejectsUndefined: false, terminalWriteFails: true },
+  ])(
+    "compensates completed effects after both step writes fail ($fallbackRejectsUndefined, $terminalWriteFails)",
+    async ({ fallbackRejectsUndefined, terminalWriteFails }) => {
+      const delegate = new InMemorySagaStore();
+      const completionError = new ProviderProblem("charge completion write unavailable");
+      const fallbackError = fallbackRejectsUndefined
+        ? undefined
+        : new ProviderProblem("charge failure write unavailable");
+      const terminalError = new ProviderProblem("terminal write unavailable");
+      const store: SagaStore = {
+        create: (params) => delegate.create(params),
+        findById: (id) => delegate.findById(id),
+        findByIdempotencyKey: (sagaName, key) => delegate.findByIdempotencyKey(sagaName, key),
+        list: (options) => delegate.list(options),
+        update: (id, data) => {
+          const charge = data.steps?.find((step) => step.id === "charge-card");
+          if (charge?.status === "completed") {
+            return Promise.reject(completionError);
+          }
+          if (charge?.status === "failed") {
+            return Promise.reject(fallbackError);
+          }
+          if (terminalWriteFails && data.status === "compensated") {
+            return Promise.reject(terminalError);
+          }
+          return delegate.update(id, data);
+        },
+      };
+      const effects: string[] = [];
+      const publish = vi.fn();
+      const nextStep = vi.fn();
+      const definition: SagaDefinition = {
+        name: "double-step-write-failure",
+        outbox: { publish },
+        steps: [
+          {
+            id: "reserve-stock",
+            run: () => effects.push("reserve-stock"),
+            compensate: () => effects.push("release-stock"),
+          },
+          {
+            id: "charge-card",
+            retry: { maxAttempts: 3 },
+            run: (_input, { enqueueOutbox }) => {
+              effects.push("charge-card");
+              enqueueOutbox({ id: "charged", topic: "charged", payload: { chargeId: "ch_42" } });
+              return { chargeId: "ch_42" };
+            },
+            compensate: (input, { stepResult }) => {
+              expect(input).toEqual({ orderId: "ord_7" });
+              expect(stepResult.result).toEqual({ chargeId: "ch_42" });
+              effects.push("refund-card");
+            },
+          },
+          { id: "send-receipt", run: nextStep },
+        ],
+      };
+      const runner = new SagaRunner(store);
+
+      const problem = await runner
+        .execute(definition, { orderId: "ord_7" })
+        .catch((error: unknown) => error);
+      const [execution] = await runner.listExecutions({ sagaName: definition.name });
+
+      expect(effects).toEqual(["reserve-stock", "charge-card", "refund-card", "release-stock"]);
+      expect(nextStep).not.toHaveBeenCalled();
+      expect(publish).not.toHaveBeenCalled();
+      expect(problem).toBeInstanceOf(SagaExecutionFailedProblem);
+      expect(problem).toHaveProperty("extensions.originalFailureMessage", completionError.message);
+      expect(execution.steps.map((step) => step.status)).toEqual(["compensated", "compensated"]);
+      expect(execution.steps[1]?.result).toEqual({ chargeId: "ch_42" });
+      expect(execution.steps[1]?.attempts).toBe(1);
+      const recordingEvidence = Object.getOwnPropertyDescriptor(problem, "sagaFailureRecordError");
+      expect(recordingEvidence?.enumerable).toBe(false);
+      if (terminalWriteFails) {
+        expect(recordingEvidence?.value).toBeInstanceOf(AggregateError);
+        expect(recordingEvidence?.value.errors).toEqual([fallbackError, terminalError]);
+      } else {
+        expect(recordingEvidence?.value).toBe(fallbackError);
+        expect(execution.status).toBe("compensated");
+        expect(execution.error?.message).toBe(completionError.message);
+      }
+    },
+  );
+
   it("reports a failed compensation after a successful step's completion write failed", async () => {
     const delegate = new InMemorySagaStore();
     let rejectCompletion = true;

@@ -205,6 +205,12 @@ or repair previously ambiguous downstream receipts; existing store and publisher
 
 ### Saga compensation recording failures
 
+When a successful step's completion write and its fallback failure write both fail, the runner
+retains the step's result for reverse compensation without rerunning the effect. The completion
+write remains the original failure; the fallback write joins the recording errors below. If
+compensation can be persisted, its step record retains that result. Otherwise recovery still
+requires reconciliation with the external effect; in-memory evidence is not durable storage.
+
 If saving a `compensation_failed` step record fails, the runner still attempts the remaining
 completed steps' compensations in reverse order. Business and compensation errors remain separate
 in `SagaExecutionFailedProblem`. Recording errors are attached as its non-enumerable
@@ -218,6 +224,6 @@ fails, durable execution state may remain `running`; the returned Problem report
 retains the recording evidence. Reconcile uncertain records using the store and external compensation
 receipts before replaying. This does not provide durable recovery when the store cannot write.
 
-When compensation-failure recording errors were collected, automatic outbox dispatch is deferred
+When step-failure or compensation-failure recording errors were collected, automatic outbox dispatch is deferred
 so a publisher failure cannot mask that evidence. Successfully recorded compensation messages remain
 pending and can be delivered through `SagaRunner.dispatchOutbox()` after handling the failure.
