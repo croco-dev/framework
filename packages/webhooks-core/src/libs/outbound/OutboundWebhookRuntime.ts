@@ -282,7 +282,6 @@ export class OutboundWebhookRuntime {
       const timestamp = String(Math.floor(startedAt.getTime() / 1_000));
       const signature = signOutboundWebhook(event.payloadBytes, timestamp, secret);
       const outcome = await this.sendWithDeadline(
-        deliveryId,
         {
           url: validatedTarget.url,
           resolvedAddresses: validatedTarget.resolvedAddresses,
@@ -338,7 +337,6 @@ export class OutboundWebhookRuntime {
   }
 
   private async sendWithDeadline(
-    deliveryId: string,
     request: Omit<OutboundWebhookTransportRequest, "signal">,
     callerSignal?: AbortSignal,
   ): Promise<OutboundWebhookAttemptOutcome> {
@@ -348,9 +346,9 @@ export class OutboundWebhookRuntime {
         ? controller.signal
         : AbortSignal.any([callerSignal, controller.signal]);
     let timeout: ReturnType<typeof setTimeout> | undefined;
-    const deadline = new Promise<never>((_resolve, reject) => {
+    const deadline = new Promise<OutboundWebhookAttemptOutcome>((resolve) => {
       timeout = setTimeout(() => {
-        reject(new OutboundWebhookRetryableProblem(deliveryId, "transport timed out"));
+        resolve({ kind: "timeout" });
         controller.abort();
       }, this.transportTimeoutMs);
     });

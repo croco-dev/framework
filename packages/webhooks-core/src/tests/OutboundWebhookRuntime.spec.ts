@@ -815,49 +815,87 @@ describe("OutboundWebhookRuntime", () => {
     },
   );
 
-  it("times out an unresponsive transport, aborts its signal, and releases its claim", async () => {
-    vi.useFakeTimers();
-    try {
-      const store = new InMemoryOutboundWebhookStore();
-      let signal: AbortSignal | undefined;
-      let markSendStarted!: () => void;
-      const sendStarted = new Promise<void>((resolve) => {
-        markSendStarted = resolve;
-      });
-      const runtime = createRuntime({
-        store,
-        transportTimeoutMs: 100,
-        claimLeaseDurationMs: 1_000,
-        transport: {
-          send: (request) => {
-            signal = request.signal;
-            markSendStarted();
-            return new Promise<never>(() => undefined);
+  it.each([false, true])(
+    "records runtime timeouts through retry exhaustion (transport rejects on abort: %s)",
+    async (rejectOnAbort) => {
+      vi.useFakeTimers();
+      vi.setSystemTime(START);
+      try {
+        const store = new InMemoryOutboundWebhookStore();
+        const publisher = { publish: vi.fn() };
+        const requests: {
+          signal?: AbortSignal;
+          finish: (outcome: OutboundWebhookAttemptOutcome) => void;
+        }[] = [];
+        let markSendStarted!: () => void;
+        const runtime = createRuntime({
+          store,
+          publisher,
+          now: () => new Date(),
+          createId: () => `attempt_${requests.length}`,
+          transportTimeoutMs: 100,
+          claimLeaseDurationMs: 1_000,
+          retryPolicy: { maxAttempts: 2, backoff: { getDelay: () => 50 } },
+          transport: {
+            send: ({ signal }) =>
+              new Promise((resolve, reject) => {
+                requests.push({ signal, finish: resolve });
+                if (rejectOnAbort) {
+                  signal?.addEventListener("abort", () => reject(signal.reason), { once: true });
+                }
+                markSendStarted();
+              }),
           },
-        },
-      });
-      const deliveryId = (await runtime.publish(EVENT)).deliveries[0]?.id ?? "";
-      const dispatch = expect(runtime.dispatch(EVENT.tenantId, deliveryId)).rejects.toBeInstanceOf(
-        OutboundWebhookRetryableProblem,
-      );
-      await sendStarted;
-      expect(signal?.aborted).toBe(false);
-      await vi.advanceTimersByTimeAsync(100);
-      await dispatch;
-      expect(signal?.aborted).toBe(true);
-      expect(await store.listAttempts(EVENT.tenantId, deliveryId)).toEqual([]);
-      expect(await store.getDelivery(EVENT.tenantId, deliveryId)).toMatchObject({
-        status: "pending",
-        attemptCount: 0,
-      });
-      const healthyWorker = createRuntime({ store });
-      await expect(healthyWorker.dispatch(EVENT.tenantId, deliveryId)).resolves.toMatchObject({
-        status: "delivered",
-      });
-    } finally {
-      vi.useRealTimers();
-    }
-  });
+        });
+        const deliveryId = (await runtime.publish(EVENT)).deliveries[0]?.id ?? "";
+        publisher.publish.mockClear();
+        for (const number of [1, 2]) {
+          const started = new Promise<void>((resolve) => {
+            markSendStarted = resolve;
+          });
+          const dispatch = runtime.dispatch(EVENT.tenantId, deliveryId);
+          await started;
+          expect(requests[number - 1]?.signal?.aborted).toBe(false);
+          await vi.advanceTimersByTimeAsync(100);
+          const result = await dispatch;
+          expect(requests[number - 1]?.signal?.aborted).toBe(true);
+          expect(result).toMatchObject({
+            status: number === 1 ? "retrying" : "dead",
+            attemptCount: number,
+          });
+          const attempts = await store.listAttempts(EVENT.tenantId, deliveryId);
+          expect(attempts).toHaveLength(number);
+          expect(attempts[number - 1]).toMatchObject({
+            number,
+            outcome: { kind: "timeout" },
+            classification: "retryable",
+            startedAt: new Date(START.getTime() + (number - 1) * 150),
+            completedAt: new Date(START.getTime() + (number - 1) * 150 + 100),
+          });
+          requests[number - 1]?.finish({ kind: "http", status: 204 });
+          await Promise.resolve();
+          expect(await store.getDelivery(EVENT.tenantId, deliveryId)).toEqual(result);
+          expect(await store.listAttempts(EVENT.tenantId, deliveryId)).toEqual(attempts);
+          if (number === 1) {
+            expect(result.nextAttemptAt).toEqual(new Date(START.getTime() + 150));
+            await expect(runtime.dispatch(EVENT.tenantId, deliveryId)).rejects.toBeInstanceOf(
+              OutboundWebhookRetryableProblem,
+            );
+            expect(requests).toHaveLength(1);
+            await vi.advanceTimersByTimeAsync(50);
+          }
+        }
+        expect(publisher.publish).toHaveBeenCalledTimes(1);
+        expect(await store.listUnpublishedIntents(EVENT.tenantId)).toEqual([]);
+        await expect(runtime.dispatch(EVENT.tenantId, deliveryId)).rejects.toBeInstanceOf(
+          OutboundWebhookReplayNotAllowedProblem,
+        );
+        expect(requests).toHaveLength(2);
+      } finally {
+        vi.useRealTimers();
+      }
+    },
+  );
 
   it("rejects a late worker completion without releasing the replacement worker claim", async () => {
     vi.useFakeTimers();
