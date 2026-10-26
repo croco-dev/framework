@@ -15,6 +15,10 @@ import type {
   RateLimitPolicy,
 } from "../libs/types";
 
+beforeEach(() => {
+  Container.reset();
+});
+
 describe("InMemoryRateLimitStore", () => {
   let store!: InMemoryRateLimitStore;
   const policy: SlidingWindowPolicy = {
@@ -25,7 +29,6 @@ describe("InMemoryRateLimitStore", () => {
   };
 
   beforeEach(() => {
-    Container.reset();
     store = new InMemoryRateLimitStore({ pruneIntervalMs: 0 });
   });
 
@@ -1023,6 +1026,42 @@ describe.each([
       releaseRead();
       await slow;
     }
+  });
+
+  it("adds idle and queued pruning counts after a pending operation crosses expiry", async () => {
+    let now = 10_000;
+    let pauseBusy = false;
+    let signalStarted = () => {};
+    let releaseRead = () => {};
+    const started = new Promise<void>((resolve) => {
+      signalStarted = resolve;
+    });
+    const release = new Promise<void>((resolve) => {
+      releaseRead = resolve;
+    });
+    const store: DistributedRateLimitStore = create(
+      () => now,
+      async (key) => {
+        if (key === "busy" && pauseBusy) {
+          pauseBusy = false;
+          signalStarted();
+          await release;
+        }
+      },
+    );
+    await store.check("idle", policy);
+    await store.check("busy", policy);
+    pauseBusy = true;
+    const pending = store.check("busy", policy);
+    await started;
+    now = 12_001;
+    const pruning = store.pruneExpired();
+    releaseRead();
+    const oldAdmission = await pending;
+    expect(await pruning).toBe(policy.algorithm === "sliding" ? 3 : 2);
+    expect((await store.refund("busy", policy, oldAdmission.refundReceipt)).refunded).toBe(false);
+    expect((await store.check("idle", policy)).remaining).toBe(2);
+    expect((await store.check("busy", policy)).remaining).toBe(2);
   });
 
   it("recovers the key queue after a rejected policy", async () => {

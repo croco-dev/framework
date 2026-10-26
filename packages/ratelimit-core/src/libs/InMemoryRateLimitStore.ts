@@ -144,6 +144,21 @@ class KeyedOperations {
     return result;
   }
 
+  async prune(keys: Iterable<string>, cleanup: (key: string) => number): Promise<number> {
+    let deletedCount = 0;
+    const queued: Promise<number>[] = [];
+    for (const key of keys) {
+      if (this.pending.has(key)) {
+        queued.push(this.run(key, () => cleanup(key)));
+      } else {
+        // Synchronous cleanup cannot interleave with a new operation on an idle key.
+        deletedCount += cleanup(key);
+      }
+    }
+    for (const count of await Promise.all(queued)) deletedCount += count;
+    return deletedCount;
+  }
+
   keys(): IterableIterator<string> {
     return this.pending.keys();
   }
@@ -270,27 +285,22 @@ export class FixedWindowInMemoryStore extends FixedWindowStore {
       ...this.counters.keys(),
       ...this.operations.keys(),
     ]);
-    const deleted = await Promise.all(
-      [...keys].map((key) =>
-        this.operations.run(key, () => {
-          const now = this.now();
-          let deletedCount = 0;
-          const entry = this.windows.get(key);
-          if (entry && now > entry.windowStart + entry.windowMs) {
-            this.windows.delete(key);
-            this.clearFixedWindowRefundReceipts(key);
-            deletedCount++;
-          }
-          const counter = this.counters.get(key);
-          if (counter?.expiresAtMs !== undefined && counter.expiresAtMs <= now) {
-            this.counters.delete(key);
-            deletedCount++;
-          }
-          return deletedCount;
-        }),
-      ),
-    );
-    return deleted.reduce((total, count) => total + count, 0);
+    return this.operations.prune(keys, (key) => {
+      const now = this.now();
+      let deletedCount = 0;
+      const entry = this.windows.get(key);
+      if (entry && now > entry.windowStart + entry.windowMs) {
+        this.windows.delete(key);
+        this.clearFixedWindowRefundReceipts(key);
+        deletedCount++;
+      }
+      const counter = this.counters.get(key);
+      if (counter?.expiresAtMs !== undefined && counter.expiresAtMs <= now) {
+        this.counters.delete(key);
+        deletedCount++;
+      }
+      return deletedCount;
+    });
   }
 
   async getStats(): Promise<{ allowed: number; denied: number; total: number }> {
@@ -488,28 +498,23 @@ export class SlidingWindowInMemoryStore extends SlidingWindowStore {
       ...this.counters.keys(),
       ...this.operations.keys(),
     ]);
-    const deleted = await Promise.all(
-      [...keys].map((key) =>
-        this.operations.run(key, () => {
-          const now = this.now();
-          let deletedCount = 0;
-          const entry = this.windows.get(key);
-          if (entry) {
-            const originalLength = entry.entries.length;
-            entry.entries = entry.entries.filter((item) => item.timestamp > now - entry.windowMs);
-            if (entry.entries.length === 0) this.windows.delete(key);
-            deletedCount += originalLength - entry.entries.length;
-          }
-          const counter = this.counters.get(key);
-          if (counter?.expiresAtMs !== undefined && counter.expiresAtMs <= now) {
-            this.counters.delete(key);
-            deletedCount++;
-          }
-          return deletedCount;
-        }),
-      ),
-    );
-    return deleted.reduce((total, count) => total + count, 0);
+    return this.operations.prune(keys, (key) => {
+      const now = this.now();
+      let deletedCount = 0;
+      const entry = this.windows.get(key);
+      if (entry) {
+        const originalLength = entry.entries.length;
+        entry.entries = entry.entries.filter((item) => item.timestamp > now - entry.windowMs);
+        if (entry.entries.length === 0) this.windows.delete(key);
+        deletedCount += originalLength - entry.entries.length;
+      }
+      const counter = this.counters.get(key);
+      if (counter?.expiresAtMs !== undefined && counter.expiresAtMs <= now) {
+        this.counters.delete(key);
+        deletedCount++;
+      }
+      return deletedCount;
+    });
   }
 
   async getStats(): Promise<{ allowed: number; denied: number; total: number }> {
@@ -618,27 +623,22 @@ export class TokenBucketInMemoryStore extends TokenBucketStore {
       ...this.counters.keys(),
       ...this.operations.keys(),
     ]);
-    const deleted = await Promise.all(
-      [...keys].map((key) =>
-        this.operations.run(key, () => {
-          const now = this.now();
-          let deletedCount = 0;
-          const entry = this.buckets.get(key);
-          if (entry && now > entry.lastRefill + entry.ttlMs) {
-            this.buckets.delete(key);
-            this.clearTokenBucketRefundReceipts(key);
-            deletedCount++;
-          }
-          const counter = this.counters.get(key);
-          if (counter?.expiresAtMs !== undefined && counter.expiresAtMs <= now) {
-            this.counters.delete(key);
-            deletedCount++;
-          }
-          return deletedCount;
-        }),
-      ),
-    );
-    return deleted.reduce((total, count) => total + count, 0);
+    return this.operations.prune(keys, (key) => {
+      const now = this.now();
+      let deletedCount = 0;
+      const entry = this.buckets.get(key);
+      if (entry && now > entry.lastRefill + entry.ttlMs) {
+        this.buckets.delete(key);
+        this.clearTokenBucketRefundReceipts(key);
+        deletedCount++;
+      }
+      const counter = this.counters.get(key);
+      if (counter?.expiresAtMs !== undefined && counter.expiresAtMs <= now) {
+        this.counters.delete(key);
+        deletedCount++;
+      }
+      return deletedCount;
+    });
   }
 
   async getStats(): Promise<{ allowed: number; denied: number; total: number }> {
