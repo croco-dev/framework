@@ -1,5 +1,6 @@
 import { spawnSync } from "node:child_process";
 import {
+  cpSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
@@ -249,6 +250,41 @@ describe("API documentation pipeline", () => {
       ["exec", "astro", "dev", "--host"],
     ]);
     expect(calls[1]).toMatchObject({ apiOnly: null, buildRoot: null });
+  });
+
+  it("formats a large generated tree with bounded arguments and preserves neighboring files", () => {
+    const fixture = createRenderFixture(7100);
+    const result = fixture.run();
+
+    expect(result.status, result.stdout + result.stderr).toBe(0);
+    const calls = fixture.calls();
+    const formatCalls = calls.filter(({ args }) => args[1] === "oxfmt");
+    expect(formatCalls).toHaveLength(1);
+    // A directory or bounded glob must replace the per-document argv expansion.
+    expect(Buffer.byteLength(JSON.stringify(formatCalls[0].args))).toBeLessThan(4096);
+    const output = markdownFiles(fixture.output);
+    expect(output).toHaveLength(7100);
+    for (const path of output) {
+      expect(readFileSync(path, "utf8"), path).toBe("# Generated\n\n- value\n");
+    }
+    expect(readFileSync(fixture.neighbor, "utf8")).toBe("# Neighbor  \n");
+    expect(existsSync(join(fixture.output, "previous.md"))).toBe(false);
+    for (const call of calls) {
+      if (call.buildRoot) expect(existsSync(call.buildRoot)).toBe(false);
+    }
+    expect(readdirSync(fixture.temporary)).toEqual([]);
+  }, 60000);
+
+  it("preserves published docs and cleans the temporary tree when formatting fails", () => {
+    const fixture = createRenderFixture(2, true);
+    const result = fixture.run();
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("failed with exit code 23");
+    expect(readdirSync(fixture.output)).toEqual(["previous.md"]);
+    expect(readFileSync(join(fixture.output, "previous.md"), "utf8")).toBe("previous\n");
+    expect(readFileSync(fixture.neighbor, "utf8")).toBe("# Neighbor  \n");
+    expect(readdirSync(fixture.temporary)).toEqual([]);
   });
 
   it("matches the tracked generated API package directories", () => {
@@ -556,4 +592,88 @@ function createFakePnpm(): string {
   );
   writeFileSync(join(root, "pnpm.cmd"), `@node "${implementation}" %*\r\n`);
   return root;
+}
+
+function createRenderFixture(count: number, failFormat = false) {
+  const root = mkdtempSync(join(tmpdir(), "croco-api-format-"));
+  TEMP_ROOTS.push(root);
+  const docs = join(root, "packages", "docs");
+  const scripts = join(docs, "scripts");
+  const temporary = join(root, "long-temporary-prefix-".repeat(6));
+  const output = join(docs, ".turbo", "docs-api", "rendered");
+  const neighbor = join(docs, "neighbor.md");
+  const log = join(root, "calls.jsonl");
+  mkdirSync(scripts, { recursive: true });
+  mkdirSync(temporary);
+  mkdirSync(output, { recursive: true });
+  mkdirSync(join(docs, "node_modules"));
+  mkdirSync(join(docs, "src"));
+  writeFileSync(join(docs, "src", "content.config.ts"), "");
+  writeFileSync(join(output, "previous.md"), "previous\n");
+  writeFileSync(neighbor, "# Neighbor  \n");
+  for (const script of ["build-docs.mts", "move-build-output.mts"]) {
+    cpSync(join(REPOSITORY_ROOT, "packages", "docs", "scripts", script), join(scripts, script));
+  }
+  const fake = join(root, "pnpm-fake.cjs");
+  writeFileSync(
+    fake,
+    `
+    const { appendFileSync, mkdirSync, writeFileSync } = require("node:fs");
+    const { join } = require("node:path");
+    const { spawnSync } = require("node:child_process");
+    const args = process.argv.slice(2);
+    const buildRoot = process.env.CROCO_DOCS_BUILD_ROOT;
+    appendFileSync(${JSON.stringify(log)}, JSON.stringify({ args, buildRoot }) + "\\n");
+    if (args[1] === "astro") {
+      const api = join(buildRoot, "src", "content", "docs", "api");
+      for (let index = 0; index < ${count}; index++) {
+        const folder = join(api, "package-" + (index % 3), "src", "classes");
+        mkdirSync(folder, { recursive: true });
+        writeFileSync(join(folder, "Document" + index + ".md"), "# Generated\\n\\n-   value\\n");
+      }
+    } else if (args[1] === "oxfmt") {
+      if (${failFormat}) process.exit(23);
+      const result = spawnSync(${JSON.stringify(join(REPOSITORY_ROOT, "node_modules", ".bin", "oxfmt"))}, args.slice(2), { stdio: "inherit" });
+      if (result.error) throw result.error;
+      process.exit(result.status ?? 1);
+    } else { process.exit(99); }
+  `,
+  );
+  writeFileSync(join(root, "pnpm"), `#!/usr/bin/env node\nrequire(${JSON.stringify(fake)});\n`, {
+    mode: 0o755,
+  });
+  writeFileSync(join(root, "pnpm.cmd"), `@node "${fake}" %*\r\n`);
+  return {
+    output,
+    neighbor,
+    temporary,
+    calls: () =>
+      readFileSync(log, "utf8")
+        .trim()
+        .split("\n")
+        .map(
+          (line) =>
+            JSON.parse(line) as {
+              args: string[];
+              buildRoot?: string;
+            },
+        ),
+    run: () =>
+      spawnSync(
+        process.execPath,
+        ["--experimental-strip-types", join(scripts, "build-docs.mts"), "--api-render"],
+        {
+          cwd: docs,
+          encoding: "utf8",
+          env: {
+            ...process.env,
+            TMPDIR: temporary,
+            TMP: temporary,
+            TEMP: temporary,
+            TURBO_HASH: "render-fixture",
+            PATH: `${root}${delimiter}${process.env.PATH ?? ""}`,
+          },
+        },
+      ),
+  };
 }

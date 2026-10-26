@@ -114,7 +114,7 @@ function renderApiDocs(): void {
     if (generatedMarkdown.length === 0) {
       throw new Error("API documentation render produced no Markdown files");
     }
-    run("pnpm", ["exec", "oxfmt", "--write", ...generatedMarkdown]);
+    run("pnpm", ["exec", "oxfmt", "--write", generatedApiDocs]);
     publishApiDocs(generatedApiDocs);
   } finally {
     rmSync(temporaryRoot, { force: true, recursive: true });
