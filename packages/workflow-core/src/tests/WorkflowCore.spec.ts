@@ -424,6 +424,140 @@ describe("workflow-core", () => {
     },
   );
 
+  it.each([
+    ["timed_out", false, false],
+    ["timed_out", true, false],
+    ["failed", false, false],
+    ["completed", false, false],
+    ["retrying", false, false],
+    ["replacement", false, false],
+    ["replacement", false, true],
+  ] as const)(
+    "stops dispatch after the parent becomes %s (last step: %s, inspection fails: %s)",
+    async (status, lastStep, failInspection) => {
+      const calls: string[] = [];
+      let stopped!: Execution;
+      @Component()
+      class StoppedTasks {
+        @Task({ name: "stopped.first" })
+        async first() {
+          calls.push("first");
+          const parent = await waitForWorkflowExecution(manager);
+          if (status === "timed_out") stopped = await manager.timeout(parent.id);
+          else if (status === "completed")
+            stopped = await manager.complete(parent.id, "external result");
+          else {
+            stopped = await manager.fail(parent.id, {
+              code: "external/failure",
+              message: "external attempt failed",
+              retryable: status !== "failed",
+            });
+            if (status === "replacement") stopped = await manager.start(parent.id);
+          }
+          return 1;
+        }
+
+        @Task({ name: "stopped.second" })
+        second() {
+          calls.push("second");
+          return 2;
+        }
+      }
+      @Component()
+      class StoppedWorkflows {
+        @Workflow({
+          name: "stopped",
+          steps: lastStep ? ["stopped.first"] : ["stopped.first", "stopped.second"],
+          maxAttempts: 2,
+        })
+        run() {}
+      }
+      instances.set(StoppedTasks, new StoppedTasks());
+      const runner = createWorkflowRunner(manager, WorkflowRegistry.fromMetadata());
+      const get = manager.get.bind(manager);
+      let observedInterruption = false;
+      const getSpy = vi.spyOn(manager, "get").mockImplementation(async (id) => {
+        if (failInspection && id === stopped?.id) {
+          if (observedInterruption) throw new TestWorkflowProblem("parent inspection unavailable");
+          observedInterruption = true;
+        }
+        return get(id);
+      });
+      const outcome = await runner.execute("stopped", {}).catch((error: unknown) => error);
+      getSpy.mockRestore();
+
+      expect(calls).toEqual(["first"]);
+      expect(outcome).toBeInstanceOf(Problem);
+      if (status === "timed_out" || status === "failed") {
+        expect(outcome).toMatchObject({
+          code: "workflow-core/workflow-execution-failed",
+          failure: stopped.error,
+          extensions: {
+            executionId: stopped.id,
+            originalFailureCode: stopped.error?.code,
+            originalFailureMessage: stopped.error?.message,
+            retryable: false,
+          },
+        });
+      } else {
+        expect(outcome).toMatchObject({ code: "execution/invalid-state-transition" });
+      }
+      expect(await manager.get(stopped.id)).toMatchObject({
+        status: stopped.status,
+        attempts: stopped.attempts,
+        completedAt: stopped.completedAt,
+      });
+      expect((await manager.get(stopped.id)).result).toBe(stopped.result);
+      expect((await manager.get(stopped.id)).error).toBe(stopped.error);
+      expect(await manager.list({ parentId: stopped.id })).toEqual([
+        expect.objectContaining({ type: "stopped.first", status: "completed", result: 1 }),
+      ]);
+    },
+  );
+
+  it.each(["Workflow step started", "Workflow execution failed"])(
+    "preserves a parent timeout during %s logging",
+    async (logMessage) => {
+      const call = vi.fn();
+      let stopped!: Execution;
+      @Component()
+      class TimeoutTasks {
+        @Task({ name: "timeout.first" })
+        first() {
+          call();
+          throw new TestWorkflowProblem("child failed after parent timeout");
+        }
+      }
+      @Component()
+      class TimeoutWorkflows {
+        @Workflow({ name: "timeout", steps: ["timeout.first"] })
+        run() {}
+      }
+      instances.set(TimeoutTasks, new TimeoutTasks());
+      const recordLog = manager.recordLog.bind(manager);
+      vi.spyOn(manager, "recordLog").mockImplementation(async (id, entry) => {
+        const result = await recordLog(id, entry);
+        if (entry.message === logMessage) stopped = await manager.timeout(id);
+        return result;
+      });
+      const runner = createWorkflowRunner(manager, WorkflowRegistry.fromMetadata());
+      await expect(runner.execute("timeout", {})).rejects.toMatchObject({
+        code: "workflow-core/workflow-execution-failed",
+        extensions: {
+          executionId: "exec-1",
+          originalFailureCode: "execution/timeout-indeterminate",
+        },
+        failure: { indeterminate: true },
+      });
+      expect(call).toHaveBeenCalledTimes(logMessage === "Workflow step started" ? 0 : 1);
+      expect(await manager.get(stopped.id)).toMatchObject({
+        status: "timed_out",
+        error: stopped.error,
+        completedAt: stopped.completedAt,
+      });
+    },
+  );
+
   it.each(["Workflow step started", "Workflow execution failed"])(
     "honors cancellation completed during %s logging",
     async (logMessage) => {

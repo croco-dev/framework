@@ -310,8 +310,8 @@ export class WorkflowRunner {
     try {
       running = await this.executionManager.start(execution.id);
     } catch (error) {
-      const cancelled = await this.inspectCancellation(execution.id, span, error);
-      if (cancelled) return this.rejectCancelledWorkflow(workflow, cancelled, span);
+      const interrupted = await this.inspectInterruption(execution.id, span, error);
+      if (interrupted) return this.rejectInterruptedWorkflow(workflow, interrupted, span);
       throw error;
     }
     span.setAttribute("workflow.reused", false);
@@ -326,7 +326,8 @@ export class WorkflowRunner {
     try {
       for (const [stepIndex, step] of workflow.steps.entries()) {
         stepExecutionId = undefined;
-        await this.assertNotCancelled(workflow.name, running.id);
+        const beforeStep = await this.getInterruptedAttempt(running);
+        if (beforeStep) return this.rejectInterruptedWorkflow(workflow, beforeStep, span);
         const stepAttributes = {
           "workflow.name": workflow.name,
           "workflow.execution.id": running.id,
@@ -348,7 +349,8 @@ export class WorkflowRunner {
           });
           throw error;
         }
-        await this.assertNotCancelled(workflow.name, running.id);
+        const beforeDispatch = await this.getInterruptedAttempt(running);
+        if (beforeDispatch) return this.rejectInterruptedWorkflow(workflow, beforeDispatch, span);
         span.addEvent("workflow.step.started", stepAttributes);
         let result: unknown;
         try {
@@ -394,7 +396,8 @@ export class WorkflowRunner {
         workflowName: workflow.name,
         steps,
       };
-      await this.assertNotCancelled(workflow.name, running.id);
+      const beforeCompletion = await this.getInterruptedAttempt(running);
+      if (beforeCompletion) return this.rejectInterruptedWorkflow(workflow, beforeCompletion, span);
       const completed = await this.executionManager.complete(running.id, result);
       span.addEvent(
         "workflow.execution.completed",
@@ -412,9 +415,9 @@ export class WorkflowRunner {
         reused: false,
       };
     } catch (error) {
-      const cancelled = await this.inspectCancellation(running.id, span, error);
-      if (cancelled) {
-        return this.rejectCancelledWorkflow(workflow, cancelled, span);
+      const interrupted = await this.inspectInterruption(running.id, span, error, running.attempts);
+      if (interrupted) {
+        return this.rejectInterruptedWorkflow(workflow, interrupted, span);
       }
       await this.recordLog(span, running.id, "error", "Workflow execution failed", {
         workflowName: workflow.name,
@@ -439,14 +442,24 @@ export class WorkflowRunner {
             );
           }
         }
-        const beforeFailure = await this.inspectCancellation(running.id, span, error);
+        const beforeFailure = await this.inspectInterruption(
+          running.id,
+          span,
+          error,
+          running.attempts,
+        );
         if (beforeFailure) {
-          return this.rejectCancelledWorkflow(workflow, beforeFailure, span);
+          return this.rejectInterruptedWorkflow(workflow, beforeFailure, span);
         }
         failed = await this.executionManager.fail(running.id, toExecutionError(error, retryable));
       } catch (failureRecordError) {
-        const afterFailure = await this.inspectCancellation(running.id, span, error);
-        if (afterFailure) return this.rejectCancelledWorkflow(workflow, afterFailure, span);
+        const afterFailure = await this.inspectInterruption(
+          running.id,
+          span,
+          error,
+          running.attempts,
+        );
+        if (afterFailure) return this.rejectInterruptedWorkflow(workflow, afterFailure, span);
         reportFailureRecordError(span, running.id, error, failureRecordError);
         throw error;
       }
@@ -458,25 +471,37 @@ export class WorkflowRunner {
     }
   }
 
-  private async inspectCancellation(
+  private async inspectInterruption(
     executionId: string,
     span: WorkflowTelemetrySpan,
     workflowError: unknown,
+    expectedAttempt?: number,
   ): Promise<Execution | undefined> {
     try {
       const execution = await this.executionManager.get(executionId);
-      return execution.status === "cancelled" ? execution : undefined;
+      return execution.status === "cancelled" ||
+        (expectedAttempt !== undefined &&
+          (execution.status !== "running" || execution.attempts !== expectedAttempt))
+        ? execution
+        : undefined;
     } catch (inspectionError) {
       reportFailureRecordError(span, executionId, workflowError, inspectionError);
       return undefined;
     }
   }
 
-  private async rejectCancelledWorkflow(
+  private async rejectInterruptedWorkflow(
     workflow: WorkflowDefinition,
     execution: Execution,
     span: WorkflowTelemetrySpan,
   ): Promise<never> {
+    if (execution.status !== "cancelled") {
+      span.addEvent(
+        "workflow.execution.interrupted",
+        getExecutionTelemetryAttributes(workflow, execution),
+      );
+      throw this.interruptionProblem(workflow.name, execution);
+    }
     span.addEvent(
       "workflow.execution.cancelled",
       getExecutionTelemetryAttributes(workflow, execution),
@@ -487,11 +512,26 @@ export class WorkflowRunner {
     throw new WorkflowExecutionCancelledProblem(workflow.name, execution.id);
   }
 
-  private async assertNotCancelled(workflowName: string, executionId: string): Promise<void> {
-    const execution = await this.executionManager.get(executionId);
+  private async getInterruptedAttempt(running: Execution): Promise<Execution | undefined> {
+    const execution = await this.executionManager.get(running.id);
+    return execution.status !== "running" || execution.attempts !== running.attempts
+      ? execution
+      : undefined;
+  }
+
+  private interruptionProblem(workflowName: string, execution: Execution) {
     if (execution.status === "cancelled") {
-      throw new WorkflowExecutionCancelledProblem(workflowName, executionId);
+      return new WorkflowExecutionCancelledProblem(workflowName, execution.id);
     }
+    if (
+      (execution.status === "failed" || execution.status === "timed_out") &&
+      execution.error !== undefined
+    ) {
+      return new WorkflowExecutionFailedProblem(workflowName, execution.id, execution.error);
+    }
+    return ExecutionProblems.invalidStateTransition(
+      `Workflow '${workflowName}' execution '${execution.id}' no longer owns the running attempt; current attempt is ${execution.attempts} in '${execution.status}' status`,
+    );
   }
 
   async cancel(executionId: string, reason?: string): Promise<Execution> {
