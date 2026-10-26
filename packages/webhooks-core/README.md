@@ -230,9 +230,11 @@ replaced token, without releasing another worker's claim.
 Set `claimLeaseDurationMs` longer than `transportTimeoutMs` and long enough to include signing,
 transport, attempt recording, and task publication. The runtime passes an abort signal to the
 transport and stops waiting when the timeout expires, even if the transport ignores the signal.
-An expired claim cannot record an attempt; a later dispatch can reclaim the delivery. A timeout
-leaves the delivery state unchanged for a retry and does not establish whether the remote endpoint
-accepted the request.
+An expired claim cannot record an attempt; a later dispatch can reclaim the delivery. A runtime
+timeout records a retryable timeout attempt, schedules the next retry, and marks the delivery dead
+when its maximum attempts are exhausted. Late transport completion cannot record a second outcome.
+A timeout does not establish whether the remote endpoint accepted the request; transports that can
+identify uncertain acceptance should return `acceptance-unknown` for operator-safe replay.
 
 Each attempt includes `webhook-id`, `webhook-delivery-id`, `webhook-timestamp`,
 `webhook-signature-version`, and `webhook-signature`. HMAC-SHA256 signs

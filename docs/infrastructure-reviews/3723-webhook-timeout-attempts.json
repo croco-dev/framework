@@ -1,0 +1,64 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "webhooks-core",
+      "classification": "pure-contract",
+      "reason": "Record runtime transport deadlines as existing retryable timeout outcomes so persisted attempt counts and bounded retries apply.",
+      "files": {
+        "packages/webhooks-core/src/libs/outbound/OutboundWebhookRuntime.ts": "eb422b5ea4a4682d1ded8cd708701009f3e3d2e10f2e0d370f1e01f3760fd711"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "This provider-neutral timeout outcome correction adds no Node Host capability, storage or lifecycle requirement. Existing transport and store contracts own I/O and lease fencing; runtime support claims are unchanged.",
+          "providers": [
+            "@croco/webhooks-core/OutboundWebhookTransport",
+            "@croco/webhooks-core/OutboundWebhookStore"
+          ],
+          "constraints": [
+            "A timeout does not prove remote acceptance. No live provider or deployment certification is claimed. Existing claim expiry still fences attempt writes."
+          ],
+          "references": [
+            "packages/webhooks-core/src/libs/outbound/OutboundWebhookRuntime.ts",
+            "packages/webhooks-core/src/libs/outbound/types.ts",
+            "packages/webhooks-core/src/tests/OutboundWebhookRuntime.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "This provider-neutral timeout outcome correction adds no Lambda Host capability, storage or lifecycle requirement. Existing transport and store contracts own I/O and lease fencing; runtime support claims are unchanged.",
+          "providers": [
+            "@croco/webhooks-core/OutboundWebhookTransport",
+            "@croco/webhooks-core/OutboundWebhookStore"
+          ],
+          "constraints": [
+            "A timeout does not prove remote acceptance. No live provider or deployment certification is claimed. Existing claim expiry still fences attempt writes."
+          ],
+          "references": [
+            "packages/webhooks-core/src/libs/outbound/OutboundWebhookRuntime.ts",
+            "packages/webhooks-core/src/libs/outbound/types.ts",
+            "packages/webhooks-core/src/tests/OutboundWebhookRuntime.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "This provider-neutral timeout outcome correction adds no Workers or Node Container Host capability, storage or lifecycle requirement. Existing transport and store contracts own I/O and lease fencing; runtime support claims are unchanged.",
+          "providers": [
+            "@croco/webhooks-core/OutboundWebhookTransport",
+            "@croco/webhooks-core/OutboundWebhookStore"
+          ],
+          "constraints": [
+            "A timeout does not prove remote acceptance. No live provider or deployment certification is claimed. Existing claim expiry still fences attempt writes."
+          ],
+          "references": [
+            "packages/webhooks-core/src/libs/outbound/OutboundWebhookRuntime.ts",
+            "packages/webhooks-core/src/libs/outbound/types.ts",
+            "packages/webhooks-core/src/tests/OutboundWebhookRuntime.spec.ts"
+          ]
+        }
+      }
+    }
+  ]
+}
