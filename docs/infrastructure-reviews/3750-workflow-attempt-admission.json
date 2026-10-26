@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "workflow-core",
+      "classification": "pure-contract",
+      "reason": "Require the original running workflow attempt before admitting another task or finalizing; preserve persisted timeout and failure evidence when execution is interrupted. No host capability, provider or runtime support claim changes.",
+      "files": {
+        "packages/workflow-core/src/libs/WorkflowRunner.ts": "27d265303d6dea64861a98d8415ce6e800e376f82d8f186065ea38621c87d669"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Workflow admission reads the existing provider-neutral ExecutionManager contract; it adds no host capability, storage or deployment lifecycle requirement.",
+          "providers": ["@croco/execution-core/ExecutionManager"],
+          "constraints": [
+            "Checks are cooperative: an already admitted task cannot be revoked, and state inspection is not atomic with external effects or lifecycle transitions. No deployed-host or provider certification is claimed."
+          ],
+          "references": [
+            "packages/workflow-core/src/libs/WorkflowRunner.ts",
+            "packages/execution-core/src/libs/interfaces/ExecutionManager.ts",
+            "packages/workflow-core/src/tests/WorkflowCore.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Workflow admission reads the existing provider-neutral ExecutionManager contract; it adds no host capability, storage or deployment lifecycle requirement.",
+          "providers": ["@croco/execution-core/ExecutionManager"],
+          "constraints": [
+            "Checks are cooperative: an already admitted task cannot be revoked, and state inspection is not atomic with external effects or lifecycle transitions. No deployed-host or provider certification is claimed."
+          ],
+          "references": [
+            "packages/workflow-core/src/libs/WorkflowRunner.ts",
+            "packages/execution-core/src/libs/interfaces/ExecutionManager.ts",
+            "packages/workflow-core/src/tests/WorkflowCore.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Workflow admission reads the existing provider-neutral ExecutionManager contract; it adds no host capability, storage or deployment lifecycle requirement.",
+          "providers": ["@croco/execution-core/ExecutionManager"],
+          "constraints": [
+            "Checks are cooperative: an already admitted task cannot be revoked, and state inspection is not atomic with external effects or lifecycle transitions. No deployed-host or provider certification is claimed."
+          ],
+          "references": [
+            "packages/workflow-core/src/libs/WorkflowRunner.ts",
+            "packages/execution-core/src/libs/interfaces/ExecutionManager.ts",
+            "packages/workflow-core/src/tests/WorkflowCore.spec.ts"
+          ]
+        }
+      }
+    }
+  ]
+}
