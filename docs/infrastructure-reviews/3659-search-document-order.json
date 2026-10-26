@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "search-core",
+      "classification": "pure-contract",
+      "reason": "Serialize overlapping automatic index/delete effects for the same tenant, index and document within one instance, preserving duplicate coalescing, failure reporting and independent-document progress.",
+      "files": {
+        "packages/search-core/src/libs/sync/SearchAutoSync.ts": "f92ed8b6270825ac3885221d0db25dc4cb7acca4f1fd04680bbed41073bd6a79"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "The Node Host is not involved in instance-local Promise ordering. The existing SearchEngine owns provider I/O; no host capability, storage, lifecycle or runtime support claim changes.",
+          "providers": ["@croco/search-core/SearchEngine"],
+          "constraints": [
+            "Ordering is limited to one SearchAutoSync instance and handle arrival order. No broker reordering correction, cross-process serialization or deployed-host certification is claimed."
+          ],
+          "references": [
+            "packages/search-core/src/libs/sync/SearchAutoSync.ts",
+            "packages/search-core/src/libs/SearchEngine.ts",
+            "packages/search-core/src/tests/SearchAutoSync.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "The Lambda Host is not involved in instance-local Promise ordering. The existing SearchEngine owns provider I/O; no host capability, storage, lifecycle or runtime support claim changes.",
+          "providers": ["@croco/search-core/SearchEngine"],
+          "constraints": [
+            "Ordering is limited to one SearchAutoSync instance and handle arrival order. No broker reordering correction, cross-process serialization or deployed-host certification is claimed."
+          ],
+          "references": [
+            "packages/search-core/src/libs/sync/SearchAutoSync.ts",
+            "packages/search-core/src/libs/SearchEngine.ts",
+            "packages/search-core/src/tests/SearchAutoSync.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "The Workers or Node Container Host is not involved in instance-local Promise ordering. The existing SearchEngine owns provider I/O; no host capability, storage, lifecycle or runtime support claim changes.",
+          "providers": ["@croco/search-core/SearchEngine"],
+          "constraints": [
+            "Ordering is limited to one SearchAutoSync instance and handle arrival order. No broker reordering correction, cross-process serialization or deployed-host certification is claimed."
+          ],
+          "references": [
+            "packages/search-core/src/libs/sync/SearchAutoSync.ts",
+            "packages/search-core/src/libs/SearchEngine.ts",
+            "packages/search-core/src/tests/SearchAutoSync.spec.ts"
+          ]
+        }
+      }
+    }
+  ]
+}

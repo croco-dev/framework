@@ -62,6 +62,7 @@ export type SearchSyncFailedEventPublisher = {
 export class SearchAutoSync implements EventHandler<DocumentIndexedEvent | DocumentDeletedEvent> {
   private processedEvents = new LRUCache<void>(10000);
   private readonly inFlightEvents = new Map<string, Promise<void>>();
+  private readonly documentTails = new Map<string, Promise<void>>();
 
   constructor(
     private readonly failedEventPublisher: SearchSyncFailedEventPublisher | undefined = undefined,
@@ -94,7 +95,18 @@ export class SearchAutoSync implements EventHandler<DocumentIndexedEvent | Docum
       return;
     }
 
-    const operation = this.process(event, eventKey);
+    const documentKey = JSON.stringify([event.tenantId, event.indexName, event.documentId]);
+    const previous = this.documentTails.get(documentKey) ?? Promise.resolve();
+    const effect = previous.then(() => this.sync(event));
+    const release = (): void => {
+      if (this.documentTails.get(documentKey) === tail) {
+        this.documentTails.delete(documentKey);
+      }
+    };
+    // Release provider ordering before failure listeners can await a corrective effect.
+    const tail = effect.then(release, release);
+    this.documentTails.set(documentKey, tail);
+    const operation = this.process(event, eventKey, effect);
     this.inFlightEvents.set(eventKey, operation);
 
     try {
@@ -107,9 +119,10 @@ export class SearchAutoSync implements EventHandler<DocumentIndexedEvent | Docum
   private async process(
     event: DocumentIndexedEvent | DocumentDeletedEvent,
     eventKey: string,
+    effect: Promise<void>,
   ): Promise<void> {
     try {
-      await this.sync(event);
+      await effect;
       this.processedEvents.add(eventKey);
     } catch (error) {
       await this.publishSyncFailure(event, error);

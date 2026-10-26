@@ -14,6 +14,14 @@ import { SearchAutoSync, type SearchSyncFailedEventPublisher } from "../libs/syn
 
 const declaredSubscriptions = getEventHandlerSubscriptions(SearchAutoSync);
 
+const deferred = (): { promise: Promise<void>; resolve: () => void } => {
+  let resolve = (): void => undefined;
+  const promise = new Promise<void>((release) => {
+    resolve = release;
+  });
+  return { promise, resolve };
+};
+
 describe("SearchAutoSync", () => {
   let searchAutoSync!: SearchAutoSync;
   let searchEngine!: SearchEngine;
@@ -150,6 +158,214 @@ describe("SearchAutoSync", () => {
       expect(eventBusMock.publishNow).not.toHaveBeenCalled();
     },
   );
+
+  describe("document effect ordering", () => {
+    it("should reserve the document before a provider synchronously admits a reentrant event", async () => {
+      mockUserAutoSyncMetadata();
+      const write = deferred();
+      let stored: string | undefined;
+      let nested: Promise<void> | undefined;
+      (searchEngine.indexDocument as Mock).mockImplementation(async (_index, document) => {
+        if (document.name === "old") {
+          nested = searchAutoSync.handle(
+            new DocumentIndexedEvent("users", "user-1", "tenant-1", { name: "new" }),
+          );
+          await write.promise;
+        }
+        stored = document.name;
+      });
+      const first = searchAutoSync.handle(
+        new DocumentIndexedEvent("users", "user-1", "tenant-1", { name: "old" }),
+      );
+      write.resolve();
+      await first;
+      await nested;
+      expect(stored).toBe("new");
+    });
+
+    it.each(["index", "delete"] as const)(
+      "should finish a delayed index before a later %s for the same document",
+      async (operation) => {
+        mockUserAutoSyncMetadata();
+        const write = deferred();
+        let stored: string | undefined;
+        (searchEngine.indexDocument as Mock).mockImplementation(async (_index, document) => {
+          if (document.name === "old") await write.promise;
+          stored = document.name;
+        });
+        (searchEngine.deleteDocument as Mock).mockImplementation(async () => {
+          stored = undefined;
+        });
+        const first = searchAutoSync.handle(
+          new DocumentIndexedEvent("users", "user-1", "tenant-1", { name: "old" }),
+        );
+        const laterEvent =
+          operation === "index"
+            ? new DocumentIndexedEvent("users", "user-1", "tenant-1", { name: "new" })
+            : new DocumentDeletedEvent("users", "user-1", "tenant-1");
+        const later = searchAutoSync.handle(laterEvent);
+        write.resolve();
+        await Promise.all([first, later]);
+
+        expect(stored).toBe(operation === "index" ? "new" : undefined);
+        await searchAutoSync.handle(laterEvent);
+        expect(searchEngine.indexDocument).toHaveBeenCalledTimes(operation === "index" ? 2 : 1);
+        expect(searchEngine.deleteDocument).toHaveBeenCalledTimes(operation === "delete" ? 1 : 0);
+      },
+    );
+
+    it("should retain the queued successor when an earlier effect completes", async () => {
+      mockUserAutoSyncMetadata();
+      const firstWrite = deferred();
+      const secondWrite = deferred();
+      const secondStarted = deferred();
+      const names: string[] = [];
+      (searchEngine.indexDocument as Mock).mockImplementation(async (_index, document) => {
+        if (document.name === "first") await firstWrite.promise;
+        if (document.name === "second") {
+          secondStarted.resolve();
+          await secondWrite.promise;
+        }
+        names.push(`${document.name}:${Context.getRequestId()}`);
+      });
+      const first = Context.run({ requestId: "request-1" }, () =>
+        searchAutoSync.handle(
+          new DocumentIndexedEvent("users", "user-1", "tenant-1", { name: "first" }),
+        ),
+      );
+      const second = Context.run({ requestId: "request-2" }, () =>
+        searchAutoSync.handle(
+          new DocumentIndexedEvent("users", "user-1", "tenant-1", { name: "second" }),
+        ),
+      );
+      firstWrite.resolve();
+      await first;
+      await secondStarted.promise;
+      const third = Context.run({ requestId: "request-3" }, () =>
+        searchAutoSync.handle(
+          new DocumentIndexedEvent("users", "user-1", "tenant-1", { name: "third" }),
+        ),
+      );
+      secondWrite.resolve();
+      await Promise.all([second, third]);
+
+      expect(names).toEqual(["first:request-1", "second:request-2", "third:request-3"]);
+      await Context.run({ requestId: "request-4" }, () =>
+        searchAutoSync.handle(
+          new DocumentIndexedEvent("users", "user-1", "tenant-1", { name: "after" }),
+        ),
+      );
+      expect(names).toEqual([
+        "first:request-1",
+        "second:request-2",
+        "third:request-3",
+        "after:request-4",
+      ]);
+    });
+
+    it("should allow an awaited corrective effect from a failure notification", async () => {
+      mockUserAutoSyncMetadata();
+      const error = new Error("Index unavailable");
+      const effects: string[] = [];
+      (searchEngine.indexDocument as Mock).mockRejectedValue(error);
+      (searchEngine.deleteDocument as Mock).mockImplementation(async (_index, id) => {
+        effects.push(id);
+      });
+      let correction: Promise<void> | undefined;
+      let correctedDuringNotification = false;
+      eventBusMock.publishNow.mockImplementation(async () => {
+        correction = searchAutoSync.handle(new DocumentDeletedEvent("users", "user-1", "tenant-1"));
+        // An independent effect probes progress without waiting on the original document's tail.
+        await searchAutoSync.handle(new DocumentDeletedEvent("users", "probe", "tenant-1"));
+        correctedDuringNotification = effects.includes("user-1");
+        if (correctedDuringNotification) await correction;
+        effects.push("notified");
+      });
+
+      await expect(
+        searchAutoSync.handle(
+          new DocumentIndexedEvent("users", "user-1", "tenant-1", { name: "failed" }),
+        ),
+      ).rejects.toBe(error);
+      await correction;
+      expect(correctedDuringNotification).toBe(true);
+      expect(effects).toEqual(["user-1", "probe", "notified"]);
+      expect(eventBusMock.publishNow).toHaveBeenCalledTimes(1);
+    });
+
+    it("should advance past a failed effect and coalesce queued duplicates before retry", async () => {
+      mockUserAutoSyncMetadata();
+      const write = deferred();
+      const error = new Error("Index unavailable");
+      const effects: string[] = [];
+      (searchEngine.indexDocument as Mock)
+        .mockImplementationOnce(async () => {
+          await write.promise;
+          effects.push("failed");
+          throw error;
+        })
+        .mockImplementation(async () => {
+          effects.push("retried");
+        });
+      (searchEngine.deleteDocument as Mock).mockImplementation(async () => {
+        effects.push("deleted");
+      });
+      const event = new DocumentIndexedEvent("users", "user-1", "tenant-1", { name: "old" });
+      const first = searchAutoSync.handle(event);
+      const failed = expect(first).rejects.toBe(error);
+      const deletion = new DocumentDeletedEvent("users", "user-1", "tenant-1");
+      const second = searchAutoSync.handle(deletion);
+      const duplicate = searchAutoSync.handle(deletion);
+      write.resolve();
+      await Promise.all([failed, second, duplicate]);
+      await searchAutoSync.handle(event);
+
+      expect(effects).toEqual(["failed", "deleted", "retried"]);
+      expect(eventBusMock.publishNow).toHaveBeenCalledTimes(1);
+      expect(eventBusMock.publishNow.mock.calls[0][0].error).toBe(error);
+      expect(searchEngine.deleteDocument).toHaveBeenCalledTimes(1);
+    });
+
+    it.each([
+      ["users", "user-2", "tenant-1"],
+      ["orders", "user-1", "tenant-1"],
+      ["users", "user-1", "tenant-2"],
+    ])(
+      "should independently progress %s/%s/%s while another document waits",
+      async (index, id, tenant) => {
+        class User {}
+        class Order {}
+        Searchable({ index: "users", autoSync: true })(User);
+        Searchable({ index: "orders", autoSync: true })(Order);
+        const write = deferred();
+        const independentStarted = deferred();
+        const observations: unknown[] = [];
+        (searchEngine.indexDocument as Mock).mockImplementation(async (_index, document) => {
+          if (document.name === "blocked") await write.promise;
+          else {
+            observations.push([_index, document.id, Context.getTenantId(), Context.getRequestId()]);
+            independentStarted.resolve();
+          }
+        });
+        const first = searchAutoSync.handle(
+          new DocumentIndexedEvent("users", "user-1", "tenant-1", { name: "blocked" }),
+        );
+        const independent = Context.run({ requestId: "independent", tenantId: tenant }, () =>
+          searchAutoSync.handle(
+            new DocumentIndexedEvent(index, id, tenant, { name: "independent" }),
+          ),
+        );
+        try {
+          await independentStarted.promise;
+          expect(observations).toEqual([[index, id, tenant, "independent"]]);
+        } finally {
+          write.resolve();
+          await Promise.all([first, independent]);
+        }
+        expect(Context.get()).toBeNull();
+      },
+    );
+  });
 
   describe("handle DocumentIndexedEvent", () => {
     it("should index document when autoSync is true", async () => {
