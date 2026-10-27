@@ -1,7 +1,6 @@
 import { randomUUID } from "node:crypto";
 import {
   Container,
-  Context as FrameworkContext,
   finishRuntimeInspectionRequest,
   type ILogger,
   type RuntimeInspector,
@@ -19,6 +18,7 @@ import {
 import type { Hono, Context as HonoContext } from "hono";
 import type { ErrorHandler } from "./ErrorHandler";
 import { HttpContext } from "./HttpContext";
+import { runWithResponseRequestScope } from "./ResponseRequestScope";
 import { isMiddlewareShortCircuit } from "./middleware/MiddlewareShortCircuit";
 import { getSecurityMiddlewareExportName } from "./middleware/SecurityMiddlewareMarker";
 import { parseTraceParent, type TraceParent, telemetryMiddleware } from "./middleware/telemetry";
@@ -102,109 +102,115 @@ export class CrocoRouteRegistrar {
         runtime,
         runtimeInspector: inspector,
       };
-      return FrameworkContext.run(requestContext, async () => {
-        let middlewareStartedAt: number | undefined;
-        try {
-          this.recordInspectionEvent(inspector, {
-            kind: "request.context",
-            outcome: "started",
-            details: {
-              requestId: runtime.requestId,
-              runtimePlatform: runtime.platform,
-              traceId: runtime.trace?.traceId,
-              spanId: runtime.trace?.spanId,
-            },
-          });
-          this.recordInspectionEvent(inspector, {
-            kind: "di.snapshot",
-            outcome: "started",
-            details: this.getDiagnosticsSnapshot(),
-          });
-          middlewareStartedAt = Date.now();
-          this.recordInspectionEvent(inspector, {
-            kind: "middleware.start",
-            outcome: "started",
-            details: {
-              count: middlewares.length,
-            },
-          });
-          let response = await this.executeMiddlewares(
-            ctx,
-            middlewares,
-            async () => {
-              const handlerStartedAt = Date.now();
-              this.recordInspectionEvent(inspector, {
-                kind: "handler.start",
-                outcome: "started",
-                name: String(route.methodName),
-                details: {
-                  route: route.path,
-                  method: route.method,
-                },
-              });
+      return runWithResponseRequestScope(
+        requestContext,
+        c.req.raw,
+        async (releaseAfterFailure) => {
+          let middlewareStartedAt: number | undefined;
+          try {
+            this.recordInspectionEvent(inspector, {
+              kind: "request.context",
+              outcome: "started",
+              details: {
+                requestId: runtime.requestId,
+                runtimePlatform: runtime.platform,
+                traceId: runtime.trace?.traceId,
+                spanId: runtime.trace?.spanId,
+              },
+            });
+            this.recordInspectionEvent(inspector, {
+              kind: "di.snapshot",
+              outcome: "started",
+              details: this.getDiagnosticsSnapshot(),
+            });
+            middlewareStartedAt = Date.now();
+            this.recordInspectionEvent(inspector, {
+              kind: "middleware.start",
+              outcome: "started",
+              details: {
+                count: middlewares.length,
+              },
+            });
+            let response = await this.executeMiddlewares(
+              ctx,
+              middlewares,
+              async () => {
+                const handlerStartedAt = Date.now();
+                this.recordInspectionEvent(inspector, {
+                  kind: "handler.start",
+                  outcome: "started",
+                  name: String(route.methodName),
+                  details: {
+                    route: route.path,
+                    method: route.method,
+                  },
+                });
 
-              const result = await route.handler(ctx);
-              const handlerResponse = this.toResponse(ctx, result, route);
-              const resultOutcome = handlerResponse.status >= 400 ? "failed" : "succeeded";
-              this.recordInspectionEvent(inspector, {
-                kind: "handler.end",
-                outcome: resultOutcome,
-                name: String(route.methodName),
-                durationMs: Date.now() - handlerStartedAt,
-                details: {
-                  resultType: this.describeResult(result),
-                  responseStatus: handlerResponse.status,
-                },
-              });
+                const result = await route.handler(ctx);
+                const handlerResponse = this.toResponse(ctx, result, route);
+                const resultOutcome = handlerResponse.status >= 400 ? "failed" : "succeeded";
+                this.recordInspectionEvent(inspector, {
+                  kind: "handler.end",
+                  outcome: resultOutcome,
+                  name: String(route.methodName),
+                  durationMs: Date.now() - handlerStartedAt,
+                  details: {
+                    resultType: this.describeResult(result),
+                    responseStatus: handlerResponse.status,
+                  },
+                });
 
-              return handlerResponse;
-            },
-            inspector,
-          );
-          response = this.withContextResponseHeaders(ctx, response);
-          const responseOutcome = response.status >= 400 ? "failed" : "succeeded";
-          this.recordInspectionEvent(inspector, {
-            kind: "middleware.end",
-            outcome: "succeeded",
-            durationMs: Date.now() - middlewareStartedAt,
-            details: {
-              traceId: ctx.get("traceId"),
-              telemetryDegraded: ctx.get("telemetryDegraded") ?? false,
-              responseStatus: response.status,
-            },
-          });
-          this.finishInspection(inspector, inspection?.id, response, responseOutcome, ctx);
-          return response;
-        } catch (error) {
-          if (error instanceof Response) {
-            const response = this.withContextResponseHeaders(ctx, error);
-            const outcome = response.status >= 400 ? "failed" : "succeeded";
+                return handlerResponse;
+              },
+              inspector,
+            );
+            response = this.withContextResponseHeaders(ctx, response);
+            const responseOutcome = response.status >= 400 ? "failed" : "succeeded";
             this.recordInspectionEvent(inspector, {
               kind: "middleware.end",
-              outcome,
-              ...(middlewareStartedAt !== undefined
-                ? { durationMs: Date.now() - middlewareStartedAt }
-                : {}),
+              outcome: "succeeded",
+              durationMs: Date.now() - middlewareStartedAt,
               details: {
                 traceId: ctx.get("traceId"),
                 telemetryDegraded: ctx.get("telemetryDegraded") ?? false,
                 responseStatus: response.status,
               },
             });
-            this.finishInspection(inspector, inspection?.id, response, outcome, ctx);
+            this.finishInspection(inspector, inspection?.id, response, responseOutcome, ctx);
+            return response;
+          } catch (error) {
+            if (error instanceof Response) {
+              const response = this.withContextResponseHeaders(ctx, error);
+              const outcome = response.status >= 400 ? "failed" : "succeeded";
+              this.recordInspectionEvent(inspector, {
+                kind: "middleware.end",
+                outcome,
+                ...(middlewareStartedAt !== undefined
+                  ? { durationMs: Date.now() - middlewareStartedAt }
+                  : {}),
+                details: {
+                  traceId: ctx.get("traceId"),
+                  telemetryDegraded: ctx.get("telemetryDegraded") ?? false,
+                  responseStatus: response.status,
+                },
+              });
+              this.finishInspection(inspector, inspection?.id, response, outcome, ctx);
+              return response;
+            }
+
+            this.recordRouteError(inspector, error);
+            const response = this.withContextResponseHeaders(
+              ctx,
+              this.errorHandler.handleError(error, ctx),
+            );
+            this.recordError?.(error, response.status);
+            this.finishInspection(inspector, inspection?.id, response, "failed", ctx, error);
+            releaseAfterFailure(error);
             return response;
           }
-
-          this.recordRouteError(inspector, error);
-          const response = this.withContextResponseHeaders(
-            ctx,
-            this.errorHandler.handleError(error, ctx),
-          );
-          this.recordError?.(error, response.status);
-          this.finishInspection(inspector, inspection?.id, response, "failed", ctx, error);
-          return response;
-        }
-      });
+        },
+        (error) => this.logger.error("Response cancellation failed", { error }),
+      );
     };
 
     const headHandler = async (c: HonoContext) => {

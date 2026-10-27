@@ -1,0 +1,109 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "framework-context",
+      "classification": "runtime-adapter",
+      "reason": "Request scope ownership follows lazy HTTP response completion, cancellation, failure and abort while Context.run retains automatic callback cleanup.",
+      "files": {
+        "packages/framework-context/src/libs/Context.ts": "937aa19d0892a29ae1b7c2b61da293c035e857b8abe585b151d53c7eb2ba8023"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "unverified",
+          "reason": "Explicit ownership reuses AsyncLocalStorage and the existing Node HTTP reader cancellation path. Local Node regression evidence is recorded separately; no Kubernetes deployment was tested.",
+          "providers": ["@croco/framework-context/Context", "@croco/transports-http"],
+          "constraints": [
+            "Owners must consume or cancel every body, or abort the request. Cleanup does not extend background work.",
+            "Local runtime tests are not deployed infrastructure certification."
+          ],
+          "references": [
+            "packages/framework-context/src/libs/Context.ts",
+            "packages/transports-http/src/tests/ResponseRequestScope.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "unverified",
+          "reason": "The existing Lambda adapter buffers the response before invocation flush. Local buffering regression evidence is recorded separately; no AWS deployment was tested.",
+          "providers": ["@croco/framework-context/Context", "@croco/transports-http"],
+          "constraints": [
+            "Owners must consume or cancel every body, or abort the request. Cleanup does not extend background work.",
+            "Local runtime tests are not deployed infrastructure certification."
+          ],
+          "references": [
+            "packages/framework-context/src/libs/Context.ts",
+            "packages/transports-http/src/tests/ResponseRequestScope.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "unverified",
+          "reason": "The shared registrar requires Node async-context compatibility. The HTTP package has no Workers runtime claim and no Worker isolate execution was performed.",
+          "providers": ["@croco/framework-context/Context", "@croco/transports-http"],
+          "constraints": [
+            "Owners must consume or cancel every body, or abort the request. Cleanup does not extend background work.",
+            "Local runtime tests are not deployed infrastructure certification."
+          ],
+          "references": [
+            "packages/framework-context/src/libs/Context.ts",
+            "packages/transports-http/src/tests/ResponseRequestScope.spec.ts"
+          ]
+        }
+      }
+    },
+    {
+      "package": "transports-http",
+      "classification": "runtime-adapter",
+      "reason": "Request scope ownership follows lazy HTTP response completion, cancellation, failure and abort while Context.run retains automatic callback cleanup.",
+      "files": {
+        "packages/transports-http/src/libs/CrocoRouteRegistrar.ts": "726169a76739c5f64ed04f0edd2ce79839cdecd58224328ca8aba25a9218d547",
+        "packages/transports-http/src/libs/ResponseRequestScope.ts": "9c1117c280e5bc3dca8a7cd600f6cc6aed444e0774cd104e550b677e6ce57dd5"
+      },
+      "catalogRuntimes": ["node", "lambda"],
+      "profiles": {
+        "kubernetes": {
+          "result": "unverified",
+          "reason": "Explicit ownership reuses AsyncLocalStorage and the existing Node HTTP reader cancellation path. Local Node regression evidence is recorded separately; no Kubernetes deployment was tested.",
+          "providers": ["@croco/framework-context/Context", "@croco/transports-http"],
+          "constraints": [
+            "Owners must consume or cancel every body, or abort the request. Cleanup does not extend background work.",
+            "Local runtime tests are not deployed infrastructure certification."
+          ],
+          "references": [
+            "packages/transports-http/src/libs/CrocoRouteRegistrar.ts",
+            "packages/transports-http/src/libs/ResponseRequestScope.ts",
+            "packages/transports-http/src/tests/ResponseRequestScope.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "unverified",
+          "reason": "The existing Lambda adapter buffers the response before invocation flush. Local buffering regression evidence is recorded separately; no AWS deployment was tested.",
+          "providers": ["@croco/framework-context/Context", "@croco/transports-http"],
+          "constraints": [
+            "Owners must consume or cancel every body, or abort the request. Cleanup does not extend background work.",
+            "Local runtime tests are not deployed infrastructure certification."
+          ],
+          "references": [
+            "packages/transports-http/src/libs/CrocoRouteRegistrar.ts",
+            "packages/transports-http/src/libs/ResponseRequestScope.ts",
+            "packages/transports-http/src/tests/ResponseRequestScope.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "unverified",
+          "reason": "The shared registrar requires Node async-context compatibility. The HTTP package has no Workers runtime claim and no Worker isolate execution was performed.",
+          "providers": ["@croco/framework-context/Context", "@croco/transports-http"],
+          "constraints": [
+            "Owners must consume or cancel every body, or abort the request. Cleanup does not extend background work.",
+            "Local runtime tests are not deployed infrastructure certification."
+          ],
+          "references": [
+            "packages/transports-http/src/libs/CrocoRouteRegistrar.ts",
+            "packages/transports-http/src/libs/ResponseRequestScope.ts",
+            "packages/transports-http/src/tests/ResponseRequestScope.spec.ts"
+          ]
+        }
+      }
+    }
+  ]
+}

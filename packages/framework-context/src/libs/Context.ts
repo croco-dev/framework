@@ -101,10 +101,36 @@ export class Context {
     });
   }
 
+  /**
+   * Creates an explicitly owned request scope for a host lifecycle that outlives a callback.
+   * The owner must dispose it on every terminal path. Deferred callbacks must use run().
+   */
+  static createRequestScope(context: RequestContext): {
+    run<T>(fn: () => T): T;
+    dispose(failure?: { readonly error: unknown }): void;
+  } {
+    const data: ContextData = {
+      context,
+      createdAt: Date.now(),
+      scope: { cache: new Map(), disposables: new Map(), disposed: false },
+    };
+    const enter = AsyncLocalStorage.snapshot();
+    return {
+      run<T>(fn: () => T): T {
+        assertRequestScopeActive(data.scope);
+        return enter(() => Context.STORAGE.run(data, fn));
+      },
+      dispose(failure?: { readonly error: unknown }): void {
+        enter(() => Context.STORAGE.run(data, () => Context.disposeRequestScope(data, failure)));
+      },
+    };
+  }
+
   private static disposeRequestScope(
     data: ContextData,
     failure?: { readonly error: unknown },
   ): void {
+    if (data.scope.disposed) return;
     data.scope.disposed = true;
     const failures: unknown[] = [];
     for (const dispose of [...data.scope.disposables.values()].reverse()) {

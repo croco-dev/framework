@@ -548,3 +548,50 @@ describe("disposed request scopes", () => {
     expect(created).toBe(0);
   });
 });
+
+describe("explicit request scope ownership", () => {
+  beforeEach(() => Container.reset());
+
+  it("reenters the same scope and rejects all reuse after idempotent disposal", () => {
+    let disposals = 0;
+    const resolve = installRequestDisposables([
+      () => {
+        disposals++;
+      },
+    ]);
+    const scope = Context.createRequestScope({ requestId: "owned" });
+    scope.run(resolve);
+    expect(disposals).toBe(0);
+    scope.run(() => {
+      expect(Context.getRequestId()).toBe("owned");
+      resolve();
+    });
+    scope.dispose();
+    scope.dispose();
+    expect(disposals).toBe(1);
+    expect(() => scope.run(resolve)).toThrow(
+      expect.objectContaining({ code: "framework-context/request-scope-disposed" }),
+    );
+    expect(Context.get()).toBeNull();
+  });
+  it("restores the owning application scope when a host invokes a deferred callback", () => {
+    const token = new Token<string>("application.owner");
+    const first = Container.createScope();
+    const second = Container.createScope();
+    try {
+      const request = first.run(() => {
+        Container.set(token, "first");
+        return Context.createRequestScope({ requestId: "first-request" });
+      });
+      second.run(() => {
+        Container.set(token, "second");
+        expect(request.run(() => Container.get(token))).toBe("first");
+        expect(Container.get(token)).toBe("second");
+      });
+      request.dispose();
+    } finally {
+      first.dispose();
+      second.dispose();
+    }
+  });
+});
