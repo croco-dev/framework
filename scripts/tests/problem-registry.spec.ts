@@ -19,6 +19,8 @@ import {
 import type { ProblemCodeRegistry } from "../problem-registry.mts";
 
 const tempRepos: string[] = [];
+// Bound each precision program's type work while still checking every registry entry.
+const REGISTRY_PRECISION_BATCH_SIZE = 25;
 
 describe("problem-registry.mts", () => {
   afterEach(() => {
@@ -31,7 +33,11 @@ describe("problem-registry.mts", () => {
     "inferred",
     "explicit",
     ...Array.from(
-      { length: Math.ceil(readRegistry(resolve(".")).problems.length / 200) },
+      {
+        length: Math.ceil(
+          readRegistry(resolve(".")).problems.length / REGISTRY_PRECISION_BATCH_SIZE,
+        ),
+      },
       (_, index) => index,
     ),
   ])("checks large registry declaration emit and exact literal precision (%s)", (mode) => {
@@ -39,7 +45,10 @@ describe("problem-registry.mts", () => {
     const current = readRegistry(resolve("."));
     const problems =
       typeof mode === "number"
-        ? current.problems.slice(mode * 200, (mode + 1) * 200)
+        ? current.problems.slice(
+            mode * REGISTRY_PRECISION_BATCH_SIZE,
+            (mode + 1) * REGISTRY_PRECISION_BATCH_SIZE,
+          )
         : Array.from({ length: 1600 }, (_, index) => ({
             ...current.problems[index % current.problems.length],
             code: `emit-regression/${index}`,
@@ -70,6 +79,7 @@ describe("problem-registry.mts", () => {
       writeFileSync(file, text);
       const program = ts.createProgram([file], {
         target: ts.ScriptTarget.ES2022,
+        lib: ["lib.es2022.d.ts"],
         module: ts.ModuleKind.ESNext,
         moduleResolution: ts.ModuleResolutionKind.Bundler,
         strict: true,
