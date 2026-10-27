@@ -37,6 +37,12 @@ const store: PersonalizedFragmentStore = {
     }
     return stored as V;
   },
+  async refresh<V>(key: string, factory: () => Promise<V>, options?: { ttlMs?: number }) {
+    return (await sharedFragments.refresh(key, factory, {
+      ...options,
+      preserveInvalidatedValue: true,
+    })) as V | undefined;
+  },
   async invalidate(key: string) {
     await sharedFragments.delete(key);
   },

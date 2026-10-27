@@ -207,6 +207,33 @@ export class InMemoryCacheStore<V = unknown> extends CacheStore<string, V> {
       return cachedValue;
     }
 
+    return this.load(key, loader, options);
+  }
+
+  /**
+   * Reloads a key while retaining its existing value for concurrent readers.
+   * Same-key loads coalesce. Delete, clear and pattern invalidation fence the
+   * publication; preserveInvalidatedValue only retains the caller's result.
+   * Coordination is local to this store instance, never distributed.
+   */
+  async refresh(
+    key: string,
+    loader: () => Promise<V | undefined>,
+    options: CacheGetOrSetOptions = {},
+  ): Promise<V | undefined> {
+    assertValidTtl(options.ttlMs);
+    if (options.ttlMs === 0) {
+      return this.getOrSet(key, loader, options);
+    }
+    return this.load(key, loader, options, this.store.get(key));
+  }
+
+  private async load(
+    key: string,
+    loader: () => Promise<V | undefined>,
+    options: CacheGetOrSetOptions,
+    previousEntry?: CacheEntry<V>,
+  ): Promise<V | undefined> {
     const pending = this.inFlightLoads.get(key);
     if (pending !== undefined) {
       return this.readLoadResult(pending.promise, options);
@@ -241,7 +268,11 @@ export class InMemoryCacheStore<V = unknown> extends CacheStore<string, V> {
 
           // 현재 캐시 값을 먼저 확인하여 늦은 loader 결과가 새 값으로 덮어쓰는지 확인
           const currentEntry = this.store.get(key);
-          if (currentEntry !== undefined && !this.isExpired(currentEntry)) {
+          if (
+            currentEntry !== undefined &&
+            currentEntry !== previousEntry &&
+            !this.isExpired(currentEntry)
+          ) {
             // 다른 set()이 저장한 값이 아직 유효하면 유지
             resolveLoad({ value: currentEntry.value, invalidated: false });
             return;
