@@ -889,3 +889,96 @@ describe("InMemoryCacheStore", () => {
     });
   });
 });
+
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((done) => {
+    resolve = done;
+  });
+  return { promise, resolve };
+}
+
+describe("InMemoryCacheStore refresh", () => {
+  it.each(["delete", "clear", "pattern"] as const)(
+    "fences %s and detaches the previous fill",
+    async (operation) => {
+      const cache = new InMemoryCacheStore<string>();
+      await cache.set("target", "initial");
+      const older = deferred<string>();
+      const pending = cache.refresh("target", () => older.promise, {
+        preserveInvalidatedValue: true,
+      });
+      expect(await cache.getOrSet("target", async () => "unexpected")).toBe("initial");
+      if (operation === "delete") await cache.delete("target");
+      if (operation === "clear") await cache.clear();
+      if (operation === "pattern") await cache.invalidatePattern("targ*");
+      const newer = deferred<string>();
+      const newLoader = vi.fn(() => newer.promise);
+      const newPending = cache.refresh("target", newLoader);
+      older.resolve("old-result");
+      expect(await pending).toBe("old-result");
+      expect(await cache.get("target")).toBeUndefined();
+      const joined = cache.refresh("target", newLoader);
+      expect(newLoader).toHaveBeenCalledTimes(1);
+      newer.resolve("new-result");
+      expect(await newPending).toBe("new-result");
+      expect(await joined).toBe("new-result");
+      expect(await cache.get("target")).toBe("new-result");
+    },
+  );
+
+  it("does not replace a newer explicit set", async () => {
+    const cache = new InMemoryCacheStore<string>();
+    await cache.set("target", "initial");
+    const loaded = deferred<string>();
+    const pending = cache.refresh("target", () => loaded.promise);
+    await cache.set("target", "explicit-update");
+    loaded.resolve("outdated-refresh");
+    expect(await pending).toBe("explicit-update");
+    expect(await cache.get("target")).toBe("explicit-update");
+  });
+
+  it("preserves the retained value after a loader failure and allows recovery", async () => {
+    const cache = new InMemoryCacheStore<string>();
+    await cache.set("target", "initial");
+    await expect(
+      cache.refresh("target", async () => {
+        throw new Error("source failed");
+      }),
+    ).rejects.toThrow("source failed");
+    expect(await cache.get("target")).toBe("initial");
+    expect(await cache.refresh("target", async () => "recovered")).toBe("recovered");
+    expect(await cache.get("target")).toBe("recovered");
+  });
+
+  it("suppresses invalidated caller results by default", async () => {
+    const cache = new InMemoryCacheStore<string>();
+    const loaded = deferred<string>();
+    const pending = cache.refresh("target", () => loaded.promise);
+    await cache.delete("target");
+    loaded.resolve("invalidated");
+    expect(await pending).toBeUndefined();
+    expect(await cache.get("target")).toBeUndefined();
+  });
+
+  it.each([-1, Number.NaN, Number.POSITIVE_INFINITY])(
+    "rejects invalid TTL %s without loading or changing the cache",
+    async (ttlMs) => {
+      const cache = new InMemoryCacheStore<string>();
+      await cache.set("target", "initial");
+      const loader = vi.fn(async () => "replacement");
+      await expect(cache.refresh("target", loader, { ttlMs })).rejects.toBeInstanceOf(
+        InvalidCacheTtlProblem,
+      );
+      expect(loader).not.toHaveBeenCalled();
+      expect(await cache.get("target")).toBe("initial");
+    },
+  );
+
+  it("preserves zero TTL bypass without publishing", async () => {
+    const cache = new InMemoryCacheStore<string>();
+    await cache.set("target", "initial");
+    expect(await cache.refresh("target", async () => "uncached", { ttlMs: 0 })).toBe("uncached");
+    expect(await cache.get("target")).toBeUndefined();
+  });
+});

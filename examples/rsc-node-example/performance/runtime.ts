@@ -21,6 +21,11 @@ const store: PersonalizedFragmentStore = {
   async getOrSet<V>(key: string, factory: () => Promise<V>, options?: { ttlMs?: number }) {
     return (await cache.getOrSet(key, factory, options)) as V;
   },
+  async refresh<V>(key: string, factory: () => Promise<V>, options?: { ttlMs?: number }) {
+    return (await cache.refresh(key, factory, { ...options, preserveInvalidatedValue: true })) as
+      | V
+      | undefined;
+  },
   async invalidate(key) {
     await cache.delete(key);
   },

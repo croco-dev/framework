@@ -203,6 +203,35 @@ Backward-compatible cache store base class.
 
 ---
 
+### refresh()
+
+> **refresh**(`key`, `loader`, `options?`): `Promise`\<`V` \| `undefined`\>
+
+Reloads a key while retaining its existing value for concurrent readers.
+Same-key loads coalesce. Delete, clear and pattern invalidation fence the
+publication; preserveInvalidatedValue only retains the caller's result.
+Coordination is local to this store instance, never distributed.
+
+#### Parameters
+
+##### key
+
+`string`
+
+##### loader
+
+() => `Promise`\<`V` \| `undefined`\>
+
+##### options?
+
+[`CacheGetOrSetOptions`](/api/cache-core/src/type-aliases/cachegetorsetoptions/) = `{}`
+
+#### Returns
+
+`Promise`\<`V` \| `undefined`\>
+
+---
+
 ### set()
 
 > **set**(`key`, `value`, `ttlMs?`): `Promise`\<`void`\>

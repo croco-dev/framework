@@ -86,3 +86,40 @@ Optional direct read used only for bounded stale-if-error recovery.
 #### Returns
 
 `Promise`\<`void`\>
+
+---
+
+### refresh?
+
+> `optional` **refresh?**: \<`V`\>(`key`, `factory`, `options?`) => `Promise`\<`V` \| `undefined`\>
+
+Optional coordinated reload retaining stale reads. Implementations must
+coalesce same-key fills and fence publication against invalidate/delete.
+Without this capability revalidation stays request-local, never publishing
+via an invalidate/getOrSet pair. Distributed fencing is adapter-owned.
+
+#### Type Parameters
+
+##### V
+
+`V`
+
+#### Parameters
+
+##### key
+
+`string`
+
+##### factory
+
+() => `Promise`\<`V`\>
+
+##### options?
+
+###### ttlMs?
+
+`number`
+
+#### Returns
+
+`Promise`\<`V` \| `undefined`\>

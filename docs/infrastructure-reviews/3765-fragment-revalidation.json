@@ -1,0 +1,99 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "cache-core",
+      "classification": "pure-contract",
+      "reason": "Coordinate existing process-local fragment reloads with the backing store invalidation boundary. Retain stale reads and fence old fills without adding host capabilities, external persistence or lifecycle requirements. Legacy adapters resolve reloads locally without unsafe publication.",
+      "files": {
+        "packages/cache-core/src/libs/InMemoryCacheStore.ts": "85b460fbf837ec6fcb15dd05e48b21a6a695aec658bf1f5a005a5d0c4cb22846"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Node Host execution is unchanged: this correction concerns process-local Promise ownership and optional adapter fencing, with no new host capability, storage connection or lifecycle boundary.",
+          "providers": ["@croco/cache-core/InMemoryCacheStore"],
+          "constraints": [
+            "Only same-instance in-memory coordination is implemented. Distributed fencing remains the adapter responsibility; no deployed-host certification is claimed."
+          ],
+          "references": [
+            "packages/cache-core/src/libs/InMemoryCacheStore.ts",
+            "packages/meta-vite/README.md"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Lambda Host execution is unchanged: this correction concerns process-local Promise ownership and optional adapter fencing, with no new host capability, storage connection or lifecycle boundary.",
+          "providers": ["@croco/cache-core/InMemoryCacheStore"],
+          "constraints": [
+            "Only same-instance in-memory coordination is implemented. Distributed fencing remains the adapter responsibility; no deployed-host certification is claimed."
+          ],
+          "references": [
+            "packages/cache-core/src/libs/InMemoryCacheStore.ts",
+            "packages/meta-vite/README.md"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Workers or explicit Node Container Host execution is unchanged: this correction concerns process-local Promise ownership and optional adapter fencing, with no new host capability, storage connection or lifecycle boundary.",
+          "providers": ["@croco/cache-core/InMemoryCacheStore"],
+          "constraints": [
+            "Only same-instance in-memory coordination is implemented. Distributed fencing remains the adapter responsibility; no deployed-host certification is claimed."
+          ],
+          "references": [
+            "packages/cache-core/src/libs/InMemoryCacheStore.ts",
+            "packages/meta-vite/README.md"
+          ]
+        }
+      }
+    },
+    {
+      "package": "meta-vite",
+      "classification": "protocol-render",
+      "reason": "Coordinate existing process-local fragment reloads with the backing store invalidation boundary. Retain stale reads and fence old fills without adding host capabilities, external persistence or lifecycle requirements. Legacy adapters resolve reloads locally without unsafe publication.",
+      "files": {
+        "packages/meta-vite/src/libs/isr/personalizedFragments.ts": "b4aa4b2902fa9577ff49b2404bdd4e782c656524c969922658ecbe62b199c262"
+      },
+      "catalogRuntimes": ["node", "lambda", "cloudflare-workers", "browser"],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Node Host execution is unchanged: this correction concerns process-local Promise ownership and optional adapter fencing, with no new host capability, storage connection or lifecycle boundary.",
+          "providers": ["@croco/cache-core/InMemoryCacheStore"],
+          "constraints": [
+            "Only same-instance in-memory coordination is implemented. Distributed fencing remains the adapter responsibility; no deployed-host certification is claimed."
+          ],
+          "references": [
+            "packages/meta-vite/src/libs/isr/personalizedFragments.ts",
+            "packages/meta-vite/README.md"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Lambda Host execution is unchanged: this correction concerns process-local Promise ownership and optional adapter fencing, with no new host capability, storage connection or lifecycle boundary.",
+          "providers": ["@croco/cache-core/InMemoryCacheStore"],
+          "constraints": [
+            "Only same-instance in-memory coordination is implemented. Distributed fencing remains the adapter responsibility; no deployed-host certification is claimed."
+          ],
+          "references": [
+            "packages/meta-vite/src/libs/isr/personalizedFragments.ts",
+            "packages/meta-vite/README.md"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Workers or explicit Node Container Host execution is unchanged: this correction concerns process-local Promise ownership and optional adapter fencing, with no new host capability, storage connection or lifecycle boundary.",
+          "providers": ["@croco/cache-core/InMemoryCacheStore"],
+          "constraints": [
+            "Only same-instance in-memory coordination is implemented. Distributed fencing remains the adapter responsibility; no deployed-host certification is claimed."
+          ],
+          "references": [
+            "packages/meta-vite/src/libs/isr/personalizedFragments.ts",
+            "packages/meta-vite/README.md"
+          ]
+        }
+      }
+    }
+  ]
+}

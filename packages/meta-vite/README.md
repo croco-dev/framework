@@ -547,3 +547,33 @@ for snapshot completion, query policy, atomicity, retention and infrastructure l
 `createPublicPageHandler({ definition, component })` resolves an `@croco/seo-core` source before headers commit and renders the component with the same public snapshot used for initial metadata. Published pages use buffered SSR with escaped title/description/canonical/lang/hreflang/robots and Product or Article JSON-LD. Nonpublic snapshots return their declared 401/403/404/410 or redirect status without public facts. Invalid declarations return 422; unavailable sources return a redacted 503. GET and HEAD are supported; responses default to `private, no-store`.
 
 This opt-in handler composes with `createMetaFetchHandler` and existing adapters; it does not change RSC/streaming/SSG/ISR behavior. See [the executable public-page application](../../examples/public-pages/README.md) for repository mapping, offer markers, CLI/admin inspection, browser verification and deployment limits.
+
+## Personalized fragment revalidation
+
+A `PersonalizedFragmentStore` can provide `refresh(key, factory, options)` to reload
+without removing the retained stale value. The adapter must coalesce same-key fills
+and prevent publication after its own exact-key invalidation. Back it with
+`InMemoryCacheStore.refresh` and forward `preserveInvalidatedValue: true` to return
+an already-loaded result to its caller without repopulating an invalidated key.
+Use the same backing store for `invalidate`, `invalidatePersonalizedFragment`,
+and refresh. `delete`, `clear`, and matching pattern invalidation fence pending
+in-memory fills; a post-invalidation fill runs independently of an older loader.
+The promotion-offers and RSC performance fixtures show this adapter wiring.
+
+Foreground expiry and background SWR use this same reload boundary. Concurrent
+readers can still receive the retained stale value within the policy window;
+source errors retain bounded stale-if-error recovery. `inspect` callback failures
+propagate and do not enable stale-if-error recovery. If a coalesced refresh fails
+before a caller's own loader runs, a live caller retries its loader once locally
+with its own cancellation signal. This result is never published and the inspect
+reason is `refresh-request-local`; one caller's cancellation does not fail another.
+Stores without `refresh`
+remain compatible, but their revalidation results stay request-local and are never
+published through an unsafe invalidate/getOrSet pair. Their retained entries can
+remain until physical expiry or explicit invalidation.
+
+In-memory coordination applies only to one `InMemoryCacheStore` instance in one
+process. Custom and distributed adapters must implement their own atomic fencing
+and invalidation semantics; neither Redis fencing nor cross-process guarantees
+are inferred from the fragment interface. Cache key revision, representation and
+variant separation, private request data and final response cache policy are unchanged.

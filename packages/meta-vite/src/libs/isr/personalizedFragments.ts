@@ -24,6 +24,17 @@ export { PersonalizedFragmentProblem } from "./personalizedFragmentProblems";
 export type PersonalizedFragmentStore = {
   getOrSet: <V>(key: string, factory: () => Promise<V>, options?: { ttlMs?: number }) => Promise<V>;
   invalidate: (key: string) => Promise<void>;
+  /**
+   * Optional coordinated reload retaining stale reads. Implementations must
+   * coalesce same-key fills and fence publication against invalidate/delete.
+   * Without this capability revalidation stays request-local, never publishing
+   * via an invalidate/getOrSet pair. Distributed fencing is adapter-owned.
+   */
+  refresh?: <V>(
+    key: string,
+    factory: () => Promise<V>,
+    options?: { ttlMs?: number },
+  ) => Promise<V | undefined>;
   /** Optional direct read used only for bounded stale-if-error recovery. */
   get?: <V>(key: string) => Promise<V | undefined>;
 };
@@ -427,8 +438,11 @@ async function resolveFragment<T>(input: {
 
   input.inspect?.({ ...base, outcome: "miss", reason: freshness.reason });
   let fresh: StoredFragment;
+  let cacheFailureReason: string | undefined;
   try {
-    fresh = await fillFragment(input);
+    fresh = await refreshFragment(input, (reason) => {
+      cacheFailureReason = reason;
+    });
   } catch (error) {
     // Genuinely expired with no SWR: still allow one bounded stale-if-error
     // read of the previous full fragment when the domain permits it.
@@ -439,18 +453,8 @@ async function resolveFragment<T>(input: {
     }
     throw error;
   }
-  try {
-    await input.store.invalidate(input.key);
-    await input.store.getOrSet<StoredFragment>(input.key, async () => fresh, {
-      ttlMs: retention,
-    });
-  } catch (error) {
-    // Cache persistence is best-effort: a concurrent fill may win the race,
-    // or the store may reject the write. Either way the freshly loaded value
-    // is already in hand, so report the write outcome and return it instead
-    // of falling back to a stale copy.
-    void error;
-    input.inspect?.({ ...base, outcome: "miss", reason: "cache-write-failed" });
+  if (cacheFailureReason !== undefined) {
+    input.inspect?.({ ...base, outcome: "miss", reason: cacheFailureReason });
   }
   return { value: parseValue<T>(fresh.bytes, fresh.value), source: "render" };
 }
@@ -491,22 +495,60 @@ async function fillFragment<T>(input: {
   };
 }
 
-async function revalidateFragment<T>(input: {
-  readonly store: PersonalizedFragmentStore;
-  readonly key: string;
-  readonly loader: PersonalizedFragmentLoader<T>;
-  readonly expectedDependencies: readonly PersonalizedCacheDependency[];
-  readonly expectedRevision: string;
-  readonly freshness: PersonalizedCacheFreshnessPolicy;
-  readonly nowMs: number;
-  readonly signal?: AbortSignal;
-}): Promise<void> {
+async function refreshFragment<T>(
+  input: {
+    readonly store: PersonalizedFragmentStore;
+    readonly key: string;
+    readonly loader: PersonalizedFragmentLoader<T>;
+    readonly expectedDependencies: readonly PersonalizedCacheDependency[];
+    readonly expectedRevision: string;
+    readonly freshness: PersonalizedCacheFreshnessPolicy;
+    readonly nowMs: number;
+    readonly signal?: AbortSignal;
+  },
+  onCacheFailure?: (reason: string) => void,
+): Promise<StoredFragment> {
+  if (input.store.refresh === undefined) {
+    return fillFragment(input);
+  }
+  let fresh: StoredFragment | undefined;
+  let ownsFill = false;
+  let stored: StoredFragment | undefined;
   try {
-    const fresh = await fillFragment(input);
-    await input.store.invalidate(input.key);
-    await input.store.getOrSet<StoredFragment>(input.key, async () => fresh, {
-      ttlMs: retentionMs(input.freshness),
-    });
+    stored = await input.store.refresh(
+      input.key,
+      async () => {
+        ownsFill = true;
+        fresh = await fillFragment(input);
+        return fresh;
+      },
+      { ttlMs: retentionMs(input.freshness) },
+    );
+  } catch (error) {
+    input.signal?.throwIfAborted();
+    if (fresh === undefined) {
+      if (!ownsFill) {
+        // A shared owner can fail or cancel independently of this caller.
+        // Retry this caller's loader once locally, never as a shared write.
+        onCacheFailure?.("refresh-request-local");
+        return fillFragment(input);
+      }
+      throw error;
+    }
+    onCacheFailure?.("cache-write-failed");
+    return fresh;
+  }
+  input.signal?.throwIfAborted();
+  // A fenced adapter may suppress publication and return undefined. Resolve
+  // locally outside the shared-refresh catch so a local failure is not retried.
+  return stored ?? fresh ?? fillFragment(input);
+}
+
+async function revalidateFragment<T>(
+  input: Parameters<typeof refreshFragment<T>>[0],
+): Promise<void> {
+  try {
+    await refreshFragment(input);
   } catch (error) {
     void error;
     // Background revalidation is best-effort; the stale response already went out.
