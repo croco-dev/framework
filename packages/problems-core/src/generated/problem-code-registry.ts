@@ -14876,7 +14876,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/admin-core/src/libs/ExperienceOperations.ts";
-          readonly line: 45;
+          readonly line: 46;
           readonly column: 5;
           readonly kind: "problem-constructor";
         },
@@ -14932,7 +14932,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/experience-drizzle/src/libs/PostgresExperienceStore.ts";
-          readonly line: 24;
+          readonly line: 25;
           readonly column: 5;
           readonly kind: "problem-constructor";
         },
@@ -49097,7 +49097,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/admin-core/src/libs/ExperienceOperations.ts",
-          line: 45,
+          line: 46,
           column: 5,
           kind: "problem-constructor",
         },
@@ -49157,7 +49157,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/experience-drizzle/src/libs/PostgresExperienceStore.ts",
-          line: 24,
+          line: 25,
           column: 5,
           kind: "problem-constructor",
         },

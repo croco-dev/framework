@@ -21,7 +21,10 @@ type Pool = Client & {
   connect(): Promise<Client & { release(): void }>;
   end(): Promise<void>;
 };
-function database(pool: Pool): ExperiencePgDatabase {
+function database(
+  pool: Pool,
+  beforeWork?: (client: Client) => Promise<void>,
+): ExperiencePgDatabase {
   function executor(client: Client): ExperiencePgExecutor {
     return {
       execute: (statement) => {
@@ -36,6 +39,7 @@ function database(pool: Pool): ExperiencePgDatabase {
       const client = await pool.connect();
       try {
         await client.query("BEGIN");
+        await beforeWork?.(client);
         const result = await work(executor(client));
         await client.query("COMMIT");
         return result;
@@ -276,4 +280,343 @@ describe.skipIf(!url)("PostgreSQL experience publication and receipts", () => {
       if (!poolAClosed) await poolA.end();
     }
   }, 30000);
+});
+
+describe.skipIf(!url)("PostgreSQL experience configuration families", () => {
+  it("evaluates published candidates beyond archived history and paginates every family", async () => {
+    const require = createRequire(import.meta.url);
+    const { Pool: PgPool } = require("pg") as {
+      Pool: new (options: { connectionString: string; max?: number }) => Pool;
+    };
+    const pool = new PgPool({ connectionString: url as string, max: 2 });
+    const store = new PostgresExperienceStore(database(pool));
+    const scope = { appId: "history", environment: "test", tenantId: randomUUID() };
+    const config: ExperienceConfig = {
+      id: "z-published",
+      placementId: "history.tip",
+      scope,
+      revision: 1,
+      status: "published",
+      renderer: "banner",
+      content: { locale: "en", title: "Current", body: "Published content" },
+      priority: 1,
+    };
+    await pool.query(
+      readFileSync(new URL("../../migrations/0001_experience.up.sql", import.meta.url), "utf8"),
+    );
+    try {
+      for (let index = 0; index < 100; index += 1) {
+        await store.saveConfig({
+          config: {
+            ...config,
+            id: `archived-${String(index).padStart(3, "0")}`,
+            status: "archived",
+          },
+          expectedRevision: null,
+          actorId: "operator",
+          reason: "Archive",
+          idempotencyKey: "initial",
+        });
+      }
+      await store.saveConfig({
+        config,
+        expectedRevision: null,
+        actorId: "operator",
+        reason: "Publish",
+        idempotencyKey: "initial",
+      });
+      const { evaluatePlacement } = await import("@croco/experience-core");
+      const result = await evaluatePlacement({
+        store,
+        scope,
+        placement: {
+          id: config.placementId,
+          allowedRenderers: ["banner"],
+          schema: {
+            contextFields: {},
+            content: {
+              locales: ["en"],
+              maxTitleLength: 100,
+              maxBodyLength: 1000,
+              allowActionUrl: false,
+            },
+          },
+        },
+        subject: { kind: "customer", id: "reader" },
+        context: {},
+        locale: "en",
+      });
+      expect(result.reason).toBe("selected");
+      expect(result.decision?.configId).toBe(config.id);
+      const first = await store.listConfigs(scope, config.placementId, { limit: 100 });
+      expect(first).toHaveLength(100);
+      const second = await store.listConfigs(scope, config.placementId, {
+        afterId: first.at(-1)?.id,
+        limit: 100,
+      });
+      expect(second).toEqual([config]);
+      expect(await store.listConfigs(scope, config.placementId, { afterId: config.id })).toEqual(
+        [],
+      );
+      expect(await store.getConfig(scope, config.placementId, "archived-050")).toMatchObject({
+        id: "archived-050",
+        status: "archived",
+      });
+      expect(
+        await store.getConfig({ ...scope, tenantId: "other" }, config.placementId, config.id),
+      ).toBeUndefined();
+      expect(await store.getConfig(scope, "other.placement", config.id)).toBeUndefined();
+      const updated = { ...config, revision: 2, status: "archived" as const };
+      await store.saveConfig({
+        config: updated,
+        expectedRevision: 1,
+        actorId: "operator",
+        reason: "Archive",
+        idempotencyKey: "archive",
+      });
+      expect(await store.getConfig(scope, config.placementId, config.id)).toEqual(updated);
+      expect(await store.listPublishedConfigs(scope, config.placementId)).toEqual([]);
+    } finally {
+      await pool.query(
+        readFileSync(new URL("../../migrations/0001_experience.down.sql", import.meta.url), "utf8"),
+      );
+      await pool.end();
+    }
+  });
+
+  it("serializes competing publications at the limit while preserving edits, retries and freed capacity", async () => {
+    const require = createRequire(import.meta.url);
+    const { Pool: PgPool } = require("pg") as {
+      Pool: new (options: { connectionString: string; max?: number }) => Pool;
+    };
+    const pool = new PgPool({ connectionString: url as string, max: 2 });
+    const store = new PostgresExperienceStore(database(pool));
+    const scope = { appId: "limit", environment: "test", tenantId: randomUUID() };
+    const base: ExperienceConfig = {
+      id: "base",
+      placementId: "limit.tip",
+      scope,
+      revision: 1,
+      status: "published",
+      renderer: "banner",
+      content: { locale: "en", title: "Tip", body: "Content" },
+      priority: 1,
+    };
+    const save = (
+      config: ExperienceConfig,
+      expectedRevision: number | null = null,
+      idempotencyKey = "initial",
+    ) =>
+      store.saveConfig({
+        config,
+        expectedRevision,
+        actorId: "operator",
+        reason: "Test publication",
+        idempotencyKey,
+      });
+    await pool.query(
+      readFileSync(new URL("../../migrations/0001_experience.up.sql", import.meta.url), "utf8"),
+    );
+    try {
+      for (let index = 0; index < 99; index += 1) await save({ ...base, id: `published-${index}` });
+      const attempts = [
+        { ...base, id: "contender-a" },
+        { ...base, id: "contender-b" },
+      ];
+      const results = await Promise.allSettled(attempts.map((config) => save(config)));
+      expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(1);
+      const rejection = results.find((result) => result.status === "rejected");
+      expect(rejection?.status === "rejected" && rejection.reason.message).toContain(
+        "configuration limit",
+      );
+      expect(await store.listPublishedConfigs(scope, base.placementId)).toHaveLength(100);
+      const winner = attempts[results.findIndex((result) => result.status === "fulfilled")];
+      const loser = attempts[results.findIndex((result) => result.status === "rejected")];
+      if (!winner || !loser) throw new Error("Missing competing publication result");
+      expect(await store.getConfig(scope, base.placementId, loser.id)).toBeUndefined();
+      expect(await save(winner)).toEqual(winner);
+      const edited = { ...winner, revision: 2, content: { ...winner.content, title: "Updated" } };
+      await save(edited, 1, "edit");
+      const draft = { ...loser, status: "draft" as const };
+      await save(draft);
+      await expect(
+        save({ ...draft, revision: 2, status: "published" }, 1, "publish"),
+      ).rejects.toThrow("configuration limit");
+      await save({ ...edited, revision: 3, status: "archived" }, 2, "archive");
+      const promoted = { ...draft, revision: 2, status: "published" as const };
+      await save(promoted, 1, "publish");
+      expect(await store.listPublishedConfigs(scope, base.placementId)).toHaveLength(100);
+      expect(await store.getConfig(scope, base.placementId, loser.id)).toEqual(promoted);
+    } finally {
+      await pool.query(
+        readFileSync(new URL("../../migrations/0001_experience.down.sql", import.meta.url), "utf8"),
+      );
+      await pool.end();
+    }
+  });
+  it.each(["read uncommitted", "repeatable read", "serializable"] as const)(
+    "preserves capacity when competing transactions retain %s snapshots",
+    async (isolation) => {
+      const require = createRequire(import.meta.url);
+      const { Pool: PgPool } = require("pg") as {
+        Pool: new (options: { connectionString: string; max?: number }) => Pool;
+      };
+      const pool = new PgPool({ connectionString: url as string, max: 2 });
+      const store = new PostgresExperienceStore(database(pool));
+      const scope = { appId: "isolation", environment: "test", tenantId: randomUUID() };
+      const config: ExperienceConfig = {
+        id: "base",
+        placementId: "isolation.tip",
+        scope,
+        revision: 1,
+        status: "published",
+        renderer: "banner",
+        content: { locale: "en", title: "Tip", body: "Content" },
+        priority: 1,
+      };
+      const input = (id: string) => ({
+        config: { ...config, id },
+        expectedRevision: null,
+        actorId: "operator",
+        reason: "Publish",
+        idempotencyKey: "initial",
+      });
+      await pool.query(
+        readFileSync(new URL("../../migrations/0001_experience.up.sql", import.meta.url), "utf8"),
+      );
+      try {
+        for (let index = 0; index < 99; index += 1)
+          await store.saveConfig(input(`published-${index}`));
+        let ready = (): void => {};
+        const snapshotsReady = new Promise<void>((resolve) => {
+          ready = resolve;
+        });
+        let snapshotCount = 0;
+        const racing = new PostgresExperienceStore(
+          database(pool, async (client) => {
+            await client.query(`SET TRANSACTION ISOLATION LEVEL ${isolation}`);
+            // Both snapshots see the same 99 families before either publication can start.
+            const count = await client.query(
+              "SELECT count(*)::integer AS count FROM croco_experience_current WHERE status = 'published'",
+            );
+            expect(count.rows[0]?.count).toBe(99);
+            snapshotCount += 1;
+            if (snapshotCount === 2) ready();
+            await snapshotsReady;
+          }),
+        );
+        const results = await Promise.allSettled([
+          racing.saveConfig(input("contender-a")),
+          racing.saveConfig(input("contender-b")),
+        ]);
+        if (isolation !== "read uncommitted") {
+          expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(0);
+          for (const result of results) {
+            if (result.status === "rejected")
+              expect(result.reason.message).toContain("read committed isolation");
+          }
+          expect(await store.listPublishedConfigs(scope, config.placementId)).toHaveLength(99);
+          expect(await store.getConfig(scope, config.placementId, "contender-a")).toBeUndefined();
+          expect(await store.getConfig(scope, config.placementId, "contender-b")).toBeUndefined();
+          const snapshotStore = new PostgresExperienceStore(
+            database(pool, async (client) => {
+              await client.query(`SET TRANSACTION ISOLATION LEVEL ${isolation}`);
+            }),
+          );
+          const original = input("published-0");
+          expect(await snapshotStore.saveConfig(original)).toEqual(original.config);
+          const edited = {
+            ...original.config,
+            revision: 2,
+            content: { ...original.config.content, title: "Edited" },
+          };
+          await snapshotStore.saveConfig({
+            ...original,
+            config: edited,
+            expectedRevision: 1,
+            idempotencyKey: "edit",
+          });
+          await snapshotStore.saveConfig({
+            ...original,
+            config: { ...edited, revision: 3, status: "archived" },
+            expectedRevision: 2,
+            idempotencyKey: "archive",
+          });
+          expect(await store.listPublishedConfigs(scope, config.placementId)).toHaveLength(98);
+        } else {
+          expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(1);
+          expect(await store.listPublishedConfigs(scope, config.placementId)).toHaveLength(100);
+          const failed = results.find((result) => result.status === "rejected");
+          expect(failed?.status === "rejected" && failed.reason.message).toContain(
+            "configuration limit",
+          );
+        }
+      } finally {
+        await pool.query(
+          readFileSync(
+            new URL("../../migrations/0001_experience.down.sql", import.meta.url),
+            "utf8",
+          ),
+        );
+        await pool.end();
+      }
+    },
+  );
+  it("rejects a stale serializable publication after a read-committed writer fills capacity", async () => {
+    const require = createRequire(import.meta.url);
+    const { Pool: PgPool } = require("pg") as {
+      Pool: new (options: { connectionString: string; max?: number }) => Pool;
+    };
+    const pool = new PgPool({ connectionString: url as string, max: 2 });
+    const store = new PostgresExperienceStore(database(pool));
+    const scope = { appId: "mixed-isolation", environment: "test", tenantId: randomUUID() };
+    const config: ExperienceConfig = {
+      id: "base",
+      placementId: "mixed.tip",
+      scope,
+      revision: 1,
+      status: "published",
+      renderer: "banner",
+      content: { locale: "en", title: "Tip", body: "Content" },
+      priority: 1,
+    };
+    const input = (id: string) => ({
+      config: { ...config, id },
+      expectedRevision: null,
+      actorId: "operator",
+      reason: "Publish",
+      idempotencyKey: "initial",
+    });
+    await pool.query(
+      readFileSync(new URL("../../migrations/0001_experience.up.sql", import.meta.url), "utf8"),
+    );
+    try {
+      for (let index = 0; index < 99; index += 1)
+        await store.saveConfig(input(`published-${index}`));
+      const stale = new PostgresExperienceStore(
+        database(pool, async (client) => {
+          await client.query("SET TRANSACTION ISOLATION LEVEL SERIALIZABLE");
+          const snapshot = await client.query(
+            "SELECT count(*)::integer AS count FROM croco_experience_current WHERE status = 'published'",
+          );
+          expect(snapshot.rows[0]?.count).toBe(99);
+          // A different connection commits the last slot after this snapshot, before admission.
+          await store.saveConfig(input("read-committed-winner"));
+        }),
+      );
+      const result = await Promise.allSettled([stale.saveConfig(input("stale-contender"))]);
+      const current = await pool.query(
+        "SELECT count(*)::integer AS count FROM croco_experience_current WHERE status = 'published'",
+      );
+      expect(current.rows[0]?.count).toBe(100);
+      expect(result[0]?.status).toBe("rejected");
+      expect(await store.getConfig(scope, config.placementId, "stale-contender")).toBeUndefined();
+      expect(await store.listPublishedConfigs(scope, config.placementId)).toHaveLength(100);
+    } finally {
+      await pool.query(
+        readFileSync(new URL("../../migrations/0001_experience.down.sql", import.meta.url), "utf8"),
+      );
+      await pool.end();
+    }
+  });
 });

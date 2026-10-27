@@ -17,6 +17,7 @@ export type {
 } from "./libs/experience";
 export type {
   ExperienceConfig,
+  ExperienceConfigQuery,
   ExperienceContent,
   ExperienceContext,
   ExperienceContextPredicate,

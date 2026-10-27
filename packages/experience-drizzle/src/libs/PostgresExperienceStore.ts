@@ -4,6 +4,7 @@ import { Problem, ProblemCategory } from "@croco/problems-core";
 import type { SQL } from "drizzle-orm";
 import type {
   ExperienceConfig,
+  ExperienceConfigQuery,
   ExperienceReceiptInput,
   ExperienceReserveInput,
   ExperienceSaveInput,
@@ -57,7 +58,7 @@ function assertReceipt(input: ExperienceReceiptInput, row: Record<string, unknow
 export class PostgresExperienceStore implements ExperienceStore {
   constructor(private readonly database: ExperiencePgDatabase) {}
 
-  async listConfigs(
+  async listPublishedConfigs(
     scope: ExperienceScope,
     placementId: string,
   ): Promise<readonly ExperienceConfig[]> {
@@ -70,6 +71,7 @@ export class PostgresExperienceStore implements ExperienceStore {
        AND revisions.revision = current_config.revision
       WHERE current_config.scope_key = ${scopeKey(scope)}
         AND current_config.placement_id = ${placementId}
+        AND current_config.status = 'published'
       ORDER BY current_config.config_id
       LIMIT ${MAX_CONFIGS_PER_PLACEMENT + 1}
     `);
@@ -78,6 +80,56 @@ export class PostgresExperienceStore implements ExperienceStore {
     return result.rows.map((row) => row.config as ExperienceConfig);
   }
 
+  async listConfigs(
+    scope: ExperienceScope,
+    placementId: string,
+    query: ExperienceConfigQuery = {},
+  ): Promise<readonly ExperienceConfig[]> {
+    const limit = query.limit ?? MAX_CONFIGS_PER_PLACEMENT;
+    if (
+      !placementId ||
+      !Number.isSafeInteger(limit) ||
+      limit < 1 ||
+      limit > MAX_CONFIGS_PER_PLACEMENT ||
+      (query.afterId !== undefined && !query.afterId)
+    )
+      throw new ExperienceStoreProblem("Placement and a page size from 1 to 100 are required");
+    const result = await this.database.execute(sql`
+      SELECT revisions.config FROM croco_experience_current current_config
+      JOIN croco_experience_config_revisions revisions
+        ON revisions.scope_key = current_config.scope_key
+       AND revisions.config_id = current_config.config_id
+       AND revisions.revision = current_config.revision
+      WHERE current_config.scope_key = ${scopeKey(scope)}
+        AND current_config.placement_id = ${placementId}
+        ${query.afterId === undefined ? sql`` : sql`AND current_config.config_id > ${query.afterId}`}
+      ORDER BY current_config.config_id
+      LIMIT ${limit}
+    `);
+    return result.rows.map((row) => row.config as ExperienceConfig);
+  }
+
+  async getConfig(
+    scope: ExperienceScope,
+    placementId: string,
+    configId: string,
+  ): Promise<ExperienceConfig | undefined> {
+    if (!placementId || !configId)
+      throw new ExperienceStoreProblem("Placement and configuration ids are required");
+    const result = await this.database.execute(sql`
+      SELECT revisions.config FROM croco_experience_current current_config
+      JOIN croco_experience_config_revisions revisions
+        ON revisions.scope_key = current_config.scope_key
+       AND revisions.config_id = current_config.config_id
+       AND revisions.revision = current_config.revision
+      WHERE current_config.scope_key = ${scopeKey(scope)}
+        AND current_config.placement_id = ${placementId}
+        AND current_config.config_id = ${configId}
+    `);
+    return result.rows[0]?.config as ExperienceConfig | undefined;
+  }
+
+  /** New publications require read-committed transaction isolation. */
   async saveConfig(input: ExperienceSaveInput): Promise<ExperienceConfig> {
     const { config, expectedRevision, actorId, reason, idempotencyKey } = input;
     const key = scopeKey(config.scope);
@@ -109,8 +161,12 @@ export class PostgresExperienceStore implements ExperienceStore {
           );
         return stored;
       }
+      // Serialize every status transition within the placement before counting published families.
+      await tx.execute(
+        sql`SELECT pg_advisory_xact_lock(hashtext(${JSON.stringify([key, "experience-placement"])}), hashtext(${config.placementId}))`,
+      );
       const current = await tx.execute(sql`
-        SELECT revision, placement_id FROM croco_experience_current
+        SELECT revision, placement_id, status FROM croco_experience_current
         WHERE scope_key = ${key} AND config_id = ${config.id} FOR UPDATE
       `);
       const revision = current.rows[0]?.revision;
@@ -122,6 +178,22 @@ export class PostgresExperienceStore implements ExperienceStore {
         (current.rows[0] && current.rows[0].placement_id !== config.placementId)
       )
         throw new ExperienceStoreProblem("Configuration revision or placement changed");
+      if (config.status === "published" && current.rows[0]?.status !== "published") {
+        const isolationResult = await tx.execute(
+          sql`SELECT current_setting('transaction_isolation') AS isolation`,
+        );
+        const isolation = isolationResult.rows[0]?.isolation;
+        if (isolation !== "read committed" && isolation !== "read uncommitted")
+          throw new ExperienceStoreProblem(
+            "New publications require read committed isolation; snapshot-isolated transactions are unsupported",
+          );
+        const count = await tx.execute(sql`
+          SELECT count(*)::integer AS count FROM croco_experience_current
+          WHERE scope_key = ${key} AND placement_id = ${config.placementId} AND status = 'published'
+        `);
+        if (Number(count.rows[0]?.count) >= MAX_CONFIGS_PER_PLACEMENT)
+          throw new ExperienceStoreProblem("Placement exceeds the configuration limit");
+      }
       await tx.execute(sql`
         INSERT INTO croco_experience_config_revisions
           (scope_key, config_id, revision, placement_id, config, actor_id, reason, idempotency_key)

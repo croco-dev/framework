@@ -107,8 +107,26 @@ export type ExperienceReceiptInput = Readonly<{
   handle: ExposureHandle;
   at: string;
 }>;
+/** Keyset page of current configuration families, including archived entries. */
+export type ExperienceConfigQuery = Readonly<{ afterId?: string; limit?: number }>;
+
 export interface ExperienceStore {
-  listConfigs(scope: ExperienceScope, placementId: string): Promise<readonly ExperienceConfig[]>;
+  /** Complete published candidate set; reject overflow rather than silently truncate. */
+  listPublishedConfigs(
+    scope: ExperienceScope,
+    placementId: string,
+  ): Promise<readonly ExperienceConfig[]>;
+  /** Ordered by id; default/maximum page size 100. Continue after the last returned id until empty. */
+  listConfigs(
+    scope: ExperienceScope,
+    placementId: string,
+    query?: ExperienceConfigQuery,
+  ): Promise<readonly ExperienceConfig[]>;
+  getConfig(
+    scope: ExperienceScope,
+    placementId: string,
+    configId: string,
+  ): Promise<ExperienceConfig | undefined>;
   saveConfig(input: ExperienceSaveInput): Promise<ExperienceConfig>;
   reserve(input: ExperienceReserveInput): Promise<boolean>;
   readDecision(
