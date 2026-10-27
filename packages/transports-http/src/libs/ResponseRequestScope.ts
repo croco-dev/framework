@@ -70,7 +70,7 @@ export async function runWithResponseRequestScope(
               controller.enqueue(chunk.value);
             }
           } catch (error) {
-            if (finished || cancelling) return;
+            if (cancelling) return;
             finish({ error });
             controller.error(error);
             responseReader.releaseLock();

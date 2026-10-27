@@ -208,6 +208,33 @@ describe("response scope terminal paths", () => {
     expect(resource?.disposals).toBe(1);
   });
 
+  it("rejects body consumption with the cleanup Problem when a provider destructor fails at EOF", async () => {
+    let resource: RequestResource | undefined;
+    const app = fixture(() => {
+      const current = Container.get(RequestResource);
+      resource = current;
+      current.destroy = () => {
+        current.disposals++;
+        throw new Error("provider cleanup failed");
+      };
+      return new Response(
+        new ReadableStream(
+          {
+            pull(controller) {
+              controller.close();
+            },
+          },
+          { highWaterMark: 0 },
+        ),
+      );
+    });
+    const response = await app.request("/stream");
+    await expect(response.text()).rejects.toMatchObject({
+      code: "framework-context/request-scope-disposal-failed",
+    });
+    expect(resource?.disposals).toBe(1);
+  });
+
   it("disposes an errored stream and preserves its primary error", async () => {
     let resource: RequestResource | undefined;
     const failure = new Error("source failed");
