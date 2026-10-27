@@ -440,6 +440,60 @@ describe("ReferralService", () => {
     ]);
   });
 
+  it("uses one admission lock order for opposite roles with additional subject metadata", async () => {
+    class AdmissionStore extends InMemoryReferralStore {
+      readonly orders: string[][] = [];
+      override transact<T>(work: (tx: ReferralTx) => Promise<T>): Promise<T> {
+        return super.transact((tx) => {
+          const order: string[] = [];
+          this.orders.push(order);
+          const count = tx.countSubjectReceipts.bind(tx);
+          tx.countSubjectReceipts = (...args) => {
+            order.push(args[2].id);
+            return count(...args);
+          };
+          return work(tx);
+        });
+      }
+    }
+    const store = new AdmissionStore();
+    const { service } = serviceWith({ store });
+    await service.registerProgram({ ...programInput(), perSubjectLimit: 2 });
+    const a = { ...recipient("a"), alias: "first" };
+    const b = { ...recipient("b"), alias: "second" };
+    const firstLink = await service.createReferralLink({
+      programId: "referral-welcome",
+      referrer: a,
+    });
+    const secondLink = await service.createReferralLink({
+      programId: "referral-welcome",
+      referrer: b,
+    });
+    const first = await service.claimAttribution({
+      token: firstLink.token,
+      recipient: recipient("b"),
+    });
+    const second = await service.claimAttribution({
+      token: secondLink.token,
+      recipient: recipient("a"),
+    });
+    store.orders.length = 0;
+    await service.qualifyAttribution({
+      attributionId: first.attribution.id,
+      recipient: recipient("b"),
+    });
+    await service.qualifyAttribution({
+      attributionId: second.attribution.id,
+      recipient: recipient("a"),
+    });
+    // countSubjectReceipts is the storage admission-lock boundary: the same
+    // pair must acquire the same order even when their business roles reverse.
+    expect(store.orders).toEqual([
+      ["a", "b"],
+      ["a", "b"],
+    ]);
+  });
+
   it.each(["rejected", "expired", "benefits-partial", "indeterminate"] as const)(
     "applies subject limit semantics after %s",
     async (state) => {

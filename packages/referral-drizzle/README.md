@@ -17,7 +17,9 @@ timestamps on read.
 
 Subject receipt admission uses transaction-scoped advisory locks keyed by the
 family, explicit cycle and full subject identity, shared across program revisions
-and both benefit roles. Transactions select READ COMMITTED so a count after a
+and both benefit roles. Ordering, locks and counts use only `appId`, `environment`,
+`tenantId`, `kind` and `id`; stored additional metadata is ignored when matching
+receipts and does not require a data migration. Transactions select READ COMMITTED so a count after a
 waiting lock observes the preceding commit even if the database default is
 REPEATABLE READ. Supply a connection pinned through COMMIT/ROLLBACK, permit the
 isolation statement before application queries, and configure bounded lock waits.

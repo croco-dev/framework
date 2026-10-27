@@ -857,12 +857,18 @@ class PostgresReferralTx implements ReferralTx {
         [...states].map((state) => sql`${state}`),
         sql`, `,
       );
-      const subjectJson = JSON.stringify(subject);
+      const subjectJson = JSON.stringify({
+        appId: subject.appId,
+        environment: subject.environment,
+        tenantId: subject.tenantId,
+        kind: subject.kind,
+        id: subject.id,
+      });
       const result = await this.executor.execute(sql`
         SELECT COUNT(*) AS total FROM croco_referral_attributions
         WHERE family_id = ${familyId}
           AND benefit_cycle_id = ${benefitCycleId}
-          AND (referrer = ${subjectJson}::jsonb OR recipient = ${subjectJson}::jsonb)
+          AND (referrer @> ${subjectJson}::jsonb OR recipient @> ${subjectJson}::jsonb)
           AND state IN (${stateList})
       `);
       return Number(result.rows[0]?.total ?? 0);

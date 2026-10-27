@@ -4,9 +4,9 @@
     {
       "package": "referral-core",
       "classification": "pure-contract",
-      "reason": "Recheck family/cycle subject limits at qualification before creating benefit intents. Claimed/held entries reserve program budget but only qualified or unresolved receipts consume the subject limit.",
+      "reason": "Recheck family/cycle subject limits at qualification before creating benefit intents. Claimed/held entries reserve program budget but only qualified or unresolved receipts consume the subject limit. Admission order, lock identity and receipt matching use the same five canonical subject identity fields; additional stored metadata cannot fragment limits or invert lock order.",
       "files": {
-        "packages/referral-core/src/libs/ReferralService.ts": "c8c573a4c826bb4de1dae0dde93baf1fe8e7c67038886caeb090042395253117",
+        "packages/referral-core/src/libs/ReferralService.ts": "24f87b87ec883efc38e9a5573ad8657274d41c3a88d96cb1a8f1aa2b1e38d447",
         "packages/referral-core/src/libs/ReferralStore.ts": "61e55b9b1fdc3184f994f35e5a13584481ff64a98fdda0d45760e5d55ffc3042"
       },
       "catalogRuntimes": [],
@@ -49,9 +49,9 @@
     {
       "package": "referral-drizzle",
       "classification": "durable-provider",
-      "reason": "Serialize family/cycle subject receipt counts through transaction-scoped PostgreSQL advisory locks and READ COMMITTED snapshots before admitting qualification. No schema migration.",
+      "reason": "Serialize family/cycle subject receipt counts through transaction-scoped PostgreSQL advisory locks and READ COMMITTED snapshots before admitting qualification. No schema migration. Admission order, lock identity and receipt matching use the same five canonical subject identity fields; additional stored metadata cannot fragment limits or invert lock order.",
       "files": {
-        "packages/referral-drizzle/src/libs/PostgresReferralStore.ts": "0fb678fd620281dc219c161efd7959ded95c2713d4fa209ac6ef9bdd2a22c4fe"
+        "packages/referral-drizzle/src/libs/PostgresReferralStore.ts": "79e3f18dc6a54cf3cb428f7c792c8591fb7b1b35448e704228d26f85dd13371a"
       },
       "catalogRuntimes": ["node", "lambda"],
       "profiles": {

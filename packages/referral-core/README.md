@@ -28,7 +28,9 @@ claim and its budget unchanged so it can still expire normally. Rejected or expi
 attributions do not consume the subject limit; partial or uncertain benefits do.
 Custom stores must retain family/cycle/subject admission locks from
 `countSubjectReceipts` through transaction end and read a fresh committed count
-after waiting. Count multiple subjects in stable fingerprint order. Deploy the
+after waiting. Order multiple subjects by the JSON tuple of `appId`, `environment`, `tenantId`,
+`kind` and `id`. Additional object properties do not change identity, admission
+order or receipt counts, including on already persisted subjects. Deploy the
 updated store and service together after draining older writers; before rollback,
 stop and drain writers and reconcile outstanding attributions. Mixed versions cannot
 enforce this protocol. No existing excess grants are reversed automatically.

@@ -3,7 +3,7 @@ import {
   registerReferralProgram,
   sameReferralSubject,
 } from "./ReferralProgram";
-import { attributionFingerprint, stableReferralFingerprint } from "./ReferralStore";
+import { attributionFingerprint } from "./ReferralStore";
 import type { ReferralStore, ReferralTx } from "./ReferralStore";
 import {
   InvalidReferralProgramProblem,
@@ -1068,14 +1068,21 @@ export class ReferralService {
     attribution: ReferralAttribution,
   ): Promise<void> {
     if (!attribution.recipient) return;
-    // Both roles consume the same subject limit. Acquire count locks in a
-    // stable order even when two referrals reverse referrer/recipient roles.
-    const subjects = [attribution.referrer, attribution.recipient].sort((left, right) => {
-      const a = stableReferralFingerprint(left);
-      const b = stableReferralFingerprint(right);
-      return a < b ? -1 : a > b ? 1 : 0;
-    });
-    for (const subject of subjects) {
+    // Order the canonical identity used by storage locks, independently of
+    // business role and any additional metadata retained on the subject.
+    const subjects = [attribution.referrer, attribution.recipient]
+      .map((subject) => ({
+        subject,
+        key: JSON.stringify([
+          subject.appId,
+          subject.environment,
+          subject.tenantId,
+          subject.kind,
+          subject.id,
+        ]),
+      }))
+      .sort((left, right) => (left.key < right.key ? -1 : left.key > right.key ? 1 : 0));
+    for (const { subject } of subjects) {
       const counted = await tx.countSubjectReceipts(
         program.familyId,
         program.benefitCycleId,

@@ -240,6 +240,100 @@ describe.skipIf(!url)("PostgreSQL referral budgets and attribution recovery", ()
     });
   });
 
+  it.each([
+    ["referrer", "stored"],
+    ["referrer", "queried"],
+    ["recipient", "stored"],
+    ["recipient", "queried"],
+  ] as const)("counts %s receipts when additional metadata is %s", async (side, metadataOn) => {
+    await withStores(async (_pool, store) => {
+      const service = serviceFor(store, () => ({
+        qualified: true,
+        sourceEventId: "purchase",
+        qualifyingAction: "purchase",
+        eligibleReason: "paid",
+      }));
+      const seeded = await seed(service, 1);
+      const decorated = { ...subject("shared"), alias: "extra metadata" };
+      const firstShared = metadataOn === "stored" ? decorated : subject("shared");
+      const nextShared = metadataOn === "queried" ? decorated : subject("shared");
+      const firstReferrer = side === "referrer" ? firstShared : subject("other-referrer");
+      const firstRecipient = side === "recipient" ? firstShared : subject("one");
+      const firstLink = await service.createReferralLink({
+        programId: seeded.programId,
+        referrer: firstReferrer,
+      });
+      const nextLink = await service.createReferralLink({
+        programId: seeded.programId,
+        referrer: nextShared,
+      });
+      const first = await service.claimAttribution({
+        token: firstLink.token,
+        recipient: firstRecipient,
+      });
+      const second = await service.claimAttribution({
+        token: nextLink.token,
+        recipient: subject("two"),
+      });
+      await service.qualifyAttribution({
+        attributionId: first.attribution.id,
+        recipient: firstRecipient,
+      });
+      await service.fulfillBenefits({ attributionId: first.attribution.id });
+      await expect(
+        service.qualifyAttribution({
+          attributionId: second.attribution.id,
+          recipient: subject("two"),
+        }),
+      ).rejects.toBeInstanceOf(ReferralSubjectLimitReachedProblem);
+      expect((await store.getAttribution(second.attribution.id))?.state).toBe("claimed");
+      expect(await service.listBenefitIntents({ attributionId: second.attribution.id })).toEqual(
+        [],
+      );
+    });
+  });
+
+  it("completes competing opposite-role qualifications with additional subject metadata", async () => {
+    await withStores(async (_pool, storeA, storeB) => {
+      let arrived = 0;
+      let release!: () => void;
+      const both = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      const qualify: ReferralQualificationHook = async () => {
+        arrived += 1;
+        if (arrived === 2) release();
+        await both;
+        return {
+          qualified: true,
+          sourceEventId: "purchase",
+          qualifyingAction: "purchase",
+          eligibleReason: "paid",
+        };
+      };
+      const a = serviceFor(storeA, qualify);
+      const b = serviceFor(storeB, qualify);
+      const { programId } = await seed(a, 2);
+      const decoratedA = { ...subject("a"), alias: "shown-a" };
+      const decoratedB = { ...subject("b"), alias: "shown-b" };
+      const firstLink = await a.createReferralLink({ programId, referrer: decoratedA });
+      const secondLink = await b.createReferralLink({ programId, referrer: decoratedB });
+      const first = await a.claimAttribution({ token: firstLink.token, recipient: subject("b") });
+      const second = await b.claimAttribution({ token: secondLink.token, recipient: subject("a") });
+      const outcomes = await Promise.all([
+        a.qualifyAttribution({ attributionId: first.attribution.id, recipient: subject("b") }),
+        b.qualifyAttribution({ attributionId: second.attribution.id, recipient: subject("a") }),
+      ]);
+      expect(outcomes.map((value) => value.state)).toEqual([
+        "benefits-pending",
+        "benefits-pending",
+      ]);
+      const intents = await a.listBenefitIntents({});
+      expect(intents).toHaveLength(4);
+      expect(intents.every((intent) => intent.status === "pending")).toBe(true);
+    });
+  });
+
   it("counts a qualification committed after an earlier lifecycle read under repeatable-read defaults", async () => {
     await withStores(async (pool, storeA) => {
       const verdict = {
