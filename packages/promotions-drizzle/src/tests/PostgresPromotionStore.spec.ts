@@ -59,7 +59,8 @@ describe("PostgresPromotionStore", () => {
   it("reports a policy conflict when fingerprints diverge", async () => {
     let calls = 0;
     const db: PromotionPgDatabase = {
-      execute: async () => {
+      execute: async (statement) => {
+        if (dialect.sqlToQuery(statement).sql.startsWith("SET TRANSACTION")) return { rows: [] };
         calls += 1;
         return calls === 1 ? { rows: [] } : { rows: [{ fingerprint: "other" }] };
       },
@@ -107,7 +108,7 @@ describe("PostgresPromotionStore", () => {
       ),
     );
     expect(total).toBe(2);
-    expect(seen[0]?.sql).toContain("croco_promotion_claims");
-    expect(seen[0]?.sql).toContain("COUNT(*)");
+    const countQuery = seen.find((query) => query.sql.includes("COUNT(*)"));
+    expect(countQuery?.sql).toContain("croco_promotion_claims");
   });
 });

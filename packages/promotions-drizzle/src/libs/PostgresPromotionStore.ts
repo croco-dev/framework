@@ -135,7 +135,12 @@ export class PostgresPromotionStore implements PromotionStore {
 
   async transact<T>(work: (tx: PromotionTx) => Promise<T>): Promise<T> {
     return run("transact", () =>
-      this.database.transaction((executor) => work(new PostgresPromotionTx(executor))),
+      this.database.transaction(async (executor) => {
+        // A waiting lock must be followed by a fresh snapshot, even when the
+        // supplied database defaults to REPEATABLE READ.
+        await executor.execute(sql`SET TRANSACTION ISOLATION LEVEL READ COMMITTED`);
+        return work(new PostgresPromotionTx(executor));
+      }),
     );
   }
 
@@ -314,6 +319,8 @@ class PostgresPromotionTx implements PromotionTx {
 
   async getClaimByLogicalKey(logicalKey: string): Promise<OfferClaim | null> {
     return run("read promotion claim", async () => {
+      // Acquire before the absence read, and retain through budget/claim commit.
+      await this.lockReservation(["croco.promotions.logical-key", logicalKey]);
       const result = await this.executor.execute(sql`
         SELECT document FROM croco_promotion_claims WHERE logical_key = ${logicalKey}
       `);
@@ -466,6 +473,16 @@ class PostgresPromotionTx implements PromotionTx {
     states: readonly OfferClaimState[],
   ): Promise<number> {
     return run("count promotion claims", async () => {
+      // Subject-wide admission also covers stacking groups across policy/family
+      // boundaries. Match the full scope independently of object key ordering.
+      await this.lockReservation([
+        "croco.promotions.subject",
+        subject.appId,
+        subject.environment,
+        subject.tenantId,
+        subject.kind,
+        subject.id,
+      ]);
       const stateList = sql.join(
         [...states].map((state) => sql`${state}`),
         sql`, `,
@@ -483,6 +500,12 @@ class PostgresPromotionTx implements PromotionTx {
 
   async listClaims(filter: ListClaimsFilter): Promise<readonly OfferClaim[]> {
     return run("list promotion claims", () => listClaimsWith(this.executor, filter));
+  }
+
+  private async lockReservation(identity: readonly string[]): Promise<void> {
+    await this.executor.execute(sql`
+      SELECT pg_advisory_xact_lock(hashtextextended(${JSON.stringify(identity)}, 0))
+    `);
   }
 
   async recordAudit(entry: OfferAuditEntry): Promise<void> {

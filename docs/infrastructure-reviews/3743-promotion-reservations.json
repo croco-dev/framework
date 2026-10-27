@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "promotions-drizzle",
+      "classification": "durable-provider",
+      "reason": "Serialize logical claim replay and scoped subject admission before reservation side effects using PostgreSQL transaction advisory locks and fresh READ COMMITTED reads. Reuse the existing Node PostgreSQL adapter without schema or provider additions.",
+      "files": {
+        "packages/promotions-drizzle/src/libs/PostgresPromotionStore.ts": "da60baa7cc9076b1257ee764912bce5e85f7872c5b846593c30273687a7cac95"
+      },
+      "catalogRuntimes": ["node", "lambda"],
+      "profiles": {
+        "kubernetes": {
+          "result": "unverified",
+          "reason": "The existing Node PostgreSQL provider owns these transaction locks; local two-connection PostgreSQL evidence does not establish Kubernetes deployment behavior.",
+          "providers": ["@croco/promotions-drizzle"],
+          "constraints": [
+            "A pinned connection must span BEGIN through COMMIT or ROLLBACK; READ COMMITTED is set before callback queries. No Kubernetes cluster execution or provider certification is claimed."
+          ],
+          "references": [
+            "packages/promotions-drizzle/src/libs/PostgresPromotionStore.ts",
+            "packages/promotions-drizzle/README.md",
+            "packages/promotions-drizzle/src/tests/PostgresPromotionStore.postgres.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "conditional",
+          "reason": "Reuse the existing Node PostgreSQL provider with invocation-bounded transactions and connections.",
+          "providers": ["@croco/promotions-drizzle"],
+          "constraints": [
+            "Finish COMMIT or ROLLBACK before the invocation returns; bound lock waits and connection usage through the supplied database. No AWS deployment execution or certification is claimed."
+          ],
+          "references": [
+            "packages/promotions-drizzle/src/libs/PostgresPromotionStore.ts",
+            "packages/promotions-drizzle/README.md",
+            "packages/promotions-drizzle/src/tests/PostgresPromotionStore.postgres.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "unsupported",
+          "host": "workers",
+          "reason": "This adapter requires the existing Node PostgreSQL execute/transaction provider; no Worker-native connection or advisory-lock lifecycle is introduced.",
+          "providers": ["@croco/promotions-drizzle"],
+          "constraints": [
+            "Worker isolate support is not claimed; a separate Node Container deployment would require its own verification."
+          ],
+          "references": [
+            "packages/promotions-drizzle/src/libs/PostgresPromotionStore.ts",
+            "packages/promotions-drizzle/README.md",
+            "packages/promotions-drizzle/src/tests/PostgresPromotionStore.postgres.spec.ts"
+          ]
+        }
+      }
+    }
+  ]
+}
