@@ -8,8 +8,8 @@
       "files": {
         "packages/referral-core/src/libs/InMemoryReferralStore.ts": "ca0de31fdb1d6f32be8c3839c15eb2be130b5f86fd44e4152f0d8666a1a75acb",
         "packages/referral-core/src/libs/ReferralCreditGrantAdapter.ts": "f1a29b5d1952f353b7ae1856c1faa084a8d31f448477e7b924dde0262461df20",
-        "packages/referral-core/src/libs/ReferralService.ts": "8c553d4378ceeb2ef6f7aca742d4edc0ecfd5b3708bd40e96fb385a5df5c647e",
-        "packages/referral-core/src/libs/ReferralStore.ts": "ce838936709f8ec6ac203925fd100845203ea9fd9c3890c5f2bdf7caa28f0436",
+        "packages/referral-core/src/libs/ReferralService.ts": "6976729b4cb68f19e8a640b312fbd0f251e47be7fed16696578f652fde291f93",
+        "packages/referral-core/src/libs/ReferralStore.ts": "dc7e4ca1d93d0381733419b3414844a02e942fdf24280b7767ddb48e85cbef85",
         "packages/referral-core/src/libs/types.ts": "3bea643ff0e0829b4b944af8accca0ae4ed04a3e1840de931b6320fdc75bd42f"
       },
       "catalogRuntimes": [],
@@ -60,7 +60,7 @@
       "classification": "durable-provider",
       "reason": "Persist optional return operation metadata in the existing benefit JSON document under the existing attribution row lock. No columns, status constraints, migration owner, driver or runtime claim changes.",
       "files": {
-        "packages/referral-drizzle/src/libs/PostgresReferralStore.ts": "c2e4f44cedf27cc5f20304264ac0161571cfabf613f84bd8a617485b38c6e3f3"
+        "packages/referral-drizzle/src/libs/PostgresReferralStore.ts": "b590757b0f842207757b874dfed22f4e352c0ab9039fd5244276b5ca92b59b0d"
       },
       "catalogRuntimes": ["node", "lambda"],
       "profiles": {
@@ -69,7 +69,7 @@
           "reason": "Reuses the existing Node PostgreSQL provider. Local real PostgreSQL transaction tests cover persistence, not a Node Host or Kubernetes deployment.",
           "providers": ["@croco/referral-drizzle"],
           "constraints": [
-            "Requires a PostgreSQL connection and an application-owned pool; no live Kubernetes deployment verified."
+            "Requires an application-owned pool and one connection pinned through COMMIT/ROLLBACK. Permit the existing READ COMMITTED isolation statement before callback queries; no live Kubernetes deployment verified."
           ],
           "references": [
             "packages/referral-drizzle/src/libs/PostgresReferralStore.ts",
@@ -82,7 +82,7 @@
           "reason": "The existing Lambda-compatible Node provider can reuse the same SQL transaction boundary.",
           "providers": ["@croco/referral-drizzle"],
           "constraints": [
-            "Bound pool connections and await COMMIT/ROLLBACK before invocation returns. No live Lambda execution verified."
+            "Bound pool connections, pin one connection for the transaction and permit the existing READ COMMITTED isolation statement before callback queries. Await COMMIT/ROLLBACK before invocation returns. No live Lambda execution verified."
           ],
           "references": [
             "packages/referral-drizzle/src/libs/PostgresReferralStore.ts",
