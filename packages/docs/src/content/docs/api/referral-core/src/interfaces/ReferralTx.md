@@ -97,6 +97,38 @@ readonly [`ReferralBenefitIntentStatus`](/api/referral-core/src/type-aliases/ref
 
 `string`
 
+###### returnOperation?
+
+\{ `actorId`: `string`; `failureReason?`: `string`; `idempotencyKey`: `string`; `policy`: `string`; `reason`: `string`; `receipt?`: `string`; `status`: `"unknown"` \| `"returned"` \| `"returning"`; \}
+
+###### returnOperation.actorId
+
+`string`
+
+###### returnOperation.failureReason?
+
+`string`
+
+###### returnOperation.idempotencyKey
+
+`string`
+
+###### returnOperation.policy
+
+`string`
+
+###### returnOperation.reason
+
+`string`
+
+###### returnOperation.receipt?
+
+`string`
+
+###### returnOperation.status
+
+`"unknown"` \| `"returned"` \| `"returning"`
+
 ###### status
 
 [`ReferralBenefitIntentStatus`](/api/referral-core/src/type-aliases/referralbenefitintentstatus/)
@@ -184,7 +216,7 @@ readonly [`ReferralAttributionState`](/api/referral-core/src/type-aliases/referr
 
 > **getAttribution**(`attributionId`): `Promise`\<[`ReferralAttribution`](/api/referral-core/src/type-aliases/referralattribution/) \| `null`\>
 
-Serializes this lifecycle read with attribution transitions until the transaction ends.
+Serializes lifecycle and benefit return-operation reads/writes until the transaction ends.
 
 #### Parameters
 

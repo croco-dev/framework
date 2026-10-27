@@ -220,7 +220,9 @@ describe.skipIf(!url)("PostgreSQL referral budgets and attribution recovery", ()
         returnIdempotencyKey: "return-c",
         actorId: "retry-actor",
       });
-      await service.returnBenefitSide({ ...request, returnIdempotencyKey: "return-d" });
+      await expect(
+        service.returnBenefitSide({ ...request, returnIdempotencyKey: "return-d" }),
+      ).rejects.toBeInstanceOf(ReferralAttributionStateConflictProblem);
       expect(keys).toEqual(["return-a"]);
       expect(checks).toEqual(["return-a", "return-a"]);
       const completed = await b.listBenefitIntents({ attributionId: attribution.id });

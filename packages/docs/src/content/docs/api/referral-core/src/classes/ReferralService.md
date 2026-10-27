@@ -360,8 +360,9 @@ budget. Every decision preserves actor, reason, and an audit trail.
 > **returnBenefitSide**(`input`): `Promise`\<[`ReferralAttribution`](/api/referral-core/src/type-aliases/referralattribution/)\>
 
 Returns a completed benefit through an explicit compensating fulfillment
-reversal. The reversal posts a new ledger entry keyed by the return
-idempotency key; the original grant receipt stays on the intent while the
+reversal. The first request claims a durable return key before calling the
+provider. Retries only query its receipt and never repeat an uncertain debit.
+The original grant receipt stays on the intent while the
 policy and the return receipt record why value moved back. Other
 subjects' confirmed benefits are never touched implicitly.
 

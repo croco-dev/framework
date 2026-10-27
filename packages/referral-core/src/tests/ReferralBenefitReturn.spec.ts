@@ -4,7 +4,10 @@ import type { CreditAccountId } from "@croco/credits-core";
 import { FirstPartyReferralCreditGrantAdapter } from "../credit-grant";
 import { InMemoryReferralStore } from "../libs/InMemoryReferralStore";
 import { ReferralService } from "../libs/ReferralService";
-import { ReferralBenefitFailedProblem } from "../libs/problems";
+import {
+  ReferralAttributionStateConflictProblem,
+  ReferralBenefitFailedProblem,
+} from "../libs/problems";
 import type { ReferralTx } from "../libs/ReferralStore";
 import type { ReferralFulfillmentPort } from "../libs/types";
 
@@ -82,6 +85,36 @@ const grants: ReferralFulfillmentPort = {
 };
 
 describe("ReferralBenefitReturn", () => {
+  it("preserves completed-return conflicts for legacy intents without operation metadata", async () => {
+    const { service, store, request } = await setup(grants);
+    const intent = (
+      await service.listBenefitIntents({ attributionId: request.attributionId })
+    ).find((entry) => entry.side === "referrer");
+    if (!intent) throw new Error("Missing referrer intent");
+    await store.transact((tx) =>
+      tx.compareAndSetBenefitIntent(
+        intent.id,
+        ["granted"],
+        { status: "returned" },
+        new Date("2026-02-01T00:00:00Z"),
+      ),
+    );
+    await expect(service.returnBenefitSide(request)).rejects.toBeInstanceOf(
+      ReferralAttributionStateConflictProblem,
+    );
+  });
+
+  it("does not claim an operation when reversal is unsupported", async () => {
+    const { service, request } = await setup(grants);
+    await expect(service.returnBenefitSide(request)).rejects.toThrow(
+      /does not support benefit return/,
+    );
+    const intent = (
+      await service.listBenefitIntents({ attributionId: request.attributionId })
+    ).find((entry) => entry.side === "referrer");
+    expect(intent?.returnOperation).toBeUndefined();
+    expect(intent?.status).toBe("granted");
+  });
   it("reconciles a lost credit-ledger response with exactly one compensating debit", async () => {
     const ledger = new CreditLedgerService({
       store: new InMemoryCreditLedgerStore(),
@@ -117,7 +150,9 @@ describe("ReferralBenefitReturn", () => {
     });
     await expect(service.returnBenefitSide(request)).rejects.toThrow(/lost debit response/);
     await restart().returnBenefitSide({ ...request, returnIdempotencyKey: "retry" });
-    await restart().returnBenefitSide({ ...request, returnIdempotencyKey: "another-retry" });
+    await expect(
+      restart().returnBenefitSide({ ...request, returnIdempotencyKey: "another-retry" }),
+    ).rejects.toBeInstanceOf(ReferralAttributionStateConflictProblem);
     expect(await ledger.getBalance(accountFor("referrer"))).toMatchObject({
       available: "0",
       netAdjusted: "-7",
@@ -199,7 +234,9 @@ describe("ReferralBenefitReturn", () => {
         policy: "retry-policy",
         reason: "retry-reason",
       });
-      await restarted.returnBenefitSide({ ...request, returnIdempotencyKey: "return-d" });
+      await expect(
+        restarted.returnBenefitSide({ ...request, returnIdempotencyKey: "return-d" }),
+      ).rejects.toBeInstanceOf(ReferralAttributionStateConflictProblem);
       expect(keys).toEqual(["return-a"]);
       expect(checked).toEqual(["return-a", "return-a"]);
       const completed = (

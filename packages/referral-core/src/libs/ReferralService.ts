@@ -849,9 +849,6 @@ export class ReferralService {
       if (!intent) {
         throw new ReferralBenefitFailedProblem(stored.id, input.side, "benefit intent is missing");
       }
-      if (intent.status === "returned" && intent.returnOperation?.status === "returned") {
-        return { intent, operation: intent.returnOperation, claimed: false };
-      }
       if (intent.status !== "granted") {
         throw new ReferralAttributionStateConflictProblem(
           intent.id,

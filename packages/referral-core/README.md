@@ -63,9 +63,9 @@ predicate cannot fence recovery safely.
 calling `reverse`. The first request pins its return key, policy, actor and
 reason; later requests for that side, including different caller keys, reuse
 that operation. The original grant receipt and the other side remain intact.
-Completed operations replay their stored receipt without another debit.
-Legacy `returned` intents without operation metadata retain their state-conflict
-error because they have no recoverable return receipt.
+Calls after a confirmed return retain the existing
+`ReferralAttributionStateConflictProblem`, for both new and legacy intents.
+The stored return receipt remains available through `listBenefitIntents`.
 
 A thrown error, `{ error }`, empty receipt, or failed local completion write
 does not authorize another reversal. Retry `returnBenefitSide` to invoke the
