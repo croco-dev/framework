@@ -16,14 +16,14 @@ Archived, paused and draft families do not consume its 100-candidate limit. The 
 rejects an overflowing legacy published set rather than selecting from a truncated list.
 Every status change takes a placement transaction lock; entering published status checks
 the count before writing either revision or current pointer. Concurrent publications
-cannot consume the same last slot. New publications require read-committed (including
-PostgreSQL's equivalent read-uncommitted mode) or serializable isolation. Repeatable-read
+cannot consume the same last slot. New publications require read-committed isolation
+(including PostgreSQL's equivalent read-uncommitted mode). Repeatable-read and serializable
 publication attempts fail explicitly before either revision or current pointer is written:
-their stale snapshots cannot be refreshed by an advisory lock. Existing-family edits,
-archive/pause transitions and exact replays remain available under repeatable read.
-Serializable transactions retain PostgreSQL's native serialization-failure behavior;
-retry the complete command with its original idempotency key. Editing an already published family and exact command
-replays remain possible at the limit; archiving or pausing frees a slot.
+a placement lock cannot refresh their snapshots, and serializable conflict tracking cannot
+protect admission when other callers use read committed. The adapter never changes the
+caller's isolation level. Existing-family edits, archive/pause transitions and exact replays
+remain available under snapshot isolation. Editing an already published family and exact
+command replays remain possible at the limit; archiving or pausing frees a slot.
 
 `listConfigs(scope, placementId, { limit, afterId })` reads current families of every status
 in ascending ID order. The default and maximum page size is 100. Continue with the last

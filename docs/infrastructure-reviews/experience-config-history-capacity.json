@@ -53,9 +53,9 @@
     {
       "package": "experience-drizzle",
       "classification": "durable-provider",
-      "reason": "Separate paged configuration history from complete published candidates and serialize publication capacity with existing PostgreSQL transaction/advisory-lock primitives. Reuses the existing Drizzle PostgreSQL provider, schema and index; no migration or platform claim is added. New publications reject repeatable-read snapshots; read-committed admission and PostgreSQL serializable conflict detection preserve capacity without changing the caller isolation level.",
+      "reason": "Separate paged configuration history from complete published candidates and serialize publication capacity with existing PostgreSQL transaction/advisory-lock primitives. Reuses the existing Drizzle PostgreSQL provider, schema and index; no migration or platform claim is added. New publications require statement-fresh read-committed snapshots and reject repeatable-read and serializable transactions, including mixed-isolation callers, without changing caller isolation.",
       "files": {
-        "packages/experience-drizzle/src/libs/PostgresExperienceStore.ts": "96e086ec71bb478d923cf90296f8a42e6713346013b7d0cf22acb015f28fd431"
+        "packages/experience-drizzle/src/libs/PostgresExperienceStore.ts": "42ea41b02dcffa29c4084b121da204e8ee625e88d96325373834414e0e291aed"
       },
       "catalogRuntimes": ["node", "lambda"],
       "profiles": {
@@ -66,7 +66,7 @@
           "constraints": [
             "Requires the existing PostgreSQL migration, transactional execute boundary and advisory locks.",
             "Local PostgreSQL results do not certify deployed hosts.",
-            "New publication requires read committed (or PostgreSQL read uncommitted) or serializable isolation; repeatable-read publication is explicitly rejected. Native serializable failures require whole-command retry."
+            "New publication requires read committed (or PostgreSQL read uncommitted) isolation. Repeatable-read and serializable publication attempts fail before writes; existing-family edits, archive and replay remain available."
           ],
           "references": [
             "packages/experience-drizzle/src/libs/PostgresExperienceStore.ts",
@@ -80,7 +80,7 @@
           "constraints": [
             "Requires the existing PostgreSQL migration, transactional execute boundary and advisory locks.",
             "Local PostgreSQL results do not certify deployed hosts.",
-            "New publication requires read committed (or PostgreSQL read uncommitted) or serializable isolation; repeatable-read publication is explicitly rejected. Native serializable failures require whole-command retry."
+            "New publication requires read committed (or PostgreSQL read uncommitted) isolation. Repeatable-read and serializable publication attempts fail before writes; existing-family edits, archive and replay remain available."
           ],
           "references": [
             "packages/experience-drizzle/src/libs/PostgresExperienceStore.ts",
@@ -94,7 +94,7 @@
           "constraints": [
             "Requires the existing PostgreSQL migration, transactional execute boundary and advisory locks.",
             "Local PostgreSQL results do not certify deployed hosts.",
-            "New publication requires read committed (or PostgreSQL read uncommitted) or serializable isolation; repeatable-read publication is explicitly rejected. Native serializable failures require whole-command retry."
+            "New publication requires read committed (or PostgreSQL read uncommitted) isolation. Repeatable-read and serializable publication attempts fail before writes; existing-family edits, archive and replay remain available."
           ],
           "references": [
             "packages/experience-drizzle/src/libs/PostgresExperienceStore.ts",

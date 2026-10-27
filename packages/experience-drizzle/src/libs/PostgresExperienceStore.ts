@@ -129,7 +129,7 @@ export class PostgresExperienceStore implements ExperienceStore {
     return result.rows[0]?.config as ExperienceConfig | undefined;
   }
 
-  /** New publications require read-committed or serializable transaction isolation. */
+  /** New publications require read-committed transaction isolation. */
   async saveConfig(input: ExperienceSaveInput): Promise<ExperienceConfig> {
     const { config, expectedRevision, actorId, reason, idempotencyKey } = input;
     const key = scopeKey(config.scope);
@@ -183,13 +183,9 @@ export class PostgresExperienceStore implements ExperienceStore {
           sql`SELECT current_setting('transaction_isolation') AS isolation`,
         );
         const isolation = isolationResult.rows[0]?.isolation;
-        if (
-          isolation !== "read committed" &&
-          isolation !== "read uncommitted" &&
-          isolation !== "serializable"
-        )
+        if (isolation !== "read committed" && isolation !== "read uncommitted")
           throw new ExperienceStoreProblem(
-            "New publications require read committed or serializable isolation; Repeatable read snapshots are unsupported",
+            "New publications require read committed isolation; snapshot-isolated transactions are unsupported",
           );
         const count = await tx.execute(sql`
           SELECT count(*)::integer AS count FROM croco_experience_current

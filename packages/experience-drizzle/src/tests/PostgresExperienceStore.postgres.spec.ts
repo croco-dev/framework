@@ -509,34 +509,34 @@ describe.skipIf(!url)("PostgreSQL experience configuration families", () => {
           racing.saveConfig(input("contender-a")),
           racing.saveConfig(input("contender-b")),
         ]);
-        if (isolation === "repeatable read") {
+        if (isolation !== "read uncommitted") {
           expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(0);
           for (const result of results) {
             if (result.status === "rejected")
-              expect(result.reason.message).toContain("Repeatable read");
+              expect(result.reason.message).toContain("read committed isolation");
           }
           expect(await store.listPublishedConfigs(scope, config.placementId)).toHaveLength(99);
           expect(await store.getConfig(scope, config.placementId, "contender-a")).toBeUndefined();
           expect(await store.getConfig(scope, config.placementId, "contender-b")).toBeUndefined();
-          const repeatable = new PostgresExperienceStore(
+          const snapshotStore = new PostgresExperienceStore(
             database(pool, async (client) => {
-              await client.query("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ");
+              await client.query(`SET TRANSACTION ISOLATION LEVEL ${isolation}`);
             }),
           );
           const original = input("published-0");
-          expect(await repeatable.saveConfig(original)).toEqual(original.config);
+          expect(await snapshotStore.saveConfig(original)).toEqual(original.config);
           const edited = {
             ...original.config,
             revision: 2,
             content: { ...original.config.content, title: "Edited" },
           };
-          await repeatable.saveConfig({
+          await snapshotStore.saveConfig({
             ...original,
             config: edited,
             expectedRevision: 1,
             idempotencyKey: "edit",
           });
-          await repeatable.saveConfig({
+          await snapshotStore.saveConfig({
             ...original,
             config: { ...edited, revision: 3, status: "archived" },
             expectedRevision: 2,
@@ -547,13 +547,9 @@ describe.skipIf(!url)("PostgreSQL experience configuration families", () => {
           expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(1);
           expect(await store.listPublishedConfigs(scope, config.placementId)).toHaveLength(100);
           const failed = results.find((result) => result.status === "rejected");
-          if (isolation === "serializable") {
-            expect(failed?.status === "rejected" && failed.reason.code).toBe("40001");
-          } else {
-            expect(failed?.status === "rejected" && failed.reason.message).toContain(
-              "configuration limit",
-            );
-          }
+          expect(failed?.status === "rejected" && failed.reason.message).toContain(
+            "configuration limit",
+          );
         }
       } finally {
         await pool.query(
@@ -566,4 +562,61 @@ describe.skipIf(!url)("PostgreSQL experience configuration families", () => {
       }
     },
   );
+  it("rejects a stale serializable publication after a read-committed writer fills capacity", async () => {
+    const require = createRequire(import.meta.url);
+    const { Pool: PgPool } = require("pg") as {
+      Pool: new (options: { connectionString: string; max?: number }) => Pool;
+    };
+    const pool = new PgPool({ connectionString: url as string, max: 2 });
+    const store = new PostgresExperienceStore(database(pool));
+    const scope = { appId: "mixed-isolation", environment: "test", tenantId: randomUUID() };
+    const config: ExperienceConfig = {
+      id: "base",
+      placementId: "mixed.tip",
+      scope,
+      revision: 1,
+      status: "published",
+      renderer: "banner",
+      content: { locale: "en", title: "Tip", body: "Content" },
+      priority: 1,
+    };
+    const input = (id: string) => ({
+      config: { ...config, id },
+      expectedRevision: null,
+      actorId: "operator",
+      reason: "Publish",
+      idempotencyKey: "initial",
+    });
+    await pool.query(
+      readFileSync(new URL("../../migrations/0001_experience.up.sql", import.meta.url), "utf8"),
+    );
+    try {
+      for (let index = 0; index < 99; index += 1)
+        await store.saveConfig(input(`published-${index}`));
+      const stale = new PostgresExperienceStore(
+        database(pool, async (client) => {
+          await client.query("SET TRANSACTION ISOLATION LEVEL SERIALIZABLE");
+          const snapshot = await client.query(
+            "SELECT count(*)::integer AS count FROM croco_experience_current WHERE status = 'published'",
+          );
+          expect(snapshot.rows[0]?.count).toBe(99);
+          // A different connection commits the last slot after this snapshot, before admission.
+          await store.saveConfig(input("read-committed-winner"));
+        }),
+      );
+      const result = await Promise.allSettled([stale.saveConfig(input("stale-contender"))]);
+      const current = await pool.query(
+        "SELECT count(*)::integer AS count FROM croco_experience_current WHERE status = 'published'",
+      );
+      expect(current.rows[0]?.count).toBe(100);
+      expect(result[0]?.status).toBe("rejected");
+      expect(await store.getConfig(scope, config.placementId, "stale-contender")).toBeUndefined();
+      expect(await store.listPublishedConfigs(scope, config.placementId)).toHaveLength(100);
+    } finally {
+      await pool.query(
+        readFileSync(new URL("../../migrations/0001_experience.down.sql", import.meta.url), "utf8"),
+      );
+      await pool.end();
+    }
+  });
 });
