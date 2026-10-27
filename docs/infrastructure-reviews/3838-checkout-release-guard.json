@@ -6,7 +6,7 @@
       "classification": "runtime-adapter",
       "reason": "Track release wrapper identity rather than a permanent client boolean so pg-pool replacement release functions receive the current checkout abort reason without wrapping nested savepoints again. Public transaction contracts and runtime claims are unchanged.",
       "files": {
-        "packages/tx-drizzle/src/libs/DrizzleTxAdapter.ts": "750c331654fa09033105ed4ee3209003ee5a1000c45ac4fe27cd2a715ad85a77"
+        "packages/tx-drizzle/src/libs/DrizzleTxAdapter.ts": "511b64be8fdd5fee2fb6331d86a5a9665dcc738bccb5cc3d09ffe24e8fc4e931"
       },
       "catalogRuntimes": [],
       "profiles": {

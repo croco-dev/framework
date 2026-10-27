@@ -80,6 +80,7 @@ function getClientState(rawClient: unknown): ClientState | undefined {
   return undefined;
 }
 
+/** Shares abort state across savepoints while keeping release ownership tied to the current checkout. */
 function getOrCreateClientState(rawClient: unknown): ClientState | undefined {
   if (rawClient && (typeof rawClient === "object" || typeof rawClient === "function")) {
     const record = rawClient as Record<string | symbol, unknown>;
@@ -262,6 +263,10 @@ class TxAbortCoordinator {
     }
   }
 
+  /**
+   * Guards the current checkout's release function once, including when pg-pool replaces it on reuse.
+   * Releasing forwards the checkout's abort cause and clears shared taint before the next checkout.
+   */
   guardConnectionRelease(): void {
     if (!this.rawClient || typeof this.rawClient !== "object") {
       return;
