@@ -492,6 +492,7 @@ function validateRoute(
   diagnostics.push(...validateBindingContractSchemas(route));
   diagnostics.push(...validateStrictSchemas(route, options));
   diagnostics.push(...validateRouteSchemas(route));
+  diagnostics.push(...validateQueryWireSchemas(route));
   diagnostics.push(...validateProblemResponses(route));
   diagnostics.push(...validateProblemRegistryReferences(route, problemRegistryIndex));
   diagnostics.push(...validateStrictProblemResponses(route, options));
@@ -1213,6 +1214,67 @@ function validateRouteSchemas(route: ContractGraphRoute): ContractDiagnostic[] {
   }
 
   return diagnostics;
+}
+
+/** Query values use one string per scalar or repeated strings for one array level. */
+function validateQueryWireSchemas(route: ContractGraphRoute): ContractDiagnostic[] {
+  const fields = new Map(Object.entries(getNamedSchemaShape(route.inputSchemas.query)));
+  // Inspect binding schemas too, including legacy routes without a route contract.
+  const entries = [...fields].map(([name, schema]) => ({
+    name,
+    schema,
+    sourceLocation: route.params.find((param) => param.kind === "query" && param.name === name)
+      ?.sourceLocation,
+  }));
+  for (const param of route.params) {
+    if (param.kind === "query" && param.schema && fields.get(param.name) !== param.schema) {
+      entries.push({
+        name: param.name,
+        schema: param.schema,
+        sourceLocation: param.sourceLocation,
+      });
+    }
+  }
+
+  return entries.flatMap(({ name, schema, sourceLocation }) =>
+    getUnsupportedQueryWirePaths(describeZodSchema(schema), `query.${name}`).map((location) =>
+      createRouteDiagnostic(
+        route,
+        "contract-schema-query-wire-unsupported",
+        "error",
+        `${location}: Query values cannot contain objects, records or nested arrays. Use scalar values or a single array of scalars with repeated query keys.`,
+        sourceLocation,
+      ),
+    ),
+  );
+}
+
+function getUnsupportedQueryWirePaths(
+  schema: ReturnType<typeof describeZodSchema>,
+  location: string,
+  insideArray = false,
+): string[] {
+  if (!schema) return [];
+  if (
+    schema.kind === "object" ||
+    schema.kind === "record" ||
+    (schema.kind === "array" && insideArray)
+  ) {
+    return [location];
+  }
+  if (schema.kind === "array" && schema.element) {
+    return getUnsupportedQueryWirePaths(schema.element, `${location}[]`, true);
+  }
+  if (schema.inner) {
+    return getUnsupportedQueryWirePaths(schema.inner, location, insideArray);
+  }
+  return [
+    ...new Set(
+      (schema.options ?? []).flatMap((option) =>
+        getUnsupportedQueryWirePaths(option, location, insideArray),
+      ),
+    ),
+  ];
 }
 
 function validateUniqueRoutePaths(routes: readonly ContractGraphRoute[]): ContractDiagnostic[] {

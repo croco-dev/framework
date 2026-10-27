@@ -6,8 +6,19 @@ import "reflect-metadata";
 import { Container } from "@croco/framework-context";
 import { Logger } from "@croco/framework-logger";
 import { ProblemCategory } from "@croco/problems-core";
+import { emitOpenAPIFromContractGraph } from "@croco/openapi-spec";
 import { buildContractGraph } from "@croco/protocols-core";
-import { Body, Controller, Delete, Param, Post, REST_ROUTES_KEY } from "@croco/protocols-rest";
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpMethod,
+  Param,
+  Post,
+  Query,
+  REST_ROUTES_KEY,
+} from "@croco/protocols-rest";
 import { createFrontendTelemetryBridge } from "@croco/telemetry-api";
 import { createApp, ErrorHandler, HealthCheckRegistry } from "@croco/transports-http";
 import type { RouteIR } from "@croco/protocols-core";
@@ -150,6 +161,134 @@ describe("rpc-codegen round trip", () => {
     vi.unstubAllGlobals();
     fs.rmSync(outDir, { recursive: true, force: true });
     fs.rmSync(moduleDir, { recursive: true, force: true });
+  });
+
+  it.each([
+    z.object({ term: z.string() }),
+    z.array(z.object({ term: z.string() })).optional(),
+    z.union([z.string(), z.record(z.string(), z.string())]),
+  ])("blocks RPC and OpenAPI artifacts for structured query contracts %#", (schema) => {
+    const contract = {
+      method: HttpMethod.GET as const,
+      path: "/users",
+      query: z.object({ filter: schema }),
+      response: z.string(),
+      sourceLocation: { path: "src/UserController.ts", line: 7 },
+    };
+    @Controller("")
+    class UserController {
+      @Get(contract)
+      getUser(@Query(contract, "filter") _filter: unknown): string {
+        return "unused";
+      }
+    }
+    const graph = buildContractGraph([UserController], { strictSchemas: true });
+    expect(graph.diagnostics).toContainEqual(
+      expect.objectContaining({
+        code: "contract-schema-query-wire-unsupported",
+        sourceLocation: expect.objectContaining({
+          path: expect.stringContaining("round-trip.spec.ts"),
+          line: expect.any(Number),
+        }),
+      }),
+    );
+    expect(() => generateClientFilesFromContractGraph(graph, outDir)).toThrow(
+      /contract-schema-query-wire-unsupported/,
+    );
+    expect(fs.readdirSync(outDir)).toEqual([]);
+    expect(() => emitOpenAPIFromContractGraph(graph)).toThrow(
+      /contract-schema-query-wire-unsupported/,
+    );
+  });
+
+  it("round trips supported query scalars and repeated values through server validation", async () => {
+    const query = z.object({
+      search: z.string().optional(),
+      page: z.coerce.number().int(),
+      active: z.coerce.boolean(),
+      tags: z.array(z.string()).readonly(),
+      scores: z.array(z.coerce.number()),
+      mode: z.union([z.literal("summary"), z.literal("detail")]),
+    });
+    const contract = { method: HttpMethod.GET as const, path: "/users", query, response: query };
+    @Controller("")
+    class UserController {
+      @Get(contract)
+      getUser(
+        @Query(contract, "search") _search: unknown,
+        @Query(contract, "page") _page: unknown,
+        @Query(contract, "active") _active: unknown,
+        @Query(contract, "tags") _tags: unknown,
+        @Query(contract, "scores") _scores: unknown,
+        @Query(contract, "mode") _mode: unknown,
+      ): z.infer<typeof query> {
+        return query.parse({
+          search: _search,
+          page: _page,
+          active: _active,
+          tags: _tags,
+          scores: _scores,
+          mode: _mode,
+        });
+      }
+    }
+    const graph = buildContractGraph([UserController], { strictSchemas: true });
+    expect(graph.diagnostics).toEqual([]);
+    generateClientFilesFromContractGraph(graph, outDir);
+    const generated = await importGeneratedClient(
+      "user-query-wire.ts",
+      fs.readFileSync(path.join(outDir, "user.ts"), "utf-8"),
+    );
+    await Container.reset();
+    const logger = {
+      info: () => {},
+      warn: () => {},
+      error: () => {},
+      debug: () => {},
+      fatal: () => {},
+      child: () => logger,
+    } as unknown as Logger;
+    Container.set(Logger, logger);
+    Container.set(ErrorHandler, new ErrorHandler(logger));
+    Container.set(HealthCheckRegistry, new HealthCheckRegistry());
+    const app = createApp({ controllers: [UserController], securityValidation: "off" });
+    const observed: string[] = [];
+    const client = generated.createUserClient({
+      fetch: async (url, init) => {
+        observed.push(url);
+        return app.fetch(new Request(new URL(url, "http://localhost"), init));
+      },
+    });
+    const input = {
+      query: {
+        page: 7,
+        active: true,
+        tags: ["red & blue", "vip"],
+        scores: [13, 29],
+        mode: "detail",
+      },
+    };
+    const call = client.getUser as unknown as (input: unknown) => Promise<unknown>;
+    await expect(call(input)).resolves.toEqual({
+      page: 7,
+      active: true,
+      tags: ["red & blue", "vip"],
+      scores: [13, 29],
+      mode: "detail",
+    });
+    expect(observed).toEqual([
+      "/users?page=7&active=true&tags=red+%26+blue&tags=vip&scores=13&scores=29&mode=detail",
+    ]);
+    await expect(
+      call({ query: { page: 11, active: true, tags: ["solo"], scores: [31], mode: "summary" } }),
+    ).resolves.toEqual({
+      page: 11,
+      active: true,
+      tags: ["solo"],
+      scores: [31],
+      mode: "summary",
+    });
+    await Container.reset();
   });
 
   it.each(restFormIssueCases)(

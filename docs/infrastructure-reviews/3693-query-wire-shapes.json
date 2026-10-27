@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "protocols-core",
+      "classification": "pure-contract",
+      "reason": "Reject structured HTTP query values in the canonical contract graph so strict checks, RPC and OpenAPI consumers share the existing wire boundary.",
+      "files": {
+        "packages/protocols-core/src/libs/ContractGraph.ts": "78a6a90c8184782ca3f14d022746979b27db55a1e19ae9ef7987c111721b3233"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Contract generation rejects query shapes before runtime; this adds no Node Host capability, storage dependency or lifecycle boundary.",
+          "providers": [],
+          "constraints": [
+            "Build-time validation does not certify deployed hosts or live providers. Existing query parsing and null serialization are unchanged."
+          ],
+          "references": [
+            "packages/protocols-core/src/libs/ContractGraph.ts",
+            "packages/protocols-core/src/tests/ContractGraph.spec.ts",
+            "packages/rpc-codegen/src/tests/round-trip.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Contract generation rejects query shapes before runtime; this adds no Lambda Host capability, storage dependency or lifecycle boundary.",
+          "providers": [],
+          "constraints": [
+            "Build-time validation does not certify deployed hosts or live providers. Existing query parsing and null serialization are unchanged."
+          ],
+          "references": [
+            "packages/protocols-core/src/libs/ContractGraph.ts",
+            "packages/protocols-core/src/tests/ContractGraph.spec.ts",
+            "packages/rpc-codegen/src/tests/round-trip.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Contract generation rejects query shapes before runtime; this adds no Workers or Node Container Host capability, storage dependency or lifecycle boundary.",
+          "providers": [],
+          "constraints": [
+            "Build-time validation does not certify deployed hosts or live providers. Existing query parsing and null serialization are unchanged."
+          ],
+          "references": [
+            "packages/protocols-core/src/libs/ContractGraph.ts",
+            "packages/protocols-core/src/tests/ContractGraph.spec.ts",
+            "packages/rpc-codegen/src/tests/round-trip.spec.ts"
+          ]
+        }
+      }
+    }
+  ]
+}

@@ -151,3 +151,17 @@ functions remain outside static compatibility inference.
 
 The operation executor does not create a process-global registry. Definitions are
 snapshotted when bound; each invocation uses its own explicit server context.
+
+### HTTP query wire shapes
+
+Contract graph validation rejects object, record and nested array query values with
+`contract-schema-query-wire-unsupported`, including those inside optional, nullable,
+default, catch, readonly, refinement and union schemas. The diagnostic identifies the
+query field, route and declared source location. It is an error in both strict and
+compatibility modes, so RPC and OpenAPI graph consumers stop before emitting artifacts.
+
+Query fields support scalars and one array level encoded as repeated keys. Existing
+server coercion and validation still apply; this check does not add a nested query
+parser or change null serialization. JSON body and response objects are unaffected.
+The check runs during contract generation and has no host, storage or lifecycle
+requirements on Kubernetes, Lambda or Workers.

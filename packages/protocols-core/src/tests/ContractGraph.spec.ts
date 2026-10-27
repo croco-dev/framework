@@ -652,6 +652,91 @@ describe("buildContractGraph", () => {
     expect(() => assertContractGraphHasNoErrors(graph)).toThrow(ContractGraphDiagnosticError);
   });
 
+  it.each([
+    z.object({ term: z.string() }),
+    z.record(z.string(), z.string()),
+    z.array(z.object({ term: z.string() })),
+    z.array(z.array(z.string())),
+    z.object({ term: z.string() }).optional(),
+    z.object({ term: z.string() }).nullable().readonly(),
+    z.object({ term: z.string() }).default({ term: "red" }),
+    z.object({ term: z.string() }).catch({ term: "red" }),
+    z.union([z.string(), z.object({ term: z.string() })]),
+    z.array(z.union([z.string(), z.record(z.string(), z.string())])),
+    z.object({ term: z.string() }).refine(() => true),
+  ])("should reject structured query values before generation %#", (schema) => {
+    @Controller("/search")
+    class SearchController {
+      @Get("/")
+      @ResponseSchema(z.string())
+      search(@Query("filter", schema) _filter: unknown): void {}
+    }
+    const sourceLocation = { path: "src/SearchController.ts", line: 12, column: 3 };
+    attachRouteContract(SearchController, "search", {
+      method: "GET",
+      path: "/search",
+      query: z.object({ filter: schema }),
+      response: z.string(),
+      sourceLocation,
+    });
+    for (const strictSchemas of [false, true]) {
+      const graph = buildContractGraph([SearchController], { strictSchemas });
+      expect(graph.diagnostics).toContainEqual(
+        expect.objectContaining({
+          code: "contract-schema-query-wire-unsupported",
+          severity: "error",
+          target: "schema",
+          routeId: "SearchController.search",
+          sourceLocation,
+          message: expect.stringContaining("query.filter"),
+        }),
+      );
+      expect(() => assertContractGraphHasNoErrors(graph)).toThrow(ContractGraphDiagnosticError);
+    }
+  });
+
+  it.each([
+    z.string().optional(),
+    z.coerce.number().int().default(7),
+    z.coerce.boolean(),
+    z.array(z.string()).readonly(),
+    z.array(z.coerce.number()).optional(),
+    z.union([z.string(), z.array(z.string())]),
+    z.array(z.union([z.string(), z.number()])),
+    z.string().catch("fallback"),
+    z.string().nullable().brand<"Filter">(),
+  ])("should preserve supported query wire shapes %#", (schema) => {
+    @Controller("/search")
+    class SearchController {
+      @Get("/")
+      @ResponseSchema(z.string())
+      search(@Query("filter", schema) _filter: unknown): void {}
+    }
+    expect(buildContractGraph([SearchController], { strictSchemas: true }).diagnostics).toEqual([]);
+  });
+
+  it("should reject a structured legacy query binding without a route contract", () => {
+    @Controller("/search")
+    class SearchController {
+      @Get("/")
+      search(@Query("filter", z.object({ term: z.string() })) _filter: unknown): void {}
+    }
+    expect(buildContractGraph([SearchController]).diagnostics).toContainEqual(
+      expect.objectContaining({ code: "contract-schema-query-wire-unsupported" }),
+    );
+  });
+
+  it("should keep JSON body and response objects independent of query wire validation", () => {
+    const schema = z.object({ term: z.string() });
+    @Controller("/search")
+    class SearchController {
+      @Post("/")
+      @ResponseSchema(schema)
+      search(@Body(schema) _body: unknown): void {}
+    }
+    expect(buildContractGraph([SearchController], { strictSchemas: true }).diagnostics).toEqual([]);
+  });
+
   it("should accept route contract schemas as the strict schema source of truth", () => {
     const idSchema = z.string().uuid();
     const includeSchema = z.boolean().optional();
