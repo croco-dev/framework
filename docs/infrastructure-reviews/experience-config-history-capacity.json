@@ -149,7 +149,7 @@
       "classification": "pure-contract",
       "reason": "Regenerate Problem discovery coordinates after the experience store changes; no diagnostic code or runtime contract changes.",
       "files": {
-        "packages/problems-core/src/generated/problem-code-registry.ts": "544bf53fac2f5f3617d695c50f6f33efcea7e59a7eada18f6bf2c4b13f75b863"
+        "packages/problems-core/src/generated/problem-code-registry.ts": "cb9732c63518ca746a83d63d81932f5e157e83032e70d0b22081b9ebc93bd014"
       },
       "catalogRuntimes": [],
       "profiles": {
