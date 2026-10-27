@@ -120,7 +120,7 @@ describe("generated route module", () => {
 
   it("checks a contract route independently of an earlier raw route on the same handler", async () => {
     const contract = defineRouteContract({
-      method: "GET",
+      method: HttpMethod.GET,
       path: "/stacked/contract",
       response: z.object({ value: z.string() }),
     });
