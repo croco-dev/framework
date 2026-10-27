@@ -187,7 +187,12 @@ export class PostgresReferralStore implements ReferralStore {
 
   async transact<T>(work: (tx: ReferralTx) => Promise<T>): Promise<T> {
     return run("transact", () =>
-      this.database.transaction((executor) => work(new PostgresReferralTx(executor))),
+      this.database.transaction(async (executor) => {
+        // Counts after a waiting admission lock must see the preceding commit,
+        // including when the application defaults to REPEATABLE READ.
+        await executor.execute(sql`SET TRANSACTION ISOLATION LEVEL READ COMMITTED`);
+        return work(new PostgresReferralTx(executor));
+      }),
     );
   }
 
@@ -835,16 +840,35 @@ class PostgresReferralTx implements ReferralTx {
     states: readonly ReferralAttributionState[],
   ): Promise<number> {
     return run("count referral receipts", async () => {
+      const identity = JSON.stringify([
+        "croco-referral-subject",
+        familyId,
+        benefitCycleId,
+        subject.appId,
+        subject.environment,
+        subject.tenantId,
+        subject.kind,
+        subject.id,
+      ]);
+      await this.executor.execute(sql`
+        SELECT pg_advisory_xact_lock(hashtextextended(${identity}, 0))
+      `);
       const stateList = sql.join(
         [...states].map((state) => sql`${state}`),
         sql`, `,
       );
-      const subjectJson = JSON.stringify(subject);
+      const subjectJson = JSON.stringify({
+        appId: subject.appId,
+        environment: subject.environment,
+        tenantId: subject.tenantId,
+        kind: subject.kind,
+        id: subject.id,
+      });
       const result = await this.executor.execute(sql`
         SELECT COUNT(*) AS total FROM croco_referral_attributions
         WHERE family_id = ${familyId}
           AND benefit_cycle_id = ${benefitCycleId}
-          AND (referrer = ${subjectJson}::jsonb OR recipient = ${subjectJson}::jsonb)
+          AND (referrer @> ${subjectJson}::jsonb OR recipient @> ${subjectJson}::jsonb)
           AND state IN (${stateList})
       `);
       return Number(result.rows[0]?.total ?? 0);

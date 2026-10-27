@@ -61,7 +61,8 @@ describe("PostgresReferralStore", () => {
   it("reports a program conflict when fingerprints diverge", async () => {
     let calls = 0;
     const db: ReferralPgDatabase = {
-      execute: async () => {
+      execute: async (statement) => {
+        if (dialect.sqlToQuery(statement).sql.includes("SET TRANSACTION")) return { rows: [] };
         calls += 1;
         return calls === 1 ? { rows: [] } : { rows: [{ fingerprint: "other" }] };
       },
@@ -109,8 +110,8 @@ describe("PostgresReferralStore", () => {
       ),
     );
     expect(total).toBe(2);
-    expect(seen[0]?.sql).toContain("croco_referral_attributions");
-    expect(seen[0]?.sql).toContain("COUNT(*)");
+    expect(seen.at(-1)?.sql).toContain("croco_referral_attributions");
+    expect(seen.at(-1)?.sql).toContain("COUNT(*)");
   });
 
   it("resolves link lookups by token hash without leaking the raw token", async () => {

@@ -12,6 +12,7 @@ import {
   ReferralDuplicateClaimProblem,
   ReferralQualificationRejectedProblem,
   ReferralBudgetExhaustedProblem,
+  ReferralSubjectLimitReachedProblem,
 } from "@croco/referral-core";
 import type {
   ReferralFulfillmentPort,
@@ -114,7 +115,10 @@ function serviceFor(
   });
 }
 
-async function seed(service: ReferralService): Promise<{ programId: string; token: string }> {
+async function seed(
+  service: ReferralService,
+  perSubjectLimit = 10,
+): Promise<{ programId: string; token: string }> {
   const programId = `referral-${randomUUID()}`;
   await service.registerProgram({
     id: programId,
@@ -126,7 +130,7 @@ async function seed(service: ReferralService): Promise<{ programId: string; toke
     recipientBenefit: { kind: "trial-credits", creditAmount: "3" },
     startsAt: new Date("2026-01-01T00:00:00Z"),
     endsAt: new Date("2026-12-31T00:00:00Z"),
-    perSubjectLimit: 10,
+    perSubjectLimit,
     budgetTotal: "100",
     budgetPerAttribution: "10",
     actorId: "operator",
@@ -138,6 +142,294 @@ async function seed(service: ReferralService): Promise<{ programId: string; toke
 }
 
 describe.skipIf(!url)("PostgreSQL referral budgets and attribution recovery", () => {
+  it("serializes competing qualifications across program revisions with repeatable-read defaults", async () => {
+    await withStores(async (pool, storeA) => {
+      const base = database(pool);
+      const repeatable: ReferralPgDatabase = {
+        ...base,
+        transaction: (work) =>
+          base.transaction(async (tx) => {
+            await tx.execute(sql`SET TRANSACTION ISOLATION LEVEL REPEATABLE READ`);
+            return work(tx);
+          }),
+      };
+      const storeB = new PostgresReferralStore(repeatable);
+      let arrived = 0;
+      let release!: () => void;
+      const both = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      const qualify: ReferralQualificationHook = async () => {
+        arrived += 1;
+        if (arrived === 2) release();
+        await both;
+        return {
+          qualified: true,
+          sourceEventId: "purchase",
+          qualifyingAction: "purchase",
+          eligibleReason: "paid",
+        };
+      };
+      const a = serviceFor(storeA, qualify);
+      const b = serviceFor(storeB, qualify);
+      const seeded = await seed(a);
+      const firstProgram = await storeA.getProgram(seeded.programId, 1);
+      expect(firstProgram).not.toBeNull();
+      await a.registerProgram({
+        ...firstProgram!,
+        version: 2,
+        perSubjectLimit: 1,
+        idempotencyKey: "revision-two",
+      });
+      await a.registerProgram({
+        ...firstProgram!,
+        id: "same-family",
+        familyId: firstProgram!.familyId,
+        perSubjectLimit: 1,
+        idempotencyKey: "other-program",
+      });
+      const firstLink = await a.createReferralLink({
+        programId: seeded.programId,
+        programVersion: 2,
+        referrer: subject("shared"),
+      });
+      const secondLink = await b.createReferralLink({
+        programId: "same-family",
+        referrer: subject("shared"),
+      });
+      const first = await a.claimAttribution({ token: firstLink.token, recipient: subject("one") });
+      const second = await b.claimAttribution({
+        token: secondLink.token,
+        recipient: subject("two"),
+      });
+      const inputs = [
+        { attributionId: first.attribution.id, recipient: subject("one") },
+        { attributionId: second.attribution.id, recipient: subject("two") },
+      ];
+      const outcomes = await Promise.allSettled([
+        a.qualifyAttribution(inputs[0]),
+        b.qualifyAttribution(inputs[1]),
+      ]);
+      const winners = outcomes.flatMap((result, index) =>
+        result.status === "fulfilled" ? [index] : [],
+      );
+      expect(winners).toHaveLength(1);
+      const winner = winners[0];
+      const loser = 1 - winner;
+      expect(outcomes[loser]).toMatchObject({
+        status: "rejected",
+        reason: expect.any(ReferralSubjectLimitReachedProblem),
+      });
+      expect((await storeB.getAttribution(inputs[loser].attributionId))?.state).toBe("claimed");
+      expect(await b.listBenefitIntents({ attributionId: inputs[loser].attributionId })).toEqual(
+        [],
+      );
+      expect((await a.qualifyAttribution(inputs[winner])).state).toBe("benefits-pending");
+      const fulfilled = await a.fulfillBenefits({ attributionId: inputs[winner].attributionId });
+      expect(fulfilled.state).toBe("fulfilled");
+      expect(await b.fulfillBenefits({ attributionId: fulfilled.id })).toEqual(fulfilled);
+      const rows = await pool.query(
+        "SELECT state, COUNT(*)::int AS count FROM croco_referral_attributions GROUP BY state",
+      );
+      expect(rows.rows).toEqual(
+        expect.arrayContaining([
+          { state: "claimed", count: 1 },
+          { state: "fulfilled", count: 1 },
+        ]),
+      );
+    });
+  });
+
+  it.each([
+    ["referrer", "stored"],
+    ["referrer", "queried"],
+    ["recipient", "stored"],
+    ["recipient", "queried"],
+  ] as const)("counts %s receipts when additional metadata is %s", async (side, metadataOn) => {
+    await withStores(async (_pool, store) => {
+      const service = serviceFor(store, () => ({
+        qualified: true,
+        sourceEventId: "purchase",
+        qualifyingAction: "purchase",
+        eligibleReason: "paid",
+      }));
+      const seeded = await seed(service, 1);
+      const decorated = { ...subject("shared"), alias: "extra metadata" };
+      const firstShared = metadataOn === "stored" ? decorated : subject("shared");
+      const nextShared = metadataOn === "queried" ? decorated : subject("shared");
+      const firstReferrer = side === "referrer" ? firstShared : subject("other-referrer");
+      const firstRecipient = side === "recipient" ? firstShared : subject("one");
+      const firstLink = await service.createReferralLink({
+        programId: seeded.programId,
+        referrer: firstReferrer,
+      });
+      const nextLink = await service.createReferralLink({
+        programId: seeded.programId,
+        referrer: nextShared,
+      });
+      const first = await service.claimAttribution({
+        token: firstLink.token,
+        recipient: firstRecipient,
+      });
+      const second = await service.claimAttribution({
+        token: nextLink.token,
+        recipient: subject("two"),
+      });
+      await service.qualifyAttribution({
+        attributionId: first.attribution.id,
+        recipient: firstRecipient,
+      });
+      await service.fulfillBenefits({ attributionId: first.attribution.id });
+      await expect(
+        service.qualifyAttribution({
+          attributionId: second.attribution.id,
+          recipient: subject("two"),
+        }),
+      ).rejects.toBeInstanceOf(ReferralSubjectLimitReachedProblem);
+      expect((await store.getAttribution(second.attribution.id))?.state).toBe("claimed");
+      expect(await service.listBenefitIntents({ attributionId: second.attribution.id })).toEqual(
+        [],
+      );
+    });
+  });
+
+  it("completes competing opposite-role qualifications with additional subject metadata", async () => {
+    await withStores(async (_pool, storeA, storeB) => {
+      let arrived = 0;
+      let release!: () => void;
+      const both = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      const qualify: ReferralQualificationHook = async () => {
+        arrived += 1;
+        if (arrived === 2) release();
+        await both;
+        return {
+          qualified: true,
+          sourceEventId: "purchase",
+          qualifyingAction: "purchase",
+          eligibleReason: "paid",
+        };
+      };
+      const a = serviceFor(storeA, qualify);
+      const b = serviceFor(storeB, qualify);
+      const { programId } = await seed(a, 2);
+      const decoratedA = { ...subject("a"), alias: "shown-a" };
+      const decoratedB = { ...subject("b"), alias: "shown-b" };
+      const firstLink = await a.createReferralLink({ programId, referrer: decoratedA });
+      const secondLink = await b.createReferralLink({ programId, referrer: decoratedB });
+      const first = await a.claimAttribution({ token: firstLink.token, recipient: subject("b") });
+      const second = await b.claimAttribution({ token: secondLink.token, recipient: subject("a") });
+      const outcomes = await Promise.all([
+        a.qualifyAttribution({ attributionId: first.attribution.id, recipient: subject("b") }),
+        b.qualifyAttribution({ attributionId: second.attribution.id, recipient: subject("a") }),
+      ]);
+      expect(outcomes.map((value) => value.state)).toEqual([
+        "benefits-pending",
+        "benefits-pending",
+      ]);
+      const intents = await a.listBenefitIntents({});
+      expect(intents).toHaveLength(4);
+      expect(intents.every((intent) => intent.status === "pending")).toBe(true);
+    });
+  });
+
+  it("counts a qualification committed after an earlier lifecycle read under repeatable-read defaults", async () => {
+    await withStores(async (pool, storeA) => {
+      const verdict = {
+        qualified: true as const,
+        sourceEventId: "purchase",
+        qualifyingAction: "purchase",
+        eligibleReason: "paid",
+      };
+      const a = serviceFor(storeA, () => verdict);
+      const { token } = await seed(a, 1);
+      const first = await a.claimAttribution({ token, recipient: subject("one") });
+      const second = await a.claimAttribution({ token, recipient: subject("two") });
+      const base = database(pool);
+      const storeB = new PostgresReferralStore({
+        ...base,
+        transaction: (work) =>
+          base.transaction(async (tx) => {
+            await tx.execute(sql`SET TRANSACTION ISOLATION LEVEL REPEATABLE READ`);
+            return work(tx);
+          }),
+      });
+      const b = serviceFor(storeB, async () => {
+        // B has already read its attribution. A commits after that read but
+        // before B counts; an unchanged repeatable-read snapshot would miss A.
+        await a.qualifyAttribution({
+          attributionId: first.attribution.id,
+          recipient: subject("one"),
+        });
+        return verdict;
+      });
+      await expect(
+        b.qualifyAttribution({ attributionId: second.attribution.id, recipient: subject("two") }),
+      ).rejects.toBeInstanceOf(ReferralSubjectLimitReachedProblem);
+      expect((await storeB.getAttribution(second.attribution.id))?.state).toBe("claimed");
+      expect(await b.listBenefitIntents({ attributionId: second.attribution.id })).toEqual([]);
+    });
+  });
+
+  it("holds subject admission through transaction end even with reordered subject properties", async () => {
+    await withStores(async (pool, a) => {
+      let locked!: () => void;
+      let release!: () => void;
+      const held = new Promise<void>((resolve) => {
+        locked = resolve;
+      });
+      const finish = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      const work = a.transact(async (tx) => {
+        expect(
+          await tx.countSubjectReceipts("family", "cycle", subject("shared"), ["fulfilled"]),
+        ).toBe(0);
+        locked();
+        await finish;
+      });
+      const base = database(pool);
+      const contender = new PostgresReferralStore({
+        ...base,
+        transaction: (callback) =>
+          base.transaction(async (tx) => {
+            await tx.execute(sql`SET LOCAL lock_timeout = '100ms'`);
+            return callback(tx);
+          }),
+      });
+      try {
+        await held;
+        const who = subject("shared");
+        const reordered = {
+          id: who.id,
+          kind: who.kind,
+          tenantId: who.tenantId,
+          environment: who.environment,
+          appId: who.appId,
+        };
+        await expect(
+          contender.transact((tx) =>
+            tx.countSubjectReceipts("family", "cycle", reordered, ["qualified"]),
+          ),
+        ).rejects.toMatchObject({ cause: { code: "55P03" } });
+        expect(
+          await contender.transact((tx) =>
+            tx.countSubjectReceipts("family", "other-cycle", who, ["fulfilled"]),
+          ),
+        ).toBe(0);
+      } finally {
+        release();
+        await work;
+      }
+      expect(
+        await contender.transact((tx) =>
+          tx.countSubjectReceipts("family", "cycle", subject("shared"), ["fulfilled"]),
+        ),
+      ).toBe(0);
+    });
+  });
+
   it("serializes recovery ownership with an operator decision that releases the budget", async () => {
     await withStores(async (pool, a, b) => {
       const service = serviceFor(a, () => ({

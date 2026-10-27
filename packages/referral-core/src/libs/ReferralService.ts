@@ -467,6 +467,7 @@ export class ReferralService {
           problem: new ReferralQualificationRejectedProblem(stored.id, verdict.reason),
         };
       }
+      await this.assertSubjectReceiptLimits(tx, program, stored);
       const qualified: ReferralAttribution = {
         ...stored,
         state: "qualified",
@@ -1052,8 +1053,36 @@ export class ReferralService {
     program: ReferralProgramDefinition,
     attribution: ReferralAttribution,
   ): Promise<void> {
+    await this.assertSubjectReceiptLimits(tx, program, attribution);
+    try {
+      await tx.addBudgetReservation(program.id, program.version, program.budgetPerAttribution);
+    } catch (error) {
+      if (error instanceof ReferralBudgetExhaustedProblem) throw error;
+      throw new ReferralBudgetExhaustedProblem(program.id, program.version);
+    }
+  }
+
+  private async assertSubjectReceiptLimits(
+    tx: ReferralTx,
+    program: ReferralProgramDefinition,
+    attribution: ReferralAttribution,
+  ): Promise<void> {
     if (!attribution.recipient) return;
-    for (const subject of [attribution.referrer, attribution.recipient]) {
+    // Order the canonical identity used by storage locks, independently of
+    // business role and any additional metadata retained on the subject.
+    const subjects = [attribution.referrer, attribution.recipient]
+      .map((subject) => ({
+        subject,
+        key: JSON.stringify([
+          subject.appId,
+          subject.environment,
+          subject.tenantId,
+          subject.kind,
+          subject.id,
+        ]),
+      }))
+      .sort((left, right) => (left.key < right.key ? -1 : left.key > right.key ? 1 : 0));
+    for (const { subject } of subjects) {
       const counted = await tx.countSubjectReceipts(
         program.familyId,
         program.benefitCycleId,
@@ -1064,16 +1093,10 @@ export class ReferralService {
         throw new ReferralSubjectLimitReachedProblem(
           program.familyId,
           program.benefitCycleId,
-          subject.id === attribution.referrer.id ? "referrer" : "recipient",
+          sameReferralSubject(subject, attribution.referrer) ? "referrer" : "recipient",
           program.perSubjectLimit,
         );
       }
-    }
-    try {
-      await tx.addBudgetReservation(program.id, program.version, program.budgetPerAttribution);
-    } catch (error) {
-      if (error instanceof ReferralBudgetExhaustedProblem) throw error;
-      throw new ReferralBudgetExhaustedProblem(program.id, program.version);
     }
   }
 
