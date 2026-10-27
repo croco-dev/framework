@@ -1,0 +1,112 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "membership-core",
+      "classification": "pure-contract",
+      "reason": "Preserve independent tenant progress, tenant-head ordering and bounded retry fairness without a new queue or scheduler.",
+      "files": {
+        "packages/membership-core/src/libs/InMemoryMembershipStore.ts": "1655ee54525cbefab3815db74f95fd6dc21b64af81c68e15d9b91506ea5adb43",
+        "packages/membership-core/src/libs/MembershipService.ts": "f8bc965efad1bc8ea6e2794805bed8fcd5243696eb093d1ad3a57a5c99829729",
+        "packages/membership-core/src/libs/MembershipStore.ts": "2de531e0100c191ca04deccdaa6a07e1c235fb2201083b81feb6b5597d7939b1",
+        "packages/membership-core/src/libs/conformance.ts": "5fa6e09a627451af3db7ff5528b94e5ee71373d660513e9c79be608a6bb9ea4f",
+        "packages/membership-core/src/libs/problems/MembershipProblems.ts": "228c281e437bba081a26c93478b0f5467e498f5c0c6990709b13c9651e33ae98"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Relay isolation, in-memory ordering and Problem evidence are host-independent contracts; no host capability or connection lifecycle is added.",
+          "providers": [],
+          "constraints": [
+            "Persistent fairness depends on the selected store; no deployed-host certification is claimed."
+          ],
+          "references": [
+            "packages/membership-core/src/libs/MembershipStore.ts",
+            "packages/membership-core/src/libs/MembershipService.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Relay isolation, in-memory ordering and Problem evidence are host-independent contracts; no host capability or connection lifecycle is added.",
+          "providers": [],
+          "constraints": [
+            "Persistent fairness depends on the selected store; no deployed-host certification is claimed."
+          ],
+          "references": [
+            "packages/membership-core/src/libs/MembershipStore.ts",
+            "packages/membership-core/src/libs/MembershipService.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Relay isolation, in-memory ordering and Problem evidence are host-independent contracts; no host capability or connection lifecycle is added.",
+          "providers": [],
+          "constraints": [
+            "Persistent fairness depends on the selected store; no deployed-host certification is claimed."
+          ],
+          "references": [
+            "packages/membership-core/src/libs/MembershipStore.ts",
+            "packages/membership-core/src/libs/MembershipService.ts"
+          ]
+        }
+      }
+    },
+    {
+      "package": "membership-drizzle",
+      "classification": "durable-provider",
+      "reason": "Persist last-attempt evidence, select each tenant pending head, and retain new command order with PostgreSQL clock timestamps; explicit additive migration preserves existing intents.",
+      "files": {
+        "packages/membership-drizzle/src/index.ts": "3e6723049dab193e4f5d86cb11e2d15e159bce64b7fab99c1ed9e5b2d9428ebf",
+        "packages/membership-drizzle/src/libs/DrizzleMembershipStore.ts": "7a4d5619dd0e8c1bf9b761065a160097075b4536e60f0d03f2761aab198e3765",
+        "packages/membership-drizzle/src/libs/schema.ts": "9fbe8e1af7a08ace18d209000fb081f7a28f50f642f32fcd231960f65e2912f0",
+        "packages/membership-drizzle/src/migrations/addMembershipEventRelayAttempts.ts": "afb1443702b0f2deac3122890003a354ffd5e577b0739de73ad3ca0187a6d2f9"
+      },
+      "catalogRuntimes": ["node", "lambda"],
+      "profiles": {
+        "kubernetes": {
+          "result": "conditional",
+          "reason": "Reuse the existing Node PostgreSQL adapter with explicit additive migration and committed relay attempt records.",
+          "providers": ["@croco/membership-drizzle", "@croco/tx-drizzle"],
+          "constraints": [
+            "Apply addMembershipEventRelayAttempts before deploying the new relay.",
+            "Run the relay outside request transactions and deduplicate publisher deliveries by eventId.",
+            "Bound connection and invocation lifetime; Lambda must finish awaited writes before returning.",
+            "Local PostgreSQL tests are not live cloud deployment or provider certification."
+          ],
+          "references": [
+            "packages/membership-drizzle/src/migrations/addMembershipEventRelayAttempts.ts",
+            "packages/membership-drizzle/src/tests/DrizzleMembershipStore.postgres.spec.ts",
+            "packages/membership-drizzle/README.md"
+          ]
+        },
+        "aws-lambda": {
+          "result": "conditional",
+          "reason": "Reuse the existing Node PostgreSQL adapter with explicit additive migration and committed relay attempt records.",
+          "providers": ["@croco/membership-drizzle", "@croco/tx-drizzle"],
+          "constraints": [
+            "Apply addMembershipEventRelayAttempts before deploying the new relay.",
+            "Run the relay outside request transactions and deduplicate publisher deliveries by eventId.",
+            "Bound connection and invocation lifetime; Lambda must finish awaited writes before returning.",
+            "Local PostgreSQL tests are not live cloud deployment or provider certification."
+          ],
+          "references": [
+            "packages/membership-drizzle/src/migrations/addMembershipEventRelayAttempts.ts",
+            "packages/membership-drizzle/src/tests/DrizzleMembershipStore.postgres.spec.ts",
+            "packages/membership-drizzle/README.md"
+          ]
+        },
+        "cloudflare": {
+          "result": "unsupported",
+          "host": "workers",
+          "reason": "The existing DrizzleMembershipStore uses the Node PostgreSQL transaction adapter; this change provides no Worker-native database connection.",
+          "providers": ["@croco/membership-drizzle", "@croco/tx-drizzle"],
+          "constraints": [
+            "No Worker isolate or Node Container deployment is certified by these tests."
+          ],
+          "references": ["packages/membership-drizzle/src/libs/DrizzleMembershipStore.ts"]
+        }
+      }
+    }
+  ]
+}

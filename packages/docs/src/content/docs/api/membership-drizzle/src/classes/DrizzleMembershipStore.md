@@ -231,6 +231,8 @@ Drizzle 클라이언트와 트랜잭션 매니저를 받아 저장소를 초기�
 
 > **listPendingEventIntents**(`limit?`): `Promise`\<readonly [`MembershipEventIntent`](/api/membership-core/src/type-aliases/membershipeventintent/)[]\>
 
+Returns only the oldest pending intent per tenant, least recently attempted first.
+
 #### Parameters
 
 ##### limit?
@@ -244,6 +246,28 @@ Drizzle 클라이언트와 트랜잭션 매니저를 받아 저장소를 초기�
 #### Overrides
 
 [`MembershipStore`](/api/membership-core/src/classes/membershipstore/).[`listPendingEventIntents`](/api/membership-core/src/classes/membershipstore/#listpendingeventintents)
+
+---
+
+### markEventIntentAttempted()
+
+> **markEventIntentAttempted**(`intentId`): `Promise`\<`void`\>
+
+Records an attempt before external publication so bounded retries rotate across tenants.
+
+#### Parameters
+
+##### intentId
+
+`string`
+
+#### Returns
+
+`Promise`\<`void`\>
+
+#### Overrides
+
+[`MembershipStore`](/api/membership-core/src/classes/membershipstore/).[`markEventIntentAttempted`](/api/membership-core/src/classes/membershipstore/#markeventintentattempted)
 
 ---
 

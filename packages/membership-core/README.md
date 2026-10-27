@@ -70,3 +70,18 @@ await manager.publishPendingEvents();
   relay 또는 worker에서 호출해야 하며, publisher는 `eventId` 기준 중복 제거를 보장해야 합니다.
 - `MembershipManager`와 `MembershipService`는 options 객체로 직접 생성합니다. 프레임워크 DI를 사용할 때는
   애플리케이션 provider factory에서 이 객체를 구성해 등록합니다.
+
+`publishPendingEvents(limit)`는 한 번에 테넌트별 가장 오래된 미발행 intent를 최대 `limit`개 처리합니다.
+같은 테넌트의 후속 intent는 선행 intent가 발행 완료로 기록된 뒤 다음 호출에서 처리됩니다.
+발행 전에 시도를 기록하고 가장 오래 시도하지 않은 테넌트부터 조회하므로, 실패 항목이 한 페이지보다 많아도
+다음 호출에서 다른 테넌트를 처리할 수 있습니다. PostgreSQL 저장소의 시도 기록은 relay 재시작 뒤에도 유지됩니다.
+
+일부 발행이 실패해도 독립 테넌트의 처리를 계속한 뒤 `MembershipEventPublicationProblem`을 던집니다.
+`extensions.publishedCount`는 발행과 완료 기록이 모두 성공한 intent 수이며,
+`extensions.failedIdempotencyKeys`와 `cause`의 `AggregateError`는 모든 실패를 보존합니다.
+실패한 intent는 미발행으로 남습니다. 완료 기록이 실패했거나 한 intent의 일부 이벤트만 전달된 경우에도
+동일한 `eventId`로 재시도하므로 publisher의 중복 제거가 필요합니다.
+
+커스텀 `MembershipStore`는 `markEventIntentAttempted(intentId)`를 구현하고,
+`listPendingEventIntents()`에서 테넌트별 선행 intent와 가장 오래된 시도 순서를 보장해야 합니다.
+이 메서드는 전체 미발행 이력 조회가 아니라 다음 relay 처리 후보를 반환합니다.

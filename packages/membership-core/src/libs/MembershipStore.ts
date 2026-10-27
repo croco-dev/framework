@@ -15,7 +15,10 @@ export abstract class MembershipStore {
   abstract hasExecutedCommand(idempotencyKey: string): Promise<boolean>;
   abstract execute(command: MembershipCommand): Promise<MembershipCommandResult>;
   abstract getPendingEventIntent(idempotencyKey: string): Promise<MembershipEventIntent | null>;
+  /** Returns only the oldest pending intent per tenant, least recently attempted first. */
   abstract listPendingEventIntents(limit?: number): Promise<readonly MembershipEventIntent[]>;
+  /** Records an attempt before external publication so bounded retries rotate across tenants. */
+  abstract markEventIntentAttempted(intentId: string): Promise<void>;
   abstract markEventIntentPublished(intentId: string): Promise<void>;
   abstract findByTenantAndUser(tenantId: string, userId: string): Promise<Membership | null>;
   abstract findAllByTenant(tenantId: string): Promise<Membership[]>;

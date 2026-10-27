@@ -137,8 +137,34 @@ export class MembershipService implements MembershipManager {
       );
     }
     const intents = await this.store.listPendingEventIntents(limit);
-    for (const intent of intents) await this.publishIntent(intent);
-    return intents.length;
+    const failures: { idempotencyKey: string; error: Error }[] = [];
+    let publishedCount = 0;
+    for (const intent of intents) {
+      try {
+        await this.publishIntent(intent);
+        publishedCount += 1;
+      } catch (error) {
+        failures.push({
+          idempotencyKey: intent.idempotencyKey,
+          error: error instanceof Error ? error : new Error(String(error)),
+        });
+      }
+    }
+    const first = failures[0];
+    if (first) {
+      throw new MembershipEventPublicationProblem(
+        first.idempotencyKey,
+        new AggregateError(
+          failures.map((failure) => failure.error),
+          "Membership event publication failures",
+        ),
+        {
+          publishedCount,
+          failedIdempotencyKeys: failures.map((failure) => failure.idempotencyKey),
+        },
+      );
+    }
+    return publishedCount;
   }
 
   async getMember(tenantId: string, userId: string): Promise<Membership> {
@@ -166,6 +192,7 @@ export class MembershipService implements MembershipManager {
   private async publishIntent(intent: MembershipEventIntent): Promise<void> {
     if (!this.eventPublisher) return;
     try {
+      await this.store.markEventIntentAttempted(intent.intentId);
       for (const event of intent.events) {
         await this.eventPublisher.publishIdempotently(this.restoreEvent(event));
       }

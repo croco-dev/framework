@@ -27622,6 +27622,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "addMembershipEventRelayAttempts",
+              "exportKind": "named",
+              "source": "./migrations/addMembershipEventRelayAttempts",
+              "declarationKind": "function"
+            },
+            {
               "name": "addMembershipSeatOrdinals",
               "exportKind": "named",
               "source": "./migrations/addMembershipSeatOrdinals",

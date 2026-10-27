@@ -27,7 +27,8 @@ import {
 // oxlint-disable-next-line typescript/consistent-type-imports
 import { TxManager } from "@croco/tx-core";
 import type { DrizzleDb } from "@croco/tx-drizzle";
-import { and, asc, count, eq, inArray, isNull, sql } from "drizzle-orm";
+import { and, asc, count, eq, inArray, isNull, notExists, sql } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { membershipEventIntents, membershipIdempotencyRecords, memberships } from "./schema";
 
@@ -119,6 +120,7 @@ export class DrizzleMembershipStore extends MembershipStore {
             intentId: intent.intentId,
             idempotencyKey: intent.idempotencyKey,
             events: intent.events,
+            createdAt: sql`clock_timestamp()`,
           });
         }
         return this.cloneResult(result, false);
@@ -151,13 +153,47 @@ export class DrizzleMembershipStore extends MembershipStore {
       throw new InvalidMembershipCommandProblem("event intent limit must be between 1 and 1000");
     }
     const client = this.txManager.getClient() ?? this.db;
+    const earlier = alias(membershipEventIntents, "earlier_pending");
     const rows = await client
       .select()
       .from(membershipEventIntents)
-      .where(isNull(membershipEventIntents.publishedAt))
-      .orderBy(asc(membershipEventIntents.createdAt), asc(membershipEventIntents.intentId))
+      .where(
+        and(
+          isNull(membershipEventIntents.publishedAt),
+          notExists(
+            client
+              .select({ id: earlier.intentId })
+              .from(earlier)
+              .where(
+                and(
+                  isNull(earlier.publishedAt),
+                  sql`${earlier.events}->0->'data'->>'tenantId' = ${membershipEventIntents.events}->0->'data'->>'tenantId'`,
+                  sql`(${earlier.createdAt}, ${earlier.intentId}) < (${membershipEventIntents.createdAt}, ${membershipEventIntents.intentId})`,
+                ),
+              ),
+          ),
+        ),
+      )
+      .orderBy(
+        sql`${membershipEventIntents.lastAttemptedAt} asc nulls first`,
+        asc(membershipEventIntents.createdAt),
+        asc(membershipEventIntents.intentId),
+      )
       .limit(limit);
     return rows.map((row) => this.mapIntent(row));
+  }
+
+  async markEventIntentAttempted(intentId: string): Promise<void> {
+    const client = this.txManager.getClient() ?? this.db;
+    await client
+      .update(membershipEventIntents)
+      .set({ lastAttemptedAt: sql`clock_timestamp()` })
+      .where(
+        and(
+          eq(membershipEventIntents.intentId, intentId),
+          isNull(membershipEventIntents.publishedAt),
+        ),
+      );
   }
 
   async markEventIntentPublished(intentId: string): Promise<void> {

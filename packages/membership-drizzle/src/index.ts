@@ -11,3 +11,5 @@ export { addMembershipEventIntents } from "./migrations/membershipEventIntents";
 export type { MembershipMigrationClient } from "./migrations/membershipEventIntents";
 export { addMembershipSeatOrdinals } from "./migrations/addMembershipSeatOrdinals";
 export { setMembershipTimestampDefaults } from "./migrations/setMembershipTimestampDefaults";
+
+export { addMembershipEventRelayAttempts } from "./migrations/addMembershipEventRelayAttempts";
