@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "cli",
+      "classification": "pure-contract",
+      "reason": "Distinguish zero quota from unlimited quota in generated dashboard states and reject invalid provider quotas.",
+      "files": {
+        "packages/cli/src/commands/generateUsageDashboard.ts": "3681ba6a4b1ae0e32207ae18f69710fba3b3a8ed285c8c9bd20058923a6e6799"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Only the generated usage read model classifies numeric quotas; it adds no host capability, storage, transport or lifecycle dependency.",
+          "providers": [],
+          "constraints": [
+            "Read-only dashboard classification; billing and quota enforcement are unchanged. No deployment or provider certification is claimed."
+          ],
+          "references": [
+            "packages/cli/src/commands/generateUsageDashboard.ts",
+            "packages/cli/src/tests/GenerateUsageDashboard.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Only the generated usage read model classifies numeric quotas; it adds no host capability, storage, transport or lifecycle dependency.",
+          "providers": [],
+          "constraints": [
+            "Read-only dashboard classification; billing and quota enforcement are unchanged. No deployment or provider certification is claimed."
+          ],
+          "references": [
+            "packages/cli/src/commands/generateUsageDashboard.ts",
+            "packages/cli/src/tests/GenerateUsageDashboard.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Only the generated usage read model classifies numeric quotas; it adds no host capability, storage, transport or lifecycle dependency.",
+          "providers": [],
+          "constraints": [
+            "Read-only dashboard classification; billing and quota enforcement are unchanged. No deployment or provider certification is claimed."
+          ],
+          "references": [
+            "packages/cli/src/commands/generateUsageDashboard.ts",
+            "packages/cli/src/tests/GenerateUsageDashboard.spec.ts"
+          ]
+        }
+      }
+    }
+  ]
+}
