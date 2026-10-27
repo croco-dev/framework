@@ -1,6 +1,7 @@
 import "reflect-metadata";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { Container } from "@croco/framework-context";
 import { compileRoutes, generateModule } from "@croco/framework-routes";
 import { ProblemFactory } from "@croco/problems-core";
@@ -19,9 +20,26 @@ import {
   GeneratedRootCatchAllController,
 } from "./fixtures/GeneratedCatchAllController";
 
+async function createGeneratedModuleDirectory(prefix: string): Promise<string> {
+  const directory = await mkdtemp(join(process.cwd(), prefix));
+  try {
+    const dependencies = join(directory, "node_modules", "@croco");
+    await mkdir(dependencies, { recursive: true });
+    await symlink(
+      fileURLToPath(new URL("../../", import.meta.url)),
+      join(dependencies, "transports-http"),
+      "dir",
+    );
+    return directory;
+  } catch (error) {
+    await rm(directory, { recursive: true, force: true });
+    throw error;
+  }
+}
+
 describe("generated route module", () => {
   it("binds decorated arguments and validates bodies like reflection routes while preserving raw Hono handlers", async () => {
-    const outputDir = await mkdtemp(join(process.cwd(), ".croco-generated-arguments-"));
+    const outputDir = await createGeneratedModuleDirectory(".croco-generated-arguments-");
     try {
       const moduleUrl = new URL("./fixtures/GeneratedArgumentsController.ts", import.meta.url).href;
       await compileRoutes({ controllerPaths: [moduleUrl], outputDir });
@@ -114,7 +132,7 @@ describe("generated route module", () => {
         return { value: "contract-value" };
       }
     }
-    const outputDir = await mkdtemp(join(process.cwd(), ".croco-generated-stacked-"));
+    const outputDir = await createGeneratedModuleDirectory(".croco-generated-stacked-");
     try {
       const path = join(outputDir, "legacy.mjs");
       await writeFile(
@@ -153,7 +171,7 @@ describe("generated route module", () => {
   });
 
   it("invokes DI-resolved controllers and preserves Problem handling in Hono", async () => {
-    const outputDir = await mkdtemp(join(process.cwd(), ".croco-framework-routes-runtime-"));
+    const outputDir = await createGeneratedModuleDirectory(".croco-framework-routes-runtime-");
 
     try {
       const moduleUrl = new URL("./fixtures/GeneratedRouteController.ts", import.meta.url).href;
@@ -197,7 +215,7 @@ describe("generated route module", () => {
   });
 
   it("accepts explicit controller bindings when a generated module has no imports", async () => {
-    const outputDir = await mkdtemp(join(process.cwd(), ".croco-framework-routes-bindings-"));
+    const outputDir = await createGeneratedModuleDirectory(".croco-framework-routes-bindings-");
 
     try {
       const routesModulePath = join(outputDir, "routes.mjs");
@@ -235,7 +253,7 @@ describe("generated route module", () => {
   });
 
   it("executes @All handlers equivalently through generated and reflection registration", async () => {
-    const outputDir = await mkdtemp(join(process.cwd(), ".croco-framework-routes-all-runtime-"));
+    const outputDir = await createGeneratedModuleDirectory(".croco-framework-routes-all-runtime-");
 
     try {
       const moduleUrl = new URL("./fixtures/GeneratedRouteController.ts", import.meta.url).href;
@@ -276,7 +294,7 @@ describe("generated route module", () => {
   });
 
   it("preserves catch-all parameter matching in generated route modules", async () => {
-    const outputDir = await mkdtemp(join(process.cwd(), ".croco-framework-routes-catch-all-"));
+    const outputDir = await createGeneratedModuleDirectory(".croco-framework-routes-catch-all-");
 
     try {
       const moduleUrl = new URL("./fixtures/GeneratedCatchAllController.ts", import.meta.url).href;
