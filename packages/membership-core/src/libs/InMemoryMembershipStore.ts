@@ -35,6 +35,8 @@ export class InMemoryMembershipStore extends MembershipStore {
     { fingerprint: string; result: MembershipCommandResult }
   >();
   private readonly eventIntents = new Map<string, MembershipEventIntent>();
+  private readonly eventAttempts = new Map<string, number>();
+  private attemptOrdinal = 0;
   private commandTail: Promise<void> = Promise.resolve();
 
   async hasExecutedCommand(idempotencyKey: string): Promise<boolean> {
@@ -92,11 +94,29 @@ export class InMemoryMembershipStore extends MembershipStore {
     if (!Number.isInteger(limit) || limit < 1 || limit > 1_000) {
       throw new InvalidMembershipCommandProblem("event intent limit must be between 1 and 1000");
     }
-    return [...this.eventIntents.values()].slice(0, limit).map(cloneMembershipEventIntent);
+    const tenants = new Set<string>();
+    return [...this.eventIntents.values()]
+      .filter((intent) => {
+        const tenant = intent.events[0]?.data.tenantId;
+        if (tenant === undefined || tenants.has(tenant)) return false;
+        tenants.add(tenant);
+        return true;
+      })
+      .sort(
+        (a, b) =>
+          (this.eventAttempts.get(a.intentId) ?? 0) - (this.eventAttempts.get(b.intentId) ?? 0),
+      )
+      .slice(0, limit)
+      .map(cloneMembershipEventIntent);
+  }
+
+  async markEventIntentAttempted(intentId: string): Promise<void> {
+    if (this.eventIntents.has(intentId)) this.eventAttempts.set(intentId, ++this.attemptOrdinal);
   }
 
   async markEventIntentPublished(intentId: string): Promise<void> {
     this.eventIntents.delete(intentId);
+    this.eventAttempts.delete(intentId);
   }
 
   async findByTenantAndUser(tenantId: string, userId: string): Promise<Membership | null> {

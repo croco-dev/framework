@@ -12,6 +12,7 @@ import {
 import { TxManager } from "@croco/tx-core";
 import { createDrizzleTxAdapter } from "@croco/tx-drizzle";
 import { drizzle } from "drizzle-orm/node-postgres";
+import { sql } from "drizzle-orm";
 import { Pool } from "pg";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import {
@@ -21,7 +22,7 @@ import {
 import { addMembershipEventIntents } from "../migrations/membershipEventIntents";
 import { addMembershipSeatOrdinals } from "../migrations/addMembershipSeatOrdinals";
 
-import { setMembershipTimestampDefaults } from "../index";
+import { addMembershipEventRelayAttempts, setMembershipTimestampDefaults } from "../index";
 
 const connectionString = process.env.MEMBERSHIP_POSTGRES_URL ?? "";
 
@@ -64,6 +65,7 @@ describe.skipIf(connectionString.length === 0)(
       await addMembershipSeatOrdinals({ execute: (query) => db.execute(query) });
       await setMembershipTimestampDefaults({ execute: (query) => db.execute(query) });
       await addMembershipEventIntents({ execute: (query) => db.execute(query) });
+      await addMembershipEventRelayAttempts({ execute: (query) => db.execute(query) });
     });
 
     beforeEach(async () => {
@@ -79,6 +81,107 @@ describe.skipIf(connectionString.length === 0)(
 
     afterAll(async () => {
       await pool.end();
+    });
+
+    it("rotates failed tenant heads across relay restarts without overtaking pending transitions", async () => {
+      for (let index = 0; index < 3; index += 1) {
+        await service.addMember(`failed-${index}`, "user", "member", `failed-${index}`);
+        await service.updateRole(`failed-${index}`, "user", "admin", `promote-${index}`);
+      }
+      await service.addMember("healthy", "user", "member", "healthy");
+      const delivered: string[] = [];
+      const publisher = {
+        publishIdempotently: async (event: { eventId: string }) => {
+          const pending = await pool.query(
+            "select idempotency_key from membership_event_intents where events @> $1::jsonb",
+            [JSON.stringify([{ eventId: event.eventId }])],
+          );
+          const key = pending.rows[0]?.idempotency_key as string;
+          if (key !== "healthy") throw new Error(key);
+          delivered.push(key);
+        },
+      };
+      const relay = new MembershipService({ store, eventPublisher: publisher });
+      await expect(relay.publishPendingEvents(2)).rejects.toMatchObject({
+        extensions: { publishedCount: 0, failedIdempotencyKeys: ["failed-0", "failed-1"] },
+      });
+      const db = drizzle(pool) as unknown as DrizzleMembershipClient;
+      const restartedStore = new DrizzleMembershipStore(
+        db,
+        new TxManager(createDrizzleTxAdapter(db)),
+      );
+      const restartedRelay = new MembershipService({
+        store: restartedStore,
+        eventPublisher: publisher,
+      });
+      await expect(restartedRelay.publishPendingEvents(2)).rejects.toMatchObject({
+        extensions: { publishedCount: 1, failedIdempotencyKeys: ["failed-2"] },
+      });
+      expect(delivered).toEqual(["healthy"]);
+      await expect(restartedStore.getPendingEventIntent("healthy")).resolves.toBeNull();
+      const pending = await pool.query(
+        "select idempotency_key, last_attempted_at from membership_event_intents where published_at is null order by idempotency_key",
+      );
+      expect(
+        pending.rows
+          .filter((row) => row.idempotency_key.startsWith("failed-"))
+          .every((row) => row.last_attempted_at instanceof Date),
+      ).toBe(true);
+      expect(
+        pending.rows
+          .filter((row) => row.idempotency_key.startsWith("promote-"))
+          .every((row) => row.last_attempted_at === null),
+      ).toBe(true);
+      await addMembershipEventRelayAttempts({ execute: (query) => db.execute(query) });
+      await expect(restartedStore.listPendingEventIntents()).resolves.toHaveLength(3);
+    });
+
+    it("adds relay evidence to a populated legacy intent table without changing its events", async () => {
+      await service.addMember("legacy", "user", "member", "legacy-add");
+      const before = await pool.query(
+        "select intent_id, events, created_at, published_at from membership_event_intents",
+      );
+      await txManager.run(async () => {
+        const client = txManager.getClient();
+        if (!client) throw new Error("test transaction missing");
+        await client.execute(
+          sql`alter table membership_event_intents drop column last_attempted_at`,
+        );
+        await addMembershipEventRelayAttempts(client);
+        await addMembershipEventRelayAttempts(client);
+      });
+      const after = await pool.query(
+        "select intent_id, events, created_at, published_at from membership_event_intents",
+      );
+      expect(after.rows).toEqual(before.rows);
+      await expect(store.listPendingEventIntents()).resolves.toMatchObject([
+        { idempotencyKey: "legacy-add" },
+      ]);
+      const intent = (await store.listPendingEventIntents())[0];
+      expect(intent).toBeDefined();
+      if (intent) await store.markEventIntentAttempted(intent.intentId);
+      expect(
+        (await pool.query("select last_attempted_at from membership_event_intents")).rows[0]
+          ?.last_attempted_at,
+      ).toBeInstanceOf(Date);
+    });
+
+    it("retains command order for tenant intents created in the same outer transaction", async () => {
+      await txManager.run(async () => {
+        await service.addMember("ordered", "user", "member", "ordered-add");
+        await service.updateRole("ordered", "user", "admin", "ordered-update-0");
+      });
+      const first = await store.listPendingEventIntents();
+      expect(first.map((intent) => intent.idempotencyKey)).toEqual(["ordered-add"]);
+      const relay = new MembershipService({
+        store,
+        eventPublisher: { publishIdempotently: async () => undefined },
+      });
+      await expect(relay.publishPendingEvents()).resolves.toBe(1);
+      expect(
+        (await store.listPendingEventIntents()).map((intent) => intent.idempotencyKey),
+      ).toEqual(["ordered-update-0"]);
+      await expect(relay.publishPendingEvents()).resolves.toBe(1);
     });
 
     it("rejects sole-owner demotion without recording a command or event intent", async () => {
@@ -342,6 +445,7 @@ describe.skipIf(connectionString.length === 0)(
 
       const db = drizzle(pool);
       await addMembershipEventIntents({ execute: (query) => db.execute(query) });
+      await addMembershipEventRelayAttempts({ execute: (query) => db.execute(query) });
     });
 
     it("satisfies the shared membership command conformance contract", async () => {
@@ -507,6 +611,7 @@ describe.skipIf(connectionString.length === 0).each(["UTC", "Asia/Seoul"])(
       await addMembershipSeatOrdinals({ execute: (query) => db.execute(query) });
       await setMembershipTimestampDefaults({ execute: (query) => db.execute(query) });
       await addMembershipEventIntents({ execute: (query) => db.execute(query) });
+      await addMembershipEventRelayAttempts({ execute: (query) => db.execute(query) });
     });
 
     beforeEach(async () => {

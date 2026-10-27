@@ -134,6 +134,45 @@ export function createMembershipStoreConformanceSuite(options: {
         },
       },
       {
+        name: "rotates attempted tenant heads without exposing their successors",
+        run: async () => {
+          const store = await options.createStore();
+          for (const tenantId of ["first", "second"]) {
+            await store.execute({
+              operation: "add",
+              idempotencyKey: `add-${tenantId}`,
+              membershipId: tenantId,
+              tenantId,
+              userId: "user",
+              role: "member",
+              maxSeats: null,
+            });
+            await store.execute({
+              operation: "update_role",
+              idempotencyKey: `update-${tenantId}`,
+              tenantId,
+              userId: "user",
+              role: "admin",
+            });
+          }
+          const first = (await store.listPendingEventIntents(1))[0];
+          assert.ok(first);
+          assert.equal(first.idempotencyKey, "add-first");
+          await store.markEventIntentAttempted(first.intentId);
+          assert.equal((await store.listPendingEventIntents(1))[0]?.idempotencyKey, "add-second");
+          assert.deepEqual(
+            new Set((await store.listPendingEventIntents()).map((intent) => intent.idempotencyKey)),
+            new Set(["add-first", "add-second"]),
+          );
+          await store.markEventIntentPublished(first.intentId);
+          assert.ok(
+            (await store.listPendingEventIntents()).some(
+              (intent) => intent.idempotencyKey === "update-first",
+            ),
+          );
+        },
+      },
+      {
         name: "validates pending intent limits consistently",
         run: async () => {
           const store = await options.createStore();

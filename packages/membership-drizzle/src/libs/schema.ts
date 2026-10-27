@@ -62,10 +62,16 @@ export const membershipEventIntents = pgTable(
       .references(() => membershipIdempotencyRecords.key),
     events: jsonb("events").notNull().$type<readonly MembershipEventIntentEvent[]>(),
     publishedAt: timestamp("published_at", { withTimezone: true }),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    lastAttemptedAt: timestamp("last_attempted_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .default(sql`clock_timestamp()`),
   },
   (table) => [
     uniqueIndex("membership_event_intents_idempotency_unique").on(table.idempotencyKey),
+    index("membership_event_intents_tenant_pending_idx")
+      .on(sql`(${table.events}->0->'data'->>'tenantId')`, table.createdAt, table.intentId)
+      .where(sql`${table.publishedAt} is null`),
     index("membership_event_intents_pending_idx")
       .on(table.createdAt, table.intentId)
       .where(sql`${table.publishedAt} is null`),

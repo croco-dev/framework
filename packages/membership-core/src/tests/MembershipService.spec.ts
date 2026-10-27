@@ -1,4 +1,5 @@
 import "reflect-metadata";
+import type { MembershipCreatedEvent } from "../libs/events/MembershipCreatedEvent";
 import type { DomainEvent } from "@croco/events-core";
 import { describe, expect, it, vi } from "vitest";
 import { InMemoryMembershipStore as BaseInMemoryMembershipStore } from "../libs/InMemoryMembershipStore";
@@ -337,6 +338,83 @@ describe("MembershipService atomic commands", () => {
     expect(published).toHaveLength(1);
     expect(published[0]?.eventId).toMatch(/^[a-f0-9]{64}$/u);
     await expect(store.getPendingEventIntent("add:user-1")).resolves.toBeNull();
+  });
+
+  it("publishes an independent tenant after a failure without overtaking that tenant's pending transition", async () => {
+    const store = new InMemoryMembershipStore();
+    const failure = new Error("tenant-a transport failed");
+    const delivered: string[] = [];
+    const service = createService(store, async (event) => {
+      const tenant = (event as MembershipCreatedEvent).data.tenantId;
+      if (tenant === "tenant-a") throw failure;
+      delivered.push(tenant);
+    });
+    await service.addMember("tenant-a", "alice", "member", "a-add");
+    await service.updateRole("tenant-a", "alice", "admin", "a-promote");
+    await service.addMember("tenant-b", "bob", "member", "b-add");
+
+    const error = await service.publishPendingEvents().catch((reason: unknown) => reason);
+    expect(error).toBeInstanceOf(MembershipEventPublicationProblem);
+    expect(delivered).toEqual(["tenant-b"]);
+    expect(error).toMatchObject({
+      extensions: { publishedCount: 1, failedIdempotencyKeys: ["a-add"] },
+    });
+    await expect(store.getPendingEventIntent("a-add")).resolves.not.toBeNull();
+    await expect(store.getPendingEventIntent("a-promote")).resolves.not.toBeNull();
+    await expect(store.getPendingEventIntent("b-add")).resolves.toBeNull();
+    expect((error as Error).cause).toBeInstanceOf(AggregateError);
+    expect(((error as Error).cause as AggregateError).errors[0].cause).toBe(failure);
+  });
+
+  it.each(["markEventIntentAttempted", "markEventIntentPublished"] as const)(
+    "isolates %s failures and only counts completed publications",
+    async (method) => {
+      const store = new InMemoryMembershipStore();
+      const delivered: string[] = [];
+      const service = createService(store, async (event) => {
+        delivered.push((event as MembershipCreatedEvent).data.tenantId);
+      });
+      await service.addMember("tenant-a", "alice", "member", "a-add");
+      await service.addMember("tenant-b", "bob", "member", "b-add");
+      const failure = new Error("write failed");
+      vi.spyOn(store, method).mockRejectedValueOnce(failure);
+      await expect(service.publishPendingEvents()).rejects.toMatchObject({
+        extensions: { publishedCount: 1, failedIdempotencyKeys: ["a-add"] },
+      });
+      expect(delivered).toEqual(
+        method === "markEventIntentAttempted" ? ["tenant-b"] : ["tenant-a", "tenant-b"],
+      );
+      await expect(store.getPendingEventIntent("a-add")).resolves.not.toBeNull();
+      await expect(store.getPendingEventIntent("b-add")).resolves.toBeNull();
+      await expect(service.publishPendingEvents()).resolves.toBe(1);
+    },
+  );
+
+  it("rotates repeated failures beyond the bounded page and preserves every failure", async () => {
+    const store = new InMemoryMembershipStore();
+    const delivered: string[] = [];
+    const service = createService(store, async (event) => {
+      const tenant = (event as MembershipCreatedEvent).data.tenantId;
+      if (tenant !== "healthy") throw new Error(tenant);
+      delivered.push(tenant);
+    });
+    for (let index = 0; index < 3; index += 1)
+      await service.addMember(`failed-${index}`, "user", "member", `failed-${index}`);
+    await service.addMember("healthy", "user", "member", "healthy");
+    await expect(service.publishPendingEvents(2)).rejects.toMatchObject({
+      extensions: { publishedCount: 0, failedIdempotencyKeys: ["failed-0", "failed-1"] },
+    });
+    // A new relay shares the store's attempt evidence rather than a process-local cursor.
+    const recovery = createService(store, async (event) => {
+      const tenant = (event as MembershipCreatedEvent).data.tenantId;
+      if (tenant !== "healthy") throw new Error(tenant);
+      delivered.push(tenant);
+    });
+    await expect(recovery.publishPendingEvents(2)).rejects.toMatchObject({
+      extensions: { publishedCount: 1, failedIdempotencyKeys: ["failed-2"] },
+    });
+    expect(delivered).toEqual(["healthy"]);
+    await expect(store.getPendingEventIntent("healthy")).resolves.toBeNull();
   });
 
   it("rejects semantic reuse of an idempotency key", async () => {

@@ -15,7 +15,7 @@ Indicates that a committed membership command still has an unpublished event int
 
 ### Constructor
 
-> **new MembershipEventPublicationProblem**(`idempotencyKey`, `cause`): `MembershipEventPublicationProblem`
+> **new MembershipEventPublicationProblem**(`idempotencyKey`, `cause`, `batch?`): `MembershipEventPublicationProblem`
 
 #### Parameters
 
@@ -26,6 +26,10 @@ Indicates that a committed membership command still has an unpublished event int
 ##### cause
 
 `Error`
+
+##### batch?
+
+`MembershipEventPublicationBatch`
 
 #### Returns
 

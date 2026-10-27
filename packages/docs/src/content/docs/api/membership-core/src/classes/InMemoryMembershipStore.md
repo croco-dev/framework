@@ -226,6 +226,8 @@ const membership = await manager.addMember("tenant-1", "user-1", "admin", "membe
 
 > **listPendingEventIntents**(`limit?`): `Promise`\<readonly [`MembershipEventIntent`](/api/membership-core/src/type-aliases/membershipeventintent/)[]\>
 
+Returns only the oldest pending intent per tenant, least recently attempted first.
+
 #### Parameters
 
 ##### limit?
@@ -239,6 +241,28 @@ const membership = await manager.addMember("tenant-1", "user-1", "admin", "membe
 #### Overrides
 
 [`MembershipStore`](/api/membership-core/src/classes/membershipstore/).[`listPendingEventIntents`](/api/membership-core/src/classes/membershipstore/#listpendingeventintents)
+
+---
+
+### markEventIntentAttempted()
+
+> **markEventIntentAttempted**(`intentId`): `Promise`\<`void`\>
+
+Records an attempt before external publication so bounded retries rotate across tenants.
+
+#### Parameters
+
+##### intentId
+
+`string`
+
+#### Returns
+
+`Promise`\<`void`\>
+
+#### Overrides
+
+[`MembershipStore`](/api/membership-core/src/classes/membershipstore/).[`markEventIntentAttempted`](/api/membership-core/src/classes/membershipstore/#markeventintentattempted)
 
 ---
 

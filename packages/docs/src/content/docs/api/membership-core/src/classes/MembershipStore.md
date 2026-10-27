@@ -188,6 +188,8 @@ class PostgresMembershipStore extends MembershipStore {
 
 > `abstract` **listPendingEventIntents**(`limit?`): `Promise`\<readonly [`MembershipEventIntent`](/api/membership-core/src/type-aliases/membershipeventintent/)[]\>
 
+Returns only the oldest pending intent per tenant, least recently attempted first.
+
 #### Parameters
 
 ##### limit?
@@ -197,6 +199,24 @@ class PostgresMembershipStore extends MembershipStore {
 #### Returns
 
 `Promise`\<readonly [`MembershipEventIntent`](/api/membership-core/src/type-aliases/membershipeventintent/)[]\>
+
+---
+
+### markEventIntentAttempted()
+
+> `abstract` **markEventIntentAttempted**(`intentId`): `Promise`\<`void`\>
+
+Records an attempt before external publication so bounded retries rotate across tenants.
+
+#### Parameters
+
+##### intentId
+
+`string`
+
+#### Returns
+
+`Promise`\<`void`\>
 
 ---
 

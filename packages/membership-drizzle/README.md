@@ -60,3 +60,24 @@ owner 변경은 `READ COMMITTED`와 `REPEATABLE READ`에서 같은 테넌트의 
 
 - `memberships`, 멤버십 엔터티 스키마입니다.
 - `DRIZZLE_TOKEN`, 멤버십 저장소용 DB 토큰입니다.
+
+## Pending event relay migration
+
+Before deploying this version, run `addMembershipEventRelayAttempts(client)` after
+`addMembershipEventIntents(client)`. The migration adds nullable `last_attempted_at` and a partial
+index for each tenant's oldest pending intent. It preserves existing intents, publication markers,
+command results and event IDs, and can be run repeatedly. It also changes new intent timestamps to
+`clock_timestamp()` so commands serialized within one outer transaction retain their execution order.
+Historical timestamp ties retain the existing `created_at, intent_id` ordering; their original execution
+order cannot be recovered from the stored evidence.
+
+Apply this migration explicitly before starting the new relay. There is no startup DDL. The additive
+column and index may remain when rolling back application code; dropping them while a new relay is
+running is unsupported. Use the existing database migration transaction and backup/recovery process.
+A large production table may require a separately planned index deployment window.
+
+The relay reads at most one pending head per tenant, ordered by the oldest recorded attempt (never
+attempted first), then `created_at, intent_id`. Attempts use the PostgreSQL clock and survive service
+or connection restarts. Run the relay outside request transactions so attempt evidence and publication
+markers commit independently. Publishers must deduplicate concurrent/repeated deliveries by `eventId`.
+A failed publisher or completion write keeps that tenant's successors blocked while other tenants proceed.

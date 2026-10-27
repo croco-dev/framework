@@ -111,12 +111,19 @@ export class InvalidMembershipCommandProblem extends Problem {
 
 /** Indicates that a committed membership command still has an unpublished event intent. */
 export class MembershipEventPublicationProblem extends Problem {
-  constructor(idempotencyKey: string, cause: Error) {
+  constructor(idempotencyKey: string, cause: Error, batch?: MembershipEventPublicationBatch) {
     super(
       "MEMBERSHIP_EVENT_PUBLICATION_FAILED",
       ProblemCategory.InternalServerError,
-      `Membership command '${idempotencyKey}' committed, but its event intent remains pending`,
-      { cause, extensions: { idempotencyKey } },
+      batch
+        ? `Membership event batch published ${batch.publishedCount} intents; ${batch.failedIdempotencyKeys.length} failed intents remain pending`
+        : `Membership command '${idempotencyKey}' committed, but its event intent remains pending`,
+      { cause, extensions: { idempotencyKey, ...batch } },
     );
   }
 }
+
+type MembershipEventPublicationBatch = {
+  readonly publishedCount: number;
+  readonly failedIdempotencyKeys: readonly string[];
+};
