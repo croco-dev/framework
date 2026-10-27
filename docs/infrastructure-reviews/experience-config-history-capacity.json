@@ -1,0 +1,186 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "experience-core",
+      "classification": "pure-contract",
+      "reason": "Evaluation reads the complete published candidate set independently of paged operator history; the store contract exposes scoped point reads. This contract itself owns no host or connection lifecycle.",
+      "files": {
+        "packages/experience-core/src/index.ts": "31aeb59008d372dab61e939af12e214f06230e456a422f5dd404eec3a43c9ec7",
+        "packages/experience-core/src/libs/contracts.ts": "4583b8e7f05ced2fd6f9488f0c873d307e4f452723cc782babe3fa161c526999",
+        "packages/experience-core/src/libs/experience.ts": "7c10e43eb77737585914b70f5252a80c7a5223bf448e8fa29c99f01ec4394ce2"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Only host-independent store selection, scoped reads and authorization contracts change; no platform capabilities, connection ownership or lifecycle are introduced.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/experience-core/src/index.ts",
+            "packages/experience-core/src/libs/contracts.ts",
+            "packages/experience-core/src/libs/experience.ts",
+            "packages/experience-drizzle/src/tests/PostgresExperienceStore.postgres.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Only host-independent store selection, scoped reads and authorization contracts change; no platform capabilities, connection ownership or lifecycle are introduced.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/experience-core/src/index.ts",
+            "packages/experience-core/src/libs/contracts.ts",
+            "packages/experience-core/src/libs/experience.ts",
+            "packages/experience-drizzle/src/tests/PostgresExperienceStore.postgres.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Only host-independent store selection, scoped reads and authorization contracts change; no platform capabilities, connection ownership or lifecycle are introduced.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/experience-core/src/index.ts",
+            "packages/experience-core/src/libs/contracts.ts",
+            "packages/experience-core/src/libs/experience.ts",
+            "packages/experience-drizzle/src/tests/PostgresExperienceStore.postgres.spec.ts"
+          ]
+        }
+      }
+    },
+    {
+      "package": "experience-drizzle",
+      "classification": "durable-provider",
+      "reason": "Separate paged configuration history from complete published candidates and serialize publication capacity with existing PostgreSQL transaction/advisory-lock primitives. Reuses the existing Drizzle PostgreSQL provider, schema and index; no migration or platform claim is added.",
+      "files": {
+        "packages/experience-drizzle/src/libs/PostgresExperienceStore.ts": "5ab44c7967cf2ab2213085fbe9622c10ca01707612099a2218353d5256c25f05"
+      },
+      "catalogRuntimes": ["node", "lambda"],
+      "profiles": {
+        "kubernetes": {
+          "result": "unverified",
+          "reason": "Local disposable PostgreSQL validates SQL transactions, not the Node Host Kubernetes deployment. No host execution or live-provider certification is claimed.",
+          "providers": ["@croco/experience-drizzle", "ExperiencePgDatabase"],
+          "constraints": [
+            "Requires the existing PostgreSQL migration, transactional execute boundary and advisory locks.",
+            "Local PostgreSQL results do not certify deployed hosts."
+          ],
+          "references": [
+            "packages/experience-drizzle/src/libs/PostgresExperienceStore.ts",
+            "packages/experience-drizzle/src/tests/PostgresExperienceStore.postgres.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "unverified",
+          "reason": "Local disposable PostgreSQL validates SQL transactions, not the Lambda Host invocation/connection lifecycle. No host execution or live-provider certification is claimed.",
+          "providers": ["@croco/experience-drizzle", "ExperiencePgDatabase"],
+          "constraints": [
+            "Requires the existing PostgreSQL migration, transactional execute boundary and advisory locks.",
+            "Local PostgreSQL results do not certify deployed hosts."
+          ],
+          "references": [
+            "packages/experience-drizzle/src/libs/PostgresExperienceStore.ts",
+            "packages/experience-drizzle/src/tests/PostgresExperienceStore.postgres.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "unsupported",
+          "reason": "The existing node-postgres execute/transaction provider is not a Workers isolate adapter.",
+          "providers": ["@croco/experience-drizzle", "ExperiencePgDatabase"],
+          "constraints": [
+            "Requires the existing PostgreSQL migration, transactional execute boundary and advisory locks.",
+            "Local PostgreSQL results do not certify deployed hosts."
+          ],
+          "references": [
+            "packages/experience-drizzle/src/libs/PostgresExperienceStore.ts",
+            "packages/experience-drizzle/src/tests/PostgresExperienceStore.postgres.spec.ts"
+          ]
+        }
+      }
+    },
+    {
+      "package": "admin-core",
+      "classification": "pure-contract",
+      "reason": "Operator reads accept bounded keyset pages and prior-status/field authorization uses an exact scoped configuration lookup. Authorization and domain operations remain host-independent.",
+      "files": {
+        "packages/admin-core/src/libs/ExperienceOperations.ts": "e10c268bb4e9d28b3ff06d7115a09cca9e93d11d103909631ae7d051d2431542"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Only host-independent store selection, scoped reads and authorization contracts change; no platform capabilities, connection ownership or lifecycle are introduced.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/admin-core/src/libs/ExperienceOperations.ts",
+            "packages/experience-drizzle/src/tests/PostgresExperienceStore.postgres.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Only host-independent store selection, scoped reads and authorization contracts change; no platform capabilities, connection ownership or lifecycle are introduced.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/admin-core/src/libs/ExperienceOperations.ts",
+            "packages/experience-drizzle/src/tests/PostgresExperienceStore.postgres.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Only host-independent store selection, scoped reads and authorization contracts change; no platform capabilities, connection ownership or lifecycle are introduced.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/admin-core/src/libs/ExperienceOperations.ts",
+            "packages/experience-drizzle/src/tests/PostgresExperienceStore.postgres.spec.ts"
+          ]
+        }
+      }
+    },
+    {
+      "package": "problems-core",
+      "classification": "pure-contract",
+      "reason": "Regenerate Problem discovery coordinates after the experience store changes; no diagnostic code or runtime contract changes.",
+      "files": {
+        "packages/problems-core/src/generated/problem-code-registry.ts": "d24541207aef7ce7a0509f1bc91bdb4aa49d47047d0505b5d0203466edd30a96"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Generated source coordinates change with the experience store; Problem codes, categories and runtime behavior are unchanged. No host capability or lifecycle is involved.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "docs/problem-code-registry.json"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Generated source coordinates change with the experience store; Problem codes, categories and runtime behavior are unchanged. No host capability or lifecycle is involved.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "docs/problem-code-registry.json"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Generated source coordinates change with the experience store; Problem codes, categories and runtime behavior are unchanged. No host capability or lifecycle is involved.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "docs/problem-code-registry.json"
+          ]
+        }
+      }
+    }
+  ]
+}

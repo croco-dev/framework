@@ -65,7 +65,7 @@ describe("ExperienceOperations", () => {
   it("enforces exact tenant, field, and publish permission before writing", async () => {
     const saveConfig = vi.fn(async ({ config: value }) => value);
     const store = {
-      listConfigs: vi.fn(async () => []),
+      getConfig: vi.fn(async () => undefined),
       saveConfig,
       reserve: vi.fn(),
       readDecision: vi.fn(),
@@ -117,7 +117,7 @@ describe("ExperienceOperations", () => {
   it("requires publish permission to move a published configuration back to draft", async () => {
     const saveConfig = vi.fn(async ({ config: value }) => value);
     const store = {
-      listConfigs: vi.fn(async () => [{ ...config, status: "published" }]),
+      getConfig: vi.fn(async () => ({ ...config, status: "published" })),
       saveConfig,
     } as unknown as ExperienceStore;
     const operations = new ExperienceOperations(store, { [placement.id]: placement });
@@ -135,10 +135,46 @@ describe("ExperienceOperations", () => {
     expect(saveConfig).not.toHaveBeenCalled();
   });
 
+  it("pages archived families and edits a configuration without listing its placement", async () => {
+    const archived = { ...config, status: "archived" as const };
+    const listConfigs = vi.fn(async () => [archived]);
+    const getConfig = vi.fn(async () => archived);
+    const saveConfig = vi.fn(async ({ config: value }) => value);
+    const operations = new ExperienceOperations(
+      { listConfigs, getConfig, saveConfig } as unknown as ExperienceStore,
+      { [placement.id]: placement },
+    );
+    const query = { afterId: "older-config", limit: 25 };
+    expect(await operations.list(placement.id, access, query)).toEqual([archived]);
+    expect(listConfigs).toHaveBeenCalledWith(scope, placement.id, query);
+    listConfigs.mockClear();
+    const edited = {
+      ...archived,
+      revision: 2,
+      content: { ...archived.content, title: "Updated archive" },
+    };
+    expect(
+      await operations.save(edited, access, {
+        expectedRevision: 1,
+        reason: "Correct copy",
+        idempotencyKey: "edit-archive",
+      }),
+    ).toEqual(edited);
+    expect(getConfig).toHaveBeenCalledWith(scope, placement.id, config.id);
+    expect(listConfigs).not.toHaveBeenCalled();
+    await expect(
+      operations.save(
+        edited,
+        { ...access, permissions: ["experience.write"] },
+        { expectedRevision: 1, reason: "Correct copy", idempotencyKey: "denied" },
+      ),
+    ).rejects.toThrow("permission denied");
+  });
+
   it("previews with the same placement validator without a store write", async () => {
     const saveConfig = vi.fn();
     const store = {
-      listConfigs: vi.fn(async () => []),
+      getConfig: vi.fn(async () => undefined),
       saveConfig,
       reserve: vi.fn(),
       readDecision: vi.fn(),

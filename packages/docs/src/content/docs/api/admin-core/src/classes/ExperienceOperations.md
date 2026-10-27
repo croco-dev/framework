@@ -35,7 +35,7 @@ Server boundary for scoped reads, previews, and audited configuration changes.
 
 ### list()
 
-> **list**(`placementId`, `access`): `Promise`\<readonly `Readonly`\<\{ `content`: [`ExperienceContent`](/api/experience-core/src/type-aliases/experiencecontent/); `endAt?`: `string`; `frequency?`: `Readonly`\<\{ `maxDisplays`: `number`; `windowSeconds`: `number`; \}\>; `id`: `string`; `placementId`: `string`; `priority`: `number`; `renderer`: `string`; `revision`: `number`; `scope`: [`ExperienceScope`](/api/experience-core/src/type-aliases/experiencescope/); `startAt?`: `string`; `status`: `"paused"` \| `"draft"` \| `"published"` \| `"archived"`; `targeting?`: `Readonly`\<\{ `cohortSnapshotId?`: `string`; `context?`: readonly [`ExperienceContextPredicate`](/api/experience-core/src/type-aliases/experiencecontextpredicate/)[]; `staticSubjectIds?`: readonly `string`[]; \}\>; \}\>[]\>
+> **list**(`placementId`, `access`, `query?`): `Promise`\<readonly `Readonly`\<\{ `content`: [`ExperienceContent`](/api/experience-core/src/type-aliases/experiencecontent/); `endAt?`: `string`; `frequency?`: `Readonly`\<\{ `maxDisplays`: `number`; `windowSeconds`: `number`; \}\>; `id`: `string`; `placementId`: `string`; `priority`: `number`; `renderer`: `string`; `revision`: `number`; `scope`: [`ExperienceScope`](/api/experience-core/src/type-aliases/experiencescope/); `startAt?`: `string`; `status`: `"paused"` \| `"draft"` \| `"published"` \| `"archived"`; `targeting?`: `Readonly`\<\{ `cohortSnapshotId?`: `string`; `context?`: readonly [`ExperienceContextPredicate`](/api/experience-core/src/type-aliases/experiencecontextpredicate/)[]; `staticSubjectIds?`: readonly `string`[]; \}\>; \}\>[]\>
 
 #### Parameters
 
@@ -46,6 +46,10 @@ Server boundary for scoped reads, previews, and audited configuration changes.
 ##### access
 
 [`ExperienceAdminAccess`](/api/admin-core/src/type-aliases/experienceadminaccess/)
+
+##### query?
+
+`Readonly`\<\{ `afterId?`: `string`; `limit?`: `number`; \}\>
 
 #### Returns
 

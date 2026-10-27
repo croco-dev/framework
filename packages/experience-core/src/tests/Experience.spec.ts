@@ -50,6 +50,16 @@ class TestStore implements ExperienceStore {
   readonly exposures = new Set<string>();
   configs: readonly ExperienceConfig[] = [];
   reservations = 0;
+  async getConfig(
+    _scope: ExperienceScope,
+    _placementId: string,
+    id: string,
+  ): Promise<ExperienceConfig | undefined> {
+    return this.configs.find((config) => config.id === id);
+  }
+  async listPublishedConfigs(): Promise<readonly ExperienceConfig[]> {
+    return this.configs.filter((config) => config.status === "published");
+  }
   async listConfigs(): Promise<readonly ExperienceConfig[]> {
     return this.configs;
   }

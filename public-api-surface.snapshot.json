@@ -18048,6 +18048,11 @@
               "source": "./libs/contracts"
             },
             {
+              "name": "ExperienceConfigQuery",
+              "exportKind": "named",
+              "source": "./libs/contracts"
+            },
+            {
               "name": "ExperienceContent",
               "exportKind": "named",
               "source": "./libs/contracts"

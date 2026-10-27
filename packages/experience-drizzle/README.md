@@ -11,6 +11,23 @@ therefore affects decisions started after the pause transaction, while already i
 decisions and visible UI are not recalled. A decision and its copied content remain
 readable after later configuration changes.
 
+`listPublishedConfigs(scope, placementId)` returns the complete published candidate set.
+Archived, paused and draft families do not consume its 100-candidate limit. The adapter
+rejects an overflowing legacy published set rather than selecting from a truncated list.
+Every status change takes a placement transaction lock; entering published status checks
+the count before writing either revision or current pointer. Concurrent publications
+cannot consume the same last slot. Editing an already published family and exact command
+replays remain possible at the limit; archiving or pausing frees a slot.
+
+`listConfigs(scope, placementId, { limit, afterId })` reads current families of every status
+in ascending ID order. The default and maximum page size is 100. Continue with the last
+returned ID as `afterId` until an empty page; a page is not a complete candidate set.
+This is a current-state keyset traversal, not a frozen history snapshot: concurrent inserts
+before the cursor require a new traversal. `getConfig(scope, placementId, configId)` reads
+one current family without scanning its placement. `ExperienceOperations.list` accepts the
+same optional page query and checks field permissions on each page; `save` uses the scoped
+single-family lookup for prior-status and field permissions.
+
 Reservation and dismissal use a transaction advisory lock over scope, placement, and
 subject. An unconfirmed reservation counts against frequency until its `expiresAt`;
 confirmed displays remain counted for the configured window. Confirming a display

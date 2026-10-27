@@ -10,7 +10,11 @@ configuration.
 `evaluatePlacement` considers only published, active configurations in the exact
 application, environment, tenant, and placement. It validates targeting, chooses
 one match by priority and stable ID ordering, and reserves a durable decision
-through `ExperienceStore`. A caller can pass the requested locale for an exact
+through `ExperienceStore.listPublishedConfigs` and `reserve`. Store implementations must
+return all published candidates or reject overflow, independently of archived history.
+`listConfigs` is a bounded operator page (default/maximum 100, ascending ID, optional
+`afterId`); it must never supply the evaluation candidate set. Custom stores must implement
+`listPublishedConfigs` and scoped `getConfig` when migrating to this contract. A caller can pass the requested locale for an exact
 content match. No match returns `no_match`; an unavailable published cohort
 returns `unavailable` rather than being treated as empty membership.
 

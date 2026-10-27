@@ -331,7 +331,7 @@ export async function evaluatePlacement(
   if (!Number.isSafeInteger(reservationSeconds) || reservationSeconds < 1)
     throw new ExperienceInvalidProblem("Reservation duration is invalid");
   try {
-    const configs = await input.store.listConfigs(input.scope, input.placement.id);
+    const configs = await input.store.listPublishedConfigs(input.scope, input.placement.id);
     const candidates: ExperienceConfig[] = [];
     let invalidCandidateCause: ExperienceInvalidProblem | undefined;
     for (const config of configs) {

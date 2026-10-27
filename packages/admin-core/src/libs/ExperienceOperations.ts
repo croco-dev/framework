@@ -6,6 +6,7 @@ import {
 } from "@croco/experience-core";
 import type {
   ExperienceConfig,
+  ExperienceConfigQuery,
   ExperienceContext,
   ExperienceScope,
   ExperienceStore,
@@ -109,10 +110,11 @@ export class ExperienceOperations {
   async list(
     placementId: string,
     access: ExperienceAdminAccess,
+    query?: ExperienceConfigQuery,
   ): Promise<readonly ExperienceConfig[]> {
     authorize(access, access.scope, "experience.read");
     this.placement(placementId);
-    const configs = await this.store.listConfigs(access.scope, placementId);
+    const configs = await this.store.listConfigs(access.scope, placementId, query);
     for (const config of configs) authorizeConfigFields(config, access);
     return configs;
   }
@@ -155,9 +157,7 @@ export class ExperienceOperations {
     validateExperienceConfig(config, placement, access.scope);
     if (!input.reason.trim() || !input.idempotencyKey.trim())
       throw new ExperienceAdminProblem("Audit reason and idempotency key are required");
-    const prior = (await this.store.listConfigs(access.scope, config.placementId)).find(
-      (item) => item.id === config.id,
-    );
+    const prior = await this.store.getConfig(access.scope, config.placementId, config.id);
     if (config.status !== "draft" || (prior && prior.status !== "draft"))
       authorize(access, config.scope, "experience.publish");
     for (const field of EDITABLE_FIELDS) {
