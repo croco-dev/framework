@@ -39,11 +39,16 @@ export class SchemaCompiler {
 
     const runInApplication = Container.captureCurrentScopeRunner();
     const standaloneInstances = new Map<Function, unknown>();
+    const selectedResolvers = new Set<Function>(schemaResolvers);
     const assertContainerAvailable = (target: Function): void => {
-      if (!Container.has(target as new (...args: never[]) => unknown) && target.length > 0) {
+      if (
+        autoDiscover &&
+        selectedResolvers.has(target) &&
+        !Container.has(target as new (...args: never[]) => unknown)
+      ) {
         throw ProblemFactory.internalServerError(
           "transports-graphql/resolver-container-required",
-          `Resolver '${target.name}' requires constructor injection. Install its generated graph in the application or provide a custom container.`,
+          `Resolver '${target.name}' is not registered in the application. Install its generated graph, provide a custom container, or set autoDiscover: false for standalone manual resolution.`,
         );
       }
     };

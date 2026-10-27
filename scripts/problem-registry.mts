@@ -3764,10 +3764,10 @@ const recoveryMetadataByCategory = {
 const recoveryMetadataByCode = {
   "transports-graphql/resolver-container-required": recovery({
     cause:
-      "A resolver declares required constructor arguments without a registered Croco provider or custom container.",
+      "Application discovery selected a resolver without a registered Croco provider or custom container.",
     userAction: "Ask the application owner to configure resolver dependency injection.",
     operatorAction:
-      "Install the generated DI graph and compile the schema inside ApplicationRuntime.run(), or supply an explicit TypeGraphQL container.",
+      "Install the generated DI graph and compile inside ApplicationRuntime.run(), supply a custom container, or explicitly set autoDiscover: false for standalone manual classes.",
     retryability: "not-retryable",
     redactionPolicy: "operator-only",
     severity: "error",

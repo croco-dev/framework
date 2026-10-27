@@ -91,7 +91,11 @@ describe("SchemaCompiler resolver injection", () => {
     try {
       const firstSchema = await first.run(() => SchemaCompiler.compileSchema({ validate: false }));
       const secondSchema = await second.run(() =>
-        SchemaCompiler.compileSchema({ validate: false }),
+        SchemaCompiler.compileSchema({
+          resolvers: [compiled.SingletonResolver, compiled.RequestResolver],
+          autoDiscover: false,
+          validate: false,
+        }),
       );
       const execute = (schema: GraphQL.GraphQLSchema) =>
         graphql({ schema, source: "{ singleton request repeated: request }" });
@@ -124,12 +128,14 @@ describe("SchemaCompiler resolver injection", () => {
     }
   });
 
-  it("preserves standalone no-argument resolvers and rejects missing constructor injection", async () => {
+  it("preserves standalone optional constructors and rejects unregistered application resolvers", async () => {
     @GraphQLResolver()
     class ManualResolver {
+      constructor(readonly value?: string) {}
+
       @Query(() => String)
       manual(): string {
-        return "standalone";
+        return this.value ?? "standalone";
       }
     }
     const schema = await SchemaCompiler.compileSchema({
@@ -142,16 +148,14 @@ describe("SchemaCompiler resolver injection", () => {
     });
     @GraphQLResolver()
     class MissingResolver {
-      constructor(readonly dependency: string) {}
       @Query(() => String)
       missing(): string {
-        return this.dependency;
+        return "unregistered";
       }
     }
     await expect(
       SchemaCompiler.compileSchema({
         resolvers: [MissingResolver],
-        autoDiscover: false,
         validate: false,
       }),
     ).rejects.toMatchObject({ code: "transports-graphql/resolver-container-required" });

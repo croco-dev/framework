@@ -20447,14 +20447,14 @@ Sources:
 - Retryability: `not-retryable`
 - Redaction policy: `operator-only`
 - Lifecycle: `active`
-- Cause: A resolver declares required constructor arguments without a registered Croco provider or custom container.
+- Cause: Application discovery selected a resolver without a registered Croco provider or custom container.
 - User action: Ask the application owner to configure resolver dependency injection.
-- Operator action: Install the generated DI graph and compile the schema inside ApplicationRuntime.run(), or supply an explicit TypeGraphQL container.
+- Operator action: Install the generated DI graph and compile inside ApplicationRuntime.run(), supply a custom container, or explicitly set autoDiscover: false for standalone manual classes.
 - Telemetry: `croco.problem.error` (error) with `problem.code`, `problem.category`, `problem.status`
 
 Sources:
 
-- `packages/transports-graphql/src/libs/SchemaCompiler.ts:44:15` (problem-factory)
+- `packages/transports-graphql/src/libs/SchemaCompiler.ts:49:15` (problem-factory)
 
 <a id="transports-graphql-resolvers-not-configured"></a>
 

@@ -54,12 +54,16 @@ keep host callbacks bound to the application with `bindHostCallback()`. Disposin
 application makes retained schema resolution fail rather than creating new instances.
 
 Explicit `container` objects and container getters retain TypeGraphQL semantics and
-own their resolution and lifetime. Standalone manual resolvers (`autoDiscover: false`)
-with no required constructor arguments remain supported and are cached per schema.
-A resolver with required constructor arguments and no registered provider or custom
-container fails compilation with `transports-graphql/resolver-container-required`.
-JavaScript constructor arity does not identify default or rest parameters; use a generated
-graph or explicit container whenever constructor dependencies are needed.
+own their resolution and lifetime. With the default `autoDiscover: true`, selected
+resolvers must be registered in the application; otherwise compilation fails with
+`transports-graphql/resolver-container-required`.
+
+For standalone manual classes, explicitly select `autoDiscover: false`. Registered
+classes still resolve through Croco; unregistered classes use schema-local TypeGraphQL-style
+instances constructed without arguments. This supports optional, default and rest
+constructor parameters without guessing dependency requirements from JavaScript arity.
+Supply a custom container or install a generated provider whenever constructor dependencies
+are needed in manual mode.
 
 ## Failure Semantics
 

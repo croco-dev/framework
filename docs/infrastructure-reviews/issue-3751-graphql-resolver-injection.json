@@ -4,9 +4,9 @@
     {
       "package": "transports-graphql",
       "classification": "runtime-adapter",
-      "reason": "Default code-first schema compilation resolves registered resolver instances through the owning application container, preserving generated constructor dependencies and request scope. Runtime manifests and deployed-host support claims are unchanged.",
+      "reason": "Default code-first application discovery requires registered resolvers and resolves them in the owning application/request container. Explicit manual selection (autoDiscover: false) preserves standalone classes without inferring constructor requirements from JavaScript arity. Runtime manifests and deployed-host support claims are unchanged.",
       "files": {
-        "packages/transports-graphql/src/libs/SchemaCompiler.ts": "e644f69511eb817676a72bfe15fc8a828ea553ffc5f9e87bfd0a14c5d4111b83"
+        "packages/transports-graphql/src/libs/SchemaCompiler.ts": "f2ceb713b343de4af184f83586bc8e8a56ae7b1ae4fc7796e158ef2e236b3388"
       },
       "catalogRuntimes": ["node", "lambda", "cloudflare-workers"],
       "profiles": {
@@ -37,8 +37,8 @@
           ]
         },
         "cloudflare": {
-          "result": "not-applicable",
-          "reason": "The fetch-only Workers entrypoint consumes prepared schemas and does not import this Node code-first compiler; this change adds no Worker compiler support.",
+          "result": "unsupported",
+          "reason": "The changed code-first SchemaCompiler is a Node entrypoint and is not supported in Worker isolates. The separate fetch-only Workers entrypoint consumes prepared schemas and remains outside this compiler path.",
           "providers": ["@croco/framework-context", "@croco/transports-graphql"],
           "constraints": [
             "Compile inside the owning application runtime and execute request-scoped resolvers inside an active request context. Explicit custom containers own their lifetimes."
@@ -56,7 +56,7 @@
       "classification": "pure-contract",
       "reason": "Generated Problem registry includes the resolver-container-required configuration diagnostic and non-retryable recovery guidance. This metadata has no host capabilities, persistence or lifecycle behavior.",
       "files": {
-        "packages/problems-core/src/generated/problem-code-registry.ts": "362509ecd0ae99b9384848ddcd7fd2ca7fd79616437d86094e332a5657136990"
+        "packages/problems-core/src/generated/problem-code-registry.ts": "462a6746ff7a11d99beb74d70fa80e6fe1daf911917598904d3104bb10334eb6"
       },
       "catalogRuntimes": [],
       "profiles": {
