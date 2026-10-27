@@ -1,6 +1,6 @@
 ---
-"@croco/experience-core": patch
-"@croco/experience-drizzle": patch
+"@croco/experience-core": minor
+"@croco/experience-drizzle": minor
 "@croco/admin-core": patch
 "@croco/problems-core": patch
 ---
