@@ -613,15 +613,15 @@
     {
       "packageName": "@croco/transports-http",
       "file": "packages/transports-http/src/libs/CrocoRouteRegistrar.ts",
-      "line": 105,
-      "column": 35,
+      "line": 106,
+      "column": 9,
       "code": "TS2379",
       "message": "Argument of type '{ requestId: string; inspectionId: string | undefined; traceId: string | undefined; spanId: string | undefined; traceFlags: string | number | undefined; runtime: RuntimeContext; runtimeInspector: RuntimeInspector | undefined; }' is not assignable to parameter of type 'RequestContext' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
     },
     {
       "packageName": "@croco/transports-http",
       "file": "packages/transports-http/src/libs/CrocoRouteRegistrar.ts",
-      "line": 564,
+      "line": 570,
       "column": 7,
       "code": "TS2375",
       "message": "Type '{ platform: \"cloudflare-workers\"; abortSignal: AbortSignal; env: Record<string, unknown> | undefined; native: { executionContext: { waitUntil: (promise: Promise<unknown>) => void; }; }; waitUntil: ...; capabilities: ...; }' is not assignable to type 'RuntimeContextInit' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
@@ -629,7 +629,7 @@
     {
       "packageName": "@croco/transports-http",
       "file": "packages/transports-http/src/libs/CrocoRouteRegistrar.ts",
-      "line": 754,
+      "line": 760,
       "column": 7,
       "code": "TS2379",
       "message": "Argument of type '{ inspectionId: string | undefined; status: number; outcome: \"failed\" | \"succeeded\"; details: { traceId: unknown; telemetryDegraded: {}; error: { name: string; message: string; } | undefined; }; }' is not assignable to parameter of type 'RuntimeInspectorRequestFinish' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."

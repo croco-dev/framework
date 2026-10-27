@@ -104,6 +104,47 @@
           ]
         }
       }
+    },
+    {
+      "package": "problems-core",
+      "classification": "internal-pure-refactor",
+      "reason": "Generated Problem registry source coordinates follow the reviewed Context and HTTP registrar source movement. Codes, categories, statuses and recovery contracts are unchanged.",
+      "files": {
+        "packages/problems-core/src/generated/problem-code-registry.ts": "09fefe948090f700d6b99c5c19138a0334671ba2dcc62e1b1086d829bf0b6209"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Only generated source-location metadata changes; there is no host capability, storage or lifecycle behavior change.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "docs/problem-code-registry.json"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Only generated source-location metadata changes; there is no host capability, storage or lifecycle behavior change.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "docs/problem-code-registry.json"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Only generated source-location metadata changes; there is no host capability, storage or lifecycle behavior change.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "docs/problem-code-registry.json"
+          ]
+        }
+      }
     }
   ]
 }
