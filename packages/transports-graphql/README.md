@@ -44,6 +44,23 @@ declared policy providers are resolved from Croco `Container`. Guards and roles 
 before a subscription acquires its async iterator; interceptors run for each resolved
 subscription payload.
 
+## Resolver dependencies
+
+Compile a schema inside its owning `ApplicationRuntime.run()` after installing the
+compiler-generated DI graph. The default schema container resolves registered resolvers
+and their constructor dependencies through that application, including when execution
+occurs later. Request-scoped resolvers require an active `Context.run()` for each request;
+keep host callbacks bound to the application with `bindHostCallback()`. Disposing the
+application makes retained schema resolution fail rather than creating new instances.
+
+Explicit `container` objects and container getters retain TypeGraphQL semantics and
+own their resolution and lifetime. Standalone manual resolvers (`autoDiscover: false`)
+with no required constructor arguments remain supported and are cached per schema.
+A resolver with required constructor arguments and no registered provider or custom
+container fails compilation with `transports-graphql/resolver-container-required`.
+JavaScript constructor arity does not identify default or rest parameters; use a generated
+graph or explicit container whenever constructor dependencies are needed.
+
 ## Failure Semantics
 
 Resolver and context failures that are Croco `Problem` instances are converted through

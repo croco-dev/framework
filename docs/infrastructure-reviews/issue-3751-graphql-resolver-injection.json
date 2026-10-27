@@ -1,0 +1,96 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "transports-graphql",
+      "classification": "runtime-adapter",
+      "reason": "Default code-first schema compilation resolves registered resolver instances through the owning application container, preserving generated constructor dependencies and request scope. Runtime manifests and deployed-host support claims are unchanged.",
+      "files": {
+        "packages/transports-graphql/src/libs/SchemaCompiler.ts": "e644f69511eb817676a72bfe15fc8a828ea553ffc5f9e87bfd0a14c5d4111b83"
+      },
+      "catalogRuntimes": ["node", "lambda", "cloudflare-workers"],
+      "profiles": {
+        "kubernetes": {
+          "result": "unverified",
+          "reason": "Resolver instance resolution reuses the existing Node application scope and current request context. Local compiler/runtime regressions do not certify a deployed Kubernetes host.",
+          "providers": ["@croco/framework-context", "@croco/transports-graphql"],
+          "constraints": [
+            "Compile inside the owning application runtime and execute request-scoped resolvers inside an active request context. Explicit custom containers own their lifetimes."
+          ],
+          "references": [
+            "packages/transports-graphql/src/libs/SchemaCompiler.ts",
+            "packages/transports-graphql/src/tests/SchemaCompiler.spec.ts",
+            "packages/transports-graphql/README.md"
+          ]
+        },
+        "aws-lambda": {
+          "result": "unverified",
+          "reason": "The same application/request scope adapter is reused. No Lambda deployment or invocation lifecycle certification was performed.",
+          "providers": ["@croco/framework-context", "@croco/transports-graphql"],
+          "constraints": [
+            "Compile inside the owning application runtime and execute request-scoped resolvers inside an active request context. Explicit custom containers own their lifetimes."
+          ],
+          "references": [
+            "packages/transports-graphql/src/libs/SchemaCompiler.ts",
+            "packages/transports-graphql/src/tests/SchemaCompiler.spec.ts",
+            "packages/transports-graphql/README.md"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "The fetch-only Workers entrypoint consumes prepared schemas and does not import this Node code-first compiler; this change adds no Worker compiler support.",
+          "providers": ["@croco/framework-context", "@croco/transports-graphql"],
+          "constraints": [
+            "Compile inside the owning application runtime and execute request-scoped resolvers inside an active request context. Explicit custom containers own their lifetimes."
+          ],
+          "references": [
+            "packages/transports-graphql/src/libs/SchemaCompiler.ts",
+            "packages/transports-graphql/src/tests/SchemaCompiler.spec.ts",
+            "packages/transports-graphql/README.md"
+          ]
+        }
+      }
+    },
+    {
+      "package": "problems-core",
+      "classification": "pure-contract",
+      "reason": "Generated Problem registry includes the resolver-container-required configuration diagnostic and non-retryable recovery guidance. This metadata has no host capabilities, persistence or lifecycle behavior.",
+      "files": {
+        "packages/problems-core/src/generated/problem-code-registry.ts": "362509ecd0ae99b9384848ddcd7fd2ca7fd79616437d86094e332a5657136990"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "The generated diagnostic and recovery metadata has no infrastructure, storage or lifecycle dependencies.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "docs/problem-code-registry.json"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "The generated diagnostic and recovery metadata has no infrastructure, storage or lifecycle dependencies.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "docs/problem-code-registry.json"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "The generated diagnostic and recovery metadata has no infrastructure, storage or lifecycle dependencies.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "docs/problem-code-registry.json"
+          ]
+        }
+      }
+    }
+  ]
+}

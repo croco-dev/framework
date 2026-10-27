@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export type CrocoProblemRegistry = {
   readonly version: "croco.problem-code-registry.v1";
-  readonly problemCount: 1149;
+  readonly problemCount: 1150;
   readonly problems: readonly [
     {
       readonly code: "ACCESS_DENIED";
@@ -29733,6 +29733,34 @@ export type CrocoProblemRegistry = {
       ];
     },
     {
+      readonly code: "transports-graphql/resolver-container-required";
+      readonly category: "InternalServerError";
+      readonly status: 500;
+      readonly title: "Internal Server Error";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#transports-graphql-resolver-container-required";
+      readonly recovery: {
+        readonly cause: "A resolver declares required constructor arguments without a registered Croco provider or custom container.";
+        readonly userAction: "Ask the application owner to configure resolver dependency injection.";
+        readonly operatorAction: "Install the generated DI graph and compile the schema inside ApplicationRuntime.run(), or supply an explicit TypeGraphQL container.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "operator-only";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.error";
+          readonly severity: "error";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/transports-graphql/src/libs/SchemaCompiler.ts";
+          readonly line: 44;
+          readonly column: 15;
+          readonly kind: "problem-factory";
+        },
+      ];
+    },
+    {
       readonly code: "transports-graphql/resolvers-not-configured";
       readonly category: "InternalServerError";
       readonly status: 500;
@@ -32486,7 +32514,7 @@ export type CrocoProblemRegistry = {
 
 export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 1149,
+  problemCount: 1150,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -65716,6 +65744,39 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
           line: 22,
           column: 5,
           kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "transports-graphql/resolver-container-required",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#transports-graphql-resolver-container-required",
+      recovery: {
+        cause:
+          "A resolver declares required constructor arguments without a registered Croco provider or custom container.",
+        userAction: "Ask the application owner to configure resolver dependency injection.",
+        operatorAction:
+          "Install the generated DI graph and compile the schema inside ApplicationRuntime.run(), or supply an explicit TypeGraphQL container.",
+        retryability: "not-retryable",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/transports-graphql/src/libs/SchemaCompiler.ts",
+          line: 44,
+          column: 15,
+          kind: "problem-factory",
         },
       ],
     },

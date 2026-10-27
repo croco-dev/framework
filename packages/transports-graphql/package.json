@@ -65,5 +65,9 @@
     "reflect-metadata": "^0.2.2",
     "type-graphql": "^2.0.0-rc.3"
   },
-  "devDependencies": {}
+  "devDependencies": {
+    "@croco/esbuild-plugin": "workspace:*",
+    "@croco/framework-module": "workspace:*",
+    "esbuild": "^0.20.2"
+  }
 }
