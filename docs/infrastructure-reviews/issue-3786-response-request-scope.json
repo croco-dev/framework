@@ -57,7 +57,7 @@
       "reason": "Request scope ownership follows lazy HTTP response completion, cancellation, failure and abort while Context.run retains automatic callback cleanup.",
       "files": {
         "packages/transports-http/src/libs/CrocoRouteRegistrar.ts": "726169a76739c5f64ed04f0edd2ce79839cdecd58224328ca8aba25a9218d547",
-        "packages/transports-http/src/libs/ResponseRequestScope.ts": "9c1117c280e5bc3dca8a7cd600f6cc6aed444e0774cd104e550b677e6ce57dd5"
+        "packages/transports-http/src/libs/ResponseRequestScope.ts": "2a947d3e04e4e282db3023afcac01ba34b31777983d2b9b489f249cdc518c937"
       },
       "catalogRuntimes": ["node", "lambda"],
       "profiles": {

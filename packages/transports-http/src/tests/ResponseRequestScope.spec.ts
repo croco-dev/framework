@@ -167,6 +167,47 @@ describe("response scope terminal paths", () => {
     expect(resource?.disposals).toBe(1);
   });
 
+  it("retains providers until asynchronous cancellation finishes while a read is pending", async () => {
+    let resource: RequestResource | undefined;
+    const reading = deferred();
+    const cancelling = deferred();
+    const release = deferred();
+    const app = fixture(() => {
+      resource = Container.get(RequestResource);
+      return new Response(
+        new ReadableStream(
+          {
+            pull() {
+              reading.resolve();
+              return new Promise<void>(() => {});
+            },
+            async cancel() {
+              cancelling.resolve();
+              await release.promise;
+              expect(Container.get(RequestResource)).toBe(resource);
+            },
+          },
+          { highWaterMark: 0 },
+        ),
+      );
+    });
+    const response = await app.request("/stream");
+    const reader = response.body?.getReader();
+    const read = reader?.read();
+    await reading.promise;
+    const cancellation = reader?.cancel();
+    try {
+      await cancelling.promise;
+      await Promise.resolve();
+      expect(resource?.disposals).toBe(0);
+    } finally {
+      release.resolve();
+      await cancellation;
+    }
+    expect(await read).toEqual({ done: true, value: undefined });
+    expect(resource?.disposals).toBe(1);
+  });
+
   it("disposes an errored stream and preserves its primary error", async () => {
     let resource: RequestResource | undefined;
     const failure = new Error("source failed");

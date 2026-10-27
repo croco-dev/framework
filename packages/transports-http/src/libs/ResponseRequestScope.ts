@@ -12,6 +12,7 @@ export async function runWithResponseRequestScope(
   let reader: ReadableStreamDefaultReader<Uint8Array> | undefined;
   let output: ReadableStreamDefaultController<Uint8Array> | undefined;
   let finished = false;
+  let cancelling = false;
   const finish = (failure?: { readonly error: unknown }): void => {
     if (finished) return;
     finished = true;
@@ -60,7 +61,7 @@ export async function runWithResponseRequestScope(
         async pull(controller) {
           try {
             const chunk = await scope.run(() => responseReader.read());
-            if (finished) return;
+            if (finished || cancelling) return;
             if (chunk.done) {
               finish();
               controller.close();
@@ -69,6 +70,7 @@ export async function runWithResponseRequestScope(
               controller.enqueue(chunk.value);
             }
           } catch (error) {
+            if (finished || cancelling) return;
             finish({ error });
             controller.error(error);
             responseReader.releaseLock();
@@ -76,6 +78,7 @@ export async function runWithResponseRequestScope(
         },
         async cancel(reason: unknown) {
           if (finished) return;
+          cancelling = true;
           try {
             await scope.run(() => responseReader.cancel(reason));
           } catch (error) {
