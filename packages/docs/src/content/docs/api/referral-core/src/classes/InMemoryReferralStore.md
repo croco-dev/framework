@@ -182,6 +182,11 @@ readonly [`ReferralBenefitIntentStatus`](/api/referral-core/src/type-aliases/ref
 
 > **countSubjectReceipts**(`familyId`, `benefitCycleId`, `subject`, `states`): `Promise`\<`number`\>
 
+Locks this family/cycle/subject's receipt admission until transaction end,
+then counts from a fresh committed snapshot. Qualification must retain the
+lock through its state transition and benefit intent writes. Callers that
+count multiple subjects acquire them in stable fingerprint order.
+
 #### Parameters
 
 ##### familyId

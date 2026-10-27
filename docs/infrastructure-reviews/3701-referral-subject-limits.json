@@ -1,0 +1,104 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "referral-core",
+      "classification": "pure-contract",
+      "reason": "Recheck family/cycle subject limits at qualification before creating benefit intents. Claimed/held entries reserve program budget but only qualified or unresolved receipts consume the subject limit.",
+      "files": {
+        "packages/referral-core/src/libs/ReferralService.ts": "c8c573a4c826bb4de1dae0dde93baf1fe8e7c67038886caeb090042395253117",
+        "packages/referral-core/src/libs/ReferralStore.ts": "61e55b9b1fdc3184f994f35e5a13584481ff64a98fdda0d45760e5d55ffc3042"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Host-independent service outcome ordering uses the existing transactional store contract; no host capability, connection or lifecycle ownership is introduced.",
+          "providers": ["ReferralStore"],
+          "constraints": [],
+          "references": [
+            "packages/referral-core/src/libs/ReferralService.ts",
+            "packages/referral-core/src/libs/ReferralStore.ts",
+            "packages/referral-drizzle/src/tests/PostgresReferralStore.postgres.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Host-independent service outcome ordering uses the existing transactional store contract; no host capability, connection or lifecycle ownership is introduced.",
+          "providers": ["ReferralStore"],
+          "constraints": [],
+          "references": [
+            "packages/referral-core/src/libs/ReferralService.ts",
+            "packages/referral-core/src/libs/ReferralStore.ts",
+            "packages/referral-drizzle/src/tests/PostgresReferralStore.postgres.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Host-independent service outcome ordering uses the existing transactional store contract; no host capability, connection or lifecycle ownership is introduced.",
+          "providers": ["ReferralStore"],
+          "constraints": [],
+          "references": [
+            "packages/referral-core/src/libs/ReferralService.ts",
+            "packages/referral-core/src/libs/ReferralStore.ts",
+            "packages/referral-drizzle/src/tests/PostgresReferralStore.postgres.spec.ts"
+          ]
+        }
+      }
+    },
+    {
+      "package": "referral-drizzle",
+      "classification": "durable-provider",
+      "reason": "Serialize family/cycle subject receipt counts through transaction-scoped PostgreSQL advisory locks and READ COMMITTED snapshots before admitting qualification. No schema migration.",
+      "files": {
+        "packages/referral-drizzle/src/libs/PostgresReferralStore.ts": "0fb678fd620281dc219c161efd7959ded95c2713d4fa209ac6ef9bdd2a22c4fe"
+      },
+      "catalogRuntimes": ["node", "lambda"],
+      "profiles": {
+        "kubernetes": {
+          "result": "unverified",
+          "reason": "Reuses the existing Node PostgreSQL provider. Local real PostgreSQL transaction tests cover persistence, not a Node Host or Kubernetes deployment.",
+          "providers": ["@croco/referral-drizzle"],
+          "constraints": [
+            "Requires a PostgreSQL connection and an application-owned pool; no live Kubernetes deployment verified.",
+            "Pin one connection through transaction end, permit SET TRANSACTION before queries, and bound advisory-lock waits. Drain older writers before deployment or rollback; mixed writers do not enforce this protocol."
+          ],
+          "references": [
+            "packages/referral-drizzle/src/libs/PostgresReferralStore.ts",
+            "packages/referral-core/src/libs/ReferralStore.ts",
+            "packages/referral-drizzle/src/tests/PostgresReferralStore.postgres.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "conditional",
+          "reason": "The existing Lambda-compatible Node provider can reuse the same SQL transaction boundary.",
+          "providers": ["@croco/referral-drizzle"],
+          "constraints": [
+            "Bound pool connections and await COMMIT/ROLLBACK before invocation returns. No live Lambda execution verified.",
+            "Pin one connection through transaction end, permit SET TRANSACTION before queries, and bound advisory-lock waits. Drain older writers before deployment or rollback; mixed writers do not enforce this protocol."
+          ],
+          "references": [
+            "packages/referral-drizzle/src/libs/PostgresReferralStore.ts",
+            "packages/referral-core/src/libs/ReferralStore.ts",
+            "packages/referral-drizzle/src/tests/PostgresReferralStore.postgres.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "unsupported",
+          "host": "workers",
+          "reason": "The provider has no claimed Workers runtime or isolate-compatible PostgreSQL driver.",
+          "providers": ["@croco/referral-drizzle"],
+          "constraints": [
+            "No Workers implementation or support expansion in this change.",
+            "Pin one connection through transaction end, permit SET TRANSACTION before queries, and bound advisory-lock waits. Drain older writers before deployment or rollback; mixed writers do not enforce this protocol."
+          ],
+          "references": [
+            "packages/referral-drizzle/src/libs/PostgresReferralStore.ts",
+            "packages/referral-core/src/libs/ReferralStore.ts",
+            "packages/referral-drizzle/src/tests/PostgresReferralStore.postgres.spec.ts"
+          ]
+        }
+      }
+    }
+  ]
+}

@@ -14,6 +14,7 @@ import {
   ReferralLinkRevokedProblem,
   ReferralQualificationRejectedProblem,
   ReferralSelfReferralProblem,
+  ReferralSubjectLimitReachedProblem,
   ReferralTenantMismatchProblem,
 } from "../libs/problems";
 import { generateReferralToken, hashReferralToken } from "../libs/linkToken";
@@ -397,6 +398,186 @@ describe("ReferralService", () => {
       recipient: recipient("recipient-2"),
     });
     expect(thirdClaim.firstValid).toBe(true);
+  });
+
+  it("admits only one preclaimed referral per subject and replays its existing receipts", async () => {
+    const grants: string[] = [];
+    const { service, store } = serviceWith({
+      fulfillment: {
+        ...fulfillmentOk(),
+        fulfill: async ({ idempotencyKey }) => {
+          grants.push(idempotencyKey);
+          return { outcome: "granted", grantRef: `grant:${idempotencyKey}` };
+        },
+      },
+    });
+    await service.registerProgram(programInput());
+    const { token } = await service.createReferralLink({
+      programId: "referral-welcome",
+      referrer: referrer(),
+    });
+    const first = await service.claimAttribution({ token, recipient: recipient("one") });
+    const second = await service.claimAttribution({ token, recipient: recipient("two") });
+    const input = { attributionId: first.attribution.id, recipient: recipient("one") };
+    const qualified = await service.qualifyAttribution(input);
+    expect(await service.qualifyAttribution(input)).toEqual(qualified);
+    await expect(
+      service.qualifyAttribution({
+        attributionId: second.attribution.id,
+        recipient: recipient("two"),
+      }),
+    ).rejects.toBeInstanceOf(ReferralSubjectLimitReachedProblem);
+    expect((await store.getAttribution(second.attribution.id))?.state).toBe("claimed");
+    expect(await service.listBenefitIntents({ attributionId: second.attribution.id })).toEqual([]);
+    expect(await store.transact((tx) => tx.readBudgetReserved("referral-welcome", 1))).toBe("40");
+    const fulfilled = await service.fulfillBenefits({ attributionId: first.attribution.id });
+    expect(await service.fulfillBenefits({ attributionId: first.attribution.id })).toEqual(
+      fulfilled,
+    );
+    expect(grants).toEqual([
+      `referral-benefit:${first.attribution.id}:referrer`,
+      `referral-benefit:${first.attribution.id}:recipient`,
+    ]);
+  });
+
+  it.each(["rejected", "expired", "benefits-partial", "indeterminate"] as const)(
+    "applies subject limit semantics after %s",
+    async (state) => {
+      const { service, store } = serviceWith({
+        qualification: ({ recipient: who }) =>
+          who.id === "one" && state === "rejected"
+            ? { qualified: false, reason: "not eligible" }
+            : {
+                qualified: true,
+                sourceEventId: "purchase",
+                qualifyingAction: "first-purchase",
+                eligibleReason: "paid",
+              },
+        fulfillment: {
+          ...fulfillmentOk(),
+          fulfill: async ({ intent }) =>
+            intent.side === "referrer"
+              ? { outcome: "granted", grantRef: "grant-one" }
+              : state === "indeterminate"
+                ? { outcome: "unknown", reason: "response lost" }
+                : { outcome: "failed", reason: "temporarily unavailable", retryable: true },
+        },
+      });
+      await service.registerProgram(programInput());
+      const { token } = await service.createReferralLink({
+        programId: "referral-welcome",
+        referrer: referrer(),
+      });
+      const first = await service.claimAttribution({ token, recipient: recipient("one") });
+      const second = await service.claimAttribution({ token, recipient: recipient("two") });
+      const qualification = service.qualifyAttribution({
+        attributionId: first.attribution.id,
+        recipient: recipient("one"),
+        ...(state === "expired" ? { now: new Date("2026-03-04T00:00:00Z") } : {}),
+      });
+      if (state === "rejected")
+        await expect(qualification).rejects.toBeInstanceOf(ReferralQualificationRejectedProblem);
+      else await qualification;
+      if (state === "benefits-partial" || state === "indeterminate")
+        await service.fulfillBenefits({ attributionId: first.attribution.id });
+      expect((await store.getAttribution(first.attribution.id))?.state).toBe(state);
+      const next = service.qualifyAttribution({
+        attributionId: second.attribution.id,
+        recipient: recipient("two"),
+      });
+      if (state === "rejected" || state === "expired") {
+        expect((await next).state).toBe("benefits-pending");
+        expect(await store.transact((tx) => tx.readBudgetReserved("referral-welcome", 1))).toBe(
+          "20",
+        );
+      } else {
+        await expect(next).rejects.toBeInstanceOf(ReferralSubjectLimitReachedProblem);
+        expect(await service.listBenefitIntents({ attributionId: second.attribution.id })).toEqual(
+          [],
+        );
+        expect(await store.transact((tx) => tx.readBudgetReserved("referral-welcome", 1))).toBe(
+          "40",
+        );
+      }
+    },
+  );
+
+  it.each(["revision", "cycle", "family", "tenant"] as const)(
+    "scopes subject limits by %s",
+    async (boundary) => {
+      const { service } = serviceWith();
+      const base = programInput();
+      await service.registerProgram(base);
+      const { token } = await service.createReferralLink({
+        programId: base.id,
+        referrer: referrer(),
+      });
+      const first = await service.claimAttribution({ token, recipient: recipient("one") });
+      const nextProgram = {
+        ...base,
+        version: 2,
+        idempotencyKey: "program-two",
+        ...(boundary === "cycle" ? { benefitCycleId: "cycle-two" } : {}),
+        ...(boundary === "family" ? { familyId: "family-two" } : {}),
+      };
+      await service.registerProgram(nextProgram);
+      const nextReferrer = {
+        ...referrer(),
+        ...(boundary === "tenant" ? { tenantId: "tenant-b" } : {}),
+      };
+      const nextRecipient = { ...recipient("two"), tenantId: nextReferrer.tenantId };
+      const secondLink = await service.createReferralLink({
+        programId: base.id,
+        programVersion: 2,
+        referrer: nextReferrer,
+      });
+      const second = await service.claimAttribution({
+        token: secondLink.token,
+        recipient: nextRecipient,
+      });
+      await service.qualifyAttribution({
+        attributionId: first.attribution.id,
+        recipient: recipient("one"),
+      });
+      const next = service.qualifyAttribution({
+        attributionId: second.attribution.id,
+        recipient: nextRecipient,
+      });
+      if (boundary === "revision")
+        await expect(next).rejects.toBeInstanceOf(ReferralSubjectLimitReachedProblem);
+      else expect((await next).state).toBe("benefits-pending");
+    },
+  );
+
+  it("counts the recipient's earlier referrer receipt in the same family and cycle", async () => {
+    const { service } = serviceWith();
+    await service.registerProgram(programInput());
+    const linkA = await service.createReferralLink({
+      programId: "referral-welcome",
+      referrer: recipient("shared"),
+    });
+    const first = await service.claimAttribution({
+      token: linkA.token,
+      recipient: recipient("one"),
+    });
+    const linkB = await service.createReferralLink({
+      programId: "referral-welcome",
+      referrer: referrer(),
+    });
+    const second = await service.claimAttribution({
+      token: linkB.token,
+      recipient: recipient("shared"),
+    });
+    await service.qualifyAttribution({
+      attributionId: first.attribution.id,
+      recipient: recipient("one"),
+    });
+    await expect(
+      service.qualifyAttribution({
+        attributionId: second.attribution.id,
+        recipient: recipient("shared"),
+      }),
+    ).rejects.toThrow("recipient already reached the limit");
   });
 
   it("derives cycle index from the referrer's confirmed attribution chain", async () => {

@@ -128,6 +128,12 @@ export interface ReferralTx {
   addBudgetReservation(programId: string, version: number, amount: string): Promise<void>;
   releaseBudgetReservation(programId: string, version: number, amount: string): Promise<void>;
   readBudgetReserved(programId: string, version: number): Promise<string>;
+  /**
+   * Locks this family/cycle/subject's receipt admission until transaction end,
+   * then counts from a fresh committed snapshot. Qualification must retain the
+   * lock through its state transition and benefit intent writes. Callers that
+   * count multiple subjects acquire them in stable fingerprint order.
+   */
   countSubjectReceipts(
     familyId: string,
     benefitCycleId: string,

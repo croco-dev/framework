@@ -3,7 +3,7 @@ import {
   registerReferralProgram,
   sameReferralSubject,
 } from "./ReferralProgram";
-import { attributionFingerprint } from "./ReferralStore";
+import { attributionFingerprint, stableReferralFingerprint } from "./ReferralStore";
 import type { ReferralStore, ReferralTx } from "./ReferralStore";
 import {
   InvalidReferralProgramProblem,
@@ -467,6 +467,7 @@ export class ReferralService {
           problem: new ReferralQualificationRejectedProblem(stored.id, verdict.reason),
         };
       }
+      await this.assertSubjectReceiptLimits(tx, program, stored);
       const qualified: ReferralAttribution = {
         ...stored,
         state: "qualified",
@@ -1052,8 +1053,29 @@ export class ReferralService {
     program: ReferralProgramDefinition,
     attribution: ReferralAttribution,
   ): Promise<void> {
+    await this.assertSubjectReceiptLimits(tx, program, attribution);
+    try {
+      await tx.addBudgetReservation(program.id, program.version, program.budgetPerAttribution);
+    } catch (error) {
+      if (error instanceof ReferralBudgetExhaustedProblem) throw error;
+      throw new ReferralBudgetExhaustedProblem(program.id, program.version);
+    }
+  }
+
+  private async assertSubjectReceiptLimits(
+    tx: ReferralTx,
+    program: ReferralProgramDefinition,
+    attribution: ReferralAttribution,
+  ): Promise<void> {
     if (!attribution.recipient) return;
-    for (const subject of [attribution.referrer, attribution.recipient]) {
+    // Both roles consume the same subject limit. Acquire count locks in a
+    // stable order even when two referrals reverse referrer/recipient roles.
+    const subjects = [attribution.referrer, attribution.recipient].sort((left, right) => {
+      const a = stableReferralFingerprint(left);
+      const b = stableReferralFingerprint(right);
+      return a < b ? -1 : a > b ? 1 : 0;
+    });
+    for (const subject of subjects) {
       const counted = await tx.countSubjectReceipts(
         program.familyId,
         program.benefitCycleId,
@@ -1064,16 +1086,10 @@ export class ReferralService {
         throw new ReferralSubjectLimitReachedProblem(
           program.familyId,
           program.benefitCycleId,
-          subject.id === attribution.referrer.id ? "referrer" : "recipient",
+          sameReferralSubject(subject, attribution.referrer) ? "referrer" : "recipient",
           program.perSubjectLimit,
         );
       }
-    }
-    try {
-      await tx.addBudgetReservation(program.id, program.version, program.budgetPerAttribution);
-    } catch (error) {
-      if (error instanceof ReferralBudgetExhaustedProblem) throw error;
-      throw new ReferralBudgetExhaustedProblem(program.id, program.version);
     }
   }
 
