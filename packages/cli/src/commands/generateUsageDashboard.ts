@@ -639,8 +639,11 @@ export function resolveOverageState(options: {
   readonly overagePolicy: OveragePolicy | null;
   readonly allowOverQuota: boolean;
 }): UsageDashboardOverageState {
-  if (options.quota === null || options.quota <= 0) {
+  if (options.quota === null) {
     return "within_quota";
+  }
+  if (!Number.isFinite(options.quota) || options.quota < 0) {
+    throw new UsageDashboardProviderUnavailableProblem("Usage dashboard quota must be a finite non-negative number or null.");
   }
 
   if (options.usage <= options.quota) {

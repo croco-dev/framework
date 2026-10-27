@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "cli",
+      "classification": "pure-contract",
+      "reason": "Distinguish finite zero quota from unlimited null in generated dashboard read-model policy classification; reject invalid negative/non-finite provider quota values through the existing provider Problem. No billing or quota enforcement changes.",
+      "files": {
+        "packages/cli/src/commands/generateUsageDashboard.ts": "1fa75d73ec1a03669b2ede9690027b3d854082b0ad93f5b0c1038b3d09d55cef"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "The generated read-model overage classification is pure arithmetic and policy selection. It uses no Host, storage, networking or invocation lifecycle capability. The Node CLI remains build-time tooling; no deployed runtime support is added.",
+          "providers": [],
+          "constraints": [
+            "Existing generated application provider and deployment constraints remain unchanged. This review does not certify any deployment or change quota enforcement."
+          ],
+          "references": [
+            "packages/cli/src/commands/generateUsageDashboard.ts",
+            "packages/cli/src/tests/GenerateUsageDashboard.spec.ts",
+            "docs/package-catalog.json"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "The generated read-model overage classification is pure arithmetic and policy selection. It uses no Host, storage, networking or invocation lifecycle capability. The Node CLI remains build-time tooling; no deployed runtime support is added.",
+          "providers": [],
+          "constraints": [
+            "Existing generated application provider and deployment constraints remain unchanged. This review does not certify any deployment or change quota enforcement."
+          ],
+          "references": [
+            "packages/cli/src/commands/generateUsageDashboard.ts",
+            "packages/cli/src/tests/GenerateUsageDashboard.spec.ts",
+            "docs/package-catalog.json"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "The generated read-model overage classification is pure arithmetic and policy selection. It uses no Host, storage, networking or invocation lifecycle capability. The Node CLI remains build-time tooling; no deployed runtime support is added.",
+          "providers": [],
+          "constraints": [
+            "Existing generated application provider and deployment constraints remain unchanged. This review does not certify any deployment or change quota enforcement."
+          ],
+          "references": [
+            "packages/cli/src/commands/generateUsageDashboard.ts",
+            "packages/cli/src/tests/GenerateUsageDashboard.spec.ts",
+            "docs/package-catalog.json"
+          ]
+        }
+      }
+    }
+  ]
+}

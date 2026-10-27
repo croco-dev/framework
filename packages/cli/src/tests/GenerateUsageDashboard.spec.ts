@@ -13,6 +13,12 @@ type GeneratedUsageDashboardService = {
 };
 
 type GeneratedServiceModule = {
+  resolveOverageState(options: {
+    readonly usage: number;
+    readonly quota: number | null;
+    readonly overagePolicy: "BLOCK" | "WARN" | "ALLOW_WITH_OVERAGE" | null;
+    readonly allowOverQuota: boolean;
+  }): string;
   UsageDashboardService: new (dependencies: {
     readonly tenantStore: { findById(id: string): Promise<unknown> };
     readonly billingService: { getSubscription(tenantId: string): Promise<unknown> };
@@ -478,6 +484,173 @@ await app.listen(3000);
         path.join(cwd, "apps", "api-server", "src", "controllers", "UsageDashboardController.ts"),
       ),
     ).rejects.toThrow();
+  });
+
+  it("should distinguish zero quotas from unlimited quotas in generated overage states", async () => {
+    const cwd = await createWorkspace({
+      consoleWeb: false,
+      tempPrefix: path.join(process.cwd(), ".usage-dashboard-quota-"),
+    });
+
+    try {
+      await runGenerateUsageDashboard({ cwd, page: false });
+      const { UsageDashboardService, resolveOverageState } =
+        await importGeneratedModule<GeneratedServiceModule>(
+          path.join(
+            cwd,
+            "apps",
+            "api-server",
+            "src",
+            "usage-dashboard",
+            "UsageDashboardService.ts",
+          ),
+        );
+      const cases = [
+        {
+          quota: 0,
+          usage: 1,
+          overagePolicy: "BLOCK",
+          allowOverQuota: false,
+          expected: "over_quota_blocked",
+        },
+        {
+          quota: 0,
+          usage: 1,
+          overagePolicy: "WARN",
+          allowOverQuota: false,
+          expected: "over_quota_warn",
+        },
+        {
+          quota: 0,
+          usage: 1,
+          overagePolicy: "ALLOW_WITH_OVERAGE",
+          allowOverQuota: false,
+          expected: "overage_allowed",
+        },
+        {
+          quota: 0,
+          usage: 1,
+          overagePolicy: null,
+          allowOverQuota: true,
+          expected: "overage_allowed",
+        },
+        {
+          quota: 0,
+          usage: 1,
+          overagePolicy: null,
+          allowOverQuota: false,
+          expected: "over_quota_blocked",
+        },
+        {
+          quota: 0,
+          usage: 0,
+          overagePolicy: "BLOCK",
+          allowOverQuota: false,
+          expected: "within_quota",
+        },
+        {
+          quota: null,
+          usage: 100,
+          overagePolicy: "BLOCK",
+          allowOverQuota: false,
+          expected: "within_quota",
+        },
+        {
+          quota: 10,
+          usage: 7,
+          overagePolicy: "BLOCK",
+          allowOverQuota: false,
+          expected: "within_quota",
+        },
+        {
+          quota: 10,
+          usage: 8,
+          overagePolicy: "BLOCK",
+          allowOverQuota: false,
+          expected: "near_quota",
+        },
+        {
+          quota: 10,
+          usage: 10,
+          overagePolicy: "BLOCK",
+          allowOverQuota: false,
+          expected: "near_quota",
+        },
+        {
+          quota: 10,
+          usage: 11,
+          overagePolicy: "BLOCK",
+          allowOverQuota: false,
+          expected: "over_quota_blocked",
+        },
+      ] as const;
+      for (const { expected, ...options } of cases) {
+        expect(resolveOverageState(options), JSON.stringify(options)).toBe(expected);
+      }
+      const service = new UsageDashboardService({
+        tenantStore: {
+          async findById() {
+            return { id: "tenant_acme", settings: { features: [] } };
+          },
+        },
+        billingService: {
+          async getSubscription() {
+            return null;
+          },
+        },
+        meterRegistry: {
+          async getByTenant() {
+            return cases.map((entry, index) => ({
+              tenantId: "tenant_acme",
+              meterId: "meter_" + index,
+              type: "COUNT",
+              quota: entry.quota,
+              allowOverQuota: entry.allowOverQuota,
+              metadata: { featureKey: "feature_" + index },
+            }));
+          },
+        },
+        meteringService: {
+          async getUsage(options) {
+            const { meterId } = options as { meterId: string };
+            return cases[Number(meterId.slice("meter_".length))]?.usage ?? 0;
+          },
+        },
+        entitlementManager: {
+          async check(_tenantId, featureKey) {
+            const entry = cases[Number(featureKey.slice("feature_".length))];
+            return { featureKey, granted: true, type: "quota", ...entry };
+          },
+        },
+      });
+      await expect(service.getSnapshot("tenant_acme")).resolves.toMatchObject({
+        meters: cases.map((entry, index) => ({
+          meterId: "meter_" + index,
+          usage: entry.usage,
+          quota: entry.quota,
+          overageState: entry.expected,
+        })),
+        features: cases.map((entry, index) => ({
+          featureKey: "feature_" + index,
+          quota: entry.quota,
+          overageState:
+            entry.quota === null
+              ? null
+              : entry.allowOverQuota
+                ? "over_quota_blocked"
+                : entry.expected,
+        })),
+      });
+      for (const quota of [-1, Number.NaN, Number.POSITIVE_INFINITY]) {
+        expect(() =>
+          resolveOverageState({ usage: 1, quota, overagePolicy: "BLOCK", allowOverQuota: false }),
+        ).toThrow(
+          expect.objectContaining({ code: CLI_DIAGNOSTIC_CODES.usageDashboardProviderUnavailable }),
+        );
+      }
+    } finally {
+      await fs.rm(cwd, { force: true, recursive: true });
+    }
   });
 
   it("should wrap async meter registry failures in generated provider problems", async () => {
