@@ -13,6 +13,12 @@ type GeneratedUsageDashboardService = {
 };
 
 type GeneratedServiceModule = {
+  resolveOverageState(options: {
+    usage: number;
+    quota: number | null;
+    overagePolicy: "BLOCK" | "WARN" | "ALLOW_WITH_OVERAGE" | null;
+    allowOverQuota: boolean;
+  }): string;
   UsageDashboardService: new (dependencies: {
     readonly tenantStore: { findById(id: string): Promise<unknown> };
     readonly billingService: { getSubscription(tenantId: string): Promise<unknown> };
@@ -26,6 +32,157 @@ type GeneratedServiceModule = {
 };
 
 describe("GenerateUsageDashboard", () => {
+  it("should classify zero quotas by policy while preserving unlimited and positive quotas", async () => {
+    const cases = [
+      { id: "blocked", quota: 0, usage: 1, policy: "BLOCK", state: "over_quota_blocked" },
+      { id: "warned", quota: 0, usage: 1, policy: "WARN", state: "over_quota_warn" },
+      { id: "allowed", quota: 0, usage: 1, policy: "ALLOW_WITH_OVERAGE", state: "overage_allowed" },
+      { id: "unused", quota: 0, usage: 0, policy: "BLOCK", state: "within_quota" },
+      { id: "unlimited", quota: null, usage: 17, policy: "BLOCK", state: "within_quota" },
+      { id: "below", quota: 10, usage: 7, policy: "BLOCK", state: "within_quota" },
+      { id: "near", quota: 10, usage: 8, policy: "BLOCK", state: "near_quota" },
+      { id: "at", quota: 10, usage: 10, policy: "BLOCK", state: "near_quota" },
+      { id: "above", quota: 10, usage: 11, policy: "BLOCK", state: "over_quota_blocked" },
+    ];
+    const cwd = await createWorkspace({
+      consoleWeb: false,
+      tempPrefix: path.join(process.cwd(), ".usage-dashboard-quota-"),
+    });
+
+    try {
+      await runGenerateUsageDashboard({ cwd });
+      const { UsageDashboardService, resolveOverageState } =
+        await importGeneratedModule<GeneratedServiceModule>(
+          path.join(
+            cwd,
+            "apps",
+            "api-server",
+            "src",
+            "usage-dashboard",
+            "UsageDashboardService.ts",
+          ),
+        );
+      const service = new UsageDashboardService({
+        tenantStore: {
+          async findById() {
+            return { id: "tenant_quota", settings: { features: cases.map(({ id }) => id) } };
+          },
+        },
+        billingService: {
+          async getSubscription() {
+            return null;
+          },
+        },
+        meterRegistry: {
+          async getByTenant() {
+            return cases.map(({ id, quota }) => ({
+              meterId: id,
+              quota,
+              metadata: { featureKey: id },
+            }));
+          },
+        },
+        meteringService: {
+          async getUsage(options: unknown) {
+            return (
+              cases.find(({ id }) => id === (options as { meterId: string }).meterId)?.usage ?? 0
+            );
+          },
+        },
+        entitlementManager: {
+          async check(_tenantId: string, featureKey: string) {
+            const entry = cases.find(({ id }) => id === featureKey);
+            return {
+              featureKey,
+              granted: true,
+              type: "metered",
+              usage: entry?.usage,
+              quota: entry?.quota,
+              overagePolicy: entry?.policy,
+            };
+          },
+        },
+      });
+
+      const snapshot = await service.getSnapshot("tenant_quota");
+      expect(snapshot).toMatchObject({
+        meters: cases.map(({ id, quota, state }) => ({ meterId: id, quota, overageState: state })),
+        features: cases.map(({ id, quota, state }) => ({
+          featureKey: id,
+          quota,
+          overageState: quota === null ? null : state,
+        })),
+      });
+      expect(
+        resolveOverageState({ usage: 1, quota: 0, overagePolicy: null, allowOverQuota: true }),
+      ).toBe("overage_allowed");
+    } finally {
+      await fs.rm(cwd, { force: true, recursive: true });
+    }
+  });
+
+  it.each(["meter", "feature"])(
+    "should reject a negative %s quota in the generated read model",
+    async (source) => {
+      const cwd = await createWorkspace({
+        consoleWeb: false,
+        tempPrefix: path.join(process.cwd(), ".usage-dashboard-invalid-quota-"),
+      });
+      try {
+        await runGenerateUsageDashboard({ cwd });
+        const { UsageDashboardService } = await importGeneratedModule<GeneratedServiceModule>(
+          path.join(
+            cwd,
+            "apps",
+            "api-server",
+            "src",
+            "usage-dashboard",
+            "UsageDashboardService.ts",
+          ),
+        );
+        const service = new UsageDashboardService({
+          tenantStore: {
+            async findById() {
+              return { settings: { features: [] } };
+            },
+          },
+          billingService: {
+            async getSubscription() {
+              return null;
+            },
+          },
+          meterRegistry: {
+            async getByTenant() {
+              return [
+                {
+                  meterId: "requests",
+                  quota: source === "meter" ? -1 : 10,
+                  metadata: source === "feature" ? { featureKey: "requests" } : {},
+                },
+              ];
+            },
+          },
+          meteringService: {
+            async getUsage() {
+              return 1;
+            },
+          },
+          entitlementManager: {
+            async check() {
+              return { featureKey: "requests", type: "metered", granted: false, quota: -1 };
+            },
+          },
+        });
+        await expect(service.getSnapshot("tenant_quota")).rejects.toMatchObject({
+          code: CLI_DIAGNOSTIC_CODES.usageDashboardProviderUnavailable,
+          detail: expect.stringContaining("quota must be a finite non-negative number or null"),
+        });
+      } finally {
+        await fs.rm(cwd, { force: true, recursive: true });
+      }
+    },
+  );
+
   it.each(["api", "server", "backend"])("should generate in detected apps/%s", async (app) => {
     const cwd = await createWorkspace();
     await fs.rename(path.join(cwd, "apps", "api-server"), path.join(cwd, "apps", app));

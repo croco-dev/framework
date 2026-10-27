@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "cli",
+      "classification": "pure-contract",
+      "reason": "Generated usage read models distinguish zero quotas from unlimited null, classify overages by existing policies and reject invalid quotas without changing billing or quota enforcement.",
+      "files": {
+        "packages/cli/src/commands/generateUsageDashboard.ts": "292dda743020f86bc0ef7198927c403fc27b44512b85a973a2c95a6e2a31a400"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Quota classification and validation are pure read-model calculations. They add no Host capability, storage access, lifecycle boundary or provider requirement.",
+          "providers": [],
+          "constraints": ["No deployed infrastructure or live provider certification is claimed."],
+          "references": [
+            "packages/cli/src/commands/generateUsageDashboard.ts",
+            "packages/cli/src/tests/GenerateUsageDashboard.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Quota classification and validation are pure read-model calculations. They add no Host capability, storage access, lifecycle boundary or provider requirement.",
+          "providers": [],
+          "constraints": ["No deployed infrastructure or live provider certification is claimed."],
+          "references": [
+            "packages/cli/src/commands/generateUsageDashboard.ts",
+            "packages/cli/src/tests/GenerateUsageDashboard.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Quota classification and validation are pure read-model calculations. They add no Host capability, storage access, lifecycle boundary or provider requirement.",
+          "providers": [],
+          "constraints": ["No deployed infrastructure or live provider certification is claimed."],
+          "references": [
+            "packages/cli/src/commands/generateUsageDashboard.ts",
+            "packages/cli/src/tests/GenerateUsageDashboard.spec.ts"
+          ]
+        }
+      }
+    }
+  ]
+}
