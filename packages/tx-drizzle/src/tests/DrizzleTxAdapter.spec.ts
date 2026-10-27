@@ -452,58 +452,49 @@ describe("DrizzleTxAdapter", () => {
       expect(reasons[0]).toBe(timeout);
     });
 
-    it("should discard reused connection from pool if a subsequent transaction times out", async () => {
-      const releaseCalls: unknown[] = [];
-      const execute = vi.fn(async (_query: string) => {
-        await new Promise((resolve) => setTimeout(resolve, 30));
-        return "ok";
-      });
-
+    it("should guard each replacement release function without retaining checkout taint", async () => {
+      const releases: { checkout: number; reason: unknown; receiver: unknown }[] = [];
+      let checkout = 0;
       const rawConnection = {
-        id: "pooled-conn",
-        execute,
-        release: (err?: unknown) => {
-          releaseCalls.push(err ?? null);
-        },
+        release(_reason?: unknown) {},
       };
-
+      type Client = { session: { client: typeof rawConnection } };
       const db = {
-        transaction: async <T>(fn: (tx: any) => Promise<T>): Promise<T> => {
-          const tx = { session: { client: rawConnection }, execute: rawConnection.execute };
+        transaction: async <T>(fn: (tx: Client) => Promise<T>): Promise<T> => {
+          const currentCheckout = ++checkout;
+          rawConnection.release = function (reason?: unknown) {
+            releases.push({ checkout: currentCheckout, reason, receiver: this });
+          };
           try {
-            return await fn(tx);
+            return await fn({ session: { client: rawConnection } });
           } finally {
             rawConnection.release();
           }
         },
       };
-
-      const adapter = createDrizzleTxAdapter(db as any);
-
-      // Tx 1: Succeeds normally on rawConnection
-      await adapter.transaction(async (tx: any) => {
-        await tx.execute("SELECT 1");
-      });
-      expect(releaseCalls).toEqual([null]);
-
-      // Tx 2: Times out on the SAME reused rawConnection
+      const adapter = createDrizzleTxAdapter(db);
+      const healthy = () =>
+        adapter.transaction(async () => "ok", undefined, new AbortController().signal);
+      await healthy();
+      await healthy();
       const controller = new AbortController();
-      const timeout = new Error("Tx 2 timeout");
-      const tx2Promise = adapter.transaction(
-        async (tx: any) => {
-          await tx.execute("SELECT 2");
-        },
-        undefined,
-        controller.signal,
-      );
-
-      await new Promise((resolve) => setTimeout(resolve, 10));
-      controller.abort(timeout);
-
-      await expect(tx2Promise).rejects.toThrow(TransactionRollbackConfirmedProblem);
-      // Tx 2 must have called release with the taint error!
-      expect(releaseCalls.length).toBe(2);
-      expect(releaseCalls[1]).toBe(timeout);
+      const reason = new Error("Reused checkout aborted");
+      await expect(
+        adapter.transaction(
+          async () => {
+            controller.abort(reason);
+          },
+          undefined,
+          controller.signal,
+        ),
+      ).rejects.toThrow(TransactionRollbackConfirmedProblem);
+      await healthy();
+      expect(releases).toEqual([
+        { checkout: 1, reason: undefined, receiver: rawConnection },
+        { checkout: 2, reason: undefined, receiver: rawConnection },
+        { checkout: 3, reason, receiver: rawConnection },
+        { checkout: 4, reason: undefined, receiver: rawConnection },
+      ]);
     });
 
     it("should prevent unhandled promise rejections when an in-flight query rejects after abort", async () => {

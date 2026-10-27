@@ -6379,6 +6379,12 @@
       "owner": "@croco/tx-drizzle"
     },
     {
+      "path": "packages/tx-drizzle/src/tests/DrizzleTxAdapter.postgres.spec.ts",
+      "lane": "live",
+      "qualifiers": [],
+      "owner": "@croco/tx-drizzle"
+    },
+    {
       "path": "packages/tx-drizzle/src/tests/DrizzleTxAdapter.spec.ts",
       "lane": "fast",
       "qualifiers": ["coverage"],

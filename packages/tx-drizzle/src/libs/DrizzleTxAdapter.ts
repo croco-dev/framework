@@ -68,7 +68,7 @@ const CLIENT_STATE_KEY = Symbol.for("@croco/tx-drizzle/client-state");
 interface ClientState {
   coordinatorStack: TxAbortCoordinator[];
   taintedReason: Error | null;
-  releaseWrapped: boolean;
+  releaseWrapper?: (err?: unknown) => unknown;
 }
 
 function getClientState(rawClient: unknown): ClientState | undefined {
@@ -80,6 +80,7 @@ function getClientState(rawClient: unknown): ClientState | undefined {
   return undefined;
 }
 
+/** Shares abort state across savepoints while keeping release ownership tied to the current checkout. */
 function getOrCreateClientState(rawClient: unknown): ClientState | undefined {
   if (rawClient && (typeof rawClient === "object" || typeof rawClient === "function")) {
     const record = rawClient as Record<string | symbol, unknown>;
@@ -88,7 +89,6 @@ function getOrCreateClientState(rawClient: unknown): ClientState | undefined {
       state = {
         coordinatorStack: [],
         taintedReason: null,
-        releaseWrapped: false,
       };
       record[CLIENT_STATE_KEY] = state;
     }
@@ -263,6 +263,10 @@ class TxAbortCoordinator {
     }
   }
 
+  /**
+   * Guards the current checkout's release function once, including when pg-pool replaces it on reuse.
+   * Releasing forwards the checkout's abort cause and clears shared taint before the next checkout.
+   */
   guardConnectionRelease(): void {
     if (!this.rawClient || typeof this.rawClient !== "object") {
       return;
@@ -279,11 +283,12 @@ class TxAbortCoordinator {
       release?: (err?: unknown) => unknown;
     };
 
-    if (typeof clientWithRelease.release === "function" && !state.releaseWrapped) {
+    if (
+      typeof clientWithRelease.release === "function" &&
+      clientWithRelease.release !== state.releaseWrapper
+    ) {
       const originalRelease = clientWithRelease.release.bind(this.rawClient);
-      state.releaseWrapped = true;
-
-      clientWithRelease.release = (err?: unknown) => {
+      const releaseWrapper = (err?: unknown) => {
         const currentState = getClientState(this.rawClient);
         const taint = currentState?.taintedReason ?? null;
 
@@ -297,6 +302,8 @@ class TxAbortCoordinator {
         }
         return originalRelease(err);
       };
+      state.releaseWrapper = releaseWrapper;
+      clientWithRelease.release = releaseWrapper;
     }
   }
 
