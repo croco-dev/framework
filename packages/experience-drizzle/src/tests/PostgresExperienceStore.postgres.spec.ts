@@ -21,7 +21,10 @@ type Pool = Client & {
   connect(): Promise<Client & { release(): void }>;
   end(): Promise<void>;
 };
-function database(pool: Pool): ExperiencePgDatabase {
+function database(
+  pool: Pool,
+  beforeWork?: (client: Client) => Promise<void>,
+): ExperiencePgDatabase {
   function executor(client: Client): ExperiencePgExecutor {
     return {
       execute: (statement) => {
@@ -36,6 +39,7 @@ function database(pool: Pool): ExperiencePgDatabase {
       const client = await pool.connect();
       try {
         await client.query("BEGIN");
+        await beforeWork?.(client);
         const result = await work(executor(client));
         await client.query("COMMIT");
         return result;
@@ -450,4 +454,116 @@ describe.skipIf(!url)("PostgreSQL experience configuration families", () => {
       await pool.end();
     }
   });
+  it.each(["read uncommitted", "repeatable read", "serializable"] as const)(
+    "preserves capacity when competing transactions retain %s snapshots",
+    async (isolation) => {
+      const require = createRequire(import.meta.url);
+      const { Pool: PgPool } = require("pg") as {
+        Pool: new (options: { connectionString: string; max?: number }) => Pool;
+      };
+      const pool = new PgPool({ connectionString: url as string, max: 2 });
+      const store = new PostgresExperienceStore(database(pool));
+      const scope = { appId: "isolation", environment: "test", tenantId: randomUUID() };
+      const config: ExperienceConfig = {
+        id: "base",
+        placementId: "isolation.tip",
+        scope,
+        revision: 1,
+        status: "published",
+        renderer: "banner",
+        content: { locale: "en", title: "Tip", body: "Content" },
+        priority: 1,
+      };
+      const input = (id: string) => ({
+        config: { ...config, id },
+        expectedRevision: null,
+        actorId: "operator",
+        reason: "Publish",
+        idempotencyKey: "initial",
+      });
+      await pool.query(
+        readFileSync(new URL("../../migrations/0001_experience.up.sql", import.meta.url), "utf8"),
+      );
+      try {
+        for (let index = 0; index < 99; index += 1)
+          await store.saveConfig(input(`published-${index}`));
+        let ready = (): void => {};
+        const snapshotsReady = new Promise<void>((resolve) => {
+          ready = resolve;
+        });
+        let snapshotCount = 0;
+        const racing = new PostgresExperienceStore(
+          database(pool, async (client) => {
+            await client.query(`SET TRANSACTION ISOLATION LEVEL ${isolation}`);
+            // Both snapshots see the same 99 families before either publication can start.
+            const count = await client.query(
+              "SELECT count(*)::integer AS count FROM croco_experience_current WHERE status = 'published'",
+            );
+            expect(count.rows[0]?.count).toBe(99);
+            snapshotCount += 1;
+            if (snapshotCount === 2) ready();
+            await snapshotsReady;
+          }),
+        );
+        const results = await Promise.allSettled([
+          racing.saveConfig(input("contender-a")),
+          racing.saveConfig(input("contender-b")),
+        ]);
+        if (isolation === "repeatable read") {
+          expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(0);
+          for (const result of results) {
+            if (result.status === "rejected")
+              expect(result.reason.message).toContain("Repeatable read");
+          }
+          expect(await store.listPublishedConfigs(scope, config.placementId)).toHaveLength(99);
+          expect(await store.getConfig(scope, config.placementId, "contender-a")).toBeUndefined();
+          expect(await store.getConfig(scope, config.placementId, "contender-b")).toBeUndefined();
+          const repeatable = new PostgresExperienceStore(
+            database(pool, async (client) => {
+              await client.query("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ");
+            }),
+          );
+          const original = input("published-0");
+          expect(await repeatable.saveConfig(original)).toEqual(original.config);
+          const edited = {
+            ...original.config,
+            revision: 2,
+            content: { ...original.config.content, title: "Edited" },
+          };
+          await repeatable.saveConfig({
+            ...original,
+            config: edited,
+            expectedRevision: 1,
+            idempotencyKey: "edit",
+          });
+          await repeatable.saveConfig({
+            ...original,
+            config: { ...edited, revision: 3, status: "archived" },
+            expectedRevision: 2,
+            idempotencyKey: "archive",
+          });
+          expect(await store.listPublishedConfigs(scope, config.placementId)).toHaveLength(98);
+        } else {
+          expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(1);
+          expect(await store.listPublishedConfigs(scope, config.placementId)).toHaveLength(100);
+          const failed = results.find((result) => result.status === "rejected");
+          if (isolation === "serializable") {
+            expect(failed?.status === "rejected" && failed.reason.code).toBe("40001");
+          } else {
+            expect(failed?.status === "rejected" && failed.reason.message).toContain(
+              "configuration limit",
+            );
+          }
+        }
+      } finally {
+        await pool.query(
+          readFileSync(
+            new URL("../../migrations/0001_experience.down.sql", import.meta.url),
+            "utf8",
+          ),
+        );
+        await pool.end();
+      }
+    },
+  );
 });
