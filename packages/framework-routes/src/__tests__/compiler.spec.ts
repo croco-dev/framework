@@ -309,7 +309,9 @@ describe("compiler", () => {
       );
       expect(code).toContain("export function registerRoutes(app, additionalControllerBindings");
       expect(code).toContain("routeRegistrationTable");
-      expect(code).toContain("registerGeneratedRoute(app, route, additionalControllerBindings)");
+      expect(code).toContain(
+        "registerGeneratedRoute(app, route, additionalControllerBindings, runtime)",
+      );
       expect(code).toContain("GeneratedController0");
       expect(code).toContain('handlerName: "hello"');
       expect(code).not.toContain('c.text("ok")');

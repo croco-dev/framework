@@ -41,6 +41,12 @@ Authored contract path. Optional only for compatibility with v1 tables created b
 
 ---
 
+### invocation?
+
+> `readonly` `optional` **invocation?**: `"rest"`
+
+---
+
 ### method
 
 > `readonly` **method**: `string`

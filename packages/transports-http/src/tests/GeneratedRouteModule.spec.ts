@@ -1,22 +1,177 @@
 import "reflect-metadata";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { Container } from "@croco/framework-context";
 import { compileRoutes, generateModule } from "@croco/framework-routes";
 import { ProblemFactory } from "@croco/problems-core";
-import { HttpMethod } from "@croco/protocols-rest";
+import { Controller, Get, HttpMethod, defineRouteContract } from "@croco/protocols-rest";
+import { z } from "zod";
 import { Hono } from "hono";
 import { describe, expect, it } from "vitest";
 import { createApp as createCrocoApp } from "../libs/CrocoApp";
+import {
+  GeneratedArgumentsController,
+  RejectGeneratedRequest,
+} from "./fixtures/GeneratedArgumentsController";
 import { GeneratedRouteController } from "./fixtures/GeneratedRouteController";
 import {
   GeneratedCatchAllController,
   GeneratedRootCatchAllController,
 } from "./fixtures/GeneratedCatchAllController";
 
+async function createGeneratedModuleDirectory(prefix: string): Promise<string> {
+  const directory = await mkdtemp(join(process.cwd(), prefix));
+  try {
+    const dependencies = join(directory, "node_modules", "@croco");
+    await mkdir(dependencies, { recursive: true });
+    await symlink(
+      fileURLToPath(new URL("../../", import.meta.url)),
+      join(dependencies, "transports-http"),
+      "dir",
+    );
+    return directory;
+  } catch (error) {
+    await rm(directory, { recursive: true, force: true });
+    throw error;
+  }
+}
+
 describe("generated route module", () => {
+  it("binds decorated arguments and validates bodies like reflection routes while preserving raw Hono handlers", async () => {
+    const outputDir = await createGeneratedModuleDirectory(".croco-generated-arguments-");
+    try {
+      const moduleUrl = new URL("./fixtures/GeneratedArgumentsController.ts", import.meta.url).href;
+      await compileRoutes({ controllerPaths: [moduleUrl], outputDir });
+      Container.set(GeneratedArgumentsController, new GeneratedArgumentsController());
+      Container.set(RejectGeneratedRequest, new RejectGeneratedRequest());
+      const generated = await import(
+        new URL(`file://${join(outputDir, ".croco", "build", "routes.mjs")}`).href
+      );
+      const app = new Hono();
+      generated.registerRoutes(app);
+      const reflection = createCrocoApp({
+        controllers: [GeneratedArgumentsController],
+        securityValidation: "off",
+        diValidation: "off",
+      });
+
+      for (const request of [
+        new Request("http://localhost/arguments/item-42?view=detail", {
+          headers: { "x-tenant": "tenant-7" },
+        }),
+        new Request("http://localhost/arguments", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ name: "Widget" }),
+        }),
+        new Request("http://localhost/arguments", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ name: "" }),
+        }),
+      ]) {
+        const actual = await app.request(request.clone());
+        const expected = await reflection.fetch(request.clone());
+        expect(actual.status).toBe(expected.status);
+        if (actual.status < 400) {
+          const body = await actual.json();
+          expect(body).toEqual(await expected.json());
+          expect(body).toEqual(
+            request.method === "GET"
+              ? { id: "item-42", view: "detail", tenant: "tenant-7" }
+              : { name: "Widget" },
+          );
+        } else {
+          expect(actual.status).toBe(422);
+          expect(await actual.json()).toMatchObject({ status: 422 });
+          expect(actual.headers.get("content-type")).toBe(expected.headers.get("content-type"));
+        }
+      }
+      const denied = await app.request("http://localhost/arguments/guarded/check");
+      expect(denied.status).toBe(403);
+      expect(await denied.json()).not.toHaveProperty("leaked");
+      const invalidOutput = await app.request("http://localhost/arguments/invalid/output");
+      expect(invalidOutput.status).toBe(500);
+      expect(await invalidOutput.json()).not.toHaveProperty("count");
+      const raw = await app.request("http://localhost/arguments/raw/context?value=hono-value");
+      expect(raw.status).toBe(200);
+      expect(await raw.text()).toBe("hono-value");
+      const legacyPath = join(outputDir, "legacy.mjs");
+      await writeFile(
+        legacyPath,
+        generateModule([
+          {
+            className: "GeneratedArgumentsController",
+            basePath: "/arguments",
+            routes: [{ method: "GET", path: "/:id", handlerName: "read" }],
+          },
+        ]),
+      );
+      const legacy = await import(new URL(`file://${legacyPath}`).href);
+      expect(() => legacy.registerRoutes(new Hono(), { GeneratedArgumentsController })).toThrow(
+        "missing-rest-invocation",
+      );
+    } finally {
+      Container.reset();
+      await rm(outputDir, { recursive: true, force: true });
+    }
+  });
+
+  it("checks a contract route independently of an earlier raw route on the same handler", async () => {
+    const contract = defineRouteContract({
+      method: HttpMethod.GET,
+      path: "/stacked/contract",
+      response: z.object({ value: z.string() }),
+    });
+    @Controller("/stacked")
+    class StackedController {
+      @Get(contract)
+      @Get("/raw")
+      read() {
+        return { value: "contract-value" };
+      }
+    }
+    const outputDir = await createGeneratedModuleDirectory(".croco-generated-stacked-");
+    try {
+      const path = join(outputDir, "legacy.mjs");
+      await writeFile(
+        path,
+        generateModule([
+          {
+            className: "StackedController",
+            basePath: "/stacked",
+            routes: [
+              { method: "GET", path: "/raw", handlerName: "read" },
+              { method: "GET", path: "/contract", handlerName: "read" },
+            ],
+          },
+        ]),
+      );
+      const rawPath = join(outputDir, "raw-only.mjs");
+      await writeFile(
+        rawPath,
+        generateModule([
+          {
+            className: "StackedController",
+            basePath: "/stacked",
+            routes: [{ method: "GET", path: "/raw", handlerName: "read" }],
+          },
+        ]),
+      );
+      const rawOnly = await import(new URL(`file://${rawPath}`).href);
+      expect(() => rawOnly.registerRoutes(new Hono(), { StackedController })).not.toThrow();
+      const generated = await import(new URL(`file://${path}`).href);
+      expect(() => generated.registerRoutes(new Hono(), { StackedController })).toThrow(
+        "missing-rest-invocation",
+      );
+    } finally {
+      await rm(outputDir, { recursive: true, force: true });
+    }
+  });
+
   it("invokes DI-resolved controllers and preserves Problem handling in Hono", async () => {
-    const outputDir = await mkdtemp(join(process.cwd(), ".croco-framework-routes-runtime-"));
+    const outputDir = await createGeneratedModuleDirectory(".croco-framework-routes-runtime-");
 
     try {
       const moduleUrl = new URL("./fixtures/GeneratedRouteController.ts", import.meta.url).href;
@@ -60,7 +215,7 @@ describe("generated route module", () => {
   });
 
   it("accepts explicit controller bindings when a generated module has no imports", async () => {
-    const outputDir = await mkdtemp(join(process.cwd(), ".croco-framework-routes-bindings-"));
+    const outputDir = await createGeneratedModuleDirectory(".croco-framework-routes-bindings-");
 
     try {
       const routesModulePath = join(outputDir, "routes.mjs");
@@ -98,7 +253,7 @@ describe("generated route module", () => {
   });
 
   it("executes @All handlers equivalently through generated and reflection registration", async () => {
-    const outputDir = await mkdtemp(join(process.cwd(), ".croco-framework-routes-all-runtime-"));
+    const outputDir = await createGeneratedModuleDirectory(".croco-framework-routes-all-runtime-");
 
     try {
       const moduleUrl = new URL("./fixtures/GeneratedRouteController.ts", import.meta.url).href;
@@ -139,7 +294,7 @@ describe("generated route module", () => {
   });
 
   it("preserves catch-all parameter matching in generated route modules", async () => {
-    const outputDir = await mkdtemp(join(process.cwd(), ".croco-framework-routes-catch-all-"));
+    const outputDir = await createGeneratedModuleDirectory(".croco-framework-routes-catch-all-");
 
     try {
       const moduleUrl = new URL("./fixtures/GeneratedCatchAllController.ts", import.meta.url).href;
