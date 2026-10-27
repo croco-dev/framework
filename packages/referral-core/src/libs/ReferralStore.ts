@@ -77,7 +77,7 @@ export interface ReferralTx {
   recordClick(linkId: string, occurredAt: Date): Promise<void>;
   listLinks(filter: ListReferralLinksFilter): Promise<readonly ReferralLink[]>;
   countClicksForProgram(programId: string): Promise<number>;
-  /** Serializes this lifecycle read with attribution transitions until the transaction ends. */
+  /** Serializes lifecycle and benefit return-operation reads/writes until the transaction ends. */
   getAttribution(attributionId: string): Promise<ReferralAttribution | null>;
   /** First-valid lookup: the earliest claimed attribution for a recipient in a family. */
   getFirstAttributionForRecipient(
@@ -121,6 +121,7 @@ export interface ReferralTx {
       readonly reason?: string;
       readonly accountRef?: string;
       readonly fulfillmentAttempt?: number;
+      readonly returnOperation?: ReferralBenefitIntent["returnOperation"];
     },
     now: Date,
     expectedAttempt?: number,

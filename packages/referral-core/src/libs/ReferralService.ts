@@ -809,8 +809,9 @@ export class ReferralService {
 
   /**
    * Returns a completed benefit through an explicit compensating fulfillment
-   * reversal. The reversal posts a new ledger entry keyed by the return
-   * idempotency key; the original grant receipt stays on the intent while the
+   * reversal. The first request claims a durable return key before calling the
+   * provider. Retries only query its receipt and never repeat an uncertain debit.
+   * The original grant receipt stays on the intent while the
    * policy and the return receipt record why value moved back. Other
    * subjects' confirmed benefits are never touched implicitly.
    */
@@ -848,6 +849,9 @@ export class ReferralService {
       if (!intent) {
         throw new ReferralBenefitFailedProblem(stored.id, input.side, "benefit intent is missing");
       }
+      if (intent.status === "returned" && intent.returnOperation?.status === "returned") {
+        return { intent, operation: intent.returnOperation, claimed: false };
+      }
       if (intent.status !== "granted") {
         throw new ReferralAttributionStateConflictProblem(
           intent.id,
@@ -855,67 +859,131 @@ export class ReferralService {
           `only granted benefit intents can return (policy ${input.policy})`,
         );
       }
-      return { intent };
-    });
-    const reverse = this.fulfillment.reverse;
-    if (!reverse) {
-      throw new ReferralBenefitFailedProblem(
-        input.attributionId,
-        input.side,
-        "fulfillment does not support benefit return",
-      );
-    }
-    const returnKey = input.returnIdempotencyKey ?? `return:${snapshot.intent.idempotencyKey}`;
-    let returnRef: string;
-    try {
-      const result = await reverse.call(this.fulfillment, {
-        returnIdempotencyKey: returnKey,
-        intent: snapshot.intent,
-        subject: snapshot.intent.subject,
-        attributionId: input.attributionId,
-        policy: input.policy,
-        reason: input.reason,
-      });
-      if ("error" in result) {
-        throw new ReferralBenefitFailedProblem(input.attributionId, input.side, result.error);
+      if (intent.returnOperation) {
+        return { intent, operation: intent.returnOperation, claimed: false };
       }
-      returnRef = result.returnRef;
-    } catch (error) {
-      if (error instanceof ReferralBenefitFailedProblem) throw error;
-      throw new ReferralBenefitFailedProblem(
-        input.attributionId,
-        input.side,
-        error instanceof Error ? error.message : String(error),
-      );
-    }
-    if (returnRef.trim().length === 0) {
-      throw new ReferralBenefitFailedProblem(
-        input.attributionId,
-        input.side,
-        "fulfillment returned an empty return receipt",
-      );
-    }
-    await this.store.transact(async (tx) => {
-      const stored = await tx.getAttribution(input.attributionId);
-      if (!stored) throw new ReferralAttributionNotFoundProblem(input.attributionId);
-      const program = await this.programFor(tx, stored);
-      await tx.compareAndSetBenefitIntent(
-        snapshot.intent.id,
+      if (!this.fulfillment.reverse) {
+        throw new ReferralBenefitFailedProblem(
+          stored.id,
+          input.side,
+          "fulfillment does not support benefit return",
+        );
+      }
+      const operation = {
+        status: "returning" as const,
+        idempotencyKey: input.returnIdempotencyKey ?? `return:${intent.idempotencyKey}`,
+        policy: input.policy,
+        actorId: input.actorId,
+        reason: input.reason,
+      };
+      const claimed = await tx.compareAndSetBenefitIntent(
+        intent.id,
         ["granted"],
-        {
-          status: "returned",
-          reason: `${input.policy}: ${input.reason} (return ${returnRef})`,
-        },
+        { status: "granted", returnOperation: operation },
         now,
       );
-      await tx.recordAudit(
-        this.audit("benefit", snapshot.intent.id, "benefit.returned", program, {
-          actorId: input.actorId,
-          reason: `${input.policy}: ${input.reason} (return ${returnRef})`,
-          idempotencyKey: returnKey,
-        }),
-      );
+      return { intent: claimed, operation, claimed: true };
     });
+    const { intent, operation } = snapshot;
+    if (operation.status !== "returned") {
+      const request = {
+        returnIdempotencyKey: operation.idempotencyKey,
+        intent,
+        subject: intent.subject,
+        attributionId: input.attributionId,
+        policy: operation.policy,
+        reason: operation.reason,
+      };
+      let returnRef: string;
+      try {
+        if (snapshot.claimed) {
+          const reverse = this.fulfillment.reverse;
+          if (!reverse) {
+            throw new ReferralBenefitFailedProblem(
+              input.attributionId,
+              input.side,
+              "fulfillment does not support benefit return",
+            );
+          }
+          const result = await reverse.call(this.fulfillment, request);
+          if ("error" in result) {
+            throw new ReferralBenefitFailedProblem(input.attributionId, input.side, result.error);
+          }
+          returnRef = result.returnRef;
+        } else {
+          const result = await this.fulfillment.checkReturn?.(request);
+          if (!result) {
+            throw new ReferralBenefitFailedProblem(
+              input.attributionId,
+              input.side,
+              "benefit return is pending or uncertain; a confirmed return receipt is required",
+            );
+          }
+          returnRef = result.returnRef;
+        }
+        if (returnRef.trim().length === 0) {
+          throw new ReferralBenefitFailedProblem(
+            input.attributionId,
+            input.side,
+            "fulfillment returned an empty return receipt",
+          );
+        }
+      } catch (error) {
+        // A competing lookup must not change the live owner's operation.
+        if (snapshot.claimed) {
+          await this.store.transact(async (tx) => {
+            await tx.getAttribution(input.attributionId);
+            const current = await tx.getBenefitIntent(intent.id);
+            if (current?.status === "granted" && current.returnOperation?.status === "returning") {
+              await tx.compareAndSetBenefitIntent(
+                intent.id,
+                ["granted"],
+                {
+                  status: "granted",
+                  returnOperation: {
+                    ...current.returnOperation,
+                    status: "unknown",
+                    failureReason: error instanceof Error ? error.message : String(error),
+                  },
+                },
+                now,
+              );
+            }
+          });
+        }
+        if (error instanceof ReferralBenefitFailedProblem) throw error;
+        throw new ReferralBenefitFailedProblem(
+          input.attributionId,
+          input.side,
+          error instanceof Error ? error.message : String(error),
+        );
+      }
+      await this.store.transact(async (tx) => {
+        const stored = await tx.getAttribution(input.attributionId);
+        if (!stored) throw new ReferralAttributionNotFoundProblem(input.attributionId);
+        const current = await tx.getBenefitIntent(intent.id);
+        if (current?.status === "returned" && current.returnOperation?.status === "returned")
+          return;
+        const program = await this.programFor(tx, stored);
+        await tx.compareAndSetBenefitIntent(
+          intent.id,
+          ["granted"],
+          {
+            status: "returned",
+            returnOperation: { ...operation, status: "returned", receipt: returnRef },
+            reason: `${operation.policy}: ${operation.reason} (return ${returnRef})`,
+          },
+          now,
+        );
+        await tx.recordAudit(
+          this.audit("benefit", intent.id, "benefit.returned", program, {
+            actorId: operation.actorId,
+            reason: `${operation.policy}: ${operation.reason} (return ${returnRef})`,
+            idempotencyKey: operation.idempotencyKey,
+          }),
+        );
+      });
+    }
     await this.refreshAttributionState(input.attributionId, now);
     const refreshed = await this.store.getAttribution(input.attributionId);
     if (!refreshed) throw new ReferralAttributionNotFoundProblem(input.attributionId);

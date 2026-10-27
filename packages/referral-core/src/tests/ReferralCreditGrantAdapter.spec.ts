@@ -120,12 +120,68 @@ describe("FirstPartyReferralCreditGrantAdapter receipt lookup", () => {
     const first = await adapter.reverse(request);
     expect(first).toEqual({ returnRef: expect.any(String) });
     expect(await adapter.reverse(request)).toEqual(first);
+    expect(await adapter.checkReturn(request)).toEqual(first);
     const history = await ledger.getHistory(accountId, { afterPosition: 100 });
     expect(history.transactions.filter((entry) => entry.kind === "adjustment")).toHaveLength(1);
     expect(await ledger.getBalance(accountId)).toMatchObject({
       available: "700",
       netAdjusted: "-7",
     });
+  });
+
+  it("only confirms a matching compensating debit, including receipts beyond the first page", async () => {
+    const { adapter, ledger, accountId, grant } = await setup(101);
+    const request = {
+      returnIdempotencyKey: "return-target",
+      intent,
+      subject,
+      attributionId: "attribution",
+    };
+    expect(await adapter.checkReturn(request)).toBeNull();
+    await ledger.adjustCredits({
+      accountId,
+      idempotencyKey: "unrelated-debit",
+      amount: creditAmount("7"),
+      direction: "debit",
+      reference: { type: "other", id: "attribution" },
+    });
+    expect(
+      await adapter.checkReturn({ ...request, returnIdempotencyKey: "unrelated-debit" }),
+    ).toBeNull();
+    await ledger.adjustCredits({
+      accountId,
+      idempotencyKey: "wrong-direction",
+      amount: creditAmount("7"),
+      direction: "credit",
+      reference: { type: "referral-benefit-return", id: "attribution" },
+    });
+    expect(
+      await adapter.checkReturn({ ...request, returnIdempotencyKey: "wrong-direction" }),
+    ).toBeNull();
+    const receipt = await ledger.adjustCredits({
+      accountId,
+      idempotencyKey: "return-target",
+      amount: creditAmount("7"),
+      direction: "debit",
+      reference: { type: "referral-benefit-return", id: "attribution" },
+    });
+    expect(await adapter.checkReturn(request)).toEqual({ returnRef: receipt.transactions[0]?.id });
+    expect(
+      await adapter.checkReturn({ ...request, attributionId: "other-attribution" }),
+    ).toBeNull();
+    expect(
+      await adapter.checkReturn({ ...request, subject: { ...subject, tenantId: "other-tenant" } }),
+    ).toBeNull();
+    expect(
+      await adapter.checkReturn({
+        ...request,
+        intent: { ...intent, benefit: { kind: "trial-credits", creditAmount: "3" } },
+      }),
+    ).toBeNull();
+    expect(await adapter.checkReturn({ ...request, returnIdempotencyKey: "noise-1" })).toBeNull();
+    // Move the receipt behind later history as well; lookup pins and traverses its snapshot.
+    for (let i = 0; i < 101; i++) await grant(`later-${i}`);
+    expect(await adapter.checkReturn(request)).toEqual({ returnRef: receipt.transactions[0]?.id });
   });
 
   it("reports a missing grant without debiting the account", async () => {

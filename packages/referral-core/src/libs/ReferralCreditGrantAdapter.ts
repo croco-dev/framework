@@ -145,6 +145,35 @@ export class FirstPartyReferralCreditGrantAdapter implements ReferralFulfillment
     }
   }
 
+  /** Reads the compensating debit without posting another adjustment. */
+  async checkReturn(input: {
+    readonly returnIdempotencyKey: string;
+    readonly intent: ReferralBenefitIntent;
+    readonly subject: ReferralSubject;
+    readonly attributionId: string;
+  }): Promise<{ readonly returnRef: string } | null> {
+    const benefit = input.intent.benefit;
+    if (benefit.kind !== "trial-credits") return null;
+    const accountId = await this.resolveAccount({
+      side: input.intent.side,
+      subject: input.subject,
+      benefit,
+    });
+    const account = await this.ledger.getAccount(accountId);
+    if (!account || account.tenantId !== input.subject.tenantId) return null;
+    const receipt = await this.findTransaction(
+      accountId,
+      (transaction) =>
+        transaction.idempotencyKey === input.returnIdempotencyKey &&
+        transaction.kind === "adjustment" &&
+        transaction.adjustmentDirection === "debit" &&
+        transaction.reference.type === "referral-benefit-return" &&
+        transaction.reference.id === input.attributionId &&
+        transaction.amount === canonicalReferralAmount(benefit.creditAmount),
+    );
+    return receipt ? { returnRef: receipt.id } : null;
+  }
+
   /**
    * Explicit benefit return through a new compensating ledger adjustment. The
    * original grant stays on the ledger for audit; this posts a separate debit
@@ -217,14 +246,22 @@ export class FirstPartyReferralCreditGrantAdapter implements ReferralFulfillment
     accountId: CreditAccountId,
     idempotencyKey: string,
   ): Promise<CreditTransaction | undefined> {
+    return this.findTransaction(
+      accountId,
+      (transaction) =>
+        transaction.idempotencyKey === idempotencyKey && transaction.kind === "grant",
+    );
+  }
+
+  private async findTransaction(
+    accountId: CreditAccountId,
+    matches: (transaction: CreditTransaction) => boolean,
+  ): Promise<CreditTransaction | undefined> {
     let page = await this.ledger.getHistory(accountId, { limit: HISTORY_CHECK_LIMIT });
     // Pin the first read's upper bound so concurrent appends cannot extend this scan.
     const atPosition = page.position;
     while (true) {
-      const grant = page.transactions.find(
-        (transaction) =>
-          transaction.idempotencyKey === idempotencyKey && transaction.kind === "grant",
-      );
+      const grant = page.transactions.find(matches);
       if (grant) return grant;
       const last = page.transactions.at(-1);
       if (!last || last.position >= atPosition) return undefined;

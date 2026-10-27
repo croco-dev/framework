@@ -88,6 +88,7 @@ function cloneIntent(intent: ReferralBenefitIntent): ReferralBenefitIntent {
     ...intent,
     subject: cloneSubject(intent.subject),
     benefit: cloneUnknown(intent.benefit),
+    returnOperation: intent.returnOperation ? { ...intent.returnOperation } : undefined,
     createdAt: cloneDate(intent.createdAt),
     updatedAt: cloneDate(intent.updatedAt),
   };
@@ -387,6 +388,7 @@ export class InMemoryReferralStore implements ReferralStore, ReferralTx {
       readonly reason?: string;
       readonly accountRef?: string;
       readonly fulfillmentAttempt?: number;
+      readonly returnOperation?: ReferralBenefitIntent["returnOperation"];
     },
     now: Date,
     expectedAttempt?: number,
@@ -407,6 +409,9 @@ export class InMemoryReferralStore implements ReferralStore, ReferralTx {
       ...cloneIntent(stored),
       status: patch.status,
       fulfillmentAttempt: patch.fulfillmentAttempt ?? stored.fulfillmentAttempt,
+      returnOperation: patch.returnOperation
+        ? { ...patch.returnOperation }
+        : stored.returnOperation,
       receipt: patch.receipt ?? stored.receipt,
       reason: patch.reason,
       accountRef: patch.accountRef ?? stored.accountRef,

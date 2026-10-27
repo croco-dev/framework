@@ -179,6 +179,16 @@ export type ReferralBenefitIntent = {
   readonly status: ReferralBenefitIntentStatus;
   /** Monotonic owner of an external fulfillment attempt; absent legacy values mean zero. */
   readonly fulfillmentAttempt?: number;
+  /** One durable compensating operation per benefit, independent of caller retry keys. */
+  readonly returnOperation?: {
+    readonly status: "returning" | "unknown" | "returned";
+    readonly idempotencyKey: string;
+    readonly policy: string;
+    readonly actorId: string;
+    readonly reason: string;
+    readonly receipt?: string;
+    readonly failureReason?: string;
+  };
   readonly accountRef?: string;
   readonly receipt?: string;
   readonly reason?: string;
@@ -238,6 +248,9 @@ export type ReferralFulfillmentResult =
  * instead of paying twice, including overlapping attempts from separate processes. `check` reports a previously completed grant or
  * null when nothing durable is visible; it never pays. `reverse` posts a
  * compensating return for an already granted side; it never deletes history.
+ * `checkReturn` only reads a completed reversal for the fixed operation key.
+ * A null receipt does not prove that no reversal is in flight. The service
+ * never repeats `reverse` after an uncertain result, including `{ error }`.
  */
 export interface ReferralFulfillmentPort {
   fulfill(input: {
@@ -260,6 +273,12 @@ export interface ReferralFulfillmentPort {
     readonly policy: string;
     readonly reason: string;
   }): Promise<{ readonly returnRef: string } | { readonly error: string }>;
+  checkReturn?(input: {
+    readonly returnIdempotencyKey: string;
+    readonly intent: ReferralBenefitIntent;
+    readonly subject: ReferralSubject;
+    readonly attributionId: string;
+  }): Promise<{ readonly returnRef: string } | null>;
 }
 
 export type CreateReferralLinkInput = {

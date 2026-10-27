@@ -59,6 +59,38 @@ attribution lifecycle reads inside transactions with lifecycle writes. Deploy
 that provider support with the updated service; older providers that ignore the
 predicate cannot fence recovery safely.
 
+`returnBenefitSide` claims one `returnOperation` on the granted intent before
+calling `reverse`. The first request pins its return key, policy, actor and
+reason; later requests for that side, including different caller keys, reuse
+that operation. The original grant receipt and the other side remain intact.
+Completed operations replay their stored receipt without another debit.
+Legacy `returned` intents without operation metadata retain their state-conflict
+error because they have no recoverable return receipt.
+
+A thrown error, `{ error }`, empty receipt, or failed local completion write
+does not authorize another reversal. Retry `returnBenefitSide` to invoke the
+port's optional read-only `checkReturn` with the persisted key. A confirmed
+receipt completes the original operation and audit once. A missing receipt or
+missing lookup capability reports `ReferralBenefitFailedProblem` and leaves the
+operation locked (`returning` or `unknown`), with its budget unchanged. This
+also applies to a crash after claiming but before sending: receipt absence
+cannot distinguish an unsent request from an in-flight debit. Resolve it at
+the provider and expose the verified receipt through `checkReturn`; never
+delete the claim or substitute a fresh key to retry an uncertain debit.
+The first-party credit adapter queries matching compensating debits from the
+existing ledger without posting an adjustment.
+
+Custom transactional providers must persist `returnOperation` in
+`compareAndSetBenefitIntent` and serialize its reads and writes through
+`getAttribution` inside the same transaction. In-memory storage coordinates
+only callers sharing that store instance; PostgreSQL uses the existing
+attribution row lock across processes. No distributed guarantee is added to
+the in-memory adapter. Metadata is optional in the existing JSON document,
+so no SQL migration is required. Drain older service workers before enabling
+returns with the updated service/provider pair: older binaries ignore the
+operation metadata. Before rolling back, reconcile outstanding returns and
+stop return traffic; do not run old and new return handlers concurrently.
+
 Link tokens are issued via `@croco/referral-core/link-token`; only the
 SHA-256 hash is persisted. Use `@croco/referral-drizzle` for PostgreSQL
 persistence.

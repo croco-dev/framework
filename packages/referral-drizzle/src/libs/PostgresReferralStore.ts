@@ -717,6 +717,7 @@ class PostgresReferralTx implements ReferralTx {
       readonly reason?: string;
       readonly accountRef?: string;
       readonly fulfillmentAttempt?: number;
+      readonly returnOperation?: ReferralBenefitIntent["returnOperation"];
     },
     now: Date,
     expectedAttempt?: number,
@@ -738,6 +739,7 @@ class PostgresReferralTx implements ReferralTx {
         ...current,
         status: patch.status,
         fulfillmentAttempt: patch.fulfillmentAttempt ?? current.fulfillmentAttempt,
+        returnOperation: patch.returnOperation ?? current.returnOperation,
         receipt: patch.receipt ?? current.receipt,
         reason: patch.reason,
         accountRef: patch.accountRef ?? current.accountRef,
