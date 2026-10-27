@@ -3762,6 +3762,16 @@ const recoveryMetadataByCategory = {
 } as const satisfies Record<ProblemCategory, ProblemRecoveryMetadata>;
 
 const recoveryMetadataByCode = {
+  "transports-graphql/resolver-container-required": recovery({
+    cause:
+      "Application discovery selected a resolver without a registered Croco provider or custom container.",
+    userAction: "Ask the application owner to configure resolver dependency injection.",
+    operatorAction:
+      "Install the generated DI graph and compile inside ApplicationRuntime.run(), supply a custom container, or explicitly set autoDiscover: false for standalone manual classes.",
+    retryability: "not-retryable",
+    redactionPolicy: "operator-only",
+    severity: "error",
+  }),
   "transports-graphql/fetch-schema-required": recovery({
     cause:
       "The fetch handler was configured without a prepared GraphQL schema, such as with Node-only schemaOptions.",

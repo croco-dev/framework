@@ -6494,6 +6494,16 @@ importers:
       type-graphql:
         specifier: ^2.0.0-rc.3
         version: 2.0.0-rc.3(class-validator@0.14.4)(graphql-scalars@1.25.0(graphql@16.12.0))(graphql@16.12.0)
+    devDependencies:
+      '@croco/esbuild-plugin':
+        specifier: workspace:*
+        version: link:../esbuild-plugin
+      '@croco/framework-module':
+        specifier: workspace:*
+        version: link:../framework-module
+      esbuild:
+        specifier: ^0.20.2
+        version: 0.20.2
 
   packages/transports-http:
     dependencies:

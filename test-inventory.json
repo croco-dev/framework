@@ -6025,6 +6025,12 @@
       "owner": "@croco/transports-graphql"
     },
     {
+      "path": "packages/transports-graphql/src/tests/SchemaCompiler.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/transports-graphql"
+    },
+    {
       "path": "packages/transports-http/src/tests/BehavioralEvidence.spec.ts",
       "lane": "fast",
       "qualifiers": ["coverage"],
