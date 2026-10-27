@@ -551,7 +551,7 @@ export class UsageDashboardService {
     try {
       const entitlement = await this.dependencies.entitlementManager.check(tenantId, featureKey);
       const usage = entitlement.usage ?? null;
-      const quota = entitlement.quota ?? null;
+      const quota = validateQuota(entitlement.quota ?? null);
       const remaining = entitlement.remaining ?? (quota === null || usage === null ? null : Math.max(0, quota - usage));
       const overagePolicy = entitlement.overagePolicy ?? null;
 
@@ -639,12 +639,13 @@ export function resolveOverageState(options: {
   readonly overagePolicy: OveragePolicy | null;
   readonly allowOverQuota: boolean;
 }): UsageDashboardOverageState {
-  if (options.quota === null || options.quota <= 0) {
+  const quota = validateQuota(options.quota);
+  if (quota === null) {
     return "within_quota";
   }
 
-  if (options.usage <= options.quota) {
-    return options.usage / options.quota >= NEAR_QUOTA_RATIO ? "near_quota" : "within_quota";
+  if (options.usage <= quota) {
+    return quota > 0 && options.usage / quota >= NEAR_QUOTA_RATIO ? "near_quota" : "within_quota";
   }
 
   if (options.overagePolicy === "ALLOW_WITH_OVERAGE" || options.allowOverQuota) {
@@ -655,6 +656,13 @@ export function resolveOverageState(options: {
   }
 
   return "over_quota_blocked";
+}
+
+function validateQuota(quota: number | null): number | null {
+  if (quota !== null && (!Number.isFinite(quota) || quota < 0)) {
+    throw new UsageDashboardProviderUnavailableProblem("Usage dashboard quota must be a finite, non-negative number or null.");
+  }
+  return quota;
 }
 
 function normalizeTenantId(value: string | null | undefined): string | null {
