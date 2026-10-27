@@ -4,7 +4,8 @@ import { join } from "node:path";
 import { Container } from "@croco/framework-context";
 import { compileRoutes, generateModule } from "@croco/framework-routes";
 import { ProblemFactory } from "@croco/problems-core";
-import { HttpMethod } from "@croco/protocols-rest";
+import { Controller, Get, HttpMethod, defineRouteContract } from "@croco/protocols-rest";
+import { z } from "zod";
 import { Hono } from "hono";
 import { describe, expect, it } from "vitest";
 import { createApp as createCrocoApp } from "../libs/CrocoApp";
@@ -95,6 +96,58 @@ describe("generated route module", () => {
       );
     } finally {
       Container.reset();
+      await rm(outputDir, { recursive: true, force: true });
+    }
+  });
+
+  it("checks a contract route independently of an earlier raw route on the same handler", async () => {
+    const contract = defineRouteContract({
+      method: "GET",
+      path: "/stacked/contract",
+      response: z.object({ value: z.string() }),
+    });
+    @Controller("/stacked")
+    class StackedController {
+      @Get(contract)
+      @Get("/raw")
+      read() {
+        return { value: "contract-value" };
+      }
+    }
+    const outputDir = await mkdtemp(join(process.cwd(), ".croco-generated-stacked-"));
+    try {
+      const path = join(outputDir, "legacy.mjs");
+      await writeFile(
+        path,
+        generateModule([
+          {
+            className: "StackedController",
+            basePath: "/stacked",
+            routes: [
+              { method: "GET", path: "/raw", handlerName: "read" },
+              { method: "GET", path: "/contract", handlerName: "read" },
+            ],
+          },
+        ]),
+      );
+      const rawPath = join(outputDir, "raw-only.mjs");
+      await writeFile(
+        rawPath,
+        generateModule([
+          {
+            className: "StackedController",
+            basePath: "/stacked",
+            routes: [{ method: "GET", path: "/raw", handlerName: "read" }],
+          },
+        ]),
+      );
+      const rawOnly = await import(new URL(`file://${rawPath}`).href);
+      expect(() => rawOnly.registerRoutes(new Hono(), { StackedController })).not.toThrow();
+      const generated = await import(new URL(`file://${path}`).href);
+      expect(() => generated.registerRoutes(new Hono(), { StackedController })).toThrow(
+        "missing-rest-invocation",
+      );
+    } finally {
       await rm(outputDir, { recursive: true, force: true });
     }
   });

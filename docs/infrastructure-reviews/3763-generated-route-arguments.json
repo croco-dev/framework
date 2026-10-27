@@ -6,7 +6,7 @@
       "classification": "protocol-render",
       "reason": "Generated REST invocation bindings reuse the existing HTTP transport compiler and registrar; metadata-free Hono handlers retain their existing invocation contract.",
       "files": {
-        "packages/framework-routes/src/compiler.ts": "2d51da3359035a4441b60d8c24e88220125c8f4a33a5e50259a602cd08c1469a",
+        "packages/framework-routes/src/compiler.ts": "74b1fd47ae8153c9b0b8330557c9fc2168d7285f174e8f78f695cf90c48d8418",
         "packages/framework-routes/src/metadata-reader.ts": "a9f69e6f54a395a48e18ed90682e24496e370158fed0667c90c2e143a2cc9ef5"
       },
       "catalogRuntimes": [],

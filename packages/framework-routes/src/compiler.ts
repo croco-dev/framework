@@ -240,7 +240,7 @@ export function generateModuleFromRouteRegistrationTable(
     '  if (typeof controllerType !== "function") throw new RouteRegistrationTableError(route, "missing-controller-binding");',
   );
   lines.push(
-    "  const restRoute = rest.getRouteMeta(controllerType).find((entry) => entry.methodName === route.handlerName);",
+    '  const restRoute = rest.getRouteMeta(controllerType).find((entry) => entry.methodName === route.handlerName && entry.method === route.method && (`${route.controllerPath}/${entry.path}`.replace(/\\/+/g, "/").replace(/\\/$/, "") || "/") === route.contractPath);',
   );
   lines.push(
     "  const hasRestBinding = [rest.getParamsMeta, rest.getGuards, rest.getInterceptors, rest.getFilters, rest.getPipes].some((read) => read(controllerType, route.handlerName).length > 0) || restRoute?.contract || restRoute?.statusCode !== undefined || Reflect.hasMetadata(rest.RESPONSE_SCHEMA_KEY, controllerType, route.handlerName);",
