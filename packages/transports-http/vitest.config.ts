@@ -4,6 +4,7 @@ import { defineConfig } from "vitest/config";
 export default defineConfig({
   resolve: {
     alias: {
+      "@croco/transports-http": resolve(__dirname, "src/index.ts"),
       "@croco/problems-core": resolve(__dirname, "../problems-core/src/index.ts"),
       "@croco/ratelimit-core": resolve(__dirname, "../ratelimit-core/src/index.ts"),
     },

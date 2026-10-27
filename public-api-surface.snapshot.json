@@ -45439,6 +45439,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "CrocoRouteRegistrar",
+              "exportKind": "named",
+              "source": "./libs/CrocoRouteRegistrar",
+              "declarationKind": "class"
+            },
+            {
               "name": "DEV_INSPECTOR_ENDPOINT_PATH",
               "exportKind": "named",
               "source": "./libs/devInspectorEndpoint",

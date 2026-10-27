@@ -8,6 +8,10 @@ import { HttpMethod } from "@croco/protocols-rest";
 import { Hono } from "hono";
 import { describe, expect, it } from "vitest";
 import { createApp as createCrocoApp } from "../libs/CrocoApp";
+import {
+  GeneratedArgumentsController,
+  RejectGeneratedRequest,
+} from "./fixtures/GeneratedArgumentsController";
 import { GeneratedRouteController } from "./fixtures/GeneratedRouteController";
 import {
   GeneratedCatchAllController,
@@ -15,6 +19,86 @@ import {
 } from "./fixtures/GeneratedCatchAllController";
 
 describe("generated route module", () => {
+  it("binds decorated arguments and validates bodies like reflection routes while preserving raw Hono handlers", async () => {
+    const outputDir = await mkdtemp(join(process.cwd(), ".croco-generated-arguments-"));
+    try {
+      const moduleUrl = new URL("./fixtures/GeneratedArgumentsController.ts", import.meta.url).href;
+      await compileRoutes({ controllerPaths: [moduleUrl], outputDir });
+      Container.set(GeneratedArgumentsController, new GeneratedArgumentsController());
+      Container.set(RejectGeneratedRequest, new RejectGeneratedRequest());
+      const generated = await import(
+        new URL(`file://${join(outputDir, ".croco", "build", "routes.mjs")}`).href
+      );
+      const app = new Hono();
+      generated.registerRoutes(app);
+      const reflection = createCrocoApp({
+        controllers: [GeneratedArgumentsController],
+        securityValidation: "off",
+        diValidation: "off",
+      });
+
+      for (const request of [
+        new Request("http://localhost/arguments/item-42?view=detail", {
+          headers: { "x-tenant": "tenant-7" },
+        }),
+        new Request("http://localhost/arguments", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ name: "Widget" }),
+        }),
+        new Request("http://localhost/arguments", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ name: "" }),
+        }),
+      ]) {
+        const actual = await app.request(request.clone());
+        const expected = await reflection.fetch(request.clone());
+        expect(actual.status).toBe(expected.status);
+        if (actual.status < 400) {
+          const body = await actual.json();
+          expect(body).toEqual(await expected.json());
+          expect(body).toEqual(
+            request.method === "GET"
+              ? { id: "item-42", view: "detail", tenant: "tenant-7" }
+              : { name: "Widget" },
+          );
+        } else {
+          expect(actual.status).toBe(422);
+          expect(await actual.json()).toMatchObject({ status: 422 });
+          expect(actual.headers.get("content-type")).toBe(expected.headers.get("content-type"));
+        }
+      }
+      const denied = await app.request("http://localhost/arguments/guarded/check");
+      expect(denied.status).toBe(403);
+      expect(await denied.json()).not.toHaveProperty("leaked");
+      const invalidOutput = await app.request("http://localhost/arguments/invalid/output");
+      expect(invalidOutput.status).toBe(500);
+      expect(await invalidOutput.json()).not.toHaveProperty("count");
+      const raw = await app.request("http://localhost/arguments/raw/context?value=hono-value");
+      expect(raw.status).toBe(200);
+      expect(await raw.text()).toBe("hono-value");
+      const legacyPath = join(outputDir, "legacy.mjs");
+      await writeFile(
+        legacyPath,
+        generateModule([
+          {
+            className: "GeneratedArgumentsController",
+            basePath: "/arguments",
+            routes: [{ method: "GET", path: "/:id", handlerName: "read" }],
+          },
+        ]),
+      );
+      const legacy = await import(new URL(`file://${legacyPath}`).href);
+      expect(() => legacy.registerRoutes(new Hono(), { GeneratedArgumentsController })).toThrow(
+        "missing-rest-invocation",
+      );
+    } finally {
+      Container.reset();
+      await rm(outputDir, { recursive: true, force: true });
+    }
+  });
+
   it("invokes DI-resolved controllers and preserves Problem handling in Hono", async () => {
     const outputDir = await mkdtemp(join(process.cwd(), ".croco-framework-routes-runtime-"));
 

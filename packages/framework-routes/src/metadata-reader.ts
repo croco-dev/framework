@@ -1,10 +1,19 @@
 import "reflect-metadata";
 import { discoverControllerConstructors, type Constructor } from "@croco/protocols-core";
+import {
+  getParamsMeta,
+  getGuards,
+  getInterceptors,
+  getFilters,
+  getPipes,
+  RESPONSE_SCHEMA_KEY,
+} from "@croco/protocols-rest";
 
 export type CompiledRouteInfo = {
   readonly method: string;
   readonly path: string;
   readonly handlerName: string;
+  readonly invocation?: "rest";
 };
 
 export type CompiledControllerInfo = {
@@ -21,6 +30,8 @@ type RouteMetadataShape = {
   readonly method: string;
   readonly path: string;
   readonly methodName: string | symbol;
+  readonly contract?: unknown;
+  readonly statusCode?: number;
 };
 
 const CONTROLLER_KEY = Symbol.for("croco:rest:controller");
@@ -91,6 +102,14 @@ export function readControllersMetadataFromConstructors(
         method: route.method,
         path: route.path,
         handlerName: String(route.methodName),
+        ...(route.contract ||
+        route.statusCode !== undefined ||
+        Reflect.hasMetadata(RESPONSE_SCHEMA_KEY, controller, route.methodName) ||
+        [getParamsMeta, getGuards, getInterceptors, getFilters, getPipes].some(
+          (read) => read(controller, route.methodName).length > 0,
+        )
+          ? { invocation: "rest" as const }
+          : {}),
       })),
     });
   }

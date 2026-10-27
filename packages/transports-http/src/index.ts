@@ -232,3 +232,6 @@ export type {
   HttpTransportRuntimeOptions,
 } from "./libs/HttpTransportPlugin";
 export type { CompileOptions } from "./libs/RouteCompiler";
+
+/** Registers compiled controller routes through the shared HTTP execution and response pipeline. */
+export { CrocoRouteRegistrar } from "./libs/CrocoRouteRegistrar";

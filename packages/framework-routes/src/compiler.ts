@@ -32,6 +32,7 @@ export type RouteRegistrationEntry = {
   readonly controllerName: string;
   readonly controllerPath: string;
   readonly handlerName: string;
+  readonly invocation?: "rest";
 };
 
 export type RouteRegistrationTable = {
@@ -122,6 +123,7 @@ export function createRouteRegistrationTable(
           controllerName,
           controllerPath: controller.basePath,
           handlerName: route.handlerName,
+          ...(route.invocation ? { invocation: route.invocation } : {}),
         };
       }),
     ),
@@ -171,6 +173,12 @@ export function generateModuleFromRouteRegistrationTable(
   lines.push("");
   lines.push('import * as frameworkContext from "@croco/framework-context";');
   lines.push("const { Container } = frameworkContext;");
+  lines.push('import * as rest from "@croco/protocols-rest";');
+  if (runtimeEntries.some((entry) => entry.invocation === "rest")) {
+    lines.push(
+      'import { CrocoRouteRegistrar, RouteCompiler, PipelineRunner, ErrorHandler } from "@croco/transports-http";',
+    );
+  }
   for (const [index, binding] of sortedControllerBindings.entries()) {
     lines.push(
       `import { ${binding.exportName} as GeneratedController${index} } from ${JSON.stringify(binding.importPath)};`,
@@ -222,7 +230,43 @@ export function generateModuleFromRouteRegistrationTable(
   lines.push("  }");
   lines.push("}");
   lines.push("");
-  lines.push("function registerGeneratedRoute(app, route, additionalControllerBindings) {");
+  lines.push(
+    "function registerGeneratedRoute(app, route, additionalControllerBindings, runtime) {",
+  );
+  lines.push(
+    "  const controllerType = generatedControllerBindings[route.controllerName] ?? additionalControllerBindings[route.controllerName];",
+  );
+  lines.push(
+    '  if (typeof controllerType !== "function") throw new RouteRegistrationTableError(route, "missing-controller-binding");',
+  );
+  lines.push(
+    "  const restRoute = rest.getRouteMeta(controllerType).find((entry) => entry.methodName === route.handlerName);",
+  );
+  lines.push(
+    "  const hasRestBinding = [rest.getParamsMeta, rest.getGuards, rest.getInterceptors, rest.getFilters, rest.getPipes].some((read) => read(controllerType, route.handlerName).length > 0) || restRoute?.contract || restRoute?.statusCode !== undefined || Reflect.hasMetadata(rest.RESPONSE_SCHEMA_KEY, controllerType, route.handlerName);",
+  );
+  lines.push(
+    '  if (route.invocation !== "rest" && hasRestBinding) throw new RouteRegistrationTableError(route, "missing-rest-invocation");',
+  );
+  if (runtimeEntries.some((entry) => entry.invocation === "rest")) {
+    lines.push('  if (route.invocation === "rest") {');
+    lines.push("    let routes = runtime.controllers.get(controllerType);");
+    lines.push("    if (!routes) {");
+    lines.push(
+      "      routes = runtime.compiler.compile([controllerType], { container: Container });",
+    );
+    lines.push("      runtime.controllers.set(controllerType, routes);");
+    lines.push("    }");
+    lines.push(
+      "    const compiled = routes.find((entry) => entry.methodName === route.handlerName && entry.method === route.method && entry.path === route.path);",
+    );
+    lines.push(
+      '    if (!compiled) throw new RouteRegistrationTableError(route, "rest-binding-drift");',
+    );
+    lines.push("    runtime.registrar.register(compiled);");
+    lines.push("    return;");
+    lines.push("  }");
+  }
   lines.push("  switch (route.method) {");
   for (const [method, adapterMethod] of Object.entries(ROUTE_METHOD_ADAPTERS)) {
     lines.push(`    case ${JSON.stringify(method)}:`);
@@ -239,8 +283,24 @@ export function generateModuleFromRouteRegistrationTable(
   lines.push(
     "export function registerRoutes(app, additionalControllerBindings = Object.freeze({})) {",
   );
+  if (runtimeEntries.some((entry) => entry.invocation === "rest")) {
+    lines.push(
+      "  const silentLogger = { debug() {}, info() {}, warn() {}, error() {}, fatal() {}, child() { return this; } };",
+    );
+    lines.push(
+      "  const logger = Container.getOptional(frameworkContext.LOGGER_TOKEN) ?? silentLogger;",
+    );
+    lines.push(
+      "  const errorHandler = Container.getOptional(ErrorHandler) ?? new ErrorHandler(logger);",
+    );
+    lines.push(
+      "  const runtime = { compiler: new RouteCompiler(logger, new PipelineRunner(errorHandler, logger)), registrar: new CrocoRouteRegistrar(app, errorHandler, [], logger), controllers: new Map() };",
+    );
+  } else {
+    lines.push("  const runtime = undefined;");
+  }
   lines.push("  for (const route of routeRegistrationTable) {");
-  lines.push("    registerGeneratedRoute(app, route, additionalControllerBindings);");
+  lines.push("    registerGeneratedRoute(app, route, additionalControllerBindings, runtime);");
   lines.push("  }");
   lines.push("}");
 

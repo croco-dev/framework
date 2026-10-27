@@ -63,3 +63,26 @@ Discovery parses source without executing decorators or resolving application mo
 pnpm --filter @croco/framework-routes test
 pnpm --filter @croco/framework-routes typecheck
 ```
+
+## Generated HTTP execution
+
+Generated tables mark routes with parameter decorators, route contracts, response schemas,
+status declarations or pipeline metadata with `invocation: "rest"`. Their generated modules
+require `@croco/transports-http` in the consuming application. Registration reuses its
+`RouteCompiler` and `CrocoRouteRegistrar`: parameter extraction and validation, DI-resolved
+pipes/guards/interceptors/filters, response validation, Problem responses and success status
+handling follow the runtime HTTP path. Controller and pipeline providers must be installed
+in the active application scope before registration and request execution.
+
+Metadata-free handlers retain the existing raw Hono `c` argument and must return a `Response`.
+Use `@Raw()` for the Hono context or `@Ctx()` for the Croco context in decorated signatures;
+undecorated arguments are not implicitly bound alongside parameter decorators. A legacy
+entry without the REST invocation marker cannot silently execute a controller that now has
+REST binding metadata: registration fails with `route-registration-missing-rest-invocation`.
+Regenerate its table and module together. Changed method/path bindings fail with
+`route-registration-rest-binding-drift`.
+
+The generated module registers only its table's endpoints. It does not bootstrap an application
+or install application-wide security middleware or global providers. Keep those in the existing
+application composition root. The shared registrar retains request scope and response-consumption
+lifecycle behavior. This integration does not extend the transport's deployment support.

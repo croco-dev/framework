@@ -637,3 +637,11 @@ The Node adapter cancels on client disconnect. Lambda buffers the body before pr
 cleanup and invocation flush. This change adds no streaming Lambda mode. Workers deployment
 compatibility, including the required Node async-context compatibility, remains unverified;
 no catalog runtime or deployed-provider certification is added.
+
+### Compiled route registration
+
+`CrocoRouteRegistrar` registers an existing `CompiledRoute` on Hono using the same request
+scope, middleware, Problem handling and response conversion as `CrocoApp`. Build-time route
+modules use it with `RouteCompiler` to preserve decorated argument and response semantics.
+This lower-level registration does not install application-wide security middleware or
+bootstrap providers; ordinary applications should keep using `httpTransport` composition.

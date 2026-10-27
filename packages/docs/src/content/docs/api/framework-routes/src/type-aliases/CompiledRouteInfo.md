@@ -15,6 +15,12 @@ title: "CompiledRouteInfo"
 
 ---
 
+### invocation?
+
+> `readonly` `optional` **invocation?**: `"rest"`
+
+---
+
 ### method
 
 > `readonly` **method**: `string`

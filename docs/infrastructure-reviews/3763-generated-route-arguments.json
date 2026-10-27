@@ -1,0 +1,108 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "framework-routes",
+      "classification": "protocol-render",
+      "reason": "Generated REST invocation bindings reuse the existing HTTP transport compiler and registrar; metadata-free Hono handlers retain their existing invocation contract.",
+      "files": {
+        "packages/framework-routes/src/compiler.ts": "2d51da3359035a4441b60d8c24e88220125c8f4a33a5e50259a602cd08c1469a",
+        "packages/framework-routes/src/metadata-reader.ts": "a9f69e6f54a395a48e18ed90682e24496e370158fed0667c90c2e143a2cc9ef5"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "unverified",
+          "reason": "Generated registration is checked through local Hono requests; this change does not certify deployment on this infrastructure profile.",
+          "providers": ["@croco/transports-http"],
+          "constraints": [
+            "Existing transport runtime, provider registration and application middleware requirements remain. No live infrastructure verification."
+          ],
+          "references": [
+            "packages/transports-http/src/libs/RouteCompiler.ts",
+            "packages/transports-http/src/libs/CrocoRouteRegistrar.ts",
+            "packages/transports-http/src/tests/GeneratedRouteModule.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "unverified",
+          "reason": "Generated registration is checked through local Hono requests; this change does not certify deployment on this infrastructure profile.",
+          "providers": ["@croco/transports-http"],
+          "constraints": [
+            "Existing transport runtime, provider registration and application middleware requirements remain. No live infrastructure verification."
+          ],
+          "references": [
+            "packages/transports-http/src/libs/RouteCompiler.ts",
+            "packages/transports-http/src/libs/CrocoRouteRegistrar.ts",
+            "packages/transports-http/src/tests/GeneratedRouteModule.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "unverified",
+          "reason": "Generated registration is checked through local Hono requests; this change does not certify deployment on this infrastructure profile.",
+          "providers": ["@croco/transports-http"],
+          "constraints": [
+            "Existing transport runtime, provider registration and application middleware requirements remain. No live infrastructure verification.",
+            "The Node HTTP transport is not a Worker isolate implementation; no Workers support is claimed."
+          ],
+          "references": [
+            "packages/transports-http/src/libs/RouteCompiler.ts",
+            "packages/transports-http/src/libs/CrocoRouteRegistrar.ts",
+            "packages/transports-http/src/tests/GeneratedRouteModule.spec.ts"
+          ],
+          "host": "node-container"
+        }
+      }
+    },
+    {
+      "package": "transports-http",
+      "classification": "pure-contract",
+      "reason": "Expose the existing compiled-route registrar for generated modules without changing the registrar implementation, storage, host capabilities or lifecycle.",
+      "files": {
+        "packages/transports-http/src/index.ts": "e2ed0be96957f808ffb5dedd32f19dd67562aeda14db097e168328ba458290be"
+      },
+      "catalogRuntimes": ["node", "lambda"],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "This change only exposes the existing registrar contract; no host-specific implementation or support claim changes.",
+          "providers": ["@croco/transports-http"],
+          "constraints": [
+            "Existing transport runtime, provider registration and application middleware requirements remain. No live infrastructure verification."
+          ],
+          "references": [
+            "packages/transports-http/src/libs/RouteCompiler.ts",
+            "packages/transports-http/src/libs/CrocoRouteRegistrar.ts",
+            "packages/transports-http/src/tests/GeneratedRouteModule.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "This change only exposes the existing registrar contract; no host-specific implementation or support claim changes.",
+          "providers": ["@croco/transports-http"],
+          "constraints": [
+            "Existing transport runtime, provider registration and application middleware requirements remain. No live infrastructure verification."
+          ],
+          "references": [
+            "packages/transports-http/src/libs/RouteCompiler.ts",
+            "packages/transports-http/src/libs/CrocoRouteRegistrar.ts",
+            "packages/transports-http/src/tests/GeneratedRouteModule.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "This change only exposes the existing registrar contract; no host-specific implementation or support claim changes.",
+          "providers": ["@croco/transports-http"],
+          "constraints": [
+            "Existing transport runtime, provider registration and application middleware requirements remain. No live infrastructure verification."
+          ],
+          "references": [
+            "packages/transports-http/src/libs/RouteCompiler.ts",
+            "packages/transports-http/src/libs/CrocoRouteRegistrar.ts",
+            "packages/transports-http/src/tests/GeneratedRouteModule.spec.ts"
+          ]
+        }
+      }
+    }
+  ]
+}
