@@ -19,6 +19,61 @@ AsyncLocalStorage 기반으로 요청 컨텍스트를 실행하고 조회하는 
 
 ## Methods
 
+### createRequestScope()
+
+> `static` **createRequestScope**(`context`): `object`
+
+Creates an explicitly owned request scope for a host lifecycle that outlives a callback.
+The owner must dispose it on every terminal path. Deferred callbacks must use run().
+
+#### Parameters
+
+##### context
+
+[`RequestContext`](/api/framework-context/src/interfaces/requestcontext/)
+
+#### Returns
+
+`object`
+
+##### dispose()
+
+> **dispose**(`failure?`): `void`
+
+###### Parameters
+
+###### failure?
+
+###### error
+
+`unknown`
+
+###### Returns
+
+`void`
+
+##### run()
+
+> **run**\<`T`\>(`fn`): `T`
+
+###### Type Parameters
+
+###### T
+
+`T`
+
+###### Parameters
+
+###### fn
+
+() => `T`
+
+###### Returns
+
+`T`
+
+---
+
 ### get()
 
 > `static` **get**(): [`RequestContext`](/api/framework-context/src/interfaces/requestcontext/) \| `null`

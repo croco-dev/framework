@@ -173,3 +173,13 @@ sub-surface 단위로 소유자, breaking-change 정책, generated app/doctor �
 `singleton` 생성자에서 `request` 또는 `transient` provider를 직접 주입할 수 없습니다. 두 scope 모두
 singleton보다 먼저 정리될 수 있으므로 DI 컴파일러와 런타임이 scope mismatch로 거부합니다. 요청마다 새
 인스턴스가 필요하면 소비자도 `request` 또는 `transient`로 선언하세요.
+
+### Explicit request scope ownership
+
+`Context.run(context, callback)` still disposes request providers when the callback settles.
+Hosts that return a lazy response can instead own `Context.createRequestScope(context)`.
+Its `run(callback)` reenters the captured application and request context without disposing it;
+the owner must call `dispose()` on every terminal path. Disposal is idempotent, and further
+`run()` calls fail with `framework-context/request-scope-disposed`. Pass `{ error }` to
+`dispose` when preserving a primary failure; cleanup failures use the existing diagnostics.
+This boundary does not extend background work beyond request completion.

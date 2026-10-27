@@ -622,3 +622,18 @@ runs once. A startup error rejects with `transports-http/listen-failed`, preserv
 error in `cause`; the failed listener is closed, and the same app can retry on another port. Startup
 `error` and `listening` listeners are removed on settlement. After a successful start, callers own any
 additional server `error` handling through the returned `NodeServerHandle`.
+
+### Response body and request provider lifetime
+
+The HTTP registrar retains request providers until the response reader reaches EOF, fails,
+or is cancelled. Lazy `pull` and `cancel` callbacks run in the original request context.
+Request abort disposes providers immediately, even when a source is waiting indefinitely.
+Handlers must cooperate with cancellation and stop using providers after abort. Empty and
+HEAD responses dispose immediately; handled failures dispose before the Problem response
+is returned. A host or in-process caller must consume or cancel every successful response
+body, or abort its request. Merely receiving a `Response` does not complete that request.
+
+The Node adapter cancels on client disconnect. Lambda buffers the body before provider
+cleanup and invocation flush. This change adds no streaming Lambda mode. Workers deployment
+compatibility, including the required Node async-context compatibility, remains unverified;
+no catalog runtime or deployed-provider certification is added.
