@@ -88,8 +88,10 @@ attribution row lock across processes. No distributed guarantee is added to
 the in-memory adapter. Metadata is optional in the existing JSON document,
 so no SQL migration is required. Drain older service workers before enabling
 returns with the updated service/provider pair: older binaries ignore the
-operation metadata. Before rolling back, reconcile outstanding returns and
-stop return traffic; do not run old and new return handlers concurrently.
+operation metadata. Before rolling back, stop return traffic and wait for
+in-flight return requests to finish. Then reconcile all outstanding returns
+before starting older handlers. Do not run old and new return handlers
+concurrently.
 
 Link tokens are issued via `@croco/referral-core/link-token`; only the
 SHA-256 hash is persisted. Use `@croco/referral-drizzle` for PostgreSQL

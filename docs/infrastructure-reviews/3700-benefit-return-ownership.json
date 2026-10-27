@@ -18,7 +18,9 @@
           "result": "not-applicable",
           "reason": "Host-independent service outcome ordering uses the existing transactional store contract; no host capability, connection or lifecycle ownership is introduced.",
           "providers": ["ReferralStore"],
-          "constraints": [],
+          "constraints": [
+            "Requires a ReferralStore implementation to persist returnOperation and serialize return-operation reads and writes within transact through getAttribution; no new host or lifecycle capability is required."
+          ],
           "references": [
             "packages/referral-core/src/libs/ReferralService.ts",
             "packages/referral-core/src/libs/ReferralStore.ts",
@@ -29,7 +31,9 @@
           "result": "not-applicable",
           "reason": "Host-independent service outcome ordering uses the existing transactional store contract; no host capability, connection or lifecycle ownership is introduced.",
           "providers": ["ReferralStore"],
-          "constraints": [],
+          "constraints": [
+            "Requires a ReferralStore implementation to persist returnOperation and serialize return-operation reads and writes within transact through getAttribution; no new host or lifecycle capability is required."
+          ],
           "references": [
             "packages/referral-core/src/libs/ReferralService.ts",
             "packages/referral-core/src/libs/ReferralStore.ts",
@@ -40,7 +44,9 @@
           "result": "not-applicable",
           "reason": "Host-independent service outcome ordering uses the existing transactional store contract; no host capability, connection or lifecycle ownership is introduced.",
           "providers": ["ReferralStore"],
-          "constraints": [],
+          "constraints": [
+            "Requires a ReferralStore implementation to persist returnOperation and serialize return-operation reads and writes within transact through getAttribution; no new host or lifecycle capability is required."
+          ],
           "references": [
             "packages/referral-core/src/libs/ReferralService.ts",
             "packages/referral-core/src/libs/ReferralStore.ts",
