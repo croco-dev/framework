@@ -4,7 +4,7 @@ import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { resolve, join } from "node:path";
 import { build } from "esbuild";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { compileDiGraph, writeDiGraph } from "@croco/esbuild-plugin";
 import * as frameworkContext from "@croco/framework-context";
 import { Container, Context } from "@croco/framework-context";
@@ -19,6 +19,7 @@ import type * as Fixture from "./fixtures/schemaCompilerApp";
 const { graphql } = createRequire(import.meta.url)("graphql") as typeof GraphQL;
 
 describe("SchemaCompiler resolver injection", () => {
+  beforeEach(() => Container.reset());
   afterEach(() => Container.reset());
 
   it("resolves generated constructor dependencies in the schema application and current request", async () => {
