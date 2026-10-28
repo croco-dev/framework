@@ -708,6 +708,34 @@ for (const entry of entries) { const schema = await entry.schema; if (!schema.sq
     }
   }, 30_000);
 
+  it("rejects malformed upgrade write options without changing installed-command workspace files", () => {
+    const harness = getHarness();
+    const cwd = createUpgradeWorkspace(join(harness.commandRoot, "upgrade-invalid-options"));
+    const sourcePath = join(cwd, "apps/api-server/src/problemMatchers.ts");
+    const original = readFileSync(sourcePath, "utf-8");
+
+    for (const args of [
+      ["--write", "--cwd"],
+      ["--write", "--unknown-option"],
+      ["--cwd", "--write"],
+    ]) {
+      const result = runInstalledCommand(harness, "croco", ["upgrade", ...args], cwd, 1);
+      expect(result.stderr).toMatch(/cwd|unknown-option/);
+      expect(readFileSync(sourcePath, "utf-8")).toBe(original);
+    }
+
+    runInstalledCommand(
+      harness,
+      "croco",
+      ["upgrade", "--write", "--cwd", cwd, "apps/api-server/src"],
+      harness.commandRoot,
+      0,
+    );
+    expect(readFileSync(sourcePath, "utf-8")).toContain(
+      "'CROCO_HTTP_SECURITY_001' === problem.code",
+    );
+  });
+
   it("runs upgrade JSON success and migrate failure through the installed croco command", () => {
     const harness = getHarness();
     const upgradeWorkspace = createUpgradeWorkspace(join(harness.commandRoot, "upgrade-workspace"));
