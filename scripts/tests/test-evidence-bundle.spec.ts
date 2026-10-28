@@ -4,6 +4,7 @@ import { join } from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
+import { createTestEvidenceRecord } from "../test-evidence-runtime.mts";
 import {
   normalizeTestEvidenceInput,
   parseArguments,
@@ -123,15 +124,24 @@ describe("test evidence CI bundle", () => {
 
   it("preserves a reporter resource leak as failed bundle evidence", () => {
     const rootDirectory = temporaryDirectory();
-    const [record] = normalizeTestEvidenceInput(
-      { profile: "spine", checks: [{ id: "test", label: "Test", status: "passed" }] },
-      "release.json",
-    );
-    const resources = { status: "leaked", leaks: ["database:pending"] };
-    writeFileSync(
-      join(rootDirectory, "record.json"),
-      JSON.stringify({ ...record, attachments: [], resources }),
-    );
+    const resources = { status: "leaked" as const, leaks: ["database:pending"] };
+    const record = createTestEvidenceRecord({
+      id: "test/reported-resource-leak",
+      runner: "vitest",
+      intent: { contractIds: [], description: "reports resource cleanup" },
+      observed: { contractIds: [] },
+      fidelity: {
+        boot: "isolated",
+        dependency: "fake",
+        isolation: "fake",
+        runtime: "node",
+        validation: "isolated",
+      },
+      replay: { command: "pnpm test" },
+      attempts: [{ attempt: 1, outcome: "passed" }],
+      resources,
+    });
+    writeFileSync(join(rootDirectory, "record.json"), JSON.stringify(record));
 
     const bundle = writeTestEvidenceBundle({
       inputPaths: ["record.json"],
