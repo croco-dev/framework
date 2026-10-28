@@ -92,6 +92,7 @@ const SKIPPED_DIRECTORIES = new Set([
   "node_modules",
 ]);
 const VALUE_FLAGS = new Set(["--cwd"]);
+const BOOLEAN_FLAGS = new Set(["--write", "--dry-run", "--dryRun", "--json", "--overwrite"]);
 
 function createDefaultIo(): UpgradeIo {
   const runtime = getCrocoCommandRuntime();
@@ -163,6 +164,25 @@ export function parseUpgradeArgs(
 ): UpgradeParseResult {
   if (args.includes("--help") || args.includes("-h")) {
     return { kind: "help" };
+  }
+
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index];
+    if (!arg || !arg.startsWith("-")) {
+      continue;
+    }
+    if (VALUE_FLAGS.has(arg)) {
+      const value = args[index + 1];
+      if (!value || value.startsWith("-")) {
+        return { kind: "invalid", message: `Option ${arg} requires a path value.` };
+      }
+      index += 1;
+    } else if (!BOOLEAN_FLAGS.has(arg)) {
+      return {
+        kind: "invalid",
+        message: `Unknown option '${arg}'. Use --help for supported options.`,
+      };
+    }
   }
 
   const write = args.includes("--write");

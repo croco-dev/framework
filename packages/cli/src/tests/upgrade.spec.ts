@@ -2,9 +2,9 @@ import { writeFileSync } from "node:fs";
 import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { createCrocoCommand } from "../commands/root.js";
-import { runUpgrade } from "../commands/upgrade.js";
+import { parseUpgradeArgs, runUpgrade } from "../commands/upgrade.js";
 import {
   applyUpgradeRules,
   legacyHttpSecurityUpgradeRule,
@@ -24,6 +24,78 @@ describe("upgrade command", () => {
 
   it("should expose the upgrade assistant command from the root CLI", () => {
     expect(Object.keys(createCrocoCommand().subCommands ?? {})).toContain("upgrade");
+  });
+
+  it.each([
+    [["--write", "--cwd"], "--cwd"],
+    [["--write", "--unknown-option"], "--unknown-option"],
+    [["--cwd", "--write"], "--cwd"],
+    [["--write", "--cwd", "-x"], "--cwd"],
+    [["--write", "--cwd", ""], "--cwd"],
+    [["--write", "-x"], "-x"],
+    [["--write=false"], "--write=false"],
+  ])("should reject invalid arguments %j before accessing workspace files", async (args, flag) => {
+    const cwd = await createWorkspace();
+    const sourcePath = path.join(cwd, "matcher.ts");
+    const original = "problem.code === 'transports-http/security-middleware-validation';\n";
+    await writeFile(sourcePath, original);
+    const errors: string[] = [];
+    const exists = vi.fn(() => true);
+    const write = vi.fn((file: string, content: string) => writeFileSync(file, content));
+
+    const exitCode = await runUpgrade(args, {
+      io: {
+        cwd,
+        stdout: () => {},
+        stderr: (message) => errors.push(message),
+        exists,
+        writeFile: write,
+      },
+    });
+
+    expect(parseUpgradeArgs(args, cwd)).toMatchObject({ kind: "invalid" });
+    expect(exitCode).toBe(1);
+    expect(errors.join("\n")).toContain(flag);
+    expect(exists).not.toHaveBeenCalled();
+    expect(write).not.toHaveBeenCalled();
+    expect(await fs.readFile(sourcePath, "utf-8")).toBe(original);
+  });
+
+  it.each([
+    { args: ["--help", "--write"] },
+    { args: ["-h"] },
+    { args: ["--dry-run"] },
+    { args: ["--dryRun"] },
+    { args: [] },
+  ])("should preserve workspace files with preview or help arguments %j", async ({ args }) => {
+    const cwd = await createWorkspace();
+    const sourcePath = path.join(cwd, "matcher.ts");
+    const original = "problem.code === 'transports-http/security-middleware-validation';\n";
+    await writeFile(sourcePath, original);
+
+    const exitCode = await runUpgrade(args, { io: { cwd, stdout: () => {} } });
+
+    expect(exitCode).toBe(0);
+    expect(await fs.readFile(sourcePath, "utf-8")).toBe(original);
+  });
+
+  it("should apply write mode only to an explicit target in the requested workspace", async () => {
+    const cwd = await createWorkspace();
+    const selected = path.join(cwd, "selected.ts");
+    const untouched = path.join(cwd, "untouched.ts");
+    const original = "problem.code === 'transports-http/security-middleware-validation';\n";
+    await writeFile(selected, original);
+    await writeFile(untouched, original);
+
+    const exitCode = await runUpgrade(["--write", "--cwd", cwd, "selected.ts"], {
+      io: { stdout: () => {} },
+    });
+
+    expect(exitCode).toBe(0);
+    expect(await fs.readFile(selected, "utf-8")).toBe(
+      "problem.code === 'CROCO_HTTP_SECURITY_001';\n",
+    );
+    expect(await fs.readFile(untouched, "utf-8")).toBe(original);
   });
 
   it("should report a generated route migration suggestion in dry-run mode", async () => {

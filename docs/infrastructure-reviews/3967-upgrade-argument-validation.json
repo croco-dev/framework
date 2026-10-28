@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "cli",
+      "classification": "pure-contract",
+      "reason": "Reject unknown upgrade options and missing cwd values before workspace discovery or codemod writes, preserving valid preview and write invocations.",
+      "files": {
+        "packages/cli/src/commands/upgrade.ts": "7ae8e4ea6e5cc93bca2017863aef77482afcd616e81db875a0cba933be828539"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Local CLI argument validation runs before filesystem traversal and does not change deployed application Hosts, Providers, storage or lifecycle requirements.",
+          "providers": [],
+          "constraints": [
+            "This is local invocation validation, not infrastructure or provider certification."
+          ],
+          "references": [
+            "packages/cli/src/commands/upgrade.ts",
+            "packages/cli/src/tests/upgrade.spec.ts",
+            "packages/cli/README.md"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Local CLI argument validation runs before filesystem traversal and does not change deployed application Hosts, Providers, storage or lifecycle requirements.",
+          "providers": [],
+          "constraints": [
+            "This is local invocation validation, not infrastructure or provider certification."
+          ],
+          "references": [
+            "packages/cli/src/commands/upgrade.ts",
+            "packages/cli/src/tests/upgrade.spec.ts",
+            "packages/cli/README.md"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Local CLI argument validation runs before filesystem traversal and does not change deployed application Hosts, Providers, storage or lifecycle requirements.",
+          "providers": [],
+          "constraints": [
+            "This is local invocation validation, not infrastructure or provider certification."
+          ],
+          "references": [
+            "packages/cli/src/commands/upgrade.ts",
+            "packages/cli/src/tests/upgrade.spec.ts",
+            "packages/cli/README.md"
+          ]
+        }
+      }
+    }
+  ]
+}
