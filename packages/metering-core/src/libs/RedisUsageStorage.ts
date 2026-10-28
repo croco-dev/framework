@@ -142,9 +142,46 @@ local function decodeComponent(component)
   if string.find(string.gsub(component, '%%[%x][%x]', ''), '%%') then
     return nil
   end
-  return (string.gsub(component, '%%(%x%x)', function(hex)
+  local decoded = (string.gsub(component, '%%(%x%x)', function(hex)
     return string.char(tonumber(hex, 16))
   end))
+  -- Match decodeURIComponent: shortest UTF-8 sequences for Unicode scalar values only.
+  local index = 1
+  while index <= #decoded do
+    local first = string.byte(decoded, index)
+    if first <= 0x7F then
+      index = index + 1
+    else
+      local length = nil
+      local minimumSecond = 0x80
+      local maximumSecond = 0xBF
+      if first >= 0xC2 and first <= 0xDF then
+        length = 2
+      elseif first >= 0xE0 and first <= 0xEF then
+        length = 3
+        if first == 0xE0 then minimumSecond = 0xA0 end
+        if first == 0xED then maximumSecond = 0x9F end
+      elseif first >= 0xF0 and first <= 0xF4 then
+        length = 4
+        if first == 0xF0 then minimumSecond = 0x90 end
+        if first == 0xF4 then maximumSecond = 0x8F end
+      else
+        return nil
+      end
+      local second = string.byte(decoded, index + 1)
+      if not second or second < minimumSecond or second > maximumSecond then
+        return nil
+      end
+      for offset = 2, length - 1 do
+        local continuation = string.byte(decoded, index + offset)
+        if not continuation or continuation < 0x80 or continuation > 0xBF then
+          return nil
+        end
+      end
+      index = index + length
+    end
+  end
+  return decoded
 end
 
 local records = redis.call('ZRANGEBYSCORE', usageKey, '-inf', '+inf', 'WITHSCORES')

@@ -1131,32 +1131,85 @@ describe.skipIf(!realResourcesEnabled)("Redis metering composition", () => {
     );
   });
 
-  it.each(["request:1:10", "request:1:10:v2.%7B%7D", "request:1:v2.invalid"])(
-    "rejects ambiguous stored member %s in Lua before any write",
-    async (member) => {
-      assert.isDefined(connection);
-      const storage = new RedisUsageStorage(createRedisClient(connection));
-      const usage = createUsageRecord("invalid-member");
-      const key = "usage2:tenant-atomic-record:api_calls:2024-01";
-      await connection.client.zadd(key, usage.timestamp.getTime(), member);
-      await expect(
-        storage.checkAndRecordWithinQuota({
-          tenantId: usage.tenantId,
-          meterId: usage.meterId,
-          value: usage.value,
-          quota: 100,
-          allowOverQuota: false,
-          usageRecord: usage,
-        }),
-      ).rejects.toBeInstanceOf(RedisProblem);
-      expect(await connection.client.zrange(key, 0, -1)).toEqual([member]);
-      expect(
-        await connection.client.exists(
-          "idem2:record:tenant-atomic-record:api_calls:invalid-member",
-        ),
-      ).toBe(0);
-    },
-  );
+  it("keeps valid UTF-8 boundary code points eligible for quota writes", async () => {
+    assert.isDefined(connection);
+    const storage = new RedisUsageStorage(createRedisClient(connection));
+    const usage = {
+      ...createUsageRecord("utf8-boundaries"),
+      id: String.fromCodePoint(0x7f, 0x80, 0x7ff, 0x800, 0xd7ff, 0xe000, 0xffff, 0x10000, 0x10ffff),
+      value: 10,
+    };
+    await storage.record(usage);
+    const next = { ...usage, id: "next", idempotencyKey: "next", value: 2 };
+    await expect(
+      storage.checkAndRecordWithinQuota({
+        tenantId: usage.tenantId,
+        meterId: usage.meterId,
+        value: 2,
+        quota: 12,
+        allowOverQuota: false,
+        usageRecord: next,
+      }),
+    ).resolves.toEqual({ exceeded: false, newUsage: 12 });
+    const query = {
+      tenantId: usage.tenantId,
+      meterId: usage.meterId,
+      period: "billing_cycle" as const,
+      startDate: new Date("2024-01-01"),
+      endDate: new Date("2024-01-31"),
+    };
+    await expect(storage.getUsage(query)).resolves.toBe(12);
+    await expect(storage.fetchUsageRecords(query)).resolves.toContainEqual(usage);
+  });
+
+  it.each([
+    "request:1:10",
+    "request:1:10:v2.%7B%7D",
+    "request:1:v2.invalid",
+    ...[
+      "%FF",
+      "%80",
+      "%C0%AF",
+      "%C2%41",
+      "%E0%80%AF",
+      "%ED%A0%80",
+      "%E2%82",
+      "%F0%80%80%AF",
+      "%F0%90%41%80",
+      "%F4%90%80%80",
+    ].map((id) => `${id}:10:v3.%7B%7D`),
+    "record:10:v3.%7B%22metadata%22%3A%7B%22tag%22%3A%22%FF%22%7D%7D",
+  ])("rejects invalid stored member %s in Lua before any write", async (member) => {
+    assert.isDefined(connection);
+    const storage = new RedisUsageStorage(createRedisClient(connection));
+    const usage = createUsageRecord("invalid-member");
+    const key = "usage2:tenant-atomic-record:api_calls:2024-01";
+    await connection.client.zadd(key, usage.timestamp.getTime(), member);
+    const query = {
+      tenantId: usage.tenantId,
+      meterId: usage.meterId,
+      period: "billing_cycle" as const,
+      startDate: new Date("2024-01-01"),
+      endDate: new Date("2024-01-31"),
+    };
+    await expect(storage.getUsage(query)).rejects.toBeInstanceOf(RedisProblem);
+    await expect(storage.fetchUsageRecords(query)).rejects.toBeInstanceOf(RedisProblem);
+    await expect(storage.deleteUsageRecords(query, [usage])).rejects.toBeInstanceOf(RedisProblem);
+    await expect(
+      storage.checkAndRecordWithinQuota({
+        tenantId: usage.tenantId,
+        meterId: usage.meterId,
+        value: usage.value,
+        quota: 100,
+        allowOverQuota: false,
+        usageRecord: usage,
+      }),
+    ).rejects.toBeInstanceOf(RedisProblem);
+    expect(await connection.client.zrange(key, 0, -1)).toEqual([member]);
+    expect(
+      await connection.client.exists("idem2:record:tenant-atomic-record:api_calls:invalid-member"),
+    ).toBe(0);
+  });
 
   it("computes an exact quota total across valid integer members", async () => {
     if (!connection) {

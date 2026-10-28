@@ -107,6 +107,8 @@ describe("RedisUsageStorage", () => {
     "request:1:v2.invalid",
     "request:1:v3.%7B%7D:extra",
     "%ZZ:10:v3.%7B%7D",
+    "%FF:10:v3.%7B%7D",
+    "record:10:v3.%7B%22metadata%22%3A%7B%22tag%22%3A%22%FF%22%7D%7D",
   ])(
     "rejects ambiguous or malformed member %s instead of returning a different amount",
     async (member) => {
