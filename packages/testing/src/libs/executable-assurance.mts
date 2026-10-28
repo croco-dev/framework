@@ -11,13 +11,12 @@ import type {
   ProviderConformanceMatrixManifest,
   ProviderConformanceProfileManifest,
 } from "./provider-conformance-matrix";
-import {
-  assertTestEvidenceBundle,
-  redactTestEvidence,
-  type TestEvidenceBundle,
-  type TestEvidenceFidelity,
-  type TestEvidenceObservation,
-  type TestEvidenceRecord,
+import { assertTestEvidenceBundle, redactTestEvidence } from "./test-evidence.mjs";
+import type {
+  TestEvidenceBundle,
+  TestEvidenceFidelity,
+  TestEvidenceObservation,
+  TestEvidenceRecord,
 } from "./test-evidence.mjs";
 
 export const EXECUTABLE_ASSURANCE_GRAPH_VERSION = "croco.executable-assurance-graph/v1" as const;

@@ -7,7 +7,7 @@
       "reason": "Resource leak evidence fails bundle eligibility and assurance satisfaction without changing runner outcomes. Resource status and leak lists must agree in the runtime validator and published schema.",
       "files": {
         "packages/testing/src/libs/test-evidence.mts": "f323b0eceb0c99852a063be57a49ed7f78de17bac00c588d96cad9056fad0888",
-        "packages/testing/src/libs/executable-assurance.mts": "9206d07c92e80e84744728107c854a6c2f0c5d2aae7592fb10f9c48cc0b7fc8a"
+        "packages/testing/src/libs/executable-assurance.mts": "dd575780c08880b8337b14b616662ea63c6e7c294fcee4507d951fdf5f0226c0"
       },
       "catalogRuntimes": [],
       "profiles": {
