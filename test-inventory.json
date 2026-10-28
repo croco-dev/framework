@@ -1010,6 +1010,12 @@
       "owner": "@croco/auth-better-auth"
     },
     {
+      "path": "packages/auth-better-auth/src/tests/BetterAuthVerificationPurpose.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/auth-better-auth"
+    },
+    {
       "path": "packages/auth-better-auth/src/tests/BetterAuthWebhookProcessor.spec.ts",
       "lane": "fast",
       "qualifiers": [],

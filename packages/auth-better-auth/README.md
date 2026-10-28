@@ -8,6 +8,25 @@ Better Auth와 Drizzle을 Croco 인증 흐름에 연결하는 패키지입니다
 pnpm add @croco/auth-better-auth @croco/framework-module better-auth drizzle-orm
 ```
 
+## Better Auth 보안 업데이트
+
+이 패키지는 `better-auth` 1.7.14 이상을 요구합니다. OAuth state를 Magic Link로 사용할 수 있는
+`GHSA-965c-763c-88jm`, OAuth Proxy의 `GHSA-r4xp-prcw-77qf`, device authorization의
+`GHSA-q84f-53jg-9ppm` 수정이 포함된 버전입니다. 공개 의존성 범위와 lockfile을 함께 갱신하며
+보안 검사 예외를 추가하지 않습니다. 기본 팩토리의 `bearer`·`admin` 구성은 유지합니다.
+
+공유 verification 저장소를 사용하는 서버와 같은 OAuth Proxy 흐름에 참여하는 서버는 함께
+업그레이드합니다. 배포 전에 해당 인증 흐름의 새 요청을 중단하고 진행 중 요청을 종료한 뒤,
+모든 참여 서버를 갱신하고 새 Magic Link와 OAuth·SAML sign-in을 시작합니다. 이전 링크와 state는
+새 버전에서 사용할 수 없으며, 혼합 버전 운영이나 이전 취약 버전으로의 rollback을 복구 수단으로
+사용하지 않습니다. 별도로 설치한 Better Auth 어댑터·플러그인도 공식 안내에 따라 함께 갱신합니다.
+
+현재 제공하는 1.6 기반 기본 Drizzle 테이블은 1.7.14에서도 유지하며 `issuer` 컬럼을 추가하지
+않습니다. 별도로 활성화한 플러그인과 Microsoft·Generic OAuth 등의 사용자 설정은
+[1.7 업그레이드 안내](https://better-auth.com/docs/guides/1-7-upgrade-guide)에 따라 확인합니다.
+이미 1.7.0–1.7.2의 schema 변경을 적용한 앱은 해당 안내의 복구 절차를 먼저 검토합니다.
+운영 데이터에 자동 DDL이나 backfill을 실행하지 않습니다.
+
 ## 사용법
 
 ### Application plugin

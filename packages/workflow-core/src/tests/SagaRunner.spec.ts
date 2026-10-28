@@ -2135,28 +2135,34 @@ describe("SagaRunner", () => {
         steps: [{ id: "slow-provider-call", run }],
       };
 
-      const first = runner.execute(definition, {});
-      const second = expect(runner.execute(definition, {})).rejects.toMatchObject({
-        code: "workflow-core/saga-execution-in-flight",
-        category: ProblemCategory.Conflict,
-        extensions: {
-          sagaName: definition.name,
-          executionId: expect.any(String),
-          sagaStatus: "pending",
-          retryable: true,
-        },
-      });
+      const attempts = [runner.execute(definition, {}), runner.execute(definition, {})];
+      const outcomes = Promise.allSettled(attempts);
       try {
-        await second;
+        await expect(Promise.race(attempts)).rejects.toMatchObject({
+          code: "workflow-core/saga-execution-in-flight",
+          category: ProblemCategory.Conflict,
+          extensions: {
+            sagaName: definition.name,
+            executionId: expect.any(String),
+            sagaStatus: "pending",
+            retryable: true,
+          },
+        });
       } finally {
         gate.release();
-        await first;
+        await outcomes;
       }
 
-      const result = await first;
+      const results = await outcomes;
+      const completed = results.flatMap((outcome) =>
+        outcome.status === "fulfilled" ? [outcome.value] : [],
+      );
+      expect(completed).toHaveLength(1);
+      expect(results.filter((outcome) => outcome.status === "rejected")).toHaveLength(1);
+      const [result] = completed;
       const executions = await runner.listExecutions({ sagaName: definition.name });
-      expect(result.execution.status).toBe("completed");
-      expect(result.reused).toBe(false);
+      expect(result?.execution.status).toBe("completed");
+      expect(result?.reused).toBe(false);
       expect(create).toHaveBeenCalledTimes(2);
       expect(run).toHaveBeenCalledTimes(1);
       expect(executions).toHaveLength(1);
