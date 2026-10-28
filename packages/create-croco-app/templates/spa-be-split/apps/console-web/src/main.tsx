@@ -1,6 +1,12 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
-import App from "./App";
+import { AppRoutes } from "./AppRoutes";
+import type { ComponentType } from "react";
+
+const pages = import.meta.glob<{ routeConfig: { path: string; Component: ComponentType } }>(
+  "../pages/**/route.ts",
+  { eager: true },
+);
 
 const rootElement = document.getElementById("root");
 
@@ -10,6 +16,6 @@ if (!rootElement) {
 
 ReactDOM.createRoot(rootElement).render(
   <React.StrictMode>
-    <App />
+    <AppRoutes routes={Object.values(pages).map(({ routeConfig }) => routeConfig)} />
   </React.StrictMode>,
 );

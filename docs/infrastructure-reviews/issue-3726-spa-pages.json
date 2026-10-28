@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "create-croco-app",
+      "classification": "protocol-render",
+      "reason": "Connect existing SPA routeConfig page artifacts to the generated production application entrypoint and include page sources in application typechecking. Server profiles and provider contracts are unchanged.",
+      "files": {
+        "packages/create-croco-app/templates/spa-be-split/apps/console-web/src/main.tsx": "63a9f8a7cc3929c5d3669d7169726cf5eb132eb63e5256c22522ff4b382f4241",
+        "packages/create-croco-app/templates/spa-be-split/apps/console-web/src/AppRoutes.tsx": "d24de0467454d10d18db0d5224aed23aca65c289972a803e6b7911a27a34c427",
+        "packages/create-croco-app/templates/spa-be-split/apps/console-web/tsconfig.json.hbs": "fa4522f26b5ea55e7982fedbfad0d2f28430427ff7ba26cb57eae3c532ba4e77"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "The generated SPA consumes page route artifacts in the browser. The API host is deployed separately; this correction adds no backend host capability, storage or invocation lifecycle.",
+          "providers": [],
+          "constraints": [
+            "The static frontend server must serve index.html for page URLs. Browser execution does not verify Kubernetes, AWS or Cloudflare deployment or provider certification."
+          ],
+          "references": [
+            "packages/create-croco-app/templates/spa-be-split/apps/console-web/src/main.tsx",
+            "packages/create-croco-app/templates/spa-be-split/apps/console-web/src/AppRoutes.tsx",
+            "packages/create-croco-app/templates/spa-be-split/README.md.hbs"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "The generated SPA consumes page route artifacts in the browser. The API host is deployed separately; this correction adds no backend host capability, storage or invocation lifecycle.",
+          "providers": [],
+          "constraints": [
+            "The static frontend server must serve index.html for page URLs. Browser execution does not verify Kubernetes, AWS or Cloudflare deployment or provider certification."
+          ],
+          "references": [
+            "packages/create-croco-app/templates/spa-be-split/apps/console-web/src/main.tsx",
+            "packages/create-croco-app/templates/spa-be-split/apps/console-web/src/AppRoutes.tsx",
+            "packages/create-croco-app/templates/spa-be-split/README.md.hbs"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "The generated SPA consumes page route artifacts in the browser. The API host is deployed separately; this correction adds no backend host capability, storage or invocation lifecycle.",
+          "providers": [],
+          "constraints": [
+            "The static frontend server must serve index.html for page URLs. Browser execution does not verify Kubernetes, AWS or Cloudflare deployment or provider certification."
+          ],
+          "references": [
+            "packages/create-croco-app/templates/spa-be-split/apps/console-web/src/main.tsx",
+            "packages/create-croco-app/templates/spa-be-split/apps/console-web/src/AppRoutes.tsx",
+            "packages/create-croco-app/templates/spa-be-split/README.md.hbs"
+          ]
+        }
+      }
+    }
+  ]
+}

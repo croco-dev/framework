@@ -52,6 +52,13 @@ pnpm dev:web
 
 ## 코드 생성
 
+`pnpm exec croco create page Settings --mode spa --path /settings`는
+`apps/console-web/pages/settings/route.ts`에 정적 URL과 `Component`를 선언합니다.
+SPA 진입점은 `pages/**/route.ts`의 `routeConfig`를 읽으므로 Vite를 다시 빌드하면
+해당 URL에 직접 접근하거나 새로고침해도 생성 페이지가 열립니다. `/`의 기존 앱은 유지됩니다.
+페이지 간 이동에는 일반 링크를 사용하며, 배포하는 정적 서버에도 SPA의 `index.html` fallback이 필요합니다.
+usage-dashboard generator의 SPA 페이지도 같은 등록 경로를 사용합니다.
+
 ```bash
 pnpm contract:check
 pnpm contract:verify
