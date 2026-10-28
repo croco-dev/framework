@@ -10,12 +10,13 @@ import {
   writeTestEvidenceBundle,
 } from "../test-evidence-bundle.mts";
 import { runReleaseSpineEvidence } from "../release-spine-evidence.mts";
+import { getVerificationCommand } from "../verification-manifest.mts";
+import { VerificationProblem } from "../verification-problem.mts";
 import type {
   EvidenceArtifactReference,
   EvidenceCheckResult,
   ReleaseSpineEvidenceReport,
 } from "../release-spine-evidence.mts";
-import { VerificationProblem } from "../verification-problem.mts";
 
 const temporaryDirectories: string[] = [];
 
@@ -382,9 +383,9 @@ describe("test evidence CI bundle", () => {
       profile: "repo",
       commands: [
         {
+          ...getVerificationCommand("ci-executables"),
           id: "proof",
           label: "Proof",
-          category: "quality",
           command: [process.execPath, "-e", proofCommand],
           timeoutMs: 1000,
           artifacts: [{ label: "Proof", path: "source/proof.json", required: true }],
@@ -407,6 +408,7 @@ describe("test evidence CI bundle", () => {
         { path: "source/proof.json" },
       ],
       metadata: {
+        category: "security",
         sourceSchemaVersion: 1,
         sourceProvenance: report.provenance,
         commitSha: report.provenance.commitSha,

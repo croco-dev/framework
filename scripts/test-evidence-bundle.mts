@@ -16,6 +16,13 @@ import type { TestEvidenceRecord } from "../packages/testing/src/libs/test-evide
 
 const RELEASE_EVIDENCE_SCHEMA_VERSION = "croco.release-spine-evidence/v1";
 
+// Manifest categories are descriptive metadata, including native categories such as security.
+type ReleaseEvidenceReport = Omit<ReleaseSpineEvidenceReport, "checks"> & {
+  readonly checks: readonly (Omit<ReleaseSpineEvidenceReport["checks"][number], "category"> & {
+    readonly category: string;
+  })[];
+};
+
 export function normalizeTestEvidenceInput(
   value: unknown,
   sourcePath: string,
@@ -122,7 +129,7 @@ export function normalizeReleaseEvidence(
 }
 
 // Validate the source report before assigning the adapter's attachment schema tag.
-function assertReleaseEvidenceReport(value: unknown): asserts value is ReleaseSpineEvidenceReport {
+function assertReleaseEvidenceReport(value: unknown): asserts value is ReleaseEvidenceReport {
   const report = releaseObject(value, "report");
   requireReleaseField(report.schemaVersion === 1, "report.schemaVersion");
   requireReleaseField(
@@ -180,20 +187,7 @@ function assertReleaseEvidenceReport(value: unknown): asserts value is ReleaseSp
     for (const field of ["id", "label"]) {
       requireReleaseField(nonEmpty(check[field]) !== undefined, `${path}.${field}`);
     }
-    requireReleaseField(
-      [
-        "build",
-        "coverage",
-        "generated-app",
-        "metadata",
-        "package-smoke",
-        "public-api",
-        "quality",
-        "runtime-smoke",
-        "typecheck",
-      ].includes(check.category as string),
-      `${path}.category`,
-    );
+    requireReleaseField(nonEmpty(check.category) !== undefined, `${path}.category`);
     requireReleaseField(
       [
         "pending",
