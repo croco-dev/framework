@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "referral-core",
+      "classification": "pure-contract",
+      "reason": "Reject combined trial-credit face values above the per-attribution budget at program registration, reusing exact decimal arithmetic before persistence or fulfillment.",
+      "files": {
+        "packages/referral-core/src/libs/ReferralProgram.ts": "ab6098af2cd2c4c942d2eab7812c5ca17c0bf966dbb6dd3e1e0408eb7069f17f"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Registration performs pure decimal validation without host capabilities, storage access or lifecycle ownership; existing provider and host compatibility is unchanged.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/referral-core/src/libs/ReferralProgram.ts",
+            "packages/referral-core/src/libs/amounts.ts",
+            "packages/referral-core/src/tests/ReferralService.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Registration performs pure decimal validation without host capabilities, storage access or lifecycle ownership; existing provider and host compatibility is unchanged.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/referral-core/src/libs/ReferralProgram.ts",
+            "packages/referral-core/src/libs/amounts.ts",
+            "packages/referral-core/src/tests/ReferralService.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Registration performs pure decimal validation without host capabilities, storage access or lifecycle ownership; existing provider and host compatibility is unchanged.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/referral-core/src/libs/ReferralProgram.ts",
+            "packages/referral-core/src/libs/amounts.ts",
+            "packages/referral-core/src/tests/ReferralService.spec.ts"
+          ]
+        }
+      }
+    }
+  ]
+}

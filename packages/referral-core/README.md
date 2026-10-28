@@ -19,7 +19,9 @@ the recipient to any organization.
 Benefits pin the program snapshot, and each side fulfills with a
 deterministic idempotency key (`referral-benefit:<attributionId>:<side>`),
 so one side may succeed while the other stays pending without re-paying the
-completed side on retry. Program budgets reserve at claim time and remain locked
+completed side on retry. Program registration rejects combined referrer and recipient trial credits above
+`budgetPerAttribution`, using exact decimal arithmetic; a `none` benefit counts as zero.
+Program budgets reserve at claim time and remain locked
 until rejection or expiry. Per-subject receipt limits count by family and explicit
 benefit cycle id, so a revision alone never resets them. Claimed attributions and
 novelty holds do not reserve subject receipts. Qualification atomically checks

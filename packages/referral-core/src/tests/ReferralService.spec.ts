@@ -6,6 +6,7 @@ import { InMemoryReferralStore } from "../libs/InMemoryReferralStore";
 import { registerReferralProgram } from "../libs/ReferralProgram";
 import { ReferralService } from "../libs/ReferralService";
 import {
+  InvalidReferralProgramProblem,
   ReferralAttributionStateConflictProblem,
   ReferralBenefitFailedProblem,
   ReferralDuplicateClaimProblem,
@@ -122,6 +123,75 @@ describe("ReferralService", () => {
     expect(first.program.familyId).toBe("referral-welcome");
     const second = await service.registerProgram(programInput());
     expect(second.created).toBe(false);
+  });
+
+  it.each([
+    ["10", "10", "10"],
+    ["7", "4", "10"],
+    ["0.1", "0.2", "0.299999999999999999"],
+    ["0.999999999999999999", "0.000000000000000002", "1"],
+  ])(
+    "rejects combined credits %s + %s above cap %s before persistence",
+    async (left, right, cap) => {
+      const { service, store } = serviceWith();
+      await expect(
+        service.registerProgram({
+          ...programInput(),
+          referrerBenefit: { kind: "trial-credits", creditAmount: left },
+          recipientBenefit: { kind: "trial-credits", creditAmount: right },
+          budgetPerAttribution: cap,
+        }),
+      ).rejects.toBeInstanceOf(InvalidReferralProgramProblem);
+      expect(await store.getProgram("referral-welcome", 1)).toBeNull();
+      expect(await store.listAudits()).toEqual([]);
+    },
+  );
+
+  it.each([
+    ["10", "10", "20"],
+    ["0.1", "0.2", "0.3"],
+    ["0.999999999999999999", "0.000000000000000001", "1"],
+    ["7", "4", "12"],
+    ["10", null, "10"],
+    [null, "5", "5"],
+    [null, null, "1"],
+  ])("fulfills credits %s + %s within reserved cap %s", async (left, right, cap) => {
+    const grants: { side: string; amount: string }[] = [];
+    const { service, store } = serviceWith({
+      fulfillment: {
+        ...fulfillmentOk(),
+        fulfill: async ({ intent, idempotencyKey }) => {
+          if (intent.benefit.kind === "trial-credits") {
+            grants.push({ side: intent.side, amount: intent.benefit.creditAmount });
+          }
+          return { outcome: "granted", grantRef: `grant:${idempotencyKey}` };
+        },
+      },
+    });
+    await service.registerProgram({
+      ...programInput(),
+      referrerBenefit:
+        left === null ? { kind: "none" } : { kind: "trial-credits", creditAmount: left },
+      recipientBenefit:
+        right === null ? { kind: "none" } : { kind: "trial-credits", creditAmount: right },
+      budgetPerAttribution: cap,
+    });
+    const { token } = await service.createReferralLink({
+      programId: "referral-welcome",
+      referrer: referrer(),
+    });
+    const { attribution } = await service.claimAttribution({ token, recipient: recipient() });
+    expect(await store.readBudgetReserved("referral-welcome", 1)).toBe(cap);
+    await service.qualifyAttribution({ attributionId: attribution.id, recipient: recipient() });
+    expect((await service.fulfillBenefits({ attributionId: attribution.id })).state).toBe(
+      "fulfilled",
+    );
+    expect(grants).toEqual([
+      ...(left === null ? [] : [{ side: "referrer", amount: left }]),
+      ...(right === null ? [] : [{ side: "recipient", amount: right }]),
+    ]);
+    await service.fulfillBenefits({ attributionId: attribution.id });
+    expect(grants).toHaveLength(Number(left !== null) + Number(right !== null));
   });
 
   it("creates a link whose stored row carries only the token hash", async () => {
