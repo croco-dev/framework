@@ -1134,13 +1134,26 @@ describe.skipIf(!realResourcesEnabled)("Redis metering composition", () => {
   it("keeps valid UTF-8 boundary code points eligible for quota writes", async () => {
     assert.isDefined(connection);
     const storage = new RedisUsageStorage(createRedisClient(connection));
+    const boundary = String.fromCodePoint(
+      0x7f,
+      0x80,
+      0x7ff,
+      0x800,
+      0xd7ff,
+      0xe000,
+      0xffff,
+      0x10000,
+      0x10ffff,
+    );
     const usage = {
-      ...createUsageRecord("utf8-boundaries"),
-      id: String.fromCodePoint(0x7f, 0x80, 0x7ff, 0x800, 0xd7ff, 0xe000, 0xffff, 0x10000, 0x10ffff),
+      ...createUsageRecord(boundary),
+      id: boundary,
+      eventId: boundary,
+      metadata: { [boundary]: boundary },
       value: 10,
     };
     await storage.record(usage);
-    const next = { ...usage, id: "next", idempotencyKey: "next", value: 2 };
+    const next = { ...usage, id: "next", idempotencyKey: "next", eventId: undefined, value: 2 };
     await expect(
       storage.checkAndRecordWithinQuota({
         tenantId: usage.tenantId,
@@ -1162,6 +1175,25 @@ describe.skipIf(!realResourcesEnabled)("Redis metering composition", () => {
     await expect(storage.fetchUsageRecords(query)).resolves.toContainEqual(usage);
   });
 
+  it("rejects unpaired envelope strings before writing usage or a dedupe marker", async () => {
+    assert.isDefined(connection);
+    const storage = new RedisUsageStorage(createRedisClient(connection));
+    const usage = { ...createUsageRecord("unpaired"), metadata: { tag: "\ud800" } };
+    await expect(storage.record(usage)).rejects.toBeInstanceOf(RedisProblem);
+    await expect(
+      storage.checkAndRecordWithinQuota({
+        tenantId: usage.tenantId,
+        meterId: usage.meterId,
+        value: usage.value,
+        quota: 100,
+        allowOverQuota: false,
+        usageRecord: usage,
+      }),
+    ).rejects.toBeInstanceOf(RedisProblem);
+    expect(await connection.client.zcard("usage2:tenant-atomic-record:api_calls:2024-01")).toBe(0);
+    expect(await connection.client.keys("idem2:*")).toEqual([]);
+  });
+
   it.each([
     "request:1:10",
     "request:1:10:v2.%7B%7D",
@@ -1179,6 +1211,12 @@ describe.skipIf(!realResourcesEnabled)("Redis metering composition", () => {
       "%F4%90%80%80",
     ].map((id) => `${id}:10:v3.%7B%7D`),
     "record:10:v3.%7B%22metadata%22%3A%7B%22tag%22%3A%22%FF%22%7D%7D",
+    ...[
+      { eventId: "\ud800" },
+      { idempotencyKey: "\ud800" },
+      { metadata: { tag: "\ud800" } },
+      { metadata: { ["\ud800"]: "tag" } },
+    ].map((envelope) => `record:10:v3.${encodeURIComponent(JSON.stringify(envelope))}`),
   ])("rejects invalid stored member %s in Lua before any write", async (member) => {
     assert.isDefined(connection);
     const storage = new RedisUsageStorage(createRedisClient(connection));

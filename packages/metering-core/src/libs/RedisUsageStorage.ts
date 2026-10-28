@@ -42,6 +42,17 @@ function stableStringify(value: unknown): string {
   });
 }
 
+function parseUsageJson(json: string): unknown {
+  return JSON.parse(json, (key, nestedValue: unknown) => {
+    // Redis cjson rejects unpaired surrogates, including JSON-escaped keys and string values.
+    encodeURIComponent(key);
+    if (typeof nestedValue === "string") {
+      encodeURIComponent(nestedValue);
+    }
+    return nestedValue;
+  });
+}
+
 /**
  * Redis 기반 UsageStorage 구현체
  *
@@ -809,7 +820,9 @@ return { exceeded and 1 or 0, newUsage }
         metadata: usage.metadata,
       };
 
-      return `${base}:v3.${encodeURIComponent(stableStringify(envelope))}`;
+      const payload = stableStringify(envelope);
+      parseUsageJson(payload);
+      return `${base}:v3.${encodeURIComponent(payload)}`;
     } catch (error) {
       throw this.toRedisProblem("SERIALIZE", error);
     }
@@ -899,7 +912,7 @@ return { exceeded and 1 or 0, newUsage }
   }
 
   private decodeMetadata(encodedMetadata: string): Record<string, unknown> {
-    const parsed: unknown = JSON.parse(decodeURIComponent(encodedMetadata));
+    const parsed = parseUsageJson(decodeURIComponent(encodedMetadata));
     if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
       throw new RedisProblem("ZRANGEBYSCORE", "Invalid stored usage payload");
     }

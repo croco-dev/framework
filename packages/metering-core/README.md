@@ -280,6 +280,9 @@ Logical duplicates linked by ID, idempotency key or event ID count once in both 
 checks. Conflicting amounts or timestamps fail before quota writes. Existing idempotency markers
 and Redis key namespaces are unchanged.
 
+Unpaired Unicode surrogate code units in IDs or envelope string keys/values are rejected before
+storage. Valid Unicode scalar values, including supplementary characters, remain supported.
+
 Deploy readers that understand v3 before resuming writers; old readers cannot safely consume
 v3 members. Pause usage writes while coordinating this upgrade across all processes sharing
 the Redis usage namespace. Do not roll back to an older reader while v3 members remain.

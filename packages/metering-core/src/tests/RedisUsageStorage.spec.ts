@@ -129,8 +129,14 @@ describe("RedisUsageStorage", () => {
     },
   );
 
-  it("rejects unencodable IDs as Redis Problems before changing storage", async () => {
-    const usage = { ...createUsageRecord("invalid-id"), id: "\ud800" };
+  it.each([
+    { id: "\ud800" },
+    { idempotencyKey: "\ud800" },
+    { eventId: "\ud800" },
+    { metadata: { tag: "\ud800" } },
+    { metadata: { ["\ud800"]: "tag" } },
+  ])("rejects unencodable record strings %j before changing storage", async (fields) => {
+    const usage = { ...createUsageRecord("invalid-id"), ...fields };
     await expect(storage.record(usage)).rejects.toMatchObject({
       code: "metering/redis-error",
       extensions: { operation: "SERIALIZE" },
