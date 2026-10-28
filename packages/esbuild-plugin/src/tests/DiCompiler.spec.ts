@@ -923,6 +923,91 @@ export class Conflict {}`,
     );
   }, 30_000);
 
+  it.each([
+    ["dependencies.0", null],
+    ["dependencies.0", []],
+    ["dependencies.0.tokenId", undefined],
+    ["dependencies.0.tokenId", 42],
+    ["dependencies.0.reason", "unknown"],
+    ["dependencies.0.optional", "false"],
+    ["dependencies.0.parameterIndex", -1],
+    ["dependencies.0.propertyKey", 4],
+    ["dependencies.0.source", null],
+    ["dependencies.0.source.file", false],
+    ["dependencies.0.source.line", 0],
+    ["dependencies.0.source.column", 1.5],
+    ["multiple", "false"],
+    ["moduleName", 3],
+    ["scope", "unknown"],
+    ["source.line", -1],
+    ["source.column", 0],
+    ["tokenId", null],
+  ])("rejects malformed descriptor provider field %s before writing artifacts", (field, value) => {
+    const provider: Record<string, unknown> = {
+      tokenId: "package:fixture#Service",
+      exportName: "Service",
+      stereotype: "Component",
+      scope: "singleton",
+      source: { file: "src/Service.ts", line: 2, column: 1 },
+      dependencies: [
+        {
+          tokenId: "package:fixture#Other",
+          reason: "explicit-token",
+          source: { file: "src/Service.ts", line: 3, column: 4 },
+        },
+      ],
+    };
+    const keys = field.split(".");
+    let parent = provider;
+    for (const key of keys.slice(0, -1)) parent = parent[key] as Record<string, unknown>;
+    parent[keys[keys.length - 1]!] = value;
+    const descriptor = JSON.stringify(
+      {
+        version: "croco.di-package-descriptor.v1",
+        compilerVersion: "croco.di-compiler.v1",
+        packageName: "fixture",
+        packageVersion: "1.0.0",
+        inputHash: "fixture",
+        graph: { import: "./graph.js", exportName: "generatedDiGraph" },
+        providers: [provider],
+        roots: [],
+      },
+      null,
+      2,
+    );
+    writeProject({ "descriptor.json": descriptor });
+    const graphFile = path.join(TEMP_DIR, ".croco/di.generated.ts");
+    const manifestFile = path.join(TEMP_DIR, ".croco/di.manifest.json");
+    fs.mkdirSync(path.dirname(graphFile), { recursive: true });
+    fs.writeFileSync(graphFile, "previous graph");
+    fs.writeFileSync(manifestFile, "previous manifest");
+    let failure: unknown;
+    try {
+      writeDiGraph(
+        compileDiGraph({ baseDir: TEMP_DIR, packageDescriptors: ["./descriptor.json"] }),
+      );
+    } catch (error) {
+      failure = error;
+    }
+    expect(failure).toBeInstanceOf(DiCompilerError);
+    const diagnostic = (failure as DiCompilerError).diagnostics[0];
+    expect(diagnostic).toMatchObject({
+      code: "CROCO_DI_COMPILE_001",
+      file: "descriptor.json",
+      message: expect.stringContaining(`providers[0].${field.replace(".0", "[0]")}`),
+    });
+    expect(diagnostic?.line).toBeGreaterThan(1);
+    expect(diagnostic?.column).toBeGreaterThan(1);
+    if (value !== undefined && !Array.isArray(value)) {
+      const locationText = descriptor
+        .split("\n")
+        [(diagnostic?.line ?? 1) - 1]?.slice((diagnostic?.column ?? 1) - 1);
+      expect(locationText?.startsWith(JSON.stringify(value))).toBe(true);
+    }
+    expect(fs.readFileSync(graphFile, "utf8")).toBe("previous graph");
+    expect(fs.readFileSync(manifestFile, "utf8")).toBe("previous manifest");
+  });
+
   it("rejects incompatible package descriptor compiler versions", () => {
     writeProject({
       "descriptor.json": JSON.stringify({
@@ -946,9 +1031,12 @@ export class Conflict {}`,
     const appDir = path.join(TEMP_DIR, "app");
     writeProjectAt(libraryDir, {
       "src/LibraryService.ts": `
-        import { Component } from "@croco/framework-context";
+        import { Component, InjectOptional, Token } from "@croco/framework-context";
+        export const OPTIONAL = new Token<string>("optional");
         @Component()
-        export class LibraryService {}
+        export class LibraryService {
+          constructor(@InjectOptional(OPTIONAL) readonly optional?: string) {}
+        }
       `,
     });
     const library = compileDiGraph({
@@ -1021,6 +1109,11 @@ export class Conflict {}`,
       "LibraryService",
     ]);
     expect(result.manifest.providers[1]?.tokenId).toBe("package:@fixture/library#LibraryService");
+    expect(result.manifest.providers[1]?.dependencies[0]).toMatchObject({
+      reason: "explicit-token",
+      optional: true,
+      parameterIndex: 0,
+    });
     expect(result.manifest.providers[0]?.dependencies[0]?.tokenId).toBe(
       "package:@fixture/library#LibraryService",
     );
