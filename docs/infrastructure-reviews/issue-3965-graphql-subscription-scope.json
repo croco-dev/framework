@@ -4,11 +4,11 @@
     {
       "package": "transports-graphql",
       "classification": "runtime-adapter",
-      "reason": "Standalone subscriptions retain request scope through response completion, failure, cancellation and abort; delayed iterator operations retain GraphQL authority without taking ownership of an inherited scope.",
+      "reason": "Standalone subscriptions retain request scope through response completion, failure, cancellation and abort; delayed iterator operations retain GraphQL authority without taking ownership of an inherited scope. Late response cancellation preserves the original abort reason and request metadata without waiting for cleanup.",
       "files": {
         "packages/transports-graphql/src/libs/GraphQLServer.ts": "fe4d9cbedef2dfcedfdec34adb5741e7584350f3e973b2990d14ef118f00b330",
         "packages/transports-graphql/src/libs/GraphQLFetchHandler.ts": "8d99acd3952fd67381436c220fd76bd900d3c04017f6e87e8e37fe81534e9ad3",
-        "packages/transports-graphql/src/libs/GraphQLResponseScope.ts": "d9e2aa3ed85d444f2cfe38a0400ab09aaedbdd4b3ba68f380ae0f6dd977b8f09"
+        "packages/transports-graphql/src/libs/GraphQLResponseScope.ts": "7f9f46d4f5c9668802dc7874d420f4927d7baca5dcfbb8650edd9e699b7f167e"
       },
       "catalogRuntimes": ["node", "lambda", "cloudflare-workers"],
       "profiles": {

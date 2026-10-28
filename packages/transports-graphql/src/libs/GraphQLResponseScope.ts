@@ -9,7 +9,10 @@ export async function runWithGraphQLResponseScope(
 ): Promise<Response> {
   const active = Context.get();
   const scope = active ? undefined : Context.createRequestScope({ requestId: crypto.randomUUID() });
-  const enter = AsyncLocalStorage.snapshot();
+  // Late cancellation retains request metadata after disposal without reviving providers.
+  const enter = scope
+    ? scope.run(() => AsyncLocalStorage.snapshot())
+    : AsyncLocalStorage.snapshot();
   const run = <T>(fn: () => T): T => (scope ? scope.run(fn) : enter(fn));
   let finished = false;
   let cancelling = false;
@@ -40,7 +43,9 @@ export async function runWithGraphQLResponseScope(
     request.signal.throwIfAborted();
     const response = await run(() => handler(request));
     if (finished) {
-      await response.body?.cancel(request.signal.reason);
+      void enter(() => response.body?.cancel(request.signal.reason))?.catch(
+        reportCancellationFailure,
+      );
       request.signal.throwIfAborted();
     }
     if (!response.body) {

@@ -120,3 +120,7 @@ When called inside an existing Croco request scope, the handler inherits that sc
 its original owner remains responsible for disposal after response processing.
 The Node listener continues to own its scope through socket streaming. The fetch-only
 Workers entrypoint still rejects subscription schemas.
+
+An abort before response return keeps its original rejection reason. Cancellation of a late
+response runs in the original request context without delaying that rejection; cleanup
+failures are reported separately.

@@ -609,6 +609,123 @@ describe("GraphQL standalone subscription scope", () => {
     }
   });
 
+  it("rejects an abort before response return without waiting for blocked Yoga cleanup", async () => {
+    const { token, disposed } = ledgerFixture();
+    const waiting = gate();
+    const release = gate();
+    const cleaned = vi.fn();
+    const client = new AbortController();
+    const failure = new Error("response hook aborted");
+    const server = new GraphQLServer({
+      context: () => {
+        Container.get(token);
+        return { tenantId: "late-response-tenant" };
+      },
+      schema: subscriptionSchema(async function* () {
+        try {
+          yield { sample: "first" };
+          waiting.resolve();
+          await release.promise;
+        } finally {
+          cleaned(Context.getTenantId());
+        }
+      }),
+      plugins: [
+        {
+          async onResponse({ response }) {
+            const reader = response.body?.getReader();
+            if (!reader) throw new Error("Missing Yoga body");
+            try {
+              await within(readUntil(reader, '"sample":"first"'));
+            } finally {
+              reader.releaseLock();
+            }
+            await within(waiting.promise);
+            client.abort(failure);
+          },
+        },
+      ],
+    });
+    await server.initialize();
+    const outcome = server
+      .getHandler()(request(client.signal))
+      .catch((error: unknown) => error);
+    try {
+      expect(await within(outcome)).toBe(failure);
+      expect(disposed).toHaveBeenCalledTimes(1);
+      expect(cleaned).not.toHaveBeenCalled();
+    } finally {
+      release.resolve();
+      client.abort();
+      await outcome;
+    }
+    await vi.waitFor(() => expect(cleaned).toHaveBeenCalledWith("late-response-tenant"));
+    expect(disposed).toHaveBeenCalledTimes(1);
+  });
+
+  it.each(["blocked", "rejected"] as const)(
+    "preserves abort while cancelling a late response with %s cleanup",
+    async (mode) => {
+      const { token, disposed } = ledgerFixture();
+      const ready = gate();
+      const release = gate();
+      const cancelled = gate();
+      const client = new AbortController();
+      const failure = new Error("request ended before response observation");
+      const cleanupFailure = new Error("late cleanup failed");
+      const reported = vi.spyOn(console, "error").mockImplementation(() => undefined);
+      let originalRequestId: string | null = null;
+      let cancellationRequestId: string | null = null;
+      let cancellationReason: unknown;
+      const upstream = new Response(
+        new ReadableStream({
+          async cancel(reason: unknown) {
+            cancellationRequestId = Context.getRequestId();
+            cancellationReason = reason;
+            cancelled.resolve();
+            if (mode === "rejected") throw cleanupFailure;
+            await release.promise;
+          },
+        }),
+      );
+      const server = new GraphQLServer({ schema: subscriptionSchema(async function* () {}) });
+      await server.initialize();
+      Reflect.set(server, "yogaHandler", async () => {
+        originalRequestId = Context.getRequestId();
+        Container.get(token);
+        await ready.promise;
+        return upstream;
+      });
+      const outcome = server
+        .getHandler()(request(client.signal))
+        .catch((error: unknown) => error);
+      try {
+        ready.resolve();
+        client.abort(failure);
+        await within(cancelled.promise);
+        expect(await within(outcome)).toBe(failure);
+        expect(disposed).toHaveBeenCalledTimes(1);
+        expect(originalRequestId).toBeTruthy();
+        expect(cancellationRequestId).toBe(originalRequestId);
+        expect(cancellationReason).toBe(failure);
+        if (mode === "rejected") {
+          await vi.waitFor(() =>
+            expect(reported).toHaveBeenCalledWith("GraphQL request failed", {
+              phase: "response-body",
+              problemCode: "transports-graphql/request-handling-failed",
+            }),
+          );
+        }
+      } finally {
+        ready.resolve();
+        release.resolve();
+        client.abort(failure);
+        await outcome;
+        reported.mockRestore();
+      }
+    },
+  );
+
   it.each(["consume", "cancel"] as const)(
     "retains an ordinary query provider until JSON body %s",
     async (mode) => {
