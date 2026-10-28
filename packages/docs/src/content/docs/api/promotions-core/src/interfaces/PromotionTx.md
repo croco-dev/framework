@@ -105,6 +105,8 @@ readonly [`OfferClaimState`](/api/promotions-core/src/type-aliases/offerclaimsta
 
 > **getClaim**(`claimId`): `Promise`\<[`OfferClaim`](/api/promotions-core/src/type-aliases/offerclaim/) \| `null`\>
 
+Serialize reads of an existing claim with its state transitions until commit or rollback.
+
 #### Parameters
 
 ##### claimId

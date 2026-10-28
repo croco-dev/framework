@@ -1,6 +1,6 @@
 import { assertOfferSubject, registerOfferPolicy, sameOfferSubject } from "./OfferPolicy";
 import { claimFingerprint } from "./PromotionStore";
-import type { PromotionStore } from "./PromotionStore";
+import type { PromotionStore, PromotionTx } from "./PromotionStore";
 import {
   InvalidOfferPolicyProblem,
   OfferClaimNotFoundProblem,
@@ -278,38 +278,43 @@ export class OfferService {
    * complete as recorded entitlements without ledger movement. A port that
    * reports `unknown` — or throws after possibly committing — leaves the claim
    * `indeterminate` with its budget locked for later reconciliation.
+   * A reserved claim at or past quote expiry expires atomically without a
+   * grant. Already admitted grants retain their recovery and replay behavior.
    */
   async fulfillClaim(input: {
     readonly claimId: string;
     readonly provider?: string;
     readonly now?: Date;
   }): Promise<OfferClaim> {
-    const now = input.now ?? this.now();
-    const stored = await this.store.getClaim(input.claimId);
-    if (!stored) throw new OfferClaimNotFoundProblem(input.claimId);
-    if (stored.state === "fulfilled") return stored;
-    if (stored.state === "indeterminate") return this.reconcileClaim({ claimId: stored.id, now });
-    if (stored.state !== "reserved" && stored.state !== "fulfilling") {
-      throw new OfferClaimStateConflictProblem(
-        stored.id,
-        stored.state,
-        "only reserved claims can be fulfilled; reconcile indeterminate claims explicitly",
-      );
-    }
-    const quote = await this.store.getQuote(stored.quoteId);
-    if (!quote) throw new OfferQuoteNotFoundProblem(stored.quoteId);
-    const policy = await this.store.getPolicy(stored.policyId, stored.policyVersion);
-    if (!policy) throw new OfferPolicyNotFoundProblem(stored.policyId, stored.policyVersion);
-    if (stored.benefit.kind === "discount-quote") {
-      const provider = this.requireProvider(policy, input.provider);
-      return this.store.transact(async (tx) => {
-        await tx.compareAndSetClaimState(
+    const prepared = await this.store.transact(async (tx) => {
+      const stored = await tx.getClaim(input.claimId);
+      if (!stored) throw new OfferClaimNotFoundProblem(input.claimId);
+      if (stored.state === "fulfilled") return { kind: "done" as const, claim: stored };
+      if (stored.state === "indeterminate") {
+        return { kind: "reconcile" as const, claim: stored, now: input.now ?? this.now() };
+      }
+      if (stored.state !== "reserved" && stored.state !== "fulfilling") {
+        throw new OfferClaimStateConflictProblem(
           stored.id,
-          ["reserved", "fulfilling"],
-          "fulfilling",
-          {},
-          now,
+          stored.state,
+          "only reserved claims can be fulfilled; reconcile indeterminate claims explicitly",
         );
+      }
+      const quote = await tx.getQuote(stored.quoteId);
+      if (!quote) throw new OfferQuoteNotFoundProblem(stored.quoteId);
+      const policy = await tx.getPolicy(stored.policyId, stored.policyVersion);
+      if (!policy) throw new OfferPolicyNotFoundProblem(stored.policyId, stored.policyVersion);
+      // Sample after transactional reads, which may wait for another writer.
+      const now = input.now ?? this.now();
+      if (stored.state === "reserved" && quote.expiresAt.getTime() <= now.getTime()) {
+        return {
+          kind: "done" as const,
+          claim: await this.expireClaim(tx, stored, quote, policy, now),
+        };
+      }
+      const provider = this.requireProvider(policy, input.provider);
+      await tx.compareAndSetClaimState(stored.id, [stored.state], "fulfilling", {}, now);
+      if (stored.benefit.kind === "discount-quote") {
         const fulfilled = await tx.compareAndSetClaimState(
           stored.id,
           ["fulfilling"],
@@ -324,18 +329,15 @@ export class OfferService {
             idempotencyKey: claimIdempotencyKey(stored.id),
           }),
         );
-        return fulfilled;
-      });
-    }
-    await this.store.transact(async (tx) => {
-      await tx.compareAndSetClaimState(
-        stored.id,
-        ["reserved", "fulfilling"],
-        "fulfilling",
-        {},
-        now,
-      );
+        return { kind: "done" as const, claim: fulfilled };
+      }
+      return { kind: "grant" as const, claim: stored, quote, policy, now };
     });
+    if (prepared.kind === "done") return prepared.claim;
+    if (prepared.kind === "reconcile") {
+      return this.reconcileClaim({ claimId: prepared.claim.id, now: prepared.now });
+    }
+    const { claim: stored, quote, policy, now } = prepared;
     let result: Awaited<ReturnType<OfferFulfillmentPort["fulfill"]>>;
     try {
       result = await this.fulfillment.fulfill({
@@ -531,32 +533,27 @@ export class OfferService {
     }
     return this.store.transact(async (tx) => {
       const candidates = await tx.listClaims({ states: ["reserved"], limit });
-      const expired: OfferClaim[] = [];
-      for (const candidate of candidates) {
+      const overdue = new Map<string, { claim: OfferClaim; quote: OfferQuote }>();
+      // Lock candidates in claim-id order before touching any budget row.
+      // Otherwise a sweep holding a budget could wait for a claim whose writer
+      // is waiting for that same budget to reject or expire it.
+      const ordered = [...candidates].sort((left, right) =>
+        left.id < right.id ? -1 : left.id > right.id ? 1 : 0,
+      );
+      for (const candidate of ordered) {
         const quote = await tx.getQuote(candidate.quoteId);
         if (!quote || quote.expiresAt.getTime() > now.getTime()) continue;
-        const policy = await tx.getPolicy(candidate.policyId, candidate.policyVersion);
+        const current = await tx.getClaim(candidate.id);
+        if (current?.state === "reserved") overdue.set(current.id, { claim: current, quote });
+      }
+      const expired: OfferClaim[] = [];
+      for (const candidate of candidates) {
+        const current = overdue.get(candidate.id);
+        if (!current) continue;
+        const { claim, quote } = current;
+        const policy = await tx.getPolicy(claim.policyId, claim.policyVersion);
         if (!policy) continue;
-        const done = await tx.compareAndSetClaimState(
-          candidate.id,
-          ["reserved"],
-          "expired",
-          {},
-          now,
-        );
-        await tx.releaseBudgetReservation(
-          candidate.policyId,
-          candidate.policyVersion,
-          candidate.budgetReservation.amount,
-        );
-        await tx.recordAudit(
-          this.audit("claim", candidate.id, "claim.expired", policy, {
-            actorId: "system",
-            reason: `quote ${quote.id} lapsed`,
-            idempotencyKey: `expiry:${candidate.id}`,
-          }),
-        );
-        expired.push(done);
+        expired.push(await this.expireClaim(tx, claim, quote, policy, now));
       }
       return expired;
     });
@@ -589,6 +586,29 @@ export class OfferService {
 
   async getClaim(claimId: string): Promise<OfferClaim | null> {
     return this.store.getClaim(claimId);
+  }
+
+  private async expireClaim(
+    tx: PromotionTx,
+    claim: OfferClaim,
+    quote: OfferQuote,
+    policy: RegisteredOfferPolicy,
+    now: Date,
+  ): Promise<OfferClaim> {
+    const expired = await tx.compareAndSetClaimState(claim.id, ["reserved"], "expired", {}, now);
+    await tx.releaseBudgetReservation(
+      claim.policyId,
+      claim.policyVersion,
+      claim.budgetReservation.amount,
+    );
+    await tx.recordAudit(
+      this.audit("claim", claim.id, "claim.expired", policy, {
+        actorId: "system",
+        reason: `quote ${quote.id} lapsed`,
+        idempotencyKey: `expiry:${claim.id}`,
+      }),
+    );
+    return expired;
   }
 
   private now(): Date {

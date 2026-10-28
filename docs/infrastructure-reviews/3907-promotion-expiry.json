@@ -1,0 +1,101 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "promotions-core",
+      "classification": "pure-contract",
+      "reason": "Apply the stored quote expiry only to reserved claim admission, preserving already admitted grants. The shared domain decision uses the existing transactional storage contract and adds no host capability or provider.",
+      "files": {
+        "packages/promotions-core/src/libs/OfferService.ts": "cd176e4cc6c33fcbe4ce460a1ee942db6082ce4313d374a9b428430f8ded9647",
+        "packages/promotions-core/src/libs/PromotionStore.ts": "dcbc8a399cf9256f75402900eb3f75b71841df8fa9ac0a56d978290e13620213"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Expiry admission is shared domain logic with no host API, connection, storage implementation or lifecycle ownership. Deployment constraints remain with the selected PromotionStore provider.",
+          "providers": ["@croco/promotions-core"],
+          "constraints": ["No new runtime support or deployed provider certification is claimed."],
+          "references": [
+            "packages/promotions-core/src/libs/OfferService.ts",
+            "packages/promotions-core/src/libs/PromotionStore.ts",
+            "packages/promotions-core/src/tests/OfferExpiry.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Expiry admission is shared domain logic with no host API, connection, storage implementation or lifecycle ownership. Deployment constraints remain with the selected PromotionStore provider.",
+          "providers": ["@croco/promotions-core"],
+          "constraints": ["No new runtime support or deployed provider certification is claimed."],
+          "references": [
+            "packages/promotions-core/src/libs/OfferService.ts",
+            "packages/promotions-core/src/libs/PromotionStore.ts",
+            "packages/promotions-core/src/tests/OfferExpiry.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Expiry admission is shared domain logic with no host API, connection, storage implementation or lifecycle ownership. Deployment constraints remain with the selected PromotionStore provider.",
+          "providers": ["@croco/promotions-core"],
+          "constraints": ["No new runtime support or deployed provider certification is claimed."],
+          "references": [
+            "packages/promotions-core/src/libs/OfferService.ts",
+            "packages/promotions-core/src/libs/PromotionStore.ts",
+            "packages/promotions-core/src/tests/OfferExpiry.spec.ts"
+          ]
+        }
+      }
+    },
+    {
+      "package": "promotions-drizzle",
+      "classification": "durable-provider",
+      "reason": "Serialize fulfillment admission and expiry sweeps on the existing claim row; expiry, budget release and audit commit once. Reuse the existing PostgreSQL provider without schema changes.",
+      "files": {
+        "packages/promotions-drizzle/src/libs/PostgresPromotionStore.ts": "a9fc4ad12536978b59c3095fe9b3ba2c441dde4eb8e5291e9aa7caa99e875057"
+      },
+      "catalogRuntimes": ["node", "lambda"],
+      "profiles": {
+        "kubernetes": {
+          "result": "unverified",
+          "reason": "The existing Node PostgreSQL provider owns these claim row locks; local two-connection PostgreSQL evidence does not establish Kubernetes deployment behavior.",
+          "providers": ["@croco/promotions-drizzle"],
+          "constraints": [
+            "A pinned connection must span BEGIN through COMMIT or ROLLBACK; READ COMMITTED is set before callback queries. No Kubernetes cluster execution or provider certification is claimed."
+          ],
+          "references": [
+            "packages/promotions-drizzle/src/libs/PostgresPromotionStore.ts",
+            "packages/promotions-drizzle/README.md",
+            "packages/promotions-drizzle/src/tests/PostgresPromotionStore.postgres.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "conditional",
+          "reason": "Reuse the existing Node PostgreSQL provider with invocation-bounded transactions and connections.",
+          "providers": ["@croco/promotions-drizzle"],
+          "constraints": [
+            "Finish COMMIT or ROLLBACK before the invocation returns; bound lock waits and connection usage through the supplied database. No AWS deployment execution or certification is claimed."
+          ],
+          "references": [
+            "packages/promotions-drizzle/src/libs/PostgresPromotionStore.ts",
+            "packages/promotions-drizzle/README.md",
+            "packages/promotions-drizzle/src/tests/PostgresPromotionStore.postgres.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "unsupported",
+          "host": "workers",
+          "reason": "This adapter requires the existing Node PostgreSQL execute/transaction provider; no Worker-native connection or connection lifecycle is introduced.",
+          "providers": ["@croco/promotions-drizzle"],
+          "constraints": [
+            "Worker isolate support is not claimed; a separate Node Container deployment would require its own verification."
+          ],
+          "references": [
+            "packages/promotions-drizzle/src/libs/PostgresPromotionStore.ts",
+            "packages/promotions-drizzle/README.md",
+            "packages/promotions-drizzle/src/tests/PostgresPromotionStore.postgres.spec.ts"
+          ]
+        }
+      }
+    }
+  ]
+}

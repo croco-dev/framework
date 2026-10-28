@@ -8,6 +8,7 @@ import type { PromotionPgDatabase, PromotionPgExecutor } from "../index";
 import { OfferService } from "@croco/promotions-core";
 import {
   OfferBudgetExhaustedProblem,
+  OfferClaimStateConflictProblem,
   OfferDuplicateClaimProblem,
   OfferStackingConflictProblem,
   OfferSubjectLimitReachedProblem,
@@ -169,6 +170,162 @@ function latch() {
   });
   return { promise, release };
 }
+
+describe.skipIf(!url)("PostgreSQL promotion expiry admission", () => {
+  it.each(["fulfill first", "sweep first", "admitted first", "expires while waiting"] as const)(
+    "serializes %s with the competing transaction",
+    async (scenario) => {
+      const require = createRequire(import.meta.url);
+      const { Pool: PgPool } = require("pg") as {
+        Pool: new (options: { connectionString: string; max: number }) => Pool;
+      };
+      const poolA = new PgPool({ connectionString: url as string, max: 1 });
+      const poolB = new PgPool({ connectionString: url as string, max: 1 });
+      const observer = new PgPool({ connectionString: url as string, max: 1 });
+      const resume = latch();
+      let armed = false;
+      let secondPid = 0;
+      const storeA = new PostgresPromotionStore(
+        database(poolA, async (text) => {
+          if (armed && text.includes("WHERE claim_id =") && text.includes("FOR UPDATE")) {
+            armed = false;
+            await resume.promise;
+          }
+        }),
+      );
+      const storeB = new PostgresPromotionStore(
+        database(poolB, async (_text, client) => {
+          const pid = await client.query("SELECT pg_backend_pid() AS pid");
+          secondPid = Number(pid.rows[0]?.pid);
+        }),
+      );
+      const start = new Date("2026-10-01T00:00:00Z");
+      const expiry = new Date(start.getTime() + 60_000);
+      let clock =
+        scenario === "admitted first" || scenario === "expires while waiting"
+          ? new Date(expiry.getTime() - 1)
+          : expiry;
+      const subject: OfferSubject = {
+        appId: "shop",
+        environment: "test",
+        tenantId: "tenant-a",
+        kind: "customer",
+        id: "one",
+      };
+      const grants: string[] = [];
+      const port: OfferFulfillmentPort = {
+        fulfill: async ({ claim, idempotencyKey }) => {
+          grants.push(idempotencyKey);
+          return { outcome: "granted", grantRef: `grant:${claim.id}` };
+        },
+        check: async () => null,
+      };
+      const serviceA = new OfferService({ store: storeA, fulfillment: port, clock: () => clock });
+      const serviceB = new OfferService({ store: storeB, fulfillment: port, clock: () => clock });
+      let first: Promise<unknown> | undefined;
+      let second: Promise<unknown> | undefined;
+      await observer.query(
+        readFileSync(new URL("../../migrations/0001_promotions.up.sql", import.meta.url), "utf8"),
+      );
+      try {
+        await serviceA.registerPolicy({
+          id: "expiry",
+          version: 1,
+          benefitCycleId: "cycle",
+          benefit: { kind: "trial-credits", creditAmount: "30", walletKey: "trial" },
+          eligibility: { revision: "r1" },
+          startsAt: start,
+          endsAt: new Date("2026-12-31T00:00:00Z"),
+          perSubjectLimit: 10,
+          budget: { total: "300", perClaim: "30" },
+          actorId: "operator",
+          reason: "expiry race",
+          idempotencyKey: "policy-expiry",
+        });
+        const quote = await serviceA.quoteOffer({
+          policy: { id: "expiry", version: 1 },
+          subject,
+          now: start,
+          quoteTtlMs: 60_000,
+        });
+        const { claim } = await serviceA.reserveClaim({
+          quoteId: quote.id,
+          subject,
+          logicalKey: "expires",
+          now: start,
+        });
+        const survivor = await serviceA.quoteOffer({
+          policy: { id: "expiry", version: 1 },
+          subject,
+          now: start,
+          quoteTtlMs: 120_000,
+        });
+        await serviceA.reserveClaim({
+          quoteId: survivor.id,
+          subject,
+          logicalKey: "survivor",
+          now: start,
+        });
+        armed = true;
+        first =
+          scenario === "expires while waiting"
+            ? storeA.transact((tx) => tx.getClaim(claim.id))
+            : scenario === "sweep first"
+              ? serviceA.expireOverdueClaims({ now: expiry })
+              : serviceA.fulfillClaim({ claimId: claim.id });
+        const firstResult = Promise.allSettled([first]);
+        await vi.waitFor(() => expect(armed).toBe(false));
+        second =
+          scenario === "sweep first" || scenario === "expires while waiting"
+            ? serviceB.fulfillClaim({ claimId: claim.id })
+            : serviceB.expireOverdueClaims({ now: expiry });
+        const secondResult = Promise.allSettled([second]);
+        await vi.waitFor(async () => {
+          expect(secondPid).toBeGreaterThan(0);
+          const blocked = await observer.query(
+            "SELECT cardinality(pg_blocking_pids($1)) AS count",
+            [secondPid],
+          );
+          expect(Number(blocked.rows[0]?.count)).toBeGreaterThan(0);
+        });
+        if (scenario === "expires while waiting") clock = expiry;
+        resume.release();
+        const results = [...(await firstResult), ...(await secondResult)];
+        expect(results[0]?.status).toBe("fulfilled");
+        if (scenario === "sweep first") {
+          expect(results[1]).toMatchObject({
+            status: "rejected",
+            reason: expect.any(OfferClaimStateConflictProblem),
+          });
+        } else {
+          expect(results[1]?.status).toBe("fulfilled");
+        }
+        const admitted = scenario === "admitted first";
+        expect((await serviceB.getClaim(claim.id))?.state).toBe(admitted ? "fulfilled" : "expired");
+        expect(grants).toHaveLength(admitted ? 1 : 0);
+        expect(await storeB.transact((tx) => tx.readBudgetReserved("expiry", 1))).toBe(
+          admitted ? "60" : "30",
+        );
+        const audits = await observer.query(
+          "SELECT COUNT(*)::int AS count FROM croco_promotion_audit WHERE target_id = $1 AND action = 'claim.expired'",
+          [claim.id],
+        );
+        expect(audits.rows[0]?.count).toBe(admitted ? 0 : 1);
+        expect(await serviceB.expireOverdueClaims({ now: expiry })).toEqual([]);
+      } finally {
+        resume.release();
+        await Promise.allSettled([first, second]);
+        await observer.query(
+          readFileSync(
+            new URL("../../migrations/0001_promotions.down.sql", import.meta.url),
+            "utf8",
+          ),
+        );
+        await Promise.all([poolA.end(), poolB.end(), observer.end()]);
+      }
+    },
+  );
+});
 
 describe.skipIf(!url)("PostgreSQL concurrent promotion reservations", () => {
   it.each([
