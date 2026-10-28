@@ -963,6 +963,107 @@ describe.skipIf(!realResourcesEnabled)("Redis metering composition", () => {
     },
   );
 
+  it("reconciles transitive mixed-version identities before quota checks", async () => {
+    assert.isDefined(connection);
+    const storage = new RedisUsageStorage(createRedisClient(connection));
+    const usage = {
+      ...createUsageRecord("v3-key"),
+      id: "aaa:alias",
+      eventId: "shared-event",
+      value: 10,
+    };
+    const key = "usage2:tenant-atomic-record:api_calls:2024-01";
+    const legacyKey = "usage2:tenant-atomic-record:api_calls:2024-01-15";
+    await connection.client.zadd(legacyKey, usage.timestamp.getTime(), "legacy:10");
+    await connection.client.zadd(
+      key,
+      usage.timestamp.getTime(),
+      "v2-alias:10:v2." +
+        encodeURIComponent(JSON.stringify({ idempotencyKey: "legacy", eventId: "shared-event" })),
+    );
+    await storage.record(usage);
+    await storage.record({
+      ...usage,
+      id: "independent",
+      idempotencyKey: "independent",
+      eventId: undefined,
+      value: 3,
+    });
+    const query = {
+      tenantId: usage.tenantId,
+      meterId: usage.meterId,
+      period: "day" as const,
+      startDate: new Date("2024-01-15"),
+      endDate: new Date("2024-01-15T23:59:59.999Z"),
+    };
+    await expect(storage.getUsage(query)).resolves.toBe(13);
+    const next = { ...usage, id: "next", idempotencyKey: "next", eventId: undefined, value: 2 };
+    const quota = {
+      tenantId: usage.tenantId,
+      meterId: usage.meterId,
+      value: 2,
+      quota: 14,
+      allowOverQuota: false,
+      usageRecord: next,
+    };
+    await expect(storage.checkAndRecordWithinQuota(quota)).resolves.toEqual({
+      exceeded: true,
+      newUsage: 15,
+    });
+    expect(await connection.client.zcard(key)).toBe(3);
+    await expect(
+      storage.checkAndRecordWithinQuota({ ...quota, allowOverQuota: true }),
+    ).resolves.toEqual({ exceeded: true, newUsage: 15 });
+    await expect(storage.getUsage(query)).resolves.toBe(15);
+    await storage.deleteUsageRecords(query, await storage.fetchUsageRecords(query));
+    expect(await connection.client.zcard(key)).toBe(0);
+    expect(await connection.client.zcard(legacyKey)).toBe(0);
+  });
+
+  it.each(["value", "timestamp"] as const)(
+    "rejects conflicting mixed-version %s before quota or flush writes",
+    async (conflict) => {
+      assert.isDefined(connection);
+      const storage = new RedisUsageStorage(createRedisClient(connection));
+      const usage = { ...createUsageRecord("shared"), id: "new:alias", value: 10 };
+      const key = "usage2:tenant-atomic-record:api_calls:2024-01";
+      await connection.client.zadd(
+        key,
+        usage.timestamp.getTime(),
+        "old:10:v2." + encodeURIComponent(JSON.stringify({ idempotencyKey: "shared" })),
+      );
+      await storage.record({
+        ...usage,
+        value: conflict === "value" ? 11 : 10,
+        timestamp: new Date(usage.timestamp.getTime() + (conflict === "timestamp" ? 1 : 0)),
+      });
+      const query = {
+        tenantId: usage.tenantId,
+        meterId: usage.meterId,
+        period: "billing_cycle" as const,
+        startDate: new Date("2024-01-01"),
+        endDate: new Date("2024-01-31"),
+      };
+      await expect(storage.getUsage(query)).rejects.toBeInstanceOf(RedisProblem);
+      const next = { ...usage, id: "next", idempotencyKey: "next", value: 1 };
+      await expect(
+        storage.checkAndRecordWithinQuota({
+          tenantId: usage.tenantId,
+          meterId: usage.meterId,
+          value: 1,
+          quota: 100,
+          allowOverQuota: false,
+          usageRecord: next,
+        }),
+      ).rejects.toBeInstanceOf(RedisProblem);
+      await expect(storage.deleteUsageRecords(query, [usage])).rejects.toBeInstanceOf(RedisProblem);
+      expect(await connection.client.zcard(key)).toBe(2);
+      expect(
+        await connection.client.exists("idem2:record:tenant-atomic-record:api_calls:next"),
+      ).toBe(0);
+    },
+  );
+
   it("keeps encoded IDs, legacy reads, quota totals and flush deletion consistent", async () => {
     assert.isDefined(connection);
     const storage = new RedisUsageStorage(createRedisClient(connection));

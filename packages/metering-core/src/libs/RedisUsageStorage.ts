@@ -147,17 +147,40 @@ local function decodeComponent(component)
   end))
 end
 
-local records = redis.call('ZRANGEBYSCORE', usageKey, '-inf', '+inf')
-local currentUsage = 0
+local records = redis.call('ZRANGEBYSCORE', usageKey, '-inf', '+inf', 'WITHSCORES')
+local parents = {}
+local values = {}
+local scores = {}
+local firstIndexByIdentity = {}
 
-for _, existingMember in ipairs(records) do
+local function findRoot(index)
+  local root = index
+  while parents[root] ~= root do
+    root = parents[root]
+  end
+  while parents[index] ~= index do
+    local parent = parents[index]
+    parents[index] = root
+    index = parent
+  end
+  return root
+end
+
+for index = 1, #records, 2 do
+  local existingMember = records[index]
+  local numericScore = tonumber(records[index + 1])
+  if not numericScore or numericScore == math.huge or numericScore == -math.huge then
+    return redis.error_reply('Invalid stored usage score')
+  end
   local id, usageValue, payload = string.match(existingMember, '^([^:]*):([1-9]%d*):([^:]*)$')
+  local envelope = nil
   if not payload then
     id, usageValue = string.match(existingMember, '^([^:]+):([1-9]%d*)$')
   else
     local version = string.sub(payload, 1, 3)
     if version == 'v3.' then
-      if not decodeComponent(id) then
+      id = decodeComponent(id)
+      if not id then
         return redis.error_reply('Invalid stored usage ID')
       end
     elseif id == '' then
@@ -167,24 +190,51 @@ for _, existingMember in ipairs(records) do
       payload = string.sub(payload, 4)
     end
     local decoded = decodeComponent(payload)
-    local ok, envelope = pcall(cjson.decode, decoded or '')
-    if not ok or string.sub(decoded or '', 1, 1) ~= '{' or type(envelope) ~= 'table' then
+    local ok, parsed = pcall(cjson.decode, decoded or '')
+    if not ok or string.sub(decoded or '', 1, 1) ~= '{' or type(parsed) ~= 'table' then
       return redis.error_reply('Invalid stored usage payload')
     end
     if version == 'v2.' or version == 'v3.' then
-      if (envelope.idempotencyKey ~= nil and type(envelope.idempotencyKey) ~= 'string') or
-         (envelope.eventId ~= nil and type(envelope.eventId) ~= 'string') then
+      if (parsed.idempotencyKey ~= nil and type(parsed.idempotencyKey) ~= 'string') or
+         (parsed.eventId ~= nil and type(parsed.eventId) ~= 'string') then
         return redis.error_reply('Invalid stored usage identity')
       end
+      envelope = parsed
     end
   end
   local numericUsageValue = usageValue and tonumber(usageValue)
   if not numericUsageValue or numericUsageValue > ${MAX_USAGE_VALUE} then
     return redis.error_reply('Invalid stored usage value')
   end
-  currentUsage = currentUsage + numericUsageValue
-  if currentUsage > maxSafeInteger then
-    return redis.error_reply('Usage total exceeds the safe integer range')
+
+  parents[index] = index
+  values[index] = numericUsageValue
+  scores[index] = numericScore
+  local identities = { 'id:' .. id, 'idempotency:' .. (envelope and envelope.idempotencyKey or id) }
+  if envelope and envelope.eventId ~= nil then
+    table.insert(identities, 'event:' .. envelope.eventId)
+  end
+  for _, identity in ipairs(identities) do
+    local previousIndex = firstIndexByIdentity[identity]
+    if previousIndex then
+      local previousRoot = findRoot(previousIndex)
+      if values[previousRoot] ~= numericUsageValue or scores[previousRoot] ~= numericScore then
+        return redis.error_reply('Conflicting stored usage record across Redis members')
+      end
+      parents[findRoot(index)] = previousRoot
+    else
+      firstIndexByIdentity[identity] = index
+    end
+  end
+end
+
+local currentUsage = 0
+for index = 1, #records, 2 do
+  if parents[index] == index then
+    currentUsage = currentUsage + values[index]
+    if currentUsage > maxSafeInteger then
+      return redis.error_reply('Usage total exceeds the safe integer range')
+    end
   end
 end
 
@@ -526,6 +576,27 @@ return { exceeded and 1 or 0, newUsage }
           score,
         }))
       : members.map((member) => ({ member, parsed: this.parseUsageMember(member) }));
+    const reconciled = this.groupUsageMembers(parsedMembers).map(([first, ...duplicates]) => {
+      let preferred = first;
+      for (const candidate of duplicates) {
+        if (
+          this.getUsageMemberRichness(candidate.parsed) >
+          this.getUsageMemberRichness(preferred.parsed)
+        ) {
+          preferred = candidate;
+        }
+      }
+      return preferred;
+    });
+
+    return reconciled.flatMap(({ member, score }) =>
+      withScores ? [member, String(score)] : [member],
+    );
+  }
+
+  private groupUsageMembers<T extends ReconciledUsageMember>(
+    parsedMembers: T[],
+  ): Array<[T, ...T[]]> {
     const parents = parsedMembers.map((_, index) => index);
     const findRoot = (index: number): number => {
       let root = index;
@@ -552,13 +623,13 @@ return { exceeded and 1 or 0, newUsage }
       }
     });
 
-    const groups = new Map<number, ReconciledUsageMember[]>();
+    const groups = new Map<number, T[]>();
     parsedMembers.forEach((candidate, index) => {
       const root = findRoot(index);
       groups.set(root, [...(groups.get(root) ?? []), candidate]);
     });
 
-    const reconciled = Array.from(groups.values()).map((group) => {
+    return Array.from(groups.values()).map((group): [T, ...T[]] => {
       const [first, ...duplicates] = group;
       if (first === undefined) {
         throw new RedisProblem(
@@ -566,8 +637,6 @@ return { exceeded and 1 or 0, newUsage }
           "Stored usage reconciliation produced an empty group",
         );
       }
-
-      let preferred = first;
       for (const candidate of duplicates) {
         if (first.parsed.value !== candidate.parsed.value || first.score !== candidate.score) {
           throw new RedisProblem(
@@ -575,19 +644,9 @@ return { exceeded and 1 or 0, newUsage }
             `Conflicting stored usage record '${candidate.parsed.id}' across Redis partitions`,
           );
         }
-        if (
-          this.getUsageMemberRichness(candidate.parsed) >
-          this.getUsageMemberRichness(preferred.parsed)
-        ) {
-          preferred = candidate;
-        }
       }
-      return preferred;
+      return [first, ...duplicates];
     });
-
-    return reconciled.flatMap(({ member, score }) =>
-      withScores ? [member, String(score)] : [member],
-    );
   }
 
   private getUsageMemberIdentities(usage: Pick<UsageRecord, "id"> & UsageMemberEnvelope): string[] {
@@ -704,15 +763,19 @@ return { exceeded and 1 or 0, newUsage }
       "id" | "value" | "idempotencyKey" | "eventId" | "dimensions" | "metadata"
     >,
   ): string {
-    const base = `${encodeURIComponent(usage.id)}:${usage.value}`;
-    const envelope = {
-      idempotencyKey: usage.idempotencyKey,
-      eventId: usage.eventId,
-      dimensions: usage.dimensions,
-      metadata: usage.metadata,
-    };
+    try {
+      const base = `${encodeURIComponent(usage.id)}:${usage.value}`;
+      const envelope = {
+        idempotencyKey: usage.idempotencyKey,
+        eventId: usage.eventId,
+        dimensions: usage.dimensions,
+        metadata: usage.metadata,
+      };
 
-    return `${base}:v3.${encodeURIComponent(stableStringify(envelope))}`;
+      return `${base}:v3.${encodeURIComponent(stableStringify(envelope))}`;
+    } catch (error) {
+      throw this.toRedisProblem("SERIALIZE", error);
+    }
   }
 
   private serializeLegacyUsageMember(
@@ -990,32 +1053,55 @@ return { exceeded and 1 or 0, newUsage }
     }
 
     const membersByKey = new Map<string, Array<{ member: string; score: number }>>();
+    const storedMembers: Array<{
+      key: string;
+      member: string;
+      score: number;
+      parsed: ParsedUsageMember;
+    }> = [];
     for (const [key, keyRecords] of recordsByKey) {
-      const knownMembers = keyRecords.flatMap((record) => [
-        { member: this.serializeUsageMember(record), score: record.timestamp.getTime() },
-        { member: this.serializeLegacyUsageMember(record), score: record.timestamp.getTime() },
-      ]);
-      const storedMembers = await this.runRedisOperation("ZRANGEBYSCORE", () =>
+      membersByKey.set(
+        key,
+        keyRecords.flatMap((record) => [
+          { member: this.serializeUsageMember(record), score: record.timestamp.getTime() },
+          { member: this.serializeLegacyUsageMember(record), score: record.timestamp.getTime() },
+        ]),
+      );
+      const members = await this.runRedisOperation("ZRANGEBYSCORE", () =>
         this.redis.zrangebyscore(key, min, max, "WITHSCORES"),
       );
-      const exactMembers = this.parseScoredUsageMembers(storedMembers).filter(
-        ({ member, score }) => {
-          const parsed = this.parseUsageMember(member);
-          const parsedIdentities = new Set(this.getUsageMemberIdentities(parsed));
-          return keyRecords.some(
-            (record) =>
-              record.value === parsed.value &&
-              record.timestamp.getTime() === score &&
-              this.getUsageMemberIdentities(record).some((identity) =>
-                parsedIdentities.has(identity),
-              ),
-          );
-        },
-      );
+      for (const { member, score } of this.parseScoredUsageMembers(members)) {
+        storedMembers.push({ key, member, score, parsed: this.parseUsageMember(member) });
+      }
+    }
 
-      const uniqueMembers = new Map(
-        [...knownMembers, ...exactMembers].map((candidate) => [candidate.member, candidate]),
-      );
+    const requestedIdentities = new Set(
+      records.flatMap((record) =>
+        this.getUsageMemberIdentities(record).map((identity) =>
+          JSON.stringify([identity, record.value, record.timestamp.getTime()]),
+        ),
+      ),
+    );
+    for (const group of this.groupUsageMembers(storedMembers)) {
+      if (
+        !group.some(({ parsed, score }) =>
+          this.getUsageMemberIdentities(parsed).some((identity) =>
+            requestedIdentities.has(JSON.stringify([identity, parsed.value, score])),
+          ),
+        )
+      ) {
+        continue;
+      }
+      for (const { key, member, score } of group) {
+        const members = membersByKey.get(key);
+        if (members === undefined) {
+          throw new RedisProblem("ZREM", "Stored usage reconciliation found an unknown partition");
+        }
+        members.push({ member, score });
+      }
+    }
+    for (const [key, members] of membersByKey) {
+      const uniqueMembers = new Map(members.map((candidate) => [candidate.member, candidate]));
       membersByKey.set(key, [...uniqueMembers.values()]);
     }
 

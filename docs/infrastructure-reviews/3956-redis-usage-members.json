@@ -4,9 +4,9 @@
     {
       "package": "metering-core",
       "classification": "durable-provider",
-      "reason": "Preserve arbitrary string usage IDs and amounts with versioned member encoding; validate ambiguous legacy members consistently in JavaScript and Lua. Existing Redis adapters and lifecycle boundaries are reused; package runtime claims remain unchanged.",
+      "reason": "Preserve arbitrary encodable usage IDs with versioned member encoding; align JavaScript reads, native Lua quota totals and flush deletion on transitive logical identity groups. Reject ambiguous legacy members and conflicting amounts or timestamps before writes. Existing Redis adapters and lifecycle boundaries are reused; runtime claims are unchanged.",
       "files": {
-        "packages/metering-core/src/libs/RedisUsageStorage.ts": "bf86b0c11b4b98f4a848d8e139aaf67f67f2ca1c1f5573f220c5ea896b91193d"
+        "packages/metering-core/src/libs/RedisUsageStorage.ts": "f18b904aece97a37593b1f669dcaad63fa9d7ec521dedbd77a7c29aada8f4113"
       },
       "catalogRuntimes": [],
       "profiles": {

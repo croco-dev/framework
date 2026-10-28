@@ -276,7 +276,9 @@ counts records successfully processed by the flush, including records persisted 
 integer amount and a URI-encoded envelope. IDs containing colons, Unicode or literal percent
 sequences retain their original identity. Reads and flush deletion also accept valid legacy
 `id:value[:encodedMetadata]` and v2 envelope members, including mixed-version partitions.
-Existing idempotency markers and Redis key namespaces are unchanged.
+Logical duplicates linked by ID, idempotency key or event ID count once in both reads and quota
+checks. Conflicting amounts or timestamps fail before quota writes. Existing idempotency markers
+and Redis key namespaces are unchanged.
 
 Deploy readers that understand v3 before resuming writers; old readers cannot safely consume
 v3 members. Pause usage writes while coordinating this upgrade across all processes sharing

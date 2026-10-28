@@ -127,6 +127,25 @@ describe("RedisUsageStorage", () => {
     },
   );
 
+  it("rejects unencodable IDs as Redis Problems before changing storage", async () => {
+    const usage = { ...createUsageRecord("invalid-id"), id: "\ud800" };
+    await expect(storage.record(usage)).rejects.toMatchObject({
+      code: "metering/redis-error",
+      extensions: { operation: "SERIALIZE" },
+    });
+    await expect(
+      storage.checkAndRecordWithinQuota({
+        tenantId: usage.tenantId,
+        meterId: usage.meterId,
+        usageRecord: usage,
+        value: usage.value,
+        quota: 100,
+        allowOverQuota: false,
+      }),
+    ).rejects.toBeInstanceOf(RedisProblem);
+    expect(mockRedis.eval).not.toHaveBeenCalled();
+  });
+
   function createScanDeleteRedis(initialKeys: string[]): {
     keyspace: Set<string>;
     redis: RedisClient;
