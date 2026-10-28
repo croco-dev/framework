@@ -725,33 +725,38 @@ return { exceeded and 1 or 0, newUsage }
   }
 
   private parseUsageMember(member: string): ParsedUsageMember {
-    const parts = member.split(":");
-    const rawId = parts[0] ?? "";
-    const rawValue = parts[1] ?? "";
-    const payload = parts[2];
-    const versioned = payload?.startsWith("v2.") || payload?.startsWith("v3.");
-    const encodedId = payload?.startsWith("v3.");
-    const value = Number(rawValue);
+    try {
+      const parts = member.split(":");
+      const rawId = parts[0] ?? "";
+      const rawValue = parts[1] ?? "";
+      const payload = parts[2];
+      const versioned = payload?.startsWith("v2.") || payload?.startsWith("v3.");
+      const encodedId = payload?.startsWith("v3.");
+      const value = Number(rawValue);
 
-    if (parts.length < 2 || parts.length > 3 || (!encodedId && rawId.length === 0)) {
-      throw new RedisProblem("ZRANGEBYSCORE", "Invalid stored usage member boundaries");
+      if (parts.length < 2 || parts.length > 3 || (!encodedId && rawId.length === 0)) {
+        throw new RedisProblem("ZRANGEBYSCORE", "Invalid stored usage member boundaries");
+      }
+      const id = encodedId ? decodeURIComponent(rawId) : rawId;
+      const envelope = versioned ? this.decodeUsageEnvelope(payload.slice(3)) : undefined;
+      const metadata =
+        payload !== undefined && !versioned ? this.decodeMetadata(payload) : undefined;
+
+      if (!/^[1-9]\d*$/.test(rawValue) || !Number.isSafeInteger(value) || value > MAX_USAGE_VALUE) {
+        throw new RedisProblem("ZRANGEBYSCORE", `Invalid stored usage value '${rawValue}'`);
+      }
+
+      return {
+        id,
+        value,
+        idempotencyKey: envelope?.idempotencyKey,
+        eventId: envelope?.eventId,
+        dimensions: envelope?.dimensions,
+        metadata: envelope?.metadata ?? metadata,
+      };
+    } catch (error) {
+      throw this.toRedisProblem("ZRANGEBYSCORE", error);
     }
-    const id = encodedId ? decodeURIComponent(rawId) : rawId;
-    const envelope = versioned ? this.decodeUsageEnvelope(payload.slice(3)) : undefined;
-    const metadata = payload !== undefined && !versioned ? this.decodeMetadata(payload) : undefined;
-
-    if (!/^[1-9]\d*$/.test(rawValue) || !Number.isSafeInteger(value) || value > MAX_USAGE_VALUE) {
-      throw new RedisProblem("ZRANGEBYSCORE", `Invalid stored usage value '${rawValue}'`);
-    }
-
-    return {
-      id,
-      value,
-      idempotencyKey: envelope?.idempotencyKey,
-      eventId: envelope?.eventId,
-      dimensions: envelope?.dimensions,
-      metadata: envelope?.metadata ?? metadata,
-    };
   }
 
   private parseScoredUsageMembers(

@@ -6,7 +6,7 @@
       "classification": "durable-provider",
       "reason": "Preserve arbitrary string usage IDs and amounts with versioned member encoding; validate ambiguous legacy members consistently in JavaScript and Lua. Existing Redis adapters and lifecycle boundaries are reused; package runtime claims remain unchanged.",
       "files": {
-        "packages/metering-core/src/libs/RedisUsageStorage.ts": "2e08e12b50fd21503537ba07e97d809fd9797f6c97851ab0f3f2cb09c30f9741"
+        "packages/metering-core/src/libs/RedisUsageStorage.ts": "bf86b0c11b4b98f4a848d8e139aaf67f67f2ca1c1f5573f220c5ea896b91193d"
       },
       "catalogRuntimes": [],
       "profiles": {

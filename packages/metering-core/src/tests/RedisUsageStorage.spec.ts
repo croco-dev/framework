@@ -115,9 +115,15 @@ describe("RedisUsageStorage", () => {
         tenantId: "tenant-1",
         meterId: "api_calls",
         period: "billing_cycle",
+        startDate: new Date("2024-01-01"),
+        endDate: new Date("2024-01-31"),
       };
       await expect(storage.getUsage(query)).rejects.toBeInstanceOf(RedisProblem);
       await expect(storage.fetchUsageRecords(query)).rejects.toBeInstanceOf(RedisProblem);
+      await expect(
+        storage.deleteUsageRecords(query, [createUsageRecord("flush")]),
+      ).rejects.toBeInstanceOf(RedisProblem);
+      expect(mockRedis.eval).not.toHaveBeenCalled();
     },
   );
 
