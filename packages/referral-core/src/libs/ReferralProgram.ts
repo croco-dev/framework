@@ -1,4 +1,4 @@
-import { canonicalReferralAmount, compareReferralAmounts } from "./amounts";
+import { addReferralAmounts, canonicalReferralAmount, compareReferralAmounts } from "./amounts";
 import { InvalidReferralProgramProblem } from "./problems";
 import type {
   ReferralBenefit,
@@ -143,6 +143,15 @@ export function registerReferralProgram(
   ) {
     throw new InvalidReferralProgramProblem(
       "recipientBenefit.creditAmount must not exceed budgetPerAttribution",
+    );
+  }
+  const combinedCreditAmount = addReferralAmounts(
+    referrerBenefit.kind === "trial-credits" ? referrerBenefit.creditAmount : "0",
+    recipientBenefit.kind === "trial-credits" ? recipientBenefit.creditAmount : "0",
+  );
+  if (compareReferralAmounts(combinedCreditAmount, budgetPerAttribution) > 0) {
+    throw new InvalidReferralProgramProblem(
+      "combined benefit creditAmount must not exceed budgetPerAttribution",
     );
   }
   return {
