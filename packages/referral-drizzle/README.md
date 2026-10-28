@@ -27,6 +27,13 @@ No schema migration is required. Drain older writers before deploying the servic
 and provider together. Before rollback, stop and drain writers and reconcile
 outstanding attributions; older writers do not implement this admission protocol.
 
+Benefit return ownership and receipts are optional `returnOperation` fields
+in the existing JSON document. Transactional attribution reads lock the row,
+so separate service processes observe one return operation before any external
+debit. No SQL migration is needed. Deploy the updated store and service
+together after draining older return handlers; see the referral-core README
+for uncertain-return recovery and rollback requirements.
+
 Live PostgreSQL coverage runs with `pnpm test:live` when
 `REFERRALS_TEST_DATABASE_URL` is set; the default `pnpm test` runs only the
 offline contract checks.

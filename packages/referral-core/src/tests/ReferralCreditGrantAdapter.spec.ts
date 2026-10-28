@@ -1,5 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
-import { CreditLedgerService, InMemoryCreditLedgerStore, creditAmount } from "@croco/credits-core";
+import {
+  CreditLedgerService,
+  InMemoryCreditLedgerStore,
+  creditAmount,
+  creditTransactionId,
+} from "@croco/credits-core";
 import { FirstPartyReferralCreditGrantAdapter } from "../credit-grant";
 import type { ReferralBenefitIntent } from "../libs/types";
 
@@ -55,10 +60,40 @@ async function setup(priorGrants: number) {
 }
 
 describe("FirstPartyReferralCreditGrantAdapter receipt lookup", () => {
-  it.each([1, 100, 101, 1001])("finds the exact grant at position %i", async (position) => {
+  it.each([1, 100, 101])("finds the exact grant at position %i", async (position) => {
     const { adapter, grant } = await setup(position - 1);
     const target = await grant("target");
     expect(await adapter.check(input)).toEqual({ grantRef: target.transactions[0]?.id });
+  });
+
+  it("finds the exact grant at position 1001", async () => {
+    const { adapter, ledger, accountId, grant } = await setup(0);
+    const [receipt] = (await grant("target")).transactions;
+    if (!receipt) throw new Error("missing grant fixture");
+    // Exercise a long paged history without 1,000 unrelated ledger writes.
+    // The cases above and the return tests retain real-ledger integration.
+    const history = Array.from({ length: 1001 }, (_, index) => ({
+      ...receipt,
+      id: index === 1000 ? receipt.id : creditTransactionId(`noise-${index}`),
+      idempotencyKey: index === 1000 ? "target" : `noise-${index}`,
+      position: index + 1,
+    }));
+    let reads = 0;
+    vi.spyOn(ledger, "getHistory").mockImplementation(async (requestedAccount, options = {}) => {
+      if (++reads > history.length + 1) throw new Error("history scan did not advance");
+      expect(requestedAccount).toBe(accountId);
+      const position = options.atPosition ?? history.length;
+      return {
+        accountId,
+        position,
+        transactions: history
+          .filter(
+            (entry) => entry.position > (options.afterPosition ?? 0) && entry.position <= position,
+          )
+          .slice(0, options.limit ?? 100),
+      };
+    });
+    expect(await adapter.check(input)).toEqual({ grantRef: receipt.id });
   });
 
   it("finishes a fixed snapshot while writes continue and finds a later receipt on the next check", async () => {
@@ -120,12 +155,68 @@ describe("FirstPartyReferralCreditGrantAdapter receipt lookup", () => {
     const first = await adapter.reverse(request);
     expect(first).toEqual({ returnRef: expect.any(String) });
     expect(await adapter.reverse(request)).toEqual(first);
+    expect(await adapter.checkReturn(request)).toEqual(first);
     const history = await ledger.getHistory(accountId, { afterPosition: 100 });
     expect(history.transactions.filter((entry) => entry.kind === "adjustment")).toHaveLength(1);
     expect(await ledger.getBalance(accountId)).toMatchObject({
       available: "700",
       netAdjusted: "-7",
     });
+  });
+
+  it("only confirms a matching compensating debit, including receipts beyond the first page", async () => {
+    const { adapter, ledger, accountId, grant } = await setup(101);
+    const request = {
+      returnIdempotencyKey: "return-target",
+      intent,
+      subject,
+      attributionId: "attribution",
+    };
+    expect(await adapter.checkReturn(request)).toBeNull();
+    await ledger.adjustCredits({
+      accountId,
+      idempotencyKey: "unrelated-debit",
+      amount: creditAmount("7"),
+      direction: "debit",
+      reference: { type: "other", id: "attribution" },
+    });
+    expect(
+      await adapter.checkReturn({ ...request, returnIdempotencyKey: "unrelated-debit" }),
+    ).toBeNull();
+    await ledger.adjustCredits({
+      accountId,
+      idempotencyKey: "wrong-direction",
+      amount: creditAmount("7"),
+      direction: "credit",
+      reference: { type: "referral-benefit-return", id: "attribution" },
+    });
+    expect(
+      await adapter.checkReturn({ ...request, returnIdempotencyKey: "wrong-direction" }),
+    ).toBeNull();
+    const receipt = await ledger.adjustCredits({
+      accountId,
+      idempotencyKey: "return-target",
+      amount: creditAmount("7"),
+      direction: "debit",
+      reference: { type: "referral-benefit-return", id: "attribution" },
+    });
+    expect(await adapter.checkReturn(request)).toEqual({ returnRef: receipt.transactions[0]?.id });
+    expect(
+      await adapter.checkReturn({ ...request, attributionId: "other-attribution" }),
+    ).toBeNull();
+    expect(
+      await adapter.checkReturn({ ...request, subject: { ...subject, tenantId: "other-tenant" } }),
+    ).toBeNull();
+    expect(
+      await adapter.checkReturn({
+        ...request,
+        intent: { ...intent, benefit: { kind: "trial-credits", creditAmount: "3" } },
+      }),
+    ).toBeNull();
+    expect(await adapter.checkReturn({ ...request, returnIdempotencyKey: "noise-1" })).toBeNull();
+    // Move the receipt behind later history as well; lookup pins and traverses its snapshot.
+    for (let i = 0; i < 101; i++) await grant(`later-${i}`);
+    expect(await adapter.checkReturn(request)).toEqual({ returnRef: receipt.transactions[0]?.id });
   });
 
   it("reports a missing grant without debiting the account", async () => {

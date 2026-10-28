@@ -10,6 +10,9 @@ External benefit boundary. `fulfill` must be idempotent on
 instead of paying twice, including overlapping attempts from separate processes. `check` reports a previously completed grant or
 null when nothing durable is visible; it never pays. `reverse` posts a
 compensating return for an already granted side; it never deletes history.
+`checkReturn` only reads a completed reversal for the fixed operation key.
+A null receipt does not prove that no reversal is in flight. The service
+never repeats `reverse` after an uncertain result, including `{ error }`.
 
 ## Methods
 
@@ -36,6 +39,36 @@ compensating return for an already granted side; it never deletes history.
 #### Returns
 
 `Promise`\<\{ `grantRef`: `string`; \} \| `null`\>
+
+---
+
+### checkReturn()?
+
+> `optional` **checkReturn**(`input`): `Promise`\<\{ `returnRef`: `string`; \} \| `null`\>
+
+#### Parameters
+
+##### input
+
+###### attributionId
+
+`string`
+
+###### intent
+
+[`ReferralBenefitIntent`](/api/referral-core/src/type-aliases/referralbenefitintent/)
+
+###### returnIdempotencyKey
+
+`string`
+
+###### subject
+
+[`ReferralSubject`](/api/referral-core/src/type-aliases/referralsubject/)
+
+#### Returns
+
+`Promise`\<\{ `returnRef`: `string`; \} \| `null`\>
 
 ---
 

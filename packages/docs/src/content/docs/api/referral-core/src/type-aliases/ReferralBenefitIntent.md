@@ -73,6 +73,42 @@ Deterministic key: `referral-benefit:<attributionId>:<side>`.
 
 ---
 
+### returnOperation?
+
+> `readonly` `optional` **returnOperation?**: `object`
+
+One durable compensating operation per benefit, independent of caller retry keys.
+
+#### actorId
+
+> `readonly` **actorId**: `string`
+
+#### failureReason?
+
+> `readonly` `optional` **failureReason?**: `string`
+
+#### idempotencyKey
+
+> `readonly` **idempotencyKey**: `string`
+
+#### policy
+
+> `readonly` **policy**: `string`
+
+#### reason
+
+> `readonly` **reason**: `string`
+
+#### receipt?
+
+> `readonly` `optional` **receipt?**: `string`
+
+#### status
+
+> `readonly` **status**: `"returning"` \| `"unknown"` \| `"returned"`
+
+---
+
 ### side
 
 > `readonly` **side**: [`ReferralBenefitSide`](/api/referral-core/src/type-aliases/referralbenefitside/)

@@ -101,6 +101,7 @@ async function withStores(
 function serviceFor(
   store: PostgresReferralStore,
   qualification: ReferralQualificationHook = () => ({ qualified: false, reason: "no purchase" }),
+  fulfillment: ReferralFulfillmentPort = fulfillmentOk(),
 ): ReferralService {
   return new ReferralService({
     store,
@@ -110,7 +111,7 @@ function serviceFor(
     },
     novelty: () => ({ novelty: "new", reason: "new signup" }),
     qualification,
-    fulfillment: fulfillmentOk(),
+    fulfillment,
     clock: () => new Date("2026-02-01T00:00:00Z"),
   });
 }
@@ -142,6 +143,106 @@ async function seed(
 }
 
 describe.skipIf(!url)("PostgreSQL referral budgets and attribution recovery", () => {
+  it("claims one return across independent stores and recovers its durable receipt after restart", async () => {
+    await withStores(async (pool, a, b) => {
+      let entered!: () => void;
+      let release!: () => void;
+      const started = new Promise<void>((resolve) => {
+        entered = resolve;
+      });
+      const proceed = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      let visible = false;
+      const keys: string[] = [];
+      const checks: string[] = [];
+      const fulfillment: ReferralFulfillmentPort = {
+        ...fulfillmentOk(),
+        reverse: async ({ returnIdempotencyKey }) => {
+          keys.push(returnIdempotencyKey);
+          entered();
+          await proceed;
+          throw new Error("connection lost after durable debit");
+        },
+        checkReturn: async ({ returnIdempotencyKey }) => {
+          checks.push(returnIdempotencyKey);
+          return visible ? { returnRef: "durable-debit" } : null;
+        },
+      };
+      const qualify: ReferralQualificationHook = () => ({
+        qualified: true,
+        sourceEventId: "purchase",
+        qualifyingAction: "purchase",
+        eligibleReason: "paid",
+      });
+      const service = serviceFor(a, qualify, fulfillment);
+      const { token, programId } = await seed(service);
+      const { attribution } = await service.claimAttribution({
+        token,
+        recipient: subject("recipient"),
+      });
+      await service.qualifyAttribution({
+        attributionId: attribution.id,
+        recipient: subject("recipient"),
+      });
+      await service.fulfillBenefits({ attributionId: attribution.id });
+      const request = {
+        attributionId: attribution.id,
+        side: "referrer" as const,
+        policy: "duplicate",
+        actorId: "operator",
+        reason: "return reward",
+        returnIdempotencyKey: "return-a",
+      };
+      const first = service.returnBenefitSide(request);
+      const firstSettled = Promise.allSettled([first]);
+      await started;
+      const restarted = serviceFor(b, qualify, fulfillment);
+      try {
+        await expect(
+          restarted.returnBenefitSide({ ...request, returnIdempotencyKey: "return-b" }),
+        ).rejects.toThrow(/pending or uncertain/);
+      } finally {
+        release();
+      }
+      expect((await firstSettled)[0].status).toBe("rejected");
+      const pending = await pool.query(
+        "SELECT document FROM croco_referral_benefit_intents WHERE attribution_id=$1 AND side='referrer'",
+        [attribution.id],
+      );
+      expect(pending.rows[0]?.document).toMatchObject({
+        status: "granted",
+        returnOperation: { status: "unknown", idempotencyKey: "return-a" },
+      });
+      visible = true;
+      await restarted.returnBenefitSide({
+        ...request,
+        returnIdempotencyKey: "return-c",
+        actorId: "retry-actor",
+      });
+      await expect(
+        service.returnBenefitSide({ ...request, returnIdempotencyKey: "return-d" }),
+      ).rejects.toBeInstanceOf(ReferralAttributionStateConflictProblem);
+      expect(keys).toEqual(["return-a"]);
+      expect(checks).toEqual(["return-a", "return-a"]);
+      const completed = await b.listBenefitIntents({ attributionId: attribution.id });
+      expect(completed.find((intent) => intent.side === "referrer")).toMatchObject({
+        status: "returned",
+        returnOperation: { status: "returned", receipt: "durable-debit" },
+      });
+      expect(completed.find((intent) => intent.side === "recipient")?.status).toBe("granted");
+      const audits = await pool.query(
+        "SELECT document FROM croco_referral_audit WHERE action='benefit.returned'",
+      );
+      expect(audits.rows).toHaveLength(1);
+      expect(audits.rows[0]?.document).toMatchObject({
+        actorId: "operator",
+        idempotencyKey: "return-a",
+      });
+      expect(await a.transact((tx) => tx.readBudgetReserved(programId, 1))).toBe("10");
+    });
+  });
+
   it("serializes competing qualifications across program revisions with repeatable-read defaults", async () => {
     await withStores(async (pool, storeA) => {
       const base = database(pool);
