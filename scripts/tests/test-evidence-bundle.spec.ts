@@ -299,6 +299,7 @@ describe("test evidence CI bundle", () => {
     ["missing check id", releaseReport({ checks: [releaseCheck({ id: undefined as never })] })],
     ["missing command", releaseReport({ checks: [releaseCheck({ command: undefined as never })] })],
     ["empty command", releaseReport({ checks: [releaseCheck({ command: [] })] })],
+    ["empty executable", releaseReport({ checks: [releaseCheck({ command: ["", "arg"] })] })],
     ["non-string command", releaseReport({ checks: [releaseCheck({ command: [42 as never] })] })],
     [
       "unknown check status",
@@ -375,7 +376,8 @@ describe("test evidence CI bundle", () => {
   it("consumes an actual v1 report with its command, source artifact and provenance intact", async () => {
     const rootDirectory = temporaryDirectory();
     mkdirSync(join(rootDirectory, "source"));
-    const proofCommand = "require('node:fs').writeFileSync('source/proof.json', '{}')";
+    const proofCommand =
+      "require('node:fs').writeFileSync('source/proof.json', JSON.stringify(process.argv.slice(1)))";
     const report = await runReleaseSpineEvidence({
       rootDir: rootDirectory,
       outputDir: join(rootDirectory, "release"),
@@ -386,13 +388,17 @@ describe("test evidence CI bundle", () => {
           ...getVerificationCommand("ci-executables"),
           id: "proof",
           label: "Proof",
-          command: [process.execPath, "-e", proofCommand],
+          command: [process.execPath, "-e", proofCommand, "", " "],
           timeoutMs: 1000,
           artifacts: [{ label: "Proof", path: "source/proof.json", required: true }],
         },
       ],
     });
     expect(report.status).toBe("passed");
+    expect(JSON.parse(readFileSync(join(rootDirectory, "source/proof.json"), "utf8"))).toEqual([
+      "",
+      " ",
+    ]);
     const bundle = writeTestEvidenceBundle({
       inputPaths: ["release/spine-evidence.json"],
       outputDirectory: "output",
@@ -402,7 +408,7 @@ describe("test evidence CI bundle", () => {
     expect(bundle.records[0]).toMatchObject({
       id: "verification/repo/proof",
       observed: { contractIds: ["proof"] },
-      replay: { command: `${process.execPath} -e ${proofCommand}` },
+      replay: { command: `${process.execPath} -e ${proofCommand}   ` },
       attachments: [
         { path: "release/spine-evidence.json", schemaVersion: "croco.release-spine-evidence/v1" },
         { path: "source/proof.json" },

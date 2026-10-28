@@ -202,7 +202,7 @@ function assertReleaseEvidenceReport(value: unknown): asserts value is ReleaseEv
       ].includes(check.status as string),
       `${path}.status`,
     );
-    requireReleaseField(stringArray(check.command), `${path}.command`);
+    requireReleaseField(commandArray(check.command), `${path}.command`);
     requireReleaseField(nonNegativeNumber(check.timeoutMs), `${path}.timeoutMs`);
     for (const field of ["durationMs", "effectiveTimeoutMs"]) {
       requireReleaseField(
@@ -267,11 +267,12 @@ function nonNegativeNumber(value: unknown): boolean {
   return typeof value === "number" && Number.isFinite(value) && value >= 0;
 }
 
-function stringArray(value: unknown): boolean {
+function commandArray(value: unknown): boolean {
   return (
     Array.isArray(value) &&
     value.length > 0 &&
-    value.every((entry) => nonEmpty(entry) !== undefined)
+    nonEmpty(value[0]) !== undefined &&
+    value.every((entry) => typeof entry === "string")
   );
 }
 
