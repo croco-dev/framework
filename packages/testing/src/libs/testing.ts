@@ -579,11 +579,13 @@ export async function assertProblemResponse(
   response: Response,
   expected: ProblemResponseExpectation = {},
 ): Promise<ProblemDetails> {
+  const problem = await readProblemResponse(response);
+  assertEqual(problem.status, response.status, `Problem status (HTTP status ${response.status})`);
+
   if (expected.status !== undefined && response.status !== expected.status) {
     throw new Error(`Expected HTTP status ${expected.status}, received ${response.status}.`);
   }
 
-  const problem = await readProblemResponse(response);
   assertEqual(problem.status, expected.status, "Problem status");
   assertEqual(problem.code, expected.code, "Problem code");
   assertEqual(problem.title, expected.title, "Problem title");

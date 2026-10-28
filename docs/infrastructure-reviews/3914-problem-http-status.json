@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "testing",
+      "classification": "pure-contract",
+      "reason": "Always reject mismatched Problem body and HTTP response statuses before optional expectations. The assertion uses only an existing Response and has no infrastructure dependency.",
+      "files": {
+        "packages/testing/src/libs/testing.ts": "743c1a48c79852cf3f8f318ab978772183bb5caac680b219332665ca6f00ae22"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "This in-process test assertion compares parsed Problem and HTTP statuses; it adds no Node capability, storage or lifecycle dependency.",
+          "providers": [],
+          "constraints": [
+            "Assertion evidence only; no host deployment or provider certification claim."
+          ],
+          "references": [
+            "packages/testing/src/libs/testing.ts",
+            "packages/testing/src/tests/testing.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "This in-process test assertion compares parsed Problem and HTTP statuses; it adds no Lambda capability, storage or lifecycle dependency.",
+          "providers": [],
+          "constraints": [
+            "Assertion evidence only; no host deployment or provider certification claim."
+          ],
+          "references": [
+            "packages/testing/src/libs/testing.ts",
+            "packages/testing/src/tests/testing.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "This in-process test assertion compares parsed Problem and HTTP statuses; it adds no Workers or Node Container capability, storage or lifecycle dependency.",
+          "providers": [],
+          "constraints": [
+            "Assertion evidence only; no host deployment or provider certification claim."
+          ],
+          "references": [
+            "packages/testing/src/libs/testing.ts",
+            "packages/testing/src/tests/testing.spec.ts"
+          ]
+        }
+      }
+    }
+  ]
+}
