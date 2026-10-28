@@ -678,6 +678,50 @@ describe("@croco/testing", () => {
     expect(problem.instance).toBe("http://localhost/greetings/problems/missing");
   });
 
+  describe("Problem HTTP status consistency", () => {
+    const body = {
+      type: "about:blank",
+      title: "Unprocessable Entity",
+      status: 422,
+      code: "input/invalid",
+      detail: "Invalid input",
+    };
+
+    it.each([
+      [200, undefined],
+      [500, undefined],
+      [200, { code: "input/invalid" }],
+      [500, { code: "input/invalid" }],
+      [200, { status: 200 }],
+      [500, { status: 500 }],
+    ])("rejects HTTP %s with body status 422 and expectations %j", async (status, expected) => {
+      const response = Response.json(body, { status });
+
+      await expect(assertProblemResponse(response, expected)).rejects.toThrow(
+        `Problem status (HTTP status ${status}) expected ${status}, received 422.`,
+      );
+      expect(response.bodyUsed).toBe(true);
+    });
+
+    it.each([undefined, { code: "input/invalid" }])(
+      "accepts matching HTTP and body statuses with expectations %j",
+      async (expected) => {
+        const response = Response.json(body, { status: 422 });
+
+        await expect(assertProblemResponse(response, expected)).resolves.toEqual(body);
+        expect(response.bodyUsed).toBe(true);
+      },
+    );
+
+    it("rejects a mismatched explicit status expectation", async () => {
+      const response = Response.json(body, { status: 422 });
+
+      await expect(assertProblemResponse(response, { status: 400 })).rejects.toThrow(
+        "Expected HTTP status 400, received 422.",
+      );
+    });
+  });
+
   it("asserts OpenAPI route contracts from controllers", () => {
     const operation = assertOpenAPIRoute([GreetingController], {
       contentType: "application/problem+json",
