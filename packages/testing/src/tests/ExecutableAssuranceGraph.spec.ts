@@ -396,8 +396,10 @@ describe("Executable Assurance Graph", () => {
     const report = evaluateExecutableAssuranceGraph(createGraph(), imported, { mode: "enforce" });
 
     expect(report.status).toBe("failed");
-    expect(report.contradictory[0]?.reasons).toEqual([
-      "Evidence 'route-success' leaked resources: database:pending, [Redacted].",
+    expect(report.contradictory).toEqual([
+      expect.objectContaining({
+        reasons: ["Evidence 'route-success' leaked resources: database:pending, [Redacted]."],
+      }),
     ]);
     for (const output of [
       serializeExecutableAssurance(report),
