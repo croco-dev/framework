@@ -4717,6 +4717,12 @@
       "owner": "@croco/promotions-core"
     },
     {
+      "path": "packages/promotions-core/src/tests/OfferExpiry.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/promotions-core"
+    },
+    {
       "path": "packages/promotions-core/src/tests/OfferPolicy.spec.ts",
       "lane": "fast",
       "qualifiers": [],

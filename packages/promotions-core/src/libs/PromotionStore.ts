@@ -70,6 +70,7 @@ export interface PromotionTx {
   savePolicy(policy: RegisteredOfferPolicy): Promise<{ readonly created: boolean }>;
   getQuote(quoteId: string): Promise<OfferQuote | null>;
   saveQuote(quote: OfferQuote): Promise<void>;
+  /** Serialize reads of an existing claim with its state transitions until commit or rollback. */
   getClaim(claimId: string): Promise<OfferClaim | null>;
   getClaimByLogicalKey(logicalKey: string): Promise<OfferClaim | null>;
   /**

@@ -23,6 +23,13 @@ credit ledger with a deterministic idempotency key: retries after response
 loss confirm the original grant instead of paying twice. Grants whose outcome
 stays unclear become `indeterminate` with their budget locked until
 `reconcileClaim` observes the grant or an operator resolves the claim.
+Fulfillment admits a reserved claim only before its quote expires. At or after
+expiry, it returns an `expired` claim and releases the budget in the same
+transaction as the expiry audit, even when the expiry sweep has not run.
+Discount entitlements use the same admission boundary. Already `fulfilling`,
+`indeterminate`, and `fulfilled` claims retain their recovery or receipt replay
+behavior after quote expiry. A claim already expired by the sweep retains the
+existing state-conflict response from `fulfillClaim`.
 Discount quotes are pure `Money` math via `quoteDiscount`; providers without
 an implemented discount feature report `supported: false` and refuse
 reservation instead of pretending the discount exists.

@@ -12,6 +12,12 @@ concurrent reserves serialize against the policy total instead of
 overspending it, and claim states move with compare-and-set transitions.
 Stored documents revive timestamps on read.
 
+Transactional `getClaim` reads lock the claim row through commit or rollback.
+Fulfillment admission and the expiry sweep re-read under that lock, so one
+state transition owns any budget release and expiry audit. A sweep that waited
+for an admitted grant skips it; a fulfillment that waited for expiry cannot
+start a new grant. Standalone claim reads remain read-only and do not lock rows.
+
 Transactions explicitly select READ COMMITTED before running the callback.
 Transactional logical-key lookups take a transaction advisory lock before
 checking for an existing claim. Subject counting then locks the complete

@@ -310,7 +310,7 @@ class PostgresPromotionTx implements PromotionTx {
   async getClaim(claimId: string): Promise<OfferClaim | null> {
     return run("read promotion claim", async () => {
       const result = await this.executor.execute(sql`
-        SELECT document FROM croco_promotion_claims WHERE claim_id = ${claimId}
+        SELECT document FROM croco_promotion_claims WHERE claim_id = ${claimId} FOR UPDATE
       `);
       const row = result.rows[0];
       return row ? reviveClaim(row.document) : null;
