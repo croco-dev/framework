@@ -11,34 +11,10 @@ import {
   serializeTestEvidence,
 } from "./test-evidence-runtime.mts";
 import { formatVerificationProblem, VerificationProblem } from "./verification-problem.mts";
+import type { ReleaseSpineEvidenceReport } from "./release-spine-evidence.mts";
 import type { TestEvidenceRecord } from "../packages/testing/src/libs/test-evidence.mts";
 
 const RELEASE_EVIDENCE_SCHEMA_VERSION = "croco.release-spine-evidence/v1";
-
-type ReleaseEvidenceArtifact = {
-  readonly exists?: boolean;
-  readonly path?: string;
-  readonly required?: boolean;
-  readonly sourcePath?: string;
-};
-
-type ReleaseEvidenceCheck = {
-  readonly artifacts?: readonly ReleaseEvidenceArtifact[];
-  readonly category?: string;
-  readonly command?: readonly string[];
-  readonly durationMs?: number | null;
-  readonly errorCode?: string | null;
-  readonly failureReason?: string | null;
-  readonly id?: string;
-  readonly label?: string;
-  readonly status?: string;
-};
-
-type ReleaseEvidenceReport = {
-  readonly checks?: readonly ReleaseEvidenceCheck[];
-  readonly profile?: string;
-  readonly provenance?: { readonly commitSha?: string };
-};
 
 export function normalizeTestEvidenceInput(
   value: unknown,
@@ -59,21 +35,22 @@ export function normalizeTestEvidenceInput(
     return value.records;
   }
   if (isRecord(value) && Array.isArray(value.checks)) {
-    return normalizeReleaseEvidence(value as ReleaseEvidenceReport, sourcePath);
+    return normalizeReleaseEvidence(value, sourcePath);
   }
   assertTestEvidenceRecord(value);
   return [value];
 }
 
 export function normalizeReleaseEvidence(
-  report: ReleaseEvidenceReport,
+  report: unknown,
   sourcePath: string,
 ): readonly TestEvidenceRecord[] {
-  const profile = nonEmpty(report.profile) ?? "unknown";
+  assertReleaseEvidenceReport(report);
+  const profile = report.profile;
   const source = sourcePath.replace(/\\/g, "/");
-  return (report.checks ?? []).map((check, index) => {
-    const id = nonEmpty(check.id) ?? `check-${index + 1}`;
-    const label = nonEmpty(check.label) ?? id;
+  return report.checks.map((check) => {
+    const id = check.id;
+    const label = check.label;
     const outcome =
       check.status === "passed"
         ? "passed"
@@ -83,7 +60,7 @@ export function normalizeReleaseEvidence(
     const artifactPaths =
       outcome === "skipped"
         ? []
-        : (check.artifacts ?? [])
+        : check.artifacts
             .filter(({ required }) => required !== false)
             .flatMap(({ path, sourcePath: artifactSource }) => {
               const artifactPath = nonEmpty(artifactSource) ?? nonEmpty(path);
@@ -101,7 +78,7 @@ export function normalizeReleaseEvidence(
         runtime: "node",
         validation: "isolated",
       },
-      replay: { command: (check.command ?? []).join(" ") || `pnpm verification --id ${id}` },
+      replay: { command: check.command.join(" ") },
       diagnostics:
         outcome === "failed"
           ? [
@@ -127,15 +104,181 @@ export function normalizeReleaseEvidence(
       ],
       ...(typeof check.durationMs === "number" ? { timing: { durationMs: check.durationMs } } : {}),
       metadata: {
-        category: nonEmpty(check.category) ?? "unknown",
+        category: check.category,
         profile,
-        ...(nonEmpty(report.provenance?.commitSha)
-          ? { commitSha: report.provenance?.commitSha ?? "" }
-          : {}),
-        sourceSchemaVersion: RELEASE_EVIDENCE_SCHEMA_VERSION,
+        commitSha: report.provenance.commitSha,
+        sourceSchemaVersion: report.schemaVersion,
+        sourceProvenance: {
+          commitSha: report.provenance.commitSha,
+          runId: report.provenance.runId,
+          runAttempt: report.provenance.runAttempt,
+          ...(report.provenance.verificationIdentity
+            ? { verificationIdentity: { ...report.provenance.verificationIdentity } }
+            : {}),
+        },
       },
     });
   });
+}
+
+// Validate the source report before assigning the adapter's attachment schema tag.
+function assertReleaseEvidenceReport(value: unknown): asserts value is ReleaseSpineEvidenceReport {
+  const report = releaseObject(value, "report");
+  requireReleaseField(report.schemaVersion === 1, "report.schemaVersion");
+  requireReleaseField(
+    ["repo", "spine", "publish"].includes(report.profile as string),
+    "report.profile",
+  );
+  requireReleaseField(
+    ["running", "passed", "failed", "timed_out", "interrupted"].includes(report.status as string),
+    "report.status",
+  );
+  for (const field of ["generatedAt", "outputDir", "rootDir"]) {
+    requireReleaseField(nonEmpty(report[field]) !== undefined, `report.${field}`);
+  }
+  requireReleaseField(nullableString(report.completedAt), "report.completedAt");
+  requireReleaseField(nonNegativeNumber(report.totalTimeoutMs), "report.totalTimeoutMs");
+  const provenance = releaseObject(report.provenance, "report.provenance");
+  for (const field of ["commitSha", "runId", "runAttempt"]) {
+    requireReleaseField(nonEmpty(provenance[field]) !== undefined, `report.provenance.${field}`);
+  }
+  if (provenance.verificationIdentity !== undefined) {
+    const identity = releaseObject(
+      provenance.verificationIdentity,
+      "report.provenance.verificationIdentity",
+    );
+    for (const field of ["baseSha", "headSha", "candidateSha"]) {
+      requireReleaseField(
+        nonEmpty(identity[field]) !== undefined,
+        `report.provenance.verificationIdentity.${field}`,
+      );
+    }
+  }
+  const summary = releaseObject(report.summary, "report.summary");
+  for (const field of [
+    "failed",
+    "interrupted",
+    "notApplicable",
+    "passed",
+    "pending",
+    "running",
+    "skippedAfterTimeout",
+    "skippedPrerequisite",
+    "timedOut",
+    "total",
+  ]) {
+    requireReleaseField(
+      nonNegativeNumber(summary[field]) && Number.isSafeInteger(summary[field]),
+      `report.summary.${field}`,
+    );
+  }
+  requireReleaseField(Array.isArray(report.checks), "report.checks");
+  const checks = report.checks as unknown[];
+  for (const [index, entry] of checks.entries()) {
+    const path = `report.checks[${index}]`;
+    const check = releaseObject(entry, path);
+    for (const field of ["id", "label"]) {
+      requireReleaseField(nonEmpty(check[field]) !== undefined, `${path}.${field}`);
+    }
+    requireReleaseField(
+      [
+        "build",
+        "coverage",
+        "generated-app",
+        "metadata",
+        "package-smoke",
+        "public-api",
+        "quality",
+        "runtime-smoke",
+        "typecheck",
+      ].includes(check.category as string),
+      `${path}.category`,
+    );
+    requireReleaseField(
+      [
+        "pending",
+        "running",
+        "passed",
+        "failed",
+        "timed_out",
+        "interrupted",
+        "skipped_after_timeout",
+        "skipped_prerequisite",
+        "not_applicable",
+      ].includes(check.status as string),
+      `${path}.status`,
+    );
+    requireReleaseField(stringArray(check.command), `${path}.command`);
+    requireReleaseField(nonNegativeNumber(check.timeoutMs), `${path}.timeoutMs`);
+    for (const field of ["durationMs", "effectiveTimeoutMs"]) {
+      requireReleaseField(
+        check[field] === null || nonNegativeNumber(check[field]),
+        `${path}.${field}`,
+      );
+    }
+    requireReleaseField(
+      check.exitCode === null || Number.isSafeInteger(check.exitCode),
+      `${path}.exitCode`,
+    );
+    for (const field of [
+      "completedAt",
+      "errorCode",
+      "errorMessage",
+      "failureReason",
+      "signal",
+      "startedAt",
+    ]) {
+      requireReleaseField(nullableString(check[field]), `${path}.${field}`);
+    }
+    for (const field of ["stderrExcerpt", "stdoutExcerpt"]) {
+      requireReleaseField(typeof check[field] === "string", `${path}.${field}`);
+    }
+    requireReleaseField(Array.isArray(check.artifacts), `${path}.artifacts`);
+    for (const [artifactIndex, artifactEntry] of (check.artifacts as unknown[]).entries()) {
+      const artifactPath = `${path}.artifacts[${artifactIndex}]`;
+      const artifact = releaseObject(artifactEntry, artifactPath);
+      for (const field of ["label", "path", "sourcePath"]) {
+        requireReleaseField(nonEmpty(artifact[field]) !== undefined, `${artifactPath}.${field}`);
+      }
+      for (const field of ["exists", "fresh", "required"]) {
+        requireReleaseField(typeof artifact[field] === "boolean", `${artifactPath}.${field}`);
+      }
+      for (const field of ["copiedPath", "copyError", "modifiedAt"]) {
+        requireReleaseField(nullableString(artifact[field]), `${artifactPath}.${field}`);
+      }
+    }
+  }
+}
+
+function releaseObject(value: unknown, path: string): Record<string, unknown> {
+  requireReleaseField(isRecord(value), path);
+  return value as Record<string, unknown>;
+}
+
+function requireReleaseField(valid: boolean, path: string): void {
+  if (!valid) {
+    throw new VerificationProblem(
+      "INVALID_RELEASE_EVIDENCE_REPORT",
+      "input",
+      `Invalid release evidence field '${path}'.`,
+    );
+  }
+}
+
+function nullableString(value: unknown): boolean {
+  return value === null || typeof value === "string";
+}
+
+function nonNegativeNumber(value: unknown): boolean {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0;
+}
+
+function stringArray(value: unknown): boolean {
+  return (
+    Array.isArray(value) &&
+    value.length > 0 &&
+    value.every((entry) => nonEmpty(entry) !== undefined)
+  );
 }
 
 export function writeTestEvidenceBundle(options: {
