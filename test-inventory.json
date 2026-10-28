@@ -2194,6 +2194,17 @@
       }
     },
     {
+      "path": "packages/create-croco-app/templates/spa-be-split/apps/console-web/src/tests/AppRoutes.spec.tsx",
+      "lane": "generated-app",
+      "qualifiers": [],
+      "owner": "create-croco-app",
+      "generated": {
+        "sourcePath": "packages/create-croco-app/templates/spa-be-split/apps/console-web/src/tests/AppRoutes.spec.tsx",
+        "generatedPath": "apps/console-web/src/tests/AppRoutes.spec.tsx",
+        "commandId": "create-croco-app"
+      }
+    },
+    {
       "path": "packages/create-croco-app/templates/spa-be-split/apps/console-web/src/tests/ProblemNotice.spec.tsx",
       "lane": "generated-app",
       "qualifiers": [],

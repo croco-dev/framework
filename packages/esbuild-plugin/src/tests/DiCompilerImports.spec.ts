@@ -1,4 +1,3 @@
-import { spawnSync } from "node:child_process";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { tmpdir } from "node:os";
@@ -8,6 +7,7 @@ import { compileDiGraph, createDiPackageDescriptor, writeDiGraph } from "../libs
 
 const repositoryRoot = path.resolve(__dirname, "../../../..");
 const roots: string[] = [];
+const typecheckPrograms = new Map<string, ts.Program>();
 
 function fixture(options: Record<string, unknown>, packageType: string, extension: string): string {
   const root = fs.mkdtempSync(path.join(tmpdir(), "croco-di-imports-"));
@@ -47,24 +47,33 @@ function fixture(options: Record<string, unknown>, packageType: string, extensio
 }
 
 function typecheck(root: string): void {
-  const result = spawnSync(
-    process.execPath,
-    [
-      path.join(repositoryRoot, "node_modules/typescript/bin/tsc"),
-      "--project",
-      path.join(root, "tsconfig.json"),
-      "--noEmit",
-    ],
-    { encoding: "utf8" },
+  const config = ts.getParsedCommandLineOfConfigFile(
+    path.join(root, "tsconfig.json"),
+    { noEmit: true },
+    {
+      ...ts.sys,
+      onUnRecoverableConfigFileDiagnostic: (diagnostic) => {
+        throw new Error(ts.flattenDiagnosticMessageText(diagnostic.messageText, "\n"));
+      },
+    },
   );
-  expect({ status: result.status, stdout: result.stdout, stderr: result.stderr }).toEqual({
-    status: 0,
-    stdout: "",
-    stderr: "",
+  if (!config) throw new Error("Missing consumer TypeScript configuration");
+  expect(config.errors).toEqual([]);
+  const program = ts.createProgram({
+    rootNames: config.fileNames,
+    options: config.options,
+    oldProgram: typecheckPrograms.get(root),
   });
+  typecheckPrograms.set(root, program);
+  expect(
+    ts
+      .getPreEmitDiagnostics(program)
+      .map((diagnostic) => ts.flattenDiagnosticMessageText(diagnostic.messageText, "\n")),
+  ).toEqual([]);
 }
 
 afterEach(() => {
+  typecheckPrograms.clear();
   for (const root of roots.splice(0)) fs.rmSync(root, { recursive: true, force: true });
 });
 
