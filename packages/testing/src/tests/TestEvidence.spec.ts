@@ -158,6 +158,44 @@ describe("croco.test-evidence/v1", () => {
     );
   });
 
+  it("fails a bundle with leaked resources without rewriting assertion outcomes", () => {
+    const resources = { status: "leaked" as const, leaks: ["database:pending"] };
+    const evidence = record({ resources });
+    const bundle = createTestEvidenceBundle([evidence]);
+
+    expect(bundle.status).toBe("failed");
+    expect(bundle.summary).toEqual({ failed: 0, flaky: 0, passed: 1, skipped: 0, total: 1 });
+    expect(bundle.records[0]).toMatchObject({
+      outcome: "passed",
+      attempts: [{ attempt: 1, outcome: "passed", durationMs: 4 }],
+      resources,
+    });
+    expect(() => assertTestEvidenceBundle(bundle)).not.toThrow();
+    expect(() => assertTestEvidenceBundle({ ...bundle, status: "passed" })).toThrow(
+      TestEvidenceContractError,
+    );
+  });
+
+  it.each(["clean", "not-checked"] as const)(
+    "preserves successful evidence with %s resources and no leaks",
+    (status) => {
+      expect(createTestEvidenceBundle([record({ resources: { status, leaks: [] } })]).status).toBe(
+        "passed",
+      );
+    },
+  );
+
+  it.each([
+    { status: "clean", leaks: ["database:pending"] },
+    { status: "not-checked", leaks: ["task:pending"] },
+    { status: "leaked", leaks: [] },
+  ] as const)("rejects inconsistent resource evidence $status/$leaks", (resources) => {
+    expect(() => record({ resources })).toThrow(TestEvidenceContractError);
+    expect(() => createTestEvidenceBundle([{ ...record(), resources }])).toThrow(
+      TestEvidenceContractError,
+    );
+  });
+
   it("rejects malformed task, span, and provider observation IDs", () => {
     for (const observed of [
       { contractIds: [], taskIds: ["task/duplicate", "task/duplicate"] },

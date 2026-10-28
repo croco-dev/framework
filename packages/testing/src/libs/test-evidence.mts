@@ -474,7 +474,11 @@ export function assertTestEvidenceBundle(value: unknown): asserts value is TestE
       );
     }
   }
-  const expectedStatus = deriveBundleStatus(expectedSummary, bundle.missingArtifacts.length);
+  const expectedStatus = deriveBundleStatus(
+    bundle.records,
+    expectedSummary,
+    bundle.missingArtifacts.length,
+  );
   if (bundle.status !== expectedStatus) {
     throw new TestEvidenceContractError(
       `Evidence bundle status '${String(bundle.status)}' does not match derived '${expectedStatus}'.`,
@@ -518,7 +522,7 @@ export function createTestEvidenceBundle(
     schemaVersion: TEST_EVIDENCE_SCHEMA_VERSION,
     missingArtifacts,
     records: sortedRecords,
-    status: deriveBundleStatus(summary, missingArtifacts.length),
+    status: deriveBundleStatus(sortedRecords, summary, missingArtifacts.length),
     summary,
   });
 }
@@ -534,10 +538,16 @@ function summarizeRecords(records: readonly TestEvidenceRecord[]): TestEvidenceB
 }
 
 function deriveBundleStatus(
+  records: readonly TestEvidenceRecord[],
   summary: TestEvidenceBundle["summary"],
   missingArtifactCount: number,
 ): TestEvidenceBundle["status"] {
-  return summary.failed > 0 || summary.flaky > 0 || missingArtifactCount > 0 ? "failed" : "passed";
+  return summary.failed > 0 ||
+    summary.flaky > 0 ||
+    missingArtifactCount > 0 ||
+    records.some(({ resources }) => resources.status === "leaked")
+    ? "failed"
+    : "passed";
 }
 
 function normalizeTestEvidenceRecord(record: TestEvidenceRecord): TestEvidenceRecord {
@@ -755,6 +765,12 @@ function assertResources(id: string, value: unknown): asserts value is TestEvide
     ["clean", "leaked", "not-checked"] as const,
     `Evidence '${id}' resource status`,
   );
+  const hasLeaks = resources.leaks.length > 0;
+  if ((resources.status === "leaked") !== hasLeaks) {
+    throw new TestEvidenceContractError(
+      `Evidence '${id}' resources must list leaks exactly when status is 'leaked'.`,
+    );
+  }
 }
 
 function assertDiagnostics(

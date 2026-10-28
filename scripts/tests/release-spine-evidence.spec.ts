@@ -1728,6 +1728,24 @@ describe("release-spine-evidence.mts", () => {
     );
   });
 
+  it("rejects a forged passed bundle with resource leaks before exact-head reuse", () => {
+    const repo = createTempRepo();
+    const evidencePath = join(repo, "bundle.json");
+    writeFileSync(
+      evidencePath,
+      JSON.stringify(
+        reusableEvidenceBundle("fake artifactful", {
+          status: "leaked",
+          leaks: ["database:pending"],
+        }),
+      ),
+    );
+
+    expect(() =>
+      reuseTestEvidence([createCommand("artifactful")], evidencePath, "exact-head", "spine", repo),
+    ).toThrow("does not match derived 'failed'");
+  });
+
   it("reuses an attached required artifact only when it exists and marks it as reused", async () => {
     const repo = createTempRepo();
     const evidencePath = join(repo, "bundle.json");
@@ -2003,7 +2021,10 @@ function findCheck(manifest: readonly EvidenceCommand[], id: string): EvidenceCo
   return check;
 }
 
-function reusableEvidenceBundle(command: string): object {
+function reusableEvidenceBundle(
+  command: string,
+  resources = { leaks: [] as string[], status: "not-checked" },
+): object {
   return {
     schemaVersion: "croco.test-evidence/v1",
     status: "passed",
@@ -2027,7 +2048,7 @@ function reusableEvidenceBundle(command: string): object {
         replay: { command },
         diagnostics: [],
         attempts: [{ attempt: 1, outcome: "passed" }],
-        resources: { leaks: [], status: "not-checked" },
+        resources,
         attachments: [],
         metadata: { commitSha: "exact-head", profile: "spine" },
       },

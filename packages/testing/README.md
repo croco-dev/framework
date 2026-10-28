@@ -230,6 +230,12 @@ Problem codes, and event IDs. Declaring a contract never marks it observed. `att
 for outcome classification: a failed attempt followed by a pass is always `flaky`, and the bundle is not
 successful until that flakiness is addressed. Seed, virtual time, and a replay command remain explicit.
 
+Resource cleanup is evaluated separately from assertion outcomes. A `leaked` record retains its attempt
+outcomes and leak IDs, but fails its bundle and cannot satisfy an assurance obligation or be reused for
+verification. `leaked` requires at least one leak ID; `clean` and `not-checked` require an empty leak list.
+Explicit `not-checked` evidence remains eligible under the existing fidelity and observation rules; it does
+not claim that cleanup was checked.
+
 Fidelity records boot boundary, dependency fidelity, runtime, isolation, and validation independently.
 `assertTestEvidenceFidelity()` compares actual evidence with a required profile and rejects relabeling, so an
 isolated fake or rollback run cannot satisfy application, local-real, or commit evidence. Existing versioned

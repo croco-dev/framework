@@ -121,6 +121,32 @@ describe("test evidence CI bundle", () => {
     expect(bundle.records[0]?.diagnostics[0]?.code).toBe("CROCO_TEST_EVIDENCE_INPUT_MISSING");
   });
 
+  it("preserves a reporter resource leak as failed bundle evidence", () => {
+    const rootDirectory = temporaryDirectory();
+    const [record] = normalizeTestEvidenceInput(
+      { profile: "spine", checks: [{ id: "test", label: "Test", status: "passed" }] },
+      "release.json",
+    );
+    const resources = { status: "leaked", leaks: ["database:pending"] };
+    writeFileSync(
+      join(rootDirectory, "record.json"),
+      JSON.stringify({ ...record, attachments: [], resources }),
+    );
+
+    const bundle = writeTestEvidenceBundle({
+      inputPaths: ["record.json"],
+      outputDirectory: "out",
+      rootDirectory,
+    });
+
+    expect(bundle.status).toBe("failed");
+    expect(bundle.records[0]).toMatchObject({ outcome: "passed", resources });
+    expect(JSON.parse(readFileSync(join(rootDirectory, "out/bundle.json"), "utf8"))).toMatchObject({
+      status: "failed",
+      records: [expect.objectContaining({ outcome: "passed", resources })],
+    });
+  });
+
   it("preserves required missing artifacts from an existing verification report", () => {
     const rootDirectory = temporaryDirectory();
     mkdirSync(join(rootDirectory, "ci-reports/release"), { recursive: true });
