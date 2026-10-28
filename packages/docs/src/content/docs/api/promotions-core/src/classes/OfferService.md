@@ -89,6 +89,8 @@ confirm the original grant instead of paying twice. Discount quotes
 complete as recorded entitlements without ledger movement. A port that
 reports `unknown` — or throws after possibly committing — leaves the claim
 `indeterminate` with its budget locked for later reconciliation.
+A reserved claim at or past quote expiry expires atomically without a
+grant. Already admitted grants retain their recovery and replay behavior.
 
 #### Parameters
 
