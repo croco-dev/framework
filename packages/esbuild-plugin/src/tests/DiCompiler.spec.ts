@@ -998,7 +998,14 @@ export class Conflict {}`,
     });
     expect(diagnostic?.line).toBeGreaterThan(1);
     expect(diagnostic?.column).toBeGreaterThan(1);
-    if (value !== undefined && !Array.isArray(value)) {
+    if (value === undefined) {
+      const reasonIndex = descriptor.indexOf('"reason": "explicit-token"');
+      const dependencyStart = descriptor.lastIndexOf("{", reasonIndex);
+      expect(diagnostic).toMatchObject({
+        line: descriptor.slice(0, dependencyStart).split("\n").length,
+        column: dependencyStart - descriptor.lastIndexOf("\n", dependencyStart - 1),
+      });
+    } else {
       const locationText = descriptor
         .split("\n")
         [(diagnostic?.line ?? 1) - 1]?.slice((diagnostic?.column ?? 1) - 1);
