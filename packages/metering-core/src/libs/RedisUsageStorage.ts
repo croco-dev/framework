@@ -44,30 +44,39 @@ function stableStringify(value: unknown): string {
 }
 
 function parseUsageJson(json: string, operation: "SERIALIZE" | "ZRANGEBYSCORE"): unknown {
-  const depths = new WeakMap<object, number>();
-  return JSON.parse(json, (key, nestedValue: unknown) => {
-    // Redis cjson rejects unpaired surrogates, including JSON-escaped keys and string values.
-    encodeURIComponent(key);
-    if (typeof nestedValue === "string") {
-      encodeURIComponent(nestedValue);
-    }
-    if (nestedValue !== null && typeof nestedValue === "object") {
-      let depth = 1;
-      for (const child of Object.values(nestedValue)) {
-        if (child !== null && typeof child === "object") {
-          depth = Math.max(depth, (depths.get(child) ?? 0) + 1);
+  // Validate original tokens: JSON.parse discards overwritten duplicate properties before a reviver runs.
+  let depth = 0;
+  for (let index = 0; index < json.length; index += 1) {
+    const character = json[index];
+    if (character === '"') {
+      const start = index;
+      index += 1;
+      while (index < json.length) {
+        if (json[index] === "\\") {
+          index += 2;
+        } else if (json[index] === '"') {
+          break;
+        } else {
+          index += 1;
         }
       }
+      const token: unknown = JSON.parse(json.slice(start, index + 1));
+      if (typeof token === "string") {
+        encodeURIComponent(token);
+      }
+    } else if (character === "{" || character === "[") {
+      depth += 1;
       if (depth > MAX_USAGE_JSON_DEPTH) {
         throw new RedisProblem(
           operation,
           `Usage JSON exceeds the maximum depth of ${MAX_USAGE_JSON_DEPTH}`,
         );
       }
-      depths.set(nestedValue, depth);
+    } else if (character === "}" || character === "]") {
+      depth -= 1;
     }
-    return nestedValue;
-  });
+  }
+  return JSON.parse(json);
 }
 
 /**

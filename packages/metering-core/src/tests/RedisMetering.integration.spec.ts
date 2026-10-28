@@ -1258,7 +1258,12 @@ describe.skipIf(!realResourcesEnabled)("Redis metering composition", () => {
     const usage = {
       ...createUsageRecord("json-grammar"),
       value: 10,
-      metadata: { note: 'NaN 1. "escaped"', fraction: 1.5, exponent: 1e21 },
+      metadata: {
+        note: 'NaN 1. "escaped" \\ end',
+        fraction: 1.5,
+        exponent: 1e21,
+        literalBrackets: "[".repeat(1_001),
+      },
     };
     await storage.record(usage);
     await connection.client.zadd(
@@ -1318,6 +1323,12 @@ describe.skipIf(!realResourcesEnabled)("Redis metering composition", () => {
       (value) => `record:10:v3.${encodeURIComponent(`{"metadata":{"value":${value}}}`)}`,
     ),
     `record:10:v3.${encodeURIComponent('{"metadata":{"tag":"line\nfeed"}}')}`,
+    ...[
+      '{"metadata":"\\ud800","metadata":{}}',
+      '{"idempotencyKey":"\\ud800","idempotencyKey":"valid"}',
+      `{"metadata":${"[".repeat(1_000)}0${"]".repeat(1_000)},"metadata":{}}`,
+      `{"metadata":${'{"nested":'.repeat(1_000)}0${"}".repeat(1_000)},"metadata":{}}`,
+    ].map((json) => `record:10:v3.${encodeURIComponent(json)}`),
   ])("rejects invalid stored member %s in Lua before any write", async (member) => {
     assert.isDefined(connection);
     const storage = new RedisUsageStorage(createRedisClient(connection));

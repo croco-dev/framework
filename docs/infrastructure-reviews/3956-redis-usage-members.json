@@ -6,7 +6,7 @@
       "classification": "durable-provider",
       "reason": "Preserve encodable usage IDs with a versioned member codec; align JavaScript reads, native Lua quota totals and flush deletion on logical identity groups and strict JSON/Unicode validation. New writes enforce the native CJSON 1000-level JSON boundary before storage. Quota decoding uses isolated CJSON controls and preserves shared decoder settings. Existing adapters and lifecycle ownership are reused; deployed-host and non-native provider execution remain unverified.",
       "files": {
-        "packages/metering-core/src/libs/RedisUsageStorage.ts": "8d95dbd8f94ebbe4d2cf61444074c819ecd83e084fbf6d25b7bbdf8b566ea05d"
+        "packages/metering-core/src/libs/RedisUsageStorage.ts": "0f8bb17db49fd2bab8d39932da9c314fb972beaf4203da9888d7ef9ac7fa4e21"
       },
       "catalogRuntimes": [],
       "profiles": {
