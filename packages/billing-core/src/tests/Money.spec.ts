@@ -239,6 +239,82 @@ describe("Money", () => {
     expect(new Money(1200, "KRW").toFormattedString("ko-KR")).toContain("₩1,200");
   });
 
+  it.each([
+    {
+      amount: 9007199254740990,
+      currency: "USD",
+      decimal: "90071992547409.90",
+      formatted: "$90,071,992,547,409.90",
+    },
+    {
+      amount: Number.MAX_SAFE_INTEGER,
+      currency: "USD",
+      decimal: "90071992547409.91",
+      formatted: "$90,071,992,547,409.91",
+    },
+    {
+      amount: Number.MAX_SAFE_INTEGER,
+      currency: "JPY",
+      decimal: "9007199254740991",
+      formatted: "¥9,007,199,254,740,991",
+    },
+    {
+      amount: Number.MAX_SAFE_INTEGER,
+      currency: "KWD",
+      decimal: "9007199254740.991",
+      formatted: "KWD\u00a09,007,199,254,740.991",
+    },
+    {
+      amount: 9007199254739999,
+      currency: "KWD",
+      decimal: "9007199254739.999",
+      formatted: "KWD\u00a09,007,199,254,739.999",
+    },
+    {
+      amount: Number.MAX_SAFE_INTEGER,
+      currency: "CLF",
+      decimal: "900719925474.0991",
+      formatted: "CLF\u00a0900,719,925,474.0991",
+    },
+  ])(
+    "should retain every minor unit at the safe-integer boundary for $currency $amount",
+    ({ amount, currency, decimal, formatted }) => {
+      expect.soft(new Money(amount, currency).toString()).toBe(`${currency} ${decimal}`);
+      expect.soft(new Money(-amount, currency).toString()).toBe(`${currency} -${decimal}`);
+      expect.soft(new Money(amount, currency).toFormattedString("en-US")).toBe(formatted);
+      expect.soft(new Money(-amount, currency).toFormattedString("en-US")).toBe(`-${formatted}`);
+      expect(new Money(amount, currency).toJSON()).toEqual({ amount, currency });
+      expect(new Money(-amount, currency).toJSON()).toEqual({ amount: -amount, currency });
+    },
+  );
+
+  it.each([
+    { locale: "de-DE", expected: "90.071.992.547.409,91\u00a0$" },
+    { locale: "en-IN", expected: "$9,00,71,99,25,47,409.91" },
+    { locale: "ar-EG", expected: "\u200f٩٠٬٠٧١٬٩٩٢٬٥٤٧٬٤٠٩٫٩١\u00a0US$" },
+  ])("should preserve locale conventions and exact digits for $locale", ({ locale, expected }) => {
+    expect(new Money(Number.MAX_SAFE_INTEGER, "USD").toFormattedString(locale)).toBe(expected);
+  });
+
+  it.each([
+    { amount: -1, currency: "USD", decimal: "-0.01", formatted: "-$0.01" },
+    { amount: -1, currency: "KWD", decimal: "-0.001", formatted: "-KWD\u00a00.001" },
+    { amount: 0, currency: "USD", decimal: "0.00", formatted: "$0.00" },
+    { amount: -0, currency: "USD", decimal: "0.00", formatted: "$0.00" },
+    { amount: 1, currency: "KWD", decimal: "0.001", formatted: "KWD\u00a00.001" },
+    { amount: 1099, currency: "USD", decimal: "10.99", formatted: "$10.99" },
+    { amount: -1099, currency: "USD", decimal: "-10.99", formatted: "-$10.99" },
+    { amount: 0, currency: "JPY", decimal: "0", formatted: "¥0" },
+  ])(
+    "should preserve small and zero amounts for $currency $amount",
+    ({ amount, currency, decimal, formatted }) => {
+      const money = new Money(amount, currency);
+      expect(money.toString()).toBe(`${currency} ${decimal}`);
+      expect(money.toFormattedString("en-US")).toBe(formatted);
+      expect(money.toJSON()).toEqual({ amount: amount === 0 ? 0 : amount, currency });
+    },
+  );
+
   it("should create money from decimal amounts", () => {
     expect(Money.fromDecimal(19.99, "usd").toJSON()).toEqual({ amount: 1999, currency: "USD" });
     expect(Money.fromDecimal(0.3, "USD").amount).toBe(30);

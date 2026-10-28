@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "billing-core",
+      "classification": "pure-contract",
+      "reason": "Preserve every validated safe-integer minor unit in plain and localized Money strings without changing numeric toDecimal, persisted amounts or arithmetic.",
+      "files": {
+        "packages/billing-core/src/libs/Money.ts": "9fc220d6e6e104481428452c2f443dcf86f76c599938c4a1bcdc1b94ec388e0a"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Exact Money string formatting is pure integer and Intl logic independent of the Kubernetes Node Host; no host capabilities, provider, storage or lifecycle boundaries change.",
+          "providers": [],
+          "constraints": [
+            "Locale output uses the executing runtime\u2019s existing Intl currency and numbering-system data; no deployment or provider certification is claimed."
+          ],
+          "references": [
+            "packages/billing-core/src/libs/Money.ts",
+            "packages/billing-core/src/tests/Money.spec.ts",
+            "docs/package-catalog.json"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Exact Money string formatting is pure integer and Intl logic independent of the Lambda Host; no host capabilities, provider, storage or lifecycle boundaries change.",
+          "providers": [],
+          "constraints": [
+            "Locale output uses the executing runtime\u2019s existing Intl currency and numbering-system data; no deployment or provider certification is claimed."
+          ],
+          "references": [
+            "packages/billing-core/src/libs/Money.ts",
+            "packages/billing-core/src/tests/Money.spec.ts",
+            "docs/package-catalog.json"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Exact Money string formatting is pure integer and Intl logic independent of the Workers or explicit Node Container Host; no host capabilities, provider, storage or lifecycle boundaries change.",
+          "providers": [],
+          "constraints": [
+            "Locale output uses the executing runtime\u2019s existing Intl currency and numbering-system data; no deployment or provider certification is claimed."
+          ],
+          "references": [
+            "packages/billing-core/src/libs/Money.ts",
+            "packages/billing-core/src/tests/Money.spec.ts",
+            "docs/package-catalog.json"
+          ]
+        }
+      }
+    }
+  ]
+}

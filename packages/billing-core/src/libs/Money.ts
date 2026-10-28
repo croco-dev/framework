@@ -111,14 +111,43 @@ export class Money {
 
   toString(): string {
     const fractionDigits = Money.getFractionDigits(this.currency);
-    return `${this.currency} ${this.toDecimal().toFixed(fractionDigits)}`;
+    const digits = Math.abs(this.amount)
+      .toString()
+      .padStart(fractionDigits + 1, "0");
+    const decimal =
+      fractionDigits === 0
+        ? digits
+        : `${digits.slice(0, -fractionDigits)}.${digits.slice(-fractionDigits)}`;
+    return `${this.currency} ${this.amount < 0 ? "-" : ""}${decimal}`;
   }
 
   toFormattedString(locale = "en-US"): string {
-    return new Intl.NumberFormat(locale, {
+    const formatter = new Intl.NumberFormat(locale, {
       style: "currency",
       currency: this.currency,
-    }).format(this.toDecimal());
+    });
+    const fractionDigits = formatter.resolvedOptions().maximumFractionDigits ?? 2;
+    const scale = BigInt(10) ** BigInt(fractionDigits);
+    const magnitude = Money.absInteger(BigInt(this.amount));
+    const whole = Number(magnitude / scale) * (this.amount < 0 ? -1 : 1);
+
+    if (fractionDigits === 0) {
+      return formatter.format(whole);
+    }
+
+    const fraction = new Intl.NumberFormat(locale, {
+      useGrouping: false,
+      minimumIntegerDigits: fractionDigits,
+      maximumFractionDigits: 0,
+      numberingSystem: formatter.resolvedOptions().numberingSystem,
+    }).format(magnitude % scale);
+
+    // Format the exact integer and replace only the fractional digits, retaining
+    // locale-specific grouping, signs (including -0), currency placement and literals.
+    return formatter
+      .formatToParts(whole)
+      .map((part) => (part.type === "fraction" ? fraction : part.value))
+      .join("");
   }
 
   toJSON(): { amount: number; currency: string } {
