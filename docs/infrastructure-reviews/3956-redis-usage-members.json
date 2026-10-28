@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "metering-core",
+      "classification": "durable-provider",
+      "reason": "Preserve arbitrary string usage IDs and amounts with versioned member encoding; validate ambiguous legacy members consistently in JavaScript and Lua. Existing Redis adapters and lifecycle boundaries are reused; package runtime claims remain unchanged.",
+      "files": {
+        "packages/metering-core/src/libs/RedisUsageStorage.ts": "2e08e12b50fd21503537ba07e97d809fd9797f6c97851ab0f3f2cb09c30f9741"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "unverified",
+          "reason": "Reuse existing RedisClient and server-side Lua; local Redis conformance does not establish Node Host or Kubernetes execution.",
+          "providers": ["@croco/metering-core/RedisUsageStorage", "@croco/metering-upstash"],
+          "constraints": [
+            "Requires persistent Redis with existing scriptKeyAccess capabilities; all readers must understand v3 before writers resume."
+          ],
+          "references": [
+            "packages/metering-core/src/libs/RedisUsageStorage.ts",
+            "packages/metering-core/src/tests/RedisMetering.integration.spec.ts",
+            "packages/metering-upstash/README.md"
+          ]
+        },
+        "aws-lambda": {
+          "result": "unverified",
+          "reason": "Reuse existing RedisClient and server-side Lua; no Lambda invocation/host execution is claimed.",
+          "providers": ["@croco/metering-core/RedisUsageStorage", "@croco/metering-upstash"],
+          "constraints": [
+            "Await usage operations within invocation budgets; connection lifecycle remains with the adapter; coordinate reader/writer rollout."
+          ],
+          "references": [
+            "packages/metering-core/src/libs/RedisUsageStorage.ts",
+            "packages/metering-core/src/tests/RedisMetering.integration.spec.ts",
+            "packages/metering-upstash/README.md"
+          ]
+        },
+        "cloudflare": {
+          "result": "unverified",
+          "reason": "No Workers or Node Container execution is established by this stored-member codec change.",
+          "providers": ["@croco/metering-core/RedisUsageStorage", "@croco/metering-upstash"],
+          "constraints": [
+            "Requires an independently compatible RedisClient and Lua service; no Workers support claim is added."
+          ],
+          "references": [
+            "packages/metering-core/src/libs/RedisUsageStorage.ts",
+            "packages/metering-core/src/tests/RedisMetering.integration.spec.ts",
+            "packages/metering-upstash/README.md"
+          ]
+        }
+      }
+    }
+  ]
+}

@@ -137,11 +137,47 @@ if recordedResult then
   end
 end
 
+-- URI components never contain raw colons, so extra fields are ambiguous legacy data.
+local function decodeComponent(component)
+  if string.find(string.gsub(component, '%%[%x][%x]', ''), '%%') then
+    return nil
+  end
+  return (string.gsub(component, '%%(%x%x)', function(hex)
+    return string.char(tonumber(hex, 16))
+  end))
+end
+
 local records = redis.call('ZRANGEBYSCORE', usageKey, '-inf', '+inf')
 local currentUsage = 0
 
 for _, existingMember in ipairs(records) do
-  local usageValue = string.match(existingMember, '^[^:]+:([1-9]%d*):') or string.match(existingMember, '^[^:]+:([1-9]%d*)$')
+  local id, usageValue, payload = string.match(existingMember, '^([^:]*):([1-9]%d*):([^:]*)$')
+  if not payload then
+    id, usageValue = string.match(existingMember, '^([^:]+):([1-9]%d*)$')
+  else
+    local version = string.sub(payload, 1, 3)
+    if version == 'v3.' then
+      if not decodeComponent(id) then
+        return redis.error_reply('Invalid stored usage ID')
+      end
+    elseif id == '' then
+      return redis.error_reply('Invalid stored usage ID')
+    end
+    if version == 'v2.' or version == 'v3.' then
+      payload = string.sub(payload, 4)
+    end
+    local decoded = decodeComponent(payload)
+    local ok, envelope = pcall(cjson.decode, decoded or '')
+    if not ok or string.sub(decoded or '', 1, 1) ~= '{' or type(envelope) ~= 'table' then
+      return redis.error_reply('Invalid stored usage payload')
+    end
+    if version == 'v2.' or version == 'v3.' then
+      if (envelope.idempotencyKey ~= nil and type(envelope.idempotencyKey) ~= 'string') or
+         (envelope.eventId ~= nil and type(envelope.eventId) ~= 'string') then
+        return redis.error_reply('Invalid stored usage identity')
+      end
+    end
+  end
   local numericUsageValue = usageValue and tonumber(usageValue)
   if not numericUsageValue or numericUsageValue > ${MAX_USAGE_VALUE} then
     return redis.error_reply('Invalid stored usage value')
@@ -668,7 +704,7 @@ return { exceeded and 1 or 0, newUsage }
       "id" | "value" | "idempotencyKey" | "eventId" | "dimensions" | "metadata"
     >,
   ): string {
-    const base = `${usage.id}:${usage.value}`;
+    const base = `${encodeURIComponent(usage.id)}:${usage.value}`;
     const envelope = {
       idempotencyKey: usage.idempotencyKey,
       eventId: usage.eventId,
@@ -676,7 +712,7 @@ return { exceeded and 1 or 0, newUsage }
       metadata: usage.metadata,
     };
 
-    return `${base}:v2.${encodeURIComponent(stableStringify(envelope))}`;
+    return `${base}:v3.${encodeURIComponent(stableStringify(envelope))}`;
   }
 
   private serializeLegacyUsageMember(
@@ -690,13 +726,19 @@ return { exceeded and 1 or 0, newUsage }
 
   private parseUsageMember(member: string): ParsedUsageMember {
     const parts = member.split(":");
-    const id = parts[0] ?? "";
+    const rawId = parts[0] ?? "";
     const rawValue = parts[1] ?? "";
+    const payload = parts[2];
+    const versioned = payload?.startsWith("v2.") || payload?.startsWith("v3.");
+    const encodedId = payload?.startsWith("v3.");
     const value = Number(rawValue);
-    const payload = parts.length > 2 ? parts.slice(2).join(":") : undefined;
-    const envelope = payload?.startsWith("v2.")
-      ? this.decodeUsageEnvelope(payload.slice(3))
-      : undefined;
+
+    if (parts.length < 2 || parts.length > 3 || (!encodedId && rawId.length === 0)) {
+      throw new RedisProblem("ZRANGEBYSCORE", "Invalid stored usage member boundaries");
+    }
+    const id = encodedId ? decodeURIComponent(rawId) : rawId;
+    const envelope = versioned ? this.decodeUsageEnvelope(payload.slice(3)) : undefined;
+    const metadata = payload !== undefined && !versioned ? this.decodeMetadata(payload) : undefined;
 
     if (!/^[1-9]\d*$/.test(rawValue) || !Number.isSafeInteger(value) || value > MAX_USAGE_VALUE) {
       throw new RedisProblem("ZRANGEBYSCORE", `Invalid stored usage value '${rawValue}'`);
@@ -708,7 +750,7 @@ return { exceeded and 1 or 0, newUsage }
       idempotencyKey: envelope?.idempotencyKey,
       eventId: envelope?.eventId,
       dimensions: envelope?.dimensions,
-      metadata: envelope?.metadata ?? (payload ? this.decodeMetadata(payload) : undefined),
+      metadata: envelope?.metadata ?? metadata,
     };
   }
 
@@ -751,22 +793,23 @@ return { exceeded and 1 or 0, newUsage }
     return timestamp;
   }
 
-  private decodeMetadata(encodedMetadata: string): Record<string, unknown> | undefined {
-    try {
-      const decoded = decodeURIComponent(encodedMetadata);
-      const parsed = JSON.parse(decoded) as Record<string, unknown>;
-      return parsed;
-    } catch {
-      return undefined;
+  private decodeMetadata(encodedMetadata: string): Record<string, unknown> {
+    const parsed: unknown = JSON.parse(decodeURIComponent(encodedMetadata));
+    if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
+      throw new RedisProblem("ZRANGEBYSCORE", "Invalid stored usage payload");
     }
+    return parsed as Record<string, unknown>;
   }
 
-  private decodeUsageEnvelope(encodedEnvelope: string): UsageMemberEnvelope | undefined {
-    try {
-      return JSON.parse(decodeURIComponent(encodedEnvelope)) as UsageMemberEnvelope;
-    } catch {
-      return undefined;
+  private decodeUsageEnvelope(encodedEnvelope: string): UsageMemberEnvelope {
+    const parsed = this.decodeMetadata(encodedEnvelope);
+    if (
+      (parsed.idempotencyKey !== undefined && typeof parsed.idempotencyKey !== "string") ||
+      (parsed.eventId !== undefined && typeof parsed.eventId !== "string")
+    ) {
+      throw new RedisProblem("ZRANGEBYSCORE", "Invalid stored usage identity");
     }
+    return parsed as UsageMemberEnvelope;
   }
 
   private sumUsageMembers(members: string[]): number {

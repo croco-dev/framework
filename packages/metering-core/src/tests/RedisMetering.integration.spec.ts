@@ -963,6 +963,100 @@ describe.skipIf(!realResourcesEnabled)("Redis metering composition", () => {
     },
   );
 
+  it("keeps encoded IDs, legacy reads, quota totals and flush deletion consistent", async () => {
+    assert.isDefined(connection);
+    const storage = new RedisUsageStorage(createRedisClient(connection));
+    const usage = { ...createUsageRecord("dedupe:요청"), id: "request:1:🦀%3A", value: 10 };
+    const key = "usage2:tenant-atomic-record:api_calls:2024-01";
+    const query = {
+      tenantId: usage.tenantId,
+      meterId: usage.meterId,
+      period: "billing_cycle" as const,
+      startDate: new Date("2024-01-01"),
+      endDate: new Date("2024-01-31"),
+    };
+    await connection.client.zadd(key, usage.timestamp.getTime(), "legacy:3");
+    await connection.client.zadd(
+      key,
+      usage.timestamp.getTime(),
+      "prior:4:v2.%7B%22idempotencyKey%22%3A%22prior-key%22%7D",
+    );
+    await storage.record(usage);
+    await expect(storage.getUsage(query)).resolves.toBe(17);
+    const next = { ...usage, id: "next:2", idempotencyKey: "next-key", value: 2 };
+    const quota = {
+      tenantId: usage.tenantId,
+      meterId: usage.meterId,
+      quota: 18,
+      value: next.value,
+      allowOverQuota: false,
+      usageRecord: next,
+    };
+    await expect(storage.checkAndRecordWithinQuota(quota)).resolves.toEqual({
+      exceeded: true,
+      newUsage: 19,
+    });
+    await expect(storage.getUsage(query)).resolves.toBe(17);
+    await expect(
+      storage.checkAndRecordWithinQuota({ ...quota, allowOverQuota: true }),
+    ).resolves.toEqual({ exceeded: true, newUsage: 19 });
+    const records = await storage.fetchUsageRecords(query);
+    expect(records).toContainEqual(usage);
+    expect(records).toContainEqual(next);
+    expect(records.map(({ id, value, idempotencyKey }) => ({ id, value, idempotencyKey }))).toEqual(
+      expect.arrayContaining([
+        { id: "legacy", value: 3, idempotencyKey: "legacy" },
+        { id: "prior", value: 4, idempotencyKey: "prior-key" },
+      ]),
+    );
+    // An old partition can repeat a logical v2 record; reads reconcile it and deletion removes both representations.
+    await connection.client.zadd(
+      "usage2:tenant-atomic-record:api_calls:2024-01-15",
+      usage.timestamp.getTime(),
+      "prior:4:v2.%7B%22idempotencyKey%22%3A%22prior-key%22%7D",
+    );
+    const dayQuery = {
+      ...query,
+      period: "day" as const,
+      startDate: new Date("2024-01-15"),
+      endDate: new Date("2024-01-15T23:59:59.999Z"),
+    };
+    await expect(storage.getUsage(dayQuery)).resolves.toBe(19);
+    await storage.deleteUsageRecords(dayQuery, await storage.fetchUsageRecords(dayQuery));
+    await expect(storage.getUsage(dayQuery)).resolves.toBe(0);
+    expect(await connection.client.zcard(key)).toBe(0);
+    expect(await connection.client.zcard("usage2:tenant-atomic-record:api_calls:2024-01-15")).toBe(
+      0,
+    );
+  });
+
+  it.each(["request:1:10", "request:1:10:v2.%7B%7D", "request:1:v2.invalid"])(
+    "rejects ambiguous stored member %s in Lua before any write",
+    async (member) => {
+      assert.isDefined(connection);
+      const storage = new RedisUsageStorage(createRedisClient(connection));
+      const usage = createUsageRecord("invalid-member");
+      const key = "usage2:tenant-atomic-record:api_calls:2024-01";
+      await connection.client.zadd(key, usage.timestamp.getTime(), member);
+      await expect(
+        storage.checkAndRecordWithinQuota({
+          tenantId: usage.tenantId,
+          meterId: usage.meterId,
+          value: usage.value,
+          quota: 100,
+          allowOverQuota: false,
+          usageRecord: usage,
+        }),
+      ).rejects.toBeInstanceOf(RedisProblem);
+      expect(await connection.client.zrange(key, 0, -1)).toEqual([member]);
+      expect(
+        await connection.client.exists(
+          "idem2:record:tenant-atomic-record:api_calls:invalid-member",
+        ),
+      ).toBe(0);
+    },
+  );
+
   it("computes an exact quota total across valid integer members", async () => {
     if (!connection) {
       throw new Error("Redis test resource did not start");
