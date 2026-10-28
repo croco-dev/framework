@@ -376,6 +376,41 @@ describe("Executable Assurance Graph", () => {
     );
   });
 
+  it("redacts leak IDs imported without evidence constructors in assurance output", () => {
+    const bundle = createTestEvidenceBundle(completeEvidence());
+    const imported = {
+      ...bundle,
+      status: "failed" as const,
+      records: bundle.records.map((record) =>
+        record.id === "route-success"
+          ? {
+              ...record,
+              resources: {
+                status: "leaked" as const,
+                leaks: ["database:pending", "token=reporter-secret"],
+              },
+            }
+          : record,
+      ),
+    };
+    const report = evaluateExecutableAssuranceGraph(createGraph(), imported, { mode: "enforce" });
+
+    expect(report.status).toBe("failed");
+    expect(report.contradictory[0]?.reasons).toEqual([
+      "Evidence 'route-success' leaked resources: database:pending, [Redacted].",
+    ]);
+    for (const output of [
+      serializeExecutableAssurance(report),
+      renderExecutableAssuranceMarkdown(report),
+    ]) {
+      expect(output).toContain("database:pending");
+      expect(output).not.toContain("reporter-secret");
+    }
+    expect(imported.records.find(({ id }) => id === "route-success")?.resources.leaks).toContain(
+      "token=reporter-secret",
+    );
+  });
+
   it("keeps explicit not-checked evidence eligible without promoting it to clean", () => {
     const records = completeEvidence().map((record) => ({
       ...record,

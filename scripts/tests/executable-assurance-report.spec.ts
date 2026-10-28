@@ -11,6 +11,8 @@ import {
   writeExecutableAssuranceReport,
 } from "../executable-assurance-report.mts";
 
+import { createTestEvidenceBundle, createTestEvidenceRecord } from "../test-evidence-runtime.mts";
+
 const temporaryDirectories: string[] = [];
 const repositoryRoot = resolve(import.meta.dirname, "../..");
 
@@ -92,6 +94,86 @@ describe("executable-assurance-report", () => {
     expect(readFileSync(join(outputDirectory, "summary.md"), "utf8")).toContain(
       "- Status: **PASSED**",
     );
+  }, 60_000);
+
+  it("redacts imported leak IDs in JSON, Markdown and stdout diagnostics", async () => {
+    const directory = mkdtempSync(join(tmpdir(), "croco-assurance-leaks-"));
+    temporaryDirectories.push(directory);
+    const graphPath = join(directory, "graph.json");
+    const evidencePath = join(directory, "bundle.json");
+    const outputDirectory = join(directory, "out");
+    const behaviorId = "task:verify";
+    writeFileSync(
+      graphPath,
+      JSON.stringify({
+        schemaVersion: "croco.executable-assurance-graph/v1",
+        nodes: [{ id: behaviorId, kind: "task", label: "verify", artifact: "tasks" }],
+        obligations: [
+          {
+            id: "obligation:verify",
+            behaviorId,
+            nodeId: behaviorId,
+            blocking: true,
+            description: "verify completes without leaks",
+            minimumFidelity: {},
+            observations: [],
+            recovery: { command: "pnpm test", testTemplate: "verify" },
+          },
+        ],
+        artifactVersions: {},
+      }),
+    );
+    const record = createTestEvidenceRecord({
+      id: "verify",
+      runner: "vitest",
+      intent: { contractIds: [behaviorId], description: "verify" },
+      observed: { contractIds: [behaviorId] },
+      fidelity: {
+        boot: "isolated",
+        dependency: "fake",
+        isolation: "fake",
+        runtime: "node",
+        validation: "isolated",
+      },
+      replay: { command: "pnpm test" },
+      resources: { status: "clean", leaks: [] },
+      attempts: [{ attempt: 1, outcome: "passed" }],
+    });
+    const bundle = createTestEvidenceBundle([record]);
+    // Imported JSON need not have passed through either redacting constructor.
+    writeFileSync(
+      evidencePath,
+      JSON.stringify({
+        ...bundle,
+        status: "failed",
+        records: [
+          {
+            ...record,
+            resources: { status: "leaked", leaks: ["database:pending", "token=reporter-secret"] },
+          },
+        ],
+      }),
+    );
+    const stdout = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+
+    const result = await writeExecutableAssuranceReport({
+      graphPath,
+      evidencePath,
+      outputDirectory,
+      mode: "enforce",
+    });
+
+    expect(result.status).toBe("failed");
+    const outputs = [
+      readFileSync(join(outputDirectory, "report.json"), "utf8"),
+      readFileSync(join(outputDirectory, "summary.md"), "utf8"),
+      stdout.mock.calls.map(([chunk]) => String(chunk)).join(""),
+    ];
+    for (const output of outputs) {
+      expect(output).toContain("database:pending");
+      expect(output).toContain("Redacted");
+      expect(output).not.toContain("reporter-secret");
+    }
   }, 60_000);
 
   it("runs through the repository CLI entrypoint", () => {

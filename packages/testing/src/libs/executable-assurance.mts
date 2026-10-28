@@ -13,6 +13,7 @@ import type {
 } from "./provider-conformance-matrix";
 import {
   assertTestEvidenceBundle,
+  redactTestEvidence,
   type TestEvidenceBundle,
   type TestEvidenceFidelity,
   type TestEvidenceObservation,
@@ -1090,7 +1091,8 @@ function contradictionReasons(
     reasons.push(`Evidence '${record.id}' outcome is '${record.outcome}', not 'passed'.`);
   }
   if (record.resources.status === "leaked") {
-    reasons.push(`Evidence '${record.id}' leaked resources: ${record.resources.leaks.join(", ")}.`);
+    const leaks = redactTestEvidence(record.resources.leaks);
+    reasons.push(`Evidence '${record.id}' leaked resources: ${leaks.join(", ")}.`);
   }
   for (const path of missingArtifacts) {
     reasons.push(`Evidence '${record.id}' is missing required artifact '${path}'.`);
