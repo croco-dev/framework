@@ -4,6 +4,7 @@ import { join } from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
+import { createTestEvidenceRecord } from "../test-evidence-runtime.mts";
 import {
   normalizeTestEvidenceInput,
   parseArguments,
@@ -201,6 +202,41 @@ describe("test evidence CI bundle", () => {
       },
     ]);
     expect(bundle.records[0]?.diagnostics[0]?.code).toBe("CROCO_TEST_EVIDENCE_INPUT_MISSING");
+  });
+
+  it("preserves a reporter resource leak as failed bundle evidence", () => {
+    const rootDirectory = temporaryDirectory();
+    const resources = { status: "leaked" as const, leaks: ["database:pending"] };
+    const record = createTestEvidenceRecord({
+      id: "test/reported-resource-leak",
+      runner: "vitest",
+      intent: { contractIds: [], description: "reports resource cleanup" },
+      observed: { contractIds: [] },
+      fidelity: {
+        boot: "isolated",
+        dependency: "fake",
+        isolation: "fake",
+        runtime: "node",
+        validation: "isolated",
+      },
+      replay: { command: "pnpm test" },
+      attempts: [{ attempt: 1, outcome: "passed" }],
+      resources,
+    });
+    writeFileSync(join(rootDirectory, "record.json"), JSON.stringify(record));
+
+    const bundle = writeTestEvidenceBundle({
+      inputPaths: ["record.json"],
+      outputDirectory: "out",
+      rootDirectory,
+    });
+
+    expect(bundle.status).toBe("failed");
+    expect(bundle.records[0]).toMatchObject({ outcome: "passed", resources });
+    expect(JSON.parse(readFileSync(join(rootDirectory, "out/bundle.json"), "utf8"))).toMatchObject({
+      status: "failed",
+      records: [expect.objectContaining({ outcome: "passed", resources })],
+    });
   });
 
   it("preserves required missing artifacts from an existing verification report", () => {

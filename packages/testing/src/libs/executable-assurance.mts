@@ -11,12 +11,12 @@ import type {
   ProviderConformanceMatrixManifest,
   ProviderConformanceProfileManifest,
 } from "./provider-conformance-matrix";
-import {
-  assertTestEvidenceBundle,
-  type TestEvidenceBundle,
-  type TestEvidenceFidelity,
-  type TestEvidenceObservation,
-  type TestEvidenceRecord,
+import { assertTestEvidenceBundle, redactTestEvidence } from "./test-evidence.mjs";
+import type {
+  TestEvidenceBundle,
+  TestEvidenceFidelity,
+  TestEvidenceObservation,
+  TestEvidenceRecord,
 } from "./test-evidence.mjs";
 
 export const EXECUTABLE_ASSURANCE_GRAPH_VERSION = "croco.executable-assurance-graph/v1" as const;
@@ -1054,6 +1054,7 @@ function assessObligation(
   const satisfied = declared.find(
     (record) =>
       record.outcome === "passed" &&
+      record.resources.status !== "leaked" &&
       !missingArtifactsByRecord.has(record.id) &&
       matchesFidelity(record.fidelity, obligation.minimumFidelity) &&
       obligation.observations.every((observation) => observationMatches(record, observation)),
@@ -1087,6 +1088,10 @@ function contradictionReasons(
   const reasons: string[] = [];
   if (record.outcome !== "passed") {
     reasons.push(`Evidence '${record.id}' outcome is '${record.outcome}', not 'passed'.`);
+  }
+  if (record.resources.status === "leaked") {
+    const leaks = redactTestEvidence(record.resources.leaks);
+    reasons.push(`Evidence '${record.id}' leaked resources: ${leaks.join(", ")}.`);
   }
   for (const path of missingArtifacts) {
     reasons.push(`Evidence '${record.id}' is missing required artifact '${path}'.`);

@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "testing",
+      "classification": "pure-contract",
+      "reason": "Resource leak evidence fails bundle eligibility and assurance satisfaction without changing runner outcomes. Resource status and leak lists must agree in the runtime validator and published schema.",
+      "files": {
+        "packages/testing/src/libs/test-evidence.mts": "f323b0eceb0c99852a063be57a49ed7f78de17bac00c588d96cad9056fad0888",
+        "packages/testing/src/libs/executable-assurance.mts": "dd575780c08880b8337b14b616662ea63c6e7c294fcee4507d951fdf5f0226c0"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Runner-neutral evidence validation and in-memory eligibility use no host capabilities, storage adapter or application lifecycle. The same logic consumes evidence produced for any runtime.",
+          "providers": [],
+          "constraints": [
+            "This change consumes recorded leaks; it does not detect new leaks, execute provider operations or certify deployed infrastructure. Explicit not-checked evidence retains its existing meaning."
+          ],
+          "references": [
+            "packages/testing/src/libs/test-evidence.mts",
+            "packages/testing/src/libs/executable-assurance.mts",
+            "packages/testing/schemas/test-evidence-v1.schema.json",
+            "packages/testing/src/tests/TestEvidence.spec.ts",
+            "packages/testing/src/tests/ExecutableAssuranceGraph.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Runner-neutral evidence validation and in-memory eligibility use no host capabilities, storage adapter or application lifecycle. The same logic consumes evidence produced for any runtime.",
+          "providers": [],
+          "constraints": [
+            "This change consumes recorded leaks; it does not detect new leaks, execute provider operations or certify deployed infrastructure. Explicit not-checked evidence retains its existing meaning."
+          ],
+          "references": [
+            "packages/testing/src/libs/test-evidence.mts",
+            "packages/testing/src/libs/executable-assurance.mts",
+            "packages/testing/schemas/test-evidence-v1.schema.json",
+            "packages/testing/src/tests/TestEvidence.spec.ts",
+            "packages/testing/src/tests/ExecutableAssuranceGraph.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Runner-neutral evidence validation and in-memory eligibility use no host capabilities, storage adapter or application lifecycle. The same logic consumes evidence produced for any runtime.",
+          "providers": [],
+          "constraints": [
+            "This change consumes recorded leaks; it does not detect new leaks, execute provider operations or certify deployed infrastructure. Explicit not-checked evidence retains its existing meaning."
+          ],
+          "references": [
+            "packages/testing/src/libs/test-evidence.mts",
+            "packages/testing/src/libs/executable-assurance.mts",
+            "packages/testing/schemas/test-evidence-v1.schema.json",
+            "packages/testing/src/tests/TestEvidence.spec.ts",
+            "packages/testing/src/tests/ExecutableAssuranceGraph.spec.ts"
+          ]
+        }
+      }
+    }
+  ]
+}

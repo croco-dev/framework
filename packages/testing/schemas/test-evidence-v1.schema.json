@@ -139,7 +139,10 @@
       "properties": {
         "leaks": { "type": "array", "items": { "type": "string" } },
         "status": { "enum": ["clean", "leaked", "not-checked"] }
-      }
+      },
+      "if": { "properties": { "status": { "const": "leaked" } } },
+      "then": { "properties": { "leaks": { "minItems": 1 } } },
+      "else": { "properties": { "leaks": { "maxItems": 0 } } }
     }
   }
 }

@@ -346,6 +346,87 @@ describe("Executable Assurance Graph", () => {
     );
   });
 
+  it("reports leaked resources as contradictory despite matching execution evidence", () => {
+    const records = completeEvidence().map((record) =>
+      record.id === "route-success"
+        ? { ...record, resources: { status: "leaked" as const, leaks: ["database:pending"] } }
+        : record,
+    );
+    const report = evaluateExecutableAssuranceGraph(
+      createGraph(),
+      createTestEvidenceBundle(records),
+      { mode: "enforce" },
+    );
+
+    expect(report.status).toBe("failed");
+    expect(report.summary).toMatchObject({
+      satisfied: 6,
+      contradictory: 1,
+      blockingUnsatisfied: 1,
+    });
+    expect(report.contradictory).toEqual([
+      expect.objectContaining({
+        evidenceIds: ["route-success"],
+        obligation: expect.objectContaining({ behaviorId: "route:UsersController.create" }),
+        reasons: [expect.stringContaining("database:pending")],
+      }),
+    ]);
+    expect(() => assertExecutableAssuranceSatisfied(report)).toThrow(
+      ExecutableAssuranceUnsatisfiedProblem,
+    );
+  });
+
+  it("redacts leak IDs imported without evidence constructors in assurance output", () => {
+    const bundle = createTestEvidenceBundle(completeEvidence());
+    const imported = {
+      ...bundle,
+      status: "failed" as const,
+      records: bundle.records.map((record) =>
+        record.id === "route-success"
+          ? {
+              ...record,
+              resources: {
+                status: "leaked" as const,
+                leaks: ["database:pending", "token=reporter-secret"],
+              },
+            }
+          : record,
+      ),
+    };
+    const report = evaluateExecutableAssuranceGraph(createGraph(), imported, { mode: "enforce" });
+
+    expect(report.status).toBe("failed");
+    expect(report.contradictory).toEqual([
+      expect.objectContaining({
+        reasons: ["Evidence 'route-success' leaked resources: database:pending, [Redacted]."],
+      }),
+    ]);
+    for (const output of [
+      serializeExecutableAssurance(report),
+      renderExecutableAssuranceMarkdown(report),
+    ]) {
+      expect(output).toContain("database:pending");
+      expect(output).not.toContain("reporter-secret");
+    }
+    expect(imported.records.find(({ id }) => id === "route-success")?.resources.leaks).toContain(
+      "token=reporter-secret",
+    );
+  });
+
+  it("keeps explicit not-checked evidence eligible without promoting it to clean", () => {
+    const records = completeEvidence().map((record) => ({
+      ...record,
+      resources: { status: "not-checked" as const, leaks: [] },
+    }));
+
+    expect(
+      evaluateExecutableAssuranceGraph(createGraph(), createTestEvidenceBundle(records), {
+        mode: "enforce",
+      }).status,
+    ).toBe("passed");
+    expect(records.every(({ resources }) => resources.status === "not-checked")).toBe(true);
+  });
+
   it("accepts adapter evidence for an application-minimum route obligation", () => {
     const records = completeEvidence().map((record) =>
       record.id === "route-success"
