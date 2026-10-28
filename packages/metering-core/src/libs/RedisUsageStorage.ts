@@ -22,6 +22,7 @@ type ReconciledUsageMember = {
   parsed: ParsedUsageMember;
   score?: number;
 };
+const MAX_USAGE_JSON_DEPTH = 1_000;
 
 function stableStringify(value: unknown): string {
   return JSON.stringify(value, (_key, nestedValue: unknown) => {
@@ -42,12 +43,28 @@ function stableStringify(value: unknown): string {
   });
 }
 
-function parseUsageJson(json: string): unknown {
+function parseUsageJson(json: string, operation: "SERIALIZE" | "ZRANGEBYSCORE"): unknown {
+  const depths = new WeakMap<object, number>();
   return JSON.parse(json, (key, nestedValue: unknown) => {
     // Redis cjson rejects unpaired surrogates, including JSON-escaped keys and string values.
     encodeURIComponent(key);
     if (typeof nestedValue === "string") {
       encodeURIComponent(nestedValue);
+    }
+    if (nestedValue !== null && typeof nestedValue === "object") {
+      let depth = 1;
+      for (const child of Object.values(nestedValue)) {
+        if (child !== null && typeof child === "object") {
+          depth = Math.max(depth, (depths.get(child) ?? 0) + 1);
+        }
+      }
+      if (depth > MAX_USAGE_JSON_DEPTH) {
+        throw new RedisProblem(
+          operation,
+          `Usage JSON exceeds the maximum depth of ${MAX_USAGE_JSON_DEPTH}`,
+        );
+      }
+      depths.set(nestedValue, depth);
     }
     return nestedValue;
   });
@@ -195,6 +212,52 @@ local function decodeComponent(component)
   return decoded
 end
 
+-- Isolate decoder settings from other scripts sharing Redis's Lua VM.
+if type(cjson.new) ~= 'function' then
+  return redis.error_reply('Usage quota evaluation requires an isolated Lua CJSON decoder')
+end
+local usageJson = cjson.new()
+usageJson.decode_invalid_numbers(false)
+usageJson.decode_max_depth(${MAX_USAGE_JSON_DEPTH})
+
+local function decodeUsageJson(encoded)
+  local decoded = decodeComponent(encoded)
+  if not decoded then return nil end
+  local start = 1
+  while start <= #decoded do
+    local byte = string.byte(decoded, start)
+    if byte ~= 0x20 and byte ~= 0x09 and byte ~= 0x0A and byte ~= 0x0D then break end
+    start = start + 1
+  end
+  if string.byte(decoded, start) ~= 0x7B then return nil end
+  local quoted = false
+  local escaped = false
+  for index = start, #decoded do
+    local byte = string.byte(decoded, index)
+    if quoted then
+      if byte < 0x20 then return nil end
+      if escaped then
+        escaped = false
+      elseif byte == 0x5C then
+        escaped = true
+      elseif byte == 0x22 then
+        quoted = false
+      end
+    elseif byte == 0x22 then
+      quoted = true
+    elseif byte < 0x20 and byte ~= 0x09 and byte ~= 0x0A and byte ~= 0x0D then
+      return nil
+    elseif byte == 0x2E then
+      -- CJSON accepts a missing fractional part; JSON.parse does not.
+      local nextByte = string.byte(decoded, index + 1)
+      if not nextByte or nextByte < 0x30 or nextByte > 0x39 then return nil end
+    end
+  end
+  local ok, parsed = pcall(usageJson.decode, decoded)
+  if not ok or type(parsed) ~= 'table' then return nil end
+  return parsed
+end
+
 local records = redis.call('ZRANGEBYSCORE', usageKey, '-inf', '+inf', 'WITHSCORES')
 local parents = {}
 local values = {}
@@ -237,9 +300,8 @@ for index = 1, #records, 2 do
     if version == 'v2.' or version == 'v3.' then
       payload = string.sub(payload, 4)
     end
-    local decoded = decodeComponent(payload)
-    local ok, parsed = pcall(cjson.decode, decoded or '')
-    if not ok or string.sub(decoded or '', 1, 1) ~= '{' or type(parsed) ~= 'table' then
+    local parsed = decodeUsageJson(payload)
+    if not parsed then
       return redis.error_reply('Invalid stored usage payload')
     end
     if version == 'v2.' or version == 'v3.' then
@@ -821,7 +883,7 @@ return { exceeded and 1 or 0, newUsage }
       };
 
       const payload = stableStringify(envelope);
-      parseUsageJson(payload);
+      parseUsageJson(payload, "SERIALIZE");
       return `${base}:v3.${encodeURIComponent(payload)}`;
     } catch (error) {
       throw this.toRedisProblem("SERIALIZE", error);
@@ -912,7 +974,7 @@ return { exceeded and 1 or 0, newUsage }
   }
 
   private decodeMetadata(encodedMetadata: string): Record<string, unknown> {
-    const parsed = parseUsageJson(decodeURIComponent(encodedMetadata));
+    const parsed = parseUsageJson(decodeURIComponent(encodedMetadata), "ZRANGEBYSCORE");
     if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
       throw new RedisProblem("ZRANGEBYSCORE", "Invalid stored usage payload");
     }

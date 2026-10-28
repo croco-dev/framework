@@ -282,6 +282,14 @@ and Redis key namespaces are unchanged.
 
 Unpaired Unicode surrogate code units in IDs or envelope string keys/values are rejected before
 storage. Valid Unicode scalar values, including supplementary characters, remain supported.
+JSON payloads allow at most 1,000 nested object/array levels, matching the
+[Lua CJSON default](https://www.kyne.au/~mark/software/lua-cjson-manual.html#decode_max_depth).
+For new writes, this count includes the envelope root. Payloads beyond this boundary are rejected
+before storage, and unsupported existing payloads fail explicitly.
+
+Compatible Redis services must provide Lua CJSON's `new`, `decode_invalid_numbers` and
+`decode_max_depth` controls. Quota evaluation uses a private decoder and preserves shared Lua
+decoder settings. Verify these controls on other Redis providers before rollout.
 
 Deploy readers that understand v3 before resuming writers; old readers cannot safely consume
 v3 members. Pause usage writes while coordinating this upgrade across all processes sharing

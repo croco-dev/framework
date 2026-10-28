@@ -1195,6 +1195,103 @@ describe.skipIf(!realResourcesEnabled)("Redis metering composition", () => {
   });
 
   it.each([
+    { kind: "object", layers: 998, allowed: true },
+    { kind: "object", layers: 999, allowed: false },
+    { kind: "array", layers: 998, allowed: true },
+    { kind: "array", layers: 999, allowed: false },
+  ])("aligns $kind JSON nesting at $layers layers with Lua", async ({ kind, layers, allowed }) => {
+    assert.isDefined(connection);
+    const storage = new RedisUsageStorage(createRedisClient(connection));
+    let nested: unknown = 0;
+    for (let index = 0; index < layers; index += 1) {
+      nested = kind === "object" ? { nested } : [nested];
+    }
+    const usage = { ...createUsageRecord("depth"), value: 10, metadata: { nested } };
+    const next = { ...createUsageRecord("next"), value: 3 };
+    const quota = {
+      tenantId: usage.tenantId,
+      meterId: usage.meterId,
+      value: 3,
+      quota: 13,
+      allowOverQuota: false,
+      usageRecord: next,
+    };
+    const key = "usage2:tenant-atomic-record:api_calls:2024-01";
+    const query = {
+      tenantId: usage.tenantId,
+      meterId: usage.meterId,
+      period: "billing_cycle" as const,
+      startDate: new Date("2024-01-01"),
+      endDate: new Date("2024-01-31"),
+    };
+    if (allowed) {
+      await storage.record(usage);
+      await expect(storage.checkAndRecordWithinQuota(quota)).resolves.toEqual({
+        exceeded: false,
+        newUsage: 13,
+      });
+      await expect(storage.getUsage(query)).resolves.toBe(13);
+      return;
+    }
+    await expect(storage.record(usage)).rejects.toBeInstanceOf(RedisProblem);
+    await expect(
+      storage.checkAndRecordWithinQuota({ ...quota, usageRecord: usage, value: 10 }),
+    ).rejects.toBeInstanceOf(RedisProblem);
+    expect(await connection.client.zcard(key)).toBe(0);
+    const member = `deep:10:v3.${encodeURIComponent(JSON.stringify({ metadata: usage.metadata }))}`;
+    await connection.client.zadd(key, usage.timestamp.getTime(), member);
+    await expect(storage.getUsage(query)).rejects.toBeInstanceOf(RedisProblem);
+    await expect(storage.fetchUsageRecords(query)).rejects.toBeInstanceOf(RedisProblem);
+    await expect(storage.deleteUsageRecords(query, [usage])).rejects.toBeInstanceOf(RedisProblem);
+    await expect(storage.checkAndRecordWithinQuota(quota)).rejects.toBeInstanceOf(RedisProblem);
+    expect(await connection.client.zrange(key, 0, -1)).toEqual([member]);
+    expect(await connection.client.keys("idem2:*")).toEqual([]);
+  });
+
+  it("accepts valid JSON grammar without changing the shared Lua decoder", async () => {
+    assert.isDefined(connection);
+    const before = await connection.client.eval(
+      "return cjson.decode_invalid_numbers() and 1 or 0",
+      0,
+    );
+    const storage = new RedisUsageStorage(createRedisClient(connection));
+    const usage = {
+      ...createUsageRecord("json-grammar"),
+      value: 10,
+      metadata: { note: 'NaN 1. "escaped"', fraction: 1.5, exponent: 1e21 },
+    };
+    await storage.record(usage);
+    await connection.client.zadd(
+      "usage2:tenant-atomic-record:api_calls:2024-01",
+      usage.timestamp.getTime(),
+      `legacy:2:${encodeURIComponent(' \t{ "source": "legacy" }\r\n')}`,
+    );
+    const next = { ...createUsageRecord("next"), value: 3 };
+    await expect(
+      storage.checkAndRecordWithinQuota({
+        tenantId: usage.tenantId,
+        meterId: usage.meterId,
+        value: 3,
+        quota: 15,
+        allowOverQuota: false,
+        usageRecord: next,
+      }),
+    ).resolves.toEqual({ exceeded: false, newUsage: 15 });
+    const query = {
+      tenantId: usage.tenantId,
+      meterId: usage.meterId,
+      period: "billing_cycle" as const,
+      startDate: new Date("2024-01-01"),
+      endDate: new Date("2024-01-31"),
+    };
+    await expect(storage.getUsage(query)).resolves.toBe(15);
+    await expect(storage.fetchUsageRecords(query)).resolves.toContainEqual(usage);
+    expect(
+      await connection.client.eval("return cjson.decode_invalid_numbers() and 1 or 0", 0),
+    ).toBe(before);
+  });
+
+  it.each([
     "request:1:10",
     "request:1:10:v2.%7B%7D",
     "request:1:v2.invalid",
@@ -1217,6 +1314,10 @@ describe.skipIf(!realResourcesEnabled)("Redis metering composition", () => {
       { metadata: { tag: "\ud800" } },
       { metadata: { ["\ud800"]: "tag" } },
     ].map((envelope) => `record:10:v3.${encodeURIComponent(JSON.stringify(envelope))}`),
+    ...["NaN", "Infinity", "0x10", "01", "1."].map(
+      (value) => `record:10:v3.${encodeURIComponent(`{"metadata":{"value":${value}}}`)}`,
+    ),
+    `record:10:v3.${encodeURIComponent('{"metadata":{"tag":"line\nfeed"}}')}`,
   ])("rejects invalid stored member %s in Lua before any write", async (member) => {
     assert.isDefined(connection);
     const storage = new RedisUsageStorage(createRedisClient(connection));
