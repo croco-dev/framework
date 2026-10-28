@@ -692,6 +692,8 @@ describe("@croco/testing", () => {
       [500, undefined],
       [200, { code: "input/invalid" }],
       [500, { code: "input/invalid" }],
+      [200, { status: 200 }],
+      [500, { status: 500 }],
     ])("rejects HTTP %s with body status 422 and expectations %j", async (status, expected) => {
       const response = Response.json(body, { status });
 
