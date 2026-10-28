@@ -487,6 +487,7 @@ describe("GraphQL standalone subscription scope", () => {
           expect(observations).toHaveLength(2);
           expect(observations[0].requestId).toBeTruthy();
           expect(observations[1]).toEqual(observations[0]);
+          expect(observations[1]?.ledger).toBe(observations[0]?.ledger);
           expect(observations[1]).toMatchObject({ tenant: "tenant-42", user: "user-73" });
           complete.resolve();
           while (!(await within(reader.read())).done) {
@@ -557,6 +558,87 @@ describe("GraphQL standalone subscription scope", () => {
       } finally {
         release.resolve();
         reader.releaseLock();
+      }
+    },
+  );
+
+  it("disposes once on abort while the subscription iterator is still blocked", async () => {
+    const { token, disposed } = ledgerFixture();
+    const waiting = gate();
+    const release = gate();
+    const cleaned = vi.fn();
+    const client = new AbortController();
+    const server = new GraphQLServer({
+      context: () => {
+        Container.get(token);
+        return { tenantId: "blocked-tenant" };
+      },
+      schema: subscriptionSchema(async function* () {
+        try {
+          yield { sample: "first" };
+          waiting.resolve();
+          await release.promise;
+        } finally {
+          cleaned(Context.getTenantId());
+        }
+      }),
+    });
+    await server.initialize();
+    const response = await server.getHandler()(request(client.signal));
+    const reader = response.body?.getReader();
+    if (!reader) throw new Error("Missing subscription body");
+    let pending: Promise<unknown> | undefined;
+    try {
+      await within(readUntil(reader, '"sample":"first"'));
+      pending = reader.read().catch((error: unknown) => error);
+      await within(waiting.promise);
+      expect(disposed).not.toHaveBeenCalled();
+      const failure = new Error("blocked request ended");
+      client.abort(failure);
+      expect(await within(pending)).toBe(failure);
+      expect(disposed).toHaveBeenCalledTimes(1);
+      expect(cleaned).not.toHaveBeenCalled();
+      release.resolve();
+      await vi.waitFor(() => expect(cleaned).toHaveBeenCalledWith("blocked-tenant"));
+      expect(disposed).toHaveBeenCalledTimes(1);
+    } finally {
+      release.resolve();
+      client.abort();
+      await pending;
+      reader.releaseLock();
+    }
+  });
+
+  it.each(["consume", "cancel"] as const)(
+    "retains an ordinary query provider until JSON body %s",
+    async (mode) => {
+      const { token, disposed } = ledgerFixture();
+      const server = new GraphQLServer({
+        context: () => {
+          Container.get(token);
+          return {};
+        },
+        schema: subscriptionSchema(async function* () {}),
+      });
+      await server.initialize();
+      const response = await server.getHandler()(
+        new Request("http://localhost/graphql", {
+          method: "POST",
+          headers: { "content-type": "application/json", accept: "application/json" },
+          body: JSON.stringify({ query: "{ sample }" }),
+        }),
+      );
+      try {
+        expect(disposed).not.toHaveBeenCalled();
+        if (mode === "consume") {
+          expect(await response.json()).toEqual({ data: { sample: "query-result" } });
+        } else {
+          if (!response.body) throw new Error("Missing query body");
+          await response.body.cancel();
+        }
+        expect(disposed).toHaveBeenCalledTimes(1);
+      } finally {
+        if (!response.bodyUsed) await response.body?.cancel();
       }
     },
   );
