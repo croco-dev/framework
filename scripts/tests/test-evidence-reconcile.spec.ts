@@ -184,7 +184,10 @@ describe("test evidence reconciliation", () => {
         !path.includes("/spa-be-split/tests/journeys/") &&
         !path.includes("/addons/trpc-nextjs/"),
     );
-    expect(executedPaths).toHaveLength(20);
+    expect(executedPaths).toHaveLength(21);
+    expect(executedPaths).toContain(
+      "packages/create-croco-app/templates/spa-be-split/apps/console-web/src/tests/AppRoutes.spec.tsx",
+    );
     const workerBootstrapPath =
       "packages/create-croco-app/templates/saas/apps/api-server/src/tests/WorkerBootstrap.spec.ts";
     expect(executedPaths).toContain(workerBootstrapPath);
