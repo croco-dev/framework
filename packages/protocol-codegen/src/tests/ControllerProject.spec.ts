@@ -1861,6 +1861,7 @@ describe("createControllerProject", () => {
   });
   it("preserves multi-root dynamic import identity with an explicit options argument", async () => {
     const root = createTemporaryDirectory();
+    fs.mkdirSync(path.join(root, "node_modules"));
     writeJson(path.join(root, "package.json"), { type: "module" });
     writeJson(path.join(root, "tsconfig.json"), {
       compilerOptions: { module: "NodeNext", moduleResolution: "NodeNext", target: "ES2022" },
