@@ -708,21 +708,26 @@ for (const entry of entries) { const schema = await entry.schema; if (!schema.sq
     }
   }, 30_000);
 
-  it("rejects malformed upgrade write options without changing installed-command workspace files", () => {
+  it.each([
+    { name: "missing-cwd", args: ["--write", "--cwd"], flag: "--cwd" },
+    { name: "unknown-option", args: ["--write", "--unknown-option"], flag: "--unknown-option" },
+    { name: "option-as-cwd", args: ["--cwd", "--write"], flag: "--cwd" },
+  ])("rejects $name without changing installed-command workspace files", ({ name, args, flag }) => {
     const harness = getHarness();
-    const cwd = createUpgradeWorkspace(join(harness.commandRoot, "upgrade-invalid-options"));
+    const cwd = createUpgradeWorkspace(join(harness.commandRoot, `upgrade-${name}`));
     const sourcePath = join(cwd, "apps/api-server/src/problemMatchers.ts");
     const original = readFileSync(sourcePath, "utf-8");
 
-    for (const args of [
-      ["--write", "--cwd"],
-      ["--write", "--unknown-option"],
-      ["--cwd", "--write"],
-    ]) {
-      const result = runInstalledCommand(harness, "croco", ["upgrade", ...args], cwd, 1);
-      expect(result.stderr).toMatch(/cwd|unknown-option/);
-      expect(readFileSync(sourcePath, "utf-8")).toBe(original);
-    }
+    const result = runInstalledCommand(harness, "croco", ["upgrade", ...args], cwd, 1);
+
+    expect(result.stderr).toContain(flag);
+    expect(readFileSync(sourcePath, "utf-8")).toBe(original);
+  });
+
+  it("applies valid upgrade write options through the installed command", () => {
+    const harness = getHarness();
+    const cwd = createUpgradeWorkspace(join(harness.commandRoot, "upgrade-valid-write"));
+    const sourcePath = join(cwd, "apps/api-server/src/problemMatchers.ts");
 
     runInstalledCommand(
       harness,
