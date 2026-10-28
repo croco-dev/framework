@@ -115,14 +115,40 @@ function createCrocoContextPlugin(): GraphQLContextPropagationPlugin {
       const subscribe: GraphQLExecuteFn = (...args) => Reflect.apply(subscribeFn, undefined, args);
       setSubscribeFn(((...args: readonly unknown[]) => {
         const [subscriptionArgs] = args;
+        const context = propagateGraphQLContext(readContextValue(subscriptionArgs));
         return FrameworkContext.run(
-          propagateGraphQLContext(readContextValue(subscriptionArgs)),
-          () => Reflect.apply(subscribe, undefined, args),
+          context,
+          async () => {
+            const result: unknown = await Reflect.apply(subscribe, undefined, args);
+            if (!isAsyncIterable(result)) return result;
+            const iterator = result[Symbol.asyncIterator]();
+            const run = <T>(fn: () => T): T =>
+              FrameworkContext.run(context, fn, { inheritScope: true }) as T;
+            return {
+              [Symbol.asyncIterator]() {
+                return this;
+              },
+              next: () => run(() => iterator.next()),
+              ...(iterator.return ? { return: () => run(() => iterator.return?.()) } : {}),
+              ...(iterator.throw
+                ? { throw: (error: unknown) => run(() => iterator.throw?.(error)) }
+                : {}),
+            };
+          },
           { inheritScope: true },
         );
       }) as typeof subscribeFn);
     },
   };
+}
+
+function isAsyncIterable(value: unknown): value is AsyncIterable<unknown> {
+  return (
+    value !== null &&
+    (typeof value === "object" || typeof value === "function") &&
+    Symbol.asyncIterator in value &&
+    typeof value[Symbol.asyncIterator] === "function"
+  );
 }
 
 function readContextValue(executionArgs: unknown): unknown {
