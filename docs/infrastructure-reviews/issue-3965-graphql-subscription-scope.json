@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "transports-graphql",
+      "classification": "runtime-adapter",
+      "reason": "Standalone subscriptions retain request scope through response completion, failure, cancellation and abort; delayed iterator operations retain GraphQL authority without taking ownership of an inherited scope.",
+      "files": {
+        "packages/transports-graphql/src/libs/GraphQLServer.ts": "fe4d9cbedef2dfcedfdec34adb5741e7584350f3e973b2990d14ef118f00b330",
+        "packages/transports-graphql/src/libs/GraphQLFetchHandler.ts": "8d99acd3952fd67381436c220fd76bd900d3c04017f6e87e8e37fe81534e9ad3",
+        "packages/transports-graphql/src/libs/GraphQLResponseScope.ts": "d9e2aa3ed85d444f2cfe38a0400ab09aaedbdd4b3ba68f380ae0f6dd977b8f09"
+      },
+      "catalogRuntimes": ["node", "lambda", "cloudflare-workers"],
+      "profiles": {
+        "kubernetes": {
+          "result": "unverified",
+          "reason": "Standalone SSE and the existing Node listener reuse Context explicit scope ownership. Local Node tests do not verify a Kubernetes deployment.",
+          "providers": [
+            "@croco/framework-context/Context",
+            "@croco/transports-graphql/GraphQLServer"
+          ],
+          "constraints": [
+            "Consume, cancel or abort every subscription response. No deployed cluster certification."
+          ],
+          "references": [
+            "packages/transports-graphql/src/libs/GraphQLServer.ts",
+            "packages/transports-graphql/src/tests/GraphQLServer.streaming.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "conditional",
+          "reason": "The existing Node-based GraphQL handler can be composed only within the host invocation lifetime; this fix does not add Lambda SSE support.",
+          "providers": ["@croco/transports-graphql/GraphQLServer"],
+          "constraints": [
+            "Complete or cancel the body before invocation return and telemetry flush. Lambda streaming is not certified."
+          ],
+          "references": [
+            "packages/presentation-preset/runtime-profiles.json",
+            "packages/transports-graphql/src/libs/GraphQLServer.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "unsupported",
+          "host": "workers",
+          "reason": "The Workers fetch-only entrypoint explicitly rejects subscription schemas. Standalone GraphQLServer remains a Node entrypoint.",
+          "providers": ["@croco/transports-graphql/fetch"],
+          "constraints": [
+            "Workers query/mutation support is unchanged; this change does not enable Workers subscriptions."
+          ],
+          "references": [
+            "packages/transports-graphql/src/fetch.ts",
+            "packages/transports-graphql/src/libs/GraphQLFetchHandler.ts"
+          ]
+        }
+      }
+    }
+  ]
+}

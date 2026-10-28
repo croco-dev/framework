@@ -109,3 +109,14 @@ are not rolled back by cancelling a request.
 See [Workers protocol conformance](../../examples/workers-protocols/README.md) for the
 local workerd smoke, generated GraphQL SDK and native tRPC client evidence. This does
 not certify a deployed Worker or the full SaaS Cloudflare profile.
+
+### Standalone response lifetime
+
+`GraphQLServer.getHandler()` retains its request scope until the returned response body
+finishes, fails, is cancelled, or its request is aborted. Consume or cancel every response
+body, including query and mutation responses. Delayed subscription iterator operations
+retain the request ID and the tenant/user returned by the server context factory.
+When called inside an existing Croco request scope, the handler inherits that scope;
+its original owner remains responsible for disposal after response processing.
+The Node listener continues to own its scope through socket streaming. The fetch-only
+Workers entrypoint still rejects subscription schemas.

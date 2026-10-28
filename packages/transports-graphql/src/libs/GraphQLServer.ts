@@ -21,6 +21,8 @@ import {
 import type { GraphQLServerOptions } from "./types";
 import { createYogaHandler, runInGraphQLRequestContext } from "./GraphQLFetchHandler";
 
+import { runWithGraphQLResponseScope } from "./GraphQLResponseScope";
+
 type YogaHandler = (request: Request) => Promise<Response>;
 type NodeRequestAbortScope = {
   readonly aborted: Promise<never>;
@@ -111,7 +113,10 @@ export class GraphQLServer {
       throw new GraphQLServerNotInitializedProblem();
     }
     const yoga = this.yogaHandler;
-    return async (request: Request) => runInGraphQLRequestContext(() => yoga(request));
+    return async (request: Request) =>
+      runWithGraphQLResponseScope(request, yoga, (error) =>
+        this.recordNodeRequestFailure(error, "response-body"),
+      );
   }
 
   start(port: number): Promise<void> {

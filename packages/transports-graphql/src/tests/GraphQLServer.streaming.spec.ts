@@ -1,7 +1,13 @@
 import "reflect-metadata";
 import type { Server, ServerResponse } from "node:http";
 import { createRequire } from "node:module";
-import { Container } from "@croco/framework-context";
+import {
+  Container,
+  Context,
+  Token,
+  defineGeneratedDiGraph,
+  GENERATED_DI_GRAPH_VERSION,
+} from "@croco/framework-context";
 import type * as GraphQL from "graphql";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { GraphQLServer } from "../libs/GraphQLServer";
@@ -391,6 +397,212 @@ describe("GraphQL Node subscription streaming", () => {
         client.abort();
         await server.stop();
       }
+    },
+  );
+});
+
+describe("GraphQL standalone subscription scope", () => {
+  beforeEach(() => Container.reset());
+  afterEach(() => Container.reset());
+
+  function ledgerFixture() {
+    const disposed = vi.fn();
+    const token = new Token<object>("subscription-ledger");
+    Container.installGeneratedGraph(
+      defineGeneratedDiGraph({
+        version: GENERATED_DI_GRAPH_VERSION,
+        graphId: "subscription-scope",
+        compilerVersion: "test",
+        inputHash: "subscription-scope",
+        roots: [token],
+        providers: [
+          {
+            token,
+            tokenId: "test:subscription-ledger",
+            debugName: "SubscriptionLedger",
+            scope: "request",
+            dependencies: [],
+            factory: () => ({ [Symbol.dispose]: disposed }),
+            sourceLocation: { file: "GraphQLServer.streaming.spec.ts", line: 1, column: 1 },
+          },
+        ],
+      }),
+    );
+    return { disposed, token };
+  }
+
+  function request(signal?: AbortSignal) {
+    return new Request("http://localhost/graphql", {
+      method: "POST",
+      headers: { "content-type": "application/json", accept: "text/event-stream" },
+      body: JSON.stringify({ query: "subscription { sample }" }),
+      signal,
+    });
+  }
+
+  it.each(["standalone", "inherited", "node"] as const)(
+    "retains the same provider and authority across delayed yields in %s",
+    async (mode) => {
+      const { token, disposed } = ledgerFixture();
+      const second = gate();
+      const complete = gate();
+      const observations: {
+        ledger: object;
+        requestId: string | null;
+        tenant: string | null;
+        user: string | undefined;
+      }[] = [];
+      const observe = () =>
+        observations.push({
+          ledger: Container.get(token),
+          requestId: Context.getRequestId(),
+          tenant: Context.getTenantId(),
+          user: Context.getCurrentUser()?.id,
+        });
+      const server = new GraphQLServer({
+        context: () => ({ tenantId: "tenant-42", user: { id: "user-73" } }),
+        schema: subscriptionSchema(async function* () {
+          observe();
+          yield { sample: "first" };
+          await second.promise;
+          observe();
+          yield { sample: "second" };
+          await complete.promise;
+        }),
+      });
+      const client = new AbortController();
+      await server.initialize();
+      const consume = async () => {
+        const response =
+          mode === "node"
+            ? await subscribe(endpoint(server), client.signal)
+            : await server.getHandler()(request(client.signal));
+        const reader = response.body?.getReader();
+        if (!reader) throw new Error("Missing subscription body");
+        try {
+          expect(disposed).not.toHaveBeenCalled();
+          await within(readUntil(reader, '"sample":"first"'));
+          second.resolve();
+          await within(readUntil(reader, '"sample":"second"'));
+          expect(observations).toHaveLength(2);
+          expect(observations[0].requestId).toBeTruthy();
+          expect(observations[1]).toEqual(observations[0]);
+          expect(observations[1]).toMatchObject({ tenant: "tenant-42", user: "user-73" });
+          complete.resolve();
+          while (!(await within(reader.read())).done) {
+            /* drain the completion event */
+          }
+          expect(disposed).toHaveBeenCalledTimes(mode === "inherited" ? 0 : 1);
+        } finally {
+          second.resolve();
+          complete.resolve();
+          await reader.cancel();
+          reader.releaseLock();
+        }
+      };
+      try {
+        if (mode === "node") await server.start(0);
+        if (mode === "inherited") await Context.run({ requestId: "outer-91" }, consume);
+        else await consume();
+        expect(disposed).toHaveBeenCalledTimes(1);
+      } finally {
+        client.abort();
+        second.resolve();
+        complete.resolve();
+        await server.stop();
+      }
+    },
+  );
+
+  it.each(["cancel", "abort"] as const)(
+    "disposes once and cancels the real iterator on %s",
+    async (mode) => {
+      const { token, disposed } = ledgerFixture();
+      const cleaned = vi.fn();
+      const release = gate();
+      const client = new AbortController();
+      const server = new GraphQLServer({
+        context: () => {
+          Container.get(token);
+          return { tenantId: "cleanup-tenant" };
+        },
+        schema: subscriptionSchema(async function* () {
+          try {
+            yield { sample: "first" };
+            await release.promise;
+          } finally {
+            cleaned(Context.getTenantId());
+          }
+        }),
+      });
+      await server.initialize();
+      const response = await server.getHandler()(request(client.signal));
+      const reader = response.body?.getReader();
+      if (!reader) throw new Error("Missing subscription body");
+      try {
+        await within(readUntil(reader, '"sample":"first"'));
+        expect(disposed).not.toHaveBeenCalled();
+        release.resolve();
+        if (mode === "cancel") await within(reader.cancel("consumer done"));
+        else {
+          client.abort(new Error("request ended"));
+          await within(expect(reader.read()).rejects.toThrow("request ended"));
+        }
+        await vi.waitFor(() => expect(cleaned).toHaveBeenCalledWith("cleanup-tenant"));
+        expect(disposed).toHaveBeenCalledTimes(1);
+        expect(cleaned).toHaveBeenCalledTimes(1);
+        await reader.cancel().catch(() => undefined);
+        client.abort();
+        expect(disposed).toHaveBeenCalledTimes(1);
+      } finally {
+        release.resolve();
+        reader.releaseLock();
+      }
+    },
+  );
+
+  it.each(["error", "cancel-rejection", "no-body", "handler-rejection", "pre-abort"] as const)(
+    "releases owned providers and source locks on %s",
+    async (mode) => {
+      const { token, disposed } = ledgerFixture();
+      const failure = new Error("source failed");
+      const server = new GraphQLServer({ schema: subscriptionSchema(async function* () {}) });
+      await server.initialize();
+      let source: ReadableStreamDefaultController<Uint8Array> | undefined;
+      const upstream = new Response(
+        new ReadableStream<Uint8Array>({
+          start(controller) {
+            source = controller;
+          },
+          cancel() {
+            if (mode === "cancel-rejection") throw failure;
+          },
+        }),
+        { headers: { "content-type": "text/event-stream" } },
+      );
+      const invoked = vi.fn(() => {
+        Container.get(token);
+        if (mode === "handler-rejection") throw failure;
+        return mode === "no-body" ? new Response(null, { status: 204 }) : upstream;
+      });
+      Reflect.set(server, "yogaHandler", invoked);
+      const client = new AbortController();
+      if (mode === "pre-abort") client.abort(failure);
+      if (mode === "handler-rejection" || mode === "pre-abort") {
+        await expect(server.getHandler()(request(client.signal))).rejects.toBe(failure);
+        expect(invoked).toHaveBeenCalledTimes(mode === "pre-abort" ? 0 : 1);
+      } else {
+        const response = await server.getHandler()(request(client.signal));
+        if (mode === "error") {
+          source?.error(failure);
+          await expect(response.text()).rejects.toBe(failure);
+        } else if (mode === "cancel-rejection")
+          await expect(response.body?.cancel()).rejects.toBe(failure);
+        else expect(response.status).toBe(204);
+      }
+      expect(disposed).toHaveBeenCalledTimes(mode === "pre-abort" ? 0 : 1);
+      expect(upstream.body?.locked).toBe(false);
+      client.abort();
     },
   );
 });
