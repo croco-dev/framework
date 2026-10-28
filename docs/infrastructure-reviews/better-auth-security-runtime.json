@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "auth-better-auth",
+      "classification": "runtime-adapter",
+      "reason": "Raise the published Better Auth minimum to1.7.14 and align its runtime dependency graph to include the OAuth state/Magic Link, OAuth Proxy and device authorization security fixes without changing the existing Node/Drizzle composition or enabling new plugins.",
+      "files": {
+        "packages/auth-better-auth/package.json": "dfffb35220f86baf6ace42c84e3df709174529b3ba0431ce345722cc17aff4ff"
+      },
+      "catalogRuntimes": ["node", "lambda"],
+      "profiles": {
+        "kubernetes": {
+          "result": "unverified",
+          "reason": "Reuses the existing Node Host authentication provider and PostgreSQL Drizzle schema; no Kubernetes deployment was executed.",
+          "providers": ["@croco/auth-better-auth", "better-auth/adapters/drizzle"],
+          "constraints": [
+            "Application owns the PostgreSQL connection lifecycle. Upgrade all nodes sharing verification storage and all OAuth Proxy participants together; restart pending Magic Links and OAuth/SAML flows. No new infrastructure support or live certification is claimed."
+          ],
+          "references": [
+            "packages/auth-better-auth/package.json",
+            "packages/auth-better-auth/src/libs/BetterAuthFactory.ts",
+            "packages/auth-better-auth/src/libs/schema.ts",
+            "packages/auth-better-auth/README.md",
+            "packages/auth-better-auth/src/tests/BetterAuthVerificationPurpose.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "conditional",
+          "reason": "The existing Lambda-compatible Node authentication provider retains its application-owned database and invocation boundary.",
+          "providers": ["@croco/auth-better-auth", "better-auth/adapters/drizzle"],
+          "constraints": [
+            "Bound database connections and await authentication writes before invocation completion. Deploy nodes sharing verification storage and OAuth Proxy participants in one coordinated cutover. No live AWS execution or certification is claimed."
+          ],
+          "references": [
+            "packages/auth-better-auth/package.json",
+            "packages/auth-better-auth/src/libs/BetterAuthFactory.ts",
+            "packages/auth-better-auth/src/libs/schema.ts",
+            "packages/auth-better-auth/README.md",
+            "packages/auth-better-auth/src/tests/BetterAuthVerificationPurpose.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "unsupported",
+          "host": "workers",
+          "reason": "This existing Node/PostgreSQL provider has no claimed Workers isolate runtime; the dependency update adds none.",
+          "providers": ["@croco/auth-better-auth"],
+          "constraints": [
+            "Do not treat upstream browser or Workers-related optional dependencies as evidence that the Croco Node/Drizzle provider runs in a Worker isolate."
+          ],
+          "references": [
+            "packages/auth-better-auth/package.json",
+            "packages/auth-better-auth/src/libs/BetterAuthFactory.ts",
+            "packages/auth-better-auth/src/libs/schema.ts",
+            "packages/auth-better-auth/README.md",
+            "packages/auth-better-auth/src/tests/BetterAuthVerificationPurpose.spec.ts"
+          ]
+        }
+      }
+    }
+  ]
+}

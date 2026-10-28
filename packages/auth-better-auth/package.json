@@ -61,7 +61,7 @@
     "@croco/problems-core": "workspace:*",
     "@croco/tx-drizzle": "workspace:*",
     "@croco/webhooks-core": "workspace:*",
-    "better-auth": "^1.6.23",
+    "better-auth": "^1.7.14",
     "drizzle-orm": "catalog:",
     "zod": "4.6.6"
   },
