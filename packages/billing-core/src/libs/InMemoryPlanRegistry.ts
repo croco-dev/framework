@@ -4,8 +4,10 @@ import type {
   ProviderPlanBinding,
   ProviderPlanLookup,
 } from "../types";
+import { Money } from "./Money";
 import type { PlanRegistry } from "./PlanRegistry";
 import {
+  InvalidMoneyCurrencyProblem,
   InvalidPlanVersionDefinitionProblem,
   PlanVersionAlreadyPublishedProblem,
   PlanVersionConflictProblem,
@@ -224,6 +226,13 @@ function validatePlanVersion(planVersion: PlanVersionDefinition): void {
     throw new InvalidPlanVersionDefinitionProblem(
       "provider bindings require non-empty provider, product, and price identifiers",
     );
+  }
+
+  try {
+    Money.zero(planVersion.currency);
+  } catch (error) {
+    if (!(error instanceof InvalidMoneyCurrencyProblem)) throw error;
+    throw new InvalidPlanVersionDefinitionProblem("currency must be a 3-letter ISO code");
   }
 
   const bindingKeys = planVersion.providerBindings.map(providerBindingKey);

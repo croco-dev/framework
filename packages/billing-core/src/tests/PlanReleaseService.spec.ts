@@ -886,46 +886,49 @@ describe("PlanReleaseService", () => {
     await expect(planRegistry.getAllPlanVersions("pro")).resolves.toHaveLength(1);
   });
 
-  it("records deterministic registry rejection and releases the publication reservation", async () => {
-    const { service, store } = createHarness();
-    const invalid = await reviewDraft(service, createDefinition({ amount: -1 }));
-    await expect(
-      service.publishNow({
-        ref: invalid.ref,
-        expectedRevision: invalid.revision,
-        actor: ACTOR,
-        reason: "invalid registry publish",
-        idempotencyKey: "invalid-publish",
-      }),
-    ).rejects.toBeInstanceOf(InvalidPlanVersionDefinitionProblem);
-
-    const recovered = await store.get(invalid.ref);
-    expect(recovered).toMatchObject({
-      state: "in_review",
-      publicationIntent: undefined,
-      publicationFailures: [
-        expect.objectContaining({
+  it.each([{ amount: -1 }, { currency: "US$" }])(
+    "records deterministic registry rejection and releases the publication reservation for %j",
+    async (definition) => {
+      const { service, store } = createHarness();
+      const invalid = await reviewDraft(service, createDefinition(definition));
+      await expect(
+        service.publishNow({
+          ref: invalid.ref,
+          expectedRevision: invalid.revision,
+          actor: ACTOR,
+          reason: "invalid registry publish",
           idempotencyKey: "invalid-publish",
-          code: "billing/invalid-plan-version-definition",
         }),
-      ],
-    });
-    if (!recovered) throw new Error("expected recovered release");
-    const returned = await service.returnToDraft({
-      ref: recovered.ref,
-      expectedRevision: recovered.revision,
-      actor: ACTOR,
-      reason: "correct invalid definition",
-    });
-    await expect(
-      service.updateDraft({
-        definition: createDefinition(),
-        expectedRevision: returned.revision,
+      ).rejects.toBeInstanceOf(InvalidPlanVersionDefinitionProblem);
+
+      const recovered = await store.get(invalid.ref);
+      expect(recovered).toMatchObject({
+        state: "in_review",
+        publicationIntent: undefined,
+        publicationFailures: [
+          expect.objectContaining({
+            idempotencyKey: "invalid-publish",
+            code: "billing/invalid-plan-version-definition",
+          }),
+        ],
+      });
+      if (!recovered) throw new Error("expected recovered release");
+      const returned = await service.returnToDraft({
+        ref: recovered.ref,
+        expectedRevision: recovered.revision,
         actor: ACTOR,
-        reason: "correct amount",
-      }),
-    ).resolves.toMatchObject({ state: "draft", definition: { amount: 9_900 } });
-  });
+        reason: "correct invalid definition",
+      });
+      await expect(
+        service.updateDraft({
+          definition: createDefinition(),
+          expectedRevision: returned.revision,
+          actor: ACTOR,
+          reason: "correct definition",
+        }),
+      ).resolves.toMatchObject({ state: "draft", definition: { amount: 9_900, currency: "USD" } });
+    },
+  );
 
   it("preserves the registry Problem when deterministic-failure compensation loses a race", async () => {
     class FailCompensationStore extends InMemoryPlanReleaseStore {

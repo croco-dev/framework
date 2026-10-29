@@ -1,8 +1,9 @@
-import { describe, expect, it } from "vitest";
+import { assert, describe, expect, it } from "vitest";
 import {
   InMemoryPlanRegistry,
   InvalidPlanVersionDefinitionProblem,
   migrateSubscriptionPlanVersion,
+  Money,
   planVersionRef,
   PlanVersionAlreadyPublishedProblem,
   PlanVersionConflictProblem,
@@ -99,6 +100,50 @@ describe("InMemoryPlanRegistry", () => {
     await expect(
       registry.getPlanAtDate("pro", new Date("2025-12-31T23:59:59.999Z")),
     ).resolves.toBeNull();
+  });
+
+  it.each(["US$", "123", "₩€¥", "U S", "   ", "US", "USDD", " USD "])(
+    "rejects invalid currency %j without reserving publication identities",
+    async (currency) => {
+      const registry = new InMemoryPlanRegistry();
+      const invalid = createVersion({ currency });
+
+      await expect(registry.publishPlanVersion(invalid)).rejects.toBeInstanceOf(
+        InvalidPlanVersionDefinitionProblem,
+      );
+      await expect(registry.getPlanVersion(invalid.ref)).resolves.toBeNull();
+      await expect(registry.getAllPlanVersions()).resolves.toEqual([]);
+      await expect(
+        registry.resolveProviderPlanVersion(invalid.providerBindings[0]),
+      ).rejects.toBeInstanceOf(UnknownProviderPlanMappingProblem);
+
+      const corrected = createVersion();
+      await registry.publishPlanVersion(corrected);
+      await expect(registry.getPlanVersion(corrected.ref)).resolves.toEqual(corrected);
+      await expect(
+        registry.resolveProviderPlanVersion(corrected.providerBindings[0]),
+      ).resolves.toEqual(corrected);
+    },
+  );
+
+  it.each([
+    ["USD", "USD"],
+    ["usd", "USD"],
+    ["eUr", "EUR"],
+    ["JPY", "JPY"],
+    ["ZZZ", "ZZZ"],
+  ])("preserves published currency %s and supports Money prices", async (currency, normalized) => {
+    const registry = new InMemoryPlanRegistry();
+    const version = createVersion({ currency });
+    await registry.publishPlanVersion(version);
+
+    const published = await registry.getPlanVersion(version.ref);
+    expect(published?.currency).toBe(currency);
+    assert(published !== null);
+    expect(new Money(published.amount, published.currency).toJSON()).toEqual({
+      amount: 9900,
+      currency: normalized,
+    });
   });
 
   it("copies and freezes published versions so callers cannot overwrite them", async () => {

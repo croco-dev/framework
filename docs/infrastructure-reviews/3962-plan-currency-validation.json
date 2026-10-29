@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "billing-core",
+      "classification": "pure-contract",
+      "reason": "Reject plan currencies that Money cannot represent before immutable publication, retaining existing casing, length and publication failure recovery contracts.",
+      "files": {
+        "packages/billing-core/src/libs/InMemoryPlanRegistry.ts": "8b98a58c48f6c2a864192e1bc9bfe44b467324050a9927995a95689862dfd57c"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Currency validation reuses pure Money logic independently of the Kubernetes Node Host; it adds no host capability, provider, durable storage or lifecycle requirement.",
+          "providers": [],
+          "constraints": [
+            "No deployed host, live payment provider or provider certification is claimed."
+          ],
+          "references": [
+            "packages/billing-core/src/libs/InMemoryPlanRegistry.ts",
+            "packages/billing-core/src/libs/Money.ts",
+            "packages/billing-core/src/tests/InMemoryPlanRegistry.spec.ts",
+            "packages/billing-core/src/tests/PlanReleaseService.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Currency validation reuses pure Money logic independently of the Lambda Host; it adds no host capability, provider, durable storage or lifecycle requirement.",
+          "providers": [],
+          "constraints": [
+            "No deployed host, live payment provider or provider certification is claimed."
+          ],
+          "references": [
+            "packages/billing-core/src/libs/InMemoryPlanRegistry.ts",
+            "packages/billing-core/src/libs/Money.ts",
+            "packages/billing-core/src/tests/InMemoryPlanRegistry.spec.ts",
+            "packages/billing-core/src/tests/PlanReleaseService.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Currency validation reuses pure Money logic independently of the Workers or explicit Node Container Host; it adds no host capability, provider, durable storage or lifecycle requirement.",
+          "providers": [],
+          "constraints": [
+            "No deployed host, live payment provider or provider certification is claimed."
+          ],
+          "references": [
+            "packages/billing-core/src/libs/InMemoryPlanRegistry.ts",
+            "packages/billing-core/src/libs/Money.ts",
+            "packages/billing-core/src/tests/InMemoryPlanRegistry.spec.ts",
+            "packages/billing-core/src/tests/PlanReleaseService.spec.ts"
+          ]
+        }
+      }
+    }
+  ]
+}
