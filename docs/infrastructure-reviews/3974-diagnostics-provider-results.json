@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "diagnostics-core",
+      "classification": "pure-contract",
+      "reason": "Validate resolved provider HealthStatus values before aggregation; malformed values produce a bounded degraded diagnostic while valid results and existing timeout/throw handling retain their semantics.",
+      "files": {
+        "packages/diagnostics-core/src/libs/DiagnosticsCollector.ts": "06c20b7410de83a5fe2ae6678b80f03152eb80543139ac97c00157d141006cbf"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Result shape validation is host-independent pure logic with no new capability, storage or lifecycle requirements. Existing provider execution and timeout ownership are unchanged.",
+          "providers": ["@croco/diagnostics-core/DiagnosticsCollector"],
+          "constraints": [
+            "This review does not certify a provider, deployment host or published release."
+          ],
+          "references": [
+            "packages/diagnostics-core/src/libs/DiagnosticsCollector.ts",
+            "packages/diagnostics-core/src/libs/types.ts",
+            "packages/diagnostics-core/src/tests/DiagnosticsIntegration.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Result shape validation is host-independent pure logic with no new capability, storage or lifecycle requirements. Existing provider execution and timeout ownership are unchanged.",
+          "providers": ["@croco/diagnostics-core/DiagnosticsCollector"],
+          "constraints": [
+            "This review does not certify a provider, deployment host or published release."
+          ],
+          "references": [
+            "packages/diagnostics-core/src/libs/DiagnosticsCollector.ts",
+            "packages/diagnostics-core/src/libs/types.ts",
+            "packages/diagnostics-core/src/tests/DiagnosticsIntegration.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Result shape validation is host-independent pure logic with no new capability, storage or lifecycle requirements. Existing provider execution and timeout ownership are unchanged.",
+          "providers": ["@croco/diagnostics-core/DiagnosticsCollector"],
+          "constraints": [
+            "This review does not certify a provider, deployment host or published release."
+          ],
+          "references": [
+            "packages/diagnostics-core/src/libs/DiagnosticsCollector.ts",
+            "packages/diagnostics-core/src/libs/types.ts",
+            "packages/diagnostics-core/src/tests/DiagnosticsIntegration.spec.ts"
+          ]
+        }
+      }
+    }
+  ]
+}

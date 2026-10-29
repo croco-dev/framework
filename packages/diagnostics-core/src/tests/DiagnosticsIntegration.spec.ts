@@ -177,6 +177,87 @@ describe("DiagnosticsCollector Integration", () => {
     expect(report.summary).toBe("all_healthy");
   });
 
+  describe("provider result validation", () => {
+    const validHealth: HealthStatus = {
+      status: "healthy",
+      component: "cache-primary",
+      lastChecked: "2026-10-28T01:02:03.000Z",
+    };
+
+    it.each([
+      ["null", null],
+      ["undefined", undefined],
+      ["primitive", "healthy"],
+      ["array", []],
+      ["unknown status", { ...validHealth, status: "unknown" }],
+      ["down status", { ...validHealth, status: "down" }],
+      ["missing status", { component: "cache", lastChecked: validHealth.lastChecked }],
+      ["missing component", { status: "healthy", lastChecked: validHealth.lastChecked }],
+      ["invalid component", { ...validHealth, component: 17 }],
+      ["missing lastChecked", { status: "healthy", component: "cache" }],
+      ["invalid lastChecked", { ...validHealth, lastChecked: 17 }],
+      ["invalid message", { ...validHealth, message: { secret: "do-not-expose" } }],
+      ["null details", { ...validHealth, details: null }],
+      ["array details", { ...validHealth, details: [] }],
+      ["primitive details", { ...validHealth, details: "do-not-expose" }],
+    ])("isolates %s and preserves the healthy provider", async (_label, value) => {
+      collector.registerProvider({
+        name: "malformed-provider",
+        getHealth: async () => value as HealthStatus,
+      });
+      collector.registerProvider(new MockDiagnosticsProvider("cache", validHealth));
+
+      const report = await collector.getReport();
+
+      expect(report.summary).toBe("degraded");
+      expect(report.components).toEqual([
+        {
+          status: "degraded",
+          component: "malformed-provider",
+          message: "Provider returned an invalid health status",
+          lastChecked: expect.any(String),
+        },
+        validHealth,
+      ]);
+      expect(Number.isNaN(Date.parse(report.components[0].lastChecked))).toBe(false);
+      expect(JSON.stringify(report)).not.toContain("do-not-expose");
+    });
+
+    it.each([
+      ["healthy", "all_healthy"],
+      ["degraded", "degraded"],
+      ["unhealthy", "issues_detected"],
+    ] as const)("preserves valid %s results and their summary", async (status, summary) => {
+      const health: HealthStatus = {
+        ...validHealth,
+        status,
+        message: "Provider diagnostic",
+        details: { pending: 7, nested: { available: true } },
+      };
+      collector.registerProvider(new MockDiagnosticsProvider("cache", health));
+
+      const report = await collector.getReport();
+
+      expect(report.summary).toBe(summary);
+      expect(report.components).toEqual([health]);
+    });
+
+    it("keeps unhealthy summary precedence when another provider is malformed", async () => {
+      const unhealthy: HealthStatus = { ...validHealth, status: "unhealthy" };
+      collector.registerProvider(new MockDiagnosticsProvider("cache", unhealthy));
+      collector.registerProvider({
+        name: "malformed",
+        getHealth: async () => null as unknown as HealthStatus,
+      });
+
+      const report = await collector.getReport();
+
+      expect(report.summary).toBe("issues_detected");
+      expect(report.components[0]).toEqual(unhealthy);
+      expect(report.components[1]).toMatchObject({ status: "degraded", component: "malformed" });
+    });
+  });
+
   it("should record errors via recordError and include in report", async () => {
     collector.recordError(
       makeErrorRecord({ component: "auth", code: "AUTH_FAILED", message: "Invalid token" }),

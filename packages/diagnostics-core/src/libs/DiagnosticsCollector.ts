@@ -40,6 +40,25 @@ function capMessage(message: string, maxLength: number): string {
   return `${message.slice(0, maxLength - 3)}...`;
 }
 
+function isHealthStatus(value: unknown): value is HealthStatus {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return false;
+  }
+  const health = value as Record<string, unknown>;
+  return (
+    (health.status === "healthy" ||
+      health.status === "degraded" ||
+      health.status === "unhealthy") &&
+    typeof health.component === "string" &&
+    typeof health.lastChecked === "string" &&
+    (health.message === undefined || typeof health.message === "string") &&
+    (health.details === undefined ||
+      (typeof health.details === "object" &&
+        health.details !== null &&
+        !Array.isArray(health.details)))
+  );
+}
+
 function computeSummary(statuses: readonly HealthStatus[]): DiagnosticsReport["summary"] {
   if (statuses.length === 0) {
     return "all_healthy";
@@ -143,7 +162,19 @@ export class DiagnosticsCollector {
     });
 
     try {
-      return await Promise.race([provider.getHealth(controller.signal), timeoutPromise]);
+      const health: unknown = await Promise.race([
+        provider.getHealth(controller.signal),
+        timeoutPromise,
+      ]);
+      if (!isHealthStatus(health)) {
+        return {
+          status: "degraded",
+          component: provider.name,
+          message: "Provider returned an invalid health status",
+          lastChecked: new Date().toISOString(),
+        };
+      }
+      return health;
     } finally {
       if (timeoutId !== undefined) {
         clearTimeout(timeoutId);
