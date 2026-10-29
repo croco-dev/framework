@@ -58,18 +58,22 @@ export class ExperimentRuntime {
     scope = normalizePolicyScope(scope);
     const definition = registration.definition;
     this.validateDefinition(definition);
+    const sourceHandlers = registration.handlers;
     const handlers = Object.fromEntries(
-      Object.getOwnPropertyNames(registration.handlers).map((id) => [
-        id,
-        registration.handlers[id],
-      ]),
+      definition.variants.flatMap(({ id }) =>
+        Object.hasOwn(sourceHandlers, id) ? [[id, sourceHandlers[id]] as const] : [],
+      ),
     );
     if (
       definition.variants.some(
         (variant) =>
           !Object.hasOwn(handlers, variant.id) || typeof handlers[variant.id] !== "function",
       ) ||
-      Object.keys(handlers).some((id) => !definition.variants.some((variant) => variant.id === id))
+      Object.getOwnPropertyNames(sourceHandlers).some(
+        (id) =>
+          Object.hasOwn(sourceHandlers, id) &&
+          !definition.variants.some((variant) => variant.id === id),
+      )
     )
       throw new ExperimentProblem(
         "invalid",

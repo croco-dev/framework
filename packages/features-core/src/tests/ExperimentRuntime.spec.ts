@@ -61,17 +61,25 @@ async function fixture(overrides: Partial<ExperimentRegistration> = {}) {
 }
 
 describe("ExperimentRuntime", () => {
-  it.each(["constructor", "toString", "missing"])(
-    "rejects a missing own handler before registering the experiment: %s",
-    async (id) => {
+  it.each([
+    { id: "constructor", phantom: false },
+    { id: "toString", phantom: false },
+    { id: "missing", phantom: false },
+    { id: "constructor", phantom: true },
+    { id: "toString", phantom: true },
+  ])(
+    "rejects a missing own handler before registering the experiment: $id (phantom: $phantom)",
+    async ({ id, phantom }) => {
       const store = new InMemoryExperimentStore();
       const write = vi.spyOn(store, "register");
       const runtime = new ExperimentRuntime({ store, authorization: { authorize: () => true } });
+      const handlers = phantom ? new Proxy({}, { ownKeys: () => [id] }) : {};
+      expect(Object.hasOwn(handlers, id)).toBe(false);
       await expect(
         runtime.register(
           {
             definition: { ...definition, variants: [{ id, value: "chosen", weight: 10000 }] },
-            handlers: {},
+            handlers,
             eligibility: () => ({ status: "eligible" }),
           },
           scope,
@@ -111,30 +119,35 @@ describe("ExperimentRuntime", () => {
     },
   );
   it.each([
-    ["constructor", true],
-    ["toString", true],
-    ["__proto__", true],
-    ["toString", false],
-  ])("executes an explicit own handler (%s, enumerable: %s)", async (id, enumerable) => {
-    const handler = vi.fn((context) => ({ selected: id, request: context.request }));
-    const handlers = Object.defineProperty({}, id, { value: handler, enumerable });
-    const { runtime } = await fixture({
-      definition: { ...definition, variants: [{ id, value: "chosen", weight: 10000 }] },
-      handlers,
-    });
-    await runtime.start(transition);
-    const assigned = await runtime.assign(input);
-    if (assigned.status !== "assigned") throw new Error("Expected assignment");
-    expect(assigned.assignment.variant).toBe(id);
-    expect(
-      await runtime.treat({
-        ...input,
-        assignmentId: assigned.assignment.id,
-        context: { request: 42 },
-      }),
-    ).toEqual({ status: "treated", value: { selected: id, request: 42 } });
-    expect(handler).toHaveBeenCalledExactlyOnceWith({ request: 42 });
-  });
+    { id: "constructor", enumerable: true, proxy: false },
+    { id: "toString", enumerable: true, proxy: false },
+    { id: "__proto__", enumerable: true, proxy: false },
+    { id: "toString", enumerable: false, proxy: false },
+    { id: "constructor", enumerable: true, proxy: true },
+  ])(
+    "executes an explicit own handler ($id, enumerable: $enumerable, proxy: $proxy)",
+    async ({ id, enumerable, proxy }) => {
+      const handler = vi.fn((context) => ({ selected: id, request: context.request }));
+      const own = Object.defineProperty({}, id, { value: handler, enumerable });
+      const handlers = proxy ? new Proxy(own, {}) : own;
+      const { runtime } = await fixture({
+        definition: { ...definition, variants: [{ id, value: "chosen", weight: 10000 }] },
+        handlers,
+      });
+      await runtime.start(transition);
+      const assigned = await runtime.assign(input);
+      if (assigned.status !== "assigned") throw new Error("Expected assignment");
+      expect(assigned.assignment.variant).toBe(id);
+      expect(
+        await runtime.treat({
+          ...input,
+          assignmentId: assigned.assignment.id,
+          context: { request: 42 },
+        }),
+      ).toEqual({ status: "treated", value: { selected: id, request: 42 } });
+      expect(handler).toHaveBeenCalledExactlyOnceWith({ request: 42 });
+    },
+  );
   it("keeps the validated handler snapshot when caller input changes during authorization", async () => {
     const handler = vi.fn(() => "registered handler");
     const replacement = vi.fn(() => "replacement handler");

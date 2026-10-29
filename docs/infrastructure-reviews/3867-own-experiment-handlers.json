@@ -6,7 +6,7 @@
       "classification": "pure-contract",
       "reason": "Require exactly the explicitly owned callable experiment handlers, preserve the validated snapshot and reject inherited treatment functions without changing public signatures or persisted experiment records.",
       "files": {
-        "packages/features-core/src/libs/ExperimentRuntime.ts": "d5af112091b3108d6c4ddff7f8985d91187635d3d0215ea3dee5fbbe3dcc1bf6"
+        "packages/features-core/src/libs/ExperimentRuntime.ts": "3ed26902eb10234bb10e28bbeb981246144375af650b54c3dbced306e1fb979a"
       },
       "catalogRuntimes": [],
       "profiles": {
