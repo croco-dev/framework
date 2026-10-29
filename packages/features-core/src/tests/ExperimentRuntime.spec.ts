@@ -61,6 +61,134 @@ async function fixture(overrides: Partial<ExperimentRegistration> = {}) {
 }
 
 describe("ExperimentRuntime", () => {
+  it.each(["constructor", "toString", "missing"])(
+    "rejects a missing own handler before registering the experiment: %s",
+    async (id) => {
+      const store = new InMemoryExperimentStore();
+      const write = vi.spyOn(store, "register");
+      const runtime = new ExperimentRuntime({ store, authorization: { authorize: () => true } });
+      await expect(
+        runtime.register(
+          {
+            definition: { ...definition, variants: [{ id, value: "chosen", weight: 10000 }] },
+            handlers: {},
+            eligibility: () => ({ status: "eligible" }),
+          },
+          scope,
+          "operator",
+        ),
+      ).rejects.toMatchObject({ code: "features/experiment/invalid" });
+      expect(write).not.toHaveBeenCalled();
+      expect(await store.list(scope)).toEqual([]);
+    },
+  );
+  it.each(["inherited", "non-callable", "extra", "non-enumerable extra"])(
+    "rejects handlers that do not exactly match the declared variants: %s",
+    async (kind) => {
+      const store = new InMemoryExperimentStore();
+      const write = vi.spyOn(store, "register");
+      const runtime = new ExperimentRuntime({ store, authorization: { authorize: () => true } });
+      const handlers = { control: () => false, treatment: () => true };
+      if (kind === "inherited") {
+        Object.setPrototypeOf(handlers, { treatment: handlers.treatment });
+        Reflect.deleteProperty(handlers, "treatment");
+      } else if (kind === "non-callable") {
+        Object.defineProperty(handlers, "treatment", { value: "not a function" });
+      } else {
+        Object.defineProperty(handlers, "unused", {
+          value: () => "unused",
+          enumerable: kind === "extra",
+        });
+      }
+      await expect(
+        runtime.register(
+          { definition, handlers, eligibility: () => ({ status: "eligible" }) },
+          scope,
+          "operator",
+        ),
+      ).rejects.toMatchObject({ code: "features/experiment/invalid" });
+      expect(write).not.toHaveBeenCalled();
+    },
+  );
+  it.each([
+    ["constructor", true],
+    ["toString", true],
+    ["__proto__", true],
+    ["toString", false],
+  ])("executes an explicit own handler (%s, enumerable: %s)", async (id, enumerable) => {
+    const handler = vi.fn((context) => ({ selected: id, request: context.request }));
+    const handlers = Object.defineProperty({}, id, { value: handler, enumerable });
+    const { runtime } = await fixture({
+      definition: { ...definition, variants: [{ id, value: "chosen", weight: 10000 }] },
+      handlers,
+    });
+    await runtime.start(transition);
+    const assigned = await runtime.assign(input);
+    if (assigned.status !== "assigned") throw new Error("Expected assignment");
+    expect(assigned.assignment.variant).toBe(id);
+    expect(
+      await runtime.treat({
+        ...input,
+        assignmentId: assigned.assignment.id,
+        context: { request: 42 },
+      }),
+    ).toEqual({ status: "treated", value: { selected: id, request: 42 } });
+    expect(handler).toHaveBeenCalledExactlyOnceWith({ request: 42 });
+  });
+  it("keeps the validated handler snapshot when caller input changes during authorization", async () => {
+    const handler = vi.fn(() => "registered handler");
+    const replacement = vi.fn(() => "replacement handler");
+    const handlers = { constructor: handler };
+    const store = new InMemoryExperimentStore();
+    const runtime = new ExperimentRuntime({
+      store,
+      authorization: {
+        authorize: ({ action }) => {
+          if (action === "register") handlers.constructor = replacement;
+          return true;
+        },
+      },
+    });
+    await runtime.register(
+      {
+        definition: {
+          ...definition,
+          variants: [{ id: "constructor", value: "chosen", weight: 10000 }],
+        },
+        handlers,
+        eligibility: () => ({ status: "eligible" }),
+      },
+      scope,
+      "operator",
+    );
+    await runtime.start(transition);
+    const assigned = await runtime.assign(input);
+    if (assigned.status !== "assigned") throw new Error("Expected assignment");
+    expect(await runtime.treat({ ...input, assignmentId: assigned.assignment.id })).toEqual({
+      status: "treated",
+      value: "registered handler",
+    });
+    expect(handler).toHaveBeenCalledOnce();
+    expect(replacement).not.toHaveBeenCalled();
+  });
+  it.each(["constructor", "toString", "__proto__"])(
+    "rejects an admitted assignment without its own registered handler: %s",
+    async (variant) => {
+      const { runtime, store, handlers } = await fixture();
+      await runtime.start(transition);
+      const assigned = await runtime.assign(input);
+      if (assigned.status !== "assigned") throw new Error("Expected assignment");
+      vi.spyOn(store, "admit").mockResolvedValue({
+        status: "admitted",
+        assignment: { ...assigned.assignment, variant },
+      });
+      await expect(
+        runtime.treat({ ...input, assignmentId: assigned.assignment.id }),
+      ).rejects.toMatchObject({ code: "features/experiment/conflict" });
+      expect(handlers.control).not.toHaveBeenCalled();
+      expect(handlers.treatment).not.toHaveBeenCalled();
+    },
+  );
   it("requires explicit evaluation revision and rejects an untyped missing revision", async () => {
     // @ts-expect-error Evaluated results require the application revision even with provider metadata.
     const missingRevision: DetailedEvaluation = {

@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "features-core",
+      "classification": "pure-contract",
+      "reason": "Require exactly the explicitly owned callable experiment handlers, preserve the validated snapshot and reject inherited treatment functions without changing public signatures or persisted experiment records.",
+      "files": {
+        "packages/features-core/src/libs/ExperimentRuntime.ts": "d5af112091b3108d6c4ddff7f8985d91187635d3d0215ea3dee5fbbe3dcc1bf6"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Handler own-property validation and snapshots are JavaScript object operations independent of the Kubernetes Node Host; no host capability, provider, storage or lifecycle requirement changes.",
+          "providers": [],
+          "constraints": [
+            "Existing runtime catalog claims remain unchanged; this review does not certify deployment or provider support."
+          ],
+          "references": [
+            "packages/features-core/src/libs/ExperimentRuntime.ts",
+            "packages/features-core/src/tests/ExperimentRuntime.spec.ts",
+            "docs/package-catalog.json"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Handler own-property validation and snapshots are JavaScript object operations independent of the Lambda Host; no host capability, provider, storage or lifecycle requirement changes.",
+          "providers": [],
+          "constraints": [
+            "Existing runtime catalog claims remain unchanged; this review does not certify deployment or provider support."
+          ],
+          "references": [
+            "packages/features-core/src/libs/ExperimentRuntime.ts",
+            "packages/features-core/src/tests/ExperimentRuntime.spec.ts",
+            "docs/package-catalog.json"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Handler own-property validation and snapshots are JavaScript object operations independent of the Workers or explicit Node Container Host; no host capability, provider, storage or lifecycle requirement changes.",
+          "providers": [],
+          "constraints": [
+            "Existing runtime catalog claims remain unchanged; this review does not certify deployment or provider support."
+          ],
+          "references": [
+            "packages/features-core/src/libs/ExperimentRuntime.ts",
+            "packages/features-core/src/tests/ExperimentRuntime.spec.ts",
+            "docs/package-catalog.json"
+          ]
+        }
+      }
+    }
+  ]
+}
