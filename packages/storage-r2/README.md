@@ -116,7 +116,7 @@ pnpm --filter @croco/storage-r2 test -- src/tests/R2LiveSmoke.spec.ts
 `@croco/storage-r2/workers`의 `R2BindingStorageProvider`는 Worker의 R2 binding을 직접 사용합니다.
 루트 진입점의 S3 SDK 제공자는 Node/Lambda용으로 유지됩니다. Worker에는 `nodejs_compat`이 필요합니다.
 
-```typescript
+```typescript typecheck
 import { R2BindingStorageProvider } from "@croco/storage-r2/workers";
 import type { R2BucketBinding } from "@croco/storage-r2/workers";
 
