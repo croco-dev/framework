@@ -194,3 +194,15 @@ provider SDK and uses no in-memory SaaS replacement. Local demo code is separate
 unavailable for this profile. `profile:check` validates the bootstrap graph while
 `profile:smoke:real` refuses full SaaS promotion. Real provider support and certification
 require separate implementation, connection and execution evidence.
+
+### Security dependency resolution
+
+Generated pnpm workspaces pin `graphql-scalars` to `2.0.1` and `systeminformation` to
+`5.33.16` through workspace overrides. These resolve GHSA-x8rm-f576-gq67 and
+GHSA-3f7j-7jwc-fxfj. Keep these overrides when updating an existing generated app.
+TypeGraphQL 2.0.0-rc.3 still declares a `graphql-scalars` 1.x peer; the override supplies
+the tested GraphQL 16-compatible 2.0.1 implementation instead of installing a vulnerable
+1.x peer. Croco's repository overrides do not propagate into independently installed
+published packages. Existing consumers must apply equivalent root overrides; merely
+updating a Croco package or adding a direct scalar dependency can leave a nested 1.x copy.
+This change does not certify a Windows deployment or change supported infrastructure.

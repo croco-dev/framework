@@ -4,13 +4,14 @@ import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { resolve, join } from "node:path";
 import { build } from "esbuild";
+import { GraphQLTimestamp } from "type-graphql";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { compileDiGraph, writeDiGraph } from "@croco/esbuild-plugin";
 import * as frameworkContext from "@croco/framework-context";
 import { Container, Context } from "@croco/framework-context";
 import { createApplicationRuntime } from "@croco/framework-module";
 import * as graphqlProtocol from "@croco/protocols-graphql";
-import { GraphQLResolver, Query } from "@croco/protocols-graphql";
+import { Arg, GraphQLResolver, Query } from "@croco/protocols-graphql";
 import { SchemaCompiler } from "../libs/SchemaCompiler";
 import type { GeneratedDiGraph } from "@croco/framework-context";
 import type * as GraphQL from "graphql";
@@ -21,6 +22,42 @@ const { graphql } = createRequire(import.meta.url)("graphql") as typeof GraphQL;
 describe("SchemaCompiler resolver injection", () => {
   beforeEach(() => Container.reset());
   afterEach(() => Container.reset());
+
+  it("preserves TypeGraphQL ISO date and timestamp coercion with the patched scalar peer", async () => {
+    @GraphQLResolver()
+    class DateResolver {
+      @Query(() => Date)
+      isoDate(@Arg("value", () => Date) value: Date): Date {
+        return value;
+      }
+
+      @Query(() => GraphQLTimestamp)
+      timestamp(@Arg("value", () => GraphQLTimestamp) value: Date): Date {
+        return value;
+      }
+    }
+    const schema = await SchemaCompiler.compileSchema({
+      resolvers: [DateResolver],
+      autoDiscover: false,
+      validate: false,
+    });
+    const source =
+      "query($iso: DateTimeISO!, $stamp: Timestamp!) { isoDate(value: $iso) timestamp(value: $stamp) }";
+    expect(
+      await graphql({
+        schema,
+        source,
+        variableValues: { iso: "2026-10-28T12:34:56.789Z", stamp: 1_700_000_000_123 },
+      }),
+    ).toEqual({ data: { isoDate: "2026-10-28T12:34:56.789Z", timestamp: 1_700_000_000_123 } });
+    const invalid = await graphql({
+      schema,
+      source,
+      variableValues: { iso: "not-a-date", stamp: 1_700_000_000_123 },
+    });
+    expect(invalid.errors).toHaveLength(1);
+    expect(invalid.data).toBeUndefined();
+  });
 
   it("resolves generated constructor dependencies in the schema application and current request", async () => {
     const directory = realpathSync(mkdtempSync(join(tmpdir(), "croco-graphql-di-")));

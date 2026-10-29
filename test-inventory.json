@@ -5772,6 +5772,12 @@
       "owner": "@croco/telemetry-sdk-node"
     },
     {
+      "path": "packages/telemetry-sdk-node/src/tests/HostMetricsSecurity.spec.ts",
+      "lane": "fast",
+      "qualifiers": ["coverage"],
+      "owner": "@croco/telemetry-sdk-node"
+    },
+    {
       "path": "packages/telemetry-sdk-node/src/tests/LambdaPreset.spec.ts",
       "lane": "fast",
       "qualifiers": ["coverage"],
@@ -6025,6 +6031,12 @@
     },
     {
       "path": "packages/transports-graphql/src/tests/GraphQLFetchHandler.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/transports-graphql"
+    },
+    {
+      "path": "packages/transports-graphql/src/tests/GraphQLScalarSecurity.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/transports-graphql"

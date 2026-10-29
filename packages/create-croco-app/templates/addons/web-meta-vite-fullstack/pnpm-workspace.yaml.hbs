@@ -2,6 +2,9 @@ packages:
   - 'api-worker'
   - 'ssr-worker'
   - 'libs/**/*'
+overrides:
+  graphql-scalars: 2.0.1
+  systeminformation: 5.33.16
 patchedDependencies:
   tsup@8.5.1: patches/tsup@8.5.1.patch
 allowBuilds:
