@@ -58,12 +58,21 @@ export class ExperimentRuntime {
     scope = normalizePolicyScope(scope);
     const definition = registration.definition;
     this.validateDefinition(definition);
+    const sourceHandlers = registration.handlers;
+    const handlers = Object.fromEntries(
+      definition.variants.flatMap(({ id }) =>
+        Object.hasOwn(sourceHandlers, id) ? [[id, sourceHandlers[id]] as const] : [],
+      ),
+    );
     if (
       definition.variants.some(
-        (variant) => typeof registration.handlers[variant.id] !== "function",
+        (variant) =>
+          !Object.hasOwn(handlers, variant.id) || typeof handlers[variant.id] !== "function",
       ) ||
-      Object.keys(registration.handlers).some(
-        (id) => !definition.variants.some((variant) => variant.id === id),
+      Object.getOwnPropertyNames(sourceHandlers).some(
+        (id) =>
+          Object.hasOwn(sourceHandlers, id) &&
+          !definition.variants.some((variant) => variant.id === id),
       )
     )
       throw new ExperimentProblem(
@@ -88,7 +97,7 @@ export class ExperimentRuntime {
       ...registration,
       codeRevision: definition.revision,
       definition: structuredClone(definition),
-      handlers: { ...registration.handlers },
+      handlers,
     });
     return record;
   }
@@ -366,8 +375,11 @@ export class ExperimentRuntime {
       this.now(),
     );
     if (admission.status !== "admitted") return admission;
-    const handler = registration.handlers[admission.assignment.variant];
-    if (!handler)
+    const variant = admission.assignment.variant;
+    const handler = Object.hasOwn(registration.handlers, variant)
+      ? registration.handlers[variant]
+      : undefined;
+    if (typeof handler !== "function")
       throw new ExperimentProblem("conflict", "Assignment handler registration is unavailable");
     return { status: "treated", value: await handler(input.context ?? {}) };
   }
