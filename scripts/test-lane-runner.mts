@@ -484,15 +484,23 @@ export function readPlaywrightExecutionEvidence(
       for (const test of spec.tests ?? []) {
         const fullName = `${name}${test.projectName ? ` [${test.projectName}]` : ""}`;
         if (!test.results?.length) assertions.push({ fullName });
+        const expectedStatus = test.expectedStatus ?? "passed";
         for (const result of test.results ?? []) {
-          assertions.push({ status: result.status, fullName });
+          // Skips and absent results never prove execution, even when expected.
+          const status =
+            result.status === "skipped" || result.status === undefined
+              ? result.status
+              : result.status === expectedStatus
+                ? "passed"
+                : "failed";
+          assertions.push({ status, fullName });
         }
-        // Completion retains every attempt; failure diagnostics follow terminal expectations.
+        // Completion retains every normalized attempt; diagnostics follow terminal expectations.
         const finalStatus = test.results?.at(-1)?.status;
         if (
           finalStatus !== undefined &&
           finalStatus !== "skipped" &&
-          finalStatus !== (test.expectedStatus ?? "passed")
+          finalStatus !== expectedStatus
         ) {
           file.failed = true;
         }
