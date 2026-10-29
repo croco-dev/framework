@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "referral-core",
+      "classification": "pure-contract",
+      "reason": "Reject an existing link ID with a different token hash using the existing PostgreSQL duplicate-claim rule; equal hashes replay the stored link without replacing expiry or revocation.",
+      "files": {
+        "packages/referral-core/src/libs/InMemoryReferralStore.ts": "7d2c1ae65d54defbcb1992d3417b7131dea161c7d0cf6a5631ac5fd61c354b5f"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Link identity comparison uses only the process-local store and existing Problem contract; it adds no host capability, I/O, storage schema or lifecycle requirement.",
+          "providers": ["@croco/referral-core/InMemoryReferralStore"],
+          "constraints": [
+            "Process-local state remains non-durable. No deployed infrastructure or PostgreSQL execution is certified."
+          ],
+          "references": [
+            "packages/referral-core/src/libs/InMemoryReferralStore.ts",
+            "packages/referral-drizzle/src/libs/PostgresReferralStore.ts",
+            "packages/referral-core/src/tests/InMemoryReferralStore.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Link identity comparison uses only the process-local store and existing Problem contract; it adds no host capability, I/O, storage schema or lifecycle requirement.",
+          "providers": ["@croco/referral-core/InMemoryReferralStore"],
+          "constraints": [
+            "Process-local state remains non-durable. No deployed infrastructure or PostgreSQL execution is certified."
+          ],
+          "references": [
+            "packages/referral-core/src/libs/InMemoryReferralStore.ts",
+            "packages/referral-drizzle/src/libs/PostgresReferralStore.ts",
+            "packages/referral-core/src/tests/InMemoryReferralStore.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Link identity comparison uses only the process-local store and existing Problem contract; it adds no host capability, I/O, storage schema or lifecycle requirement.",
+          "providers": ["@croco/referral-core/InMemoryReferralStore"],
+          "constraints": [
+            "Process-local state remains non-durable. No deployed infrastructure or PostgreSQL execution is certified."
+          ],
+          "references": [
+            "packages/referral-core/src/libs/InMemoryReferralStore.ts",
+            "packages/referral-drizzle/src/libs/PostgresReferralStore.ts",
+            "packages/referral-core/src/tests/InMemoryReferralStore.spec.ts"
+          ]
+        }
+      }
+    }
+  ]
+}

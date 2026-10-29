@@ -7,6 +7,7 @@ import { ReferralService } from "../libs/ReferralService";
 import {
   ReferralAttributionNotFoundProblem,
   ReferralBudgetExhaustedProblem,
+  ReferralDuplicateClaimProblem,
 } from "../libs/problems";
 import type { ReferralTx } from "../libs/ReferralStore";
 import type {
@@ -186,7 +187,69 @@ atomicStoreConformance<ReferralTx>(
   },
 );
 
+describe("InMemoryReferralStore link identity", () => {
+  it.each([false, true])(
+    "rejects a different hash without changing a revoked=%s link",
+    async (revoked) => {
+      const store = new InMemoryReferralStore();
+      await store.saveLink(link);
+      if (revoked) await store.revokeLink(link.id, new Date("2026-10-02T00:00:00Z"));
+      const before = await store.getLink(link.id);
+
+      await expect(
+        store.saveLink({ ...link, tokenHash: "replacement-hash" }),
+      ).rejects.toBeInstanceOf(ReferralDuplicateClaimProblem);
+
+      expect(await store.getLink(link.id)).toEqual(before);
+      expect(await store.getLinkByTokenHash(link.tokenHash)).toEqual(before);
+      expect(await store.getLinkByTokenHash("replacement-hash")).toBeNull();
+    },
+  );
+
+  it("replays the stored link with the same hash without extending or restoring it", async () => {
+    const store = new InMemoryReferralStore();
+    expect(await store.saveLink(link)).toEqual({ created: true, link });
+    const revoked = await store.revokeLink(link.id, new Date("2026-10-02T00:00:00Z"));
+
+    const replay = await store.saveLink({ ...link, expiresAt: new Date("2028-01-01T00:00:00Z") });
+
+    expect(replay).toEqual({ created: false, link: revoked });
+    replay.link.expiresAt.setTime(0);
+    expect(await store.getLinkByTokenHash(link.tokenHash)).toEqual(revoked);
+  });
+});
+
 describe("InMemoryReferralStore service atomicity", () => {
+  it("rejects a generated replacement token before recording link creation", async () => {
+    const store = new InMemoryReferralStore();
+    let nextToken = 0;
+    const service = new ReferralService({
+      store,
+      clock: () => new Date(now),
+      tokens: { generateToken: () => `token-${++nextToken}`, hashToken: hashReferralToken },
+      fulfillment: {
+        fulfill: async () => ({ outcome: "granted", grantRef: "grant" }),
+        check: async () => null,
+      },
+    });
+    await service.registerProgram(program);
+    const input = { programId: program.id, referrer, linkId: "explicit-link", now };
+    const created = await service.createReferralLink(input);
+    expect(created.link.tokenHash).toBe(hashReferralToken(created.token));
+    expect(await store.getLinkByTokenHash(hashReferralToken(created.token))).toEqual(created.link);
+    const audits = await store.listAudits();
+
+    await expect(service.createReferralLink(input)).rejects.toBeInstanceOf(
+      ReferralDuplicateClaimProblem,
+    );
+
+    expect(await store.listAudits()).toEqual(audits);
+    expect(await store.getLink(created.link.id)).toEqual(created.link);
+    expect(await store.getLinkByTokenHash(hashReferralToken("token-2"))).toBeNull();
+    const replay = await service.createReferralLink({ ...input, token: created.token });
+    expect(replay).toEqual(created);
+  });
+
   it("does not expose, recover or qualify an attribution whose budget reservation failed", async () => {
     const store = new InMemoryReferralStore();
     const service = new ReferralService({
