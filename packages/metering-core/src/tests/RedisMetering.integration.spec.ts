@@ -963,6 +963,404 @@ describe.skipIf(!realResourcesEnabled)("Redis metering composition", () => {
     },
   );
 
+  it("reconciles transitive mixed-version identities before quota checks", async () => {
+    assert.isDefined(connection);
+    const storage = new RedisUsageStorage(createRedisClient(connection));
+    const usage = {
+      ...createUsageRecord("v3-key"),
+      id: "aaa:alias",
+      eventId: "shared-event",
+      value: 10,
+    };
+    const key = "usage2:tenant-atomic-record:api_calls:2024-01";
+    const legacyKey = "usage2:tenant-atomic-record:api_calls:2024-01-15";
+    await connection.client.zadd(legacyKey, usage.timestamp.getTime(), "legacy:10");
+    await connection.client.zadd(
+      key,
+      usage.timestamp.getTime(),
+      "v2-alias:10:v2." +
+        encodeURIComponent(JSON.stringify({ idempotencyKey: "legacy", eventId: "shared-event" })),
+    );
+    await storage.record(usage);
+    await storage.record({
+      ...usage,
+      id: "independent",
+      idempotencyKey: "independent",
+      eventId: undefined,
+      value: 3,
+    });
+    const query = {
+      tenantId: usage.tenantId,
+      meterId: usage.meterId,
+      period: "day" as const,
+      startDate: new Date("2024-01-15"),
+      endDate: new Date("2024-01-15T23:59:59.999Z"),
+    };
+    await expect(storage.getUsage(query)).resolves.toBe(13);
+    const next = { ...usage, id: "next", idempotencyKey: "next", eventId: undefined, value: 2 };
+    const quota = {
+      tenantId: usage.tenantId,
+      meterId: usage.meterId,
+      value: 2,
+      quota: 14,
+      allowOverQuota: false,
+      usageRecord: next,
+    };
+    await expect(storage.checkAndRecordWithinQuota(quota)).resolves.toEqual({
+      exceeded: true,
+      newUsage: 15,
+    });
+    expect(await connection.client.zcard(key)).toBe(3);
+    await expect(
+      storage.checkAndRecordWithinQuota({ ...quota, allowOverQuota: true }),
+    ).resolves.toEqual({ exceeded: true, newUsage: 15 });
+    await expect(storage.getUsage(query)).resolves.toBe(15);
+    await storage.deleteUsageRecords(query, await storage.fetchUsageRecords(query));
+    expect(await connection.client.zcard(key)).toBe(0);
+    expect(await connection.client.zcard(legacyKey)).toBe(0);
+  });
+
+  it.each(["value", "timestamp"] as const)(
+    "rejects conflicting mixed-version %s before quota or flush writes",
+    async (conflict) => {
+      assert.isDefined(connection);
+      const storage = new RedisUsageStorage(createRedisClient(connection));
+      const usage = { ...createUsageRecord("shared"), id: "new:alias", value: 10 };
+      const key = "usage2:tenant-atomic-record:api_calls:2024-01";
+      await connection.client.zadd(
+        key,
+        usage.timestamp.getTime(),
+        "old:10:v2." + encodeURIComponent(JSON.stringify({ idempotencyKey: "shared" })),
+      );
+      await storage.record({
+        ...usage,
+        value: conflict === "value" ? 11 : 10,
+        timestamp: new Date(usage.timestamp.getTime() + (conflict === "timestamp" ? 1 : 0)),
+      });
+      const query = {
+        tenantId: usage.tenantId,
+        meterId: usage.meterId,
+        period: "billing_cycle" as const,
+        startDate: new Date("2024-01-01"),
+        endDate: new Date("2024-01-31"),
+      };
+      await expect(storage.getUsage(query)).rejects.toBeInstanceOf(RedisProblem);
+      const next = { ...usage, id: "next", idempotencyKey: "next", value: 1 };
+      await expect(
+        storage.checkAndRecordWithinQuota({
+          tenantId: usage.tenantId,
+          meterId: usage.meterId,
+          value: 1,
+          quota: 100,
+          allowOverQuota: false,
+          usageRecord: next,
+        }),
+      ).rejects.toBeInstanceOf(RedisProblem);
+      await expect(storage.deleteUsageRecords(query, [usage])).rejects.toBeInstanceOf(RedisProblem);
+      expect(await connection.client.zcard(key)).toBe(2);
+      expect(
+        await connection.client.exists("idem2:record:tenant-atomic-record:api_calls:next"),
+      ).toBe(0);
+    },
+  );
+
+  it("keeps encoded IDs, legacy reads, quota totals and flush deletion consistent", async () => {
+    assert.isDefined(connection);
+    const storage = new RedisUsageStorage(createRedisClient(connection));
+    const usage = { ...createUsageRecord("dedupe:요청"), id: "request:1:🦀%3A", value: 10 };
+    const key = "usage2:tenant-atomic-record:api_calls:2024-01";
+    const query = {
+      tenantId: usage.tenantId,
+      meterId: usage.meterId,
+      period: "billing_cycle" as const,
+      startDate: new Date("2024-01-01"),
+      endDate: new Date("2024-01-31"),
+    };
+    await connection.client.zadd(key, usage.timestamp.getTime(), "legacy:3");
+    await connection.client.zadd(
+      key,
+      usage.timestamp.getTime(),
+      "prior:4:v2.%7B%22idempotencyKey%22%3A%22prior-key%22%7D",
+    );
+    await storage.record(usage);
+    await expect(storage.getUsage(query)).resolves.toBe(17);
+    const next = { ...usage, id: "next:2", idempotencyKey: "next-key", value: 2 };
+    const quota = {
+      tenantId: usage.tenantId,
+      meterId: usage.meterId,
+      quota: 18,
+      value: next.value,
+      allowOverQuota: false,
+      usageRecord: next,
+    };
+    await expect(storage.checkAndRecordWithinQuota(quota)).resolves.toEqual({
+      exceeded: true,
+      newUsage: 19,
+    });
+    await expect(storage.getUsage(query)).resolves.toBe(17);
+    await expect(
+      storage.checkAndRecordWithinQuota({ ...quota, allowOverQuota: true }),
+    ).resolves.toEqual({ exceeded: true, newUsage: 19 });
+    const records = await storage.fetchUsageRecords(query);
+    expect(records).toContainEqual(usage);
+    expect(records).toContainEqual(next);
+    expect(records.map(({ id, value, idempotencyKey }) => ({ id, value, idempotencyKey }))).toEqual(
+      expect.arrayContaining([
+        { id: "legacy", value: 3, idempotencyKey: "legacy" },
+        { id: "prior", value: 4, idempotencyKey: "prior-key" },
+      ]),
+    );
+    // An old partition can repeat a logical v2 record; reads reconcile it and deletion removes both representations.
+    await connection.client.zadd(
+      "usage2:tenant-atomic-record:api_calls:2024-01-15",
+      usage.timestamp.getTime(),
+      "prior:4:v2.%7B%22idempotencyKey%22%3A%22prior-key%22%7D",
+    );
+    const dayQuery = {
+      ...query,
+      period: "day" as const,
+      startDate: new Date("2024-01-15"),
+      endDate: new Date("2024-01-15T23:59:59.999Z"),
+    };
+    await expect(storage.getUsage(dayQuery)).resolves.toBe(19);
+    await storage.deleteUsageRecords(dayQuery, await storage.fetchUsageRecords(dayQuery));
+    await expect(storage.getUsage(dayQuery)).resolves.toBe(0);
+    expect(await connection.client.zcard(key)).toBe(0);
+    expect(await connection.client.zcard("usage2:tenant-atomic-record:api_calls:2024-01-15")).toBe(
+      0,
+    );
+  });
+
+  it("keeps valid UTF-8 boundary code points eligible for quota writes", async () => {
+    assert.isDefined(connection);
+    const storage = new RedisUsageStorage(createRedisClient(connection));
+    const boundary = String.fromCodePoint(
+      0x7f,
+      0x80,
+      0x7ff,
+      0x800,
+      0xd7ff,
+      0xe000,
+      0xffff,
+      0x10000,
+      0x10ffff,
+    );
+    const usage = {
+      ...createUsageRecord(boundary),
+      id: boundary,
+      eventId: boundary,
+      metadata: { [boundary]: boundary },
+      value: 10,
+    };
+    await storage.record(usage);
+    const next = { ...usage, id: "next", idempotencyKey: "next", eventId: undefined, value: 2 };
+    await expect(
+      storage.checkAndRecordWithinQuota({
+        tenantId: usage.tenantId,
+        meterId: usage.meterId,
+        value: 2,
+        quota: 12,
+        allowOverQuota: false,
+        usageRecord: next,
+      }),
+    ).resolves.toEqual({ exceeded: false, newUsage: 12 });
+    const query = {
+      tenantId: usage.tenantId,
+      meterId: usage.meterId,
+      period: "billing_cycle" as const,
+      startDate: new Date("2024-01-01"),
+      endDate: new Date("2024-01-31"),
+    };
+    await expect(storage.getUsage(query)).resolves.toBe(12);
+    await expect(storage.fetchUsageRecords(query)).resolves.toContainEqual(usage);
+  });
+
+  it("rejects unpaired envelope strings before writing usage or a dedupe marker", async () => {
+    assert.isDefined(connection);
+    const storage = new RedisUsageStorage(createRedisClient(connection));
+    const usage = { ...createUsageRecord("unpaired"), metadata: { tag: "\ud800" } };
+    await expect(storage.record(usage)).rejects.toBeInstanceOf(RedisProblem);
+    await expect(
+      storage.checkAndRecordWithinQuota({
+        tenantId: usage.tenantId,
+        meterId: usage.meterId,
+        value: usage.value,
+        quota: 100,
+        allowOverQuota: false,
+        usageRecord: usage,
+      }),
+    ).rejects.toBeInstanceOf(RedisProblem);
+    expect(await connection.client.zcard("usage2:tenant-atomic-record:api_calls:2024-01")).toBe(0);
+    expect(await connection.client.keys("idem2:*")).toEqual([]);
+  });
+
+  it.each([
+    { kind: "object", layers: 998, allowed: true },
+    { kind: "object", layers: 999, allowed: false },
+    { kind: "array", layers: 998, allowed: true },
+    { kind: "array", layers: 999, allowed: false },
+  ])("aligns $kind JSON nesting at $layers layers with Lua", async ({ kind, layers, allowed }) => {
+    assert.isDefined(connection);
+    const storage = new RedisUsageStorage(createRedisClient(connection));
+    let nested: unknown = 0;
+    for (let index = 0; index < layers; index += 1) {
+      nested = kind === "object" ? { nested } : [nested];
+    }
+    const usage = { ...createUsageRecord("depth"), value: 10, metadata: { nested } };
+    const next = { ...createUsageRecord("next"), value: 3 };
+    const quota = {
+      tenantId: usage.tenantId,
+      meterId: usage.meterId,
+      value: 3,
+      quota: 13,
+      allowOverQuota: false,
+      usageRecord: next,
+    };
+    const key = "usage2:tenant-atomic-record:api_calls:2024-01";
+    const query = {
+      tenantId: usage.tenantId,
+      meterId: usage.meterId,
+      period: "billing_cycle" as const,
+      startDate: new Date("2024-01-01"),
+      endDate: new Date("2024-01-31"),
+    };
+    if (allowed) {
+      await storage.record(usage);
+      await expect(storage.checkAndRecordWithinQuota(quota)).resolves.toEqual({
+        exceeded: false,
+        newUsage: 13,
+      });
+      await expect(storage.getUsage(query)).resolves.toBe(13);
+      return;
+    }
+    await expect(storage.record(usage)).rejects.toBeInstanceOf(RedisProblem);
+    await expect(
+      storage.checkAndRecordWithinQuota({ ...quota, usageRecord: usage, value: 10 }),
+    ).rejects.toBeInstanceOf(RedisProblem);
+    expect(await connection.client.zcard(key)).toBe(0);
+    const member = `deep:10:v3.${encodeURIComponent(JSON.stringify({ metadata: usage.metadata }))}`;
+    await connection.client.zadd(key, usage.timestamp.getTime(), member);
+    await expect(storage.getUsage(query)).rejects.toBeInstanceOf(RedisProblem);
+    await expect(storage.fetchUsageRecords(query)).rejects.toBeInstanceOf(RedisProblem);
+    await expect(storage.deleteUsageRecords(query, [usage])).rejects.toBeInstanceOf(RedisProblem);
+    await expect(storage.checkAndRecordWithinQuota(quota)).rejects.toBeInstanceOf(RedisProblem);
+    expect(await connection.client.zrange(key, 0, -1)).toEqual([member]);
+    expect(await connection.client.keys("idem2:*")).toEqual([]);
+  });
+
+  it("accepts valid JSON grammar without changing the shared Lua decoder", async () => {
+    assert.isDefined(connection);
+    const before = await connection.client.eval(
+      "return cjson.decode_invalid_numbers() and 1 or 0",
+      0,
+    );
+    const storage = new RedisUsageStorage(createRedisClient(connection));
+    const usage = {
+      ...createUsageRecord("json-grammar"),
+      value: 10,
+      metadata: {
+        note: 'NaN 1. "escaped" \\ end',
+        fraction: 1.5,
+        exponent: 1e21,
+        literalBrackets: "[".repeat(1_001),
+      },
+    };
+    await storage.record(usage);
+    await connection.client.zadd(
+      "usage2:tenant-atomic-record:api_calls:2024-01",
+      usage.timestamp.getTime(),
+      `legacy:2:${encodeURIComponent(' \t{ "source": "legacy" }\r\n')}`,
+    );
+    const next = { ...createUsageRecord("next"), value: 3 };
+    await expect(
+      storage.checkAndRecordWithinQuota({
+        tenantId: usage.tenantId,
+        meterId: usage.meterId,
+        value: 3,
+        quota: 15,
+        allowOverQuota: false,
+        usageRecord: next,
+      }),
+    ).resolves.toEqual({ exceeded: false, newUsage: 15 });
+    const query = {
+      tenantId: usage.tenantId,
+      meterId: usage.meterId,
+      period: "billing_cycle" as const,
+      startDate: new Date("2024-01-01"),
+      endDate: new Date("2024-01-31"),
+    };
+    await expect(storage.getUsage(query)).resolves.toBe(15);
+    await expect(storage.fetchUsageRecords(query)).resolves.toContainEqual(usage);
+    expect(
+      await connection.client.eval("return cjson.decode_invalid_numbers() and 1 or 0", 0),
+    ).toBe(before);
+  });
+
+  it.each([
+    "request:1:10",
+    "request:1:10:v2.%7B%7D",
+    "request:1:v2.invalid",
+    ...[
+      "%FF",
+      "%80",
+      "%C0%AF",
+      "%C2%41",
+      "%E0%80%AF",
+      "%ED%A0%80",
+      "%E2%82",
+      "%F0%80%80%AF",
+      "%F0%90%41%80",
+      "%F4%90%80%80",
+    ].map((id) => `${id}:10:v3.%7B%7D`),
+    "record:10:v3.%7B%22metadata%22%3A%7B%22tag%22%3A%22%FF%22%7D%7D",
+    ...[
+      { eventId: "\ud800" },
+      { idempotencyKey: "\ud800" },
+      { metadata: { tag: "\ud800" } },
+      { metadata: { ["\ud800"]: "tag" } },
+    ].map((envelope) => `record:10:v3.${encodeURIComponent(JSON.stringify(envelope))}`),
+    ...["NaN", "Infinity", "0x10", "01", "1."].map(
+      (value) => `record:10:v3.${encodeURIComponent(`{"metadata":{"value":${value}}}`)}`,
+    ),
+    `record:10:v3.${encodeURIComponent('{"metadata":{"tag":"line\nfeed"}}')}`,
+    ...[
+      '{"metadata":"\\ud800","metadata":{}}',
+      '{"idempotencyKey":"\\ud800","idempotencyKey":"valid"}',
+      `{"metadata":${"[".repeat(1_000)}0${"]".repeat(1_000)},"metadata":{}}`,
+      `{"metadata":${'{"nested":'.repeat(1_000)}0${"}".repeat(1_000)},"metadata":{}}`,
+    ].map((json) => `record:10:v3.${encodeURIComponent(json)}`),
+  ])("rejects invalid stored member %s in Lua before any write", async (member) => {
+    assert.isDefined(connection);
+    const storage = new RedisUsageStorage(createRedisClient(connection));
+    const usage = createUsageRecord("invalid-member");
+    const key = "usage2:tenant-atomic-record:api_calls:2024-01";
+    await connection.client.zadd(key, usage.timestamp.getTime(), member);
+    const query = {
+      tenantId: usage.tenantId,
+      meterId: usage.meterId,
+      period: "billing_cycle" as const,
+      startDate: new Date("2024-01-01"),
+      endDate: new Date("2024-01-31"),
+    };
+    await expect(storage.getUsage(query)).rejects.toBeInstanceOf(RedisProblem);
+    await expect(storage.fetchUsageRecords(query)).rejects.toBeInstanceOf(RedisProblem);
+    await expect(storage.deleteUsageRecords(query, [usage])).rejects.toBeInstanceOf(RedisProblem);
+    await expect(
+      storage.checkAndRecordWithinQuota({
+        tenantId: usage.tenantId,
+        meterId: usage.meterId,
+        value: usage.value,
+        quota: 100,
+        allowOverQuota: false,
+        usageRecord: usage,
+      }),
+    ).rejects.toBeInstanceOf(RedisProblem);
+    expect(await connection.client.zrange(key, 0, -1)).toEqual([member]);
+    expect(
+      await connection.client.exists("idem2:record:tenant-atomic-record:api_calls:invalid-member"),
+    ).toBe(0);
+  });
+
   it("computes an exact quota total across valid integer members", async () => {
     if (!connection) {
       throw new Error("Redis test resource did not start");

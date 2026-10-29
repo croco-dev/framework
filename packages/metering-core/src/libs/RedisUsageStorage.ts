@@ -22,6 +22,7 @@ type ReconciledUsageMember = {
   parsed: ParsedUsageMember;
   score?: number;
 };
+const MAX_USAGE_JSON_DEPTH = 1_000;
 
 function stableStringify(value: unknown): string {
   return JSON.stringify(value, (_key, nestedValue: unknown) => {
@@ -40,6 +41,42 @@ function stableStringify(value: unknown): string {
       ),
     );
   });
+}
+
+function parseUsageJson(json: string, operation: "SERIALIZE" | "ZRANGEBYSCORE"): unknown {
+  // Validate original tokens: JSON.parse discards overwritten duplicate properties before a reviver runs.
+  let depth = 0;
+  for (let index = 0; index < json.length; index += 1) {
+    const character = json[index];
+    if (character === '"') {
+      const start = index;
+      index += 1;
+      while (index < json.length) {
+        if (json[index] === "\\") {
+          index += 2;
+        } else if (json[index] === '"') {
+          break;
+        } else {
+          index += 1;
+        }
+      }
+      const token: unknown = JSON.parse(json.slice(start, index + 1));
+      if (typeof token === "string") {
+        encodeURIComponent(token);
+      }
+    } else if (character === "{" || character === "[") {
+      depth += 1;
+      if (depth > MAX_USAGE_JSON_DEPTH) {
+        throw new RedisProblem(
+          operation,
+          `Usage JSON exceeds the maximum depth of ${MAX_USAGE_JSON_DEPTH}`,
+        );
+      }
+    } else if (character === "}" || character === "]") {
+      depth -= 1;
+    }
+  }
+  return JSON.parse(json);
 }
 
 /**
@@ -137,18 +174,186 @@ if recordedResult then
   end
 end
 
-local records = redis.call('ZRANGEBYSCORE', usageKey, '-inf', '+inf')
-local currentUsage = 0
+-- URI components never contain raw colons, so extra fields are ambiguous legacy data.
+local function decodeComponent(component)
+  if string.find(string.gsub(component, '%%[%x][%x]', ''), '%%') then
+    return nil
+  end
+  local decoded = (string.gsub(component, '%%(%x%x)', function(hex)
+    return string.char(tonumber(hex, 16))
+  end))
+  -- Match decodeURIComponent: shortest UTF-8 sequences for Unicode scalar values only.
+  local index = 1
+  while index <= #decoded do
+    local first = string.byte(decoded, index)
+    if first <= 0x7F then
+      index = index + 1
+    else
+      local length = nil
+      local minimumSecond = 0x80
+      local maximumSecond = 0xBF
+      if first >= 0xC2 and first <= 0xDF then
+        length = 2
+      elseif first >= 0xE0 and first <= 0xEF then
+        length = 3
+        if first == 0xE0 then minimumSecond = 0xA0 end
+        if first == 0xED then maximumSecond = 0x9F end
+      elseif first >= 0xF0 and first <= 0xF4 then
+        length = 4
+        if first == 0xF0 then minimumSecond = 0x90 end
+        if first == 0xF4 then maximumSecond = 0x8F end
+      else
+        return nil
+      end
+      local second = string.byte(decoded, index + 1)
+      if not second or second < minimumSecond or second > maximumSecond then
+        return nil
+      end
+      for offset = 2, length - 1 do
+        local continuation = string.byte(decoded, index + offset)
+        if not continuation or continuation < 0x80 or continuation > 0xBF then
+          return nil
+        end
+      end
+      index = index + length
+    end
+  end
+  return decoded
+end
 
-for _, existingMember in ipairs(records) do
-  local usageValue = string.match(existingMember, '^[^:]+:([1-9]%d*):') or string.match(existingMember, '^[^:]+:([1-9]%d*)$')
+-- Isolate decoder settings from other scripts sharing Redis's Lua VM.
+if type(cjson.new) ~= 'function' then
+  return redis.error_reply('Usage quota evaluation requires an isolated Lua CJSON decoder')
+end
+local usageJson = cjson.new()
+usageJson.decode_invalid_numbers(false)
+usageJson.decode_max_depth(${MAX_USAGE_JSON_DEPTH})
+
+local function decodeUsageJson(encoded)
+  local decoded = decodeComponent(encoded)
+  if not decoded then return nil end
+  local start = 1
+  while start <= #decoded do
+    local byte = string.byte(decoded, start)
+    if byte ~= 0x20 and byte ~= 0x09 and byte ~= 0x0A and byte ~= 0x0D then break end
+    start = start + 1
+  end
+  if string.byte(decoded, start) ~= 0x7B then return nil end
+  local quoted = false
+  local escaped = false
+  for index = start, #decoded do
+    local byte = string.byte(decoded, index)
+    if quoted then
+      if byte < 0x20 then return nil end
+      if escaped then
+        escaped = false
+      elseif byte == 0x5C then
+        escaped = true
+      elseif byte == 0x22 then
+        quoted = false
+      end
+    elseif byte == 0x22 then
+      quoted = true
+    elseif byte < 0x20 and byte ~= 0x09 and byte ~= 0x0A and byte ~= 0x0D then
+      return nil
+    elseif byte == 0x2E then
+      -- CJSON accepts a missing fractional part; JSON.parse does not.
+      local nextByte = string.byte(decoded, index + 1)
+      if not nextByte or nextByte < 0x30 or nextByte > 0x39 then return nil end
+    end
+  end
+  local ok, parsed = pcall(usageJson.decode, decoded)
+  if not ok or type(parsed) ~= 'table' then return nil end
+  return parsed
+end
+
+local records = redis.call('ZRANGEBYSCORE', usageKey, '-inf', '+inf', 'WITHSCORES')
+local parents = {}
+local values = {}
+local scores = {}
+local firstIndexByIdentity = {}
+
+local function findRoot(index)
+  local root = index
+  while parents[root] ~= root do
+    root = parents[root]
+  end
+  while parents[index] ~= index do
+    local parent = parents[index]
+    parents[index] = root
+    index = parent
+  end
+  return root
+end
+
+for index = 1, #records, 2 do
+  local existingMember = records[index]
+  local numericScore = tonumber(records[index + 1])
+  if not numericScore or numericScore == math.huge or numericScore == -math.huge then
+    return redis.error_reply('Invalid stored usage score')
+  end
+  local id, usageValue, payload = string.match(existingMember, '^([^:]*):([1-9]%d*):([^:]*)$')
+  local envelope = nil
+  if not payload then
+    id, usageValue = string.match(existingMember, '^([^:]+):([1-9]%d*)$')
+  else
+    local version = string.sub(payload, 1, 3)
+    if version == 'v3.' then
+      id = decodeComponent(id)
+      if not id then
+        return redis.error_reply('Invalid stored usage ID')
+      end
+    elseif id == '' then
+      return redis.error_reply('Invalid stored usage ID')
+    end
+    if version == 'v2.' or version == 'v3.' then
+      payload = string.sub(payload, 4)
+    end
+    local parsed = decodeUsageJson(payload)
+    if not parsed then
+      return redis.error_reply('Invalid stored usage payload')
+    end
+    if version == 'v2.' or version == 'v3.' then
+      if (parsed.idempotencyKey ~= nil and type(parsed.idempotencyKey) ~= 'string') or
+         (parsed.eventId ~= nil and type(parsed.eventId) ~= 'string') then
+        return redis.error_reply('Invalid stored usage identity')
+      end
+      envelope = parsed
+    end
+  end
   local numericUsageValue = usageValue and tonumber(usageValue)
   if not numericUsageValue or numericUsageValue > ${MAX_USAGE_VALUE} then
     return redis.error_reply('Invalid stored usage value')
   end
-  currentUsage = currentUsage + numericUsageValue
-  if currentUsage > maxSafeInteger then
-    return redis.error_reply('Usage total exceeds the safe integer range')
+
+  parents[index] = index
+  values[index] = numericUsageValue
+  scores[index] = numericScore
+  local identities = { 'id:' .. id, 'idempotency:' .. (envelope and envelope.idempotencyKey or id) }
+  if envelope and envelope.eventId ~= nil then
+    table.insert(identities, 'event:' .. envelope.eventId)
+  end
+  for _, identity in ipairs(identities) do
+    local previousIndex = firstIndexByIdentity[identity]
+    if previousIndex then
+      local previousRoot = findRoot(previousIndex)
+      if values[previousRoot] ~= numericUsageValue or scores[previousRoot] ~= numericScore then
+        return redis.error_reply('Conflicting stored usage record across Redis members')
+      end
+      parents[findRoot(index)] = previousRoot
+    else
+      firstIndexByIdentity[identity] = index
+    end
+  end
+end
+
+local currentUsage = 0
+for index = 1, #records, 2 do
+  if parents[index] == index then
+    currentUsage = currentUsage + values[index]
+    if currentUsage > maxSafeInteger then
+      return redis.error_reply('Usage total exceeds the safe integer range')
+    end
   end
 end
 
@@ -490,6 +695,27 @@ return { exceeded and 1 or 0, newUsage }
           score,
         }))
       : members.map((member) => ({ member, parsed: this.parseUsageMember(member) }));
+    const reconciled = this.groupUsageMembers(parsedMembers).map(([first, ...duplicates]) => {
+      let preferred = first;
+      for (const candidate of duplicates) {
+        if (
+          this.getUsageMemberRichness(candidate.parsed) >
+          this.getUsageMemberRichness(preferred.parsed)
+        ) {
+          preferred = candidate;
+        }
+      }
+      return preferred;
+    });
+
+    return reconciled.flatMap(({ member, score }) =>
+      withScores ? [member, String(score)] : [member],
+    );
+  }
+
+  private groupUsageMembers<T extends ReconciledUsageMember>(
+    parsedMembers: T[],
+  ): Array<[T, ...T[]]> {
     const parents = parsedMembers.map((_, index) => index);
     const findRoot = (index: number): number => {
       let root = index;
@@ -516,13 +742,13 @@ return { exceeded and 1 or 0, newUsage }
       }
     });
 
-    const groups = new Map<number, ReconciledUsageMember[]>();
+    const groups = new Map<number, T[]>();
     parsedMembers.forEach((candidate, index) => {
       const root = findRoot(index);
       groups.set(root, [...(groups.get(root) ?? []), candidate]);
     });
 
-    const reconciled = Array.from(groups.values()).map((group) => {
+    return Array.from(groups.values()).map((group): [T, ...T[]] => {
       const [first, ...duplicates] = group;
       if (first === undefined) {
         throw new RedisProblem(
@@ -530,8 +756,6 @@ return { exceeded and 1 or 0, newUsage }
           "Stored usage reconciliation produced an empty group",
         );
       }
-
-      let preferred = first;
       for (const candidate of duplicates) {
         if (first.parsed.value !== candidate.parsed.value || first.score !== candidate.score) {
           throw new RedisProblem(
@@ -539,19 +763,9 @@ return { exceeded and 1 or 0, newUsage }
             `Conflicting stored usage record '${candidate.parsed.id}' across Redis partitions`,
           );
         }
-        if (
-          this.getUsageMemberRichness(candidate.parsed) >
-          this.getUsageMemberRichness(preferred.parsed)
-        ) {
-          preferred = candidate;
-        }
       }
-      return preferred;
+      return [first, ...duplicates];
     });
-
-    return reconciled.flatMap(({ member, score }) =>
-      withScores ? [member, String(score)] : [member],
-    );
   }
 
   private getUsageMemberIdentities(usage: Pick<UsageRecord, "id"> & UsageMemberEnvelope): string[] {
@@ -668,15 +882,21 @@ return { exceeded and 1 or 0, newUsage }
       "id" | "value" | "idempotencyKey" | "eventId" | "dimensions" | "metadata"
     >,
   ): string {
-    const base = `${usage.id}:${usage.value}`;
-    const envelope = {
-      idempotencyKey: usage.idempotencyKey,
-      eventId: usage.eventId,
-      dimensions: usage.dimensions,
-      metadata: usage.metadata,
-    };
+    try {
+      const base = `${encodeURIComponent(usage.id)}:${usage.value}`;
+      const envelope = {
+        idempotencyKey: usage.idempotencyKey,
+        eventId: usage.eventId,
+        dimensions: usage.dimensions,
+        metadata: usage.metadata,
+      };
 
-    return `${base}:v2.${encodeURIComponent(stableStringify(envelope))}`;
+      const payload = stableStringify(envelope);
+      parseUsageJson(payload, "SERIALIZE");
+      return `${base}:v3.${encodeURIComponent(payload)}`;
+    } catch (error) {
+      throw this.toRedisProblem("SERIALIZE", error);
+    }
   }
 
   private serializeLegacyUsageMember(
@@ -689,27 +909,38 @@ return { exceeded and 1 or 0, newUsage }
   }
 
   private parseUsageMember(member: string): ParsedUsageMember {
-    const parts = member.split(":");
-    const id = parts[0] ?? "";
-    const rawValue = parts[1] ?? "";
-    const value = Number(rawValue);
-    const payload = parts.length > 2 ? parts.slice(2).join(":") : undefined;
-    const envelope = payload?.startsWith("v2.")
-      ? this.decodeUsageEnvelope(payload.slice(3))
-      : undefined;
+    try {
+      const parts = member.split(":");
+      const rawId = parts[0] ?? "";
+      const rawValue = parts[1] ?? "";
+      const payload = parts[2];
+      const versioned = payload?.startsWith("v2.") || payload?.startsWith("v3.");
+      const encodedId = payload?.startsWith("v3.");
+      const value = Number(rawValue);
 
-    if (!/^[1-9]\d*$/.test(rawValue) || !Number.isSafeInteger(value) || value > MAX_USAGE_VALUE) {
-      throw new RedisProblem("ZRANGEBYSCORE", `Invalid stored usage value '${rawValue}'`);
+      if (parts.length < 2 || parts.length > 3 || (!encodedId && rawId.length === 0)) {
+        throw new RedisProblem("ZRANGEBYSCORE", "Invalid stored usage member boundaries");
+      }
+      const id = encodedId ? decodeURIComponent(rawId) : rawId;
+      const envelope = versioned ? this.decodeUsageEnvelope(payload.slice(3)) : undefined;
+      const metadata =
+        payload !== undefined && !versioned ? this.decodeMetadata(payload) : undefined;
+
+      if (!/^[1-9]\d*$/.test(rawValue) || !Number.isSafeInteger(value) || value > MAX_USAGE_VALUE) {
+        throw new RedisProblem("ZRANGEBYSCORE", `Invalid stored usage value '${rawValue}'`);
+      }
+
+      return {
+        id,
+        value,
+        idempotencyKey: envelope?.idempotencyKey,
+        eventId: envelope?.eventId,
+        dimensions: envelope?.dimensions,
+        metadata: envelope?.metadata ?? metadata,
+      };
+    } catch (error) {
+      throw this.toRedisProblem("ZRANGEBYSCORE", error);
     }
-
-    return {
-      id,
-      value,
-      idempotencyKey: envelope?.idempotencyKey,
-      eventId: envelope?.eventId,
-      dimensions: envelope?.dimensions,
-      metadata: envelope?.metadata ?? (payload ? this.decodeMetadata(payload) : undefined),
-    };
   }
 
   private parseScoredUsageMembers(
@@ -751,22 +982,23 @@ return { exceeded and 1 or 0, newUsage }
     return timestamp;
   }
 
-  private decodeMetadata(encodedMetadata: string): Record<string, unknown> | undefined {
-    try {
-      const decoded = decodeURIComponent(encodedMetadata);
-      const parsed = JSON.parse(decoded) as Record<string, unknown>;
-      return parsed;
-    } catch {
-      return undefined;
+  private decodeMetadata(encodedMetadata: string): Record<string, unknown> {
+    const parsed = parseUsageJson(decodeURIComponent(encodedMetadata), "ZRANGEBYSCORE");
+    if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
+      throw new RedisProblem("ZRANGEBYSCORE", "Invalid stored usage payload");
     }
+    return parsed as Record<string, unknown>;
   }
 
-  private decodeUsageEnvelope(encodedEnvelope: string): UsageMemberEnvelope | undefined {
-    try {
-      return JSON.parse(decodeURIComponent(encodedEnvelope)) as UsageMemberEnvelope;
-    } catch {
-      return undefined;
+  private decodeUsageEnvelope(encodedEnvelope: string): UsageMemberEnvelope {
+    const parsed = this.decodeMetadata(encodedEnvelope);
+    if (
+      (parsed.idempotencyKey !== undefined && typeof parsed.idempotencyKey !== "string") ||
+      (parsed.eventId !== undefined && typeof parsed.eventId !== "string")
+    ) {
+      throw new RedisProblem("ZRANGEBYSCORE", "Invalid stored usage identity");
     }
+    return parsed as UsageMemberEnvelope;
   }
 
   private sumUsageMembers(members: string[]): number {
@@ -942,32 +1174,55 @@ return { exceeded and 1 or 0, newUsage }
     }
 
     const membersByKey = new Map<string, Array<{ member: string; score: number }>>();
+    const storedMembers: Array<{
+      key: string;
+      member: string;
+      score: number;
+      parsed: ParsedUsageMember;
+    }> = [];
     for (const [key, keyRecords] of recordsByKey) {
-      const knownMembers = keyRecords.flatMap((record) => [
-        { member: this.serializeUsageMember(record), score: record.timestamp.getTime() },
-        { member: this.serializeLegacyUsageMember(record), score: record.timestamp.getTime() },
-      ]);
-      const storedMembers = await this.runRedisOperation("ZRANGEBYSCORE", () =>
+      membersByKey.set(
+        key,
+        keyRecords.flatMap((record) => [
+          { member: this.serializeUsageMember(record), score: record.timestamp.getTime() },
+          { member: this.serializeLegacyUsageMember(record), score: record.timestamp.getTime() },
+        ]),
+      );
+      const members = await this.runRedisOperation("ZRANGEBYSCORE", () =>
         this.redis.zrangebyscore(key, min, max, "WITHSCORES"),
       );
-      const exactMembers = this.parseScoredUsageMembers(storedMembers).filter(
-        ({ member, score }) => {
-          const parsed = this.parseUsageMember(member);
-          const parsedIdentities = new Set(this.getUsageMemberIdentities(parsed));
-          return keyRecords.some(
-            (record) =>
-              record.value === parsed.value &&
-              record.timestamp.getTime() === score &&
-              this.getUsageMemberIdentities(record).some((identity) =>
-                parsedIdentities.has(identity),
-              ),
-          );
-        },
-      );
+      for (const { member, score } of this.parseScoredUsageMembers(members)) {
+        storedMembers.push({ key, member, score, parsed: this.parseUsageMember(member) });
+      }
+    }
 
-      const uniqueMembers = new Map(
-        [...knownMembers, ...exactMembers].map((candidate) => [candidate.member, candidate]),
-      );
+    const requestedIdentities = new Set(
+      records.flatMap((record) =>
+        this.getUsageMemberIdentities(record).map((identity) =>
+          JSON.stringify([identity, record.value, record.timestamp.getTime()]),
+        ),
+      ),
+    );
+    for (const group of this.groupUsageMembers(storedMembers)) {
+      if (
+        !group.some(({ parsed, score }) =>
+          this.getUsageMemberIdentities(parsed).some((identity) =>
+            requestedIdentities.has(JSON.stringify([identity, parsed.value, score])),
+          ),
+        )
+      ) {
+        continue;
+      }
+      for (const { key, member, score } of group) {
+        const members = membersByKey.get(key);
+        if (members === undefined) {
+          throw new RedisProblem("ZREM", "Stored usage reconciliation found an unknown partition");
+        }
+        members.push({ member, score });
+      }
+    }
+    for (const [key, members] of membersByKey) {
+      const uniqueMembers = new Map(members.map((candidate) => [candidate.member, candidate]));
       membersByKey.set(key, [...uniqueMembers.values()]);
     }
 

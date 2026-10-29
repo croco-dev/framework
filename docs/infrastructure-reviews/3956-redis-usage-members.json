@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "metering-core",
+      "classification": "durable-provider",
+      "reason": "Preserve encodable usage IDs with a versioned member codec; align JavaScript reads, native Lua quota totals and flush deletion on logical identity groups and strict JSON/Unicode validation. New writes enforce the native CJSON 1000-level JSON boundary before storage. Quota decoding uses isolated CJSON controls and preserves shared decoder settings. Existing adapters and lifecycle ownership are reused; deployed-host and non-native provider execution remain unverified.",
+      "files": {
+        "packages/metering-core/src/libs/RedisUsageStorage.ts": "0f8bb17db49fd2bab8d39932da9c314fb972beaf4203da9888d7ef9ac7fa4e21"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "unverified",
+          "reason": "Reuse existing RedisClient and server-side Lua; local Redis conformance does not establish Node Host or Kubernetes execution.",
+          "providers": ["@croco/metering-core/RedisUsageStorage", "@croco/metering-upstash"],
+          "constraints": [
+            "Requires persistent Redis with existing scriptKeyAccess capabilities; all readers must understand v3 before writers resume.",
+            "Redis Lua must expose cjson.new, decode_invalid_numbers and decode_max_depth; JSON payload depth is limited to 1000. These controls were exercised on local native Redis, not live Upstash or a deployed Host."
+          ],
+          "references": [
+            "packages/metering-core/src/libs/RedisUsageStorage.ts",
+            "packages/metering-core/src/tests/RedisMetering.integration.spec.ts",
+            "packages/metering-upstash/README.md"
+          ]
+        },
+        "aws-lambda": {
+          "result": "unverified",
+          "reason": "Reuse existing RedisClient and server-side Lua; no Lambda invocation/host execution is claimed.",
+          "providers": ["@croco/metering-core/RedisUsageStorage", "@croco/metering-upstash"],
+          "constraints": [
+            "Await usage operations within invocation budgets; connection lifecycle remains with the adapter; coordinate reader/writer rollout.",
+            "Redis Lua must expose cjson.new, decode_invalid_numbers and decode_max_depth; JSON payload depth is limited to 1000. These controls were exercised on local native Redis, not live Upstash or a deployed Host."
+          ],
+          "references": [
+            "packages/metering-core/src/libs/RedisUsageStorage.ts",
+            "packages/metering-core/src/tests/RedisMetering.integration.spec.ts",
+            "packages/metering-upstash/README.md"
+          ]
+        },
+        "cloudflare": {
+          "result": "unverified",
+          "reason": "No Workers or Node Container execution is established by this stored-member codec change.",
+          "providers": ["@croco/metering-core/RedisUsageStorage", "@croco/metering-upstash"],
+          "constraints": [
+            "Requires an independently compatible RedisClient and Lua service; no Workers support claim is added.",
+            "Redis Lua must expose cjson.new, decode_invalid_numbers and decode_max_depth; JSON payload depth is limited to 1000. These controls were exercised on local native Redis, not live Upstash or a deployed Host."
+          ],
+          "references": [
+            "packages/metering-core/src/libs/RedisUsageStorage.ts",
+            "packages/metering-core/src/tests/RedisMetering.integration.spec.ts",
+            "packages/metering-upstash/README.md"
+          ]
+        }
+      }
+    }
+  ]
+}

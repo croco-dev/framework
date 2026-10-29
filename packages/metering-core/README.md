@@ -269,3 +269,34 @@ After a save or deletion failure, retry the flush normally. Already persisted re
 by the repository, and deletion removes only the supplied closed-cycle records. `recordsFlushed`
 counts records successfully processed by the flush, including records persisted by a previous attempt.
 `UsageStorage.deleteUsageRecords` remains optional for storage used without an aggregator.
+
+### Redis usage member compatibility
+
+`RedisUsageStorage` writes v3 sorted-set members with a URI-encoded usage ID, a separate
+integer amount and a URI-encoded envelope. IDs containing colons, Unicode or literal percent
+sequences retain their original identity. Reads and flush deletion also accept valid legacy
+`id:value[:encodedMetadata]` and v2 envelope members, including mixed-version partitions.
+Logical duplicates linked by ID, idempotency key or event ID count once in both reads and quota
+checks. Conflicting amounts or timestamps fail before quota writes. Existing idempotency markers
+and Redis key namespaces are unchanged.
+
+Unpaired Unicode surrogate code units in IDs or envelope string keys/values are rejected before
+storage. Valid Unicode scalar values, including supplementary characters, remain supported.
+JSON payloads allow at most 1,000 nested object/array levels, matching the
+[Lua CJSON default](https://www.kyne.au/~mark/software/lua-cjson-manual.html#decode_max_depth).
+For new writes, this count includes the envelope root. Payloads beyond this boundary are rejected
+before storage, and unsupported existing payloads fail explicitly.
+
+Compatible Redis services must provide Lua CJSON's `new`, `decode_invalid_numbers` and
+`decode_max_depth` controls. Quota evaluation uses a private decoder and preserves shared Lua
+decoder settings. Verify these controls on other Redis providers before rollout.
+
+Deploy readers that understand v3 before resuming writers; old readers cannot safely consume
+v3 members. Pause usage writes while coordinating this upgrade across all processes sharing
+the Redis usage namespace. Do not roll back to an older reader while v3 members remain.
+
+Ambiguous legacy members (for example `request:1:10`) or malformed payloads fail with
+`metering/redis-error`; quota evaluation rejects them before writing usage or a dedupe marker.
+The adapter does not guess an original ID or amount. Reconcile such records against the
+application's authoritative usage source before resuming the affected reads or quota writes.
+Local Redis conformance is separate from deployed-host verification and provider certification.

@@ -82,6 +82,79 @@ describe("RedisUsageStorage", () => {
     ]);
   });
 
+  it.each(["request:1", "요청:🦀%3A", "v3", ""])(
+    "preserves usage identity and amount for ID %j",
+    async (id) => {
+      const usage = { ...createUsageRecord("dedupe:한글"), id, value: 10 };
+      await storage.record(usage);
+      const member = String(vi.mocked(mockRedis.eval).mock.calls[0]?.[2][1]);
+      vi.mocked(mockRedis.zrangebyscore).mockResolvedValue(withScores([member]));
+      const query: UsageQueryOptions = {
+        tenantId: usage.tenantId,
+        meterId: usage.meterId,
+        period: "billing_cycle",
+        startDate: new Date("2024-01-01"),
+        endDate: new Date("2024-01-31"),
+      };
+      await expect(storage.fetchUsageRecords(query)).resolves.toEqual([usage]);
+      await expect(storage.getUsage(query)).resolves.toBe(10);
+    },
+  );
+
+  it.each([
+    "request:1:10",
+    "request:1:10:v2.%7B%7D",
+    "request:1:v2.invalid",
+    "request:1:v3.%7B%7D:extra",
+    "%ZZ:10:v3.%7B%7D",
+    "%FF:10:v3.%7B%7D",
+    "record:10:v3.%7B%22metadata%22%3A%7B%22tag%22%3A%22%FF%22%7D%7D",
+    "record:10:v3.%7B%22metadata%22%3A%22%5Cud800%22%2C%22metadata%22%3A%7B%7D%7D",
+  ])(
+    "rejects ambiguous or malformed member %s instead of returning a different amount",
+    async (member) => {
+      vi.mocked(mockRedis.zrangebyscore).mockResolvedValue(withScores([member]));
+      const query: UsageQueryOptions = {
+        tenantId: "tenant-1",
+        meterId: "api_calls",
+        period: "billing_cycle",
+        startDate: new Date("2024-01-01"),
+        endDate: new Date("2024-01-31"),
+      };
+      await expect(storage.getUsage(query)).rejects.toBeInstanceOf(RedisProblem);
+      await expect(storage.fetchUsageRecords(query)).rejects.toBeInstanceOf(RedisProblem);
+      await expect(
+        storage.deleteUsageRecords(query, [createUsageRecord("flush")]),
+      ).rejects.toBeInstanceOf(RedisProblem);
+      expect(mockRedis.eval).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each([
+    { id: "\ud800" },
+    { idempotencyKey: "\ud800" },
+    { eventId: "\ud800" },
+    { metadata: { tag: "\ud800" } },
+    { metadata: { ["\ud800"]: "tag" } },
+  ])("rejects unencodable record strings %j before changing storage", async (fields) => {
+    const usage = { ...createUsageRecord("invalid-id"), ...fields };
+    await expect(storage.record(usage)).rejects.toMatchObject({
+      code: "metering/redis-error",
+      extensions: { operation: "SERIALIZE" },
+    });
+    await expect(
+      storage.checkAndRecordWithinQuota({
+        tenantId: usage.tenantId,
+        meterId: usage.meterId,
+        usageRecord: usage,
+        value: usage.value,
+        quota: 100,
+        allowOverQuota: false,
+      }),
+    ).rejects.toBeInstanceOf(RedisProblem);
+    expect(mockRedis.eval).not.toHaveBeenCalled();
+  });
+
   function createScanDeleteRedis(initialKeys: string[]): {
     keyspace: Set<string>;
     redis: RedisClient;
@@ -167,7 +240,7 @@ describe("RedisUsageStorage", () => {
       expect(mockRedis.eval).toHaveBeenCalledWith(
         expect.any(String),
         ["usage2:tenant-1:api_calls:2024-01", "idem2:record:tenant-1:api_calls:key-123"],
-        [usage.timestamp.getTime(), expect.stringMatching(/^usage-123:5:v2\./), 86400],
+        [usage.timestamp.getTime(), expect.stringMatching(/^usage-123:5:v3\./), 86400],
       );
       expect(mockRedis.set).not.toHaveBeenCalled();
       expect(mockRedis.zadd).not.toHaveBeenCalled();
@@ -284,7 +357,7 @@ describe("RedisUsageStorage", () => {
       await storage.record(record);
 
       const member = String(vi.mocked(mockRedis.eval).mock.calls[0]?.[2][1]);
-      const envelope = JSON.parse(decodeURIComponent(member.split(":v2.")[1] ?? ""));
+      const envelope = JSON.parse(decodeURIComponent(member.split(":v3.")[1] ?? ""));
       expect(envelope.metadata).toEqual({
         boxed: 7,
         selfReturning: { value: "kept" },
@@ -1051,7 +1124,7 @@ describe("RedisUsageStorage", () => {
         expect.stringContaining("ZREM"),
         ["usage2:tenant-1:api_calls:2024-01"],
         expect.arrayContaining([
-          expect.stringMatching(/^usage-1:5:v2\./),
+          expect.stringMatching(/^usage-1:5:v3\./),
           "usage-1:5:%7B%22endpoint%22%3A%22%2Fusers%22%7D",
         ]),
       );
@@ -1086,7 +1159,7 @@ describe("RedisUsageStorage", () => {
           /Invalid stored quota result[\s\S]*redis\.call\('ZRANGEBYSCORE'[\s\S]*Invalid stored usage value/,
         ),
         ["usage2:tenant-1:api_calls:2024-01", "idem2:record:tenant-1:api_calls:key-123"],
-        [10, 5, usage.timestamp.getTime(), expect.stringMatching(/^usage-123:5:v2\./), 0],
+        [10, 5, usage.timestamp.getTime(), expect.stringMatching(/^usage-123:5:v3\./), 0],
       );
     });
 
@@ -1505,8 +1578,8 @@ describe("RedisUsageStorage", () => {
         expect.stringContaining("ZREM"),
         ["usage2:tenant-1:api_calls:2024-01-15"],
         expect.arrayContaining([
-          expect.stringMatching(/^usage-1:5:v2\./),
-          expect.stringMatching(/^usage-2:3:v2\./),
+          expect.stringMatching(/^usage-1:5:v3\./),
+          expect.stringMatching(/^usage-2:3:v3\./),
           "usage-1:5:%7B%22source%22%3A%22api%22%7D",
           "usage-2:3",
         ]),
@@ -1685,7 +1758,7 @@ describe("RedisUsageStorage", () => {
       expect(mockRedis.eval).toHaveBeenCalledWith(
         expect.stringContaining("ZREM"),
         ["usage2:tenant-1:api_calls:2026-01"],
-        expect.arrayContaining([expect.stringMatching(/^usage-shared:10:v2\./), "usage-shared:10"]),
+        expect.arrayContaining([expect.stringMatching(/^usage-shared:10:v3\./), "usage-shared:10"]),
       );
     });
   });
