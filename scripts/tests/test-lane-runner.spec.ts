@@ -541,7 +541,7 @@ describe("test lane runner", () => {
     rmSync(root, { recursive: true, force: true });
   });
 
-  it("requires every spec and attempt in a normalized Playwright file to pass", () => {
+  it("requires every spec and attempt in a normalized Playwright file to meet expectations", () => {
     const root = mkdtempSync(join(tmpdir(), "croco-playwright-file-evidence-"));
     const reportPath = join(root, "playwright.json");
     try {
@@ -560,6 +560,23 @@ describe("test lane runner", () => {
                 {
                   file: "unexpected-pass.spec.ts",
                   tests: [{ expectedStatus: "failed", results: [{ status: "passed" }] }],
+                },
+                {
+                  file: "flaky-expected.spec.ts",
+                  tests: [
+                    {
+                      expectedStatus: "failed",
+                      results: [{ status: "passed" }, { status: "failed" }],
+                    },
+                  ],
+                },
+                {
+                  file: "expected-skip.spec.ts",
+                  tests: [{ expectedStatus: "skipped", results: [{ status: "skipped" }] }],
+                },
+                {
+                  file: "missing-result.spec.ts",
+                  tests: [{ expectedStatus: "failed", results: [{}] }],
                 },
               ],
               suites: [
@@ -587,7 +604,16 @@ describe("test lane runner", () => {
   it("rejects partial files from real no-browser Playwright execution", () => {
     const root = mkdtempSync(join(tmpdir(), "croco-playwright-lane-"));
     const packageRoot = join(root, "packages", "a");
-    const names = ["all-skipped", "failed", "partial", "passed", "project-skip", "unexpected-pass"];
+    const names = [
+      "all-skipped",
+      "failed",
+      "partial",
+      "passed",
+      "project-skip",
+      "unexpected-pass",
+      "expected-failure",
+      "mixed-expected",
+    ];
     try {
       mkdirSync(packageRoot, { recursive: true });
       writeFileSync(
@@ -606,7 +632,7 @@ describe("test lane runner", () => {
           name: "@croco/a",
           private: true,
           scripts: {
-            "test:integration": "playwright test partial.spec.cjs",
+            "test:integration": "playwright test expected-failure.spec.cjs mixed-expected.spec.cjs",
           },
         }),
       );
@@ -624,9 +650,42 @@ describe("test lane runner", () => {
         "test('passes', () => expect(1).toBe(1));",
         "test('project-specific', ({}, info) => { test.skip(info.project.name === 'second', 'project skip'); expect(1).toBe(1); });",
         "test('unexpectedly passes', () => { test.fail(); expect(1).toBe(1); });",
+        "test('expected failure', () => { test.fail(); expect(1).toBe(2); });",
+        "test('passes', () => expect(1).toBe(1)); test('expected failure', () => { test.fail(); expect(1).toBe(2); });",
       ];
       names.forEach((name, index) =>
         writeFileSync(join(packageRoot, `${name}.spec.cjs`), prelude + sources[index]),
+      );
+      const expectedFailures = runTestLane({
+        rootDir: root,
+        lane: "integration",
+        inventory: {
+          version: 1,
+          exceptions: [],
+          tests: ["expected-failure", "mixed-expected"].map((name) => ({
+            path: `packages/a/${name}.spec.cjs`,
+            lane: "integration" as const,
+            qualifiers: [],
+            owner: "@croco/a",
+          })),
+        },
+        scriptResolver: () => "playwright test expected-failure.spec.cjs mixed-expected.spec.cjs",
+      });
+      expect(expectedFailures.commands[0]?.exitCode).toBe(0);
+      expect(expectedFailures.executedPaths).toEqual([
+        "packages/a/expected-failure.spec.cjs",
+        "packages/a/mixed-expected.spec.cjs",
+      ]);
+      expect(expectedFailures.skippedFiles).toEqual([]);
+      expect(expectedFailures.status).toBe("passed");
+      assertLaneReportShape(expectedFailures);
+      writeFileSync(
+        join(packageRoot, "package.json"),
+        JSON.stringify({
+          name: "@croco/a",
+          private: true,
+          scripts: { "test:integration": "playwright test partial.spec.cjs" },
+        }),
       );
       // A successful Playwright process with skips still produces incomplete lane evidence.
       const partial = runTestLane({
@@ -650,7 +709,7 @@ describe("test lane runner", () => {
       assertLaneReportShape(partial);
       expect(partial.executedPaths).toEqual([]);
       expect(partial.skippedFiles).toEqual([
-        expect.objectContaining({ status: "partially-executed", passedAssertions: 4 }),
+        expect.objectContaining({ status: "partially-executed", passedAssertions: 6 }),
       ]);
       expect(partial.status).toBe("failed");
       expect(partial.diagnostics).toContainEqual(
@@ -668,7 +727,10 @@ describe("test lane runner", () => {
           name: "@croco/a",
           private: true,
           scripts: {
-            "test:integration": `playwright test ${names.map((name) => `${name}.spec.cjs`).join(" ")}`,
+            "test:integration": `playwright test ${names
+              .toSorted()
+              .map((name) => `${name}.spec.cjs`)
+              .join(" ")}`,
           },
         }),
       );
@@ -687,7 +749,11 @@ describe("test lane runner", () => {
         },
       });
       expect(report.status).toBe("failed");
-      expect(report.executedPaths).toEqual(["packages/a/passed.spec.cjs"]);
+      expect(report.executedPaths).toEqual([
+        "packages/a/expected-failure.spec.cjs",
+        "packages/a/mixed-expected.spec.cjs",
+        "packages/a/passed.spec.cjs",
+      ]);
       expect(report.skippedFiles).toEqual([
         expect.objectContaining({
           path: "packages/a/all-skipped.spec.cjs",
