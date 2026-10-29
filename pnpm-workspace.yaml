@@ -12,6 +12,9 @@ overrides:
   typescript: 6.0.3
   oxfmt>tinypool: 2.1.2
   source-map-js: 1.2.2
+  # TypeGraphQL rc.3 still declares a 1.x peer; 2.0.1 keeps the used GraphQL 16 scalar API.
+  graphql-scalars: 2.0.1
+  systeminformation: 5.33.16
   "@graphql-tools/utils": 12.1.0
   sharp: 0.35.4
   "@clerk/shared": 3.47.7

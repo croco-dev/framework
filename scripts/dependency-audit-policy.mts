@@ -992,7 +992,7 @@ function runGeneratedTemplateAudit(
     );
     writeFileSync(
       join(tempRoot, "pnpm-workspace.yaml"),
-      'packages:\n  - packages/create-croco-app/templates/**\noverrides:\n  postcss: 8.5.18\n  "@graphql-tools/utils@<=12.0.0": 12.0.3\n',
+      'packages:\n  - packages/create-croco-app/templates/**\noverrides:\n  graphql-scalars: 2.0.1\n  systeminformation: 5.33.16\n  postcss: 8.5.18\n  "@graphql-tools/utils@<=12.0.0": 12.0.3\n',
     );
     const installResult = spawnSync("pnpm", ["install", "--lockfile-only", "--ignore-scripts"], {
       cwd: tempRoot,

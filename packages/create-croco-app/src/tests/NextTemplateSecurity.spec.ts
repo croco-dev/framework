@@ -9,6 +9,18 @@ const POSTCSS_WORKSPACE_TEMPLATES = ["blank", "spa-be-split"] as const;
 const SHARP_WORKSPACE_TEMPLATES = ["blank", "base-ddd", "spa-be-split", "saas"] as const;
 
 describe("Next.js addon templates", () => {
+  it.each([
+    "blank/pnpm-workspace.yaml",
+    "base-ddd/pnpm-workspace.yaml.hbs",
+    "spa-be-split/pnpm-workspace.yaml.hbs",
+    "saas/pnpm-workspace.yaml.hbs",
+    "addons/web-meta-vite-fullstack/pnpm-workspace.yaml.hbs",
+  ])("keeps patched scalar and host-metrics resolutions in %s", (path) => {
+    const workspace = readFileSync(join(TEMPLATES_DIR, path), "utf8");
+    expect(workspace).toMatch(/overrides:\n(?:  .*\n)*  graphql-scalars: 2\.0\.1/);
+    expect(workspace).toMatch(/overrides:\n(?:  .*\n)*  systeminformation: 5\.33\.16/);
+  });
+
   it.each(["base-ddd", "spa-be-split", "saas"] as const)(
     "keeps GraphQL dependencies patched in an independent %s workspace",
     (template) => {

@@ -75,6 +75,8 @@ describe("dependency-audit-policy.mts", () => {
     expect(lockfile.overrides?.["@graphql-tools/utils"]).toBe("12.1.0");
 
     for (const [name, version] of [
+      ["graphql-scalars", "2.0.1"],
+      ["systeminformation", "5.33.16"],
       ["tinypool", "2.1.2"],
       ["source-map-js", "1.2.2"],
       ["@graphql-tools/utils", "12.1.0"],
