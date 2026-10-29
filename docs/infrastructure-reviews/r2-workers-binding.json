@@ -8,36 +8,46 @@
       "files": {
         "packages/storage-r2/package.json": "2f42075bfa1b88646463a6376c03ef39ed4ce9bd8b02e784b2bdcbf0ab4ec489",
         "packages/storage-r2/src/workers.ts": "7b9af17cef52453194ddafe115292f2eb6f70feb36dc5261242210ec9813d026",
-        "packages/storage-r2/src/libs/R2BindingStorageProvider.ts": "6515f3e8cbb3dca4146805dd25f0cb724842f643e1a842220252d83f50feae32",
+        "packages/storage-r2/src/libs/R2BindingStorageProvider.ts": "65a01e1a3a11facef79fca23db42117a4d0a2218eb90f98dd79daad40e233414",
         "packages/storage-r2/src/libs/problems/R2BindingProblem.ts": "3a55d717b883603190d1306226fcca8d76390ebf92faa2721af35dbf837ca571",
-        "packages/storage-r2/src/libs/problems/R2BindingUnsupportedProblem.ts": "010068683781c1aad3af30fe900245fdd3fec7fa62fe3624116fca9a0685282b"
+        "packages/storage-r2/src/libs/problems/R2BindingUnsupportedProblem.ts": "010068683781c1aad3af30fe900245fdd3fec7fa62fe3624116fca9a0685282b",
+        "packages/storage-r2/src/libs/readBufferedR2Stream.ts": "d081e771beb5ccf95e86edbfeb074dbc7ff8fa9f5e666f7787b4d55100c24e61",
+        "packages/storage-r2/src/libs/R2StorageProvider.ts": "aff75733ad9113d44661c4fcb36bebc27fc4d623749ec3ac0c89f9ed46cefe20"
       },
       "catalogRuntimes": ["node", "lambda"],
       "profiles": {
         "kubernetes": {
-          "result": "not-applicable",
-          "reason": "The new entry requires a Worker-owned R2Bucket binding. Existing root S3 code and its Node/Lambda lifecycle and credentials are unchanged; this change makes no new claim for that host.",
+          "result": "conditional",
+          "reason": "The existing root S3 adapter now reuses the same pure bounded-read helper as the Workers entry. Its Node/Lambda behavior and lifecycle are preserved; the native binding remains a separate opt-in entry.",
           "providers": ["@croco/storage-r2", "@croco/storage-core"],
           "constraints": [
-            "Select the existing S3 adapter on Node/Lambda; a Worker binding is not available on those hosts."
+            "Root S3 adapter requires the existing Node runtime, configured S3 credentials and bucket; Worker bindings are unavailable on this host.",
+            "No live Kubernetes/AWS deployment or provider certification is claimed; Lambda invocation and callback/flush boundaries remain owned by the selected Host."
           ],
           "references": [
             "packages/storage-r2/src/index.ts",
             "packages/storage-r2/src/workers.ts",
-            "packages/storage-r2/README.md"
+            "packages/storage-r2/README.md",
+            "packages/storage-r2/src/libs/readBufferedR2Stream.ts",
+            "packages/storage-r2/src/libs/R2StorageProvider.ts",
+            "packages/storage-r2/src/tests/R2StorageProvider.spec.ts"
           ]
         },
         "aws-lambda": {
-          "result": "not-applicable",
-          "reason": "The new entry requires a Worker-owned R2Bucket binding. Existing root S3 code and its Node/Lambda lifecycle and credentials are unchanged; this change makes no new claim for that host.",
+          "result": "conditional",
+          "reason": "The existing root S3 adapter now reuses the same pure bounded-read helper as the Workers entry. Its Node/Lambda behavior and lifecycle are preserved; the native binding remains a separate opt-in entry.",
           "providers": ["@croco/storage-r2", "@croco/storage-core"],
           "constraints": [
-            "Select the existing S3 adapter on Node/Lambda; a Worker binding is not available on those hosts."
+            "Root S3 adapter requires the existing Node runtime, configured S3 credentials and bucket; Worker bindings are unavailable on this host.",
+            "No live Kubernetes/AWS deployment or provider certification is claimed; Lambda invocation and callback/flush boundaries remain owned by the selected Host."
           ],
           "references": [
             "packages/storage-r2/src/index.ts",
             "packages/storage-r2/src/workers.ts",
-            "packages/storage-r2/README.md"
+            "packages/storage-r2/README.md",
+            "packages/storage-r2/src/libs/readBufferedR2Stream.ts",
+            "packages/storage-r2/src/libs/R2StorageProvider.ts",
+            "packages/storage-r2/src/tests/R2StorageProvider.spec.ts"
           ]
         },
         "cloudflare": {

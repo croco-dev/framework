@@ -118,6 +118,18 @@ describe("R2 binding storage contract", () => {
     expect(get).toHaveBeenCalledTimes(1);
   });
 
+  it("accepts the exact 10MiB buffered boundary and retains the final byte", async () => {
+    const provider = new R2BindingStorageProvider(fixture());
+    const bytes = new Uint8Array(10 * 1024 * 1024);
+    bytes[0] = 37;
+    bytes[bytes.length - 1] = 211;
+    await provider.put("tenant-a/limit", bytes);
+    const result = await provider.get("tenant-a/limit");
+    expect(result.byteLength).toBe(10 * 1024 * 1024);
+    expect(result[0]).toBe(37);
+    expect(result[result.length - 1]).toBe(211);
+  });
+
   it("does not translate a binding outage into a missing object", async () => {
     const bucket = fixture();
     vi.spyOn(bucket, "head").mockRejectedValue(new Error("binding unavailable"));

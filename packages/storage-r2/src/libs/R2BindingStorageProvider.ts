@@ -16,7 +16,7 @@ import type {
 } from "@croco/storage-core";
 import { R2BindingProblem } from "./problems/R2BindingProblem";
 import { R2BindingUnsupportedProblem } from "./problems/R2BindingUnsupportedProblem";
-import { R2ObjectTooLargeProblem } from "./problems/R2ObjectTooLargeProblem";
+import { readBufferedR2Stream } from "./readBufferedR2Stream";
 
 /** Structural subset accepted directly from a Worker R2Bucket binding. */
 export type R2BindingObject = {
@@ -63,7 +63,6 @@ export type R2BindingStorageOptions = {
 
 /** Uses the native binding without S3 credentials, automatic retries or cross-request mutable state. */
 export class R2BindingStorageProvider extends BaseStorageProvider {
-  private static readonly MAX_BUFFERED_GET_BYTES = 10 * 1024 * 1024;
   private readonly publicUrlBase?: string;
 
   constructor(
@@ -116,23 +115,9 @@ export class R2BindingStorageProvider extends BaseStorageProvider {
     this.validateKey(key);
     this.assertOperationNotAborted(options, "get", key);
     const stream = await this.read(key, options, "get");
-    const chunks: Uint8Array[] = [];
-    let size = 0;
-    for await (const chunk of stream) {
-      size += chunk.byteLength;
-      if (size > R2BindingStorageProvider.MAX_BUFFERED_GET_BYTES) {
-        throw new R2ObjectTooLargeProblem(key, R2BindingStorageProvider.MAX_BUFFERED_GET_BYTES);
-      }
-      chunks.push(chunk);
-    }
+    const bytes = await readBufferedR2Stream(key, stream);
     this.assertOperationNotAborted(options, "get", key);
-    const result = new Uint8Array(size);
-    let offset = 0;
-    for (const chunk of chunks) {
-      result.set(chunk, offset);
-      offset += chunk.byteLength;
-    }
-    return result;
+    return bytes;
   }
 
   async getStream(key: string, options?: R2BindingReadOptions): Promise<StorageStream> {
