@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export type CrocoProblemRegistry = {
   readonly version: "croco.problem-code-registry.v1";
-  readonly problemCount: 1150;
+  readonly problemCount: 1152;
   readonly problems: readonly [
     {
       readonly code: "ACCESS_DENIED";
@@ -3276,6 +3276,62 @@ export type CrocoProblemRegistry = {
         {
           readonly file: "packages/storage-core/src/libs/problems/StorageOperationAbortedProblem.ts";
           readonly line: 12;
+          readonly column: 5;
+          readonly kind: "problem-constructor";
+        },
+      ];
+    },
+    {
+      readonly code: "STORAGE_R2_BINDING_FAILED";
+      readonly category: "InternalServerError";
+      readonly status: 500;
+      readonly title: "Internal Server Error";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#storage-r2-binding-failed";
+      readonly recovery: {
+        readonly cause: "Croco or an upstream dependency failed after accepting the request.";
+        readonly userAction: "Retry later only when the operation is idempotent or the caller owns retry safety.";
+        readonly operatorAction: "Use traces, logs, and upstream diagnostics to isolate the failing boundary.";
+        readonly retryability: "conditional";
+        readonly redactionPolicy: "operator-only";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.error";
+          readonly severity: "error";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/storage-r2/src/libs/problems/R2BindingProblem.ts";
+          readonly line: 10;
+          readonly column: 5;
+          readonly kind: "problem-constructor";
+        },
+      ];
+    },
+    {
+      readonly code: "STORAGE_R2_BINDING_UNSUPPORTED";
+      readonly category: "NotImplemented";
+      readonly status: 501;
+      readonly title: "Not Implemented";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#storage-r2-binding-unsupported";
+      readonly recovery: {
+        readonly cause: "The requested capability is not supported by this runtime or adapter.";
+        readonly userAction: "Use a supported capability or choose an adapter/runtime that provides it.";
+        readonly operatorAction: "Check runtime capability declarations and provider maturity documentation.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "public";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.info";
+          readonly severity: "info";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/storage-r2/src/libs/problems/R2BindingUnsupportedProblem.ts";
+          readonly line: 8;
           readonly column: 5;
           readonly kind: "problem-constructor";
         },
@@ -32514,7 +32570,7 @@ export type CrocoProblemRegistry = {
 
 export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 1150,
+  problemCount: 1152,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -36136,6 +36192,69 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
         {
           file: "packages/storage-core/src/libs/problems/StorageOperationAbortedProblem.ts",
           line: 12,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "STORAGE_R2_BINDING_FAILED",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#storage-r2-binding-failed",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/storage-r2/src/libs/problems/R2BindingProblem.ts",
+          line: 10,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "STORAGE_R2_BINDING_UNSUPPORTED",
+      category: "NotImplemented",
+      status: 501,
+      title: "Not Implemented",
+      cookbookPath: "/reference/problem-recovery-cookbook/#storage-r2-binding-unsupported",
+      recovery: {
+        cause: "The requested capability is not supported by this runtime or adapter.",
+        userAction: "Use a supported capability or choose an adapter/runtime that provides it.",
+        operatorAction:
+          "Check runtime capability declarations and provider maturity documentation.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/storage-r2/src/libs/problems/R2BindingUnsupportedProblem.ts",
+          line: 8,
           column: 5,
           kind: "problem-constructor",
         },

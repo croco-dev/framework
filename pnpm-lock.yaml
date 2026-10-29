@@ -6112,6 +6112,9 @@ importers:
       '@aws-sdk/s3-request-presigner':
         specifier: ^3.1057.0
         version: 3.1057.0
+      '@cloudflare/workers-types':
+        specifier: 4.20260316.1
+        version: 4.20260316.1
       '@croco/diagnostics-core':
         specifier: workspace:*
         version: link:../diagnostics-core
@@ -6140,6 +6143,12 @@ importers:
       '@types/node':
         specifier: ^24.0.0
         version: 24.13.2
+      esbuild:
+        specifier: 0.27.7
+        version: 0.27.7
+      miniflare:
+        specifier: 4.20260312.0
+        version: 4.20260312.0(@types/node@24.13.2)
 
   packages/storage-s3:
     dependencies:
