@@ -1,3 +1,4 @@
+import { ProblemFactory } from "@croco/problems-core";
 import type { WarehouseReadRequest, WarehouseReader } from "@croco/warehouse-core/runtime";
 
 async function awaitSourceOperation<T>(operation: Promise<T>, signal?: AbortSignal): Promise<T> {
@@ -15,6 +16,36 @@ async function awaitSourceOperation<T>(operation: Promise<T>, signal?: AbortSign
   }
 }
 
+async function closeSource<T>(
+  iterator: AsyncIterator<T>,
+  signal: AbortSignal | undefined,
+  failure: { cause: unknown } | undefined,
+): Promise<void> {
+  try {
+    // Cancellation interrupts a blocked return; awaitSourceOperation still observes late rejections.
+    await awaitSourceOperation(
+      Promise.resolve().then(() => iterator.return?.()),
+      signal,
+    );
+  } catch (cleanupFailure) {
+    if (!failure) throw cleanupFailure;
+    if (signal?.aborted && Object.is(cleanupFailure, signal.reason)) throw cleanupFailure;
+    throw ProblemFactory.internalServerError(
+      "metrics-core/source-cleanup-failed",
+      "Metrics source failed and its iterator cleanup also failed",
+      {
+        cause: new AggregateError(
+          [failure.cause, cleanupFailure],
+          "Metrics source and cleanup failures",
+          {
+            cause: failure.cause,
+          },
+        ),
+      },
+    );
+  }
+}
+
 export async function* cancellableSource<T>(
   source: AsyncIterable<T>,
   signal?: AbortSignal,
@@ -22,6 +53,7 @@ export async function* cancellableSource<T>(
   signal?.throwIfAborted();
   const iterator = source[Symbol.asyncIterator]();
   let complete = false;
+  let failure: { cause: unknown } | undefined;
   try {
     while (true) {
       const result = await awaitSourceOperation(
@@ -38,14 +70,11 @@ export async function* cancellableSource<T>(
       }
       yield result.value;
     }
+  } catch (error) {
+    failure = { cause: error };
+    throw error;
   } finally {
-    if (!complete && iterator.return) {
-      // Cleanup is attempted, but cancellation also interrupts a blocked return operation.
-      await awaitSourceOperation(
-        Promise.resolve().then(() => iterator.return?.()),
-        signal,
-      );
-    }
+    if (!complete && iterator.return) await closeSource(iterator, signal, failure);
   }
 }
 

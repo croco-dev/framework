@@ -4182,6 +4182,12 @@
       "owner": "@croco/metrics-core"
     },
     {
+      "path": "packages/metrics-core/src/tests/BoundedSource.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/metrics-core"
+    },
+    {
       "path": "packages/metrics-core/src/tests/CarryingCapacity.spec.ts",
       "lane": "fast",
       "qualifiers": [],

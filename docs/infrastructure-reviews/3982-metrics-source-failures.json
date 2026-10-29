@@ -1,0 +1,78 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "metrics-core",
+      "classification": "pure-contract",
+      "reason": "Preserve both source-read and iterator-cleanup causes through the existing Problem factory without modifying provider retry or host lifecycle policy.",
+      "files": {
+        "packages/metrics-core/src/libs/read/BoundedSource.ts": "c9b9aaa9daa2c5a4fb2102e0bc12ed45d94d22fa06a9bdd3a9ff4a813ca53f8b"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Failure composition uses only ECMAScript async iterators, promises and AbortSignal. It adds no host capability, storage access or provider lifecycle ownership and makes no deployment support claim.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/metrics-core/src/libs/read/BoundedSource.ts",
+            "packages/metrics-core/src/tests/BoundedSource.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Failure composition uses only ECMAScript async iterators, promises and AbortSignal. It adds no host capability, storage access or provider lifecycle ownership and makes no deployment support claim.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/metrics-core/src/libs/read/BoundedSource.ts",
+            "packages/metrics-core/src/tests/BoundedSource.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Failure composition uses only ECMAScript async iterators, promises and AbortSignal. It adds no host capability, storage access or provider lifecycle ownership and makes no deployment support claim.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/metrics-core/src/libs/read/BoundedSource.ts",
+            "packages/metrics-core/src/tests/BoundedSource.spec.ts"
+          ]
+        }
+      }
+    },
+    {
+      "package": "problems-core",
+      "classification": "pure-contract",
+      "reason": "Generated diagnostic metadata and union types include the metrics source cleanup failure code; no infrastructure requirement changes.",
+      "files": {
+        "packages/problems-core/src/generated/problem-code-registry.ts": "7ce95e5586955bb06d67ca54b4e56c13ca9b969b34b282a4a4ba3ee912eae922"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Generated Problem metadata has no host capability, storage or lifecycle dependency.",
+          "providers": [],
+          "constraints": [],
+          "references": ["packages/problems-core/src/generated/problem-code-registry.ts"]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Generated Problem metadata has no host capability, storage or lifecycle dependency.",
+          "providers": [],
+          "constraints": [],
+          "references": ["packages/problems-core/src/generated/problem-code-registry.ts"]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Generated Problem metadata has no host capability, storage or lifecycle dependency.",
+          "providers": [],
+          "constraints": [],
+          "references": ["packages/problems-core/src/generated/problem-code-registry.ts"]
+        }
+      }
+    }
+  ]
+}
