@@ -227,7 +227,12 @@ export class InMemoryReferralStore implements ReferralStore, ReferralTx {
       throw new ReferralDuplicateClaimProblem(link.referrer.id);
     }
     const existing = this.state.links.get(link.id);
-    if (existing) return { created: false, link: cloneLink(existing) };
+    if (existing) {
+      if (existing.tokenHash !== link.tokenHash) {
+        throw new ReferralDuplicateClaimProblem(link.referrer.id);
+      }
+      return { created: false, link: cloneLink(existing) };
+    }
     this.state.links.set(link.id, cloneLink(link));
     this.state.linksByTokenHash.set(link.tokenHash, link.id);
     return { created: true, link: cloneLink(link) };
