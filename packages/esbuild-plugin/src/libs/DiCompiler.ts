@@ -816,8 +816,10 @@ function readPackageDescriptors(
     .sort()
     .map((descriptorFile) => {
       let parsed: unknown;
+      let descriptorText: string;
       try {
-        parsed = JSON.parse(fs.readFileSync(descriptorFile, "utf8"));
+        descriptorText = fs.readFileSync(descriptorFile, "utf8");
+        parsed = JSON.parse(descriptorText);
       } catch (error) {
         throw packageDescriptorError(
           baseDir,
@@ -826,6 +828,43 @@ function readPackageDescriptors(
         );
       }
       if (!isDiPackageDescriptor(parsed)) {
+        const field = invalidDescriptorProviderField(parsed);
+        if (field) {
+          const source = ts.parseJsonText(descriptorFile, descriptorText);
+          let node: ts.Node = source.statements[0]?.expression ?? source;
+          for (const key of field) {
+            const child =
+              typeof key === "number" && ts.isArrayLiteralExpression(node)
+                ? node.elements[key]
+                : typeof key === "string" && ts.isObjectLiteralExpression(node)
+                  ? node.properties
+                      .filter(
+                        (property) =>
+                          ts.isPropertyAssignment(property) &&
+                          ts.isStringLiteral(property.name) &&
+                          property.name.text === key,
+                      )
+                      .at(-1)
+                  : undefined;
+            if (!child) break;
+            node = ts.isPropertyAssignment(child) ? child.initializer : child;
+          }
+          const location = source.getLineAndCharacterOfPosition(node.getStart(source));
+          const fieldName = field.reduce<string>(
+            (name, key) =>
+              typeof key === "number" ? `${name}[${key}]` : name ? `${name}.${key}` : key,
+            "",
+          );
+          throw new DiCompilerError([
+            {
+              code: "CROCO_DI_COMPILE_001",
+              file: normalizePath(path.relative(baseDir, descriptorFile)),
+              line: location.line + 1,
+              column: location.character + 1,
+              message: `Invalid package descriptor field '${fieldName}'.`,
+            },
+          ]);
+        }
         throw packageDescriptorError(
           baseDir,
           descriptorFile,
@@ -910,23 +949,67 @@ function resolveDescriptorFile(
   }
 }
 
+function isDescriptorRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function invalidSourceField(value: unknown): readonly string[] | undefined {
+  if (!isDescriptorRecord(value)) return [];
+  if (typeof value.file !== "string") return ["file"];
+  for (const key of ["line", "column"]) {
+    if (!Number.isSafeInteger(value[key]) || (value[key] as number) < 1) return [key];
+  }
+  return undefined;
+}
+
+function invalidManifestProviderField(value: unknown): readonly (string | number)[] | undefined {
+  if (!isDescriptorRecord(value)) return [];
+  for (const key of ["tokenId", "exportName", "stereotype"]) {
+    if (typeof value[key] !== "string") return [key];
+  }
+  if (!["singleton", "request", "transient"].includes(value.scope as string)) return ["scope"];
+  const sourceField = invalidSourceField(value.source);
+  if (sourceField) return ["source", ...sourceField];
+  if (value.multiple !== undefined && typeof value.multiple !== "boolean") return ["multiple"];
+  if (value.moduleName !== undefined && typeof value.moduleName !== "string") return ["moduleName"];
+  if (!Array.isArray(value.dependencies)) return ["dependencies"];
+  for (const [index, dependency] of value.dependencies.entries()) {
+    const prefix = ["dependencies", index];
+    if (!isDescriptorRecord(dependency)) return prefix;
+    if (typeof dependency.tokenId !== "string") return [...prefix, "tokenId"];
+    if (
+      !["constructor-type", "explicit-token", "explicit-many-token"].includes(
+        dependency.reason as string,
+      )
+    )
+      return [...prefix, "reason"];
+    if (dependency.optional !== undefined && typeof dependency.optional !== "boolean")
+      return [...prefix, "optional"];
+    if (
+      dependency.parameterIndex !== undefined &&
+      (!Number.isSafeInteger(dependency.parameterIndex) ||
+        (dependency.parameterIndex as number) < 0)
+    )
+      return [...prefix, "parameterIndex"];
+    if (dependency.propertyKey !== undefined && typeof dependency.propertyKey !== "string")
+      return [...prefix, "propertyKey"];
+    const dependencySourceField = invalidSourceField(dependency.source);
+    if (dependencySourceField) return [...prefix, "source", ...dependencySourceField];
+  }
+  return undefined;
+}
+
+function invalidDescriptorProviderField(value: unknown): readonly (string | number)[] | undefined {
+  if (!isDescriptorRecord(value) || !Array.isArray(value.providers)) return undefined;
+  for (const [index, provider] of value.providers.entries()) {
+    const field = invalidManifestProviderField(provider);
+    if (field) return ["providers", index, ...field];
+  }
+  return undefined;
+}
+
 function isDiManifestProvider(value: unknown): value is DiManifestProvider {
-  if (typeof value !== "object" || value === null) return false;
-  const provider = value as Partial<DiManifestProvider>;
-  return (
-    typeof provider.tokenId === "string" &&
-    typeof provider.exportName === "string" &&
-    typeof provider.stereotype === "string" &&
-    (provider.scope === "singleton" ||
-      provider.scope === "request" ||
-      provider.scope === "transient") &&
-    typeof provider.source === "object" &&
-    provider.source !== null &&
-    typeof provider.source.file === "string" &&
-    typeof provider.source.line === "number" &&
-    typeof provider.source.column === "number" &&
-    Array.isArray(provider.dependencies)
-  );
+  return invalidManifestProviderField(value) === undefined;
 }
 
 function packageDescriptorError(

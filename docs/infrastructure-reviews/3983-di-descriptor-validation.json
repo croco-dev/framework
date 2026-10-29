@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "esbuild-plugin",
+      "classification": "pure-contract",
+      "reason": "Reject malformed nested DI package descriptor metadata before linking or writing artifacts, with descriptor field locations. This changes build-time input validation only.",
+      "files": {
+        "packages/esbuild-plugin/src/libs/DiCompiler.ts": "d3a140399528f6cfd57b5b0f5f7903135c570ecf1bf0ab8b99bec65c67be244a"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Descriptor validation executes during compilation and adds no Node capability, storage or application lifecycle requirement.",
+          "providers": [],
+          "constraints": [
+            "Build-time validation only; no deployed-host or provider certification claim."
+          ],
+          "references": [
+            "packages/esbuild-plugin/src/libs/DiCompiler.ts",
+            "packages/esbuild-plugin/src/tests/DiCompiler.spec.ts",
+            "docs/architecture/compile-time-di.md"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Descriptor validation executes during compilation and adds no Lambda capability, storage or application lifecycle requirement.",
+          "providers": [],
+          "constraints": [
+            "Build-time validation only; no deployed-host or provider certification claim."
+          ],
+          "references": [
+            "packages/esbuild-plugin/src/libs/DiCompiler.ts",
+            "packages/esbuild-plugin/src/tests/DiCompiler.spec.ts",
+            "docs/architecture/compile-time-di.md"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Descriptor validation executes during compilation and adds no Workers or Node Container capability, storage or application lifecycle requirement.",
+          "providers": [],
+          "constraints": [
+            "Build-time validation only; no deployed-host or provider certification claim."
+          ],
+          "references": [
+            "packages/esbuild-plugin/src/libs/DiCompiler.ts",
+            "packages/esbuild-plugin/src/tests/DiCompiler.spec.ts",
+            "docs/architecture/compile-time-di.md"
+          ]
+        }
+      }
+    }
+  ]
+}
