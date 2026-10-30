@@ -250,6 +250,26 @@ describe("DiagnosticsCollector Integration", () => {
       },
     );
 
+    it("retains the validated health snapshot when an accessor later fails", async () => {
+      let firstRead = true;
+      const health = Object.defineProperty({ ...validHealth }, "status", {
+        get() {
+          if (firstRead) {
+            firstRead = false;
+            return "healthy";
+          }
+          throw new Error("private-provider-payload");
+        },
+      });
+      collector.registerProvider(new MockDiagnosticsProvider("cache", health));
+
+      const report = await collector.getReport();
+
+      expect(report.summary).toBe("all_healthy");
+      expect(report.components).toEqual([validHealth]);
+      expect(JSON.stringify(report)).not.toContain("private-provider-payload");
+    });
+
     it.each([
       ["healthy", "all_healthy"],
       ["degraded", "degraded"],

@@ -40,26 +40,31 @@ function capMessage(message: string, maxLength: number): string {
   return `${message.slice(0, maxLength - 3)}...`;
 }
 
-function isHealthStatus(value: unknown): value is HealthStatus {
+function readHealthStatus(value: unknown): HealthStatus | undefined {
   try {
     if (typeof value !== "object" || value === null || Array.isArray(value)) {
-      return false;
+      return undefined;
     }
-    const health = value as Record<string, unknown>;
-    return (
-      (health.status === "healthy" ||
-        health.status === "degraded" ||
-        health.status === "unhealthy") &&
-      typeof health.component === "string" &&
-      typeof health.lastChecked === "string" &&
-      (health.message === undefined || typeof health.message === "string") &&
-      (health.details === undefined ||
-        (typeof health.details === "object" &&
-          health.details !== null &&
-          !Array.isArray(health.details)))
-    );
+    const { status, component, lastChecked, message, details } = value as Record<string, unknown>;
+    if (
+      (status !== "healthy" && status !== "degraded" && status !== "unhealthy") ||
+      typeof component !== "string" ||
+      typeof lastChecked !== "string" ||
+      (message !== undefined && typeof message !== "string") ||
+      (details !== undefined &&
+        (typeof details !== "object" || details === null || Array.isArray(details)))
+    ) {
+      return undefined;
+    }
+    return {
+      status,
+      component,
+      lastChecked,
+      ...(message === undefined ? {} : { message }),
+      ...(details === undefined ? {} : { details: details as Record<string, unknown> }),
+    };
   } catch {
-    return false;
+    return undefined;
   }
 }
 
@@ -166,11 +171,12 @@ export class DiagnosticsCollector {
     });
 
     try {
-      const health: unknown = await Promise.race([
+      const result: unknown = await Promise.race([
         provider.getHealth(controller.signal),
         timeoutPromise,
       ]);
-      if (!isHealthStatus(health)) {
+      const health = readHealthStatus(result);
+      if (health === undefined) {
         return {
           status: "degraded",
           component: provider.name,

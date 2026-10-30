@@ -6,7 +6,7 @@
       "classification": "pure-contract",
       "reason": "Validate resolved provider HealthStatus values before aggregation; malformed values produce a bounded degraded diagnostic while valid results and existing timeout/throw handling retain their semantics.",
       "files": {
-        "packages/diagnostics-core/src/libs/DiagnosticsCollector.ts": "f7d045736d6f08a16cbfcf35846498057aa4ec13239e251229c847a9eca0be78"
+        "packages/diagnostics-core/src/libs/DiagnosticsCollector.ts": "6fc35a82327ab0f667fc6e1bce5af5f6dac9838278c12303ae5007b4a94845ec"
       },
       "catalogRuntimes": [],
       "profiles": {
