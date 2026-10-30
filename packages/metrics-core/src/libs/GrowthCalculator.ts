@@ -1,3 +1,5 @@
+import { MixedCurrencyMRRProblem } from "./problems/MetricsProblems";
+
 import type { MRRMovement } from "../types";
 
 /**
@@ -20,6 +22,13 @@ export class GrowthCalculator {
    * @returns Quick Ratio, or null if denominator is zero
    */
   async calculateQuickRatio(movement: MRRMovement): Promise<number | null> {
+    const currency = movement.new.currency;
+    for (const component of [movement.expansion, movement.churned, movement.contraction]) {
+      if (component.currency !== currency) {
+        throw new MixedCurrencyMRRProblem(currency, component.currency);
+      }
+    }
+
     const newMRR = movement.new.amount + movement.expansion.amount;
     const lostMRR = movement.churned.amount + movement.contraction.amount;
 

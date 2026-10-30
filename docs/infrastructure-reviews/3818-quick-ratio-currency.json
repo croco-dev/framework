@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "metrics-core",
+      "classification": "pure-contract",
+      "reason": "Reject mixed currencies in Quick Ratio with the existing MixedCurrencyMRRProblem, including zero amounts, while preserving same-currency results and the null zero-denominator contract.",
+      "files": {
+        "packages/metrics-core/src/libs/GrowthCalculator.ts": "c8416c3b8123b3d3dcaba7d2abba3901b104b0ec446d7a79fd4277e017f147d2"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Quick Ratio validates the currencies of its four input Money values before arithmetic. This pure calculation requires no host capabilities, storage, provider calls or lifecycle changes.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/metrics-core/src/libs/GrowthCalculator.ts",
+            "packages/metrics-core/src/tests/GrowthCalculator.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Quick Ratio validates the currencies of its four input Money values before arithmetic. This pure calculation requires no host capabilities, storage, provider calls or lifecycle changes.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/metrics-core/src/libs/GrowthCalculator.ts",
+            "packages/metrics-core/src/tests/GrowthCalculator.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Quick Ratio validates the currencies of its four input Money values before arithmetic. This pure calculation requires no host capabilities, storage, provider calls or lifecycle changes.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/metrics-core/src/libs/GrowthCalculator.ts",
+            "packages/metrics-core/src/tests/GrowthCalculator.spec.ts"
+          ]
+        }
+      }
+    }
+  ]
+}

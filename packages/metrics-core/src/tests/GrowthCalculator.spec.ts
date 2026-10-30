@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { GrowthCalculator } from "../libs/GrowthCalculator";
+import { MixedCurrencyMRRProblem } from "../libs/problems/MetricsProblems";
 import type { MRRMovement } from "../types";
 
 describe("GrowthCalculator", () => {
@@ -17,6 +18,45 @@ describe("GrowthCalculator", () => {
     reactivation: { amount: 1000, currency: "USD" },
     net: { amount: 11000, currency: "USD" },
     ...overrides,
+  });
+
+  describe("Currency validation", () => {
+    it.each(
+      (["new", "expansion", "churned", "contraction"] as const).flatMap((component) =>
+        [7000, 0].map((amount) => ({ component, amount })),
+      ),
+    )(
+      "should reject a different currency in $component with amount $amount",
+      async ({ component, amount }) => {
+        const movement = createMovement({ [component]: { amount, currency: "KRW" } });
+
+        await expect(calculator.calculateQuickRatio(movement)).rejects.toThrow(
+          MixedCurrencyMRRProblem,
+        );
+      },
+    );
+
+    it("should reject mixed currencies before returning null for a zero denominator", async () => {
+      const movement = createMovement({
+        churned: { amount: 0, currency: "USD" },
+        contraction: { amount: 0, currency: "KRW" },
+      });
+
+      await expect(calculator.calculateQuickRatio(movement)).rejects.toThrow(
+        MixedCurrencyMRRProblem,
+      );
+    });
+
+    it("should calculate a single non-USD currency without validating unused movement fields", async () => {
+      const movement = createMovement({
+        new: { amount: 18000, currency: "KRW" },
+        expansion: { amount: 12000, currency: "KRW" },
+        churned: { amount: 8000, currency: "KRW" },
+        contraction: { amount: 4000, currency: "KRW" },
+      });
+
+      await expect(calculator.calculateQuickRatio(movement)).resolves.toBe(2.5);
+    });
   });
 
   describe("Fixture A: 우수한 성장 - Quick Ratio 4.0", () => {
