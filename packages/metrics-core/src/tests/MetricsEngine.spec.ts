@@ -4,7 +4,7 @@ import type {
   SimulationConfig,
   UserCCConfig,
 } from "../libs/CarryingCapacityCalculator";
-import type { GrowthCalculator } from "../libs/GrowthCalculator";
+import { GrowthCalculator } from "../libs/GrowthCalculator";
 import type { PlanProvider } from "../libs/interfaces/PlanProvider";
 import type { LtvCalculator, LtvConfig } from "../libs/LtvCalculator";
 import { MetricsEngine } from "../libs/MetricsEngine";
@@ -134,6 +134,35 @@ describe("MetricsEngine", () => {
       expect(result).toBe(expected);
       expect(mockGrowthCalculator.calculateQuickRatio).toHaveBeenCalledWith({});
     });
+  });
+
+  it("should preserve currency validation through the real GrowthCalculator", async () => {
+    const realGrowthEngine = new MetricsEngine(
+      mockMrrCalculator,
+      mockRetentionCalculator,
+      new GrowthCalculator(),
+      mockCcCalculator,
+      mockLtvCalculator,
+      mockSnapshotScheduler,
+    );
+    const movement: MRRMovement = {
+      new: { amount: 10000, currency: "USD" },
+      expansion: { amount: 10000, currency: "KRW" },
+      churned: { amount: 10000, currency: "USD" },
+      contraction: { amount: 0, currency: "USD" },
+      reactivation: { amount: 0, currency: "USD" },
+      net: { amount: 10000, currency: "USD" },
+    };
+
+    await expect(realGrowthEngine.calculateQuickRatio(movement)).rejects.toMatchObject({
+      code: "metrics-core/mixed-currency-mrr",
+    });
+    await expect(
+      realGrowthEngine.calculateQuickRatio({
+        ...movement,
+        expansion: { amount: 10000, currency: "USD" },
+      }),
+    ).resolves.toBe(2);
   });
 
   describe("Carrying Capacity Methods", () => {
