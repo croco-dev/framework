@@ -103,7 +103,10 @@ describe.skipIf(process.env.CROCO_TEST_REAL_RESOURCES !== "1")(
       await container?.stop();
     }, 180_000);
 
-    function upstream(mode: "accepted" | "lost-response") {
+    function upstream(
+      mode: "accepted" | "lost-response" | "transport-lost",
+      beforeResponse?: () => Promise<void>,
+    ) {
       const requests: string[] = [];
       const accepted = new Map<string, string>();
       return {
@@ -125,6 +128,11 @@ describe.skipIf(process.env.CROCO_TEST_REAL_RESOURCES !== "1")(
           if (!key) throw new Error("Missing fixture idempotency key");
           requests.push(key);
           if (!accepted.has(key)) accepted.set(key, `email-${accepted.size + 1}`);
+          await beforeResponse?.();
+          if (mode === "transport-lost") {
+            // resend@4.8 maps fetch rejection to retryable application_error.
+            throw new TypeError("fetch failed after provider acceptance");
+          }
           if (mode === "lost-response") {
             // Upstream has accepted once, but the caller cannot establish that from this response.
             return Response.json(
@@ -188,39 +196,81 @@ describe.skipIf(process.env.CROCO_TEST_REAL_RESOURCES !== "1")(
       ).toEqual([{ tenant_id: "tenant-a" }, { tenant_id: "tenant-b" }]);
     });
 
-    it("retains unknown acceptance across fresh Workers and does not blindly send again", async () => {
-      const provider = upstream("lost-response");
-      const firstWorker = await worker(provider);
-      const response = await firstWorker.dispatchFetch("https://fixture/send?key=unknown");
-      expect(response.status).toBeGreaterThanOrEqual(400);
-      const failure = await response.text();
-      expect(failure).toContain("engagement-core/contact-policy-acceptance-unknown");
-      expect(failure).not.toContain(apiKey);
-      expect(failure).not.toContain(address);
-      expect(failure).not.toContain("private-recipient-name");
-      expect(provider.requests).toHaveLength(3);
-      expect(new Set(provider.requests).size).toBe(1);
-      expect(provider.accepted.size).toBe(1);
+    it.each([
+      ["lost-response", 3],
+      ["transport-lost", 3],
+    ] as const)(
+      "retains unknown acceptance after %s across fresh Workers without resending",
+      async (mode, attempts) => {
+        const provider = upstream(mode);
+        const firstWorker = await worker(provider);
+        const response = await firstWorker.dispatchFetch("https://fixture/send?key=unknown");
+        expect(response.status).toBeGreaterThanOrEqual(400);
+        const failure = await response.text();
+        expect(failure).toContain("engagement-core/contact-policy-acceptance-unknown");
+        expect(failure).not.toContain(apiKey);
+        expect(failure).not.toContain(address);
+        expect(failure).not.toContain("private-recipient-name");
+        expect(provider.requests).toHaveLength(attempts);
+        expect(new Set(provider.requests).size).toBe(1);
+        expect(provider.accepted.size).toBe(1);
 
-      const reopened = await worker(provider);
-      const replay = await reopened.dispatchFetch("https://fixture/send?key=unknown");
-      expect(replay.status).toBe(409);
-      expect(await replay.text()).toContain("engagement-core/contact-policy-conflict");
-      expect(provider.requests).toHaveLength(3);
-      const observed = await pool.query(
-        "select state, execution_ids from engagement_contact_policy_reservations",
-      );
-      expect(observed.rows).toEqual([{ state: "unknown", execution_ids: [] }]);
-      expect((await pool.query("select type from engagement_delivery_events")).rows).toEqual([]);
-      const dispatch = await pool.query("select outcome from engagement_dispatches");
-      expect(dispatch.rows).toMatchObject([
-        {
-          outcome: {
-            kind: "failed",
-            retryable: false,
-            failureCode: "engagement-core/contact-policy-acceptance-unknown",
+        const reopened = await worker(provider);
+        const replay = await reopened.dispatchFetch("https://fixture/send?key=unknown");
+        expect(replay.status).toBe(409);
+        expect(await replay.text()).toContain("engagement-core/contact-policy-conflict");
+        expect(provider.requests).toHaveLength(attempts);
+        const observed = await pool.query(
+          "select state, execution_ids from engagement_contact_policy_reservations",
+        );
+        expect(observed.rows).toEqual([{ state: "unknown", execution_ids: [] }]);
+        expect((await pool.query("select type from engagement_delivery_events")).rows).toEqual([]);
+        const dispatch = await pool.query("select outcome from engagement_dispatches");
+        expect(dispatch.rows).toMatchObject([
+          {
+            outcome: {
+              kind: "failed",
+              retryable: false,
+              failureCode: "engagement-core/contact-policy-acceptance-unknown",
+            },
           },
-        },
+        ]);
+      },
+    );
+
+    it("rejects a concurrent duplicate while the first Worker awaits provider acceptance", async () => {
+      let releaseResponse: () => void = () => {};
+      let reachedUpstream: () => void = () => {};
+      const responseGate = new Promise<void>((resolve) => {
+        releaseResponse = resolve;
+      });
+      const upstreamReached = new Promise<void>((resolve) => {
+        reachedUpstream = resolve;
+      });
+      const provider = upstream("accepted", async () => {
+        reachedUpstream();
+        await responseGate;
+      });
+      const firstWorker = await worker(provider);
+      const secondWorker = await worker(provider);
+      const first = firstWorker.dispatchFetch("https://fixture/send?key=concurrent");
+      try {
+        await upstreamReached;
+        const duplicate = await secondWorker.dispatchFetch("https://fixture/send?key=concurrent");
+        expect(duplicate.status).toBe(409);
+        expect(await duplicate.text()).toContain("engagement-core/contact-policy-conflict");
+        expect(provider.requests).toHaveLength(1);
+        expect(provider.accepted.size).toBe(1);
+      } finally {
+        releaseResponse();
+      }
+      expect((await first).status).toBe(200);
+      expect(provider.requests).toHaveLength(1);
+      expect(
+        (await pool.query("select state from engagement_contact_policy_reservations")).rows,
+      ).toEqual([{ state: "committed" }]);
+      expect((await pool.query("select type from engagement_delivery_events")).rows).toEqual([
+        { type: "accepted" },
       ]);
     });
 

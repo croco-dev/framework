@@ -144,7 +144,7 @@ describe("Resend on actual workerd with a synthetic HTTP upstream", () => {
             {
               name,
               statusCode: status,
-              message: `Authorization: Bearer ${apiKey}; ${payload.to}; ${payload.subject}; ${payload.content}; ${payload.text}; ${key}`,
+              message: `Authorization: Bearer ${apiKey}; ${payload.to}; ${payload.subject}; ${payload.content}; ${payload.text}; ${payload.replyTo}; ${payload.headers["X-Business-Reference"]}; ${key}`,
             },
             { status },
           );
@@ -162,6 +162,8 @@ describe("Resend on actual workerd with a synthetic HTTP upstream", () => {
             payload.subject,
             payload.content,
             payload.text,
+            payload.replyTo,
+            payload.headers["X-Business-Reference"],
             key,
           ]) {
             expect(diagnostic).not.toContain(privateValue);

@@ -60,7 +60,7 @@
             "runtime": "cloudflare-workers",
             "path": "packages/notifications-resend/src/tests/ResendWorkers.spec.ts",
             "testName": "Resend on actual workerd with a synthetic HTTP upstream sends rendered email using the secret binding and reports provider acceptance",
-            "sha256": "6a15b06ceddf24bf1c57d7e6bd8d74fdf01098d1ade29e0979ee6ff4d55118e8"
+            "sha256": "71c71a09e7a035b2382e4b81c75567e742ea0191f2ef402a6702ae103900458c"
           }
         }
       }
