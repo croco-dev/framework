@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "transports-http",
+      "classification": "pure-contract",
+      "reason": "Query records preserve every URLSearchParams name as an own data key, including prototype property names. This process-local conversion changes no host capability, provider, storage or lifecycle boundary.",
+      "files": {
+        "packages/transports-http/src/libs/HttpContext.ts": "82eef1a5a4b8b1060ac37a9abdb095428939cedbfa519370ab46ba8effc06f0f"
+      },
+      "catalogRuntimes": ["node", "lambda"],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "The correction only stores URLSearchParams strings in a prototype-free in-memory record. It introduces no infrastructure capability, storage or lifecycle requirement.",
+          "providers": ["@croco/transports-http/HttpContext"],
+          "constraints": [
+            "Existing transport runtime claims remain unchanged; this does not certify a deployed host or add Workers support."
+          ],
+          "references": [
+            "packages/transports-http/src/libs/HttpContext.ts",
+            "packages/transports-http/src/tests/HttpContext.spec.ts",
+            "packages/transports-http/src/tests/NodeAdapterSmoke.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "The correction only stores URLSearchParams strings in a prototype-free in-memory record. It introduces no infrastructure capability, storage or lifecycle requirement.",
+          "providers": ["@croco/transports-http/HttpContext"],
+          "constraints": [
+            "Existing transport runtime claims remain unchanged; this does not certify a deployed host or add Workers support."
+          ],
+          "references": [
+            "packages/transports-http/src/libs/HttpContext.ts",
+            "packages/transports-http/src/tests/HttpContext.spec.ts",
+            "packages/transports-http/src/tests/NodeAdapterSmoke.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "The correction only stores URLSearchParams strings in a prototype-free in-memory record. It introduces no infrastructure capability, storage or lifecycle requirement.",
+          "providers": ["@croco/transports-http/HttpContext"],
+          "constraints": [
+            "Existing transport runtime claims remain unchanged; this does not certify a deployed host or add Workers support."
+          ],
+          "references": [
+            "packages/transports-http/src/libs/HttpContext.ts",
+            "packages/transports-http/src/tests/HttpContext.spec.ts",
+            "packages/transports-http/src/tests/NodeAdapterSmoke.spec.ts"
+          ]
+        }
+      }
+    }
+  ]
+}
