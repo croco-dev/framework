@@ -98,7 +98,7 @@
       "file": "packages/meta-vite/src/libs/isr/isrMiddleware.ts",
       "line": 37,
       "excerpt": "throw new Error(\"CacheStore returned no ISR response\");",
-      "reason": "Reviewed 2026-10-30 (#4004): IsrCacheStore.getOrSet promises Response. An undefined result is a provider-contract violation, not a cache miss or render success; the middleware propagates this invariant failure rather than serving fabricated content. A stable provider-diagnostic migration needs separate compatibility review.",
+      "reason": "Reviewed 2026-10-30 (#4004): CacheStore.getOrSet permits undefined, including invalidated in-flight loads. The current ISR middleware promises its caller a Response and rejects this no-response outcome. Retain that existing rejection during exception maintenance; changing invalidation, fallback rendering or the public error model requires a separate ISR behavior review.",
       "owner": "framework-error-handling",
       "expiresOn": "2027-01-13"
     },
