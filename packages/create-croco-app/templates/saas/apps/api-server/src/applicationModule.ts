@@ -1,6 +1,7 @@
 import { BILLING_GATEWAY_TOKEN } from "@croco/billing-core";
 import type { DiagnosticsProvider, HealthStatus } from "@croco/diagnostics-core";
 import { EntitlementManager } from "@croco/entitlements-core";
+import { EventBusConfig } from "@croco/events-core";
 import { LOGGER_TOKEN } from "@croco/framework-context";
 import type { ILogger } from "@croco/framework-context";
 import {
@@ -70,17 +71,19 @@ export function createSaasApplicationModule(options: SaasApplicationModuleOption
       { provide: LOGGER_TOKEN, useValue: options.logger },
       {
         provide: SAAS_RUNTIME_STATE_TOKEN,
-        useFactory: (ctx) => {
+        useFactory: async (ctx) => {
           const state = new SaasRuntimeState({
             create: () =>
               createSaasDemoRuntime({
                 billingGateway: ctx.get(BILLING_GATEWAY_TOKEN),
               }),
-            onReset: (runtime) => {
+            onReset: async (runtime) => {
+              await EventBusConfig.getInstance().start({ handlers: [] });
               ctx.set(EntitlementManager, runtime.entitlementManager);
               options.onRuntimeReset?.(ctx, runtime);
             },
           });
+          await EventBusConfig.getInstance().start({ handlers: [] });
           diagnosticsProvider.bind(state);
           return state;
         },

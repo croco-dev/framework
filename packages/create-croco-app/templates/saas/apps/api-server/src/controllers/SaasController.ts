@@ -28,13 +28,13 @@ export class SaasController {
   @ProblemResponses(...routeProblemResponses(seedSaasDemoRoute))
   async seedDemo() {
     await assertDemoEndpointsEnabled();
-    return runSaasDemoFlow(this.runtimeState.reset());
+    return runSaasDemoFlow(await this.runtimeState.reset());
   }
 
   @Get(smokeSaasDemoRoute)
   @ProblemResponses(...routeProblemResponses(smokeSaasDemoRoute))
   async smokeDemo() {
     await assertDemoEndpointsEnabled();
-    return runSaasDemoFlow(this.runtimeState.reset());
+    return runSaasDemoFlow(await this.runtimeState.reset());
   }
 }
