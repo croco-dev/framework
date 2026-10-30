@@ -130,7 +130,7 @@ export class HttpContext implements CrocoHttpContext, ProtocolHttpContext {
 }
 
 function toQueryRecord(searchParams: URLSearchParams): Record<string, string | string[]> {
-  const query: Record<string, string | string[]> = {};
+  const query = Object.create(null) as Record<string, string | string[]>;
 
   searchParams.forEach((value, key) => {
     const existing = query[key];

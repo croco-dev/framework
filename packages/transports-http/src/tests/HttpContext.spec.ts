@@ -1,3 +1,4 @@
+import { Hono } from "hono";
 import type { Context as HonoContext } from "hono";
 import { describe, expect, it, vi } from "vitest";
 import { HttpContext } from "../libs/HttpContext";
@@ -64,6 +65,45 @@ describe("HttpContext", () => {
     expect(ctx.req.query.tag).toEqual(["first", "second"]);
     expect(ctx.query("tag")).toEqual(["first", "second"]);
     expect(ctx.req.headers["x-tags"]).toBe("read, write");
+  });
+
+  it.each(["constructor", "toString", "__proto__", "hasOwnProperty", "", "이름", "tag"])(
+    "should preserve own query values for %j",
+    async (key) => {
+      const app = new Hono();
+      const observed: HttpContext[] = [];
+      app.get("/", (raw) => {
+        observed.push(new HttpContext(raw));
+        return raw.text("ok");
+      });
+
+      for (const values of [["first"], ["", "둘째", "last"]]) {
+        const search = new URLSearchParams(values.map((value) => [key, value]));
+        await app.request(`http://localhost/?${search}`);
+        const ctx = observed.at(-1);
+        expect(ctx).toBeDefined();
+        const expected = values.length === 1 ? values[0] : values;
+        expect(Object.hasOwn(ctx?.req.query ?? {}, key)).toBe(true);
+        expect(ctx?.req.query[key]).toEqual(expected);
+        expect(ctx?.request.query?.[key]).toEqual(expected);
+        expect(ctx?.query(key)).toEqual(expected);
+        expect(Object.keys(ctx?.req.query ?? {})).toEqual([key]);
+        expect(Array.isArray(Object.getPrototypeOf(ctx?.req.query ?? {}))).toBe(false);
+      }
+    },
+  );
+
+  it("should return undefined for absent inherited property names", async () => {
+    const app = new Hono();
+    app.get("/", (raw) => {
+      const ctx = new HttpContext(raw);
+      for (const key of ["constructor", "toString", "__proto__", "hasOwnProperty"]) {
+        expect(Object.hasOwn(ctx.req.query, key)).toBe(false);
+        expect(ctx.query(key)).toBeUndefined();
+      }
+      return raw.text("ok");
+    });
+    expect((await app.request("http://localhost/")).status).toBe(200);
   });
 
   it("should capture route params into req.params", () => {

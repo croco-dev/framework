@@ -7,7 +7,15 @@ import { join } from "node:path";
 import { Container, type ILogger, LOGGER_TOKEN } from "@croco/framework-context";
 import { Logger } from "@croco/framework-logger";
 import { Problem } from "@croco/problems-core";
-import { Body, Controller, Get, Post, Raw, RequestValidationProblem } from "@croco/protocols-rest";
+import {
+  Body,
+  Controller,
+  Get,
+  Post,
+  Query,
+  Raw,
+  RequestValidationProblem,
+} from "@croco/protocols-rest";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import { createApp, type CrocoApp } from "../libs/CrocoApp";
@@ -28,6 +36,18 @@ class NodeSmokeController {
   @Get("/json")
   json() {
     return { ok: true, transport: "node", path: "json" };
+  }
+
+  @Get("/query")
+  query(
+    @Query("constructor", z.union([z.string(), z.array(z.string())]).optional())
+    constructorValue: string | string[] | undefined,
+    @Query("toString", z.union([z.string(), z.array(z.string())]).optional())
+    toStringValue: string | string[] | undefined,
+    @Query("__proto__", z.union([z.string(), z.array(z.string())]).optional())
+    protoValue: string | string[] | undefined,
+  ) {
+    return { constructorValue, toStringValue, protoValue };
   }
 
   @Get("/problem")
@@ -131,6 +151,32 @@ describe("NodeAdapter real server smoke", () => {
 
     if (cleanupFailures.length > 0) {
       throw new Error(`Node smoke cleanup failed: ${cleanupFailures.join("; ")}`);
+    }
+  });
+
+  it("binds prototype-named query values through schemas over real HTTP", async () => {
+    const server = await createNodeSmokeApp().listen(0);
+    servers.push(server);
+    await waitForListening(server, "query binding");
+    const baseUrl = getBaseUrl(server, "query binding");
+
+    for (const [query, expected] of [
+      ["", {}],
+      [
+        "constructor=alpha&toString=beta&__proto__=gamma",
+        { constructorValue: "alpha", toStringValue: "beta", protoValue: "gamma" },
+      ],
+      [
+        "constructor=a&constructor=b&toString=c&toString=d&__proto__=e&__proto__=f",
+        { constructorValue: ["a", "b"], toStringValue: ["c", "d"], protoValue: ["e", "f"] },
+      ],
+    ] as const) {
+      const response = await fetchWithTimeout(
+        `${baseUrl}/node-smoke/query?${query}`,
+        "query binding",
+      );
+      expect(response.status).toBe(200);
+      expect(await response.json()).toEqual(expected);
     }
   });
 
