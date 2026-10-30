@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "gid-core",
+      "classification": "pure-contract",
+      "reason": "Reject prefixed ULIDs above the 128-bit maximum without changing generation, prefix policy, uppercase grammar or public declarations.",
+      "files": {
+        "packages/gid-core/src/libs/IdPrefix.ts": "bd90ff1fc0402664e99142acc6a16c10a88003696e21752013905e749562cd16"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "ULID range validation uses only string and regular expression operations, independent of the Kubernetes Node Host. No provider, storage, host capability or lifecycle changes.",
+          "providers": [],
+          "constraints": [
+            "Existing runtime catalog claims remain unchanged; this review does not certify a deployment or provider."
+          ],
+          "references": [
+            "packages/gid-core/src/libs/IdPrefix.ts",
+            "packages/gid-core/src/tests/IdPrefix.spec.ts",
+            "docs/package-catalog.json"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "ULID range validation uses only string and regular expression operations, independent of the Lambda Host. No provider, storage, host capability or lifecycle changes.",
+          "providers": [],
+          "constraints": [
+            "Existing runtime catalog claims remain unchanged; this review does not certify a deployment or provider."
+          ],
+          "references": [
+            "packages/gid-core/src/libs/IdPrefix.ts",
+            "packages/gid-core/src/tests/IdPrefix.spec.ts",
+            "docs/package-catalog.json"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "ULID range validation uses only string and regular expression operations, independent of the Workers or explicit Node Container Host. No provider, storage, host capability or lifecycle changes.",
+          "providers": [],
+          "constraints": [
+            "Existing runtime catalog claims remain unchanged; this review does not certify a deployment or provider."
+          ],
+          "references": [
+            "packages/gid-core/src/libs/IdPrefix.ts",
+            "packages/gid-core/src/tests/IdPrefix.spec.ts",
+            "docs/package-catalog.json"
+          ]
+        }
+      }
+    }
+  ]
+}

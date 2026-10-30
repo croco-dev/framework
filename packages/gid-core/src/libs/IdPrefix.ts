@@ -3,7 +3,7 @@ import { getInvalidIdPrefixReason, MINIMUM_ID_PREFIX_LENGTH } from "./idPrefixPo
 import { InvalidIdPrefixProblem } from "./problems/GidProblems";
 
 const ULID_LENGTH = 26;
-const ULID_REGEX = /^[0123456789ABCDEFGHJKMNPQRSTVWXYZ]{26}$/;
+const ULID_REGEX = /^[0-7][0123456789ABCDEFGHJKMNPQRSTVWXYZ]{25}$/;
 
 export class IdPrefix<TPrefix extends string = string> {
   private readonly prefix: TPrefix;
