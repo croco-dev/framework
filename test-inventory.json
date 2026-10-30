@@ -4422,6 +4422,12 @@
       "owner": "@croco/notifications-resend"
     },
     {
+      "path": "packages/notifications-resend/src/tests/ResendEngagementWorkers.postgres.spec.ts",
+      "lane": "live",
+      "qualifiers": [],
+      "owner": "@croco/notifications-resend"
+    },
+    {
       "path": "packages/notifications-resend/src/tests/ResendLiveSmoke.spec.ts",
       "lane": "live",
       "qualifiers": [],
@@ -4429,6 +4435,12 @@
     },
     {
       "path": "packages/notifications-resend/src/tests/ResendProvider.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/notifications-resend"
+    },
+    {
+      "path": "packages/notifications-resend/src/tests/ResendWorkers.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/notifications-resend"
