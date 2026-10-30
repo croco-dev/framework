@@ -46,12 +46,13 @@
   "scripts": {
     "build": "tsup src/index.ts --format esm,cjs --minify --clean --dts",
     "dev": "tsup src/index.ts --format cjs,esm --dts --watch",
-    "test": "vitest run --exclude src/tests/ResendLiveSmoke.spec.ts",
+    "test": "vitest run --exclude src/tests/ResendLiveSmoke.spec.ts --exclude src/tests/ResendEngagementWorkers.postgres.spec.ts",
     "test:evidence": "pnpm run test --maxWorkers=1 --reporter=json --outputFile=.turbo/croco-test-evidence.json",
     "test:live": "vitest run src/tests/ResendLiveSmoke.spec.ts",
     "typecheck": "tsrs --noEmit",
     "lint": "oxlint .",
-    "docs:api:model": "node --experimental-strip-types ../docs/scripts/generate-package-api-model.mts"
+    "docs:api:model": "node --experimental-strip-types ../docs/scripts/generate-package-api-model.mts",
+    "test:workers": "CROCO_TEST_REAL_RESOURCES=1 vitest run src/tests/ResendEngagementWorkers.postgres.spec.ts --maxWorkers=1"
   },
   "dependencies": {
     "@croco/diagnostics-core": "workspace:*",
@@ -63,10 +64,24 @@
     "resend": "^4.0.0"
   },
   "devDependencies": {
+    "@croco/engagement-core": "workspace:*",
+    "@croco/engagement-drizzle": "workspace:*",
+    "@croco/execution-core": "workspace:*",
+    "@croco/execution-drizzle": "workspace:*",
+    "@croco/tasks-core": "workspace:*",
     "@croco/testing": "workspace:*",
+    "@croco/tx-core": "workspace:*",
+    "@croco/tx-drizzle": "workspace:*",
+    "@types/pg": "8.20.0",
+    "drizzle-orm": "catalog:",
+    "esbuild": "0.27.2",
+    "miniflare": "4.20260312.0",
+    "pg": "8.22.0",
     "reflect-metadata": "^0.2.2",
+    "testcontainers": "12.0.4",
     "tsup": "^8.4.0",
     "typescript": "^5.7.2",
-    "vitest": "4.1.8"
+    "vitest": "4.1.8",
+    "zod": "4.6.6"
   }
 }

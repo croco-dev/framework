@@ -192,7 +192,7 @@ None.
 | `@croco/notifications-core`            | Contracts      | domain        | Notifications           | unclaimed                                 |
 | `@croco/notifications-fcm`             | Plugins        | provider      | Notifications           | node, lambda                              |
 | `@croco/notifications-react-email`     | Plugins        | presentation  | Notifications           | node, lambda                              |
-| `@croco/notifications-resend`          | Plugins        | provider      | Notifications           | node, lambda                              |
+| `@croco/notifications-resend`          | Plugins        | provider      | Notifications           | node, lambda, cloudflare-workers          |
 | `@croco/onboarding-core`               | Contracts      | domain        | Onboarding              | unclaimed                                 |
 | `@croco/onboarding-drizzle`            | Plugins        | provider      | Onboarding              | node, lambda                              |
 | `@croco/openapi-spec`                  | Tooling        | codegen       | Openapi Spec            | unclaimed                                 |

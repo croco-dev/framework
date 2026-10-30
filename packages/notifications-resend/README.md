@@ -87,6 +87,49 @@ missing config, live check 상태만 반환하며 API key 원문은 노출하지
 필요하면 `readinessCheck`를 주입하고, 반환되는 details의 token/secret/api key/idempotency key 계열
 값은 redaction됩니다.
 
+## Cloudflare Workers
+
+기존 `ResendProvider`를 `nodejs_compat`가 활성화된 Workers에서도 사용할 수 있습니다.
+API key는 `process.env` 대신 Worker의 secret binding에서 전달합니다. Resend 선택은 선택 사항이며,
+이 패키지를 설치하거나 import하는 것만으로 발송 Provider가 등록되지는 않습니다.
+
+```typescript typecheck
+import { ResendProvider } from "@croco/notifications-resend";
+
+export function createWorkerResendProvider(env: { RESEND_API_KEY: string }): ResendProvider {
+  return new ResendProvider({
+    apiKey: env.RESEND_API_KEY,
+    from: "notifications@example.com",
+  });
+}
+```
+
+단건 전송과 렌더링된 이메일은 기존 Notification/Engagement 경로를 사용합니다. `success: true`와
+`messageId`는 Resend가 요청을 접수했다는 뜻이며, 수신자에게 배달됐다는 뜻은 아닙니다.
+배달 상태는 검증된 provider event를 `EngagementDeliveryEventProcessor`에 전달해 별도로 기록합니다.
+호출자는 검증된 tenant/recipient scope와 업무별로 유지되는 idempotency key를 제공해야 합니다.
+
+재시작 후 중복 발송과 응답 유실을 처리하려면 durable Engagement dispatch/execution store 및
+ContactPolicy reservation을 함께 사용합니다. 전송 전에 커밋한 `unknown` 상태를 유지하고,
+접수 여부를 확인하지 못한 요청을 새 key로 다시 보내지 않습니다. 접수 증거가 있으면 기존
+ContactPolicy reconciliation API로 reservation을 정정하며, dispatch·배달 영수증은 해당 저장소와
+event 경로에서 별도로 처리합니다. 외부 전송 전체를 DB transaction으로 감싸면 실패 시
+이 증거까지 rollback될 수 있으므로, 저장소가 소유한 transaction 경계를 유지해야 합니다.
+Worker callback이 끝나기 전에 전송과 저장을 완료하고 DB 연결을 닫습니다. SDK는 upstream timeout
+실패를 분류하지만 호출자가 지정하는 deadline이나 원격 전송 취소를 제공하지 않습니다.
+대량 broadcast의 내구 실행은 Queue/Task 경로가 필요하며, `waitUntil`만으로 보장하지 않습니다.
+
+```bash
+pnpm --filter @croco/notifications-resend... build
+pnpm --filter @croco/notifications-resend test
+# Docker 필요: 실제 workerd + PostgreSQL, 합성 Resend HTTP 응답
+pnpm --filter @croco/notifications-resend test:workers
+```
+
+로컬 fixture는 이메일 요청, 재시도·오류 분류·민감값 제거, durable receipt와 새 Worker에서의
+중복/접수 불명 처리를 검사합니다. 실제 Resend 발송, Cloudflare 배포, Hyperdrive proxy 동작이나
+전체 SaaS profile 인증을 검증한 결과는 아닙니다. 패키지의 alpha 상태는 유지합니다.
+
 ## Failure modes and recovery
 
 | Problem code                                | 의미                                                             | 복구 액션                                                       |

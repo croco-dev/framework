@@ -179,3 +179,17 @@ provide signed URLs or per-object ACLs and are never retried automatically. Canc
 waiting and read-body consumption; a started put/delete can still commit remotely. Applications
 own authenticated tenant/key selection and recovery after an uncertain write. The binding has no
 shutdown/flush operation and must remain within the selected Worker callback's lifetime.
+
+## Resend Workers email
+
+`@croco/notifications-resend` reuses its existing `ResendProvider` in Workers with `nodejs_compat`.
+Pass the API key from the application's secret binding and select the provider explicitly.
+`pnpm --filter @croco/notifications-resend test` includes actual workerd with synthetic HTTP upstreams;
+`pnpm --filter @croco/notifications-resend test:workers` additionally needs Docker for real PostgreSQL
+dispatch, execution and ContactPolicy receipts. Keep accepted, unknown and delivered states distinct.
+An accepted-but-response-lost send stays unknown until reconciled; never wrap external dispatch and
+its durable pre-send evidence in one outer database transaction. Finish callback work before closing
+its request-owned database connection. The SDK classifies upstream timeout failures but offers no
+caller deadline or remote cancellation guarantee. These local tests do not certify live Resend,
+deployed Hyperdrive, Cloudflare or the full SaaS profile. Large broadcasts need a durable Queue/Task
+path; request `waitUntil` is not that path. See the package README for the opt-in composition and limits.

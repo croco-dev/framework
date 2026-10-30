@@ -677,6 +677,7 @@ jobs:
               - 'packages/membership-drizzle/**'
               - 'packages/metering-core/**'
               - 'packages/metering-drizzle/**'
+              - 'packages/notifications-resend/**'
               - 'packages/metrics-core/**'
               - 'packages/warehouse-postgres/**'
               - 'packages/migration-runner/**'
@@ -1525,6 +1526,11 @@ jobs:
         run: |
           pnpm build --filter=@croco/tx-drizzle...
           pnpm --filter @croco/tx-drizzle test:workers
+
+      - name: Verify Resend acceptance and durable receipts in local Workers
+        run: |
+          pnpm build --filter=@croco/notifications-resend...
+          pnpm --filter @croco/notifications-resend test:workers
 
       - name: Verify persistence concurrency against PostgreSQL
         env:

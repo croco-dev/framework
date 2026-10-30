@@ -962,7 +962,7 @@
     "notifications-resend": {
       "role": "Plugins",
       "subtype": "provider",
-      "runtimes": ["node", "lambda"],
+      "runtimes": ["node", "lambda", "cloudflare-workers"],
       "domain": "Notifications"
     },
     "onboarding-core": {
@@ -2087,7 +2087,7 @@
       "notifications-resend": {
         "domain": "Notifications",
         "adapter": "Resend email provider",
-        "runtimes": ["node", "lambda"],
+        "runtimes": ["node", "lambda", "cloudflare-workers"],
         "requiredEnv": ["RESEND_API_KEY", "default from address"],
         "features": [
           "email send",
@@ -2098,7 +2098,8 @@
           "shared capability conformance",
           "safe diagnostics",
           "redacted upstream Problems",
-          "optional live smoke"
+          "optional live smoke",
+          "Workers nodejs_compat; local workerd and durable Engagement receipts; no live service certification"
         ]
       },
       "notifications-react-email": {

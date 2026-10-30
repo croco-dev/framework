@@ -1,0 +1,69 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "notifications-resend",
+      "classification": "runtime-adapter",
+      "reason": "Add a verified Workers runtime claim for the existing Resend provider, with real workerd HTTP and durable Engagement receipt fixtures. No duplicate provider or domain engine is introduced.",
+      "files": {
+        "docs/package-catalog.json": "e68c0ea0caef36ee44b877de4c01825cce926cff69699dad2cc139cd4400b7f1"
+      },
+      "catalogRuntimes": ["node", "lambda", "cloudflare-workers"],
+      "profiles": {
+        "kubernetes": {
+          "result": "unverified",
+          "reason": "The existing Node provider and SDK are reused without changing transport behavior. No Kubernetes deployment is exercised by this change.",
+          "providers": ["@croco/notifications-resend/ResendProvider"],
+          "constraints": [
+            "Existing Node runtime support remains; no live Kubernetes or Resend certification."
+          ],
+          "references": [
+            "packages/notifications-resend/src/libs/ResendProvider.ts",
+            "packages/notifications-resend/src/tests/ResendProvider.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "unverified",
+          "reason": "The unchanged provider retains its Lambda runtime claim. This change tests local Workers rather than an AWS invocation.",
+          "providers": ["@croco/notifications-resend/ResendProvider"],
+          "constraints": [
+            "Await send and durable receipt writes within the invocation lifetime; no live AWS or Resend certification."
+          ],
+          "references": [
+            "packages/notifications-resend/src/libs/ResendProvider.ts",
+            "packages/notifications-resend/README.md"
+          ]
+        },
+        "cloudflare": {
+          "result": "supported",
+          "host": "workers",
+          "reason": "The existing Fetch-based Resend SDK and provider execute in actual local workerd. Separate PostgreSQL fixtures verify durable dispatch, execution and ContactPolicy receipts.",
+          "providers": [
+            "@croco/notifications-resend/ResendProvider",
+            "@croco/engagement-drizzle/DrizzleEngagementStore",
+            "@croco/engagement-drizzle/DrizzleContactPolicyStore"
+          ],
+          "constraints": [
+            "Requires nodejs_compat and explicit secret binding; provider selection remains optional.",
+            "Synthetic Resend HTTP upstream and local PostgreSQL do not verify live Resend, deployed Hyperdrive or full SaaS profile certification.",
+            "Complete send and receipt persistence within the callback; no caller deadline or remote cancellation guarantee. Large broadcast requires durable Queue/Task execution.",
+            "Provider acceptance is not delivery. Retain committed unknown reservations after ambiguous acceptance; no outer transaction around remote send."
+          ],
+          "references": [
+            "packages/notifications-resend/src/tests/ResendWorkers.spec.ts",
+            "packages/notifications-resend/src/tests/ResendEngagementWorkers.postgres.spec.ts",
+            "packages/notifications-resend/src/tests/fixtures/resendEngagementWorker.ts",
+            "packages/notifications-resend/README.md"
+          ],
+          "evidence": {
+            "kind": "host-runtime",
+            "runtime": "cloudflare-workers",
+            "path": "packages/notifications-resend/src/tests/ResendWorkers.spec.ts",
+            "testName": "Resend on actual workerd with a synthetic HTTP upstream sends rendered email using the secret binding and reports provider acceptance",
+            "sha256": "71c71a09e7a035b2382e4b81c75567e742ea0191f2ef402a6702ae103900458c"
+          }
+        }
+      }
+    }
+  ]
+}
