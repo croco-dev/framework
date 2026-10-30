@@ -8,333 +8,333 @@
       "file": "packages/admin-ops/src/libs/sourceAdapters.ts",
       "line": 362,
       "excerpt": "throw new Error(\"Execution manager does not support audit log append\");",
-      "reason": "Reviewed pre-existing internal runtime assertion; future user-facing failures in this file must use Problem-shaped or diagnostic-coded errors.",
+      "reason": "Reviewed 2026-10-30 (#4004): recoverExecution refuses retry without the manager audit-log capability. createRetryConsole.runRecovery converts this adapter rejection into status=failed and admin-ops/provider-recovery-failed; no retry executes without the audit append.",
       "owner": "framework-error-handling",
-      "expiresOn": "2026-10-29"
+      "expiresOn": "2027-01-05"
     },
     {
       "package": "@croco/admin-ops",
       "file": "packages/admin-ops/src/libs/sourceAdapters.ts",
       "line": 379,
       "excerpt": "throw new Error(\"Execution manager does not support replay\");",
-      "reason": "Reviewed pre-existing internal runtime assertion; future user-facing failures in this file must use Problem-shaped or diagnostic-coded errors.",
+      "reason": "Reviewed 2026-10-30 (#4004): recoverExecution rejects a replay-capability mismatch. createRetryConsole.runRecovery owns the public failed-result diagnostic; this private adapter guard must not invent a second recovery Problem contract.",
       "owner": "framework-error-handling",
-      "expiresOn": "2026-10-29"
+      "expiresOn": "2027-01-05"
     },
     {
       "package": "@croco/admin-ops",
       "file": "packages/admin-ops/src/libs/sourceAdapters.ts",
       "line": 612,
       "excerpt": "throw new Error(\"Lifecycle recovery provider is not configured\");",
-      "reason": "Reviewed pre-existing internal runtime assertion; future user-facing failures in this file must use Problem-shaped or diagnostic-coded errors.",
+      "reason": "Reviewed 2026-10-30 (#4004): createLifecycleRetryConsoleSource rejects an absent optional recovery callback. The normal console hides unsupported recovery actions and runRecovery normalizes a direct adapter rejection into a failed result.",
       "owner": "framework-error-handling",
-      "expiresOn": "2026-10-29"
+      "expiresOn": "2027-01-05"
     },
     {
       "package": "@croco/admin-ops",
       "file": "packages/admin-ops/src/libs/sourceAdapters.ts",
       "line": 618,
       "excerpt": "throw new Error(`Lifecycle run '${item.id}' was not found`);",
-      "reason": "Reviewed pre-existing internal runtime assertion; future user-facing failures in this file must use Problem-shaped or diagnostic-coded errors.",
+      "reason": "Reviewed 2026-10-30 (#4004): The lifecycle source rejects a run that vanished between console selection and provider lookup. runRecovery owns normalization into a failed result; this guard prevents calling recover with a missing run.",
       "owner": "framework-error-handling",
-      "expiresOn": "2026-10-29"
+      "expiresOn": "2027-01-05"
     },
     {
       "package": "@croco/diagnostics-core",
       "file": "packages/diagnostics-core/src/libs/ErrorHistoryRingBuffer.ts",
       "line": 16,
       "excerpt": "throw new Error(\"maxSize must be at least 1\");",
-      "reason": "Reviewed pre-existing internal runtime assertion; future user-facing failures in this file must use Problem-shaped or diagnostic-coded errors.",
+      "reason": "Reviewed 2026-10-30 (#4004): ErrorHistoryRingBuffer rejects a nonpositive capacity before allocating or recording diagnostics. This constructor programmer/configuration assertion has no request recovery state; retain the current thrown-Error contract until a separately reviewed configuration diagnostic replaces it.",
       "owner": "framework-error-handling",
-      "expiresOn": "2026-10-29"
+      "expiresOn": "2027-01-07"
     },
     {
       "package": "@croco/frontend-problems",
       "file": "packages/frontend-problems/src/index.ts",
       "line": 924,
       "excerpt": "throw new Error(`Unhandled Problem variant${suffix}`);",
-      "reason": "Internal exhaustive/programmer assertion retained as a reviewed exception while user-facing runtime validation paths use coded errors.",
+      "reason": "Reviewed 2026-10-30 (#4004): assertProblemExhaustive accepts never and throws for an unhandled runtime variant. This is a programmer assertion outside the declared domain Problem union; turning it into another domain Problem would change the exhaustive failure contract.",
       "owner": "framework-error-handling",
-      "expiresOn": "2026-10-29"
+      "expiresOn": "2027-01-09"
     },
     {
       "package": "@croco/idempotency-core",
       "file": "packages/idempotency-core/src/libs/conformance.ts",
       "line": 346,
       "excerpt": "throw new Error(\"omitted-ttl reservation must grant a finite in-flight lease\");",
-      "reason": "Conformance and test-support assertions intentionally fail developer verification paths; migrate only if this becomes a user-facing runtime recovery boundary.",
+      "reason": "Reviewed 2026-10-30 (#4004): The provider conformance runner must reject an invalid lease, result mismatch, or missing expected rejection. These assertions report a failed verification case rather than a business idempotency outcome; expected provider Problems are checked separately.",
       "owner": "framework-error-handling",
-      "expiresOn": "2026-10-29"
+      "expiresOn": "2027-01-11"
     },
     {
       "package": "@croco/idempotency-core",
       "file": "packages/idempotency-core/src/libs/conformance.ts",
       "line": 388,
       "excerpt": "throw new Error(`${message}. Expected ${String(expected)}, got ${String(actual)}.`);",
-      "reason": "Conformance and test-support assertions intentionally fail developer verification paths; migrate only if this becomes a user-facing runtime recovery boundary.",
+      "reason": "Reviewed 2026-10-30 (#4004): The provider conformance runner must reject an invalid lease, result mismatch, or missing expected rejection. These assertions report a failed verification case rather than a business idempotency outcome; expected provider Problems are checked separately.",
       "owner": "framework-error-handling",
-      "expiresOn": "2026-10-29"
+      "expiresOn": "2027-01-11"
     },
     {
       "package": "@croco/idempotency-core",
       "file": "packages/idempotency-core/src/libs/conformance.ts",
       "line": 400,
       "excerpt": "throw new Error(",
-      "reason": "Conformance and test-support assertions intentionally fail developer verification paths; migrate only if this becomes a user-facing runtime recovery boundary.",
+      "reason": "Reviewed 2026-10-30 (#4004): The provider conformance runner must reject an invalid lease, result mismatch, or missing expected rejection. These assertions report a failed verification case rather than a business idempotency outcome; expected provider Problems are checked separately.",
       "owner": "framework-error-handling",
-      "expiresOn": "2026-10-29"
+      "expiresOn": "2027-01-11"
     },
     {
       "package": "@croco/idempotency-core",
       "file": "packages/idempotency-core/src/libs/conformance.ts",
       "line": 405,
       "excerpt": "throw new Error(`Expected ${expected.name} to be thrown.`);",
-      "reason": "Conformance and test-support assertions intentionally fail developer verification paths; migrate only if this becomes a user-facing runtime recovery boundary.",
+      "reason": "Reviewed 2026-10-30 (#4004): The provider conformance runner must reject an invalid lease, result mismatch, or missing expected rejection. These assertions report a failed verification case rather than a business idempotency outcome; expected provider Problems are checked separately.",
       "owner": "framework-error-handling",
-      "expiresOn": "2026-10-29"
+      "expiresOn": "2027-01-11"
     },
     {
       "package": "@croco/meta-vite",
       "file": "packages/meta-vite/src/libs/isr/isrMiddleware.ts",
       "line": 37,
       "excerpt": "throw new Error(\"CacheStore returned no ISR response\");",
-      "reason": "Reviewed pre-existing internal runtime assertion; future user-facing failures in this file must use Problem-shaped or diagnostic-coded errors.",
+      "reason": "Reviewed 2026-10-30 (#4004): CacheStore.getOrSet permits undefined, including invalidated in-flight loads. The current ISR middleware promises its caller a Response and rejects this no-response outcome. Retain that existing rejection during exception maintenance; changing invalidation, fallback rendering or the public error model requires a separate ISR behavior review.",
       "owner": "framework-error-handling",
-      "expiresOn": "2026-10-29"
+      "expiresOn": "2027-01-13"
     },
     {
       "package": "@croco/migration-runner",
       "file": "packages/migration-runner/src/package-version.ts",
       "line": 11,
       "excerpt": "throw new Error(\"Missing package version in package.json\");",
-      "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
+      "reason": "Reviewed 2026-10-30 (#4004): getPackageVersion checks the statically imported package manifest used by the CLI version option. Missing metadata is a broken build/package invariant, not a migration apply failure; preserve startup rejection until the packaging boundary supplies a dedicated diagnostic.",
       "owner": "framework-error-handling",
-      "expiresOn": "2026-10-29"
+      "expiresOn": "2027-01-15"
     },
     {
       "package": "@croco/outbox-core",
       "file": "packages/outbox-core/src/libs/conformance.ts",
       "line": 355,
       "excerpt": "throw new Error(\"rollback\");",
-      "reason": "Conformance and test-support assertions intentionally fail developer verification paths; migrate only if this becomes a user-facing runtime recovery boundary.",
+      "reason": "Reviewed 2026-10-30 (#4004): The conformance Unit of Work callback deliberately throws to verify rollback removes the record. This is an injected test failure, not an outbox delivery failure; replacing it with a successful result would invalidate the transaction probe.",
       "owner": "framework-error-handling",
-      "expiresOn": "2026-10-29"
+      "expiresOn": "2027-01-17"
     },
     {
       "package": "@croco/problems-core",
       "file": "packages/problems-core/src/libs/Problem.ts",
       "line": 37,
       "excerpt": "throw new Error(`Unhandled Problem variant${suffix}`);",
-      "reason": "Internal exhaustive/programmer assertion retained as a reviewed exception while user-facing runtime validation paths use coded errors.",
+      "reason": "Reviewed 2026-10-30 (#4004): assertProblemExhaustive accepts never and throws for an unhandled runtime variant. This is a programmer assertion outside the declared domain Problem union; preserve it without introducing a recursive UnhandledProblem variant.",
       "owner": "framework-error-handling",
-      "expiresOn": "2026-10-29"
+      "expiresOn": "2027-01-19"
     },
     {
       "package": "@croco/protocols-core",
       "file": "packages/protocols-core/src/libs/ContractGraphConsumerCoverage.ts",
       "line": 612,
       "excerpt": "throw new Error(`Unknown contract graph consumer '${consumerId}'.`);",
-      "reason": "Reviewed pre-existing internal runtime assertion; future user-facing failures in this file must use Problem-shaped or diagnostic-coded errors.",
+      "reason": "Reviewed 2026-10-30 (#4004): getConsumerDefinition accepts only the closed ContractGraphConsumerId union. A missing definition is an invalid programmer-supplied consumer identity, not a valid graph diagnostic; preserve rejection instead of inventing coverage for an unknown consumer.",
       "owner": "framework-error-handling",
-      "expiresOn": "2026-10-29"
+      "expiresOn": "2027-01-21"
     },
     {
       "package": "@croco/rpc-codegen",
       "file": "packages/rpc-codegen/src/libs/generate.ts",
       "line": 1730,
       "excerpt": "throw new Error(\\`Unhandled RPC Problem variant\\${suffix}\\`);",
-      "reason": "Internal exhaustive/programmer assertion retained as a reviewed exception while user-facing runtime validation paths use coded errors.",
+      "reason": "Reviewed 2026-10-30 (#4004): The generated assertExhaustiveProblem helper accepts never and throws for an unhandled runtime variant. The template intentionally matches the standalone helpers; introducing a domain Problem would change generated consumer behavior and its declared union.",
       "owner": "framework-error-handling",
-      "expiresOn": "2026-10-29"
+      "expiresOn": "2027-01-23"
     },
     {
       "package": "@croco/testing",
       "file": "packages/testing/src/libs/failure-drill.ts",
       "line": 356,
       "excerpt": "throw new Error(`Failure drill '${scenario.id}' did not return a Problem.`);",
-      "reason": "Conformance and test-support assertions intentionally fail developer verification paths; migrate only if this becomes a user-facing runtime recovery boundary.",
+      "reason": "Reviewed 2026-10-30 (#4004): The failure-drill assertion verifies that the scenario produced its expected Problem, recovery action and telemetry/audit evidence. Its Error marks verification failure, distinct from the domain Problem being observed; a missing observation must never pass as a scenario result.",
       "owner": "framework-error-handling",
-      "expiresOn": "2026-10-29"
+      "expiresOn": "2027-01-25"
     },
     {
       "package": "@croco/testing",
       "file": "packages/testing/src/libs/failure-drill.ts",
       "line": 359,
       "excerpt": "throw new Error(`Failure drill '${scenario.id}' did not return a recovery action.`);",
-      "reason": "Conformance and test-support assertions intentionally fail developer verification paths; migrate only if this becomes a user-facing runtime recovery boundary.",
+      "reason": "Reviewed 2026-10-30 (#4004): The failure-drill assertion verifies that the scenario produced its expected Problem, recovery action and telemetry/audit evidence. Its Error marks verification failure, distinct from the domain Problem being observed; a missing observation must never pass as a scenario result.",
       "owner": "framework-error-handling",
-      "expiresOn": "2026-10-29"
+      "expiresOn": "2027-01-25"
     },
     {
       "package": "@croco/testing",
       "file": "packages/testing/src/libs/failure-drill.ts",
       "line": 383,
       "excerpt": "throw new Error(",
-      "reason": "Conformance and test-support assertions intentionally fail developer verification paths; migrate only if this becomes a user-facing runtime recovery boundary.",
+      "reason": "Reviewed 2026-10-30 (#4004): The failure-drill assertion verifies that the scenario produced its expected Problem, recovery action and telemetry/audit evidence. Its Error marks verification failure, distinct from the domain Problem being observed; a missing observation must never pass as a scenario result.",
       "owner": "framework-error-handling",
-      "expiresOn": "2026-10-29"
+      "expiresOn": "2027-01-25"
     },
     {
       "package": "@croco/testing",
       "file": "packages/testing/src/libs/failure-drill.ts",
       "line": 389,
       "excerpt": "throw new Error(",
-      "reason": "Conformance and test-support assertions intentionally fail developer verification paths; migrate only if this becomes a user-facing runtime recovery boundary.",
+      "reason": "Reviewed 2026-10-30 (#4004): The failure-drill assertion verifies that the scenario produced its expected Problem, recovery action and telemetry/audit evidence. Its Error marks verification failure, distinct from the domain Problem being observed; a missing observation must never pass as a scenario result.",
       "owner": "framework-error-handling",
-      "expiresOn": "2026-10-29"
+      "expiresOn": "2027-01-25"
     },
     {
       "package": "@croco/testing",
       "file": "packages/testing/src/libs/failure-drill.ts",
       "line": 395,
       "excerpt": "throw new Error(",
-      "reason": "Conformance and test-support assertions intentionally fail developer verification paths; migrate only if this becomes a user-facing runtime recovery boundary.",
+      "reason": "Reviewed 2026-10-30 (#4004): The failure-drill assertion verifies that the scenario produced its expected Problem, recovery action and telemetry/audit evidence. Its Error marks verification failure, distinct from the domain Problem being observed; a missing observation must never pass as a scenario result.",
       "owner": "framework-error-handling",
-      "expiresOn": "2026-10-29"
+      "expiresOn": "2027-01-25"
     },
     {
       "package": "@croco/testing",
       "file": "packages/testing/src/libs/failure-drill.ts",
       "line": 402,
       "excerpt": "throw new Error(",
-      "reason": "Conformance and test-support assertions intentionally fail developer verification paths; migrate only if this becomes a user-facing runtime recovery boundary.",
+      "reason": "Reviewed 2026-10-30 (#4004): The failure-drill assertion verifies that the scenario produced its expected Problem, recovery action and telemetry/audit evidence. Its Error marks verification failure, distinct from the domain Problem being observed; a missing observation must never pass as a scenario result.",
       "owner": "framework-error-handling",
-      "expiresOn": "2026-10-29"
+      "expiresOn": "2027-01-25"
     },
     {
       "package": "@croco/testing",
       "file": "packages/testing/src/libs/failure-drill.ts",
       "line": 414,
       "excerpt": "throw new Error(",
-      "reason": "Conformance and test-support assertions intentionally fail developer verification paths; migrate only if this becomes a user-facing runtime recovery boundary.",
+      "reason": "Reviewed 2026-10-30 (#4004): The failure-drill assertion verifies that the scenario produced its expected Problem, recovery action and telemetry/audit evidence. Its Error marks verification failure, distinct from the domain Problem being observed; a missing observation must never pass as a scenario result.",
       "owner": "framework-error-handling",
-      "expiresOn": "2026-10-29"
+      "expiresOn": "2027-01-25"
     },
     {
       "package": "@croco/testing",
       "file": "packages/testing/src/libs/failure-drill.ts",
       "line": 439,
       "excerpt": "throw new Error(",
-      "reason": "Conformance and test-support assertions intentionally fail developer verification paths; migrate only if this becomes a user-facing runtime recovery boundary.",
+      "reason": "Reviewed 2026-10-30 (#4004): The failure-drill assertion verifies that the scenario produced its expected Problem, recovery action and telemetry/audit evidence. Its Error marks verification failure, distinct from the domain Problem being observed; a missing observation must never pass as a scenario result.",
       "owner": "framework-error-handling",
-      "expiresOn": "2026-10-29"
+      "expiresOn": "2027-01-25"
     },
     {
       "package": "@croco/testing",
       "file": "packages/testing/src/libs/failure-drill.ts",
       "line": 450,
       "excerpt": "throw new Error(",
-      "reason": "Conformance and test-support assertions intentionally fail developer verification paths; migrate only if this becomes a user-facing runtime recovery boundary.",
+      "reason": "Reviewed 2026-10-30 (#4004): The failure-drill assertion verifies that the scenario produced its expected Problem, recovery action and telemetry/audit evidence. Its Error marks verification failure, distinct from the domain Problem being observed; a missing observation must never pass as a scenario result.",
       "owner": "framework-error-handling",
-      "expiresOn": "2026-10-29"
+      "expiresOn": "2027-01-25"
     },
     {
       "package": "@croco/testing",
       "file": "packages/testing/src/libs/testing.ts",
       "line": 572,
       "excerpt": "throw new Error(\"Expected response body to be RFC 7807 Problem Details.\");",
-      "reason": "Conformance and test-support assertions intentionally fail developer verification paths; migrate only if this becomes a user-facing runtime recovery boundary.",
+      "reason": "Reviewed 2026-10-30 (#4004): The testing helper rejects malformed Problem responses or mismatched HTTP/OpenAPI expectations. Its Error is the test assertion result, distinct from the application Problem under observation; converting it to an observed Problem could obscure a broken test contract.",
       "owner": "framework-error-handling",
-      "expiresOn": "2026-10-29"
+      "expiresOn": "2027-01-25"
     },
     {
       "package": "@croco/testing",
       "file": "packages/testing/src/libs/testing.ts",
       "line": 586,
       "excerpt": "throw new Error(`Expected HTTP status ${expected.status}, received ${response.status}.`);",
-      "reason": "Conformance and test-support assertions intentionally fail developer verification paths; migrate only if this becomes a user-facing runtime recovery boundary.",
+      "reason": "Reviewed 2026-10-30 (#4004): The testing helper rejects malformed Problem responses or mismatched HTTP/OpenAPI expectations. Its Error is the test assertion result, distinct from the application Problem under observation; converting it to an observed Problem could obscure a broken test contract.",
       "owner": "framework-error-handling",
-      "expiresOn": "2026-10-29"
+      "expiresOn": "2027-01-25"
     },
     {
       "package": "@croco/testing",
       "file": "packages/testing/src/libs/testing.ts",
       "line": 598,
       "excerpt": "throw new Error(`Expected Problem detail to include \"${expectedDetail}\".`);",
-      "reason": "Conformance and test-support assertions intentionally fail developer verification paths; migrate only if this becomes a user-facing runtime recovery boundary.",
+      "reason": "Reviewed 2026-10-30 (#4004): The testing helper rejects malformed Problem responses or mismatched HTTP/OpenAPI expectations. Its Error is the test assertion result, distinct from the application Problem under observation; converting it to an observed Problem could obscure a broken test contract.",
       "owner": "framework-error-handling",
-      "expiresOn": "2026-10-29"
+      "expiresOn": "2027-01-25"
     },
     {
       "package": "@croco/testing",
       "file": "packages/testing/src/libs/testing.ts",
       "line": 620,
       "excerpt": "throw new Error(`Expected OpenAPI operation ${method.toUpperCase()} ${path}.`);",
-      "reason": "Conformance and test-support assertions intentionally fail developer verification paths; migrate only if this becomes a user-facing runtime recovery boundary.",
+      "reason": "Reviewed 2026-10-30 (#4004): The testing helper rejects malformed Problem responses or mismatched HTTP/OpenAPI expectations. Its Error is the test assertion result, distinct from the application Problem under observation; converting it to an observed Problem could obscure a broken test contract.",
       "owner": "framework-error-handling",
-      "expiresOn": "2026-10-29"
+      "expiresOn": "2027-01-25"
     },
     {
       "package": "@croco/testing",
       "file": "packages/testing/src/libs/testing.ts",
       "line": 628,
       "excerpt": "throw new Error(",
-      "reason": "Conformance and test-support assertions intentionally fail developer verification paths; migrate only if this becomes a user-facing runtime recovery boundary.",
+      "reason": "Reviewed 2026-10-30 (#4004): The testing helper rejects malformed Problem responses or mismatched HTTP/OpenAPI expectations. Its Error is the test assertion result, distinct from the application Problem under observation; converting it to an observed Problem could obscure a broken test contract.",
       "owner": "framework-error-handling",
-      "expiresOn": "2026-10-29"
+      "expiresOn": "2027-01-25"
     },
     {
       "package": "@croco/testing",
       "file": "packages/testing/src/libs/testing.ts",
       "line": 634,
       "excerpt": "throw new Error(",
-      "reason": "Conformance and test-support assertions intentionally fail developer verification paths; migrate only if this becomes a user-facing runtime recovery boundary.",
+      "reason": "Reviewed 2026-10-30 (#4004): The testing helper rejects malformed Problem responses or mismatched HTTP/OpenAPI expectations. Its Error is the test assertion result, distinct from the application Problem under observation; converting it to an observed Problem could obscure a broken test contract.",
       "owner": "framework-error-handling",
-      "expiresOn": "2026-10-29"
+      "expiresOn": "2027-01-25"
     },
     {
       "package": "@croco/testing",
       "file": "packages/testing/src/libs/testing.ts",
       "line": 727,
       "excerpt": "throw new Error(",
-      "reason": "Conformance and test-support assertions intentionally fail developer verification paths; migrate only if this becomes a user-facing runtime recovery boundary.",
+      "reason": "Reviewed 2026-10-30 (#4004): registerConstructor rejects a circular testing-provider dependency while assembling the test fixture. This is fixture construction failure, not an application request Problem; preserve hard failure before any handler executes.",
       "owner": "framework-error-handling",
-      "expiresOn": "2026-10-29"
+      "expiresOn": "2027-01-25"
     },
     {
       "package": "@croco/testing",
       "file": "packages/testing/src/libs/testing.ts",
       "line": 844,
       "excerpt": "throw new Error(`${label} expected ${String(expected)}, received ${String(actual)}.`);",
-      "reason": "Conformance and test-support assertions intentionally fail developer verification paths; migrate only if this becomes a user-facing runtime recovery boundary.",
+      "reason": "Reviewed 2026-10-30 (#4004): The testing helper rejects malformed Problem responses or mismatched HTTP/OpenAPI expectations. Its Error is the test assertion result, distinct from the application Problem under observation; converting it to an observed Problem could obscure a broken test contract.",
       "owner": "framework-error-handling",
-      "expiresOn": "2026-10-29"
+      "expiresOn": "2027-01-25"
     },
     {
       "package": "@croco/webhooks-core",
       "file": "packages/webhooks-core/src/libs/conformance.ts",
       "line": 166,
       "excerpt": "throw new Error(`${message}. Expected ${String(expected)}, got ${String(actual)}.`);",
-      "reason": "Conformance and test-support assertions intentionally fail developer verification paths; migrate only if this becomes a user-facing runtime recovery boundary.",
+      "reason": "Reviewed 2026-10-30 (#4004): The provider conformance runner rejects mismatched decoded events or missing/incorrect signature rejection. Assertion errors must remain distinct from the expected InvalidWebhookSignatureProblem raised by the adapter under test.",
       "owner": "framework-error-handling",
-      "expiresOn": "2026-10-29"
+      "expiresOn": "2027-01-26"
     },
     {
       "package": "@croco/webhooks-core",
       "file": "packages/webhooks-core/src/libs/conformance.ts",
       "line": 174,
       "excerpt": "throw new Error(`${message}. Expected ${expectedJson}, got ${actualJson}.`);",
-      "reason": "Conformance and test-support assertions intentionally fail developer verification paths; migrate only if this becomes a user-facing runtime recovery boundary.",
+      "reason": "Reviewed 2026-10-30 (#4004): The provider conformance runner rejects mismatched decoded events or missing/incorrect signature rejection. Assertion errors must remain distinct from the expected InvalidWebhookSignatureProblem raised by the adapter under test.",
       "owner": "framework-error-handling",
-      "expiresOn": "2026-10-29"
+      "expiresOn": "2027-01-26"
     },
     {
       "package": "@croco/webhooks-core",
       "file": "packages/webhooks-core/src/libs/conformance.ts",
       "line": 190,
       "excerpt": "throw new Error(",
-      "reason": "Conformance and test-support assertions intentionally fail developer verification paths; migrate only if this becomes a user-facing runtime recovery boundary.",
+      "reason": "Reviewed 2026-10-30 (#4004): The provider conformance runner rejects mismatched decoded events or missing/incorrect signature rejection. Assertion errors must remain distinct from the expected InvalidWebhookSignatureProblem raised by the adapter under test.",
       "owner": "framework-error-handling",
-      "expiresOn": "2026-10-29"
+      "expiresOn": "2027-01-26"
     },
     {
       "package": "@croco/webhooks-core",
       "file": "packages/webhooks-core/src/libs/conformance.ts",
       "line": 195,
       "excerpt": "throw new Error(`Expected ${expectedName} to be thrown.`);",
-      "reason": "Conformance and test-support assertions intentionally fail developer verification paths; migrate only if this becomes a user-facing runtime recovery boundary.",
+      "reason": "Reviewed 2026-10-30 (#4004): The provider conformance runner rejects mismatched decoded events or missing/incorrect signature rejection. Assertion errors must remain distinct from the expected InvalidWebhookSignatureProblem raised by the adapter under test.",
       "owner": "framework-error-handling",
-      "expiresOn": "2026-10-29"
+      "expiresOn": "2027-01-26"
     }
   ]
 }

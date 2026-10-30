@@ -26,9 +26,9 @@
       "file": "packages/framework-context/src/libs/RuntimeInspector.ts",
       "line": 590,
       "excerpt": "} catch {",
-      "reason": "Runtime inspector failure reporters are optional instrumentation and must not affect application behavior.",
+      "reason": "Reviewed 2026-10-30 (#4004): reportRuntimeInspectorFailure has already delivered the original inspection error to the optional reporter. A reporter that itself throws is a secondary instrumentation failure; rethrowing or recursively reporting it would disrupt the application. The public helper intentionally returns without a report result.",
       "owner": "framework-error-handling",
-      "expiresOn": "2026-10-29"
+      "expiresOn": "2027-01-27"
     },
     {
       "package": "@croco/onboarding-core",
@@ -53,9 +53,9 @@
       "file": "packages/transports-graphql/src/libs/GraphQLServer.ts",
       "line": 239,
       "excerpt": "} catch {",
-      "reason": "Startup logging is optional and must not prevent the GraphQL server from resolving a successful listen callback.",
+      "reason": "Reviewed 2026-10-30 (#4004): The catch encloses only optional Logger resolution and the startup info message after the Node server is listening. Logging failure must not reject an otherwise bound server; listen errors use the separate onError rejection path. This exemption does not cover request or schema failures.",
       "owner": "framework-error-handling",
-      "expiresOn": "2026-10-29"
+      "expiresOn": "2027-01-28"
     },
     {
       "package": "@croco/lifecycle-core",

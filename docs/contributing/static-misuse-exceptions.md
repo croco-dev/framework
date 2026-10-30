@@ -23,3 +23,8 @@ package so reviews do not collapse onto one date.
 Run `pnpm static-misuse:check` and the affected package tests after any allowlist change. To verify gate behavior,
 temporarily set an expiry to a past date and temporarily add an entry without changing `baselineEntryCount`; both
 checks must fail, and both temporary edits must be reverted.
+
+## Review records
+
+- [October 2026 review](./static-misuse-review-2026-10.md): retention decisions for the exceptions that expired
+  on 2026-10-29, with package-specific failure boundaries and staggered next-review dates.
