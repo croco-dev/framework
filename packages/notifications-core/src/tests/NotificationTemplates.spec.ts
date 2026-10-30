@@ -11,6 +11,91 @@ import {
 import { NotificationChannel } from "../libs/types";
 
 describe("NotificationTemplateRegistry", () => {
+  it.each(["constructor", "toString", "__proto__"])(
+    "should require an own value for %s with or without a schema",
+    (name) => {
+      for (const withSchema of [false, true]) {
+        const registry = new NotificationTemplateRegistry();
+        const template = {
+          id: "own-variable",
+          version: "v1",
+          locale: "en-US",
+          channel: NotificationChannel.EMAIL,
+          subject: `Subject {{${name}}}`,
+          content: `Hello {{${name}}} / {{${name}}}`,
+          ...(withSchema
+            ? {
+                variablesSchema: {
+                  properties: { [name]: { type: "string" as const, required: true } },
+                },
+              }
+            : {}),
+        };
+        registry.registerTemplate(template);
+
+        expect(() => registry.render({ ...template, variables: {} })).toThrow(
+          NotificationTemplateVariablesInvalidProblem,
+        );
+
+        const variables = Object.freeze({ [name]: "<Ada & Bob>" });
+        const prototype = Object.getPrototypeOf(variables);
+        expect(registry.render({ ...template, variables })).toMatchObject({
+          subject: "Subject <Ada & Bob>",
+          content: "Hello &lt;Ada &amp; Bob&gt; / &lt;Ada &amp; Bob&gt;",
+          variables,
+        });
+        expect(Object.getPrototypeOf(variables)).toBe(prototype);
+        expect(Object.getOwnPropertyDescriptors(variables)).toEqual({
+          [name]: { value: "<Ada & Bob>", writable: false, enumerable: true, configurable: false },
+        });
+
+        if (withSchema) {
+          expect(() => registry.render({ ...template, variables: { [name]: 42 } })).toThrow(
+            NotificationTemplateVariablesInvalidProblem,
+          );
+        }
+      }
+    },
+  );
+
+  it("should ignore inherited required and optional values without invoking their getters", () => {
+    const registry = new NotificationTemplateRegistry();
+    const prototype = Object.freeze({
+      get required() {
+        throw new Error("Inherited values must not be read");
+      },
+      get optional() {
+        throw new Error("Inherited values must not be read");
+      },
+    });
+    const variables: Record<string, unknown> = Object.create(prototype);
+    const template = {
+      id: "inherited-variables",
+      version: "v1",
+      locale: "en-US",
+      channel: NotificationChannel.SMS,
+      content: "{{required}} / {{optional}} / {{constructor}}",
+      variablesSchema: {
+        additionalProperties: false,
+        properties: {
+          required: { type: "string" as const, required: true },
+          optional: { type: "string" as const },
+          constructor: { type: "string" as const, required: false },
+        },
+      },
+    };
+    registry.registerTemplate(template);
+
+    expect(() => registry.render({ ...template, variables })).toThrow(
+      NotificationTemplateVariablesInvalidProblem,
+    );
+    Object.defineProperty(variables, "required", { value: "<Ada>", enumerable: true });
+    Object.freeze(variables);
+    expect(registry.render({ ...template, variables }).content).toBe("<Ada> /  / ");
+    expect(Object.getPrototypeOf(variables)).toBe(prototype);
+    expect(Object.keys(variables)).toEqual(["required"]);
+  });
+
   it("should render a template after validating schema variables", () => {
     const registry = new NotificationTemplateRegistry();
 

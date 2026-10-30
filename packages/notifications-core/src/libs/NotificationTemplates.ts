@@ -140,7 +140,8 @@ function validateTemplateVariables(
 
   if (schema !== undefined) {
     for (const [name, definition] of Object.entries(schema.properties)) {
-      if (variables[name] === undefined) {
+      const value = getOwnTemplateVariable(variables, name);
+      if (value === undefined) {
         if (definition.required) {
           issues.push(`${name} is required`);
         }
@@ -148,7 +149,7 @@ function validateTemplateVariables(
         continue;
       }
 
-      if (!matchesTemplateVariableType(variables[name], definition.type)) {
+      if (!matchesTemplateVariableType(value, definition.type)) {
         issues.push(`${name} must be ${definition.type}`);
       }
     }
@@ -171,7 +172,7 @@ function validateTemplateVariables(
   );
 
   for (const name of extractTemplatePlaceholders(template)) {
-    if (variables[name] === undefined && !optionalVariables.has(name)) {
+    if (getOwnTemplateVariable(variables, name) === undefined && !optionalVariables.has(name)) {
       issues.push(`${name} is required by template`);
     }
   }
@@ -209,8 +210,12 @@ function renderTemplateString(
   variableEscaping: NotificationTemplateVariableEscaping,
 ): string {
   return value.replace(/\{\{\s*([A-Za-z0-9_.-]+)\s*\}\}/g, (_match, name: string) =>
-    stringifyTemplateVariable(variables[name], variableEscaping),
+    stringifyTemplateVariable(getOwnTemplateVariable(variables, name), variableEscaping),
   );
+}
+
+function getOwnTemplateVariable(variables: Record<string, unknown>, name: string): unknown {
+  return Object.hasOwn(variables, name) ? variables[name] : undefined;
 }
 
 function stringifyTemplateVariable(
