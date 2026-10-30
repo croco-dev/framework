@@ -37,4 +37,78 @@ describe("HeaderTenantResolver", () => {
     const result = await resolver.resolve({ headers: { "x-tenant-id": "default-tenant" } });
     expect(result).toBe("default-tenant");
   });
+
+  it.each(["x-tenant-id", "X-Tenant-ID", "X-TENANT-ID"])(
+    "should resolve the default header with incoming name %s",
+    async (headerName) => {
+      expect(
+        await new HeaderTenantResolver().resolve({ headers: { [headerName]: "Tenant-A7" } }),
+      ).toBe("Tenant-A7");
+    },
+  );
+
+  describe.each(["x-org-id", "X-Org-ID", "X-ORG-ID"])("configured header %s", (headerName) => {
+    it.each(["x-org-id", "X-Org-ID", "X-ORG-ID"])(
+      "should resolve incoming name %s",
+      async (incomingName) => {
+        const resolver = new HeaderTenantResolver({ headerName });
+        expect(await resolver.resolve({ headers: { [incomingName]: "org-456" } })).toBe("org-456");
+      },
+    );
+  });
+
+  it("should preserve array selection and leave the original header bag unchanged", async () => {
+    const values = ["tenant-1", "tenant-2"];
+    Object.freeze(values);
+    const headers = Object.freeze({ "X-Tenant-ID": values, "x-other": "unrelated" });
+
+    expect(await new HeaderTenantResolver().resolve({ headers })).toBe("tenant-1");
+    expect(headers).toEqual({ "X-Tenant-ID": ["tenant-1", "tenant-2"], "x-other": "unrelated" });
+    expect(headers["X-Tenant-ID"]).toBe(values);
+  });
+
+  it.each([undefined, "", []])(
+    "should preserve missing or empty value handling for %j",
+    async (value) => {
+      expect(
+        await new HeaderTenantResolver().resolve({ headers: { "X-Tenant-ID": value } }),
+      ).toBeNull();
+    },
+  );
+
+  it.each([
+    { "x-tenant-id": "tenant-1", "X-Tenant-ID": "tenant-2" },
+    { "X-Tenant-ID": "tenant-2", "x-tenant-id": "tenant-1" },
+    { "x-tenant-id": "tenant-1", "X-Tenant-ID": "tenant-1" },
+    { "x-tenant-id": undefined, "X-Tenant-ID": "tenant-2" },
+  ])("should return null for duplicate case-insensitive keys %j", async (headers) => {
+    expect(await new HeaderTenantResolver().resolve({ headers })).toBeNull();
+  });
+
+  it("should ignore inherited tenant headers while accepting own headers", async () => {
+    const headers: Record<string, string> = Object.create({ "x-tenant-id": "inherited-tenant" });
+    const resolver = new HeaderTenantResolver();
+    expect(await resolver.resolve({ headers })).toBeNull();
+
+    headers["X-Tenant-ID"] = "own-tenant";
+    expect(await resolver.resolve({ headers })).toBe("own-tenant");
+  });
+
+  it.each([
+    ["x-tenant-id", "X-Tenant-ID"],
+    ["X-Tenant-ID", "x-tenant-id"],
+  ])("should resolve a non-enumerable own header %s", async (headerName, duplicateName) => {
+    const headers: Record<string, string> = {};
+    Object.defineProperty(headers, headerName, { value: "own-tenant", enumerable: false });
+    expect(await new HeaderTenantResolver().resolve({ headers })).toBe("own-tenant");
+
+    headers[duplicateName] = "another-tenant";
+    expect(await new HeaderTenantResolver().resolve({ headers })).toBeNull();
+  });
+
+  it("should not resolve an inherited Object prototype property as a custom header", async () => {
+    const resolver = new HeaderTenantResolver({ headerName: "constructor" });
+    expect(await resolver.resolve({ headers: {} })).toBeNull();
+    expect(await resolver.resolve({ headers: { constructor: "own-tenant" } })).toBe("own-tenant");
+  });
 });
