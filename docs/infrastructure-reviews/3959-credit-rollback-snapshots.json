@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "credits-core",
+      "classification": "internal-pure-refactor",
+      "reason": "Internal in-memory rollback snapshots retain immutable ledger records and copy their containers; lot availability updates replace readonly records. External defensive copies, atomic failure recovery, idempotency, public signatures and persisted formats are unchanged.",
+      "files": {
+        "packages/credits-core/src/libs/InMemoryCreditLedgerStore.ts": "cf0062525eb6b2a493c0c97515c9b17a1dd6435f0020e57ac3087dd770ba3da3"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "This internal in-memory snapshot optimization changes no host capability, storage provider, deployment or lifecycle boundary. Existing platform support is not expanded or certified.",
+          "providers": ["@croco/credits-core/InMemoryCreditLedgerStore"],
+          "constraints": [
+            "Volatile in-memory state remains non-durable; no deployment or provider certification is claimed."
+          ],
+          "references": [
+            "packages/credits-core/src/libs/InMemoryCreditLedgerStore.ts",
+            "packages/credits-core/src/tests/CreditLedger.spec.ts",
+            "packages/credits-core/src/libs/conformance.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "This internal in-memory snapshot optimization changes no host capability, storage provider, deployment or lifecycle boundary. Existing platform support is not expanded or certified.",
+          "providers": ["@croco/credits-core/InMemoryCreditLedgerStore"],
+          "constraints": [
+            "Volatile in-memory state remains non-durable; no deployment or provider certification is claimed."
+          ],
+          "references": [
+            "packages/credits-core/src/libs/InMemoryCreditLedgerStore.ts",
+            "packages/credits-core/src/tests/CreditLedger.spec.ts",
+            "packages/credits-core/src/libs/conformance.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "This internal in-memory snapshot optimization changes no host capability, storage provider, deployment or lifecycle boundary. Existing platform support is not expanded or certified.",
+          "providers": ["@croco/credits-core/InMemoryCreditLedgerStore"],
+          "constraints": [
+            "Volatile in-memory state remains non-durable; no deployment or provider certification is claimed."
+          ],
+          "references": [
+            "packages/credits-core/src/libs/InMemoryCreditLedgerStore.ts",
+            "packages/credits-core/src/tests/CreditLedger.spec.ts",
+            "packages/credits-core/src/libs/conformance.ts"
+          ]
+        }
+      }
+    }
+  ]
+}

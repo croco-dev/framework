@@ -59,7 +59,7 @@ type LotState = {
   readonly createdAt: Date;
   readonly position: number;
   readonly grant: CreditGrantTerms;
-  available: CreditAmount;
+  readonly available: CreditAmount;
 };
 
 type AccountState = {
@@ -128,26 +128,14 @@ function cloneReservation(
   };
 }
 
-function cloneAccountState(state: AccountState): AccountState {
+function snapshotAccountState(state: AccountState): AccountState {
+  // Ledger records are replaced or appended, so rollback needs separate containers
+  // rather than copies of every immutable historical record.
   return {
-    account: cloneAccount(state.account),
-    transactions: state.transactions.map(cloneTransaction),
-    reservations: new Map(
-      [...state.reservations].map(([id, reservation]) => [
-        id,
-        cloneReservation(reservation) as CreditReservation,
-      ]),
-    ),
-    lots: new Map(
-      [...state.lots].map(([id, lot]) => [
-        id,
-        {
-          ...lot,
-          createdAt: new Date(lot.createdAt),
-          grant: cloneGrant(lot.grant) ?? {},
-        },
-      ]),
-    ),
+    account: state.account,
+    transactions: [...state.transactions],
+    reservations: new Map(state.reservations),
+    lots: new Map(state.lots),
   };
 }
 
@@ -538,7 +526,7 @@ export class InMemoryCreditLedgerStore extends CreditLedgerStore {
     account: AccountState,
     command: Exclude<CreditLedgerCommand, OpenCreditAccountCommand>,
   ): CreditCommandResult {
-    const accountSnapshot = cloneAccountState(account);
+    const accountSnapshot = snapshotAccountState(account);
     const transactionAccountsSnapshot = new Map(this.transactionAccounts);
     const reservationAccountsSnapshot = new Map(this.reservationAccounts);
     try {
@@ -835,7 +823,7 @@ export class InMemoryCreditLedgerStore extends CreditLedgerStore {
     }
     const transactions = selected.map((lot, index) => {
       const amount = lot.available;
-      lot.available = ZERO_CREDIT_AMOUNT;
+      account.lots.set(lot.transactionId, { ...lot, available: ZERO_CREDIT_AMOUNT });
       return this.appendTransaction(account, {
         id: command.transactionIds[index],
         kind: "expire",
@@ -889,7 +877,10 @@ export class InMemoryCreditLedgerStore extends CreditLedgerStore {
       if (compareCreditAmounts(remaining, ZERO_CREDIT_AMOUNT) === 0) break;
       const amount =
         compareCreditAmounts(lot.available, remaining) <= 0 ? lot.available : remaining;
-      lot.available = subtractCreditAmounts(lot.available, amount);
+      options.account.lots.set(lot.transactionId, {
+        ...lot,
+        available: subtractCreditAmounts(lot.available, amount),
+      });
       remaining = subtractCreditAmounts(remaining, amount);
       allocations.push({ grantTransactionId: lot.transactionId, amount });
     }
@@ -964,7 +955,10 @@ export class InMemoryCreditLedgerStore extends CreditLedgerStore {
       if (!lot) {
         throw new CreditTransactionNotFoundProblem(allocation.grantTransactionId);
       }
-      lot.available = addCreditAmounts(lot.available, allocation.amount);
+      account.lots.set(lot.transactionId, {
+        ...lot,
+        available: addCreditAmounts(lot.available, allocation.amount),
+      });
     }
   }
 
