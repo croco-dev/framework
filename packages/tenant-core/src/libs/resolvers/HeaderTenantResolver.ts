@@ -14,12 +14,23 @@ export class HeaderTenantResolver implements TenantResolver<HeaderRequest> {
   private readonly required: boolean;
 
   constructor(options: HeaderTenantResolverOptions = {}) {
-    this.headerName = options.headerName ?? "x-tenant-id";
+    this.headerName = (options.headerName ?? "x-tenant-id").toLowerCase();
     this.required = options.required ?? false;
   }
 
   async resolve(request: HeaderRequest): Promise<string | null> {
-    const headerValue = request.headers?.[this.headerName];
+    const headers = request.headers;
+    if (!headers) {
+      return null;
+    }
+    const matchingKeys = Object.keys(headers).filter(
+      (key) => key.toLowerCase() === this.headerName,
+    );
+    // Duplicate field names are ambiguous even when their current values agree.
+    if (matchingKeys.length !== 1) {
+      return null;
+    }
+    const headerValue = headers[matchingKeys[0]];
     if (!headerValue) {
       return null;
     }

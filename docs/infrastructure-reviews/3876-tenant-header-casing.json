@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "tenant-core",
+      "classification": "pure-contract",
+      "reason": "Header tenant lookup compares own field names case-insensitively and returns null for duplicate case variants instead of selecting an ambiguous tenant. Existing array selection and the input bag are preserved.",
+      "files": {
+        "packages/tenant-core/src/libs/resolvers/HeaderTenantResolver.ts": "1f66dda4acb7aaba070fc6bad3e6415a2b10cf35995dff24112cbb4c362dd7d9"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "The resolver only reads a caller-supplied in-memory header record. Case normalization and duplicate detection introduce no host capability, provider, storage or lifecycle requirement.",
+          "providers": ["@croco/tenant-core/HeaderTenantResolver"],
+          "constraints": [
+            "Tenant identification does not authorize tenant access; existing authentication and authorization remain required. No live infrastructure certification is claimed."
+          ],
+          "references": [
+            "packages/tenant-core/src/libs/resolvers/HeaderTenantResolver.ts",
+            "packages/tenant-core/src/tests/HeaderTenantResolver.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "The resolver only reads a caller-supplied in-memory header record. Case normalization and duplicate detection introduce no host capability, provider, storage or lifecycle requirement.",
+          "providers": ["@croco/tenant-core/HeaderTenantResolver"],
+          "constraints": [
+            "Tenant identification does not authorize tenant access; existing authentication and authorization remain required. No live infrastructure certification is claimed."
+          ],
+          "references": [
+            "packages/tenant-core/src/libs/resolvers/HeaderTenantResolver.ts",
+            "packages/tenant-core/src/tests/HeaderTenantResolver.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "The resolver only reads a caller-supplied in-memory header record. Case normalization and duplicate detection introduce no host capability, provider, storage or lifecycle requirement.",
+          "providers": ["@croco/tenant-core/HeaderTenantResolver"],
+          "constraints": [
+            "Tenant identification does not authorize tenant access; existing authentication and authorization remain required. No live infrastructure certification is claimed."
+          ],
+          "references": [
+            "packages/tenant-core/src/libs/resolvers/HeaderTenantResolver.ts",
+            "packages/tenant-core/src/tests/HeaderTenantResolver.spec.ts"
+          ]
+        }
+      }
+    }
+  ]
+}
