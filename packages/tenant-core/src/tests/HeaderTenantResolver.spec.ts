@@ -94,6 +94,15 @@ describe("HeaderTenantResolver", () => {
     expect(await resolver.resolve({ headers })).toBe("own-tenant");
   });
 
+  it.each(["x-tenant-id", "X-Tenant-ID"])(
+    "should resolve a non-enumerable own header %s",
+    async (headerName) => {
+      const headers: Record<string, string> = {};
+      Object.defineProperty(headers, headerName, { value: "own-tenant", enumerable: false });
+      expect(await new HeaderTenantResolver().resolve({ headers })).toBe("own-tenant");
+    },
+  );
+
   it("should not resolve an inherited Object prototype property as a custom header", async () => {
     const resolver = new HeaderTenantResolver({ headerName: "constructor" });
     expect(await resolver.resolve({ headers: {} })).toBeNull();

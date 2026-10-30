@@ -6,7 +6,7 @@
       "classification": "pure-contract",
       "reason": "Header tenant lookup compares own field names case-insensitively and returns null for duplicate case variants instead of selecting an ambiguous tenant. Existing array selection and the input bag are preserved.",
       "files": {
-        "packages/tenant-core/src/libs/resolvers/HeaderTenantResolver.ts": "1f66dda4acb7aaba070fc6bad3e6415a2b10cf35995dff24112cbb4c362dd7d9"
+        "packages/tenant-core/src/libs/resolvers/HeaderTenantResolver.ts": "44220a0f4fc858ce24fe177eacfc85242587d495eaa26e7f18ef0a538740ae7e"
       },
       "catalogRuntimes": [],
       "profiles": {

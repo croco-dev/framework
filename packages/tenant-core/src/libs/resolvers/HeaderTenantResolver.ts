@@ -23,7 +23,7 @@ export class HeaderTenantResolver implements TenantResolver<HeaderRequest> {
     if (!headers) {
       return null;
     }
-    const matchingKeys = Object.keys(headers).filter(
+    const matchingKeys = Object.getOwnPropertyNames(headers).filter(
       (key) => key.toLowerCase() === this.headerName,
     );
     // Duplicate field names are ambiguous even when their current values agree.
