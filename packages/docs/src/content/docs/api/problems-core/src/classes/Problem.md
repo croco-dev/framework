@@ -539,6 +539,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`OutboxDispatchProblem`](/api/outbox-core/src/classes/outboxdispatchproblem/)
 - [`OutboxFailureMetadataProblem`](/api/outbox-core/src/classes/outboxfailuremetadataproblem/)
 - [`OutboxRecordIdConflictProblem`](/api/outbox-core/src/classes/outboxrecordidconflictproblem/)
+- [`OutboxRetryConfigurationProblem`](/api/outbox-core/src/classes/outboxretryconfigurationproblem/)
 - [`OutboxUnitOfWorkContextProblem`](/api/outbox-core/src/classes/outboxunitofworkcontextproblem/)
 - [`AmbiguousPaginationParameterProblem`](/api/pagination-core/src/classes/ambiguouspaginationparameterproblem/)
 - [`ConflictingPaginationProblem`](/api/pagination-core/src/classes/conflictingpaginationproblem/)

@@ -60,7 +60,7 @@
       "classification": "pure-contract",
       "reason": "Publish the generated outbox retry-configuration Problem code and recovery metadata without changing Problem execution.",
       "files": {
-        "packages/problems-core/src/generated/problem-code-registry.ts": "c9cff676fe4ddf6073c97abc67e35691344778408d96f47b8a00cca3a541f4c9"
+        "packages/problems-core/src/generated/problem-code-registry.ts": "1af51349d467ba6fbf29ece54a9309162ec2a2726f7687e504b4ef756b807017"
       },
       "catalogRuntimes": [],
       "profiles": {
