@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "transports-http",
+      "classification": "runtime-adapter",
+      "reason": "Reject aborted request-body reads before handler dispatch, cancel pending source reads without waiting for cleanup, and remove the abort listener and reader lock on completion. Existing body-size and replay contracts remain.",
+      "files": {
+        "packages/transports-http/src/libs/middleware/BodyLimitMiddleware.ts": "c8a4311cb9c2ea54c7e7785065e743d59146fa40c4f7a46702491adb91d4b050"
+      },
+      "catalogRuntimes": ["node", "lambda"],
+      "profiles": {
+        "kubernetes": {
+          "result": "unverified",
+          "reason": "The shared limiter observes the Fetch Request signal and uses native Web Stream cancellation through the existing Node HTTP transport. Synthetic Node request tests do not verify client-disconnect propagation or a deployed Kubernetes host.",
+          "providers": ["@croco/transports-http/CrocoApp"],
+          "constraints": [
+            "Requires the host to abort the Request signal; cancellation requests source cleanup but does not await its completion.",
+            "No deployed Kubernetes or live disconnect certification."
+          ],
+          "references": [
+            "packages/transports-http/src/libs/middleware/BodyLimitMiddleware.ts",
+            "packages/transports-http/src/tests/BodyLimitMiddleware.spec.ts",
+            "packages/transports-http/src/tests/NodeAdapterSmoke.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "unverified",
+          "reason": "The existing Lambda adapter supplies buffered request bodies and does not claim an invocation AbortSignal. The common limiter remains reusable without adding a deadline or Lambda disconnect signal.",
+          "providers": ["@croco/transports-http/CrocoLambdaAdapter"],
+          "constraints": [
+            "Buffered Lambda input retains the existing size and replay behavior.",
+            "No invocation cancellation capability or live AWS certification is added."
+          ],
+          "references": [
+            "packages/transports-http/src/libs/middleware/BodyLimitMiddleware.ts",
+            "packages/transports-http/src/tests/BodyLimitMiddleware.spec.ts",
+            "packages/transports-http/src/libs/CrocoLambdaAdapter.ts",
+            "packages/transports-http/src/tests/LambdaAdapterConformance.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "unverified",
+          "reason": "The limiter uses portable Fetch and Web Streams operations, but transports-http has no Workers runtime claim and this change supplies no Worker isolate or Node Container execution evidence.",
+          "providers": ["@croco/transports-http"],
+          "constraints": [
+            "Portable middleware logic alone does not establish Workers transport support.",
+            "No Workers isolate or explicit Node Container deployment is certified."
+          ],
+          "references": [
+            "packages/transports-http/src/libs/middleware/BodyLimitMiddleware.ts",
+            "packages/transports-http/src/tests/BodyLimitMiddleware.spec.ts",
+            "docs/package-catalog.json"
+          ]
+        }
+      }
+    }
+  ]
+}

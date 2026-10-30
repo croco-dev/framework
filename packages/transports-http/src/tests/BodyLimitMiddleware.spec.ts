@@ -123,6 +123,7 @@ describe("BodyLimitMiddleware", () => {
   it("accepts the exact boundary and replays identical bytes downstream", async () => {
     const { request, stream } = createRequestBody(["12", "34"]);
     const context = createContext(request);
+    const removeListener = vi.spyOn(request.signal, "removeEventListener");
     let downstream = "";
 
     await bodyLimitMiddleware({ limit: 4 })(context, async () => {
@@ -131,6 +132,7 @@ describe("BodyLimitMiddleware", () => {
 
     expect(downstream).toBe("1234");
     expect(stream.locked).toBe(false);
+    expect(removeListener).toHaveBeenCalledWith("abort", expect.any(Function));
   });
 
   it("rejects a valid declared overflow without reading and starts cancellation once", async () => {
@@ -274,8 +276,127 @@ describe("BodyLimitMiddleware", () => {
     expect(rejection).toMatchObject({
       code: "transports-http/request-body-read-failed",
       detail: "Request body reading was aborted",
-      cause,
+      cause: expect.objectContaining({ name: "AbortError" }),
     });
+    expect(stream.locked).toBe(false);
+  });
+
+  it.each(["pending", "rejecting"] as const)(
+    "stops a pending read on abort without waiting for %s source cancellation",
+    async (cancellation) => {
+      const abortController = new AbortController();
+      let beginRead!: () => void;
+      const reading = new Promise<void>((resolve) => {
+        beginRead = resolve;
+      });
+      let finishCancellation!: () => void;
+      const cleanup = new Promise<void>((resolve) => {
+        finishCancellation = resolve;
+      });
+      const cancel = vi.fn(() =>
+        cancellation === "pending" ? cleanup : Promise.reject(new Error("source cleanup failed")),
+      );
+      const stream = new ReadableStream<Uint8Array>(
+        {
+          pull() {
+            beginRead();
+          },
+          cancel,
+        },
+        { highWaterMark: 0 },
+      );
+      const request = requestWithStream(stream, undefined, abortController.signal);
+      const removeListener = vi.spyOn(request.signal, "removeEventListener");
+      const next = vi.fn(async () => {});
+      const result = Promise.resolve(
+        bodyLimitMiddleware({ limit: 32 })(createContext(request), next),
+      );
+      const rejected = expect(result).rejects.toMatchObject({
+        code: "transports-http/request-body-read-failed",
+        detail: "Request body reading was aborted",
+      });
+      await reading;
+      abortController.abort();
+      try {
+        await rejected;
+        expect(cancel).toHaveBeenCalledOnce();
+        expect(stream.locked).toBe(false);
+        expect(next).not.toHaveBeenCalled();
+        expect(removeListener).toHaveBeenCalledWith("abort", expect.any(Function));
+      } finally {
+        finishCancellation();
+      }
+    },
+  );
+
+  it("rejects an already aborted body without pulling it", async () => {
+    const abortController = new AbortController();
+    abortController.abort();
+    const pull = vi.fn();
+    const cancel = vi.fn();
+    const stream = new ReadableStream<Uint8Array>({ pull, cancel }, { highWaterMark: 0 });
+    const next = vi.fn(async () => {});
+    await expect(
+      bodyLimitMiddleware()(
+        createContext(requestWithStream(stream, undefined, abortController.signal)),
+        next,
+      ),
+    ).rejects.toMatchObject({ code: "transports-http/request-body-read-failed" });
+    expect(pull).not.toHaveBeenCalled();
+    expect(cancel).toHaveBeenCalledOnce();
+    expect(stream.locked).toBe(false);
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it.each(["eof", "chunk", "error"] as const)(
+    "does not dispatch when abort overlaps a read's %s result",
+    async (completion) => {
+      const abortController = new AbortController();
+      const next = vi.fn(async () => {});
+      const stream = new ReadableStream<Uint8Array>(
+        {
+          pull(controller) {
+            if (completion === "eof") controller.close();
+            else if (completion === "error") controller.error(new Error("read failed"));
+            else controller.enqueue(new TextEncoder().encode("body"));
+            abortController.abort();
+          },
+        },
+        { highWaterMark: 0 },
+      );
+      await expect(
+        bodyLimitMiddleware({ limit: 32 })(
+          createContext(requestWithStream(stream, undefined, abortController.signal)),
+          next,
+        ),
+      ).rejects.toMatchObject({
+        code: "transports-http/request-body-read-failed",
+        detail: "Request body reading was aborted",
+      });
+      expect(stream.locked).toBe(false);
+      expect(next).not.toHaveBeenCalled();
+    },
+  );
+
+  it("checks abort again before downstream dispatch after a completed body read", async () => {
+    const abortController = new AbortController();
+    const stream = new ReadableStream<Uint8Array>(
+      {
+        pull(controller) {
+          controller.close();
+          queueMicrotask(() => abortController.abort());
+        },
+      },
+      { highWaterMark: 0 },
+    );
+    const next = vi.fn(async () => {});
+    await expect(
+      bodyLimitMiddleware()(
+        createContext(requestWithStream(stream, undefined, abortController.signal)),
+        next,
+      ),
+    ).rejects.toMatchObject({ code: "transports-http/request-body-read-failed" });
+    expect(next).not.toHaveBeenCalled();
     expect(stream.locked).toBe(false);
   });
 
