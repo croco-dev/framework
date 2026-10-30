@@ -32990,6 +32990,12 @@
               "declarationKind": "const"
             },
             {
+              "name": "OUTBOX_RETRY_CONFIGURATION_PROBLEM_CODE",
+              "exportKind": "named",
+              "source": "./libs/problems/OutboxProblems",
+              "declarationKind": "const"
+            },
+            {
               "name": "OUTBOX_UNIT_OF_WORK_CONTEXT_PROBLEM_CODE",
               "exportKind": "named",
               "source": "./libs/problems/OutboxProblems",
@@ -33015,6 +33021,12 @@
             },
             {
               "name": "OutboxRecordIdConflictProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/OutboxProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "OutboxRetryConfigurationProblem",
               "exportKind": "named",
               "source": "./libs/problems/OutboxProblems",
               "declarationKind": "class"

@@ -31,6 +31,7 @@ export type TransactionalOutboxStoreContext<TClient = unknown> = {
 };
 
 export type OutboxRetryOptions = {
+  /** Positive safe integer. Defaults to 3; invalid budgets reject before any record or idempotency mutation. */
   readonly maxAttempts?: number;
 };
 

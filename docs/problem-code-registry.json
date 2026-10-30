@@ -25303,7 +25303,7 @@
       "sources": [
         {
           "file": "packages/outbox-core/src/libs/problems/OutboxProblems.ts",
-          "line": 34,
+          "line": 47,
           "column": 5,
           "kind": "problem-constructor"
         }
@@ -25333,7 +25333,7 @@
       "sources": [
         {
           "file": "packages/outbox-core/src/libs/problems/OutboxProblems.ts",
-          "line": 103,
+          "line": 116,
           "column": 5,
           "kind": "problem-constructor"
         }
@@ -25363,7 +25363,7 @@
       "sources": [
         {
           "file": "packages/outbox-core/src/libs/problems/OutboxProblems.ts",
-          "line": 133,
+          "line": 146,
           "column": 5,
           "kind": "problem-constructor"
         }
@@ -25393,7 +25393,37 @@
       "sources": [
         {
           "file": "packages/outbox-core/src/libs/problems/OutboxProblems.ts",
-          "line": 120,
+          "line": 133,
+          "column": 5,
+          "kind": "problem-constructor"
+        }
+      ]
+    },
+    {
+      "code": "outbox-core/retry-configuration-invalid",
+      "category": "InternalServerError",
+      "status": 500,
+      "title": "Internal Server Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#outbox-core-retry-configuration-invalid",
+      "recovery": {
+        "cause": "An outbox producer configured maxAttempts outside the positive safe-integer range.",
+        "userAction": "Ask the operator to correct maxAttempts before recording the outbox intent again.",
+        "operatorAction": "Use a positive safe integer or omit maxAttempts for the default budget. The rejected write reserves no record or idempotency key.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "operator-only",
+        "telemetry": {
+          "eventName": "croco.problem.error",
+          "severity": "error",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/outbox-core/src/libs/problems/OutboxProblems.ts",
+          "line": 32,
           "column": 5,
           "kind": "problem-constructor"
         }
@@ -25423,7 +25453,7 @@
       "sources": [
         {
           "file": "packages/outbox-core/src/libs/problems/OutboxProblems.ts",
-          "line": 146,
+          "line": 159,
           "column": 5,
           "kind": "problem-constructor"
         }

@@ -23688,7 +23688,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/outbox-core/src/libs/problems/OutboxProblems.ts";
-          readonly line: 34;
+          readonly line: 47;
           readonly column: 5;
           readonly kind: "problem-constructor";
         },
@@ -23716,7 +23716,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/outbox-core/src/libs/problems/OutboxProblems.ts";
-          readonly line: 103;
+          readonly line: 116;
           readonly column: 5;
           readonly kind: "problem-constructor";
         },
@@ -23744,7 +23744,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/outbox-core/src/libs/problems/OutboxProblems.ts";
-          readonly line: 133;
+          readonly line: 146;
           readonly column: 5;
           readonly kind: "problem-constructor";
         },
@@ -23772,7 +23772,35 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/outbox-core/src/libs/problems/OutboxProblems.ts";
-          readonly line: 120;
+          readonly line: 133;
+          readonly column: 5;
+          readonly kind: "problem-constructor";
+        },
+      ];
+    },
+    {
+      readonly code: "outbox-core/retry-configuration-invalid";
+      readonly category: "InternalServerError";
+      readonly status: 500;
+      readonly title: "Internal Server Error";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#outbox-core-retry-configuration-invalid";
+      readonly recovery: {
+        readonly cause: "An outbox producer configured maxAttempts outside the positive safe-integer range.";
+        readonly userAction: "Ask the operator to correct maxAttempts before recording the outbox intent again.";
+        readonly operatorAction: "Use a positive safe integer or omit maxAttempts for the default budget. The rejected write reserves no record or idempotency key.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "operator-only";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.error";
+          readonly severity: "error";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/outbox-core/src/libs/problems/OutboxProblems.ts";
+          readonly line: 32;
           readonly column: 5;
           readonly kind: "problem-constructor";
         },
@@ -23800,7 +23828,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/outbox-core/src/libs/problems/OutboxProblems.ts";
-          readonly line: 146;
+          readonly line: 159;
           readonly column: 5;
           readonly kind: "problem-constructor";
         },
@@ -59028,7 +59056,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/outbox-core/src/libs/problems/OutboxProblems.ts",
-          line: 34,
+          line: 47,
           column: 5,
           kind: "problem-constructor",
         },
@@ -59060,7 +59088,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/outbox-core/src/libs/problems/OutboxProblems.ts",
-          line: 103,
+          line: 116,
           column: 5,
           kind: "problem-constructor",
         },
@@ -59093,7 +59121,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/outbox-core/src/libs/problems/OutboxProblems.ts",
-          line: 133,
+          line: 146,
           column: 5,
           kind: "problem-constructor",
         },
@@ -59126,7 +59154,39 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/outbox-core/src/libs/problems/OutboxProblems.ts",
-          line: 120,
+          line: 133,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "outbox-core/retry-configuration-invalid",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#outbox-core-retry-configuration-invalid",
+      recovery: {
+        cause: "An outbox producer configured maxAttempts outside the positive safe-integer range.",
+        userAction:
+          "Ask the operator to correct maxAttempts before recording the outbox intent again.",
+        operatorAction:
+          "Use a positive safe integer or omit maxAttempts for the default budget. The rejected write reserves no record or idempotency key.",
+        retryability: "not-retryable",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/outbox-core/src/libs/problems/OutboxProblems.ts",
+          line: 32,
           column: 5,
           kind: "problem-constructor",
         },
@@ -59160,7 +59220,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/outbox-core/src/libs/problems/OutboxProblems.ts",
-          line: 146,
+          line: 159,
           column: 5,
           kind: "problem-constructor",
         },

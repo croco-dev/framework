@@ -861,6 +861,7 @@ This cookbook documents 1153 public Croco Problem codes. The deterministic JSON 
 | [`outbox-core/dispatch-failed`](#outbox-core-dispatch-failed)                                                                                   | InternalServerError                                                                      |                     500 | conditional   | operator-only | active     |       1 |
 | [`outbox-core/failure-metadata-missing`](#outbox-core-failure-metadata-missing)                                                                 | InternalServerError                                                                      |                     500 | not-retryable | operator-only | active     |       1 |
 | [`outbox-core/record-id-conflict`](#outbox-core-record-id-conflict)                                                                             | Conflict                                                                                 |                     409 | not-retryable | safe-message  | active     |       1 |
+| [`outbox-core/retry-configuration-invalid`](#outbox-core-retry-configuration-invalid)                                                           | InternalServerError                                                                      |                     500 | not-retryable | operator-only | active     |       1 |
 | [`outbox-core/unit-of-work-context-invalid`](#outbox-core-unit-of-work-context-invalid)                                                         | InternalServerError                                                                      |                     500 | not-retryable | operator-only | active     |       1 |
 | [`presentation-preset/frontend-action-manifest-duplicate-conflict`](#presentation-preset-frontend-action-manifest-duplicate-conflict)           | Conflict                                                                                 |                     409 | conditional   | safe-message  | active     |       1 |
 | [`presentation-preset/frontend-action-manifest-invalid`](#presentation-preset-frontend-action-manifest-invalid)                                 | ValidationError                                                                          |                     422 | not-retryable | public        | active     |       1 |
@@ -16569,7 +16570,7 @@ Sources:
 
 Sources:
 
-- `packages/outbox-core/src/libs/problems/OutboxProblems.ts:34:5` (problem-constructor)
+- `packages/outbox-core/src/libs/problems/OutboxProblems.ts:47:5` (problem-constructor)
 
 <a id="outbox-core-dispatch-failed"></a>
 
@@ -16587,7 +16588,7 @@ Sources:
 
 Sources:
 
-- `packages/outbox-core/src/libs/problems/OutboxProblems.ts:103:5` (problem-constructor)
+- `packages/outbox-core/src/libs/problems/OutboxProblems.ts:116:5` (problem-constructor)
 
 <a id="outbox-core-failure-metadata-missing"></a>
 
@@ -16605,7 +16606,7 @@ Sources:
 
 Sources:
 
-- `packages/outbox-core/src/libs/problems/OutboxProblems.ts:133:5` (problem-constructor)
+- `packages/outbox-core/src/libs/problems/OutboxProblems.ts:146:5` (problem-constructor)
 
 <a id="outbox-core-record-id-conflict"></a>
 
@@ -16623,7 +16624,25 @@ Sources:
 
 Sources:
 
-- `packages/outbox-core/src/libs/problems/OutboxProblems.ts:120:5` (problem-constructor)
+- `packages/outbox-core/src/libs/problems/OutboxProblems.ts:133:5` (problem-constructor)
+
+<a id="outbox-core-retry-configuration-invalid"></a>
+
+## `outbox-core/retry-configuration-invalid`
+
+- Category: `InternalServerError`
+- HTTP status: `500` Internal Server Error
+- Retryability: `not-retryable`
+- Redaction policy: `operator-only`
+- Lifecycle: `active`
+- Cause: An outbox producer configured maxAttempts outside the positive safe-integer range.
+- User action: Ask the operator to correct maxAttempts before recording the outbox intent again.
+- Operator action: Use a positive safe integer or omit maxAttempts for the default budget. The rejected write reserves no record or idempotency key.
+- Telemetry: `croco.problem.error` (error) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/outbox-core/src/libs/problems/OutboxProblems.ts:32:5` (problem-constructor)
 
 <a id="outbox-core-unit-of-work-context-invalid"></a>
 
@@ -16641,7 +16660,7 @@ Sources:
 
 Sources:
 
-- `packages/outbox-core/src/libs/problems/OutboxProblems.ts:146:5` (problem-constructor)
+- `packages/outbox-core/src/libs/problems/OutboxProblems.ts:159:5` (problem-constructor)
 
 <a id="presentation-preset-frontend-action-manifest-duplicate-conflict"></a>
 

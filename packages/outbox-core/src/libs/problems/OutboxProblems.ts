@@ -1,6 +1,7 @@
 import { Problem, ProblemCategory } from "@croco/problems-core";
 import type { OutboxFailureMetadata } from "../types";
 
+export const OUTBOX_RETRY_CONFIGURATION_PROBLEM_CODE = "outbox-core/retry-configuration-invalid";
 export const OUTBOX_DISPATCH_PROBLEM_CODE = "outbox-core/dispatch-failed";
 export const OUTBOX_CLAIM_CONFIGURATION_PROBLEM_CODE = "outbox-core/claim-configuration-invalid";
 export const OUTBOX_RECORD_ID_CONFLICT_PROBLEM_CODE = "outbox-core/record-id-conflict";
@@ -24,6 +25,18 @@ export type OutboxDispatchProblemOptions = {
   readonly failure: OutboxFailureMetadata;
   readonly cause?: Error;
 };
+
+/** Problem raised when a producer configures an invalid outbox retry budget. */
+export class OutboxRetryConfigurationProblem extends Problem {
+  constructor(maxAttempts: number) {
+    super(
+      OUTBOX_RETRY_CONFIGURATION_PROBLEM_CODE,
+      ProblemCategory.InternalServerError,
+      `maxAttempts must be a positive safe integer; received ${String(maxAttempts)}.`,
+      { extensions: { maxAttempts: String(maxAttempts) } },
+    );
+  }
+}
 
 /** Problem raised when an outbox claim lease cannot preserve exclusive ownership. */
 export class OutboxClaimConfigurationProblem extends Problem {
