@@ -39,6 +39,38 @@ describe("IdPrefix", () => {
       expect(TestId.validate(validId)).toBe(true);
     });
 
+    it.each(["0", "1", "2", "3", "4", "5", "6", "7"])(
+      "128비트 범위 안에서 %s로 시작하는 ULID를 허용한다",
+      (firstCharacter) => {
+        const UserId = new IdPrefix("usr");
+        expect(UserId.validate(`usr_${firstCharacter}ZZZZZZZZZZZZZZZZZZZZZZZZZ`)).toBe(true);
+      },
+    );
+
+    it("최소 ULID와 기존 정상 ID를 허용하고 타입을 좁힌다", () => {
+      const UserId = new IdPrefix("usr");
+      expect(UserId.validate("usr_00000000000000000000000000")).toBe(true);
+
+      const existingId: unknown = "usr_01ARZ3NDEKTSV4RRFFQ69G5FAV";
+      expect(UserId.validate(existingId)).toBe(true);
+      if (UserId.validate(existingId)) {
+        expectTypeOf(existingId).toEqualTypeOf<PrefixedId<"usr">>();
+      }
+    });
+
+    it.each("89ABCDEFGHJKMNPQRSTVWXYZ".split(""))(
+      "128비트 범위를 넘는 %s로 시작하는 ULID를 거부한다",
+      (firstCharacter) => {
+        const UserId = new IdPrefix("usr");
+        expect(UserId.validate(`usr_${firstCharacter}0000000000000000000000000`)).toBe(false);
+      },
+    );
+
+    it.each(["a", "I", "L", "O", "U"])("ULID의 기존 문자 제한 %s를 유지한다", (character) => {
+      const UserId = new IdPrefix("usr");
+      expect(UserId.validate(`usr_01ARZ3NDEKTSV4RRFFQ69G5FA${character}`)).toBe(false);
+    });
+
     it("잘못된 prefix를 가진 ID는 거부한다", () => {
       const TypeA = new IdPrefix("tpa");
       const TypeB = new IdPrefix("tpb");
