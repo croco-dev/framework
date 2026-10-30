@@ -15,6 +15,7 @@ import {
   compareCreditAmounts,
   createCreditLedgerStoreConformanceSuite,
   creditAmount,
+  creditTransactionId,
   ExpiredGrantProblem,
   InMemoryCreditLedgerStore,
   InsufficientCreditsProblem,
@@ -741,6 +742,177 @@ describe("CreditLedgerService", () => {
     await expect(service.getBalance(opened.account.id, 3)).rejects.toThrow(
       StaleLedgerPositionProblem,
     );
+  });
+
+  it("restores lot availability when a command fails after allocating credits", async () => {
+    const opened = await service.openAccount({
+      tenantId: "rollback",
+      idempotencyKey: "open",
+      reference: ref("open"),
+    });
+    const accountId = opened.account.id;
+    await service.grantCredits({
+      accountId,
+      amount: creditAmount("13"),
+      idempotencyKey: "grant",
+      reference: ref("grant"),
+    });
+    const before = await service.getHistory(accountId);
+    const failure = new InvalidCreditCommandProblem("metadata read failed");
+    let reads = 0;
+    const command: CreditLedgerCommand = {
+      operation: "consume",
+      accountId,
+      transactionId: creditTransactionId("failed-consume"),
+      amount: creditAmount("9"),
+      idempotencyKey: "consume",
+      occurredAt: new Date("2026-07-26T12:00:00Z"),
+      reference: {
+        type: "test",
+        get id() {
+          if (++reads === 3) throw failure;
+          return "consume";
+        },
+      },
+    };
+    await expect(store.execute(command)).rejects.toBe(failure);
+    expect(await service.getHistory(accountId)).toEqual(before);
+    const retry = await store.execute({ ...command, reference: ref("consume") });
+    expect(retry).toMatchObject({ replayed: false, transactions: [{ amount: "9", position: 2 }] });
+    await expect(
+      service.consumeCredits({
+        accountId,
+        amount: creditAmount("4"),
+        idempotencyKey: "remainder",
+        reference: ref("remainder"),
+      }),
+    ).resolves.toMatchObject({ transactions: [{ amount: "4" }] });
+    await expect(
+      service.consumeCredits({
+        accountId,
+        amount: creditAmount("1"),
+        idempotencyKey: "overdraw",
+        reference: ref("overdraw"),
+      }),
+    ).rejects.toBeInstanceOf(InsufficientCreditsProblem);
+  });
+
+  it("restores both lots when expiry fails after appending the first transaction", async () => {
+    const opened = await service.openAccount({
+      tenantId: "expiry-rollback",
+      idempotencyKey: "open",
+      reference: ref("open"),
+    });
+    const accountId = opened.account.id;
+    for (const amount of ["7", "11"]) {
+      await service.grantCredits({
+        accountId,
+        amount: creditAmount(amount),
+        expiresAt: new Date("2026-07-27T00:00:00Z"),
+        idempotencyKey: `grant-${amount}`,
+        reference: ref(`grant-${amount}`),
+      });
+    }
+    const before = await service.getHistory(accountId);
+    const failure = new InvalidCreditCommandProblem("second expiry metadata read failed");
+    let reads = 0;
+    const command: CreditLedgerCommand = {
+      operation: "expire",
+      accountId,
+      transactionIds: [creditTransactionId("expire-first"), creditTransactionId("expire-second")],
+      limit: 2,
+      occurredAt: new Date("2026-07-28T00:00:00Z"),
+      idempotencyKey: "expire",
+      reference: {
+        type: "test",
+        get id() {
+          if (++reads === 4) throw failure;
+          return "expire";
+        },
+      },
+    };
+    await expect(store.execute(command)).rejects.toBe(failure);
+    expect(await service.getHistory(accountId)).toEqual(before);
+    const retry = await store.execute({ ...command, reference: ref("expire") });
+    expect(retry).toMatchObject({
+      replayed: false,
+      transactions: [
+        { id: "expire-first", kind: "expire", amount: "7", position: 3 },
+        { id: "expire-second", kind: "expire", amount: "11", position: 4 },
+      ],
+    });
+    expect(await service.getBalance(accountId)).toMatchObject({ available: "0", expired: "18" });
+  });
+
+  it("rolls back an appended commit and restored lots when its release fails", async () => {
+    const opened = await service.openAccount({
+      tenantId: "rollback",
+      idempotencyKey: "open",
+      reference: ref("open"),
+    });
+    const accountId = opened.account.id;
+    await service.grantCredits({
+      accountId,
+      amount: creditAmount("13"),
+      idempotencyKey: "grant",
+      reference: ref("grant"),
+    });
+    const reserved = await service.reserveCredits({
+      accountId,
+      amount: creditAmount("9"),
+      idempotencyKey: "reserve",
+      reference: ref("reserve"),
+    });
+    const reservation = reserved.reservation;
+    if (!reservation) throw new InvalidCreditCommandProblem("test reservation is missing");
+    const before = await service.getHistory(accountId);
+    const failure = new InvalidCreditCommandProblem("release metadata read failed");
+    let reads = 0;
+    const command: CreditLedgerCommand = {
+      operation: "commit",
+      accountId,
+      reservationId: reservation.id,
+      commitTransactionId: creditTransactionId("failed-commit"),
+      releaseTransactionId: creditTransactionId("failed-release"),
+      amount: creditAmount("4"),
+      idempotencyKey: "settle",
+      occurredAt: new Date("2026-07-26T12:00:00Z"),
+      reference: {
+        type: "test",
+        get id() {
+          if (++reads === 4) throw failure;
+          return "settle";
+        },
+      },
+    };
+    await expect(store.execute(command)).rejects.toBe(failure);
+    expect(await service.getHistory(accountId)).toEqual(before);
+    expect(await store.getReservation(accountId, reservation.id)).toEqual(reservation);
+    await expect(
+      service.consumeCredits({
+        accountId,
+        amount: creditAmount("5"),
+        idempotencyKey: "overdraw",
+        reference: ref("overdraw"),
+      }),
+    ).rejects.toBeInstanceOf(InsufficientCreditsProblem);
+    const retry = await store.execute({ ...command, reference: ref("settle") });
+    expect(retry).toMatchObject({
+      replayed: false,
+      transactions: [
+        { kind: "commit", amount: "4", position: 3 },
+        { kind: "release", amount: "5", position: 4 },
+      ],
+      reservation: { status: "committed" },
+    });
+    await expect(
+      service.consumeCredits({
+        accountId,
+        amount: creditAmount("9"),
+        idempotencyKey: "remaining",
+        reference: ref("remaining"),
+      }),
+    ).resolves.toMatchObject({ transactions: [{ amount: "9" }] });
   });
 
   it("rejects colliding generated IDs before any allocation mutates", async () => {

@@ -62,6 +62,12 @@ function asError(cause: unknown): Error {
   return cause instanceof Error ? cause : new Error("Unknown request body read failure");
 }
 
+function throwIfBodyReadAborted(request: Request): void {
+  if (request.signal.aborted) {
+    throw new HttpRequestBodyReadProblem(request.url, true, asError(request.signal.reason));
+  }
+}
+
 function concatenateChunks(chunks: readonly Uint8Array[], length: number): BoundedBytes {
   const body = new Uint8Array(new ArrayBuffer(length));
   let offset = 0;
@@ -85,6 +91,13 @@ async function readBoundedBody(
     throw new HttpRequestBodyUnavailableProblem(instance);
   }
 
+  if (request.signal.aborted) {
+    if (body) {
+      suppressCancellation(body.cancel(request.signal.reason));
+    }
+    throwIfBodyReadAborted(request);
+  }
+
   const declaredLength = parseContentLength(request.headers.get("content-length") ?? undefined);
   if (declaredLength !== undefined && declaredLength > config.limit) {
     if (body) {
@@ -100,8 +113,13 @@ async function readBoundedBody(
   const reader = body.getReader();
   const chunks: Uint8Array[] = [];
   let length = 0;
+  const cancelOnAbort = (): void => {
+    suppressCancellation(reader.cancel(request.signal.reason));
+  };
+  request.signal.addEventListener("abort", cancelOnAbort, { once: true });
 
   try {
+    throwIfBodyReadAborted(request);
     while (true) {
       let result: ReadableStreamReadResult<Uint8Array>;
       try {
@@ -110,6 +128,7 @@ async function readBoundedBody(
         throw new HttpRequestBodyReadProblem(instance, request.signal.aborted, asError(cause));
       }
 
+      throwIfBodyReadAborted(request);
       if (result.done) {
         return concatenateChunks(chunks, length);
       }
@@ -123,6 +142,7 @@ async function readBoundedBody(
       length += result.value.byteLength;
     }
   } finally {
+    request.signal.removeEventListener("abort", cancelOnAbort);
     reader.releaseLock();
   }
 }
@@ -175,6 +195,7 @@ export const bodyLimitMiddleware = (options: BodyLimitOptions = {}): MiddlewareF
       }
     }
 
+    throwIfBodyReadAborted(ctx.raw.req.raw);
     await next();
   };
 

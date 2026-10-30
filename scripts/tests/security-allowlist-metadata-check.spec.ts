@@ -655,6 +655,54 @@ describe("security-allowlist-metadata-check.mts", () => {
     expect(result.stdout).toContain("uses an inline Gitleaks suppression comment");
   });
 
+  it("retains root-commit suppression diagnostics after that file is deleted", () => {
+    const root = createTempRoot();
+    writeRepo(root);
+    const marker = `${"gitleaks"}${":allow"}`;
+    writeFileSync(join(root, "root.txt"), `dummy # ${marker}\n`);
+    runGit(root, "init", "-b", "trunk");
+    runGit(root, "config", "user.email", "security@example.com");
+    runGit(root, "config", "user.name", "Security Tests");
+    runGit(root, "add", ".");
+    runGit(root, "commit", "-m", "root suppression");
+    const original = runGit(root, "rev-parse", "HEAD").trim();
+    rmSync(join(root, "root.txt"));
+    runGit(root, "add", ".");
+    runGit(root, "commit", "-m", "remove root suppression");
+    const result = runScript(root);
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain(`reachable commit ${original.slice(0, 12)}`);
+  });
+
+  it("retains same-count edits after a suppression enters only through a merge", () => {
+    const root = createTempRoot();
+    writeRepo(root);
+    runGit(root, "init", "-b", "trunk");
+    runGit(root, "config", "user.email", "security@example.com");
+    runGit(root, "config", "user.name", "Security Tests");
+    runGit(root, "add", ".");
+    runGit(root, "commit", "-m", "initial fixture");
+    const clean = runGit(root, "rev-parse", "HEAD").trim();
+    runGit(root, "checkout", "-b", "side");
+    writeFileSync(join(root, "side.txt"), "side branch\n");
+    runGit(root, "add", ".");
+    runGit(root, "commit", "-m", "side branch");
+    runGit(root, "checkout", "trunk");
+    runGit(root, "merge", "side", "--no-ff", "--no-commit");
+    const marker = `${"gitleaks"}${":allow"}`;
+    writeFileSync(join(root, "merge.txt"), `const value = 1; // ${marker}\n`);
+    runGit(root, "add", ".");
+    runGit(root, "commit", "-m", "merge-only suppression");
+    writeFileSync(join(root, "merge.txt"), `const value = 2; // ${marker}\n`);
+    runGit(root, "add", ".");
+    runGit(root, "commit", "-m", "same-count edit");
+    const changed = runGit(root, "rev-parse", "HEAD").trim();
+    runGit(root, "checkout", "--detach", clean);
+    const result = runScript(root);
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain(`reachable commit ${changed.slice(0, 12)}`);
+  });
+
   it("fails closed when reachable Git history cannot be inspected", () => {
     const root = createTempRoot();
     writeRepo(root);
@@ -1119,11 +1167,12 @@ function runScript(root: string, ...args: string[]): ScriptResult {
   };
 }
 
-function runGit(root: string, ...args: string[]): void {
+function runGit(root: string, ...args: string[]): string {
   const result = spawnSync("git", args, {
     cwd: root,
     encoding: "utf-8",
   });
 
   expect(result.status, result.stderr).toBe(0);
+  return result.stdout;
 }

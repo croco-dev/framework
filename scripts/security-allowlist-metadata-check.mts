@@ -1009,24 +1009,50 @@ function readHistoricalInlineGitleaksSuppressions(
     return [];
   }
 
-  const logResult = spawnSync(
+  const gitOptions = {
+    encoding: "utf-8",
+    maxBuffer: 20 * 1024 * 1024,
+  } as const;
+  // First rule out occurrences with fixed-string counts rather than line diffs.
+  // Include roots and every merge parent; no-renames also covers moved files.
+  // Possible occurrences still use the original query for its exact diagnostics.
+  let logResult = spawnSync(
     "git",
     [
       "-C",
       rootDir,
       "log",
       "--all",
-      "-z",
-      `-G${inlineGitleaksAllowMarker}`,
+      "--full-history",
+      "--root",
+      "--diff-merges=separate",
+      "--no-renames",
+      `-S${inlineGitleaksAllowMarker}`,
+      "--max-count=1",
       "--format=%H",
       "--no-patch",
       "--",
     ],
-    {
-      encoding: "utf-8",
-      maxBuffer: 20 * 1024 * 1024,
-    },
+    gitOptions,
   );
+
+  if (!logResult.error && logResult.status === 0 && logResult.stdout.trim() !== "") {
+    logResult = spawnSync(
+      "git",
+      [
+        "-C",
+        rootDir,
+        "log",
+        "--all",
+        "-z",
+        `-G${inlineGitleaksAllowMarker}`,
+        "--format=%H",
+        "--no-patch",
+        "--",
+      ],
+      gitOptions,
+    );
+  }
 
   if (logResult.error || logResult.status !== 0) {
     violations.push({
