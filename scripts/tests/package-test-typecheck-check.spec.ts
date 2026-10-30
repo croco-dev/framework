@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { collectPackageTestTypecheckDiagnostics } from "../package-test-typecheck-check.mts";
 
 const roots: string[] = [];
-function fixture(config: unknown, command = "tsrs --noEmit"): string {
+function fixture(config: unknown, command = "tsrs --noEmit", extension = "ts"): string {
   const root = mkdtempSync(join(tmpdir(), "croco-test-typecheck-"));
   roots.push(root);
   write(root, "packages/example/package.json", {
@@ -14,8 +14,8 @@ function fixture(config: unknown, command = "tsrs --noEmit"): string {
   });
   write(root, "packages/example/tsconfig.json", config);
   write(root, "packages/example/src/index.ts", "export const value = 1;");
-  write(root, "packages/example/src/tests/example.spec.ts", "export {};");
-  write(root, "packages/example/src/nested/example.test.ts", "export {};");
+  write(root, `packages/example/src/tests/example.spec.${extension}`, "export {};");
+  write(root, `packages/example/src/nested/example.test.${extension}`, "export {};");
   return root;
 }
 function write(root: string, path: string, value: unknown): void {
@@ -28,9 +28,33 @@ afterEach(() => {
 });
 
 describe("package test typecheck membership", () => {
-  it("accepts broad inclusion, harmless exclusions, and both test naming patterns", () => {
-    const root = fixture({ include: ["src"], exclude: ["dist", "node_modules"] });
-    expect(collectPackageTestTypecheckDiagnostics(root)).toEqual([]);
+  it.each(["ts", "tsx", "mts", "cts"])(
+    "accepts broad inclusion, harmless exclusions, and both .%s test naming patterns",
+    (extension) => {
+      const root = fixture(
+        { include: ["src"], exclude: ["dist", "node_modules"] },
+        undefined,
+        extension,
+      );
+      expect(collectPackageTestTypecheckDiagnostics(root)).toEqual([]);
+    },
+  );
+
+  describe.each(["tsx", "mts", "cts"])(".%s test membership", (extension) => {
+    it.each([
+      { include: ["src"], exclude: [`**/*.spec.${extension}`, `**/*.test.${extension}`] },
+      { include: ["src/index.ts"] },
+      { files: ["src/index.ts"] },
+    ])("rejects omitted tests with their resolved paths: %j", (config) => {
+      const root = fixture(config, undefined, extension);
+      const diagnostics = collectPackageTestTypecheckDiagnostics(root);
+      const label =
+        "@croco/example (packages/example/package.json), config packages/example/tsconfig.json";
+      expect(diagnostics).toEqual([
+        `${label}: test packages/example/src/nested/example.test.${extension} is missing from typecheck inputs`,
+        `${label}: test packages/example/src/tests/example.spec.${extension} is missing from typecheck inputs`,
+      ]);
+    });
   });
 
   it.each([
@@ -121,9 +145,12 @@ describe("package test typecheck membership", () => {
     ]);
   });
 
-  it("does not impose typecheck on tooling packages without that script", () => {
-    const root = fixture({ include: ["src"] });
-    write(root, "packages/example/package.json", { scripts: { test: "vitest run" } });
-    expect(collectPackageTestTypecheckDiagnostics(root)).toEqual([]);
-  });
+  it.each(["ts", "tsx", "mts", "cts"])(
+    "does not impose typecheck on tooling packages with .%s tests without that script",
+    (extension) => {
+      const root = fixture({ include: ["src/index.ts"] }, undefined, extension);
+      write(root, "packages/example/package.json", { scripts: { test: "vitest run" } });
+      expect(collectPackageTestTypecheckDiagnostics(root)).toEqual([]);
+    },
+  );
 });

@@ -59,10 +59,13 @@ export function collectPackageTestTypecheckDiagnostics(rootDir: string): string[
       );
     }
     const included = new Set(parsed.fileNames.map((path) => resolve(path)));
-    const tests = ts.sys.readDirectory(join(packageDir, "src"), [".ts"], undefined, [
-      "**/*.spec.ts",
-      "**/*.test.ts",
-    ]);
+    const extensions = [".ts", ".tsx", ".mts", ".cts"];
+    const tests = ts.sys.readDirectory(
+      join(packageDir, "src"),
+      extensions,
+      undefined,
+      extensions.flatMap((extension) => [`**/*.spec${extension}`, `**/*.test${extension}`]),
+    );
     for (const test of tests) {
       if (!included.has(resolve(test))) {
         diagnostics.push(
