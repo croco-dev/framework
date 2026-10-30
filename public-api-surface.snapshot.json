@@ -41165,6 +41165,87 @@
               "source": "./libs/R2StorageDiagnosticsProvider"
             }
           ]
+        },
+        {
+          "exportPath": "./workers",
+          "kind": "code",
+          "targets": [
+            {
+              "conditions": ["types", "import"],
+              "target": "./dist/workers.d.mts"
+            },
+            {
+              "conditions": ["types", "require"],
+              "target": "./dist/workers.d.ts"
+            },
+            {
+              "conditions": ["import"],
+              "target": "./dist/workers.mjs"
+            },
+            {
+              "conditions": ["require"],
+              "target": "./dist/workers.js"
+            }
+          ],
+          "sourceEntrypoint": "packages/storage-r2/src/workers.ts",
+          "runtimeExports": [
+            {
+              "name": "R2BindingProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/R2BindingProblem",
+              "declarationKind": "class"
+            },
+            {
+              "name": "R2BindingStorageProvider",
+              "exportKind": "named",
+              "source": "./libs/R2BindingStorageProvider",
+              "declarationKind": "class"
+            },
+            {
+              "name": "R2BindingUnsupportedProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/R2BindingUnsupportedProblem",
+              "declarationKind": "class"
+            },
+            {
+              "name": "R2ObjectTooLargeProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/R2ObjectTooLargeProblem",
+              "declarationKind": "class"
+            }
+          ],
+          "typeExports": [
+            {
+              "name": "R2BindingObject",
+              "exportKind": "named",
+              "source": "./libs/R2BindingStorageProvider"
+            },
+            {
+              "name": "R2BindingObjectBody",
+              "exportKind": "named",
+              "source": "./libs/R2BindingStorageProvider"
+            },
+            {
+              "name": "R2BindingRange",
+              "exportKind": "named",
+              "source": "./libs/R2BindingStorageProvider"
+            },
+            {
+              "name": "R2BindingReadOptions",
+              "exportKind": "named",
+              "source": "./libs/R2BindingStorageProvider"
+            },
+            {
+              "name": "R2BindingStorageOptions",
+              "exportKind": "named",
+              "source": "./libs/R2BindingStorageProvider"
+            },
+            {
+              "name": "R2BucketBinding",
+              "exportKind": "named",
+              "source": "./libs/R2BindingStorageProvider"
+            }
+          ]
         }
       ]
     },

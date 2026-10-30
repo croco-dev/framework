@@ -16,11 +16,14 @@ export const CORE_COVERAGE_BUILD_COMMAND = [
 
 export const CORE_COVERAGE_TEST_COMMAND = [
   "pnpm",
+  // Bound both schedulers so package parallelism does not multiply Vitest worker pools.
+  "--workspace-concurrency=2",
   ...CORE_COVERAGE_PACKAGES.flatMap((packageName) => ["--filter", packageName]),
   "exec",
   "vitest",
   "run",
   "--coverage",
+  "--maxWorkers=1",
   "--config",
   "../../vitest.config.ts",
 ] as const;

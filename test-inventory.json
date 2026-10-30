@@ -5634,6 +5634,18 @@
       "owner": "@croco/storage-r2"
     },
     {
+      "path": "packages/storage-r2/src/tests/R2BindingStorageProvider.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/storage-r2"
+    },
+    {
+      "path": "packages/storage-r2/src/tests/R2BindingWorkers.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/storage-r2"
+    },
+    {
       "path": "packages/storage-r2/src/tests/R2Config.spec.ts",
       "lane": "fast",
       "qualifiers": [],

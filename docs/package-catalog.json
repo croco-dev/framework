@@ -2209,7 +2209,8 @@
           "stream reads",
           "retry",
           "safe diagnostics",
-          "env-gated live smoke"
+          "env-gated live smoke",
+          "Workers /workers subset: native R2Bucket binding, nodejs_compat, ranged streams, bounded get; no signing, ACL or automatic retries; local workerd evidence only"
         ]
       },
       "tasks-qstash": {

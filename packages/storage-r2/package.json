@@ -26,6 +26,14 @@
       },
       "import": "./dist/index.mjs",
       "require": "./dist/index.js"
+    },
+    "./workers": {
+      "types": {
+        "import": "./dist/workers.d.mts",
+        "require": "./dist/workers.d.ts"
+      },
+      "import": "./dist/workers.mjs",
+      "require": "./dist/workers.js"
     }
   },
   "publishConfig": {
@@ -39,12 +47,20 @@
         },
         "import": "./dist/index.mjs",
         "require": "./dist/index.js"
+      },
+      "./workers": {
+        "types": {
+          "import": "./dist/workers.d.mts",
+          "require": "./dist/workers.d.ts"
+        },
+        "import": "./dist/workers.mjs",
+        "require": "./dist/workers.js"
       }
     },
     "access": "public"
   },
   "scripts": {
-    "build": "tsup src/index.ts --format esm,cjs --minify --clean --dts",
+    "build": "tsup src/index.ts src/workers.ts --format esm,cjs --minify --clean --dts",
     "lint": "oxlint .",
     "test": "vitest run --exclude src/tests/R2LiveSmoke.spec.ts",
     "test:evidence": "pnpm run test --maxWorkers=1 --reporter=json --outputFile=.turbo/croco-test-evidence.json",
@@ -55,6 +71,7 @@
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1057.0",
     "@aws-sdk/s3-request-presigner": "^3.1057.0",
+    "@cloudflare/workers-types": "4.20260316.1",
     "@croco/diagnostics-core": "workspace:*",
     "@croco/framework-config": "workspace:*",
     "@croco/framework-context": "workspace:*",
@@ -65,6 +82,8 @@
   },
   "devDependencies": {
     "@croco/testing": "workspace:*",
-    "@types/node": "^24.0.0"
+    "@types/node": "^24.0.0",
+    "esbuild": "0.27.7",
+    "miniflare": "4.20260312.0"
   }
 }

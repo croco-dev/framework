@@ -18,7 +18,7 @@ import { BaseStorageProvider, validateSignedUrlExpiry } from "@croco/storage-cor
 import { storageStreamToNodeReadable } from "@croco/storage-core/node";
 import { MissingR2ConfigProblem } from "./problems/MissingR2ConfigProblem";
 import { EmptyR2BodyProblem } from "./problems/EmptyR2BodyProblem";
-import { R2ObjectTooLargeProblem } from "./problems/R2ObjectTooLargeProblem";
+import { readBufferedR2Stream } from "./readBufferedR2Stream";
 import { validateR2Options } from "./R2Config";
 import type { R2Options } from "./types";
 
@@ -166,7 +166,6 @@ const R2_RETRY_POLICY: RetryPolicy = {
  */
 @Component()
 export class R2StorageProvider extends BaseStorageProvider {
-  private static readonly MAX_BUFFERED_GET_BYTES = 10 * 1024 * 1024;
   private readonly client: S3Client;
   private readonly options: R2Options;
 
@@ -281,27 +280,8 @@ export class R2StorageProvider extends BaseStorageProvider {
     this.assertOperationNotAborted(options, "get", key);
 
     try {
-      const chunks: Uint8Array[] = [];
       const stream = await this.getStream(key, options);
-      let totalBytes = 0;
-
-      for await (const chunk of stream) {
-        totalBytes += chunk.byteLength;
-
-        if (totalBytes > R2StorageProvider.MAX_BUFFERED_GET_BYTES) {
-          throw new R2ObjectTooLargeProblem(key, R2StorageProvider.MAX_BUFFERED_GET_BYTES);
-        }
-
-        chunks.push(chunk);
-      }
-
-      const bytes = new Uint8Array(totalBytes);
-      let offset = 0;
-
-      for (const chunk of chunks) {
-        bytes.set(chunk, offset);
-        offset += chunk.byteLength;
-      }
+      const bytes = await readBufferedR2Stream(key, stream);
 
       this.assertOperationNotAborted(options, "get", key);
       return bytes;

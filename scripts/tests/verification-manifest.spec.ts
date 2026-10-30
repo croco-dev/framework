@@ -524,11 +524,13 @@ describe("verification manifest", () => {
     ]);
     expect(CORE_COVERAGE_TEST_COMMAND).toEqual([
       "pnpm",
+      "--workspace-concurrency=2",
       ...CORE_COVERAGE_PACKAGES.flatMap((packageName) => ["--filter", packageName]),
       "exec",
       "vitest",
       "run",
       "--coverage",
+      "--maxWorkers=1",
       "--config",
       "../../vitest.config.ts",
     ]);

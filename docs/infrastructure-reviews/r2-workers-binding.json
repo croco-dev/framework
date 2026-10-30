@@ -1,0 +1,108 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "storage-r2",
+      "classification": "durable-provider",
+      "reason": "Add an explicit Workers R2Bucket entry while preserving the root S3 adapter and its Node/Lambda support. No core storage engine or provisioning is introduced.",
+      "files": {
+        "packages/storage-r2/package.json": "2f42075bfa1b88646463a6376c03ef39ed4ce9bd8b02e784b2bdcbf0ab4ec489",
+        "packages/storage-r2/src/workers.ts": "7b9af17cef52453194ddafe115292f2eb6f70feb36dc5261242210ec9813d026",
+        "packages/storage-r2/src/libs/R2BindingStorageProvider.ts": "65a01e1a3a11facef79fca23db42117a4d0a2218eb90f98dd79daad40e233414",
+        "packages/storage-r2/src/libs/problems/R2BindingProblem.ts": "3a55d717b883603190d1306226fcca8d76390ebf92faa2721af35dbf837ca571",
+        "packages/storage-r2/src/libs/problems/R2BindingUnsupportedProblem.ts": "010068683781c1aad3af30fe900245fdd3fec7fa62fe3624116fca9a0685282b",
+        "packages/storage-r2/src/libs/readBufferedR2Stream.ts": "d081e771beb5ccf95e86edbfeb074dbc7ff8fa9f5e666f7787b4d55100c24e61",
+        "packages/storage-r2/src/libs/R2StorageProvider.ts": "aff75733ad9113d44661c4fcb36bebc27fc4d623749ec3ac0c89f9ed46cefe20"
+      },
+      "catalogRuntimes": ["node", "lambda"],
+      "profiles": {
+        "kubernetes": {
+          "result": "conditional",
+          "reason": "The existing root S3 adapter now reuses the same pure bounded-read helper as the Workers entry. Its Node/Lambda behavior and lifecycle are preserved; the native binding remains a separate opt-in entry.",
+          "providers": ["@croco/storage-r2", "@croco/storage-core"],
+          "constraints": [
+            "Root S3 adapter requires the existing Node runtime, configured S3 credentials and bucket; Worker bindings are unavailable on this host.",
+            "No live Kubernetes/AWS deployment or provider certification is claimed; Lambda invocation and callback/flush boundaries remain owned by the selected Host."
+          ],
+          "references": [
+            "packages/storage-r2/src/index.ts",
+            "packages/storage-r2/src/workers.ts",
+            "packages/storage-r2/README.md",
+            "packages/storage-r2/src/libs/readBufferedR2Stream.ts",
+            "packages/storage-r2/src/libs/R2StorageProvider.ts",
+            "packages/storage-r2/src/tests/R2StorageProvider.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "conditional",
+          "reason": "The existing root S3 adapter now reuses the same pure bounded-read helper as the Workers entry. Its Node/Lambda behavior and lifecycle are preserved; the native binding remains a separate opt-in entry.",
+          "providers": ["@croco/storage-r2", "@croco/storage-core"],
+          "constraints": [
+            "Root S3 adapter requires the existing Node runtime, configured S3 credentials and bucket; Worker bindings are unavailable on this host.",
+            "No live Kubernetes/AWS deployment or provider certification is claimed; Lambda invocation and callback/flush boundaries remain owned by the selected Host."
+          ],
+          "references": [
+            "packages/storage-r2/src/index.ts",
+            "packages/storage-r2/src/workers.ts",
+            "packages/storage-r2/README.md",
+            "packages/storage-r2/src/libs/readBufferedR2Stream.ts",
+            "packages/storage-r2/src/libs/R2StorageProvider.ts",
+            "packages/storage-r2/src/tests/R2StorageProvider.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "unverified",
+          "host": "workers",
+          "reason": "Package-wide Workers support remains unclaimed: only the explicit /workers binding subset runs in the local workerd R2 fixture. The root S3 API and full deployment are outside that claim.",
+          "providers": ["@croco/storage-r2/workers", "@croco/storage-core"],
+          "constraints": [
+            "Requires application-owned R2Bucket binding and native nodejs_compat for the common DI contract.",
+            "Local workerd R2 storage only; no live Cloudflare account, deployed resource or provider certification.",
+            "No signing or object ACL; native known-length upload streams only; get buffers at most 10MiB.",
+            "Cancellation stops waiting and read consumption, not remote write/delete commit; no automatic retry or distributed transaction guarantee.",
+            "Application owns authenticated tenant/key selection and callback lifetime; binding has no shutdown/flush API."
+          ],
+          "references": [
+            "packages/storage-r2/src/workers.ts",
+            "packages/storage-r2/src/libs/R2BindingStorageProvider.ts",
+            "packages/storage-r2/src/tests/R2BindingWorkers.spec.ts",
+            "packages/storage-r2/src/tests/fixtures/r2Worker.ts",
+            "packages/storage-r2/README.md"
+          ]
+        }
+      }
+    },
+    {
+      "package": "problems-core",
+      "classification": "pure-contract",
+      "reason": "Generated recovery metadata for the new R2 binding failure and unsupported-capability codes; no execution, host or storage behavior changes.",
+      "files": {
+        "packages/problems-core/src/generated/problem-code-registry.ts": "ba9df4596c0fd2ded11c56245138451cafc4b2e1b82a324cc04d516fcacbd7f8"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Generated Problem recovery data has no host capability, storage or lifecycle dependency.",
+          "providers": ["@croco/problems-core"],
+          "constraints": [],
+          "references": ["packages/problems-core/src/generated/problem-code-registry.ts"]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Generated Problem recovery data has no host capability, storage or lifecycle dependency.",
+          "providers": ["@croco/problems-core"],
+          "constraints": [],
+          "references": ["packages/problems-core/src/generated/problem-code-registry.ts"]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Generated Problem recovery data has no host capability, storage or lifecycle dependency.",
+          "providers": ["@croco/problems-core"],
+          "constraints": [],
+          "references": ["packages/problems-core/src/generated/problem-code-registry.ts"]
+        }
+      }
+    }
+  ]
+}

@@ -166,3 +166,16 @@ binding identity; keep deployment, proxy pooling/cache/failover and certificatio
 separate deployment/configuration evidence exists. Neither artifact provisions or deploys resources.
 These artifacts and package scripts are not shipped in generated applications. In a generated
 application, use its own declared scripts; inspect the framework repository for this local evidence.
+
+## R2 Workers binding subset
+
+Use `R2BindingStorageProvider` from `@croco/storage-r2/workers` with the application-owned
+`env.BUCKET` binding and native `nodejs_compat`. The root S3-compatible provider retains
+its Node/Lambda support. The package-wide catalog does not claim the entire package on Workers.
+`pnpm --filter @croco/storage-r2 test` includes local workerd R2 binding fixtures for native
+known-length upload streams, ranged reads, metadata, cancellation and bounded buffering.
+This is local runtime evidence, not live Cloudflare certification. Binding operations do not
+provide signed URLs or per-object ACLs and are never retried automatically. Cancellation stops
+waiting and read-body consumption; a started put/delete can still commit remotely. Applications
+own authenticated tenant/key selection and recovery after an uncertain write. The binding has no
+shutdown/flush operation and must remain within the selected Worker callback's lifetime.
