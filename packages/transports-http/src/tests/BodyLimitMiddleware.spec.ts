@@ -123,6 +123,7 @@ describe("BodyLimitMiddleware", () => {
   it("accepts the exact boundary and replays identical bytes downstream", async () => {
     const { request, stream } = createRequestBody(["12", "34"]);
     const context = createContext(request);
+    const addListener = vi.spyOn(request.signal, "addEventListener");
     const removeListener = vi.spyOn(request.signal, "removeEventListener");
     let downstream = "";
 
@@ -132,7 +133,8 @@ describe("BodyLimitMiddleware", () => {
 
     expect(downstream).toBe("1234");
     expect(stream.locked).toBe(false);
-    expect(removeListener).toHaveBeenCalledWith("abort", expect.any(Function));
+    expect(addListener).toHaveBeenCalledWith("abort", expect.any(Function), { once: true });
+    expect(removeListener).toHaveBeenCalledWith("abort", addListener.mock.calls[0]?.[1]);
   });
 
   it("rejects a valid declared overflow without reading and starts cancellation once", async () => {
@@ -306,6 +308,7 @@ describe("BodyLimitMiddleware", () => {
         { highWaterMark: 0 },
       );
       const request = requestWithStream(stream, undefined, abortController.signal);
+      const addListener = vi.spyOn(request.signal, "addEventListener");
       const removeListener = vi.spyOn(request.signal, "removeEventListener");
       const next = vi.fn(async () => {});
       const result = Promise.resolve(
@@ -322,7 +325,8 @@ describe("BodyLimitMiddleware", () => {
         expect(cancel).toHaveBeenCalledOnce();
         expect(stream.locked).toBe(false);
         expect(next).not.toHaveBeenCalled();
-        expect(removeListener).toHaveBeenCalledWith("abort", expect.any(Function));
+        expect(addListener).toHaveBeenCalledWith("abort", expect.any(Function), { once: true });
+        expect(removeListener).toHaveBeenCalledWith("abort", addListener.mock.calls[0]?.[1]);
       } finally {
         finishCancellation();
       }
@@ -333,7 +337,7 @@ describe("BodyLimitMiddleware", () => {
     const abortController = new AbortController();
     abortController.abort();
     const pull = vi.fn();
-    const cancel = vi.fn();
+    const cancel = vi.fn(() => new Promise<void>(() => {}));
     const stream = new ReadableStream<Uint8Array>({ pull, cancel }, { highWaterMark: 0 });
     const next = vi.fn(async () => {});
     await expect(

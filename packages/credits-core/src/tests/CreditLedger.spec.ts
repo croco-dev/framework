@@ -797,6 +797,53 @@ describe("CreditLedgerService", () => {
     ).rejects.toBeInstanceOf(InsufficientCreditsProblem);
   });
 
+  it("restores both lots when expiry fails after appending the first transaction", async () => {
+    const opened = await service.openAccount({
+      tenantId: "expiry-rollback",
+      idempotencyKey: "open",
+      reference: ref("open"),
+    });
+    const accountId = opened.account.id;
+    for (const amount of ["7", "11"]) {
+      await service.grantCredits({
+        accountId,
+        amount: creditAmount(amount),
+        expiresAt: new Date("2026-07-27T00:00:00Z"),
+        idempotencyKey: `grant-${amount}`,
+        reference: ref(`grant-${amount}`),
+      });
+    }
+    const before = await service.getHistory(accountId);
+    const failure = new InvalidCreditCommandProblem("second expiry metadata read failed");
+    let reads = 0;
+    const command: CreditLedgerCommand = {
+      operation: "expire",
+      accountId,
+      transactionIds: [creditTransactionId("expire-first"), creditTransactionId("expire-second")],
+      limit: 2,
+      occurredAt: new Date("2026-07-28T00:00:00Z"),
+      idempotencyKey: "expire",
+      reference: {
+        type: "test",
+        get id() {
+          if (++reads === 4) throw failure;
+          return "expire";
+        },
+      },
+    };
+    await expect(store.execute(command)).rejects.toBe(failure);
+    expect(await service.getHistory(accountId)).toEqual(before);
+    const retry = await store.execute({ ...command, reference: ref("expire") });
+    expect(retry).toMatchObject({
+      replayed: false,
+      transactions: [
+        { id: "expire-first", kind: "expire", amount: "7", position: 3 },
+        { id: "expire-second", kind: "expire", amount: "11", position: 4 },
+      ],
+    });
+    expect(await service.getBalance(accountId)).toMatchObject({ available: "0", expired: "18" });
+  });
+
   it("rolls back an appended commit and restored lots when its release fails", async () => {
     const opened = await service.openAccount({
       tenantId: "rollback",
