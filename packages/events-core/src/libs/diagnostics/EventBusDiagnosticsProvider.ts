@@ -19,6 +19,16 @@ export class EventBusDiagnosticsProvider implements DiagnosticsProvider {
       };
     }
 
+    if (!config.isStarted()) {
+      return {
+        status: "unhealthy",
+        component: "events",
+        message: "Event bus subscriptions have not started",
+        details: this.buildDetails(subscriberCount, stats?.getStats()),
+        lastChecked: new Date().toISOString(),
+      };
+    }
+
     if (!stats) {
       return {
         status: "degraded",

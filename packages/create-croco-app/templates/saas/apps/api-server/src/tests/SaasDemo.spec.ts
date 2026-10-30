@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { CheckoutResult } from "@croco/billing-core";
 import { EntitlementManager } from "@croco/entitlements-core";
-import { EventPublisher } from "@croco/events-core";
+import { EventBusDiagnosticsProvider, EventPublisher } from "@croco/events-core";
 import { Container as CrocoContainer, LOGGER_TOKEN } from "@croco/framework-context";
 import type { ILogger } from "@croco/framework-context";
 import { ApplicationRuntime } from "@croco/framework-module";
@@ -307,6 +307,30 @@ describe("SaaS golden path demo", () => {
           process.env.NODE_ENV = previousNodeEnv;
         }
         warn.mockRestore();
+      }
+    },
+  );
+
+  executableProfileTest(
+    "starts event subscriptions before serving diagnostics and after resetting the demo",
+    async () => {
+      const app = await createCrocoApp({ profileMode: "zero-credential" });
+      const provider = new EventBusDiagnosticsProvider();
+
+      try {
+        expect((await app.applicationRuntime.run(() => provider.getHealth())).status).toBe(
+          "healthy",
+        );
+
+        await app.applicationRuntime.run(() =>
+          app.applicationRuntime.get(SAAS_RUNTIME_STATE_TOKEN).reset(),
+        );
+
+        expect((await app.applicationRuntime.run(() => provider.getHealth())).status).toBe(
+          "healthy",
+        );
+      } finally {
+        await app.disposeApplicationRuntime();
       }
     },
   );
@@ -899,6 +923,28 @@ describe("SaaS golden path demo", () => {
         process.env[SAAS_DEMO_ENDPOINTS_ENABLED_ENV] = previousFlag;
       }
     }
+  });
+
+  it("waits for reset initialization and preserves the current runtime when it fails", async () => {
+    const initial = createSaasDemoRuntime();
+    const replacement = createSaasDemoRuntime();
+    const failure = new Error("Event subscription startup failed");
+    let rejectInitialization: (error: Error) => void = () => undefined;
+    const initialization = new Promise<void>((_resolve, reject) => {
+      rejectInitialization = reject;
+    });
+    const state = new SaasRuntimeState({
+      initial,
+      create: () => replacement,
+      onReset: () => initialization,
+    });
+
+    const reset = state.reset();
+    expect(state.current).toBe(initial);
+    rejectInitialization(failure);
+
+    await expect(reset).rejects.toBe(failure);
+    expect(state.current).toBe(initial);
   });
 
   it("runs an inspectable billing sync background job", async () => {

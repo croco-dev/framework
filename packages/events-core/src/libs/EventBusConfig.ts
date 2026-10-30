@@ -102,6 +102,17 @@ export class EventBusConfig {
     return this.subscriptions;
   }
 
+  /** Whether a bus is configured and every registered subscription has started. Empty configurations are not started. */
+  public isStarted(): boolean {
+    return (
+      this.eventBus !== undefined &&
+      this.subscriptions.size > 0 &&
+      [...this.subscriptions].every((subscription) =>
+        this.startedSubscriptions.has(this.createSubscriptionKey(subscription)),
+      )
+    );
+  }
+
   public getEventBus(): EventBus {
     if (!this.eventBus) {
       throw new EventBusNotSetProblem();

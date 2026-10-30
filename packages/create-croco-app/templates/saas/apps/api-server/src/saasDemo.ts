@@ -504,7 +504,7 @@ export const SAAS_RUNTIME_STATE_TOKEN = new Token<SaasRuntimeState>("SaasRuntime
 export type SaasRuntimeStateOptions = {
   readonly create: () => SaasRuntime;
   readonly initial?: SaasRuntime;
-  readonly onReset?: (runtime: SaasRuntime) => void;
+  readonly onReset?: (runtime: SaasRuntime) => void | Promise<void>;
 };
 
 export class SaasRuntimeState {
@@ -518,10 +518,10 @@ export class SaasRuntimeState {
     return this.currentRuntime;
   }
 
-  reset(): SaasRuntime {
+  async reset(): Promise<SaasRuntime> {
     const runtime = this.options.create();
+    await this.options.onReset?.(runtime);
     this.currentRuntime = runtime;
-    this.options.onReset?.(runtime);
     return runtime;
   }
 }

@@ -1,0 +1,117 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "events-core",
+      "classification": "pure-contract",
+      "reason": "Event diagnostics require a configured bus and all declared subscriptions to be started. The additive isStarted query reads existing state without changing registration, retry or host lifecycle behavior.",
+      "files": {
+        "packages/events-core/src/libs/EventBusConfig.ts": "a33a0c9aa68be5fa6186df480b404addb7efddf90e3608477b0704c167f924a0",
+        "packages/events-core/src/libs/diagnostics/EventBusDiagnosticsProvider.ts": "f0cc11af6146d2d589a6e98e151064ecd1c150a6cfc32f3765c7f05689f454a2"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Readiness inspects the existing process-local bus reference and started-subscription map. The Node Host gains no capability, provider, storage or lifecycle requirement.",
+          "providers": ["@croco/events-core/EventBusConfig"],
+          "constraints": [
+            "Readiness describes successful registration on the configured bus, not live transport reachability or provider certification. Existing runtime claims remain unchanged."
+          ],
+          "references": [
+            "packages/events-core/src/libs/EventBusConfig.ts",
+            "packages/events-core/src/libs/diagnostics/EventBusDiagnosticsProvider.ts",
+            "packages/events-core/src/tests/EventBusDiagnosticsProvider.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Readiness inspects the existing process-local bus reference and started-subscription map. The Lambda Host gains no capability, provider, storage or lifecycle requirement.",
+          "providers": ["@croco/events-core/EventBusConfig"],
+          "constraints": [
+            "Readiness describes successful registration on the configured bus, not live transport reachability or provider certification. Existing runtime claims remain unchanged."
+          ],
+          "references": [
+            "packages/events-core/src/libs/EventBusConfig.ts",
+            "packages/events-core/src/libs/diagnostics/EventBusDiagnosticsProvider.ts",
+            "packages/events-core/src/tests/EventBusDiagnosticsProvider.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Readiness inspects the existing process-local bus reference and started-subscription map. The Workers Host gains no capability, provider, storage or lifecycle requirement.",
+          "providers": ["@croco/events-core/EventBusConfig"],
+          "constraints": [
+            "Readiness describes successful registration on the configured bus, not live transport reachability or provider certification. Existing runtime claims remain unchanged."
+          ],
+          "references": [
+            "packages/events-core/src/libs/EventBusConfig.ts",
+            "packages/events-core/src/libs/diagnostics/EventBusDiagnosticsProvider.ts",
+            "packages/events-core/src/tests/EventBusDiagnosticsProvider.spec.ts"
+          ]
+        }
+      }
+    },
+    {
+      "package": "create-croco-app",
+      "classification": "runtime-adapter",
+      "reason": "The generated SaaS application awaits its existing EventBusConfig registration before publishing its runtime state, including asynchronous demo resets. This directly adapts the diagnostics consumer without changing host callbacks, bus selection, provider support or deployment configuration.",
+      "files": {
+        "packages/create-croco-app/templates/saas/apps/api-server/src/applicationModule.ts": "38833a77dfd72e8a303d6ad912dd3b2a07c7c1b1b6c3c1c72174dbf640bf69bd",
+        "packages/create-croco-app/templates/saas/apps/api-server/src/controllers/SaasController.ts": "98afdea84a51faa71220c66ba7943259ed611f45aaae866b0154cdc8fc3a935a",
+        "packages/create-croco-app/templates/saas/apps/api-server/src/saasDemo.ts": "ae65a090a19e9d2fbe856f791604098d819ca02059f56b1ec8ef1fcd28112a6e"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "unverified",
+          "reason": "The generated Node SaaS application reuses its existing InMemoryEventBus and application scope. Generated zero-credential smoke verifies registration and diagnostics locally; no Kubernetes cluster or live provider execution is claimed.",
+          "providers": [
+            "@croco/events-core/EventBusConfig",
+            "@croco/events-inmemory/InMemoryEventBus"
+          ],
+          "constraints": [
+            "Await subscription startup before exposing runtime state and after demo reset. Keep the existing process-local lifetime and host callback isolation. Kubernetes deployment and live providers remain unverified."
+          ],
+          "references": [
+            "packages/create-croco-app/templates/saas/apps/api-server/src/applicationModule.ts",
+            "packages/create-croco-app/templates/saas/apps/api-server/src/controllers/SaasController.ts",
+            "packages/create-croco-app/templates/saas/apps/api-server/src/saasDemo.ts",
+            "packages/create-croco-app/templates/saas/apps/api-server/src/tests/SaasDemo.spec.ts",
+            "packages/create-croco-app/src/saas-provider-profiles.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "unverified",
+          "reason": "The full saas-lambda provider composition remains documentation-only; this Node SaaS consumer correction does not implement or certify that composition. Existing Lambda host invocation and flush ownership are unchanged.",
+          "providers": ["@croco/preset-lambda"],
+          "constraints": [
+            "No full SaaS Lambda runtime or live AWS execution is established by Node zero-credential smoke."
+          ],
+          "references": [
+            "packages/create-croco-app/templates/saas/apps/api-server/src/applicationModule.ts",
+            "packages/create-croco-app/templates/saas/apps/api-server/src/controllers/SaasController.ts",
+            "packages/create-croco-app/templates/saas/apps/api-server/src/saasDemo.ts",
+            "packages/create-croco-app/templates/saas/apps/api-server/src/tests/SaasDemo.spec.ts",
+            "packages/create-croco-app/src/saas-provider-profiles.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "The saas-cloudflare profile selects the separate bootstrap-only Worker application rather than this full Node SaaS module. No Workers event bus, storage, callback or lifecycle behavior changes.",
+          "providers": ["@croco/preset-cloudflare"],
+          "constraints": [
+            "Full SaaS providers remain unavailable in the Worker bootstrap; this change does not add or certify them."
+          ],
+          "references": [
+            "packages/create-croco-app/templates/saas/apps/api-server/src/applicationModule.ts",
+            "packages/create-croco-app/templates/saas/apps/api-server/src/controllers/SaasController.ts",
+            "packages/create-croco-app/templates/saas/apps/api-server/src/saasDemo.ts",
+            "packages/create-croco-app/templates/saas/apps/api-server/src/tests/SaasDemo.spec.ts",
+            "packages/create-croco-app/src/saas-provider-profiles.ts"
+          ]
+        }
+      }
+    }
+  ]
+}

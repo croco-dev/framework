@@ -49,6 +49,18 @@ title: "EventBusConfig"
 
 ---
 
+### isStarted()
+
+> **isStarted**(): `boolean`
+
+Whether a bus is configured and every registered subscription has started. Empty configurations are not started.
+
+#### Returns
+
+`boolean`
+
+---
+
 ### setEventBus()
 
 > **setEventBus**(`eventBus`): `void`
