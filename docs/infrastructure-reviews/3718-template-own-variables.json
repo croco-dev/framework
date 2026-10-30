@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "notifications-core",
+      "classification": "pure-contract",
+      "reason": "Validate and render only explicitly supplied own template variables; preserve optional omission, schema types and channel escaping.",
+      "files": {
+        "packages/notifications-core/src/libs/NotificationTemplates.ts": "0b7b68b118f7a1fa777b7a67c39bb7dd3c03bd1834d5f817480de32fb679eee7"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Own-property validation and template substitution are pure synchronous logic independent of the Kubernetes Node Host; no host capability, storage, provider or lifecycle changes.",
+          "providers": [],
+          "constraints": ["No live notification delivery or provider certification is claimed."],
+          "references": [
+            "packages/notifications-core/src/libs/NotificationTemplates.ts",
+            "packages/notifications-core/src/tests/NotificationTemplates.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Own-property validation and template substitution are pure synchronous logic independent of the Lambda Host; no host capability, storage, provider or lifecycle changes.",
+          "providers": [],
+          "constraints": ["No live notification delivery or provider certification is claimed."],
+          "references": [
+            "packages/notifications-core/src/libs/NotificationTemplates.ts",
+            "packages/notifications-core/src/tests/NotificationTemplates.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Own-property validation and template substitution are pure synchronous logic independent of the Workers or explicit Node Container Host; no host capability, storage, provider or lifecycle changes.",
+          "providers": [],
+          "constraints": ["No live notification delivery or provider certification is claimed."],
+          "references": [
+            "packages/notifications-core/src/libs/NotificationTemplates.ts",
+            "packages/notifications-core/src/tests/NotificationTemplates.spec.ts"
+          ]
+        }
+      }
+    }
+  ]
+}
