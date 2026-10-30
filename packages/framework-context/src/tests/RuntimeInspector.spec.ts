@@ -1,7 +1,33 @@
 import { describe, expect, it } from "vitest";
-import { Context, RuntimeInspector, RuntimeInspectorConfigurationProblem } from "../index";
+import {
+  Context,
+  recordRuntimeInspectionEvent,
+  RuntimeInspector,
+  RuntimeInspectorConfigurationProblem,
+} from "../index";
 
 describe("RuntimeInspector", () => {
+  it("isolates a failing failure reporter after reporting the original inspection error", () => {
+    const inspectionError = new Error("inspection failed");
+    const reportedErrors: Error[] = [];
+
+    expect(() =>
+      recordRuntimeInspectionEvent(
+        {
+          recordEvent: () => {
+            throw inspectionError;
+          },
+        },
+        { requestId: "reporter-failure", kind: "handler.end" },
+        (error) => {
+          reportedErrors.push(error);
+          throw new Error("reporter failed");
+        },
+      ),
+    ).not.toThrow();
+    expect(reportedErrors).toEqual([inspectionError]);
+  });
+
   describe("configuration", () => {
     it.each(["maxRequests", "maxEventsPerRequest", "maxStringLength"] as const)(
       "rejects invalid %s values before collecting requests",

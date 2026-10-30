@@ -411,6 +411,35 @@ describe("GraphQLServer start", () => {
     expect(nodeServer.listenerCount("error")).toBe(0);
     expect(nodeServer.listeners("listening")).toEqual(createServer().listeners("listening"));
   });
+
+  it("should serve requests when optional startup logging throws", async () => {
+    const logger = createLoggerMock();
+    const log = vi.spyOn(logger, "info").mockImplementation(() => {
+      throw new Error("startup logger failed");
+    });
+    Container.set(Logger, logger);
+    const server = new GraphQLServer({
+      schemaOptions: { resolvers: [UserResolver], autoDiscover: false },
+    });
+
+    try {
+      await server.start(0);
+      const nodeServer = Reflect.get(server, "server") as Server;
+      const address = nodeServer.address();
+      if (!address || typeof address === "string") throw new Error("Expected TCP address");
+      const response = await fetch(`http://localhost:${address.port}/graphql`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ query: "{ hello }" }),
+      });
+
+      expect(log).toHaveBeenCalledOnce();
+      expect(response.status).toBe(200);
+      expect(await response.json()).toEqual({ data: { hello: "Hello, GraphQL!" } });
+    } finally {
+      await server.stop();
+    }
+  });
 });
 
 describe("GraphQLServer listener lifecycle", () => {
