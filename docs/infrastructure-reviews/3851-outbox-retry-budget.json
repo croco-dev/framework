@@ -1,0 +1,109 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "outbox-core",
+      "classification": "pure-contract",
+      "reason": "Reject invalid positive-safe-integer outbox retry budgets before state changes and expose their configuration Problem through the canonical generated registry.",
+      "files": {
+        "packages/outbox-core/src/index.ts": "add8e25068aa239cd15e524d7a661508d93487aa230ab793c915db9f911641da",
+        "packages/outbox-core/src/libs/InMemoryTransactionalOutboxStore.ts": "5c41ba09ce8576ed30fa3ae1f57eed39279d99742d02121ae7e459dbecc0d67f",
+        "packages/outbox-core/src/libs/conformance.ts": "84cc2d6ab748a59bff0fa3fdd9a38c7eb8f0d62fd59cf0abe0e37a1182758fac",
+        "packages/outbox-core/src/libs/problems/OutboxProblems.ts": "ccbc505d03edf41f10aed2c71423c9a984a191503e8324702d45c8a7177b784d",
+        "packages/outbox-core/src/libs/types.ts": "f5ffa87eec876514f857270ab6925935af56951dd64fae410d5cdc40c76ac762"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Numeric admission validation and generated Problem metadata require no new host capability, storage or lifecycle boundary. Existing store runtime constraints remain unchanged.",
+          "providers": ["@croco/outbox-core"],
+          "constraints": [
+            "No deployment, live provider, durable storage or Workers compatibility claim is added."
+          ],
+          "references": [
+            "packages/outbox-core/src/libs/InMemoryTransactionalOutboxStore.ts",
+            "packages/outbox-core/src/libs/conformance.ts",
+            "packages/outbox-core/src/libs/problems/OutboxProblems.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Numeric admission validation and generated Problem metadata require no new host capability, storage or lifecycle boundary. Existing store runtime constraints remain unchanged.",
+          "providers": ["@croco/outbox-core"],
+          "constraints": [
+            "No deployment, live provider, durable storage or Workers compatibility claim is added."
+          ],
+          "references": [
+            "packages/outbox-core/src/libs/InMemoryTransactionalOutboxStore.ts",
+            "packages/outbox-core/src/libs/conformance.ts",
+            "packages/outbox-core/src/libs/problems/OutboxProblems.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Numeric admission validation and generated Problem metadata require no new host capability, storage or lifecycle boundary. Existing store runtime constraints remain unchanged.",
+          "providers": ["@croco/outbox-core"],
+          "constraints": [
+            "No deployment, live provider, durable storage or Workers compatibility claim is added."
+          ],
+          "references": [
+            "packages/outbox-core/src/libs/InMemoryTransactionalOutboxStore.ts",
+            "packages/outbox-core/src/libs/conformance.ts",
+            "packages/outbox-core/src/libs/problems/OutboxProblems.ts"
+          ]
+        }
+      }
+    },
+    {
+      "package": "problems-core",
+      "classification": "pure-contract",
+      "reason": "Publish the generated outbox retry-configuration Problem code and recovery metadata without changing Problem execution.",
+      "files": {
+        "packages/problems-core/src/generated/problem-code-registry.ts": "1af51349d467ba6fbf29ece54a9309162ec2a2726f7687e504b4ef756b807017"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Numeric admission validation and generated Problem metadata require no new host capability, storage or lifecycle boundary. Existing store runtime constraints remain unchanged.",
+          "providers": ["@croco/problems-core"],
+          "constraints": [
+            "No deployment, live provider, durable storage or Workers compatibility claim is added."
+          ],
+          "references": [
+            "packages/outbox-core/src/libs/InMemoryTransactionalOutboxStore.ts",
+            "packages/outbox-core/src/libs/conformance.ts",
+            "packages/outbox-core/src/libs/problems/OutboxProblems.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Numeric admission validation and generated Problem metadata require no new host capability, storage or lifecycle boundary. Existing store runtime constraints remain unchanged.",
+          "providers": ["@croco/problems-core"],
+          "constraints": [
+            "No deployment, live provider, durable storage or Workers compatibility claim is added."
+          ],
+          "references": [
+            "packages/outbox-core/src/libs/InMemoryTransactionalOutboxStore.ts",
+            "packages/outbox-core/src/libs/conformance.ts",
+            "packages/outbox-core/src/libs/problems/OutboxProblems.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Numeric admission validation and generated Problem metadata require no new host capability, storage or lifecycle boundary. Existing store runtime constraints remain unchanged.",
+          "providers": ["@croco/problems-core"],
+          "constraints": [
+            "No deployment, live provider, durable storage or Workers compatibility claim is added."
+          ],
+          "references": [
+            "packages/outbox-core/src/libs/InMemoryTransactionalOutboxStore.ts",
+            "packages/outbox-core/src/libs/conformance.ts",
+            "packages/outbox-core/src/libs/problems/OutboxProblems.ts"
+          ]
+        }
+      }
+    }
+  ]
+}

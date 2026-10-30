@@ -1,4 +1,5 @@
 import { fail, strictEqual } from "node:assert/strict";
+import { Problem } from "@croco/problems-core";
 import {
   OUTBOX_CLAIM_CONFIGURATION_PROBLEM_CODE,
   OUTBOX_DISPATCH_PROBLEM_CODE,
@@ -45,6 +46,87 @@ export function createTransactionalOutboxStoreContractSuite<
 ): TransactionalOutboxStoreContractSuite {
   return {
     cases: [
+      ...[false, true].flatMap((unitOfWork) =>
+        [0, -1, 1.5, NaN, Infinity, -Infinity, Number.MAX_SAFE_INTEGER + 1].map((maxAttempts) => ({
+          name: `rejects invalid retry budget ${String(maxAttempts)} without partial state ${unitOfWork ? "in a Unit of Work" : "directly"}`,
+          run: async () => {
+            const store = await options.createStore();
+            const now = new Date("2026-01-01T00:00:00.000Z");
+            const record = async (context?: TransactionalOutboxStoreContext<TClient>) => {
+              const error = await assertRejects(() =>
+                store.record(createIntent(), {
+                  id: "rejected",
+                  now,
+                  context,
+                  retry: { maxAttempts },
+                }),
+              );
+              if (!(error instanceof Problem)) {
+                fail("invalid retry budget must reject with a Problem");
+              }
+              assertEqual(
+                error.code,
+                "outbox-core/retry-configuration-invalid",
+                "invalid retry budget must produce a stable configuration Problem",
+              );
+              // Catch inside the transaction so rollback cannot hide a partial write.
+              const accepted = await store.record(createIntent(), {
+                id: "accepted",
+                now,
+                context,
+                retry: { maxAttempts: 1 },
+              });
+              assertEqual(
+                accepted.id,
+                "accepted",
+                "rejection must not reserve the idempotency key",
+              );
+              assertEqual(accepted.retry.maxAttempts, 1, "corrected budget must be stored");
+            };
+            if (unitOfWork) {
+              await options.runInUnitOfWork(store, record);
+            } else {
+              await record();
+            }
+            const records = await options.listRecords(store);
+            assertEqual(records.length, 1, "rejection must not leave a partial record");
+            assertEqual(records[0].id, "accepted", "only the corrected record must remain");
+          },
+        })),
+      ),
+      ...[undefined, 1, Number.MAX_SAFE_INTEGER].map((maxAttempts) => ({
+        name: `accepts and claims valid retry budget ${String(maxAttempts)}`,
+        run: async () => {
+          const store = await options.createStore();
+          const now = new Date("2026-01-01T00:00:00.000Z");
+          const record = await store.record(createIntent(), {
+            id: "valid-budget",
+            now,
+            retry: { maxAttempts },
+          });
+          assertEqual(
+            record.retry.maxAttempts,
+            maxAttempts ?? 3,
+            "default and explicit budgets must be preserved",
+          );
+          const [claimed] = await store.claimBatch({ limit: 1, now, visibilityTimeoutMs: 1_000 });
+          assertEqual(
+            assertDefined(claimed, "accepted record must be claimable").retry.attempt,
+            1,
+            "first claim must consume one attempt",
+          );
+          await store.markDispatched(record.id, {
+            dispatchedAt: now,
+            expectedAttempt: claimed.claim.attempt,
+          });
+          const [completed] = await options.listRecords(store);
+          assertEqual(
+            completed.status,
+            "dispatched",
+            "valid budgets must allow dispatch completion",
+          );
+        },
+      })),
       {
         name: "returns the existing record for duplicate tenant-scoped idempotency keys",
         run: async () => {

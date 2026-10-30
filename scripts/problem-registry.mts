@@ -5141,6 +5141,15 @@ const recoveryMetadataByCode = {
     redactionPolicy: "operator-only",
     severity: "error",
   }),
+  "outbox-core/retry-configuration-invalid": recovery({
+    cause: "An outbox producer configured maxAttempts outside the positive safe-integer range.",
+    userAction: "Ask the operator to correct maxAttempts before recording the outbox intent again.",
+    operatorAction:
+      "Use a positive safe integer or omit maxAttempts for the default budget. The rejected write reserves no record or idempotency key.",
+    retryability: "not-retryable",
+    redactionPolicy: "operator-only",
+    severity: "error",
+  }),
   "outbox-core/claim-configuration-invalid": recovery({
     cause:
       "An outbox dispatcher requested a visibility lease that is not a positive safe-integer duration with a representable expiry.",

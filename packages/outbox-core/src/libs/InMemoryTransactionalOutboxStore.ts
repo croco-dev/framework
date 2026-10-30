@@ -6,6 +6,7 @@ import {
   OutboxDispatchProblem,
   OutboxFailureMetadataProblem,
   OutboxRecordIdConflictProblem,
+  OutboxRetryConfigurationProblem,
   OutboxUnitOfWorkContextProblem,
   readOutboxFailureMetadata,
 } from "./problems/OutboxProblems";
@@ -310,6 +311,11 @@ export class InMemoryTransactionalOutboxStore implements TransactionalOutboxStor
     intent: OutboxIntent,
     options: OutboxRecordOptions<InMemoryTransactionalOutboxStoreClient>,
   ): OutboxRecord {
+    const maxAttempts = options.retry?.maxAttempts ?? DEFAULT_MAX_ATTEMPTS;
+    if (!Number.isSafeInteger(maxAttempts) || maxAttempts <= 0) {
+      throw new OutboxRetryConfigurationProblem(maxAttempts);
+    }
+
     const scopedKey = idempotencyScopeKey(intent);
     const existingId = state.idByIdempotencyScope.get(scopedKey);
     if (existingId) {
@@ -337,7 +343,7 @@ export class InMemoryTransactionalOutboxStore implements TransactionalOutboxStor
       metadata: cloneRecord(intent.metadata ?? {}),
       retry: {
         attempt: 0,
-        maxAttempts: options.retry?.maxAttempts ?? DEFAULT_MAX_ATTEMPTS,
+        maxAttempts,
         retryable: true,
         terminal: false,
       },

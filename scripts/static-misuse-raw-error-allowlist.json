@@ -114,7 +114,7 @@
     {
       "package": "@croco/outbox-core",
       "file": "packages/outbox-core/src/libs/conformance.ts",
-      "line": 355,
+      "line": 437,
       "excerpt": "throw new Error(\"rollback\");",
       "reason": "Reviewed 2026-10-30 (#4004): The conformance Unit of Work callback deliberately throws to verify rollback removes the record. This is an injected test failure, not an outbox delivery failure; replacing it with a successful result would invalidate the transaction probe.",
       "owner": "framework-error-handling",
