@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "testing",
+      "classification": "pure-contract",
+      "reason": "Ended test spans stop accepting recording mutations and retain their first end timestamp; span context remains readable for child creation.",
+      "files": {
+        "packages/testing/src/libs/telemetry-testing.ts": "ecad3c452cc15a705af4659a3cdabf71076b49a59e0a4754dc6ca45da8be6026"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "The correction only guards the process-local telemetry capture record. It introduces no host capability, storage, exporter, application lifecycle or deployment requirement.",
+          "providers": ["@croco/testing/installTestingTelemetryCapture"],
+          "constraints": [
+            "This test capture is not a deployed telemetry SDK or a live OTLP exporter; no infrastructure or provider certification is claimed."
+          ],
+          "references": [
+            "packages/testing/src/libs/telemetry-testing.ts",
+            "packages/testing/src/tests/testing.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "The correction only guards the process-local telemetry capture record. It introduces no host capability, storage, exporter, application lifecycle or deployment requirement.",
+          "providers": ["@croco/testing/installTestingTelemetryCapture"],
+          "constraints": [
+            "This test capture is not a deployed telemetry SDK or a live OTLP exporter; no infrastructure or provider certification is claimed."
+          ],
+          "references": [
+            "packages/testing/src/libs/telemetry-testing.ts",
+            "packages/testing/src/tests/testing.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "The correction only guards the process-local telemetry capture record. It introduces no host capability, storage, exporter, application lifecycle or deployment requirement.",
+          "providers": ["@croco/testing/installTestingTelemetryCapture"],
+          "constraints": [
+            "This test capture is not a deployed telemetry SDK or a live OTLP exporter; no infrastructure or provider certification is claimed."
+          ],
+          "references": [
+            "packages/testing/src/libs/telemetry-testing.ts",
+            "packages/testing/src/tests/testing.spec.ts"
+          ]
+        }
+      }
+    }
+  ]
+}

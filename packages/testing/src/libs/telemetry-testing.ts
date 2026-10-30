@@ -227,16 +227,19 @@ class TestingSpan implements Span {
   }
 
   setAttribute(key: string, value: NonNullable<Attributes[string]>): this {
+    if (!this.isRecording()) return this;
     this.record.attributes[key] = value;
     return this;
   }
 
   setAttributes(attributes: Attributes): this {
+    if (!this.isRecording()) return this;
     Object.assign(this.record.attributes, attributes);
     return this;
   }
 
   addEvent(name: string, attributes?: Attributes): this {
+    if (!this.isRecording()) return this;
     this.record.events.push({
       attributes: attributes ?? {},
       name,
@@ -253,16 +256,19 @@ class TestingSpan implements Span {
   }
 
   setStatus(status: SpanStatus): this {
+    if (!this.isRecording()) return this;
     this.record.status = status;
     return this;
   }
 
   updateName(name: string): this {
+    if (!this.isRecording()) return this;
     this.record.name = name;
     return this;
   }
 
   end(endTime?: unknown): void {
+    if (!this.isRecording()) return;
     this.record.ended = true;
     Object.assign(this.record, { endTime });
   }
@@ -272,6 +278,7 @@ class TestingSpan implements Span {
   }
 
   recordException(exception: Exception): void {
+    if (!this.isRecording()) return;
     this.record.exceptions.push({ exception });
   }
 }
