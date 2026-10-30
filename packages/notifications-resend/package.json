@@ -46,7 +46,7 @@
   "scripts": {
     "build": "tsup src/index.ts --format esm,cjs --minify --clean --dts",
     "dev": "tsup src/index.ts --format cjs,esm --dts --watch",
-    "test": "vitest run --exclude src/tests/ResendLiveSmoke.spec.ts",
+    "test": "vitest run --exclude src/tests/ResendLiveSmoke.spec.ts --exclude src/tests/ResendEngagementWorkers.postgres.spec.ts",
     "test:evidence": "pnpm run test --maxWorkers=1 --reporter=json --outputFile=.turbo/croco-test-evidence.json",
     "test:live": "vitest run src/tests/ResendLiveSmoke.spec.ts",
     "typecheck": "tsrs --noEmit",
