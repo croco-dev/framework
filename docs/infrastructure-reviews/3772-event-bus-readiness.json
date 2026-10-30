@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "events-core",
+      "classification": "pure-contract",
+      "reason": "Event diagnostics require a configured bus and all declared subscriptions to be started. The additive isStarted query reads existing state without changing registration, retry or host lifecycle behavior.",
+      "files": {
+        "packages/events-core/src/libs/EventBusConfig.ts": "a33a0c9aa68be5fa6186df480b404addb7efddf90e3608477b0704c167f924a0",
+        "packages/events-core/src/libs/diagnostics/EventBusDiagnosticsProvider.ts": "f0cc11af6146d2d589a6e98e151064ecd1c150a6cfc32f3765c7f05689f454a2"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Readiness inspects the existing process-local bus reference and started-subscription map. The Node Host gains no capability, provider, storage or lifecycle requirement.",
+          "providers": ["@croco/events-core/EventBusConfig"],
+          "constraints": [
+            "Readiness describes successful registration on the configured bus, not live transport reachability or provider certification. Existing runtime claims remain unchanged."
+          ],
+          "references": [
+            "packages/events-core/src/libs/EventBusConfig.ts",
+            "packages/events-core/src/libs/diagnostics/EventBusDiagnosticsProvider.ts",
+            "packages/events-core/src/tests/EventBusDiagnosticsProvider.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Readiness inspects the existing process-local bus reference and started-subscription map. The Lambda Host gains no capability, provider, storage or lifecycle requirement.",
+          "providers": ["@croco/events-core/EventBusConfig"],
+          "constraints": [
+            "Readiness describes successful registration on the configured bus, not live transport reachability or provider certification. Existing runtime claims remain unchanged."
+          ],
+          "references": [
+            "packages/events-core/src/libs/EventBusConfig.ts",
+            "packages/events-core/src/libs/diagnostics/EventBusDiagnosticsProvider.ts",
+            "packages/events-core/src/tests/EventBusDiagnosticsProvider.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Readiness inspects the existing process-local bus reference and started-subscription map. The Workers Host gains no capability, provider, storage or lifecycle requirement.",
+          "providers": ["@croco/events-core/EventBusConfig"],
+          "constraints": [
+            "Readiness describes successful registration on the configured bus, not live transport reachability or provider certification. Existing runtime claims remain unchanged."
+          ],
+          "references": [
+            "packages/events-core/src/libs/EventBusConfig.ts",
+            "packages/events-core/src/libs/diagnostics/EventBusDiagnosticsProvider.ts",
+            "packages/events-core/src/tests/EventBusDiagnosticsProvider.spec.ts"
+          ]
+        }
+      }
+    }
+  ]
+}
