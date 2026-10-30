@@ -40,6 +40,34 @@ function capMessage(message: string, maxLength: number): string {
   return `${message.slice(0, maxLength - 3)}...`;
 }
 
+function readHealthStatus(value: unknown): HealthStatus | undefined {
+  try {
+    if (typeof value !== "object" || value === null || Array.isArray(value)) {
+      return undefined;
+    }
+    const { status, component, lastChecked, message, details } = value as Record<string, unknown>;
+    if (
+      (status !== "healthy" && status !== "degraded" && status !== "unhealthy") ||
+      typeof component !== "string" ||
+      typeof lastChecked !== "string" ||
+      (message !== undefined && typeof message !== "string") ||
+      (details !== undefined &&
+        (typeof details !== "object" || details === null || Array.isArray(details)))
+    ) {
+      return undefined;
+    }
+    return {
+      status,
+      component,
+      lastChecked,
+      ...(message === undefined ? {} : { message }),
+      ...(details === undefined ? {} : { details: details as Record<string, unknown> }),
+    };
+  } catch {
+    return undefined;
+  }
+}
+
 function computeSummary(statuses: readonly HealthStatus[]): DiagnosticsReport["summary"] {
   if (statuses.length === 0) {
     return "all_healthy";
@@ -143,7 +171,20 @@ export class DiagnosticsCollector {
     });
 
     try {
-      return await Promise.race([provider.getHealth(controller.signal), timeoutPromise]);
+      const result: unknown = await Promise.race([
+        provider.getHealth(controller.signal),
+        timeoutPromise,
+      ]);
+      const health = readHealthStatus(result);
+      if (health === undefined) {
+        return {
+          status: "degraded",
+          component: provider.name,
+          message: "Provider returned an invalid health status",
+          lastChecked: new Date().toISOString(),
+        };
+      }
+      return health;
     } finally {
       if (timeoutId !== undefined) {
         clearTimeout(timeoutId);
