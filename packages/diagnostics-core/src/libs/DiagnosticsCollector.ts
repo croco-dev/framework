@@ -41,22 +41,26 @@ function capMessage(message: string, maxLength: number): string {
 }
 
 function isHealthStatus(value: unknown): value is HealthStatus {
-  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+  try {
+    if (typeof value !== "object" || value === null || Array.isArray(value)) {
+      return false;
+    }
+    const health = value as Record<string, unknown>;
+    return (
+      (health.status === "healthy" ||
+        health.status === "degraded" ||
+        health.status === "unhealthy") &&
+      typeof health.component === "string" &&
+      typeof health.lastChecked === "string" &&
+      (health.message === undefined || typeof health.message === "string") &&
+      (health.details === undefined ||
+        (typeof health.details === "object" &&
+          health.details !== null &&
+          !Array.isArray(health.details)))
+    );
+  } catch {
     return false;
   }
-  const health = value as Record<string, unknown>;
-  return (
-    (health.status === "healthy" ||
-      health.status === "degraded" ||
-      health.status === "unhealthy") &&
-    typeof health.component === "string" &&
-    typeof health.lastChecked === "string" &&
-    (health.message === undefined || typeof health.message === "string") &&
-    (health.details === undefined ||
-      (typeof health.details === "object" &&
-        health.details !== null &&
-        !Array.isArray(health.details)))
-  );
 }
 
 function computeSummary(statuses: readonly HealthStatus[]): DiagnosticsReport["summary"] {

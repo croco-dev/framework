@@ -223,6 +223,33 @@ describe("DiagnosticsCollector Integration", () => {
       expect(JSON.stringify(report)).not.toContain("do-not-expose");
     });
 
+    it.each(["status", "component", "lastChecked", "message", "details"])(
+      "isolates a throwing %s getter without exposing its exception",
+      async (property) => {
+        const health = Object.defineProperty({ ...validHealth }, property, {
+          get() {
+            throw new Error("private-provider-payload");
+          },
+        });
+        collector.registerProvider(new MockDiagnosticsProvider("malformed-provider", health));
+        collector.registerProvider(new MockDiagnosticsProvider("cache", validHealth));
+
+        const report = await collector.getReport();
+
+        expect(report.summary).toBe("degraded");
+        expect(report.components).toEqual([
+          {
+            status: "degraded",
+            component: "malformed-provider",
+            message: "Provider returned an invalid health status",
+            lastChecked: expect.any(String),
+          },
+          validHealth,
+        ]);
+        expect(JSON.stringify(report)).not.toContain("private-provider-payload");
+      },
+    );
+
     it.each([
       ["healthy", "all_healthy"],
       ["degraded", "degraded"],
