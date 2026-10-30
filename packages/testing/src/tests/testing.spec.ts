@@ -1,7 +1,14 @@
 import "reflect-metadata";
 import { AsyncLocalStorage } from "node:async_hooks";
 import { queryObjects } from "node:v8";
-import { context, ProxyTracerProvider, ROOT_CONTEXT, trace } from "@opentelemetry/api";
+import {
+  context,
+  isSpanContextValid,
+  ProxyTracerProvider,
+  ROOT_CONTEXT,
+  SpanStatusCode,
+  trace,
+} from "@opentelemetry/api";
 import { CurrentApiKey, CurrentPrincipal, User } from "@croco/auth-core";
 import type {
   BillingGateway,
@@ -1103,6 +1110,83 @@ describe("@croco/testing", () => {
       name: "testing.operation",
     });
   });
+
+  it("keeps telemetry mutations recorded before end and ignores late mutations", () => {
+    const capture = installTestingTelemetryCapture();
+    const span = trace.getTracer("testing.span-lifecycle").startSpan("original");
+    const error = new Error("before end");
+
+    expect(span.isRecording()).toBe(true);
+    expect(span.setAttribute("before", 1)).toBe(span);
+    expect(span.setAttributes({ retained: true })).toBe(span);
+    expect(span.addEvent("before-event", { phase: "before" })).toBe(span);
+    span.recordException(error);
+    expect(span.setStatus({ code: SpanStatusCode.ERROR, message: "before status" })).toBe(span);
+    expect(span.updateName("before-name")).toBe(span);
+    span.end(100);
+
+    expect(span.isRecording()).toBe(false);
+    expect(span.setAttribute("before", 2)).toBe(span);
+    expect(span.setAttributes({ retained: false, late: true })).toBe(span);
+    expect(span.addEvent("late-event", { phase: "after" })).toBe(span);
+    span.recordException(new Error("after end"));
+    expect(span.setStatus({ code: SpanStatusCode.OK })).toBe(span);
+    expect(span.updateName("late-name")).toBe(span);
+
+    expect(capture.spans).toMatchObject([
+      {
+        attributes: { before: 1, retained: true },
+        events: [{ name: "before-event", attributes: { phase: "before" } }],
+        exceptions: [{ exception: error }],
+        status: { code: SpanStatusCode.ERROR, message: "before status" },
+        name: "before-name",
+        ended: true,
+        endTime: 100,
+      },
+    ]);
+    expect(capture.spans[0]?.attributes).not.toHaveProperty("late");
+  });
+
+  it.each([100, undefined])("preserves the first telemetry end time (%s)", (endTime) => {
+    const capture = installTestingTelemetryCapture();
+    const span = trace.getTracer("testing.span-lifecycle").startSpan("subject");
+    span.end(endTime);
+    span.end(200);
+    expect(capture.spans[0]?.endTime).toBe(endTime);
+    span.end();
+
+    expect(span.isRecording()).toBe(false);
+    expect(capture.spans[0]?.endTime).toBe(endTime);
+  });
+
+  it.each(["startSpan", "startActiveSpan"] as const)(
+    "allows %s to inherit the context of an ended telemetry parent",
+    (method) => {
+      const capture = installTestingTelemetryCapture();
+      const tracer = trace.getTracer("testing.span-lifecycle");
+      const parent = tracer.startSpan("parent");
+      const parentContext = parent.spanContext();
+      parent.end(100);
+
+      expect(parent.isRecording()).toBe(false);
+      expect(parent.spanContext()).toEqual(parentContext);
+      expect(isSpanContextValid(parentContext)).toBe(true);
+      const ctx = trace.setSpan(ROOT_CONTEXT, parent);
+      if (method === "startSpan") {
+        tracer.startSpan("child", {}, ctx).end();
+      } else {
+        tracer.startActiveSpan("child", {}, ctx, (child) => child.end());
+      }
+
+      expect(capture.spans[1]).toMatchObject({
+        name: "child",
+        parentSpanId: parentContext.spanId,
+        traceId: parentContext.traceId,
+        ended: true,
+      });
+      expect(capture.spans[1]?.spanId).not.toBe(parentContext.spanId);
+    },
+  );
 
   describe.each(["startSpan", "startActiveSpan"] as const)(
     "telemetry %s parent selection",
