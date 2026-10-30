@@ -1,0 +1,113 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "metrics-core",
+      "classification": "pure-contract",
+      "reason": "Accumulate normalized MRR minor units exactly and reject a final total outside the public Number safe-integer range before snapshots can be written.",
+      "files": {
+        "packages/metrics-core/src/index.ts": "53dde214e9e74a0f93f1bfb3c653feeec20b883f3278459894c93127a0bf18b0",
+        "packages/metrics-core/src/libs/MrrCalculator.ts": "c17c3d726f9fdec57aba1593ac77ebffddaaceb383e3b1f69e648565cf7cc02a",
+        "packages/metrics-core/src/libs/problems/MetricsProblems.ts": "60fdc68564db5cfa39c264638e37399ba03a0f8d03e0452dba123911b5c5ff99"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "This pure numeric validation and generated diagnostic metadata have no dependency on the Kubernetes Node Host, host capabilities, provider storage or lifecycle behavior.",
+          "providers": [],
+          "constraints": [
+            "No deployed host, live database or provider certification is claimed; existing runtime claims remain unchanged."
+          ],
+          "references": [
+            "packages/metrics-core/src/libs/MrrCalculator.ts",
+            "packages/metrics-core/src/tests/MrrCalculator.spec.ts",
+            "packages/metrics-core/src/tests/SnapshotScheduler.spec.ts",
+            "packages/metrics-core/src/index.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "This pure numeric validation and generated diagnostic metadata have no dependency on the Lambda Host, host capabilities, provider storage or lifecycle behavior.",
+          "providers": [],
+          "constraints": [
+            "No deployed host, live database or provider certification is claimed; existing runtime claims remain unchanged."
+          ],
+          "references": [
+            "packages/metrics-core/src/libs/MrrCalculator.ts",
+            "packages/metrics-core/src/tests/MrrCalculator.spec.ts",
+            "packages/metrics-core/src/tests/SnapshotScheduler.spec.ts",
+            "packages/metrics-core/src/index.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "This pure numeric validation and generated diagnostic metadata have no dependency on the Workers or explicit Node Container Host, host capabilities, provider storage or lifecycle behavior.",
+          "providers": [],
+          "constraints": [
+            "No deployed host, live database or provider certification is claimed; existing runtime claims remain unchanged."
+          ],
+          "references": [
+            "packages/metrics-core/src/libs/MrrCalculator.ts",
+            "packages/metrics-core/src/tests/MrrCalculator.spec.ts",
+            "packages/metrics-core/src/tests/SnapshotScheduler.spec.ts",
+            "packages/metrics-core/src/index.ts"
+          ]
+        }
+      }
+    },
+    {
+      "package": "problems-core",
+      "classification": "pure-contract",
+      "reason": "Regenerate the canonical typed Problem registry for the metrics-core MRR overflow validation code; registry behavior and recovery policies are unchanged.",
+      "files": {
+        "packages/problems-core/src/generated/problem-code-registry.ts": "f20771cbb4b93d78b503278bb343f415908ae1ad70258e8c81abe4c1b310e502"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "This pure numeric validation and generated diagnostic metadata have no dependency on the Kubernetes Node Host, host capabilities, provider storage or lifecycle behavior.",
+          "providers": [],
+          "constraints": [
+            "No deployed host, live database or provider certification is claimed; existing runtime claims remain unchanged."
+          ],
+          "references": [
+            "packages/metrics-core/src/libs/MrrCalculator.ts",
+            "packages/metrics-core/src/tests/MrrCalculator.spec.ts",
+            "packages/metrics-core/src/tests/SnapshotScheduler.spec.ts",
+            "packages/problems-core/src/generated/problem-code-registry.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "This pure numeric validation and generated diagnostic metadata have no dependency on the Lambda Host, host capabilities, provider storage or lifecycle behavior.",
+          "providers": [],
+          "constraints": [
+            "No deployed host, live database or provider certification is claimed; existing runtime claims remain unchanged."
+          ],
+          "references": [
+            "packages/metrics-core/src/libs/MrrCalculator.ts",
+            "packages/metrics-core/src/tests/MrrCalculator.spec.ts",
+            "packages/metrics-core/src/tests/SnapshotScheduler.spec.ts",
+            "packages/problems-core/src/generated/problem-code-registry.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "This pure numeric validation and generated diagnostic metadata have no dependency on the Workers or explicit Node Container Host, host capabilities, provider storage or lifecycle behavior.",
+          "providers": [],
+          "constraints": [
+            "No deployed host, live database or provider certification is claimed; existing runtime claims remain unchanged."
+          ],
+          "references": [
+            "packages/metrics-core/src/libs/MrrCalculator.ts",
+            "packages/metrics-core/src/tests/MrrCalculator.spec.ts",
+            "packages/metrics-core/src/tests/SnapshotScheduler.spec.ts",
+            "packages/problems-core/src/generated/problem-code-registry.ts"
+          ]
+        }
+      }
+    }
+  ]
+}

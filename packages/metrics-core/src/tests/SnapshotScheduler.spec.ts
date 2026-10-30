@@ -177,6 +177,51 @@ describe("SnapshotScheduler", () => {
     expect(mockRepository.recordSnapshot).not.toHaveBeenCalled();
   });
 
+  it("preserves the previous snapshot when the real MRR total overflows and permits recovery", async () => {
+    const date = new Date("2026-10-01T00:00:00Z");
+    const snapshots: MetricsSnapshot[] = [];
+    vi.mocked(mockRepository.getMRRHistory).mockResolvedValue([]);
+    vi.mocked(mockRepository.recordSnapshot).mockImplementation(async (_tenant, snapshot) => {
+      snapshots.splice(0, snapshots.length, snapshot);
+    });
+    const realScheduler = new SnapshotScheduler(mockRepository);
+    const input = {
+      subscriptions: mockSubscriptions,
+      planProvider: mockPlanProvider,
+      activeCustomers: 1,
+    };
+    const config = { tenantId: "tenant_123" };
+    await realScheduler.captureSnapshot(input, date, config);
+    const previous = snapshots[0];
+    expect(previous.totalMRR.amount).toBe(2900);
+    vi.mocked(mockRepository.recordSnapshot).mockClear();
+    vi.mocked(mockPlanProvider.getPlanVersion).mockResolvedValue({
+      id: "plan_pro",
+      amount: Number.MAX_SAFE_INTEGER,
+      currency: "USD",
+      interval: "month",
+      intervalCount: 1,
+    });
+    const overflowing = {
+      ...input,
+      subscriptions: [
+        ...mockSubscriptions,
+        { ...mockSubscriptions[0], id: "sub_2" },
+        { ...mockSubscriptions[0], id: "sub_3" },
+      ],
+      activeCustomers: 3,
+    };
+    await expect(realScheduler.captureSnapshot(overflowing, date, config)).rejects.toMatchObject({
+      code: "metrics-core/mrr-total-overflow",
+    });
+    expect(mockRepository.recordSnapshot).not.toHaveBeenCalled();
+    expect(snapshots).toEqual([previous]);
+
+    await realScheduler.captureSnapshot(input, date, config);
+    expect(mockRepository.recordSnapshot).toHaveBeenCalledTimes(1);
+    expect(snapshots[0].totalMRR).toEqual({ amount: Number.MAX_SAFE_INTEGER, currency: "USD" });
+  });
+
   describe("unavailable pricing with the real calculator", () => {
     const priced = { id: "sub-priced", planId: "pro", pricingRef: "pro@v1" };
     const unavailable = { id: "sub-missing", planId: "team", pricingRef: "team@v3" };

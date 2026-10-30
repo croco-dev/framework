@@ -29908,6 +29908,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "MRRTotalOverflowProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/MetricsProblems",
+              "declarationKind": "class"
+            },
+            {
               "name": "MetricExpressionError",
               "exportKind": "named",
               "source": "./libs/metric/MetricExpression",
