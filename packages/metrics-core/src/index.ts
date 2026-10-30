@@ -93,6 +93,7 @@ export {
   InvalidUserCarryingCapacityMetricProblem,
   InvalidRetentionMovementProblem,
   MixedCurrencyMRRProblem,
+  MRRTotalOverflowProblem,
   RetentionMetricsUnavailableProblem,
   SubscriptionPricingUnavailableProblem,
 } from "./libs/problems/MetricsProblems";

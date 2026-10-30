@@ -3,6 +3,7 @@ import type { Money, SubscriptionSnapshot } from "../types";
 import type { PlanProvider } from "./interfaces/PlanProvider";
 import {
   MixedCurrencyMRRProblem,
+  MRRTotalOverflowProblem,
   SubscriptionPricingUnavailableProblem,
 } from "./problems/MetricsProblems";
 
@@ -25,7 +26,7 @@ export class MrrCalculator {
     subscriptions: SubscriptionSnapshot[],
     planProvider: PlanProvider,
   ): Promise<Money> {
-    let totalAmount = 0;
+    let totalAmount = BigInt(0);
     let currency: string | null = null;
 
     for (const subscription of subscriptions) {
@@ -46,11 +47,16 @@ export class MrrCalculator {
         throw new MixedCurrencyMRRProblem(currency, plan.currency);
       }
 
-      totalAmount += normalizedAmount;
+      totalAmount += BigInt(normalizedAmount);
       currency = plan.currency;
     }
 
-    return { amount: totalAmount, currency: currency ?? "USD" };
+    const maxAmount = BigInt(Number.MAX_SAFE_INTEGER);
+    if (totalAmount > maxAmount || totalAmount < -maxAmount) {
+      throw new MRRTotalOverflowProblem(totalAmount.toString());
+    }
+
+    return { amount: Number(totalAmount), currency: currency ?? "USD" };
   }
 
   /**

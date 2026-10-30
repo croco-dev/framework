@@ -215,6 +215,58 @@ describe("MrrCalculator", () => {
     });
   });
 
+  describe("exact total minor units", () => {
+    const limit = Number.MAX_SAFE_INTEGER;
+
+    async function calculate(amounts: readonly number[]) {
+      const subscriptions = amounts.map((_amount, index) => ({
+        id: `sub-${index}`,
+        planId: String(index),
+        pricingRef: String(index),
+      }));
+      const provider: PlanProvider = {
+        getPlanVersion: async (ref) => ({
+          id: ref,
+          amount: amounts[Number(ref)],
+          currency: "EUR",
+          interval: "month",
+          intervalCount: 1,
+        }),
+      };
+      return calculator.calculateMRR(subscriptions, provider);
+    }
+
+    it.each([
+      [[limit - 7, 5, 2], limit],
+      [[-limit + 7, -5, -2], -limit],
+      [[limit, 2, -limit], 2],
+      [[limit, -limit, 2], 2],
+      [[2, limit, -limit], 2],
+      [[2, -limit, limit], 2],
+      [[-limit, limit, 2], 2],
+      [[-limit, 2, limit], 2],
+    ] as const)("returns exact safe total for %j", async (amounts, expected) => {
+      await expect(calculate(amounts)).resolves.toEqual({
+        amount: expected,
+        currency: "EUR",
+      });
+    });
+
+    it.each([
+      [[limit, 1], "9007199254740992"],
+      [[1, limit], "9007199254740992"],
+      [[limit, limit, limit], "27021597764222973"],
+      [[-limit, -1], "-9007199254740992"],
+      [[-1, -limit], "-9007199254740992"],
+      [[-limit, -limit, -limit], "-27021597764222973"],
+    ] as const)("rejects unrepresentable total for %j", async (amounts, expected) => {
+      await expect(calculate(amounts)).rejects.toMatchObject({
+        code: "metrics-core/mrr-total-overflow",
+        detail: expect.stringContaining(expected),
+      });
+    });
+  });
+
   describe("Edge Cases", () => {
     it("should handle empty subscriptions list", async () => {
       const result = await calculator.calculateMRR([], mockPlanProvider);

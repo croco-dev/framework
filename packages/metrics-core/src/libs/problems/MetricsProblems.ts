@@ -113,3 +113,15 @@ export class SubscriptionPricingUnavailableProblem extends Problem {
     );
   }
 }
+
+export class MRRTotalOverflowProblem extends Problem {
+  readonly code = "metrics-core/mrr-total-overflow";
+  readonly category = ProblemCategory.ValidationError;
+  constructor(amount: string) {
+    super(
+      undefined,
+      ProblemCategory.ValidationError,
+      `MRR total '${amount}' is outside the safe integer range for Money.amount.`,
+    );
+  }
+}
