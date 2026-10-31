@@ -152,6 +152,7 @@ describe("compressionMiddleware", () => {
       expected: "br",
     },
     { name: "uses configured preference for a wildcard", header: "*", expected: "gzip" },
+    { name: "does not compress for identity", header: "identity", expected: null },
     { name: "does not compress for an empty header", header: "", expected: null },
     { name: "does not compress without a header", header: undefined, expected: null },
     { name: "ignores an invalid quality value", header: "gzip;q=1.5, br;q=0.4", expected: "br" },
@@ -169,7 +170,61 @@ describe("compressionMiddleware", () => {
     );
 
     expect(response.headers.get("Content-Encoding")).toBe(expected);
+    expect(response.headers.get("Vary")).toBe("Accept-Encoding");
   });
+
+  it.each([
+    { source: "response", key: "Vary", value: "Origin", expected: "Origin, Accept-Encoding" },
+    { source: "context", key: "vary", value: "Origin", expected: "Accept-Encoding, Origin" },
+    { source: "raw", key: "Vary", value: "Origin", expected: "Accept-Encoding, Origin" },
+    {
+      source: "response",
+      key: "Vary",
+      value: "Origin, aCcEpT-EnCoDiNg",
+      expected: "Origin, aCcEpT-EnCoDiNg",
+    },
+    {
+      source: "context",
+      key: "VARY",
+      value: "Origin, accept-encoding, ORIGIN",
+      expected: "Accept-Encoding, Origin",
+    },
+    { source: "response", key: "Vary", value: "*", expected: "*" },
+    { source: "context", key: "VaRy", value: "*", expected: "*" },
+    { source: "raw", key: "Vary", value: "*", expected: "*" },
+  ])(
+    "preserves $source Vary: $value during encoding negotiation",
+    async ({ source, key, value, expected }) => {
+      const app = createApp({
+        controllers: [CompressionController],
+        middlewares: [
+          compressionMiddleware({ threshold: 64 }),
+          async (ctx, next) => {
+            const response = await next();
+            if (!(response instanceof Response)) return response;
+            if (source === "response") response.headers.set(key, value);
+            if (source === "context") ctx.res.headers[key] = value;
+            if (source === "raw") ctx.raw.header(key, value);
+            return response;
+          },
+        ],
+        securityValidation: "off",
+      });
+
+      for (const encoding of ["identity", "gzip", "br"]) {
+        const response = await app.fetch(
+          new Request("http://localhost/compression/large-json", {
+            headers: { "Accept-Encoding": encoding },
+          }),
+        );
+        expect(response.headers.get("Content-Encoding")).toBe(
+          encoding === "identity" ? null : encoding,
+        );
+        expect(response.headers.get("Vary")).toBe(expected);
+        await response.arrayBuffer();
+      }
+    },
+  );
 
   it("keeps header order when configured preference omits both encodings", async () => {
     const app = createApp({
