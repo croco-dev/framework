@@ -199,9 +199,14 @@ path; request `waitUntil` is not that path. See the package README for the opt-i
 Use one fixture-owned clock for domain time, readers, permission variants and restarted services.
 Capture existing clock/scheduler seams in a bound factory; use `fixedClock` / `TestClock` from
 `@croco/testing` or the existing TestKernel clock for virtual scheduling. Do not introduce production
-APIs solely for testing or global Date patches. Mark controlled test/fixture sources with
-`// croco-test-clock: controlled`; `pnpm static-misuse:check` checks supported constructor seams and
-ambient reads. The rule is explicit and bounded, not general dependency inference. Keep native
-lifecycle exceptions local and explained. See `docs/contributing/test-clocks.md` and the executable
-`packages/research-core/src/tests/researchFixtures.ts` for derived instances, time advancement,
-expiry boundaries and the audit's remaining unsupported seams.
+APIs solely for testing or global Date patches. Keep native lifecycle exceptions local and explained.
+
+In the framework checkout, mark controlled test/fixture sources with `// croco-test-clock: controlled`;
+`pnpm static-misuse:check` checks supported constructor seams and ambient reads. This repository-local
+checker is not installed in generated applications. An application should run its configured tests with
+its fixture-owned clock; the marker alone provides no enforcement there. The framework rule is explicit
+and bounded, not general dependency inference. See the
+[shared-clock guide](https://github.com/croco-dev/framework/blob/trunk/docs/contributing/test-clocks.md)
+and the executable
+[research fixture](https://github.com/croco-dev/framework/blob/trunk/packages/research-core/src/tests/researchFixtures.ts)
+for derived instances, time advancement, expiry boundaries and the audit's remaining unsupported seams.
