@@ -1,0 +1,100 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "execution-core",
+      "classification": "pure-contract",
+      "reason": "Reject invalid execution attempts and timeout settings before store access using the existing ExecutionProblem boundary.",
+      "files": {
+        "packages/execution-core/src/libs/ExecutionManagerImpl.ts": "2b7fe895aa3133709718e52fa167e26ed09d6c42a0431f0e2dc78391d7706d3f",
+        "packages/execution-core/src/libs/ExecutionProblem.ts": "659b469b13affb455814f56377cf463db06c38f4e31feb8d03b58fdcd8601f1a"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Numeric input validation and generated Problem metadata have no host capability, storage, or lifecycle dependency. Existing provider and runtime constraints remain unchanged.",
+          "providers": ["@croco/execution-core"],
+          "constraints": [
+            "No deployment, durable storage, live provider, or runtime support claim is added."
+          ],
+          "references": [
+            "packages/execution-core/src/libs/ExecutionManagerImpl.ts",
+            "packages/execution-core/src/libs/ExecutionProblem.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Numeric input validation and generated Problem metadata have no host capability, storage, or lifecycle dependency. Existing provider and runtime constraints remain unchanged.",
+          "providers": ["@croco/execution-core"],
+          "constraints": [
+            "No deployment, durable storage, live provider, or runtime support claim is added."
+          ],
+          "references": [
+            "packages/execution-core/src/libs/ExecutionManagerImpl.ts",
+            "packages/execution-core/src/libs/ExecutionProblem.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Numeric input validation and generated Problem metadata have no host capability, storage, or lifecycle dependency. Existing provider and runtime constraints remain unchanged.",
+          "providers": ["@croco/execution-core"],
+          "constraints": [
+            "No deployment, durable storage, live provider, or runtime support claim is added."
+          ],
+          "references": [
+            "packages/execution-core/src/libs/ExecutionManagerImpl.ts",
+            "packages/execution-core/src/libs/ExecutionProblem.ts"
+          ]
+        }
+      }
+    },
+    {
+      "package": "problems-core",
+      "classification": "pure-contract",
+      "reason": "Expose the generated execution configuration Problem code and recovery metadata.",
+      "files": {
+        "packages/problems-core/src/generated/problem-code-registry.ts": "e24754940e822a71c83d735391db67290f9270ac3f718f49ccc57bdd70fb239b"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Numeric input validation and generated Problem metadata have no host capability, storage, or lifecycle dependency. Existing provider and runtime constraints remain unchanged.",
+          "providers": ["@croco/problems-core"],
+          "constraints": [
+            "No deployment, durable storage, live provider, or runtime support claim is added."
+          ],
+          "references": [
+            "packages/execution-core/src/libs/ExecutionManagerImpl.ts",
+            "packages/execution-core/src/libs/ExecutionProblem.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Numeric input validation and generated Problem metadata have no host capability, storage, or lifecycle dependency. Existing provider and runtime constraints remain unchanged.",
+          "providers": ["@croco/problems-core"],
+          "constraints": [
+            "No deployment, durable storage, live provider, or runtime support claim is added."
+          ],
+          "references": [
+            "packages/execution-core/src/libs/ExecutionManagerImpl.ts",
+            "packages/execution-core/src/libs/ExecutionProblem.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Numeric input validation and generated Problem metadata have no host capability, storage, or lifecycle dependency. Existing provider and runtime constraints remain unchanged.",
+          "providers": ["@croco/problems-core"],
+          "constraints": [
+            "No deployment, durable storage, live provider, or runtime support claim is added."
+          ],
+          "references": [
+            "packages/execution-core/src/libs/ExecutionManagerImpl.ts",
+            "packages/execution-core/src/libs/ExecutionProblem.ts"
+          ]
+        }
+      }
+    }
+  ]
+}
