@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "create-croco-app",
+      "classification": "deployment-profile",
+      "reason": "Generated Lambda packaging reuses the invoking pnpm CLI or the installed PATH executable without Corepack, retaining build-before-replacement ordering and subprocess failure propagation. This is build-time Tooling; no application Host support claim changes.",
+      "files": {
+        "packages/create-croco-app/templates/addons/lambda-api/scripts/package-lambda.mjs.hbs": "e5c0c25fc05216183f3bf6a61665777cde82e1d57ec78cdb12d957325ecaff6a",
+        "packages/create-croco-app/templates/addons/lambda-api/lambda/README.md": "6d09c776942fe9bb0861fce4b724d57abbcc74fc87a3c7a52f522a91269c279e"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "The change executes pnpm on the build machine for the Lambda packaging script. It adds no Kubernetes Node Host provider, cluster storage or application lifecycle requirement.",
+          "providers": [],
+          "constraints": [
+            "Subprocess fixtures verify local packaging order and failure propagation; they do not verify live infrastructure, provider certification or a Windows host."
+          ],
+          "references": [
+            "packages/create-croco-app/templates/addons/lambda-api/scripts/package-lambda.mjs.hbs",
+            "packages/create-croco-app/templates/addons/lambda-api/lambda/README.md",
+            "packages/create-croco-app/src/installers/lambda-api.ts",
+            "packages/create-croco-app/src/tests/LambdaApiProfile.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "The generated packaging script runs before deployment on the build machine, not inside a Lambda invocation. It reuses pnpm to build and stage the existing Lambda Host dependency closure. Invocation scope, telemetry flush, IAM and runtime capabilities are unchanged.",
+          "providers": [],
+          "constraints": [
+            "Subprocess fixtures verify local packaging order and failure propagation; they do not verify live infrastructure, provider certification or a Windows host."
+          ],
+          "references": [
+            "packages/create-croco-app/templates/addons/lambda-api/scripts/package-lambda.mjs.hbs",
+            "packages/create-croco-app/templates/addons/lambda-api/lambda/README.md",
+            "packages/create-croco-app/src/installers/lambda-api.ts",
+            "packages/create-croco-app/src/tests/LambdaApiProfile.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "The Lambda packaging script is not emitted for or executed by Workers. This build-time command introduces no Workers binding, storage capability, isolate lifecycle or Node Container requirement.",
+          "providers": [],
+          "constraints": [
+            "Subprocess fixtures verify local packaging order and failure propagation; they do not verify live infrastructure, provider certification or a Windows host."
+          ],
+          "references": [
+            "packages/create-croco-app/templates/addons/lambda-api/scripts/package-lambda.mjs.hbs",
+            "packages/create-croco-app/templates/addons/lambda-api/lambda/README.md",
+            "packages/create-croco-app/src/installers/lambda-api.ts",
+            "packages/create-croco-app/src/tests/LambdaApiProfile.spec.ts"
+          ]
+        }
+      }
+    }
+  ]
+}
