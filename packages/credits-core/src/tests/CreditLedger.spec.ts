@@ -3,7 +3,7 @@ import {
   EventAfterCommitOutcomeRequiredProblem,
   EventAfterCommitRequiresActiveTransactionProblem,
 } from "@croco/events-core";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   addCreditAmounts,
   CreditAccountMismatchProblem,
@@ -913,6 +913,107 @@ describe("CreditLedgerService", () => {
         reference: ref("remaining"),
       }),
     ).resolves.toMatchObject({ transactions: [{ amount: "9" }] });
+  });
+
+  it("keeps stored history and grant terms isolated across commands and rollback", async () => {
+    const opened = await service.openAccount({
+      tenantId: "tenant-snapshot-isolation",
+      idempotencyKey: "snapshot-open",
+      reference: ref("snapshot-open"),
+    });
+    const accountId = opened.account.id;
+    const expiresAt = new Date("2026-08-26T00:00:00.000Z");
+    const meterKeys = ["tokens"];
+    const granted = await service.grantCredits({
+      accountId,
+      amount: creditAmount("10"),
+      expiresAt,
+      meterKeys,
+      idempotencyKey: "snapshot-grant",
+      reference: ref("snapshot-grant"),
+    });
+    expiresAt.setUTCFullYear(2000);
+    meterKeys[0] = "requests";
+    granted.transactions[0]?.occurredAt.setUTCFullYear(2001);
+    granted.transactions[0]?.grant?.expiresAt?.setUTCFullYear(2002);
+
+    const reserved = await service.reserveCredits({
+      accountId,
+      amount: creditAmount("3"),
+      meterKey: "tokens",
+      idempotencyKey: "snapshot-reserve",
+      reference: ref("snapshot-reserve"),
+    });
+    const history = await service.getHistory(accountId, { atPosition: 1 });
+    const original = history.transactions[0];
+    expect(original).toMatchObject({
+      position: 1,
+      occurredAt: new Date("2026-07-26T12:00:00.000Z"),
+      grant: { expiresAt: new Date("2026-08-26T00:00:00.000Z"), meterKeys: ["tokens"] },
+    });
+    original?.occurredAt.setUTCFullYear(2003);
+    original?.grant?.expiresAt?.setUTCFullYear(2004);
+    if (original?.grant?.meterKeys) Reflect.set(original.grant.meterKeys, 0, "requests");
+    const beforeFailure = await service.getBalance(accountId);
+    const failingService = new CreditLedgerService({
+      store,
+      eventDelivery: "development",
+      clock: () => new Date("2026-07-26T12:00:00.000Z"),
+      idGenerator: () => "snapshot-failed-transaction",
+    });
+    const failedInput = {
+      accountId,
+      amount: creditAmount("2"),
+      meterKey: "tokens",
+      idempotencyKey: "snapshot-rejected",
+      reference: ref("snapshot-rejected"),
+    };
+    const failure = new InvalidCreditCommandProblem("injected transaction-index write failure");
+    const set = Map.prototype.set;
+    const write = vi.spyOn(Map.prototype, "set").mockImplementation(function (
+      this: Map<unknown, unknown>,
+      key: unknown,
+      value: unknown,
+    ) {
+      // Fail after allocation and append, so rollback must restore mutable lots and history.
+      if (key === "snapshot-failed-transaction" && value === accountId) throw failure;
+      return set.call(this, key, value);
+    });
+    try {
+      await expect(failingService.consumeCredits(failedInput)).rejects.toBe(failure);
+    } finally {
+      write.mockRestore();
+    }
+    expect(await service.getBalance(accountId)).toEqual(beforeFailure);
+    const reservationId = reserved.reservation?.id;
+    if (!reservationId) throw new InvalidCreditCommandProblem("test reservation is missing");
+    await service.releaseCredits({
+      accountId,
+      reservationId,
+      idempotencyKey: "snapshot-release",
+      reference: ref("snapshot-release"),
+    });
+    expect(await service.getBalance(accountId)).toMatchObject({ available: "10", reserved: "0" });
+    await expect(failingService.consumeCredits(failedInput)).resolves.toMatchObject({
+      replayed: false,
+      transactions: [{ id: "snapshot-failed-transaction", amount: "2" }],
+    });
+    expect(await service.getBalance(accountId)).toMatchObject({ available: "8", reserved: "0" });
+    await expect(
+      service.consumeCredits({
+        accountId,
+        amount: creditAmount("8"),
+        meterKey: "tokens",
+        idempotencyKey: "snapshot-consume-remainder",
+        reference: ref("snapshot-consume-remainder"),
+      }),
+    ).resolves.toMatchObject({ operation: "consume", replayed: false });
+    expect(await service.getBalance(accountId)).toMatchObject({ available: "0", consumed: "10" });
+    expect((await service.getHistory(accountId, { atPosition: 1 })).transactions[0]).toMatchObject({
+      position: 1,
+      occurredAt: new Date("2026-07-26T12:00:00.000Z"),
+      grant: { expiresAt: new Date("2026-08-26T00:00:00.000Z"), meterKeys: ["tokens"] },
+    });
   });
 
   it("rejects colliding generated IDs before any allocation mutates", async () => {
