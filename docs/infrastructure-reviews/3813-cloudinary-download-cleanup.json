@@ -1,0 +1,101 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "storage-cloudinary",
+      "classification": "runtime-adapter",
+      "reason": "Cancel each failed download response body before returning its original HTTP Problem or retrying. Wait at most 1000ms and stop waiting on caller abort; cleanup failure preserves status classification and successful bodies remain caller-owned. No public API, credentials, retry policy, or runtime support claim changes.",
+      "files": {
+        "packages/storage-cloudinary/src/libs/CloudinaryProvider.ts": "4b0ab7d019f5bee2d94ce59de4784b023bec2472ae53a06608ea02afb29fdc97"
+      },
+      "catalogRuntimes": ["node", "lambda"],
+      "profiles": {
+        "kubernetes": {
+          "result": "unverified",
+          "reason": "The existing Node Host uses the Cloudinary SDK and fetch adapter. Failed download bodies now receive bounded cancellation before the original failure or retry; no Kubernetes host execution is included.",
+          "providers": ["@croco/storage-cloudinary", "@croco/preset-node"],
+          "constraints": [
+            "Requires Node.js and the existing Cloudinary SDK. Each failed-response cleanup waits at most 1000ms, or until caller abort. Cleanup settlement after the bound and actual connection-pool reuse are not guaranteed. No live Cloudinary or Kubernetes deployment is certified."
+          ],
+          "references": [
+            "packages/storage-cloudinary/src/libs/CloudinaryProvider.ts",
+            "packages/storage-cloudinary/src/libs/CloudinaryStoragePlugin.ts",
+            "packages/storage-core/src/libs/types.ts",
+            "packages/preset-node/src/index.ts",
+            "packages/preset-lambda/src/index.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "unverified",
+          "reason": "Reuse the existing Lambda-compatible Node adapter; response cleanup remains inside the awaited getStream operation and adds no new invocation owner. The Lambda Host path is not executed by the local stream fixtures.",
+          "providers": ["@croco/storage-cloudinary", "@croco/preset-lambda"],
+          "constraints": [
+            "Await storage operations before invocation completion. Up to three existing retry attempts may each spend 1000ms on cleanup; caller abort ends that wait. No live AWS or Cloudinary certification."
+          ],
+          "references": [
+            "packages/storage-cloudinary/src/libs/CloudinaryProvider.ts",
+            "packages/storage-cloudinary/src/libs/CloudinaryStoragePlugin.ts",
+            "packages/storage-core/src/libs/types.ts",
+            "packages/preset-node/src/index.ts",
+            "packages/preset-lambda/src/index.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "unsupported",
+          "host": "workers",
+          "reason": "The Cloudinary provider declares Node and Lambda compatibility and imports Node crypto and the Cloudinary Node SDK. This cleanup fix does not establish Worker isolate support.",
+          "providers": ["@croco/storage-cloudinary"],
+          "constraints": ["No Cloudflare Workers or Node Container deployment support is added."],
+          "references": [
+            "packages/storage-cloudinary/src/libs/CloudinaryProvider.ts",
+            "packages/storage-cloudinary/src/libs/CloudinaryStoragePlugin.ts"
+          ]
+        }
+      }
+    },
+    {
+      "package": "problems-core",
+      "classification": "pure-contract",
+      "reason": "Regenerate the unchanged Cloudinary upload-intent Problem source location after download cleanup shifts its implementation. Problem codes, categories, recovery policies and runtime behavior are unchanged.",
+      "files": {
+        "packages/problems-core/src/generated/problem-code-registry.ts": "98e5c28cd41054b3eb995870d8e4afee6a4f9772f405df0d79fdc12cf3b9bd28"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Only generated diagnostic source coordinates change. This static metadata needs no host capability, storage access, provider or lifecycle boundary.",
+          "providers": ["@croco/problems-core"],
+          "constraints": ["No host execution or deployment support claim is added."],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "scripts/problem-registry.mts",
+            "packages/storage-cloudinary/src/libs/CloudinaryProvider.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Only generated diagnostic source coordinates change. This static metadata needs no host capability, storage access, provider or lifecycle boundary.",
+          "providers": ["@croco/problems-core"],
+          "constraints": ["No host execution or deployment support claim is added."],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "scripts/problem-registry.mts",
+            "packages/storage-cloudinary/src/libs/CloudinaryProvider.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Only generated diagnostic source coordinates change. This static metadata needs no host capability, storage access, provider or lifecycle boundary.",
+          "providers": ["@croco/problems-core"],
+          "constraints": ["No host execution or deployment support claim is added."],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "scripts/problem-registry.mts",
+            "packages/storage-cloudinary/src/libs/CloudinaryProvider.ts"
+          ]
+        }
+      }
+    }
+  ]
+}
