@@ -9,7 +9,7 @@ export type TaskOptions = {
    */
   name?: string;
   /**
-   * Maximum retry attempts (default: 1).
+   * Maximum attempts, including the first attempt; a positive safe integer (default: 1).
    */
   maxAttempts?: number;
   /**
@@ -20,7 +20,7 @@ export type TaskOptions = {
    */
   isRetryable?: (error: Error) => boolean;
   /**
-   * Timeout in milliseconds (default: no timeout).
+   * Finite, non-negative timeout in milliseconds; 0 or undefined means no timeout.
    */
   timeout?: number;
   /**

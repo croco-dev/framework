@@ -326,6 +326,14 @@ export class ExecutionManagerImpl
       timeout,
       ...rest
     } = params;
+    if (!Number.isSafeInteger(maxAttempts) || maxAttempts < 1) {
+      throw ExecutionProblems.invalidConfiguration("maxAttempts must be a positive safe integer");
+    }
+    if (timeout !== undefined && (!Number.isFinite(timeout) || timeout < 0)) {
+      throw ExecutionProblems.invalidConfiguration(
+        "timeout must be a finite non-negative number of milliseconds",
+      );
+    }
     let requestFingerprint: string | undefined;
 
     if (idempotencyKey) {

@@ -6,6 +6,7 @@ export enum ExecutionProblemCode {
   IDEMPOTENCY_CONFLICT = "execution/idempotency-conflict",
   MAX_RETRIES_EXCEEDED = "execution/max-retries-exceeded",
   INVALID_STATE_TRANSITION = "execution/invalid-state-transition",
+  INVALID_CONFIGURATION = "execution/invalid-configuration",
   INVALID_CONTINUATION_LEASE_DURATION = "execution/invalid-continuation-lease-duration",
   CONTINUATION_UNSUPPORTED = "execution/continuation-unsupported",
   CONTINUATION_CONFLICT = "execution/continuation-conflict",
@@ -98,6 +99,14 @@ export class ExecutionProblem extends Problem {
  * Factory methods for creating ExecutionProblem instances.
  */
 export class ExecutionProblems {
+  static invalidConfiguration(detail: string): ExecutionProblem {
+    return new ExecutionProblem(
+      ExecutionProblemCode.INVALID_CONFIGURATION,
+      ProblemCategory.ValidationError,
+      detail,
+    );
+  }
+
   static invalidContinuationLeaseDuration(
     options: InvalidContinuationLeaseDurationProblemOptions,
   ): InvalidContinuationLeaseDurationProblem {
