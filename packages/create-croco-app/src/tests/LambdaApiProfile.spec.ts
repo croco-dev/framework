@@ -1,5 +1,13 @@
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -21,6 +29,141 @@ const input = {
 } as const;
 
 describe("Lambda API infrastructure profile", () => {
+  async function packagingFixture() {
+    const root = mkdtempSync(join(tmpdir(), "croco-lambda-package-"));
+    roots.push(root);
+    const target = join(root, "app with spaces");
+    await generate(target, normalizeNonInteractiveOptions(input));
+    const bin = join(root, "bin with spaces");
+    mkdirSync(bin);
+    const fakePnpm = join(bin, "pnpm");
+    const pnpmCli = join(bin, "pnpm.mjs");
+    writeFileSync(
+      pnpmCli,
+      `import { appendFileSync, existsSync } from 'node:fs';
+const args = process.argv.slice(2);
+const command = args[2];
+appendFileSync('commands.jsonl', JSON.stringify({ args, cwd: process.cwd(), oldPackage: existsSync('dist/lambda-package/previous.txt') }) + '\\n');
+if (command === process.env.FAIL_COMMAND) {
+  if (process.env.FAIL_SIGNAL) process.kill(process.pid, 'SIGTERM');
+  else process.exit(Number(process.env.FAIL_STATUS));
+}
+`,
+    );
+    const quote = (path: string) => `'${path.replaceAll("'", "'\\''")}'`;
+    writeFileSync(fakePnpm, `#!/bin/sh\nexec ${quote(process.execPath)} ${quote(pnpmCli)} "$@"\n`, {
+      mode: 0o755,
+    });
+    const previous = join(target, "dist/lambda-package/previous.txt");
+    mkdirSync(join(target, "dist/lambda-package"), { recursive: true });
+    writeFileSync(previous, "previous deployment");
+    return {
+      target: realpathSync(target),
+      previous,
+      run: (env: Record<string, string> = {}) =>
+        spawnSync(process.execPath, [join(target, "scripts/package-lambda.mjs")], {
+          cwd: root,
+          env: {
+            ...process.env,
+            PATH: bin,
+            npm_execpath: process.platform === "win32" ? pnpmCli : "",
+            ...env,
+          },
+          encoding: "utf8",
+          timeout: 10_000,
+        }),
+      commands: () =>
+        readFileSync(join(target, "commands.jsonl"), "utf8")
+          .trim()
+          .split("\n")
+          .map((line) => JSON.parse(line)),
+      pnpmCli,
+      pnpmExecutable: fakePnpm,
+    };
+  }
+
+  it("packages with installed pnpm and no Corepack, building before replacing the deployment", async () => {
+    const fixture = await packagingFixture();
+    const result = fixture.run();
+    expect(result.error).toBeUndefined();
+    expect(result.status, result.stderr).toBe(0);
+    expect(fixture.commands()).toEqual([
+      { args: ["--filter", "@example/api-server", "build"], cwd: fixture.target, oldPackage: true },
+      {
+        args: ["--filter", "@example/api-server", "deploy", "--prod", "dist/lambda-package"],
+        cwd: fixture.target,
+        oldPackage: false,
+      },
+    ]);
+    expect(existsSync(fixture.previous)).toBe(false);
+  });
+
+  it("reuses the invoking pnpm CLI path without a shell or a PATH launcher", async () => {
+    const fixture = await packagingFixture();
+    const emptyBin = join(fixture.target, "empty-bin");
+    mkdirSync(emptyBin);
+    const result = fixture.run({ PATH: emptyBin, npm_execpath: fixture.pnpmCli });
+    expect(result.error).toBeUndefined();
+    expect(result.status, result.stderr).toBe(0);
+    expect(fixture.commands().map(({ args }) => args)).toEqual([
+      ["--filter", "@example/api-server", "build"],
+      ["--filter", "@example/api-server", "deploy", "--prod", "dist/lambda-package"],
+    ]);
+  });
+
+  it.runIf(process.platform !== "win32")(
+    "executes a standalone pnpm launcher instead of parsing it as JavaScript",
+    async () => {
+      const fixture = await packagingFixture();
+      const emptyBin = join(fixture.target, "empty-bin");
+      mkdirSync(emptyBin);
+      const result = fixture.run({ PATH: emptyBin, npm_execpath: fixture.pnpmExecutable });
+      expect(result.error).toBeUndefined();
+      expect(result.status, result.stderr).toBe(0);
+      expect(fixture.commands().map(({ args }) => args[2])).toEqual(["build", "deploy"]);
+    },
+  );
+
+  it.each(["build", "deploy"])(
+    "propagates a failed %s without reporting packaging success",
+    async (command) => {
+      const fixture = await packagingFixture();
+      const result = fixture.run({ FAIL_COMMAND: command, FAIL_STATUS: "23" });
+      expect(result.error).toBeUndefined();
+      expect(result.status, result.stderr).toBe(23);
+      expect(fixture.commands().map(({ args }) => args[2])).toEqual(
+        command === "build" ? ["build"] : ["build", "deploy"],
+      );
+      expect(existsSync(fixture.previous)).toBe(command === "build");
+      expect(result.stdout).not.toContain("Lambda deployment directory prepared");
+    },
+  );
+
+  it("fails before removing the previous deployment when pnpm is unavailable", async () => {
+    const fixture = await packagingFixture();
+    const emptyBin = join(fixture.target, "empty-bin");
+    mkdirSync(emptyBin);
+    const result = fixture.run({ PATH: emptyBin, npm_execpath: "" });
+    expect(result.error).toBeUndefined();
+    expect(result.status).not.toBe(0);
+    expect(readFileSync(fixture.previous, "utf8")).toBe("previous deployment");
+    expect(existsSync(join(fixture.target, "commands.jsonl"))).toBe(false);
+    expect(result.stdout).not.toContain("Lambda deployment directory prepared");
+  });
+
+  it.runIf(process.platform !== "win32")(
+    "fails safely when the build subprocess is terminated by a signal",
+    async () => {
+      const fixture = await packagingFixture();
+      const result = fixture.run({ FAIL_COMMAND: "build", FAIL_SIGNAL: "1" });
+      expect(result.error).toBeUndefined();
+      expect(result.status).toBe(1);
+      expect(fixture.commands()).toHaveLength(1);
+      expect(readFileSync(fixture.previous, "utf8")).toBe("previous deployment");
+      expect(result.stdout).not.toContain("Lambda deployment directory prepared");
+    },
+  );
+
   it("generates an IAM-protected HTTP API with bounded execution and matching host/package metadata", async () => {
     const root = mkdtempSync(join(tmpdir(), "croco-lambda-api-"));
     roots.push(root);

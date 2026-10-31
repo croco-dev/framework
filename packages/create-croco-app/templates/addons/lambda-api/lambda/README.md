@@ -17,11 +17,16 @@ sam validate --lint --template-file lambda/template.json
 sam deploy --template-file lambda/template.json --resolve-s3 --capabilities CAPABILITY_IAM --guided
 ```
 
-`lambda:package` builds the API and deploys its production dependency closure into
+Install pnpm on the build machine and use the generated Node.js version requirement.
+`pnpm lambda:package` reuses the invoking pnpm CLI; Corepack is not required.
+It builds the API and deploys its production dependency closure into
 `dist/lambda-package/`. SAM packages that directory with `dist/lambda.handler`; do not deploy
 only the compiled JavaScript without its dependencies. Use a Linux x86_64 build environment
 when adding native dependencies. The local fixture loads this deployment directory and invokes
 API Gateway v2 events; it does not contact AWS or prove gateway IAM enforcement.
+If the build fails, the previous deployment directory is preserved. After a successful build,
+packaging replaces that directory; if deploy fails, fix the reported error and rerun
+`pnpm lambda:package` before using SAM.
 
 The HTTP API requires AWS IAM/SigV4 authorization. The application is a sample API without
 end-user authentication. The local auth/cookie fixture exercises an injected fixture middleware,
