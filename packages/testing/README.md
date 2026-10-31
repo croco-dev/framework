@@ -129,6 +129,12 @@ guaranteed.
 
 ## Deterministic Runtime Controls
 
+Keep every service, store, permission variant and restarted reader on the fixture-owned clock.
+Use a bound factory that captures the existing clock dependencies; mark controlled fixture sources with
+`// croco-test-clock: controlled` so the repository static-misuse gate rejects missing constructor clocks
+and ambient reads. See [shared test clocks](../../docs/contributing/test-clocks.md) for the executable
+research fixture, exact expiry boundaries, independent fixtures and native lifecycle exceptions.
+
 Each `TestKernel` owns a `clock`, `ids`, `random`, `environment`, `network`, and `replay` record.
 The bootstrap callback receives the same controls, so production code can consume existing explicit
 dependency seams instead of requiring a test-only branch. For example, pass `context.retry` to

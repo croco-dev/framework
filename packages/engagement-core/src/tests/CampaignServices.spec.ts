@@ -1,3 +1,5 @@
+// croco-test-clock: controlled
+import { fixedClock } from "@croco/testing";
 import {
   ExecutionManagerImpl,
   ExecutionStore,
@@ -327,30 +329,27 @@ function createFixture(
   store: RecordingCampaignStore = new RecordingCampaignStore(),
   publisher?: CampaignExecutionPublisher,
 ) {
+  const time = fixedClock("2026-09-01T00:00:00.000Z");
+  const clock = () => time.now;
   const source = new InactiveTrials(members);
   const audiences = new AudienceRegistry();
   audiences.register(InactiveTrials, source);
   const campaigns = new CampaignRegistry();
   campaigns.register(TrialReminder);
   const executionManager = new ExecutionManagerImpl(new MemoryExecutionStore(), {
-    clock: () => new Date("2026-09-01T00:00:00.000Z"),
+    clock,
   });
   const sender = new FakeCampaignSender();
-  const snapshots = new CampaignSnapshotService(
-    audiences,
-    store,
-    () => new Date("2026-09-01T00:00:00.000Z"),
-    () => "snapshot-1",
-  );
+  const snapshots = new CampaignSnapshotService(audiences, store, clock, () => "snapshot-1");
   const broadcasts = new CampaignBroadcastService(
     campaigns,
     store,
     executionManager,
     sender,
     publisher,
-    () => new Date("2026-09-01T00:00:00.000Z"),
+    clock,
   );
-  return { source, campaigns, executionManager, sender, snapshots, broadcasts, store };
+  return { source, campaigns, executionManager, sender, snapshots, broadcasts, store, time, clock };
 }
 
 describe("CampaignServices", () => {
@@ -385,7 +384,7 @@ describe("CampaignServices", () => {
       resolver.register(TrialEnding, renderer);
       const suppressions = { evaluate: vi.fn(async () => ({ suppressed: false })) };
       const dispatch = vi.fn(async () => ({ executionId: "notification-1" }));
-      const engagementStore = new InMemoryEngagementStore();
+      const engagementStore = new InMemoryEngagementStore(undefined, fixture.clock);
       const failure =
         retryable === undefined
           ? new Error("dependency unavailable")
@@ -418,6 +417,7 @@ describe("CampaignServices", () => {
         { prepareDispatch: () => ({ dispatch }) },
         suppressions,
         boundary === "store" ? engagementStore : undefined,
+        fixture.clock,
       );
       const send = vi.spyOn(sender, "send");
       const broadcasts = new CampaignBroadcastService(
@@ -425,6 +425,8 @@ describe("CampaignServices", () => {
         fixture.store,
         fixture.executionManager,
         sender,
+        undefined,
+        fixture.clock,
       );
       const { snapshot } = await fixture.snapshots.createSnapshot(TrialReminder, {
         tenantId: "tenant-1",

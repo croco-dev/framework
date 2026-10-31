@@ -11,6 +11,8 @@ import type {
   VerifiedReportReader,
 } from "../libs/read/MetricReadService";
 
+const clock = () => new Date("2026-09-02T00:00:00.000Z");
+
 const window = { from: "2026-09-01T00:00:00.000Z", to: "2026-09-02T00:00:00.000Z" };
 const definition: RegisteredMetricDefinition = {
   id: "captures_total",
@@ -126,7 +128,7 @@ function fixture(
       [query],
       authority,
       options.reader ?? reader,
-      options.now,
+      options.now ?? clock,
     ),
     executor,
     reader,
@@ -150,7 +152,7 @@ function report(overrides: Partial<VerifiedMetricReport> = {}): VerifiedMetricRe
     },
     permissionEpoch: "permission-1",
     privacyEpoch: "privacy-1",
-    expiresAt: "2099-01-01T00:00:00.000Z",
+    expiresAt: "2026-09-03T00:00:00.000Z",
     ...overrides,
   };
 }
@@ -269,6 +271,8 @@ describe("MetricReadService", () => {
     },
   );
 
+  // Deadlines use the production Date.now/Node timer adapter independently of report freshness.
+  // Keep adapter-level fake timers here; report timestamps always use the fixture clock.
   it("keeps the original query deadline at release", async () => {
     vi.useFakeTimers();
     try {
@@ -624,6 +628,7 @@ describe("MetricReadService", () => {
         authorize: async () => ({ permissionEpoch: "permission-1", privacyEpoch: "privacy-1" }),
       },
       reader,
+      clock,
     );
 
     expect(
@@ -1412,6 +1417,8 @@ describe("MetricReadService", () => {
             currentContext: () => ({ ...context, budget: { ...context.budget, maxTimeMs: 100 } }),
             authorize,
           },
+          undefined,
+          clock,
         );
         const pending =
           kind === "definitions" ? service.listDefinitions() : service.listRegisteredQueries();

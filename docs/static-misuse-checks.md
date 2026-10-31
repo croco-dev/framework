@@ -13,6 +13,50 @@ and format pass. Current rules:
 - `CROCO_STATIC_RAW_ERROR_RUNTIME_BOUNDARY`
 - `CROCO_STATIC_EMPTY_CATCH_RUNTIME_BOUNDARY`
 - `CROCO_STATIC_DIRECT_ERROR_SUBCLASS_BOUNDARY`
+- `CROCO_STATIC_TEST_CLOCK_BOUNDARY`
+
+## Controlled test clocks
+
+Declare `// croco-test-clock: controlled` in the leading comments of a test or test-helper file when its fixture owns a
+logical clock. The existing `pnpm static-misuse:check` gate checks that file without maintaining
+a second test inventory. Its diagnostics use `CROCO_STATIC_TEST_CLOCK_BOUNDARY` and include the
+offending constructor or ambient read, its source location, and a recovery action.
+
+Create the clock once per fixture. Use the existing `fixedClock`/`TestClock` when scheduled work
+must advance, or the service's existing explicit clock callback for a synchronous fixture. Bind
+service construction inside the fixture so reader, permission variant and restart instances retain
+the same clock. A separate fixture must create a separate clock. Do not replace global `Date` or
+global timers to make domain expiry assertions deterministic.
+
+The checker follows resolved constructor declarations, including aliased imports and re-exports.
+It requires explicit values for zero-argument `clock`/`now` callbacks returning `Date` or `number`,
+`clock` objects with a callable `now`, and callable `schedule`/`scheduler` dependencies. It checks
+both positional parameters and immediate options properties. Omitted options, explicit `undefined`,
+and values whose types still allow `undefined` fail. Date-valued inputs such as `{ now: Date }`
+are data, so they are not treated as dependency injection seams.
+
+Ambient `Date()`, `Date.now()` and `new Date()` in a controlled file fail, including reads inside
+callbacks. Parsing a supplied timestamp and constructing a date from supplied milliseconds remain
+valid. Fixed dates are allowed; the rule does not ban date literals or require every test to use
+`TestKernel`.
+
+A native event-loop, browser or provider lifecycle assertion may need real elapsed time. Exempt
+only the immediately following expression with a reason at the boundary:
+
+```typescript no-check
+// croco-test-clock-real-time -- Measure native socket shutdown; business expiry uses the fixture clock.
+const startedAt = Date.now();
+```
+
+Blank reasons and separated comments do not suppress a diagnostic. The ordinary static-misuse
+ignore directives do not suppress this rule. A lifecycle exception must not make business TTL,
+retention, lease or retry assertions depend on wall time.
+
+This is an explicit fixture contract, not whole-program clock analysis. Files without the declaration
+retain their existing behavior. The checker does not prove clock identity, inspect opaque factories
+or imported callback bodies, infer arbitrary dependency names, or trace clocks through service
+locators. Typecheck still owns incompatible dependency values; fixture tests own shared-clock
+identity and scheduler behavior. Keep a bound factory and regression coverage at those boundaries.
 
 ## Repository Boundary Rule
 

@@ -1,3 +1,4 @@
+// croco-test-clock: controlled
 import { IdempotencyConflictProblem, InMemoryIdempotencyStore } from "@croco/idempotency-core";
 import { Problem, ProblemCategory } from "@croco/problems-core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -13,12 +14,15 @@ import type { BillingAccount, Subscription } from "../types";
 const PLAN_VERSION_REF = "plan-pro@v1" as Subscription["planVersionRef"];
 
 describe("BillingService", () => {
+  let now: Date;
+  const clock = () => new Date(now);
   let store!: InMemoryBillingStore;
   let mockGateway!: BillingGateway;
   let service!: BillingService;
 
   beforeEach(() => {
-    store = new InMemoryBillingStore();
+    now = new Date("2026-01-01T00:00:00.000Z");
+    store = new InMemoryBillingStore(clock);
     mockGateway = {
       ensureCustomer: vi.fn(),
       createCheckout: vi.fn(),
@@ -27,12 +31,16 @@ describe("BillingService", () => {
       resumeSubscription: vi.fn(),
       getCustomerPortalUrl: vi.fn(),
     };
-    service = new BillingService({
+    service = createService({
       store,
       gateway: mockGateway,
-      checkoutIdempotencyStore: new InMemoryIdempotencyStore(),
+      checkoutIdempotencyStore: new InMemoryIdempotencyStore({ now: clock }),
     });
   });
+
+  function createService(options: ConstructorParameters<typeof BillingService>[0]) {
+    return new BillingService({ ...options, clock });
+  }
 
   async function saveBillingAccount(
     tenantId: string,
@@ -44,7 +52,7 @@ describe("BillingService", () => {
       tenantId,
       externalCustomerId: `ext-${billingAccountId}`,
       email,
-      createdAt: new Date(),
+      createdAt: clock(),
     };
 
     await store.saveAccount(account);
@@ -67,9 +75,9 @@ describe("BillingService", () => {
         planId: "plan-pro",
         planVersionRef: PLAN_VERSION_REF,
         status: "active",
-        currentPeriodEnd: new Date(),
+        currentPeriodEnd: clock(),
         cancelAtPeriodEnd: false,
-        lastSyncedAt: new Date(),
+        lastSyncedAt: clock(),
       };
       await store.saveSubscription(subscription);
 
@@ -87,9 +95,9 @@ describe("BillingService", () => {
         planId: "plan-pro",
         planVersionRef: PLAN_VERSION_REF,
         status: "trialing",
-        currentPeriodEnd: new Date(),
+        currentPeriodEnd: clock(),
         cancelAtPeriodEnd: false,
-        lastSyncedAt: new Date(),
+        lastSyncedAt: clock(),
       };
       await store.saveSubscription(subscription);
 
@@ -107,9 +115,9 @@ describe("BillingService", () => {
         planId: "plan-pro",
         planVersionRef: PLAN_VERSION_REF,
         status: "canceled",
-        currentPeriodEnd: new Date(),
+        currentPeriodEnd: clock(),
         cancelAtPeriodEnd: false,
-        lastSyncedAt: new Date(),
+        lastSyncedAt: clock(),
       };
       await store.saveSubscription(subscription);
 
@@ -127,9 +135,9 @@ describe("BillingService", () => {
         planId: "plan-pro",
         planVersionRef: PLAN_VERSION_REF,
         status: "past_due",
-        currentPeriodEnd: new Date(),
+        currentPeriodEnd: clock(),
         cancelAtPeriodEnd: false,
-        lastSyncedAt: new Date(),
+        lastSyncedAt: clock(),
       };
       await store.saveSubscription(subscription);
 
@@ -147,9 +155,9 @@ describe("BillingService", () => {
         planId: "plan-pro",
         planVersionRef: PLAN_VERSION_REF,
         status: "revoked",
-        currentPeriodEnd: new Date(),
+        currentPeriodEnd: clock(),
         cancelAtPeriodEnd: false,
-        lastSyncedAt: new Date(),
+        lastSyncedAt: clock(),
       };
       await store.saveSubscription(subscription);
 
@@ -174,9 +182,9 @@ describe("BillingService", () => {
         planId: "plan-pro",
         planVersionRef: PLAN_VERSION_REF,
         status: "active",
-        currentPeriodEnd: new Date(),
+        currentPeriodEnd: clock(),
         cancelAtPeriodEnd: false,
-        lastSyncedAt: new Date(),
+        lastSyncedAt: clock(),
       };
       await store.saveSubscription(subscription);
 
@@ -201,9 +209,9 @@ describe("BillingService", () => {
         planId: "plan-pro",
         planVersionRef: PLAN_VERSION_REF,
         status: "active",
-        currentPeriodEnd: new Date(),
+        currentPeriodEnd: clock(),
         cancelAtPeriodEnd: false,
-        lastSyncedAt: new Date(),
+        lastSyncedAt: clock(),
       };
       await store.saveSubscription(subscription);
 
@@ -368,13 +376,13 @@ describe("BillingService", () => {
         cancelUrl: "https://example.com/cancel",
         idempotencyKey: "checkout-distributed",
       };
-      const idempotencyStore = new InMemoryIdempotencyStore<CheckoutResult>();
-      const firstService = new BillingService({
+      const idempotencyStore = new InMemoryIdempotencyStore<CheckoutResult>({ now: clock });
+      const firstService = createService({
         store,
         gateway: mockGateway,
         checkoutIdempotencyStore: idempotencyStore,
       });
-      const secondService = new BillingService({
+      const secondService = createService({
         store,
         gateway: mockGateway,
         checkoutIdempotencyStore: idempotencyStore,
@@ -415,13 +423,13 @@ describe("BillingService", () => {
         cancelUrl: "https://example.com/cancel",
         idempotencyKey: "checkout-foreign-reservation",
       };
-      const idempotencyStore = new InMemoryIdempotencyStore<CheckoutResult>();
-      const firstService = new BillingService({
+      const idempotencyStore = new InMemoryIdempotencyStore<CheckoutResult>({ now: clock });
+      const firstService = createService({
         store,
         gateway: mockGateway,
         checkoutIdempotencyStore: idempotencyStore,
       });
-      const secondService = new BillingService({
+      const secondService = createService({
         store,
         gateway: mockGateway,
         checkoutIdempotencyStore: idempotencyStore,
@@ -464,9 +472,8 @@ describe("BillingService", () => {
         cancelUrl: "https://example.com/cancel",
         idempotencyKey: "checkout-expired-reservation",
       };
-      let now = new Date("2026-01-01T00:00:00.000Z");
-      const idempotencyStore = new InMemoryIdempotencyStore<CheckoutResult>({ now: () => now });
-      const serviceWithExpiringReservation = new BillingService({
+      const idempotencyStore = new InMemoryIdempotencyStore<CheckoutResult>({ now: clock });
+      const serviceWithExpiringReservation = createService({
         store,
         gateway: mockGateway,
         checkoutIdempotencyStore: idempotencyStore,
@@ -478,6 +485,7 @@ describe("BillingService", () => {
       };
 
       vi.mocked(mockGateway.ensureCustomer).mockResolvedValue("ext-cust-expired-reservation");
+      vi.mocked(mockGateway.reconcileCheckout).mockResolvedValue(null);
       vi.mocked(mockGateway.createCheckout)
         .mockRejectedValueOnce(new BillingCheckoutInProgressProblem(params.tenantId))
         .mockResolvedValueOnce(checkout);
@@ -485,7 +493,12 @@ describe("BillingService", () => {
       await expect(serviceWithExpiringReservation.createCheckout(params)).rejects.toThrow(
         BillingCheckoutInProgressProblem,
       );
-      now = new Date(now.getTime() + 101);
+      now = new Date(now.getTime() + 99);
+      await expect(serviceWithExpiringReservation.createCheckout(params)).rejects.toThrow(
+        BillingCheckoutInProgressProblem,
+      );
+      expect(mockGateway.createCheckout).toHaveBeenCalledTimes(1);
+      now = new Date(now.getTime() + 1);
       await expect(serviceWithExpiringReservation.createCheckout(params)).resolves.toEqual({
         checkoutUrl: checkout.checkoutUrl,
       });
@@ -583,8 +596,8 @@ describe("BillingService", () => {
         cancelUrl: "https://example.com/cancel",
         idempotencyKey: "checkout-commit-recovery",
       };
-      const idempotencyStore = new InMemoryIdempotencyStore<CheckoutResult>();
-      const serviceWithCommitFailure = new BillingService({
+      const idempotencyStore = new InMemoryIdempotencyStore<CheckoutResult>({ now: clock });
+      const serviceWithCommitFailure = createService({
         store,
         gateway: mockGateway,
         checkoutIdempotencyStore: idempotencyStore,
@@ -658,7 +671,7 @@ describe("BillingService", () => {
         tenantId: "tenant-1",
         externalCustomerId: "ext-cust-1",
         email: "test@example.com",
-        createdAt: new Date(),
+        createdAt: clock(),
       });
 
       const params = {
@@ -727,7 +740,7 @@ describe("BillingService", () => {
         tenantId: "tenant-2",
         externalCustomerId: "ext-cust-2",
         email: "tenant2@example.com",
-        createdAt: new Date(),
+        createdAt: clock(),
       });
 
       await store.saveSubscription({
@@ -737,9 +750,9 @@ describe("BillingService", () => {
         planId: "plan-pro",
         planVersionRef: PLAN_VERSION_REF,
         status: "active",
-        currentPeriodEnd: new Date(),
+        currentPeriodEnd: clock(),
         cancelAtPeriodEnd: false,
-        lastSyncedAt: new Date(),
+        lastSyncedAt: clock(),
       });
 
       expect(await service.hasActiveSubscription("tenant-2")).toBe(true);
@@ -761,9 +774,9 @@ describe("BillingService", () => {
         planId: "plan-pro",
         planVersionRef: PLAN_VERSION_REF,
         status: "active",
-        currentPeriodEnd: new Date(),
+        currentPeriodEnd: clock(),
         cancelAtPeriodEnd: false,
-        lastSyncedAt: new Date(),
+        lastSyncedAt: clock(),
       };
       await store.saveSubscription(subscription);
 
@@ -795,9 +808,9 @@ describe("BillingService", () => {
           planId: "plan-pro",
           planVersionRef: PLAN_VERSION_REF,
           status,
-          currentPeriodEnd: new Date(),
+          currentPeriodEnd: clock(),
           cancelAtPeriodEnd: false,
-          lastSyncedAt: new Date(),
+          lastSyncedAt: clock(),
         };
         await store.saveSubscription(subscription);
 
@@ -846,9 +859,9 @@ describe("BillingService", () => {
         planId: "plan-pro",
         planVersionRef: PLAN_VERSION_REF,
         status: "active",
-        currentPeriodEnd: new Date(),
+        currentPeriodEnd: clock(),
         cancelAtPeriodEnd: false,
-        lastSyncedAt: new Date(),
+        lastSyncedAt: clock(),
       };
       await store.saveSubscription(subscription);
       await store.saveOrder({
@@ -858,7 +871,7 @@ describe("BillingService", () => {
         amount: 2900,
         currency: "USD",
         reason: "subscription_cycle",
-        paidAt: new Date(),
+        paidAt: clock(),
       });
 
       await service.cancelSubscription({
@@ -890,10 +903,10 @@ describe("BillingService", () => {
           publishIdempotently: vi.fn(),
         };
 
-        const serviceWithPublisher = new BillingService({
+        const serviceWithPublisher = createService({
           store,
           gateway: mockGateway,
-          checkoutIdempotencyStore: new InMemoryIdempotencyStore(),
+          checkoutIdempotencyStore: new InMemoryIdempotencyStore({ now: clock }),
           eventPublisher: mockEventPublisher as BillingLifecycleEventPublisher,
         });
 
@@ -906,9 +919,9 @@ describe("BillingService", () => {
           planId: "plan-pro",
           planVersionRef: PLAN_VERSION_REF,
           status: "active",
-          currentPeriodEnd: new Date(),
+          currentPeriodEnd: clock(),
           cancelAtPeriodEnd: false,
-          lastSyncedAt: new Date(),
+          lastSyncedAt: clock(),
         };
         await store.saveSubscription(subscription);
 
@@ -950,10 +963,10 @@ describe("BillingService", () => {
           }
         }),
       };
-      const serviceWithPublisher = new BillingService({
+      const serviceWithPublisher = createService({
         store,
         gateway: mockGateway,
-        checkoutIdempotencyStore: new InMemoryIdempotencyStore(),
+        checkoutIdempotencyStore: new InMemoryIdempotencyStore({ now: clock }),
         eventPublisher: mockEventPublisher as BillingLifecycleEventPublisher,
       });
       await saveBillingAccount("tenant-1");
@@ -964,9 +977,9 @@ describe("BillingService", () => {
         planId: "plan-pro",
         planVersionRef: PLAN_VERSION_REF,
         status: "active",
-        currentPeriodEnd: new Date(),
+        currentPeriodEnd: clock(),
         cancelAtPeriodEnd: false,
-        lastSyncedAt: new Date(),
+        lastSyncedAt: clock(),
       });
 
       const pending = await serviceWithPublisher.cancelSubscription({
@@ -1017,10 +1030,10 @@ describe("BillingService", () => {
             await deliveryBlocked;
           }),
       };
-      const serviceWithPublisher = new BillingService({
+      const serviceWithPublisher = createService({
         store,
         gateway: mockGateway,
-        checkoutIdempotencyStore: new InMemoryIdempotencyStore(),
+        checkoutIdempotencyStore: new InMemoryIdempotencyStore({ now: clock }),
         eventPublisher: mockEventPublisher as BillingLifecycleEventPublisher,
       });
       await saveBillingAccount("tenant-1");
@@ -1031,9 +1044,9 @@ describe("BillingService", () => {
         planId: "plan-pro",
         planVersionRef: PLAN_VERSION_REF,
         status: "active",
-        currentPeriodEnd: new Date(),
+        currentPeriodEnd: clock(),
         cancelAtPeriodEnd: false,
-        lastSyncedAt: new Date(),
+        lastSyncedAt: clock(),
       });
       await serviceWithPublisher.cancelSubscription({
         tenantId: "tenant-1",
@@ -1068,9 +1081,9 @@ describe("BillingService", () => {
           planId: "plan-old",
           planVersionRef: PLAN_VERSION_REF,
           status: "active",
-          currentPeriodEnd: new Date(),
+          currentPeriodEnd: clock(),
           cancelAtPeriodEnd: false,
-          lastSyncedAt: new Date(),
+          lastSyncedAt: clock(),
         });
         vi.mocked(mockGateway.cancelSubscription).mockImplementationOnce(async () => {
           await store.saveSubscription({
@@ -1082,7 +1095,7 @@ describe("BillingService", () => {
             status: "active",
             currentPeriodEnd: new Date("2031-01-01T00:00:00.000Z"),
             cancelAtPeriodEnd: false,
-            lastSyncedAt: new Date(),
+            lastSyncedAt: clock(),
           });
         });
 
@@ -1532,9 +1545,9 @@ describe("BillingService", () => {
         planId: "plan-pro",
         planVersionRef: PLAN_VERSION_REF,
         status: "active",
-        currentPeriodEnd: new Date(),
+        currentPeriodEnd: clock(),
         cancelAtPeriodEnd: true,
-        lastSyncedAt: new Date(),
+        lastSyncedAt: clock(),
       };
       await store.saveSubscription(subscription);
 

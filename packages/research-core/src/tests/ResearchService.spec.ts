@@ -1,38 +1,14 @@
+// croco-test-clock: controlled
 import { describe, expect, it, vi } from "vitest";
+import { ResearchConflictProblem, ResearchDeniedProblem, ResearchInvalidProblem } from "../index";
 import {
-  InMemoryResearchStore,
-  ResearchService,
-  ResearchConflictProblem,
-  ResearchDeniedProblem,
-  ResearchInvalidProblem,
-} from "../index";
-import { scope, access, study, candidates, command } from "./researchFixtures";
-function fixture() {
-  const store = new InMemoryResearchStore();
-  const send = vi.fn(async () => ({ status: "queued" as const, executionIds: ["execution"] }));
-  let now = new Date("2026-10-13T00:00:00Z");
-  const clock = () => now;
-  const service = new ResearchService(
-    store,
-    {
-      authorize: async (input, permission) =>
-        input.principal === "verified-session" &&
-        !(input.actor === "reader" && permission !== "research.read"),
-    },
-    { send },
-    [study.bookingUrl],
-    clock,
-  );
-  return {
-    store,
-    service,
-    send,
-    clock,
-    setNow: (value: Date) => {
-      now = value;
-    },
-  };
-}
+  scope,
+  access,
+  study,
+  candidates,
+  command,
+  createResearchFixture as fixture,
+} from "./researchFixtures";
 async function setup(f = fixture(), rows = candidates()) {
   await f.service.publishStudy(scope, study, access, command(0, "publish"));
   await f.service.importCandidates(scope, study.id, rows, access, command(1, "import"));
@@ -65,6 +41,61 @@ async function selectedWithNote() {
   return { f, subject };
 }
 describe("ResearchService", () => {
+  it.each(["2026-10-13T00:00:00Z", "2034-03-26T01:30:00+01:00"])(
+    "shares note retention time across permission variants and restarts from %s",
+    async (initial) => {
+      const f = await setup(fixture(initial));
+      await f.service.writeNote(
+        scope,
+        study.id,
+        "achieved-0",
+        "Retained evidence",
+        access,
+        command(2, "note"),
+      );
+      const reader = f.createService({
+        authorize: async (_access, permission) => permission !== "research.write",
+      });
+      await expect(
+        reader.writeNote(scope, study.id, "achieved-0", null, access, command(3, "denied")),
+      ).rejects.toThrow(ResearchDeniedProblem);
+      const retentionMs = 7 * 24 * 60 * 60 * 1000;
+      await f.time.advanceBy(retentionMs - 1);
+      expect((await reader.inspect(scope, study.id, access)).candidates[0].note).toBe(
+        "Retained evidence",
+      );
+      const restarted = f.createService();
+      expect((await restarted.inspect(scope, study.id, access)).candidates[0].note).toBe(
+        "Retained evidence",
+      );
+      await f.time.advanceBy(1);
+      expect((await reader.inspect(scope, study.id, access)).candidates[0].note).toBeUndefined();
+      await f.time.advanceBy(1);
+      expect((await restarted.inspect(scope, study.id, access)).candidates[0].note).toBeUndefined();
+    },
+  );
+  it("keeps concurrent fixtures on independent timelines", async () => {
+    const fixtures = await Promise.all([setup(fixture()), setup(fixture("2034-03-26T00:30:00Z"))]);
+    await Promise.all(
+      fixtures.map(async (f) => {
+        await f.service.writeNote(
+          scope,
+          study.id,
+          "achieved-0",
+          "Retained evidence",
+          access,
+          command(2, "note"),
+        );
+      }),
+    );
+    await fixtures[0].time.advanceBy(7 * 24 * 60 * 60 * 1000);
+    const [expired, retained] = await Promise.all(
+      fixtures.map((f) => f.createService().inspect(scope, study.id, access)),
+    );
+    expect(expired.candidates[0].note).toBeUndefined();
+    expect(retained.candidates[0].note).toBe("Retained evidence");
+    expect(fixtures[1].clock().toISOString()).toBe("2034-03-26T00:30:00.000Z");
+  });
   it("rejects admission before consuming note deletion or dispatch completion capacity", async () => {
     const { f, subject } = await selectedWithNote();
     await seedAuditHistory(f, 49997);
@@ -93,7 +124,7 @@ describe("ResearchService", () => {
       if (cleanup === "explicit deletion")
         await f.service.writeNote(scope, study.id, subject, null, access, command(49998, "delete"));
       else {
-        f.setNow(new Date("2026-10-21T00:00:00Z"));
+        await f.time.advanceBy(8 * 24 * 60 * 60 * 1000);
         await f.service.purgeExpiredNotes(scope, study.id, access, command(49998, "purge"));
       }
       const stored = await f.store.read(scope, study.id);
@@ -151,7 +182,7 @@ describe("ResearchService", () => {
     await expect(
       f.service.invite(scope, study.id, subject, access, command(49996, "invite")),
     ).rejects.toThrow(ResearchConflictProblem);
-    f.setNow(new Date("2026-10-21T00:00:00Z"));
+    await f.time.advanceBy(8 * 24 * 60 * 60 * 1000);
     await f.service.purgeExpiredNotes(scope, study.id, access, command(49997, "purge"));
     await f.service.reconcileInvitation(
       scope,
@@ -239,7 +270,7 @@ describe("ResearchService", () => {
         }
         record.revision = 49999;
       });
-      if (cleanup === "expiration purge") f.setNow(new Date("2026-10-21T00:00:00Z"));
+      if (cleanup === "expiration purge") await f.time.advanceBy(8 * 24 * 60 * 60 * 1000);
       await expect(
         f.service.publishStudy(scope, study, access, command(49999, "ordinary-write")),
       ).rejects.toThrow(ResearchInvalidProblem);
@@ -342,13 +373,9 @@ describe("ResearchService", () => {
       command(6, "accept"),
     );
     await f.service.markParticipated(scope, study.id, subject, access, command(7, "participated"));
-    const recruiter = new ResearchService(
-      f.store,
-      { authorize: async (_access, permission) => permission !== "research.participate" },
-      { send: f.send },
-      [study.bookingUrl],
-      f.clock,
-    );
+    const recruiter = f.createService({
+      authorize: async (_access, permission) => permission !== "research.participate",
+    });
     for (const response of ["declined", "withdrawn"] as const) {
       await expect(
         recruiter.recordResponse(scope, study.id, subject, response, access, command(8, response)),
@@ -381,13 +408,9 @@ describe("ResearchService", () => {
       access,
       command(2, "note"),
     );
-    const reader = new ResearchService(
-      f.store,
-      { authorize: async (_access, permission) => permission !== "research.write" },
-      { send: f.send },
-      [study.bookingUrl],
-      f.clock,
-    );
+    const reader = f.createService({
+      authorize: async (_access, permission) => permission !== "research.write",
+    });
     expect((await reader.inspect(scope, study.id, access)).candidates[0].note).toBe(
       "Private source evidence",
     );
@@ -416,13 +439,9 @@ describe("ResearchService", () => {
       ),
     ).rejects.toThrow(ResearchConflictProblem);
     expect((await f.store.read(scope, study.id)).revision).toBe(2);
-    const restricted = new ResearchService(
-      f.store,
-      { authorize: async (_input, _permission, subject) => subject === undefined },
-      { send: f.send },
-      [study.bookingUrl],
-      f.clock,
-    );
+    const restricted = f.createService({
+      authorize: async (_input, _permission, subject) => subject === undefined,
+    });
     await expect(
       restricted.importCandidates(
         scope,
@@ -577,13 +596,7 @@ describe("ResearchService", () => {
     await expect(
       f.service.invite(scope, study.id, next, access, command(5, "unknown")),
     ).rejects.toThrow("unknown");
-    const restarted = new ResearchService(
-      f.store,
-      { authorize: async () => true },
-      { send: f.send },
-      [study.bookingUrl],
-      f.clock,
-    );
+    const restarted = f.createService({ authorize: async () => true });
     await restarted.invite(scope, study.id, next, access, command(5, "unknown"));
     expect(f.send).toHaveBeenCalledTimes(2);
     const page = await restarted.inspect(scope, study.id, access);
@@ -681,7 +694,7 @@ describe("ResearchService", () => {
     await f.service.writeNote(scope, study.id, subject, null, access, command(3, "delete"));
     expect(JSON.stringify(await f.store.read(scope, study.id))).not.toContain("PRIVATE RESPONSE");
     await f.service.writeNote(scope, study.id, subject, "expires", access, command(4, "expiring"));
-    f.setNow(new Date("2026-10-20T00:00:00Z"));
+    await f.time.advanceBy(7 * 24 * 60 * 60 * 1000);
     expect((await f.service.inspect(scope, study.id, access)).candidates[0].note).toBeUndefined();
     await f.service.purgeExpiredNotes(scope, study.id, access, command(5, "purge"));
     expect((await f.store.read(scope, study.id)).notes).toEqual([]);

@@ -1,3 +1,4 @@
+// croco-test-clock: controlled
 import { createHash } from "node:crypto";
 import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
@@ -344,7 +345,7 @@ function serviceFixture(
 ) {
   const { store, policy } = setup();
   let currentPolicy = policy;
-  const dispatches = new InMemoryEngagementStore();
+  const dispatches = new InMemoryEngagementStore(undefined, () => now);
   const dispatch = vi.fn(async () => {
     if (options.failProvider) throw new Error("acceptance unknown");
     return { executionId: "execution" };

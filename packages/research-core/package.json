@@ -55,6 +55,7 @@
     "@croco/problems-core": "workspace:*"
   },
   "devDependencies": {
+    "@croco/testing": "workspace:*",
     "reflect-metadata": "^0.2.2",
     "tsup": "^8.4.0",
     "typescript": "^5.7.2",

@@ -1,3 +1,4 @@
+// croco-test-clock: controlled
 import { describe, expect, it, beforeAll, beforeEach, afterAll, vi } from "vitest";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
@@ -60,12 +61,14 @@ suite("DrizzleResearchStore PostgreSQL", () => {
   ];
   const dbs = pools.map((pool) => drizzle(pool, { schema: { researchStudies } }));
   const stores = dbs.map((db) => new DrizzleResearchStore(db));
+  const clock = () => new Date("2026-10-13T00:00:00Z");
   const service = (store: DrizzleResearchStore) =>
     new ResearchService(
       store,
       { authorize: async () => true },
       { send: async () => ({ status: "queued", executionIds: ["logical-send"] }) },
       [study.bookingUrl],
+      clock,
     );
   beforeAll(async () => {
     await createResearchSchema(dbs[0]);
@@ -156,18 +159,26 @@ suite("DrizzleResearchStore PostgreSQL", () => {
     const send = vi.fn(async () => {
       throw new ResearchConflictProblem("synthetic acceptance unknown");
     });
-    const failing = new ResearchService(stores[1], { authorize: async () => true }, { send }, [
-      study.bookingUrl,
-    ]);
+    const failing = new ResearchService(
+      stores[1],
+      { authorize: async () => true },
+      { send },
+      [study.bookingUrl],
+      clock,
+    );
     await expect(
       failing.invite(scope, study.id, selected[1].subject, access, command(6, "unknown-send")),
     ).rejects.toThrow(ResearchConflictProblem);
     const pool = new Pool({ connectionString: url, max: 1 });
     try {
       const store = new DrizzleResearchStore(drizzle(pool, { schema: { researchStudies } }));
-      const restarted = new ResearchService(store, { authorize: async () => true }, { send }, [
-        study.bookingUrl,
-      ]);
+      const restarted = new ResearchService(
+        store,
+        { authorize: async () => true },
+        { send },
+        [study.bookingUrl],
+        clock,
+      );
       await restarted.invite(
         scope,
         study.id,

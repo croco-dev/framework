@@ -20,6 +20,7 @@ beforeEach(() => {
 });
 
 describe("InMemoryRateLimitStore", () => {
+  let now: number;
   let store!: InMemoryRateLimitStore;
   const policy: SlidingWindowPolicy = {
     name: "test",
@@ -29,7 +30,8 @@ describe("InMemoryRateLimitStore", () => {
   };
 
   beforeEach(() => {
-    store = new InMemoryRateLimitStore({ pruneIntervalMs: 0 });
+    now = Date.parse("2026-01-01T00:00:00.000Z");
+    store = new InMemoryRateLimitStore({ now: () => now, pruneIntervalMs: 0 });
   });
 
   afterEach(() => {
@@ -188,7 +190,7 @@ describe("InMemoryRateLimitStore", () => {
     const result = await store.check("user:1", policy);
     expect(result.success).toBe(false);
     expect(result.remaining).toBe(0);
-    expect(result.resetAtMs).toBeGreaterThan(Date.now());
+    expect(result.resetAtMs).toBeGreaterThan(now);
   });
 
   it("should track different keys separately", async () => {
@@ -204,8 +206,7 @@ describe("InMemoryRateLimitStore", () => {
   it("should return correct limit and resetAtMs", async () => {
     const result = await store.check("user:1", policy);
     expect(result.limit).toBe(3);
-    expect(result.resetAtMs).toBeGreaterThan(Date.now());
-    expect(result.resetAtMs).toBeLessThanOrEqual(Date.now() + 60000);
+    expect(result.resetAtMs).toBe(now + 60000);
   });
 
   it("should reset all buckets when reset() is called", async () => {
@@ -253,11 +254,8 @@ describe("InMemoryRateLimitStore", () => {
   });
 
   it("should refund the original sliding window receipt for out-of-order completions", async () => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date("2026-01-01T00:00:00.000Z"));
-
     const first = await store.check("user:1", policy);
-    vi.advanceTimersByTime(1);
+    now += 1;
     const second = await store.check("user:1", policy);
 
     const firstRefund = await store.refund("user:1", policy, first.refundReceipt);
@@ -267,32 +265,28 @@ describe("InMemoryRateLimitStore", () => {
     expect(secondRefund.refunded).toBe(true);
     expect(secondRefund.remaining).toBe(3);
     expect(await store.getStats()).toEqual({ allowed: 0, denied: 0, total: 0 });
-
-    vi.useRealTimers();
   });
 
   it("should prune expired buckets without new checks", async () => {
-    vi.useFakeTimers();
-
     await store.check("user:1", policy);
     await store.check("user:2", policy);
 
-    vi.advanceTimersByTime(policy.windowMs + 1);
+    now += policy.windowMs + 1;
 
     const deleted = await store.pruneExpired();
     const result = await store.check("user:1", policy);
 
     expect(deleted).toBe(2);
     expect(result.remaining).toBe(2);
-
-    vi.useRealTimers();
   });
 
   it("should automatically prune expired sliding window entries", async () => {
-    vi.useFakeTimers();
-    const autoPrunedStore = new InMemoryRateLimitStore({ pruneIntervalMs: 10 });
+    // Exercise the native prune timer adapter; bucket expiry uses the injected fixture clock.
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    const autoPrunedStore = new InMemoryRateLimitStore({ now: () => now, pruneIntervalMs: 10 });
 
     await autoPrunedStore.check("user:1", policy);
+    now += policy.windowMs + 10;
     vi.advanceTimersByTime(policy.windowMs + 10);
     await vi.runOnlyPendingTimersAsync();
 
@@ -305,8 +299,9 @@ describe("InMemoryRateLimitStore", () => {
   });
 
   it("should clear the sliding window prune timer on destroy", () => {
-    vi.useFakeTimers();
-    const autoPrunedStore = new InMemoryRateLimitStore({ pruneIntervalMs: 10 });
+    // Exercise the native prune timer adapter; bucket expiry uses the injected fixture clock.
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    const autoPrunedStore = new InMemoryRateLimitStore({ now: () => now, pruneIntervalMs: 10 });
 
     autoPrunedStore.destroy();
 
@@ -466,16 +461,18 @@ describe("InMemoryRateLimitStore", () => {
   });
 
   it("should automatically prune expired fixed window entries", async () => {
-    vi.useFakeTimers();
+    // Exercise the native prune timer adapter; bucket expiry uses the injected fixture clock.
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
     const fixedPolicy: FixedWindowPolicy = {
       name: "fixed-test",
       algorithm: "fixed",
       limit: 3,
       windowMs: 60000,
     };
-    const fixedStore = new FixedWindowInMemoryStore({ pruneIntervalMs: 10 });
+    const fixedStore = new FixedWindowInMemoryStore({ now: () => now, pruneIntervalMs: 10 });
 
     await fixedStore.check("user:1", fixedPolicy);
+    now += fixedPolicy.windowMs + 10;
     vi.advanceTimersByTime(fixedPolicy.windowMs + 10);
     await vi.runOnlyPendingTimersAsync();
 
@@ -494,7 +491,7 @@ describe("InMemoryRateLimitStore", () => {
       limit: 1,
       windowMs: 60000,
     };
-    const fixedStore = new FixedWindowInMemoryStore({ pruneIntervalMs: 0 });
+    const fixedStore = new FixedWindowInMemoryStore({ now: () => now, pruneIntervalMs: 0 });
 
     const check = await fixedStore.check("user:1", fixedPolicy);
     const refund = await fixedStore.refund("user:1", fixedPolicy, check.refundReceipt);
@@ -518,7 +515,7 @@ describe("InMemoryRateLimitStore", () => {
       limit: 1,
       windowMs: 60000,
     };
-    const fixedStore = new FixedWindowInMemoryStore({ pruneIntervalMs: 0 });
+    const fixedStore = new FixedWindowInMemoryStore({ now: () => now, pruneIntervalMs: 0 });
 
     const check = await fixedStore.check("user:1", fixedPolicy);
     await fixedStore.reset("");
@@ -530,19 +527,16 @@ describe("InMemoryRateLimitStore", () => {
   });
 
   it("should not refund a stale fixed window receipt into a newer window", async () => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date("2026-01-01T00:00:00.000Z"));
-
     const fixedPolicy: FixedWindowPolicy = {
       name: "fixed-stale-refund",
       algorithm: "fixed",
       limit: 1,
       windowMs: 1000,
     };
-    const fixedStore = new FixedWindowInMemoryStore({ pruneIntervalMs: 0 });
+    const fixedStore = new FixedWindowInMemoryStore({ now: () => now, pruneIntervalMs: 0 });
 
     const staleCheck = await fixedStore.check("user:1", fixedPolicy);
-    vi.advanceTimersByTime(1001);
+    now += 1001;
     const currentCheck = await fixedStore.check("user:1", fixedPolicy);
     const staleRefund = await fixedStore.refund("user:1", fixedPolicy, staleCheck.refundReceipt);
     const blocked = await fixedStore.check("user:1", fixedPolicy);
@@ -553,11 +547,11 @@ describe("InMemoryRateLimitStore", () => {
     expect(await fixedStore.getStats()).toEqual({ allowed: 2, denied: 1, total: 3 });
 
     fixedStore.close();
-    vi.useRealTimers();
   });
 
   it("should automatically prune expired token bucket entries", async () => {
-    vi.useFakeTimers();
+    // Exercise the native prune timer adapter; bucket expiry uses the injected fixture clock.
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
     const tokenPolicy: TokenBucketPolicy = {
       name: "token-test",
       algorithm: "token-bucket",
@@ -565,9 +559,10 @@ describe("InMemoryRateLimitStore", () => {
       refillRate: 1,
       refillIntervalMs: 1000,
     };
-    const tokenStore = new TokenBucketInMemoryStore({ pruneIntervalMs: 10 });
+    const tokenStore = new TokenBucketInMemoryStore({ now: () => now, pruneIntervalMs: 10 });
 
     await tokenStore.check("user:1", tokenPolicy);
+    now += 3010;
     vi.advanceTimersByTime(3010);
     await vi.runOnlyPendingTimersAsync();
 
@@ -588,7 +583,7 @@ describe("InMemoryRateLimitStore", () => {
       refillRate: 1,
       refillIntervalMs: 1000,
     };
-    const tokenStore = new TokenBucketInMemoryStore({ pruneIntervalMs: 0 });
+    const tokenStore = new TokenBucketInMemoryStore({ now: () => now, pruneIntervalMs: 0 });
 
     const check = await tokenStore.check("user:1", tokenPolicy);
     const refund = await tokenStore.refund("user:1", tokenPolicy, check.refundReceipt);
@@ -707,7 +702,7 @@ describe("InMemoryRateLimitStore", () => {
       refillRate: 1,
       refillIntervalMs: 1000,
     };
-    const tokenStore = new TokenBucketInMemoryStore({ pruneIntervalMs: 0 });
+    const tokenStore = new TokenBucketInMemoryStore({ now: () => now, pruneIntervalMs: 0 });
 
     const check = await tokenStore.check("user:1", tokenPolicy);
     await tokenStore.reset("");
@@ -801,7 +796,7 @@ describe("InMemoryRateLimitStore", () => {
     };
 
     beforeEach(() => {
-      slidingStore = new SlidingWindowInMemoryStore({ pruneIntervalMs: 0 });
+      slidingStore = new SlidingWindowInMemoryStore({ now: () => now, pruneIntervalMs: 0 });
     });
 
     afterEach(() => {
@@ -809,10 +804,6 @@ describe("InMemoryRateLimitStore", () => {
     });
 
     it("should use custom windowMs (5000ms) for pruning", async () => {
-      vi.useFakeTimers();
-      const baseTime = Date.now();
-      vi.setSystemTime(baseTime);
-
       // Make 5 requests within the custom 5000ms window
       for (let i = 0; i < 5; i++) {
         const r = await slidingStore.check("key-a", customWindowPolicy);
@@ -820,7 +811,7 @@ describe("InMemoryRateLimitStore", () => {
       }
 
       // Advance past 5000ms custom window but still within default 60000ms
-      vi.advanceTimersByTime(6000);
+      now += 6000;
 
       // pruneExpired uses stored entry.windowMs — with bug (60000) nothing pruned,
       // with fix (5000) all 5 entries get pruned
@@ -830,8 +821,6 @@ describe("InMemoryRateLimitStore", () => {
       // After prune, fresh entry with full capacity
       const result = await slidingStore.check("key-a", customWindowPolicy);
       expect(result.remaining).toBe(4);
-
-      vi.useRealTimers();
     });
   });
 
@@ -846,7 +835,7 @@ describe("InMemoryRateLimitStore", () => {
     };
 
     beforeEach(() => {
-      tokenStore = new TokenBucketInMemoryStore({ pruneIntervalMs: 0 });
+      tokenStore = new TokenBucketInMemoryStore({ now: () => now, pruneIntervalMs: 0 });
     });
 
     afterEach(() => {
