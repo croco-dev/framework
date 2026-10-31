@@ -193,3 +193,15 @@ its request-owned database connection. The SDK classifies upstream timeout failu
 caller deadline or remote cancellation guarantee. These local tests do not certify live Resend,
 deployed Hyperdrive, Cloudflare or the full SaaS profile. Large broadcasts need a durable Queue/Task
 path; request `waitUntil` is not that path. See the package README for the opt-in composition and limits.
+
+## Time-dependent test fixtures
+
+Use one fixture-owned clock for domain time, readers, permission variants and restarted services.
+Capture existing clock/scheduler seams in a bound factory; use `fixedClock` / `TestClock` from
+`@croco/testing` or the existing TestKernel clock for virtual scheduling. Do not introduce production
+APIs solely for testing or global Date patches. Mark controlled test/fixture sources with
+`// croco-test-clock: controlled`; `pnpm static-misuse:check` checks supported constructor seams and
+ambient reads. The rule is explicit and bounded, not general dependency inference. Keep native
+lifecycle exceptions local and explained. See `docs/contributing/test-clocks.md` and the executable
+`packages/research-core/src/tests/researchFixtures.ts` for derived instances, time advancement,
+expiry boundaries and the audit's remaining unsupported seams.

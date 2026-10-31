@@ -3654,6 +3654,12 @@
       "owner": "@croco/lifecycle-core"
     },
     {
+      "path": "packages/lifecycle-core/src/tests/LifecycleClock.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/lifecycle-core"
+    },
+    {
       "path": "packages/lifecycle-core/src/tests/LifecycleCore.spec.ts",
       "lane": "fast",
       "qualifiers": [],
@@ -7141,6 +7147,12 @@
     },
     {
       "path": "scripts/tests/strict-contract-typecheck.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "repo:ci"
+    },
+    {
+      "path": "scripts/tests/test-clock-check.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "repo:ci"

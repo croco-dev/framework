@@ -4,6 +4,12 @@ import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { isAbsolute, join, relative, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import ts from "typescript";
+import {
+  detectTestClockFindings,
+  isControlledTestClockSource,
+  TEST_CLOCK_DIAGNOSTIC,
+  TEST_CLOCK_RECOVERY,
+} from "./test-clock-check.mts";
 
 export type StaticMisuseDiagnostic = {
   readonly code: string;
@@ -397,6 +403,41 @@ function detectDefaultLocaleCompare({
   return diagnostics;
 }
 
+const controlledTestClockRule: StaticMisuseRule = {
+  id: "controlled-test-clock-boundary",
+  code: TEST_CLOCK_DIAGNOSTIC,
+  title: "Controlled test fixtures preserve their explicit clock boundary",
+  targetDir: ".",
+  sourceDirs: ["packages", "examples", "scripts", "tests"],
+  description:
+    "Opted-in test fixtures must inject declared temporal dependencies into every direct constructor and avoid ambient wall-clock reads.",
+  limitation:
+    "Only test/helper files declaring // croco-test-clock: controlled are checked. Resolved constructor signatures identify callable clock/now, clock.now objects and callable schedule/scheduler options. Opaque factories, imported callback bodies, arbitrary dependency names and shared-clock identity are not inferred.",
+  recovery: TEST_CLOCK_RECOVERY,
+  detectors: [],
+  allowInlineIgnore: false,
+  syntaxDetectors: [
+    {
+      detect: ({ sourceFile, checker, relativeFile, lines, rule }) => {
+        if (!checker || !isControlledTestClockSource(relativeFile, sourceFile.text)) return [];
+        return detectTestClockFindings(sourceFile, checker).map(({ node, message }) => {
+          const location = sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile));
+          return {
+            code: rule.code,
+            ruleId: rule.id,
+            file: relativeFile,
+            line: location.line + 1,
+            column: location.character + 1,
+            message,
+            excerpt: (lines[location.line] ?? "").trim(),
+            action: rule.recovery,
+          };
+        });
+      },
+    },
+  ],
+};
+
 const STATIC_MISUSE_RULES: readonly StaticMisuseRule[] = [
   repositoryBoundaryRule,
   restGeneratedContractRule,
@@ -407,6 +448,7 @@ const STATIC_MISUSE_RULES: readonly StaticMisuseRule[] = [
   directErrorSubclassRule,
   emptyCatchRuntimeBoundaryRule,
   deterministicLocaleCompareRule,
+  controlledTestClockRule,
 ];
 
 function matchImportSpecifier(line: string, specifierPattern: RegExp): RegExpMatchArray | null {
@@ -3117,10 +3159,15 @@ function scanRule(rootDir: string, rule: StaticMisuseRule): StaticMisuseRuleResu
     : walkSourceFiles(targetDir);
   const programFilePaths = filePaths.filter((filePath) => {
     const relativeFile = toPosixPath(relative(rootDir, filePath));
-    return !rule.includeFile || rule.includeFile(relativeFile);
+    return (
+      (!rule.includeFile || rule.includeFile(relativeFile)) &&
+      (rule.id !== controlledTestClockRule.id ||
+        isControlledTestClockSource(relativeFile, readFileSync(filePath, "utf-8")))
+    );
   });
   const program =
-    rule.id === restOverloadedContractRouteDecoratorRule.id
+    rule.id === restOverloadedContractRouteDecoratorRule.id ||
+    rule.id === controlledTestClockRule.id
       ? ts.createProgram(programFilePaths, {
           allowJs: true,
           experimentalDecorators: true,
@@ -3131,6 +3178,12 @@ function scanRule(rootDir: string, rule: StaticMisuseRule): StaticMisuseRuleResu
           skipLibCheck: true,
           target: ts.ScriptTarget.Latest,
           types: [],
+          ...(rule.id === controlledTestClockRule.id
+            ? {
+                strict: true,
+                paths: { "@croco/*": [join(rootDir, "packages/*/src/index.ts")] },
+              }
+            : {}),
         })
       : null;
   const checker = program?.getTypeChecker();

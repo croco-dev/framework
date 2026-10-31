@@ -60,6 +60,7 @@
   "devDependencies": {
     "@croco/framework-context": "workspace:*",
     "@croco/tasks-core": "workspace:*",
+    "@croco/testing": "workspace:*",
     "tsup": "^8.4.0",
     "typescript": "^5.7.2",
     "vitest": "4.1.8",

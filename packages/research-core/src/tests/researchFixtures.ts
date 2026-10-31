@@ -1,5 +1,10 @@
+// croco-test-clock: controlled
+import { fixedClock } from "@croco/testing";
+import { vi } from "vitest";
+import { InMemoryResearchStore, ResearchService } from "../index";
 import type {
   Candidate,
+  ResearchAuthorizer,
   ResearchAccess,
   ResearchCommand,
   ResearchScope,
@@ -48,3 +53,19 @@ export const command = (revision: number, key: string): ResearchCommand => ({
   reason: "Synthetic verification",
   source: "test-command",
 });
+
+/** Every reader, permission variant and restarted service uses this fixture's timeline. */
+export function createResearchFixture(initial = "2026-10-13T00:00:00Z") {
+  const time = fixedClock(initial);
+  const clock = () => time.now;
+  const store = new InMemoryResearchStore();
+  const send = vi.fn(async () => ({ status: "queued" as const, executionIds: ["execution"] }));
+  const createService = (
+    authorizer: ResearchAuthorizer = {
+      authorize: async (input, permission) =>
+        input.principal === "verified-session" &&
+        !(input.actor === "reader" && permission !== "research.read"),
+    },
+  ) => new ResearchService(store, authorizer, { send }, [study.bookingUrl], clock);
+  return { time, clock, store, send, createService, service: createService() };
+}

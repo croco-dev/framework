@@ -1,3 +1,5 @@
+// croco-test-clock: controlled
+import { fixedClock } from "@croco/testing";
 import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import {
@@ -10,7 +12,14 @@ import {
   Renders,
 } from "@croco/engagement-core";
 import { createResearchEngagementSender } from "../index";
-import { access, candidates, command, scope, study } from "./researchFixtures";
+import {
+  access,
+  candidates,
+  command,
+  scope,
+  study,
+  createResearchFixture,
+} from "./researchFixtures";
 import { InMemoryResearchStore, ResearchService } from "../index";
 const message = defineMessage({
   id: "research-invite",
@@ -45,20 +54,28 @@ describe("Research engagement integration", () => {
         push: [],
       })),
     );
+    const time = fixedClock("2026-10-13T00:00:00Z");
+    const clock = () => time.now;
     let denied = true;
     const engagement = new EngagementService(
       directory,
       render,
       { prepareDispatch: () => ({ dispatch }) },
       { evaluate: async () => ({ suppressed: denied, kind: "preference" }) },
+      undefined,
+      clock,
     );
     const sender = createResearchEngagementSender(engagement, message, async (definition) => ({
       bookingUrl: definition.bookingUrl,
     }));
     const store = new InMemoryResearchStore();
-    const service = new ResearchService(store, { authorize: async () => true }, sender, [
-      study.bookingUrl,
-    ]);
+    const service = new ResearchService(
+      store,
+      { authorize: async () => true },
+      sender,
+      [study.bookingUrl],
+      clock,
+    );
     await service.publishStudy(scope, study, access, command(0, "publish"));
     await service.importCandidates(scope, study.id, candidates(), access, command(1, "import"));
     await service.selectCandidates(scope, study.id, access, command(2, "select"));
