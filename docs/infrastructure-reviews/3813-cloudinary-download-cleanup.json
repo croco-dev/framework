@@ -58,7 +58,7 @@
       "classification": "pure-contract",
       "reason": "Regenerate the unchanged Cloudinary upload-intent Problem source location after download cleanup shifts its implementation. Problem codes, categories, recovery policies and runtime behavior are unchanged.",
       "files": {
-        "packages/problems-core/src/generated/problem-code-registry.ts": "98e5c28cd41054b3eb995870d8e4afee6a4f9772f405df0d79fdc12cf3b9bd28"
+        "packages/problems-core/src/generated/problem-code-registry.ts": "67e6a1658dbac97d89e78e40408fca242004b92a9371d24c3e9e31699f4ef105"
       },
       "catalogRuntimes": [],
       "profiles": {
