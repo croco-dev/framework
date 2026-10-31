@@ -13,9 +13,10 @@ import {
 } from "@croco/framework-context";
 import type { ILogger } from "@croco/framework-context";
 import { Hono } from "hono";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { CrocoRouteRegistrar } from "../libs/CrocoRouteRegistrar";
 import { ErrorHandler } from "../libs/ErrorHandler";
+import { runWithResponseRequestScope } from "../libs/ResponseRequestScope";
 
 const logger: ILogger = {
   info() {},
@@ -285,6 +286,170 @@ describe("response scope terminal paths", () => {
     gate.resolve();
   });
 
+  it.each([false, true])(
+    "releases an aborted source after cancellation settles (reading=%s)",
+    async (reading) => {
+      let resource: RequestResource | undefined;
+      const started = deferred();
+      const release = deferred();
+      const abort = new AbortController();
+      const failure = new Error("request disconnected");
+      const cancel = vi.fn(async () => {
+        await release.promise;
+      });
+      const source = new ReadableStream<Uint8Array>(
+        {
+          pull() {
+            started.resolve();
+            return new Promise<void>(() => {});
+          },
+          cancel,
+        },
+        { highWaterMark: 0 },
+      );
+      const app = fixture(() => {
+        resource = Container.get(RequestResource);
+        return new Response(source);
+      });
+      const response = await app.request("/stream", { signal: abort.signal });
+      expect(source.locked).toBe(true);
+      const body = reading ? response.text() : undefined;
+      void body?.catch(() => undefined);
+      if (reading) await started.promise;
+      try {
+        abort.abort(failure);
+        await expect(body ?? response.text()).rejects.toBe(failure);
+        expect(resource?.disposals).toBe(1);
+        expect(cancel).toHaveBeenCalledExactlyOnceWith(failure);
+        expect(source.locked).toBe(true);
+      } finally {
+        release.resolve();
+      }
+      await vi.waitFor(() => expect(source.locked).toBe(false));
+      expect(resource?.disposals).toBe(1);
+    },
+  );
+
+  it("shares reader cleanup when request abort interrupts consumer cancellation", async () => {
+    let resource: RequestResource | undefined;
+    const started = deferred();
+    const cancelling = deferred();
+    const release = deferred();
+    const abort = new AbortController();
+    const cancel = vi.fn(async () => {
+      cancelling.resolve();
+      await release.promise;
+    });
+    const source = new ReadableStream<Uint8Array>(
+      {
+        pull() {
+          started.resolve();
+          return new Promise<void>(() => {});
+        },
+        cancel,
+      },
+      { highWaterMark: 0 },
+    );
+    const app = fixture(() => {
+      resource = Container.get(RequestResource);
+      return new Response(source);
+    });
+    const response = await app.request("/stream", { signal: abort.signal });
+    const consumer = response.body?.getReader();
+    const read = consumer?.read();
+    await started.promise;
+    const cancellation = consumer?.cancel("consumer stopped");
+    try {
+      await cancelling.promise;
+      expect(resource?.disposals).toBe(0);
+      abort.abort("request stopped");
+      expect(resource?.disposals).toBe(1);
+      expect(source.locked).toBe(true);
+    } finally {
+      release.resolve();
+      await cancellation;
+    }
+    expect(await read).toEqual({ done: true, value: undefined });
+    expect(cancel).toHaveBeenCalledExactlyOnceWith("consumer stopped");
+    expect(source.locked).toBe(false);
+    expect(resource?.disposals).toBe(1);
+  });
+
+  it("releases the reader and reports a rejected abort cancellation without replacing the abort error", async () => {
+    let resource: RequestResource | undefined;
+    const release = deferred();
+    const abort = new AbortController();
+    const failure = new Error("request disconnected");
+    const cancellationFailure = new Error("source cancellation failed");
+    const report = vi.fn();
+    const source = new ReadableStream<Uint8Array>({
+      async cancel() {
+        await release.promise;
+        throw cancellationFailure;
+      },
+    });
+    const response = await runWithResponseRequestScope(
+      { requestId: "abort-cancellation-failure" },
+      new Request("http://localhost/stream", { signal: abort.signal }),
+      async () => {
+        resource = Container.get(RequestResource);
+        return new Response(source);
+      },
+      report,
+    );
+    try {
+      abort.abort(failure);
+      await expect(response.text()).rejects.toBe(failure);
+      expect(resource?.disposals).toBe(1);
+    } finally {
+      release.resolve();
+    }
+    await vi.waitFor(() => expect(report).toHaveBeenCalledExactlyOnceWith(cancellationFailure));
+    expect(source.locked).toBe(false);
+    expect(resource?.disposals).toBe(1);
+  });
+
+  it.each(["EOF", "error"])("releases the reader when %s races with abort", async (terminal) => {
+    let resource: RequestResource | undefined;
+    let sourceController: ReadableStreamDefaultController<Uint8Array> | undefined;
+    const started = deferred();
+    const abort = new AbortController();
+    const failure = new Error("request disconnected");
+    const sourceFailure = new Error("source failed");
+    const report = vi.fn();
+    const source = new ReadableStream<Uint8Array>(
+      {
+        start(controller) {
+          sourceController = controller;
+        },
+        pull() {
+          started.resolve();
+        },
+      },
+      { highWaterMark: 0 },
+    );
+    const response = await runWithResponseRequestScope(
+      { requestId: "terminal-abort-race" },
+      new Request("http://localhost/stream", { signal: abort.signal }),
+      async () => {
+        resource = Container.get(RequestResource);
+        return new Response(source);
+      },
+      report,
+    );
+    const body = response.text();
+    void body.catch(() => undefined);
+    await started.promise;
+    if (terminal === "EOF") sourceController?.close();
+    else sourceController?.error(sourceFailure);
+    abort.abort(failure);
+    await expect(body).rejects.toBe(failure);
+    await vi.waitFor(() => expect(source.locked).toBe(false));
+    expect(resource?.disposals).toBe(1);
+    if (terminal === "error") expect(report).toHaveBeenCalledExactlyOnceWith(sourceFailure);
+    else expect(report).not.toHaveBeenCalled();
+  });
+
   it.each(["GET", "HEAD"])("cleans up %s responses without a body consumer", async (method) => {
     let resource: RequestResource | undefined;
     let cancelled = false;
@@ -355,6 +520,7 @@ describe("response scope terminal paths", () => {
       let resource: RequestResource | undefined;
       const ended = deferred();
       const gate = deferred();
+      let source: ReadableStream<Uint8Array> | undefined;
       const app = fixture(() => {
         resource = Container.get(RequestResource);
         const originalDestroy = resource.destroy.bind(resource);
@@ -363,26 +529,25 @@ describe("response scope terminal paths", () => {
           ended.resolve();
         };
         let first = true;
-        return new Response(
-          new ReadableStream<Uint8Array>(
-            {
-              async pull(controller) {
-                if (first) {
-                  first = false;
-                  controller.enqueue(new TextEncoder().encode("connected"));
-                } else {
-                  await gate.promise;
-                  if (terminal === "complete") {
-                    expect(Container.get(RequestResource)).toBe(resource);
-                    controller.enqueue(new TextEncoder().encode("finished"));
-                    controller.close();
-                  }
+        source = new ReadableStream<Uint8Array>(
+          {
+            async pull(controller) {
+              if (first) {
+                first = false;
+                controller.enqueue(new TextEncoder().encode("connected"));
+              } else {
+                await gate.promise;
+                if (terminal === "complete") {
+                  expect(Container.get(RequestResource)).toBe(resource);
+                  controller.enqueue(new TextEncoder().encode("finished"));
+                  controller.close();
                 }
-              },
+              }
             },
-            { highWaterMark: 0 },
-          ),
+          },
+          { highWaterMark: 0 },
         );
+        return new Response(source);
       });
       const server = serve({
         fetch: (request) => app.fetch(request),
@@ -413,6 +578,7 @@ describe("response scope terminal paths", () => {
           client.destroy();
         }
         await ended.promise;
+        await vi.waitFor(() => expect(source?.locked).toBe(false));
         expect(resource?.disposals).toBe(1);
       } finally {
         gate.resolve();
