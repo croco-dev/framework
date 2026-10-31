@@ -165,9 +165,9 @@ export interface CreateExecutionParams {
   type: string;
   /** Optional payload data */
   payload?: unknown;
-  /** Maximum retry attempts (default: 1) */
+  /** Maximum attempts, including the first attempt; a positive safe integer (default: 1). */
   maxAttempts?: number;
-  /** Timeout in milliseconds (default: no timeout) */
+  /** Finite, non-negative timeout in milliseconds; 0 or undefined means no timeout. */
   timeout?: number;
   /** Optional scheduled start time */
   scheduledFor?: Date;

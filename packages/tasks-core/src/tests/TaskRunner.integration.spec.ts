@@ -163,6 +163,68 @@ describe("TaskRunner integration", () => {
     vi.useRealTimers();
   });
 
+  it.each([
+    { maxAttempts: 0 },
+    { maxAttempts: -1 },
+    { maxAttempts: NaN },
+    { maxAttempts: Infinity },
+    { maxAttempts: 1.5 },
+    { timeout: NaN },
+    { timeout: Infinity },
+    { timeout: -1 },
+  ])(
+    "rejects invalid task configuration %o before storage or handler execution",
+    async (options) => {
+      const handle = vi.fn().mockResolvedValue("must not run");
+      @Component()
+      class InvalidTask {
+        @Task({ name: "invalid-config-task", ...options })
+        async run(): Promise<string> {
+          return handle();
+        }
+      }
+
+      Container.set(InvalidTask, new InvalidTask());
+      const store = new MemoryExecutionStore();
+      const create = vi.spyOn(store, "create");
+      const manager = new ExecutionManagerImpl(store);
+      const runner = new TaskRunner(manager, TaskRegistry.fromMetadata());
+
+      await expect(runner.execute("invalid-config-task", {})).rejects.toMatchObject({
+        code: "execution/invalid-configuration",
+        category: "ValidationError",
+      });
+      expect(create).not.toHaveBeenCalled();
+      expect(handle).not.toHaveBeenCalled();
+      expect(await store.list()).toEqual([]);
+    },
+  );
+
+  it.each([undefined, 0, 2_147_483_648])(
+    "executes a task with timeout %s through the real execution manager",
+    async (timeout) => {
+      const handle = vi.fn().mockResolvedValue("done");
+      @Component()
+      class ValidTask {
+        @Task({ name: "valid-config-task", timeout })
+        async run(): Promise<string> {
+          return handle();
+        }
+      }
+
+      Container.set(ValidTask, new ValidTask());
+      const store = new MemoryExecutionStore();
+      const manager = new ExecutionManagerImpl(store);
+      const runner = new TaskRunner(manager, TaskRegistry.fromMetadata());
+
+      await expect(runner.execute("valid-config-task", {})).resolves.toBe("done");
+      const [execution] = await store.list();
+      expect(execution).toMatchObject({ status: "completed", maxAttempts: 1, attempts: 1 });
+      expect(execution?.timeout).toBe(timeout);
+      expect(handle).toHaveBeenCalledOnce();
+    },
+  );
+
   it("retries an ordinary Error while attempts remain", async () => {
     @Component()
     class RetriableTask {
