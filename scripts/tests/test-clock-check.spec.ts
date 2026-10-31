@@ -1,6 +1,8 @@
+import { spawnSync } from "node:child_process";
 import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import ts from "typescript";
 import { afterEach, describe, expect, it } from "vitest";
 
@@ -199,5 +201,22 @@ const notAdjacent = Date.now();
         action: expect.stringContaining("bound factory"),
       }),
     ]);
+    const cli = spawnSync(
+      process.execPath,
+      [
+        "--experimental-strip-types",
+        fileURLToPath(new URL("../static-misuse-check.mts", import.meta.url)),
+        "--root",
+        root,
+      ],
+      { encoding: "utf-8" },
+    );
+    const output = `${cli.stdout}${cli.stderr}`;
+    expect(cli.status).toBe(1);
+    expect(output).toContain("CROCO_STATIC_TEST_CLOCK_BOUNDARY");
+    expect(output).toContain("reasoned next-line real-time exception");
+    expect(output).not.toContain(
+      "escape hatch: // croco-static-misuse-ignore-next-line CROCO_STATIC_TEST_CLOCK_BOUNDARY",
+    );
   });
 });

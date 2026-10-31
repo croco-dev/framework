@@ -326,13 +326,14 @@ describe("verification manifest", () => {
   });
 
   it("preserves the exact pre-split monolithic manifest output", () => {
+    // The required clock-check test is the only added --path in the serialized release gate.
     const manifests = (["repo", "spine", "publish"] as const).map((profile) =>
       createVerificationManifest(profile),
     );
     expect(
       createHash("sha256").update(JSON.stringify(manifests)).digest("hex"),
       "The pre-split monolithic manifest changed; update this digest only after intentionally verifying the new serialized commands.",
-    ).toBe("2c44b2e3b5e3921584c005e936546968e08b4111a30ca6077ba1c3b827fc3d55");
+    ).toBe("4ce397ab46c538c1199897415624ee93f32a426dc2d6f6accfa064e9746405c4");
   });
 
   it("classifies every dependency edge and every cross-lane edge for synthesis", () => {
