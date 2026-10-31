@@ -13,6 +13,22 @@ export async function runWithResponseRequestScope(
   let output: ReadableStreamDefaultController<Uint8Array> | undefined;
   let finished = false;
   let cancelling = false;
+  const releaseReader = (): void => {
+    const responseReader = reader;
+    reader = undefined;
+    responseReader?.releaseLock();
+  };
+  const cancelReader = async (reason: unknown): Promise<void> => {
+    const responseReader = reader;
+    if (!responseReader) return;
+    reader = undefined;
+    cancelling = true;
+    try {
+      await scope.run(() => responseReader.cancel(reason));
+    } finally {
+      responseReader.releaseLock();
+    }
+  };
   const finish = (failure?: { readonly error: unknown }): void => {
     if (finished) return;
     finished = true;
@@ -23,8 +39,7 @@ export async function runWithResponseRequestScope(
     const error: unknown = request.signal.reason;
     output?.error(error);
     try {
-      const cancellation = reader ? scope.run(() => reader?.cancel(error)) : undefined;
-      void cancellation?.catch(reportCancellationFailure);
+      void cancelReader(error).catch(reportCancellationFailure);
     } finally {
       finish({ error });
     }
@@ -65,7 +80,7 @@ export async function runWithResponseRequestScope(
             if (chunk.done) {
               finish();
               controller.close();
-              responseReader.releaseLock();
+              releaseReader();
             } else {
               controller.enqueue(chunk.value);
             }
@@ -73,20 +88,18 @@ export async function runWithResponseRequestScope(
             if (cancelling) return;
             finish({ error });
             controller.error(error);
-            responseReader.releaseLock();
+            releaseReader();
           }
         },
         async cancel(reason: unknown) {
           if (finished) return;
-          cancelling = true;
           try {
-            await scope.run(() => responseReader.cancel(reason));
+            await cancelReader(reason);
           } catch (error) {
             finish({ error });
             throw error;
           } finally {
             finish();
-            responseReader.releaseLock();
           }
         },
       },

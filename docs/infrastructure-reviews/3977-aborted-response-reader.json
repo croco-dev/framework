@@ -1,0 +1,63 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "transports-http",
+      "classification": "runtime-adapter",
+      "reason": "Response readers are released after request-abort cancellation settles. Abort and consumer cancellation transfer the same reader ownership once, preserving immediate abort delivery and request-scope disposal.",
+      "files": {
+        "packages/transports-http/src/libs/ResponseRequestScope.ts": "8f204e642289a3733e1373c0155128a748743a3de24297843ce2d4a033ab4656"
+      },
+      "catalogRuntimes": ["node", "lambda"],
+      "profiles": {
+        "kubernetes": {
+          "result": "supported",
+          "reason": "The existing Node HTTP host fixture exercises a real client disconnect and verifies that the response source is unlocked after scope cleanup.",
+          "providers": ["@croco/transports-http", "@hono/node-server"],
+          "constraints": [
+            "Evidence runs the Node host locally, not a deployed Kubernetes cluster or production certification.",
+            "A source cancellation that never settles retains its reader until settlement; request abort and scope disposal remain immediate."
+          ],
+          "references": [
+            "packages/transports-http/src/libs/ResponseRequestScope.ts",
+            "packages/transports-http/src/tests/ResponseRequestScope.spec.ts"
+          ],
+          "evidence": {
+            "kind": "host-runtime",
+            "runtime": "node",
+            "path": "packages/transports-http/src/tests/ResponseRequestScope.spec.ts",
+            "testName": "response scope terminal paths keeps Node response providers alive until disconnect",
+            "sha256": "55300a10b2b19c9d3f45f9c30ac1a1910417a562c07fe0029966bf15817567f9"
+          }
+        },
+        "aws-lambda": {
+          "result": "conditional",
+          "reason": "Reuse the existing Lambda response buffering path, which consumes the body before flush. This correction changes no Lambda serialization or invocation owner.",
+          "providers": ["@croco/transports-http/CrocoLambdaAdapter"],
+          "constraints": [
+            "The local Lambda buffering regression does not certify an AWS deployment.",
+            "The invocation must finish body consumption and request cleanup before telemetry flush."
+          ],
+          "references": [
+            "packages/transports-http/src/libs/ResponseRequestScope.ts",
+            "packages/transports-http/src/tests/ResponseRequestScope.spec.ts",
+            "packages/transports-http/src/libs/CrocoLambdaAdapter.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "unsupported",
+          "host": "workers",
+          "reason": "The HTTP transport package claims Node and Lambda runtimes only. This reader cleanup does not add a Workers host or change async-context compatibility.",
+          "providers": [],
+          "constraints": [
+            "No Workers runtime claim, Worker isolate execution or Cloudflare deployment certification is introduced."
+          ],
+          "references": [
+            "packages/transports-http/src/libs/ResponseRequestScope.ts",
+            "docs/package-catalog.json"
+          ]
+        }
+      }
+    }
+  ]
+}
