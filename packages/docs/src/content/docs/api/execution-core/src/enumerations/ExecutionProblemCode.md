@@ -55,6 +55,12 @@ title: "ExecutionProblemCode"
 
 ---
 
+### INVALID_CONFIGURATION
+
+> **INVALID_CONFIGURATION**: `"execution/invalid-configuration"`
+
+---
+
 ### INVALID_CONTINUATION_LEASE_DURATION
 
 > **INVALID_CONTINUATION_LEASE_DURATION**: `"execution/invalid-continuation-lease-duration"`
