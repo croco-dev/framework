@@ -591,6 +591,189 @@ describe("CloudinaryProvider", () => {
   });
 
   describe("getStream()", () => {
+    describe("failed download response cleanup", () => {
+      beforeEach(() => {
+        vi.useFakeTimers();
+      });
+
+      afterEach(() => {
+        vi.useRealTimers();
+      });
+
+      it.each([
+        [404, "STORAGE_FILE_NOT_FOUND"],
+        [403, "storage-cloudinary/validation-failed"],
+      ])("cancels an HTTP %i body before returning its original Problem", async (status, code) => {
+        const cancel = vi.fn();
+        const body = new ReadableStream<Uint8Array>({ cancel });
+        vi.mocked(global.fetch).mockResolvedValue(new Response(body, { status }));
+
+        await expect(provider.getStream("test-key")).rejects.toMatchObject({ code });
+
+        expect(cancel).toHaveBeenCalledTimes(1);
+        expect(global.fetch).toHaveBeenCalledTimes(1);
+        expect(vi.getTimerCount()).toBe(0);
+      });
+
+      it.each([429, 503])("waits for HTTP %i cleanup before retrying", async (status) => {
+        const events: string[] = [];
+        let finishCleanup = () => {};
+        let cleanupStarted = () => {};
+        const started = new Promise<void>((resolve) => {
+          cleanupStarted = resolve;
+        });
+        const cleanup = new Promise<void>((resolve) => {
+          finishCleanup = resolve;
+        });
+        const body = new ReadableStream<Uint8Array>({
+          async cancel() {
+            cleanupStarted();
+            await cleanup;
+            events.push("cleaned");
+          },
+        });
+        vi.mocked(global.fetch)
+          .mockResolvedValueOnce(new Response(body, { status }))
+          .mockImplementationOnce(async () => {
+            events.push("retried");
+            return new Response(new Uint8Array([7, 19]));
+          });
+
+        const operation = provider.getStream("test-key");
+        await started;
+        expect(global.fetch).toHaveBeenCalledTimes(1);
+        await vi.advanceTimersByTimeAsync(20);
+        expect(global.fetch).toHaveBeenCalledTimes(1);
+        finishCleanup();
+        await vi.runAllTimersAsync();
+        const stream = await operation;
+
+        expect(events).toEqual(["cleaned", "retried"]);
+        expect(new Uint8Array(await new Response(stream).arrayBuffer())).toEqual(
+          new Uint8Array([7, 19]),
+        );
+        expect(vi.getTimerCount()).toBe(0);
+      });
+
+      it.each([
+        [404, "STORAGE_FILE_NOT_FOUND", 1],
+        [429, "storage-cloudinary/retryable-upstream", 3],
+        [503, "storage-cloudinary/retryable-upstream", 3],
+        [501, "storage-cloudinary/terminal-upstream", 3],
+      ])(
+        "preserves HTTP %i classification when cancellation rejects",
+        async (status, code, attempts) => {
+          const cancel = vi.fn(async () => {
+            throw new Error("cleanup failed");
+          });
+          vi.mocked(global.fetch).mockImplementation(
+            async () => new Response(new ReadableStream<Uint8Array>({ cancel }), { status }),
+          );
+          const result = expect(provider.getStream("test-key")).rejects.toMatchObject({
+            code,
+            ...(status === 404 ? {} : { extensions: { upstreamStatus: status } }),
+          });
+          await vi.runAllTimersAsync();
+          await result;
+
+          expect(cancel).toHaveBeenCalledTimes(attempts);
+          expect(global.fetch).toHaveBeenCalledTimes(attempts);
+          expect(vi.getTimerCount()).toBe(0);
+        },
+      );
+
+      it.each([404, 503])(
+        "bounds stalled HTTP %i cleanup without replacing the failure",
+        async (status) => {
+          const rejectCleanups: ((error: Error) => void)[] = [];
+          const cancel = vi.fn(
+            () =>
+              new Promise<void>((_resolve, reject) => {
+                rejectCleanups.push(reject);
+              }),
+          );
+          vi.mocked(global.fetch).mockImplementation(
+            async () => new Response(new ReadableStream<Uint8Array>({ cancel }), { status }),
+          );
+          let settled = false;
+          const startedAt = Date.now();
+          const result = expect(
+            provider.getStream("test-key").finally(() => {
+              settled = true;
+            }),
+          ).rejects.toMatchObject({
+            code:
+              status === 404 ? "STORAGE_FILE_NOT_FOUND" : "storage-cloudinary/retryable-upstream",
+          });
+          await vi.advanceTimersByTimeAsync(999);
+          expect(settled).toBe(false);
+          expect(global.fetch).toHaveBeenCalledTimes(1);
+          await vi.runAllTimersAsync();
+          await result;
+
+          expect(cancel).toHaveBeenCalledTimes(status === 404 ? 1 : 3);
+          if (status === 404) expect(Date.now() - startedAt).toBe(1000);
+          expect(vi.getTimerCount()).toBe(0);
+          for (const reject of rejectCleanups) reject(new Error("late cleanup rejection"));
+          await Promise.resolve();
+        },
+      );
+
+      it("stops waiting for cleanup on caller abort without retrying", async () => {
+        const controller = new AbortController();
+        const reason = new Error("caller cancelled during cleanup");
+        let cleanupStarted = () => {};
+        const started = new Promise<void>((resolve) => {
+          cleanupStarted = resolve;
+        });
+        const cancel = vi.fn(() => {
+          cleanupStarted();
+          return new Promise<void>(() => {});
+        });
+        vi.mocked(global.fetch).mockResolvedValue(
+          new Response(new ReadableStream<Uint8Array>({ cancel }), { status: 503 }),
+        );
+        const result = expect(
+          provider.getStream("test-key", { signal: controller.signal }),
+        ).rejects.toMatchObject({ code: "STORAGE_OPERATION_ABORTED", cause: reason });
+        await started;
+        controller.abort(reason);
+        await result;
+
+        expect(cancel).toHaveBeenCalledTimes(1);
+        expect(global.fetch).toHaveBeenCalledTimes(1);
+        expect(vi.getTimerCount()).toBe(0);
+      });
+
+      it("preserves not-found responses without a body", async () => {
+        vi.mocked(global.fetch).mockResolvedValue(new Response(null, { status: 404 }));
+
+        await expect(provider.getStream("test-key")).rejects.toThrow(FileNotFoundProblem);
+        expect(global.fetch).toHaveBeenCalledTimes(1);
+        expect(vi.getTimerCount()).toBe(0);
+      });
+
+      it("leaves successful response cancellation to the caller", async () => {
+        const cancel = vi.fn();
+        const body = new ReadableStream<Uint8Array>({
+          start(controller) {
+            controller.enqueue(new Uint8Array([13, 29]));
+          },
+          cancel,
+        });
+        vi.mocked(global.fetch).mockResolvedValue(new Response(body));
+
+        const stream = await provider.getStream("test-key");
+        const reader = stream.getReader();
+        expect(await reader.read()).toEqual({ done: false, value: new Uint8Array([13, 29]) });
+        expect(cancel).not.toHaveBeenCalled();
+        await reader.cancel("caller finished");
+        reader.releaseLock();
+        expect(cancel).toHaveBeenCalledWith("caller finished");
+        expect(vi.getTimerCount()).toBe(0);
+      });
+    });
+
     it.each(["uploads/avatar_123", "uploads/avatar.", "uploads/avatar.png."])(
       "should request an automatic format for extensionless image key %s",
       async (key) => {
