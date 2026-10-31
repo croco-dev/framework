@@ -1,6 +1,5 @@
 import ts from "typescript";
 
-export const TEST_CLOCK_DIAGNOSTIC = "CROCO_STATIC_TEST_CLOCK_BOUNDARY";
 export const TEST_CLOCK_RECOVERY =
   "Create every fixture instance through its bound factory and pass the shared clock/scheduler explicitly. Reserve a reasoned next-line real-time exception for native lifecycle checks.";
 

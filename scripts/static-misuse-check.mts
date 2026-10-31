@@ -7,7 +7,6 @@ import ts from "typescript";
 import {
   detectTestClockFindings,
   isControlledTestClockSource,
-  TEST_CLOCK_DIAGNOSTIC,
   TEST_CLOCK_RECOVERY,
 } from "./test-clock-check.mts";
 
@@ -405,7 +404,7 @@ function detectDefaultLocaleCompare({
 
 const controlledTestClockRule: StaticMisuseRule = {
   id: "controlled-test-clock-boundary",
-  code: TEST_CLOCK_DIAGNOSTIC,
+  code: "CROCO_STATIC_TEST_CLOCK_BOUNDARY",
   title: "Controlled test fixtures preserve their explicit clock boundary",
   targetDir: ".",
   sourceDirs: ["packages", "examples", "scripts", "tests"],
@@ -3324,8 +3323,8 @@ function printTextReport(results: readonly StaticMisuseRuleResult[]): void {
 
     if (result.diagnostics.length > 0) {
       console.error(`  limitation: ${result.limitation}`);
-      if (rule && rule.allowInlineIgnore === false && rule.allowlistPath) {
-        console.error(`  reviewed baseline: ${rule.allowlistPath}`);
+      if (rule?.allowInlineIgnore === false) {
+        if (rule.allowlistPath) console.error(`  reviewed baseline: ${rule.allowlistPath}`);
       } else {
         console.error(
           `  escape hatch: // ${ignoreNextLinePrefix} ${result.code} -- explain why this direct reference is intentional`,
