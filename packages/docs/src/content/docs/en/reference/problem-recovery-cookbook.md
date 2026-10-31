@@ -19469,7 +19469,7 @@ Sources:
 
 Sources:
 
-- `packages/storage-cloudinary/src/libs/CloudinaryProvider.ts:474:13` (problem-factory)
+- `packages/storage-cloudinary/src/libs/CloudinaryProvider.ts:498:13` (problem-factory)
 
 <a id="storage-cloudinary-missing-config"></a>
 
