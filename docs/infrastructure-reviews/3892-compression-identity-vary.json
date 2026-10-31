@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "transports-http",
+      "classification": "pure-contract",
+      "reason": "Eligible identity responses declare Accept-Encoding as a cache selection input, preserving existing Vary tokens through route header merging. This is an in-memory HTTP metadata correction with no infrastructure dependency.",
+      "files": {
+        "packages/transports-http/src/libs/middleware/CompressionMiddleware.ts": "3c1b83cdf8945bee55ca6cd99975da92701372e915314209a603ec46eb81c309"
+      },
+      "catalogRuntimes": ["node", "lambda"],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "This correction merges HTTP Vary tokens for already buffered, compression-eligible responses. It adds no host capability, storage or lifecycle requirement.",
+          "providers": ["@croco/transports-http/compressionMiddleware"],
+          "constraints": [
+            "Existing Node/Lambda runtime claims and compression algorithms remain unchanged. No Workers support, live deployment or provider certification is claimed."
+          ],
+          "references": [
+            "packages/transports-http/src/libs/middleware/CompressionMiddleware.ts",
+            "packages/transports-http/src/libs/middleware/VaryHeader.ts",
+            "packages/transports-http/src/tests/CompressionMiddleware.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "This correction merges HTTP Vary tokens for already buffered, compression-eligible responses. It adds no host capability, storage or lifecycle requirement.",
+          "providers": ["@croco/transports-http/compressionMiddleware"],
+          "constraints": [
+            "Existing Node/Lambda runtime claims and compression algorithms remain unchanged. No Workers support, live deployment or provider certification is claimed."
+          ],
+          "references": [
+            "packages/transports-http/src/libs/middleware/CompressionMiddleware.ts",
+            "packages/transports-http/src/libs/middleware/VaryHeader.ts",
+            "packages/transports-http/src/tests/CompressionMiddleware.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "This correction merges HTTP Vary tokens for already buffered, compression-eligible responses. It adds no host capability, storage or lifecycle requirement.",
+          "providers": ["@croco/transports-http/compressionMiddleware"],
+          "constraints": [
+            "Existing Node/Lambda runtime claims and compression algorithms remain unchanged. No Workers support, live deployment or provider certification is claimed."
+          ],
+          "references": [
+            "packages/transports-http/src/libs/middleware/CompressionMiddleware.ts",
+            "packages/transports-http/src/libs/middleware/VaryHeader.ts",
+            "packages/transports-http/src/tests/CompressionMiddleware.spec.ts"
+          ]
+        }
+      }
+    }
+  ]
+}

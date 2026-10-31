@@ -31,23 +31,28 @@ export const compressionMiddleware = (options: CompressionOptions = {}): Middlew
 
     if (!shouldCompress(contentType)) return response;
 
-    const encoding = selectEncoding(acceptEncoding, encodings);
-    if (!encoding) return response;
-
     const body = getResponseBody(ctx);
     if (!body || body.length < threshold) return response;
 
-    const compressed = await compressBody(body, encoding);
-    if (!compressed) return response;
-
     const headers = new Headers(response.headers);
-    headers.set("Content-Encoding", encoding);
     setVaryHeader(headers, "Accept-Encoding");
+
+    const identityResponse = new Response(response.body, {
+      status: response.status,
+      statusText: response.statusText,
+      headers,
+    });
+    const encoding = selectEncoding(acceptEncoding, encodings);
+    if (!encoding) return identityResponse;
+
+    const compressed = await compressBody(body, encoding);
+    if (!compressed) return identityResponse;
+
+    headers.set("Content-Encoding", encoding);
     headers.delete("Content-Length");
 
     ctx.res.status = response.status;
     ctx.res.headers["content-encoding"] = encoding;
-    ctx.res.headers["vary"] = headers.get("Vary") ?? "Accept-Encoding";
     for (const key of Object.keys(ctx.res.headers)) {
       if (key.toLowerCase() === "content-length") {
         delete ctx.res.headers[key];
