@@ -1,5 +1,121 @@
 # @croco/framework-routes
 
+## 0.0.5
+
+### Patch Changes
+
+- ec0a465: Generate clients, schemas, contract graphs and manifests in a stable ordinal order regardless of the execution locale.
+- b278729: - fix: block critical test tooling advisories
+- 7cdfcae: Declare audited package side effects so bundlers remove pure imports while preserving required initialization and CSS.
+- 7d5be43: Root-anchored artifact ignore rules now produce the same generated manifest commit policy as equivalent relative rules.
+- c64b83f: Generated route registration now accepts `@All()` controllers and binds them through the adapter's all-method registration path.
+- f2b05cf: Preserve intent-map provider identity, scope and dependency edges for Component named aliases and namespace imports, while excluding unrelated decorators.
+- 5ba3e63: Reject route registration tables whose HTTP method, paths, or controller/handler bindings differ from the supplied ContractGraph, with field-level drift diagnostics and source locations. Preserve legacy v1 path normalization when contractPath is omitted.
+- a513c78: Generated route modules now resolve declared controllers through Croco DI and invoke their bound handler methods instead of returning placeholder responses.
+- 241593c: - fix(framework-routes): keep same-named providers in different modules as distinct intent entities
+- 17c8730: Resolve ESM and CommonJS consumers to declaration files matching each published implementation format.
+- 67e0cbe: fix: resolve published package types before runtime conditions
+- 5d54fb4: declare Apache-2.0 license across all publishable package manifests and ship LICENSE in published packages
+- bcc2712: Generated HTTP routes bind decorated controller arguments and reuse the HTTP validation, provider pipeline and response adapter while retaining metadata-free Hono context handlers.
+- dfea286: Derive intent map public symbols from TypeScript export declarations so comments, string values, and nested declarations do not publish phantom APIs. Preserve named exports and source locations, including all bindings in exported variable declarations.
+- c11a9b4: Preserve named catch-all matching and parameter extraction when routes are registered from generated tables, and
+  keep published Problem registry source locations synchronized with the shared route compiler import.
+- Updated dependencies [31a6ed5]
+- Updated dependencies [efe301f]
+- Updated dependencies [ec0a465]
+- Updated dependencies [28bc834]
+- Updated dependencies [78f08f7]
+- Updated dependencies [a6d9468]
+- Updated dependencies [4ca14ab]
+- Updated dependencies [38cba9c]
+- Updated dependencies [b278729]
+- Updated dependencies [7008727]
+- Updated dependencies [868ea09]
+- Updated dependencies [98ba459]
+- Updated dependencies [7cdfcae]
+- Updated dependencies [c91a72b]
+- Updated dependencies [cb61f2e]
+- Updated dependencies [9404839]
+- Updated dependencies [81ed45b]
+- Updated dependencies [21bfb6e]
+- Updated dependencies [26f4b9e]
+- Updated dependencies [d9ab40a]
+- Updated dependencies [2cc5438]
+- Updated dependencies [3342494]
+- Updated dependencies [7df16bb]
+- Updated dependencies [c1ce071]
+- Updated dependencies [639abfe]
+- Updated dependencies [0fa2546]
+- Updated dependencies [008f3f0]
+- Updated dependencies [543eda3]
+- Updated dependencies [6489abb]
+- Updated dependencies [6aeb0b0]
+- Updated dependencies [3648511]
+- Updated dependencies [dda0a50]
+- Updated dependencies [7d248c5]
+- Updated dependencies [be7408f]
+- Updated dependencies [16cc286]
+- Updated dependencies [734c41b]
+- Updated dependencies [eed5e70]
+- Updated dependencies [a90659b]
+- Updated dependencies [cfdc20a]
+- Updated dependencies [8ab3c0e]
+- Updated dependencies [17c8730]
+- Updated dependencies [67e0cbe]
+- Updated dependencies [e3bb85e]
+- Updated dependencies [4a15ff9]
+- Updated dependencies [44fb02d]
+- Updated dependencies [1c843a5]
+- Updated dependencies [45882f1]
+- Updated dependencies [f0c328e]
+- Updated dependencies [6bac6de]
+- Updated dependencies [efb33f9]
+- Updated dependencies [157089a]
+- Updated dependencies [df8d018]
+- Updated dependencies [5d54fb4]
+- Updated dependencies [20eccc9]
+- Updated dependencies [5584cd6]
+- Updated dependencies [c0b7a0a]
+- Updated dependencies [e745cc9]
+- Updated dependencies [33d4b2f]
+- Updated dependencies [54f9a57]
+- Updated dependencies [65f9c8a]
+- Updated dependencies [e9db5a8]
+- Updated dependencies [c5eee6e]
+- Updated dependencies [a2760e3]
+- Updated dependencies [ab51ace]
+- Updated dependencies [c11a9b4]
+- Updated dependencies [8aa72a1]
+- Updated dependencies [f141c18]
+- Updated dependencies [7f7ccee]
+- Updated dependencies [5306098]
+- Updated dependencies [6cb0a5c]
+- Updated dependencies [81a3d25]
+- Updated dependencies [fa8eea4]
+- Updated dependencies [4926f9f]
+- Updated dependencies [2c68e9c]
+- Updated dependencies [d0b77fd]
+- Updated dependencies [e1b6e54]
+- Updated dependencies [6107afa]
+- Updated dependencies [5d9a8df]
+- Updated dependencies [f9193be]
+- Updated dependencies [6d6863f]
+- Updated dependencies [aa19802]
+- Updated dependencies [a7bf96e]
+- Updated dependencies [ea4d1d1]
+- Updated dependencies [7b1505b]
+- Updated dependencies [8c1acbd]
+- Updated dependencies [99da854]
+- Updated dependencies [ae125e4]
+- Updated dependencies [76e734f]
+- Updated dependencies [0e0a46c]
+- Updated dependencies [377c684]
+- Updated dependencies [370ee55]
+- Updated dependencies [370ee55]
+  - @croco/protocols-core@0.2.0
+  - @croco/protocols-rest@0.1.0
+  - @croco/framework-context@0.1.0
+
 ## 0.0.4
 
 ### Patch Changes
