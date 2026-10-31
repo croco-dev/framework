@@ -34,21 +34,25 @@ It requires explicit values for zero-argument `clock`/`now` callbacks returning 
 both positional parameters and immediate options properties. Omitted options, explicit `undefined`,
 and values whose types still allow `undefined` fail. Date-valued inputs such as `{ now: Date }`
 are data, so they are not treated as dependency injection seams.
+Union options are checked against the alternatives selected by the supplied argument; each possible
+argument alternative must explicitly bind its branch's clock/scheduler dependencies.
 
 Ambient `Date()`, `Date.now()` and `new Date()` in a controlled file fail, including reads inside
-callbacks. Parsing a supplied timestamp and constructing a date from supplied milliseconds remain
+callbacks and literal computed accesses such as `Date['now']()` or `globalThis['Date']`.
+Parsing a supplied timestamp and constructing a date from supplied milliseconds remain
 valid. Fixed dates are allowed; the rule does not ban date literals or require every test to use
 `TestKernel`.
 
 A native event-loop, browser or provider lifecycle assertion may need real elapsed time. Exempt
-only the immediately following expression with a reason at the boundary:
+one ambient read in the immediately following expression with a reason at the boundary:
 
 ```typescript no-check
 // croco-test-clock-real-time -- Measure native socket shutdown; business expiry uses the fixture clock.
 const startedAt = Date.now();
 ```
 
-Blank reasons and separated comments do not suppress a diagnostic. The ordinary static-misuse
+The exception never waives a missing constructor dependency or a second ambient read, including
+another read on the same line. Blank reasons and separated comments do not suppress a diagnostic. The ordinary static-misuse
 ignore directives do not suppress this rule. A lifecycle exception must not make business TTL,
 retention, lease or retry assertions depend on wall time.
 

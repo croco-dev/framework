@@ -76,10 +76,15 @@ describe("Lifecycle controlled execution leases", () => {
         settled = true;
         return result;
       });
+    await time.advanceBy(0);
+    expect(time.pendingWork).toMatchObject([
+      { dueAt: "2026-07-26T00:00:00.010Z", source: "execution-lease" },
+    ]);
     await time.advanceBy(9);
     expect(settled).toBe(false);
     await time.advanceBy(1);
     await expect(pausing).resolves.toMatchObject({ state: { revision: 2 } });
+    expect(time.pendingWork).toEqual([]);
     expect(await registry.getRegistrationState("retention-risk", "1.0.0")).toBe("paused");
   });
 
@@ -101,8 +106,13 @@ describe("Lifecycle controlled execution leases", () => {
       version: "1.0.0",
       expectedRevision: 1,
     });
+    await time.advanceBy(0);
+    expect(time.pendingWork).toMatchObject([
+      { dueAt: "2026-07-26T00:00:01.000Z", source: "execution-lease" },
+    ]);
     await time.advanceBy(1_000);
     await expect(pausing).resolves.toMatchObject({ state: { revision: 2 } });
+    expect(time.pendingWork).toEqual([]);
     expect(time.now).toEqual(new Date("2026-07-26T00:00:01.000Z"));
   });
 });

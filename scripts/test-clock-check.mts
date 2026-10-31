@@ -28,26 +28,40 @@ export function detectTestClockFindings(
 ): readonly TestClockFinding[] {
   const findings: TestClockFinding[] = [];
   const lines = sourceFile.text.split(/\r?\n/);
+  const realTimeExpressions = new Set<ts.Expression>();
 
   function report(node: ts.Node, message: string): void {
-    const line = sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile)).line;
-    if (/^\s*\/\/\s*croco-test-clock-real-time\s+--\s+\S.*$/.test(lines[line - 1] ?? "")) return;
     findings.push({ node, message });
+  }
+
+  function reportAmbient(node: ts.Expression, message: string): void {
+    const owner = immediateExpressionOwner(node);
+    if (owner && !realTimeExpressions.has(owner.expression)) {
+      const start = sourceFile.getLineAndCharacterOfPosition(owner.anchor.getStart(sourceFile));
+      const prefix = (lines[start.line] ?? "").slice(0, start.character);
+      if (
+        /^\s*$/.test(prefix) &&
+        /^\s*\/\/\s*croco-test-clock-real-time\s+--\s+\S.*$/.test(lines[start.line - 1] ?? "")
+      ) {
+        realTimeExpressions.add(owner.expression);
+        return;
+      }
+    }
+    report(node, message);
   }
 
   function visit(node: ts.Node): void {
     if (ts.isNewExpression(node) && isGlobalDate(node.expression, checker)) {
       if (!node.arguments?.length)
-        report(node, "Ambient new Date() escapes the controlled fixture clock.");
+        reportAmbient(node, "Ambient new Date() escapes the controlled fixture clock.");
     } else if (ts.isCallExpression(node) && isGlobalDate(node.expression, checker)) {
-      report(node, "Ambient Date() escapes the controlled fixture clock.");
+      reportAmbient(node, "Ambient Date() escapes the controlled fixture clock.");
     } else if (
       ts.isCallExpression(node) &&
-      ts.isPropertyAccessExpression(node.expression) &&
-      node.expression.name.text === "now" &&
-      isGlobalDate(node.expression.expression, checker)
+      literalPropertyAccess(node.expression)?.name === "now" &&
+      isGlobalDate(literalPropertyAccess(node.expression)?.receiver, checker)
     ) {
-      report(node, "Ambient Date.now() escapes the controlled fixture clock.");
+      reportAmbient(node, "Ambient Date.now() escapes the controlled fixture clock.");
     }
 
     if (ts.isNewExpression(node)) {
@@ -65,22 +79,48 @@ export function detectTestClockFindings(
           return;
         }
 
+        const alternatives = typeAlternatives(parameterType, checker);
+        if (alternatives.length > 1) {
+          const branches = alternatives.map((type) => ({
+            type,
+            seams: temporalProperties(type, node, checker),
+          }));
+          if (!branches.some(({ seams }) => seams.length > 0)) return;
+          if (
+            !argument ||
+            mayBeUndefined(checker.getTypeAtLocation(argument)) ||
+            typeAlternatives(checker.getTypeAtLocation(argument), checker).some(
+              (suppliedType) =>
+                !branches.some(
+                  ({ type, seams }) =>
+                    checker.isTypeAssignableTo(suppliedType, type) &&
+                    seams.every((property) =>
+                      hasExplicitProperty(suppliedType, property.name, argument, checker),
+                    ),
+                ),
+            )
+          ) {
+            report(
+              argument ?? node,
+              `Constructor '${node.expression.getText(sourceFile)}' must receive a complete clock/scheduler options alternative from its controlled fixture.`,
+            );
+          }
+          return;
+        }
+
         const options = checker.getNonNullableType(parameterType);
         for (const property of checker.getPropertiesOfType(options)) {
           const propertyType = checker.getTypeOfSymbolAtLocation(property, node);
           if (!isTemporalSeam(property.name, propertyType, checker)) continue;
-          const supplied = argument
-            ? checker.getPropertyOfType(
-                checker.getNonNullableType(checker.getTypeAtLocation(argument)),
-                property.name,
-              )
-            : undefined;
           if (
             !argument ||
             mayBeUndefined(checker.getTypeAtLocation(argument)) ||
-            !supplied ||
-            (supplied.flags & ts.SymbolFlags.Optional) !== 0 ||
-            mayBeUndefined(checker.getTypeOfSymbolAtLocation(supplied, argument))
+            !hasExplicitProperty(
+              checker.getTypeAtLocation(argument),
+              property.name,
+              argument,
+              checker,
+            )
           ) {
             report(
               argument ?? node,
@@ -99,6 +139,8 @@ export function detectTestClockFindings(
 
 function isTemporalSeam(name: string, type: ts.Type, checker: ts.TypeChecker): boolean {
   const value = checker.getNonNullableType(type);
+  if (value.isUnion())
+    return value.types.some((alternative) => isTemporalSeam(name, alternative, checker));
   if (name === "scheduler" || name === "schedule") return value.getCallSignatures().length > 0;
   if (name !== "clock" && name !== "now") return false;
   if (isClockCallback(value, checker)) return true;
@@ -134,17 +176,92 @@ function mayBeUndefined(type: ts.Type): boolean {
   );
 }
 
-function isGlobalDate(expression: ts.Expression, checker: ts.TypeChecker): boolean {
-  const name = ts.isIdentifier(expression)
-    ? expression
-    : ts.isPropertyAccessExpression(expression)
-      ? expression.name
-      : undefined;
-  if (!name || name.text !== "Date") return false;
-  const symbol = checker.getSymbolAtLocation(name);
+function typeAlternatives(type: ts.Type, checker: ts.TypeChecker): readonly ts.Type[] {
+  const value = checker.getNonNullableType(type);
+  return value.isUnion() ? value.types : [value];
+}
+
+function temporalProperties(
+  type: ts.Type,
+  location: ts.Node,
+  checker: ts.TypeChecker,
+): readonly ts.Symbol[] {
+  return checker
+    .getPropertiesOfType(type)
+    .filter((property) =>
+      isTemporalSeam(property.name, checker.getTypeOfSymbolAtLocation(property, location), checker),
+    );
+}
+
+function hasExplicitProperty(
+  type: ts.Type,
+  name: string,
+  location: ts.Node,
+  checker: ts.TypeChecker,
+): boolean {
+  const property = checker.getPropertyOfType(checker.getNonNullableType(type), name);
+  return (
+    !!property &&
+    (property.flags & ts.SymbolFlags.Optional) === 0 &&
+    !mayBeUndefined(checker.getTypeOfSymbolAtLocation(property, location))
+  );
+}
+
+function literalPropertyAccess(
+  expression: ts.Expression,
+): { readonly receiver: ts.Expression; readonly name: string } | undefined {
+  if (ts.isPropertyAccessExpression(expression))
+    return { receiver: expression.expression, name: expression.name.text };
+  if (
+    ts.isElementAccessExpression(expression) &&
+    ts.isStringLiteralLike(expression.argumentExpression)
+  ) {
+    return { receiver: expression.expression, name: expression.argumentExpression.text };
+  }
+  return undefined;
+}
+
+function isGlobalDate(expression: ts.Expression | undefined, checker: ts.TypeChecker): boolean {
+  if (!expression) return false;
+  let symbol: ts.Symbol | undefined;
+  if (ts.isIdentifier(expression)) {
+    if (expression.text !== "Date") return false;
+    symbol = checker.getSymbolAtLocation(expression);
+  } else {
+    const access = literalPropertyAccess(expression);
+    if (access?.name !== "Date") return false;
+    symbol = checker.getPropertyOfType(checker.getTypeAtLocation(access.receiver), "Date");
+  }
   return (
     symbol?.declarations?.some((declaration) =>
       /(?:^|\/)lib\.[^/]+\.d\.ts$/.test(declaration.getSourceFile().fileName),
     ) ?? false
   );
+}
+
+function immediateExpressionOwner(
+  node: ts.Expression,
+): { readonly expression: ts.Expression; readonly anchor: ts.Node } | undefined {
+  let current: ts.Node = node;
+  while (current.parent && !ts.isStatement(current)) {
+    if (ts.isFunctionLike(current.parent)) return undefined;
+    if (ts.isVariableDeclaration(current.parent) && current.parent.initializer) {
+      const declaration = current.parent;
+      const expression = declaration.initializer;
+      if (!expression) return undefined;
+      if (
+        !ts.isVariableDeclarationList(declaration.parent) ||
+        declaration.parent.declarations[0] !== declaration
+      )
+        return undefined;
+      const statement = declaration.parent.parent;
+      if (!ts.isVariableStatement(statement)) return undefined;
+      return { expression, anchor: statement };
+    }
+    current = current.parent;
+  }
+  if (ts.isExpressionStatement(current)) return { expression: current.expression, anchor: current };
+  if (ts.isReturnStatement(current) && current.expression)
+    return { expression: current.expression, anchor: current };
+  return undefined;
 }

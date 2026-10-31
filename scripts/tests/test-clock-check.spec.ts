@@ -24,6 +24,13 @@ export class ObjectClockService {
 export class DateInput {
   constructor(readonly options: { now?: Date; clock?: string; scheduler?: number } = {}) {}
 }
+type Scheduler = (callback: () => void, delay: number) => void;
+export class UnionOptionsService {
+  constructor(readonly options: { now?: () => number } | { schedule?: Scheduler } = {}) {}
+}
+export class UnionClockService {
+  constructor(readonly clock: (() => Date) | { now(): Date } = () => new Date()) {}
+}
 `;
 
 afterEach(() => {
@@ -40,7 +47,7 @@ function fixture(body: string, controlled = true) {
     ["packages/example/src/index.ts", 'export * from "./Service.js";'],
     [
       file,
-      `${controlled ? directive : ""}\nimport { Service as Reader, OptionsService, ObjectClockService, DateInput } from '@croco/example';\n${body}`,
+      `${controlled ? directive : ""}\nimport { Service as Reader, OptionsService, ObjectClockService, DateInput, UnionOptionsService, UnionClockService } from '@croco/example';\n${body}`,
     ],
   ]) {
     const target = join(root, path);
@@ -152,6 +159,63 @@ function customClock() {
     expect(findings).toEqual([]);
   });
 
+  it("detects literal computed ambient reads while preserving shadowed Date bindings", () => {
+    const { findings } = fixture(`
+Date['now']();
+globalThis['Date']();
+new globalThis['Date']();
+globalThis['Date']['now']();
+new globalThis['Date']('2037-04-05T06:07:08Z');
+function shadowed() {
+  const Date = { now: () => 17 };
+  Date['now']();
+  const globalThis = { Date: () => 'fixture-value' };
+  globalThis['Date']();
+}
+`);
+    expect(findings.map(({ node }) => node.getText())).toEqual([
+      "Date['now']()",
+      "globalThis['Date']()",
+      "new globalThis['Date']()",
+      "globalThis['Date']['now']()",
+    ]);
+  });
+
+  it("checks union options against the supplied alternative rather than demanding every branch", () => {
+    const { findings } = fixture(`
+const now = () => 17;
+const schedule = (callback: () => void, _delay: number) => callback();
+new UnionOptionsService();
+new UnionOptionsService(undefined);
+new UnionOptionsService({});
+new UnionOptionsService({ now });
+new UnionOptionsService({ schedule });
+declare const complete: { now: typeof now } | { schedule: typeof schedule };
+new UnionOptionsService(complete);
+declare const incomplete: { now?: typeof now } | { schedule: typeof schedule };
+new UnionOptionsService(incomplete);
+`);
+    expect(findings.map(({ node }) => node.getText())).toEqual([
+      "new UnionOptionsService()",
+      "undefined",
+      "{}",
+      "incomplete",
+    ]);
+  });
+
+  it("requires positional clocks that accept either callback or object forms", () => {
+    const { findings } = fixture(`
+new UnionClockService();
+new UnionClockService(undefined);
+new UnionClockService(() => new Date('2043-08-09T10:11:12Z'));
+new UnionClockService({ now: () => new Date('2039-04-03T02:01:00Z') });
+`);
+    expect(findings.map(({ node }) => node.getText())).toEqual([
+      "new UnionClockService()",
+      "undefined",
+    ]);
+  });
+
   it("limits real-lifecycle exceptions to the next expression and requires a reason", () => {
     const { findings } = fixture(`
 // croco-test-clock-real-time -- Measure native provider connection shutdown, outside business expiry.
@@ -167,6 +231,26 @@ const notAdjacent = Date.now();
       "Date.now()",
       "new Date()",
       "Date.now()",
+    ]);
+  });
+
+  it("real-lifecycle exceptions cannot waive injections or more than the first immediate ambient read", () => {
+    const { findings } = fixture(`
+// croco-test-clock-real-time -- Measure one native timestamp before the socket operation.
+const first = Date.now(); const second = Date.now();
+// croco-test-clock-real-time -- Read one native timestamp while comparing the provider boundary.
+const elapsed = Date.now() - Date.now();
+// croco-test-clock-real-time -- This native timestamp is after an unrelated construction.
+new Reader(); Date.now();
+// croco-test-clock-real-time -- Native lifecycle readings never relax fixture dependency wiring.
+new Reader(undefined);
+`);
+    expect(findings.map(({ node }) => node.getText())).toEqual([
+      "Date.now()",
+      "Date.now()",
+      "new Reader()",
+      "Date.now()",
+      "undefined",
     ]);
   });
 
