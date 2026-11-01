@@ -38,6 +38,14 @@ class ExplicitOptionsController {
   options() {
     return { handler: "options" };
   }
+
+  @Options("/capabilities")
+  capabilities() {
+    return new Response(JSON.stringify({ capability: true }), {
+      status: 202,
+      headers: { "Content-Type": "application/json", Vary: "Accept-Language" },
+    });
+  }
 }
 
 @Controller("/all")
@@ -72,8 +80,12 @@ function preflight(path: string, method: string, origin = WEB_ORIGIN): Request {
   });
 }
 
-function createMockContext(method: string, origin?: string): CrocoHttpContext {
-  const headers: Record<string, string> = {};
+function createMockContext(
+  method: string,
+  origin?: string,
+  requestHeaders: Record<string, string> = {},
+): CrocoHttpContext {
+  const headers: Record<string, string> = { ...requestHeaders };
   if (origin) {
     headers.origin = origin;
   }
@@ -118,8 +130,10 @@ describe("corsMiddleware", () => {
     origins: ["https://example.com", "https://app.example.com"],
   };
 
-  it("should add CORS headers for allowed origin", async () => {
-    const ctx = createMockContext("GET", "https://example.com");
+  it("should add CORS headers without treating GET as preflight", async () => {
+    const ctx = createMockContext("GET", "https://example.com", {
+      "access-control-request-method": "POST",
+    });
     const middleware = corsMiddleware(defaultOptions);
     const next = vi.fn();
 
@@ -164,7 +178,9 @@ describe("corsMiddleware", () => {
   });
 
   it("should handle preflight OPTIONS request with 204", async () => {
-    const ctx = createMockContext("OPTIONS", "https://example.com");
+    const ctx = createMockContext("OPTIONS", "https://example.com", {
+      "access-control-request-method": "POST",
+    });
     const middleware = corsMiddleware(defaultOptions);
     const next = vi.fn();
 
@@ -218,7 +234,9 @@ describe("corsMiddleware", () => {
   });
 
   it("should use custom maxAge for preflight", async () => {
-    const ctx = createMockContext("OPTIONS", "https://example.com");
+    const ctx = createMockContext("OPTIONS", "https://example.com", {
+      "access-control-request-method": "POST",
+    });
     const middleware = corsMiddleware({
       ...defaultOptions,
       maxAge: 3600,
@@ -254,6 +272,101 @@ describe("CORS preflight routing", () => {
     expect(response.headers.get("vary")?.split(", ")).toEqual(
       expect.arrayContaining(["Origin", "Access-Control-Request-Headers"]),
     );
+  });
+
+  it.each([undefined, "", "   "])(
+    "preserves an ordinary OPTIONS handler when request-method is %j",
+    async (requestMethod) => {
+      const app = createApp({
+        controllers: [ExplicitOptionsController],
+        securityValidation: "off",
+        middlewares: [corsMiddleware({ origins: [WEB_ORIGIN], credentials: true })],
+      });
+      const headers = new Headers({
+        origin: WEB_ORIGIN,
+        "access-control-request-headers": "x-ordinary",
+      });
+      if (requestMethod !== undefined) {
+        headers.set("Access-Control-Request-Method", requestMethod);
+      }
+
+      const response = await app.fetch(
+        new Request("https://api.example.com/explicit/capabilities", {
+          method: "OPTIONS",
+          headers,
+        }),
+      );
+
+      expect(response.status).toBe(202);
+      expect(await response.json()).toEqual({ capability: true });
+      expect(response.headers.get("access-control-allow-origin")).toBe(WEB_ORIGIN);
+      expect(response.headers.get("access-control-allow-credentials")).toBe("true");
+      expect(response.headers.get("access-control-allow-headers")).toBeNull();
+      expect(response.headers.get("access-control-max-age")).toBeNull();
+      expect(response.headers.get("vary")?.split(", ")).toEqual(
+        expect.arrayContaining(["Origin", "Accept-Language"]),
+      );
+      expect(response.headers.get("vary")?.split(", ")).not.toContain(
+        "Access-Control-Request-Headers",
+      );
+    },
+  );
+
+  it("preserves an ALL handler for ordinary OPTIONS and short-circuits a real preflight", async () => {
+    const app = createApp({
+      controllers: [AllController],
+      securityValidation: "off",
+      middlewares: [corsMiddleware({ origins: [WEB_ORIGIN] })],
+    });
+
+    const ordinary = await app.fetch(
+      new Request("https://api.example.com/all", {
+        method: "OPTIONS",
+        headers: { origin: WEB_ORIGIN },
+      }),
+    );
+    expect(ordinary.status).toBe(200);
+    expect(await ordinary.json()).toEqual({ handler: "all" });
+    expect(ordinary.headers.get("access-control-allow-origin")).toBe(WEB_ORIGIN);
+
+    const actualPreflight = await app.fetch(preflight("/all", "POST"));
+    expect(actualPreflight.status).toBe(204);
+    expect(await actualPreflight.text()).toBe("");
+    expect(actualPreflight.headers.get("access-control-allow-headers")).toBe("content-type");
+  });
+
+  it("keeps ordinary OPTIONS fallback at 404 and requires an allowed Origin for preflight", async () => {
+    const app = createApp({
+      controllers: [UserController, ExplicitOptionsController],
+      securityValidation: "off",
+      middlewares: [corsMiddleware({ origins: [WEB_ORIGIN] })],
+    });
+
+    const fallback = await app.fetch(
+      new Request("https://api.example.com/users", {
+        method: "OPTIONS",
+        headers: { origin: WEB_ORIGIN },
+      }),
+    );
+    expect(fallback.status).toBe(404);
+    expect(fallback.headers.get("access-control-allow-origin")).toBe(WEB_ORIGIN);
+    expect(fallback.headers.get("access-control-max-age")).toBeNull();
+
+    for (const origin of [undefined, "https://other.example.com"]) {
+      const headers = new Headers({ "access-control-request-method": "POST" });
+      if (origin !== undefined) headers.set("Origin", origin);
+      const response = await app.fetch(
+        new Request("https://api.example.com/explicit/capabilities", {
+          method: "OPTIONS",
+          headers,
+        }),
+      );
+      expect(response.status).toBe(202);
+      expect(await response.json()).toEqual({ capability: true });
+      expect(response.headers.get("access-control-allow-origin")).toBeNull();
+      expect(response.headers.get("access-control-max-age")).toBeNull();
+      expect(response.headers.get("vary")?.split(", ")).toContain("Origin");
+    }
   });
 
   it("uses only explicitly allowed headers", async () => {

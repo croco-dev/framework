@@ -39,7 +39,8 @@ export const corsMiddleware = (options: CorsOptions): MiddlewareFunction => {
         return;
       }
 
-      const isPreflight = ctx.req.method === "OPTIONS";
+      const isPreflight =
+        ctx.req.method === "OPTIONS" && Boolean(ctx.header("access-control-request-method"));
 
       ctx.raw.header("Access-Control-Allow-Origin", requestOrigin);
       ctx.raw.header("Access-Control-Allow-Methods", methods.join(", "));

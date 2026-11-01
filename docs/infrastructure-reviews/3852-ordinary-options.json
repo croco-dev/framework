@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "transports-http",
+      "classification": "pure-contract",
+      "reason": "Ordinary OPTIONS requests retain their explicit handler response; only allowed-origin OPTIONS with a nonempty Access-Control-Request-Method short-circuit as preflight. This HTTP classification correction is independent of infrastructure.",
+      "files": {
+        "packages/transports-http/src/libs/middleware/CorsMiddleware.ts": "9209ac220c9a73748f46c28f345b5fc6a885c1ec49a66037bbbd066bd00ea664"
+      },
+      "catalogRuntimes": ["node", "lambda"],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Preflight classification uses the existing request method and headers in memory. It introduces no host capability, storage or lifecycle dependency.",
+          "providers": ["@croco/transports-http/corsMiddleware"],
+          "constraints": [
+            "Existing Node/Lambda runtime claims, origin allowlist and credential policy remain unchanged. No Workers support, live deployment or provider certification is claimed."
+          ],
+          "references": [
+            "packages/transports-http/src/libs/middleware/CorsMiddleware.ts",
+            "packages/transports-http/src/libs/HttpTransportPlugin.ts",
+            "packages/transports-http/src/tests/CorsMiddleware.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Preflight classification uses the existing request method and headers in memory. It introduces no host capability, storage or lifecycle dependency.",
+          "providers": ["@croco/transports-http/corsMiddleware"],
+          "constraints": [
+            "Existing Node/Lambda runtime claims, origin allowlist and credential policy remain unchanged. No Workers support, live deployment or provider certification is claimed."
+          ],
+          "references": [
+            "packages/transports-http/src/libs/middleware/CorsMiddleware.ts",
+            "packages/transports-http/src/libs/HttpTransportPlugin.ts",
+            "packages/transports-http/src/tests/CorsMiddleware.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Preflight classification uses the existing request method and headers in memory. It introduces no host capability, storage or lifecycle dependency.",
+          "providers": ["@croco/transports-http/corsMiddleware"],
+          "constraints": [
+            "Existing Node/Lambda runtime claims, origin allowlist and credential policy remain unchanged. No Workers support, live deployment or provider certification is claimed."
+          ],
+          "references": [
+            "packages/transports-http/src/libs/middleware/CorsMiddleware.ts",
+            "packages/transports-http/src/libs/HttpTransportPlugin.ts",
+            "packages/transports-http/src/tests/CorsMiddleware.spec.ts"
+          ]
+        }
+      }
+    }
+  ]
+}
