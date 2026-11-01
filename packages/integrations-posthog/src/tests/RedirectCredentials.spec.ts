@@ -138,12 +138,14 @@ describe("follow-redirects (resolved via Axios)", () => {
           Authorization: "Bearer retained-token",
           Cookie: "session=retained",
           "X-Cred^ential": "retained-secret",
+          "X-Secret|Key": "retained-key",
         },
         sensitiveHeaders: credentialHeaderNames(crossRealm),
       });
       expect(received.authorization).toBe("Bearer retained-token");
       expect(received.cookie).toBe("session=retained");
       expect(received["x-cred^ential"]).toBe("retained-secret");
+      expect(received["x-secret|key"]).toBe("retained-key");
     },
   );
 });
