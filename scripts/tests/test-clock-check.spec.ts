@@ -249,6 +249,58 @@ new LabelReader();
     ]);
   });
 
+  it("rejects ambient Date.now callback references without duplicating direct calls", () => {
+    const { findings } = fixture(`
+const schedule = (callback: () => void, _delay: number) => callback();
+new OptionsService({ now: Date.now, schedule });
+const captured = Date.now;
+const computed = globalThis['Date']['now'];
+const called = (Date.now)();
+function shadowed() {
+  const Date = { now: () => 17 };
+  new OptionsService({ now: Date.now, schedule });
+  const captured = Date.now;
+  const globalThis = { Date: { now: () => 23 } };
+  const computed = globalThis['Date']['now'];
+}
+`);
+    expect(findings.map(({ node }) => node.getText())).toEqual([
+      "Date.now",
+      "Date.now",
+      "globalThis['Date']['now']",
+      "(Date.now)()",
+    ]);
+  });
+
+  it("recognizes ambient clocks through transparent TypeScript expression wrappers", () => {
+    const { findings } = fixture(`
+new (Date as DateConstructor)();
+(Date as DateConstructor)();
+new (Date!)();
+new (<DateConstructor>Date)();
+(Date satisfies DateConstructor)();
+((Date.now) as typeof Date.now)();
+(Date.now!)();
+(Date.now satisfies () => number)();
+new (Date as DateConstructor)('2037-04-05T06:07:08Z');
+function shadowed() {
+  const Date = { now: () => 17 };
+  (Date as typeof Date).now();
+  ((Date.now) as () => number)();
+}
+`);
+    expect(findings.map(({ node }) => node.getText())).toEqual([
+      "new (Date as DateConstructor)()",
+      "(Date as DateConstructor)()",
+      "new (Date!)()",
+      "new (<DateConstructor>Date)()",
+      "(Date satisfies DateConstructor)()",
+      "((Date.now) as typeof Date.now)()",
+      "(Date.now!)()",
+      "(Date.now satisfies () => number)()",
+    ]);
+  });
+
   it("requires positional clocks that accept either callback or object forms", () => {
     const { findings } = fixture(`
 new UnionClockService();

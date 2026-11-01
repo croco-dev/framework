@@ -62,6 +62,8 @@ export function detectTestClockFindings(
       isGlobalDate(literalPropertyAccess(node.expression)?.receiver, checker)
     ) {
       reportAmbient(node, "Ambient Date.now() escapes the controlled fixture clock.");
+    } else if (isAmbientNowReference(node, checker)) {
+      reportAmbient(node, "Ambient Date.now reference escapes the controlled fixture clock.");
     }
 
     if (ts.isNewExpression(node)) {
@@ -212,7 +214,7 @@ function hasExplicitProperty(
 function literalPropertyAccess(
   expression: ts.Expression,
 ): { readonly receiver: ts.Expression; readonly name: string } | undefined {
-  const target = skipParentheses(expression);
+  const target = unwrapExpression(expression);
   if (ts.isPropertyAccessExpression(target))
     return { receiver: target.expression, name: target.name.text };
   if (ts.isElementAccessExpression(target) && ts.isStringLiteralLike(target.argumentExpression)) {
@@ -223,7 +225,7 @@ function literalPropertyAccess(
 
 function isGlobalDate(expression: ts.Expression | undefined, checker: ts.TypeChecker): boolean {
   if (!expression) return false;
-  const target = skipParentheses(expression);
+  const target = unwrapExpression(expression);
   let symbol: ts.Symbol | undefined;
   if (ts.isIdentifier(target)) {
     if (target.text !== "Date") return false;
@@ -240,10 +242,40 @@ function isGlobalDate(expression: ts.Expression | undefined, checker: ts.TypeChe
   );
 }
 
-function skipParentheses(expression: ts.Expression): ts.Expression {
+function unwrapExpression(expression: ts.Expression): ts.Expression {
   let current = expression;
-  while (ts.isParenthesizedExpression(current)) current = current.expression;
+  while (isTransparentExpression(current)) current = current.expression;
   return current;
+}
+
+function isTransparentExpression(
+  node: ts.Node | undefined,
+): node is
+  | ts.ParenthesizedExpression
+  | ts.AsExpression
+  | ts.TypeAssertion
+  | ts.NonNullExpression
+  | ts.SatisfiesExpression {
+  return (
+    !!node &&
+    (ts.isParenthesizedExpression(node) ||
+      ts.isAsExpression(node) ||
+      ts.isTypeAssertionExpression(node) ||
+      ts.isNonNullExpression(node) ||
+      ts.isSatisfiesExpression(node))
+  );
+}
+
+function isAmbientNowReference(
+  node: ts.Node,
+  checker: ts.TypeChecker,
+): node is ts.PropertyAccessExpression | ts.ElementAccessExpression {
+  if (!ts.isPropertyAccessExpression(node) && !ts.isElementAccessExpression(node)) return false;
+  const access = literalPropertyAccess(node);
+  if (access?.name !== "now" || !isGlobalDate(access.receiver, checker)) return false;
+  let outer: ts.Node = node;
+  while (isTransparentExpression(outer.parent)) outer = outer.parent;
+  return !(ts.isCallExpression(outer.parent) && outer.parent.expression === outer);
 }
 
 function immediateExpressionOwner(

@@ -39,6 +39,9 @@ argument alternative must explicitly bind its branch's clock/scheduler dependenc
 
 Ambient `Date()`, `Date.now()` and `new Date()` in a controlled file fail, including reads inside
 callbacks and literal computed accesses such as `Date['now']()` or `globalThis['Date']`.
+References such as `now: Date.now` or `const captured = Date.now` also fail; passing the ambient
+function explicitly does not bind it to the shared fixture clock.
+Parentheses and expression-only TypeScript assertions do not change this boundary.
 Parsing a supplied timestamp and constructing a date from supplied milliseconds remain
 valid. Fixed dates are allowed; the rule does not ban date literals or require every test to use
 `TestKernel`.

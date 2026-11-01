@@ -3186,7 +3186,8 @@ function scanRule(rootDir: string, rule: StaticMisuseRule): StaticMisuseRuleResu
         })
       : null;
   const checker = program?.getTypeChecker();
-  const diagnostics = filePaths.flatMap((filePath) => {
+  const scannedFilePaths = rule.id === controlledTestClockRule.id ? programFilePaths : filePaths;
+  const diagnostics = scannedFilePaths.flatMap((filePath) => {
     const source = readFileSync(filePath, "utf-8");
     const lines = source.split(/\r?\n/);
     const relativeFile = toPosixPath(relative(rootDir, filePath));
