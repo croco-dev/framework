@@ -1,5 +1,6 @@
 import { createServer } from "node:http";
 import { createRequire } from "node:module";
+import { runInNewContext } from "node:vm";
 import { afterEach, describe, expect, it } from "vitest";
 
 import type { ClientRequest, IncomingMessage, RequestOptions, Server } from "node:http";
@@ -17,6 +18,15 @@ const redirectHttp = (
   }
 ).http;
 const servers: Server[] = [];
+
+function credentialHeaderNames(crossRealm: boolean): string[] {
+  const names = crossRealm
+    ? (runInNewContext("['X-Cred^ential', 'X-Secret|Key']") as string[])
+    : ["X-Cred^ential", "X-Secret|Key"];
+  expect(Array.isArray(names)).toBe(true);
+  expect(names instanceof Array).toBe(!crossRealm);
+  return names;
+}
 
 async function listen(server: Server): Promise<number> {
   servers.push(server);
@@ -50,7 +60,7 @@ afterEach(async () => {
 });
 
 describe("follow-redirects (resolved via Axios)", () => {
-  it.each(["array", "custom-name"] as const)(
+  it.each(["array", "custom-name", "cross-realm-array", "cross-realm-object"] as const)(
     "strips %s credentials on a cross-origin redirect",
     async (kind) => {
       let received: IncomingMessage["headers"] = {};
@@ -67,12 +77,16 @@ describe("follow-redirects (resolved via Axios)", () => {
         }),
       );
       const headers =
-        kind === "array"
+        kind === "array" || kind === "cross-realm-array"
           ? [
               "Authorization",
               "Bearer private-token",
               "Cookie",
               "session=private",
+              "X-Cred^ential",
+              "private-token",
+              "X-Secret|Key",
+              "private-key",
               "X-Public",
               "visible",
             ]
@@ -87,7 +101,7 @@ describe("follow-redirects (resolved via Axios)", () => {
         port: origin,
         path: "/",
         headers,
-        sensitiveHeaders: ["X-Cred^ential", "X-Secret|Key"],
+        sensitiveHeaders: credentialHeaderNames(kind.startsWith("cross-realm")),
       });
 
       // Array-form headers must not leak values under numeric header names either.
@@ -102,31 +116,36 @@ describe("follow-redirects (resolved via Axios)", () => {
     },
   );
 
-  it("preserves credentials on a same-origin redirect", async () => {
-    let received: IncomingMessage["headers"] = {};
-    const port = await listen(
-      createServer((incoming, response) => {
-        if (incoming.url === "/") {
-          response.writeHead(302, { location: "/destination" });
-        } else {
-          received = incoming.headers;
-        }
-        response.end();
-      }),
-    );
-    await request({
-      hostname: "127.0.0.1",
-      port,
-      path: "/",
-      headers: {
-        Authorization: "Bearer retained-token",
-        Cookie: "session=retained",
-        "X-Cred^ential": "retained-secret",
-      },
-      sensitiveHeaders: ["X-Cred^ential"],
-    });
-    expect(received.authorization).toBe("Bearer retained-token");
-    expect(received.cookie).toBe("session=retained");
-    expect(received["x-cred^ential"]).toBe("retained-secret");
-  });
+  it.each([false, true])(
+    "preserves credentials on a same-origin redirect (cross-realm: %s)",
+    async (crossRealm) => {
+      let received: IncomingMessage["headers"] = {};
+      const port = await listen(
+        createServer((incoming, response) => {
+          if (incoming.url === "/") {
+            response.writeHead(302, { location: "/destination" });
+          } else {
+            received = incoming.headers;
+          }
+          response.end();
+        }),
+      );
+      await request({
+        hostname: "127.0.0.1",
+        port,
+        path: "/",
+        headers: {
+          Authorization: "Bearer retained-token",
+          Cookie: "session=retained",
+          "X-Cred^ential": "retained-secret",
+          "X-Secret|Key": "retained-key",
+        },
+        sensitiveHeaders: credentialHeaderNames(crossRealm),
+      });
+      expect(received.authorization).toBe("Bearer retained-token");
+      expect(received.cookie).toBe("session=retained");
+      expect(received["x-cred^ential"]).toBe("retained-secret");
+      expect(received["x-secret|key"]).toBe("retained-key");
+    },
+  );
 });
