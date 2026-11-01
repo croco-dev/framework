@@ -2,7 +2,7 @@ import http from "node:http";
 import { createConnection } from "node:net";
 import type { AddressInfo, Socket } from "node:net";
 import { Hono } from "hono";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { NodeHost } from "../entry";
 import { createNodeEntry, createNodeHost } from "../index";
 
@@ -126,6 +126,57 @@ describe("createNodeHost keep-alive drain", () => {
 
     await expect(inFlight).resolves.toEqual({ status: 200, connection: "close", body: "done" });
     await expect(closing).resolves.toBeUndefined();
+  }, 10_000);
+
+  it("rejects an overflowing timeout while preserving the listener and active response", async () => {
+    const { host, gate, inFlight } = await startWithInFlightRequest(65_000);
+    const response = inFlight.then(
+      (value) => value,
+      (error: unknown) => error,
+    );
+    const server = host.server;
+
+    try {
+      await expect(host.close(2_147_483_648)).rejects.toMatchObject({
+        code: "preset-node/invalid-close-timeout",
+        status: 400,
+        extensions: { timeoutMs: 2_147_483_648 },
+      });
+      expect(host.server).toBe(server);
+      expect(server?.listening).toBe(true);
+      await expect(host.start()).resolves.toBeUndefined();
+      gate.resolve();
+      await expect(response).resolves.toEqual({
+        status: 200,
+        connection: "keep-alive",
+        body: "done",
+      });
+
+      const agent = new http.Agent({ keepAlive: true });
+      agents.push(agent);
+      await expect(request(getServerPort(host.server), agent)).resolves.toMatchObject({
+        status: 200,
+        body: "done",
+      });
+    } finally {
+      gate.resolve();
+    }
+  }, 10_000);
+
+  it("drains an active response at the maximum supported timeout without overflow warnings", async () => {
+    const { host, gate, inFlight } = await startWithInFlightRequest(65_000);
+    const warning = vi.spyOn(process, "emitWarning");
+    try {
+      const closing = host.close(2_147_483_647);
+      expect(host.close(2_147_483_647)).toBe(closing);
+      gate.resolve();
+      await expect(inFlight).resolves.toEqual({ status: 200, connection: "close", body: "done" });
+      await expect(closing).resolves.toBeUndefined();
+      expect(warning).not.toHaveBeenCalled();
+    } finally {
+      gate.resolve();
+      warning.mockRestore();
+    }
   }, 10_000);
 
   it("completes drain after an in-flight request despite a longer keep-alive timeout", async () => {

@@ -1,0 +1,64 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "preset-node",
+      "classification": "runtime-adapter",
+      "reason": "Reject close timeouts outside the Node timer range before any lifecycle mutation; preserve the existing configuration Problem for non-finite inputs with JSON-safe diagnostic values.",
+      "files": {
+        "packages/preset-node/src/entry.ts": "eb5971ee9cf1c522fb78334a18a26b6522970731ed1f9500ff90c4e5812c075d",
+        "packages/preset-node/src/problems.ts": "b778bfd0298384485891002c71eb064973d4a13529f872e55136511d5793db41"
+      },
+      "catalogRuntimes": ["node"],
+      "profiles": {
+        "kubernetes": {
+          "result": "supported",
+          "reason": "The existing Node Host rejects an overflowing timeout while real loopback HTTP requests prove the listener and active response remain usable.",
+          "providers": ["@croco/preset-node", "@hono/node-server"],
+          "constraints": [
+            "Local Node host-runtime evidence only; no live Kubernetes deployment or provider certification.",
+            "Supported close timeouts are integers from 1 through 2147483647 milliseconds."
+          ],
+          "references": [
+            "packages/preset-node/src/entry.ts",
+            "packages/preset-node/src/problems.ts",
+            "packages/preset-node/src/tests/presetNodeE2E.spec.ts",
+            "packages/presentation-preset/runtime-profiles.json",
+            "packages/create-croco-app/templates/saas/apps/api-server/src/index.ts"
+          ],
+          "evidence": {
+            "kind": "host-runtime",
+            "runtime": "node",
+            "path": "packages/preset-node/src/tests/presetNodeE2E.spec.ts",
+            "testName": "createNodeHost keep-alive drain rejects an overflowing timeout while preserving the listener and active response",
+            "sha256": "1f5491a0b5244dc4db9db5b9fa273ea81985431ed2c30fe0ba1d3cd0fe9d049b"
+          }
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "The Lambda Host invokes its fetch adapter without owning a Node TCP listener or calling NodeHost.close.",
+          "providers": ["@croco/preset-lambda"],
+          "constraints": ["No Lambda timeout, invocation or flush behavior changes."],
+          "references": [
+            "packages/preset-lambda/src/handler.ts",
+            "packages/presentation-preset/runtime-profiles.json"
+          ]
+        },
+        "cloudflare": {
+          "result": "unsupported",
+          "host": "workers",
+          "reason": "The Node Host requires node:http and the Hono Node adapter; Worker isolates use the separate fetch host and do not expose this listener close operation.",
+          "providers": ["@croco/preset-cloudflare"],
+          "constraints": [
+            "No Worker TCP listener or Node Container support is introduced or certified."
+          ],
+          "references": [
+            "packages/preset-node/src/entry.ts",
+            "packages/preset-cloudflare/src/fetch.ts",
+            "packages/presentation-preset/runtime-profiles.json"
+          ]
+        }
+      }
+    }
+  ]
+}

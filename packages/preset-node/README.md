@@ -21,7 +21,9 @@ host does not define HTTP routes, and the build target does not start or stop th
 `NodeHost.start()` shares concurrent startup work and is idempotent after the server starts.
 `NodeHost.close(timeoutMs?)` waits for active startup, shares concurrent shutdown work, and permanently closes
 the host. It rejects after 30 seconds by default if the Node server does not finish closing. Create a new host
-instead of calling `start()` after closing begins.
+instead of calling `start()` after closing begins. An explicit timeout must be an integer from `1` through
+`2_147_483_647` milliseconds. Values outside this range reject with `preset-node/invalid-close-timeout`
+before changing the host lifecycle or closing active connections.
 
 ## Usage
 

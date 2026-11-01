@@ -29,6 +29,7 @@ export type NodeEntry = NodeHost;
 type NodeEntryState = "idle" | "starting" | "started" | "closing" | "closed";
 
 const DEFAULT_CLOSE_TIMEOUT_MS = 30_000;
+const MAX_CLOSE_TIMEOUT_MS = 2_147_483_647;
 
 function asError(cause: unknown): Error {
   return cause instanceof Error ? cause : new Error(String(cause));
@@ -179,7 +180,7 @@ export function createNodeHost(
   };
 
   const close = (timeoutMs = DEFAULT_CLOSE_TIMEOUT_MS): Promise<void> => {
-    if (!Number.isSafeInteger(timeoutMs) || timeoutMs <= 0) {
+    if (!Number.isSafeInteger(timeoutMs) || timeoutMs <= 0 || timeoutMs > MAX_CLOSE_TIMEOUT_MS) {
       return Promise.reject(new NodeEntryCloseTimeoutProblem(timeoutMs));
     }
 

@@ -308,43 +308,97 @@ describe("createNodeEntry", () => {
     }
   });
 
-  it("rejects an invalid close timeout without changing lifecycle state", async () => {
-    const close = vi.fn((callback?: (error?: Error) => void) => callback?.());
-    const server = createTestServer(close);
-    vi.mocked(serve).mockImplementationOnce((_options, callback) => {
-      callback?.({ address: "127.0.0.1", family: "IPv4", port: 3000 });
-      return server;
-    });
-    const entry = createNodeEntry({ fetch: vi.fn() });
+  it.each([
+    { timeoutMs: 0, extension: 0 },
+    { timeoutMs: -1, extension: -1 },
+    { timeoutMs: 1.5, extension: 1.5 },
+    { timeoutMs: NaN, extension: "NaN" },
+    { timeoutMs: Infinity, extension: "Infinity" },
+    { timeoutMs: -Infinity, extension: "-Infinity" },
+    { timeoutMs: 2_147_483_648, extension: 2_147_483_648 },
+    { timeoutMs: Number.MAX_SAFE_INTEGER, extension: Number.MAX_SAFE_INTEGER },
+  ])(
+    "rejects close timeout $timeoutMs without changing lifecycle state",
+    async ({ timeoutMs, extension }) => {
+      const close = vi.fn((callback?: (error?: Error) => void) => callback?.());
+      const server = createTestServer(close);
+      vi.mocked(serve).mockImplementationOnce((_options, callback) => {
+        callback?.({ address: "127.0.0.1", family: "IPv4", port: 3000 });
+        return server;
+      });
+      const entry = createNodeEntry({ fetch: vi.fn() });
 
-    await entry.start();
-    await expect(entry.close(0)).rejects.toMatchObject({
-      code: "preset-node/invalid-close-timeout",
-      status: 400,
-      extensions: { timeoutMs: 0 },
-    });
-    await expect(entry.start()).resolves.toBeUndefined();
-    expect(close).not.toHaveBeenCalled();
-    await expect(entry.close()).resolves.toBeUndefined();
-    await expect(entry.close(0)).rejects.toMatchObject({
-      code: "preset-node/invalid-close-timeout",
-      status: 400,
-      extensions: { timeoutMs: 0 },
-    });
+      await entry.start();
+      await expect(entry.close(timeoutMs)).rejects.toMatchObject({
+        code: "preset-node/invalid-close-timeout",
+        status: 400,
+        extensions: { timeoutMs: extension },
+      });
+      await expect(entry.start()).resolves.toBeUndefined();
+      expect(close).not.toHaveBeenCalled();
+      await expect(entry.close()).resolves.toBeUndefined();
+      await expect(entry.close(timeoutMs)).rejects.toMatchObject({
+        code: "preset-node/invalid-close-timeout",
+        status: 400,
+        extensions: { timeoutMs: extension },
+      });
 
-    expect(close).toHaveBeenCalledTimes(1);
-    expect(entry.server).toBeNull();
-  });
+      expect(close).toHaveBeenCalledTimes(1);
+      expect(entry.server).toBeNull();
+    },
+  );
 
-  it("rejects an invalid close timeout while idle without fencing start", async () => {
-    const entry = createNodeEntry({ fetch: vi.fn() });
+  it.each([0, 2_147_483_648])(
+    "rejects close timeout %s while idle without fencing start",
+    async (timeoutMs) => {
+      const entry = createNodeEntry({ fetch: vi.fn() });
 
-    await expect(entry.close(0)).rejects.toMatchObject({
-      code: "preset-node/invalid-close-timeout",
-      status: 400,
-      extensions: { timeoutMs: 0 },
-    });
-    await expect(entry.start()).resolves.toBeUndefined();
-    await entry.close();
-  });
+      await expect(entry.close(timeoutMs)).rejects.toMatchObject({
+        code: "preset-node/invalid-close-timeout",
+        status: 400,
+        extensions: { timeoutMs },
+      });
+      await expect(entry.start()).resolves.toBeUndefined();
+      await entry.close();
+    },
+  );
+
+  it.each([1, 2_147_483_647])(
+    "honors the supported close timeout boundary %s",
+    async (timeoutMs) => {
+      vi.useFakeTimers();
+      let finishClose: (() => void) | undefined;
+      const close = vi.fn((callback?: (error?: Error) => void) => {
+        finishClose = () => callback?.();
+      });
+      const closeAllConnections = vi.fn();
+      const server = Object.assign(createTestServer(close), { closeAllConnections });
+      vi.mocked(serve).mockImplementationOnce((_options, callback) => {
+        callback?.({ address: "127.0.0.1", family: "IPv4", port: 3000 });
+        return server;
+      });
+      const entry = createNodeHost({ fetch: vi.fn() });
+
+      try {
+        await entry.start();
+        const closing = entry.close(timeoutMs);
+        const result = expect(closing).rejects.toMatchObject({
+          code: "preset-node/lifecycle-io-failed",
+        });
+        expect(entry.close(timeoutMs)).toBe(closing);
+        await expect(entry.close(2_147_483_648)).rejects.toMatchObject({
+          code: "preset-node/invalid-close-timeout",
+        });
+        await vi.advanceTimersByTimeAsync(timeoutMs - 1);
+        expect(closeAllConnections).not.toHaveBeenCalled();
+        await vi.advanceTimersByTimeAsync(1);
+        await result;
+        expect(closeAllConnections).toHaveBeenCalledOnce();
+        finishClose?.();
+        await entry.close();
+      } finally {
+        vi.useRealTimers();
+      }
+    },
+  );
 });
