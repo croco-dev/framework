@@ -547,6 +547,60 @@ describe("contract testing", () => {
     ).toBe("success");
   });
 
+  it.each([
+    [undefined, 204],
+    [204, 204],
+    [205, 205],
+    [202, 202],
+  ] as const)(
+    "accepts an absent body for no-output status %s (observed %s)",
+    (successStatus, status) => {
+      const emptyRoute = { ...route, outputSchema: null, successStatus };
+      expect(assertContractObservation(emptyRoute, validCase, { status, body: undefined })).toBe(
+        "success",
+      );
+    },
+  );
+
+  it.each([null, "", false, 0, {}, { accepted: true }])(
+    "rejects a body without an output schema: %j",
+    (body) => {
+      expect(() =>
+        assertContractObservation({ ...route, outputSchema: null, successStatus: 204 }, validCase, {
+          status: 204,
+          body,
+        }),
+      ).toThrow("body outside its success schema");
+    },
+  );
+
+  it("keeps status and invalid-input checks for no-output routes", () => {
+    const emptyRoute = { ...route, outputSchema: null };
+    expect(() =>
+      assertContractObservation(emptyRoute, validCase, { status: 200, body: undefined }),
+    ).toThrow(ContractInvariantProblem);
+    expect(() =>
+      assertContractObservation({ ...emptyRoute, successStatus: 202 }, validCase, {
+        status: 204,
+        body: undefined,
+      }),
+    ).toThrow("undocumented success status 204");
+    expect(() =>
+      assertContractObservation(emptyRoute, invalidCase, { status: 204, body: undefined }),
+    ).toThrow("Schema-invalid input");
+  });
+
+  it.each([200, 201])("keeps output-schema validation for status %s", (successStatus) => {
+    for (const body of [undefined, { id: 42, accepted: true }]) {
+      expect(() =>
+        assertContractObservation({ ...route, successStatus }, validCase, {
+          status: successStatus,
+          body,
+        }),
+      ).toThrow("body outside its success schema");
+    }
+  });
+
   it("intersects chained bounds and preserves strict-header case classification", () => {
     const boundedHeaders = z
       .object({ "x-request-id": z.string().min(5).min(2).max(8).max(10) })

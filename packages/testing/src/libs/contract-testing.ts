@@ -86,6 +86,7 @@ export type ContractGeneratedCase = {
 
 export type ContractExecutionObservation = {
   readonly status: number;
+  /** Use undefined for an absent response body; JSON null is a response body. */
   readonly body: unknown;
   readonly headers?: Readonly<Record<string, string>>;
   readonly logs?: readonly unknown[];
@@ -415,14 +416,16 @@ export function assertContractObservation(
         `Schema-invalid input for route '${route.routeId}' returned a successful response.`,
       );
     }
-    const successStatus = route.successStatus ?? 200;
+    const successStatus = route.successStatus ?? (route.outputSchema ? 200 : 204);
     if (observation.status !== successStatus) {
       throw new ContractInvariantProblem(
         `Route '${route.routeId}' returned undocumented success status ${observation.status}; its output-schema contract declares status ${successStatus}.`,
       );
     }
-    const parsed = route.outputSchema?.safeParse(observation.body);
-    if (!route.outputSchema || !parsed?.success) {
+    const validBody = route.outputSchema
+      ? route.outputSchema.safeParse(observation.body).success
+      : observation.body === undefined;
+    if (!validBody) {
       throw new ContractInvariantProblem(
         `Route '${route.routeId}' returned status ${observation.status} with a body outside its success schema.`,
       );

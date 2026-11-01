@@ -13,6 +13,8 @@ title: "ContractExecutionObservation"
 
 > `readonly` **body**: `unknown`
 
+Use undefined for an absent response body; JSON null is a response body.
+
 ---
 
 ### headers?
