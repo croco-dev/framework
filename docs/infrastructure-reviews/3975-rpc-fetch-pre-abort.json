@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "testing",
+      "classification": "pure-contract",
+      "reason": "Reject already aborted effective Request signals before dispatch in createRpcTestFetch, preserving abort reasons and native Request signal override precedence. Public signatures and runtime support claims are unchanged.",
+      "files": {
+        "packages/testing/src/libs/testing.ts": "36685c44a8234be4580527197ca0d8657cc6e977c34b7574854cd30a717539de"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "The in-memory RPC test adapter checks the effective Request signal before dispatch. This adds no Kubernetes Node Host capability, storage or lifecycle dependency.",
+          "providers": [],
+          "constraints": [
+            "Only cancellation before dispatch is covered; running handlers are not interrupted. No deployment support or live provider certification is claimed."
+          ],
+          "references": [
+            "packages/testing/src/libs/testing.ts",
+            "packages/testing/src/tests/testing.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "The in-memory RPC test adapter checks the effective Request signal before dispatch. This adds no AWS Lambda Host capability, storage or lifecycle dependency.",
+          "providers": [],
+          "constraints": [
+            "Only cancellation before dispatch is covered; running handlers are not interrupted. No deployment support or live provider certification is claimed."
+          ],
+          "references": [
+            "packages/testing/src/libs/testing.ts",
+            "packages/testing/src/tests/testing.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "The in-memory RPC test adapter checks the effective Request signal before dispatch. This adds no Cloudflare Workers or Node Container Host capability, storage or lifecycle dependency.",
+          "providers": [],
+          "constraints": [
+            "Only cancellation before dispatch is covered; running handlers are not interrupted. No deployment support or live provider certification is claimed."
+          ],
+          "references": [
+            "packages/testing/src/libs/testing.ts",
+            "packages/testing/src/tests/testing.spec.ts"
+          ]
+        }
+      }
+    }
+  ]
+}

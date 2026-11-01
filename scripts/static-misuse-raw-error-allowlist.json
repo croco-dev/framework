@@ -285,7 +285,7 @@
     {
       "package": "@croco/testing",
       "file": "packages/testing/src/libs/testing.ts",
-      "line": 727,
+      "line": 729,
       "excerpt": "throw new Error(",
       "reason": "Reviewed 2026-10-30 (#4004): registerConstructor rejects a circular testing-provider dependency while assembling the test fixture. This is fixture construction failure, not an application request Problem; preserve hard failure before any handler executes.",
       "owner": "framework-error-handling",
@@ -294,7 +294,7 @@
     {
       "package": "@croco/testing",
       "file": "packages/testing/src/libs/testing.ts",
-      "line": 844,
+      "line": 846,
       "excerpt": "throw new Error(`${label} expected ${String(expected)}, received ${String(actual)}.`);",
       "reason": "Reviewed 2026-10-30 (#4004): The testing helper rejects malformed Problem responses or mismatched HTTP/OpenAPI expectations. Its Error is the test assertion result, distinct from the application Problem under observation; converting it to an observed Problem could obscure a broken test contract.",
       "owner": "framework-error-handling",
