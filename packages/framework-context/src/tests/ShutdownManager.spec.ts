@@ -28,6 +28,20 @@ function createMockLogger(overrides: Partial<ILogger> = {}): ILogger {
   return logger;
 }
 
+const INVALID_TIMEOUTS = [
+  Number.NaN,
+  Number.POSITIVE_INFINITY,
+  Number.NEGATIVE_INFINITY,
+  0,
+  -1,
+  0.5,
+  1.5,
+  2_147_483_647.5,
+  2_147_483_648,
+  Number.MAX_SAFE_INTEGER,
+  Number.MAX_SAFE_INTEGER + 1,
+];
+
 describe("ShutdownManager", () => {
   let originalExitCode: typeof process.exitCode;
 
@@ -262,7 +276,7 @@ describe("ShutdownManager", () => {
       }
     });
 
-    it.each([Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY, 0, -1])(
+    it.each(INVALID_TIMEOUTS)(
       "should reject invalid root timeout %s before creating the singleton",
       (timeoutMs) => {
         expect(() => ShutdownManager.getInstance(timeoutMs)).toThrow(InvalidShutdownTimeoutProblem);
@@ -280,7 +294,7 @@ describe("ShutdownManager", () => {
       },
     );
 
-    it.each([Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY, 0, -1])(
+    it.each(INVALID_TIMEOUTS)(
       "should reject invalid scoped timeout %s before creating the scoped manager",
       (timeoutMs) => {
         const rootManager = ShutdownManager.getInstance(100);
@@ -405,7 +419,7 @@ describe("ShutdownManager", () => {
   });
 
   describe("configure", () => {
-    it.each([Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY, 0, -1])(
+    it.each(INVALID_TIMEOUTS)(
       "should reject invalid reconfiguration %s without mutating the valid timeout",
       (timeoutMs) => {
         const manager = ShutdownManager.getInstance(100);
@@ -419,6 +433,64 @@ describe("ShutdownManager", () => {
         );
         expect((manager as unknown as { timeoutMs: number }).timeoutMs).toBe(100);
         expect(() => manager.configure(100)).not.toThrow();
+      },
+    );
+
+    it.each(["root", "scoped"])(
+      "preserves %s hooks and the first explicit configuration after rejecting an invalid timeout",
+      async (ownership) => {
+        vi.useFakeTimers();
+        const scope = Container.createScope();
+        const run = async () => {
+          Container.set(LOGGER_TOKEN, createMockLogger());
+          const manager = ShutdownManager.getInstance();
+          const pendingHook = createDeferred();
+          const hook = { onShutdown: vi.fn((_signal: AbortSignal) => pendingHook.promise) };
+          manager.register(hook);
+
+          for (const timeoutMs of INVALID_TIMEOUTS) {
+            expect(() => manager.configure(timeoutMs)).toThrow(InvalidShutdownTimeoutProblem);
+            expect(() => ShutdownManager.getInstance(timeoutMs)).toThrow(
+              InvalidShutdownTimeoutProblem,
+            );
+          }
+          manager.configure(17);
+          expect(ShutdownManager.getInstance(17)).toBe(manager);
+
+          const shutdown = manager.shutdown({ throwOnHookError: true });
+          const rejected = expect(shutdown).rejects.toThrow(ShutdownTimeoutProblem);
+          const signal = hook.onShutdown.mock.calls[0]?.[0];
+          expect(hook.onShutdown).toHaveBeenCalledTimes(1);
+          expect(signal?.aborted).toBe(false);
+          await vi.advanceTimersByTimeAsync(16);
+          expect(signal?.aborted).toBe(false);
+          await vi.advanceTimersByTimeAsync(1);
+          await rejected;
+          expect(signal?.aborted).toBe(true);
+          pendingHook.resolve();
+        };
+
+        try {
+          await (ownership === "scoped" ? scope.run(run) : run());
+        } finally {
+          scope.dispose();
+          vi.useRealTimers();
+        }
+      },
+    );
+
+    it.each([1, 2_147_483_647])(
+      "completes hooks with timer-safe boundary %s",
+      async (timeoutMs) => {
+        const manager = ShutdownManager.getInstance(timeoutMs);
+        manager.configure(timeoutMs);
+        const hook = { onShutdown: vi.fn(async (_signal: AbortSignal) => {}) };
+        manager.register(hook);
+
+        await expect(manager.shutdown({ throwOnHookError: true })).resolves.toBeUndefined();
+
+        expect(hook.onShutdown).toHaveBeenCalledTimes(1);
+        expect(hook.onShutdown.mock.calls[0]?.[0].aborted).toBe(false);
       },
     );
 

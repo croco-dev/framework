@@ -5,7 +5,7 @@ prev: false
 title: "InvalidShutdownTimeoutProblem"
 ---
 
-Shutdown timeout configuration must be a finite positive duration.
+Shutdown timeout configuration must be a positive integer within the timer range.
 
 ## Extends
 
