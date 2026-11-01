@@ -68,6 +68,13 @@ export class AdminGeneratedContractProblem extends Problem {
   }
 }
 
+const RESERVED_SOURCE_SYMBOLS = new Set([
+  "AdminGeneratedProblem",
+  "AdminGeneratedResourceConfig",
+  "adminClientBindings",
+  "adminResources",
+]);
+
 export function getAdminGeneratedDiagnostics(
   graph: ContractGraph,
 ): readonly AdminGeneratedDiagnostic[] {
@@ -112,6 +119,23 @@ export function getAdminGeneratedDiagnostics(
     }
 
     seenBindingNames.set(bindingName, route);
+
+    const typeNames = [
+      ...(needsInput(route) ? [getInputTypeName(route)] : []),
+      ...(route.outputSchema ? [getOutputTypeName(route)] : []),
+      getProblemTypeName(route),
+      getBindingTypeName(route),
+    ];
+    for (const symbol of typeNames) {
+      if (RESERVED_SOURCE_SYMBOLS.has(symbol)) {
+        diagnostics.push({
+          code: "admin-generated-reserved-symbol",
+          routeId: route.routeId,
+          path: route.path,
+          message: `Cannot generate admin resource type '${symbol}': operation id '${route.operationId}' (route '${route.routeId}') collides with a reserved generated source symbol. Rename the operation id so its generated type names are distinct.`,
+        });
+      }
+    }
   }
 
   return diagnostics.sort(compareDiagnostics);
