@@ -761,6 +761,80 @@ describe("@croco/testing", () => {
     });
   });
 
+  describe("RPC fetch cancellation before dispatch", () => {
+    function setup() {
+      const app = createTestingApp({
+        controllers: [GreetingController],
+        providers: greetingProviders(),
+      });
+      return { rpcFetch: createRpcTestFetch(app), dispatch: vi.spyOn(app.app, "fetch") };
+    }
+
+    it.each(["init", "request"] as const)(
+      "rejects an already aborted %s signal without dispatching",
+      async (source) => {
+        const { rpcFetch, dispatch } = setup();
+        const signal = AbortSignal.abort();
+        const input =
+          source === "request"
+            ? new Request("http://localhost/greetings/Grace", { signal })
+            : "/greetings/Grace";
+
+        await expect(rpcFetch(input, source === "init" ? { signal } : undefined)).rejects.toBe(
+          signal.reason,
+        );
+        expect(signal.reason).toMatchObject({ name: "AbortError" });
+        expect(dispatch).not.toHaveBeenCalled();
+      },
+    );
+
+    it.each([new Error("caller cancelled"), { code: "cancelled" }, null])(
+      "preserves the caller's abort reason %j",
+      async (reason) => {
+        const { rpcFetch, dispatch } = setup();
+
+        await expect(
+          rpcFetch("/greetings/Grace", { signal: AbortSignal.abort(reason) }),
+        ).rejects.toBe(reason);
+        expect(dispatch).not.toHaveBeenCalled();
+      },
+    );
+
+    it("rejects a live Request when init overrides it with an aborted signal", async () => {
+      const { rpcFetch, dispatch } = setup();
+      const input = new Request("http://localhost/greetings/Grace");
+      const signal = AbortSignal.abort("override cancelled");
+
+      await expect(rpcFetch(input, { signal })).rejects.toBe("override cancelled");
+      expect(dispatch).not.toHaveBeenCalled();
+    });
+
+    it.each(["live", "null"] as const)(
+      "dispatches an aborted Request when init overrides it with a %s signal",
+      async (override) => {
+        const { rpcFetch, dispatch } = setup();
+        const input = new Request("http://localhost/greetings/Grace", {
+          signal: AbortSignal.abort(),
+        });
+        const signal = override === "live" ? new AbortController().signal : null;
+
+        await expect(readJson(await rpcFetch(input, { signal }))).resolves.toEqual({
+          message: "Hello, Grace",
+        });
+        expect(dispatch).toHaveBeenCalledOnce();
+      },
+    );
+
+    it("returns the app's original Response for an uncancelled request", async () => {
+      const { rpcFetch, dispatch } = setup();
+      const response = new Response("original response", { status: 202 });
+      dispatch.mockResolvedValueOnce(response);
+
+      await expect(rpcFetch("/greetings/Grace")).resolves.toBe(response);
+      expect(dispatch).toHaveBeenCalledOnce();
+    });
+  });
+
   it("seeds reset defaults for apps created outside createTestingApp", async () => {
     resetCrocoTestingContext({ providers: greetingProviders() });
     const app = createTestingApp({

@@ -654,6 +654,8 @@ export function createRpcTestFetch(
         ? createTestingRequest(input, init ?? {}, baseUrl)
         : createTestingRequest(String(input), init ?? {}, baseUrl);
 
+    request.signal.throwIfAborted();
+
     return targetApp.fetch(request);
   };
 }
