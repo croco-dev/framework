@@ -842,6 +842,121 @@ export const adminResources = [
     ]);
   });
 
+  describe("generated symbol namespace", () => {
+    @Controller("/symbols")
+    class SymbolsController {
+      @Post("/")
+      @ResponseSchema(z.object({ id: z.string() }))
+      @ProblemResponse({ code: "SYMBOL_CONFLICT", category: ProblemCategory.Conflict })
+      create(@Body(z.object({ name: z.string() })) _body: { name: string }): void {}
+    }
+
+    const graphFor = (operationId: string): ContractGraph => {
+      const graph = buildContractGraph([SymbolsController]);
+      return { ...graph, routes: graph.routes.map((route) => ({ ...route, operationId })) };
+    };
+
+    it.each(["adminGenerated", "admin-generated"])(
+      "rejects the reserved import collision from %s before writing files",
+      (operationId) => {
+        const graph = graphFor(operationId);
+        const diagnostics = getAdminGeneratedDiagnostics(graph);
+        expect(diagnostics).toEqual([
+          expect.objectContaining({
+            code: "admin-generated-reserved-symbol",
+            routeId: "SymbolsController.create",
+            path: "/symbols",
+          }),
+        ]);
+        expect(diagnostics[0]?.message).toContain(operationId);
+        expect(diagnostics[0]?.message).toContain("AdminGeneratedProblem");
+        expect(createAdminGeneratedArtifact(graph).diagnostics).toEqual(diagnostics);
+        expect(() => generateAdminResourceSourceFromContractGraph(graph)).toThrow(
+          AdminGeneratedContractProblem,
+        );
+
+        const outDir = mkdtempSync(join(tmpdir(), "croco-admin-symbols-"));
+        try {
+          writeFileSync(join(outDir, "admin-resources.ts"), "existing resources\n");
+          writeFileSync(join(outDir, "index.ts"), "existing barrel\n");
+          expect(() => generateAdminResourceFilesFromContractGraph(graph, outDir)).toThrow(
+            "AdminGeneratedProblem",
+          );
+          expect(readFileSync(join(outDir, "admin-resources.ts"), "utf8")).toBe(
+            "existing resources\n",
+          );
+          expect(readFileSync(join(outDir, "index.ts"), "utf8")).toBe("existing barrel\n");
+          const absentDir = join(outDir, "absent");
+          expect(() => generateAdminResourceFilesFromContractGraph(graph, absentDir)).toThrow(
+            AdminGeneratedContractProblem,
+          );
+          expect(existsSync(absentDir)).toBe(false);
+        } finally {
+          rmSync(outDir, { recursive: true, force: true });
+        }
+      },
+    );
+
+    it("typechecks complete generated consumers with names near imports and local bindings", () => {
+      const operationIds = [
+        "adminGeneratedResourceConfig",
+        "adminGeneratedProblem",
+        "adminClientBindings",
+        "adminResources",
+      ];
+      const graph = buildContractGraph([SymbolsController]);
+      const renamedGraph: ContractGraph = {
+        ...graph,
+        routes: operationIds.flatMap((operationId, index) =>
+          graph.routes.map((route) => ({
+            ...route,
+            operationId,
+            routeId: `SymbolsController.create${index}`,
+            controllerPath: `/symbols${index}`,
+            path: `/symbols${index}`,
+          })),
+        ),
+      };
+      const outDir = mkdtempSync(join(tmpdir(), "croco-admin-consumer-"));
+      try {
+        generateAdminResourceFilesFromContractGraph(renamedGraph, outDir);
+        writeFileSync(
+          join(outDir, "consumer.ts"),
+          `
+import { adminClientBindings, adminResources } from './index';
+import type { AdminResourcesAdminBinding } from './index';
+const input: AdminResourcesAdminBinding['input'] = { name: 'Ada' };
+const output: AdminResourcesAdminBinding['output'] = { id: 'symbol_1' };
+const problem: AdminResourcesAdminBinding['problem'] = { code: 'SYMBOL_CONFLICT', category: 'Conflict', status: 409 };
+// @ts-expect-error Generated input keeps its field type.
+const invalidInput: AdminResourcesAdminBinding['input'] = { name: 42 };
+// @ts-expect-error Generated output keeps its field type.
+const invalidOutput: AdminResourcesAdminBinding['output'] = { id: 42 };
+// @ts-expect-error Generated Problem keeps its literal code.
+const invalidProblem: AdminResourcesAdminBinding['problem'] = { code: 'OTHER', category: 'Conflict', status: 409 };
+void [input, output, problem, invalidInput, invalidOutput, invalidProblem, adminClientBindings, adminResources];
+`,
+        );
+        const program = ts.createProgram([join(outDir, "consumer.ts")], {
+          strict: true,
+          noEmit: true,
+          skipLibCheck: true,
+          target: ts.ScriptTarget.ES2022,
+          module: ts.ModuleKind.ESNext,
+          moduleResolution: ts.ModuleResolutionKind.Bundler,
+          paths: { "@croco/admin-generated": [join(import.meta.dirname, "../../dist/index.d.ts")] },
+        });
+        expect(
+          ts
+            .getPreEmitDiagnostics(program)
+            .map((diagnostic) => ts.flattenDiagnosticMessageText(diagnostic.messageText, " ")),
+        ).toEqual([]);
+      } finally {
+        rmSync(outDir, { recursive: true, force: true });
+      }
+    });
+  });
+
   it("should fail binding-name normalization collisions with a dedicated diagnostic", () => {
     @Controller("/users")
     class UsersController {

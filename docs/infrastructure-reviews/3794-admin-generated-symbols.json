@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "admin-generated",
+      "classification": "protocol-render",
+      "reason": "Reject operation-derived declarations that collide with fixed imports or local symbols before writing generated resources; existing valid type names remain unchanged.",
+      "files": {
+        "packages/admin-generated/src/libs/generate.ts": "25dde310dbd1bbc443e6f8f28f389bae0e943268551b3e33f701bda54311a90d"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Generated TypeScript symbol validation runs at build time. It adds no Node capability, storage, provider or lifecycle dependency.",
+          "providers": [],
+          "constraints": [
+            "No deployment support or live infrastructure certification is introduced."
+          ],
+          "references": [
+            "packages/admin-generated/src/libs/generate.ts",
+            "packages/admin-generated/src/tests/AdminGenerated.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Generated TypeScript symbol validation runs at build time. It adds no Lambda capability, storage, provider or lifecycle dependency.",
+          "providers": [],
+          "constraints": [
+            "No deployment support or live infrastructure certification is introduced."
+          ],
+          "references": [
+            "packages/admin-generated/src/libs/generate.ts",
+            "packages/admin-generated/src/tests/AdminGenerated.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Generated TypeScript symbol validation runs at build time. It adds no Workers or Node Container capability, storage, provider or lifecycle dependency.",
+          "providers": [],
+          "constraints": [
+            "No deployment support or live infrastructure certification is introduced."
+          ],
+          "references": [
+            "packages/admin-generated/src/libs/generate.ts",
+            "packages/admin-generated/src/tests/AdminGenerated.spec.ts"
+          ]
+        }
+      }
+    }
+  ]
+}
