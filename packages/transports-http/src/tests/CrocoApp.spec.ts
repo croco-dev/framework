@@ -961,6 +961,7 @@ describe("CrocoApp", () => {
         method: "OPTIONS",
         headers: {
           origin: "https://example.com",
+          "access-control-request-method": "GET",
         },
       }),
     );
