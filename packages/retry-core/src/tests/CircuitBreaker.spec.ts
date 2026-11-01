@@ -14,6 +14,14 @@ vi.mock("@croco/telemetry-api", () => ({
 }));
 
 describe("CircuitBreaker", () => {
+  const createGate = () => {
+    let release = () => {};
+    const promise = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    return { promise, resolve: release };
+  };
+
   const createBreaker = (options: Partial<CircuitBreakerOptions> = {}) => {
     return new CircuitBreaker({
       circuitId: "test-circuit",
@@ -408,9 +416,9 @@ describe("CircuitBreaker", () => {
   });
 
   it("serializes forceClose with a late failure and preserves timed recovery", async () => {
-    const resetReached = Promise.withResolvers<void>();
-    const releaseReset = Promise.withResolvers<void>();
-    const failureLockAttempted = Promise.withResolvers<void>();
+    const resetReached = createGate();
+    const releaseReset = createGate();
+    const failureLockAttempted = createGate();
     let resetPaused = false;
     let resetHeldLock = false;
     let lockHeld = false;
@@ -494,8 +502,8 @@ describe("CircuitBreaker", () => {
   });
 
   it("finishes forceClose after an earlier forceOpen transition", async () => {
-    const openingReached = Promise.withResolvers<void>();
-    const releaseOpening = Promise.withResolvers<void>();
+    const openingReached = createGate();
+    const releaseOpening = createGate();
     class PausedOpenStore extends InMemoryCircuitBreakerStateStore {
       override async setLastFailureTime(circuitId: string, time: number): Promise<void> {
         await super.setLastFailureTime(circuitId, time);
