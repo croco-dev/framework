@@ -6,7 +6,7 @@
       "classification": "pure-contract",
       "reason": "Align no-output contract observations with existing HTTP/OpenAPI defaults: 204 without an output schema, explicit success statuses preserved, and only an absent body accepted. Output schemas and invalid-input rejection remain enforced.",
       "files": {
-        "packages/testing/src/libs/contract-testing.ts": "3f88b3228a5a342422e43e693aedee98f823bcfa8c96f02d91193560982b192c"
+        "packages/testing/src/libs/contract-testing.ts": "646606608c35a7ff245ef77eadb96dbdc2a516ddd0cd7ccb0bddbc499a0511e1"
       },
       "catalogRuntimes": [],
       "profiles": {
@@ -50,56 +50,6 @@
             "packages/transports-http/src/libs/CrocoRouteRegistrar.ts",
             "packages/openapi-spec/src/libs/emitOpenAPI.ts",
             "packages/testing/src/tests/ContractRuntimeDifferentialIntegration.spec.ts"
-          ]
-        }
-      }
-    },
-    {
-      "package": "problems-core",
-      "classification": "pure-contract",
-      "reason": "Keep generated Problem registry source locations aligned with the final testing source. Only five source line values and their type literals change, all by one line.",
-      "files": {
-        "packages/problems-core/src/generated/problem-code-registry.ts": "d3e5bffc9d46810de0d596062a2d6ba064a66382c9b4cd1b9d981bd9d1fc351b"
-      },
-      "catalogRuntimes": [],
-      "profiles": {
-        "kubernetes": {
-          "result": "not-applicable",
-          "reason": "Canonical Problem registry generation updates only testing source line locations after the observation contract comment. It adds no Kubernetes Node Host capability, storage or lifecycle dependency.",
-          "providers": [],
-          "constraints": [
-            "Problem codes, categories, recovery guidance and serialization behavior are unchanged; only generated source-location metadata moves by one line. No runtime support or deployment certification is claimed."
-          ],
-          "references": [
-            "packages/problems-core/src/generated/problem-code-registry.ts",
-            "packages/testing/src/libs/contract-testing.ts",
-            "scripts/problem-registry.mts"
-          ]
-        },
-        "aws-lambda": {
-          "result": "not-applicable",
-          "reason": "Canonical Problem registry generation updates only testing source line locations after the observation contract comment. It adds no AWS Lambda Host capability, storage or lifecycle dependency.",
-          "providers": [],
-          "constraints": [
-            "Problem codes, categories, recovery guidance and serialization behavior are unchanged; only generated source-location metadata moves by one line. No runtime support or deployment certification is claimed."
-          ],
-          "references": [
-            "packages/problems-core/src/generated/problem-code-registry.ts",
-            "packages/testing/src/libs/contract-testing.ts",
-            "scripts/problem-registry.mts"
-          ]
-        },
-        "cloudflare": {
-          "result": "not-applicable",
-          "reason": "Canonical Problem registry generation updates only testing source line locations after the observation contract comment. It adds no Cloudflare Workers or Node Container Host capability, storage or lifecycle dependency.",
-          "providers": [],
-          "constraints": [
-            "Problem codes, categories, recovery guidance and serialization behavior are unchanged; only generated source-location metadata moves by one line. No runtime support or deployment certification is claimed."
-          ],
-          "references": [
-            "packages/problems-core/src/generated/problem-code-registry.ts",
-            "packages/testing/src/libs/contract-testing.ts",
-            "scripts/problem-registry.mts"
           ]
         }
       }

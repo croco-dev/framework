@@ -170,8 +170,12 @@ Fast-check-driven contract failures may also store a replay `path`, `runtime`, a
 default `pr` profile runs 32 cases with a stable seed; `nightly` runs 512 and `manual` runs 2,048.
 `numRuns`, `seed`, and fast-check replay `path` remain explicit overrides, so CI budgets cannot
 silently expand. Generated cases include both schema-valid and schema-invalid transport inputs. A
-schema-valid request may return either the declared success schema or any declared Problem union;
+schema-valid request may return either the declared success response or any declared Problem union;
 the runner does not assume that every valid request is a business success.
+
+Routes without an output schema default to status 204; an explicit `successStatus` takes precedence.
+Executors use `body: undefined` for an absent response body. Parsed JSON `null` is a present body and
+requires an output schema, as do all other response values.
 
 The built-in generator supports Zod 4 strings with `min`/`max`, numbers with `min`/`max`/`int`,
 booleans, JSON-safe literals, enums and native enums, objects, arrays, tuples, unions,

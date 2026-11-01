@@ -86,7 +86,6 @@ export type ContractGeneratedCase = {
 
 export type ContractExecutionObservation = {
   readonly status: number;
-  /** Use undefined for an absent response body; JSON null is a response body. */
   readonly body: unknown;
   readonly headers?: Readonly<Record<string, string>>;
   readonly logs?: readonly unknown[];
