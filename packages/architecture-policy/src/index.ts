@@ -67,6 +67,27 @@ export class ArchitecturePolicyPackageJsonParseProblem extends Problem {
   }
 }
 
+class ArchitecturePolicyTsconfigProblem extends Problem {
+  constructor(tsconfigPath: string, diagnostics: readonly ts.Diagnostic[]) {
+    super(
+      "architecture-policy/tsconfig",
+      ProblemCategory.ValidationError,
+      `Cannot resolve architecture policy imports with invalid TypeScript configuration: ${tsconfigPath}.`,
+      {
+        extensions: {
+          tsconfigPath,
+          diagnostics: diagnostics.map((diagnostic) => ({
+            code: diagnostic.code,
+            message: ts.flattenDiagnosticMessageText(diagnostic.messageText, "\n"),
+          })),
+          recovery:
+            "Correct the TypeScript configuration and its extends chain, then rerun the policy check.",
+        },
+      },
+    );
+  }
+}
+
 export type ArchitecturePolicyPackageGroup = {
   readonly description?: string;
   readonly packages?: readonly string[];
@@ -770,6 +791,7 @@ function collectSourceImports(
   packages: readonly PackageInfo[],
 ): readonly ImportRecord[] {
   const files = collectIncludedFiles(policy);
+  const resolveModule = createModuleResolver(policy.rootDir);
 
   return files.flatMap((filePath) => {
     const relativeFile = toPosixPath(relative(policy.rootDir, filePath));
@@ -782,17 +804,21 @@ function collectSourceImports(
     const lineStarts = source.getLineStarts();
 
     return extractImportSpecifiers(source).map((entry) => {
-      const targetFile = entry.specifier.startsWith(".")
-        ? toPosixPath(relative(policy.rootDir, resolve(dirname(filePath), entry.specifier)))
-        : null;
+      const resolvedFile = entry.specifier.startsWith(".")
+        ? resolve(dirname(filePath), entry.specifier)
+        : resolveModule(entry.specifier, filePath);
+      const targetFile = resolvedFile ? toPosixPath(relative(policy.rootDir, resolvedFile)) : null;
       const targetPackage = targetFile === null ? null : findSourcePackage(packages, targetFile);
+      const declaredImport = splitPackageSpecifier(entry.specifier);
       const imported =
-        targetPackage && targetPackage !== sourcePackage && targetFile !== null
-          ? {
-              packageName: targetPackage.name,
-              subpath: toPosixPath(relative(targetPackage.relativeDir, targetFile)),
-            }
-          : splitPackageSpecifier(entry.specifier);
+        targetPackage && targetFile !== null && declaredImport.packageName !== targetPackage.name
+          ? targetPackage === sourcePackage
+            ? { packageName: null, subpath: null }
+            : {
+                packageName: targetPackage.name,
+                subpath: toPosixPath(relative(targetPackage.relativeDir, targetFile)),
+              }
+          : declaredImport;
 
       return {
         sourceKind: "source",
@@ -807,6 +833,59 @@ function collectSourceImports(
       } satisfies ImportRecord;
     });
   });
+}
+
+function createModuleResolver(
+  rootDir: string,
+): (specifier: string, filePath: string) => string | undefined {
+  const configPaths = new Map<string, string | undefined>();
+  const projects = new Map<
+    string,
+    { options: ts.CompilerOptions; cache: ts.ModuleResolutionCache }
+  >();
+
+  return (specifier, filePath) => {
+    const directory = dirname(filePath);
+    if (!configPaths.has(directory)) {
+      configPaths.set(
+        directory,
+        ts.findConfigFile(directory, (candidate) => {
+          const relativePath = relative(rootDir, candidate);
+          return !relativePath.startsWith("..") && ts.sys.fileExists(candidate);
+        }),
+      );
+    }
+    const configPath = configPaths.get(directory);
+    const projectKey = configPath ?? rootDir;
+    let project = projects.get(projectKey);
+    if (!project) {
+      let options: ts.CompilerOptions = {};
+      if (configPath) {
+        const config = ts.readJsonConfigFile(configPath, ts.sys.readFile);
+        const parsed = ts.parseJsonSourceFileConfigFileContent(
+          config,
+          ts.sys,
+          dirname(configPath),
+          {},
+          configPath,
+        );
+        const errors = parsed.errors.filter((diagnostic) => diagnostic.code !== 18003);
+        if (errors.length > 0) throw new ArchitecturePolicyTsconfigProblem(configPath, errors);
+        options = parsed.options;
+      }
+      project = {
+        options,
+        cache: ts.createModuleResolutionCache(
+          rootDir,
+          (path) => (ts.sys.useCaseSensitiveFileNames ? path : path.toLowerCase()),
+          options,
+        ),
+      };
+      projects.set(projectKey, project);
+    }
+    return ts.resolveModuleName(specifier, filePath, project.options, ts.sys, project.cache)
+      .resolvedModule?.resolvedFileName;
+  };
 }
 
 function collectPackageManifestImports(
