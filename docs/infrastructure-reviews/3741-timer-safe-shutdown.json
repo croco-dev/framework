@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "framework-context",
+      "classification": "pure-contract",
+      "reason": "Reject fractional and out-of-range shutdown timeouts through the existing typed configuration Problem before creating or reconfiguring root and scoped managers.",
+      "files": {
+        "packages/framework-context/src/libs/ShutdownManager.ts": "9999dcfc1db88884f3dd241013e1af873734a7dfe4e2c05a9c26774a9ff34a39",
+        "packages/framework-context/src/libs/problems/ShutdownProblems.ts": "d70294ba89b0ed7c979ab34d6f2fc2d012ad4d1261529432f0e5dc8333c5143e"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "The change validates numeric configuration before manager state mutation. It adds no host capability, storage dependency or lifecycle implementation, and does not change existing runtime support.",
+          "providers": ["@croco/framework-context"],
+          "constraints": [
+            "Existing timer scheduling, hook execution and host support remain unchanged; no live infrastructure or provider certification is claimed."
+          ],
+          "references": [
+            "packages/framework-context/src/libs/ShutdownManager.ts",
+            "packages/framework-context/src/libs/problems/ShutdownProblems.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "The change validates numeric configuration before manager state mutation. It adds no host capability, storage dependency or lifecycle implementation, and does not change existing runtime support.",
+          "providers": ["@croco/framework-context"],
+          "constraints": [
+            "Existing timer scheduling, hook execution and host support remain unchanged; no live infrastructure or provider certification is claimed."
+          ],
+          "references": [
+            "packages/framework-context/src/libs/ShutdownManager.ts",
+            "packages/framework-context/src/libs/problems/ShutdownProblems.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "The change validates numeric configuration before manager state mutation. It adds no host capability, storage dependency or lifecycle implementation, and does not change existing runtime support.",
+          "providers": ["@croco/framework-context"],
+          "constraints": [
+            "Existing timer scheduling, hook execution and host support remain unchanged; no live infrastructure or provider certification is claimed."
+          ],
+          "references": [
+            "packages/framework-context/src/libs/ShutdownManager.ts",
+            "packages/framework-context/src/libs/problems/ShutdownProblems.ts"
+          ]
+        }
+      }
+    }
+  ]
+}

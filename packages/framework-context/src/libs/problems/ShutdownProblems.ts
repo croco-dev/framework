@@ -66,7 +66,7 @@ function assertNever(value: never): never {
   throw new OnShutdownDecoratorProblem("non-method", String(value));
 }
 
-/** Shutdown timeout configuration must be a finite positive duration. */
+/** Shutdown timeout configuration must be a positive integer within the timer range. */
 export class InvalidShutdownTimeoutProblem extends Problem {
   readonly code = "framework-context/shutdown-timeout-invalid";
   readonly category = ProblemCategory.ValidationError;
@@ -75,7 +75,7 @@ export class InvalidShutdownTimeoutProblem extends Problem {
     super(
       undefined,
       undefined,
-      `Shutdown timeout must be a finite positive duration; received ${String(timeoutMs)}ms`,
+      `Shutdown timeout must be an integer from 1 to 2147483647ms; received ${String(timeoutMs)}ms`,
     );
   }
 }

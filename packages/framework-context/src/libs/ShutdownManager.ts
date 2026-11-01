@@ -10,6 +10,7 @@ import {
 import type { Constructor, ShutdownHook } from "./types";
 
 const DEFAULT_TIMEOUT_MS = 30_000;
+const MAX_TIMEOUT_MS = 2_147_483_647;
 
 /** @internal */
 export const SHUTDOWN_HOOK_OWNER = Symbol.for("@croco/framework-context/shutdown-hook/owner");
@@ -25,7 +26,7 @@ function getHookOwner(hook: ShutdownHook): Constructor | undefined {
 type ShutdownLifecycleState = "accepting-hooks" | "shutting-down" | "shut-down";
 
 function assertValidShutdownTimeout(timeoutMs: number): void {
-  if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) {
+  if (!Number.isInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > MAX_TIMEOUT_MS) {
     throw new InvalidShutdownTimeoutProblem(timeoutMs);
   }
 }

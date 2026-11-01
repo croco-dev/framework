@@ -90,7 +90,7 @@ surfaced as unhandled promise rejections. Successful shutdown leaves the existin
 
 `ShutdownManager`는 프로세스 singleton입니다. `getInstance()`로 암시적 기본 timeout이 생성된 뒤에는
 `getInstance(timeoutMs)` 또는 `configure(timeoutMs)`로 한 번 명시적 timeout을 고정할 수 있습니다.
-timeout은 유한한 양수여야 하며, 잘못된 값은 manager 상태가 변경되기 전에
+timeout은 1~2,147,483,647ms 범위의 정수여야 하며, 잘못된 값은 manager 상태가 변경되기 전에
 `InvalidShutdownTimeoutProblem`으로 거부됩니다.
 서로 다른 명시적 timeout을 다시 전달하면 `ShutdownConfigurationConflictProblem`이 발생합니다.
 종료가 시작된 뒤 새 훅을 등록하면 현재 lifecycle 상태와 복구 행동을 포함한
