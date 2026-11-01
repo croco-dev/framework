@@ -126,6 +126,7 @@ export class MigrationRunner {
     if (await this.store.hasTable(this.db)) {
       const executed = await this.store.getExecutedMigrations(this.db);
       reconcileMigrationHistory(files, executed);
+      return (await select(this.db)).map(({ id, name }) => `${id}_${name}`);
     }
 
     let selected: MigrationFile[] = [];
