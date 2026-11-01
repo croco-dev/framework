@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export type CrocoProblemRegistry = {
   readonly version: "croco.problem-code-registry.v1";
-  readonly problemCount: 1155;
+  readonly problemCount: 1156;
   readonly problems: readonly [
     {
       readonly code: "ACCESS_DENIED";
@@ -14596,7 +14596,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/execution-core/src/libs/ExecutionProblem.ts";
-          readonly line: 176;
+          readonly line: 185;
           readonly column: 12;
           readonly kind: "problem-constructor";
         },
@@ -14624,7 +14624,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/execution-core/src/libs/ExecutionProblem.ts";
-          readonly line: 168;
+          readonly line: 177;
           readonly column: 12;
           readonly kind: "problem-constructor";
         },
@@ -14652,7 +14652,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/execution-core/src/libs/ExecutionProblem.ts";
-          readonly line: 160;
+          readonly line: 169;
           readonly column: 12;
           readonly kind: "problem-constructor";
         },
@@ -14680,7 +14680,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/execution-core/src/libs/ExecutionProblem.ts";
-          readonly line: 112;
+          readonly line: 121;
           readonly column: 12;
           readonly kind: "problem-constructor";
         },
@@ -14708,7 +14708,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/execution-core/src/libs/ExecutionProblem.ts";
-          readonly line: 151;
+          readonly line: 160;
           readonly column: 12;
           readonly kind: "problem-constructor";
         },
@@ -14736,7 +14736,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/execution-core/src/libs/ExecutionProblem.ts";
-          readonly line: 140;
+          readonly line: 149;
           readonly column: 12;
           readonly kind: "problem-constructor";
         },
@@ -14764,7 +14764,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/execution-core/src/libs/ExecutionProblem.ts";
-          readonly line: 116;
+          readonly line: 125;
           readonly column: 12;
           readonly kind: "problem-constructor";
         },
@@ -14792,7 +14792,35 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/execution-core/src/libs/ExecutionProblem.ts";
-          readonly line: 184;
+          readonly line: 193;
+          readonly column: 12;
+          readonly kind: "problem-constructor";
+        },
+      ];
+    },
+    {
+      readonly code: "execution/invalid-configuration";
+      readonly category: "ValidationError";
+      readonly status: 422;
+      readonly title: "Validation Error";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#execution-invalid-configuration";
+      readonly recovery: {
+        readonly cause: "The request or generated contract failed schema or semantic validation.";
+        readonly userAction: "Fix the invalid fields and retry with schema-conformant input.";
+        readonly operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "public";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.info";
+          readonly severity: "info";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/execution-core/src/libs/ExecutionProblem.ts";
+          readonly line: 103;
           readonly column: 12;
           readonly kind: "problem-constructor";
         },
@@ -14820,7 +14848,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/execution-core/src/libs/ExecutionProblem.ts";
-          readonly line: 31;
+          readonly line: 32;
           readonly column: 1;
           readonly kind: "problem-class";
         },
@@ -14848,7 +14876,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/execution-core/src/libs/ExecutionProblem.ts";
-          readonly line: 132;
+          readonly line: 141;
           readonly column: 12;
           readonly kind: "problem-constructor";
         },
@@ -14876,7 +14904,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/execution-core/src/libs/ExecutionProblem.ts";
-          readonly line: 124;
+          readonly line: 133;
           readonly column: 12;
           readonly kind: "problem-constructor";
         },
@@ -14904,7 +14932,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/execution-core/src/libs/ExecutionProblem.ts";
-          readonly line: 108;
+          readonly line: 117;
           readonly column: 12;
           readonly kind: "problem-constructor";
         },
@@ -32473,7 +32501,7 @@ export type CrocoProblemRegistry = {
       readonly className: "ExecutionProblem";
       readonly source: {
         readonly file: "packages/execution-core/src/libs/ExecutionProblem.ts";
-        readonly line: 63;
+        readonly line: 64;
         readonly column: 1;
         readonly kind: "problem-class";
       };
@@ -32654,7 +32682,7 @@ export type CrocoProblemRegistry = {
 
 export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 1155,
+  problemCount: 1156,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -48932,7 +48960,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/execution-core/src/libs/ExecutionProblem.ts",
-          line: 176,
+          line: 185,
           column: 12,
           kind: "problem-constructor",
         },
@@ -48964,7 +48992,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/execution-core/src/libs/ExecutionProblem.ts",
-          line: 168,
+          line: 177,
           column: 12,
           kind: "problem-constructor",
         },
@@ -48996,7 +49024,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/execution-core/src/libs/ExecutionProblem.ts",
-          line: 160,
+          line: 169,
           column: 12,
           kind: "problem-constructor",
         },
@@ -49026,7 +49054,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/execution-core/src/libs/ExecutionProblem.ts",
-          line: 112,
+          line: 121,
           column: 12,
           kind: "problem-constructor",
         },
@@ -49056,7 +49084,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/execution-core/src/libs/ExecutionProblem.ts",
-          line: 151,
+          line: 160,
           column: 12,
           kind: "problem-constructor",
         },
@@ -49088,7 +49116,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/execution-core/src/libs/ExecutionProblem.ts",
-          line: 140,
+          line: 149,
           column: 12,
           kind: "problem-constructor",
         },
@@ -49118,7 +49146,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/execution-core/src/libs/ExecutionProblem.ts",
-          line: 116,
+          line: 125,
           column: 12,
           kind: "problem-constructor",
         },
@@ -49148,7 +49176,37 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/execution-core/src/libs/ExecutionProblem.ts",
-          line: 184,
+          line: 193,
+          column: 12,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "execution/invalid-configuration",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#execution-invalid-configuration",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/execution-core/src/libs/ExecutionProblem.ts",
+          line: 103,
           column: 12,
           kind: "problem-constructor",
         },
@@ -49179,7 +49237,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/execution-core/src/libs/ExecutionProblem.ts",
-          line: 31,
+          line: 32,
           column: 1,
           kind: "problem-class",
         },
@@ -49209,7 +49267,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/execution-core/src/libs/ExecutionProblem.ts",
-          line: 132,
+          line: 141,
           column: 12,
           kind: "problem-constructor",
         },
@@ -49239,7 +49297,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/execution-core/src/libs/ExecutionProblem.ts",
-          line: 124,
+          line: 133,
           column: 12,
           kind: "problem-constructor",
         },
@@ -49270,7 +49328,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/execution-core/src/libs/ExecutionProblem.ts",
-          line: 108,
+          line: 117,
           column: 12,
           kind: "problem-constructor",
         },
@@ -69012,7 +69070,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       className: "ExecutionProblem",
       source: {
         file: "packages/execution-core/src/libs/ExecutionProblem.ts",
-        line: 63,
+        line: 64,
         column: 1,
         kind: "problem-class",
       },

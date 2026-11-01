@@ -41,7 +41,7 @@ Initial log entries
 
 > `optional` **maxAttempts?**: `number`
 
-Maximum retry attempts (default: 1)
+Maximum attempts, including the first attempt; a positive safe integer (default: 1).
 
 #### Inherited from
 
@@ -121,7 +121,7 @@ Optional scheduled start time
 
 > `optional` **timeout?**: `number`
 
-Timeout in milliseconds (default: no timeout)
+Finite, non-negative timeout in milliseconds; 0 or undefined means no timeout.
 
 #### Inherited from
 

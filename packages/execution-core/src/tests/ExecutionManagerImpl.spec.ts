@@ -396,6 +396,60 @@ describe("ExecutionManagerImpl", () => {
   });
 
   describe("create", () => {
+    it.each([0, -1, NaN, Infinity, -Infinity, 1.5, Number.MAX_SAFE_INTEGER + 1])(
+      "rejects invalid maxAttempts %s before accessing the store",
+      async (maxAttempts) => {
+        const create = vi.spyOn(store, "create");
+        const lookup = vi.spyOn(store, "findByIdempotencyKey");
+
+        await expect(
+          manager.create({ type: "task", maxAttempts, idempotencyKey: "invalid-config" }),
+        ).rejects.toMatchObject({
+          code: "execution/invalid-configuration",
+          category: "ValidationError",
+        });
+        expect(create).not.toHaveBeenCalled();
+        expect(lookup).not.toHaveBeenCalled();
+        expect(await store.list()).toEqual([]);
+      },
+    );
+
+    it.each([NaN, Infinity, -Infinity, -1])(
+      "rejects invalid timeout %s before accessing the store",
+      async (timeout) => {
+        const create = vi.spyOn(store, "create");
+        const lookup = vi.spyOn(store, "findByIdempotencyKey");
+
+        await expect(
+          manager.create({ type: "task", timeout, idempotencyKey: "invalid-config" }),
+        ).rejects.toMatchObject({
+          code: "execution/invalid-configuration",
+          category: "ValidationError",
+        });
+        expect(create).not.toHaveBeenCalled();
+        expect(lookup).not.toHaveBeenCalled();
+        expect(await store.list()).toEqual([]);
+      },
+    );
+
+    it.each([undefined, 0, 0.5, 2_147_483_648])(
+      "preserves valid timeout %s and default attempts",
+      async (timeout) => {
+        const execution = await manager.create({ type: "task", timeout });
+        expect(execution).toMatchObject({ maxAttempts: 1, attempts: 0, status: "pending" });
+        expect(execution.timeout).toBe(timeout);
+      },
+    );
+
+    it("rejects invalid configuration even when an idempotent execution exists", async () => {
+      const original = await manager.create({ type: "task", idempotencyKey: "existing" });
+
+      await expect(
+        manager.create({ type: "task", idempotencyKey: "existing", timeout: NaN }),
+      ).rejects.toMatchObject({ code: "execution/invalid-configuration" });
+      expect(await store.list()).toEqual([original]);
+    });
+
     it("creates execution with pending status", async () => {
       const execution = await manager.create({ type: "task" });
 

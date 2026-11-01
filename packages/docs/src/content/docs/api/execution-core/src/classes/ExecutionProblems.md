@@ -151,6 +151,22 @@ Factory methods for creating ExecutionProblem instances.
 
 ---
 
+### invalidConfiguration()
+
+> `static` **invalidConfiguration**(`detail`): [`ExecutionProblem`](/api/execution-core/src/classes/executionproblem/)
+
+#### Parameters
+
+##### detail
+
+`string`
+
+#### Returns
+
+[`ExecutionProblem`](/api/execution-core/src/classes/executionproblem/)
+
+---
+
 ### invalidContinuationLeaseDuration()
 
 > `static` **invalidContinuationLeaseDuration**(`options`): [`InvalidContinuationLeaseDurationProblem`](/api/execution-core/src/classes/invalidcontinuationleasedurationproblem/)
