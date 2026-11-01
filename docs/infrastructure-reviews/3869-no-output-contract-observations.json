@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "testing",
+      "classification": "pure-contract",
+      "reason": "Align no-output contract observations with existing HTTP/OpenAPI defaults: 204 without an output schema, explicit success statuses preserved, and only an absent body accepted. Output schemas and invalid-input rejection remain enforced.",
+      "files": {
+        "packages/testing/src/libs/contract-testing.ts": "646606608c35a7ff245ef77eadb96dbdc2a516ddd0cd7ccb0bddbc499a0511e1"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "The contract observation assertion inspects status and an already captured body in memory. This adds no Kubernetes Node Host capability, storage or lifecycle dependency.",
+          "providers": [],
+          "constraints": [
+            "An absent observed body is undefined; JSON null and other present values remain bodies. Existing HTTP/OpenAPI status policy and runtime support claims are unchanged. No live deployment or provider certification is claimed."
+          ],
+          "references": [
+            "packages/testing/src/libs/contract-testing.ts",
+            "packages/transports-http/src/libs/CrocoRouteRegistrar.ts",
+            "packages/openapi-spec/src/libs/emitOpenAPI.ts",
+            "packages/testing/src/tests/ContractRuntimeDifferentialIntegration.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "The contract observation assertion inspects status and an already captured body in memory. This adds no AWS Lambda Host capability, storage or lifecycle dependency.",
+          "providers": [],
+          "constraints": [
+            "An absent observed body is undefined; JSON null and other present values remain bodies. Existing HTTP/OpenAPI status policy and runtime support claims are unchanged. No live deployment or provider certification is claimed."
+          ],
+          "references": [
+            "packages/testing/src/libs/contract-testing.ts",
+            "packages/transports-http/src/libs/CrocoRouteRegistrar.ts",
+            "packages/openapi-spec/src/libs/emitOpenAPI.ts",
+            "packages/testing/src/tests/ContractRuntimeDifferentialIntegration.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "The contract observation assertion inspects status and an already captured body in memory. This adds no Cloudflare Workers or Node Container Host capability, storage or lifecycle dependency.",
+          "providers": [],
+          "constraints": [
+            "An absent observed body is undefined; JSON null and other present values remain bodies. Existing HTTP/OpenAPI status policy and runtime support claims are unchanged. No live deployment or provider certification is claimed."
+          ],
+          "references": [
+            "packages/testing/src/libs/contract-testing.ts",
+            "packages/transports-http/src/libs/CrocoRouteRegistrar.ts",
+            "packages/openapi-spec/src/libs/emitOpenAPI.ts",
+            "packages/testing/src/tests/ContractRuntimeDifferentialIntegration.spec.ts"
+          ]
+        }
+      }
+    }
+  ]
+}

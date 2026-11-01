@@ -37,6 +37,7 @@ import {
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { z } from "zod";
 import {
+  assertContractObservation,
   CONTRACT_RUNTIME_LIFECYCLE_CAPABILITIES,
   type ContractExecutionObservation,
   type ContractGeneratedCase,
@@ -114,6 +115,9 @@ class ContractRuntimeDifferentialIntegrationController {
     observedWorkerAbortSignal = runtime?.abortSignal;
     return { ok: true, platform: runtime?.platform, binding: runtime?.env?.MY_KV };
   }
+
+  @Post("/ack")
+  acknowledge(): void {}
 }
 
 @Controller("/query-transport")
@@ -156,6 +160,12 @@ const testCase: ContractGeneratedCase = {
   },
 };
 
+const validNoOutputCase: ContractGeneratedCase = {
+  kind: "valid",
+  canarySecret: "croco-canary-no-output",
+  input: {},
+};
+
 describe("ContractRuntimeDifferentialIntegration", () => {
   const servers: NodeServerHandle[] = [];
 
@@ -170,6 +180,45 @@ describe("ContractRuntimeDifferentialIntegration", () => {
     runtimeEvidence.clear();
     observedWorkerAbortSignal = undefined;
     Container.reset();
+  });
+
+  it("accepts a real HTTP no-content response as a no-output contract observation", async () => {
+    const graph = buildContractGraph([ContractRuntimeDifferentialIntegrationController]);
+    const ackRoute = graph.routes.find(({ methodName }) => methodName === "acknowledge");
+    if (!ackRoute) {
+      throw new Error("The no-output route was not emitted into the contract graph.");
+    }
+    expect(ackRoute.outputSchema).toBeNull();
+    const app = createApp({
+      controllers: [ContractRuntimeDifferentialIntegrationController],
+      securityValidation: "off",
+      diValidation: "off",
+    });
+    const server = await startServer(app, 0);
+    servers.push(server);
+    await waitForListening(server);
+    const address = server.address() as AddressInfo | null;
+    if (!address) {
+      throw new Error("Node adapter did not expose a listening address.");
+    }
+    const response = await fetch(`http://127.0.0.1:${address.port}${ackRoute.path}`, {
+      method: "POST",
+    });
+    const text = await response.text();
+    expect(response.status).toBe(204);
+    expect(text).toBe("");
+    const observation = {
+      status: response.status,
+      body: text === "" ? undefined : (JSON.parse(text) as unknown),
+    };
+    expect(assertContractObservation(ackRoute, validNoOutputCase, observation)).toBe("success");
+    expect(
+      assertContractObservation(
+        { ...ackRoute, successStatus: 204 },
+        validNoOutputCase,
+        observation,
+      ),
+    ).toBe("success");
   });
 
   it("proves one typed contract across real Node, Lambda, and Cloudflare Workers adapter paths without credentials", async () => {
