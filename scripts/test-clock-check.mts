@@ -161,8 +161,10 @@ function isClockCallback(type: ts.Type, checker: ts.TypeChecker): boolean {
     .some((signature) => {
       if (signature.parameters.length !== 0) return false;
       const result = checker.getReturnTypeOfSignature(signature);
+      const constituents = result.isIntersection() ? result.types : [result];
       return (
-        (result.flags & ts.TypeFlags.NumberLike) !== 0 || checker.typeToString(result) === "Date"
+        constituents.some((part) => (part.flags & ts.TypeFlags.NumberLike) !== 0) ||
+        checker.typeToString(result) === "Date"
       );
     });
 }
@@ -210,25 +212,24 @@ function hasExplicitProperty(
 function literalPropertyAccess(
   expression: ts.Expression,
 ): { readonly receiver: ts.Expression; readonly name: string } | undefined {
-  if (ts.isPropertyAccessExpression(expression))
-    return { receiver: expression.expression, name: expression.name.text };
-  if (
-    ts.isElementAccessExpression(expression) &&
-    ts.isStringLiteralLike(expression.argumentExpression)
-  ) {
-    return { receiver: expression.expression, name: expression.argumentExpression.text };
+  const target = skipParentheses(expression);
+  if (ts.isPropertyAccessExpression(target))
+    return { receiver: target.expression, name: target.name.text };
+  if (ts.isElementAccessExpression(target) && ts.isStringLiteralLike(target.argumentExpression)) {
+    return { receiver: target.expression, name: target.argumentExpression.text };
   }
   return undefined;
 }
 
 function isGlobalDate(expression: ts.Expression | undefined, checker: ts.TypeChecker): boolean {
   if (!expression) return false;
+  const target = skipParentheses(expression);
   let symbol: ts.Symbol | undefined;
-  if (ts.isIdentifier(expression)) {
-    if (expression.text !== "Date") return false;
-    symbol = checker.getSymbolAtLocation(expression);
+  if (ts.isIdentifier(target)) {
+    if (target.text !== "Date") return false;
+    symbol = checker.getSymbolAtLocation(target);
   } else {
-    const access = literalPropertyAccess(expression);
+    const access = literalPropertyAccess(target);
     if (access?.name !== "Date") return false;
     symbol = checker.getPropertyOfType(checker.getTypeAtLocation(access.receiver), "Date");
   }
@@ -237,6 +238,12 @@ function isGlobalDate(expression: ts.Expression | undefined, checker: ts.TypeChe
       /(?:^|\/)lib\.[^/]+\.d\.ts$/.test(declaration.getSourceFile().fileName),
     ) ?? false
   );
+}
+
+function skipParentheses(expression: ts.Expression): ts.Expression {
+  let current = expression;
+  while (ts.isParenthesizedExpression(current)) current = current.expression;
+  return current;
 }
 
 function immediateExpressionOwner(

@@ -203,6 +203,52 @@ new UnionOptionsService(incomplete);
     ]);
   });
 
+  it("detects wrapped ambient reads without confusing fixed dates or shadowed bindings", () => {
+    const { findings } = fixture(`
+new (Date)();
+(Date)['now']();
+(Date.now)();
+((globalThis)['Date']['now'])();
+new (Date)('2037-04-05T06:07:08Z');
+(Date).parse('2037-04-05T06:07:08Z');
+function shadowed() {
+  const Date = { now: () => 17 };
+  (Date)['now']();
+  (Date.now)();
+  const globalThis = { Date: () => 'fixture-value' };
+  (globalThis['Date'])();
+}
+`);
+    expect(findings.map(({ node }) => node.getText())).toEqual([
+      "new (Date)()",
+      "(Date)['now']()",
+      "(Date.now)()",
+      "((globalThis)['Date']['now'])()",
+    ]);
+  });
+
+  it("requires branded numeric clock callbacks while leaving nonnumeric callback data alone", () => {
+    const { findings } = fixture(`
+type EpochMs = number & { readonly __epoch: unique symbol };
+type Label = string & { readonly __label: unique symbol };
+declare class EpochReader { constructor(clock?: () => EpochMs); }
+declare class EpochOptions { constructor(options?: { now?: () => EpochMs }); }
+declare class LabelReader { constructor(clock?: () => Label); }
+declare const clock: () => EpochMs;
+new EpochReader();
+new EpochReader(undefined);
+new EpochReader(clock);
+new EpochOptions();
+new EpochOptions({ now: clock });
+new LabelReader();
+`);
+    expect(findings.map(({ node }) => node.getText())).toEqual([
+      "new EpochReader()",
+      "undefined",
+      "new EpochOptions()",
+    ]);
+  });
+
   it("requires positional clocks that accept either callback or object forms", () => {
     const { findings } = fixture(`
 new UnionClockService();
