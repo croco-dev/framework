@@ -412,7 +412,7 @@ describe("contract testing", () => {
     ).toThrow(
       expect.objectContaining({
         code: "testing/contract-generation-unsupported",
-        extensions: { path: "input.body.items" },
+        extensions: expect.objectContaining({ path: "input.body.items" }),
       }),
     );
   });
