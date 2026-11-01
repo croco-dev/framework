@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "migration-runner",
+      "classification": "pure-contract",
+      "reason": "Existing-checkpoint previews perform reads on the base client; fresh-table rollback-only initialization and actual migration execution retain their existing contracts. The change does not introduce a deployment profile or database schema.",
+      "files": {
+        "packages/migration-runner/src/libs/MigrationRunner.ts": "7c4726c4025fc47e3437e057eaa15115c45482ea6984f8d8b7d07de510e6e1d4"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "This correction selects an existing PostgreSQL checkpoint preview through the base client instead of initializing it. It changes operator tooling query selection, adds no Node Host capability, storage format or lifecycle requirement, and makes no deployment runtime claim.",
+          "providers": ["MigrationRunner", "MigrationStore"],
+          "constraints": [
+            "Programmatic previews retain the PostgreSQL introspection and transaction-capable client requirements; missing checkpoint tables still use rollback-only initialization."
+          ],
+          "references": [
+            "packages/migration-runner/src/libs/MigrationRunner.ts",
+            "packages/migration-runner/src/libs/MigrationStore.ts",
+            "packages/migration-runner/src/tests/MigrationStatusPostgres.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "This correction selects an existing PostgreSQL checkpoint preview through the base client instead of initializing it. It changes operator tooling query selection, adds no Lambda Host capability, storage format or lifecycle requirement, and makes no deployment runtime claim.",
+          "providers": ["MigrationRunner", "MigrationStore"],
+          "constraints": [
+            "Programmatic previews retain the PostgreSQL introspection and transaction-capable client requirements; missing checkpoint tables still use rollback-only initialization."
+          ],
+          "references": [
+            "packages/migration-runner/src/libs/MigrationRunner.ts",
+            "packages/migration-runner/src/libs/MigrationStore.ts",
+            "packages/migration-runner/src/tests/MigrationStatusPostgres.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "This correction selects an existing PostgreSQL checkpoint preview through the base client instead of initializing it. It changes operator tooling query selection, adds no Workers Host capability, storage format or lifecycle requirement, and makes no deployment runtime claim.",
+          "providers": ["MigrationRunner", "MigrationStore"],
+          "constraints": [
+            "Programmatic previews retain the PostgreSQL introspection and transaction-capable client requirements; missing checkpoint tables still use rollback-only initialization."
+          ],
+          "references": [
+            "packages/migration-runner/src/libs/MigrationRunner.ts",
+            "packages/migration-runner/src/libs/MigrationStore.ts",
+            "packages/migration-runner/src/tests/MigrationStatusPostgres.spec.ts"
+          ]
+        }
+      }
+    }
+  ]
+}

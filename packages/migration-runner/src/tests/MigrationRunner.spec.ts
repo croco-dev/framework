@@ -2,6 +2,8 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { ProblemCategory } from "@croco/problems-core";
+import { PgDialect } from "drizzle-orm/pg-core";
+import type { SQL } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { DatabaseClient } from "../libs/db-types";
 import { MigrationRunner } from "../libs/MigrationRunner";
@@ -410,6 +412,50 @@ describe("MigrationRunner", () => {
         fixtures.cleanup();
       }
     });
+  });
+
+  describe("existing checkpoint previews", () => {
+    it.each(["previewUp", "previewDown"] as const)(
+      "should perform only reads through %s without opening an initialization transaction",
+      async (operation) => {
+        const fixtures = createMigrationFixtures([
+          { id: "20261001000000", name: "create_accounts" },
+          { id: "20261002000000", name: "create_orders" },
+          { id: "20261003000000", name: "create_invoices" },
+        ]);
+        const db = new DeterministicMigrationDatabase();
+        try {
+          await new MigrationRunner(db, fixtures.path).up("20261002000000");
+          const before = db.snapshot();
+          const statements: string[] = [];
+          const dialect = new PgDialect();
+          const readOnlyDb: DatabaseClient = {
+            execute: async (query) => {
+              const text = dialect.sqlToQuery(query as SQL).sql.trim();
+              statements.push(text);
+              if (!text.startsWith("SELECT")) throw new Error("read-only executor refused a write");
+              return db.execute(query);
+            },
+            transaction: vi.fn(async () => {
+              throw new Error("existing checkpoint preview must use the base client");
+            }),
+          };
+          const candidate = new MigrationRunner(readOnlyDb, fixtures.path);
+
+          await expect(candidate[operation]()).resolves.toEqual(
+            operation === "previewUp"
+              ? ["20261003000000_create_invoices"]
+              : ["20261002000000_create_orders"],
+          );
+          expect(statements.length).toBeGreaterThan(0);
+          expect(statements.every((text) => text.startsWith("SELECT"))).toBe(true);
+          expect(readOnlyDb.transaction).not.toHaveBeenCalled();
+          expect(db.snapshot()).toEqual(before);
+        } finally {
+          fixtures.cleanup();
+        }
+      },
+    );
   });
 
   describe("history reconciliation", () => {
