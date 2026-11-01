@@ -46,6 +46,7 @@ const CLOUDINARY_RETRY_POLICY: RetryPolicy = {
 };
 
 const DEFAULT_CLOUDINARY_API_BASE_URL = "https://api.cloudinary.com";
+const FAILED_DOWNLOAD_CLEANUP_TIMEOUT_MS = 1000;
 
 const CLOUDINARY_FORMAT_CONTENT_TYPES: ReadonlyMap<string, string> = new Map([
   ["jpg", "image/jpeg"],
@@ -195,6 +196,28 @@ function normalizeCloudinaryBaseUrl(
   return url.origin;
 }
 
+async function cancelFailedDownload(response: Response, signal?: AbortSignal): Promise<void> {
+  if (!response.body) return;
+
+  let stopWaiting = () => {};
+  const interrupted = new Promise<void>((resolve) => {
+    stopWaiting = resolve;
+  });
+  const timer = setTimeout(stopWaiting, FAILED_DOWNLOAD_CLEANUP_TIMEOUT_MS);
+  signal?.addEventListener("abort", stopWaiting, { once: true });
+  if (signal?.aborted) stopWaiting();
+
+  try {
+    await Promise.race([response.body.cancel(), interrupted]);
+  } catch (cancellationError: unknown) {
+    // Cleanup must not replace the HTTP status Problem or its retry classification.
+    void cancellationError;
+  } finally {
+    clearTimeout(timer);
+    signal?.removeEventListener("abort", stopWaiting);
+  }
+}
+
 function normalizeDownloadStream(stream: StorageStream, key: string): StorageStream {
   const reader = stream.getReader();
 
@@ -269,6 +292,7 @@ export class CloudinaryProvider extends BaseStorageProvider implements ImageProv
           const fetchedResponse = await fetch(url, { signal: options?.signal });
 
           if (!fetchedResponse.ok) {
+            await cancelFailedDownload(fetchedResponse, options?.signal);
             if (fetchedResponse.status === 404) {
               this.throwNotFound(key);
             }
