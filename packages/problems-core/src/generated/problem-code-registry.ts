@@ -29222,7 +29222,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/testing/src/libs/contract-testing.ts";
-          readonly line: 284;
+          readonly line: 285;
           readonly column: 5;
           readonly kind: "problem-constructor";
         },
@@ -29250,7 +29250,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/testing/src/libs/contract-testing.ts";
-          readonly line: 179;
+          readonly line: 180;
           readonly column: 5;
           readonly kind: "problem-constructor";
         },
@@ -29278,7 +29278,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/testing/src/libs/contract-testing.ts";
-          readonly line: 191;
+          readonly line: 192;
           readonly column: 5;
           readonly kind: "problem-constructor";
         },
@@ -29306,7 +29306,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/testing/src/libs/contract-testing.ts";
-          readonly line: 203;
+          readonly line: 204;
           readonly column: 5;
           readonly kind: "problem-constructor";
         },
@@ -32641,7 +32641,7 @@ export type CrocoProblemRegistry = {
       readonly className: "ContractTestingProblem";
       readonly source: {
         readonly file: "packages/testing/src/libs/contract-testing.ts";
-        readonly line: 165;
+        readonly line: 166;
         readonly column: 1;
         readonly kind: "problem-class";
       };
@@ -65322,7 +65322,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/testing/src/libs/contract-testing.ts",
-          line: 284,
+          line: 285,
           column: 5,
           kind: "problem-constructor",
         },
@@ -65355,7 +65355,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/testing/src/libs/contract-testing.ts",
-          line: 179,
+          line: 180,
           column: 5,
           kind: "problem-constructor",
         },
@@ -65388,7 +65388,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/testing/src/libs/contract-testing.ts",
-          line: 191,
+          line: 192,
           column: 5,
           kind: "problem-constructor",
         },
@@ -65421,7 +65421,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/testing/src/libs/contract-testing.ts",
-          line: 203,
+          line: 204,
           column: 5,
           kind: "problem-constructor",
         },
@@ -69224,7 +69224,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       className: "ContractTestingProblem",
       source: {
         file: "packages/testing/src/libs/contract-testing.ts",
-        line: 165,
+        line: 166,
         column: 1,
         kind: "problem-class",
       },
