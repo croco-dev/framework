@@ -3,9 +3,14 @@ import { JourneyTaskBridge } from "@croco/lifecycle-core";
 import { TaskRegistry, TaskRunner } from "@croco/tasks-core";
 import { Cron, TriggerRegistry } from "@croco/triggers-core";
 import type { JourneyEngine, JourneyScope, JourneyStore } from "@croco/lifecycle-core";
+import type { TaskRunnerRuntime } from "@croco/tasks-core";
 import { MemoryExecutionStore } from "./MemoryExecutionStore";
 
 type JourneyNodePayload = { scope: JourneyScope; episodeId: string; revision: number };
+type ExecutionTime = {
+  clock: () => Date;
+  schedule: NonNullable<TaskRunnerRuntime["schedule"]>;
+};
 
 export class JourneyWakeTrigger {
   constructor(
@@ -25,8 +30,11 @@ export function createJourneyRuntime(
   engine: JourneyEngine,
   scope: JourneyScope,
   now: () => Date,
-  executionStore = new MemoryExecutionStore(),
+  existingExecutionStore?: MemoryExecutionStore,
+  executionTime?: ExecutionTime,
 ) {
+  const clock = executionTime?.clock ?? (() => new Date());
+  const executionStore = existingExecutionStore ?? new MemoryExecutionStore(clock);
   let bridge: JourneyTaskBridge;
   const target = {
     run: (payload: JourneyNodePayload) => bridge.execute(payload),
@@ -45,8 +53,11 @@ export function createJourneyRuntime(
       },
     },
   ]);
-  const manager = new ExecutionManagerImpl(executionStore);
-  const runner = new TaskRunner(manager, registry);
+  const manager = new ExecutionManagerImpl(executionStore, { clock });
+  const runner = new TaskRunner(manager, registry, undefined, {
+    now: () => clock().getTime(),
+    schedule: executionTime?.schedule,
+  });
   bridge = new JourneyTaskBridge(store, engine, {
     invoke: async ({ taskId, idempotencyKey, scope: taskScope, episodeId, revision }) => {
       let executionId: string | undefined;
@@ -66,7 +77,7 @@ export function createJourneyRuntime(
           if (
             execution.startedAt === undefined ||
             execution.timeout === undefined ||
-            execution.startedAt.getTime() + execution.timeout > Date.now()
+            execution.startedAt.getTime() + execution.timeout > clock().getTime()
           )
             throw error;
           // Durable Journey revision CAS and action admission fence abandoned attempts.

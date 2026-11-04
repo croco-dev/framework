@@ -13,6 +13,10 @@ export class MemoryExecutionStore extends ExecutionStore {
   private readonly executions = new Map<string, Execution>();
   private sequence = 0;
 
+  constructor(private readonly clock: () => Date = () => new Date()) {
+    super();
+  }
+
   async create(params: CreateExecutionRecordParams): Promise<Execution> {
     const execution: Execution = {
       id: `exec-${String(++this.sequence).padStart(4, "0")}`,
@@ -20,7 +24,7 @@ export class MemoryExecutionStore extends ExecutionStore {
       status: "pending",
       attempts: 0,
       maxAttempts: params.maxAttempts ?? 1,
-      createdAt: new Date(),
+      createdAt: this.clock(),
       requestFingerprint: params.requestFingerprint,
       ...(params.payload !== undefined ? { payload: params.payload } : {}),
       ...(params.timeout !== undefined ? { timeout: params.timeout } : {}),
