@@ -106,7 +106,7 @@ export class ChangedTestPlanProblem extends Problem {
   }
 }
 
-const FULL_SUITE_EVIDENCE_VERSION = 1;
+const FULL_SUITE_EVIDENCE_VERSION = 1 as const;
 
 export function assertChangedTestSelectionBaseline(
   value: unknown,
