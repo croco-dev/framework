@@ -3654,13 +3654,13 @@
       "owner": "@croco/lifecycle-core"
     },
     {
-      "path": "packages/lifecycle-core/src/tests/LifecycleClock.spec.ts",
+      "path": "packages/lifecycle-core/src/tests/LifecycleCore.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/lifecycle-core"
     },
     {
-      "path": "packages/lifecycle-core/src/tests/LifecycleCore.spec.ts",
+      "path": "packages/lifecycle-core/src/tests/LifecycleExecutionLeaseAndPause.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/lifecycle-core"

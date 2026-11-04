@@ -32,7 +32,7 @@ production constructor has a default. See [the exact detection limits](../static
 Do not use that marker as a claim that every transitive dependency has been inspected: opaque factories,
 unmarked legacy tests and dependencies without a supported injection seam still need review.
 
-For lease/timeout tests, inject both the clock and its scheduler. `LifecycleClock.spec.ts` passes
+For lease/timeout tests, inject both the clock and its scheduler. `LifecycleExecutionLeaseAndPause.spec.ts` passes
 `time.schedule` to `scheduleExecutionClaimWake`, starts the blocked transition, advances to just before
 the lease deadline, and then reaches the exact deadline. It never waits for real time to cross that boundary.
 
