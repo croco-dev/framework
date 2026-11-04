@@ -348,8 +348,8 @@ function hasCompleteObservationWindow(
   return (
     runs.length === observationWindow &&
     runs.every(
-      ({ complete, fullSuiteEvidenceVersion }) =>
-        complete && fullSuiteEvidenceVersion === FULL_SUITE_EVIDENCE_VERSION,
+      ({ complete, fullTests, fullSuiteEvidenceVersion }) =>
+        complete && fullTests > 0 && fullSuiteEvidenceVersion === FULL_SUITE_EVIDENCE_VERSION,
     )
   );
 }

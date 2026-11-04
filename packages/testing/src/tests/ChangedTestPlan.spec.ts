@@ -738,6 +738,32 @@ describe("ChangedTestPlan", () => {
     expect(() => assertChangedTestPlanEnforceable(second)).not.toThrow();
   });
 
+  it("rejects a restored observation window containing an empty run", () => {
+    const plan = createChangedTestPlan({ base: "origin/trunk", changedFiles: [] });
+    const fullEvidence = completeFullEvidence([
+      evidence("users.passed", "route:UsersController.create"),
+    ]);
+    const baseline = updateChangedTestSelectionBaseline(plan, fullEvidence, {
+      observationWindow: 1,
+      missThreshold: 0,
+    });
+    const restored = {
+      ...baseline,
+      runs: baseline.runs.map((run) => ({ ...run, fullTests: 0 })),
+    };
+    assertChangedTestSelectionBaseline(restored);
+    expect(() => assertChangedTestPlanEnforceable(restored)).toThrow(
+      "complete non-empty full-suite evidence",
+    );
+
+    const continued = updateChangedTestSelectionBaseline(plan, fullEvidence, {
+      previous: restored,
+      observationWindow: 2,
+      missThreshold: 0,
+    });
+    expect(continued.eligibleForEnforcement).toBe(false);
+  });
+
   it.each(["flaky test", "missing attachment"])("keeps a run with a %s incomplete", (failure) => {
     const test = evidence("users.create.success", "route:UsersController.create");
     const { records } = completeFullEvidence([
