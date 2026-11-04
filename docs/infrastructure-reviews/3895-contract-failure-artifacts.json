@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "testing",
+      "classification": "pure-contract",
+      "reason": "Preserve one complete contract fuzz replay artifact per route ID, runtime label, and seed in the existing test runner file sink. The artifact schema and runtime support claims are unchanged.",
+      "files": {
+        "packages/testing/src/libs/contract-testing.ts": "e6dc233f97b5db1dde69db2919b25955f388da7e4e303db61f1588c7b5820281"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "The Node test runner writes replay evidence after capturing the test observation. The Kubernetes Node Host does not own artifact storage or participate in the write.",
+          "providers": [],
+          "constraints": [
+            "The file sink uses a writable local directory on the test runner. The artifact runtime label identifies the executor."
+          ],
+          "references": [
+            "packages/testing/src/libs/contract-testing.ts",
+            "packages/testing/src/tests/ContractRuntimeDifferentialIntegration.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "The Node test runner writes replay evidence after capturing the test observation. The AWS Lambda Host does not own artifact storage or participate in the write.",
+          "providers": [],
+          "constraints": [
+            "The file sink uses a writable local directory on the test runner. The artifact runtime label identifies the executor."
+          ],
+          "references": [
+            "packages/testing/src/libs/contract-testing.ts",
+            "packages/testing/src/tests/ContractRuntimeDifferentialIntegration.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "The Node test runner writes replay evidence after capturing the test observation. The Cloudflare Workers or Node Container Host does not own artifact storage or participate in the write.",
+          "providers": [],
+          "constraints": [
+            "The file sink uses a writable local directory on the test runner. The artifact runtime label identifies the executor."
+          ],
+          "references": [
+            "packages/testing/src/libs/contract-testing.ts",
+            "packages/testing/src/tests/ContractRuntimeDifferentialIntegration.spec.ts"
+          ]
+        }
+      }
+    }
+  ]
+}

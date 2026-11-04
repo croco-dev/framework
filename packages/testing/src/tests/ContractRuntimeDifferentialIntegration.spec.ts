@@ -1,5 +1,8 @@
 import "reflect-metadata";
+import { mkdtemp, readFile, readdir, rm } from "node:fs/promises";
 import type { AddressInfo } from "node:net";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import {
   Container,
   Context as FrameworkContext,
@@ -34,16 +37,20 @@ import {
   type MiddlewareFunction,
   type NodeServerHandle,
 } from "@croco/transports-http";
+import * as fc from "fast-check";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { z } from "zod";
 import {
   assertContractObservation,
   CONTRACT_RUNTIME_LIFECYCLE_CAPABILITIES,
   type ContractExecutionObservation,
+  type ContractFailureArtifact,
+  ContractInvariantProblem,
   type ContractGeneratedCase,
   type ContractLifecycleObservation,
   type ContractLifecycleOutcome,
   type ContractRuntimeLifecycleCapability,
+  runContractFuzz,
   runContractRuntimeDifferential,
 } from "../libs/contract-testing";
 import { createTestKernel } from "../libs/TestKernel";
@@ -165,6 +172,119 @@ const validNoOutputCase: ContractGeneratedCase = {
   canarySecret: "croco-canary-no-output",
   input: {},
 };
+
+describe("contract failure artifacts", () => {
+  it("preserves separate replay files for route IDs with the same filename prefix", async () => {
+    const get = (name: string) =>
+      Get(
+        defineRouteContract({
+          id: `testing.artifact.${name}`,
+          method: HttpMethod.GET,
+          path: `/${name}`,
+          operationId: `artifact_${name}`,
+        }),
+      );
+
+    @Controller("/artifact-replay")
+    class ArtifactController {
+      @get("alpha")
+      readα() {}
+
+      @get("beta")
+      readβ() {}
+
+      @get("ascii")
+      ["read-"]() {}
+    }
+
+    const graph = buildContractGraph([ArtifactController]);
+    expect(graph.diagnostics.filter(({ severity }) => severity === "error")).toEqual([]);
+    const routeIds = [
+      "ArtifactController.readα",
+      "ArtifactController.readβ",
+      "ArtifactController.read-",
+    ];
+    expect(graph.routes.map(({ routeId }) => routeId)).toEqual(expect.arrayContaining(routeIds));
+
+    const directory = await mkdtemp(join(tmpdir(), "croco-contract-failures-"));
+    const seed = 42;
+    const runtime = "node";
+    const persistFailure = async (route: ContractGraphRoute, replayCommand: string) => {
+      await expect(
+        runContractFuzz({
+          route,
+          runtime,
+          seed,
+          numRuns: 1,
+          arbitrary: fc.constant({ kind: "valid", input: {}, canarySecret: route.routeId }),
+          failureDirectory: directory,
+          replayCommand,
+          execute: () => ({ status: 200, body: undefined }),
+        }),
+      ).rejects.toThrow(ContractInvariantProblem);
+    };
+    const readArtifacts = async () => {
+      const filenames = (await readdir(directory)).sort();
+      expect(filenames).toHaveLength(routeIds.length);
+      return Promise.all(
+        filenames.map(async (filename) => ({
+          filename,
+          artifact: JSON.parse(
+            await readFile(join(directory, filename), "utf8"),
+          ) as ContractFailureArtifact,
+        })),
+      );
+    };
+
+    try {
+      await Promise.all(graph.routes.map((route) => persistFailure(route, "pnpm test")));
+      const stored = await readArtifacts();
+      expect(stored.map(({ artifact }) => artifact.routeId).sort()).toEqual([...routeIds].sort());
+      for (const { artifact } of stored) {
+        expect(artifact).toMatchObject({
+          schemaVersion: "croco.contract-test-failure.v1",
+          runtime,
+          seed,
+          minimalInput: { kind: "valid", input: {}, canarySecret: artifact.routeId },
+          error: { code: "testing/contract-invariant-failed" },
+        });
+        expect(artifact.counterexamplePath).toMatch(/^\d+$/);
+        expect(artifact.replayCommand).toBe(
+          `CROCO_CONTRACT_ROUTE='${artifact.routeId}' CROCO_CONTRACT_SEED=42 CROCO_CONTRACT_PATH='${artifact.counterexamplePath}' CROCO_CONTRACT_RUNTIME='node' pnpm test`,
+        );
+      }
+
+      const repeatRoute = graph.routes.find(({ routeId }) => routeId === routeIds[0]);
+      if (!repeatRoute) throw new TypeError("Expected the first route in the contract graph.");
+      const expectedArtifactsAfterReplay = (suffix: string) =>
+        stored.map((entry) =>
+          entry.artifact.routeId === repeatRoute.routeId
+            ? {
+                ...entry,
+                artifact: {
+                  ...entry.artifact,
+                  replayCommand: `${entry.artifact.replayCommand} ${suffix}`,
+                },
+              }
+            : entry,
+        );
+
+      await persistFailure(repeatRoute, "pnpm test --repeat");
+      expect(await readArtifacts()).toEqual(expectedArtifactsAfterReplay("--repeat"));
+
+      await Promise.all([
+        persistFailure(repeatRoute, "pnpm test --first"),
+        persistFailure(repeatRoute, "pnpm test --second"),
+      ]);
+      expect([
+        expectedArtifactsAfterReplay("--first"),
+        expectedArtifactsAfterReplay("--second"),
+      ]).toContainEqual(await readArtifacts());
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+});
 
 describe("ContractRuntimeDifferentialIntegration", () => {
   const servers: NodeServerHandle[] = [];

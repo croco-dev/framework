@@ -1,4 +1,5 @@
-import { mkdir, writeFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
+import { mkdir, mkdtemp, rename, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { RuntimeCapabilityManifest, RuntimeCapabilityName } from "@croco/framework-context";
 import {
@@ -615,9 +616,21 @@ export function createFileContractFailureSink(
 ): ContractFailureSink {
   return {
     async persist(artifact) {
+      const { routeId, runtime, seed } = artifact;
+      const identity = JSON.stringify([routeId, runtime, String(seed)]);
+      const digest = createHash("sha256").update(identity).digest("hex");
+      const filename = `contract-${sanitize(routeId).slice(0, 80)}-${sanitize(runtime).slice(0, 32)}-${seed}-${digest}.json`;
+      const serialized = `${JSON.stringify(artifact, null, 2)}\n`;
+
       await mkdir(directory, { recursive: true });
-      const filename = `${sanitize(artifact.routeId)}-${sanitize(artifact.runtime)}-${artifact.seed}.json`;
-      await writeFile(join(directory, filename), `${JSON.stringify(artifact, null, 2)}\n`, "utf8");
+      const stagingDirectory = await mkdtemp(join(directory, ".contract-failure-"));
+      const stagedFile = join(stagingDirectory, "artifact.json");
+      try {
+        await writeFile(stagedFile, serialized, "utf8");
+        await rename(stagedFile, join(directory, filename));
+      } finally {
+        await rm(stagingDirectory, { recursive: true, force: true });
+      }
     },
   };
 }
