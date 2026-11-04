@@ -143,7 +143,7 @@ function eventGraph(eventName: string): ExecutableAssuranceGraph {
 function evidence(
   id: string,
   contractId: string,
-  outcome: "passed" | "failed" = "passed",
+  outcome: "passed" | "failed" | "skipped" = "passed",
   packageName?: string,
 ): TestEvidenceRecord {
   const routeId = contractId.startsWith("route:") ? contractId.slice("route:".length) : undefined;
@@ -478,7 +478,7 @@ describe("ChangedTestPlan", () => {
       observedRuns: 0,
       selectionMisses: 1,
       eligibleForEnforcement: false,
-      runs: [{ missedTests: ["hidden.regression"] }],
+      runs: [{ complete: false, fullTests: 2, missedTests: ["hidden.regression"] }],
     });
     expect(() => assertChangedTestPlanEnforceable(baseline)).toThrow(
       "Enforcement requires 2 observed run(s)",
@@ -547,6 +547,42 @@ describe("ChangedTestPlan", () => {
     expect(() => assertChangedTestPlanEnforceable(baseline)).toThrow("only 0 are recorded");
   });
 
+  it.each([
+    { label: "marker only", records: [], fullTests: 0 },
+    {
+      label: "skipped only",
+      records: [evidence("users.skipped", "route:UsersController.create", "skipped")],
+      fullTests: 0,
+    },
+    {
+      label: "passed and skipped",
+      records: [
+        evidence("users.passed", "route:UsersController.create"),
+        evidence("users.skipped", "route:UsersController.create", "skipped"),
+      ],
+      fullTests: 1,
+    },
+  ])(
+    "does not credit $label evidence even with a passing full-suite marker",
+    ({ records, fullTests }) => {
+      const plan = createChangedTestPlan({ base: "origin/trunk", changedFiles: [] });
+      const fullEvidence = completeFullEvidence(records);
+      const baseline = updateChangedTestSelectionBaseline(plan, fullEvidence, {
+        observationWindow: 1,
+        missThreshold: 0,
+      });
+
+      expect(fullEvidence.status).toBe("passed");
+      expect(fullEvidence.summary.skipped).toBe(records.length - fullTests);
+      expect(baseline).toMatchObject({
+        observedRuns: 0,
+        eligibleForEnforcement: false,
+        runs: [{ complete: false, fullTests, missedTests: [] }],
+      });
+      expect(() => assertChangedTestPlanEnforceable(baseline)).toThrow("only 0 are recorded");
+    },
+  );
+
   it("enables enforcement only after the documented window and threshold are satisfied", () => {
     const plan = createChangedTestPlan({
       base: "origin/trunk",
@@ -572,6 +608,37 @@ describe("ChangedTestPlan", () => {
 
     expect(second.eligibleForEnforcement).toBe(true);
     expect(() => assertChangedTestPlanEnforceable(second)).not.toThrow();
+  });
+
+  it.each(["flaky test", "missing attachment"])("keeps a run with a %s incomplete", (failure) => {
+    const test = evidence("users.create.success", "route:UsersController.create");
+    const { records } = completeFullEvidence([
+      createTestEvidenceRecord({
+        ...test,
+        ...(failure === "flaky test"
+          ? {
+              attempts: [
+                { attempt: 1, outcome: "failed" },
+                { attempt: 2, outcome: "passed" },
+              ],
+            }
+          : { attachments: [{ kind: "report", path: "ci-reports/test.json" }] }),
+      }),
+    ]);
+    const fullEvidence = createTestEvidenceBundle(records, () => false);
+    const plan = createChangedTestPlan({ base: "origin/trunk", changedFiles: [] });
+
+    expect(fullEvidence.status).toBe("failed");
+    expect(
+      updateChangedTestSelectionBaseline(plan, fullEvidence, {
+        observationWindow: 1,
+        missThreshold: 0,
+      }),
+    ).toMatchObject({
+      observedRuns: 0,
+      eligibleForEnforcement: false,
+      runs: [{ complete: false, fullTests: 1 }],
+    });
   });
 
   it("requires the retained run window even when cumulative observed runs are larger", () => {

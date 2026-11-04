@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "testing",
+      "classification": "pure-contract",
+      "reason": "Only executed tests count in full-suite observations. A skipped record keeps the run incomplete even when its suite status marker passed.",
+      "files": {
+        "packages/testing/src/libs/changed-test-plan.mts": "f422435664432bbe420cd0f223b1fa681d5337392a714058a359e9e97f7c04ed"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "The changed-test planner evaluates an in-memory test evidence bundle in the local tooling path. It requires no Kubernetes Node Host capability, storage, or lifecycle behavior.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/testing/src/libs/changed-test-plan.mts",
+            "packages/cli/src/commands/testPlan.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "The changed-test planner evaluates an in-memory test evidence bundle in the local tooling path. It requires no AWS Lambda Host capability, storage, or lifecycle behavior.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/testing/src/libs/changed-test-plan.mts",
+            "packages/cli/src/commands/testPlan.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "The changed-test planner evaluates an in-memory test evidence bundle in the local tooling path. It requires no Cloudflare Workers or Node Container Host capability, storage, or lifecycle behavior.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/testing/src/libs/changed-test-plan.mts",
+            "packages/cli/src/commands/testPlan.ts"
+          ]
+        }
+      }
+    }
+  ]
+}

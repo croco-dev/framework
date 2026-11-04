@@ -262,11 +262,13 @@ export function updateChangedTestSelectionBaseline(
   const fullSuiteStatus = fullEvidence.records.find(
     ({ id }) => id === "croco.changed-test-full-suite-status",
   );
-  const fullTestsObserved = fullEvidence.records.filter(
+  const fullTestRecords = fullEvidence.records.filter(
     ({ id }) => id !== "croco.changed-test-full-suite-status",
-  ).length;
+  );
+  const fullTestsObserved = fullTestRecords.filter(({ outcome }) => outcome !== "skipped").length;
   const complete =
     fullTestsObserved > 0 &&
+    fullTestsObserved === fullTestRecords.length &&
     fullEvidence.missingArtifacts.length === 0 &&
     fullEvidence.status === "passed" &&
     fullSuiteStatus?.outcome === "passed";
