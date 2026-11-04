@@ -40,7 +40,7 @@ export async function runCroco(
   if (rootCommandIndex !== undefined && argv[rootCommandIndex] === "desktop") {
     return runDesktopRemoved(runtime);
   }
-  const rawArgs = normalizeContractsRootArgs(normalizeMigrateRootArgs(argv));
+  const rawArgs = normalizeContractsDiffRootArgs(normalizeMigrateRootArgs(argv));
 
   try {
     if (rawArgs.includes("--help") || rawArgs.includes("-h")) {
@@ -96,6 +96,20 @@ function createBoundCrocoCommand(runtime: CrocoCommandRuntime): CommandDef<typeo
       ...GLOBAL_OPTIONS,
     },
     setup({ rawArgs }) {
+      // Match Citty's dispatch before it discards arguments preceding the command names.
+      const dispatchIndex = rawArgs.findIndex((arg) => !arg.startsWith("-"));
+      if (rawArgs[dispatchIndex] === "contracts") {
+        const childIndex = rawArgs.findIndex(
+          (arg, index) => index > dispatchIndex && !arg.startsWith("-"),
+        );
+        if (childIndex > 1 && rawArgs[childIndex] === "check") {
+          throw createCliError(
+            "Pass all arguments after 'contracts check'.",
+            "E_CONTRACTS_CHECK_ARGUMENTS",
+          );
+        }
+      }
+
       const commandIndex = findRootCommandIndex(rawArgs);
       if (
         commandIndex !== undefined &&
@@ -246,42 +260,20 @@ export function normalizeMigrateRootArgs(rawArgs: readonly string[]): string[] {
   return [...rawArgs];
 }
 
-function normalizeContractsRootArgs(rawArgs: readonly string[]): string[] {
+function normalizeContractsDiffRootArgs(rawArgs: readonly string[]): string[] {
   const rootIndex = findRootCommandIndex(rawArgs);
-  if (rootIndex !== undefined && rawArgs[rootIndex] === "contracts") {
-    const parentArgs = rawArgs.slice(rootIndex + 1);
-    const childOffset = findRootCommandIndex(parentArgs);
-    if (childOffset !== undefined) {
-      const subcommand = parentArgs[childOffset];
-      if (subcommand === "check" || subcommand === "diff") {
-        return forwardContractsArgs(rawArgs, rootIndex, rootIndex + 1 + childOffset, subcommand);
-      }
-    }
+  if (rootIndex === undefined || rawArgs[rootIndex] !== "contracts") {
+    return [...rawArgs];
   }
-
-  // Citty selects the first non-option token even if it follows a value-taking option.
-  const dispatchRootIndex = rawArgs.findIndex((arg) => !arg.startsWith("-"));
-  if (rawArgs[dispatchRootIndex] === "contracts") {
-    const dispatchChildIndex = rawArgs.findIndex(
-      (arg, index) => index > dispatchRootIndex && !arg.startsWith("-"),
-    );
-    if (rawArgs[dispatchChildIndex] === "check") {
-      return forwardContractsArgs(rawArgs, dispatchRootIndex, dispatchChildIndex, "check");
-    }
+  const parentArgs = rawArgs.slice(rootIndex + 1);
+  const childOffset = findRootCommandIndex(parentArgs);
+  if (childOffset === undefined || parentArgs[childOffset] !== "diff") {
+    return [...rawArgs];
   }
-
-  return [...rawArgs];
-}
-
-function forwardContractsArgs(
-  rawArgs: readonly string[],
-  rootIndex: number,
-  childIndex: number,
-  subcommand: "check" | "diff",
-): string[] {
+  const childIndex = rootIndex + 1 + childOffset;
   return [
     "contracts",
-    subcommand,
+    "diff",
     ...rawArgs.slice(0, rootIndex),
     ...rawArgs.slice(rootIndex + 1, childIndex),
     ...rawArgs.slice(childIndex + 1),

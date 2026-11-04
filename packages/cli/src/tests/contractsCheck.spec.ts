@@ -4,25 +4,33 @@ import { runContractsCheck } from "../commands/contractsCheck.js";
 import { runCroco } from "../commands/root.js";
 
 describe("contractsCheck", () => {
+  it("should reject a misspelled strict option before loading controllers", async () => {
+    const stderr = vi.fn();
+    const argv = ["contracts", "check", "--controllers", "missing.ts", "--strict-schema"];
+
+    expect(await runCroco(argv, { stdout: vi.fn(), stderr })).toEqual({ exitCode: 1 });
+    expect(stderr).toHaveBeenCalledWith(
+      expect.stringContaining("Unknown option '--strict-schema'"),
+    );
+  });
+
   it.each(
     [
-      ["contracts", "check", "--controllers", "missing.ts", "--strict-schema"],
       ["contracts", "--strict-schema", "check", "missing.ts"],
       ["--strict-schema", "contracts", "check", "missing.ts"],
       ["contracts", "--strict-schema", "--cwd", "check", "missing.ts"],
       ["--strict-schema", "--cwd", "contracts", "check", "missing.ts"],
+      ["contracts", "--out", "check", "report.json", "missing.ts"],
+      ["--", "contracts", "check", "--strict-schema"],
     ].map((argv) => ({ argv })),
-  )(
-    "should reject a misspelled strict option before loading controllers: $argv",
-    async ({ argv }) => {
-      const stderr = vi.fn();
+  )("should reject arguments placed before contracts check: $argv", async ({ argv }) => {
+    const stderr = vi.fn();
 
-      expect(await runCroco(argv, { stdout: vi.fn(), stderr })).toEqual({ exitCode: 1 });
-      expect(stderr).toHaveBeenCalledWith(
-        expect.stringContaining("Unknown option '--strict-schema'"),
-      );
-    },
-  );
+    expect(await runCroco(argv, { stdout: vi.fn(), stderr })).toEqual({ exitCode: 1 });
+    expect(stderr).toHaveBeenCalledWith(
+      expect.stringContaining("Pass all arguments after 'contracts check'"),
+    );
+  });
 
   it.each([
     { args: ["src/**/*.ts", "--unknown"], message: "Unknown option '--unknown'" },
