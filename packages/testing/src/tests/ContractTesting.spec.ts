@@ -348,6 +348,75 @@ describe("contract testing", () => {
     expect(kinds).toEqual(new Set(["valid", "invalid"]));
   });
 
+  it.each([0, 2, 8])(
+    "honors exact array length %s in generated cases and fuzz runs",
+    async (length) => {
+      const body = z.array(z.string()).length(length);
+      const arrayRoute = { ...route, inputSchemas: { ...route.inputSchemas, body } };
+      const cases = fc.sample(createContractCaseArbitrary(arrayRoute), {
+        seed: 1489,
+        numRuns: 100,
+      });
+
+      expect(new Set(cases.map(({ kind }) => kind))).toEqual(new Set(["valid", "invalid"]));
+      for (const testCase of cases) {
+        expect(body.safeParse(testCase.input.body).success).toBe(testCase.kind === "valid");
+        if (testCase.kind === "valid") expect(testCase.input.body).toHaveLength(length);
+      }
+
+      const kinds = new Set<string>();
+      const report = await runContractFuzz({
+        route: arrayRoute,
+        runtime: "node",
+        seed: 1489,
+        failureSink: { persist: async () => {} },
+        execute: (testCase) => {
+          kinds.add(testCase.kind);
+          const accepted = body.safeParse(testCase.input.body).success;
+          return accepted
+            ? successObservation
+            : {
+                status: 422,
+                body: { code: "users/invalid", type: "about:blank", title: "Invalid", status: 422 },
+              };
+        },
+      });
+      expect(report).toMatchObject({ status: "passed", numRuns: 32 });
+      expect(kinds).toEqual(new Set(["valid", "invalid"]));
+    },
+  );
+
+  it("intersects exact array length with compatible repeated bounds", () => {
+    const body = z.array(z.string()).min(1).length(2).max(4).min(0).max(3);
+    const cases = fc.sample(
+      createContractCaseArbitrary({ ...route, inputSchemas: { ...route.inputSchemas, body } }),
+      { seed: 1489, numRuns: 100 },
+    );
+    const valid = cases.filter(({ kind }) => kind === "valid");
+    expect(valid.length).toBeGreaterThan(0);
+    for (const testCase of valid) {
+      expect(body.safeParse(testCase.input.body).success).toBe(true);
+      expect(testCase.input.body).toHaveLength(2);
+    }
+  });
+
+  it.each([
+    z.array(z.string()).length(0).min(1),
+    z.array(z.string()).min(3).length(2),
+    z.array(z.string()).length(2).max(1),
+    z.array(z.string()).length(2).length(3),
+  ])("rejects contradictory array lengths before sampling %#", (items) => {
+    const body = z.object({ items });
+    expect(() =>
+      createContractCaseArbitrary({ ...route, inputSchemas: { ...route.inputSchemas, body } }),
+    ).toThrow(
+      expect.objectContaining({
+        code: "testing/contract-generation-unsupported",
+        extensions: expect.objectContaining({ path: "input.body.items" }),
+      }),
+    );
+  });
+
   it("invalidates transport while retaining a universally accepting body", () => {
     const mixedRoute = {
       ...route,
