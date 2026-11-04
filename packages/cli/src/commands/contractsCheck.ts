@@ -134,7 +134,7 @@ export function parseContractsCheckArgs(args: readonly string[]): ContractsCheck
 
   try {
     const { values, positionals, tokens } = parseArgs({
-      args: [...args],
+      args: normalizeSeparatePathValues(args),
       options: CHECK_OPTIONS,
       allowPositionals: true,
       strict: true,
@@ -182,6 +182,22 @@ export function parseContractsCheckArgs(args: readonly string[]): ContractsCheck
       message: error instanceof Error ? error.message : String(error),
     };
   }
+}
+
+function normalizeSeparatePathValues(args: readonly string[]): string[] {
+  const normalized = [...args];
+  for (let index = 0; index < normalized.length; index += 1) {
+    const flag = normalized[index];
+    if (flag === "--") break;
+    if (flag !== "--controllers" && flag !== "--out") continue;
+
+    // The original command accepts single-hyphen paths as separate values.
+    const value = normalized[index + 1];
+    if (value?.startsWith("-") && !value.startsWith("--")) {
+      normalized.splice(index, 2, `${flag}=${value}`);
+    }
+  }
+  return normalized;
 }
 
 function printContractsCheckHelp(io: ContractsCheckIo): void {

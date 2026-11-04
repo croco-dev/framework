@@ -168,6 +168,20 @@ describe("contractsCheck", () => {
     expect(writeFile).toHaveBeenCalledWith("/workspace/first.json", expect.any(String));
   });
 
+  it("should accept separate controller and output paths beginning with a single hyphen", async () => {
+    const loadContractGraph = vi.fn(async () => createGraph());
+    const writeFile = vi.fn();
+
+    expect(
+      await runContractsCheck(["--controllers", "-routes.ts", "--out", "-snapshot.json"], {
+        loadContractGraph,
+        io: { cwd: "/workspace", mkdir: vi.fn(), stdout: vi.fn(), stderr: vi.fn(), writeFile },
+      }),
+    ).toBe(0);
+    expect(loadContractGraph).toHaveBeenCalledWith("-routes.ts", { strictSchemas: false });
+    expect(writeFile).toHaveBeenCalledWith("/workspace/-snapshot.json", expect.any(String));
+  });
+
   it("should exit non-zero when contract graph errors exist", async () => {
     const stdout: string[] = [];
     const diagnostics: ContractDiagnostic[] = [
