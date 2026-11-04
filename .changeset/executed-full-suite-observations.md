@@ -3,4 +3,4 @@
 "@croco/cli": patch
 ---
 
-Changed-test enforcement requires complete full-suite observations. A suite with any skipped tests stays incomplete, and its executed test count excludes skipped tests and the suite status marker.
+Changed-test enforcement requires full-suite evidence with executed tests and no skipped results. Suite status and completeness records contribute neither executed tests nor missed tests to the baseline.

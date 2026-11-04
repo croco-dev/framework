@@ -170,10 +170,13 @@ function evidence(
   });
 }
 
-function completeFullEvidence(records: readonly TestEvidenceRecord[]) {
+function completeFullEvidence(
+  records: readonly TestEvidenceRecord[],
+  status: "passed" | "failed" = "passed",
+) {
   return createTestEvidenceBundle([
     ...records,
-    evidence("croco.changed-test-full-suite-status", "verification:full-suite"),
+    evidence("croco.changed-test-full-suite-status", "verification:full-suite", status),
   ]);
 }
 
@@ -505,6 +508,40 @@ describe("ChangedTestPlan", () => {
       expect.objectContaining({ profile: "full", command: ["pnpm", "test"] }),
     ]);
     expect(baseline.runs[0]?.missedTests).toEqual([]);
+  });
+
+  it("persists a valid miss rate when the suite marker failed and a test was skipped", () => {
+    const plan = createChangedTestPlan({
+      base: "origin/trunk",
+      baseGraph: graph("string"),
+      headGraph: graph("number"),
+      evidence: createTestEvidenceBundle([
+        evidence("users.create.success", "route:UsersController.create"),
+      ]),
+      changedFiles: ["docs/users-controller.md"],
+    });
+    const fullEvidence = completeFullEvidence(
+      [
+        evidence("hidden.regression", "route:HiddenController.read", "failed"),
+        evidence("users.create.success", "route:UsersController.create", "skipped"),
+      ],
+      "failed",
+    );
+    const baseline = updateChangedTestSelectionBaseline(plan, fullEvidence, {
+      observationWindow: 1,
+      missThreshold: 0,
+    });
+
+    expect(() =>
+      assertChangedTestSelectionBaseline(JSON.parse(JSON.stringify(baseline))),
+    ).not.toThrow();
+    expect(baseline).toMatchObject({
+      observedRuns: 0,
+      selectionMisses: 1,
+      missRate: 1,
+      eligibleForEnforcement: false,
+      runs: [{ complete: false, fullTests: 1, missedTests: ["hidden.regression"] }],
+    });
   });
 
   it("does not report failures as misses when the selected plan covers the full suite", () => {

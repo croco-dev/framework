@@ -259,11 +259,10 @@ export function updateChangedTestSelectionBaseline(
   }
   const selected = new Set(plan.selectedTests);
   const fullSuiteSelected = plan.selectedSuites.some(({ profile }) => profile === "full");
-  const fullSuiteStatus = fullEvidence.records.find(
-    ({ id }) => id === "croco.changed-test-full-suite-status",
-  );
+  const fullSuiteStatusId = "croco.changed-test-full-suite-status";
+  const fullSuiteStatus = fullEvidence.records.find(({ id }) => id === fullSuiteStatusId);
   const fullTestRecords = fullEvidence.records.filter(
-    ({ id }) => id !== "croco.changed-test-full-suite-status",
+    ({ id }) => id !== fullSuiteStatusId && id !== "croco.changed-test-full-suite-completeness",
   );
   const fullTestsObserved = fullTestRecords.filter(({ outcome }) => outcome !== "skipped").length;
   const complete =
@@ -272,7 +271,7 @@ export function updateChangedTestSelectionBaseline(
     fullEvidence.missingArtifacts.length === 0 &&
     fullEvidence.status === "passed" &&
     fullSuiteStatus?.outcome === "passed";
-  const missedTests = fullEvidence.records
+  const missedTests = fullTestRecords
     .filter(({ id, outcome }) => outcome === "failed" && !fullSuiteSelected && !selected.has(id))
     .map(({ id }) => id)
     .sort(compareStrings);

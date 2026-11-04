@@ -4,9 +4,9 @@
     {
       "package": "testing",
       "classification": "pure-contract",
-      "reason": "Only executed tests count in full-suite observations. A skipped record keeps the run incomplete even when its suite status marker passed.",
+      "reason": "Changed-test observations count executed test records and distinguish them from skipped results and suite metadata. Incomplete runs do not count toward enforcement.",
       "files": {
-        "packages/testing/src/libs/changed-test-plan.mts": "f422435664432bbe420cd0f223b1fa681d5337392a714058a359e9e97f7c04ed"
+        "packages/testing/src/libs/changed-test-plan.mts": "d0017ea904be02d1185704c3f560b512ef989c9bc64d27b71dace344e36b04d4"
       },
       "catalogRuntimes": [],
       "profiles": {
