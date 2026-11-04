@@ -53,7 +53,7 @@
       "classification": "pure-contract",
       "reason": "Refresh the generated contract-testing Problem source coordinates after the file sink import moves them.",
       "files": {
-        "packages/problems-core/src/generated/problem-code-registry.ts": "7ae77d72411e6823c5a916f4919c52e9500ff1c38a629787f13072af25ac0fb1"
+        "packages/problems-core/src/generated/problem-code-registry.ts": "71a3bc7a663d6a5ccf48d893b9f89312cb5cfaeeb25e8bcbcdca25c40fef56db"
       },
       "catalogRuntimes": [],
       "profiles": {
