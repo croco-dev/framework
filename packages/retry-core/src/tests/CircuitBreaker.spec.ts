@@ -14,6 +14,14 @@ vi.mock("@croco/telemetry-api", () => ({
 }));
 
 describe("CircuitBreaker", () => {
+  const createGate = () => {
+    let release = () => {};
+    const promise = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    return { promise, resolve: release };
+  };
+
   const createBreaker = (options: Partial<CircuitBreakerOptions> = {}) => {
     return new CircuitBreaker({
       circuitId: "test-circuit",
@@ -405,6 +413,132 @@ describe("CircuitBreaker", () => {
 
     expect(await breaker.getState()).toBe(CircuitState.CLOSED);
     expect(await breaker.getFailureCount()).toBe(0);
+  });
+
+  it("serializes forceClose with a late failure and preserves timed recovery", async () => {
+    const resetReached = createGate();
+    const releaseReset = createGate();
+    const failureLockAttempted = createGate();
+    let resetPaused = false;
+    let resetHeldLock = false;
+    let lockHeld = false;
+    let time = 100;
+
+    class PausedResetStore extends InMemoryCircuitBreakerStateStore {
+      override async resetFailureCount(circuitId: string): Promise<void> {
+        await super.resetFailureCount(circuitId);
+        if (circuitId === "test-circuit") {
+          resetHeldLock = lockHeld;
+          resetPaused = true;
+          resetReached.resolve();
+          await releaseReset.promise;
+          resetPaused = false;
+        }
+      }
+
+      override async withCircuitLock<T>(
+        circuitId: string,
+        operation: () => Promise<T>,
+      ): Promise<T> {
+        if (circuitId !== "test-circuit") {
+          return super.withCircuitLock(circuitId, operation);
+        }
+        if (resetPaused) {
+          failureLockAttempted.resolve();
+        }
+        return super.withCircuitLock(circuitId, async () => {
+          lockHeld = true;
+          try {
+            return await operation();
+          } finally {
+            lockHeld = false;
+          }
+        });
+      }
+    }
+
+    const stateStore = new PausedResetStore({ now: () => time });
+    const breaker = createBreaker({ stateStore, failureThreshold: 1, now: () => time });
+    const peer = createBreaker({ stateStore, failureThreshold: 1, now: () => time });
+    const failure = new Error("late dependency failure");
+    const closing = breaker.forceClose();
+    await resetReached.promise;
+
+    const failing = expect(
+      peer.execute(async () => {
+        throw failure;
+      }),
+    ).rejects.toBe(failure);
+    await failureLockAttempted.promise;
+    try {
+      const independent = createBreaker({ circuitId: "independent", stateStore });
+      await expect(independent.execute(async () => "independent success")).resolves.toBe(
+        "independent success",
+      );
+
+      // Finish the unprotected interleaving on the old implementation without
+      // deadlocking a failure that correctly waits for the close operation.
+      if (!resetHeldLock) {
+        await failing;
+      }
+    } finally {
+      releaseReset.resolve();
+      await Promise.all([closing, failing]);
+    }
+
+    expect(await breaker.getState()).toBe(CircuitState.OPEN);
+    expect(await breaker.getFailureCount()).toBe(1);
+    const healthy = vi.fn(async () => {
+      expect(await breaker.getState()).toBe(CircuitState.HALF_OPEN);
+      return "recovered";
+    });
+    await expect(breaker.execute(healthy)).rejects.toBeInstanceOf(CircuitBreakerOpenProblem);
+    expect(healthy).not.toHaveBeenCalled();
+    time = 200;
+    await expect(breaker.execute(healthy)).resolves.toBe("recovered");
+    expect(healthy).toHaveBeenCalledTimes(1);
+    expect(await breaker.getState()).toBe(CircuitState.CLOSED);
+    expect(await breaker.getFailureCount()).toBe(0);
+  });
+
+  it("finishes forceClose after an earlier forceOpen transition", async () => {
+    const openingReached = createGate();
+    const releaseOpening = createGate();
+    class PausedOpenStore extends InMemoryCircuitBreakerStateStore {
+      override async setLastFailureTime(circuitId: string, time: number): Promise<void> {
+        await super.setLastFailureTime(circuitId, time);
+        openingReached.resolve();
+        await releaseOpening.promise;
+      }
+    }
+    const stateStore = new PausedOpenStore();
+    const breaker = createBreaker({ stateStore });
+    await stateStore.incrementFailureCount("test-circuit");
+    const opening = breaker.forceOpen();
+    await openingReached.promise;
+    const closing = breaker.forceClose();
+    releaseOpening.resolve();
+    await Promise.all([opening, closing]);
+
+    expect(await breaker.getState()).toBe(CircuitState.CLOSED);
+    expect(await breaker.getFailureCount()).toBe(0);
+    await expect(breaker.execute(async () => "healthy")).resolves.toBe("healthy");
+  });
+
+  it("preserves state and failure count when forceClose cannot acquire its lock", async () => {
+    const stateStore = new InMemoryCircuitBreakerStateStore();
+    const breaker = createBreaker({ stateStore, failureThreshold: 1 });
+    await expect(
+      breaker.execute(async () => {
+        throw new Error("dependency failed");
+      }),
+    ).rejects.toThrow("dependency failed");
+    const lockFailure = new Error("lock unavailable");
+    vi.spyOn(stateStore, "withCircuitLock").mockRejectedValueOnce(lockFailure);
+
+    await expect(breaker.forceClose()).rejects.toBe(lockFailure);
+    expect(await breaker.getState()).toBe(CircuitState.OPEN);
+    expect(await breaker.getFailureCount()).toBe(1);
   });
 
   it("reset으로 모든 상태를 초기화할 수 있어야 한다", async () => {

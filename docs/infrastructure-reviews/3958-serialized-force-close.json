@@ -1,0 +1,77 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "retry-core",
+      "classification": "pure-contract",
+      "reason": "Serialize the forceClose failure-count reset and CLOSED transition with success/failure bookkeeping and forceOpen through the existing per-circuit state-store lock. Public signatures and stored representations remain unchanged.",
+      "files": {
+        "packages/retry-core/src/libs/CircuitBreaker.ts": "10a255b6d4ab25f2081c066958ca885a7b836898b2ca90ba1c3aa8419a10da8b"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "unverified",
+          "reason": "forceClose now uses the injected state store's existing circuit lock on the Kubernetes Node Host. No host adapter, lock protocol, runtime capability or deployment claim changes; this change has no host execution evidence.",
+          "providers": [
+            "@croco/retry-core/InMemoryCircuitBreakerStateStore",
+            "@croco/retry-core/RedisCircuitBreakerStore"
+          ],
+          "constraints": [
+            "Serialization requires all writers for the circuit to use the same state store and its existing lock semantics; this change does not alter distributed lock ownership or lease duration.",
+            "Await forceClose before ending the request or invocation. In-memory state and locks remain process-local; a shared store retains its existing connection and lifecycle requirements.",
+            "Local deterministic concurrency tests do not certify a live deployment or provider. The catalog declares no deployment runtimes."
+          ],
+          "references": [
+            "packages/retry-core/src/libs/CircuitBreaker.ts",
+            "packages/retry-core/src/libs/CircuitBreakerState.ts",
+            "packages/retry-core/src/libs/stores/RedisCircuitBreakerStore.ts",
+            "packages/retry-core/src/tests/CircuitBreaker.spec.ts",
+            "docs/package-catalog.json"
+          ]
+        },
+        "aws-lambda": {
+          "result": "unverified",
+          "reason": "forceClose now uses the injected state store's existing circuit lock on the AWS Lambda Host. No host adapter, lock protocol, runtime capability or deployment claim changes; this change has no host execution evidence.",
+          "providers": [
+            "@croco/retry-core/InMemoryCircuitBreakerStateStore",
+            "@croco/retry-core/RedisCircuitBreakerStore"
+          ],
+          "constraints": [
+            "Serialization requires all writers for the circuit to use the same state store and its existing lock semantics; this change does not alter distributed lock ownership or lease duration.",
+            "Await forceClose before ending the request or invocation. In-memory state and locks remain process-local; a shared store retains its existing connection and lifecycle requirements.",
+            "Local deterministic concurrency tests do not certify a live deployment or provider. The catalog declares no deployment runtimes."
+          ],
+          "references": [
+            "packages/retry-core/src/libs/CircuitBreaker.ts",
+            "packages/retry-core/src/libs/CircuitBreakerState.ts",
+            "packages/retry-core/src/libs/stores/RedisCircuitBreakerStore.ts",
+            "packages/retry-core/src/tests/CircuitBreaker.spec.ts",
+            "docs/package-catalog.json"
+          ]
+        },
+        "cloudflare": {
+          "result": "unverified",
+          "reason": "forceClose now uses the injected state store's existing circuit lock on the Cloudflare Workers Host. No host adapter, lock protocol, runtime capability or deployment claim changes; this change has no host execution evidence.",
+          "providers": [
+            "@croco/retry-core/InMemoryCircuitBreakerStateStore",
+            "@croco/retry-core/RedisCircuitBreakerStore"
+          ],
+          "constraints": [
+            "Serialization requires all writers for the circuit to use the same state store and its existing lock semantics; this change does not alter distributed lock ownership or lease duration.",
+            "Await forceClose before ending the request or invocation. In-memory state and locks remain process-local; a shared store retains its existing connection and lifecycle requirements.",
+            "Local deterministic concurrency tests do not certify a live deployment or provider. The catalog declares no deployment runtimes."
+          ],
+          "references": [
+            "packages/retry-core/src/libs/CircuitBreaker.ts",
+            "packages/retry-core/src/libs/CircuitBreakerState.ts",
+            "packages/retry-core/src/libs/stores/RedisCircuitBreakerStore.ts",
+            "packages/retry-core/src/tests/CircuitBreaker.spec.ts",
+            "docs/package-catalog.json"
+          ],
+          "host": "workers"
+        }
+      }
+    }
+  ]
+}

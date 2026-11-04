@@ -368,8 +368,10 @@ export class CircuitBreaker {
   }
 
   async forceClose(): Promise<void> {
-    await this.stateStore.resetFailureCount(this.circuitId);
-    await this.setCircuitState(CircuitState.CLOSED);
+    await this.withCircuitLock(async () => {
+      await this.stateStore.resetFailureCount(this.circuitId);
+      await this.setCircuitState(CircuitState.CLOSED);
+    });
   }
 
   async reset(): Promise<void> {
