@@ -133,23 +133,32 @@ export function parseContractsCheckArgs(args: readonly string[]): ContractsCheck
   }
 
   try {
-    const { values, positionals } = parseArgs({
+    const { values, positionals, tokens } = parseArgs({
       args: [...args],
       options: CHECK_OPTIONS,
       allowPositionals: true,
       strict: true,
+      tokens: true,
     });
-    if (values.controllers === "" || values.out === "") {
-      const flag = values.controllers === "" ? "--controllers" : "--out";
-      return { kind: "invalid", message: `Option ${flag} requires a nonempty value.` };
+
+    // Validate every path option and keep the first value, as in the original parser.
+    let controllers: string | undefined;
+    let out: string | undefined;
+    for (const token of tokens) {
+      if (token.kind !== "option" || token.value === undefined) continue;
+      if (token.value === "") {
+        return { kind: "invalid", message: `Option ${token.rawName} requires a nonempty value.` };
+      }
+      if (token.name === "controllers") controllers ??= token.value;
+      if (token.name === "out") out ??= token.value;
     }
 
-    const extra = positionals[values.controllers === undefined ? 1 : 0];
+    const extra = positionals[controllers === undefined ? 1 : 0];
     if (extra !== undefined) {
       return { kind: "invalid", message: `Unexpected positional argument '${extra}'.` };
     }
 
-    const controllers = values.controllers ?? positionals[0];
+    controllers ??= positionals[0];
     if (!controllers) {
       return {
         kind: "invalid",
@@ -158,13 +167,12 @@ export function parseContractsCheckArgs(args: readonly string[]): ContractsCheck
       };
     }
 
-    const out = values.out ?? null;
     return {
       kind: "run",
       options: {
         controllers,
-        out,
-        json: values.json === true || out !== null,
+        out: out ?? null,
+        json: values.json === true || out !== undefined,
         strictSchemas: values["strict-schemas"] === true,
       },
     };

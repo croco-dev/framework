@@ -6,8 +6,8 @@
       "classification": "pure-contract",
       "reason": "Reject unsupported contracts check arguments before loading controllers so a misspelled strict option cannot silently select relaxed validation.",
       "files": {
-        "packages/cli/src/commands/contractsCheck.ts": "743200feccbbce22293c8beaeeabcbb040ffc1d1598da492989a4e1eff404cfe",
-        "packages/cli/src/commands/root.ts": "a98e6fb34b13b49a04b5fc44b56564de3be068ce603a8da82b57ff13208bac8f"
+        "packages/cli/src/commands/contractsCheck.ts": "f677c699f7968eba7d85a68028df875db747238721d341c94d02b5b9220739ff",
+        "packages/cli/src/commands/root.ts": "624ca210c9ff1d24b63fd688967d12bc4241d7bbeac448d9100e7ca59780bd1b"
       },
       "catalogRuntimes": [],
       "profiles": {

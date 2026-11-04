@@ -52,6 +52,9 @@ describe("contractsDiff", () => {
       const common = ["contracts", "diff", "--baseline", snapshot, "--current-snapshot", snapshot];
       expect(await runCroco(common, io)).toEqual({ exitCode: 0 });
       expect(await runCroco([...common, "--cwd", dir], io)).toEqual({ exitCode: 0 });
+      expect(await runCroco(["contracts", "--cwd", "check", ...common.slice(1)], io)).toEqual({
+        exitCode: 0,
+      });
       expect(
         await runCroco(
           [

@@ -248,16 +248,37 @@ export function normalizeMigrateRootArgs(rawArgs: readonly string[]): string[] {
 
 function normalizeContractsRootArgs(rawArgs: readonly string[]): string[] {
   const rootIndex = findRootCommandIndex(rawArgs);
-  if (rootIndex === undefined || rawArgs[rootIndex] !== "contracts") {
-    return [...rawArgs];
+  if (rootIndex !== undefined && rawArgs[rootIndex] === "contracts") {
+    const parentArgs = rawArgs.slice(rootIndex + 1);
+    const childOffset = findRootCommandIndex(parentArgs);
+    if (childOffset !== undefined) {
+      const subcommand = parentArgs[childOffset];
+      if (subcommand === "check" || subcommand === "diff") {
+        return forwardContractsArgs(rawArgs, rootIndex, rootIndex + 1 + childOffset, subcommand);
+      }
+    }
   }
-  const parentArgs = rawArgs.slice(rootIndex + 1);
-  const childOffset = findRootCommandIndex(parentArgs);
-  const subcommand = childOffset === undefined ? undefined : parentArgs[childOffset];
-  if (childOffset === undefined || (subcommand !== "check" && subcommand !== "diff")) {
-    return [...rawArgs];
+
+  // Citty selects the first non-option token even if it follows a value-taking option.
+  const dispatchRootIndex = rawArgs.findIndex((arg) => !arg.startsWith("-"));
+  if (rawArgs[dispatchRootIndex] === "contracts") {
+    const dispatchChildIndex = rawArgs.findIndex(
+      (arg, index) => index > dispatchRootIndex && !arg.startsWith("-"),
+    );
+    if (rawArgs[dispatchChildIndex] === "check") {
+      return forwardContractsArgs(rawArgs, dispatchRootIndex, dispatchChildIndex, "check");
+    }
   }
-  const childIndex = rootIndex + 1 + childOffset;
+
+  return [...rawArgs];
+}
+
+function forwardContractsArgs(
+  rawArgs: readonly string[],
+  rootIndex: number,
+  childIndex: number,
+  subcommand: "check" | "diff",
+): string[] {
   return [
     "contracts",
     subcommand,
