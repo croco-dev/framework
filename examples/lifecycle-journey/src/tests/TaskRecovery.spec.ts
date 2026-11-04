@@ -162,7 +162,8 @@ test("fences a live abandoned invocation after a replacement worker completes", 
     // The suspended worker cannot deliver its own timeout callback.
     schedule: () => () => {},
   });
-  const pending = initial.wake.run();
+  // The episode claim can expire before the task itself is eligible for retry.
+  const pending = initial.bridge.dispatchDue(scope, time.now, 1, 29_999);
   const settled = Promise.allSettled([pending]);
   try {
     await entered;
@@ -179,7 +180,9 @@ test("fences a live abandoned invocation after a replacement worker completes", 
       executionTime,
     );
     await time.advanceBy(29_999);
-    assert.equal(await replacement.wake.run(), 0);
+    await assert.rejects(replacement.bridge.dispatchDue(scope, time.now, 1, 1), {
+      code: "execution/invalid-state-transition",
+    });
     assert.equal(sends, 0);
     assert.equal((await initial.executionStore.findById(running.id))?.attempts, 1);
 
