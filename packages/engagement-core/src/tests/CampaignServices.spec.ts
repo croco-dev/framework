@@ -217,6 +217,10 @@ class MemoryExecutionStore extends ExecutionStore {
   private readonly executions = new Map<string, Execution>();
   private sequence = 0;
 
+  constructor(private readonly clock: () => Date) {
+    super();
+  }
+
   async create(params: CreateExecutionRecordParams): Promise<Execution> {
     if (params.idempotencyKey !== undefined) {
       const existing = await this.findByIdempotencyKey(params.idempotencyKey);
@@ -229,7 +233,7 @@ class MemoryExecutionStore extends ExecutionStore {
       status: "pending",
       attempts: 0,
       maxAttempts: params.maxAttempts ?? 1,
-      createdAt: new Date("2026-09-01T00:00:00.000Z"),
+      createdAt: this.clock(),
       checkpoints: {},
     };
     this.executions.set(execution.id, cloneExecution(execution));
@@ -336,7 +340,7 @@ function createFixture(
   audiences.register(InactiveTrials, source);
   const campaigns = new CampaignRegistry();
   campaigns.register(TrialReminder);
-  const executionManager = new ExecutionManagerImpl(new MemoryExecutionStore(), {
+  const executionManager = new ExecutionManagerImpl(new MemoryExecutionStore(clock), {
     clock,
   });
   const sender = new FakeCampaignSender();
@@ -592,12 +596,17 @@ describe("CampaignServices", () => {
     ).rejects.toMatchObject({ code: "engagement-core/campaign-snapshot-not-found" });
     expect(fixture.sender.commands).toEqual([]);
 
+    await fixture.time.advanceBy(1_000);
     const result = await fixture.broadcasts.broadcast(TrialReminder, TENANT_SCOPE, snapshot.id, {
       pageSize: 2,
       concurrency: 2,
     });
 
-    expect(result.execution.status).toBe("completed");
+    expect(result.execution).toMatchObject({
+      status: "completed",
+      createdAt: new Date("2026-09-01T00:00:01.000Z"),
+      completedAt: new Date("2026-09-01T00:00:01.000Z"),
+    });
     expect(result.progress).toEqual({
       total: 5,
       completed: 5,
