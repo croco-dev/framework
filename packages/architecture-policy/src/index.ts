@@ -1,5 +1,5 @@
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
-import { dirname, join, relative, resolve } from "node:path";
+import { basename, dirname, join, relative, resolve } from "node:path";
 import ts from "typescript";
 import { Problem, ProblemCategory } from "@croco/problems-core";
 export const ARCHITECTURE_POLICY_SCHEMA_VERSION = "croco.architecture-policy/v1";
@@ -820,17 +820,15 @@ function collectSourceImports(
       const resolveImport = relativeImport
         ? undefined
         : (resolveModule ??= getModuleResolver(source));
-      const resolvedModule = resolveImport?.(entry.node);
-      const resolvedFile = relativeImport
-        ? resolve(dirname(filePath), specifier)
-        : resolvedModule?.resolvedFileName;
-      const targetFile = resolvedFile
-        ? toPosixPath(
-            relative(
-              relativeImport ? policy.rootDir : canonicalRoot,
-              relativeImport ? resolvedFile : realpath(resolvedFile),
-            ),
-          )
+      const relativeTarget = relativeImport
+        ? resolve(canonicalRoot, dirname(relativeFile), specifier)
+        : undefined;
+      const resolvedFile = relativeTarget
+        ? join(realpath(dirname(relativeTarget)), basename(relativeTarget))
+        : resolveImport?.resolve(entry.node);
+      const canonicalTarget = resolvedFile && realpath(resolvedFile);
+      const targetFile = canonicalTarget
+        ? toPosixPath(relative(canonicalRoot, canonicalTarget))
         : null;
       const targetPackage =
         targetFile === null || targetFile.split("/").includes("node_modules")
@@ -840,21 +838,26 @@ function collectSourceImports(
       let matchesResolvedExport: ImportRecord["matchesResolvedExport"];
       if (targetPackage && targetFile !== null) {
         const targetSubpath = toPosixPath(relative(targetPackage.relativeDir, targetFile));
-        if (targetPackage === sourcePackage) {
-          imported = { packageName: null, subpath: null };
-        } else if (imported.packageName !== targetPackage.name) {
-          imported = { packageName: targetPackage.name, subpath: targetSubpath };
-        } else if (resolveImport && resolvedModule && !resolvedModule.isExternalLibraryImport) {
-          matchesResolvedExport = (target) => {
-            const declaredFile = resolveImport(
-              entry.node,
-              resolve(policy.rootDir, targetPackage.relativeDir, target),
-            )?.resolvedFileName;
-            return (
-              declaredFile !== undefined &&
-              toPosixPath(relative(canonicalRoot, realpath(declaredFile))) === targetFile
-            );
-          };
+        if (imported.packageName !== targetPackage.name) {
+          imported =
+            targetPackage === sourcePackage
+              ? { packageName: null, subpath: null }
+              : { packageName: targetPackage.name, subpath: targetSubpath };
+        } else if (resolveImport) {
+          const bareFile = resolveImport.resolveWithoutAliases(entry.node);
+          if (!bareFile || realpath(bareFile) !== canonicalTarget) {
+            if (targetPackage === sourcePackage) {
+              imported = { packageName: null, subpath: null };
+            } else {
+              matchesResolvedExport = (target) => {
+                const declaredFile = resolveImport.resolve(
+                  entry.node,
+                  resolve(canonicalRoot, targetPackage.relativeDir, target),
+                );
+                return declaredFile !== undefined && realpath(declaredFile) === canonicalTarget;
+              };
+            }
+          }
         }
       }
 
@@ -874,18 +877,20 @@ function collectSourceImports(
   });
 }
 
-function createModuleResolver(
-  rootDir: string,
-): (
-  source: ts.SourceFile,
-) => (usage: ts.StringLiteralLike, specifier?: string) => ts.ResolvedModuleFull | undefined {
+function createModuleResolver(rootDir: string) {
+  const createResolution = (options: ts.CompilerOptions) => ({
+    options,
+    cache: ts.createModuleResolutionCache(
+      rootDir,
+      (path) => (ts.sys.useCaseSensitiveFileNames ? path : path.toLowerCase()),
+      options,
+    ),
+  });
+  type Resolution = ReturnType<typeof createResolution>;
   const configPaths = new Map<string, string | undefined>();
-  const projects = new Map<
-    string,
-    { options: ts.CompilerOptions; cache: ts.ModuleResolutionCache }
-  >();
+  const projects = new Map<string, { configured: Resolution; withoutAliases: Resolution }>();
 
-  return (source) => {
+  return (source: ts.SourceFile) => {
     const filePath = source.fileName;
     const directory = dirname(filePath);
     if (!configPaths.has(directory)) {
@@ -927,24 +932,26 @@ function createModuleResolver(
         if (errors.length > 0) throw new ArchitecturePolicyTsconfigProblem(configPath, errors);
         options = parsed.options;
       }
-      project = {
-        options,
-        cache: ts.createModuleResolutionCache(
-          rootDir,
-          (path) => (ts.sys.useCaseSensitiveFileNames ? path : path.toLowerCase()),
-          options,
-        ),
-      };
+      const configured = createResolution(options);
+      const withoutAliases =
+        options.paths || options.baseUrl
+          ? createResolution({ ...options, paths: undefined, baseUrl: undefined })
+          : configured;
+      project = { configured, withoutAliases };
       projects.set(projectKey, project);
     }
-    const { options, cache } = project;
+    const { configured, withoutAliases } = project;
     source.impliedNodeFormat = ts.getImpliedNodeFormatForFile(
       filePath,
-      cache.getPackageJsonInfoCache(),
+      configured.cache.getPackageJsonInfoCache(),
       ts.sys,
-      options,
+      configured.options,
     );
-    return (usage, specifier = usage.text) =>
+    const resolveUsing = (
+      { options, cache }: Resolution,
+      usage: ts.StringLiteralLike,
+      specifier: string,
+    ): string | undefined =>
       ts.resolveModuleName(
         specifier,
         filePath,
@@ -953,7 +960,13 @@ function createModuleResolver(
         cache,
         undefined,
         ts.getModeForUsageLocation(source, usage, options),
-      ).resolvedModule;
+      ).resolvedModule?.resolvedFileName;
+    return {
+      resolve: (usage: ts.StringLiteralLike, specifier = usage.text) =>
+        resolveUsing(configured, usage, specifier),
+      resolveWithoutAliases: (usage: ts.StringLiteralLike) =>
+        resolveUsing(withoutAliases, usage, usage.text),
+    };
   };
 }
 

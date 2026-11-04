@@ -351,10 +351,12 @@ describe("architecture policy engine", () => {
       writePackage(repo, "packages/app", "@test/app");
       writePackage(repo, "packages/plugin", "@test/plugin", {
         version: "1.0.0",
-        exports: { ".": "./src/entry.js" },
+        exports: { ".": "./src/entry.js", "./public": "./src/public.js" },
       });
       writeFile(repo, "packages/plugin/src/entry.js", "export const value = 1;\n");
       writeFile(repo, "packages/plugin/src/entry.d.ts", "export declare const value: number;\n");
+      writeFile(repo, "packages/plugin/src/public.js", "export const value = 2;\n");
+      writeFile(repo, "packages/plugin/src/public.d.ts", "export declare const value: number;\n");
       const pluginLink = join(repo, "packages/app/node_modules/@test/plugin");
       mkdirSync(dirname(pluginLink), { recursive: true });
       symlinkSync(join(repo, "packages/plugin"), pluginLink, "junction");
@@ -366,11 +368,24 @@ describe("architecture policy engine", () => {
             module: "esnext",
             moduleResolution: "bundler",
             preserveSymlinks,
-            paths: { "#plugin": ["./node_modules/@test/plugin/src/entry.d.ts"] },
+            paths: {
+              "#plugin": ["./node_modules/@test/plugin/src/entry.d.ts"],
+              "@test/plugin/public": ["./node_modules/@test/plugin/src/entry.d.ts"],
+            },
           },
         }),
       );
-      writeFile(repo, "packages/app/src/index.ts", "import '@test/plugin';\nimport '#plugin';\n");
+      const imports = [
+        "@test/plugin",
+        "../node_modules/@test/plugin/src/entry.d.ts",
+        "#plugin",
+        "@test/plugin/public",
+      ];
+      writeFile(
+        repo,
+        "packages/app/src/index.ts",
+        imports.map((specifier) => `import '${specifier}';`).join("\n"),
+      );
 
       const report = checkArchitecturePolicy({
         rootDir: repo,
@@ -392,7 +407,7 @@ describe("architecture policy engine", () => {
       expect(
         report.diagnostics.filter((entry) => entry.code === "architecture-policy/forbidden-import"),
       ).toEqual(
-        ["@test/plugin", "#plugin"].map((importSpecifier) =>
+        imports.map((importSpecifier) =>
           expect.objectContaining({ importSpecifier, targetPackage: "@test/plugin" }),
         ),
       );
@@ -400,9 +415,13 @@ describe("architecture policy engine", () => {
         report.diagnostics.filter(
           (entry) => entry.code === "architecture-policy/private-entrypoint-import",
         ),
-      ).toEqual([
-        expect.objectContaining({ importSpecifier: "#plugin", targetPackage: "@test/plugin" }),
-      ]);
+      ).toEqual(
+        imports
+          .slice(1)
+          .map((importSpecifier) =>
+            expect.objectContaining({ importSpecifier, targetPackage: "@test/plugin" }),
+          ),
+      );
     },
   );
 
