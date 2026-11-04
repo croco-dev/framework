@@ -6301,7 +6301,7 @@ Sources:
 
 Sources:
 
-- `packages/architecture-policy/src/index.ts:72:5` (problem-constructor)
+- `packages/architecture-policy/src/index.ts:78:5` (problem-constructor)
 
 <a id="audit-core-auditable-decorator-misuse"></a>
 

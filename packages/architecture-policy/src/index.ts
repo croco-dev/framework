@@ -69,19 +69,25 @@ export class ArchitecturePolicyPackageJsonParseProblem extends Problem {
 
 class ArchitecturePolicyTsconfigProblem extends Problem {
   constructor(tsconfigPath: string, diagnostics: readonly ts.Diagnostic[]) {
+    const details = diagnostics.map((diagnostic) => ({
+      code: diagnostic.code,
+      message: ts.flattenDiagnosticMessageText(diagnostic.messageText, "\n"),
+    }));
+    const recovery =
+      "Correct the TypeScript configuration and its extends chain, then rerun the policy check.";
     super(
       "architecture-policy/tsconfig",
       ProblemCategory.ValidationError,
-      `Cannot resolve architecture policy imports with invalid TypeScript configuration: ${tsconfigPath}.`,
+      [
+        `architecture-policy/tsconfig: Cannot resolve imports with invalid TypeScript configuration: ${tsconfigPath}.`,
+        ...details.map(({ code, message }) => `TS${code}: ${message}`),
+        recovery,
+      ].join("\n"),
       {
         extensions: {
           tsconfigPath,
-          diagnostics: diagnostics.map((diagnostic) => ({
-            code: diagnostic.code,
-            message: ts.flattenDiagnosticMessageText(diagnostic.messageText, "\n"),
-          })),
-          recovery:
-            "Correct the TypeScript configuration and its extends chain, then rerun the policy check.",
+          diagnostics: details,
+          recovery,
         },
       },
     );
@@ -212,6 +218,7 @@ type ImportRecord = {
   readonly specifier: string;
   readonly importedPackageName: string | null;
   readonly importedSubpath: string | null;
+  readonly resolvedExportPath?: string;
   readonly sourcePackage: PackageInfo | null;
 };
 
@@ -791,7 +798,7 @@ function collectSourceImports(
   packages: readonly PackageInfo[],
 ): readonly ImportRecord[] {
   const files = collectIncludedFiles(policy);
-  const resolveModule = createModuleResolver(policy.rootDir);
+  const getModuleResolver = createModuleResolver(policy.rootDir);
 
   return files.flatMap((filePath) => {
     const relativeFile = toPosixPath(relative(policy.rootDir, filePath));
@@ -800,25 +807,30 @@ function collectSourceImports(
       filePath,
       readFileSync(filePath, "utf-8"),
       ts.ScriptTarget.Latest,
+      true,
     );
     const lineStarts = source.getLineStarts();
+    let resolveModule: ReturnType<typeof getModuleResolver> | undefined;
 
     return extractImportSpecifiers(source).map((entry) => {
-      const resolvedFile = entry.specifier.startsWith(".")
-        ? resolve(dirname(filePath), entry.specifier)
-        : resolveModule(entry.specifier, filePath);
+      const specifier = entry.node.text;
+      const resolvedFile = ts.isExternalModuleNameRelative(specifier)
+        ? resolve(dirname(filePath), specifier)
+        : (resolveModule ??= getModuleResolver(source))(entry.node);
       const targetFile = resolvedFile ? toPosixPath(relative(policy.rootDir, resolvedFile)) : null;
       const targetPackage = targetFile === null ? null : findSourcePackage(packages, targetFile);
-      const declaredImport = splitPackageSpecifier(entry.specifier);
-      const imported =
-        targetPackage && targetFile !== null && declaredImport.packageName !== targetPackage.name
-          ? targetPackage === sourcePackage
-            ? { packageName: null, subpath: null }
-            : {
-                packageName: targetPackage.name,
-                subpath: toPosixPath(relative(targetPackage.relativeDir, targetFile)),
-              }
-          : declaredImport;
+      let imported = splitPackageSpecifier(specifier);
+      let resolvedExportPath: string | undefined;
+      if (targetPackage && targetFile !== null) {
+        const targetSubpath = toPosixPath(relative(targetPackage.relativeDir, targetFile));
+        if (targetPackage === sourcePackage) {
+          imported = { packageName: null, subpath: null };
+        } else if (imported.packageName === targetPackage.name) {
+          resolvedExportPath = `./${targetSubpath}`;
+        } else {
+          imported = { packageName: targetPackage.name, subpath: targetSubpath };
+        }
+      }
 
       return {
         sourceKind: "source",
@@ -826,9 +838,10 @@ function collectSourceImports(
         line: entry.line,
         column: entry.column,
         excerpt: source.text.slice(lineStarts[entry.line - 1], lineStarts[entry.line]).trim(),
-        specifier: entry.specifier,
+        specifier,
         importedPackageName: imported.packageName,
         importedSubpath: imported.subpath,
+        resolvedExportPath,
         sourcePackage,
       } satisfies ImportRecord;
     });
@@ -837,14 +850,15 @@ function collectSourceImports(
 
 function createModuleResolver(
   rootDir: string,
-): (specifier: string, filePath: string) => string | undefined {
+): (source: ts.SourceFile) => (usage: ts.StringLiteralLike) => string | undefined {
   const configPaths = new Map<string, string | undefined>();
   const projects = new Map<
     string,
     { options: ts.CompilerOptions; cache: ts.ModuleResolutionCache }
   >();
 
-  return (specifier, filePath) => {
+  return (source) => {
+    const filePath = source.fileName;
     const directory = dirname(filePath);
     if (!configPaths.has(directory)) {
       configPaths.set(
@@ -883,8 +897,23 @@ function createModuleResolver(
       };
       projects.set(projectKey, project);
     }
-    return ts.resolveModuleName(specifier, filePath, project.options, ts.sys, project.cache)
-      .resolvedModule?.resolvedFileName;
+    const { options, cache } = project;
+    source.impliedNodeFormat = ts.getImpliedNodeFormatForFile(
+      filePath,
+      cache.getPackageJsonInfoCache(),
+      ts.sys,
+      options,
+    );
+    return (usage) =>
+      ts.resolveModuleName(
+        usage.text,
+        filePath,
+        options,
+        ts.sys,
+        cache,
+        undefined,
+        ts.getModeForUsageLocation(source, usage, options),
+      ).resolvedModule?.resolvedFileName;
   };
 }
 
@@ -1133,7 +1162,7 @@ function runPublicEntrypointRule(
       return [];
     }
 
-    if (isExportedSubpath(targetPackage, entry.importedSubpath)) {
+    if (isExportedSubpath(targetPackage, entry.importedSubpath, entry.resolvedExportPath)) {
       return [];
     }
 
@@ -1327,10 +1356,12 @@ function splitPackageSpecifier(specifier: string): {
   };
 }
 
-function extractImportSpecifiers(
-  source: ts.SourceFile,
-): readonly { readonly specifier: string; readonly line: number; readonly column: number }[] {
-  const specifiers: { specifier: string; line: number; column: number }[] = [];
+function extractImportSpecifiers(source: ts.SourceFile): readonly {
+  readonly node: ts.StringLiteralLike;
+  readonly line: number;
+  readonly column: number;
+}[] {
+  const specifiers: { node: ts.StringLiteralLike; line: number; column: number }[] = [];
 
   function record(node: ts.Node | undefined): void {
     if (!node || !(ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node))) {
@@ -1338,7 +1369,7 @@ function extractImportSpecifiers(
     }
     const location = source.getLineAndCharacterOfPosition(node.getStart(source) + 1);
     specifiers.push({
-      specifier: node.text,
+      node,
       line: location.line + 1,
       column: location.character + 1,
     });
@@ -1404,19 +1435,36 @@ function findJsonPropertyLocation(
   return { line: 1, column: 1 };
 }
 
-function isExportedSubpath(pkg: PackageInfo, subpath: string | null): boolean {
+function isExportedSubpath(
+  pkg: PackageInfo,
+  subpath: string | null,
+  resolvedPath?: string,
+): boolean {
+  const matchesTarget = (target: string, wildcard = ""): boolean => {
+    // Built package exports keep their public specifier when TypeScript maps them to build sources.
+    if (resolvedPath === undefined || target.startsWith("./dist/")) return true;
+    const selected = target.replaceAll("*", wildcard);
+    return (
+      selected === resolvedPath ||
+      selected === resolvedPath.replace(/\.([cm]?)tsx?$/, ".$1js") ||
+      selected === resolvedPath.replace(/\.tsx$/, ".jsx")
+    );
+  };
   if (subpath === null) {
     const publishConfig = isRecord(pkg.packageJson.publishConfig)
       ? pkg.packageJson.publishConfig
       : undefined;
     const exportsField = publishConfig?.exports ?? pkg.packageJson.exports;
     // Without an exports map, legacy main/index resolution remains available.
-    return exportsField == null || publicExportTargetStatus(pkg.exportSubpaths["."]) === "public";
+    return (
+      exportsField == null ||
+      publicExportTargetStatus(pkg.exportSubpaths["."], matchesTarget) === "public"
+    );
   }
 
   const exportKey = `./${subpath}`;
   if (Object.hasOwn(pkg.exportSubpaths, exportKey)) {
-    return publicExportTargetStatus(pkg.exportSubpaths[exportKey]) === "public";
+    return publicExportTargetStatus(pkg.exportSubpaths[exportKey], matchesTarget) === "public";
   }
 
   // Node selects the longest prefix before *, then the longest complete key.
@@ -1434,17 +1482,25 @@ function isExportedSubpath(pkg: PackageInfo, subpath: string | null): boolean {
     })
     .sort((left, right) => right.indexOf("*") - left.indexOf("*") || right.length - left.length);
   const selected = patterns[0];
+  if (selected === undefined) return false;
+  const star = selected.indexOf("*");
+  const wildcard = exportKey.slice(star, exportKey.length - (selected.length - star - 1));
   return (
-    selected !== undefined && publicExportTargetStatus(pkg.exportSubpaths[selected]) === "public"
+    publicExportTargetStatus(pkg.exportSubpaths[selected], (target) =>
+      matchesTarget(target, wildcard),
+    ) === "public"
   );
 }
 
-function publicExportTargetStatus(target: unknown): "public" | "blocked" | "unmatched" {
-  if (typeof target === "string") return "public";
+function publicExportTargetStatus(
+  target: unknown,
+  matchesTarget: (target: string) => boolean,
+): "public" | "blocked" | "unmatched" {
+  if (typeof target === "string") return matchesTarget(target) ? "public" : "unmatched";
   if (Array.isArray(target)) {
     let status: "blocked" | "unmatched" = target.length === 0 ? "blocked" : "unmatched";
     for (const value of target) {
-      const candidate = publicExportTargetStatus(value);
+      const candidate = publicExportTargetStatus(value, matchesTarget);
       if (candidate === "public") return "public";
       if (candidate === "blocked") status = "blocked";
     }
@@ -1452,7 +1508,7 @@ function publicExportTargetStatus(target: unknown): "public" | "blocked" | "unma
   }
   if (isRecord(target)) {
     for (const [condition, value] of Object.entries(target)) {
-      const status = publicExportTargetStatus(value);
+      const status = publicExportTargetStatus(value, matchesTarget);
       if (status === "public") return "public";
       if (condition === "default" && status !== "unmatched") return status;
     }

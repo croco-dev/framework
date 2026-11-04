@@ -7895,7 +7895,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/architecture-policy/src/index.ts";
-          readonly line: 72;
+          readonly line: 78;
           readonly column: 5;
           readonly kind: "problem-constructor";
         },
@@ -41484,7 +41484,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/architecture-policy/src/index.ts",
-          line: 72,
+          line: 78,
           column: 5,
           kind: "problem-constructor",
         },

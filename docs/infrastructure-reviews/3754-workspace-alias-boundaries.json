@@ -6,7 +6,7 @@
       "classification": "pure-contract",
       "reason": "Resolve TypeScript aliases to their workspace owner before evaluating existing package boundary and entrypoint rules; keep same-package aliases local and reject invalid TypeScript configuration. This is static tooling with no infrastructure runtime claim.",
       "files": {
-        "packages/architecture-policy/src/index.ts": "2082611b3e4a8630ade425161e105d5f22252895e50821751e0d40dda7e63322"
+        "packages/architecture-policy/src/index.ts": "f85d5106e1d39def373f37efdc2edab62995b1bbc1fcdba426ce22a05f517382"
       },
       "catalogRuntimes": [],
       "profiles": {
@@ -56,7 +56,7 @@
       "classification": "pure-contract",
       "reason": "Generate the architecture-policy/tsconfig code and its source reference through the canonical Problem registry generator. Existing codes and recovery contracts remain intact.",
       "files": {
-        "packages/problems-core/src/generated/problem-code-registry.ts": "2452e729971f79b684e490934d366df4efe6a9bb221e0cd43f13805553a79314"
+        "packages/problems-core/src/generated/problem-code-registry.ts": "5af5822b63f8a2ad2e6afc6ff8db1fb8d02b72fd0dd8a51820614007bb6010a7"
       },
       "catalogRuntimes": [],
       "profiles": {

@@ -71,19 +71,29 @@ describe("architecture policy engine", () => {
     ]);
   });
 
-  it.each(["paths", "inherited baseUrl", "nearest config", "wildcard fallbacks"])(
+  it.each([
+    "paths",
+    "dot-prefixed alias",
+    "inherited baseUrl",
+    "nearest config",
+    "wildcard fallbacks",
+  ])(
     "checks bare, relative and alias imports against the same package boundary (%s)",
     (configuration) => {
       const repo = createTempRepo();
       writePackage(repo, "packages/app", "@test/app");
       writePackage(repo, "packages/plugin", "@test/plugin");
       const wildcard = configuration === "wildcard fallbacks";
-      const alias = wildcard ? "#plugin/index" : "#plugin";
+      const alias = wildcard
+        ? "#plugin/index"
+        : configuration === "dot-prefixed alias"
+          ? ".plugin"
+          : "#plugin";
       const compilerOptions = {
         moduleResolution: "bundler",
         paths: wildcard
           ? { "#plugin/*": ["../missing/*", "../plugin/src/*"] }
-          : { "#plugin": ["../plugin/src/index.ts"] },
+          : { [alias]: ["../plugin/src/index.ts"] },
       };
       if (configuration === "inherited baseUrl") {
         writeFile(
@@ -161,50 +171,113 @@ describe("architecture policy engine", () => {
     },
   );
 
-  it("keeps app-local aliases local even when external packages are forbidden", () => {
+  it("uses the resolution mode of each NodeNext import", () => {
     const repo = createTempRepo();
     writePackage(repo, "packages/app", "@test/app");
+    writePackage(repo, "packages/plugin", "@test/plugin");
     writeFile(
       repo,
       "packages/app/tsconfig.json",
       JSON.stringify({
-        compilerOptions: { paths: { "#local": ["./src/local.ts"] } },
+        compilerOptions: {
+          module: "nodenext",
+          paths: { "#target": ["./src/local", "../plugin/src/index.ts"] },
+        },
       }),
     );
     writeFile(repo, "packages/app/src/local.ts", "export const value = 2;\n");
-    writeFile(repo, "packages/app/src/index.ts", "export { value } from '#local';\n");
+    writeFile(
+      repo,
+      "packages/app/src/entry.mts",
+      "import '#target';\nimport local = require('#target');\nexport { local };\n",
+    );
 
     const report = checkArchitecturePolicy({
       rootDir: repo,
       manifest: {
         schemaVersion: ARCHITECTURE_POLICY_SCHEMA_VERSION,
-        packageGroups: { app: { packages: ["@test/app"] } },
+        packageGroups: {
+          app: { packages: ["@test/app"] },
+          plugins: { packages: ["@test/plugin"] },
+        },
         rules: {
-          allowedGroupImports: [
-            { id: "app-edges", fromGroups: ["app"], allowGroups: [], allowExternal: false },
+          forbiddenImports: [
+            { id: "no-plugins", from: { groups: ["app"] }, to: { groups: ["plugins"] } },
           ],
-          publicEntrypoints: { id: "public-exports" },
         },
       },
     });
 
-    expect(report.status).toBe("pass");
-    expect(report.importCount).toBe(1);
-    expect(report.diagnostics).toEqual([]);
+    expect(report.diagnostics).toEqual([
+      expect.objectContaining({
+        code: "architecture-policy/forbidden-import",
+        importSpecifier: "#target",
+        targetPackage: "@test/plugin",
+        line: 1,
+      }),
+    ]);
   });
+
+  it.each(["#local", "@test/app/internal"])(
+    "keeps app-local alias %s local even when external packages are forbidden",
+    (alias) => {
+      const repo = createTempRepo();
+      writePackage(repo, "packages/app", "@test/app");
+      writeFile(
+        repo,
+        "packages/app/tsconfig.json",
+        JSON.stringify({
+          compilerOptions: { paths: { [alias]: ["./src/local.ts"] } },
+        }),
+      );
+      writeFile(repo, "packages/app/src/local.ts", "export const value = 2;\n");
+      writeFile(repo, "packages/app/src/index.ts", `export { value } from '${alias}';\n`);
+
+      const report = checkArchitecturePolicy({
+        rootDir: repo,
+        manifest: {
+          schemaVersion: ARCHITECTURE_POLICY_SCHEMA_VERSION,
+          packageGroups: { app: { packages: ["@test/app"] } },
+          rules: {
+            allowedGroupImports: [
+              { id: "app-edges", fromGroups: ["app"], allowGroups: [], allowExternal: false },
+            ],
+            publicEntrypoints: { id: "public-exports" },
+          },
+        },
+      });
+
+      expect(report.status).toBe("pass");
+      expect(report.importCount).toBe(1);
+      expect(report.diagnostics).toEqual([]);
+    },
+  );
 
   it("checks private workspace files reached through an alias without changing bare exports", () => {
     const repo = createTempRepo();
     writePackage(repo, "packages/app", "@test/app");
-    writePackage(repo, "packages/plugin", "@test/plugin", { exports: { ".": "./src/index.ts" } });
+    writePackage(repo, "packages/plugin", "@test/plugin", {
+      exports: { ".": "./src/index.ts", "./public": "./src/public.ts" },
+    });
+    writeFile(repo, "packages/plugin/src/public.ts", "export const value = 1;\n");
+    writeFile(repo, "packages/plugin/src/private.ts", "export const value = 2;\n");
     writeFile(
       repo,
       "packages/app/tsconfig.json",
       JSON.stringify({
-        compilerOptions: { paths: { "#plugin": ["../plugin/src/index.ts"] } },
+        compilerOptions: {
+          paths: {
+            "#plugin": ["../plugin/src/index.ts"],
+            "@test/plugin/public": ["../plugin/src/private.ts"],
+          },
+        },
       }),
     );
-    writeFile(repo, "packages/app/src/index.ts", "import '@test/plugin';\nimport('#plugin');\n");
+    writeFile(
+      repo,
+      "packages/app/src/index.ts",
+      "import '@test/plugin';\nimport('#plugin');\nimport '@test/plugin/public';\n",
+    );
 
     const report = checkArchitecturePolicy({
       rootDir: repo,
@@ -218,6 +291,11 @@ describe("architecture policy engine", () => {
       expect.objectContaining({
         code: "architecture-policy/private-entrypoint-import",
         importSpecifier: "#plugin",
+        targetPackage: "@test/plugin",
+      }),
+      expect.objectContaining({
+        code: "architecture-policy/private-entrypoint-import",
+        importSpecifier: "@test/plugin/public",
         targetPackage: "@test/plugin",
       }),
     ]);
