@@ -571,14 +571,35 @@ for (const entry of entries) { const schema = await entry.schema; if (!schema.sq
       }
     `);
 
+    const importMarker = join(harness.commandRoot, "weak-controller-imported.txt");
+    writeFileSync(
+      fixtures.weakGlob,
+      `${readFileSync(fixtures.weakGlob, "utf8")}
+declare const process: {
+  getBuiltinModule(name: "node:fs"): { writeFileSync(path: string, value: string): void };
+};
+process.getBuiltinModule("node:fs").writeFileSync(${JSON.stringify(importMarker)}, "imported");
+`,
+    );
+    const invalidSnapshot = join(harness.commandRoot, "invalid-contract-graph.json");
     const misspelledStrictOption = runInstalledCommand(
       harness,
       "croco",
-      ["contracts", "check", "--controllers", fixtures.weakGlob, "--strict-schema"],
+      [
+        "contracts",
+        "check",
+        "--controllers",
+        fixtures.weakGlob,
+        "--out",
+        invalidSnapshot,
+        "--strict-schema",
+      ],
       harness.commandRoot,
       1,
     );
     expect(misspelledStrictOption.stderr).toContain("Unknown option '--strict-schema'");
+    expect(existsSync(importMarker)).toBe(false);
+    expect(existsSync(invalidSnapshot)).toBe(false);
 
     const strictContracts = runInstalledCommand(
       harness,
@@ -587,6 +608,7 @@ for (const entry of entries) { const schema = await entry.schema; if (!schema.sq
       harness.commandRoot,
       1,
     );
+    expect(readFileSync(importMarker, "utf8")).toBe("imported");
     expect(snapshotEnvelope(harness, strictContracts)).toMatchInlineSnapshot(`
       {
         "jsonSummary": {
