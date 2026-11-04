@@ -6,7 +6,7 @@
       "classification": "pure-contract",
       "reason": "Resolve TypeScript aliases to their workspace owner before evaluating existing package boundary and entrypoint rules; keep same-package aliases local and reject invalid TypeScript configuration. This is static tooling with no infrastructure runtime claim.",
       "files": {
-        "packages/architecture-policy/src/index.ts": "5b648ed614110805c0aa7a93091cb12d9d013b296baf011da0901e808a68ecb9"
+        "packages/architecture-policy/src/index.ts": "ebcb18307863f34cebc7a7bc578eb6d906710b2d8eaeb52d04b1de7838e6db75"
       },
       "catalogRuntimes": [],
       "profiles": {

@@ -435,6 +435,32 @@ describe("architecture policy engine", () => {
     },
   );
 
+  it("keeps a declared relative export when its symlink stays inside the workspace package", () => {
+    const repo = createTempRepo();
+    writePackage(repo, "packages/app", "@test/app");
+    writePackage(repo, "packages/plugin", "@test/plugin", {
+      exports: { "./public.js": "./public.js" },
+    });
+    writeFile(repo, "packages/plugin/src/impl.js", "export const value = 1;\n");
+    symlinkSync(
+      join(repo, "packages/plugin/src/impl.js"),
+      join(repo, "packages/plugin/public.js"),
+      "file",
+    );
+    writeFile(repo, "packages/app/src/index.ts", "import '../../plugin/public.js';\n");
+
+    const report = checkArchitecturePolicy({
+      rootDir: repo,
+      manifest: {
+        schemaVersion: ARCHITECTURE_POLICY_SCHEMA_VERSION,
+        rules: { publicEntrypoints: { id: "public-exports" } },
+      },
+    });
+
+    expect(report.status).toBe("pass");
+    expect(report.diagnostics).toEqual([]);
+  });
+
   it.each([
     ["malformed JSON", '{ "compilerOptions": { "paths": '],
     ["missing extends", '{ "extends": "./missing.json" }'],

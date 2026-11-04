@@ -836,7 +836,7 @@ function collectSourceImports(
       let imported = splitPackageSpecifier(specifier);
       let matchesResolvedExport: ImportRecord["matchesResolvedExport"];
       if (targetPackage && targetFile !== null) {
-        const lexicalFile = lexicalTarget && toPosixPath(relative(canonicalRoot, lexicalTarget));
+        const lexicalFile = relativeTarget && toPosixPath(relative(canonicalRoot, relativeTarget));
         const entrypointFile =
           lexicalFile && findSourcePackage(packages, lexicalFile) === targetPackage
             ? lexicalFile
