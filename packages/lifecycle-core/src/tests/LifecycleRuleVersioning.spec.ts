@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   InMemoryLifecycleActionSink,
   InMemoryLifecycleDryRunStore,
@@ -571,6 +571,50 @@ describe("LifecycleRuleRegistry versioning", () => {
       replayed: false,
       state: { revision: 4 },
     });
+  });
+
+  it("wakes a blocked pause at lease expiry through the default timer adapter", async () => {
+    let now = NOW.getTime();
+    const stateStore = new InMemoryLifecycleRuleStateStore({ now: () => new Date(now) });
+    const registry = new LifecycleRuleRegistry({ stateStore });
+    await registerVersion(registry, "1.0.0", { activate: true });
+    const claimId = "abandoned-default-timer-lease";
+    expect(
+      stateStore.claimExecution({
+        claimId,
+        ruleId: "retention-risk",
+        version: "1.0.0",
+        expiresAt: new Date(now + 10),
+      }),
+    ).toEqual({ claimed: true });
+
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    try {
+      let settled = false;
+      const pausing = registry
+        .pause({
+          commandId: "pause-after-default-timer-expiry",
+          ruleId: "retention-risk",
+          version: "1.0.0",
+          expectedRevision: 1,
+        })
+        .then((result) => {
+          settled = true;
+          return result;
+        });
+      await vi.advanceTimersByTimeAsync(0);
+      now += 9;
+      await vi.advanceTimersByTimeAsync(9);
+      expect(settled).toBe(false);
+      now += 1;
+      await vi.advanceTimersByTimeAsync(1);
+      expect(settled).toBe(true);
+      await expect(pausing).resolves.toMatchObject({ state: { revision: 2 } });
+      expect(await registry.getRegistrationState("retention-risk", "1.0.0")).toBe("paused");
+    } finally {
+      stateStore.releaseExecution(claimId);
+      vi.useRealTimers();
+    }
   });
 });
 

@@ -92,6 +92,36 @@ new Reader(maybeClock);
     expect(findings[0]?.node.getText()).toBe("new Reader()");
   });
 
+  it("checks the values supplied by tuple spreads at their runtime positions", () => {
+    const { findings } = fixture(`
+const clock = () => new Date('2026-10-13T00:00:00Z');
+const now = () => 12;
+const schedule = (callback: () => void, _delay: number) => callback();
+declare class NamedReader { constructor(label: string, clock?: () => Date); }
+new Reader(...([] as const));
+new Reader(...([undefined] as const));
+new Reader(...([clock] as const));
+new Reader(...([] as const), clock);
+declare const maybeArgs: [clock?: () => Date];
+new Reader(...maybeArgs);
+new OptionsService(...([{ now }] as const));
+new OptionsService(...([{ now, schedule }] as const));
+new UnionOptionsService(...([{ now }] as const));
+new NamedReader(...(['label', clock] as const));
+new NamedReader(...(['label'] as const));
+new Date(...([] as const));
+new Date(...(['2026-10-13'] as const));
+`);
+    expect(findings.map(({ node, message }) => [node.getText(), message])).toEqual([
+      ["new Reader(...([] as const))", expect.stringContaining("fixture 'clock'")],
+      ["...([undefined] as const)", expect.stringContaining("fixture 'clock'")],
+      ["new Reader(...maybeArgs)", expect.stringContaining("fixture 'clock'")],
+      ["...([{ now }] as const)", expect.stringContaining("options.schedule")],
+      ["new NamedReader(...(['label'] as const))", expect.stringContaining("fixture 'clock'")],
+      ["new Date(...([] as const))", expect.stringContaining("Ambient new Date()")],
+    ]);
+  });
+
   it("requires every declared options seam, including optional values that can fall back to ambient time", () => {
     const { findings } = fixture(`
 const now = () => 12;

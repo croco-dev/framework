@@ -35,6 +35,8 @@ unmarked legacy tests and dependencies without a supported injection seam still 
 For lease/timeout tests, inject both the clock and its scheduler. `LifecycleExecutionLeaseAndPause.spec.ts` passes
 `time.schedule` to `scheduleExecutionClaimWake`, starts the blocked transition, advances to just before
 the lease deadline, and then reaches the exact deadline. It never waits for real time to cross that boundary.
+`LifecycleRuleVersioning.spec.ts` also tests the store's default timer adapter. It supplies the lease
+clock explicitly and uses Vitest fake timers for the adapter's `setTimeout` and `clearTimeout`.
 
 Native timer, browser and provider lifecycle tests may need real I/O or scheduling. Keep their business clock
 controlled, explain the native behavior being observed, and limit any real-time checker exception to the

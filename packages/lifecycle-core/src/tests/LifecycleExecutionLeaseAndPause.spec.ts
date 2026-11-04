@@ -87,32 +87,4 @@ describe("Lifecycle controlled execution leases", () => {
     expect(time.pendingWork).toEqual([]);
     expect(await registry.getRegistrationState("retention-risk", "1.0.0")).toBe("paused");
   });
-
-  it("uses the configured logical scheduler when an execution lease expires", async () => {
-    const { time, stateStore, registry } = fixture();
-    await registerVersion(registry, "1.0.0", { activate: true });
-    expect(
-      stateStore.claimExecution({
-        claimId: "logical-clock-lease",
-        ruleId: "retention-risk",
-        version: "1.0.0",
-        expiresAt: new Date(time.now.getTime() + 1_000),
-      }),
-    ).toEqual({ claimed: true });
-
-    const pausing = registry.pause({
-      commandId: "pause-after-logical-lease-expiry",
-      ruleId: "retention-risk",
-      version: "1.0.0",
-      expectedRevision: 1,
-    });
-    await time.advanceBy(0);
-    expect(time.pendingWork).toMatchObject([
-      { dueAt: "2026-07-26T00:00:01.000Z", source: "execution-lease" },
-    ]);
-    await time.advanceBy(1_000);
-    await expect(pausing).resolves.toMatchObject({ state: { revision: 2 } });
-    expect(time.pendingWork).toEqual([]);
-    expect(time.now).toEqual(new Date("2026-07-26T00:00:01.000Z"));
-  });
 });

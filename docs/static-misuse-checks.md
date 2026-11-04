@@ -36,12 +36,15 @@ and values whose types still allow `undefined` fail. Date-valued inputs such as 
 are data, so they are not treated as dependency injection seams.
 Union options are checked against the alternatives selected by the supplied argument; each possible
 argument alternative must explicitly bind its branch's clock/scheduler dependencies.
+Fixed-length tuple spreads are checked at their expanded argument positions. An unknown-length
+spread cannot establish which values supply the remaining positional dependencies.
 
 Ambient `Date()`, `Date.now()` and `new Date()` in a controlled file fail, including reads inside
 callbacks and literal computed accesses such as `Date['now']()` or `globalThis['Date']`.
 References such as `now: Date.now` or `const captured = Date.now` also fail; passing the ambient
 function explicitly does not bind it to the shared fixture clock.
 Parentheses and expression-only TypeScript assertions do not change this boundary.
+Spreading an empty tuple into `new Date` still reads the ambient clock.
 Parsing a supplied timestamp and constructing a date from supplied milliseconds remain
 valid. Fixed dates are allowed; the rule does not ban date literals or require every test to use
 `TestKernel`.

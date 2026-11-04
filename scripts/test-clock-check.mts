@@ -8,6 +8,8 @@ export type TestClockFinding = {
   readonly message: string;
 };
 
+type ConstructorArgument = { node: ts.Expression; type?: ts.Type };
+
 export function isControlledTestClockSource(file: string, source: string): boolean {
   const testSource =
     /(?:^|\/)(?:tests|__tests__|fixtures)\//.test(file) ||
@@ -52,7 +54,14 @@ export function detectTestClockFindings(
 
   function visit(node: ts.Node): void {
     if (ts.isNewExpression(node) && isGlobalDate(node.expression, checker)) {
-      if (!node.arguments?.length)
+      if (
+        !node.arguments?.some((argument) => {
+          if (!ts.isSpreadElement(argument)) return true;
+          const type = checker.getTypeAtLocation(argument.expression);
+          const first = checker.isTupleType(type) && checker.getPropertyOfType(type, "0");
+          return !!first && (first.flags & ts.SymbolFlags.Optional) === 0;
+        })
+      )
         reportAmbient(node, "Ambient new Date() escapes the controlled fixture clock.");
     } else if (ts.isCallExpression(node) && isGlobalDate(node.expression, checker)) {
       reportAmbient(node, "Ambient Date() escapes the controlled fixture clock.");
@@ -67,12 +76,19 @@ export function detectTestClockFindings(
     }
 
     if (ts.isNewExpression(node)) {
+      const args = node.arguments ?? [];
+      const spreadArgs = args.some(ts.isSpreadElement)
+        ? expandConstructorArguments(args, checker)
+        : undefined;
       const signature = checker.getResolvedSignature(node);
       signature?.parameters.forEach((parameter, index) => {
         const parameterType = checker.getTypeOfSymbolAtLocation(parameter, node);
-        const argument = node.arguments?.[index];
+        const argument = spreadArgs ? spreadArgs[index]?.node : args[index];
+        const getArgumentType = () =>
+          spreadArgs?.[index]?.type ?? (argument && checker.getTypeAtLocation(argument));
         if (isTemporalSeam(parameter.name, parameterType, checker)) {
-          if (!argument || mayBeUndefined(checker.getTypeAtLocation(argument))) {
+          const supplied = getArgumentType();
+          if (!supplied || mayBeUndefined(supplied)) {
             report(
               argument ?? node,
               `Constructor '${node.expression.getText(sourceFile)}' must receive its fixture '${parameter.name}' explicitly.`,
@@ -88,10 +104,12 @@ export function detectTestClockFindings(
             seams: temporalProperties(type, node, checker),
           }));
           if (!branches.some(({ seams }) => seams.length > 0)) return;
+          const supplied = getArgumentType();
           if (
             !argument ||
-            mayBeUndefined(checker.getTypeAtLocation(argument)) ||
-            typeAlternatives(checker.getTypeAtLocation(argument), checker).some(
+            !supplied ||
+            mayBeUndefined(supplied) ||
+            typeAlternatives(supplied, checker).some(
               (suppliedType) =>
                 !branches.some(
                   ({ type, seams }) =>
@@ -114,15 +132,12 @@ export function detectTestClockFindings(
         for (const property of checker.getPropertiesOfType(options)) {
           const propertyType = checker.getTypeOfSymbolAtLocation(property, node);
           if (!isTemporalSeam(property.name, propertyType, checker)) continue;
+          const supplied = getArgumentType();
           if (
             !argument ||
-            mayBeUndefined(checker.getTypeAtLocation(argument)) ||
-            !hasExplicitProperty(
-              checker.getTypeAtLocation(argument),
-              property.name,
-              argument,
-              checker,
-            )
+            !supplied ||
+            mayBeUndefined(supplied) ||
+            !hasExplicitProperty(supplied, property.name, argument, checker)
           ) {
             report(
               argument ?? node,
@@ -137,6 +152,30 @@ export function detectTestClockFindings(
 
   visit(sourceFile);
   return findings;
+}
+
+function expandConstructorArguments(
+  args: readonly ts.Expression[],
+  checker: ts.TypeChecker,
+): readonly ConstructorArgument[] {
+  const supplied: ConstructorArgument[] = [];
+  for (const node of args) {
+    if (!ts.isSpreadElement(node)) {
+      supplied.push({ node });
+      continue;
+    }
+    const tuple = checker.getTypeAtLocation(node.expression);
+    if (!checker.isTupleType(tuple)) break;
+    const lengthProperty = checker.getPropertyOfType(tuple, "length");
+    const length = lengthProperty && checker.getTypeOfSymbolAtLocation(lengthProperty, node);
+    if (!length?.isNumberLiteral()) break;
+    for (let index = 0; index < length.value; index++) {
+      const element = checker.getPropertyOfType(tuple, String(index));
+      if (!element) return supplied;
+      supplied.push({ node, type: checker.getTypeOfSymbolAtLocation(element, node) });
+    }
+  }
+  return supplied;
 }
 
 function isTemporalSeam(name: string, type: ts.Type, checker: ts.TypeChecker): boolean {
