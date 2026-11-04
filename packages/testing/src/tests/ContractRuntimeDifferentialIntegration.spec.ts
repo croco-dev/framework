@@ -209,12 +209,15 @@ describe("contract failure artifacts", () => {
     const directory = await mkdtemp(join(tmpdir(), "croco-contract-failures-"));
     const seed = 42;
     const runtime = "node";
-    const persistFailure = async (route: ContractGraphRoute, replayCommand: string) => {
+    const persistFailure = async (
+      route: ContractGraphRoute,
+      replayCommand: string,
+      identity = { runtime, seed },
+    ) => {
       await expect(
         runContractFuzz({
           route,
-          runtime,
-          seed,
+          ...identity,
           numRuns: 1,
           arbitrary: fc.constant({ kind: "valid", input: {}, canarySecret: route.routeId }),
           failureDirectory: directory,
@@ -223,9 +226,9 @@ describe("contract failure artifacts", () => {
         }),
       ).rejects.toThrow(ContractInvariantProblem);
     };
-    const readArtifacts = async () => {
+    const readArtifacts = async (expectedCount = routeIds.length) => {
       const filenames = (await readdir(directory)).sort();
-      expect(filenames).toHaveLength(routeIds.length);
+      expect(filenames).toHaveLength(expectedCount);
       return Promise.all(
         filenames.map(async (filename) => ({
           filename,
@@ -276,10 +279,29 @@ describe("contract failure artifacts", () => {
         persistFailure(repeatRoute, "pnpm test --first"),
         persistFailure(repeatRoute, "pnpm test --second"),
       ]);
+      const afterOverlap = await readArtifacts();
       expect([
         expectedArtifactsAfterReplay("--first"),
         expectedArtifactsAfterReplay("--second"),
-      ]).toContainEqual(await readArtifacts());
+      ]).toContainEqual(afterOverlap);
+
+      const distinctIdentities = [
+        { runtime: "node-α", seed },
+        { runtime: "node-β", seed },
+        { runtime, seed: seed + 1 },
+      ];
+      await Promise.all(
+        distinctIdentities.map((identity) => persistFailure(repeatRoute, "pnpm test", identity)),
+      );
+      const all = await readArtifacts(afterOverlap.length + distinctIdentities.length);
+      expect(all).toEqual(expect.arrayContaining(afterOverlap));
+      expect(all.map(({ artifact }) => artifact)).toEqual(
+        expect.arrayContaining(
+          distinctIdentities.map((identity) =>
+            expect.objectContaining({ routeId: repeatRoute.routeId, ...identity }),
+          ),
+        ),
+      );
     } finally {
       await rm(directory, { recursive: true, force: true });
     }
