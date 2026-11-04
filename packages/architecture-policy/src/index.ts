@@ -218,7 +218,7 @@ type ImportRecord = {
   readonly specifier: string;
   readonly importedPackageName: string | null;
   readonly importedSubpath: string | null;
-  readonly resolvedExportPath?: string;
+  readonly matchesResolvedExport?: (target: string) => boolean;
   readonly sourcePackage: PackageInfo | null;
 };
 
@@ -799,6 +799,8 @@ function collectSourceImports(
 ): readonly ImportRecord[] {
   const files = collectIncludedFiles(policy);
   const getModuleResolver = createModuleResolver(policy.rootDir);
+  const realpath = ts.sys.realpath ?? ((path: string) => path);
+  const canonicalRoot = realpath(policy.rootDir);
 
   return files.flatMap((filePath) => {
     const relativeFile = toPosixPath(relative(policy.rootDir, filePath));
@@ -814,21 +816,45 @@ function collectSourceImports(
 
     return extractImportSpecifiers(source).map((entry) => {
       const specifier = entry.node.text;
-      const resolvedFile = ts.isExternalModuleNameRelative(specifier)
+      const relativeImport = ts.isExternalModuleNameRelative(specifier);
+      const resolveImport = relativeImport
+        ? undefined
+        : (resolveModule ??= getModuleResolver(source));
+      const resolvedModule = resolveImport?.(entry.node);
+      const resolvedFile = relativeImport
         ? resolve(dirname(filePath), specifier)
-        : (resolveModule ??= getModuleResolver(source))(entry.node);
-      const targetFile = resolvedFile ? toPosixPath(relative(policy.rootDir, resolvedFile)) : null;
-      const targetPackage = targetFile === null ? null : findSourcePackage(packages, targetFile);
+        : resolvedModule?.resolvedFileName;
+      const targetFile = resolvedFile
+        ? toPosixPath(
+            relative(
+              relativeImport ? policy.rootDir : canonicalRoot,
+              relativeImport ? resolvedFile : realpath(resolvedFile),
+            ),
+          )
+        : null;
+      const targetPackage =
+        targetFile === null || targetFile.split("/").includes("node_modules")
+          ? null
+          : findSourcePackage(packages, targetFile);
       let imported = splitPackageSpecifier(specifier);
-      let resolvedExportPath: string | undefined;
+      let matchesResolvedExport: ImportRecord["matchesResolvedExport"];
       if (targetPackage && targetFile !== null) {
         const targetSubpath = toPosixPath(relative(targetPackage.relativeDir, targetFile));
         if (targetPackage === sourcePackage) {
           imported = { packageName: null, subpath: null };
-        } else if (imported.packageName === targetPackage.name) {
-          resolvedExportPath = `./${targetSubpath}`;
-        } else {
+        } else if (imported.packageName !== targetPackage.name) {
           imported = { packageName: targetPackage.name, subpath: targetSubpath };
+        } else if (resolveImport && resolvedModule && !resolvedModule.isExternalLibraryImport) {
+          matchesResolvedExport = (target) => {
+            const declaredFile = resolveImport(
+              entry.node,
+              resolve(policy.rootDir, targetPackage.relativeDir, target),
+            )?.resolvedFileName;
+            return (
+              declaredFile !== undefined &&
+              toPosixPath(relative(canonicalRoot, realpath(declaredFile))) === targetFile
+            );
+          };
         }
       }
 
@@ -841,7 +867,7 @@ function collectSourceImports(
         specifier,
         importedPackageName: imported.packageName,
         importedSubpath: imported.subpath,
-        resolvedExportPath,
+        matchesResolvedExport,
         sourcePackage,
       } satisfies ImportRecord;
     });
@@ -850,7 +876,9 @@ function collectSourceImports(
 
 function createModuleResolver(
   rootDir: string,
-): (source: ts.SourceFile) => (usage: ts.StringLiteralLike) => string | undefined {
+): (
+  source: ts.SourceFile,
+) => (usage: ts.StringLiteralLike, specifier?: string) => ts.ResolvedModuleFull | undefined {
   const configPaths = new Map<string, string | undefined>();
   const projects = new Map<
     string,
@@ -884,6 +912,18 @@ function createModuleResolver(
           configPath,
         );
         const errors = parsed.errors.filter((diagnostic) => diagnostic.code !== 18003);
+        if (errors.length === 0 && parsed.options.paths) {
+          // TypeScript validates paths substitutions in its compiler options pass, after parsing.
+          const program = ts.createProgram({
+            rootNames: [],
+            options: { ...parsed.options, noLib: true, types: [] },
+          });
+          errors.push(
+            ...program
+              .getOptionsDiagnostics()
+              .filter(({ code }) => (code >= 5061 && code <= 5066) || code === 5090),
+          );
+        }
         if (errors.length > 0) throw new ArchitecturePolicyTsconfigProblem(configPath, errors);
         options = parsed.options;
       }
@@ -904,16 +944,16 @@ function createModuleResolver(
       ts.sys,
       options,
     );
-    return (usage) =>
+    return (usage, specifier = usage.text) =>
       ts.resolveModuleName(
-        usage.text,
+        specifier,
         filePath,
         options,
         ts.sys,
         cache,
         undefined,
         ts.getModeForUsageLocation(source, usage, options),
-      ).resolvedModule?.resolvedFileName;
+      ).resolvedModule;
   };
 }
 
@@ -1162,7 +1202,7 @@ function runPublicEntrypointRule(
       return [];
     }
 
-    if (isExportedSubpath(targetPackage, entry.importedSubpath, entry.resolvedExportPath)) {
+    if (isExportedSubpath(targetPackage, entry.importedSubpath, entry.matchesResolvedExport)) {
       return [];
     }
 
@@ -1438,16 +1478,14 @@ function findJsonPropertyLocation(
 function isExportedSubpath(
   pkg: PackageInfo,
   subpath: string | null,
-  resolvedPath?: string,
+  matchesResolvedExport?: ImportRecord["matchesResolvedExport"],
 ): boolean {
   const matchesTarget = (target: string, wildcard = ""): boolean => {
     // Built package exports keep their public specifier when TypeScript maps them to build sources.
-    if (resolvedPath === undefined || target.startsWith("./dist/")) return true;
-    const selected = target.replaceAll("*", wildcard);
     return (
-      selected === resolvedPath ||
-      selected === resolvedPath.replace(/\.([cm]?)tsx?$/, ".$1js") ||
-      selected === resolvedPath.replace(/\.tsx$/, ".jsx")
+      !matchesResolvedExport ||
+      target.startsWith("./dist/") ||
+      matchesResolvedExport(target.replaceAll("*", wildcard))
     );
   };
   if (subpath === null) {

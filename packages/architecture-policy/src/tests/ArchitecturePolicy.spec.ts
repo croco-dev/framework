@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { ProblemCategory } from "@croco/problems-core";
@@ -301,10 +301,117 @@ describe("architecture policy engine", () => {
     ]);
   });
 
+  it("keeps installed third-party dependencies outside the importing workspace package", () => {
+    const repo = createTempRepo();
+    writePackage(repo, "packages/app", "@test/app");
+    writeFile(
+      repo,
+      "packages/app/tsconfig.json",
+      '{"compilerOptions":{"moduleResolution":"bundler"}}',
+    );
+    writeFile(
+      repo,
+      "packages/app/node_modules/vendor/package.json",
+      '{"name":"vendor","types":"index.d.ts"}',
+    );
+    writeFile(
+      repo,
+      "packages/app/node_modules/vendor/index.d.ts",
+      "export declare const value: number;\n",
+    );
+    writeFile(repo, "packages/app/src/index.ts", "import 'vendor';\n");
+
+    const report = checkArchitecturePolicy({
+      rootDir: realpathSync(repo),
+      manifest: {
+        schemaVersion: ARCHITECTURE_POLICY_SCHEMA_VERSION,
+        packageGroups: { app: { packages: ["@test/app"] } },
+        rules: {
+          allowedGroupImports: [
+            { id: "app-edges", fromGroups: ["app"], allowGroups: [], allowExternal: false },
+          ],
+        },
+      },
+    });
+
+    expect(report.diagnostics).toEqual([
+      expect.objectContaining({
+        code: "architecture-policy/disallowed-dependency-edge",
+        importSpecifier: "vendor",
+        sourcePackage: "@test/app",
+        targetPackage: "vendor",
+      }),
+    ]);
+  });
+
+  it.each([false, true])(
+    "keeps linked workspace boundaries and bare declarations with preserveSymlinks=%s",
+    (preserveSymlinks) => {
+      const repo = createTempRepo();
+      writePackage(repo, "packages/app", "@test/app");
+      writePackage(repo, "packages/plugin", "@test/plugin", {
+        version: "1.0.0",
+        exports: { ".": "./src/entry.js" },
+      });
+      writeFile(repo, "packages/plugin/src/entry.js", "export const value = 1;\n");
+      writeFile(repo, "packages/plugin/src/entry.d.ts", "export declare const value: number;\n");
+      const pluginLink = join(repo, "packages/app/node_modules/@test/plugin");
+      mkdirSync(dirname(pluginLink), { recursive: true });
+      symlinkSync(join(repo, "packages/plugin"), pluginLink, "junction");
+      writeFile(
+        repo,
+        "packages/app/tsconfig.json",
+        JSON.stringify({
+          compilerOptions: {
+            module: "esnext",
+            moduleResolution: "bundler",
+            preserveSymlinks,
+            paths: { "#plugin": ["./node_modules/@test/plugin/src/entry.d.ts"] },
+          },
+        }),
+      );
+      writeFile(repo, "packages/app/src/index.ts", "import '@test/plugin';\nimport '#plugin';\n");
+
+      const report = checkArchitecturePolicy({
+        rootDir: repo,
+        manifest: {
+          schemaVersion: ARCHITECTURE_POLICY_SCHEMA_VERSION,
+          packageGroups: {
+            app: { packages: ["@test/app"] },
+            plugins: { packages: ["@test/plugin"] },
+          },
+          rules: {
+            forbiddenImports: [
+              { id: "no-plugins", from: { groups: ["app"] }, to: { groups: ["plugins"] } },
+            ],
+            publicEntrypoints: { id: "public-exports" },
+          },
+        },
+      });
+
+      expect(
+        report.diagnostics.filter((entry) => entry.code === "architecture-policy/forbidden-import"),
+      ).toEqual(
+        ["@test/plugin", "#plugin"].map((importSpecifier) =>
+          expect.objectContaining({ importSpecifier, targetPackage: "@test/plugin" }),
+        ),
+      );
+      expect(
+        report.diagnostics.filter(
+          (entry) => entry.code === "architecture-policy/private-entrypoint-import",
+        ),
+      ).toEqual([
+        expect.objectContaining({ importSpecifier: "#plugin", targetPackage: "@test/plugin" }),
+      ]);
+    },
+  );
+
   it.each([
     ["malformed JSON", '{ "compilerOptions": { "paths": '],
     ["missing extends", '{ "extends": "./missing.json" }'],
     ["invalid compiler option", '{ "compilerOptions": { "moduleResolution": "invalid" } }'],
+    ["non-array path mapping", '{"compilerOptions":{"paths":{"#plugin":"./src/index.ts"}}}'],
+    ["non-string path substitution", '{"compilerOptions":{"paths":{"#plugin":[123]}}}'],
   ])("rejects %s instead of treating aliases as external packages", (_name, configuration) => {
     const repo = createTempRepo();
     writePackage(repo, "packages/app", "@test/app");
