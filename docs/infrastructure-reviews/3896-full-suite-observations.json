@@ -4,9 +4,9 @@
     {
       "package": "testing",
       "classification": "pure-contract",
-      "reason": "Changed-test observations count executed test records and distinguish them from skipped results and suite metadata. Incomplete runs do not count toward enforcement.",
+      "reason": "Changed-test enforcement requires a window of complete executed-test observations. Skipped outcomes and suite or verification metadata cannot supply execution evidence. Earlier v1 observations remain readable for historical reporting.",
       "files": {
-        "packages/testing/src/libs/changed-test-plan.mts": "26bf350205ffc0bc8a28ca29a25c2838d289751da1e777ff3110c26fc1b41b8c"
+        "packages/testing/src/libs/changed-test-plan.mts": "aaf90f584f01210f051646ffc16b4b61cf80071ee5e85bd781f528e47e16fd85"
       },
       "catalogRuntimes": [],
       "profiles": {

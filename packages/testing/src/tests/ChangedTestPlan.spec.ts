@@ -613,6 +613,16 @@ describe("ChangedTestPlan", () => {
   it.each([
     { label: "marker only", records: [], fullTests: 0 },
     {
+      label: "repository verification metadata only",
+      records: [
+        createTestEvidenceRecord({
+          ...evidence("verification/repo/package-manifests", "package-manifests"),
+          runner: "croco-verification",
+        }),
+      ],
+      fullTests: 0,
+    },
+    {
       label: "skipped only",
       records: [evidence("users.skipped", "route:UsersController.create", "skipped")],
       fullTests: 0,
@@ -636,7 +646,9 @@ describe("ChangedTestPlan", () => {
       });
 
       expect(fullEvidence.status).toBe("passed");
-      expect(fullEvidence.summary.skipped).toBe(records.length - fullTests);
+      expect(fullEvidence.summary.skipped).toBe(
+        records.filter(({ outcome }) => outcome === "skipped").length,
+      );
       expect(baseline).toMatchObject({
         observedRuns: 0,
         eligibleForEnforcement: false,
@@ -669,6 +681,59 @@ describe("ChangedTestPlan", () => {
       missThreshold: 0,
     });
 
+    expect(second.eligibleForEnforcement).toBe(true);
+    expect(() => assertChangedTestPlanEnforceable(second)).not.toThrow();
+  });
+
+  it("requires a new complete window when legacy observations have no executed-test evidence", () => {
+    const plan = createChangedTestPlan({ base: "origin/trunk", changedFiles: [] });
+    const legacy = {
+      schemaVersion: "croco.changed-test-selection-baseline/v1",
+      observationWindow: 1,
+      missThreshold: 0,
+      observedRuns: 1,
+      selectionMisses: 0,
+      missRate: 0,
+      eligibleForEnforcement: true,
+      runs: [
+        {
+          base: "origin/trunk",
+          head: "legacy",
+          selectedTests: 0,
+          fullTests: 1,
+          missedTests: [],
+          complete: true,
+        },
+      ],
+    };
+    assertChangedTestSelectionBaseline(legacy);
+    const fullEvidence = completeFullEvidence([
+      evidence("users.passed", "route:UsersController.create"),
+    ]);
+    const first = updateChangedTestSelectionBaseline(plan, fullEvidence, {
+      previous: legacy,
+      observationWindow: 2,
+      missThreshold: 0,
+    });
+    expect(first.runs[0]).toEqual(legacy.runs[0]);
+    expect(first.eligibleForEnforcement).toBe(false);
+    expect(() => assertChangedTestPlanEnforceable(legacy)).toThrow(
+      "complete non-empty full-suite evidence",
+    );
+
+    const saved: unknown = JSON.parse(JSON.stringify(first));
+    assertChangedTestSelectionBaseline(saved);
+    expect(() =>
+      assertChangedTestSelectionBaseline({
+        ...saved,
+        runs: saved.runs.map((run) => ({ ...run, fullSuiteEvidenceVersion: 2 })),
+      }),
+    ).toThrow("artifact does not match the v1 schema");
+    const second = updateChangedTestSelectionBaseline(plan, fullEvidence, {
+      previous: saved,
+      observationWindow: 2,
+      missThreshold: 0,
+    });
     expect(second.eligibleForEnforcement).toBe(true);
     expect(() => assertChangedTestPlanEnforceable(second)).not.toThrow();
   });

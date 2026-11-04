@@ -8,8 +8,7 @@ import type {
 import type { TestEvidenceBundle, TestEvidenceRecord } from "./test-evidence.mjs";
 
 export const CHANGED_TEST_PLAN_VERSION = "croco.changed-test-plan/v1" as const;
-export const CHANGED_TEST_SELECTION_BASELINE_VERSION =
-  "croco.changed-test-selection-baseline/v1" as const;
+export const CHANGED_TEST_SELECTION_BASELINE_VERSION = "croco.changed-test-selection-baseline/v1";
 
 export type ChangedTestFallback = {
   readonly profile: "full";
@@ -88,6 +87,7 @@ export type ChangedTestSelectionBaseline = {
     readonly fullTests: number;
     readonly missedTests: readonly string[];
     readonly complete: boolean;
+    readonly fullSuiteEvidenceVersion?: 1;
   }[];
 };
 
@@ -105,6 +105,8 @@ export class ChangedTestPlanProblem extends Problem {
     this.name = "ChangedTestPlanProblem";
   }
 }
+
+const FULL_SUITE_EVIDENCE_VERSION = 1;
 
 export function assertChangedTestSelectionBaseline(
   value: unknown,
@@ -127,7 +129,9 @@ export function assertChangedTestSelectionBaseline(
         isNonNegativeInteger(run["fullTests"]) &&
         Array.isArray(run["missedTests"]) &&
         run["missedTests"].every((test) => typeof test === "string") &&
-        typeof run["complete"] === "boolean",
+        typeof run["complete"] === "boolean" &&
+        (run["fullSuiteEvidenceVersion"] === undefined ||
+          run["fullSuiteEvidenceVersion"] === FULL_SUITE_EVIDENCE_VERSION),
     );
   if (
     value["schemaVersion"] !== CHANGED_TEST_SELECTION_BASELINE_VERSION ||
@@ -265,7 +269,9 @@ export function updateChangedTestSelectionBaseline(
     "croco.changed-test-full-suite-completeness",
   ]);
   const fullSuiteStatus = fullEvidence.records.find(({ id }) => id === fullSuiteStatusId);
-  const fullTestRecords = fullEvidence.records.filter(({ id }) => !fullSuiteMetadataIds.has(id));
+  const fullTestRecords = fullEvidence.records.filter(
+    ({ id, runner }) => !fullSuiteMetadataIds.has(id) && runner !== "croco-verification",
+  );
   const fullTestsObserved = fullTestRecords.filter(({ outcome }) => outcome !== "skipped").length;
   const complete =
     fullTestsObserved > 0 &&
@@ -287,6 +293,7 @@ export function updateChangedTestSelectionBaseline(
       fullTests: fullTestsObserved,
       missedTests,
       complete,
+      fullSuiteEvidenceVersion: FULL_SUITE_EVIDENCE_VERSION,
     },
   ].slice(-options.observationWindow);
   const observedRuns = (options.previous?.observedRuns ?? 0) + (complete ? 1 : 0);
@@ -307,9 +314,8 @@ export function updateChangedTestSelectionBaseline(
     missRate,
     eligibleForEnforcement:
       observedRuns >= options.observationWindow &&
-      runs.length === options.observationWindow &&
       missRate <= options.missThreshold &&
-      runs.every((run) => run.complete),
+      hasCompleteObservationWindow(runs, options.observationWindow),
     runs,
   });
 }
@@ -325,11 +331,27 @@ export function assertChangedTestPlanEnforceable(baseline: ChangedTestSelectionB
       `Enforcement requires a miss rate at or below ${baseline.missThreshold}; the observed rate is ${baseline.missRate}.`,
     );
   }
-  if (!baseline.eligibleForEnforcement) {
+  if (
+    !baseline.eligibleForEnforcement ||
+    !hasCompleteObservationWindow(baseline.runs, baseline.observationWindow)
+  ) {
     throw new ChangedTestPlanProblem(
       "Enforcement requires complete non-empty full-suite evidence for every run in the observation window.",
     );
   }
+}
+
+function hasCompleteObservationWindow(
+  runs: ChangedTestSelectionBaseline["runs"],
+  observationWindow: number,
+): boolean {
+  return (
+    runs.length === observationWindow &&
+    runs.every(
+      ({ complete, fullSuiteEvidenceVersion }) =>
+        complete && fullSuiteEvidenceVersion === FULL_SUITE_EVIDENCE_VERSION,
+    )
+  );
 }
 
 export function serializeChangedTestPlan(
