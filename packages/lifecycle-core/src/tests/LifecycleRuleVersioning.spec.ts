@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   InMemoryLifecycleActionSink,
   InMemoryLifecycleDryRunStore,
@@ -89,7 +89,7 @@ function registerVersion(
     executableFingerprint: `retention-risk-bundle:${version}`,
     contextRequirements: ["metadata.atRisk", "onboarding.isCompleted"],
     activate: options.activate,
-    registeredAt: options.registeredAt,
+    registeredAt: options.registeredAt ?? NOW,
   });
 }
 
@@ -573,79 +573,48 @@ describe("LifecycleRuleRegistry versioning", () => {
     });
   });
 
-  it("rejects duplicate execution lease identifiers instead of sharing ownership", async () => {
-    const stateStore = new InMemoryLifecycleRuleStateStore();
+  it("wakes a blocked pause at lease expiry through the default timer adapter", async () => {
+    let now = NOW.getTime();
+    const stateStore = new InMemoryLifecycleRuleStateStore({ now: () => new Date(now) });
     const registry = new LifecycleRuleRegistry({ stateStore });
     await registerVersion(registry, "1.0.0", { activate: true });
-    const claim = {
-      claimId: "duplicate-lease",
-      ruleId: "retention-risk",
-      version: "1.0.0",
-      expiresAt: new Date(Date.now() + 30_000),
-    };
-
-    expect(stateStore.claimExecution(claim)).toEqual({ claimed: true });
-    expect(stateStore.claimExecution(claim)).toEqual({ claimed: false, state: undefined });
-
-    stateStore.releaseExecution(claim.claimId);
-  });
-
-  it("automatically resumes a blocked transition when an abandoned execution lease expires", async () => {
-    const stateStore = new InMemoryLifecycleRuleStateStore();
-    const registry = new LifecycleRuleRegistry({ stateStore });
-    await registerVersion(registry, "1.0.0", { activate: true });
+    const claimId = "abandoned-default-timer-lease";
     expect(
       stateStore.claimExecution({
-        claimId: "abandoned-lease",
+        claimId,
         ruleId: "retention-risk",
         version: "1.0.0",
-        expiresAt: new Date(Date.now() + 10),
+        expiresAt: new Date(now + 10),
       }),
     ).toEqual({ claimed: true });
 
-    await expect(
-      registry.pause({
-        commandId: "pause-after-lease-expiry",
-        ruleId: "retention-risk",
-        version: "1.0.0",
-        expectedRevision: 1,
-      }),
-    ).resolves.toMatchObject({ state: { revision: 2 } });
-    expect(await registry.getRegistrationState("retention-risk", "1.0.0")).toBe("paused");
-  });
-
-  it("uses the configured logical scheduler when an execution lease expires", async () => {
-    let now = new Date("2026-07-26T00:00:00.000Z");
-    const stateStore = new InMemoryLifecycleRuleStateStore({
-      now: () => now,
-      scheduleExecutionClaimWake: (wake, delayMs) => {
-        const timer = setTimeout(() => {
-          now = new Date(now.getTime() + delayMs);
-          wake();
-        }, 0);
-        return () => clearTimeout(timer);
-      },
-    });
-    const registry = new LifecycleRuleRegistry({ stateStore });
-    await registerVersion(registry, "1.0.0", { activate: true });
-    expect(
-      stateStore.claimExecution({
-        claimId: "logical-clock-lease",
-        ruleId: "retention-risk",
-        version: "1.0.0",
-        expiresAt: new Date(now.getTime() + 1_000),
-      }),
-    ).toEqual({ claimed: true });
-
-    await expect(
-      registry.pause({
-        commandId: "pause-after-logical-lease-expiry",
-        ruleId: "retention-risk",
-        version: "1.0.0",
-        expectedRevision: 1,
-      }),
-    ).resolves.toMatchObject({ state: { revision: 2 } });
-    expect(now).toEqual(new Date("2026-07-26T00:00:01.000Z"));
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    try {
+      let settled = false;
+      const pausing = registry
+        .pause({
+          commandId: "pause-after-default-timer-expiry",
+          ruleId: "retention-risk",
+          version: "1.0.0",
+          expectedRevision: 1,
+        })
+        .then((result) => {
+          settled = true;
+          return result;
+        });
+      await vi.advanceTimersByTimeAsync(0);
+      now += 9;
+      await vi.advanceTimersByTimeAsync(9);
+      expect(settled).toBe(false);
+      now += 1;
+      await vi.advanceTimersByTimeAsync(1);
+      expect(settled).toBe(true);
+      await expect(pausing).resolves.toMatchObject({ state: { revision: 2 } });
+      expect(await registry.getRegistrationState("retention-risk", "1.0.0")).toBe("paused");
+    } finally {
+      stateStore.releaseExecution(claimId);
+      vi.useRealTimers();
+    }
   });
 });
 

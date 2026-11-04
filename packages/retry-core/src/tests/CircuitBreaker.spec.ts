@@ -1,3 +1,4 @@
+// croco-test-clock: controlled
 import { recordEvent } from "@croco/telemetry-api";
 import { ProblemFactory } from "@croco/problems-core";
 import { describe, expect, it, vi } from "vitest";
@@ -14,6 +15,7 @@ vi.mock("@croco/telemetry-api", () => ({
 }));
 
 describe("CircuitBreaker", () => {
+  const now = () => 10_000;
   const createGate = () => {
     let release = () => {};
     const promise = new Promise<void>((resolve) => {
@@ -24,6 +26,7 @@ describe("CircuitBreaker", () => {
 
   const createBreaker = (options: Partial<CircuitBreakerOptions> = {}) => {
     return new CircuitBreaker({
+      now,
       circuitId: "test-circuit",
       failureThreshold: 3,
       openDuration: 100,
@@ -34,12 +37,13 @@ describe("CircuitBreaker", () => {
 
   it("uses the injected clock at the exact open-duration boundary and after a failed probe", async () => {
     let time = 100;
-    const stateStore = new InMemoryCircuitBreakerStateStore();
+    const clock = () => time;
+    const stateStore = new InMemoryCircuitBreakerStateStore({ now: clock });
     const breaker = createBreaker({
       failureThreshold: 1,
       openDuration: 1000,
       stateStore,
-      now: () => time,
+      now: clock,
     });
     const failure = new Error("dependency failed");
     const fn = vi.fn().mockRejectedValue(failure);
@@ -72,8 +76,9 @@ describe("CircuitBreaker", () => {
 
   it("records the injected clock when forceOpen is called", async () => {
     let time = 1234;
-    const stateStore = new InMemoryCircuitBreakerStateStore();
-    const breaker = createBreaker({ stateStore, now: () => time });
+    const clock = () => time;
+    const stateStore = new InMemoryCircuitBreakerStateStore({ now: clock });
+    const breaker = createBreaker({ stateStore, now: clock });
 
     await breaker.forceOpen();
     expect(await stateStore.getLastFailureTime("test-circuit")).toBe(1234);
@@ -177,7 +182,7 @@ describe("CircuitBreaker", () => {
 
   it("passes an ignored non-Error rejection through unchanged", async () => {
     const rejected = { code: "CALLER_INPUT" };
-    const stateStore = new InMemoryCircuitBreakerStateStore();
+    const stateStore = new InMemoryCircuitBreakerStateStore({ now });
     const breaker = createBreaker({
       failureThreshold: 1,
       stateStore,
@@ -195,7 +200,7 @@ describe("CircuitBreaker", () => {
   });
 
   it("releases a half-open slot after a caller Problem without changing circuit state", async () => {
-    const stateStore = new InMemoryCircuitBreakerStateStore();
+    const stateStore = new InMemoryCircuitBreakerStateStore({ now });
     const breaker = createBreaker({ stateStore, halfOpenRequests: 1 });
     const problem = ProblemFactory.notFound("missing");
     await stateStore.setState("test-circuit", CircuitState.HALF_OPEN);
@@ -209,7 +214,7 @@ describe("CircuitBreaker", () => {
   });
 
   it("releases a half-open slot when the custom failure classifier throws", async () => {
-    const stateStore = new InMemoryCircuitBreakerStateStore();
+    const stateStore = new InMemoryCircuitBreakerStateStore({ now });
     const classificationError = new Error("classifier failed");
     const recordFailure = vi.fn(() => {
       throw classificationError;
@@ -229,7 +234,7 @@ describe("CircuitBreaker", () => {
   });
 
   it("does not release a later half-open cycle's slot when an old caller-error probe settles", async () => {
-    const stateStore = new InMemoryCircuitBreakerStateStore();
+    const stateStore = new InMemoryCircuitBreakerStateStore({ now });
     const breaker = createBreaker({ stateStore, halfOpenRequests: 2, openDuration: 1 });
     const problem = ProblemFactory.notFound("missing");
     let rejectOld!: (error: Error) => void;
@@ -245,7 +250,7 @@ describe("CircuitBreaker", () => {
       breaker.execute(async () => Promise.reject(new Error("dependency failed"))),
     ).rejects.toThrow("dependency failed");
     expect(await breaker.getState()).toBe(CircuitState.OPEN);
-    await stateStore.setLastFailureTime("test-circuit", Date.now() - 2);
+    await stateStore.setLastFailureTime("test-circuit", now() - 2);
 
     const firstNewProbe = breaker.execute(
       () => new Promise<string>((resolve) => (resolveFirst = resolve)),
@@ -301,7 +306,7 @@ describe("CircuitBreaker", () => {
   });
 
   it("uses fallback when a HALF_OPEN trial occupies the only slot", async () => {
-    const stateStore = new InMemoryCircuitBreakerStateStore();
+    const stateStore = new InMemoryCircuitBreakerStateStore({ now });
     const fallback = vi.fn(async () => "fallback");
     const breaker = createBreaker({ stateStore, halfOpenRequests: 1, fallback });
     await stateStore.setState("test-circuit", CircuitState.HALF_OPEN);
@@ -324,7 +329,7 @@ describe("CircuitBreaker", () => {
   });
 
   it("rejects without fallback when a HALF_OPEN trial occupies the only slot", async () => {
-    const stateStore = new InMemoryCircuitBreakerStateStore();
+    const stateStore = new InMemoryCircuitBreakerStateStore({ now });
     const breaker = createBreaker({ stateStore, halfOpenRequests: 1 });
     await stateStore.setState("test-circuit", CircuitState.HALF_OPEN);
 
@@ -343,13 +348,14 @@ describe("CircuitBreaker", () => {
   });
 
   it("openDuration 후 HALF_OPEN으로 전환되어야 한다", async () => {
-    const breaker = createBreaker({ failureThreshold: 1, openDuration: 50 });
+    let time = now();
+    const breaker = createBreaker({ failureThreshold: 1, openDuration: 50, now: () => time });
     const fn = vi.fn().mockRejectedValue(new Error("fail"));
 
     await expect(breaker.execute(fn)).rejects.toThrow("fail");
     expect(await breaker.getState()).toBe(CircuitState.OPEN);
 
-    await new Promise((resolve) => setTimeout(resolve, 60));
+    time += 50;
 
     expect(await breaker.getState()).toBe(CircuitState.OPEN);
 
@@ -361,12 +367,13 @@ describe("CircuitBreaker", () => {
   });
 
   it("HALF_OPEN에서 성공 시 CLOSED로 복귀해야 한다", async () => {
-    const breaker = createBreaker({ failureThreshold: 1, openDuration: 10 });
+    let time = now();
+    const breaker = createBreaker({ failureThreshold: 1, openDuration: 10, now: () => time });
     const fn = vi.fn().mockRejectedValue(new Error("fail"));
 
     await expect(breaker.execute(fn)).rejects.toThrow("fail");
 
-    await new Promise((resolve) => setTimeout(resolve, 20));
+    time += 10;
 
     fn.mockResolvedValue("success");
     const result = await breaker.execute(fn);
@@ -377,13 +384,14 @@ describe("CircuitBreaker", () => {
   });
 
   it("HALF_OPEN에서 실패 시 OPEN으로 복귀해야 한다", async () => {
-    const breaker = createBreaker({ failureThreshold: 1, openDuration: 10 });
+    let time = now();
+    const breaker = createBreaker({ failureThreshold: 1, openDuration: 10, now: () => time });
     const fn = vi.fn();
 
     fn.mockRejectedValueOnce(new Error("fail"));
     await expect(breaker.execute(fn)).rejects.toThrow("fail");
 
-    await new Promise((resolve) => setTimeout(resolve, 20));
+    time += 10;
 
     fn.mockRejectedValueOnce(new Error("fail again"));
     await expect(breaker.execute(fn)).rejects.toThrow("fail again");
@@ -423,6 +431,7 @@ describe("CircuitBreaker", () => {
     let resetHeldLock = false;
     let lockHeld = false;
     let time = 100;
+    const clock = () => time;
 
     class PausedResetStore extends InMemoryCircuitBreakerStateStore {
       override async resetFailureCount(circuitId: string): Promise<void> {
@@ -457,9 +466,9 @@ describe("CircuitBreaker", () => {
       }
     }
 
-    const stateStore = new PausedResetStore({ now: () => time });
-    const breaker = createBreaker({ stateStore, failureThreshold: 1, now: () => time });
-    const peer = createBreaker({ stateStore, failureThreshold: 1, now: () => time });
+    const stateStore = new PausedResetStore({ now: clock });
+    const breaker = createBreaker({ stateStore, failureThreshold: 1, now: clock });
+    const peer = createBreaker({ stateStore, failureThreshold: 1, now: clock });
     const failure = new Error("late dependency failure");
     const closing = breaker.forceClose();
     await resetReached.promise;
@@ -471,7 +480,7 @@ describe("CircuitBreaker", () => {
     ).rejects.toBe(failure);
     await failureLockAttempted.promise;
     try {
-      const independent = createBreaker({ circuitId: "independent", stateStore });
+      const independent = createBreaker({ circuitId: "independent", stateStore, now: clock });
       await expect(independent.execute(async () => "independent success")).resolves.toBe(
         "independent success",
       );
@@ -511,7 +520,7 @@ describe("CircuitBreaker", () => {
         await releaseOpening.promise;
       }
     }
-    const stateStore = new PausedOpenStore();
+    const stateStore = new PausedOpenStore({ now });
     const breaker = createBreaker({ stateStore });
     await stateStore.incrementFailureCount("test-circuit");
     const opening = breaker.forceOpen();
@@ -526,7 +535,7 @@ describe("CircuitBreaker", () => {
   });
 
   it("preserves state and failure count when forceClose cannot acquire its lock", async () => {
-    const stateStore = new InMemoryCircuitBreakerStateStore();
+    const stateStore = new InMemoryCircuitBreakerStateStore({ now });
     const breaker = createBreaker({ stateStore, failureThreshold: 1 });
     await expect(
       breaker.execute(async () => {
@@ -558,7 +567,7 @@ describe("CircuitBreaker", () => {
   });
 
   it("상태 저장소를 교체할 수 있어야 한다", async () => {
-    const customStore = new InMemoryCircuitBreakerStateStore();
+    const customStore = new InMemoryCircuitBreakerStateStore({ now });
     const breaker = createBreaker({ stateStore: customStore });
     const fn = vi.fn().mockResolvedValue("success");
 
@@ -664,7 +673,7 @@ describe("CircuitBreaker", () => {
     });
 
     it("BUG-12 HALF_OPEN 상태에서 동시 요청 수 제한", async () => {
-      const stateStore = new InMemoryCircuitBreakerStateStore();
+      const stateStore = new InMemoryCircuitBreakerStateStore({ now });
       const breaker = createBreaker({
         stateStore,
         halfOpenRequests: 2,
@@ -817,6 +826,7 @@ describe("CircuitBreaker", () => {
       };
 
       const breaker = new CircuitBreaker({
+        now,
         circuitId: "test-circuit",
         failureThreshold: 1,
         stateStore: mockStore,
@@ -925,7 +935,7 @@ describe("CircuitBreaker", () => {
 
   describe("저장소 예외 처리", () => {
     it("CLOSED 성공 bookkeeping 실패가 성공 결과를 덮거나 실패 카운터를 증가시키지 않아야 한다", async () => {
-      const stateStore = new InMemoryCircuitBreakerStateStore();
+      const stateStore = new InMemoryCircuitBreakerStateStore({ now });
       const resetFailureCount = vi
         .spyOn(stateStore, "resetFailureCount")
         .mockRejectedValue(new Error("Store write failed"));
@@ -949,7 +959,7 @@ describe("CircuitBreaker", () => {
     });
 
     it("bookkeeping 장애 telemetry 실패도 성공 결과를 덮지 않아야 한다", async () => {
-      const stateStore = new InMemoryCircuitBreakerStateStore();
+      const stateStore = new InMemoryCircuitBreakerStateStore({ now });
       vi.spyOn(stateStore, "resetFailureCount").mockRejectedValue(new Error("Store write failed"));
       vi.mocked(recordEvent).mockImplementationOnce(() => {
         throw new Error("Telemetry unavailable");
@@ -961,7 +971,7 @@ describe("CircuitBreaker", () => {
     });
 
     it("HALF_OPEN 성공 bookkeeping 실패가 성공 결과를 덮거나 실패 전이로 들어가지 않아야 한다", async () => {
-      const stateStore = new InMemoryCircuitBreakerStateStore();
+      const stateStore = new InMemoryCircuitBreakerStateStore({ now });
       await stateStore.setState("test-circuit", CircuitState.HALF_OPEN);
       await stateStore.incrementFailureCount("test-circuit");
       const resetFailureCount = vi
@@ -1009,6 +1019,7 @@ describe("CircuitBreaker", () => {
       };
 
       const breaker = new CircuitBreaker({
+        now,
         circuitId: "test-circuit",
         stateStore: mockStore,
       });
@@ -1036,6 +1047,7 @@ describe("CircuitBreaker", () => {
       };
 
       const breaker = new CircuitBreaker({
+        now,
         circuitId: "test-circuit",
         failureThreshold: 1,
         stateStore: mockStore,
@@ -1047,16 +1059,16 @@ describe("CircuitBreaker", () => {
     });
   });
 
-  describe("시간 기반 상태 전환 (fake timers)", () => {
+  describe("주입한 시계에 따른 상태 전환", () => {
     it("openDuration 경과 후 HALF_OPEN으로 전환되어야 한다", async () => {
-      vi.useFakeTimers();
-      const breaker = createBreaker({ failureThreshold: 1, openDuration: 100 });
+      let time = now();
+      const breaker = createBreaker({ failureThreshold: 1, openDuration: 100, now: () => time });
       const fn = vi.fn().mockRejectedValue(new Error("fail"));
 
       await expect(breaker.execute(fn)).rejects.toThrow("fail");
       expect(await breaker.getState()).toBe(CircuitState.OPEN);
 
-      vi.advanceTimersByTime(100);
+      time += 100;
 
       expect(await breaker.getState()).toBe(CircuitState.OPEN);
 
@@ -1065,28 +1077,24 @@ describe("CircuitBreaker", () => {
 
       expect(result).toBe("success");
       expect(await breaker.getState()).toBe(CircuitState.CLOSED);
-
-      vi.useRealTimers();
     });
 
     it("openDuration 미만에서는 OPEN을 유지해야 한다", async () => {
-      vi.useFakeTimers();
-      const breaker = createBreaker({ failureThreshold: 1, openDuration: 100 });
+      let time = now();
+      const breaker = createBreaker({ failureThreshold: 1, openDuration: 100, now: () => time });
       const fn = vi.fn().mockRejectedValue(new Error("fail"));
 
       await expect(breaker.execute(fn)).rejects.toThrow("fail");
       expect(await breaker.getState()).toBe(CircuitState.OPEN);
 
-      vi.advanceTimersByTime(50);
+      time += 50;
 
       expect(await breaker.getState()).toBe(CircuitState.OPEN);
-
-      vi.useRealTimers();
     });
 
     it("HALF_OPEN에서 성공 후 CLOSED로 전환되고 실패 카운트가 초기화되어야 한다", async () => {
-      vi.useFakeTimers();
-      const breaker = createBreaker({ failureThreshold: 2, openDuration: 50 });
+      let time = now();
+      const breaker = createBreaker({ failureThreshold: 2, openDuration: 50, now: () => time });
       const fn = vi.fn();
 
       fn.mockRejectedValueOnce(new Error("fail"));
@@ -1098,15 +1106,13 @@ describe("CircuitBreaker", () => {
       expect(await breaker.getState()).toBe(CircuitState.OPEN);
       expect(await breaker.getFailureCount()).toBe(2);
 
-      vi.advanceTimersByTime(60);
+      time += 50;
 
       fn.mockResolvedValue("success");
       await breaker.execute(fn);
 
       expect(await breaker.getState()).toBe(CircuitState.CLOSED);
       expect(await breaker.getFailureCount()).toBe(0);
-
-      vi.useRealTimers();
     });
   });
 });
