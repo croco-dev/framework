@@ -36,8 +36,8 @@ and values whose types still allow `undefined` fail. Date-valued inputs such as 
 are data, so they are not treated as dependency injection seams.
 Union options are checked against the alternatives selected by the supplied argument; each possible
 argument alternative must explicitly bind its branch's clock/scheduler dependencies.
-Fixed-length tuple spreads are checked at their expanded argument positions. An unknown-length
-spread cannot establish which values supply the remaining positional dependencies.
+Tuple spreads are checked at their guaranteed argument positions. An optional or variable-length
+suffix cannot establish which values supply subsequent positional dependencies.
 
 Ambient `Date()`, `Date.now()` and `new Date()` in a controlled file fail, including reads inside
 callbacks and literal computed accesses such as `Date['now']()` or `globalThis['Date']`.

@@ -166,14 +166,15 @@ function expandConstructorArguments(
     }
     const tuple = checker.getTypeAtLocation(node.expression);
     if (!checker.isTupleType(tuple)) break;
-    const lengthProperty = checker.getPropertyOfType(tuple, "length");
-    const length = lengthProperty && checker.getTypeOfSymbolAtLocation(lengthProperty, node);
-    if (!length?.isNumberLiteral()) break;
-    for (let index = 0; index < length.value; index++) {
+    let index = 0;
+    for (; ; index++) {
       const element = checker.getPropertyOfType(tuple, String(index));
-      if (!element) return supplied;
+      if (!element || (element.flags & ts.SymbolFlags.Optional) !== 0) break;
       supplied.push({ node, type: checker.getTypeOfSymbolAtLocation(element, node) });
     }
+    const lengthProperty = checker.getPropertyOfType(tuple, "length");
+    const length = lengthProperty && checker.getTypeOfSymbolAtLocation(lengthProperty, node);
+    if (!length?.isNumberLiteral() || length.value !== index) break;
   }
   return supplied;
 }

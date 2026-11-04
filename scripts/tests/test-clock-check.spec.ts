@@ -102,6 +102,8 @@ new Reader(...([] as const));
 new Reader(...([undefined] as const));
 new Reader(...([clock] as const));
 new Reader(...([] as const), clock);
+const clockAndMaybeLabel: [clock: () => Date, label?: string] = [clock];
+new Reader(...clockAndMaybeLabel);
 declare const maybeArgs: [clock?: () => Date];
 new Reader(...maybeArgs);
 new OptionsService(...([{ now }] as const));
