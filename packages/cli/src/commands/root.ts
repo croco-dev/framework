@@ -96,6 +96,20 @@ function createBoundCrocoCommand(runtime: CrocoCommandRuntime): CommandDef<typeo
       ...GLOBAL_OPTIONS,
     },
     setup({ rawArgs }) {
+      // Match Citty's dispatch before it discards arguments preceding the command names.
+      const dispatchIndex = rawArgs.findIndex((arg) => !arg.startsWith("-"));
+      if (rawArgs[dispatchIndex] === "contracts") {
+        const childIndex = rawArgs.findIndex(
+          (arg, index) => index > dispatchIndex && !arg.startsWith("-"),
+        );
+        if (childIndex > 1 && rawArgs[childIndex] === "check") {
+          throw createCliError(
+            "Pass all arguments after 'contracts check'.",
+            "E_CONTRACTS_CHECK_ARGUMENTS",
+          );
+        }
+      }
+
       const commandIndex = findRootCommandIndex(rawArgs);
       if (
         commandIndex !== undefined &&

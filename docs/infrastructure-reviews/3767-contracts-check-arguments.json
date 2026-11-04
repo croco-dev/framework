@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "cli",
+      "classification": "pure-contract",
+      "reason": "Reject unsupported contracts check arguments before loading controllers so a misspelled strict option cannot silently select relaxed validation.",
+      "files": {
+        "packages/cli/src/commands/contractsCheck.ts": "7e2343e2098363462bf38607923e8803d537d24f37e64d34eb120215311293c4",
+        "packages/cli/src/commands/root.ts": "6451d6cc9987c284c152e993dc811c627440be6cdef48e5bc14aff99a41ce896"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "This check runs as a Node CLI command before controller loading. Its argument validation has no dependency on the deployed Host, Provider, storage or lifecycle.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/cli/src/commands/contractsCheck.ts",
+            "packages/cli/src/commands/root.ts",
+            "packages/cli/src/tests/contractsCheck.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "This check runs as a Node CLI command before controller loading. Its argument validation has no dependency on the deployed Host, Provider, storage or lifecycle.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/cli/src/commands/contractsCheck.ts",
+            "packages/cli/src/commands/root.ts",
+            "packages/cli/src/tests/contractsCheck.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "This check runs as a Node CLI command before controller loading. Its argument validation has no dependency on the deployed Host, Provider, storage or lifecycle.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/cli/src/commands/contractsCheck.ts",
+            "packages/cli/src/commands/root.ts",
+            "packages/cli/src/tests/contractsCheck.spec.ts"
+          ]
+        }
+      }
+    }
+  ]
+}

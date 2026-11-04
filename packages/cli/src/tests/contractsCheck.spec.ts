@@ -1,9 +1,73 @@
 import type { ContractDiagnostic, ContractGraph } from "@croco/protocols-core";
-import { beforeEach, describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { runContractsCheck } from "../commands/contractsCheck.js";
+import { runCroco } from "../commands/root.js";
 
 describe("contractsCheck", () => {
-  beforeEach(() => {});
+  it("should reject a misspelled strict option before loading controllers", async () => {
+    const stderr = vi.fn();
+    const argv = ["contracts", "check", "--controllers", "missing.ts", "--strict-schema"];
+
+    expect(await runCroco(argv, { stdout: vi.fn(), stderr })).toEqual({ exitCode: 1 });
+    expect(stderr).toHaveBeenCalledWith(
+      expect.stringContaining("Unknown option '--strict-schema'"),
+    );
+  });
+
+  it.each(
+    [
+      ["contracts", "--strict-schema", "check", "missing.ts"],
+      ["--strict-schema", "contracts", "check", "missing.ts"],
+      ["contracts", "--strict-schema", "--cwd", "check", "missing.ts"],
+      ["--strict-schema", "--cwd", "contracts", "check", "missing.ts"],
+      ["contracts", "--out", "check", "report.json", "missing.ts"],
+      ["--", "contracts", "check", "--strict-schema"],
+    ].map((argv) => ({ argv })),
+  )("should reject arguments placed before contracts check: $argv", async ({ argv }) => {
+    const stderr = vi.fn();
+
+    expect(await runCroco(argv, { stdout: vi.fn(), stderr })).toEqual({ exitCode: 1 });
+    expect(stderr).toHaveBeenCalledWith(
+      expect.stringContaining("Pass all arguments after 'contracts check'"),
+    );
+  });
+
+  it.each([
+    { args: ["src/**/*.ts", "--unknown"], message: "Unknown option '--unknown'" },
+    { args: ["src/**/*.ts", "--out"], message: "--out" },
+    { args: ["--controllers", "--strict-schemas", "src/**/*.ts"], message: "--controllers" },
+    { args: ["--controllers="], message: "--controllers" },
+    {
+      args: ["--controllers=", "--controllers", "src/**/*.ts"],
+      message: "--controllers",
+    },
+    { args: ["src/**/*.ts", "--out="], message: "--out" },
+    {
+      args: ["src/**/*.ts", "--out=", "--out", "artifacts/contracts.json"],
+      message: "--out",
+    },
+    { args: ["src/**/*.ts", "--strict-schemas=false"], message: "--strict-schemas" },
+    { args: ["src/**/*.ts", "extra.ts"], message: "extra.ts" },
+  ])(
+    "should reject malformed arguments before invoking the loader: $args",
+    async ({ args, message }) => {
+      const loadContractGraph = vi.fn(async () => createGraph());
+      const stderr = vi.fn();
+      const mkdir = vi.fn();
+      const writeFile = vi.fn();
+
+      expect(
+        await runContractsCheck(args, {
+          loadContractGraph,
+          io: { stdout: vi.fn(), stderr, mkdir, writeFile },
+        }),
+      ).toBe(1);
+      expect(stderr).toHaveBeenCalledWith(expect.stringContaining(message));
+      expect(loadContractGraph).not.toHaveBeenCalled();
+      expect(mkdir).not.toHaveBeenCalled();
+      expect(writeFile).not.toHaveBeenCalled();
+    },
+  );
 
   it("should validate a contract graph with text output", async () => {
     const stdout: string[] = [];
@@ -29,11 +93,12 @@ describe("contractsCheck", () => {
     const stdout: string[] = [];
     const writes = new Map<string, string>();
     const mkdirs: string[] = [];
+    const loadContractGraph = vi.fn(async () => createGraph());
 
     const exitCode = await runContractsCheck(
-      ["--controllers", "src/**/*.ts", "--json", "--out", "artifacts/contracts.json"],
+      ["--controllers=src/**/*.ts", "--out=artifacts/contracts.json"],
       {
-        loadContractGraph: async () => createGraph(),
+        loadContractGraph,
         io: {
           cwd: "/workspace/app",
           mkdir: (path) => mkdirs.push(path),
@@ -46,6 +111,7 @@ describe("contractsCheck", () => {
     const content = writes.get("/workspace/app/artifacts/contracts.json");
 
     expect(exitCode).toBe(0);
+    expect(loadContractGraph).toHaveBeenCalledWith("src/**/*.ts", { strictSchemas: false });
     expect(mkdirs).toEqual(["/workspace/app/artifacts"]);
     expect(stdout).toEqual([
       "Wrote contract graph snapshot to /workspace/app/artifacts/contracts.json.",
@@ -74,6 +140,46 @@ describe("contractsCheck", () => {
         ],
       },
     });
+  });
+
+  it("should keep the first controller and output paths when options repeat", async () => {
+    const loadContractGraph = vi.fn(async () => createGraph());
+    const writeFile = vi.fn();
+
+    expect(
+      await runContractsCheck(
+        [
+          "--controllers",
+          "first.ts",
+          "--controllers",
+          "second.ts",
+          "--out",
+          "first.json",
+          "--out",
+          "second.json",
+        ],
+        {
+          loadContractGraph,
+          io: { cwd: "/workspace", mkdir: vi.fn(), stdout: vi.fn(), writeFile },
+        },
+      ),
+    ).toBe(0);
+    expect(loadContractGraph).toHaveBeenCalledWith("first.ts", { strictSchemas: false });
+    expect(writeFile).toHaveBeenCalledWith("/workspace/first.json", expect.any(String));
+  });
+
+  it("should accept separate controller and output paths beginning with a single hyphen", async () => {
+    const loadContractGraph = vi.fn(async () => createGraph());
+    const writeFile = vi.fn();
+
+    expect(
+      await runContractsCheck(["--controllers", "-routes.ts", "--out", "-snapshot.json"], {
+        loadContractGraph,
+        io: { cwd: "/workspace", mkdir: vi.fn(), stdout: vi.fn(), stderr: vi.fn(), writeFile },
+      }),
+    ).toBe(0);
+    expect(loadContractGraph).toHaveBeenCalledWith("-routes.ts", { strictSchemas: false });
+    expect(writeFile).toHaveBeenCalledWith("/workspace/-snapshot.json", expect.any(String));
   });
 
   it("should exit non-zero when contract graph errors exist", async () => {
