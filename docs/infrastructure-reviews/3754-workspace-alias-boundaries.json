@@ -1,0 +1,96 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "architecture-policy",
+      "classification": "pure-contract",
+      "reason": "Resolve TypeScript aliases to their workspace owner before evaluating existing package boundary and entrypoint rules; keep same-package aliases local and reject invalid TypeScript configuration. This is static tooling with no infrastructure runtime claim.",
+      "files": {
+        "packages/architecture-policy/src/index.ts": "ebcb18307863f34cebc7a7bc578eb6d906710b2d8eaeb52d04b1de7838e6db75"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "TypeScript project resolution changes a build-time repository policy check. It adds no Node Host execution, storage format, lifecycle boundary or runtime support claim.",
+          "providers": ["@croco/architecture-policy", "typescript"],
+          "constraints": [
+            "The existing policy tooling reads source files and TypeScript configuration from the local filesystem; no deployed host or live provider is certified."
+          ],
+          "references": [
+            "packages/architecture-policy/src/index.ts",
+            "packages/architecture-policy/src/tests/ArchitecturePolicy.spec.ts",
+            "packages/architecture-policy/README.md"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "TypeScript project resolution changes a build-time repository policy check. It adds no Lambda Host execution, storage format, lifecycle boundary or runtime support claim.",
+          "providers": ["@croco/architecture-policy", "typescript"],
+          "constraints": [
+            "The existing policy tooling reads source files and TypeScript configuration from the local filesystem; no deployed host or live provider is certified."
+          ],
+          "references": [
+            "packages/architecture-policy/src/index.ts",
+            "packages/architecture-policy/src/tests/ArchitecturePolicy.spec.ts",
+            "packages/architecture-policy/README.md"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "TypeScript project resolution changes a build-time repository policy check. It adds no Workers Host execution, storage format, lifecycle boundary or runtime support claim.",
+          "providers": ["@croco/architecture-policy", "typescript"],
+          "constraints": [
+            "The existing policy tooling reads source files and TypeScript configuration from the local filesystem; no deployed host or live provider is certified."
+          ],
+          "references": [
+            "packages/architecture-policy/src/index.ts",
+            "packages/architecture-policy/src/tests/ArchitecturePolicy.spec.ts",
+            "packages/architecture-policy/README.md"
+          ]
+        }
+      }
+    },
+    {
+      "package": "problems-core",
+      "classification": "pure-contract",
+      "reason": "Generate the architecture-policy/tsconfig code and its source reference through the canonical Problem registry generator. Existing codes and recovery contracts remain intact.",
+      "files": {
+        "packages/problems-core/src/generated/problem-code-registry.ts": "5af5822b63f8a2ad2e6afc6ff8db1fb8d02b72fd0dd8a51820614007bb6010a7"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Generated Problem code metadata makes the TypeScript configuration failure inspectable. It changes no host capability, storage, provider or lifecycle contract.",
+          "providers": [],
+          "constraints": ["No deployment runtime support or provider certification claim."],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "scripts/problem-registry.mts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Generated Problem code metadata makes the TypeScript configuration failure inspectable. It changes no host capability, storage, provider or lifecycle contract.",
+          "providers": [],
+          "constraints": ["No deployment runtime support or provider certification claim."],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "scripts/problem-registry.mts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Generated Problem code metadata makes the TypeScript configuration failure inspectable. It changes no host capability, storage, provider or lifecycle contract.",
+          "providers": [],
+          "constraints": ["No deployment runtime support or provider certification claim."],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "scripts/problem-registry.mts"
+          ]
+        }
+      }
+    }
+  ]
+}

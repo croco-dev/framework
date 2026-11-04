@@ -14,6 +14,16 @@ The engine is intentionally separate from oxlint and format checks. It reasons o
 contracts, generated app manifests, and package export surfaces; syntax and style remain owned by
 oxlint, oxfmt, and TypeScript.
 
+Source imports use the nearest `tsconfig.json` within the checked repository and TypeScript's module
+resolution for each import, including inherited `extends`, `baseUrl`, and `paths`. Aliases into
+another workspace package receive that package's group and entrypoint checks. Aliases to files in the
+same package remain local. A package-name alias that redirects a declared source export is checked
+against the export's target. Built exports under `dist` retain their declared package specifier when
+the project maps them to source.
+Invalid configuration fails with `architecture-policy/tsconfig`, including the configuration path,
+TypeScript diagnostics, and recovery guidance. Correct the configuration or its `extends` chain
+before rerunning the check.
+
 The `publicEntrypoints` rule checks all scoped and unscoped workspace packages when
 `includePackages` is omitted. An explicit filter keeps the existing glob semantics: `*` selects
 unscoped names, `@croco/*` selects that scope, and an empty array selects no packages.

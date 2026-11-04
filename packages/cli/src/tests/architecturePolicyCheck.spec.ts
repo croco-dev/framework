@@ -128,6 +128,28 @@ describe("architecturePolicyCheck", () => {
     expect(stdout[0]).toContain("Usage: croco architecture-policy check");
   });
 
+  it("prints the compiler diagnostic and recovery for an invalid tsconfig", async () => {
+    const repo = createTempRepo();
+    const stderr: string[] = [];
+    writeFile(repo, "tsconfig.json", '{"extends":"./missing-config.json"}');
+    writeFile(repo, "packages/app/package.json", '{"name":"@test/app"}');
+    writeFile(repo, "packages/app/src/index.ts", "import '#alias';\n");
+
+    const exitCode = await runArchitecturePolicyCheck(["croco.arch.json"], {
+      io: {
+        cwd: repo,
+        readFile: () => '{"schemaVersion":"croco.architecture-policy/v1"}',
+        stderr: (message) => stderr.push(message),
+      },
+    });
+
+    expect(exitCode).toBe(1);
+    expect(stderr).toEqual([expect.stringContaining("architecture-policy/tsconfig")]);
+    expect(stderr[0]).toContain("TS5083:");
+    expect(stderr[0]).toContain("missing-config.json");
+    expect(stderr[0]).toContain("rerun the policy check");
+  });
+
   it("does not treat --root values as positional manifests", async () => {
     const stdout: string[] = [];
     const stderr: string[] = [];

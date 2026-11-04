@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export type CrocoProblemRegistry = {
   readonly version: "croco.problem-code-registry.v1";
-  readonly problemCount: 1156;
+  readonly problemCount: 1157;
   readonly problems: readonly [
     {
       readonly code: "ACCESS_DENIED";
@@ -7868,6 +7868,34 @@ export type CrocoProblemRegistry = {
         {
           readonly file: "packages/architecture-policy/src/index.ts";
           readonly line: 56;
+          readonly column: 5;
+          readonly kind: "problem-constructor";
+        },
+      ];
+    },
+    {
+      readonly code: "architecture-policy/tsconfig";
+      readonly category: "ValidationError";
+      readonly status: 422;
+      readonly title: "Validation Error";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#architecture-policy-tsconfig";
+      readonly recovery: {
+        readonly cause: "The request or generated contract failed schema or semantic validation.";
+        readonly userAction: "Fix the invalid fields and retry with schema-conformant input.";
+        readonly operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "public";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.info";
+          readonly severity: "info";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/architecture-policy/src/index.ts";
+          readonly line: 78;
           readonly column: 5;
           readonly kind: "problem-constructor";
         },
@@ -32682,7 +32710,7 @@ export type CrocoProblemRegistry = {
 
 export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 1156,
+  problemCount: 1157,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -41427,6 +41455,36 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
         {
           file: "packages/architecture-policy/src/index.ts",
           line: 56,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "architecture-policy/tsconfig",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#architecture-policy-tsconfig",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/architecture-policy/src/index.ts",
+          line: 78,
           column: 5,
           kind: "problem-constructor",
         },

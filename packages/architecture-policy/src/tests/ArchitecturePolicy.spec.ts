@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { ProblemCategory } from "@croco/problems-core";
@@ -69,6 +69,428 @@ describe("architecture policy engine", () => {
         targetGroup: "plugins",
       }),
     ]);
+  });
+
+  it.each([
+    "paths",
+    "dot-prefixed alias",
+    "inherited baseUrl",
+    "nearest config",
+    "wildcard fallbacks",
+  ])(
+    "checks bare, relative and alias imports against the same package boundary (%s)",
+    (configuration) => {
+      const repo = createTempRepo();
+      writePackage(repo, "packages/app", "@test/app");
+      writePackage(repo, "packages/plugin", "@test/plugin");
+      const wildcard = configuration === "wildcard fallbacks";
+      const alias = wildcard
+        ? "#plugin/index"
+        : configuration === "dot-prefixed alias"
+          ? ".plugin"
+          : "#plugin";
+      const compilerOptions = {
+        moduleResolution: "bundler",
+        paths: wildcard
+          ? { "#plugin/*": ["../missing/*", "../plugin/src/*"] }
+          : { [alias]: ["../plugin/src/index.ts"] },
+      };
+      if (configuration === "inherited baseUrl") {
+        writeFile(
+          repo,
+          "tsconfig.json",
+          JSON.stringify({
+            compilerOptions: {
+              moduleResolution: "bundler",
+              baseUrl: ".",
+              paths: { "#plugin": ["packages/plugin/src/index.ts"] },
+            },
+          }),
+        );
+        writeFile(repo, "packages/app/tsconfig.json", '{ "extends": "../../tsconfig.json" }');
+      } else {
+        if (configuration === "nearest config") {
+          writeFile(
+            repo,
+            "tsconfig.json",
+            JSON.stringify({
+              compilerOptions: { paths: { "#plugin": ["packages/app/src/local.ts"] } },
+            }),
+          );
+        }
+        writeFile(repo, "packages/app/tsconfig.json", JSON.stringify({ compilerOptions }));
+      }
+      writeFile(repo, "packages/app/src/local.ts", "export const value = 2;\n");
+      writeFile(
+        repo,
+        "packages/app/src/index.ts",
+        [
+          "import '@test/plugin';",
+          "import '../../plugin/src/index.js';",
+          `import '${alias}';`,
+        ].join("\n"),
+      );
+
+      const report = checkArchitecturePolicy({
+        rootDir: repo,
+        manifest: {
+          schemaVersion: ARCHITECTURE_POLICY_SCHEMA_VERSION,
+          include: ["packages/*/src/**/*.ts"],
+          packageGroups: {
+            app: { packages: ["@test/app"] },
+            plugins: { packages: ["@test/plugin"] },
+          },
+          rules: {
+            forbiddenImports: [
+              { id: "no-plugins", from: { groups: ["app"] }, to: { groups: ["plugins"] } },
+            ],
+            allowedGroupImports: [
+              { id: "app-edges", fromGroups: ["app"], allowGroups: [], allowExternal: true },
+            ],
+          },
+        },
+      });
+
+      expect(report.status).toBe("fail");
+      for (const code of [
+        "architecture-policy/forbidden-import",
+        "architecture-policy/disallowed-dependency-edge",
+      ]) {
+        expect(report.diagnostics.filter((diagnostic) => diagnostic.code === code)).toEqual(
+          ["@test/plugin", "../../plugin/src/index.js", alias].map((importSpecifier) =>
+            expect.objectContaining({
+              code,
+              importSpecifier,
+              sourcePackage: "@test/app",
+              targetPackage: "@test/plugin",
+              targetGroup: "plugins",
+            }),
+          ),
+        );
+      }
+    },
+  );
+
+  it("uses the resolution mode of each NodeNext import", () => {
+    const repo = createTempRepo();
+    writePackage(repo, "packages/app", "@test/app");
+    writePackage(repo, "packages/plugin", "@test/plugin");
+    writeFile(
+      repo,
+      "packages/app/tsconfig.json",
+      JSON.stringify({
+        compilerOptions: {
+          module: "nodenext",
+          paths: { "#target": ["./src/local", "../plugin/src/index.ts"] },
+        },
+      }),
+    );
+    writeFile(repo, "packages/app/src/local.ts", "export const value = 2;\n");
+    writeFile(
+      repo,
+      "packages/app/src/entry.mts",
+      "import '#target';\nimport local = require('#target');\nexport { local };\n",
+    );
+
+    const report = checkArchitecturePolicy({
+      rootDir: repo,
+      manifest: {
+        schemaVersion: ARCHITECTURE_POLICY_SCHEMA_VERSION,
+        packageGroups: {
+          app: { packages: ["@test/app"] },
+          plugins: { packages: ["@test/plugin"] },
+        },
+        rules: {
+          forbiddenImports: [
+            { id: "no-plugins", from: { groups: ["app"] }, to: { groups: ["plugins"] } },
+          ],
+        },
+      },
+    });
+
+    expect(report.diagnostics).toEqual([
+      expect.objectContaining({
+        code: "architecture-policy/forbidden-import",
+        importSpecifier: "#target",
+        targetPackage: "@test/plugin",
+        line: 1,
+      }),
+    ]);
+  });
+
+  it.each(["#local", "@test/app/internal"])(
+    "keeps app-local alias %s local even when external packages are forbidden",
+    (alias) => {
+      const repo = createTempRepo();
+      writePackage(repo, "packages/app", "@test/app");
+      writeFile(
+        repo,
+        "packages/app/tsconfig.json",
+        JSON.stringify({
+          compilerOptions: { paths: { [alias]: ["./src/local.ts"] } },
+        }),
+      );
+      writeFile(repo, "packages/app/src/local.ts", "export const value = 2;\n");
+      writeFile(repo, "packages/app/src/index.ts", `export { value } from '${alias}';\n`);
+
+      const report = checkArchitecturePolicy({
+        rootDir: repo,
+        manifest: {
+          schemaVersion: ARCHITECTURE_POLICY_SCHEMA_VERSION,
+          packageGroups: { app: { packages: ["@test/app"] } },
+          rules: {
+            allowedGroupImports: [
+              { id: "app-edges", fromGroups: ["app"], allowGroups: [], allowExternal: false },
+            ],
+            publicEntrypoints: { id: "public-exports" },
+          },
+        },
+      });
+
+      expect(report.status).toBe("pass");
+      expect(report.importCount).toBe(1);
+      expect(report.diagnostics).toEqual([]);
+    },
+  );
+
+  it("checks private workspace files reached through an alias without changing bare exports", () => {
+    const repo = createTempRepo();
+    writePackage(repo, "packages/app", "@test/app");
+    writePackage(repo, "packages/plugin", "@test/plugin", {
+      exports: { ".": "./src/index.ts", "./public": "./src/public.ts" },
+    });
+    writeFile(repo, "packages/plugin/src/public.ts", "export const value = 1;\n");
+    writeFile(repo, "packages/plugin/src/private.ts", "export const value = 2;\n");
+    writeFile(
+      repo,
+      "packages/app/tsconfig.json",
+      JSON.stringify({
+        compilerOptions: {
+          paths: {
+            "#plugin": ["../plugin/src/index.ts"],
+            "@test/plugin/public": ["../plugin/src/private.ts"],
+          },
+        },
+      }),
+    );
+    writeFile(
+      repo,
+      "packages/app/src/index.ts",
+      "import '@test/plugin';\nimport('#plugin');\nimport '@test/plugin/public';\n",
+    );
+
+    const report = checkArchitecturePolicy({
+      rootDir: repo,
+      manifest: {
+        schemaVersion: ARCHITECTURE_POLICY_SCHEMA_VERSION,
+        rules: { publicEntrypoints: { id: "public-exports" } },
+      },
+    });
+
+    expect(report.diagnostics).toEqual([
+      expect.objectContaining({
+        code: "architecture-policy/private-entrypoint-import",
+        importSpecifier: "#plugin",
+        targetPackage: "@test/plugin",
+      }),
+      expect.objectContaining({
+        code: "architecture-policy/private-entrypoint-import",
+        importSpecifier: "@test/plugin/public",
+        targetPackage: "@test/plugin",
+      }),
+    ]);
+  });
+
+  it("keeps installed third-party dependencies outside the importing workspace package", () => {
+    const repo = createTempRepo();
+    writePackage(repo, "packages/app", "@test/app");
+    writeFile(
+      repo,
+      "packages/app/tsconfig.json",
+      '{"compilerOptions":{"moduleResolution":"bundler"}}',
+    );
+    writeFile(
+      repo,
+      "packages/app/node_modules/vendor/package.json",
+      '{"name":"vendor","types":"index.d.ts"}',
+    );
+    writeFile(
+      repo,
+      "packages/app/node_modules/vendor/index.d.ts",
+      "export declare const value: number;\n",
+    );
+    writeFile(repo, "packages/app/src/index.ts", "import 'vendor';\n");
+
+    const report = checkArchitecturePolicy({
+      rootDir: realpathSync(repo),
+      manifest: {
+        schemaVersion: ARCHITECTURE_POLICY_SCHEMA_VERSION,
+        packageGroups: { app: { packages: ["@test/app"] } },
+        rules: {
+          allowedGroupImports: [
+            { id: "app-edges", fromGroups: ["app"], allowGroups: [], allowExternal: false },
+          ],
+        },
+      },
+    });
+
+    expect(report.diagnostics).toEqual([
+      expect.objectContaining({
+        code: "architecture-policy/disallowed-dependency-edge",
+        importSpecifier: "vendor",
+        sourcePackage: "@test/app",
+        targetPackage: "vendor",
+      }),
+    ]);
+  });
+
+  it.each([false, true])(
+    "keeps linked workspace boundaries and bare declarations with preserveSymlinks=%s",
+    (preserveSymlinks) => {
+      const repo = createTempRepo();
+      writePackage(repo, "packages/app", "@test/app");
+      writePackage(repo, "packages/plugin", "@test/plugin", {
+        version: "1.0.0",
+        exports: {
+          ".": "./src/entry.js",
+          "./public": { default: "./src/public.js", import: "./src/entry.js" },
+        },
+      });
+      writeFile(repo, "packages/plugin/src/entry.js", "export const value = 1;\n");
+      writeFile(repo, "packages/plugin/src/entry.d.ts", "export declare const value: number;\n");
+      writeFile(repo, "packages/plugin/src/public.js", "export const value = 2;\n");
+      writeFile(repo, "packages/plugin/src/public.d.ts", "export declare const value: number;\n");
+      const pluginLink = join(repo, "packages/app/node_modules/@test/plugin");
+      mkdirSync(dirname(pluginLink), { recursive: true });
+      symlinkSync(join(repo, "packages/plugin"), pluginLink, "junction");
+      writeFile(repo, "packages/plugin/src/linked-target.ts", "export const value = 3;\n");
+      symlinkSync(
+        join(repo, "packages/plugin/src/linked-target.ts"),
+        join(repo, "packages/app/src/linked-entry.ts"),
+        "file",
+      );
+      writeFile(
+        repo,
+        "packages/app/tsconfig.json",
+        JSON.stringify({
+          compilerOptions: {
+            module: "esnext",
+            moduleResolution: "bundler",
+            preserveSymlinks,
+            paths: {
+              "#plugin": ["./node_modules/@test/plugin/src/entry.d.ts"],
+              "@test/plugin/public": ["./node_modules/@test/plugin/src/entry.d.ts"],
+            },
+          },
+        }),
+      );
+      const imports = [
+        "@test/plugin",
+        "../node_modules/@test/plugin/src/entry.d.ts",
+        "./linked-entry.js",
+        "#plugin",
+        "@test/plugin/public",
+      ];
+      writeFile(
+        repo,
+        "packages/app/src/index.ts",
+        imports.map((specifier) => `import '${specifier}';`).join("\n"),
+      );
+
+      const report = checkArchitecturePolicy({
+        rootDir: repo,
+        manifest: {
+          schemaVersion: ARCHITECTURE_POLICY_SCHEMA_VERSION,
+          packageGroups: {
+            app: { packages: ["@test/app"] },
+            plugins: { packages: ["@test/plugin"] },
+          },
+          rules: {
+            forbiddenImports: [
+              { id: "no-plugins", from: { groups: ["app"] }, to: { groups: ["plugins"] } },
+            ],
+            publicEntrypoints: { id: "public-exports" },
+          },
+        },
+      });
+
+      expect(
+        report.diagnostics.filter((entry) => entry.code === "architecture-policy/forbidden-import"),
+      ).toEqual(
+        imports.map((importSpecifier) =>
+          expect.objectContaining({ importSpecifier, targetPackage: "@test/plugin" }),
+        ),
+      );
+      expect(
+        report.diagnostics.filter(
+          (entry) => entry.code === "architecture-policy/private-entrypoint-import",
+        ),
+      ).toEqual(
+        imports
+          .slice(1)
+          .map((importSpecifier) =>
+            expect.objectContaining({ importSpecifier, targetPackage: "@test/plugin" }),
+          ),
+      );
+    },
+  );
+
+  it("keeps a declared relative export when its symlink stays inside the workspace package", () => {
+    const repo = createTempRepo();
+    writePackage(repo, "packages/app", "@test/app");
+    writePackage(repo, "packages/plugin", "@test/plugin", {
+      exports: { "./public.js": "./public.js" },
+    });
+    writeFile(repo, "packages/plugin/src/impl.js", "export const value = 1;\n");
+    symlinkSync(
+      join(repo, "packages/plugin/src/impl.js"),
+      join(repo, "packages/plugin/public.js"),
+      "file",
+    );
+    writeFile(repo, "packages/app/src/index.ts", "import '../../plugin/public.js';\n");
+
+    const report = checkArchitecturePolicy({
+      rootDir: repo,
+      manifest: {
+        schemaVersion: ARCHITECTURE_POLICY_SCHEMA_VERSION,
+        rules: { publicEntrypoints: { id: "public-exports" } },
+      },
+    });
+
+    expect(report.status).toBe("pass");
+    expect(report.diagnostics).toEqual([]);
+  });
+
+  it.each([
+    ["malformed JSON", '{ "compilerOptions": { "paths": '],
+    ["missing extends", '{ "extends": "./missing.json" }'],
+    ["invalid compiler option", '{ "compilerOptions": { "moduleResolution": "invalid" } }'],
+    ["non-array path mapping", '{"compilerOptions":{"paths":{"#plugin":"./src/index.ts"}}}'],
+    ["non-string path substitution", '{"compilerOptions":{"paths":{"#plugin":[123]}}}'],
+  ])("rejects %s instead of treating aliases as external packages", (_name, configuration) => {
+    const repo = createTempRepo();
+    writePackage(repo, "packages/app", "@test/app");
+    writeFile(repo, "packages/app/tsconfig.json", configuration);
+    writeFile(repo, "packages/app/src/index.ts", "import '#plugin';\n");
+
+    const error = captureError(() =>
+      checkArchitecturePolicy({
+        rootDir: repo,
+        manifest: { schemaVersion: ARCHITECTURE_POLICY_SCHEMA_VERSION },
+      }),
+    );
+
+    expect(error).toMatchObject({
+      code: "architecture-policy/tsconfig",
+      category: ProblemCategory.ValidationError,
+      extensions: {
+        tsconfigPath: join(repo, "packages/app/tsconfig.json"),
+        diagnostics: expect.arrayContaining([
+          expect.objectContaining({ code: expect.any(Number), message: expect.any(String) }),
+        ]),
+        recovery: expect.stringContaining("extends"),
+      },
+    });
   });
 
   it("flags a generated provider package that imports an app file through a relative path", () => {
