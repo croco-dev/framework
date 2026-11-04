@@ -186,6 +186,8 @@ generation requires one of those shapes; Croco does not guess domain-valid state
 
 Every failure is shrunk and written to `.croco/contract-failures` by default. The versioned artifact
 retains the runtime, seed, counterexample path, minimal input, stable diagnostic, and replay command.
+The file sink derives a deterministic filename from the route ID, runtime, and seed. Writing another
+failure for the same combination replaces that file with a complete artifact.
 Replay commands scope the seed and shrink path to the matching route and runtime, so other contract
 suites in the same test command keep their configured profiles. Set `replayCommand` when the owning
 suite has a narrower test command than `pnpm test`.
