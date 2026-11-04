@@ -260,10 +260,12 @@ export function updateChangedTestSelectionBaseline(
   const selected = new Set(plan.selectedTests);
   const fullSuiteSelected = plan.selectedSuites.some(({ profile }) => profile === "full");
   const fullSuiteStatusId = "croco.changed-test-full-suite-status";
+  const fullSuiteMetadataIds = new Set([
+    fullSuiteStatusId,
+    "croco.changed-test-full-suite-completeness",
+  ]);
   const fullSuiteStatus = fullEvidence.records.find(({ id }) => id === fullSuiteStatusId);
-  const fullTestRecords = fullEvidence.records.filter(
-    ({ id }) => id !== fullSuiteStatusId && id !== "croco.changed-test-full-suite-completeness",
-  );
+  const fullTestRecords = fullEvidence.records.filter(({ id }) => !fullSuiteMetadataIds.has(id));
   const fullTestsObserved = fullTestRecords.filter(({ outcome }) => outcome !== "skipped").length;
   const complete =
     fullTestsObserved > 0 &&
@@ -290,7 +292,10 @@ export function updateChangedTestSelectionBaseline(
   const observedRuns = (options.previous?.observedRuns ?? 0) + (complete ? 1 : 0);
   const selectionMisses = (options.previous?.selectionMisses ?? 0) + missedTests.length;
   const fullTests = runs.reduce((total, run) => total + run.fullTests, 0);
-  const windowMisses = runs.reduce((total, run) => total + run.missedTests.length, 0);
+  const windowMisses = runs.reduce(
+    (total, run) => total + run.missedTests.filter((id) => !fullSuiteMetadataIds.has(id)).length,
+    0,
+  );
   const missRate = fullTests === 0 ? 0 : windowMisses / fullTests;
 
   return deepFreeze({

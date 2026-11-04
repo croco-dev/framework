@@ -302,7 +302,8 @@ test failure in `croco.changed-test-selection-baseline/v1`. The `fullTests` coun
 the suite status and completeness records. A run counts toward the observation window only when it has a
 passing suite status marker, at least one executed test, passing bundle status, and no skipped tests or
 missing artifacts. A CI lane report can confirm that test files ran. A bundle containing only its suite
-metadata contributes no completed observation.
+metadata contributes no completed observation. The miss rate also excludes suite metadata stored as misses
+in older v1 baselines.
 `assertChangedTestPlanEnforceable()` rejects optimization until the observation window and miss threshold
 are satisfied. Product PRs stay advisory during shadow mode, while planner contract tests remain blocking.
 

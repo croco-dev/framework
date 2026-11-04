@@ -542,6 +542,32 @@ describe("ChangedTestPlan", () => {
       eligibleForEnforcement: false,
       runs: [{ complete: false, fullTests: 1, missedTests: ["hidden.regression"] }],
     });
+
+    const continued = updateChangedTestSelectionBaseline(plan, fullEvidence, {
+      previous: {
+        schemaVersion: "croco.changed-test-selection-baseline/v1",
+        observationWindow: 2,
+        missThreshold: 0,
+        observedRuns: 0,
+        selectionMisses: 1,
+        missRate: 0,
+        eligibleForEnforcement: false,
+        runs: [
+          {
+            base: "origin/trunk",
+            head: "legacy",
+            selectedTests: 0,
+            fullTests: 0,
+            missedTests: ["croco.changed-test-full-suite-status"],
+            complete: false,
+          },
+        ],
+      },
+      observationWindow: 2,
+      missThreshold: 0,
+    });
+    expect(continued.missRate).toBe(1);
+    expect(() => assertChangedTestSelectionBaseline(continued)).not.toThrow();
   });
 
   it("does not report failures as misses when the selected plan covers the full suite", () => {

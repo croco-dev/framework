@@ -6,7 +6,7 @@
       "classification": "pure-contract",
       "reason": "Changed-test observations count executed test records and distinguish them from skipped results and suite metadata. Incomplete runs do not count toward enforcement.",
       "files": {
-        "packages/testing/src/libs/changed-test-plan.mts": "d0017ea904be02d1185704c3f560b512ef989c9bc64d27b71dace344e36b04d4"
+        "packages/testing/src/libs/changed-test-plan.mts": "26bf350205ffc0bc8a28ca29a25c2838d289751da1e777ff3110c26fc1b41b8c"
       },
       "catalogRuntimes": [],
       "profiles": {
