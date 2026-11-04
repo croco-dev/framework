@@ -351,7 +351,10 @@ describe("architecture policy engine", () => {
       writePackage(repo, "packages/app", "@test/app");
       writePackage(repo, "packages/plugin", "@test/plugin", {
         version: "1.0.0",
-        exports: { ".": "./src/entry.js", "./public": "./src/public.js" },
+        exports: {
+          ".": "./src/entry.js",
+          "./public": { default: "./src/public.js", import: "./src/entry.js" },
+        },
       });
       writeFile(repo, "packages/plugin/src/entry.js", "export const value = 1;\n");
       writeFile(repo, "packages/plugin/src/entry.d.ts", "export declare const value: number;\n");
@@ -360,6 +363,12 @@ describe("architecture policy engine", () => {
       const pluginLink = join(repo, "packages/app/node_modules/@test/plugin");
       mkdirSync(dirname(pluginLink), { recursive: true });
       symlinkSync(join(repo, "packages/plugin"), pluginLink, "junction");
+      writeFile(repo, "packages/plugin/src/linked-target.ts", "export const value = 3;\n");
+      symlinkSync(
+        join(repo, "packages/plugin/src/linked-target.ts"),
+        join(repo, "packages/app/src/linked-entry.ts"),
+        "file",
+      );
       writeFile(
         repo,
         "packages/app/tsconfig.json",
@@ -378,6 +387,7 @@ describe("architecture policy engine", () => {
       const imports = [
         "@test/plugin",
         "../node_modules/@test/plugin/src/entry.d.ts",
+        "./linked-entry.js",
         "#plugin",
         "@test/plugin/public",
       ];

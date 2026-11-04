@@ -817,15 +817,14 @@ function collectSourceImports(
     return extractImportSpecifiers(source).map((entry) => {
       const specifier = entry.node.text;
       const relativeImport = ts.isExternalModuleNameRelative(specifier);
-      const resolveImport = relativeImport
-        ? undefined
-        : (resolveModule ??= getModuleResolver(source));
+      const resolveImport = (resolveModule ??= getModuleResolver(source));
       const relativeTarget = relativeImport
         ? resolve(canonicalRoot, dirname(relativeFile), specifier)
         : undefined;
-      const resolvedFile = relativeTarget
-        ? join(realpath(dirname(relativeTarget)), basename(relativeTarget))
-        : resolveImport?.resolve(entry.node);
+      const lexicalTarget =
+        relativeTarget &&
+        realpath(join(realpath(dirname(relativeTarget)), basename(relativeTarget)));
+      const resolvedFile = resolveImport.resolve(entry.node) ?? lexicalTarget;
       const canonicalTarget = resolvedFile && realpath(resolvedFile);
       const targetFile = canonicalTarget
         ? toPosixPath(relative(canonicalRoot, canonicalTarget))
@@ -837,23 +836,29 @@ function collectSourceImports(
       let imported = splitPackageSpecifier(specifier);
       let matchesResolvedExport: ImportRecord["matchesResolvedExport"];
       if (targetPackage && targetFile !== null) {
-        const targetSubpath = toPosixPath(relative(targetPackage.relativeDir, targetFile));
+        const lexicalFile = lexicalTarget && toPosixPath(relative(canonicalRoot, lexicalTarget));
+        const entrypointFile =
+          lexicalFile && findSourcePackage(packages, lexicalFile) === targetPackage
+            ? lexicalFile
+            : targetFile;
+        const targetSubpath = toPosixPath(relative(targetPackage.relativeDir, entrypointFile));
         if (imported.packageName !== targetPackage.name) {
           imported =
             targetPackage === sourcePackage
               ? { packageName: null, subpath: null }
               : { packageName: targetPackage.name, subpath: targetSubpath };
-        } else if (resolveImport) {
-          const bareFile = resolveImport.resolveWithoutAliases(entry.node);
+        } else {
+          const targetRoot = resolve(canonicalRoot, targetPackage.relativeDir);
+          const bareFile =
+            resolveImport.resolveWithoutAliases(entry.node) ??
+            resolveImport.resolveWithoutAliases(entry.node, join(targetRoot, basename(filePath)));
           if (!bareFile || realpath(bareFile) !== canonicalTarget) {
             if (targetPackage === sourcePackage) {
               imported = { packageName: null, subpath: null };
             } else {
               matchesResolvedExport = (target) => {
-                const declaredFile = resolveImport.resolve(
-                  entry.node,
-                  resolve(canonicalRoot, targetPackage.relativeDir, target),
-                );
+                if (bareFile) return false;
+                const declaredFile = resolveImport.resolve(entry.node, resolve(targetRoot, target));
                 return declaredFile !== undefined && realpath(declaredFile) === canonicalTarget;
               };
             }
@@ -951,10 +956,11 @@ function createModuleResolver(rootDir: string) {
       { options, cache }: Resolution,
       usage: ts.StringLiteralLike,
       specifier: string,
+      containingFile = filePath,
     ): string | undefined =>
       ts.resolveModuleName(
         specifier,
-        filePath,
+        containingFile,
         options,
         ts.sys,
         cache,
@@ -964,8 +970,8 @@ function createModuleResolver(rootDir: string) {
     return {
       resolve: (usage: ts.StringLiteralLike, specifier = usage.text) =>
         resolveUsing(configured, usage, specifier),
-      resolveWithoutAliases: (usage: ts.StringLiteralLike) =>
-        resolveUsing(withoutAliases, usage, usage.text),
+      resolveWithoutAliases: (usage: ts.StringLiteralLike, containingFile?: string) =>
+        resolveUsing(withoutAliases, usage, usage.text, containingFile),
     };
   };
 }
@@ -1547,7 +1553,7 @@ function publicExportTargetStatus(
   target: unknown,
   matchesTarget: (target: string) => boolean,
 ): "public" | "blocked" | "unmatched" {
-  if (typeof target === "string") return matchesTarget(target) ? "public" : "unmatched";
+  if (typeof target === "string") return matchesTarget(target) ? "public" : "blocked";
   if (Array.isArray(target)) {
     let status: "blocked" | "unmatched" = target.length === 0 ? "blocked" : "unmatched";
     for (const value of target) {
