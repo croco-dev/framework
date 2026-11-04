@@ -300,9 +300,18 @@ TypeScript/build, verification-policy, or shared-runtime changes widen execution
 budgets report overflow as incomplete without removing required evidence.
 
 `updateChangedTestSelectionBaseline()` compares the plan with full-suite evidence and records every omitted
-failure in `croco.changed-test-selection-baseline/v1`. `assertChangedTestPlanEnforceable()` rejects optimization
-until the documented observation window and miss threshold are satisfied, keeping product PRs advisory during
-shadow mode while planner contract tests remain blocking.
+test failure in `croco.changed-test-selection-baseline/v1`. The `fullTests` count excludes skipped tests,
+suite status and completeness records, and records from the `croco-verification` runner. A run is complete
+when it has a passing suite status marker, at least one executed test, passing bundle status, and no skipped
+tests or missing artifacts. A CI lane report can confirm that test files ran. A bundle containing only its
+suite metadata contributes no completed observation.
+
+`assertChangedTestPlanEnforceable()` requires a full observation window of complete runs recorded with
+`fullSuiteEvidenceVersion: 1` and a miss rate within the configured threshold. Earlier v1 baselines remain
+readable and retain their historical observations. Collect a fresh observation window before enabling
+enforcement because the earlier summaries cannot identify which tests were skipped. The miss rate excludes
+suite markers recorded as misses in older windows. Product PRs stay advisory during shadow mode, while
+planner contract tests remain blocking.
 
 ## Failure Drills
 

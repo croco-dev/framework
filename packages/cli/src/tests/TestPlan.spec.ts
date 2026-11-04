@@ -253,6 +253,54 @@ describe("test plan", () => {
     ).toThrow(/CROCO_CHANGED_TEST_PLAN_INVALID: Invalid changed-test baseline/);
   });
 
+  it("writes incomplete full-suite evidence and rejects enforcement when a test was skipped", () => {
+    const full = serializeTestEvidence(
+      createTestEvidenceBundle([
+        testEvidence("croco.changed-test-full-suite-status"),
+        testEvidence("users.create.success", "skipped"),
+      ]),
+    );
+    const writes = new Map<string, string>();
+
+    expect(() =>
+      runTestPlan(
+        [
+          "--changed",
+          "origin/trunk",
+          "--full-evidence",
+          "full.json",
+          "--baseline-out",
+          "baseline.json",
+          "--observation-window",
+          "1",
+          "--enforce",
+        ],
+        {
+          cwd: "/workspace",
+          exists: (path) => path === "/workspace/full.json",
+          readFile: () => full,
+          mkdir: () => {},
+          writeFile: (path, content) => writes.set(path, content),
+          stdout: () => {},
+          git: (args) => {
+            if (args[0] === "show") {
+              throw new Error(
+                "fatal: path 'executable-assurance.graph.json' does not exist in 'origin/trunk'",
+              );
+            }
+            if (args[0] === "diff") return "";
+            return "abc123\n";
+          },
+        },
+      ),
+    ).toThrow("only 0 are recorded");
+    expect(JSON.parse(writes.get("/workspace/baseline.json") ?? "{}")).toMatchObject({
+      eligibleForEnforcement: false,
+      observedRuns: 0,
+      runs: [{ complete: false, fullTests: 0 }],
+    });
+  });
+
   it.each([
     "C:\\outside\\graph.json",
     "C:outside\\graph.json",
@@ -294,7 +342,7 @@ function graph(label: string) {
   });
 }
 
-function testEvidence(id: string) {
+function testEvidence(id: string, outcome: "passed" | "skipped" = "passed") {
   return createTestEvidenceRecord({
     id,
     runner: "vitest",
@@ -311,7 +359,7 @@ function testEvidence(id: string) {
       validation: "production",
     },
     replay: { command: `pnpm vitest run -t "${id}"` },
-    attempts: [{ attempt: 1, outcome: "passed" }],
+    attempts: [{ attempt: 1, outcome }],
     resources: { leaks: [], status: "clean" },
   });
 }

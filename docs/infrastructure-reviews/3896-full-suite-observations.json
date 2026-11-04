@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "testing",
+      "classification": "pure-contract",
+      "reason": "Changed-test enforcement requires a window of complete executed-test observations. Skipped outcomes and suite or verification metadata cannot supply execution evidence. Earlier v1 observations remain readable for historical reporting.",
+      "files": {
+        "packages/testing/src/libs/changed-test-plan.mts": "8ee61c76ff2ba7533183406076ba5e67e43684e3b3bafcd44769738fef953109"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "The changed-test planner evaluates an in-memory test evidence bundle in the local tooling path. It requires no Kubernetes Node Host capability, storage, or lifecycle behavior.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/testing/src/libs/changed-test-plan.mts",
+            "packages/cli/src/commands/testPlan.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "The changed-test planner evaluates an in-memory test evidence bundle in the local tooling path. It requires no AWS Lambda Host capability, storage, or lifecycle behavior.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/testing/src/libs/changed-test-plan.mts",
+            "packages/cli/src/commands/testPlan.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "The changed-test planner evaluates an in-memory test evidence bundle in the local tooling path. It requires no Cloudflare Workers or Node Container Host capability, storage, or lifecycle behavior.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/testing/src/libs/changed-test-plan.mts",
+            "packages/cli/src/commands/testPlan.ts"
+          ]
+        }
+      }
+    }
+  ]
+}

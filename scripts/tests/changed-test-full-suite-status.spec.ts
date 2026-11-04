@@ -4,6 +4,12 @@ import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import {
+  createChangedTestPlan,
+  createTestEvidenceBundle,
+  updateChangedTestSelectionBaseline,
+} from "../../packages/testing/src/executable-assurance.ts";
+import type { TestEvidenceRecord } from "../../packages/testing/src/executable-assurance.ts";
+import {
   assertChangedTestFullSuiteEvidence,
   writeChangedTestFullSuiteStatus,
 } from "../changed-test-full-suite-status.mts";
@@ -101,7 +107,7 @@ describe("changed-test-full-suite-status", () => {
     }
   });
 
-  it("emits completeness only after successful lane evidence is validated", () => {
+  it("emits completeness for a validated lane without crediting suite metadata as test results", () => {
     const directory = fixtureRoot();
     try {
       const output = resolve(directory, "status.json");
@@ -109,7 +115,7 @@ describe("changed-test-full-suite-status", () => {
       writeFileSync(report, `${JSON.stringify(laneReport())}\n`);
       writeChangedTestFullSuiteStatus(0, output, report, directory);
 
-      const records = JSON.parse(readFileSync(output, "utf8")) as Record<string, unknown>[];
+      const records = JSON.parse(readFileSync(output, "utf8")) as TestEvidenceRecord[];
       expect(
         records.find(({ id }) => id === "croco.changed-test-full-suite-completeness"),
       ).toMatchObject({
@@ -118,6 +124,18 @@ describe("changed-test-full-suite-status", () => {
           inventoryDigest: inventoryDigest(inventory),
           tasks: [expect.objectContaining({ cacheHash: "task-hash" })],
         },
+      });
+      const fullEvidence = createTestEvidenceBundle(records);
+      const plan = createChangedTestPlan({ base: "origin/trunk", changedFiles: [] });
+      expect(
+        updateChangedTestSelectionBaseline(plan, fullEvidence, {
+          observationWindow: 1,
+          missThreshold: 0,
+        }),
+      ).toMatchObject({
+        observedRuns: 0,
+        eligibleForEnforcement: false,
+        runs: [{ complete: false, fullTests: 0 }],
       });
     } finally {
       rmSync(directory, { recursive: true, force: true });
