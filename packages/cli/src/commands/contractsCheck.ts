@@ -1,5 +1,6 @@
 import { dirname, resolve } from "node:path";
 import { mkdirSync, writeFileSync } from "node:fs";
+import { parseArgs } from "node:util";
 import { defineCommand } from "citty";
 import {
   createContractGraphSnapshot,
@@ -9,8 +10,17 @@ import {
   type BuildContractGraphOptions,
   type ContractGraph,
 } from "@croco/protocols-core";
-import { GLOBAL_OPTIONS } from "./options.js";
 import { getCrocoCommandRuntime } from "../libs/cliRuntime.js";
+
+const CHECK_OPTIONS = {
+  controllers: { type: "string", description: "Controller files to load" },
+  json: { type: "boolean", description: "Print a stable ContractGraph snapshot JSON report" },
+  out: { type: "string", description: "Write the stable snapshot JSON report to a file" },
+  "strict-schemas": {
+    type: "boolean",
+    description: "Fail when routes omit response, body, or named parameter schemas",
+  },
+} as const;
 
 export type ContractGraphLoader = (
   glob: string,
@@ -53,9 +63,7 @@ export const contractsCheck = defineCommand({
     name: "check",
     description: "Validate and snapshot the canonical contract graph",
   },
-  args: {
-    ...GLOBAL_OPTIONS,
-  },
+  args: CHECK_OPTIONS,
   async run({ rawArgs }) {
     getCrocoCommandRuntime().setExitCode(await runContractsCheck(rawArgs));
   },
@@ -124,37 +132,59 @@ export function parseContractsCheckArgs(args: readonly string[]): ContractsCheck
     return { kind: "help" };
   }
 
-  const controllers = getFlagValue(args, "--controllers") ?? getFirstPosition(args);
-  const out = getFlagValue(args, "--out");
+  try {
+    const { values, positionals } = parseArgs({
+      args: [...args],
+      options: CHECK_OPTIONS,
+      allowPositionals: true,
+      strict: true,
+    });
+    if (values.controllers === "" || values.out === "") {
+      const flag = values.controllers === "" ? "--controllers" : "--out";
+      return { kind: "invalid", message: `Option ${flag} requires a nonempty value.` };
+    }
 
-  if (!controllers) {
+    const extra = positionals[values.controllers === undefined ? 1 : 0];
+    if (extra !== undefined) {
+      return { kind: "invalid", message: `Unexpected positional argument '${extra}'.` };
+    }
+
+    const controllers = values.controllers ?? positionals[0];
+    if (!controllers) {
+      return {
+        kind: "invalid",
+        message:
+          "Missing controller glob. Pass --controllers <glob> or a positional controller glob.",
+      };
+    }
+
+    const out = values.out ?? null;
+    return {
+      kind: "run",
+      options: {
+        controllers,
+        out,
+        json: values.json === true || out !== null,
+        strictSchemas: values["strict-schemas"] === true,
+      },
+    };
+  } catch (error) {
     return {
       kind: "invalid",
-      message:
-        "Missing controller glob. Pass --controllers <glob> or a positional controller glob.",
+      message: error instanceof Error ? error.message : String(error),
     };
   }
-
-  return {
-    kind: "run",
-    options: {
-      controllers,
-      out,
-      json: args.includes("--json") || out !== null,
-      strictSchemas: args.includes("--strict-schemas"),
-    },
-  };
 }
 
 function printContractsCheckHelp(io: ContractsCheckIo): void {
-  io.stdout(`Usage: croco contracts check --controllers <glob> [--json] [--out <path>]
-       croco contracts check <glob> [--json] [--out <path>]
+  io.stdout(`Usage: croco contracts check --controllers <glob> [--strict-schemas] [--json] [--out <path>]
+       croco contracts check <glob> [--strict-schemas] [--json] [--out <path>]
 
 Options:
-  --controllers <glob>  Controller files to load
-  --json                Print a stable ContractGraph snapshot JSON report
-  --out <path>          Write the stable snapshot JSON report to a file
-  --strict-schemas      Fail when generated routes omit response, body, or named parameter schemas
+  --controllers <glob>  ${CHECK_OPTIONS.controllers.description}
+  --json                ${CHECK_OPTIONS.json.description}
+  --out <path>          ${CHECK_OPTIONS.out.description}
+  --strict-schemas      ${CHECK_OPTIONS["strict-schemas"].description}
   --help, -h            Show this help message`);
 }
 
@@ -181,34 +211,4 @@ function writeOutputFile(path: string, content: string, io: ContractsCheckIo): v
 
 function resolvePath(path: string, cwd: string): string {
   return resolve(cwd, path);
-}
-
-function getFlagValue(args: readonly string[], flag: string): string | null {
-  const index = args.indexOf(flag);
-  const value = index >= 0 ? args[index + 1] : undefined;
-
-  return value && !value.startsWith("--") ? value : null;
-}
-
-function getFirstPosition(args: readonly string[]): string | null {
-  const valueFlags = new Set(["--controllers", "--out"]);
-
-  for (let index = 0; index < args.length; index += 1) {
-    const arg = args[index];
-
-    if (!arg) {
-      continue;
-    }
-
-    if (valueFlags.has(arg)) {
-      index += 1;
-      continue;
-    }
-
-    if (!arg.startsWith("-")) {
-      return arg;
-    }
-  }
-
-  return null;
 }

@@ -1,9 +1,48 @@
 import type { ContractDiagnostic, ContractGraph } from "@croco/protocols-core";
-import { beforeEach, describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { runContractsCheck } from "../commands/contractsCheck.js";
+import { runCroco } from "../commands/root.js";
 
 describe("contractsCheck", () => {
-  beforeEach(() => {});
+  it.each(
+    [
+      ["contracts", "check", "--controllers", "missing.ts", "--strict-schema"],
+      ["contracts", "--strict-schema", "check", "missing.ts"],
+      ["--strict-schema", "contracts", "check", "missing.ts"],
+    ].map((argv) => ({ argv })),
+  )(
+    "should reject a misspelled strict option before loading controllers: $argv",
+    async ({ argv }) => {
+      const stderr = vi.fn();
+
+      expect(await runCroco(argv, { stdout: vi.fn(), stderr })).toEqual({ exitCode: 1 });
+      expect(stderr).toHaveBeenCalledWith(
+        expect.stringContaining("Unknown option '--strict-schema'"),
+      );
+    },
+  );
+
+  it.each([
+    { args: ["src/**/*.ts", "--unknown"], message: "Unknown option '--unknown'" },
+    { args: ["src/**/*.ts", "--out"], message: "--out" },
+    { args: ["--controllers", "--strict-schemas", "src/**/*.ts"], message: "--controllers" },
+    { args: ["--controllers="], message: "--controllers" },
+    { args: ["src/**/*.ts", "--out="], message: "--out" },
+    { args: ["src/**/*.ts", "--strict-schemas=false"], message: "--strict-schemas" },
+    { args: ["src/**/*.ts", "extra.ts"], message: "extra.ts" },
+  ])(
+    "should reject malformed arguments before invoking the loader: $args",
+    async ({ args, message }) => {
+      const loadContractGraph = vi.fn(async () => createGraph());
+      const stderr = vi.fn();
+
+      expect(
+        await runContractsCheck(args, { loadContractGraph, io: { stdout: vi.fn(), stderr } }),
+      ).toBe(1);
+      expect(stderr).toHaveBeenCalledWith(expect.stringContaining(message));
+      expect(loadContractGraph).not.toHaveBeenCalled();
+    },
+  );
 
   it("should validate a contract graph with text output", async () => {
     const stdout: string[] = [];
@@ -31,7 +70,7 @@ describe("contractsCheck", () => {
     const mkdirs: string[] = [];
 
     const exitCode = await runContractsCheck(
-      ["--controllers", "src/**/*.ts", "--json", "--out", "artifacts/contracts.json"],
+      ["--controllers=src/**/*.ts", "--out=artifacts/contracts.json"],
       {
         loadContractGraph: async () => createGraph(),
         io: {

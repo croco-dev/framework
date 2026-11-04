@@ -40,7 +40,7 @@ export async function runCroco(
   if (rootCommandIndex !== undefined && argv[rootCommandIndex] === "desktop") {
     return runDesktopRemoved(runtime);
   }
-  const rawArgs = normalizeContractsDiffRootArgs(normalizeMigrateRootArgs(argv));
+  const rawArgs = normalizeContractsRootArgs(normalizeMigrateRootArgs(argv));
 
   try {
     if (rawArgs.includes("--help") || rawArgs.includes("-h")) {
@@ -246,20 +246,21 @@ export function normalizeMigrateRootArgs(rawArgs: readonly string[]): string[] {
   return [...rawArgs];
 }
 
-function normalizeContractsDiffRootArgs(rawArgs: readonly string[]): string[] {
+function normalizeContractsRootArgs(rawArgs: readonly string[]): string[] {
   const rootIndex = findRootCommandIndex(rawArgs);
   if (rootIndex === undefined || rawArgs[rootIndex] !== "contracts") {
     return [...rawArgs];
   }
   const parentArgs = rawArgs.slice(rootIndex + 1);
   const childOffset = findRootCommandIndex(parentArgs);
-  if (childOffset === undefined || parentArgs[childOffset] !== "diff") {
+  const subcommand = childOffset === undefined ? undefined : parentArgs[childOffset];
+  if (childOffset === undefined || (subcommand !== "check" && subcommand !== "diff")) {
     return [...rawArgs];
   }
   const childIndex = rootIndex + 1 + childOffset;
   return [
     "contracts",
-    "diff",
+    subcommand,
     ...rawArgs.slice(0, rootIndex),
     ...rawArgs.slice(rootIndex + 1, childIndex),
     ...rawArgs.slice(childIndex + 1),

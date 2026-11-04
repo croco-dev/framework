@@ -571,6 +571,15 @@ for (const entry of entries) { const schema = await entry.schema; if (!schema.sq
       }
     `);
 
+    const misspelledStrictOption = runInstalledCommand(
+      harness,
+      "croco",
+      ["contracts", "check", "--controllers", fixtures.weakGlob, "--strict-schema"],
+      harness.commandRoot,
+      1,
+    );
+    expect(misspelledStrictOption.stderr).toContain("Unknown option '--strict-schema'");
+
     const strictContracts = runInstalledCommand(
       harness,
       "croco",
