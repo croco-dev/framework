@@ -47,6 +47,56 @@
           ]
         }
       }
+    },
+    {
+      "package": "problems-core",
+      "classification": "pure-contract",
+      "reason": "Refresh the generated contract-testing Problem source coordinates after the file sink import moves them.",
+      "files": {
+        "packages/problems-core/src/generated/problem-code-registry.ts": "7ae77d72411e6823c5a916f4919c52e9500ff1c38a629787f13072af25ac0fb1"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "The generated registry contains static diagnostic source coordinates with no Host capability, storage, Provider or lifecycle dependency.",
+          "providers": [],
+          "constraints": [
+            "The changed coordinates point to the same Problem constructors and class."
+          ],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "scripts/problem-registry.mts",
+            "packages/testing/src/libs/contract-testing.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "The generated registry contains static diagnostic source coordinates with no Host capability, storage, Provider or lifecycle dependency.",
+          "providers": [],
+          "constraints": [
+            "The changed coordinates point to the same Problem constructors and class."
+          ],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "scripts/problem-registry.mts",
+            "packages/testing/src/libs/contract-testing.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "The generated registry contains static diagnostic source coordinates with no Host capability, storage, Provider or lifecycle dependency.",
+          "providers": [],
+          "constraints": [
+            "The changed coordinates point to the same Problem constructors and class."
+          ],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "scripts/problem-registry.mts",
+            "packages/testing/src/libs/contract-testing.ts"
+          ]
+        }
+      }
     }
   ]
 }
