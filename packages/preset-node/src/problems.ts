@@ -6,9 +6,9 @@ export class NodeEntryCloseTimeoutProblem extends Problem {
     super(
       "preset-node/invalid-close-timeout",
       ProblemCategory.BadRequest,
-      `Node entry close timeout must be a positive safe integer. Received ${timeoutMs}.`,
+      `Node entry close timeout must be an integer between 1 and 2147483647 milliseconds. Received ${timeoutMs}.`,
       {
-        extensions: { timeoutMs },
+        extensions: { timeoutMs: Number.isFinite(timeoutMs) ? timeoutMs : String(timeoutMs) },
       },
     );
   }
