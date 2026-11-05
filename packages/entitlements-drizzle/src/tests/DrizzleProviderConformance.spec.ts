@@ -1,10 +1,18 @@
 import { getTableColumns } from "drizzle-orm";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { planVersionRef } from "@croco/billing-core";
+import {
+  EntitlementPlanVersionMismatchProblem,
+  InMemoryPlanEntitlementRegistry,
+  PlanEntitlementRegistry,
+} from "@croco/entitlements-core";
+import { Container } from "@croco/framework-context";
 import { ProblemFactory } from "@croco/problems-core";
 import { createDrizzleProviderConformanceSuite } from "@croco/testing/drizzle";
 import { DrizzleHealthIndicator } from "@croco/tx-drizzle";
 import { DrizzlePlanEntitlementRegistry } from "../libs/DrizzlePlanEntitlementRegistry";
 import { planEntitlements, planEntitlementSets } from "../libs/schema";
+import type { EntitlementRule } from "@croco/entitlements-core";
 
 type DrizzleEntitlementsClient = ConstructorParameters<typeof DrizzlePlanEntitlementRegistry>[0];
 
@@ -165,4 +173,106 @@ describe("entitlements-drizzle provider conformance", () => {
       },
     ]);
   });
+});
+
+const rules: EntitlementRule[] = [
+  { featureKey: "seats", type: "static", value: 7 },
+  { featureKey: "storage", type: "metered", meterId: "storage" },
+];
+const ref = planVersionRef("legacy:plan-a");
+
+class LegacyRegistry extends PlanEntitlementRegistry {
+  async getEntitlements(planId: string): Promise<EntitlementRule[]> {
+    return planId === "plan-a" ? rules : [];
+  }
+
+  async findRule(planId: string, featureKey: string): Promise<EntitlementRule | null> {
+    return (
+      (await this.getEntitlements(planId)).find((rule) => rule.featureKey === featureKey) ?? null
+    );
+  }
+}
+
+describe.each([
+  { name: "base fallback", create: () => new LegacyRegistry() },
+  {
+    name: "InMemory",
+    create: () => {
+      const registry = new InMemoryPlanEntitlementRegistry();
+      registry.register("plan-a", rules);
+      return registry;
+    },
+  },
+  {
+    name: "Drizzle",
+    create: () => {
+      const db = {
+        select: vi.fn().mockReturnValue({
+          from: vi.fn().mockReturnValue({
+            where: vi.fn().mockResolvedValue(
+              rules.map((rule) => ({
+                ...rule,
+                planId: "plan-a",
+                planVersionRef: null,
+                value: rule.value ?? null,
+                quota: null,
+                meterId: rule.meterId ?? null,
+                meterBilling: null,
+                overagePolicy: null,
+              })),
+            ),
+          }),
+        }),
+      };
+      return new DrizzlePlanEntitlementRegistry(db as unknown as DrizzleEntitlementsClient);
+    },
+  },
+])("Legacy plan reference: $name", ({ create }) => {
+  let registry: PlanEntitlementRegistry;
+
+  beforeEach(() => {
+    Container.reset();
+    registry = create();
+  });
+
+  it.each(["plan-b", ""])(
+    "rejects expected plan %j and permits a corrected retry",
+    async (expectedPlanId) => {
+      for (const lookup of [
+        () => registry.getEntitlementsByPlanVersion(ref, expectedPlanId),
+        () => registry.findRuleByPlanVersion(ref, "seats", expectedPlanId),
+        () => registry.findRuleByPlanVersion(ref, "missing", expectedPlanId),
+      ]) {
+        const result = lookup();
+        await expect(result).rejects.toBeInstanceOf(EntitlementPlanVersionMismatchProblem);
+        await expect(result).rejects.toMatchObject({
+          code: "entitlements-core/plan-version-mismatch",
+          status: 409,
+          detail: `Plan version 'legacy:plan-a' belongs to 'plan-a', not '${expectedPlanId}'`,
+        });
+      }
+
+      await expect(registry.findRuleByPlanVersion(ref, "seats", "plan-a")).resolves.toMatchObject({
+        value: 7,
+      });
+    },
+  );
+
+  it.each(["plan-a", undefined])(
+    "preserves legacy rules with expected plan %j",
+    async (expectedPlanId) => {
+      await expect(registry.getEntitlementsByPlanVersion(ref, expectedPlanId)).resolves.toEqual([
+        expect.objectContaining(rules[0]),
+        expect.objectContaining(rules[1]),
+      ]);
+      await expect(
+        registry.findRuleByPlanVersion(ref, "seats", expectedPlanId),
+      ).resolves.toMatchObject({
+        value: 7,
+      });
+      await expect(
+        registry.findRuleByPlanVersion(ref, "missing", expectedPlanId),
+      ).resolves.toBeNull();
+    },
+  );
 });

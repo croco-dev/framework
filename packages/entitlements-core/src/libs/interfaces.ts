@@ -2,7 +2,10 @@ import type { DomainEvent } from "@croco/events-core";
 import { Token } from "@croco/framework-context";
 import type { PlanVersionRef } from "@croco/billing-core";
 import { getLegacyPlanId } from "./EntitlementDefinition";
-import { EntitlementPlanVersionNotFoundProblem } from "./problems/EntitlementProblems";
+import {
+  EntitlementPlanVersionMismatchProblem,
+  EntitlementPlanVersionNotFoundProblem,
+} from "./problems/EntitlementProblems";
 import type {
   EntitlementCheckStatus,
   EntitlementQuotaStatus,
@@ -29,11 +32,14 @@ export abstract class PlanEntitlementRegistry {
 
   async getEntitlementsByPlanVersion(
     ref: PlanVersionRef,
-    _expectedPlanId?: string,
+    expectedPlanId?: string,
   ): Promise<readonly EntitlementRule[]> {
     const legacyPlanId = getLegacyPlanId(ref);
     if (legacyPlanId === null) {
       throw new EntitlementPlanVersionNotFoundProblem(ref);
+    }
+    if (expectedPlanId !== undefined && legacyPlanId !== expectedPlanId) {
+      throw new EntitlementPlanVersionMismatchProblem(ref, expectedPlanId, legacyPlanId);
     }
 
     return this.getEntitlements(legacyPlanId);

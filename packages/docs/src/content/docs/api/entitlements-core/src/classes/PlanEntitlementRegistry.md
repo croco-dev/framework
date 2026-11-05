@@ -90,7 +90,7 @@ title: "PlanEntitlementRegistry"
 
 ### getEntitlementsByPlanVersion()
 
-> **getEntitlementsByPlanVersion**(`ref`, `_expectedPlanId?`): `Promise`\<readonly [`EntitlementRule`](/api/entitlements-core/src/type-aliases/entitlementrule/)[]\>
+> **getEntitlementsByPlanVersion**(`ref`, `expectedPlanId?`): `Promise`\<readonly [`EntitlementRule`](/api/entitlements-core/src/type-aliases/entitlementrule/)[]\>
 
 #### Parameters
 
@@ -98,7 +98,7 @@ title: "PlanEntitlementRegistry"
 
 [`PlanVersionRef`](/api/billing-core/src/type-aliases/planversionref/)
 
-##### \_expectedPlanId?
+##### expectedPlanId?
 
 `string`
 

@@ -84,7 +84,7 @@ export class DrizzlePlanEntitlementRegistry extends PlanEntitlementRegistry {
   ): Promise<readonly EntitlementRule[]> {
     const legacyPlanId = getLegacyPlanId(ref);
     if (legacyPlanId !== null) {
-      return this.getEntitlements(legacyPlanId);
+      return super.getEntitlementsByPlanVersion(ref, expectedPlanId);
     }
 
     const sets = await this.db
