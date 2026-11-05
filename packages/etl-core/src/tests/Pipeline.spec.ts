@@ -402,7 +402,7 @@ describe("pipeline operations", () => {
   it("restarts only the unfinished mutable partition while preserving prior partition counts", async () => {
     const f = await fixture([[raw("a")], [raw("b"), raw("c")]]);
     const calls: string[] = [];
-    let fail = true;
+    let failuresRemaining = 2;
     const definition: PipelineDefinition = {
       ...f.definition,
       source: {
@@ -415,8 +415,8 @@ describe("pipeline operations", () => {
         dependencies: [],
         process(row) {
           calls.push(String(row.id));
-          if (row.id === "c" && fail) {
-            fail = false;
+          if (row.id === "c" && failuresRemaining > 0) {
+            failuresRemaining--;
             throw new PipelineProblem("interrupted");
           }
           return row;
@@ -425,6 +425,16 @@ describe("pipeline operations", () => {
     };
     const operations = createPipelineOperations(definition, f.runtime);
     await expect(operations.run()).rejects.toMatchObject({ reason: "interrupted" });
+    calls.length = 0;
+    await expect(operations.retry("execution-1")).rejects.toMatchObject({ reason: "interrupted" });
+    expect(calls).toEqual(["b", "c"]);
+    expect((await operations.status("execution-1")).checkpoints).toMatchObject({
+      "pipeline.chunkCheckpoint": {
+        cursor: { cursor: { partition: 1, record: 1, counts: { input: 2, output: 2 } } },
+        processedCount: 2,
+      },
+    });
+
     calls.length = 0;
     const result = await operations.retry("execution-1");
     expect(calls).toEqual(["b", "c"]);

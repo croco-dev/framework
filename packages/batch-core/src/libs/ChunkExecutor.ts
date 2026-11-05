@@ -22,6 +22,22 @@ function isProcessedCount(value: unknown): value is number {
   return typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
 }
 
+function restoreReaderCheckpoint(
+  reader: Checkpointable,
+  cursor: unknown,
+  processedCount: number,
+): number {
+  reader.restoreCheckpoint(cursor);
+  const restoredCount = reader.getRestoredProcessedCount?.();
+  if (restoredCount === undefined) return processedCount;
+  if (!isProcessedCount(restoredCount)) {
+    throw ExecutionProblems.checkpointStoreConformance(
+      "Invalid input count after restoring the reader",
+    );
+  }
+  return restoredCount;
+}
+
 function isCheckpointable(obj: unknown): obj is Checkpointable {
   return (
     typeof obj === "object" &&
@@ -106,12 +122,13 @@ export class ChunkExecutor {
     try {
       let items: O[] = [];
       let chunkInputCount = 0;
-      let processedCount = this.restoreProcessedCount(execution, step);
+      const restoredCount = this.restoreProcessedCount(execution, step);
+      let processedCount = restoredCount ?? 0;
       const totalCount = execution.progress?.total;
       if (
         this.hasValidTotal(totalCount) &&
-        processedCount > 0 &&
-        processedCount > (execution.progress?.current ?? 0)
+        restoredCount !== undefined &&
+        restoredCount !== execution.progress?.current
       ) {
         if (!(await this.isRunningAttempt(execution))) return;
         await this.executionManager.updateProgress(executionId, {
@@ -264,10 +281,10 @@ export class ChunkExecutor {
     return typeof total === "number" && Number.isFinite(total) && total > 0;
   }
 
-  private restoreProcessedCount<I, O>(execution: Execution, step: Step<I, O>): number {
+  private restoreProcessedCount<I, O>(execution: Execution, step: Step<I, O>): number | undefined {
     const { reader, name } = step;
     const { checkpoints } = execution;
-    if (!checkpoints || !isCheckpointable(reader)) return 0;
+    if (!checkpoints || !isCheckpointable(reader)) return undefined;
 
     const checkpointKey = chunkCheckpointKey(name);
     if (Object.hasOwn(checkpoints, checkpointKey)) {
@@ -285,20 +302,21 @@ export class ChunkExecutor {
           `Invalid chunk checkpoint for step '${name}'`,
         );
       }
-      reader.restoreCheckpoint(checkpoint.cursor);
-      return checkpoint.processedCount;
+      return restoreReaderCheckpoint(reader, checkpoint.cursor, checkpoint.processedCount);
     }
 
     const legacyCursorKey = `${name}.cursor`;
-    if (!Object.hasOwn(checkpoints, legacyCursorKey)) return 0;
-    reader.restoreCheckpoint(checkpoints[legacyCursorKey]);
+    if (!Object.hasOwn(checkpoints, legacyCursorKey)) return undefined;
+    const cursor = checkpoints[legacyCursorKey];
     const checkpointed = checkpoints[`${name}.processedCount`];
     if (typeof checkpointed === "number" && Number.isFinite(checkpointed) && checkpointed > 0) {
-      return checkpointed;
+      return restoreReaderCheckpoint(reader, cursor, checkpointed);
     }
 
     const current = execution.progress?.current;
-    return typeof current === "number" && Number.isFinite(current) && current > 0 ? current : 0;
+    const processedCount =
+      typeof current === "number" && Number.isFinite(current) && current > 0 ? current : 0;
+    return restoreReaderCheckpoint(reader, cursor, processedCount);
   }
 
   private async resolveExecution(

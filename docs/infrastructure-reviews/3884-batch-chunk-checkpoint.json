@@ -4,9 +4,10 @@
     {
       "package": "batch-core",
       "classification": "pure-contract",
-      "reason": "Persist and restore the batch cursor and cumulative input count together using the existing execution checkpoint contract. Host requirements and runtime support claims are unchanged.",
+      "reason": "Persist and restore the batch cursor and cumulative input count together using the existing execution checkpoint contract. A reader that rewinds on restore supplies the count at its restored position.",
       "files": {
-        "packages/batch-core/src/libs/ChunkExecutor.ts": "079cb16e90f5d1cf80c6e5850698c33ef7fc21958a244a3d153f0a79a24ff87f"
+        "packages/batch-core/src/libs/ChunkExecutor.ts": "00e2375bc1e4d97a4e7de09447c9e18c6b4fb33eddd83a18021fa8d4138f45be",
+        "packages/batch-core/src/libs/interfaces/ItemReader.ts": "ded43567f9cb842045bf235d8f7baf8bab63e7d2a8901782d4f6523d736ba511"
       },
       "catalogRuntimes": [],
       "profiles": {
@@ -54,9 +55,9 @@
     {
       "package": "etl-core",
       "classification": "pure-contract",
-      "reason": "Save the final pipeline cursor and its input count in the same format as intermediate chunks. The existing execution attempt facade still fences each checkpoint mutation.",
+      "reason": "Save intermediate and final pipeline cursors with their input counts, including after an unfinished partition rewinds. The existing execution attempt facade still fences each checkpoint mutation.",
       "files": {
-        "packages/etl-core/src/pipeline/definePipeline.ts": "5b2a245b47c9a95af1c536739fa562c3ffceae502a4a869818c5ebcda6a8c154"
+        "packages/etl-core/src/pipeline/definePipeline.ts": "7ec9d77e8ebdb26627e11db896b19336932818ff17916691cb2de4ffcba74e90"
       },
       "catalogRuntimes": [],
       "profiles": {

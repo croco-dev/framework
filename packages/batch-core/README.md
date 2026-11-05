@@ -107,7 +107,7 @@ const importStep = new Step({
 `ChunkExecutor`는 기본적으로 단일 스텝 배치 작업을 실행한다고 보고 스텝이 끝나면 실행을
 `completed`로 전이합니다. 여러 스텝이 하나의 실행을 공유한다면 중간 스텝에서 실행을 완료하지
 않도록 `completeExecution: false`를 전달하고, 이후 스텝은 이미 `running` 상태인 실행을 재사용하도록
-`startExecution: false`를 전달합니다. 체크포인트는 `step.name.cursor` 키로 저장되므로 각 스텝의
+`startExecution: false`를 전달합니다. 체크포인트는 `<스텝 이름>.chunkCheckpoint` 키로 저장하므로 각 스텝의
 재시작 지점은 분리됩니다.
 
 ```typescript
@@ -128,17 +128,20 @@ await chunkExecutor.execute(executionId, loadStep, { startExecution: false });
   새 attempt로 넘어간 뒤 완료된 이전 쓰기는 새 attempt의 체크포인트·진행률을 갱신하지 않습니다.
   상태 조회와 외부 효과·체크포인트는 원자적이지 않으며, 실행 중인 외부 쓰기를 강제로 중단하지 않습니다.
 - `chunkSize`는 성공적으로 처리한 입력 수를 기준으로 하며, processor가 `null`을 반환한 항목도 포함합니다.
-  reader가 `Checkpointable`이면 각 청크와 마지막 남은 입력의 처리가 끝나면 `step.name.cursor` 체크포인트를 갱신한 뒤
-  `step.name.processedCount` 체크포인트에 누적 입력 건수를 저장합니다. 출력이 있는
-  청크는 writer가 완료된 뒤에만 갱신하고, 모두 필터링된 청크는 writer 호출 없이 갱신합니다.
+  reader가 `Checkpointable`이면 각 청크의 처리가 끝날 때 `<스텝 이름>.chunkCheckpoint`에
+  `{ version: 1, cursor, processedCount }`를 한 번에 저장합니다. 출력이 있는 청크는 writer가
+  완료된 뒤에 저장하고, 모두 필터링된 청크는 writer 호출 없이 저장합니다.
 - `progress.current`와 완료 결과의 `processedCount`도 필터링된 입력을 포함합니다. 진행률 갱신은 유효한
   `progress.total`이 설정된 실행에만 적용됩니다.
 - 재시도 가능한 실패는 `execution-core`가 실행을 `retrying` 상태로 남기며, 다음 `execute()` 호출은 마지막
   체크포인트를 reader에 복원합니다.
-- 재시도 중 진행률은 `progress.total` 설정과 무관하게 `step.name.processedCount` 체크포인트에서
-  이어집니다. 이 키가 없는 기존 실행은 `progress.current`에서 복원합니다. 체크포인트 이후 남은 청크만
-  처리해도 완료 결과의 `processedCount`는 전체 실행 기준으로 유지됩니다.
-- writer가 실패한 청크는 체크포인트를 갱신하지 않습니다. 같은 청크가 재전달될 수 있으므로 writer는
+- 재시도할 때는 같은 체크포인트에서 커서와 누적 입력 건수를 복원합니다. `progress.total`을 설정하지
+  않아도 완료 결과에는 복원한 건수가 포함됩니다. 진행률을 별도로 저장하다 실패한 경우에도 재시도 시
+  복원한 건수로 갱신합니다. 기존 실행에 새 키가 없으면 `<스텝 이름>.cursor`와
+  `<스텝 이름>.processedCount`를 읽고, 기존 건수 키도 없으면 `progress.current`를 사용합니다.
+- 새 형식으로 저장한 실행을 재개할 때는 해당 형식을 읽을 수 있는 버전의 worker를 사용합니다.
+  이전 버전으로 재개하면 과거 커서나 시작 지점부터 입력을 다시 처리할 수 있습니다.
+- writer가 실패하거나 writer 성공 후 체크포인트가 저장되기 전에 중단되면 같은 청크가 재전달될 수 있으므로 writer는
   실행 ID, 스텝 이름, 입력 키, 또는 애플리케이션 idempotency key로 중복 쓰기를 흡수해야 합니다.
 - `classifyFailure`가 실패하면 원래 오류 메시지는 유지하되 `batch-core/failure-classification-failed` 코드로
   실행 실패 메타데이터에 남깁니다. 분류기 오류가 실제 처리 실패를 성공처럼 숨기지 않습니다.

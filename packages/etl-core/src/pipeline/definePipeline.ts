@@ -396,6 +396,9 @@ export function createPipelineOperations(input: PipelineDefinition, runtime: Pip
         getCheckpoint() {
           return { bindingHash: digest(binding), cursor: structuredClone(cursor) };
         },
+        getRestoredProcessedCount() {
+          return cursor.counts.input;
+        },
         restoreCheckpoint(value: unknown) {
           const saved = value as { bindingHash: string; cursor: Cursor };
           if (

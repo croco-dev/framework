@@ -1065,6 +1065,41 @@ describe("ChunkExecutor", () => {
     });
   });
 
+  it("restores the final step's lower progress after its checkpoint committed", async () => {
+    const manager = new ExecutionManagerImpl(new TestExecutionStore());
+    const executor = new ChunkExecutor(manager);
+    const execution = await manager.create({ type: "batch-job", maxAttempts: 2 });
+    await manager.updateProgress(execution.id, { current: 0, total: 3 });
+    const writer = { write: vi.fn().mockResolvedValue(undefined) };
+    const extract = () =>
+      new Step({
+        name: "extract",
+        reader: createCheckpointReader([1, 2, 3]),
+        writer,
+        chunkSize: 3,
+      });
+    const load = () =>
+      new Step({ name: "load", reader: createCheckpointReader([4, 5]), writer, chunkSize: 2 });
+    const failure = new Error("progress connection lost");
+
+    await executor.execute(execution.id, extract(), { completeExecution: false });
+    vi.spyOn(manager, "updateProgress").mockRejectedValueOnce(failure);
+    await expect(executor.execute(execution.id, load(), { startExecution: false })).rejects.toBe(
+      failure,
+    );
+    expect((await manager.get(execution.id)).progress?.current).toBe(3);
+
+    await executor.execute(execution.id, extract(), { completeExecution: false });
+    await executor.execute(execution.id, load(), { startExecution: false });
+
+    expect(writer.write.mock.calls).toEqual([[[1, 2, 3]], [[4, 5]]]);
+    expect(await manager.get(execution.id)).toMatchObject({
+      status: "completed",
+      progress: { current: 2, total: 3 },
+      result: { processedCount: 2 },
+    });
+  });
+
   it("rejects a cursor that cannot be stored as a JSON property", async () => {
     const manager = new ExecutionManagerImpl(new TestExecutionStore());
     const execution = await manager.create({ type: "import-users" });

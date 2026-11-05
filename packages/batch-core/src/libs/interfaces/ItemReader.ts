@@ -16,4 +16,7 @@ export interface Checkpointable {
    * Restores the component to the given state.
    */
   restoreCheckpoint(checkpoint: unknown): void;
+
+  /** Returns the cumulative input count after restore when the reader can rewind its cursor. */
+  getRestoredProcessedCount?(): number;
 }
