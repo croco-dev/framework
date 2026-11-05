@@ -260,36 +260,41 @@ describe("BetterAuthSessionManager", () => {
       await expect(result).rejects.toBeInstanceOf(BetterAuthSessionLookupProblem);
     });
 
-    it("should preserve Error identity and keep credentials out of diagnostics", async () => {
-      const token = "private-session-token";
-      const upstream = Object.assign(new Error(`authorization: Bearer ${token}`), {
-        statusCode: 429,
-        token,
-      });
-      const warn = vi.fn();
-      const logger: ILogger = {
-        warn,
-        debug: vi.fn(),
-        info: vi.fn(),
-        error: vi.fn(),
-        fatal: vi.fn(),
-        child: vi.fn(),
-      };
-      const manager = new BetterAuthSessionManager(
-        createMockAuthFactory({ listSessionsError: upstream }),
-        logger,
-      );
+    it.each([true, false])(
+      "should preserve causes and exclude credentials (Error: %s)",
+      async (isError) => {
+        const token = "private-session-token";
+        const failure = { message: `authorization: Bearer ${token}`, statusCode: 429, token };
+        const upstream = isError ? Object.assign(new Error(failure.message), failure) : failure;
+        const warn = vi.fn();
+        const logger: ILogger = {
+          warn,
+          debug: vi.fn(),
+          info: vi.fn(),
+          error: vi.fn(),
+          fatal: vi.fn(),
+          child: vi.fn(),
+        };
+        const manager = new BetterAuthSessionManager(
+          createMockAuthFactory({ listSessionsError: upstream }),
+          logger,
+        );
 
-      const problem = await manager.getSession(token).catch((error: unknown) => error);
-      expect(problem).toBeInstanceOf(BetterAuthSessionLookupProblem);
-      if (!(problem instanceof BetterAuthSessionLookupProblem)) return;
-      expect(problem.cause).toBe(upstream);
-      expect(problem.message).not.toContain(token);
-      expect(JSON.stringify(problem.toJSON())).not.toContain(token);
-      expect(warn).toHaveBeenCalledWith("BetterAuthSessionManager.getSession() failed", {
-        error: problem.toJSON(),
-      });
-    });
+        const problem = await manager.getSession(token).catch((error: unknown) => error);
+        expect(problem).toBeInstanceOf(BetterAuthSessionLookupProblem);
+        if (!(problem instanceof BetterAuthSessionLookupProblem)) return;
+        if (upstream instanceof Error) {
+          expect(problem.cause).toBe(upstream);
+        } else {
+          expect(problem.cause?.cause).toBe(upstream);
+        }
+        expect(problem.message).not.toContain(token);
+        expect(JSON.stringify(problem.toJSON())).not.toContain(token);
+        expect(warn).toHaveBeenCalledWith("BetterAuthSessionManager.getSession() failed", {
+          error: problem.toJSON(),
+        });
+      },
+    );
 
     it("should throw lookup problem and log warning when listSessions fails unexpectedly", async () => {
       const warnSpy = vi.fn();
