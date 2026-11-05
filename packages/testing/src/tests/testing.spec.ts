@@ -888,11 +888,11 @@ describe("@croco/testing", () => {
       const runtime = createTestingRequestContext().runtime;
       expect(runtime).toBeDefined();
       if (!runtime) return;
-      const first = Promise.withResolvers<void>();
-      const second = Promise.withResolvers<void>();
-      const third = Promise.withResolvers<void>();
-      const secondStarted = Promise.withResolvers<void>();
-      const thirdStarted = Promise.withResolvers<void>();
+      const first = createDeferred();
+      const second = createDeferred();
+      const third = createDeferred();
+      const secondStarted = createDeferred();
+      const thirdStarted = createDeferred();
       const completed: string[] = [];
       runtime.waitUntil(
         first.promise.then(() => {
@@ -946,12 +946,12 @@ describe("@croco/testing", () => {
       expect(other).toBeDefined();
       if (!first || !other) return;
       await first.flush();
-      const otherTask = Promise.withResolvers<void>();
+      const otherTask = createDeferred();
       other.waitUntil(otherTask.promise);
       try {
         first.waitUntil(Promise.resolve("single batch"));
         await first.flush();
-        const later = Promise.withResolvers<void>();
+        const later = createDeferred();
         first.waitUntil(later.promise);
         const flushed = vi.fn();
         const flushing = first.flush().then(flushed);
