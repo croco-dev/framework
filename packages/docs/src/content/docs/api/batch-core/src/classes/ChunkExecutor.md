@@ -54,3 +54,33 @@ title: "ChunkExecutor"
 #### Returns
 
 `Promise`\<`void`\>
+
+---
+
+### saveCheckpoint()
+
+> **saveCheckpoint**(`executionId`, `stepName`, `cursor`, `processedCount`): `Promise`\<[`Execution`](/api/execution-core/src/interfaces/execution/)\>
+
+Saves a step's cursor and cumulative input count in one checkpoint.
+
+#### Parameters
+
+##### executionId
+
+`string`
+
+##### stepName
+
+`string`
+
+##### cursor
+
+`unknown`
+
+##### processedCount
+
+`number`
+
+#### Returns
+
+`Promise`\<[`Execution`](/api/execution-core/src/interfaces/execution/)\>
