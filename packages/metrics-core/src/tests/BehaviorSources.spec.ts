@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { describe, it, expect, vi } from "vitest";
 import {
@@ -10,7 +11,11 @@ import { computePeriodicRetention, computeFrequencyDistribution } from "../libs/
 import { MetricReadService } from "../libs/read/MetricReadService";
 import type { BehaviorColumnBinding } from "../libs/BehaviorSources";
 import type { BehaviorDefinition } from "../libs/BehaviorMetrics";
-import type { MetricReadContext, MetricReadQuality } from "../libs/read/MetricReadService";
+import type {
+  MetricReadContext,
+  MetricReadQuality,
+  VerifiedMetricReport,
+} from "../libs/read/MetricReadService";
 import type { SourceSchema } from "@croco/etl-core/source";
 import type { WarehouseReadRequest, WarehouseReader } from "@croco/warehouse-core/runtime";
 
@@ -111,6 +116,17 @@ const request: WarehouseReadRequest = {
   maxBytes: 20000,
   timeoutMs: 1000,
 };
+
+const behaviorQuery = {
+  definition: { ...definition, actions: ["report.saved", "report.shared"] },
+  queryId: "weekly",
+  queryVersion: 1,
+  selection: { kind: "periodic", options: { baseline, returning } },
+  scope,
+  sourceRevisions: context.sourceRevisions,
+  limits,
+  requiredFields: ["action"],
+} as const satisfies Omit<Parameters<typeof registerBehaviorQuery>[0], "source">;
 
 describe("Behavior shared sources", () => {
   it("gives the same 40/100 and count3/day1 from normalized rows, CSV, JSONL and paged warehouse", async () => {
@@ -257,6 +273,137 @@ describe("Behavior shared sources", () => {
       ).rejects.toThrow();
     }
   });
+  it("reuses verified reports across reordered declaration keys and rejects mismatched reports", async () => {
+    const dataset = await importBehaviorSource(
+      bytes(await fixture()),
+      schema,
+      binding,
+      metadata,
+      300,
+    );
+    const source = vi.fn(async () => ({ dataset, quality }));
+    const authority = {
+      currentContext: () => context,
+      authorize: async () => ({ permissionEpoch: "1", privacyEpoch: "2" }),
+    };
+    const original = await registerBehaviorQuery({ ...behaviorQuery, source });
+    const reordered = await registerBehaviorQuery({
+      ...behaviorQuery,
+      scope: { tenantId: scope.tenantId, environment: scope.environment, appId: scope.appId },
+      selection: {
+        kind: "periodic",
+        options: {
+          returning: { to: returning.to, from: returning.from, kind: returning.kind },
+          baseline,
+        },
+      },
+      sourceRevisions: [{ revision: "snapshot-1", sourceRef: "example" }],
+      source,
+    });
+    const window = {
+      from: new Date(definition.historyStart).toISOString(),
+      to: new Date(returning.to).toISOString(),
+    };
+    const execution = await new MetricReadService(
+      [original.definition],
+      [original.query],
+      authority,
+    ).runRegisteredQuery("weekly", null, window);
+    expect(execution).toMatchObject({ status: "verified", source: "executor" });
+    if (execution.status !== "verified") return;
+    const report: VerifiedMetricReport = {
+      id: "reviewed-behavior",
+      queryId: original.query.id,
+      queryVersion: original.query.version,
+      inputKey: await original.query.inputKey(null),
+      resultHash: "reviewed-result",
+      result: execution.result,
+      reviewed: {
+        reviewerId: "reviewer",
+        reviewedAt: "2026-09-22T00:00:00Z",
+        definitionHash: original.definition.hash,
+        resultHash: "reviewed-result",
+      },
+      permissionEpoch: "1",
+      privacyEpoch: "2",
+      expiresAt: "2026-10-01T00:00:00Z",
+    };
+    const legacyHash = createHash("sha256").update(JSON.stringify(behaviorQuery)).digest("hex");
+    const reader = {
+      readCandidates: vi.fn(async () => [
+        {
+          ...report,
+          id: "legacy",
+          inputKey: legacyHash,
+          result: {
+            ...report.result,
+            definition: { ...report.result.definition, hash: legacyHash },
+          },
+          reviewed: { ...report.reviewed, definitionHash: legacyHash },
+        },
+        {
+          ...report,
+          id: "wrong-window",
+          result: { ...report.result, window: { ...window, to: "2026-09-22T00:00:00.000Z" } },
+        },
+        {
+          ...report,
+          id: "wrong-tenant",
+          result: { ...report.result, principal: { ...context.principal, tenant: "other" } },
+        },
+        { ...report, id: "old-privacy-epoch", privacyEpoch: "1" },
+        report,
+      ]),
+      verify: vi.fn(async () => true),
+    };
+    const service = new MetricReadService(
+      [reordered.definition],
+      [reordered.query],
+      authority,
+      reader,
+      () => new Date("2026-09-23T00:00:00Z"),
+    );
+    await expect(service.getVerifiedReport("weekly", null, window)).resolves.toEqual({
+      status: "verified",
+      report,
+    });
+    expect(reordered.definition.hash).toBe(original.definition.hash);
+    expect(reader.readCandidates).toHaveBeenCalledWith(
+      "weekly",
+      report.inputKey,
+      context.principal,
+      expect.any(AbortSignal),
+    );
+    expect(reader.verify).toHaveBeenCalledExactlyOnceWith(report, expect.any(AbortSignal));
+    expect(source).toHaveBeenCalledTimes(1);
+  });
+
+  it("distinguishes meaningful changes to the behavior query declaration", async () => {
+    const source = vi.fn();
+    const original = await registerBehaviorQuery({ ...behaviorQuery, source });
+    const variations = [
+      { scope: { ...scope, tenantId: "tenant-b" } },
+      { queryVersion: 2 },
+      { definition: { ...behaviorQuery.definition, version: "2" } },
+      { definition: { ...behaviorQuery.definition, actions: ["report.shared", "report.saved"] } },
+      { sourceRevisions: [{ sourceRef: "example", revision: "snapshot-2" }] },
+      {
+        selection: {
+          kind: "periodic",
+          options: { baseline, returning: { ...returning, to: "2026-09-22T00:00:00Z" } },
+        },
+      },
+    ] as const satisfies readonly Partial<
+      Omit<Parameters<typeof registerBehaviorQuery>[0], "source">
+    >[];
+    for (const variation of variations) {
+      const changed = await registerBehaviorQuery({ ...behaviorQuery, ...variation, source });
+      expect(changed.definition.hash).not.toBe(original.definition.hash);
+      expect(await changed.query.inputKey(null)).not.toBe(await original.query.inputKey(null));
+    }
+    expect(source).not.toHaveBeenCalled();
+  });
+
   it("keeps source budgets pinned when a caller mutates the returned registration", async () => {
     const dataset = await importBehaviorSource(
       bytes(await fixture()),

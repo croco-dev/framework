@@ -332,6 +332,8 @@ The warehouse binding shares the bounded page runner with activation metrics. It
 
 `registerBehaviorQuery` registers a fixed versioned selection, scope and source revisions with `MetricReadService`. Behavior definition versions remain strings; `queryVersion` is the positive integer registration version. The returned definition hash covers the semantic declaration and limits. The service authorizes fields and budgets, verifies source provenance and returns aggregate results without subject or event identities. Incomplete observation or first-behavior history produces partial evidence; it cannot become a verified result even if the source declares complete quality. Registered read windows must cover the selection and its required history.
 
+The definition hash and query input key use the same digest. Object key order has no effect, including in nested objects. Array order contributes to the digest. If an existing verified behavior report carries a different digest from the current registration, regenerate and review that report before reusing it. Reports whose digest already matches continue through the usual verification checks.
+
 ## State-transition growth models
 
 `validateStatePartition`, `estimateTransitionMatrix`, `projectGrowthModel` and

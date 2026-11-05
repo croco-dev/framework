@@ -138,10 +138,21 @@ function calculate(
   const { subjects: _subjects, sourceRefs: _sourceRefs, ...aggregate } = result;
   return aggregate;
 }
-async function digest(value: unknown): Promise<string> {
+async function digestDeclaration(value: unknown): Promise<string> {
+  // Apply JSON's existing value semantics before ordering object keys.
+  const json: unknown = JSON.parse(JSON.stringify(value));
+  const canonical = JSON.stringify(json, (_key, entry: unknown) => {
+    if (entry === null || typeof entry !== "object" || Array.isArray(entry)) return entry;
+    const record = entry as Record<string, unknown>;
+    return Object.fromEntries(
+      Object.keys(record)
+        .sort()
+        .map((key) => [key, record[key]]),
+    );
+  });
   const bytes = await globalThis.crypto.subtle.digest(
     "SHA-256",
-    new TextEncoder().encode(JSON.stringify(value)),
+    new TextEncoder().encode(canonical),
   );
   return Array.from(new Uint8Array(bytes), (byte) => byte.toString(16).padStart(2, "0")).join("");
 }
@@ -169,7 +180,7 @@ export async function registerBehaviorQuery(options: {
     declaration.sourceRevisions.length === 0
   )
     invalid("query.declaration");
-  const hash = await digest(declaration);
+  const hash = await digestDeclaration(declaration);
   const definition: RegisteredMetricDefinition = {
     id: declaration.definition.id,
     version: declaration.queryVersion,
