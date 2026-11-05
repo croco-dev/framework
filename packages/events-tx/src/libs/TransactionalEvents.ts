@@ -723,22 +723,28 @@ export class TransactionalOutboxRelay<TClient = unknown> {
       try {
         results.push(await this.publishOne(message, signal));
       } catch (error) {
-        for (const unstarted of claimed.slice(index + 1)) {
-          try {
-            await this.releaseClaim(unstarted);
-          } catch (releaseError) {
-            try {
-              recordError(releaseError);
-            } catch {
-              continue;
-            }
-          }
-        }
+        await this.releaseUnstartedClaims(claimed.slice(index + 1));
         throw error;
       }
     }
 
     return this.createBatchResult(signal.aborted ? "cancelled" : "completed", claimed, results);
+  }
+
+  private async releaseUnstartedClaims(
+    messages: readonly TransactionalOutboxMessage[],
+  ): Promise<void> {
+    for (const message of messages) {
+      try {
+        await this.releaseClaim(message);
+      } catch (releaseError) {
+        try {
+          recordError(releaseError);
+        } catch {
+          continue;
+        }
+      }
+    }
   }
 
   private createBatchResult(
@@ -789,6 +795,23 @@ export class TransactionalOutboxRelay<TClient = unknown> {
   ): Promise<OutboxRelayMessageResult> {
     return withSpan(
       async () => {
+        let current: TransactionalOutboxMessage | null;
+        try {
+          current = await this.config.store.findOutboxById(message.id, this.context());
+        } catch (error) {
+          await this.releaseUnstartedClaims([message]);
+          throw error;
+        }
+        if (!current || current.status !== "publishing" || current.attempts !== message.attempts) {
+          return this.createStaleClaimResult(message, "events-tx/outbox-publish-stale-claim");
+        }
+        if (
+          signal.aborted ||
+          !current.lockedUntil ||
+          current.lockedUntil.getTime() <= this.now().getTime()
+        ) {
+          return this.releaseClaim(message);
+        }
         try {
           await this.config.publish(message, signal);
         } catch (error) {

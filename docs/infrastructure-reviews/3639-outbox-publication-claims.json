@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "events-tx",
+      "classification": "pure-contract",
+      "reason": "Check stored outbox ownership and lease immediately before starting publication; release expired unstarted claims using the existing attempt fence.",
+      "files": {
+        "packages/events-tx/src/libs/TransactionalEvents.ts": "a4a0191ae92054f445910b93c678b8c8a752ffcfeee1ae15698440e7f827bc35"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "The Node Host does not participate in the relay claim check. This coordination logic uses the existing store read and attempt-fenced release without adding host capabilities, storage formats or lifecycle boundaries.",
+          "providers": ["@croco/events-tx/TransactionalEventStore"],
+          "constraints": [
+            "The configured store must expose current claim state. A lease may be lost after the check or during an active callback; delivery remains at-least-once and requires external idempotency. No infrastructure support or certification claim is added."
+          ],
+          "references": [
+            "packages/events-tx/src/libs/TransactionalEvents.ts",
+            "packages/events-tx/src/libs/InMemoryTransactionalEventStore.ts",
+            "packages/events-tx/src/libs/DrizzleTransactionalEventStore.ts",
+            "packages/events-tx/src/tests/TransactionalOutbox.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "The Lambda Host does not participate in the relay claim check. This coordination logic uses the existing store read and attempt-fenced release without adding host capabilities, storage formats or lifecycle boundaries.",
+          "providers": ["@croco/events-tx/TransactionalEventStore"],
+          "constraints": [
+            "The configured store must expose current claim state. A lease may be lost after the check or during an active callback; delivery remains at-least-once and requires external idempotency. No infrastructure support or certification claim is added."
+          ],
+          "references": [
+            "packages/events-tx/src/libs/TransactionalEvents.ts",
+            "packages/events-tx/src/libs/InMemoryTransactionalEventStore.ts",
+            "packages/events-tx/src/libs/DrizzleTransactionalEventStore.ts",
+            "packages/events-tx/src/tests/TransactionalOutbox.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "The Workers or Node Container Host does not participate in the relay claim check. This coordination logic uses the existing store read and attempt-fenced release without adding host capabilities, storage formats or lifecycle boundaries.",
+          "providers": ["@croco/events-tx/TransactionalEventStore"],
+          "constraints": [
+            "The configured store must expose current claim state. A lease may be lost after the check or during an active callback; delivery remains at-least-once and requires external idempotency. No infrastructure support or certification claim is added."
+          ],
+          "references": [
+            "packages/events-tx/src/libs/TransactionalEvents.ts",
+            "packages/events-tx/src/libs/InMemoryTransactionalEventStore.ts",
+            "packages/events-tx/src/libs/DrizzleTransactionalEventStore.ts",
+            "packages/events-tx/src/tests/TransactionalOutbox.spec.ts"
+          ]
+        }
+      }
+    }
+  ]
+}
