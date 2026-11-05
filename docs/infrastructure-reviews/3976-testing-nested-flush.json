@@ -4,9 +4,9 @@
     {
       "package": "testing",
       "classification": "pure-contract",
-      "reason": "Drain waitUntil tasks registered by earlier tasks before the lightweight testing request runtime flush completes. Keep each request queue isolated and preserve allSettled rejection handling.",
+      "reason": "Observe waitUntil rejections when registered and drain successive settled batches before the lightweight testing request runtime flush completes. Preserve per-request isolation and the non-rejecting background failure policy.",
       "files": {
-        "packages/testing/src/libs/testing.ts": "0fd12397564cba2783715cbf97666e1387630559f6e4db11c7ff6eeefe9071ec"
+        "packages/testing/src/libs/testing.ts": "d63f75730e4d7f5eebe6ff7dd28b834c6c3c104b6a1ac554a929aeb9b2bf7550"
       },
       "catalogRuntimes": [],
       "profiles": {

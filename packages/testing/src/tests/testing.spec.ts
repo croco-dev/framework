@@ -992,6 +992,33 @@ describe("@croco/testing", () => {
       expect(completed).toEqual(["after rejection"]);
     });
 
+    it("observes rejected descendants while a sibling keeps the current batch pending", async () => {
+      const runtime = createTestingRequestContext().runtime;
+      expect(runtime).toBeDefined();
+      if (!runtime) return;
+      const sibling = createDeferred();
+      const descendantRegistered = createDeferred();
+      runtime.waitUntil(sibling.promise);
+      runtime.waitUntil(
+        Promise.resolve().then(() => {
+          runtime.waitUntil(Promise.reject(new TestingBillingProblem("nested background failure")));
+          descendantRegistered.resolve();
+        }),
+      );
+      const flushed = vi.fn();
+      const flushing = runtime.flush().then(flushed);
+      try {
+        await descendantRegistered.promise;
+        // Cross the rejection-reporting turn while the sibling is still pending.
+        await setImmediate();
+        expect(flushed).not.toHaveBeenCalled();
+      } finally {
+        sibling.resolve();
+        await flushing;
+      }
+      expect(flushed).toHaveBeenCalledOnce();
+    });
+
     it("preserves explicit runtime overrides and the disabled runtime option", async () => {
       const waitUntil = vi.fn();
       const flush = vi.fn(async () => {});
