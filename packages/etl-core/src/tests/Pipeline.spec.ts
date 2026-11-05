@@ -356,8 +356,29 @@ describe("pipeline operations", () => {
     expect(f.writer.write).not.toHaveBeenCalled();
     expect(f.store.checkpointWrites.length).toBeGreaterThanOrEqual(2);
     expect(f.store.checkpointWrites.at(-1)?.value).toMatchObject({
-      cursor: { partition: 1, counts: { input: 2, filtered: 2 } },
+      cursor: { cursor: { partition: 1, counts: { input: 2, filtered: 2 } } },
+      processedCount: 2,
     });
+  });
+
+  it("restores the final checkpoint of an empty pipeline after sealing fails", async () => {
+    const f = await fixture([[]]);
+    const failure = new PipelineProblem("interrupted");
+    vi.mocked(f.catalog.sealCandidate).mockRejectedValueOnce(failure);
+
+    await expect(f.operations.run()).rejects.toBe(failure);
+    expect((await f.operations.status("execution-1")).checkpoints).toMatchObject({
+      "pipeline.chunkCheckpoint": {
+        cursor: { cursor: { partition: 1, record: 0 } },
+        processedCount: 0,
+      },
+    });
+    await expect(f.operations.retry("execution-1")).resolves.toMatchObject({
+      state: "published",
+      inputCount: 0,
+      outputCount: 0,
+    });
+    expect(f.writer.write).not.toHaveBeenCalled();
   });
 
   it("replays durable rows after a checkpoint failure without duplicating the grain", async () => {
@@ -442,7 +463,10 @@ describe("pipeline operations", () => {
       );
       await expect(operations.run()).rejects.toMatchObject({ reason: "interrupted" });
       expect((await f.executions.get("execution-1")).checkpoints).toMatchObject({
-        "pipeline.cursor": { cursor: { partition: 0, record: 1, counts: { input: 1, output: 1 } } },
+        "pipeline.chunkCheckpoint": {
+          cursor: { cursor: { partition: 0, record: 1, counts: { input: 1, output: 1 } } },
+          processedCount: 1,
+        },
       });
       calls.length = 0;
       const result = await operations.retry("execution-1");
@@ -504,17 +528,20 @@ describe("pipeline operations", () => {
     const execution = await f.executions.get(result.executionId);
     expect(execution.status).toBe("failed");
     expect(execution.checkpoints).toMatchObject({
-      "pipeline.cursor": {
+      "pipeline.chunkCheckpoint": {
         cursor: {
-          rejections: [
-            {
-              sourceId: "partition-0",
-              record: 2,
-              reason: "etl-core/projection-failed",
-              sensitivity: "sensitive",
-            },
-          ],
+          cursor: {
+            rejections: [
+              {
+                sourceId: "partition-0",
+                record: 2,
+                reason: "etl-core/projection-failed",
+                sensitivity: "sensitive",
+              },
+            ],
+          },
         },
+        processedCount: 2,
       },
     });
     expect(f.catalog.publishCandidate).not.toHaveBeenCalled();
