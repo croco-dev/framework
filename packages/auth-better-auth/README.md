@@ -151,6 +151,12 @@ await sessions.revokeSession(targetSessionToken, sessionToken);
 await sessions.revokeUserSessions("user_123", adminSessionToken);
 ```
 
+`getSession()`은 조회 결과가 없거나 Better Auth가 400·401·403·404(또는 대응하는 symbolic status)를
+반환하면 `null`을 반환합니다. 408·429와 그 밖의 조회 실패는
+`auth-better-auth/session-lookup-failed` Problem으로 전달합니다. 원본 `Error`는 `cause`에 보존하고,
+객체 형태의 오류는 `cause.cause`에 보존합니다. 로그와 Problem JSON에는 원본 오류나 세션 토큰을
+포함하지 않습니다. 자동 재시도는 수행하지 않습니다.
+
 `BetterAuthFactory`는 Bearer 인증과 관리자 세션 해제 API에 필요한 Better Auth `bearer`, `admin`
 plugin을 기본으로 등록합니다. `revokeSession()`은 해제할 세션 토큰과 현재 사용자 세션 토큰을 분리해
 받으므로 다른 활성 세션도 해제할 수 있습니다. `revokeUserSessions()`는 `session:revoke` 권한이 있는

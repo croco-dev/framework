@@ -60,9 +60,11 @@ export class BetterAuthSessionManager implements BetterAuthSessionProvider {
         return null;
       }
 
-      const cause = toError(error);
-      this.logger?.warn("BetterAuthSessionManager.getSession() failed", { error: cause });
-      throw new BetterAuthSessionLookupProblem(cause);
+      const problem = new BetterAuthSessionLookupProblem(toError(error));
+      this.logger?.warn("BetterAuthSessionManager.getSession() failed", {
+        error: problem.toJSON(),
+      });
+      throw problem;
     }
   }
 
@@ -224,7 +226,7 @@ function isInvalidSessionLookupError(error: unknown): boolean {
   const statusCode = getNumericProperty(error, "statusCode") ?? getNumericProperty(error, "status");
 
   if (statusCode !== undefined) {
-    return statusCode >= 400 && statusCode < 500;
+    return statusCode === 400 || statusCode === 401 || statusCode === 403 || statusCode === 404;
   }
 
   const status = getStringProperty(error, "status");
@@ -292,5 +294,7 @@ function getStringProperty(value: unknown, key: string): string | undefined {
 }
 
 function toError(error: unknown): Error {
-  return error instanceof Error ? error : new Error(String(error));
+  return error instanceof Error
+    ? error
+    : new Error("Better Auth session lookup failed", { cause: error });
 }

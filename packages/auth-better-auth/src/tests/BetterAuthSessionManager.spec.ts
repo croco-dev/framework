@@ -214,29 +214,81 @@ describe("BetterAuthSessionManager", () => {
       expect(result?.userAgent).toBeUndefined();
     });
 
-    it("should return null when listSessions rejects invalid session errors", async () => {
-      const errorFactory = {
-        getAuth: () => ({
-          $context: createMockAuthContext(),
-          api: {
-            listSessions: vi
-              .fn<(args: { headers: Headers }) => Promise<unknown[]>>()
-              .mockRejectedValue({ statusCode: 401 }),
-            revokeSession: vi
-              .fn<(args: { headers: Headers; body: { token: string } }) => Promise<void>>()
-              .mockResolvedValue(undefined),
-            revokeUserSessions: vi
-              .fn<(args: { headers: Headers; body: { userId: string } }) => Promise<void>>()
-              .mockResolvedValue(undefined),
-          },
-        }),
+    it.each([
+      { statusCode: 400 },
+      { statusCode: 401 },
+      { statusCode: 403 },
+      { statusCode: 404 },
+      { status: 400 },
+      { status: 401 },
+      { status: 403 },
+      { status: 404 },
+      { status: "BAD_REQUEST" },
+      { status: "UNAUTHORIZED" },
+      { status: "FORBIDDEN" },
+      { status: "NOT_FOUND" },
+    ])("should retain session absence for %j", async (error) => {
+      const manager = new BetterAuthSessionManager(
+        createMockAuthFactory({ listSessionsError: error }),
+      );
+
+      await expect(manager.getSession("expired-token")).resolves.toBeNull();
+    });
+
+    it.each([
+      { statusCode: 408 },
+      { statusCode: 429 },
+      { status: 408 },
+      { status: 429 },
+      { status: "REQUEST_TIMEOUT" },
+      { status: "TOO_MANY_REQUESTS" },
+      { statusCode: 409 },
+      { status: 422 },
+      { statusCode: 503 },
+      { statusCode: 429, status: "UNAUTHORIZED" },
+    ])("should preserve lookup failure and upstream status for %j", async (error) => {
+      const manager = new BetterAuthSessionManager(
+        createMockAuthFactory({ listSessionsError: error }),
+      );
+
+      const result = manager.getSession("private-session-token");
+      await expect(result).rejects.toMatchObject({
+        code: "auth-better-auth/session-lookup-failed",
+        status: 500,
+        cause: { cause: error },
+      });
+      await expect(result).rejects.toBeInstanceOf(BetterAuthSessionLookupProblem);
+    });
+
+    it("should preserve Error identity and keep credentials out of diagnostics", async () => {
+      const token = "private-session-token";
+      const upstream = Object.assign(new Error(`authorization: Bearer ${token}`), {
+        statusCode: 429,
+        token,
+      });
+      const warn = vi.fn();
+      const logger: ILogger = {
+        warn,
+        debug: vi.fn(),
+        info: vi.fn(),
+        error: vi.fn(),
+        fatal: vi.fn(),
+        child: vi.fn(),
       };
+      const manager = new BetterAuthSessionManager(
+        createMockAuthFactory({ listSessionsError: upstream }),
+        logger,
+      );
 
-      sessionManager = new BetterAuthSessionManager(errorFactory);
-
-      const result = await sessionManager.getSession("expired-token");
-
-      expect(result).toBeNull();
+      const problem = await manager.getSession(token).catch((error: unknown) => error);
+      expect(problem).toBeInstanceOf(BetterAuthSessionLookupProblem);
+      if (!(problem instanceof BetterAuthSessionLookupProblem)) return;
+      expect(problem.cause).toBe(upstream);
+      expect(problem.message).not.toContain(token);
+      expect(JSON.stringify(problem.toJSON())).not.toContain(token);
+      expect(warn).toHaveBeenCalledWith("BetterAuthSessionManager.getSession() failed", {
+        error: problem.toJSON(),
+      });
     });
 
     it("should throw lookup problem and log warning when listSessions fails unexpectedly", async () => {
@@ -273,33 +325,8 @@ describe("BetterAuthSessionManager", () => {
       );
 
       expect(warnSpy).toHaveBeenCalledWith("BetterAuthSessionManager.getSession() failed", {
-        error: expect.any(Error),
+        error: expect.objectContaining({ code: "auth-better-auth/session-lookup-failed" }),
       });
-    });
-
-    it("should throw lookup problem for 5xx lookup errors", async () => {
-      const errorFactory = {
-        getAuth: () => ({
-          $context: createMockAuthContext(),
-          api: {
-            listSessions: vi
-              .fn<(args: { headers: Headers }) => Promise<unknown[]>>()
-              .mockRejectedValue({ status: 503 }),
-            revokeSession: vi
-              .fn<(args: { headers: Headers; body: { token: string } }) => Promise<void>>()
-              .mockResolvedValue(undefined),
-            revokeUserSessions: vi
-              .fn<(args: { headers: Headers; body: { userId: string } }) => Promise<void>>()
-              .mockResolvedValue(undefined),
-          },
-        }),
-      };
-
-      sessionManager = new BetterAuthSessionManager(errorFactory);
-
-      await expect(sessionManager.getSession("any-token")).rejects.toBeInstanceOf(
-        BetterAuthSessionLookupProblem,
-      );
     });
   });
 
