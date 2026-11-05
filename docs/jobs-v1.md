@@ -108,7 +108,8 @@ preserved legacy schedules, and mutations that were actually sent to QStash.
 
 ## Batch Checkpoints
 
-`@croco/batch-core` stores checkpoints under a per-step key such as `import-users.cursor`.
+`@croco/batch-core` stores the cursor and cumulative input count together under a per-step key such as
+`import-users.chunkCheckpoint`. Retries can also read existing executions with separate cursor and count keys.
 Step names must contain a non-whitespace character and remain unique within each built job so these
 checkpoint identities cannot collide. Invalid names fail during `Step` construction, and duplicate
 names fail when `JobBuilder.build()` validates the complete job.

@@ -1,0 +1,115 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "batch-core",
+      "classification": "pure-contract",
+      "reason": "Persist and restore the batch cursor and cumulative input count together using the existing execution checkpoint contract. A reader that rewinds on restore supplies the count at its restored position.",
+      "files": {
+        "packages/batch-core/src/libs/ChunkExecutor.ts": "00e2375bc1e4d97a4e7de09447c9e18c6b4fb33eddd83a18021fa8d4138f45be",
+        "packages/batch-core/src/libs/interfaces/ItemReader.ts": "ded43567f9cb842045bf235d8f7baf8bab63e7d2a8901782d4f6523d736ba511"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "The Node Host does not participate in checkpoint encoding or restoration. The existing ExecutionStore owns the atomic single-key merge.",
+          "providers": ["@croco/execution-core/ExecutionStore"],
+          "constraints": [
+            "The store must implement atomic single-key merges. External writes and progress updates remain separate from checkpoint persistence."
+          ],
+          "references": [
+            "packages/batch-core/src/libs/ChunkExecutor.ts",
+            "packages/execution-core/src/libs/interfaces/ExecutionStore.ts",
+            "packages/batch-core/src/tests/ChunkExecutor.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "The Lambda Host does not participate in checkpoint encoding or restoration. The existing ExecutionStore owns the atomic single-key merge.",
+          "providers": ["@croco/execution-core/ExecutionStore"],
+          "constraints": [
+            "The store must implement atomic single-key merges. External writes and progress updates remain separate from checkpoint persistence."
+          ],
+          "references": [
+            "packages/batch-core/src/libs/ChunkExecutor.ts",
+            "packages/execution-core/src/libs/interfaces/ExecutionStore.ts",
+            "packages/batch-core/src/tests/ChunkExecutor.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "The Workers or Node Container Host does not participate in checkpoint encoding or restoration. The existing ExecutionStore owns the atomic single-key merge.",
+          "providers": ["@croco/execution-core/ExecutionStore"],
+          "constraints": [
+            "The store must implement atomic single-key merges. External writes and progress updates remain separate from checkpoint persistence."
+          ],
+          "references": [
+            "packages/batch-core/src/libs/ChunkExecutor.ts",
+            "packages/execution-core/src/libs/interfaces/ExecutionStore.ts",
+            "packages/batch-core/src/tests/ChunkExecutor.spec.ts"
+          ]
+        }
+      }
+    },
+    {
+      "package": "etl-core",
+      "classification": "pure-contract",
+      "reason": "Save intermediate and final pipeline cursors with their input counts, including after an unfinished partition rewinds. The existing execution attempt facade still fences each checkpoint mutation.",
+      "files": {
+        "packages/etl-core/src/pipeline/definePipeline.ts": "7ec9d77e8ebdb26627e11db896b19336932818ff17916691cb2de4ffcba74e90"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "The Node Host does not participate in assembling the pipeline checkpoint. The existing attempt-fenced execution manager still owns the store mutation.",
+          "providers": [
+            "@croco/batch-core/ChunkExecutor",
+            "@croco/execution-core/ExecutionAttemptManager"
+          ],
+          "constraints": [
+            "The configured store must still support attempt fencing. Warehouse writes and publication keep their existing lifecycle and recovery contracts."
+          ],
+          "references": [
+            "packages/etl-core/src/pipeline/definePipeline.ts",
+            "packages/batch-core/src/libs/ChunkExecutor.ts",
+            "packages/etl-core/src/tests/Pipeline.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "The Lambda Host does not participate in assembling the pipeline checkpoint. The existing attempt-fenced execution manager still owns the store mutation.",
+          "providers": [
+            "@croco/batch-core/ChunkExecutor",
+            "@croco/execution-core/ExecutionAttemptManager"
+          ],
+          "constraints": [
+            "The configured store must still support attempt fencing. Warehouse writes and publication keep their existing lifecycle and recovery contracts."
+          ],
+          "references": [
+            "packages/etl-core/src/pipeline/definePipeline.ts",
+            "packages/batch-core/src/libs/ChunkExecutor.ts",
+            "packages/etl-core/src/tests/Pipeline.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "The Workers or Node Container Host does not participate in assembling the pipeline checkpoint. The existing attempt-fenced execution manager still owns the store mutation.",
+          "providers": [
+            "@croco/batch-core/ChunkExecutor",
+            "@croco/execution-core/ExecutionAttemptManager"
+          ],
+          "constraints": [
+            "The configured store must still support attempt fencing. Warehouse writes and publication keep their existing lifecycle and recovery contracts."
+          ],
+          "references": [
+            "packages/etl-core/src/pipeline/definePipeline.ts",
+            "packages/batch-core/src/libs/ChunkExecutor.ts",
+            "packages/etl-core/src/tests/Pipeline.spec.ts"
+          ]
+        }
+      }
+    }
+  ]
+}

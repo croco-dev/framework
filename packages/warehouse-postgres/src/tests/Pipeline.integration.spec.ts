@@ -223,7 +223,7 @@ describe.skipIf(process.env.CROCO_TEST_REAL_RESOURCES !== "1")(
       const checkpoint = vi
         .spyOn(store.runtime.executions, "checkpointAttempt")
         .mockImplementation(async (...args) => {
-          if (args[1] === "payments.cursor") checkpointCount++;
+          if (args[1] === "payments.chunkCheckpoint") checkpointCount++;
           if (checkpointCount === 2) throw new Error("checkpoint fault after durable write");
           return saveCheckpoint(...args);
         });
@@ -242,8 +242,9 @@ describe.skipIf(process.env.CROCO_TEST_REAL_RESOURCES !== "1")(
       );
       expect(receipts.rows[0].count).toBe("2");
       const saved = await store.manager().get(executionId);
-      expect(saved.checkpoints?.["payments.cursor"]).toMatchObject({
-        cursor: { partition: 0, record: 1, counts: { input: 1, output: 1 } },
+      expect(saved.checkpoints?.["payments.chunkCheckpoint"]).toMatchObject({
+        cursor: { cursor: { partition: 0, record: 1, counts: { input: 1, output: 1 } } },
+        processedCount: 1,
       });
       checkpoint.mockRestore();
       const restartedOwner = store.publication();

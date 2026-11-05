@@ -45,6 +45,18 @@ Returns the current state of the component.
 
 ---
 
+### getRestoredProcessedCount()?
+
+> `optional` **getRestoredProcessedCount**(): `number`
+
+Returns the cumulative input count after restore when the reader can rewind its cursor.
+
+#### Returns
+
+`number`
+
+---
+
 ### restoreCheckpoint()
 
 > **restoreCheckpoint**(`checkpoint`): `void`

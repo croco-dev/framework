@@ -111,7 +111,10 @@ describe("authorized enrichment HTTP and batch integration", () => {
       ),
     ).rejects.toMatchObject({ code: "analytics-core/enrichment-provider-failed" });
     const completed = await executions.get(execution.id);
-    expect(completed.checkpoints?.["enrichment.cursor"]).toBe(5);
+    expect(completed.checkpoints?.["enrichment.chunkCheckpoint"]).toMatchObject({
+      cursor: 5,
+      processedCount: 5,
+    });
     expect(completed.status).toBe("retrying");
     expect((await f.operations.read("demo")).status).toBe("partial");
     const ids = inputs.map((input) => input.itemId);
@@ -122,7 +125,7 @@ describe("authorized enrichment HTTP and batch integration", () => {
       await expect(
         classifyBatch(executions, execution.id, f.service, scope, "demo", selectedIds, version),
       ).rejects.toMatchObject({ code: "analytics-core/enrichment-invalid-input" });
-      expect((await executions.get(execution.id)).checkpoints?.["enrichment.cursor"]).toBe(5);
+      expect((await executions.get(execution.id)).checkpoints).toEqual(completed.checkpoints);
     }
     await classifyBatch(executions, execution.id, f.service, scope, "demo", ids, "v1");
     expect((await executions.get(execution.id)).status).toBe("completed");

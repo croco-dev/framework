@@ -234,7 +234,6 @@ export function createPipelineOperations(input: PipelineDefinition, runtime: Pip
     throw new PipelineProblem("execution-fencing-required");
   if (!runtime.executions.supportsAttemptFencing())
     throw new PipelineProblem("execution-fencing-required");
-  const key = `${definition.id}.cursor`;
   async function identities() {
     const target = await compileFact(definition.project.target);
     const transformHash = digest([
@@ -397,6 +396,9 @@ export function createPipelineOperations(input: PipelineDefinition, runtime: Pip
         getCheckpoint() {
           return { bindingHash: digest(binding), cursor: structuredClone(cursor) };
         },
+        getRestoredProcessedCount() {
+          return cursor.counts.input;
+        },
         restoreCheckpoint(value: unknown) {
           const saved = value as { bindingHash: string; cursor: Cursor };
           if (
@@ -539,12 +541,18 @@ export function createPipelineOperations(input: PipelineDefinition, runtime: Pip
         },
         classifyFailure: () => ({ retryable: false }),
       });
-      await new ChunkExecutor(facade).execute(executionId, step, {
+      const executor = new ChunkExecutor(facade);
+      await executor.execute(executionId, step, {
         startExecution: false,
         completeExecution: false,
       });
       await assertActive();
-      await runtime.executions.checkpointAttempt(token, key, reader.getCheckpoint());
+      await executor.saveCheckpoint(
+        executionId,
+        step.name,
+        reader.getCheckpoint(),
+        cursor.counts.input,
+      );
       const coverage = definition.source.coverage;
       const complete =
         cursor.counts.rejected === 0 &&
