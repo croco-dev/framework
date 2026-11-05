@@ -877,10 +877,12 @@ function createTestingRuntimeContext(
     env: {},
     platform: "node",
     waitUntil(promise: Promise<unknown>) {
-      waitUntilPromises.push(promise);
+      waitUntilPromises.push(Promise.allSettled([promise]));
     },
     async flush() {
-      await Promise.allSettled(waitUntilPromises.splice(0));
+      while (waitUntilPromises.length > 0) {
+        await Promise.all(waitUntilPromises.splice(0));
+      }
     },
     async shutdown() {},
   } satisfies Omit<RuntimeContext, "capabilities" | "requestId">;

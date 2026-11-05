@@ -1,5 +1,6 @@
 import "reflect-metadata";
 import { AsyncLocalStorage } from "node:async_hooks";
+import { setImmediate } from "node:timers/promises";
 import { queryObjects } from "node:v8";
 import {
   context,
@@ -880,6 +881,157 @@ describe("@croco/testing", () => {
       waitUntil: true,
     });
     expect(Context.isActive()).toBe(false);
+  });
+
+  describe("request runtime flush", () => {
+    it("waits for second and third generation waitUntil tasks in the same flush", async () => {
+      const runtime = createTestingRequestContext().runtime;
+      expect(runtime).toBeDefined();
+      if (!runtime) return;
+      const first = createDeferred();
+      const second = createDeferred();
+      const third = createDeferred();
+      const secondStarted = createDeferred();
+      const thirdStarted = createDeferred();
+      const completed: string[] = [];
+      runtime.waitUntil(
+        first.promise.then(() => {
+          completed.push("first");
+          runtime.waitUntil(
+            second.promise.then(() => {
+              completed.push("second");
+              runtime.waitUntil(
+                third.promise.then(() => {
+                  completed.push("third");
+                }),
+              );
+              thirdStarted.resolve();
+            }),
+          );
+          secondStarted.resolve();
+        }),
+      );
+      const flushed = vi.fn();
+      const flushing = runtime.flush().then(flushed);
+      try {
+        first.resolve();
+        await secondStarted.promise;
+        await setImmediate();
+        expect(completed).toEqual(["first"]);
+        expect(flushed).not.toHaveBeenCalled();
+
+        second.resolve();
+        await thirdStarted.promise;
+        await setImmediate();
+        expect(completed).toEqual(["first", "second"]);
+        expect(flushed).not.toHaveBeenCalled();
+
+        third.resolve();
+        await flushing;
+        expect(completed).toEqual(["first", "second", "third"]);
+        expect(flushed).toHaveBeenCalledOnce();
+      } finally {
+        first.resolve();
+        second.resolve();
+        third.resolve();
+        await flushing;
+        await runtime.flush();
+      }
+    });
+
+    it("keeps request queues isolated and drains work registered after a completed flush", async () => {
+      const first = createTestingRequestContext().runtime;
+      const other = createTestingRequestContext().runtime;
+      expect(first).toBeDefined();
+      expect(other).toBeDefined();
+      if (!first || !other) return;
+      await first.flush();
+      const otherTask = createDeferred();
+      other.waitUntil(otherTask.promise);
+      try {
+        first.waitUntil(Promise.resolve("single batch"));
+        await first.flush();
+        const later = createDeferred();
+        first.waitUntil(later.promise);
+        const flushed = vi.fn();
+        const flushing = first.flush().then(flushed);
+        try {
+          await setImmediate();
+          expect(flushed).not.toHaveBeenCalled();
+        } finally {
+          later.resolve();
+          await flushing;
+        }
+        await first.flush();
+      } finally {
+        otherTask.resolve();
+        await other.flush();
+      }
+    });
+
+    it("settles rejected nested work without rejecting flush or skipping later work", async () => {
+      const runtime = createTestingRequestContext().runtime;
+      expect(runtime).toBeDefined();
+      if (!runtime) return;
+      const completed: string[] = [];
+      runtime.waitUntil(
+        Promise.resolve().then(() => {
+          runtime.waitUntil(
+            Promise.resolve().then(() => {
+              runtime.waitUntil(
+                Promise.resolve().then(() => {
+                  completed.push("after rejection");
+                }),
+              );
+              throw new TestingBillingProblem("background failure");
+            }),
+          );
+        }),
+      );
+      await expect(runtime.flush()).resolves.toBeUndefined();
+      expect(completed).toEqual(["after rejection"]);
+    });
+
+    it("observes rejected descendants while a sibling keeps the current batch pending", async () => {
+      const runtime = createTestingRequestContext().runtime;
+      expect(runtime).toBeDefined();
+      if (!runtime) return;
+      const sibling = createDeferred();
+      const descendantRegistered = createDeferred();
+      runtime.waitUntil(sibling.promise);
+      runtime.waitUntil(
+        Promise.resolve().then(() => {
+          runtime.waitUntil(Promise.reject(new TestingBillingProblem("nested background failure")));
+          descendantRegistered.resolve();
+        }),
+      );
+      const flushed = vi.fn();
+      const flushing = runtime.flush().then(flushed);
+      try {
+        await descendantRegistered.promise;
+        // Cross the rejection-reporting turn while the sibling is still pending.
+        await setImmediate();
+        expect(flushed).not.toHaveBeenCalled();
+      } finally {
+        sibling.resolve();
+        await flushing;
+      }
+      expect(flushed).toHaveBeenCalledOnce();
+    });
+
+    it("preserves explicit runtime overrides and the disabled runtime option", async () => {
+      const waitUntil = vi.fn();
+      const flush = vi.fn(async () => {});
+      const context = createTestingRequestContext({ runtime: { waitUntil, flush } });
+      expect(context.runtime?.waitUntil).toBe(waitUntil);
+      expect(context.runtime?.flush).toBe(flush);
+      const task = Promise.resolve();
+      context.runtime?.waitUntil(task);
+      await context.runtime?.flush();
+      expect(waitUntil).toHaveBeenCalledWith(task);
+      expect(flush).toHaveBeenCalledOnce();
+      expect(createTestingRequestContext({ runtime: false }).runtime).toBeUndefined();
+    });
   });
 
   it("resets transaction context hooks between testing contexts", async () => {
