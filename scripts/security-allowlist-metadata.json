@@ -41,6 +41,13 @@
           "owner": "kang-heewon",
           "reason": "Public infrastructure evidence contains SHA-256 digests, not credentials. BetterAuthAuthenticationProblem.ts digests in e7bb918 and c0e681d were independently recomputed from their tracked source blobs and trigger generic-api-key. This exact record path survives squash; all production source and other records remain scanned. Re-review the entire public-evidence record by the deadline.",
           "reviewBy": "2026-11-30"
+        },
+        {
+          "kind": "path",
+          "value": "^docs/infrastructure-reviews/3866-session-lookup-failures\\.json$",
+          "owner": "kang-heewon",
+          "reason": "Issue #3866 infrastructure evidence contains public source SHA-256 digests, not credentials. The BetterAuthSessionManager.ts digest was independently recomputed from the tracked source blob at 105db03 and exactly matches the recorded value that triggers generic-api-key. This fully anchored evidence-record path survives squash merge; production source and all other review records remain scanned. Re-review the entire public-evidence record by the deadline.",
+          "reviewBy": "2026-11-30"
         }
       ],
       "ignoreFingerprints": [
