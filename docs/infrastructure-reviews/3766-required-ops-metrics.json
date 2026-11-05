@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "cli",
+      "classification": "pure-contract",
+      "reason": "A caller that requires metrics must obtain a metrics result before the CLI can report a healthy application.",
+      "files": {
+        "packages/cli/src/libs/ops.ts": "4665a9c51037d20931c229ea54aced6268ddc9539364f35aefc760472ca2e194"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "The CLI selects an existing HTTP endpoint in the caller process. Endpoint selection does not depend on the Node Host, cluster storage, or Pod lifecycle.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/cli/src/libs/ops.ts",
+            "packages/transports-http/src/libs/operationalEndpoints.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "The CLI selects an existing HTTP endpoint in the caller process. Endpoint selection does not depend on Lambda invocation, storage, or flush behavior.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/cli/src/libs/ops.ts",
+            "packages/transports-http/src/libs/operationalEndpoints.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "The CLI selects an existing HTTP endpoint in the caller process. Endpoint selection requires no Workers binding, isolate lifecycle, or Container capability.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/cli/src/libs/ops.ts",
+            "packages/transports-http/src/libs/operationalEndpoints.ts"
+          ]
+        }
+      }
+    }
+  ]
+}

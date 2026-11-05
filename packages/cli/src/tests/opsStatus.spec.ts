@@ -160,6 +160,35 @@ describe("ops status", () => {
     ]);
   });
 
+  it.each([{}, { includeMetrics: false }])(
+    "checks required metrics with options %j and reflects recovery on the next check",
+    async (options) => {
+      let metricsStatus = 503;
+      const fetchStatus: OpsStatusFetch = async (input) =>
+        input.endsWith("/metrics")
+          ? new Response("requests_total 42\n", { status: metricsStatus })
+          : healthyOperationalResponse(input);
+      const checkOptions = {
+        ...options,
+        fetch: fetchStatus,
+        requiredEndpoints: ["metrics"] as const,
+      };
+
+      const failed = await runOpsCheck("http://localhost:3000", checkOptions);
+      expect(failed.summary).toBe("unhealthy");
+      expect(failed.endpoints).toContainEqual(
+        expect.objectContaining({ name: "metrics", required: true, httpStatus: 503, ok: false }),
+      );
+
+      metricsStatus = 200;
+      const recovered = await runOpsCheck("http://localhost:3000", checkOptions);
+      expect(recovered.summary).toBe("healthy");
+      expect(recovered.endpoints).toContainEqual(
+        expect.objectContaining({ name: "metrics", required: true, httpStatus: 200, ok: true }),
+      );
+    },
+  );
+
   it("marks missing diagnostics as unhealthy for CI checks", async () => {
     const fetchStatus: OpsStatusFetch = async (input) => {
       if (input.endsWith("/health")) {
