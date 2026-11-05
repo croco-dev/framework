@@ -79,8 +79,11 @@ describe("ChunkExecutor", () => {
         expect(final.result).toBeUndefined();
         if (checkpointed) {
           expect(final.checkpoints).toEqual({
-            "cancelled-step.cursor": { offset: 1 },
-            "cancelled-step.processedCount": 1,
+            "cancelled-step.chunkCheckpoint": {
+              version: 1,
+              cursor: { offset: 1 },
+              processedCount: 1,
+            },
           });
         } else {
           expect(final.checkpoints).toBeUndefined();
@@ -295,7 +298,9 @@ describe("ChunkExecutor", () => {
           completedAt: terminal.completedAt,
         });
         expect((await manager.get(execution.id)).checkpoints).toEqual(
-          checkpointed ? { "timed.cursor": { offset: 1 }, "timed.processedCount": 1 } : undefined,
+          checkpointed
+            ? { "timed.chunkCheckpoint": { version: 1, cursor: { offset: 1 }, processedCount: 1 } }
+            : undefined,
         );
         expect((await manager.get(execution.id)).progress).toEqual(
           hasTotal ? { current: 1, total: 3, percent: 33 } : undefined,
@@ -606,9 +611,15 @@ describe("ChunkExecutor", () => {
     expect(reader.restoreCheckpoint).toHaveBeenCalledWith({ offset: 5 });
     expect(reader.read).toHaveBeenCalledTimes(2);
     expect(writer.write).toHaveBeenCalledWith([3]);
-    expect(executionManager.checkpoint).toHaveBeenCalledWith("exec-1", "test-step.cursor", {
-      offset: 10,
-    });
+    expect(executionManager.checkpoint).toHaveBeenCalledWith(
+      "exec-1",
+      "test-step.chunkCheckpoint",
+      {
+        version: 1,
+        cursor: { offset: 10 },
+        processedCount: 1,
+      },
+    );
   });
 
   it.each([false, true])(
@@ -718,16 +729,17 @@ describe("ChunkExecutor", () => {
         Math.min((index + 1) * 2, count),
       );
       expect((executionManager.checkpoint as Mock).mock.calls).toEqual(
-        offsets.flatMap((offset) => [
-          ["exec-1", "filtered-step.cursor", { offset }],
-          ["exec-1", "filtered-step.processedCount", offset],
+        offsets.map((offset) => [
+          "exec-1",
+          "filtered-step.chunkCheckpoint",
+          { version: 1, cursor: { offset }, processedCount: offset },
         ]),
       );
       expect((executionManager.updateProgress as Mock).mock.calls).toEqual(
         offsets.map((current) => ["exec-1", { current, total: 5 }]),
       );
       expect(checkpoints).toEqual(
-        Array.from({ length: count }, (_, index) => 2 * Math.floor(index / 2)),
+        Array.from({ length: count }, (_, index) => Math.floor(index / 2)),
       );
       expect(writer.write).not.toHaveBeenCalled();
       expect(executionManager.complete).toHaveBeenCalledWith("exec-1", { processedCount: count });
@@ -751,12 +763,21 @@ describe("ChunkExecutor", () => {
 
     expect(writer.write.mock.calls).toEqual([[[20]], [[40]]]);
     expect((executionManager.checkpoint as Mock).mock.calls).toEqual([
-      ["exec-1", "mixed-step.cursor", { offset: 2 }],
-      ["exec-1", "mixed-step.processedCount", 2],
-      ["exec-1", "mixed-step.cursor", { offset: 4 }],
-      ["exec-1", "mixed-step.processedCount", 4],
-      ["exec-1", "mixed-step.cursor", { offset: 5 }],
-      ["exec-1", "mixed-step.processedCount", 5],
+      [
+        "exec-1",
+        "mixed-step.chunkCheckpoint",
+        { version: 1, cursor: { offset: 2 }, processedCount: 2 },
+      ],
+      [
+        "exec-1",
+        "mixed-step.chunkCheckpoint",
+        { version: 1, cursor: { offset: 4 }, processedCount: 4 },
+      ],
+      [
+        "exec-1",
+        "mixed-step.chunkCheckpoint",
+        { version: 1, cursor: { offset: 5 }, processedCount: 5 },
+      ],
     ]);
     expect(executionManager.updateProgress).not.toHaveBeenCalled();
     expect(executionManager.complete).toHaveBeenCalledWith("exec-1", { processedCount: 5 });
@@ -802,8 +823,7 @@ describe("ChunkExecutor", () => {
       const retrying = await realManager.get(execution.id);
       expect(retrying.status).toBe("retrying");
       expect(retrying.checkpoints).toEqual({
-        "filtered-retry.cursor": { offset: 2 },
-        "filtered-retry.processedCount": 2,
+        "filtered-retry.chunkCheckpoint": { version: 1, cursor: { offset: 2 }, processedCount: 2 },
       });
       expect(retrying.progress).toMatchObject({ current: 2, total: 5 });
       expect(writer.write.mock.calls).toEqual(failureSource === "writer" ? [[[4]]] : []);
@@ -828,8 +848,7 @@ describe("ChunkExecutor", () => {
       const completed = await realManager.get(execution.id);
       expect(completed.status).toBe("completed");
       expect(completed.checkpoints).toEqual({
-        "filtered-retry.cursor": { offset: 5 },
-        "filtered-retry.processedCount": 5,
+        "filtered-retry.chunkCheckpoint": { version: 1, cursor: { offset: 5 }, processedCount: 5 },
       });
       expect(completed.progress).toMatchObject({ current: 5, total: 5, percent: 100 });
       expect(completed.result).toEqual({ processedCount: 5 });
@@ -855,9 +874,15 @@ describe("ChunkExecutor", () => {
     await executor.execute("exec-1", step, { completeExecution: false });
 
     expect(writer.write).toHaveBeenCalledWith([1]);
-    expect(executionManager.checkpoint).toHaveBeenCalledWith("exec-1", "first-step.cursor", {
-      offset: 1,
-    });
+    expect(executionManager.checkpoint).toHaveBeenCalledWith(
+      "exec-1",
+      "first-step.chunkCheckpoint",
+      {
+        version: 1,
+        cursor: { offset: 1 },
+        processedCount: 1,
+      },
+    );
     expect(executionManager.complete).not.toHaveBeenCalled();
   });
 
@@ -885,8 +910,7 @@ describe("ChunkExecutor", () => {
     expect(running.status).toBe("running");
     expect(running.completedAt).toBeUndefined();
     expect(running.checkpoints).toEqual({
-      "extract.cursor": { offset: 1 },
-      "extract.processedCount": 1,
+      "extract.chunkCheckpoint": { version: 1, cursor: { offset: 1 }, processedCount: 1 },
     });
 
     await realExecutor.execute(
@@ -904,10 +928,8 @@ describe("ChunkExecutor", () => {
     expect(completed.status).toBe("completed");
     expect(completed.attempts).toBe(1);
     expect(completed.checkpoints).toEqual({
-      "extract.cursor": { offset: 1 },
-      "extract.processedCount": 1,
-      "load.cursor": { offset: 1 },
-      "load.processedCount": 1,
+      "extract.chunkCheckpoint": { version: 1, cursor: { offset: 1 }, processedCount: 1 },
+      "load.chunkCheckpoint": { version: 1, cursor: { offset: 1 }, processedCount: 1 },
     });
     expect(firstWriter.write).toHaveBeenCalledWith([1]);
     expect(secondWriter.write).toHaveBeenCalledWith([2]);
@@ -952,8 +974,7 @@ describe("ChunkExecutor", () => {
       }),
     );
     expect(retrying.checkpoints).toEqual({
-      "import-users.cursor": { offset: 2 },
-      "import-users.processedCount": 2,
+      "import-users.chunkCheckpoint": { version: 1, cursor: { offset: 2 }, processedCount: 2 },
     });
     expect(retrying.progress).toEqual({
       current: 2,
@@ -968,8 +989,7 @@ describe("ChunkExecutor", () => {
     expect(completed.error).toBeUndefined();
     expect(completed.result).toEqual({ processedCount: 3 });
     expect(completed.checkpoints).toEqual({
-      "import-users.cursor": { offset: 3 },
-      "import-users.processedCount": 3,
+      "import-users.chunkCheckpoint": { version: 1, cursor: { offset: 3 }, processedCount: 3 },
     });
     expect(completed.progress).toEqual({
       current: 3,
@@ -978,6 +998,94 @@ describe("ChunkExecutor", () => {
     });
     expect(reader.restoreCheckpoint).toHaveBeenCalledWith({ offset: 2 });
     expect(writes).toEqual([[1, 2], [3], [3]]);
+  });
+
+  it.each(["before", "after"] as const)(
+    "resumes cursor and input count together after a failure %s checkpoint commit",
+    async (boundary) => {
+      const store = new TestExecutionStore();
+      const manager = new ExecutionManagerImpl(store);
+      const execution = await manager.create({ type: "import-users", maxAttempts: 2 });
+      const mergeCheckpoint = store.mergeCheckpoint.bind(store);
+      const failure = new Error("checkpoint connection lost");
+      vi.spyOn(store, "mergeCheckpoint").mockImplementationOnce(async (id, key, value) => {
+        if (boundary === "after") await mergeCheckpoint(id, key, value);
+        throw failure;
+      });
+      const writer = { write: vi.fn().mockResolvedValue(undefined) };
+      const step = () =>
+        new Step<number, number>({
+          name: "import-users",
+          reader: createCheckpointReader([1, 2, 3]),
+          writer,
+          chunkSize: 1,
+        });
+
+      await expect(new ChunkExecutor(manager).execute(execution.id, step())).rejects.toBe(failure);
+      expect(await manager.get(execution.id)).toMatchObject({ status: "retrying" });
+
+      await new ChunkExecutor(manager).execute(execution.id, step());
+
+      expect(writer.write.mock.calls).toEqual(
+        boundary === "before" ? [[[1]], [[1]], [[2]], [[3]]] : [[[1]], [[2]], [[3]]],
+      );
+      expect(await manager.get(execution.id)).toMatchObject({
+        status: "completed",
+        result: { processedCount: 3 },
+      });
+    },
+  );
+
+  it("recovers final progress when the last checkpoint was committed before progress failed", async () => {
+    const manager = new ExecutionManagerImpl(new TestExecutionStore());
+    const execution = await manager.create({ type: "import-users", maxAttempts: 2 });
+    await manager.updateProgress(execution.id, { current: 0, total: 3 });
+    const failure = new Error("progress connection lost");
+    vi.spyOn(manager, "updateProgress").mockRejectedValueOnce(failure);
+    const processor = { process: vi.fn(async () => null) };
+    const writer = { write: vi.fn() };
+    const step = () =>
+      new Step<number, number>({
+        name: "import-users",
+        reader: createCheckpointReader([1, 2, 3]),
+        processor,
+        writer,
+        chunkSize: 3,
+      });
+
+    await expect(new ChunkExecutor(manager).execute(execution.id, step())).rejects.toBe(failure);
+    await new ChunkExecutor(manager).execute(execution.id, step());
+
+    expect(processor.process.mock.calls).toEqual([[1], [2], [3]]);
+    expect(writer.write).not.toHaveBeenCalled();
+    expect(await manager.get(execution.id)).toMatchObject({
+      status: "completed",
+      progress: { current: 3, total: 3, percent: 100 },
+      result: { processedCount: 3 },
+    });
+  });
+
+  it("rejects a cursor that cannot be stored as a JSON property", async () => {
+    const manager = new ExecutionManagerImpl(new TestExecutionStore());
+    const execution = await manager.create({ type: "import-users" });
+    const reader = {
+      read: vi.fn().mockResolvedValueOnce(1).mockResolvedValue(null),
+      getCheckpoint: () => undefined,
+      restoreCheckpoint: vi.fn(),
+    };
+
+    await expect(
+      new ChunkExecutor(manager).execute(
+        execution.id,
+        new Step({
+          name: "import-users",
+          reader,
+          writer: { write: vi.fn().mockResolvedValue(undefined) },
+          chunkSize: 1,
+        }),
+      ),
+    ).rejects.toMatchObject({ code: "execution/checkpoint-store-conformance" });
+    expect((await manager.get(execution.id)).checkpoints).toBeUndefined();
   });
 
   it("counts items committed before the retry when no progress total was declared", async () => {
@@ -1003,8 +1111,7 @@ describe("ChunkExecutor", () => {
     await expect(realExecutor.execute(execution.id, step)).rejects.toThrow("temporary sink outage");
     expect(await realManager.get(execution.id)).toMatchObject({ status: "retrying" });
     expect((await realManager.get(execution.id)).checkpoints).toEqual({
-      "import-users.cursor": { offset: 2 },
-      "import-users.processedCount": 2,
+      "import-users.chunkCheckpoint": { version: 1, cursor: { offset: 2 }, processedCount: 2 },
     });
 
     await realExecutor.execute(execution.id, step);
@@ -1038,6 +1145,70 @@ describe("ChunkExecutor", () => {
       result: { processedCount: 5 },
     });
   });
+
+  it("resumes each step independently when legacy and current checkpoints coexist", async () => {
+    const manager = new ExecutionManagerImpl(new TestExecutionStore());
+    const executor = new ChunkExecutor(manager);
+    const execution = await manager.create({ type: "batch-job", maxAttempts: 2 });
+    await manager.start(execution.id);
+    await manager.checkpoint(execution.id, "extract.cursor", { offset: 1 });
+    await manager.checkpoint(execution.id, "extract.processedCount", 1);
+    await manager.checkpoint(execution.id, "load.cursor", { offset: 1 });
+    await manager.checkpoint(execution.id, "load.processedCount", 1);
+    await manager.checkpoint(execution.id, "load.chunkCheckpoint", {
+      version: 1,
+      cursor: { offset: 2 },
+      processedCount: 2,
+    });
+    await manager.fail(execution.id, { message: "interrupted job", retryable: true });
+    const extractWriter = { write: vi.fn().mockResolvedValue(undefined) };
+    const loadWriter = { write: vi.fn().mockResolvedValue(undefined) };
+
+    await executor.execute(
+      execution.id,
+      new Step({ name: "extract", reader: createCheckpointReader([1, 2]), writer: extractWriter }),
+      { completeExecution: false },
+    );
+    expect(extractWriter.write.mock.calls).toEqual([[[2]]]);
+    expect((await manager.get(execution.id)).checkpoints?.["extract.chunkCheckpoint"]).toEqual({
+      version: 1,
+      cursor: { offset: 2 },
+      processedCount: 2,
+    });
+
+    await executor.execute(
+      execution.id,
+      new Step({ name: "load", reader: createCheckpointReader([10, 20, 30]), writer: loadWriter }),
+      { startExecution: false },
+    );
+    expect(loadWriter.write.mock.calls).toEqual([[[30]]]);
+    expect((await manager.get(execution.id)).result).toEqual({ processedCount: 3 });
+  });
+
+  it.each([
+    { version: 2, cursor: { offset: 2 }, processedCount: 2 },
+    { version: 1, cursor: { offset: 2 }, processedCount: "2" },
+    { version: 1, processedCount: 2 },
+  ])(
+    "rejects an unsupported checkpoint even when a legacy cursor exists (%j)",
+    async (checkpoint) => {
+      const manager = new ExecutionManagerImpl(new TestExecutionStore());
+      const execution = await manager.create({ type: "import-users" });
+      await manager.checkpoint(execution.id, "import-users.cursor", { offset: 1 });
+      await manager.checkpoint(execution.id, "import-users.chunkCheckpoint", checkpoint);
+      const reader = createCheckpointReader([1, 2, 3]);
+      const writer = { write: vi.fn() };
+
+      await expect(
+        new ChunkExecutor(manager).execute(
+          execution.id,
+          new Step({ name: "import-users", reader, writer }),
+        ),
+      ).rejects.toMatchObject({ code: "execution/checkpoint-store-conformance" });
+      expect(reader.read).not.toHaveBeenCalled();
+      expect(writer.write).not.toHaveBeenCalled();
+    },
+  );
 
   it("should not seed retry progress without a restored step checkpoint", async () => {
     const realManager = new ExecutionManagerImpl(new TestExecutionStore());

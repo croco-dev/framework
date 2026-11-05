@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "batch-core",
+      "classification": "pure-contract",
+      "reason": "Persist and restore the batch cursor and cumulative input count together using the existing execution checkpoint contract. Host requirements and runtime support claims are unchanged.",
+      "files": {
+        "packages/batch-core/src/libs/ChunkExecutor.ts": "103c9f90a8b7e643021ccf5366eba43ea7eb0f8d06b141502e839c1bc2a498c5"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "The Node Host does not participate in checkpoint encoding or restoration. The existing ExecutionStore owns the atomic single-key merge.",
+          "providers": ["@croco/execution-core/ExecutionStore"],
+          "constraints": [
+            "The store must implement atomic single-key merges. External writes and progress updates remain separate from checkpoint persistence."
+          ],
+          "references": [
+            "packages/batch-core/src/libs/ChunkExecutor.ts",
+            "packages/execution-core/src/libs/interfaces/ExecutionStore.ts",
+            "packages/batch-core/src/tests/ChunkExecutor.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "The Lambda Host does not participate in checkpoint encoding or restoration. The existing ExecutionStore owns the atomic single-key merge.",
+          "providers": ["@croco/execution-core/ExecutionStore"],
+          "constraints": [
+            "The store must implement atomic single-key merges. External writes and progress updates remain separate from checkpoint persistence."
+          ],
+          "references": [
+            "packages/batch-core/src/libs/ChunkExecutor.ts",
+            "packages/execution-core/src/libs/interfaces/ExecutionStore.ts",
+            "packages/batch-core/src/tests/ChunkExecutor.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "The Workers or Node Container Host does not participate in checkpoint encoding or restoration. The existing ExecutionStore owns the atomic single-key merge.",
+          "providers": ["@croco/execution-core/ExecutionStore"],
+          "constraints": [
+            "The store must implement atomic single-key merges. External writes and progress updates remain separate from checkpoint persistence."
+          ],
+          "references": [
+            "packages/batch-core/src/libs/ChunkExecutor.ts",
+            "packages/execution-core/src/libs/interfaces/ExecutionStore.ts",
+            "packages/batch-core/src/tests/ChunkExecutor.spec.ts"
+          ]
+        }
+      }
+    }
+  ]
+}
