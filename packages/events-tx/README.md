@@ -50,7 +50,13 @@ const relay = new TransactionalOutboxRelay({
 await relay.publishBatch({ limit: 50 });
 ```
 
-The relay claims visible messages, publishes each one, marks successful messages as `published`, schedules retry with backoff after failures, and marks exhausted messages as `poisoned` or `dead_lettered` when a dead-letter hook is configured. Before each callback, the relay reads the stored claim and checks its status, attempt number, and lease against the current clock. A completed or superseded claim returns `stale_claim` without starting publication. An expired claim whose publication has not started is released as `retrying` without consuming an attempt; a concurrent reclaim makes that release return `stale_claim`. Completion updates are guarded by the claimed attempt number; if another relay already completed or superseded the claim, the batch result reports `stale_claim` without overwriting the newer state.
+The relay claims visible messages, publishes each one, marks successful messages as `published`, schedules retry with backoff after failures, and marks exhausted messages as `poisoned` or `dead_lettered` when a dead-letter hook is configured.
+
+Before each callback, the relay reads the stored claim and checks its status, attempt number, and lease against the current clock. A completed or superseded claim returns `stale_claim` without starting publication. An expired claim whose publication has not started is released as `retrying` without consuming an attempt; a concurrent reclaim makes that release return `stale_claim`.
+
+If the ownership read fails, the batch rejects with that error after attempting to release the current and later unstarted claims through the existing attempt fence. A cleanup failure does not replace the original read error.
+
+Completion updates are guarded by the claimed attempt number; if another relay already completed or superseded the claim, the batch result reports `stale_claim` without overwriting the newer state.
 
 Publish callbacks receive an optional `AbortSignal`. `stop()` prevents new batches and cancels active callbacks, while `drain(signal)` waits for active batches and reports whether the supplied shutdown boundary expired. Claims whose publication never started are released immediately as `retrying` without consuming an attempt.
 

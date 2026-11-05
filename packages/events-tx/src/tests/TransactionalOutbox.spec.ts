@@ -720,6 +720,89 @@ describe("TransactionalOutboxRelay", () => {
     });
   });
 
+  it.each([false, true])(
+    "releases the current and later unstarted claims when ownership lookup rejects (cancelled: %s)",
+    async (cancelled) => {
+      const fixture = createOutboxFixture();
+      for (let index = 1; index <= 3; index++) {
+        await appendMessage(fixture, {
+          aggregateId: `acct-${index}`,
+          idempotencyKey: `credit-${index}`,
+          maxAttempts: 1,
+        });
+      }
+      const lookupStarted = createDeferred<void>();
+      const lookupCompletion = createDeferred<void>();
+      const failure = new OutboxStorageProblem("ownership lookup unavailable");
+      vi.spyOn(fixture.store, "findOutboxById").mockImplementationOnce(async () => {
+        lookupStarted.resolve(undefined);
+        await lookupCompletion.promise;
+        throw failure;
+      });
+      const publish = vi.fn(async () => {});
+      const relay = new TransactionalOutboxRelay({
+        store: fixture.store,
+        now: fixture.clock.now,
+        publish,
+      });
+      const batch = relay.publishBatch();
+      const rejected = expect(batch).rejects.toBe(failure);
+      await lookupStarted.promise;
+      const drain = cancelled ? relay.drain() : undefined;
+      lookupCompletion.resolve(undefined);
+      await rejected;
+      if (drain)
+        await expect(drain).resolves.toMatchObject({ status: "drained", pendingBatches: 0 });
+
+      expect(publish).not.toHaveBeenCalled();
+      await expect(fixture.store.listOutboxMessages()).resolves.toMatchObject([
+        { id: "message-1", status: "retrying", attempts: 0 },
+        { id: "message-2", status: "retrying", attempts: 0 },
+        { id: "message-3", status: "retrying", attempts: 0 },
+      ]);
+      const recovered = new TransactionalOutboxRelay({
+        store: fixture.store,
+        now: fixture.clock.now,
+        publish,
+      });
+      await expect(recovered.publishBatch()).resolves.toMatchObject({ claimed: 3, published: 3 });
+      expect(publish).toHaveBeenCalledTimes(3);
+    },
+  );
+
+  it("preserves an ownership lookup error and releases later claims when current release also fails", async () => {
+    const fixture = createOutboxFixture();
+    for (let index = 1; index <= 3; index++) {
+      await appendMessage(fixture, {
+        aggregateId: `acct-${index}`,
+        idempotencyKey: `credit-${index}`,
+        maxAttempts: 1,
+      });
+    }
+    const failure = new OutboxStorageProblem("ownership lookup unavailable");
+    vi.spyOn(fixture.store, "findOutboxById").mockRejectedValueOnce(failure);
+    vi.spyOn(fixture.store, "releaseOutboxClaim").mockRejectedValueOnce(
+      new OutboxStorageProblem("release unavailable"),
+    );
+    vi.spyOn(telemetry, "recordError").mockImplementation(() => {
+      throw new Error("telemetry unavailable");
+    });
+    const publish = vi.fn(async () => {});
+    const relay = new TransactionalOutboxRelay({
+      store: fixture.store,
+      now: fixture.clock.now,
+      publish,
+    });
+
+    await expect(relay.publishBatch()).rejects.toBe(failure);
+    expect(publish).not.toHaveBeenCalled();
+    await expect(fixture.store.listOutboxMessages()).resolves.toMatchObject([
+      { id: "message-1", status: "publishing", attempts: 1 },
+      { id: "message-2", status: "retrying", attempts: 0 },
+      { id: "message-3", status: "retrying", attempts: 0 },
+    ]);
+  });
+
   describe("publication acknowledgement failure", () => {
     it.each([1, 3])(
       "preserves the publishing claim when acknowledgement rejects with maxAttempts %s",

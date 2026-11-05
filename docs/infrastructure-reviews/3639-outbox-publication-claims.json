@@ -6,7 +6,7 @@
       "classification": "pure-contract",
       "reason": "Check stored outbox ownership and lease immediately before starting publication; release expired unstarted claims using the existing attempt fence.",
       "files": {
-        "packages/events-tx/src/libs/TransactionalEvents.ts": "950a2c01ec835289a674f06548901b5c008fd63faef0088c6e1b156a7567fa25"
+        "packages/events-tx/src/libs/TransactionalEvents.ts": "a4a0191ae92054f445910b93c678b8c8a752ffcfeee1ae15698440e7f827bc35"
       },
       "catalogRuntimes": [],
       "profiles": {
