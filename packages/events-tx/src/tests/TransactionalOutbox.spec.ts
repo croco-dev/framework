@@ -599,6 +599,127 @@ describe("TransactionalOutbox", () => {
 });
 
 describe("TransactionalOutboxRelay", () => {
+  it.each([false, true])(
+    "skips an unstarted claim after another relay reclaims it (completed: %s)",
+    async (completed) => {
+      const fixture = createOutboxFixture();
+      await appendMessage(fixture);
+      await appendMessage(fixture, { aggregateId: "acct-2", idempotencyKey: "credit-acct-2" });
+      const slowStarted = createDeferred<void>();
+      const slowCompletion = createDeferred<void>();
+      const fastStarted = createDeferred<void>();
+      const fastCompletion = createDeferred<void>();
+      const publications: string[] = [];
+      const slow = new TransactionalOutboxRelay({
+        store: fixture.store,
+        now: fixture.clock.now,
+        visibilityTimeoutMs: 1_000,
+        publish: async (message) => {
+          publications.push(`slow:${message.id}`);
+          slowStarted.resolve(undefined);
+          await slowCompletion.promise;
+        },
+      });
+      const fast = new TransactionalOutboxRelay({
+        store: fixture.store,
+        now: fixture.clock.now,
+        publish: async (message) => {
+          publications.push(`fast:${message.id}`);
+          if (message.id === "message-2") {
+            fastStarted.resolve(undefined);
+            if (!completed) await fastCompletion.promise;
+          }
+        },
+      });
+
+      const slowBatch = slow.publishBatch();
+      await slowStarted.promise;
+      fixture.clock.advance(1_000);
+      const fastBatch = fast.publishBatch();
+      await fastStarted.promise;
+      if (completed) await fastBatch;
+      slowCompletion.resolve(undefined);
+      await expect(slowBatch).resolves.toMatchObject({ claimed: 2, published: 0, staleClaimed: 2 });
+      expect(publications).toEqual(["slow:message-1", "fast:message-1", "fast:message-2"]);
+      await expect(fixture.store.findOutboxById("message-2")).resolves.toMatchObject({
+        status: completed ? "published" : "publishing",
+        attempts: 2,
+      });
+      fastCompletion.resolve(undefined);
+      await expect(fastBatch).resolves.toMatchObject({ published: 2 });
+    },
+  );
+
+  it.each([999, 1_000])(
+    "checks the lease before starting the next publication after %s ms of batch waiting",
+    async (elapsed) => {
+      const fixture = createOutboxFixture();
+      await appendMessage(fixture, { maxAttempts: 1 });
+      await appendMessage(fixture, {
+        aggregateId: "acct-2",
+        idempotencyKey: "credit-acct-2",
+        maxAttempts: 1,
+      });
+      const publications: string[] = [];
+      const relay = new TransactionalOutboxRelay({
+        store: fixture.store,
+        now: fixture.clock.now,
+        visibilityTimeoutMs: 1_000,
+        publish: async (message) => {
+          publications.push(message.id);
+          if (message.id === "message-1") fixture.clock.advance(elapsed);
+        },
+      });
+
+      await expect(relay.publishBatch()).resolves.toMatchObject({
+        claimed: 2,
+        published: elapsed < 1_000 ? 2 : 1,
+        released: elapsed < 1_000 ? 0 : 1,
+      });
+      expect(publications).toEqual(elapsed < 1_000 ? ["message-1", "message-2"] : ["message-1"]);
+      if (elapsed === 1_000) {
+        await expect(fixture.store.findOutboxById("message-2")).resolves.toMatchObject({
+          status: "retrying",
+          attempts: 0,
+        });
+        await expect(relay.publishBatch()).resolves.toMatchObject({ claimed: 1, published: 1 });
+        expect(publications).toEqual(["message-1", "message-2"]);
+      }
+    },
+  );
+
+  it("releases an unstarted claim when drain cancels its ownership lookup", async () => {
+    const fixture = createOutboxFixture();
+    await appendMessage(fixture);
+    const lookupStarted = createDeferred<void>();
+    const lookupCompletion = createDeferred<void>();
+    const find = fixture.store.findOutboxById.bind(fixture.store);
+    vi.spyOn(fixture.store, "findOutboxById").mockImplementationOnce(async (...args) => {
+      const message = await find(...args);
+      lookupStarted.resolve(undefined);
+      await lookupCompletion.promise;
+      return message;
+    });
+    const publish = vi.fn(async () => {});
+    const relay = new TransactionalOutboxRelay({
+      store: fixture.store,
+      now: fixture.clock.now,
+      publish,
+    });
+
+    const batch = relay.publishBatch();
+    await lookupStarted.promise;
+    const drain = relay.drain();
+    lookupCompletion.resolve(undefined);
+    await expect(batch).resolves.toMatchObject({ status: "cancelled", published: 0, released: 1 });
+    await expect(drain).resolves.toMatchObject({ status: "drained", pendingBatches: 0 });
+    expect(publish).not.toHaveBeenCalled();
+    await expect(fixture.store.findOutboxById("message-1")).resolves.toMatchObject({
+      status: "retrying",
+      attempts: 0,
+    });
+  });
+
   describe("publication acknowledgement failure", () => {
     it.each([1, 3])(
       "preserves the publishing claim when acknowledgement rejects with maxAttempts %s",
@@ -2788,8 +2909,18 @@ describe("DrizzleTransactionalEventStore", () => {
     async (firstAttempt) => {
       const clock = createClock(new Date("2026-01-01T00:00:00.000Z"));
       const inboxLease = new Date("2026-01-01T00:00:30.000Z");
-      const firstClaim = outboxRowValues({ status: "publishing", attempts: 1, maxAttempts: 2 });
-      const competingClaim = outboxRowValues({ status: "publishing", attempts: 2, maxAttempts: 2 });
+      const firstClaim = outboxRowValues({
+        status: "publishing",
+        attempts: 1,
+        maxAttempts: 2,
+        lockedUntil: new Date("2026-01-01T00:00:01.000Z"),
+      });
+      const competingClaim = outboxRowValues({
+        status: "publishing",
+        attempts: 2,
+        maxAttempts: 2,
+        lockedUntil: new Date("2026-01-01T00:00:02.001Z"),
+      });
       const released = outboxRowValues({
         status: "retrying",
         attempts: 1,
@@ -2811,6 +2942,7 @@ describe("DrizzleTransactionalEventStore", () => {
       };
       const steps: QueryStep[] = [
         { table: "outbox", operation: "update", rows: [firstClaim] },
+        { table: "outbox", operation: "select", rows: [firstClaim] },
         { table: "inbox", operation: "select", rows: [] },
         { table: "inbox", operation: "insert", rows: [processing] },
       ];
@@ -2860,6 +2992,7 @@ describe("DrizzleTransactionalEventStore", () => {
       clock.advance(1_001);
       steps.push(
         { table: "outbox", operation: "update", rows: [competingClaim] },
+        { table: "outbox", operation: "select", rows: [competingClaim] },
         { table: "inbox", operation: "select", rows: [processing] },
         { table: "outbox", operation: "select", rows: [competingClaim] },
         { table: "outbox", operation: "update", rows: [released] },
@@ -2871,7 +3004,9 @@ describe("DrizzleTransactionalEventStore", () => {
       });
       expect(handlerAttempts).toBe(1);
       expect(effects).toEqual([]);
-      const releaseQuery = queries[6];
+      const releaseQuery = queries.at(-1);
+      expect(releaseQuery).toBeDefined();
+      if (!releaseQuery) throw new Error("Expected a claim release query.");
       expect(releaseQuery.sql).toContain('"visible_at" =');
       expect(releaseQuery.params).toContain(inboxLease.toISOString());
       expect(releaseQuery.params).toContain("retrying");
@@ -2890,8 +3025,15 @@ describe("DrizzleTransactionalEventStore", () => {
         await batchA;
       }
       clock.advance(28_999);
+      const retriedClaim = outboxRowValues({
+        status: "publishing",
+        attempts: 2,
+        maxAttempts: 2,
+        lockedUntil: new Date("2026-01-01T00:00:31.000Z"),
+      });
       steps.push(
-        { table: "outbox", operation: "update", rows: [competingClaim] },
+        { table: "outbox", operation: "update", rows: [retriedClaim] },
+        { table: "outbox", operation: "select", rows: [retriedClaim] },
         {
           table: "inbox",
           operation: "select",

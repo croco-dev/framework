@@ -789,6 +789,17 @@ export class TransactionalOutboxRelay<TClient = unknown> {
   ): Promise<OutboxRelayMessageResult> {
     return withSpan(
       async () => {
+        const current = await this.config.store.findOutboxById(message.id, this.context());
+        if (!current || current.status !== "publishing" || current.attempts !== message.attempts) {
+          return this.createStaleClaimResult(message, "events-tx/outbox-publish-stale-claim");
+        }
+        if (
+          signal.aborted ||
+          !current.lockedUntil ||
+          current.lockedUntil.getTime() <= this.now().getTime()
+        ) {
+          return this.releaseClaim(message);
+        }
         try {
           await this.config.publish(message, signal);
         } catch (error) {
