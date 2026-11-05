@@ -880,7 +880,9 @@ function createTestingRuntimeContext(
       waitUntilPromises.push(promise);
     },
     async flush() {
-      await Promise.allSettled(waitUntilPromises.splice(0));
+      while (waitUntilPromises.length > 0) {
+        await Promise.allSettled(waitUntilPromises.splice(0));
+      }
     },
     async shutdown() {},
   } satisfies Omit<RuntimeContext, "capabilities" | "requestId">;

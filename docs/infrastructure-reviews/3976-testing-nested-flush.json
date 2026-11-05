@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "testing",
+      "classification": "pure-contract",
+      "reason": "Drain waitUntil tasks registered by earlier tasks before the lightweight testing request runtime flush completes. Keep each request queue isolated and preserve allSettled rejection handling.",
+      "files": {
+        "packages/testing/src/libs/testing.ts": "0fd12397564cba2783715cbf97666e1387630559f6e4db11c7ff6eeefe9071ec"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "This change drains the in-memory request queue of the lightweight testing simulator. It adds no Kubernetes Node Host capability, storage or deployment lifecycle dependency.",
+          "providers": [],
+          "constraints": [
+            "The simulator is not a deployed Host. Actual Host flush implementations, TestKernel lifecycle behavior, runtime overrides and background rejection policy remain unchanged. No deployment or provider certification is claimed."
+          ],
+          "references": [
+            "packages/testing/src/libs/testing.ts",
+            "packages/testing/src/tests/testing.spec.ts",
+            "packages/testing/README.md"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "This change drains the in-memory request queue of the lightweight testing simulator. It adds no AWS Lambda Host capability, storage or deployment lifecycle dependency.",
+          "providers": [],
+          "constraints": [
+            "The simulator is not a deployed Host. Actual Host flush implementations, TestKernel lifecycle behavior, runtime overrides and background rejection policy remain unchanged. No deployment or provider certification is claimed."
+          ],
+          "references": [
+            "packages/testing/src/libs/testing.ts",
+            "packages/testing/src/tests/testing.spec.ts",
+            "packages/testing/README.md"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "This change drains the in-memory request queue of the lightweight testing simulator. It adds no Cloudflare Workers or Node Container Host capability, storage or deployment lifecycle dependency.",
+          "providers": [],
+          "constraints": [
+            "The simulator is not a deployed Host. Actual Host flush implementations, TestKernel lifecycle behavior, runtime overrides and background rejection policy remain unchanged. No deployment or provider certification is claimed."
+          ],
+          "references": [
+            "packages/testing/src/libs/testing.ts",
+            "packages/testing/src/tests/testing.spec.ts",
+            "packages/testing/README.md"
+          ]
+        }
+      }
+    }
+  ]
+}
