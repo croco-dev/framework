@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "metrics-core",
+      "classification": "pure-contract",
+      "reason": "Behavior query definitions and report lookup keys derive their digest from the same stable JSON declaration across object key orders.",
+      "files": {
+        "packages/metrics-core/src/libs/BehaviorSources.ts": "1306e92eadfec2fde18e437bde186d7a0885b26f6a430ab3a09e6d3b92d0fd1c"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Declaration key ordering is a JSON transformation over registered options. It uses the existing Web Crypto digest and adds no provider, storage operation, host capability or lifecycle dependency.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/metrics-core/src/libs/BehaviorSources.ts",
+            "packages/metrics-core/src/tests/BehaviorSources.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Declaration key ordering is a JSON transformation over registered options. It uses the existing Web Crypto digest and adds no provider, storage operation, host capability or lifecycle dependency.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/metrics-core/src/libs/BehaviorSources.ts",
+            "packages/metrics-core/src/tests/BehaviorSources.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Declaration key ordering is a JSON transformation over registered options. It uses the existing Web Crypto digest and adds no provider, storage operation, host capability or lifecycle dependency.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/metrics-core/src/libs/BehaviorSources.ts",
+            "packages/metrics-core/src/tests/BehaviorSources.spec.ts"
+          ]
+        }
+      }
+    }
+  ]
+}
