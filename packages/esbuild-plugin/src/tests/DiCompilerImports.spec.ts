@@ -12,6 +12,22 @@ function fixture(options: Record<string, unknown>, packageType: string, extensio
   const root = fs.mkdtempSync(path.join(tmpdir(), "croco-di-imports-"));
   roots.push(root);
   fs.mkdirSync(path.join(root, "src"));
+  const crocoModules = path.join(root, "node_modules/@croco");
+  fs.mkdirSync(crocoModules, { recursive: true });
+  // Match published entrypoints without following workspace links back into implementation sources.
+  for (const name of ["framework-context", "problems-core", "diagnostics-core"]) {
+    const packageRoot = path.join(repositoryRoot, "packages", name);
+    const installedRoot = path.join(crocoModules, name);
+    const manifest = JSON.parse(fs.readFileSync(path.join(packageRoot, "package.json"), "utf8"));
+    fs.mkdirSync(installedRoot);
+    fs.writeFileSync(
+      path.join(installedRoot, "package.json"),
+      JSON.stringify({ ...manifest, ...manifest.publishConfig }),
+    );
+    fs.cpSync(path.join(packageRoot, "dist"), path.join(installedRoot, "dist"), {
+      recursive: true,
+    });
+  }
   fs.writeFileSync(path.join(root, "package.json"), JSON.stringify({ type: packageType }));
   fs.writeFileSync(
     path.join(root, "tsconfig.json"),
@@ -25,18 +41,6 @@ function fixture(options: Record<string, unknown>, packageType: string, extensio
         typeRoots: [path.join(repositoryRoot, "node_modules/@types")],
         lib: ["esnext", "dom"],
         ignoreDeprecations: "6.0",
-        // Check consumers against built public contracts, not the runtime implementation.
-        paths: {
-          "@croco/framework-context": [
-            path.join(repositoryRoot, "packages/framework-context/dist/index.d.ts"),
-          ],
-          "@croco/problems-core": [
-            path.join(repositoryRoot, "packages/problems-core/dist/index.d.ts"),
-          ],
-          "@croco/diagnostics-core": [
-            path.join(repositoryRoot, "packages/diagnostics-core/dist/index.d.ts"),
-          ],
-        },
         ...options,
       },
       include: ["src/**/*"],
@@ -49,7 +53,7 @@ function fixture(options: Record<string, unknown>, packageType: string, extensio
   return root;
 }
 
-function typecheck(root: string): ts.Program {
+function typecheck(root: string, expectedDiagnosticCodes: readonly number[] = []): ts.Program {
   const config = ts.getParsedCommandLineOfConfigFile(
     path.join(root, "tsconfig.json"),
     {},
@@ -66,10 +70,22 @@ function typecheck(root: string): ts.Program {
     rootNames: config.fileNames,
     options: config.options,
   });
-  const diagnostics = ts
-    .getPreEmitDiagnostics(program)
-    .map((diagnostic) => ts.flattenDiagnosticMessageText(diagnostic.messageText, "\n"));
-  expect(diagnostics, diagnostics.join("\n")).toEqual([]);
+  const implementationSources = program
+    .getSourceFiles()
+    .filter((source) => !source.isDeclarationFile);
+  expect(implementationSources.map((source) => source.fileName)).toEqual(
+    expect.arrayContaining(config.fileNames),
+  );
+  expect(
+    implementationSources.filter((source) => !source.fileName.startsWith(root + path.sep)),
+  ).toEqual([]);
+  const diagnostics = ts.getPreEmitDiagnostics(program);
+  expect(
+    diagnostics.map((diagnostic) => diagnostic.code),
+    diagnostics
+      .map((diagnostic) => ts.flattenDiagnosticMessageText(diagnostic.messageText, "\n"))
+      .join("\n"),
+  ).toEqual(expectedDiagnosticCodes);
   return program;
 }
 
@@ -100,6 +116,35 @@ describe("DI graph consumer imports", () => {
     );
     expect(() => typecheck(root)).toThrow("Expected 0 arguments");
     fs.writeFileSync(result.outFile, result.code);
+    typecheck(root);
+  }, 30_000);
+
+  it("rejects extensionless generated NodeNext imports and accepts their restoration", () => {
+    const root = fixture({ module: "NodeNext", moduleResolution: "NodeNext" }, "module", "ts");
+    const result = compileDiGraph({ baseDir: root, outFile: "src/di.generated.ts" });
+    writeDiGraph(result);
+    typecheck(root);
+
+    fs.writeFileSync(
+      result.outFile,
+      result.code.replace('from "./Service.js"', 'from "./Service"'),
+    );
+    typecheck(root, [2835]);
+    fs.writeFileSync(result.outFile, result.code);
+    typecheck(root);
+  }, 30_000);
+
+  it("rejects semantic source changes and accepts their restoration", () => {
+    const root = fixture({ module: "NodeNext", moduleResolution: "NodeNext" }, "module", "ts");
+    const serviceFile = path.join(root, "src/Service.ts");
+    const serviceSource = fs.readFileSync(serviceFile, "utf8");
+    const result = compileDiGraph({ baseDir: root, outFile: "src/di.generated.ts" });
+    writeDiGraph(result);
+    typecheck(root);
+
+    fs.writeFileSync(serviceFile, serviceSource.replace("value = 37", 'value: number = "invalid"'));
+    typecheck(root, [2322]);
+    fs.writeFileSync(serviceFile, serviceSource);
     typecheck(root);
   }, 30_000);
 
