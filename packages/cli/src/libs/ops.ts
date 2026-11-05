@@ -93,7 +93,7 @@ export async function runOpsStatus(
     parseOpsTimeoutMs(options.timeoutMs ?? DEFAULT_TIMEOUT_MS) ?? DEFAULT_TIMEOUT_MS;
   const tokenHeader = options.tokenHeader ?? DEFAULT_TOKEN_HEADER;
   const requiredEndpoints = new Set(options.requiredEndpoints ?? STATUS_REQUIRED_ENDPOINTS);
-  const endpoints = selectOpsEndpoints(options.includeMetrics ?? true);
+  const endpoints = selectOpsEndpoints(options.includeMetrics ?? true, requiredEndpoints);
   const snapshots = await Promise.all(
     endpoints.map(async (endpoint) =>
       fetchOperationalEndpoint({
@@ -268,8 +268,11 @@ function isOperationalPayload(name: OpsEndpointName, body: unknown): boolean {
   return (body["status"] === "up" || body["status"] === "down") && Array.isArray(body["results"]);
 }
 
-function selectOpsEndpoints(includeMetrics: boolean): readonly (typeof OPS_ENDPOINTS)[number][] {
-  if (includeMetrics) {
+function selectOpsEndpoints(
+  includeMetrics: boolean,
+  requiredEndpoints: ReadonlySet<OpsEndpointName>,
+): readonly (typeof OPS_ENDPOINTS)[number][] {
+  if (includeMetrics || requiredEndpoints.has("metrics")) {
     return OPS_ENDPOINTS;
   }
 
