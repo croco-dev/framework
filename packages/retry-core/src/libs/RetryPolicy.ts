@@ -1,5 +1,6 @@
 import { Problem, ProblemCategory, readExplicitRetryability } from "@croco/problems-core";
 import { RetrySuccessHookProblem } from "./errors";
+import { unwrapCircuitBreakerBookkeepingError } from "./errors/CircuitBreakerBookkeepingProblem";
 
 /**
  * Determines whether an error should trigger a retry.
@@ -68,6 +69,8 @@ export class DefaultRetryPolicy implements RetryPolicy {
     if (attempt >= maxAttempts) {
       return false;
     }
+
+    error = unwrapCircuitBreakerBookkeepingError(error);
 
     if (error instanceof RetrySuccessHookProblem) {
       return false;

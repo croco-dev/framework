@@ -1,5 +1,6 @@
 ---
 "@croco/retry-core": patch
+"@croco/problems-core": patch
 ---
 
-Preserve the original operation failure and retry classification when circuit state bookkeeping fails, and report the store failure through the existing bookkeeping trace event.
+Expose operation and circuit-bookkeeping failures together in a typed Problem even without tracing, while retry policies retain the original operation's classification.

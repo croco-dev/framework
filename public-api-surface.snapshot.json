@@ -39345,6 +39345,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "CircuitBreakerBookkeepingProblem",
+              "exportKind": "named",
+              "source": "./libs/errors",
+              "declarationKind": "class"
+            },
+            {
               "name": "CircuitBreakerOpenProblem",
               "exportKind": "named",
               "source": "./libs/errors",

@@ -4,49 +4,101 @@
     {
       "package": "retry-core",
       "classification": "pure-contract",
-      "reason": "Preserve the primary operation or classifier error when failure bookkeeping throws and report the bookkeeping failure through the existing trace event. State writes and partial failure recovery remain owned by the existing state store.",
+      "reason": "Expose operation and circuit bookkeeping failures together in a typed Problem independently of tracing. Retry policy decisions use the original operation failure, while raw failures remain non-enumerable and outside public JSON and failed-operation trace attributes. Existing state-store writes and recovery ownership remain unchanged.",
       "files": {
-        "packages/retry-core/src/libs/CircuitBreaker.ts": "ad57bbeb10c5ba13e0c5d92cf2e8c8b744883a277fffe94de3b2584bef22f985"
+        "packages/retry-core/src/index.ts": "6621c1bfa8a9981b59722639252d4bc32e9e6f9c00552d6d24921abec0dbab99",
+        "packages/retry-core/src/libs/CircuitBreaker.ts": "70771b15ba9d5f703bd2bfd9bb28a9a5a786eee396e83067d35eed6c797be348",
+        "packages/retry-core/src/libs/RetryEngine.ts": "a4591071ba438e689a9929b9525f50e21b0f2c625ef13f266d88c83a41cd8aab",
+        "packages/retry-core/src/libs/RetryPolicy.ts": "17ebb2f688cb0de899e43230bd1552790c53ea074fbb9c35949c836dd29a5151",
+        "packages/retry-core/src/libs/errors/CircuitBreakerBookkeepingProblem.ts": "accd09b1ccf3d88d5d10c43edd8df7d3ff7b412323f55b74217d28c78d7c94db",
+        "packages/retry-core/src/libs/errors/index.ts": "0a6e556a32bf4c634a6d1b26d3d00c63a59c231d28a6026c83b249d702ec4f10"
       },
       "catalogRuntimes": [],
       "profiles": {
         "kubernetes": {
           "result": "not-applicable",
-          "reason": "This changes host-independent circuit error precedence and event reporting. It adds no Kubernetes Node Host capability, storage provider or lifecycle requirement.",
+          "reason": "This changes host-independent circuit failure diagnostics and retry classification. It adds no Kubernetes Node Host capability, storage provider or lifecycle requirement.",
           "providers": ["@croco/retry-core:CircuitBreakerStateStore"],
           "constraints": [
             "Partial state writes are not rolled back. Existing provider locking, storage availability and recovery requirements still apply. No host execution, deployment or provider certification is claimed."
           ],
           "references": [
             "packages/retry-core/src/libs/CircuitBreaker.ts",
-            "packages/retry-core/src/tests/CircuitBreaker.spec.ts",
+            "packages/retry-core/src/libs/errors/CircuitBreakerBookkeepingProblem.ts",
+            "packages/retry-core/src/tests/RetryCoreExports.spec.ts",
             "packages/retry-core/README.md"
           ]
         },
         "aws-lambda": {
           "result": "not-applicable",
-          "reason": "This changes host-independent circuit error precedence and event reporting. It adds no Lambda Host capability, storage provider or lifecycle requirement.",
+          "reason": "This changes host-independent circuit failure diagnostics and retry classification. It adds no Lambda Host capability, storage provider or lifecycle requirement.",
           "providers": ["@croco/retry-core:CircuitBreakerStateStore"],
           "constraints": [
             "Partial state writes are not rolled back. Existing provider locking, storage availability and recovery requirements still apply. No host execution, deployment or provider certification is claimed."
           ],
           "references": [
             "packages/retry-core/src/libs/CircuitBreaker.ts",
-            "packages/retry-core/src/tests/CircuitBreaker.spec.ts",
+            "packages/retry-core/src/libs/errors/CircuitBreakerBookkeepingProblem.ts",
+            "packages/retry-core/src/tests/RetryCoreExports.spec.ts",
             "packages/retry-core/README.md"
           ]
         },
         "cloudflare": {
           "result": "not-applicable",
-          "reason": "This changes host-independent circuit error precedence and event reporting. It adds no Workers or Node Container Host capability, storage provider or lifecycle requirement.",
+          "reason": "This changes host-independent circuit failure diagnostics and retry classification. It adds no Workers or Node Container Host capability, storage provider or lifecycle requirement.",
           "providers": ["@croco/retry-core:CircuitBreakerStateStore"],
           "constraints": [
             "Partial state writes are not rolled back. Existing provider locking, storage availability and recovery requirements still apply. No host execution, deployment or provider certification is claimed."
           ],
           "references": [
             "packages/retry-core/src/libs/CircuitBreaker.ts",
-            "packages/retry-core/src/tests/CircuitBreaker.spec.ts",
+            "packages/retry-core/src/libs/errors/CircuitBreakerBookkeepingProblem.ts",
+            "packages/retry-core/src/tests/RetryCoreExports.spec.ts",
             "packages/retry-core/README.md"
+          ]
+        }
+      }
+    },
+    {
+      "package": "problems-core",
+      "classification": "pure-contract",
+      "reason": "The canonical Problem registry generator adds the bookkeeping diagnostic code and its existing InternalServerError recovery metadata. This adds contract data only, without a provider dependency or Host behavior.",
+      "files": {
+        "packages/problems-core/src/generated/problem-code-registry.ts": "7df0495669b4309265d9a01c828eb7bcba0a608d7a31c6e9ab67a423e9d8f7ad"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Generated Problem code metadata has no Host capability, storage or deployment lifecycle dependency. No runtime support is added.",
+          "providers": [],
+          "constraints": ["No host execution, deployment or provider certification is claimed."],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "docs/problem-code-registry.json",
+            "packages/retry-core/src/libs/errors/CircuitBreakerBookkeepingProblem.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Generated Problem code metadata has no Host capability, storage or deployment lifecycle dependency. No runtime support is added.",
+          "providers": [],
+          "constraints": ["No host execution, deployment or provider certification is claimed."],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "docs/problem-code-registry.json",
+            "packages/retry-core/src/libs/errors/CircuitBreakerBookkeepingProblem.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Generated Problem code metadata has no Host capability, storage or deployment lifecycle dependency. No runtime support is added.",
+          "providers": [],
+          "constraints": ["No host execution, deployment or provider certification is claimed."],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "docs/problem-code-registry.json",
+            "packages/retry-core/src/libs/errors/CircuitBreakerBookkeepingProblem.ts"
           ]
         }
       }

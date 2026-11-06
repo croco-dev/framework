@@ -1,3 +1,4 @@
+export { CircuitBreakerBookkeepingProblem } from "./CircuitBreakerBookkeepingProblem";
 export { CircuitBreakerOpenProblem } from "./CircuitBreakerOpenProblem";
 export { DuplicateRecoverHandlerProblem } from "./DuplicateRecoverHandlerProblem";
 export { RetryAbortedProblem } from "./RetryAbortedProblem";

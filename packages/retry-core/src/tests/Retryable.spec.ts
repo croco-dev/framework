@@ -968,7 +968,10 @@ describe("@Retryable", () => {
     const firstCall = service.doWork(1);
     await vi.waitFor(() => expect(entered).toEqual([1]));
 
-    await expect(service.doWork(2)).rejects.toThrow("dependency failed");
+    await expect(service.doWork(2)).rejects.toMatchObject({
+      operationError: new Error("dependency failed"),
+      bookkeepingError: new Error("lock unavailable"),
+    });
 
     const thirdCall = service.doWork(3);
     await vi.waitFor(() => expect(entered).toEqual([1, 2, 3]));

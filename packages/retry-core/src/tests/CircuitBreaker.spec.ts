@@ -8,6 +8,7 @@ import {
   CircuitState,
   InMemoryCircuitBreakerStateStore,
 } from "../libs/CircuitBreakerState";
+import { CircuitBreakerBookkeepingProblem } from "../libs/errors/CircuitBreakerBookkeepingProblem";
 import { CircuitBreakerOpenProblem } from "../libs/errors/CircuitBreakerOpenProblem";
 import { DefaultRetryPolicy } from "../libs/RetryPolicy";
 import { RetryTemplate } from "../libs/RetryTemplate";
@@ -957,15 +958,24 @@ describe("CircuitBreaker", () => {
         const fallback = vi.fn(async () => "fallback");
         const breaker = createBreaker({ stateStore, failureThreshold: 1, fallback });
 
-        await expect(breaker.execute(async () => Promise.reject(upstream))).rejects.toBe(upstream);
-        expect(new DefaultRetryPolicy().shouldRetry(upstream, 1, 3)).toBe(false);
+        const failure = await breaker
+          .execute(async () => Promise.reject(upstream))
+          .catch((error: unknown) => error);
+        expect(failure).toBeInstanceOf(CircuitBreakerBookkeepingProblem);
+        expect(failure).toMatchObject({
+          cause: upstream,
+          operationError: upstream,
+          bookkeepingError: storeFailure,
+        });
+        expect(new DefaultRetryPolicy().shouldRetry(failure, 1, 3)).toBe(false);
         expect(fallback).not.toHaveBeenCalled();
         expect(await breaker.getState()).toBe(state);
         expect(recordEvent).toHaveBeenCalledWith("circuit_breaker.bookkeeping_failed", {
           "circuit.id": "test-circuit",
           "circuit.state": state,
-          "error.message": "Store write failed",
-          "error.type": "Error",
+          "error.message": "Circuit state recording failed after an operation failure",
+          "error.type": "CircuitBreakerBookkeepingProblem",
+          "error.code": "retry-core/circuit-bookkeeping-failed",
           "operation.succeeded": false,
         });
 
@@ -1009,17 +1019,20 @@ describe("CircuitBreaker", () => {
           throw upstream;
         };
 
-        await expect(breaker.execute(fn)).rejects.toBe(
-          classification === "ignored" ? upstream : classificationFailure,
-        );
+        await expect(breaker.execute(fn)).rejects.toMatchObject({
+          cause: classification === "ignored" ? upstream : classificationFailure,
+          operationError: classification === "ignored" ? upstream : classificationFailure,
+          bookkeepingError: new Error("Slot release failed"),
+        });
         expect(recordFailure).toHaveBeenCalledExactlyOnceWith(upstream);
         expect(await breaker.getFailureCount()).toBe(0);
         expect(await breaker.getState()).toBe(CircuitState.HALF_OPEN);
         expect(recordEvent).toHaveBeenCalledWith("circuit_breaker.bookkeeping_failed", {
           "circuit.id": "test-circuit",
           "circuit.state": CircuitState.HALF_OPEN,
-          "error.message": "Slot release failed",
-          "error.type": "Error",
+          "error.message": "Circuit state recording failed after an operation failure",
+          "error.type": "CircuitBreakerBookkeepingProblem",
+          "error.code": "retry-core/circuit-bookkeeping-failed",
           "operation.succeeded": false,
         });
       },
@@ -1036,7 +1049,32 @@ describe("CircuitBreaker", () => {
       const breaker = createBreaker({ stateStore });
       const upstream = new Error("Original dependency failure");
 
-      await expect(breaker.execute(async () => Promise.reject(upstream))).rejects.toBe(upstream);
+      await expect(breaker.execute(async () => Promise.reject(upstream))).rejects.toMatchObject({
+        cause: upstream,
+        operationError: upstream,
+        bookkeepingError: new Error("Store write failed"),
+      });
+    });
+
+    it("does not copy raw operation or store failure messages into trace attributes", async () => {
+      const stateStore = new InMemoryCircuitBreakerStateStore({ now });
+      const bookkeepingError = Object.assign(new Error("store-private-password"), {
+        name: "private-store-name",
+      });
+      vi.spyOn(stateStore, "incrementFailureAndCheck").mockRejectedValueOnce(bookkeepingError);
+      const operationError = new Error("upstream-private-token");
+      const breaker = createBreaker({ stateStore });
+
+      await expect(
+        breaker.execute(async () => Promise.reject(operationError)),
+      ).rejects.toMatchObject({
+        operationError,
+        bookkeepingError,
+      });
+      const attributes = JSON.stringify(vi.mocked(recordEvent).mock.calls);
+      expect(attributes).not.toContain("store-private-password");
+      expect(attributes).not.toContain("private-store-name");
+      expect(attributes).not.toContain("upstream-private-token");
     });
 
     it("CLOSED 성공 bookkeeping 실패가 성공 결과를 덮거나 실패 카운터를 증가시키지 않아야 한다", async () => {
@@ -1161,12 +1199,16 @@ describe("CircuitBreaker", () => {
       const upstream = new Error("fail");
       const fn = vi.fn().mockRejectedValue(upstream);
 
-      await expect(breaker.execute(fn)).rejects.toBe(upstream);
+      await expect(breaker.execute(fn)).rejects.toMatchObject({
+        cause: upstream,
+        operationError: upstream,
+      });
       expect(recordEvent).toHaveBeenCalledWith("circuit_breaker.bookkeeping_failed", {
         "circuit.id": "test-circuit",
         "circuit.state": CircuitState.CLOSED,
-        "error.message": "Store write failed",
-        "error.type": "Error",
+        "error.message": "Circuit state recording failed after an operation failure",
+        "error.type": "CircuitBreakerBookkeepingProblem",
+        "error.code": "retry-core/circuit-bookkeeping-failed",
         "operation.succeeded": false,
       });
     });

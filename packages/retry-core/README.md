@@ -124,7 +124,15 @@ HALF_OPEN 상태, generation marker(마지막 실패 시각), 활성 슬롯 및 
 
 `LambdaTimeoutGuard`는 다음 재시도를 시작할 시간이 부족하면 `LambdaTimeoutProblem`을 throw합니다. 열린 서킷은 `CircuitBreakerOpenProblem`을 throw하며 category는 `TooManyRequests`입니다. 두 실패 모두 generic `Error`가 아니라 Croco `Problem`이므로 호출자는 코드와 category로 복구 경로를 판단할 수 있습니다.
 
-서킷 브레이커의 보호 대상 작업이 성공한 뒤 상태 저장소의 성공 bookkeeping이 실패하더라도 완료된 작업 결과는 실패로 바뀌지 않으며 실패 카운터도 증가하지 않습니다. 활성 trace에는 `circuit_breaker.bookkeeping_failed` 이벤트가 기록되므로 저장소 장애를 업무 작업의 재시도와 분리해 관찰할 수 있습니다. 작업이 실패한 뒤 실패 횟수 기록, HALF_OPEN 실패 전이 또는 slot 반납이 실패해도 원래 작업 오류를 전달합니다. 사용자 `recordFailure`가 던진 오류도 slot 반납 장애로 덮지 않습니다. 같은 이벤트의 `operation.succeeded`가 `false`이면 실패한 작업의 상태 기록이 완료되지 않았다는 뜻이며, `error.message`와 `error.type`은 저장소 오류를 나타냅니다. 이벤트의 `circuit.state`는 기록을 시작한 상태이며 최종 저장 상태를 보장하지 않습니다. 일부 쓰기만 반영될 수 있으므로 upstream 작업이 종료된 것을 확인하고 저장소를 복구한 뒤 상태를 조회해야 합니다. HALF_OPEN slot이 남았다면 위의 `forceOpen()` 복구 절차를 따릅니다. trace가 없거나 telemetry 기록도 실패하면 이 이벤트는 남지 않지만 원래 작업 오류는 유지됩니다.
+서킷 브레이커의 보호 대상 작업이 성공한 뒤 상태 저장소의 성공 bookkeeping이 실패하더라도 완료된 작업 결과는 실패로 바뀌지 않으며 실패 카운터도 증가하지 않습니다. 활성 trace에는 `circuit_breaker.bookkeeping_failed` 이벤트가 기록됩니다.
+
+작업 실패 뒤 실패 횟수 기록, HALF_OPEN 실패 전이 또는 slot 반납도 실패하면 `CircuitBreakerBookkeepingProblem`(`retry-core/circuit-bookkeeping-failed`)이 발생합니다. `operationError`에는 원래 거절 값이, `bookkeepingError`에는 저장소 오류가 보존됩니다. 원래 값이 `Error`이면 `cause`도 같은 객체를 가리키므로 기존 cause chain을 읽을 수 있습니다. 사용자 `recordFailure`가 던진 오류 뒤 slot 반납이 실패한 경우에는 기존 classifier 우선순위에 따라 그 classifier 오류가 `operationError`가 됩니다. 기록이 성공하면 기존 오류를 그대로 전달합니다.
+
+`DefaultRetryPolicy`는 중첩된 bookkeeping Problem의 원래 작업 오류를 기준으로 category, `retryFor`/`noRetryFor`, 명시적인 `retryable`을 판단합니다. 재시도 엔진도 사용자 `RetryPolicy`에 원래 작업 오류를 전달하며, `Error`가 아닌 값에는 기존 Error 정규화를 적용합니다. 오류 훅과 recovery context에는 두 실패를 담은 Problem이 남습니다. 원래 오류가 `RetrySuccessHookProblem`이면 사용자 정책과 관계없이 작업을 다시 실행하지 않습니다.
+
+두 원본 오류는 trace 유무나 telemetry 기록 성공 여부와 관계없이 Problem 객체에서 읽을 수 있습니다. 원본 오류는 enumerable 속성과 공개 JSON에서 제외하며, JSON의 추가 진단에는 circuit ID, 처리 경로의 `state`, `operationSucceeded: false`, `bookkeepingRecorded: false`, 명시된 경우의 `retryable`을 포함합니다. 기존 trace 이벤트의 `operation.succeeded`도 `false`가 되며, 결합 Problem의 code·안전한 설명·type을 기록합니다. 두 원본 오류의 메시지는 이 실패 이벤트에 복제하지 않습니다.
+
+상태 기록은 일부 쓰기만 반영될 수 있고 자동으로 롤백되지 않습니다. Problem의 `state`와 이벤트의 `circuit.state`는 CLOSED/HALF_OPEN 처리 경로를 나타내며 최종 저장 상태를 보장하지 않습니다. upstream 작업이 종료된 것을 확인하고 저장소를 복구한 뒤 상태를 조회해야 합니다. HALF_OPEN slot이 남았다면 위의 `forceOpen()` 복구 절차를 따릅니다.
 
 업무 콜백이 성공한 뒤 `RetryListener.onSuccess` 또는 저수준 `RetryHooks.onSuccess`가 실패하면 콜백과 recovery는 다시 실행되지 않습니다. 대신 `RetrySuccessHookProblem`이 throw되며 `callbackSucceeded: true`, 훅 이름, 메서드 이름, 성공 시도 횟수와 원래 오류를 제공합니다. 따라서 호출자는 성공한 비멱등 작업을 재호출하지 않고 관측·리스너 장애를 별도로 처리해야 합니다.
 
@@ -135,5 +143,5 @@ HALF_OPEN 상태, generation marker(마지막 실패 시각), 활성 슬롯 및 
 - 정책과 백오프: `DefaultRetryPolicy`, `ExponentialBackoff`, `FixedBackoff`, `NoBackoff`
 - 서킷 브레이커: `CircuitBreaker`, `CircuitBreakerRetryTemplate`, `CircuitState`, `InMemoryCircuitBreakerStateStore`, `RedisCircuitBreakerStore`
 - Lambda 연동: `LambdaTimeoutGuard`, `setLambdaContext`, `getRemainingTimeInMillis`, `hasTimeForRetry`
-- Problem 타입: `RetryExhaustedProblem`, `RetryAbortedProblem`, `RetrySuccessHookProblem`, `LambdaTimeoutProblem`, `CircuitBreakerOpenProblem`, `CircuitBreakerUnexpectedStateProblem`, `InvalidRetryConfigurationProblem`
+- Problem 타입: `CircuitBreakerBookkeepingProblem`, `RetryExhaustedProblem`, `RetryAbortedProblem`, `RetrySuccessHookProblem`, `LambdaTimeoutProblem`, `CircuitBreakerOpenProblem`, `CircuitBreakerUnexpectedStateProblem`, `InvalidRetryConfigurationProblem`
 - 타입: `RetryableOptions`, `RetryTemplateOptions`, `RetryHooks`, `BackoffOptions`, `CircuitBreakerConfig`, `CircuitBreakerOptions`, `RetryListener`
