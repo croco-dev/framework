@@ -859,16 +859,59 @@ describe("InMemoryRateLimitStore", () => {
       expect(result.remaining).toBe(2);
     });
 
-    it("should delete bucket on expire(key, ttlMs)", async () => {
-      await tokenStore.check("user:expire", tokenPolicy);
+    it.each([10_000, 0, -1])(
+      "should expire only the counter while preserving quota and refund receipts for TTL %s",
+      async (ttlMs) => {
+        const key = "user:expire";
+        const slowPolicy: TokenBucketPolicy = {
+          ...tokenPolicy,
+          capacity: 1,
+          refillIntervalMs: 60_000,
+        };
+        const admission = await tokenStore.check(key, slowPolicy);
+        expect(admission.success).toBe(true);
+        expect(await tokenStore.increment(key, 5)).toBe(5);
 
-      // Expire the bucket
-      await tokenStore.expire("user:expire", 0);
+        await tokenStore.expire(key, ttlMs);
+        expect(await tokenStore.getCount(key)).toBe(ttlMs > 0 ? 5 : 0);
+        expect((await tokenStore.check(key, slowPolicy)).success).toBe(false);
 
-      // After expire, next check should create a fresh bucket
-      const result = await tokenStore.check("user:expire", tokenPolicy);
-      expect(result.success).toBe(true);
-      expect(result.remaining).toBe(2);
+        if (ttlMs > 0) {
+          now += ttlMs - 1;
+          expect(await tokenStore.getCount(key)).toBe(5);
+          expect((await tokenStore.check(key, slowPolicy)).success).toBe(false);
+          now += 1;
+          expect(await tokenStore.getCount(key)).toBe(0);
+          expect((await tokenStore.check(key, slowPolicy)).success).toBe(false);
+          now += 1;
+          expect(await tokenStore.getCount(key)).toBe(0);
+          expect((await tokenStore.check(key, slowPolicy)).success).toBe(false);
+        }
+
+        expect((await tokenStore.refund(key, slowPolicy, admission.refundReceipt)).refunded).toBe(
+          true,
+        );
+        expect((await tokenStore.refund(key, slowPolicy, admission.refundReceipt)).refunded).toBe(
+          false,
+        );
+        expect((await tokenStore.check(key, slowPolicy)).success).toBe(true);
+        expect((await tokenStore.check(key, slowPolicy)).success).toBe(false);
+      },
+    );
+
+    it("should prune an expired counter without removing an active bucket or refund receipt", async () => {
+      const key = "user:prune-counter";
+      const admission = await tokenStore.check(key, tokenPolicy);
+      await tokenStore.increment(key, 5);
+      await tokenStore.expire(key, 100);
+      now += 100;
+
+      expect(await tokenStore.pruneExpired()).toBe(1);
+      expect(await tokenStore.getCount(key)).toBe(0);
+      expect((await tokenStore.refund(key, tokenPolicy, admission.refundReceipt)).refunded).toBe(
+        true,
+      );
+      expect((await tokenStore.check(key, tokenPolicy)).remaining).toBe(2);
     });
   });
 });
@@ -1116,7 +1159,7 @@ it("resets all sliding keys including an admission that has not stored its first
   expect((await store.check("new-key", policy)).success).toBe(false);
 });
 
-it("expires a token bucket after pending admission without reviving its receipt", async () => {
+it("preserves pending admission and its receipt when expiring a missing token counter", async () => {
   const store = new TokenBucketInMemoryStore({ now: () => 10_000, pruneIntervalMs: 0 });
   const policy: TokenBucketPolicy = {
     name: "expire",
@@ -1130,7 +1173,28 @@ it("expires a token bucket after pending admission without reviving its receipt"
   const after = store.check("key", policy);
   const receipt = (await before).refundReceipt;
   await expired;
-  expect((await after).success).toBe(true);
-  expect((await store.refund("key", policy, receipt)).refunded).toBe(false);
+  expect((await after).success).toBe(false);
+  expect((await store.refund("key", policy, receipt)).refunded).toBe(true);
+  expect((await store.check("key", policy)).success).toBe(true);
   expect((await store.check("key", policy)).success).toBe(false);
 });
+
+describe.each([FixedWindowInMemoryStore, SlidingWindowInMemoryStore, TokenBucketInMemoryStore])(
+  "%s counter TTL conformance",
+  (Store) => {
+    it("retains the value until the exact TTL boundary and starts a new counter afterward", async () => {
+      let now = 1000;
+      const store = new Store({ now: () => now, pruneIntervalMs: 0 });
+      expect(await store.increment("counter", 5)).toBe(5);
+      await store.expire("counter", 10_000);
+      now = 10_999;
+      expect(await store.getCount("counter")).toBe(5);
+      now = 11_000;
+      expect(await store.getCount("counter")).toBe(0);
+      now = 11_001;
+      expect(await store.getCount("counter")).toBe(0);
+      expect(await store.increment("counter", 2)).toBe(2);
+      store.close();
+    });
+  },
+);

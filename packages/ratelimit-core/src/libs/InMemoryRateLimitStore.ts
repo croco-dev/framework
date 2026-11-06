@@ -611,9 +611,7 @@ export class TokenBucketInMemoryStore extends TokenBucketStore {
 
   async expire(key: string, ttlMs: number): Promise<void> {
     return this.operations.run(key, async () => {
-      this.buckets.delete(key);
       expireCounter(this.counters, key, ttlMs, this.now());
-      this.clearTokenBucketRefundReceipts(key);
     });
   }
 
