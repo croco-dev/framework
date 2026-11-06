@@ -753,7 +753,15 @@ export async function readOptionalJsonResult<Problem extends ProblemDeclaration 
     return { ok: true, data: undefined, response };
   }
 
-  const body = await response.text();
+  let body: string;
+  try {
+    body = await response.text();
+  } catch (cause) {
+    if (isAbortError(cause)) {
+      throw cause;
+    }
+    return toProblemResponseFailure(response, undefined, cause);
+  }
 
   if (body.length === 0) {
     return { ok: true, data: undefined, response };
@@ -780,7 +788,15 @@ export async function readOptionalJsonProblemResult<
     return { ok: true, data: undefined, response };
   }
 
-  const body = await response.text();
+  let body: string;
+  try {
+    body = await response.text();
+  } catch (cause) {
+    if (isAbortError(cause)) {
+      throw cause;
+    }
+    return toProblemResponseFailure(response, undefined, cause);
+  }
 
   if (body.length === 0) {
     return { ok: true, data: undefined, response };

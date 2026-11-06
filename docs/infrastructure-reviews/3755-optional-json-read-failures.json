@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "frontend-problems",
+      "classification": "pure-contract",
+      "reason": "Optional JSON result readers preserve response-body read failures as external failures with the original cause, while retaining cancellation and existing JSON parsing evidence. Public signatures and runtime support claims remain unchanged.",
+      "files": {
+        "packages/frontend-problems/src/index.ts": "ed296f6e8803d912378aa6acf838155d5fccbc4698ad5aea6821c5e9878e6bb2"
+      },
+      "catalogRuntimes": ["browser", "cloudflare-workers"],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Optional JSON response failure conversion uses the existing Fetch Response contract and has no Kubernetes Node Host capability, storage or lifecycle dependency.",
+          "providers": [],
+          "constraints": [
+            "AbortError remains cancellation. No Host support, live deployment or provider certification is claimed."
+          ],
+          "references": [
+            "packages/frontend-problems/src/index.ts",
+            "packages/frontend-problems/src/tests/problemClient.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Optional JSON response failure conversion uses the existing Fetch Response contract and has no AWS Lambda Host capability, storage or lifecycle dependency.",
+          "providers": [],
+          "constraints": [
+            "AbortError remains cancellation. No Host support, live deployment or provider certification is claimed."
+          ],
+          "references": [
+            "packages/frontend-problems/src/index.ts",
+            "packages/frontend-problems/src/tests/problemClient.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Optional JSON response failure conversion uses the existing Fetch Response contract and has no Cloudflare Workers or Node Container Host capability, storage or lifecycle dependency.",
+          "providers": [],
+          "constraints": [
+            "AbortError remains cancellation. No Host support, live deployment or provider certification is claimed."
+          ],
+          "references": [
+            "packages/frontend-problems/src/index.ts",
+            "packages/frontend-problems/src/tests/problemClient.spec.ts"
+          ]
+        }
+      }
+    }
+  ]
+}
