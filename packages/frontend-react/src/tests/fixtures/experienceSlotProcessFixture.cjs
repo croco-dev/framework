@@ -96,18 +96,28 @@ if (mode === "experiment-region-cleanup") {
       { stdio: "ignore", detached: role === "parent" && mode.includes("detached") },
     );
     descendant.unref();
+    if (role === "parent" && mode.endsWith("startup-stall")) {
+      const deadline = Date.now() + 1_000;
+      const wait = new Int32Array(new SharedArrayBuffer(4));
+      while (!existsSync(join(directory, "descendants-ready")) && Date.now() < deadline)
+        Atomics.wait(wait, 0, 0, 5);
+      // Exercise descendants becoming ready while their parent is still initializing.
+      Atomics.wait(wait, 0, 0, 250);
+    }
     if (role === "parent" && mode.includes("detached") && !mode.includes("unregistered"))
       diagnostic("chromium.process", "owned", { pid: descendant.pid });
   } else {
-    writeFileSync(join(directory, "ready"), "ready");
+    writeFileSync(join(directory, "descendants-ready"), "ready");
   }
   diagnostic(role, "completed");
   if (mode === "json-hang") process.stdout.write("[]");
   const keepAlive = setInterval(() => {}, 10_000);
-  if (role === "parent" && mode.startsWith("parent-")) {
+  if (role === "parent") {
     const readyCheck = setInterval(() => {
-      if (!existsSync(join(directory, "ready"))) return;
+      if (!existsSync(join(directory, "descendants-ready"))) return;
       clearInterval(readyCheck);
+      writeFileSync(join(directory, "ready"), "ready");
+      if (!mode.startsWith("parent-")) return;
       clearInterval(keepAlive);
       if (mode.startsWith("parent-signaled")) {
         process.removeAllListeners("SIGTERM");
