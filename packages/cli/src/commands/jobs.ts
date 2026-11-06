@@ -553,51 +553,46 @@ function createHttpJobsClient(target: string, options: RunJobsOptions): JobsComm
 
   return {
     list(filters?: JobsListFilters): Promise<JobListReport> {
-      return requestJobsEndpoint(target, "", {
+      return requestJobsEndpoint(target, "", isJobListReport, {
         fetchJobEndpoint,
         token: options.token,
         tokenHeader,
         timeoutMs,
         query: filters,
-        validate: isJobListReport,
       });
     },
     show(id: string): Promise<JobDetails> {
-      return requestJobsEndpoint(target, `/${encodeURIComponent(id)}`, {
+      return requestJobsEndpoint(target, `/${encodeURIComponent(id)}`, isJobDetails, {
         fetchJobEndpoint,
         token: options.token,
         tokenHeader,
         timeoutMs,
-        validate: isJobDetails,
       });
     },
     logs(id: string): Promise<readonly JobLogEntry[]> {
-      return requestJobsEndpoint(target, `/${encodeURIComponent(id)}/logs`, {
+      return requestJobsEndpoint(target, `/${encodeURIComponent(id)}/logs`, isJobLogs, {
         fetchJobEndpoint,
         token: options.token,
         tokenHeader,
         timeoutMs,
-        validate: isJobLogs,
       });
     },
     cancel(id: string, params = {}): Promise<JobDetails> {
-      return requestJobsEndpoint(target, `/${encodeURIComponent(id)}/cancel`, {
+      return requestJobsEndpoint(target, `/${encodeURIComponent(id)}/cancel`, isJobDetails, {
         fetchJobEndpoint,
         token: options.token,
         tokenHeader,
         timeoutMs,
-        validate: isJobDetails,
         method: "POST",
         body: params,
       });
     },
     replay(id: string, params = {}): Promise<JobDetails> {
-      return requestJobsEndpoint(target, `/${encodeURIComponent(id)}/replay`, {
+      return requestJobsEndpoint(target, `/${encodeURIComponent(id)}/replay`, isJobDetails, {
         fetchJobEndpoint,
         token: options.token,
         tokenHeader,
         timeoutMs,
-        validate: isJobDetails,
         method: "POST",
         body: params,
       });
@@ -608,6 +603,7 @@ function createHttpJobsClient(target: string, options: RunJobsOptions): JobsComm
 async function requestJobsEndpoint<T>(
   target: string,
   path: string,
+  validate: (body: unknown) => body is T,
   options: {
     readonly fetchJobEndpoint: JobsStatusFetch;
     readonly timeoutMs: number;
@@ -616,7 +612,6 @@ async function requestJobsEndpoint<T>(
     readonly method?: "GET" | "POST";
     readonly body?: unknown;
     readonly query?: Record<string, unknown>;
-    readonly validate: (body: unknown) => body is T;
   },
 ): Promise<T> {
   const controller = new AbortController();
@@ -650,7 +645,7 @@ async function requestJobsEndpoint<T>(
       throw new JobsHttpProblem(response.status, describeErrorBody(body));
     }
 
-    if (!options.validate(body)) {
+    if (!validate(body)) {
       throw new InvalidJobsResponseProblem();
     }
     return body;
@@ -664,12 +659,12 @@ async function requestJobsEndpoint<T>(
 function isJobListReport(value: unknown): value is JobListReport {
   return (
     isRecord(value) &&
-    (value.summary === "healthy" || value.summary === "attention") &&
-    typeof value.generatedAt === "string" &&
-    isJobCount(value.total) &&
-    isJobCount(value.attentionCount) &&
-    Array.isArray(value.jobs) &&
-    value.jobs.every(isJobSummary)
+    (value["summary"] === "healthy" || value["summary"] === "attention") &&
+    typeof value["generatedAt"] === "string" &&
+    isJobCount(value["total"]) &&
+    isJobCount(value["attentionCount"]) &&
+    Array.isArray(value["jobs"]) &&
+    value["jobs"].every(isJobSummary)
   );
 }
 
@@ -680,53 +675,53 @@ function isJobCount(value: unknown): value is number {
 function isJobSummary(value: unknown): value is JobSummary {
   return (
     isRecord(value) &&
-    typeof value.id === "string" &&
-    typeof value.type === "string" &&
-    typeof value.status === "string" &&
-    isJobCount(value.attempts) &&
-    isJobCount(value.maxAttempts) &&
-    typeof value.createdAt === "string" &&
-    isJobCount(value.logCount) &&
+    typeof value["id"] === "string" &&
+    typeof value["type"] === "string" &&
+    typeof value["status"] === "string" &&
+    isJobCount(value["attempts"]) &&
+    isJobCount(value["maxAttempts"]) &&
+    typeof value["createdAt"] === "string" &&
+    isJobCount(value["logCount"]) &&
     ["workflowName", "startedAt", "completedAt", "replayOf", "errorMessage"].every(
       (key) => value[key] === undefined || typeof value[key] === "string",
     ) &&
-    isJobFailurePolicy(value.failurePolicy)
+    isJobFailurePolicy(value["failurePolicy"])
   );
 }
 
 function isJobFailurePolicy(value: unknown): value is JobFailurePolicy {
   return (
     isRecord(value) &&
-    typeof value.state === "string" &&
-    typeof value.needsAttention === "boolean" &&
-    typeof value.retryable === "boolean" &&
-    typeof value.replayable === "boolean" &&
-    typeof value.recoveryAction === "string" &&
-    typeof value.reason === "string"
+    typeof value["state"] === "string" &&
+    typeof value["needsAttention"] === "boolean" &&
+    typeof value["retryable"] === "boolean" &&
+    typeof value["replayable"] === "boolean" &&
+    typeof value["recoveryAction"] === "string" &&
+    typeof value["reason"] === "string"
   );
 }
 
 function isJobDetails(value: unknown): value is JobDetails {
   return (
     isRecord(value) &&
-    (value.metadata === undefined || isRecord(value.metadata)) &&
-    (value.checkpoints === undefined || isRecord(value.checkpoints)) &&
-    isJobLogs(value.logs) &&
+    (value["metadata"] === undefined || isRecord(value["metadata"])) &&
+    (value["checkpoints"] === undefined || isRecord(value["checkpoints"])) &&
+    isJobLogs(value["logs"]) &&
     isJobSummary(value)
   );
 }
 
 function isJobLogs(value: unknown): value is readonly JobLogEntry[] {
-  return Array.isArray(value) && value.every(isJobLogEntry);
+  return Array.isArray(value) && value["every"](isJobLogEntry);
 }
 
 function isJobLogEntry(value: unknown): value is JobLogEntry {
   return (
     isRecord(value) &&
-    typeof value.timestamp === "string" &&
-    typeof value.level === "string" &&
-    typeof value.message === "string" &&
-    (value.data === undefined || isRecord(value.data))
+    typeof value["timestamp"] === "string" &&
+    typeof value["level"] === "string" &&
+    typeof value["message"] === "string" &&
+    (value["data"] === undefined || isRecord(value["data"]))
   );
 }
 

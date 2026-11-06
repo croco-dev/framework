@@ -6,7 +6,7 @@
       "classification": "runtime-adapter",
       "reason": "Validate Jobs HTTP response shapes in the local operator CLI before formatting and exit-code selection. This does not change server execution policy, infrastructure capabilities, storage or Host lifecycle.",
       "files": {
-        "packages/cli/src/commands/jobs.ts": "9c8afbd57d45e304d58356a389f109d65271bcd6f9ee5c48592d36e91b279441",
+        "packages/cli/src/commands/jobs.ts": "dd3d915caee1c7f500096041620c2067f73ea3a78271434522eedb59a45b05bf",
         "packages/cli/src/libs/diagnosticCodes.ts": "42f2e6993d657371cde559eff54c23ab67c786ec99a5c3d32fb930a1d5393e0a"
       },
       "catalogRuntimes": [],
@@ -80,7 +80,7 @@
       "classification": "pure-contract",
       "reason": "Regenerate the typed Problem registry for the invalid Jobs response diagnostic. This metadata update does not introduce deployment capabilities, storage or Host lifecycle requirements.",
       "files": {
-        "packages/problems-core/src/generated/problem-code-registry.ts": "ddb3291ec3202093ddc3e0ba672086a9ab0d269ff264abcb6e4c2a27e2a4cc55"
+        "packages/problems-core/src/generated/problem-code-registry.ts": "a2df48eeece23d19f47ae8ae4512e4c0eace0da970cda6b6c2d9ed82ae4e7397"
       },
       "catalogRuntimes": [],
       "profiles": {
