@@ -1,3 +1,4 @@
+import { ts } from "ts-morph";
 import { CliError } from "../libs/CliError.js";
 
 export type TextReplacement = {
@@ -24,7 +25,7 @@ export type UpgradeRuleResult = {
 
 export type UpgradeRule = {
   readonly id: string;
-  analyze(content: string): UpgradeRuleResult;
+  analyze(content: string, fileName?: string): UpgradeRuleResult;
 };
 
 export type UpgradeRuleAnalysis = {
@@ -92,8 +93,8 @@ export const routeConfigUpgradeRule: UpgradeRule = {
 
 export const legacyHttpSecurityUpgradeRule: UpgradeRule = {
   id: "legacy-http-security",
-  analyze(content) {
-    const matches = findLegacyHttpSecurityCodeMatches(content);
+  analyze(content, fileName) {
+    const matches = findLegacyHttpSecurityCodeMatches(content, fileName);
     const safeMatches = matches.filter((match) => match.safe);
     const manualMatches = matches.filter((match) => !match.safe);
     const findings: FileFinding[] = [];
@@ -172,8 +173,9 @@ export const upgradeRules: readonly UpgradeRule[] = [
 export function applyUpgradeRules(
   content: string,
   rules: readonly UpgradeRule[] = upgradeRules,
+  fileName?: string,
 ): UpgradeRuleAnalysis {
-  const results = rules.map((rule) => rule.analyze(content));
+  const results = rules.map((rule) => rule.analyze(content, fileName));
   const findings = results.flatMap((result) => result.findings);
   const replacements = results.flatMap((result) => result.replacements);
 
@@ -223,10 +225,14 @@ type LegacyHttpSecurityCodeMatch = {
 
 function findLegacyHttpSecurityCodeMatches(
   content: string,
+  fileName?: string,
 ): readonly LegacyHttpSecurityCodeMatch[] {
   const pattern = new RegExp(`(['"])${LEGACY_HTTP_SECURITY_CODE}\\1`, "g");
+  const matches = [...content.matchAll(pattern)];
+  if (matches.length === 0) return [];
+  const safeLiteralStarts = findProblemCodeComparisonLiterals(content, fileName);
 
-  return [...content.matchAll(pattern)].flatMap((match) => {
+  return matches.flatMap((match) => {
     if (typeof match.index !== "number") {
       return [];
     }
@@ -236,25 +242,50 @@ function findLegacyHttpSecurityCodeMatches(
         index: match.index,
         text: match[0],
         quote: match[1] ?? "'",
-        safe: isProblemCodeComparison(content, match.index, match[0].length),
+        safe: safeLiteralStarts.has(match.index),
       },
     ];
   });
 }
 
-function isProblemCodeComparison(content: string, index: number, length: number): boolean {
-  const lineStart = content.lastIndexOf("\n", index - 1) + 1;
-  const lineEndIndex = content.indexOf("\n", index + length);
-  const lineEnd = lineEndIndex >= 0 ? lineEndIndex : content.length;
-  const before = content.slice(lineStart, index);
-  const after = content.slice(index + length, lineEnd);
-  const codeAccess = String.raw`(?:^|[^A-Za-z0-9_$])(?:[A-Za-z_$][\w$]*(?:\??\.[A-Za-z_$][\w$]*)*\??\.)?code`;
-  const codeBeforeLiteral = new RegExp(`${codeAccess}\\s*(?:===|!==|==|!=)\\s*$`);
-  const codeAfterLiteral = new RegExp(
-    `^\\s*(?:===|!==|==|!=)\\s*(?:[A-Za-z_$][\\w$]*(?:\\??\\.[A-Za-z_$][\\w$]*)*\\??\\.)?code(?:[^A-Za-z0-9_$]|$)`,
-  );
+function findProblemCodeComparisonLiterals(
+  content: string,
+  fileName = "upgrade.tsx",
+): ReadonlySet<number> {
+  const source = ts.createSourceFile(fileName, content, ts.ScriptTarget.Latest, true);
+  const starts = new Set<number>();
 
-  return codeBeforeLiteral.test(before) || codeAfterLiteral.test(after);
+  const visit = (node: ts.Node): void => {
+    if (
+      ts.isBinaryExpression(node) &&
+      (node.operatorToken.kind === ts.SyntaxKind.EqualsEqualsEqualsToken ||
+        node.operatorToken.kind === ts.SyntaxKind.ExclamationEqualsEqualsToken ||
+        node.operatorToken.kind === ts.SyntaxKind.EqualsEqualsToken ||
+        node.operatorToken.kind === ts.SyntaxKind.ExclamationEqualsToken)
+    ) {
+      const literal = isProblemCodeAccess(node.left)
+        ? node.right
+        : isProblemCodeAccess(node.right)
+          ? node.left
+          : undefined;
+
+      if (literal && ts.isStringLiteral(literal) && literal.text === LEGACY_HTTP_SECURITY_CODE) {
+        starts.add(literal.getStart(source));
+      }
+    }
+
+    ts.forEachChild(node, visit);
+  };
+
+  visit(source);
+  return starts;
+}
+
+function isProblemCodeAccess(node: ts.Expression): boolean {
+  return (
+    (ts.isIdentifier(node) && node.text === "code") ||
+    (ts.isPropertyAccessExpression(node) && node.name.text === "code")
+  );
 }
 
 function findMetaViteRouteConfigMigration(
