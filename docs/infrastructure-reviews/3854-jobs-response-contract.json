@@ -1,0 +1,111 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "cli",
+      "classification": "runtime-adapter",
+      "reason": "Validate Jobs HTTP response shapes in the local operator CLI before formatting and exit-code selection. This does not change server execution policy, infrastructure capabilities, storage or Host lifecycle.",
+      "files": {
+        "packages/cli/src/commands/jobs.ts": "dd3d915caee1c7f500096041620c2067f73ea3a78271434522eedb59a45b05bf",
+        "packages/cli/src/libs/diagnosticCodes.ts": "42f2e6993d657371cde559eff54c23ab67c786ec99a5c3d32fb930a1d5393e0a"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Validate Jobs HTTP response shapes in the local operator CLI before formatting and exit-code selection. This does not change server execution policy, infrastructure capabilities, storage or Host lifecycle.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/cli/src/commands/jobs.ts",
+            "packages/cli/src/libs/diagnosticCodes.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Validate Jobs HTTP response shapes in the local operator CLI before formatting and exit-code selection. This does not change server execution policy, infrastructure capabilities, storage or Host lifecycle.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/cli/src/commands/jobs.ts",
+            "packages/cli/src/libs/diagnosticCodes.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Validate Jobs HTTP response shapes in the local operator CLI before formatting and exit-code selection. This does not change server execution policy, infrastructure capabilities, storage or Host lifecycle.",
+          "providers": [],
+          "constraints": [],
+          "references": [
+            "packages/cli/src/commands/jobs.ts",
+            "packages/cli/src/libs/diagnosticCodes.ts"
+          ]
+        }
+      }
+    },
+    {
+      "package": "diagnostics-core",
+      "classification": "pure-contract",
+      "reason": "Define the stable invalid Jobs response diagnostic and recovery guidance. Diagnostic metadata has no infrastructure, storage or Host lifecycle dependency.",
+      "files": {
+        "packages/diagnostics-core/src/libs/DiagnosticCodes.ts": "74a6a05718675912a60ebd8bd1d913717c1382b2da70b2cfaf9fdec9b4da99ef"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Define the stable invalid Jobs response diagnostic and recovery guidance. Diagnostic metadata has no infrastructure, storage or Host lifecycle dependency.",
+          "providers": [],
+          "constraints": [],
+          "references": ["packages/diagnostics-core/src/libs/DiagnosticCodes.ts"]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Define the stable invalid Jobs response diagnostic and recovery guidance. Diagnostic metadata has no infrastructure, storage or Host lifecycle dependency.",
+          "providers": [],
+          "constraints": [],
+          "references": ["packages/diagnostics-core/src/libs/DiagnosticCodes.ts"]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Define the stable invalid Jobs response diagnostic and recovery guidance. Diagnostic metadata has no infrastructure, storage or Host lifecycle dependency.",
+          "providers": [],
+          "constraints": [],
+          "references": ["packages/diagnostics-core/src/libs/DiagnosticCodes.ts"]
+        }
+      }
+    },
+    {
+      "package": "problems-core",
+      "classification": "pure-contract",
+      "reason": "Regenerate the typed Problem registry for the invalid Jobs response diagnostic. This metadata update does not introduce deployment capabilities, storage or Host lifecycle requirements.",
+      "files": {
+        "packages/problems-core/src/generated/problem-code-registry.ts": "a2df48eeece23d19f47ae8ae4512e4c0eace0da970cda6b6c2d9ed82ae4e7397"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Regenerate the typed Problem registry for the invalid Jobs response diagnostic. This metadata update does not introduce deployment capabilities, storage or Host lifecycle requirements.",
+          "providers": [],
+          "constraints": [],
+          "references": ["packages/problems-core/src/generated/problem-code-registry.ts"]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Regenerate the typed Problem registry for the invalid Jobs response diagnostic. This metadata update does not introduce deployment capabilities, storage or Host lifecycle requirements.",
+          "providers": [],
+          "constraints": [],
+          "references": ["packages/problems-core/src/generated/problem-code-registry.ts"]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Regenerate the typed Problem registry for the invalid Jobs response diagnostic. This metadata update does not introduce deployment capabilities, storage or Host lifecycle requirements.",
+          "providers": [],
+          "constraints": [],
+          "references": ["packages/problems-core/src/generated/problem-code-registry.ts"]
+        }
+      }
+    }
+  ]
+}
