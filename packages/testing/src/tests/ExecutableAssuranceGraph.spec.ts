@@ -346,6 +346,42 @@ describe("Executable Assurance Graph", () => {
     );
   });
 
+  it("rejects missing attempt traces even when a summary report exists", () => {
+    const records = completeEvidence().map((record) =>
+      record.id === "route-success"
+        ? createTestEvidenceRecord({
+            ...record,
+            attachments: [{ kind: "report", path: "summary.json" }],
+            attempts: [
+              {
+                attempt: 1,
+                outcome: "passed",
+                attachments: [{ kind: "trace", path: "missing.zip" }],
+              },
+            ],
+          })
+        : record,
+    );
+    const bundle = createTestEvidenceBundle(records, (path) => path === "summary.json");
+    const report = evaluateExecutableAssuranceGraph(createGraph(), bundle, { mode: "enforce" });
+    expect(report.status).toBe("failed");
+    expect(report.contradictory).toEqual([
+      expect.objectContaining({
+        evidenceIds: ["route-success"],
+        reasons: ["Evidence 'route-success' is missing required artifact 'missing.zip'."],
+      }),
+    ]);
+    expect(() => assertExecutableAssuranceSatisfied(report)).toThrow(
+      ExecutableAssuranceUnsatisfiedProblem,
+    );
+    const complete = evaluateExecutableAssuranceGraph(
+      createGraph(),
+      createTestEvidenceBundle(records, () => true),
+      { mode: "enforce" },
+    );
+    expect(complete.status).toBe("passed");
+  });
+
   it("reports leaked resources as contradictory despite matching execution evidence", () => {
     const records = completeEvidence().map((record) =>
       record.id === "route-success"

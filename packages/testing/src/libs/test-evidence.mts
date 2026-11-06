@@ -212,7 +212,8 @@ export function createTestEvidenceRecord(input: TestEvidenceRecordInput): TestEv
   assertAttempts(input.id, attempts);
   const outcome = classifyTestEvidenceOutcome(attempts);
   const diagnostics = input.diagnostics ?? attempts.flatMap((attempt) => attempt.diagnostics ?? []);
-  const attachments = input.attachments ?? attempts.flatMap((attempt) => attempt.attachments ?? []);
+  const attachments = input.attachments ?? [];
+  assertAttachments(input.id, attachments, "attachments");
   const record = redactTestEvidence(
     normalizeTestEvidenceRecord({
       ...input,
@@ -502,21 +503,32 @@ export function createTestEvidenceBundle(
   records: readonly TestEvidenceRecord[],
   artifactExists: TestEvidenceArtifactProbe = () => true,
 ): TestEvidenceBundle {
-  const sortedRecords = records
+  const preparedRecords = records
     .map((record) => {
       assertTestEvidenceRecord(record);
-      return deepFreeze(redactTestEvidence(normalizeTestEvidenceRecord(record)));
+      const normalized = normalizeTestEvidenceRecord(record);
+      return {
+        record: deepFreeze(redactTestEvidence(normalized)),
+        attachmentPaths: [...new Set(normalized.attachments.map(({ path }) => path))],
+      };
     })
-    .sort((left, right) => compareStrings(left.id, right.id));
+    .sort((left, right) => compareStrings(left.record.id, right.record.id));
+  const sortedRecords = preparedRecords.map(({ record }) => record);
   const duplicate = sortedRecords.find(({ id }, index) => sortedRecords[index - 1]?.id === id);
   if (duplicate) {
     throw new TestEvidenceContractError(`Evidence bundle duplicates id '${duplicate.id}'.`);
   }
-  const missingArtifacts = sortedRecords.flatMap((record) =>
-    record.attachments
-      .filter(({ path }) => !artifactExists(path))
-      .map(({ path }) => ({ path, recordId: record.id, required: true as const })),
-  );
+  const missingArtifacts = preparedRecords.flatMap(({ record, attachmentPaths }) => {
+    // Probe original paths privately; only redacted paths leave the evidence consumer.
+    const missingPaths = redactTestEvidence(
+      attachmentPaths.filter((path) => !artifactExists(path)),
+    );
+    return [...new Set(missingPaths)].map((path) => ({
+      path,
+      recordId: record.id,
+      required: true as const,
+    }));
+  });
   const summary = summarizeRecords(sortedRecords);
   return deepFreeze({
     schemaVersion: TEST_EVIDENCE_SCHEMA_VERSION,
@@ -577,7 +589,20 @@ function normalizeTestEvidenceRecord(record: TestEvidenceRecord): TestEvidenceRe
         ...(attempt.diagnostics ? { diagnostics: sortDiagnostics(attempt.diagnostics) } : {}),
       })),
     resources: { ...record.resources, leaks: sortStrings(record.resources.leaks) },
-    attachments: sortAttachments(record.attachments),
+    attachments: sortAttachments([
+      ...new Map(
+        [
+          ...record.attachments,
+          ...record.attempts.flatMap((attempt) => attempt.attachments ?? []),
+        ].map(
+          (attachment) =>
+            [
+              JSON.stringify([attachment.kind, attachment.path, attachment.schemaVersion]),
+              attachment,
+            ] as const,
+        ),
+      ).values(),
+    ]),
   };
 }
 

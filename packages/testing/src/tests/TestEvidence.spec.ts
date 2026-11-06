@@ -390,6 +390,122 @@ describe("croco.test-evidence/v1", () => {
     );
   });
 
+  it.each([undefined, [], [{ kind: "report" as const, path: "summary.json" }]])(
+    "checks every attempt attachment alongside record attachments %j",
+    (attachments) => {
+      const attempts = [
+        {
+          attempt: 1,
+          outcome: "skipped" as const,
+          attachments: [{ kind: "trace" as const, path: "first.zip" }],
+        },
+        {
+          attempt: 2,
+          outcome: "passed" as const,
+          attachments: [{ kind: "trace" as const, path: "second.zip" }],
+        },
+      ];
+      const evidence = record({ attachments, attempts });
+      const bundle = createTestEvidenceBundle([evidence], (path) => path === "summary.json");
+      expect(bundle.status).toBe("failed");
+      expect(bundle.missingArtifacts).toEqual([
+        { path: "first.zip", recordId: evidence.id, required: true },
+        { path: "second.zip", recordId: evidence.id, required: true },
+      ]);
+      expect(evidence.attempts).toEqual(attempts);
+      expect(createTestEvidenceBundle([evidence], () => true).status).toBe("passed");
+    },
+  );
+
+  it("checks attempt attachments in imported v1 records without a complete aggregate", () => {
+    const source = record({ attachments: [{ kind: "report", path: "summary.json" }] });
+    const imported: TestEvidenceRecord = JSON.parse(
+      JSON.stringify({
+        ...source,
+        attempts: [
+          { attempt: 1, outcome: "passed", attachments: [{ kind: "trace", path: "missing.zip" }] },
+        ],
+      }),
+    );
+    const bundle = createTestEvidenceBundle([imported], (path) => path === "summary.json");
+    expect(bundle.status).toBe("failed");
+    expect(bundle.missingArtifacts).toEqual([
+      { path: "missing.zip", recordId: source.id, required: true },
+    ]);
+    expect(imported.attachments).toEqual(source.attachments);
+    expect(bundle.records[0]?.attempts).toEqual(imported.attempts);
+  });
+
+  it("deduplicates aggregate attachments by kind, path, and schema version deterministically", () => {
+    const trace = { kind: "trace" as const, path: "shared.json" };
+    const versioned = { ...trace, schemaVersion: "trace/v1" };
+    const report = { kind: "report" as const, path: "shared.json" };
+    const first = record({
+      attachments: [trace, versioned, report, trace],
+      attempts: [{ attempt: 1, outcome: "passed", attachments: [versioned, trace, report] }],
+    });
+    const second = record({
+      attachments: [report, versioned, trace],
+      attempts: first.attempts,
+    });
+    expect(first.attachments).toEqual([report, trace, versioned]);
+    expect(serializeTestEvidence(first)).toBe(serializeTestEvidence(second));
+    const missing = { path: "shared.json", recordId: first.id, required: true };
+    expect(createTestEvidenceBundle([first], () => false).missingArtifacts).toEqual([missing]);
+    const imported = { ...first, attachments: [trace, trace], attempts: first.attempts };
+    expect(createTestEvidenceBundle([imported], () => false).records[0]?.attachments).toEqual([
+      report,
+      trace,
+      versioned,
+    ]);
+  });
+
+  it.each(["all", "one", "none"] as const)(
+    "checks original imported paths before reporting redacted missing artifacts: %s present",
+    (present) => {
+      const originalPaths = ["trace-token=a.zip", "trace-token=b.zip"];
+      const imported: TestEvidenceRecord = {
+        ...record({ attachments: [{ kind: "report", path: "summary.json" }] }),
+        attempts: [
+          {
+            attempt: 1,
+            outcome: "passed",
+            attachments: originalPaths.map((path) => ({ kind: "trace", path })),
+          },
+        ],
+      };
+      const existing = new Set([
+        "summary.json",
+        ...(present === "all" ? originalPaths : present === "one" ? ["trace-token=a.zip"] : []),
+      ]);
+      const probe = vi.fn((path: string) => existing.has(path));
+      const bundle = createTestEvidenceBundle([imported], probe);
+      expect(probe.mock.calls.map(([path]) => path).sort()).toEqual([
+        "summary.json",
+        "trace-token=a.zip",
+        "trace-token=b.zip",
+      ]);
+      expect(bundle.status).toBe(present === "all" ? "passed" : "failed");
+      expect(bundle.missingArtifacts).toEqual(
+        present === "all"
+          ? []
+          : [{ path: "trace-[Redacted]", recordId: imported.id, required: true }],
+      );
+      expect(imported.attempts[0]?.attachments?.map(({ path }) => path)).toEqual(originalPaths);
+      expect(() => assertNoTestEvidenceSecrets(bundle, originalPaths)).not.toThrow();
+    },
+  );
+
+  it("validates every attachment before deduplication can hide malformed duplicates", () => {
+    const trace = { kind: "trace" as const, path: "shared.zip" };
+    expect(() =>
+      record({
+        attachments: [{ ...trace, unexpected: true } as unknown as typeof trace],
+        attempts: [{ attempt: 1, outcome: "passed", attachments: [trace] }],
+      }),
+    ).toThrow(TestEvidenceContractError);
+  });
+
   it("escapes Markdown control characters in record and missing artifact values", () => {
     const bundle = createTestEvidenceBundle(
       [

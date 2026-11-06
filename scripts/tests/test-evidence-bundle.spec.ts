@@ -148,6 +148,45 @@ describe("test evidence CI bundle", () => {
     ).toEqual([evidence]);
   });
 
+  it("fails imported records when only their attempt trace is missing", () => {
+    const rootDirectory = temporaryDirectory();
+    writeFileSync(join(rootDirectory, "summary.json"), "{}");
+    const source = normalizeTestEvidenceInput(releaseReport(), "release.json")[0];
+    if (!source) throw new Error("Expected normalized evidence");
+    writeFileSync(
+      join(rootDirectory, "record.json"),
+      JSON.stringify({
+        ...source,
+        attachments: [{ kind: "report", path: "summary.json" }],
+        attempts: [
+          {
+            attempt: 1,
+            outcome: "passed",
+            attachments: [{ kind: "trace", path: "trace-token=artifact.zip" }],
+          },
+        ],
+      }),
+    );
+    const options = {
+      inputPaths: ["record.json"],
+      outputDirectory: "bundle",
+      rootDirectory,
+    };
+    const missing = writeTestEvidenceBundle(options);
+    expect(missing.status).toBe("failed");
+    expect(missing.missingArtifacts).toEqual([
+      { path: "trace-[Redacted]", recordId: source.id, required: true },
+    ]);
+    expect(JSON.parse(readFileSync(join(rootDirectory, "bundle/bundle.json"), "utf8")).status).toBe(
+      "failed",
+    );
+    writeFileSync(join(rootDirectory, "trace-token=artifact.zip"), "trace fixture");
+    expect(writeTestEvidenceBundle(options).status).toBe("passed");
+    expect(readFileSync(join(rootDirectory, "bundle/bundle.json"), "utf8")).not.toContain(
+      "trace-token=artifact.zip",
+    );
+  });
+
   it("normalizes verification results without rerunning their commands", () => {
     const rootDirectory = temporaryDirectory();
     mkdirSync(join(rootDirectory, "ci-reports/release"), { recursive: true });
