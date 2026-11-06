@@ -1,4 +1,4 @@
-import { ts } from "ts-morph";
+import ts from "typescript";
 import { CliError } from "../libs/CliError.js";
 
 export type TextReplacement = {

@@ -4,10 +4,11 @@
     {
       "package": "cli",
       "classification": "pure-contract",
-      "reason": "Only real AST equality comparisons of code and the legacy HTTP diagnostic literal are safe to rewrite; preserve string, template, comment and JSX text payloads.",
+      "reason": "Only real AST equality comparisons of code and the legacy HTTP diagnostic literal are safe to rewrite; preserve string, template, comment and JSX text payloads. Local syntax analysis uses the declared TypeScript 6.0.3 Compiler API runtime dependency.",
       "files": {
         "packages/cli/src/commands/upgrade.ts": "f2d77361ecf1f118de39c7e6303a1d938a5cab4d2c5a489008961e6779362e50",
-        "packages/cli/src/commands/upgradeRules.ts": "09e580388971720015fa0382f15d77b9cde22a94a24d5040866602f886ea99f4"
+        "packages/cli/src/commands/upgradeRules.ts": "0d0a78589da9f2d98da3c1d6054e1ae4b457a346429b1ae79277f976b9c1ee39",
+        "packages/cli/package.json": "ba57800bc3f87fea629d507bfe9ec25ca3fbefcdd6d2998997143933ca8f1157"
       },
       "catalogRuntimes": [],
       "profiles": {
