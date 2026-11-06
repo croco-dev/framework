@@ -67,7 +67,9 @@ const DEFAULT_VITEST_REPORTER_OPTIONS: TestEvidenceReporterOptions = {
   },
 };
 
-const PACKAGE_NAMES_BY_DIRECTORY = new Map<string, string | undefined>();
+type TestEvidencePackageIdentity = { readonly name: string; readonly directory: string };
+
+const PACKAGE_IDENTITIES_BY_DIRECTORY = new Map<string, TestEvidencePackageIdentity | undefined>();
 
 type VitestTaskParent =
   | { readonly type: "module" }
@@ -203,10 +205,16 @@ function vitestReplayCommand(task: VitestTask, packageName: string | undefined):
   const pattern = `${task.parent ? "^" : "(?:^| )"}${escapeRegExp(names.join(" "))}$`;
   const moduleId = task.module?.moduleId;
   const projectRoot = task.project?.config?.root;
-  const file = moduleId
-    ? ` ${shellQuote(projectRoot ? relative(projectRoot, moduleId) : moduleId)}`
+  const modulePath = moduleId ? resolve(projectRoot ?? ".", moduleId) : undefined;
+  const owningPackage =
+    modulePath && packageName ? findPackageIdentity(dirname(modulePath)) : undefined;
+  const fileRoot =
+    owningPackage && owningPackage.name === packageName ? owningPackage.directory : projectRoot;
+  const file = modulePath
+    ? ` ${shellQuote(fileRoot ? `./${relative(fileRoot, modulePath)}` : modulePath)}`
     : "";
-  return `${replayPrefix(packageName)} vitest run${file} -t ${shellQuote(pattern)}`;
+  const project = task.project?.name ? ` --project=${shellQuote(task.project.name)}` : "";
+  return `${replayPrefix(packageName)} vitest run${project} -t ${shellQuote(pattern)}${file}`;
 }
 
 function playwrightReplayCommand(
@@ -230,10 +238,11 @@ function playwrightReplayCommand(
       ? ` ${shellQuote(`${escapeRegExp(filePath)}${location.line === undefined ? "" : `:${location.line}`}`)}`
       : "";
   const tags = test.tags?.length ? `(?: (?:${test.tags.map(escapeRegExp).join("|")}))*` : "";
-  const pattern = titlePath
-    ? `^${titlePath.filter(Boolean).map(escapeRegExp).join(`${tags} `)}${tags}$`
+  const grepTitlePath = titlePath?.[0] === "" ? titlePath.slice(1) : titlePath;
+  const pattern = grepTitlePath
+    ? `^${grepTitlePath.map(escapeRegExp).join(`${tags} `)}${tags}$`
     : `(?:^| )${escapeRegExp(test.title)}${tags}$`;
-  return `${prefix}${project}${file} --grep ${shellQuote(pattern)}`;
+  return `${prefix}${project} --grep ${shellQuote(pattern)}${file ? ` --${file}` : ""}`;
 }
 
 function resolvePackageName(
@@ -274,24 +283,24 @@ function packageNameFromSource(
     : baseDirectory
       ? resolve(baseDirectory, source)
       : undefined;
-  return path ? findPackageName(dirname(path)) : undefined;
+  return path ? findPackageIdentity(dirname(path))?.name : undefined;
 }
 
 function packageNameFromDirectory(directory: string | undefined): string | undefined {
-  return directory ? findPackageName(directory) : undefined;
+  return directory ? findPackageIdentity(directory)?.name : undefined;
 }
 
-function findPackageName(startDirectory: string): string | undefined {
+function findPackageIdentity(startDirectory: string): TestEvidencePackageIdentity | undefined {
   let directory = resolve(startDirectory);
   const root = parse(directory).root;
   const visitedDirectories: string[] = [];
   while (true) {
-    if (PACKAGE_NAMES_BY_DIRECTORY.has(directory)) {
-      const packageName = PACKAGE_NAMES_BY_DIRECTORY.get(directory);
+    if (PACKAGE_IDENTITIES_BY_DIRECTORY.has(directory)) {
+      const identity = PACKAGE_IDENTITIES_BY_DIRECTORY.get(directory);
       for (const visited of visitedDirectories) {
-        PACKAGE_NAMES_BY_DIRECTORY.set(visited, packageName);
+        PACKAGE_IDENTITIES_BY_DIRECTORY.set(visited, identity);
       }
-      return packageName;
+      return identity;
     }
     visitedDirectories.push(directory);
     const manifestPath = resolve(directory, "package.json");
@@ -307,7 +316,7 @@ function findPackageName(startDirectory: string): string | undefined {
       }
       if (directory === root) {
         for (const visited of visitedDirectories) {
-          PACKAGE_NAMES_BY_DIRECTORY.set(visited, undefined);
+          PACKAGE_IDENTITIES_BY_DIRECTORY.set(visited, undefined);
         }
         return undefined;
       }
@@ -322,7 +331,7 @@ function findPackageName(startDirectory: string): string | undefined {
     if (!("name" in manifest)) {
       if (directory === root) {
         for (const visited of visitedDirectories) {
-          PACKAGE_NAMES_BY_DIRECTORY.set(visited, undefined);
+          PACKAGE_IDENTITIES_BY_DIRECTORY.set(visited, undefined);
         }
         return undefined;
       }
@@ -334,11 +343,11 @@ function findPackageName(startDirectory: string): string | undefined {
         `Package manifest '${manifestPath}' must declare a non-empty string name.`,
       );
     }
-    const packageName = manifest["name"].trim();
+    const identity = { name: manifest["name"].trim(), directory };
     for (const visited of visitedDirectories) {
-      PACKAGE_NAMES_BY_DIRECTORY.set(visited, packageName);
+      PACKAGE_IDENTITIES_BY_DIRECTORY.set(visited, identity);
     }
-    return packageName;
+    return identity;
   }
 }
 
