@@ -18,8 +18,7 @@ const currentWorkingDirectory = process.cwd().replace(/\\/g, "/");
 const isFrameworkContextPackageRun = currentWorkingDirectory.endsWith("packages/framework-context");
 const isTestingPackageRun = currentWorkingDirectory.endsWith("packages/testing");
 const isTxDrizzlePackageRun = currentWorkingDirectory.endsWith("packages/tx-drizzle");
-const shouldExcludeCliIntegrationTestsFromCoreCoverage =
-  isCoreCoverageRun && currentWorkingDirectory.endsWith("packages/cli");
+const isCliCoreCoverageRun = isCoreCoverageRun && currentWorkingDirectory.endsWith("packages/cli");
 const shouldApplyCoreCoverageThresholds =
   isCoreCoverageRun && isCoreCoveragePackageDirectory(currentWorkingDirectory);
 
@@ -62,7 +61,7 @@ export default defineConfig({
     exclude: [
       "**/node_modules/**",
       "**/dist/**",
-      ...(shouldExcludeCliIntegrationTestsFromCoreCoverage ? ["src/tests/integration/**"] : []),
+      ...(isCliCoreCoverageRun ? ["src/tests/integration/**"] : []),
     ],
     coverage: {
       provider: "v8",
@@ -71,6 +70,7 @@ export default defineConfig({
       thresholds: coverageThresholds,
     },
     testTimeout: 10000,
-    pool: "threads",
+    // CLI fixtures exercise the app's real cwd; process.chdir is unavailable in worker threads.
+    pool: isCliCoreCoverageRun ? "forks" : "threads",
   },
 });
