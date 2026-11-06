@@ -216,7 +216,7 @@ export function createUpgradeReport(options: UpgradeOptions, io: UpgradeIo): Upg
 
   for (const file of sourceFiles) {
     const content = io.readFile(file);
-    const analysis = analyzeUpgradeFile(content);
+    const analysis = analyzeUpgradeFile(content, file);
     const diff =
       analysis.updatedContent === content
         ? undefined
@@ -274,8 +274,8 @@ export function createUpgradeReport(options: UpgradeOptions, io: UpgradeIo): Upg
   };
 }
 
-export function analyzeUpgradeFile(content: string): FileAnalysis {
-  return applyUpgradeRules(content);
+export function analyzeUpgradeFile(content: string, fileName?: string): FileAnalysis {
+  return applyUpgradeRules(content, undefined, fileName);
 }
 
 export function formatUpgradeReport(report: UpgradeReport): string {

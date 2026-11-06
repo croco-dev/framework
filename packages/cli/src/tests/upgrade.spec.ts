@@ -5,6 +5,7 @@ import * as path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createCrocoCommand } from "../commands/root.js";
 import { parseUpgradeArgs, runUpgrade } from "../commands/upgrade.js";
+import type { UpgradeReport } from "../commands/upgrade.js";
 import {
   applyUpgradeRules,
   legacyHttpSecurityUpgradeRule,
@@ -382,6 +383,105 @@ const options = { unsafeSkipSecurityValidation: true };
     expect(second.findings).toEqual([]);
     expect(second.updatedContent).toBe(after);
   });
+
+  it.each([
+    `const source = "problem.code === 'transports-http/security-middleware-validation'";`,
+    "const source = `problem.code === 'transports-http/security-middleware-validation'`;",
+    "const source = `prefix ${name} problem.code === 'transports-http/security-middleware-validation'`;",
+    "// problem.code === 'transports-http/security-middleware-validation'",
+    "/* 'transports-http/security-middleware-validation' !== problem?.code */",
+    `const element = <p>problem.code === 'transports-http/security-middleware-validation'</p>;`,
+    `const fixture = 'transports-http/security-middleware-validation';`,
+    `problem.extensions?.legacyCode === 'transports-http/security-middleware-validation';`,
+    `problem.code.includes('transports-http/security-middleware-validation');`,
+  ])("should preserve non-comparison payloads byte-for-byte: %s", (content) => {
+    const result = applyUpgradeRules(content, [legacyHttpSecurityUpgradeRule]);
+
+    expect(result.updatedContent).toBe(content);
+    expect(result.findings.length).toBeGreaterThan(0);
+    expect(result.findings.every((finding) => finding.confidence === "manual")).toBe(true);
+  });
+
+  it.each(["===", "!==", "==", "!="])(
+    "should rewrite only literal operands of real %s comparisons across lines and comments",
+    (operator) => {
+      const before = `problem?.code\n  ${operator} /* retain this comment */ 'transports-http/security-middleware-validation';
+"transports-http/security-middleware-validation"\n  ${operator} response.problem?.code;
+code ${operator} 'transports-http/security-middleware-validation';
+const message = \`result: \${problem.code ${operator} 'transports-http/security-middleware-validation'}\`;
+`;
+      const after = `problem?.code\n  ${operator} /* retain this comment */ 'CROCO_HTTP_SECURITY_001';
+"CROCO_HTTP_SECURITY_001"\n  ${operator} response.problem?.code;
+code ${operator} 'CROCO_HTTP_SECURITY_001';
+const message = \`result: \${problem.code ${operator} 'CROCO_HTTP_SECURITY_001'}\`;
+`;
+
+      const result = applyUpgradeRules(before, [legacyHttpSecurityUpgradeRule]);
+
+      expect(result.updatedContent).toBe(after);
+      expect(result.findings.map((finding) => finding.code)).toEqual(["CROCO_CLI_UPGRADE_003"]);
+      expect(applyUpgradeRules(after, [legacyHttpSecurityUpgradeRule]).updatedContent).toBe(after);
+    },
+  );
+
+  it("should preview and write the same mixed-source changes and leave repeated writes unchanged", async () => {
+    const cwd = await createWorkspace();
+    const sourcePath = path.join(cwd, "matcher.ts");
+    const before = `const payload = "problem.code === 'transports-http/security-middleware-validation'";
+// problem.code === 'transports-http/security-middleware-validation'
+const matches = problem?.code
+  === 'transports-http/security-middleware-validation';
+`;
+    const after = `const payload = "problem.code === 'transports-http/security-middleware-validation'";
+// problem.code === 'transports-http/security-middleware-validation'
+const matches = problem?.code
+  === 'CROCO_HTTP_SECURITY_001';
+`;
+    await writeFile(sourcePath, before);
+    const reports: UpgradeReport[] = [];
+    const write = vi.fn((file: string, content: string) => writeFileSync(file, content));
+
+    for (const args of [[], ["--write"], ["--write"]]) {
+      const output: string[] = [];
+      expect(
+        await runUpgrade(["--cwd", cwd, "--json", sourcePath, ...args], {
+          io: { stdout: (message) => output.push(message), writeFile: write },
+        }),
+      ).toBe(0);
+      reports.push(JSON.parse(output.join("\n")) as UpgradeReport);
+      expect(await fs.readFile(sourcePath, "utf-8")).toBe(args.length === 0 ? before : after);
+    }
+
+    expect(reports[0]?.summary).toMatchObject({ safeCodemods: 1, appliedCodemods: 0 });
+    expect(reports[1]?.summary).toMatchObject({ safeCodemods: 1, appliedCodemods: 1 });
+    expect(reports[2]?.summary).toMatchObject({ safeCodemods: 0, appliedCodemods: 0 });
+    expect(reports[0]?.findings).toEqual(
+      reports[1]?.findings.map((finding) => ({ ...finding, applied: false })),
+    );
+    expect(write).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    { extension: "ts", prefix: "const identity = <T>(value: T) => value;" },
+    {
+      extension: "tsx",
+      prefix: `const element = <p>problem.code === 'transports-http/security-middleware-validation'</p>;`,
+    },
+  ])(
+    "should use the $extension parser for the selected source file",
+    async ({ extension, prefix }) => {
+      const cwd = await createWorkspace();
+      const sourcePath = path.join(cwd, `matcher.${extension}`);
+      const before = `${prefix}\nproblem.code === 'transports-http/security-middleware-validation';\n`;
+      const after = `${prefix}\nproblem.code === 'CROCO_HTTP_SECURITY_001';\n`;
+      await writeFile(sourcePath, before);
+
+      expect(
+        await runUpgrade(["--cwd", cwd, "--write", sourcePath], { io: { stdout: () => {} } }),
+      ).toBe(0);
+      expect(await fs.readFile(sourcePath, "utf-8")).toBe(after);
+    },
+  );
 
   it("should write a safe codemod only on the first write-mode run", async () => {
     const cwd = await createWorkspace();
