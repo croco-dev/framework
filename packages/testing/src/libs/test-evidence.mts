@@ -213,6 +213,7 @@ export function createTestEvidenceRecord(input: TestEvidenceRecordInput): TestEv
   const outcome = classifyTestEvidenceOutcome(attempts);
   const diagnostics = input.diagnostics ?? attempts.flatMap((attempt) => attempt.diagnostics ?? []);
   const attachments = input.attachments ?? [];
+  assertAttachments(input.id, attachments, "attachments");
   const record = redactTestEvidence(
     normalizeTestEvidenceRecord({
       ...input,

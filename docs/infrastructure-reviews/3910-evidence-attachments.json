@@ -6,7 +6,7 @@
       "classification": "pure-contract",
       "reason": "Aggregate record and attempt attachments before checking artifact completeness, including imported v1 records. Preserve attempt metadata and existing schema; missing paths fail the bundle and assurance eligibility.",
       "files": {
-        "packages/testing/src/libs/test-evidence.mts": "6c1719def0c595f9e46428df49b517a71b5aad4ed246b145aecc0bfc16cf44f0"
+        "packages/testing/src/libs/test-evidence.mts": "0af2e46b0fec390245d236e03ec6abac0d296571a8832e6bb5d7c588adba0f7a"
       },
       "catalogRuntimes": [],
       "profiles": {

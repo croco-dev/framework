@@ -442,6 +442,22 @@ describe("croco.test-evidence/v1", () => {
     expect(serializeTestEvidence(first)).toBe(serializeTestEvidence(second));
     const missing = { path: "shared.json", recordId: first.id, required: true };
     expect(createTestEvidenceBundle([first], () => false).missingArtifacts).toEqual([missing]);
+    const imported = { ...first, attachments: [trace, trace], attempts: first.attempts };
+    expect(createTestEvidenceBundle([imported], () => false).records[0]?.attachments).toEqual([
+      report,
+      trace,
+      versioned,
+    ]);
+  });
+
+  it("validates every attachment before deduplication can hide malformed duplicates", () => {
+    const trace = { kind: "trace" as const, path: "shared.zip" };
+    expect(() =>
+      record({
+        attachments: [{ ...trace, unexpected: true } as unknown as typeof trace],
+        attempts: [{ attempt: 1, outcome: "passed", attachments: [trace] }],
+      }),
+    ).toThrow(TestEvidenceContractError);
   });
 
   it("escapes Markdown control characters in record and missing artifact values", () => {
