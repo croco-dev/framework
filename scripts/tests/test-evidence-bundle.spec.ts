@@ -159,7 +159,11 @@ describe("test evidence CI bundle", () => {
         ...source,
         attachments: [{ kind: "report", path: "summary.json" }],
         attempts: [
-          { attempt: 1, outcome: "passed", attachments: [{ kind: "trace", path: "missing.zip" }] },
+          {
+            attempt: 1,
+            outcome: "passed",
+            attachments: [{ kind: "trace", path: "trace-token=artifact.zip" }],
+          },
         ],
       }),
     );
@@ -171,13 +175,16 @@ describe("test evidence CI bundle", () => {
     const missing = writeTestEvidenceBundle(options);
     expect(missing.status).toBe("failed");
     expect(missing.missingArtifacts).toEqual([
-      { path: "missing.zip", recordId: source.id, required: true },
+      { path: "trace-[Redacted]", recordId: source.id, required: true },
     ]);
     expect(JSON.parse(readFileSync(join(rootDirectory, "bundle/bundle.json"), "utf8")).status).toBe(
       "failed",
     );
-    writeFileSync(join(rootDirectory, "missing.zip"), "trace fixture");
+    writeFileSync(join(rootDirectory, "trace-token=artifact.zip"), "trace fixture");
     expect(writeTestEvidenceBundle(options).status).toBe("passed");
+    expect(readFileSync(join(rootDirectory, "bundle/bundle.json"), "utf8")).not.toContain(
+      "trace-token=artifact.zip",
+    );
   });
 
   it("normalizes verification results without rerunning their commands", () => {

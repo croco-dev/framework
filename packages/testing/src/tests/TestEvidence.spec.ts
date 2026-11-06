@@ -450,6 +450,42 @@ describe("croco.test-evidence/v1", () => {
     ]);
   });
 
+  it.each(["all", "one", "none"] as const)(
+    "checks original imported paths before reporting redacted missing artifacts: %s present",
+    (present) => {
+      const originalPaths = ["trace-token=a.zip", "trace-token=b.zip"];
+      const imported: TestEvidenceRecord = {
+        ...record({ attachments: [{ kind: "report", path: "summary.json" }] }),
+        attempts: [
+          {
+            attempt: 1,
+            outcome: "passed",
+            attachments: originalPaths.map((path) => ({ kind: "trace", path })),
+          },
+        ],
+      };
+      const existing = new Set([
+        "summary.json",
+        ...(present === "all" ? originalPaths : present === "one" ? ["trace-token=a.zip"] : []),
+      ]);
+      const probe = vi.fn((path: string) => existing.has(path));
+      const bundle = createTestEvidenceBundle([imported], probe);
+      expect(probe.mock.calls.map(([path]) => path).sort()).toEqual([
+        "summary.json",
+        "trace-token=a.zip",
+        "trace-token=b.zip",
+      ]);
+      expect(bundle.status).toBe(present === "all" ? "passed" : "failed");
+      expect(bundle.missingArtifacts).toEqual(
+        present === "all"
+          ? []
+          : [{ path: "trace-[Redacted]", recordId: imported.id, required: true }],
+      );
+      expect(imported.attempts[0]?.attachments?.map(({ path }) => path)).toEqual(originalPaths);
+      expect(() => assertNoTestEvidenceSecrets(bundle, originalPaths)).not.toThrow();
+    },
+  );
+
   it("validates every attachment before deduplication can hide malformed duplicates", () => {
     const trace = { kind: "trace" as const, path: "shared.zip" };
     expect(() =>

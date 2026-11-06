@@ -4,9 +4,9 @@
     {
       "package": "testing",
       "classification": "pure-contract",
-      "reason": "Aggregate record and attempt attachments before checking artifact completeness, including imported v1 records. Preserve attempt metadata and existing schema; missing paths fail the bundle and assurance eligibility.",
+      "reason": "Aggregate record and attempt attachments before checking artifact completeness, including imported v1 records. Probe original paths privately while returned evidence stays redacted. Preserve attempt metadata and existing schema; missing paths fail bundle and assurance eligibility.",
       "files": {
-        "packages/testing/src/libs/test-evidence.mts": "0af2e46b0fec390245d236e03ec6abac0d296571a8832e6bb5d7c588adba0f7a"
+        "packages/testing/src/libs/test-evidence.mts": "fef464cffe0c8dcc0b3cf5dbb5ac6e377bdfb9cef20473221a3b65e3f45d1f2e"
       },
       "catalogRuntimes": [],
       "profiles": {
