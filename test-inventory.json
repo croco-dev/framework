@@ -3030,6 +3030,12 @@
       "owner": "@croco/framework-context"
     },
     {
+      "path": "packages/framework-context/src/tests/ContainerReset.spec.ts",
+      "lane": "fast",
+      "qualifiers": ["coverage"],
+      "owner": "@croco/framework-context"
+    },
+    {
       "path": "packages/framework-context/src/tests/ContainerResolutionDiagnostics.spec.ts",
       "lane": "fast",
       "qualifiers": ["coverage"],

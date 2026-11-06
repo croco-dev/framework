@@ -36,6 +36,14 @@ Independent application runtimes can isolate registrations and singleton instanc
 that asynchronous scope, including work after `await`. Resetting one active scope does not reset the
 root container or another scope.
 
+Call `Container.reset()` only while the selected container is idle. Reset attempts synchronous cleanup
+of all registered values and generated transient/singleton instances, once per object, then clears
+registrations even if cleanup fails. Failures throw `framework-context/container-reset-failed`;
+`cause` is a native `AggregateError` retaining every thrown value. The serialized Problem contains up
+to 100 messages in `cleanupFailures`, the total in `cleanupFailureCount`, and the omitted count in
+`omittedCleanupFailureCount`. A second reset does not retry failed cleanup. Release any resources
+that a failing cleanup left open before reusing the container.
+
 ```typescript
 const scope = Container.createScope();
 

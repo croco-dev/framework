@@ -1,6 +1,6 @@
 {
   "version": "croco.problem-code-registry.v1",
-  "problemCount": 1159,
+  "problemCount": 1160,
   "problems": [
     {
       "code": "ACCESS_DENIED",
@@ -16964,6 +16964,36 @@
       ]
     },
     {
+      "code": "framework-context/container-reset-failed",
+      "category": "InternalServerError",
+      "status": 500,
+      "title": "Internal Server Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#framework-context-container-reset-failed",
+      "recovery": {
+        "cause": "One or more provider destructors failed during synchronous container reset. All registrations were cleared after every tracked instance was attempted.",
+        "userAction": "Do not retry reset to recover failed cleanup; its registrations are already cleared. Ask the operator to release any resources left open.",
+        "operatorAction": "Inspect cleanupFailureCount, omittedCleanupFailureCount and the bounded cleanupFailures summary; the AggregateError cause retains every original failure. Release remaining resources and repair destructors before reusing the container.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "operator-only",
+        "telemetry": {
+          "eventName": "croco.problem.error",
+          "severity": "error",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/framework-context/src/libs/Container.ts",
+          "line": 759,
+          "column": 13,
+          "kind": "problem-factory"
+        }
+      ]
+    },
+    {
       "code": "framework-context/container-scope-disposal-failed",
       "category": "InternalServerError",
       "status": 500,
@@ -16987,7 +17017,7 @@
       "sources": [
         {
           "file": "packages/framework-context/src/libs/Container.ts",
-          "line": 288,
+          "line": 289,
           "column": 13,
           "kind": "problem-factory"
         }
@@ -17017,7 +17047,7 @@
       "sources": [
         {
           "file": "packages/framework-context/src/libs/Container.ts",
-          "line": 162,
+          "line": 163,
           "column": 10,
           "kind": "problem-factory"
         }
@@ -17047,7 +17077,7 @@
       "sources": [
         {
           "file": "packages/framework-context/src/libs/Container.ts",
-          "line": 438,
+          "line": 439,
           "column": 17,
           "kind": "problem-factory"
         }
@@ -17077,7 +17107,7 @@
       "sources": [
         {
           "file": "packages/framework-context/src/libs/Container.ts",
-          "line": 459,
+          "line": 460,
           "column": 13,
           "kind": "problem-factory"
         }
@@ -17107,7 +17137,7 @@
       "sources": [
         {
           "file": "packages/framework-context/src/libs/Container.ts",
-          "line": 231,
+          "line": 232,
           "column": 13,
           "kind": "problem-factory"
         }
@@ -17227,7 +17257,7 @@
       "sources": [
         {
           "file": "packages/framework-context/src/libs/Container.ts",
-          "line": 847,
+          "line": 851,
           "column": 13,
           "kind": "problem-factory"
         }
@@ -17257,7 +17287,7 @@
       "sources": [
         {
           "file": "packages/framework-context/src/libs/Container.ts",
-          "line": 841,
+          "line": 845,
           "column": 13,
           "kind": "problem-factory"
         }
@@ -17287,7 +17317,7 @@
       "sources": [
         {
           "file": "packages/framework-context/src/libs/Container.ts",
-          "line": 1465,
+          "line": 1469,
           "column": 15,
           "kind": "problem-factory"
         }
@@ -17317,7 +17347,7 @@
       "sources": [
         {
           "file": "packages/framework-context/src/libs/Container.ts",
-          "line": 1533,
+          "line": 1537,
           "column": 13,
           "kind": "problem-factory"
         }
@@ -17587,7 +17617,7 @@
       "sources": [
         {
           "file": "packages/framework-context/src/libs/Container.ts",
-          "line": 2655,
+          "line": 2659,
           "column": 12,
           "kind": "problem-factory"
         }
