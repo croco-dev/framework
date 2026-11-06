@@ -75,9 +75,18 @@ describe("SchemaCompiler resolver injection", () => {
             module: "NodeNext",
             moduleResolution: "NodeNext",
             experimentalDecorators: true,
+            lib: ["ES2022"],
+            types: [],
+            // Compile the fixture against built public runtime declarations.
             paths: {
               "@croco/framework-context": [
-                resolve(import.meta.dirname, "../../../framework-context/src/index.ts"),
+                resolve(import.meta.dirname, "../../../framework-context/dist/index.d.ts"),
+              ],
+              "@croco/problems-core": [
+                resolve(import.meta.dirname, "../../../problems-core/dist/index.d.ts"),
+              ],
+              "@croco/diagnostics-core": [
+                resolve(import.meta.dirname, "../../../diagnostics-core/dist/index.d.ts"),
               ],
               "@croco/protocols-graphql": [
                 resolve(
