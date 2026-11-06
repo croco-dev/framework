@@ -3982,6 +3982,9 @@ importers:
 
   packages/esbuild-plugin:
     devDependencies:
+      '@croco/framework-context':
+        specifier: workspace:*
+        version: link:../framework-context
       esbuild:
         specifier: ^0.20.2
         version: 0.20.2
