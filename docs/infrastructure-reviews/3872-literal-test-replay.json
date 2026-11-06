@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "testing",
+      "classification": "pure-contract",
+      "reason": "Generate literal, file-scoped replay selectors for the existing Vitest and Playwright reporters while preserving caller-provided replay commands.",
+      "files": {
+        "packages/testing/src/libs/test-evidence-reporters.ts": "1c075635a74c6d28be05926d95a3328f3fe6c060721885e47563104522efa39d"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Replay commands are generated and consumed by local Node test runners; the Kubernetes Node Host does not participate in test selection or shell argument handling.",
+          "providers": [],
+          "constraints": [
+            "Replay uses the existing POSIX shell command contract on the development or CI runner; no deployment runtime claim changes."
+          ],
+          "references": [
+            "packages/testing/src/libs/test-evidence-reporters.ts",
+            "packages/testing/src/libs/changed-test-plan.mts",
+            "packages/testing/src/tests/TestEvidence.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Replay commands are generated and consumed by local Node test runners; the Lambda Host does not participate in test selection or shell argument handling.",
+          "providers": [],
+          "constraints": [
+            "Replay uses the existing POSIX shell command contract on the development or CI runner; no deployment runtime claim changes."
+          ],
+          "references": [
+            "packages/testing/src/libs/test-evidence-reporters.ts",
+            "packages/testing/src/libs/changed-test-plan.mts",
+            "packages/testing/src/tests/TestEvidence.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Replay commands are generated and consumed by local Node test runners; the Workers or Node Container Host does not participate in test selection or shell argument handling.",
+          "providers": [],
+          "constraints": [
+            "Replay uses the existing POSIX shell command contract on the development or CI runner; no deployment runtime claim changes."
+          ],
+          "references": [
+            "packages/testing/src/libs/test-evidence-reporters.ts",
+            "packages/testing/src/libs/changed-test-plan.mts",
+            "packages/testing/src/tests/TestEvidence.spec.ts"
+          ]
+        }
+      }
+    }
+  ]
+}

@@ -1,3 +1,4 @@
+import { spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, resolve } from "node:path";
@@ -480,6 +481,111 @@ describe("croco.test-evidence/v1", () => {
 });
 
 describe("runner reporters", () => {
+  function replayArguments(command: string): string[] {
+    const result = spawnSync("sh", ["-c", `pnpm() { printf '%s\\0' "$@"; }; ${command}`], {
+      encoding: "utf8",
+      timeout: 5000,
+    });
+    expect(result.status, result.stderr).toBe(0);
+    return result.stdout.split("\0").slice(0, -1);
+  }
+
+  it("replays literal Vitest names with their file and nested suite identity", async () => {
+    const title = "returns (cached) [ready].+ 'value' $CROCO_LITERAL `literal`\\path\nline";
+    const write = vi.fn();
+    const reporter = new CrocoVitestEvidenceReporter({
+      fidelity: isolatedFidelity,
+      packageName: "@croco/testing",
+      write,
+    });
+    await reporter.onTestCaseResult({
+      id: "literal-vitest",
+      name: title,
+      fullName: `suite > literal > nested > ${title}`,
+      parent: {
+        type: "suite",
+        name: "nested",
+        parent: { type: "suite", name: "suite > literal", parent: { type: "module" } },
+      },
+      module: { moduleId: "/repo/Replay [1].spec.ts" },
+      diagnostic: () => undefined,
+      result: () => ({ state: "passed" }),
+    });
+    const args = replayArguments(write.mock.calls[0]?.[0].replay.command);
+    expect(args.slice(0, -1)).toEqual([
+      "--filter",
+      "@croco/testing",
+      "exec",
+      "vitest",
+      "run",
+      "/repo/Replay [1].spec.ts",
+      "-t",
+    ]);
+    const pattern = new RegExp(args.at(-1) ?? "");
+    expect(pattern.test(`suite > literal nested ${title}`)).toBe(true);
+    expect(pattern.test(`suite > literal nested ${title} extra`)).toBe(false);
+    expect(pattern.test(`another suite nested ${title}`)).toBe(false);
+    expect(pattern.test("suite > literal nested returns cached rX 'value'")).toBe(false);
+  });
+
+  it("replays literal Playwright paths with tags and parameterized test locations", async () => {
+    const title = "renders (cached) [ready].+ 'value' $CROCO_LITERAL `literal`\\path\nline";
+    const write = vi.fn();
+    const reporter = new CrocoPlaywrightEvidenceReporter({ fidelity: isolatedFidelity, write });
+    reporter.onTestEnd(
+      {
+        id: "literal-playwright",
+        title,
+        titlePath: () => ["", "browser", "Replay [1].spec.ts", "suite [a]", title],
+        location: { file: "/repo/Replay [1].spec.ts", line: 12 },
+        parent: { project: () => ({ name: "browser", testDir: "/not-a-package" }) },
+        tags: ["@group[1]", "@case.+"],
+      },
+      { duration: 1, status: "passed" },
+    );
+    await reporter.onEnd();
+    const args = replayArguments(write.mock.calls[0]?.[0].replay.command);
+    expect(args.slice(0, -1)).toEqual([
+      "--filter",
+      "browser",
+      "exec",
+      "playwright",
+      "test",
+      "--project=browser",
+      "/repo/Replay \\[1\\]\\.spec\\.ts:12",
+      "--grep",
+    ]);
+    const pattern = new RegExp(args.at(-1) ?? "");
+    expect(pattern.test(`browser Replay [1].spec.ts suite [a] @group[1] ${title} @case.+`)).toBe(
+      true,
+    );
+    expect(pattern.test(`browser Replay [1].spec.ts suite [a] ${title}`)).toBe(true);
+    expect(pattern.test(`browser Replay [1].spec.ts suite [a] ${title} extra`)).toBe(false);
+    expect(pattern.test(`browser Replay [1].spec.ts other ${title}`)).toBe(false);
+    expect(pattern.test(`browser Other.spec.ts suite [a] ${title}`)).toBe(false);
+    expect(pattern.test(`other Replay [1].spec.ts suite [a] ${title}`)).toBe(false);
+  });
+
+  it("preserves explicit replay callbacks for both runners", async () => {
+    const replay = { command: "custom-runner --literal '(name)'", seed: "123" };
+    const write = vi.fn();
+    const options = { fidelity: isolatedFidelity, replay: () => replay, write };
+    await new CrocoVitestEvidenceReporter(options).onTestCaseResult({
+      id: "custom-vitest",
+      name: "(name)",
+      fullName: "(name)",
+      diagnostic: () => undefined,
+      result: () => ({ state: "passed" }),
+    });
+    const playwright = new CrocoPlaywrightEvidenceReporter(options);
+    playwright.onTestEnd(
+      { id: "custom-playwright", title: "(name)" },
+      { duration: 1, status: "passed" },
+    );
+    await playwright.onEnd();
+    expect(write.mock.calls.map(([evidence]) => evidence.replay)).toEqual([replay, replay]);
+  });
+
   it("adapts Vitest retry results without a custom runner", async () => {
     const write = vi.fn();
     const reporter = new CrocoVitestEvidenceReporter({
@@ -529,7 +635,7 @@ describe("runner reporters", () => {
         outcome: "flaky",
         packageName: "@croco/testing",
         replay: {
-          command: 'pnpm --filter "@croco/testing" exec vitest run -t "example retries"',
+          command: "pnpm --filter '@croco/testing' exec vitest run -t '(?:^| )example retries$'",
         },
         runner: "vitest",
       }),
@@ -553,7 +659,7 @@ describe("runner reporters", () => {
         id: "@croco/users::vitest/project-package",
         packageName: "@croco/users",
         replay: {
-          command: 'pnpm --filter "@croco/users" exec vitest run -t "uses project package"',
+          command: "pnpm --filter '@croco/users' exec vitest run -t '(?:^| )uses project package$'",
         },
       }),
     );
@@ -604,8 +710,8 @@ describe("runner reporters", () => {
         "@croco/users",
       ]);
       expect(bundle.records.map(({ replay }) => replay.command)).toEqual([
-        'pnpm --filter "@croco/billing" exec vitest run -t "account > loads an account"',
-        'pnpm --filter "@croco/users" exec vitest run -t "account > loads an account"',
+        `pnpm --filter '@croco/billing' exec vitest run '${packages[1]?.testFile}' -t '(?:^| )account > loads an account$'`,
+        `pnpm --filter '@croco/users' exec vitest run '${packages[0]?.testFile}' -t '(?:^| )account > loads an account$'`,
       ]);
     } finally {
       rmSync(workspace, { force: true, recursive: true });
@@ -843,16 +949,14 @@ describe("runner reporters", () => {
           id: "@croco/admin-web::shared-browser-id",
           packageName: "@croco/admin-web",
           replay: {
-            command:
-              'pnpm --filter "@croco/admin-web" exec playwright test --grep "creates a user"',
+            command: `pnpm --filter '@croco/admin-web' exec playwright test --project='chromium' '${resolve(workspace, "apps/admin-web/e2e/users")}\\.spec\\.ts' --grep '(?:^| )creates a user$'`,
           },
         }),
         expect.objectContaining({
           id: "@croco/console-web::shared-browser-id",
           packageName: "@croco/console-web",
           replay: {
-            command:
-              'pnpm --filter "@croco/console-web" exec playwright test --grep "creates a user"',
+            command: `pnpm --filter '@croco/console-web' exec playwright test --project='chromium' '${resolve(workspace, "apps/console-web/e2e/users")}\\.spec\\.ts' --grep '(?:^| )creates a user$'`,
           },
         }),
       ]);

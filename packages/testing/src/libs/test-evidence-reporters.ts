@@ -69,10 +69,15 @@ const DEFAULT_VITEST_REPORTER_OPTIONS: TestEvidenceReporterOptions = {
 
 const PACKAGE_NAMES_BY_DIRECTORY = new Map<string, string | undefined>();
 
+type VitestTaskParent =
+  | { readonly type: "module" }
+  | { readonly type: "suite"; readonly name: string; readonly parent: VitestTaskParent };
+
 export type VitestTask = {
   readonly id: string;
   readonly name: string;
   readonly module?: { readonly moduleId: string };
+  readonly parent?: VitestTaskParent;
   readonly project?: {
     readonly config?: { readonly root?: string };
     readonly name: string;
@@ -94,7 +99,7 @@ export type VitestTask = {
 export type PlaywrightTestCase = {
   readonly expectedStatus?: PlaywrightTestResult["status"];
   readonly id: string;
-  readonly location?: { readonly file: string };
+  readonly location?: { readonly file: string; readonly line?: number };
   readonly parent?: {
     readonly project: () =>
       | {
@@ -105,6 +110,7 @@ export type PlaywrightTestCase = {
   };
   readonly title: string;
   readonly titlePath?: () => readonly string[];
+  readonly tags?: readonly string[];
 };
 
 export type PlaywrightTestResult = {
@@ -154,9 +160,7 @@ export class CrocoVitestEvidenceReporter {
         },
         observed: this.options.observed?.(context) ?? { contractIds: [] },
         replay: this.options.replay?.(context) ?? {
-          command: packageName
-            ? `pnpm --filter ${JSON.stringify(packageName)} exec vitest run -t ${JSON.stringify(task.fullName)}`
-            : `pnpm vitest run -t ${JSON.stringify(task.fullName)}`,
+          command: vitestReplayCommand(task, packageName),
         },
         diagnostics:
           this.options.diagnostics?.(context) ??
@@ -177,6 +181,46 @@ export class CrocoVitestEvidenceReporter {
       }),
     );
   }
+}
+
+function shellQuote(value: string): string {
+  return `'${value.split("'").join(`'"'"'`)}'`;
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function replayPrefix(packageName: string | undefined): string {
+  return packageName ? `pnpm --filter ${shellQuote(packageName)} exec` : "pnpm";
+}
+
+function vitestReplayCommand(task: VitestTask, packageName: string | undefined): string {
+  const names = [task.parent ? task.name : task.fullName];
+  for (let parent = task.parent; parent?.type === "suite"; parent = parent.parent) {
+    names.unshift(parent.name);
+  }
+  const pattern = `${task.parent ? "^" : "(?:^| )"}${escapeRegExp(names.join(" "))}$`;
+  const file = task.module ? ` ${shellQuote(task.module.moduleId)}` : "";
+  return `${replayPrefix(packageName)} vitest run${file} -t ${shellQuote(pattern)}`;
+}
+
+function playwrightReplayCommand(
+  test: PlaywrightTestCase,
+  packageName: string | undefined,
+): string {
+  const prefix = `${replayPrefix(packageName)} playwright test`;
+  const projectName = test.parent?.project()?.name;
+  const project = projectName ? ` --project=${shellQuote(projectName)}` : "";
+  const location = test.location;
+  const file = location
+    ? ` ${shellQuote(`${escapeRegExp(location.file)}${location.line === undefined ? "" : `:${location.line}`}`)}`
+    : "";
+  const tags = test.tags?.length ? `(?: (?:${test.tags.map(escapeRegExp).join("|")}))*` : "";
+  const pattern = test.titlePath
+    ? `^${test.titlePath().filter(Boolean).map(escapeRegExp).join(`${tags} `)}${tags}$`
+    : `(?:^| )${escapeRegExp(test.title)}${tags}$`;
+  return `${prefix}${project}${file} --grep ${shellQuote(pattern)}`;
 }
 
 function resolvePackageName(
@@ -368,9 +412,7 @@ export class CrocoPlaywrightEvidenceReporter {
         intent: this.options.intent?.(context) ?? { contractIds: [], description: test.title },
         observed: this.options.observed?.(context) ?? { contractIds: [] },
         replay: this.options.replay?.(context) ?? {
-          command: packageName
-            ? `pnpm --filter ${JSON.stringify(packageName)} exec playwright test --grep ${JSON.stringify(test.title)}`
-            : `pnpm playwright test --grep ${JSON.stringify(test.title)}`,
+          command: playwrightReplayCommand(test, packageName),
         },
         diagnostics:
           this.options.diagnostics?.(context) ??

@@ -47,6 +47,12 @@ title: "VitestTask"
 
 ---
 
+### parent?
+
+> `readonly` `optional` **parent?**: `VitestTaskParent`
+
+---
+
 ### project?
 
 > `readonly` `optional` **project?**: `object`
