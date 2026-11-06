@@ -4,15 +4,21 @@ import * as path from "node:path";
 import * as esbuild from "esbuild";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { crocoPlugin } from "../libs/plugin";
+import { installPublishedDiPackages } from "./fixtures/publishedDiPackages";
 
 const TEMP_DIR = path.join(__dirname, "plugin-temp");
 
 function createProject(): { readonly entry: string; readonly component: string } {
-  const repositoryRoot = path.resolve(__dirname, "../../../..");
   const srcDir = path.join(TEMP_DIR, "src");
   const entry = path.join(srcDir, "index.ts");
   const component = path.join(srcDir, "Service.ts");
   fs.mkdirSync(srcDir, { recursive: true });
+  installPublishedDiPackages(TEMP_DIR, [
+    "framework-context",
+    "framework-module",
+    "problems-core",
+    "diagnostics-core",
+  ]);
   fs.writeFileSync(
     path.join(TEMP_DIR, "tsconfig.json"),
     JSON.stringify({
@@ -21,11 +27,6 @@ function createProject(): { readonly entry: string; readonly component: string }
         module: "NodeNext",
         moduleResolution: "NodeNext",
         experimentalDecorators: true,
-        baseUrl: repositoryRoot,
-        paths: {
-          "@croco/framework-context": ["packages/framework-context/src/index.ts"],
-          "@croco/framework-module": ["packages/framework-module/src/index.ts"],
-        },
       },
     }),
   );

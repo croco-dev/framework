@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import * as ts from "typescript";
 import { afterEach, describe, expect, it } from "vitest";
 import { compileDiGraph, createDiPackageDescriptor, writeDiGraph } from "../libs/DiCompiler";
+import { installPublishedDiPackages } from "./fixtures/publishedDiPackages";
 
 const repositoryRoot = path.resolve(__dirname, "../../../..");
 const roots: string[] = [];
@@ -12,22 +13,7 @@ function fixture(options: Record<string, unknown>, packageType: string, extensio
   const root = fs.mkdtempSync(path.join(tmpdir(), "croco-di-imports-"));
   roots.push(root);
   fs.mkdirSync(path.join(root, "src"));
-  const crocoModules = path.join(root, "node_modules/@croco");
-  fs.mkdirSync(crocoModules, { recursive: true });
-  // Match published entrypoints without following workspace links back into implementation sources.
-  for (const name of ["framework-context", "problems-core", "diagnostics-core"]) {
-    const packageRoot = path.join(repositoryRoot, "packages", name);
-    const installedRoot = path.join(crocoModules, name);
-    const manifest = JSON.parse(fs.readFileSync(path.join(packageRoot, "package.json"), "utf8"));
-    fs.mkdirSync(installedRoot);
-    fs.writeFileSync(
-      path.join(installedRoot, "package.json"),
-      JSON.stringify({ ...manifest, ...manifest.publishConfig }),
-    );
-    fs.cpSync(path.join(packageRoot, "dist"), path.join(installedRoot, "dist"), {
-      recursive: true,
-    });
-  }
+  installPublishedDiPackages(root, ["framework-context", "problems-core", "diagnostics-core"]);
   fs.writeFileSync(path.join(root, "package.json"), JSON.stringify({ type: packageType }));
   fs.writeFileSync(
     path.join(root, "tsconfig.json"),
@@ -122,9 +108,6 @@ describe("DI graph consumer imports", () => {
   it("rejects extensionless generated NodeNext imports and accepts their restoration", () => {
     const root = fixture({ module: "NodeNext", moduleResolution: "NodeNext" }, "module", "ts");
     const result = compileDiGraph({ baseDir: root, outFile: "src/di.generated.ts" });
-    writeDiGraph(result);
-    typecheck(root);
-
     fs.writeFileSync(
       result.outFile,
       result.code.replace('from "./Service.js"', 'from "./Service"'),
@@ -138,8 +121,6 @@ describe("DI graph consumer imports", () => {
     const root = fixture({ module: "NodeNext", moduleResolution: "NodeNext" }, "module", "ts");
     const serviceFile = path.join(root, "src/Service.ts");
     const serviceSource = fs.readFileSync(serviceFile, "utf8");
-    const result = compileDiGraph({ baseDir: root, outFile: "src/di.generated.ts" });
-    writeDiGraph(result);
     typecheck(root);
 
     fs.writeFileSync(serviceFile, serviceSource.replace("value = 37", 'value: number = "invalid"'));
