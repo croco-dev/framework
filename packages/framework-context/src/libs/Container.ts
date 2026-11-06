@@ -693,6 +693,7 @@ export class Container {
   /**
    * Attempts synchronous cleanup of instances present when each cleanup phase begins, then clears registrations.
    * Call only while this container is idle. A later reset does not retry failed destructors.
+   * Cleanup failures declare `retryable: false` because registrations have already been cleared.
    * @throws A `framework-context/container-reset-failed` Problem retaining every original cleanup failure.
    */
   static reset(): void {
@@ -768,6 +769,7 @@ export class Container {
         {
           cause: createResetCleanupCause(failures),
           extensions: {
+            retryable: false,
             cleanupFailureCount: failures.length,
             cleanupFailures: failures.slice(0, MAX_RESET_CLEANUP_FAILURE_MESSAGES).map((error) => {
               const message = describeResetCleanupFailure(error);

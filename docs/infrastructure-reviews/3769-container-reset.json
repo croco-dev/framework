@@ -6,7 +6,7 @@
       "classification": "pure-contract",
       "reason": "Attempt cleanup across every container lifetime before clearing registrations and report all failures through one Problem, without changing low-level RuntimeContainer reset or Host lifecycles.",
       "files": {
-        "packages/framework-context/src/libs/Container.ts": "2a88f28f74448fa138834b43be765bb008847ca1f9547c75e3deab1c0e2c8501"
+        "packages/framework-context/src/libs/Container.ts": "3e6b469e7f614f699495ebaee1e2a573074d0f315587bc4027851927915c04c3"
       },
       "catalogRuntimes": [],
       "profiles": {
@@ -56,7 +56,7 @@
       "classification": "pure-contract",
       "reason": "Publish the deterministic registry entry and recovery metadata for the container reset failure, plus updated source locations. This is generated contract data and adds no runtime capability.",
       "files": {
-        "packages/problems-core/src/generated/problem-code-registry.ts": "f340fb440eb66b07c5e7e6313644864d02080846089e0e9dcd2d44dc926c34f6"
+        "packages/problems-core/src/generated/problem-code-registry.ts": "fc1812c2877af30880e3677c119e71cd5d88f77553f90cf9ec866eb8c830a624"
       },
       "catalogRuntimes": [],
       "profiles": {

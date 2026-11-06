@@ -76,7 +76,9 @@ describe.each(["default", "application"] as const)("Container.reset in %s scope"
       expect(problem).toBeInstanceOf(Problem);
       const resetProblem = problem as Problem;
       expect(resetProblem.code).toBe("framework-context/container-reset-failed");
-      expect(JSON.stringify(resetProblem.toJSON()).length).toBeLessThan(220000);
+      const details = resetProblem.toJSON();
+      expect(details["retryable"]).toBe(false);
+      expect(JSON.stringify(details).length).toBeLessThan(220000);
       const cause = resetProblem.cause as AggregateError;
       expect(cause.errors).toHaveLength(100);
       expect(

@@ -39,6 +39,7 @@ root container or another scope.
 Call `Container.reset()` only while the selected container is idle. Reset attempts synchronous cleanup
 of registered values, generated transients, and generated singletons in that order, once per object, then clears
 registrations even if cleanup fails. Failures throw `framework-context/container-reset-failed`;
+the failure declares `retryable: false` so the default retry policy preserves it instead of retrying an empty reset.
 `cause` is a native `AggregateError` retaining every thrown value. The serialized Problem contains up
 to 100 messages in `cleanupFailures`, the total in `cleanupFailureCount`, and the omitted count in
 `omittedCleanupFailureCount`. Each message preview keeps up to 2048 UTF-16 code units and has
