@@ -1,26 +1,27 @@
 import * as fs from "node:fs";
 import { createRequire } from "node:module";
+import { tmpdir } from "node:os";
 import * as path from "node:path";
 import * as esbuild from "esbuild";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { crocoPlugin } from "../libs/plugin";
 import { installPublishedDiPackages } from "./fixtures/publishedDiPackages";
 
-const TEMP_DIR = path.join(__dirname, "plugin-temp");
+let tempDir: string;
 
 function createProject(): { readonly entry: string; readonly component: string } {
-  const srcDir = path.join(TEMP_DIR, "src");
+  const srcDir = path.join(tempDir, "src");
   const entry = path.join(srcDir, "index.ts");
   const component = path.join(srcDir, "Service.ts");
   fs.mkdirSync(srcDir, { recursive: true });
-  installPublishedDiPackages(TEMP_DIR, [
+  installPublishedDiPackages(tempDir, [
     "framework-context",
     "framework-module",
     "problems-core",
     "diagnostics-core",
   ]);
   fs.writeFileSync(
-    path.join(TEMP_DIR, "tsconfig.json"),
+    path.join(tempDir, "tsconfig.json"),
     JSON.stringify({
       compilerOptions: {
         target: "ES2022",
@@ -48,7 +49,7 @@ function createProject(): { readonly entry: string; readonly component: string }
 function createMockBuild(entry: string, platform: esbuild.Platform = "node"): esbuild.PluginBuild {
   return {
     initialOptions: {
-      absWorkingDir: TEMP_DIR,
+      absWorkingDir: tempDir,
       entryPoints: [entry],
       platform,
     },
@@ -60,11 +61,11 @@ function createMockBuild(entry: string, platform: esbuild.Platform = "node"): es
 
 describe("crocoPlugin", () => {
   beforeEach(() => {
-    fs.rmSync(TEMP_DIR, { recursive: true, force: true });
+    tempDir = fs.realpathSync(fs.mkdtempSync(path.join(tmpdir(), "croco-plugin-")));
   });
 
   afterEach(() => {
-    fs.rmSync(TEMP_DIR, { recursive: true, force: true });
+    fs.rmSync(tempDir, { recursive: true, force: true });
   });
 
   it.each([
@@ -78,7 +79,7 @@ describe("crocoPlugin", () => {
       const { entry } = createProject();
       await expect(
         esbuild.build({
-          absWorkingDir: TEMP_DIR,
+          absWorkingDir: tempDir,
           entryPoints: [entry],
           platform,
           bundle: true,
@@ -95,32 +96,29 @@ describe("crocoPlugin", () => {
       ).rejects.toThrow(
         "CROCO_DI_COMPILE_001: generateRegistry is no longer supported. Remove it and use di.enabled, di.outFile, and di.manifestFile; the generatedDiGraph must be bound to createApplicationRuntime(...).",
       );
-      expect(fs.existsSync(path.join(TEMP_DIR, "src", "registry.gen.ts"))).toBe(false);
-      expect(fs.existsSync(path.join(TEMP_DIR, ".croco"))).toBe(false);
+      expect(fs.existsSync(path.join(tempDir, "src", "registry.gen.ts"))).toBe(false);
+      expect(fs.existsSync(path.join(tempDir, ".croco"))).toBe(false);
     },
   );
 
   it("bundles a sibling DI graph with local, parent, and neighboring component imports", async () => {
     const { entry } = createProject();
-    const componentSource = fs.readFileSync(path.join(TEMP_DIR, "src", "Service.ts"), "utf8");
+    const componentSource = fs.readFileSync(path.join(tempDir, "src", "Service.ts"), "utf8");
+    fs.writeFileSync(path.join(tempDir, "Parent.ts"), componentSource.replace("Service", "Parent"));
+    fs.mkdirSync(path.join(tempDir, "other"));
     fs.writeFileSync(
-      path.join(TEMP_DIR, "Parent.ts"),
-      componentSource.replace("Service", "Parent"),
-    );
-    fs.mkdirSync(path.join(TEMP_DIR, "other"));
-    fs.writeFileSync(
-      path.join(TEMP_DIR, "other", "Sibling.ts"),
+      path.join(tempDir, "other", "Sibling.ts"),
       componentSource.replace("Service", "Sibling"),
     );
     const common: esbuild.BuildOptions = {
-      absWorkingDir: TEMP_DIR,
+      absWorkingDir: tempDir,
       platform: "node",
       format: "esm",
       bundle: true,
       write: false,
       metafile: true,
       external: ["@croco/framework-context", "@croco/framework-module", "reflect-metadata"],
-      tsconfig: path.join(TEMP_DIR, "tsconfig.json"),
+      tsconfig: path.join(tempDir, "tsconfig.json"),
     };
     const app = await esbuild.build({
       ...common,
@@ -134,7 +132,7 @@ describe("crocoPlugin", () => {
     });
     expect(app.errors).toEqual([]);
     expect(Object.keys(app.metafile?.inputs ?? {})).toContain("src/registry.gen.ts");
-    const graph = fs.readFileSync(path.join(TEMP_DIR, "src", "registry.gen.ts"), "utf8");
+    const graph = fs.readFileSync(path.join(tempDir, "src", "registry.gen.ts"), "utf8");
     expect(graph).toContain('from "./Service.js"');
     expect(graph).toContain('from "../Parent.js"');
     expect(graph).toContain('from "../other/Sibling.js"');
@@ -154,8 +152,8 @@ describe("crocoPlugin", () => {
 
     const onStart = vi.mocked(build.onStart).mock.calls[0]?.[0];
     expect(onStart?.()).toBeUndefined();
-    const generatedFile = path.join(TEMP_DIR, ".croco", "di.generated.ts");
-    const manifestFile = path.join(TEMP_DIR, ".croco", "di.manifest.json");
+    const generatedFile = path.join(tempDir, ".croco", "di.generated.ts");
+    const manifestFile = path.join(tempDir, ".croco", "di.manifest.json");
     expect(fs.existsSync(generatedFile)).toBe(true);
     expect(fs.existsSync(manifestFile)).toBe(true);
     expect(fs.readFileSync(generatedFile, "utf8")).toContain("new source0.Service(");
@@ -175,21 +173,21 @@ describe("crocoPlugin", () => {
     expect(contents).not.toContain("import './Service'");
     expect(result && "watchFiles" in result ? result.watchFiles : []).toContain(component);
     expect(result && "watchDirs" in result ? result.watchDirs : []).toContain(
-      path.join(TEMP_DIR, "src"),
+      path.join(tempDir, "src"),
     );
   });
 
   it("does not register decorated test or benchmark modules from default scans", () => {
     const { entry } = createProject();
     const decorated = `import { Component } from "@croco/framework-context"; @Component() export class Excluded {}`;
-    fs.writeFileSync(path.join(TEMP_DIR, "src", "Excluded.spec.tsx"), decorated);
-    fs.writeFileSync(path.join(TEMP_DIR, "src", "Excluded.bench.ts"), decorated);
+    fs.writeFileSync(path.join(tempDir, "src", "Excluded.spec.tsx"), decorated);
+    fs.writeFileSync(path.join(tempDir, "src", "Excluded.bench.ts"), decorated);
     const build = createMockBuild(entry);
     crocoPlugin().setup(build);
 
     vi.mocked(build.onStart).mock.calls[0]?.[0]();
     const manifest = JSON.parse(
-      fs.readFileSync(path.join(TEMP_DIR, ".croco", "di.manifest.json"), "utf8"),
+      fs.readFileSync(path.join(tempDir, ".croco", "di.manifest.json"), "utf8"),
     ) as { providers: { exportName: string }[] };
     expect(manifest.providers.map((provider) => provider.exportName)).toEqual(["Service"]);
   });
@@ -201,7 +199,7 @@ describe("crocoPlugin", () => {
     const onStart = vi.mocked(build.onStart).mock.calls[0]?.[0];
 
     onStart?.();
-    const manifestFile = path.join(TEMP_DIR, ".croco", "di.manifest.json");
+    const manifestFile = path.join(tempDir, ".croco", "di.manifest.json");
     const first = JSON.parse(fs.readFileSync(manifestFile, "utf8")) as {
       inputHash: string;
       providers: { exportName: string }[];
@@ -234,7 +232,7 @@ describe("crocoPlugin", () => {
 
     const onStart = vi.mocked(build.onStart).mock.calls[0]?.[0];
     expect(onStart?.()).toBeUndefined();
-    expect(fs.existsSync(path.join(TEMP_DIR, ".croco", "di.generated.ts"))).toBe(false);
+    expect(fs.existsSync(path.join(tempDir, ".croco", "di.generated.ts"))).toBe(false);
 
     const onLoad = vi.mocked(build.onLoad).mock.calls[0]?.[1];
     const result = await onLoad?.({
@@ -254,7 +252,7 @@ describe("crocoPlugin", () => {
       const { entry } = createProject();
       fs.writeFileSync(entry, 'export const greeting = "browser";');
       const result = await esbuild.build({
-        absWorkingDir: TEMP_DIR,
+        absWorkingDir: tempDir,
         entryPoints: [entry],
         ...(platform === undefined ? {} : { platform }),
         bundle: true,
@@ -264,7 +262,7 @@ describe("crocoPlugin", () => {
         plugins: [crocoPlugin({ reflectMetadata: false })],
       });
       expect(result.errors).toEqual([]);
-      expect(fs.existsSync(path.join(TEMP_DIR, ".croco"))).toBe(false);
+      expect(fs.existsSync(path.join(tempDir, ".croco"))).toBe(false);
       expect(Object.keys(result.metafile?.inputs ?? {})).toEqual(["src/index.ts"]);
       expect(result.outputFiles?.[0]?.text).toContain("browser");
       expect(result.outputFiles?.[0]?.text).not.toContain("generatedDiGraph");
@@ -274,7 +272,7 @@ describe("crocoPlugin", () => {
   it("forwards explicit bindings and module ownership to the compiler", () => {
     createProject();
     fs.writeFileSync(
-      path.join(TEMP_DIR, "src", "tokens.ts"),
+      path.join(tempDir, "src", "tokens.ts"),
       `
       import { Token } from "@croco/framework-context";
       export const SERVICE = new Token("service");
@@ -309,7 +307,7 @@ describe("crocoPlugin", () => {
     }).setup(build);
     expect(vi.mocked(build.onStart).mock.calls[0]?.[0]()).toBeUndefined();
     const manifest = JSON.parse(
-      fs.readFileSync(path.join(TEMP_DIR, ".croco", "di.manifest.json"), "utf8"),
+      fs.readFileSync(path.join(tempDir, ".croco", "di.manifest.json"), "utf8"),
     ) as {
       providers: { stereotype: string; tokenId: string }[];
       modules: typeof modules;
@@ -344,19 +342,19 @@ describe("crocoPlugin", () => {
       }
     `,
     );
-    const browserEntry = path.join(TEMP_DIR, "src", "hydrate.ts");
+    const browserEntry = path.join(tempDir, "src", "hydrate.ts");
     fs.writeFileSync(
       browserEntry,
       'export const hydrate = () => document.querySelector("h1")?.textContent;',
     );
     const common: esbuild.BuildOptions = {
-      absWorkingDir: TEMP_DIR,
+      absWorkingDir: tempDir,
       format: "esm",
       bundle: true,
       write: false,
       metafile: true,
       external: ["@croco/framework-context", "@croco/framework-module", "reflect-metadata"],
-      tsconfig: path.join(TEMP_DIR, "tsconfig.json"),
+      tsconfig: path.join(tempDir, "tsconfig.json"),
     };
     const server = await esbuild.build({
       ...common,
@@ -381,7 +379,7 @@ describe("crocoPlugin", () => {
     const { entry } = createProject();
     fs.writeFileSync(entry, `#!/usr/bin/env node\n${fs.readFileSync(entry, "utf8")}`);
     const result = await esbuild.build({
-      absWorkingDir: TEMP_DIR,
+      absWorkingDir: tempDir,
       entryPoints: [entry],
       platform: "node",
       format: "esm",
@@ -389,7 +387,7 @@ describe("crocoPlugin", () => {
       write: false,
       external: ["@croco/framework-context", "@croco/framework-module", "reflect-metadata"],
       plugins: [crocoPlugin()],
-      tsconfig: path.join(TEMP_DIR, "tsconfig.json"),
+      tsconfig: path.join(tempDir, "tsconfig.json"),
     });
 
     expect(result.errors).toEqual([]);
@@ -399,7 +397,7 @@ describe("crocoPlugin", () => {
 
   it("attaches graphs in imported composition modules for multiple server entrypoints", async () => {
     const { entry } = createProject();
-    const composition = path.join(TEMP_DIR, "src", "app.ts");
+    const composition = path.join(tempDir, "src", "app.ts");
     fs.writeFileSync(
       composition,
       `
@@ -411,12 +409,12 @@ describe("crocoPlugin", () => {
     `,
     );
     fs.writeFileSync(entry, 'export { runtime, resolve } from "./app";');
-    const secondEntry = path.join(TEMP_DIR, "src", "worker.ts");
+    const secondEntry = path.join(tempDir, "src", "worker.ts");
     fs.writeFileSync(secondEntry, 'export { runtime, resolve } from "./app";');
     const result = await esbuild.build({
-      absWorkingDir: TEMP_DIR,
+      absWorkingDir: tempDir,
       entryPoints: [entry, secondEntry],
-      outdir: path.join(TEMP_DIR, "dist"),
+      outdir: path.join(tempDir, "dist"),
       platform: "node",
       format: "cjs",
       bundle: true,
@@ -427,7 +425,7 @@ describe("crocoPlugin", () => {
         ).resolve("reflect-metadata"),
       },
       plugins: [crocoPlugin()],
-      tsconfig: path.join(TEMP_DIR, "tsconfig.json"),
+      tsconfig: path.join(tempDir, "tsconfig.json"),
     });
     expect(result.outputFiles).toHaveLength(2);
     for (const output of result.outputFiles) {
@@ -509,7 +507,7 @@ describe("crocoPlugin", () => {
         `,
         );
         const result = await esbuild.build({
-          absWorkingDir: TEMP_DIR,
+          absWorkingDir: tempDir,
           entryPoints: [entry],
           platform: "node",
           format: "cjs",
@@ -517,7 +515,7 @@ describe("crocoPlugin", () => {
           write: false,
           external: ["@croco/framework-context", "@croco/framework-module"],
           plugins: [crocoPlugin({ reflectMetadata: false, di: { graphId: "lexical-bindings" } })],
-          tsconfig: path.join(TEMP_DIR, "tsconfig.json"),
+          tsconfig: path.join(tempDir, "tsconfig.json"),
         });
         const loaded = { exports: {} };
         const requireStub = (specifier: string): unknown => {
@@ -573,7 +571,7 @@ describe("crocoPlugin", () => {
         );
         await expect(
           esbuild.build({
-            absWorkingDir: TEMP_DIR,
+            absWorkingDir: tempDir,
             entryPoints: [entry],
             platform: "node",
             format: "cjs",
@@ -582,7 +580,7 @@ describe("crocoPlugin", () => {
             logLevel: "silent",
             external: ["@croco/framework-context", "@croco/framework-module"],
             plugins: [crocoPlugin({ reflectMetadata: false })],
-            tsconfig: path.join(TEMP_DIR, "tsconfig.json"),
+            tsconfig: path.join(tempDir, "tsconfig.json"),
           }),
         ).rejects.toThrow(
           "CROCO_DI_COMPILE_001: Server builds with generated providers must bind an app-scoped runtime with createApplicationRuntime(...).",
@@ -595,7 +593,7 @@ describe("crocoPlugin", () => {
     const { entry } = createProject();
     fs.writeFileSync(entry, 'export { runtime } from "./app";');
     fs.writeFileSync(
-      path.join(TEMP_DIR, "src", "app.ts"),
+      path.join(tempDir, "src", "app.ts"),
       `
       import * as application from "@croco/framework-module";
       const explicitGraph = { version: 1, graphId: "explicit", compilerVersion: "test", inputHash: "test", providers: [], roots: [] } as const;
@@ -603,7 +601,7 @@ describe("crocoPlugin", () => {
     `,
     );
     const result = await esbuild.build({
-      absWorkingDir: TEMP_DIR,
+      absWorkingDir: tempDir,
       entryPoints: [entry],
       platform: "node",
       format: "esm",
@@ -622,10 +620,10 @@ describe("crocoPlugin", () => {
     async (platform) => {
       const { entry } = createProject();
       fs.writeFileSync(entry, 'export { value } from "./app";');
-      fs.writeFileSync(path.join(TEMP_DIR, "src", "app.ts"), "export const value = 1;");
+      fs.writeFileSync(path.join(tempDir, "src", "app.ts"), "export const value = 1;");
       await expect(
         esbuild.build({
-          absWorkingDir: TEMP_DIR,
+          absWorkingDir: tempDir,
           entryPoints: [entry],
           platform,
           bundle: true,
@@ -670,7 +668,7 @@ describe("crocoPlugin", () => {
     };
     const generations: Generation[] = [];
     const context = await esbuild.context({
-      absWorkingDir: TEMP_DIR,
+      absWorkingDir: tempDir,
       entryPoints: [entry],
       platform: "node",
       format: "cjs",
@@ -683,7 +681,7 @@ describe("crocoPlugin", () => {
         ).resolve("reflect-metadata"),
       },
       plugins: [crocoPlugin({ di: { graphId: "rebuild-test" } })],
-      tsconfig: path.join(TEMP_DIR, "tsconfig.json"),
+      tsconfig: path.join(tempDir, "tsconfig.json"),
     });
     const rebuild = async (): Promise<Generation> => {
       const result = await context.rebuild();
@@ -713,7 +711,7 @@ describe("crocoPlugin", () => {
         return first.resolveAll();
       });
 
-      const addedFile = path.join(TEMP_DIR, "src", "Added.ts");
+      const addedFile = path.join(tempDir, "src", "Added.ts");
       fs.writeFileSync(addedFile, providerSource("Added", "added"));
       const added = await rebuild();
       expect(
@@ -726,8 +724,8 @@ describe("crocoPlugin", () => {
         original,
       );
 
-      const graphFile = path.join(TEMP_DIR, ".croco", "di.generated.ts");
-      const manifestFile = path.join(TEMP_DIR, ".croco", "di.manifest.json");
+      const graphFile = path.join(tempDir, ".croco", "di.generated.ts");
+      const manifestFile = path.join(tempDir, ".croco", "di.manifest.json");
       const lastValidGraph = fs.readFileSync(graphFile, "utf8");
       const lastValidManifest = fs.readFileSync(manifestFile, "utf8");
       fs.writeFileSync(
@@ -773,11 +771,11 @@ describe("crocoPlugin", () => {
 
   it("watches provider additions, invalid changes, renames, and deletion automatically", async () => {
     const { entry, component } = createProject();
-    const manifestFile = path.join(TEMP_DIR, ".croco", "di.manifest.json");
+    const manifestFile = path.join(tempDir, ".croco", "di.manifest.json");
     const buildResults: number[] = [];
     const buildErrors: string[][] = [];
     const context = await esbuild.context({
-      absWorkingDir: TEMP_DIR,
+      absWorkingDir: tempDir,
       entryPoints: [entry],
       platform: "node",
       bundle: true,
@@ -796,7 +794,7 @@ describe("crocoPlugin", () => {
           },
         },
       ],
-      tsconfig: path.join(TEMP_DIR, "tsconfig.json"),
+      tsconfig: path.join(tempDir, "tsconfig.json"),
     });
     const providerNames = (): string[] => {
       const manifest = JSON.parse(fs.readFileSync(manifestFile, "utf8")) as {
@@ -819,7 +817,7 @@ describe("crocoPlugin", () => {
       await waitFor(() => buildResults.length > 0 && fs.existsSync(manifestFile));
       expect(providerNames()).toEqual(["Service"]);
 
-      const addedFile = path.join(TEMP_DIR, "src", "Added.ts");
+      const addedFile = path.join(tempDir, "src", "Added.ts");
       fs.writeFileSync(
         addedFile,
         'import { Component } from "@croco/framework-context"; @Component() export class Added {}',
@@ -871,9 +869,9 @@ describe("crocoPlugin", () => {
 
   it("recovers an initially invalid nested provider without touching the scan root", async () => {
     const { entry, component } = createProject();
-    const nestedDir = path.join(TEMP_DIR, "src", "nested");
+    const nestedDir = path.join(tempDir, "src", "nested");
     const nestedProvider = path.join(nestedDir, "Service.ts");
-    const manifestFile = path.join(TEMP_DIR, ".croco", "di.manifest.json");
+    const manifestFile = path.join(tempDir, ".croco", "di.manifest.json");
     fs.mkdirSync(nestedDir, { recursive: true });
     fs.rmSync(component);
     fs.writeFileSync(
@@ -883,7 +881,7 @@ describe("crocoPlugin", () => {
 
     const buildResults: string[][] = [];
     const context = await esbuild.context({
-      absWorkingDir: TEMP_DIR,
+      absWorkingDir: tempDir,
       entryPoints: [entry],
       platform: "node",
       bundle: true,
@@ -901,7 +899,7 @@ describe("crocoPlugin", () => {
           },
         },
       ],
-      tsconfig: path.join(TEMP_DIR, "tsconfig.json"),
+      tsconfig: path.join(tempDir, "tsconfig.json"),
     });
     const waitFor = async (predicate: () => boolean): Promise<void> => {
       const deadline = Date.now() + 20_000;
@@ -944,9 +942,9 @@ describe("crocoPlugin", () => {
 
   it("watches a selected descriptor through initial and subsequent compiler failures", async () => {
     const { entry } = createProject();
-    const libraryDir = path.join(TEMP_DIR, "library");
+    const libraryDir = path.join(tempDir, "library");
     const descriptorFile = path.join(libraryDir, "croco-di.json");
-    const manifestFile = path.join(TEMP_DIR, ".croco", "di.manifest.json");
+    const manifestFile = path.join(tempDir, ".croco", "di.manifest.json");
     fs.mkdirSync(libraryDir, { recursive: true });
     fs.writeFileSync(
       path.join(libraryDir, "graph.ts"),
@@ -966,7 +964,7 @@ describe("crocoPlugin", () => {
     });
     const buildResults: string[][] = [];
     const context = await esbuild.context({
-      absWorkingDir: TEMP_DIR,
+      absWorkingDir: tempDir,
       entryPoints: [entry],
       platform: "node",
       bundle: true,
@@ -984,7 +982,7 @@ describe("crocoPlugin", () => {
           },
         },
       ],
-      tsconfig: path.join(TEMP_DIR, "tsconfig.json"),
+      tsconfig: path.join(tempDir, "tsconfig.json"),
     });
     const waitFor = async (predicate: () => boolean): Promise<void> => {
       const deadline = Date.now() + 20_000;
