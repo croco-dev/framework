@@ -8,6 +8,94 @@ const SOURCE = { file: "src/reset.ts", line: 1, column: 1 } as const;
 afterEach(() => Container.reset());
 
 describe.each(["default", "application"] as const)("Container.reset in %s scope", (kind) => {
+  it.each([
+    {
+      length: 2048,
+      expected: `HEAD${"x".repeat(2040)}TAIL`,
+      truncated: false,
+    },
+    {
+      length: 2049,
+      expected: `HEAD${"x".repeat(2041)}TAI`,
+      truncated: true,
+    },
+  ])(
+    "limits a $length-unit cleanup message without changing its cause",
+    ({ length, expected, truncated }) => {
+      const scope = kind === "application" ? Container.createScope() : undefined;
+      const message = `HEAD${"x".repeat(length - 8)}TAIL`;
+      const failure = new Error(message);
+      const run = () => {
+        Container.set("message-boundary", {
+          destroy() {
+            throw failure;
+          },
+        });
+        let problem: unknown;
+        try {
+          Container.reset();
+        } catch (error) {
+          problem = error;
+        }
+        expect(problem).toBeInstanceOf(Problem);
+        expect((problem as Problem).toJSON()["cleanupFailures"]).toEqual([
+          { message: expected, ...(truncated ? { truncated: true } : {}) },
+        ]);
+        expect(((problem as Problem).cause as AggregateError).errors[0]).toBe(failure);
+        expect(failure.message).toBe(message);
+      };
+      try {
+        if (scope) scope.run(run);
+        else run();
+      } finally {
+        scope?.dispose();
+      }
+    },
+  );
+
+  it("bounds the serialized preview of large messages while retaining every original failure", () => {
+    const scope = kind === "application" ? Container.createScope() : undefined;
+    const failures = Array.from(
+      { length: 100 },
+      (_, index) => new Error(`failure-${index}:${"x".repeat(65536)}TAIL`),
+    );
+    const run = () => {
+      for (const [index, failure] of failures.entries()) {
+        Container.set(`large-message-${index}`, {
+          destroy() {
+            throw failure;
+          },
+        });
+      }
+      let problem: unknown;
+      try {
+        Container.reset();
+      } catch (error) {
+        problem = error;
+      }
+      expect(problem).toBeInstanceOf(Problem);
+      const resetProblem = problem as Problem;
+      expect(resetProblem.code).toBe("framework-context/container-reset-failed");
+      expect(JSON.stringify(resetProblem.toJSON()).length).toBeLessThan(220000);
+      const cause = resetProblem.cause as AggregateError;
+      expect(cause.errors).toHaveLength(100);
+      expect(
+        cause.errors.every((failure: unknown, index: number) => failure === failures[99 - index]),
+      ).toBe(true);
+      expect(
+        failures.every(
+          (failure) => failure.message.length > 65536 && failure.message.endsWith("TAIL"),
+        ),
+      ).toBe(true);
+    };
+    try {
+      if (scope) scope.run(run);
+      else run();
+    } finally {
+      scope?.dispose();
+    }
+  });
+
   it("normalizes a non-string Error.message without losing the original failure", () => {
     const scope = kind === "application" ? Container.createScope() : undefined;
     const failure = new Error("cleanup");

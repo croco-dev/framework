@@ -37,12 +37,17 @@ that asynchronous scope, including work after `await`. Resetting one active scop
 root container or another scope.
 
 Call `Container.reset()` only while the selected container is idle. Reset attempts synchronous cleanup
-of all registered values and generated transient/singleton instances, once per object, then clears
+of registered values, generated transients, and generated singletons in that order, once per object, then clears
 registrations even if cleanup fails. Failures throw `framework-context/container-reset-failed`;
 `cause` is a native `AggregateError` retaining every thrown value. The serialized Problem contains up
 to 100 messages in `cleanupFailures`, the total in `cleanupFailureCount`, and the omitted count in
-`omittedCleanupFailureCount`. A second reset does not retry failed cleanup. Release any resources
+`omittedCleanupFailureCount`. Each message preview keeps up to 2048 UTF-16 code units and has
+`truncated: true` when shortened; original errors remain unchanged in the cause. A second reset does
+not retry failed cleanup. Release any resources
 that a failing cleanup left open before reusing the container.
+
+Reset snapshots a lifetime when its phase begins. Instances constructed by a destructor during their
+own cleanup phase are outside that snapshot. Destructors should release their existing resources.
 
 ```typescript
 const scope = Container.createScope();

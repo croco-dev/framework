@@ -15871,7 +15871,7 @@ export type CrocoProblemRegistry = {
       readonly recovery: {
         readonly cause: "One or more provider destructors failed during synchronous container reset. All registrations were cleared after every tracked instance was attempted.";
         readonly userAction: "Do not retry reset to recover failed cleanup; its registrations are already cleared. Ask the operator to release any resources left open.";
-        readonly operatorAction: "Inspect cleanupFailureCount, omittedCleanupFailureCount and the bounded cleanupFailures summary; the AggregateError cause retains every original failure. Release remaining resources and repair destructors before reusing the container.";
+        readonly operatorAction: "Inspect cleanupFailureCount, omittedCleanupFailureCount and cleanupFailures; truncated messages are marked, and the AggregateError cause retains every original failure. Release remaining resources and repair destructors before reusing the container.";
         readonly retryability: "not-retryable";
         readonly redactionPolicy: "operator-only";
         readonly telemetry: {
@@ -15884,7 +15884,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/framework-context/src/libs/Container.ts";
-          readonly line: 759;
+          readonly line: 765;
           readonly column: 13;
           readonly kind: "problem-factory";
         },
@@ -15912,7 +15912,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/framework-context/src/libs/Container.ts";
-          readonly line: 289;
+          readonly line: 290;
           readonly column: 13;
           readonly kind: "problem-factory";
         },
@@ -15940,7 +15940,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/framework-context/src/libs/Container.ts";
-          readonly line: 163;
+          readonly line: 164;
           readonly column: 10;
           readonly kind: "problem-factory";
         },
@@ -15968,7 +15968,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/framework-context/src/libs/Container.ts";
-          readonly line: 439;
+          readonly line: 440;
           readonly column: 17;
           readonly kind: "problem-factory";
         },
@@ -15996,7 +15996,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/framework-context/src/libs/Container.ts";
-          readonly line: 460;
+          readonly line: 461;
           readonly column: 13;
           readonly kind: "problem-factory";
         },
@@ -16024,7 +16024,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/framework-context/src/libs/Container.ts";
-          readonly line: 232;
+          readonly line: 233;
           readonly column: 13;
           readonly kind: "problem-factory";
         },
@@ -16136,7 +16136,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/framework-context/src/libs/Container.ts";
-          readonly line: 851;
+          readonly line: 863;
           readonly column: 13;
           readonly kind: "problem-factory";
         },
@@ -16164,7 +16164,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/framework-context/src/libs/Container.ts";
-          readonly line: 845;
+          readonly line: 857;
           readonly column: 13;
           readonly kind: "problem-factory";
         },
@@ -16192,7 +16192,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/framework-context/src/libs/Container.ts";
-          readonly line: 1469;
+          readonly line: 1481;
           readonly column: 15;
           readonly kind: "problem-factory";
         },
@@ -16220,7 +16220,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/framework-context/src/libs/Container.ts";
-          readonly line: 1537;
+          readonly line: 1549;
           readonly column: 13;
           readonly kind: "problem-factory";
         },
@@ -16472,7 +16472,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/framework-context/src/libs/Container.ts";
-          readonly line: 2659;
+          readonly line: 2671;
           readonly column: 12;
           readonly kind: "problem-factory";
         },
@@ -50469,7 +50469,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
         userAction:
           "Do not retry reset to recover failed cleanup; its registrations are already cleared. Ask the operator to release any resources left open.",
         operatorAction:
-          "Inspect cleanupFailureCount, omittedCleanupFailureCount and the bounded cleanupFailures summary; the AggregateError cause retains every original failure. Release remaining resources and repair destructors before reusing the container.",
+          "Inspect cleanupFailureCount, omittedCleanupFailureCount and cleanupFailures; truncated messages are marked, and the AggregateError cause retains every original failure. Release remaining resources and repair destructors before reusing the container.",
         retryability: "not-retryable",
         redactionPolicy: "operator-only",
         telemetry: {
@@ -50484,7 +50484,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/framework-context/src/libs/Container.ts",
-          line: 759,
+          line: 765,
           column: 13,
           kind: "problem-factory",
         },
@@ -50517,7 +50517,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/framework-context/src/libs/Container.ts",
-          line: 289,
+          line: 290,
           column: 13,
           kind: "problem-factory",
         },
@@ -50550,7 +50550,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/framework-context/src/libs/Container.ts",
-          line: 163,
+          line: 164,
           column: 10,
           kind: "problem-factory",
         },
@@ -50583,7 +50583,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/framework-context/src/libs/Container.ts",
-          line: 439,
+          line: 440,
           column: 17,
           kind: "problem-factory",
         },
@@ -50616,7 +50616,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/framework-context/src/libs/Container.ts",
-          line: 460,
+          line: 461,
           column: 13,
           kind: "problem-factory",
         },
@@ -50647,7 +50647,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/framework-context/src/libs/Container.ts",
-          line: 232,
+          line: 233,
           column: 13,
           kind: "problem-factory",
         },
@@ -50776,7 +50776,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/framework-context/src/libs/Container.ts",
-          line: 851,
+          line: 863,
           column: 13,
           kind: "problem-factory",
         },
@@ -50808,7 +50808,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/framework-context/src/libs/Container.ts",
-          line: 845,
+          line: 857,
           column: 13,
           kind: "problem-factory",
         },
@@ -50839,7 +50839,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/framework-context/src/libs/Container.ts",
-          line: 1469,
+          line: 1481,
           column: 15,
           kind: "problem-factory",
         },
@@ -50870,7 +50870,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/framework-context/src/libs/Container.ts",
-          line: 1537,
+          line: 1549,
           column: 13,
           kind: "problem-factory",
         },
@@ -51156,7 +51156,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/framework-context/src/libs/Container.ts",
-          line: 2659,
+          line: 2671,
           column: 12,
           kind: "problem-factory",
         },

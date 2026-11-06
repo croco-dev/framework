@@ -4389,7 +4389,7 @@ const recoveryMetadataByCode = {
     userAction:
       "Do not retry reset to recover failed cleanup; its registrations are already cleared. Ask the operator to release any resources left open.",
     operatorAction:
-      "Inspect cleanupFailureCount, omittedCleanupFailureCount and the bounded cleanupFailures summary; the AggregateError cause retains every original failure. Release remaining resources and repair destructors before reusing the container.",
+      "Inspect cleanupFailureCount, omittedCleanupFailureCount and cleanupFailures; truncated messages are marked, and the AggregateError cause retains every original failure. Release remaining resources and repair destructors before reusing the container.",
     retryability: "not-retryable",
     redactionPolicy: "operator-only",
     severity: "error",

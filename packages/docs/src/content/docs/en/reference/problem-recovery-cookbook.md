@@ -11447,12 +11447,12 @@ Sources:
 - Lifecycle: `active`
 - Cause: One or more provider destructors failed during synchronous container reset. All registrations were cleared after every tracked instance was attempted.
 - User action: Do not retry reset to recover failed cleanup; its registrations are already cleared. Ask the operator to release any resources left open.
-- Operator action: Inspect cleanupFailureCount, omittedCleanupFailureCount and the bounded cleanupFailures summary; the AggregateError cause retains every original failure. Release remaining resources and repair destructors before reusing the container.
+- Operator action: Inspect cleanupFailureCount, omittedCleanupFailureCount and cleanupFailures; truncated messages are marked, and the AggregateError cause retains every original failure. Release remaining resources and repair destructors before reusing the container.
 - Telemetry: `croco.problem.error` (error) with `problem.code`, `problem.category`, `problem.status`
 
 Sources:
 
-- `packages/framework-context/src/libs/Container.ts:759:13` (problem-factory)
+- `packages/framework-context/src/libs/Container.ts:765:13` (problem-factory)
 
 <a id="framework-context-container-scope-disposal-failed"></a>
 
@@ -11470,7 +11470,7 @@ Sources:
 
 Sources:
 
-- `packages/framework-context/src/libs/Container.ts:289:13` (problem-factory)
+- `packages/framework-context/src/libs/Container.ts:290:13` (problem-factory)
 
 <a id="framework-context-container-scope-disposed"></a>
 
@@ -11488,7 +11488,7 @@ Sources:
 
 Sources:
 
-- `packages/framework-context/src/libs/Container.ts:163:10` (problem-factory)
+- `packages/framework-context/src/libs/Container.ts:164:10` (problem-factory)
 
 <a id="framework-context-container-scope-rollback-failed"></a>
 
@@ -11506,7 +11506,7 @@ Sources:
 
 Sources:
 
-- `packages/framework-context/src/libs/Container.ts:439:17` (problem-factory)
+- `packages/framework-context/src/libs/Container.ts:440:17` (problem-factory)
 
 <a id="framework-context-container-scope-snapshot-unavailable"></a>
 
@@ -11524,7 +11524,7 @@ Sources:
 
 Sources:
 
-- `packages/framework-context/src/libs/Container.ts:460:13` (problem-factory)
+- `packages/framework-context/src/libs/Container.ts:461:13` (problem-factory)
 
 <a id="framework-context-container-scope-transaction-active"></a>
 
@@ -11542,7 +11542,7 @@ Sources:
 
 Sources:
 
-- `packages/framework-context/src/libs/Container.ts:232:13` (problem-factory)
+- `packages/framework-context/src/libs/Container.ts:233:13` (problem-factory)
 
 <a id="framework-context-context-middleware-execution-error"></a>
 
@@ -11614,7 +11614,7 @@ Sources:
 
 Sources:
 
-- `packages/framework-context/src/libs/Container.ts:851:13` (problem-factory)
+- `packages/framework-context/src/libs/Container.ts:863:13` (problem-factory)
 
 <a id="framework-context-generated-di-graph-version-mismatch"></a>
 
@@ -11632,7 +11632,7 @@ Sources:
 
 Sources:
 
-- `packages/framework-context/src/libs/Container.ts:845:13` (problem-factory)
+- `packages/framework-context/src/libs/Container.ts:857:13` (problem-factory)
 
 <a id="framework-context-generated-di-provider-conflict"></a>
 
@@ -11650,7 +11650,7 @@ Sources:
 
 Sources:
 
-- `packages/framework-context/src/libs/Container.ts:1469:15` (problem-factory)
+- `packages/framework-context/src/libs/Container.ts:1481:15` (problem-factory)
 
 <a id="framework-context-generated-di-token-identity-conflict"></a>
 
@@ -11668,7 +11668,7 @@ Sources:
 
 Sources:
 
-- `packages/framework-context/src/libs/Container.ts:1537:13` (problem-factory)
+- `packages/framework-context/src/libs/Container.ts:1549:13` (problem-factory)
 
 <a id="framework-context-on-shutdown-decorator-invalid"></a>
 
@@ -11830,7 +11830,7 @@ Sources:
 
 Sources:
 
-- `packages/framework-context/src/libs/Container.ts:2659:12` (problem-factory)
+- `packages/framework-context/src/libs/Container.ts:2671:12` (problem-factory)
 
 <a id="framework-context-runtime-inspector-invalid-configuration"></a>
 

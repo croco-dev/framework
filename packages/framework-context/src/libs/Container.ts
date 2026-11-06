@@ -53,6 +53,7 @@ export type ContainerValidationOptions = {
 
 const COMPONENT_METADATA_KEY = Symbol("component:metadata");
 const MAX_RESET_CLEANUP_FAILURE_MESSAGES = 100;
+const MAX_RESET_CLEANUP_FAILURE_MESSAGE_LENGTH = 2048;
 let containerScopeCounter = 0;
 
 type ContainerScopeState = {
@@ -689,6 +690,11 @@ export class Container {
     Container.setValidated(false);
   }
 
+  /**
+   * Attempts synchronous cleanup of instances present when each cleanup phase begins, then clears registrations.
+   * Call only while this container is idle. A later reset does not retry failed destructors.
+   * @throws A `framework-context/container-reset-failed` Problem retaining every original cleanup failure.
+   */
   static reset(): void {
     const scope = Container.getScopeState();
     const runtime = scope?.instance ?? RuntimeContainerBackend.of();
@@ -763,9 +769,15 @@ export class Container {
           cause: createResetCleanupCause(failures),
           extensions: {
             cleanupFailureCount: failures.length,
-            cleanupFailures: failures.slice(0, MAX_RESET_CLEANUP_FAILURE_MESSAGES).map((error) => ({
-              message: describeResetCleanupFailure(error),
-            })),
+            cleanupFailures: failures.slice(0, MAX_RESET_CLEANUP_FAILURE_MESSAGES).map((error) => {
+              const message = describeResetCleanupFailure(error);
+              return message.length > MAX_RESET_CLEANUP_FAILURE_MESSAGE_LENGTH
+                ? {
+                    message: message.slice(0, MAX_RESET_CLEANUP_FAILURE_MESSAGE_LENGTH),
+                    truncated: true,
+                  }
+                : { message };
+            }),
             omittedCleanupFailureCount: Math.max(
               0,
               failures.length - MAX_RESET_CLEANUP_FAILURE_MESSAGES,
