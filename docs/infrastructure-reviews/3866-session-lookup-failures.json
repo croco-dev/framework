@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "auth-better-auth",
+      "classification": "runtime-adapter",
+      "reason": "Distinguish session absence from upstream lookup failure. Preserve upstream causes internally and log only the public Problem representation; no authentication policy, database, host lifecycle or runtime claim changes.",
+      "files": {
+        "packages/auth-better-auth/src/libs/BetterAuthSessionManager.ts": "e77193dcaf11bef19f5f55f788b178fc9816df85b407bd1f8a71cb638c0b9676"
+      },
+      "catalogRuntimes": ["node", "lambda"],
+      "profiles": {
+        "kubernetes": {
+          "result": "unverified",
+          "reason": "Reuses the existing Node Host Better Auth provider; synthetic SDK errors exercise the lookup boundary, not a Kubernetes deployment.",
+          "providers": ["@croco/auth-better-auth"],
+          "constraints": [
+            "The application owns Drizzle connections and error handling. No live Better Auth service or Kubernetes deployment was exercised."
+          ],
+          "references": [
+            "packages/auth-better-auth/src/libs/BetterAuthSessionManager.ts",
+            "packages/auth-better-auth/src/libs/BetterAuthPlugin.ts",
+            "packages/auth-better-auth/src/tests/BetterAuthSessionManager.spec.ts",
+            "packages/create-croco-app/src/saas-provider-profiles.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "conditional",
+          "reason": "Reuses the existing Lambda-compatible provider without changing request or database ownership.",
+          "providers": ["@croco/auth-better-auth"],
+          "constraints": [
+            "Await lookup completion before invocation completion and keep database connections bounded. Tests use synthetic SDK failures; no AWS deployment or provider certification is claimed."
+          ],
+          "references": [
+            "packages/auth-better-auth/src/libs/BetterAuthSessionManager.ts",
+            "packages/auth-better-auth/src/libs/BetterAuthPlugin.ts",
+            "packages/auth-better-auth/src/tests/BetterAuthSessionManager.spec.ts",
+            "packages/create-croco-app/src/saas-provider-profiles.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "unsupported",
+          "reason": "The existing Better Auth Node/Drizzle provider has no Workers isolate runtime claim; the lookup fix adds none.",
+          "providers": ["@croco/auth-better-auth"],
+          "constraints": [
+            "Do not infer Workers support from the infrastructure-independent error classification."
+          ],
+          "references": [
+            "packages/auth-better-auth/src/libs/BetterAuthSessionManager.ts",
+            "packages/auth-better-auth/src/libs/BetterAuthPlugin.ts",
+            "packages/auth-better-auth/src/tests/BetterAuthSessionManager.spec.ts",
+            "packages/create-croco-app/src/saas-provider-profiles.ts"
+          ],
+          "host": "workers"
+        }
+      }
+    }
+  ]
+}

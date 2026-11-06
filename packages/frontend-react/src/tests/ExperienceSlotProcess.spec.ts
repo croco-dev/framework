@@ -111,6 +111,7 @@ describe("ExperienceSlot process supervisor", () => {
     "parent-exit0",
     "timeout-detached",
     "interrupt-detached",
+    "interrupt-detached-startup-stall",
     "parent-exit1-detached",
     "parent-signaled-detached",
     "parent-exit0-detached",

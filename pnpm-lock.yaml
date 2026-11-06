@@ -3982,9 +3982,18 @@ importers:
 
   packages/esbuild-plugin:
     devDependencies:
+      '@croco/diagnostics-core':
+        specifier: workspace:*
+        version: link:../diagnostics-core
       '@croco/framework-context':
         specifier: workspace:*
         version: link:../framework-context
+      '@croco/framework-module':
+        specifier: workspace:*
+        version: link:../framework-module
+      '@croco/problems-core':
+        specifier: workspace:*
+        version: link:../problems-core
       esbuild:
         specifier: ^0.20.2
         version: 0.20.2

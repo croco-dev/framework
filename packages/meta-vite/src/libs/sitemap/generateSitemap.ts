@@ -1,3 +1,4 @@
+import { Buffer } from "node:buffer";
 import { createHash } from "node:crypto";
 import { SitemapProblem } from "./SitemapProblem";
 import type {
@@ -14,7 +15,6 @@ const OPEN = `${HEADER}<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.
 const CLOSE = "</urlset>\n";
 const INDEX_OPEN = `${HEADER}<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n`;
 const INDEX_CLOSE = "</sitemapindex>\n";
-const encoder = new TextEncoder();
 const PUBLICATIONS = new Set<string>([
   "public",
   "private",
@@ -334,7 +334,8 @@ export async function generateSitemap(
   }
   const parts: { name: string; xml: string; urls: number }[] = [];
   let body = "";
-  let bytes = encoder.encode(OPEN + CLOSE).byteLength;
+  const emptyDocumentBytes = Buffer.byteLength(OPEN + CLOSE, "utf8");
+  let bytes = emptyDocumentBytes;
   if (bytes > maxBytes) throw new SitemapProblem("limit", report(true));
   let count = 0;
   let unknown = 0;
@@ -346,7 +347,7 @@ export async function generateSitemap(
     });
     body = "";
     count = 0;
-    bytes = encoder.encode(OPEN + CLOSE).byteLength;
+    bytes = emptyDocumentBytes;
   };
   for (const entry of accepted) {
     const modified = lastmod(entry);
@@ -360,9 +361,8 @@ export async function generateSitemap(
           `<xhtml:link rel="alternate" hreflang="${escapeSitemapXml(alternate.locale ?? "")}" href="${escapeSitemapXml(alternate.url)}"/>`,
       )
       .join("")}</url>\n`;
-    const size = encoder.encode(xml).byteLength;
-    if (encoder.encode(OPEN + CLOSE).byteLength + size > maxBytes)
-      throw new SitemapProblem("limit", report(true));
+    const size = Buffer.byteLength(xml, "utf8");
+    if (emptyDocumentBytes + size > maxBytes) throw new SitemapProblem("limit", report(true));
     if (count && (count === maxUrls || bytes + size > maxBytes)) finish();
     body += xml;
     bytes += size;
@@ -382,7 +382,7 @@ export async function generateSitemap(
       )
       .join("") +
     INDEX_CLOSE;
-  if (encoder.encode(index).byteLength > 52428800) throw new SitemapProblem("limit", report(true));
+  if (Buffer.byteLength(index, "utf8") > 52428800) throw new SitemapProblem("limit", report(true));
   return {
     id,
     tenantId: policy.tenantId,
@@ -396,7 +396,7 @@ export async function generateSitemap(
       lastmodUnknown: unknown,
       files: parts.map((part) => ({
         name: part.name,
-        bytes: encoder.encode(part.xml).byteLength,
+        bytes: Buffer.byteLength(part.xml, "utf8"),
         urls: part.urls,
       })),
     },

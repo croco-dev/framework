@@ -5,15 +5,18 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { registerController } from "../../libs/codemods/registerController.js";
 
 describe("registerController", () => {
+  const originalCwd = process.cwd();
   let fixtureDir: string;
   let entryPath: string;
 
   beforeEach(async () => {
     fixtureDir = await mkdtemp(join(tmpdir(), "croco-cli-register-controller-"));
     entryPath = join(fixtureDir, "app.ts");
+    process.chdir(fixtureDir);
   });
 
   afterEach(async () => {
+    process.chdir(originalCwd);
     await rm(fixtureDir, { recursive: true, force: true });
   });
 

@@ -1,4 +1,5 @@
 import * as fs from "node:fs";
+import { tmpdir } from "node:os";
 import * as path from "node:path";
 import * as vm from "node:vm";
 import {
@@ -25,7 +26,7 @@ import {
   type GenerateClientOptions,
 } from "../libs/generate";
 
-const TEMP_DIR = path.join(__dirname, "codegen-temp");
+let tempDir: string;
 const GENERATED_CLIENT_TYPECHECK_TIMEOUT_MS = 15_000;
 const VIRTUAL_PROBLEMS_CORE_MODULE = "node_modules/@croco/problems-core/index.d.ts";
 type RpcQueryKeyInputProblemConstructor = new (path: string, detail: string) => Problem;
@@ -268,26 +269,25 @@ const MIXED_NATIVE_ENUM = {
 
 describe("generateClientFiles", () => {
   beforeEach(() => {
-    fs.rmSync(TEMP_DIR, { recursive: true, force: true });
-    fs.mkdirSync(TEMP_DIR, { recursive: true });
+    tempDir = fs.mkdtempSync(path.join(tmpdir(), "croco-rpc-codegen-"));
   });
 
   afterEach(() => {
-    fs.rmSync(TEMP_DIR, { recursive: true, force: true });
+    fs.rmSync(tempDir, { recursive: true, force: true });
   });
 
   it("checks unchanged outputs without changing their bytes, mtimes, or directory contents", () => {
     const routes = [createBasicRoute()];
-    const files = generateClientFiles(routes, TEMP_DIR);
+    const files = generateClientFiles(routes, tempDir);
     const before = files.map((filePath) => ({
       content: fs.readFileSync(filePath),
       filePath,
       mtimeMs: fs.statSync(filePath).mtimeMs,
     }));
-    const directoryEntries = fs.readdirSync(TEMP_DIR);
+    const directoryEntries = fs.readdirSync(tempDir);
 
-    expect(checkGeneratedClientFiles(routes, TEMP_DIR)).toEqual([]);
-    expect(fs.readdirSync(TEMP_DIR)).toEqual(directoryEntries);
+    expect(checkGeneratedClientFiles(routes, tempDir)).toEqual([]);
+    expect(fs.readdirSync(tempDir)).toEqual(directoryEntries);
     expect(
       before.map(({ filePath }) => ({
         content: fs.readFileSync(filePath),
@@ -307,23 +307,23 @@ describe("generateClientFiles", () => {
         path: "/zulu",
       },
     ];
-    generateClientFiles(routes, TEMP_DIR);
-    fs.appendFileSync(path.join(TEMP_DIR, "user.ts"), "// drift\n");
-    fs.rmSync(path.join(TEMP_DIR, "rpc.ts"));
-    fs.writeFileSync(path.join(TEMP_DIR, "stale.ts"), "export {};\n");
+    generateClientFiles(routes, tempDir);
+    fs.appendFileSync(path.join(tempDir, "user.ts"), "// drift\n");
+    fs.rmSync(path.join(tempDir, "rpc.ts"));
+    fs.writeFileSync(path.join(tempDir, "stale.ts"), "export {};\n");
 
-    expect(checkGeneratedClientFiles([createBasicRoute()], TEMP_DIR)).toEqual([
-      { filePath: path.join(TEMP_DIR, "index.ts"), status: "changed" },
-      { filePath: path.join(TEMP_DIR, "rpc.ts"), status: "missing" },
-      { filePath: path.join(TEMP_DIR, "user.ts"), status: "changed" },
-      { filePath: path.join(TEMP_DIR, "zulu.ts"), status: "unexpected" },
+    expect(checkGeneratedClientFiles([createBasicRoute()], tempDir)).toEqual([
+      { filePath: path.join(tempDir, "index.ts"), status: "changed" },
+      { filePath: path.join(tempDir, "rpc.ts"), status: "missing" },
+      { filePath: path.join(tempDir, "user.ts"), status: "changed" },
+      { filePath: path.join(tempDir, "zulu.ts"), status: "unexpected" },
     ]);
   });
 
   it("prunes stale generator-owned files and empty directories while preserving unrelated files", () => {
-    const frontendActionManifestPath = path.join(TEMP_DIR, "actions", "manifest.json");
-    const unrelatedPath = path.join(TEMP_DIR, "notes", "user-authored.ts");
-    const unrelatedEmptyDirectory = path.join(TEMP_DIR, "user-empty-directory");
+    const frontendActionManifestPath = path.join(tempDir, "actions", "manifest.json");
+    const unrelatedPath = path.join(tempDir, "notes", "user-authored.ts");
+    const unrelatedEmptyDirectory = path.join(tempDir, "user-empty-directory");
     const routes = [
       createBasicRoute(),
       {
@@ -340,21 +340,21 @@ describe("generateClientFiles", () => {
       path: "/accounts",
     };
 
-    generateClientFiles(routes, TEMP_DIR, { frontendActionManifestPath });
+    generateClientFiles(routes, tempDir, { frontendActionManifestPath });
     fs.mkdirSync(path.dirname(unrelatedPath), { recursive: true });
     fs.mkdirSync(unrelatedEmptyDirectory);
     fs.writeFileSync(unrelatedPath, "export const owner = 'user';\n");
 
-    generateClientFiles([renamedRoute], TEMP_DIR);
+    generateClientFiles([renamedRoute], tempDir);
 
-    expect(fs.existsSync(path.join(TEMP_DIR, "admin.ts"))).toBe(false);
-    expect(fs.existsSync(path.join(TEMP_DIR, "user.ts"))).toBe(false);
-    expect(fs.existsSync(path.join(TEMP_DIR, "account.ts"))).toBe(true);
+    expect(fs.existsSync(path.join(tempDir, "admin.ts"))).toBe(false);
+    expect(fs.existsSync(path.join(tempDir, "user.ts"))).toBe(false);
+    expect(fs.existsSync(path.join(tempDir, "account.ts"))).toBe(true);
     expect(fs.existsSync(frontendActionManifestPath)).toBe(false);
     expect(fs.existsSync(path.dirname(frontendActionManifestPath))).toBe(false);
     expect(fs.readFileSync(unrelatedPath, "utf8")).toBe("export const owner = 'user';\n");
     expect(fs.existsSync(unrelatedEmptyDirectory)).toBe(true);
-    expect(checkGeneratedClientFiles([renamedRoute], TEMP_DIR)).toEqual([]);
+    expect(checkGeneratedClientFiles([renamedRoute], tempDir)).toEqual([]);
   });
 
   it("bootstraps legacy generated ownership when the sidecar is missing", () => {
@@ -368,25 +368,25 @@ describe("generateClientFiles", () => {
       },
     ];
 
-    generateClientFiles(routes, TEMP_DIR);
-    fs.rmSync(path.join(TEMP_DIR, ".croco-rpc-codegen.json"));
+    generateClientFiles(routes, tempDir);
+    fs.rmSync(path.join(tempDir, ".croco-rpc-codegen.json"));
 
-    generateClientFiles([createBasicRoute()], TEMP_DIR);
+    generateClientFiles([createBasicRoute()], tempDir);
 
-    expect(fs.existsSync(path.join(TEMP_DIR, "admin.ts"))).toBe(false);
-    expect(checkGeneratedClientFiles([createBasicRoute()], TEMP_DIR)).toEqual([]);
+    expect(fs.existsSync(path.join(tempDir, "admin.ts"))).toBe(false);
+    expect(checkGeneratedClientFiles([createBasicRoute()], tempDir)).toEqual([]);
   });
 
   it("does not claim an unmarked empty module as generated ownership", () => {
-    const indexPath = path.join(TEMP_DIR, "index.ts");
+    const indexPath = path.join(tempDir, "index.ts");
 
     fs.writeFileSync(indexPath, "export {};\n");
-    const before = collectDirectoryContents(TEMP_DIR);
+    const before = collectDirectoryContents(tempDir);
 
-    expect(() => generateClientFiles([createBasicRoute()], TEMP_DIR)).toThrow(
-      `Cannot recover generated output ownership in '${TEMP_DIR}' because the legacy rpc.ts and index.ts topology is incomplete.`,
+    expect(() => generateClientFiles([createBasicRoute()], tempDir)).toThrow(
+      `Cannot recover generated output ownership in '${tempDir}' because the legacy rpc.ts and index.ts topology is incomplete.`,
     );
-    expect(collectDirectoryContents(TEMP_DIR)).toEqual(before);
+    expect(collectDirectoryContents(tempDir)).toEqual(before);
   });
 
   it("bootstraps frontend-problems generated ownership when the sidecar is missing", () => {
@@ -401,18 +401,18 @@ describe("generateClientFiles", () => {
       },
     ];
 
-    generateClientFiles(routes, TEMP_DIR, options);
-    fs.rmSync(path.join(TEMP_DIR, ".croco-rpc-codegen.json"));
+    generateClientFiles(routes, tempDir, options);
+    fs.rmSync(path.join(tempDir, ".croco-rpc-codegen.json"));
 
-    generateClientFiles([createBasicRoute()], TEMP_DIR, options);
+    generateClientFiles([createBasicRoute()], tempDir, options);
 
-    expect(fs.existsSync(path.join(TEMP_DIR, "admin.ts"))).toBe(false);
-    expect(checkGeneratedClientFiles([createBasicRoute()], TEMP_DIR, options)).toEqual([]);
+    expect(fs.existsSync(path.join(tempDir, "admin.ts"))).toBe(false);
+    expect(checkGeneratedClientFiles([createBasicRoute()], tempDir, options)).toEqual([]);
   });
 
   it("leaves previous generated outputs intact when validation fails", () => {
-    generateClientFiles([createBasicRoute()], TEMP_DIR);
-    const before = collectDirectoryContents(TEMP_DIR);
+    generateClientFiles([createBasicRoute()], tempDir);
+    const before = collectDirectoryContents(tempDir);
     const invalidRoute: RouteIR = {
       ...createBasicRoute(),
       controllerName: "HooksController",
@@ -423,14 +423,14 @@ describe("generateClientFiles", () => {
       inputSchemas: PATH_INPUT_SCHEMAS,
     };
 
-    expect(() => generateClientFiles([invalidRoute], TEMP_DIR)).toThrow(
+    expect(() => generateClientFiles([invalidRoute], tempDir)).toThrow(
       "Cannot generate RPC client for @All route HooksController.handleHook (/hooks/:id)",
     );
-    expect(collectDirectoryContents(TEMP_DIR)).toEqual(before);
+    expect(collectDirectoryContents(tempDir)).toEqual(before);
   });
 
   it("rejects a generated path that would overwrite an unrelated file", () => {
-    const unrelatedPath = path.join(TEMP_DIR, "account.ts");
+    const unrelatedPath = path.join(tempDir, "account.ts");
     const route: RouteIR = {
       ...createBasicRoute(),
       controllerName: "AccountController",
@@ -439,12 +439,12 @@ describe("generateClientFiles", () => {
     };
 
     fs.writeFileSync(unrelatedPath, "export const owner = 'user';\n");
-    const before = collectDirectoryContents(TEMP_DIR);
+    const before = collectDirectoryContents(tempDir);
 
-    expect(() => generateClientFiles([route], TEMP_DIR)).toThrow(
+    expect(() => generateClientFiles([route], tempDir)).toThrow(
       `Generated output path '${unrelatedPath}' already contains an unrelated file.`,
     );
-    expect(collectDirectoryContents(TEMP_DIR)).toEqual(before);
+    expect(collectDirectoryContents(tempDir)).toEqual(before);
   });
 
   it("replaces case-only renamed generated files without deleting the new output", () => {
@@ -461,17 +461,17 @@ describe("generateClientFiles", () => {
       path: "/api",
     };
 
-    generateClientFiles([previousRoute], TEMP_DIR);
-    generateClientFiles([renamedRoute], TEMP_DIR);
+    generateClientFiles([previousRoute], tempDir);
+    generateClientFiles([renamedRoute], tempDir);
 
-    expect(fs.readdirSync(TEMP_DIR)).not.toContain("aPI.ts");
-    expect(fs.readdirSync(TEMP_DIR)).toContain("api.ts");
-    expect(checkGeneratedClientFiles([renamedRoute], TEMP_DIR)).toEqual([]);
+    expect(fs.readdirSync(tempDir)).not.toContain("aPI.ts");
+    expect(fs.readdirSync(tempDir)).toContain("api.ts");
+    expect(checkGeneratedClientFiles([renamedRoute], tempDir)).toEqual([]);
   });
 
   it("rejects unsafe ownership paths without changing existing outputs", () => {
-    generateClientFiles([createBasicRoute()], TEMP_DIR);
-    const ownershipManifestPath = path.join(TEMP_DIR, ".croco-rpc-codegen.json");
+    generateClientFiles([createBasicRoute()], tempDir);
+    const ownershipManifestPath = path.join(tempDir, ".croco-rpc-codegen.json");
 
     fs.writeFileSync(
       ownershipManifestPath,
@@ -481,12 +481,12 @@ describe("generateClientFiles", () => {
         directories: [],
       }),
     );
-    const before = collectDirectoryContents(TEMP_DIR);
+    const before = collectDirectoryContents(tempDir);
 
-    expect(() => generateClientFiles([createBasicRoute()], TEMP_DIR)).toThrow(
+    expect(() => generateClientFiles([createBasicRoute()], tempDir)).toThrow(
       `Generated output ownership manifest '${ownershipManifestPath}' contains unsafe path '../outside.ts'.`,
     );
-    expect(collectDirectoryContents(TEMP_DIR)).toEqual(before);
+    expect(collectDirectoryContents(tempDir)).toEqual(before);
   });
 
   it("validates every stale target before deleting any generated file", () => {
@@ -505,28 +505,28 @@ describe("generateClientFiles", () => {
         path: "/zulu",
       },
     ];
-    const zuluPath = path.join(TEMP_DIR, "zulu.ts");
+    const zuluPath = path.join(tempDir, "zulu.ts");
 
-    generateClientFiles(routes, TEMP_DIR);
+    generateClientFiles(routes, tempDir);
     fs.rmSync(zuluPath);
     fs.mkdirSync(zuluPath);
 
-    expect(() => generateClientFiles([createBasicRoute()], TEMP_DIR)).toThrow(
-      `Generated output ownership manifest '${path.join(TEMP_DIR, ".croco-rpc-codegen.json")}' path 'zulu.ts' refers to a directory.`,
+    expect(() => generateClientFiles([createBasicRoute()], tempDir)).toThrow(
+      `Generated output ownership manifest '${path.join(tempDir, ".croco-rpc-codegen.json")}' path 'zulu.ts' refers to a directory.`,
     );
-    expect(fs.existsSync(path.join(TEMP_DIR, "admin.ts"))).toBe(true);
+    expect(fs.existsSync(path.join(tempDir, "admin.ts"))).toBe(true);
     expect(fs.statSync(zuluPath).isDirectory()).toBe(true);
   });
 
   it("keeps unrelated generated-looking files outside the recorded ownership", () => {
-    const unrelatedDirectory = path.join(TEMP_DIR, "notes");
+    const unrelatedDirectory = path.join(tempDir, "notes");
     const unrelatedPath = path.join(unrelatedDirectory, "index.ts");
 
-    generateClientFiles([createBasicRoute()], TEMP_DIR);
+    generateClientFiles([createBasicRoute()], tempDir);
     fs.mkdirSync(unrelatedDirectory);
     fs.writeFileSync(unrelatedPath, "export * from './rpc';\nexport * as notes from './notes';\n");
 
-    generateClientFiles([createBasicRoute()], TEMP_DIR);
+    generateClientFiles([createBasicRoute()], tempDir);
 
     expect(fs.readFileSync(unrelatedPath, "utf8")).toBe(
       "export * from './rpc';\nexport * as notes from './notes';\n",
@@ -534,16 +534,16 @@ describe("generateClientFiles", () => {
   });
 
   it("reserves the ownership manifest path without case-sensitive aliases", () => {
-    const aliasedManifestPath = path.join(TEMP_DIR, ".CROCO-RPC-CODEGEN.JSON");
+    const aliasedManifestPath = path.join(tempDir, ".CROCO-RPC-CODEGEN.JSON");
 
     expect(() =>
-      generateClientFiles([createBasicRoute()], TEMP_DIR, {
+      generateClientFiles([createBasicRoute()], tempDir, {
         frontendActionManifestPath: aliasedManifestPath,
       }),
     ).toThrow(
       `Generated output path '${aliasedManifestPath}' conflicts with the reserved ownership manifest.`,
     );
-    expect(fs.readdirSync(TEMP_DIR)).toEqual([]);
+    expect(fs.readdirSync(tempDir)).toEqual([]);
   });
 
   describe.each([
@@ -561,22 +561,22 @@ describe("generateClientFiles", () => {
     ])(
       "rejects $fileName domain collisions before changing any files",
       ({ controllerName, domain, fileName, origin }) => {
-        generateClientFiles([createBasicRoute()], TEMP_DIR);
-        const before = collectDirectoryContents(TEMP_DIR);
+        generateClientFiles([createBasicRoute()], tempDir);
+        const before = collectDirectoryContents(tempDir);
         const routes = [{ ...createBasicRoute(), controllerName, domain }];
         const options = { manifestBundlePath: ".croco/manifest" };
 
-        expect(() => generateOrCheck(routes, TEMP_DIR, options)).toThrow(
+        expect(() => generateOrCheck(routes, tempDir, options)).toThrow(
           expect.objectContaining({
             code: "rpc-codegen/invalid-contract",
             message: expect.stringContaining(fileName),
           }),
         );
-        expect(() => generateOrCheck(routes, TEMP_DIR, options)).toThrow(origin);
-        expect(() => generateOrCheck(routes, TEMP_DIR, options)).toThrow(
+        expect(() => generateOrCheck(routes, tempDir, options)).toThrow(origin);
+        expect(() => generateOrCheck(routes, tempDir, options)).toThrow(
           `domain '${fileName.replace(/\.ts$/, "")}'`,
         );
-        expect(collectDirectoryContents(TEMP_DIR)).toEqual(before);
+        expect(collectDirectoryContents(tempDir)).toEqual(before);
       },
     );
 
@@ -591,21 +591,21 @@ describe("generateClientFiles", () => {
       ["INDEX.TS", "client index"],
       ["MANIFEST-SOURCE.TS", "manifest source"],
     ])("rejects frontend manifest alias %s before changing any files", (fileName, origin) => {
-      generateClientFiles([createBasicRoute()], TEMP_DIR);
-      const before = collectDirectoryContents(TEMP_DIR);
+      generateClientFiles([createBasicRoute()], tempDir);
+      const before = collectDirectoryContents(tempDir);
       const options: GenerateClientOptions = {
         manifestBundlePath: ".croco/manifest",
-        frontendActionManifestPath: `${TEMP_DIR}/${fileName}`,
+        frontendActionManifestPath: `${tempDir}/${fileName}`,
       };
 
-      expect(() => generateOrCheck([createBasicRoute()], TEMP_DIR, options)).toThrow(
+      expect(() => generateOrCheck([createBasicRoute()], tempDir, options)).toThrow(
         expect.objectContaining({ code: "rpc-codegen/invalid-contract" }),
       );
-      expect(() => generateOrCheck([createBasicRoute()], TEMP_DIR, options)).toThrow(origin);
-      expect(() => generateOrCheck([createBasicRoute()], TEMP_DIR, options)).toThrow(
+      expect(() => generateOrCheck([createBasicRoute()], tempDir, options)).toThrow(origin);
+      expect(() => generateOrCheck([createBasicRoute()], tempDir, options)).toThrow(
         "frontend action manifest",
       );
-      expect(collectDirectoryContents(TEMP_DIR)).toEqual(before);
+      expect(collectDirectoryContents(tempDir)).toEqual(before);
     });
 
     it.each([
@@ -613,25 +613,25 @@ describe("generateClientFiles", () => {
       ".CROCO-RPC-CODEGEN.JSON",
       "nested/../.croco-rpc-codegen.json",
     ])("rejects frontend manifest ownership alias %s before changing any files", (fileName) => {
-      generateClientFiles([createBasicRoute()], TEMP_DIR);
-      const before = collectDirectoryContents(TEMP_DIR);
-      const options = { frontendActionManifestPath: `${TEMP_DIR}/${fileName}` };
+      generateClientFiles([createBasicRoute()], tempDir);
+      const before = collectDirectoryContents(tempDir);
+      const options = { frontendActionManifestPath: `${tempDir}/${fileName}` };
 
-      expect(() => generateOrCheck([createBasicRoute()], TEMP_DIR, options)).toThrow(
+      expect(() => generateOrCheck([createBasicRoute()], tempDir, options)).toThrow(
         expect.objectContaining({
           code: "rpc-codegen/invalid-contract",
           message: expect.stringContaining("conflicts with the reserved ownership manifest"),
         }),
       );
-      expect(collectDirectoryContents(TEMP_DIR)).toEqual(before);
+      expect(collectDirectoryContents(tempDir)).toEqual(before);
     });
 
     it("reserves the ownership manifest when the output directory is relative", () => {
-      generateClientFiles([createBasicRoute()], TEMP_DIR);
-      const before = collectDirectoryContents(TEMP_DIR);
-      const outputDirectory = path.relative(process.cwd(), TEMP_DIR);
+      generateClientFiles([createBasicRoute()], tempDir);
+      const before = collectDirectoryContents(tempDir);
+      const outputDirectory = path.relative(process.cwd(), tempDir);
       const options = {
-        frontendActionManifestPath: path.join(TEMP_DIR, ".croco-rpc-codegen.json"),
+        frontendActionManifestPath: path.join(tempDir, ".croco-rpc-codegen.json"),
       };
 
       expect(() => generateOrCheck([createBasicRoute()], outputDirectory, options)).toThrow(
@@ -640,11 +640,11 @@ describe("generateClientFiles", () => {
           message: expect.stringContaining("conflicts with the reserved ownership manifest"),
         }),
       );
-      expect(collectDirectoryContents(TEMP_DIR)).toEqual(before);
+      expect(collectDirectoryContents(tempDir)).toEqual(before);
     });
 
     it("rejects collisions before creating an output directory", () => {
-      const outputDirectory = path.join(TEMP_DIR, "missing-output");
+      const outputDirectory = path.join(tempDir, "missing-output");
       const routes = [{ ...createBasicRoute(), controllerName: "RpcController" }];
 
       expect(() => generateOrCheck(routes, outputDirectory)).toThrow(
@@ -660,9 +660,9 @@ describe("generateClientFiles", () => {
       const routes = [{ ...createBasicRoute(), domain: "manifest-source" }];
       const options = { manifestBundlePath };
 
-      generateClientFiles(routes, TEMP_DIR, options);
+      generateClientFiles(routes, tempDir, options);
 
-      expect(checkGeneratedClientFiles(routes, TEMP_DIR, options)).toEqual([]);
+      expect(checkGeneratedClientFiles(routes, tempDir, options)).toEqual([]);
       assertGeneratedPackageTypechecks([
         "index.ts",
         "rpc.ts",
@@ -689,15 +689,15 @@ describe("generateClientFiles", () => {
       },
     ];
 
-    const files = generateClientFiles(routes, TEMP_DIR);
+    const files = generateClientFiles(routes, tempDir);
 
     expect(files).toEqual([
-      path.join(TEMP_DIR, "user.ts"),
-      path.join(TEMP_DIR, "rpc.ts"),
-      path.join(TEMP_DIR, "index.ts"),
+      path.join(tempDir, "user.ts"),
+      path.join(tempDir, "rpc.ts"),
+      path.join(tempDir, "index.ts"),
     ]);
     const content = fs.readFileSync(files[0], "utf-8");
-    const rpcContent = fs.readFileSync(path.join(TEMP_DIR, "rpc.ts"), "utf-8");
+    const rpcContent = fs.readFileSync(path.join(tempDir, "rpc.ts"), "utf-8");
     expect(content).toContain("export function createUserClient(config: RpcClientConfig = {})");
     expect(content).toContain("export const userClient = createUserClient();");
     expect(content).toContain("export const userContractRoutes = [");
@@ -764,7 +764,7 @@ describe("generateClientFiles", () => {
       diagnostics: [],
     };
 
-    const files = generateClientFilesFromContractGraph(graph, TEMP_DIR);
+    const files = generateClientFilesFromContractGraph(graph, tempDir);
     const content = fs.readFileSync(files[0], "utf-8");
 
     expect(content).toContain(
@@ -783,18 +783,18 @@ describe("generateClientFiles", () => {
   });
 
   it("leaves existing generated outputs byte-for-byte unchanged when graph coverage fails", () => {
-    generateClientFiles([createBasicRoute()], TEMP_DIR);
-    const before = collectDirectoryContents(TEMP_DIR);
+    generateClientFiles([createBasicRoute()], tempDir);
+    const before = collectDirectoryContents(tempDir);
     const graph = createDuplicateRouteIdContractGraph();
 
-    expect(() => generateClientFilesFromContractGraph(graph, TEMP_DIR)).toThrow(
+    expect(() => generateClientFilesFromContractGraph(graph, tempDir)).toThrow(
       "contract-consumer-duplicate-route",
     );
-    expect(collectDirectoryContents(TEMP_DIR)).toEqual(before);
+    expect(collectDirectoryContents(tempDir)).toEqual(before);
   });
 
   it("does not create an output directory before failed graph coverage validation", () => {
-    const outDir = path.join(TEMP_DIR, "missing-output");
+    const outDir = path.join(tempDir, "missing-output");
     const graph = createDuplicateRouteIdContractGraph();
 
     expect(() => generateClientFilesFromContractGraph(graph, outDir)).toThrow(
@@ -804,7 +804,7 @@ describe("generateClientFiles", () => {
   });
 
   it("should emit a deterministic frontend action manifest for REST RPC routes", () => {
-    const manifestPath = path.join(TEMP_DIR, "frontend-action-manifest.json");
+    const manifestPath = path.join(tempDir, "frontend-action-manifest.json");
     const graph: ContractGraph = {
       version: "croco.contract-graph.v1",
       controllers: [
@@ -870,16 +870,16 @@ describe("generateClientFiles", () => {
       diagnostics: [],
     };
 
-    const files = generateClientFilesFromContractGraph(graph, TEMP_DIR, {
+    const files = generateClientFilesFromContractGraph(graph, tempDir, {
       frontendActionManifestPath: manifestPath,
     });
     const manifest = createFrontendActionManifestFromContractGraph(graph);
     const serialized = fs.readFileSync(manifestPath, "utf-8");
 
     expect(files).toEqual([
-      path.join(TEMP_DIR, "users.ts"),
-      path.join(TEMP_DIR, "rpc.ts"),
-      path.join(TEMP_DIR, "index.ts"),
+      path.join(tempDir, "users.ts"),
+      path.join(tempDir, "rpc.ts"),
+      path.join(tempDir, "index.ts"),
       manifestPath,
     ]);
     expect(serialized).toBe(JSON.stringify(manifest, null, 2) + "\n");
@@ -961,7 +961,7 @@ describe("generateClientFiles", () => {
   });
 
   it("composes additional producer actions into the generated frontend action manifest", () => {
-    const manifestPath = path.join(TEMP_DIR, "frontend-action-manifest.json");
+    const manifestPath = path.join(tempDir, "frontend-action-manifest.json");
     const metaViteAction: FrontendActionManifestEntry = {
       id: "server-action:signup",
       source: {
@@ -978,7 +978,7 @@ describe("generateClientFiles", () => {
       invalidates: [],
     };
 
-    generateClientFiles([createBasicRoute()], TEMP_DIR, {
+    generateClientFiles([createBasicRoute()], tempDir, {
       frontendActionManifestPath: manifestPath,
       frontendActionManifestInputs: [
         {
@@ -998,12 +998,12 @@ describe("generateClientFiles", () => {
   });
 
   it("preserves an existing manifest when an additional producer schema is incompatible", () => {
-    const manifestPath = path.join(TEMP_DIR, "frontend-action-manifest.json");
+    const manifestPath = path.join(tempDir, "frontend-action-manifest.json");
     const existing = "existing manifest\n";
     fs.writeFileSync(manifestPath, existing);
 
     expect(() =>
-      generateClientFiles([createBasicRoute()], TEMP_DIR, {
+      generateClientFiles([createBasicRoute()], tempDir, {
         frontendActionManifestPath: manifestPath,
         frontendActionManifestInputs: [
           {
@@ -1043,11 +1043,11 @@ describe("generateClientFiles", () => {
       },
     ];
 
-    const files = generateClientFiles(routes, TEMP_DIR, {
+    const files = generateClientFiles(routes, tempDir, {
       problemRuntime: "frontend-problems",
     });
     const content = fs.readFileSync(files[0], "utf-8");
-    const rpcContent = fs.readFileSync(path.join(TEMP_DIR, "rpc.ts"), "utf-8");
+    const rpcContent = fs.readFileSync(path.join(tempDir, "rpc.ts"), "utf-8");
 
     expect(rpcContent).toContain("} from '@croco/frontend-problems';");
     expect(rpcContent).toContain("ProblemClientError as RpcClientProblemError");
@@ -1133,7 +1133,7 @@ describe("generateClientFiles", () => {
       diagnostics: [],
     };
 
-    const files = generateClientFilesFromContractGraph(graph, TEMP_DIR, { reactQuery: true });
+    const files = generateClientFilesFromContractGraph(graph, tempDir, { reactQuery: true });
     const content = fs.readFileSync(files[0], "utf-8");
 
     expect(content).toContain(
@@ -1160,10 +1160,10 @@ describe("generateClientFiles", () => {
       },
     ];
 
-    expect(() => generateClientFiles(routes, TEMP_DIR)).toThrow(
+    expect(() => generateClientFiles(routes, tempDir)).toThrow(
       "Cannot generate RPC client for @All route HooksController.handleHook (/hooks/:id): @All is runtime-only and cannot be represented as a concrete generated client request. Use explicit HTTP method decorators for generated contracts.",
     );
-    expect(fs.existsSync(path.join(TEMP_DIR, "hooks.ts"))).toBe(false);
+    expect(fs.existsSync(path.join(tempDir, "hooks.ts"))).toBe(false);
   });
 
   it("should reject routes with more than one body parameter", () => {
@@ -1191,10 +1191,10 @@ describe("generateClientFiles", () => {
       },
     ];
 
-    expect(() => generateClientFiles(routes, TEMP_DIR)).toThrow(
+    expect(() => generateClientFiles(routes, tempDir)).toThrow(
       "Cannot generate RPC client for route UsersController.createUser (/users): generated contracts support one request body per route, but 2 @Body() parameters were found.",
     );
-    expect(fs.existsSync(path.join(TEMP_DIR, "users.ts"))).toBe(false);
+    expect(fs.existsSync(path.join(tempDir, "users.ts"))).toBe(false);
   });
 
   it("should reject path variables without matching path parameter metadata", () => {
@@ -1213,10 +1213,10 @@ describe("generateClientFiles", () => {
       },
     ];
 
-    expect(() => generateClientFiles(routes, TEMP_DIR)).toThrow(
+    expect(() => generateClientFiles(routes, tempDir)).toThrow(
       "Cannot generate RPC client for route UsersController.getUser (/users/:id): route path declares ':id' but no @Param(\"id\") metadata was found.",
     );
-    expect(fs.existsSync(path.join(TEMP_DIR, "users.ts"))).toBe(false);
+    expect(fs.existsSync(path.join(tempDir, "users.ts"))).toBe(false);
   });
 
   it("should reject path variables without matching generated path schemas", () => {
@@ -1235,10 +1235,10 @@ describe("generateClientFiles", () => {
       },
     ];
 
-    expect(() => generateClientFiles(routes, TEMP_DIR)).toThrow(
+    expect(() => generateClientFiles(routes, tempDir)).toThrow(
       "Cannot generate RPC client for route UsersController.getUser (/users/:id): route path declares ':id' but no generated path schema was found.",
     );
-    expect(fs.existsSync(path.join(TEMP_DIR, "users.ts"))).toBe(false);
+    expect(fs.existsSync(path.join(tempDir, "users.ts"))).toBe(false);
   });
 
   it("should reject generated path schemas without matching path variables", () => {
@@ -1257,10 +1257,10 @@ describe("generateClientFiles", () => {
       },
     ];
 
-    expect(() => generateClientFiles(routes, TEMP_DIR)).toThrow(
+    expect(() => generateClientFiles(routes, tempDir)).toThrow(
       "Cannot generate RPC client for route UsersController.listUsers (/users): generated path schema declares 'id' but route path '/users' does not contain ':id'.",
     );
-    expect(fs.existsSync(path.join(TEMP_DIR, "users.ts"))).toBe(false);
+    expect(fs.existsSync(path.join(tempDir, "users.ts"))).toBe(false);
   });
 
   it("should serialize POST body input", () => {
@@ -1279,7 +1279,7 @@ describe("generateClientFiles", () => {
       },
     ];
 
-    const files = generateClientFiles(routes, TEMP_DIR);
+    const files = generateClientFiles(routes, tempDir);
 
     const content = fs.readFileSync(files[0], "utf-8");
     expect(content).toContain(
@@ -1325,7 +1325,7 @@ describe("generateClientFiles", () => {
       },
     ];
 
-    const files = generateClientFiles(routes, TEMP_DIR);
+    const files = generateClientFiles(routes, tempDir);
     const content = fs.readFileSync(files[0], "utf-8");
 
     expect(content).toContain("export type CreateInput = { name: string; };");
@@ -1364,17 +1364,17 @@ describe("generateClientFiles", () => {
       },
     ];
 
-    const files = generateClientFiles(routes, TEMP_DIR);
+    const files = generateClientFiles(routes, tempDir);
 
     expect(files).toEqual([
-      path.join(TEMP_DIR, "order.ts"),
-      path.join(TEMP_DIR, "user.ts"),
-      path.join(TEMP_DIR, "rpc.ts"),
-      path.join(TEMP_DIR, "index.ts"),
+      path.join(tempDir, "order.ts"),
+      path.join(tempDir, "user.ts"),
+      path.join(tempDir, "rpc.ts"),
+      path.join(tempDir, "index.ts"),
     ]);
-    expect(fs.existsSync(path.join(TEMP_DIR, "user.ts"))).toBe(true);
-    expect(fs.existsSync(path.join(TEMP_DIR, "order.ts"))).toBe(true);
-    expect(fs.readFileSync(path.join(TEMP_DIR, "index.ts"), "utf-8")).toBe(
+    expect(fs.existsSync(path.join(tempDir, "user.ts"))).toBe(true);
+    expect(fs.existsSync(path.join(tempDir, "order.ts"))).toBe(true);
+    expect(fs.readFileSync(path.join(tempDir, "index.ts"), "utf-8")).toBe(
       "export * from './rpc';\nexport { createOrderClient, orderClient, orderContractRoutes, orderKeys } from './order';\nexport { createUserClient, userClient, userContractRoutes, userKeys } from './user';\nexport type { OrderClient } from './order';\nexport type { UserClient } from './user';\nexport * as orderRpc from './order';\nexport * as userRpc from './user';\n",
     );
   });
@@ -1395,17 +1395,17 @@ describe("generateClientFiles", () => {
       },
     ];
 
-    const files = generateClientFiles(routes, TEMP_DIR, {
+    const files = generateClientFiles(routes, tempDir, {
       manifestBundlePath: ".croco/manifest/",
     });
-    const manifestSource = fs.readFileSync(path.join(TEMP_DIR, "manifest-source.ts"), "utf-8");
-    const indexSource = fs.readFileSync(path.join(TEMP_DIR, "index.ts"), "utf-8");
+    const manifestSource = fs.readFileSync(path.join(tempDir, "manifest-source.ts"), "utf-8");
+    const indexSource = fs.readFileSync(path.join(tempDir, "index.ts"), "utf-8");
 
     expect(files).toEqual([
-      path.join(TEMP_DIR, "user.ts"),
-      path.join(TEMP_DIR, "rpc.ts"),
-      path.join(TEMP_DIR, "manifest-source.ts"),
-      path.join(TEMP_DIR, "index.ts"),
+      path.join(tempDir, "user.ts"),
+      path.join(tempDir, "rpc.ts"),
+      path.join(tempDir, "manifest-source.ts"),
+      path.join(tempDir, "index.ts"),
     ]);
     expect(manifestSource).toBe(`export const crocoManifestBundleSource = {
   schemaVersion: 'croco.rpc.manifest-source.v1',
@@ -1456,7 +1456,7 @@ export type CrocoManifestBundleSource = typeof crocoManifestBundleSource;
       },
     ];
 
-    expect(() => generateClientFiles(routes, TEMP_DIR)).toThrow(
+    expect(() => generateClientFiles(routes, tempDir)).toThrow(
       "Cannot generate RPC client for domain 'user': member 'getResult' would be generated for UserController.getResult (/users/:id/result) as a route method, but UserController.get (/users/:id) already generates that member as a result method.",
     );
   });
@@ -1481,16 +1481,16 @@ export type CrocoManifestBundleSource = typeof crocoManifestBundleSource;
     it.each(["GetFoo", "get_foo"])(
       "rejects getFoo/%s normalization before changing generated files",
       (methodName) => {
-        generateClientFiles([route("existing")], TEMP_DIR);
-        const before = collectDirectoryContents(TEMP_DIR);
+        generateClientFiles([route("existing")], tempDir);
+        const before = collectDirectoryContents(tempDir);
         const routes = [
           route("getFoo", { outputSchema: z.string() as RouteIR["outputSchema"] }),
           route(methodName, { outputSchema: z.number() as RouteIR["outputSchema"] }),
         ];
 
         for (const action of [
-          () => generateClientFiles(routes, TEMP_DIR),
-          () => checkGeneratedClientFiles(routes, TEMP_DIR),
+          () => generateClientFiles(routes, tempDir),
+          () => checkGeneratedClientFiles(routes, tempDir),
         ]) {
           const error = captureThrownError(action);
           assertProblem(error);
@@ -1498,7 +1498,7 @@ export type CrocoManifestBundleSource = typeof crocoManifestBundleSource;
           expect(error.detail).toContain("GetFooProblem");
           expect(error.detail).toContain("UserController.getFoo (/users/getFoo)");
           expect(error.detail).toContain(`UserController.${methodName} (/users/${methodName})`);
-          expect(collectDirectoryContents(TEMP_DIR)).toEqual(before);
+          expect(collectDirectoryContents(tempDir)).toEqual(before);
         }
       },
     );
@@ -1508,23 +1508,23 @@ export type CrocoManifestBundleSource = typeof crocoManifestBundleSource;
         route("create", { httpMethod: "POST", inputSchemas: BODY_INPUT_SCHEMAS }),
         route("createValidation"),
       ];
-      expect(() => generateClientFiles(routes, path.join(TEMP_DIR, "uncreated"))).toThrow(
+      expect(() => generateClientFiles(routes, path.join(tempDir, "uncreated"))).toThrow(
         "CreateValidationProblem",
       );
-      expect(fs.existsSync(path.join(TEMP_DIR, "uncreated"))).toBe(false);
+      expect(fs.existsSync(path.join(tempDir, "uncreated"))).toBe(false);
     });
 
     it("rejects normalized result hooks across query and mutation routes", () => {
       const routes = [route("getFoo"), route("GetFooResult", { httpMethod: "POST" })];
       expect(() =>
-        generateClientFiles(routes, path.join(TEMP_DIR, "uncreated"), { reactQuery: true }),
+        generateClientFiles(routes, path.join(tempDir, "uncreated"), { reactQuery: true }),
       ).toThrow("useGetFooResult");
-      expect(fs.existsSync(path.join(TEMP_DIR, "uncreated"))).toBe(false);
+      expect(fs.existsSync(path.join(tempDir, "uncreated"))).toBe(false);
     });
 
     it("rejects hooks that collide with a route problem declaration", () => {
       const routes = [route("useFoo"), route("fooProblemDeclarations")];
-      expect(() => generateClientFiles(routes, TEMP_DIR, { reactQuery: true })).toThrow(
+      expect(() => generateClientFiles(routes, tempDir, { reactQuery: true })).toThrow(
         "useFooProblemDeclarations",
       );
     });
@@ -1532,8 +1532,8 @@ export type CrocoManifestBundleSource = typeof crocoManifestBundleSource;
     it(
       "typechecks React Query hooks when the matching import is not emitted",
       () => {
-        generateClientFiles([route("mutation")], TEMP_DIR, { reactQuery: true });
-        const content = fs.readFileSync(path.join(TEMP_DIR, "user.ts"), "utf-8");
+        generateClientFiles([route("mutation")], tempDir, { reactQuery: true });
+        const content = fs.readFileSync(path.join(tempDir, "user.ts"), "utf-8");
         assertGeneratedReactQueryClientTypechecks(`${content}
 const query = useMutation();
 void query;
@@ -1555,11 +1555,11 @@ void query;
       expect(() =>
         generateClientFiles(
           [route(method, { httpMethod: httpMethod ?? "GET" })],
-          path.join(TEMP_DIR, "uncreated"),
+          path.join(tempDir, "uncreated"),
           options,
         ),
       ).toThrow(symbol);
-      expect(fs.existsSync(path.join(TEMP_DIR, "uncreated"))).toBe(false);
+      expect(fs.existsSync(path.join(tempDir, "uncreated"))).toBe(false);
     });
 
     it(
@@ -1579,7 +1579,7 @@ void query;
             route("query"),
             route("rpcValidation"),
           ],
-          TEMP_DIR,
+          tempDir,
         );
         const consumer = `
 import { userRpc, orderRpc } from './index';
@@ -1588,7 +1588,7 @@ const order: Promise<number> = orderRpc.orderClient.GetFoo();
 const result: Promise<unknown> = userRpc.userClient.GetFooResult();
 void user; void order; void result;
 `;
-        fs.writeFileSync(path.join(TEMP_DIR, "consumer.ts"), consumer);
+        fs.writeFileSync(path.join(tempDir, "consumer.ts"), consumer);
         assertGeneratedPackageTypechecks([
           "index.ts",
           "rpc.ts",
@@ -1635,7 +1635,7 @@ void user; void order; void result;
         },
       ];
 
-      generateClientFiles(routes, TEMP_DIR);
+      generateClientFiles(routes, tempDir);
 
       assertGeneratedPackageTypechecks(["index.ts", "rpc.ts", "order.ts", "user.ts"]);
     },
@@ -1658,7 +1658,7 @@ void user; void order; void result;
       },
     ];
 
-    const files = generateClientFiles(routes, TEMP_DIR, { reactQuery: true });
+    const files = generateClientFiles(routes, tempDir, { reactQuery: true });
 
     const content = fs.readFileSync(files[0], "utf-8");
     expect(content).toContain("import { useMutation } from '@tanstack/react-query';");
@@ -1711,10 +1711,10 @@ void user; void order; void result;
         },
       ];
 
-      const files = generateClientFiles(routes, TEMP_DIR);
+      const files = generateClientFiles(routes, tempDir);
 
       const content = fs.readFileSync(files[0], "utf-8");
-      const indexContent = fs.readFileSync(path.join(TEMP_DIR, "index.ts"), "utf-8");
+      const indexContent = fs.readFileSync(path.join(tempDir, "index.ts"), "utf-8");
       expect(content).toContain("export const userKeys = {");
       expect(content).toContain("all: () => ['user'] as const,");
       expect(content).toContain(
@@ -1759,8 +1759,8 @@ void createInvalidationRouteId;
         outputSchema: null,
         domain: null,
       }));
-      generateClientFiles(routes, TEMP_DIR, { reactQuery: true });
-      const content = fs.readFileSync(path.join(TEMP_DIR, "user.ts"), "utf8");
+      generateClientFiles(routes, tempDir, { reactQuery: true });
+      const content = fs.readFileSync(path.join(tempDir, "user.ts"), "utf8");
       assertGeneratedReactQueryClientTypechecks(content);
       const output = ts.transpileModule(content, {
         compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
@@ -1823,7 +1823,7 @@ void createInvalidationRouteId;
       },
     ];
 
-    generateClientFiles(routes, TEMP_DIR);
+    generateClientFiles(routes, tempDir);
 
     const { RpcQueryKeyInputError, serializeRpcQueryKeyInput } = loadGeneratedRpcSupport();
     const serialized = serializeRpcQueryKeyInput({
@@ -1915,7 +1915,7 @@ void createInvalidationRouteId;
       },
     ];
 
-    const files = generateClientFiles(routes, TEMP_DIR);
+    const files = generateClientFiles(routes, tempDir);
 
     const content = fs.readFileSync(files[0], "utf-8");
     expect(content).toContain("export type ListInput = { query: { page: string; }; };");
@@ -1937,7 +1937,7 @@ void createInvalidationRouteId;
       },
     ];
 
-    const files = generateClientFiles(routes, TEMP_DIR);
+    const files = generateClientFiles(routes, tempDir);
 
     const content = fs.readFileSync(files[0], "utf-8");
     expect(content).toContain("export type GetInput = { path: { id: string; }; };");
@@ -1962,7 +1962,7 @@ void createInvalidationRouteId;
       },
     ];
 
-    const files = generateClientFiles(routes, TEMP_DIR);
+    const files = generateClientFiles(routes, tempDir);
 
     const content = fs.readFileSync(files[0], "utf-8");
     expect(content).toContain(
@@ -2022,7 +2022,7 @@ void createInvalidationRouteId;
       },
     ];
 
-    const files = generateClientFiles(routes, TEMP_DIR);
+    const files = generateClientFiles(routes, tempDir);
     const content = fs.readFileSync(files[0], "utf-8");
 
     expect(content).toContain(
@@ -2062,10 +2062,10 @@ void result;
         domain: null,
       },
     ];
-    expect(() => generateClientFiles(routes, TEMP_DIR)).toThrow(
+    expect(() => generateClientFiles(routes, tempDir)).toThrow(
       /contract-schema-json-unsafe.*Zod transform effects can change runtime values/,
     );
-    expect(fs.readdirSync(TEMP_DIR)).toEqual([]);
+    expect(fs.readdirSync(tempDir)).toEqual([]);
   });
 
   it("should reject transformed response schemas instead of emitting the handler-return input", () => {
@@ -2086,7 +2086,7 @@ void result;
       },
     ];
 
-    expect(() => generateClientFiles(routes, TEMP_DIR)).toThrow(
+    expect(() => generateClientFiles(routes, tempDir)).toThrow(
       /contract-schema-json-unsafe.*Zod transform effects can change runtime values/,
     );
   });
@@ -2111,7 +2111,7 @@ void result;
       },
     ];
 
-    const files = generateClientFiles(routes, TEMP_DIR);
+    const files = generateClientFiles(routes, tempDir);
     const content = fs.readFileSync(files[0], "utf-8");
 
     expect(content).toContain(
@@ -2139,7 +2139,7 @@ void result;
       },
     ];
 
-    const files = generateClientFiles(routes, TEMP_DIR);
+    const files = generateClientFiles(routes, tempDir);
 
     const content = fs.readFileSync(files[0], "utf-8");
     expect(content).toContain(
@@ -2197,7 +2197,7 @@ void result;
       },
     ];
 
-    const files = generateClientFiles(routes, TEMP_DIR);
+    const files = generateClientFiles(routes, tempDir);
     const content = fs.readFileSync(files[0], "utf-8");
 
     expect(validResponse.id).toBe("user-1");
@@ -2227,7 +2227,7 @@ void result;
       },
     ];
 
-    const files = generateClientFiles(routes, TEMP_DIR);
+    const files = generateClientFiles(routes, tempDir);
 
     const content = fs.readFileSync(files[0], "utf-8");
     expect(content).toContain("export type GetOutput = { id: string; name: string; };");
@@ -2280,7 +2280,7 @@ void result;
         },
       ];
 
-      const files = generateClientFiles(routes, TEMP_DIR);
+      const files = generateClientFiles(routes, tempDir);
 
       const content = fs.readFileSync(files[0], "utf-8");
       const source = `import { assertExhaustiveProblem } from './rpc';
@@ -2401,7 +2401,7 @@ void handleMissingProblemBranch;
     });
     const fetchCalls: { readonly url: string; readonly init: RequestInit }[] = [];
 
-    generateClientFiles(routes, TEMP_DIR);
+    generateClientFiles(routes, tempDir);
     const { userClient } = loadGeneratedUserClientSupport(async (url, init) => {
       fetchCalls.push({ url, init });
 
@@ -2461,7 +2461,7 @@ void handleMissingProblemBranch;
     };
     const declaration = { code: "USER_NOT_FOUND", category: "NotFound", status: 404 };
 
-    generateClientFiles(routes, TEMP_DIR);
+    generateClientFiles(routes, tempDir);
     const { handleJsonResult, RpcClientProblemError } = loadGeneratedRpcSupport();
     const response = new Response(JSON.stringify(problemBody), {
       status: 409,
@@ -2514,7 +2514,7 @@ void handleMissingProblemBranch;
     };
     const declaration = { code: "USER_NOT_FOUND", category: "NotFound", status: 404 };
 
-    generateClientFiles(routes, TEMP_DIR);
+    generateClientFiles(routes, tempDir);
     const { handleJsonResponse, handleJsonResult, RpcClientStatusMismatchError } =
       loadGeneratedRpcSupport();
     const directResponse = new Response(JSON.stringify(problemBody), { status: 500 });
@@ -2570,7 +2570,7 @@ void handleMissingProblemBranch;
       },
     ];
 
-    const files = generateClientFiles(routes, TEMP_DIR);
+    const files = generateClientFiles(routes, tempDir);
 
     const content = fs.readFileSync(files[0], "utf-8");
     expect(content).toContain("export type ListProblem = never;");
@@ -2598,7 +2598,7 @@ void handleMissingProblemBranch;
       },
     ];
 
-    const files = generateClientFiles(routes, TEMP_DIR);
+    const files = generateClientFiles(routes, tempDir);
 
     const content = fs.readFileSync(files[0], "utf-8");
     expect(content).toContain(
@@ -2637,20 +2637,20 @@ void handleMissingProblemBranch;
       { ...createBasicRoute(), domain: "alpha", outputSchema: z.object({ id: z.string() }) },
       { ...createBasicRoute(), domain: "zeta", outputSchema },
     ];
-    expect(() => generateClientFiles(routes, TEMP_DIR)).toThrow(
+    expect(() => generateClientFiles(routes, tempDir)).toThrow(
       expect.objectContaining({
         code: "rpc-codegen/invalid-contract",
         message: expect.stringMatching(/output.*UserController.*dynamic.*(catchall|passthrough)/i),
       }),
     );
-    expect(fs.readdirSync(TEMP_DIR)).toEqual([]);
+    expect(fs.readdirSync(tempDir)).toEqual([]);
   });
 
   it("should preserve existing generated files when a dynamic output is rejected", () => {
     const route = { ...createBasicRoute(), outputSchema: z.object({ id: z.string() }) };
-    const files = generateClientFiles([route], TEMP_DIR);
+    const files = generateClientFiles([route], tempDir);
     const before = new Map(
-      [...files, path.join(TEMP_DIR, ".croco-rpc-codegen.json")].map((file) => [
+      [...files, path.join(tempDir, ".croco-rpc-codegen.json")].map((file) => [
         file,
         fs.readFileSync(file, "utf8"),
       ]),
@@ -2658,13 +2658,13 @@ void handleMissingProblemBranch;
     expect(() =>
       generateClientFiles(
         [{ ...route, domain: "replacement", outputSchema: z.object({}).catchall(z.number()) }],
-        TEMP_DIR,
+        tempDir,
       ),
     ).toThrow(/dynamic/i);
     for (const [file, content] of before) {
       expect(fs.readFileSync(file, "utf8")).toBe(content);
     }
-    expect(fs.existsSync(path.join(TEMP_DIR, "replacement.ts"))).toBe(false);
+    expect(fs.existsSync(path.join(tempDir, "replacement.ts"))).toBe(false);
   });
 
   it(
@@ -2677,9 +2677,9 @@ void handleMissingProblemBranch;
         id: "stats",
         counters: { widgets: 7 },
       });
-      const files = generateClientFiles([{ ...createBasicRoute(), outputSchema }], TEMP_DIR);
+      const files = generateClientFiles([{ ...createBasicRoute(), outputSchema }], tempDir);
       const sources = new Map(files.map((file) => [file, fs.readFileSync(file, "utf8")]));
-      const consumer = path.join(TEMP_DIR, "consumer.ts");
+      const consumer = path.join(tempDir, "consumer.ts");
       sources.set(
         consumer,
         `
@@ -2715,7 +2715,7 @@ void handleMissingProblemBranch;
       },
     ];
 
-    const files = generateClientFiles(routes, TEMP_DIR);
+    const files = generateClientFiles(routes, tempDir);
 
     const content = fs.readFileSync(files[0], "utf-8");
     expect(content).toContain(
@@ -2743,10 +2743,10 @@ void handleMissingProblemBranch;
       },
     ];
 
-    expect(() => generateClientFiles(routes, TEMP_DIR)).toThrow(
+    expect(() => generateClientFiles(routes, tempDir)).toThrow(
       `${CONTRACT_SCHEMA_JSON_UNSAFE_DIAGNOSTIC_CODE} at checkedAt`,
     );
-    expect(fs.existsSync(path.join(TEMP_DIR, "status.ts"))).toBe(false);
+    expect(fs.existsSync(path.join(tempDir, "status.ts"))).toBe(false);
   });
 
   it("should reject records with non-string key schemas", () => {
@@ -2765,10 +2765,10 @@ void handleMissingProblemBranch;
       },
     ];
 
-    expect(() => generateClientFiles(routes, TEMP_DIR)).toThrow(
+    expect(() => generateClientFiles(routes, tempDir)).toThrow(
       `${CONTRACT_SCHEMA_JSON_UNSAFE_DIAGNOSTIC_CODE}: ZodRecord key schema ZodNumber is unsupported; use z.string() for JSON object keys.`,
     );
-    expect(fs.existsSync(path.join(TEMP_DIR, "status.ts"))).toBe(false);
+    expect(fs.existsSync(path.join(tempDir, "status.ts"))).toBe(false);
   });
 
   it("should not write earlier domain files when a later domain has an unsupported schema", () => {
@@ -2801,13 +2801,13 @@ void handleMissingProblemBranch;
       },
     ];
 
-    expect(() => generateClientFiles(routes, TEMP_DIR)).toThrow(
+    expect(() => generateClientFiles(routes, tempDir)).toThrow(
       `${CONTRACT_SCHEMA_JSON_UNSAFE_DIAGNOSTIC_CODE} at checkedAt`,
     );
-    expect(fs.existsSync(path.join(TEMP_DIR, "alpha.ts"))).toBe(false);
-    expect(fs.existsSync(path.join(TEMP_DIR, "zeta.ts"))).toBe(false);
-    expect(fs.existsSync(path.join(TEMP_DIR, "rpc.ts"))).toBe(false);
-    expect(fs.existsSync(path.join(TEMP_DIR, "index.ts"))).toBe(false);
+    expect(fs.existsSync(path.join(tempDir, "alpha.ts"))).toBe(false);
+    expect(fs.existsSync(path.join(tempDir, "zeta.ts"))).toBe(false);
+    expect(fs.existsSync(path.join(tempDir, "rpc.ts"))).toBe(false);
+    expect(fs.existsSync(path.join(tempDir, "index.ts"))).toBe(false);
   });
 
   it(
@@ -2831,7 +2831,7 @@ void handleMissingProblemBranch;
             domain: null,
           },
         ],
-        TEMP_DIR,
+        tempDir,
       );
       const content = fs.readFileSync(files[0], "utf-8");
       expect(content).toContain("zodiacSign: string");
@@ -2867,7 +2867,7 @@ void request;
       },
     ];
 
-    const files = generateClientFiles(routes, TEMP_DIR);
+    const files = generateClientFiles(routes, tempDir);
 
     const content = fs.readFileSync(files[0], "utf-8");
     expect(content).not.toContain("z.");
@@ -2889,7 +2889,7 @@ void request;
       },
     ];
 
-    const files = generateClientFiles(routes, TEMP_DIR);
+    const files = generateClientFiles(routes, tempDir);
 
     const content = fs.readFileSync(files[0], "utf-8");
     expect(content).toContain(
@@ -2949,7 +2949,7 @@ void request;
         },
       ];
 
-      const files = generateClientFiles(routes, TEMP_DIR);
+      const files = generateClientFiles(routes, tempDir);
 
       const content = fs.readFileSync(files[0], "utf-8");
       expect(content).toContain(
@@ -3014,7 +3014,7 @@ void request;
     ];
     const fetchCalls: { readonly url: string; readonly init: RequestInit }[] = [];
 
-    generateClientFiles(routes, TEMP_DIR);
+    generateClientFiles(routes, tempDir);
     const { userClient } = loadGeneratedUserClientSupport(async (url, init) => {
       fetchCalls.push({ url, init });
 
@@ -3058,7 +3058,7 @@ void request;
       },
     ];
 
-    const files = generateClientFiles(routes, TEMP_DIR);
+    const files = generateClientFiles(routes, tempDir);
 
     const content = fs.readFileSync(files[0], "utf-8");
     expect(content).toContain(
@@ -3092,7 +3092,7 @@ void request;
       },
     ];
 
-    const files = generateClientFiles(routes, TEMP_DIR);
+    const files = generateClientFiles(routes, tempDir);
 
     const content = fs.readFileSync(files[0], "utf-8");
     expect(content).toContain(
@@ -3116,7 +3116,7 @@ void request;
       },
     ];
 
-    const files = generateClientFiles(routes, TEMP_DIR);
+    const files = generateClientFiles(routes, tempDir);
 
     const content = fs.readFileSync(files[0], "utf-8");
     expect(content).toContain(
@@ -3140,7 +3140,7 @@ void request;
       },
     ];
 
-    generateClientFiles(routes, TEMP_DIR);
+    generateClientFiles(routes, tempDir);
     const rpcModule = loadGeneratedRpcModule();
     const encodeRpcPathSegment = rpcModule.encodeRpcPathSegment as (
       route: { readonly routeId: string },
@@ -3199,8 +3199,8 @@ void request;
         },
       ];
 
-      generateClientFiles(routes, TEMP_DIR, { problemRuntime: "frontend-problems" });
-      const rpcContent = fs.readFileSync(path.join(TEMP_DIR, "rpc.ts"), "utf-8");
+      generateClientFiles(routes, tempDir, { problemRuntime: "frontend-problems" });
+      const rpcContent = fs.readFileSync(path.join(tempDir, "rpc.ts"), "utf-8");
 
       expect(rpcContent).toContain("} from '@croco/frontend-problems';");
       expect(rpcContent).toContain("export class RpcPathParamInputError extends Problem");
@@ -3249,7 +3249,7 @@ void request;
         },
       };
       const fetchCalls: { readonly url: string; readonly init: RequestInit }[] = [];
-      generateClientFiles([route], TEMP_DIR);
+      generateClientFiles([route], tempDir);
       const { userClient } = loadGeneratedUserClientSupport(async (url, init) => {
         fetchCalls.push({ url, init });
         return new Response(null, { status: 204 });
@@ -3306,7 +3306,7 @@ void request;
       },
     ];
 
-    const files = generateClientFiles(routes, TEMP_DIR);
+    const files = generateClientFiles(routes, tempDir);
 
     const content = fs.readFileSync(files[0], "utf-8");
     expect(content).toContain(
@@ -3339,7 +3339,7 @@ void request;
       },
     ];
 
-    const files = generateClientFiles(routes, TEMP_DIR);
+    const files = generateClientFiles(routes, tempDir);
 
     const content = fs.readFileSync(files[0], "utf-8");
     expect(content).toContain(
@@ -3371,7 +3371,7 @@ void request;
       },
     ];
 
-    const files = generateClientFiles(routes, TEMP_DIR);
+    const files = generateClientFiles(routes, tempDir);
 
     const content = fs.readFileSync(files[0], "utf-8");
     expect(content).toContain(
@@ -3429,7 +3429,7 @@ void request;
         },
       ];
 
-      const files = generateClientFiles(routes, TEMP_DIR, { reactQuery: true });
+      const files = generateClientFiles(routes, tempDir, { reactQuery: true });
 
       const content = fs.readFileSync(files[0], "utf-8");
       expect(content).toContain("import { useMutation, useQuery } from '@tanstack/react-query';");
@@ -3581,7 +3581,7 @@ void createResultHook;
         },
       ];
 
-      const files = generateClientFiles(routes, TEMP_DIR);
+      const files = generateClientFiles(routes, tempDir);
 
       const content = fs.readFileSync(files[0], "utf-8");
       expect(content).toContain(
@@ -3625,7 +3625,7 @@ void resultBranch;
         },
       ];
 
-      const files = generateClientFiles(routes, TEMP_DIR);
+      const files = generateClientFiles(routes, tempDir);
 
       const content = fs.readFileSync(files[0], "utf-8");
       assertGeneratedClientTypechecks(`${content}
@@ -3656,7 +3656,7 @@ void result;
         },
       ];
 
-      const files = generateClientFiles(routes, TEMP_DIR);
+      const files = generateClientFiles(routes, tempDir);
       const content = fs.readFileSync(files[0], "utf-8");
 
       expect(content).toContain(
@@ -3713,7 +3713,7 @@ void result;
         },
       ];
 
-      const files = generateClientFiles(routes, TEMP_DIR);
+      const files = generateClientFiles(routes, tempDir);
 
       const content = fs.readFileSync(files[0], "utf-8");
       expect(content).toContain(
@@ -3802,8 +3802,8 @@ void submitCreateForm;
         inputSchema: body as any,
         inputSchemas: { body: body as any, path: null, query: null, headers: null },
       };
-      generateClientFiles([route], TEMP_DIR);
-      const source = fs.readFileSync(path.join(TEMP_DIR, "user.ts"), "utf-8");
+      generateClientFiles([route], tempDir);
+      const source = fs.readFileSync(path.join(tempDir, "user.ts"), "utf-8");
       const sentBodies: unknown[] = [];
       const fetchImpl: GeneratedClientFetch = async (_url, init) => {
         sentBodies.push(JSON.parse(String(init.body)));
@@ -3888,7 +3888,7 @@ void payload;
         },
       ];
 
-      const files = generateClientFiles(routes, TEMP_DIR);
+      const files = generateClientFiles(routes, tempDir);
 
       const content = fs.readFileSync(files[0], "utf-8");
       expect(content).toContain(
@@ -3935,7 +3935,7 @@ void updateResult;
         },
       ];
 
-      const files = generateClientFiles(routes, TEMP_DIR);
+      const files = generateClientFiles(routes, tempDir);
       const content = fs.readFileSync(files[0], "utf-8");
 
       expect(content).toContain(
@@ -3977,7 +3977,7 @@ void updateResult;
     ];
 
     try {
-      generateClientFiles(routes, TEMP_DIR);
+      generateClientFiles(routes, tempDir);
       throw new Error("Expected form schema generation to fail.");
     } catch (error) {
       expect(error).toMatchObject({
@@ -3986,7 +3986,7 @@ void updateResult;
           "Cannot generate RPC form model for route UserController.create (/users): field 'profile' uses unsupported form field schema ZodObject.",
       });
     }
-    expect(fs.existsSync(path.join(TEMP_DIR, "user.ts"))).toBe(false);
+    expect(fs.existsSync(path.join(tempDir, "user.ts"))).toBe(false);
   });
 
   it("should reject unsupported non-object form bodies with a stable diagnostic and route context", () => {
@@ -4011,7 +4011,7 @@ void updateResult;
     ];
 
     try {
-      generateClientFiles(routes, TEMP_DIR);
+      generateClientFiles(routes, tempDir);
       throw new Error("Expected form schema generation to fail.");
     } catch (error) {
       expect(error).toMatchObject({
@@ -4020,7 +4020,7 @@ void updateResult;
           "Cannot generate RPC form model for route UserController.create (/users): body uses unsupported form schema ZodString.",
       });
     }
-    expect(fs.existsSync(path.join(TEMP_DIR, "user.ts"))).toBe(false);
+    expect(fs.existsSync(path.join(tempDir, "user.ts"))).toBe(false);
   });
 
   it("should reject form body objects that accept dynamic keys", () => {
@@ -4057,7 +4057,7 @@ void updateResult;
       ];
 
       try {
-        generateClientFiles(routes, TEMP_DIR);
+        generateClientFiles(routes, tempDir);
         throw new Error("Expected form schema generation to fail.");
       } catch (error) {
         expect(error).toMatchObject({
@@ -4065,7 +4065,7 @@ void updateResult;
           detail: `Cannot generate RPC form model for route UserController.create (/users): body object accepts unsupported ${mode} keys; generated form fields must cover every accepted body key.`,
         });
       }
-      expect(fs.existsSync(path.join(TEMP_DIR, "user.ts"))).toBe(false);
+      expect(fs.existsSync(path.join(tempDir, "user.ts"))).toBe(false);
     }
   });
 
@@ -4089,7 +4089,7 @@ void updateResult;
       },
     ];
 
-    const files = generateClientFiles(routes, TEMP_DIR);
+    const files = generateClientFiles(routes, tempDir);
 
     const content = fs.readFileSync(files[0], "utf-8");
     expect(content).toContain(
@@ -4175,7 +4175,7 @@ function collectDirectoryContents(directory: string): ReadonlyMap<string, Buffer
 
 function assertGeneratedClientTypechecks(
   source: string,
-  rpcSource = fs.readFileSync(path.join(TEMP_DIR, "rpc.ts"), "utf-8"),
+  rpcSource = fs.readFileSync(path.join(tempDir, "rpc.ts"), "utf-8"),
 ): void {
   assertVirtualTypeScriptSourcesTypecheck(
     new Map([
@@ -4188,7 +4188,7 @@ function assertGeneratedClientTypechecks(
 
 function assertGeneratedReactQueryClientTypechecks(
   source: string,
-  rpcSource = fs.readFileSync(path.join(TEMP_DIR, "rpc.ts"), "utf-8"),
+  rpcSource = fs.readFileSync(path.join(tempDir, "rpc.ts"), "utf-8"),
 ): void {
   assertVirtualTypeScriptSourcesTypecheck(
     new Map([
@@ -4202,10 +4202,7 @@ function assertGeneratedReactQueryClientTypechecks(
 
 function assertGeneratedPackageTypechecks(fileNames: readonly string[]): void {
   const sources = new Map(
-    fileNames.map((fileName) => [
-      fileName,
-      fs.readFileSync(path.join(TEMP_DIR, fileName), "utf-8"),
-    ]),
+    fileNames.map((fileName) => [fileName, fs.readFileSync(path.join(tempDir, fileName), "utf-8")]),
   );
 
   assertVirtualTypeScriptSourcesTypecheck(sources, fileNames);
@@ -4247,7 +4244,7 @@ function loadGeneratedRpcSupport(): {
 }
 
 function loadGeneratedRpcModule(fetchImpl?: GeneratedClientFetch): Record<string, unknown> {
-  const rpcSource = fs.readFileSync(path.join(TEMP_DIR, "rpc.ts"), "utf-8");
+  const rpcSource = fs.readFileSync(path.join(tempDir, "rpc.ts"), "utf-8");
   const outputText = ts.transpileModule(rpcSource, {
     compilerOptions: {
       module: ts.ModuleKind.CommonJS,
@@ -4273,7 +4270,7 @@ function loadGeneratedUserClientSupport(
   fetchImpl: GeneratedClientFetch,
 ): GeneratedUserClientSupport {
   const rpcModule = loadGeneratedRpcModule(fetchImpl);
-  const userSource = fs.readFileSync(path.join(TEMP_DIR, "user.ts"), "utf-8");
+  const userSource = fs.readFileSync(path.join(tempDir, "user.ts"), "utf-8");
   const outputText = ts.transpileModule(userSource, {
     compilerOptions: {
       module: ts.ModuleKind.CommonJS,

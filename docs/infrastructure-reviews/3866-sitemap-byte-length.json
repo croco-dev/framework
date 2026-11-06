@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "meta-vite",
+      "classification": "internal-pure-refactor",
+      "reason": "Replace allocating TextEncoder byte counts with Buffer.byteLength and reuse the fixed XML envelope length. The sitemap path already requires node:crypto. UTF-8 totals, partition limits, XML bytes and generation identities are unchanged; no public API, Provider, storage, Host lifecycle or runtime support claim changes.",
+      "files": {
+        "packages/meta-vite/src/libs/sitemap/generateSitemap.ts": "967e82f6c4edc2b95ce52b50ac403d248e437b18438c89d8588ccafcb9edfdbe"
+      },
+      "catalogRuntimes": ["node", "lambda", "cloudflare-workers", "browser"],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "This internal byte-count replacement preserves the existing Node sitemap path and has no cluster, storage or Node Host lifecycle dependency changes.",
+          "providers": [],
+          "constraints": [
+            "Existing sitemap publication and deployment restrictions remain unchanged."
+          ],
+          "references": [
+            "packages/meta-vite/src/libs/sitemap/generateSitemap.ts",
+            "packages/meta-vite/src/tests/Sitemap.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "UTF-8 byte counting introduces no invocation, connection, storage or flush behavior. The existing Node sitemap requirements remain in force.",
+          "providers": [],
+          "constraints": [
+            "Existing sitemap publication and deployment restrictions remain unchanged."
+          ],
+          "references": [
+            "packages/meta-vite/src/libs/sitemap/generateSitemap.ts",
+            "packages/meta-vite/src/tests/Sitemap.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "The internal replacement does not change the sitemap path's existing Node dependency or add a Workers isolate or Node Container support claim. Package-wide runtime metadata is not a certification of this path.",
+          "providers": [],
+          "constraints": [
+            "Existing sitemap publication and deployment restrictions remain unchanged."
+          ],
+          "references": [
+            "packages/meta-vite/src/libs/sitemap/generateSitemap.ts",
+            "packages/meta-vite/src/tests/Sitemap.spec.ts"
+          ]
+        }
+      }
+    }
+  ]
+}

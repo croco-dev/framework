@@ -2,7 +2,7 @@ import "reflect-metadata";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, sep } from "node:path";
 import { ProblemCategory } from "@croco/problems-core";
 import { buildContractGraph, type ContractGraph } from "@croco/protocols-core";
 import {
@@ -944,8 +944,20 @@ void [input, output, problem, invalidInput, invalidOutput, invalidProblem, admin
           target: ts.ScriptTarget.ES2022,
           module: ts.ModuleKind.ESNext,
           moduleResolution: ts.ModuleResolutionKind.Bundler,
-          paths: { "@croco/admin-generated": [join(import.meta.dirname, "../../dist/index.d.ts")] },
+          paths: {
+            "@croco/admin-generated": [join(import.meta.dirname, "../../dist/index.d.ts")],
+            "@croco/protocols-core": [
+              join(import.meta.dirname, "../../../protocols-core/dist/index.d.ts"),
+            ],
+          },
         });
+        expect(
+          program
+            .getSourceFiles()
+            .filter(
+              (source) => !source.isDeclarationFile && !source.fileName.startsWith(outDir + sep),
+            ),
+        ).toEqual([]);
         expect(
           ts
             .getPreEmitDiagnostics(program)
