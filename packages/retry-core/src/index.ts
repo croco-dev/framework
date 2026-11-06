@@ -42,9 +42,10 @@ export type {
 export { RedisCircuitBreakerStore } from "./libs/stores/RedisCircuitBreakerStore";
 
 /**
- * 재시도 차단, 소진, 복구 충돌 시 발생하는 Problem 타입들입니다.
+ * 재시도 차단·소진, 서킷 상태 기록 실패, 복구 충돌을 나타내는 Problem 타입들입니다.
  */
 export {
+  CircuitBreakerBookkeepingProblem,
   CircuitBreakerOpenProblem,
   DuplicateRecoverHandlerProblem,
   InvalidRetryConfigurationProblem,

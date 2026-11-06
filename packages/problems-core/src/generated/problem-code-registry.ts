@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export type CrocoProblemRegistry = {
   readonly version: "croco.problem-code-registry.v1";
-  readonly problemCount: 1158;
+  readonly problemCount: 1159;
   readonly problems: readonly [
     {
       readonly code: "ACCESS_DENIED";
@@ -26868,6 +26868,34 @@ export type CrocoProblemRegistry = {
       ];
     },
     {
+      readonly code: "retry-core/circuit-bookkeeping-failed";
+      readonly category: "InternalServerError";
+      readonly status: 500;
+      readonly title: "Internal Server Error";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#retry-core-circuit-bookkeeping-failed";
+      readonly recovery: {
+        readonly cause: "Croco or an upstream dependency failed after accepting the request.";
+        readonly userAction: "Retry later only when the operation is idempotent or the caller owns retry safety.";
+        readonly operatorAction: "Use traces, logs, and upstream diagnostics to isolate the failing boundary.";
+        readonly retryability: "conditional";
+        readonly redactionPolicy: "operator-only";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.error";
+          readonly severity: "error";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/retry-core/src/libs/errors/CircuitBreakerBookkeepingProblem.ts";
+          readonly line: 7;
+          readonly column: 1;
+          readonly kind: "problem-class";
+        },
+      ];
+    },
+    {
       readonly code: "retry-core/circuit-breaker-unexpected-state";
       readonly category: "InternalServerError";
       readonly status: 500;
@@ -32738,7 +32766,7 @@ export type CrocoProblemRegistry = {
 
 export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 1158,
+  problemCount: 1159,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -62725,6 +62753,38 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
         {
           file: "packages/retry-core/src/libs/errors/RetryCancellationUnsupportedProblem.ts",
           line: 6,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "retry-core/circuit-bookkeeping-failed",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#retry-core-circuit-bookkeeping-failed",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/retry-core/src/libs/errors/CircuitBreakerBookkeepingProblem.ts",
+          line: 7,
           column: 1,
           kind: "problem-class",
         },

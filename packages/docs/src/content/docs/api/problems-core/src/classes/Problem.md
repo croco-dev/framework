@@ -623,6 +623,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`SurveyExpiredProblem`](/api/research-core/src/classes/surveyexpiredproblem/)
 - [`SurveyInvalidProblem`](/api/research-core/src/classes/surveyinvalidproblem/)
 - [`SurveyUnavailableProblem`](/api/research-core/src/classes/surveyunavailableproblem/)
+- [`CircuitBreakerBookkeepingProblem`](/api/retry-core/src/classes/circuitbreakerbookkeepingproblem/)
 - [`CircuitBreakerOpenProblem`](/api/retry-core/src/classes/circuitbreakeropenproblem/)
 - [`CircuitBreakerUnexpectedStateProblem`](/api/retry-core/src/classes/circuitbreakerunexpectedstateproblem/)
 - [`DuplicateRecoverHandlerProblem`](/api/retry-core/src/classes/duplicaterecoverhandlerproblem/)

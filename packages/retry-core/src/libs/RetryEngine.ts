@@ -5,6 +5,7 @@ import {
   RetryExhaustedProblem,
   RetrySuccessHookProblem,
 } from "./errors";
+import { unwrapCircuitBreakerBookkeepingError } from "./errors/CircuitBreakerBookkeepingProblem";
 import type { RetryContext } from "./RetryContext";
 import type { RetryPolicy } from "./RetryPolicy";
 
@@ -93,23 +94,27 @@ export async function executeRetryLoop<T>(
     try {
       result = await callback();
     } catch (error) {
-      if (error instanceof RetrySuccessHookProblem) {
+      const operationError = unwrapCircuitBreakerBookkeepingError(error);
+      if (operationError instanceof RetrySuccessHookProblem) {
         throw error;
       }
 
       throwIfAborted(signal, context);
 
       const retryError = error instanceof Error ? error : new Error(String(error));
+      const operationFailure = unwrapCircuitBreakerBookkeepingError(retryError);
+      const policyError =
+        operationFailure instanceof Error ? operationFailure : new Error(String(operationFailure));
       context.setLastError(retryError);
 
       await retryHooks.onRetryError?.(retryError, context);
 
       const hasAttemptsLeft = attempt < maxAttempts;
-      const isRetryable = retryPolicy.shouldRetry(retryError, attempt, maxAttempts);
+      const isRetryable = retryPolicy.shouldRetry(policyError, attempt, maxAttempts);
 
       if (!hasAttemptsLeft) {
         const wasRetryablePreviously = retryPolicy.shouldRetry(
-          retryError,
+          policyError,
           attempt - 1,
           maxAttempts,
         );

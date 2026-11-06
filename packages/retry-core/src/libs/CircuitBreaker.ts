@@ -5,6 +5,7 @@ import {
   CircuitState,
   InMemoryCircuitBreakerStateStore,
 } from "./CircuitBreakerState";
+import { CircuitBreakerBookkeepingProblem } from "./errors/CircuitBreakerBookkeepingProblem";
 import { CircuitBreakerOpenProblem } from "./errors/CircuitBreakerOpenProblem";
 import { CircuitBreakerUnexpectedStateProblem } from "./problems/CircuitBreakerProblems";
 import { assertValidRetryNumber } from "./numericValidation";
@@ -146,22 +147,26 @@ export class CircuitBreaker {
       try {
         shouldRecord = this.recordFailure(error);
       } catch (classificationError) {
-        await this.releaseHalfOpenSlot(slot);
+        await this.recordBookkeeping(CircuitState.HALF_OPEN, () => this.releaseHalfOpenSlot(slot), {
+          error: classificationError,
+        });
         throw classificationError;
       }
 
       if (shouldRecord) {
-        await this.markHalfOpenFailure(slot);
+        await this.recordBookkeeping(CircuitState.HALF_OPEN, () => this.markHalfOpenFailure(slot), {
+          error,
+        });
       } else {
-        await this.releaseHalfOpenSlot(slot);
+        await this.recordBookkeeping(CircuitState.HALF_OPEN, () => this.releaseHalfOpenSlot(slot), {
+          error,
+        });
         throw error;
       }
       throw error instanceof Error ? error : new Error(String(error));
     }
 
-    await this.recordSuccessBookkeeping(CircuitState.HALF_OPEN, () =>
-      this.markHalfOpenSuccess(slot),
-    );
+    await this.recordBookkeeping(CircuitState.HALF_OPEN, () => this.markHalfOpenSuccess(slot));
     return result;
   }
 
@@ -178,34 +183,56 @@ export class CircuitBreaker {
       if (!this.recordFailure(error)) {
         throw error;
       }
-      await this.recordClosedFailure();
+      await this.recordBookkeeping(CircuitState.CLOSED, () => this.recordClosedFailure(), {
+        error,
+      });
       throw error instanceof Error ? error : new Error(String(error));
     }
 
-    await this.recordSuccessBookkeeping(CircuitState.CLOSED, () => this.recordClosedSuccess());
+    await this.recordBookkeeping(CircuitState.CLOSED, () => this.recordClosedSuccess());
     return result;
   }
 
-  private async recordSuccessBookkeeping(
+  private async recordBookkeeping(
     state: CircuitState,
     operation: () => Promise<void>,
+    failure?: { error: unknown },
   ): Promise<void> {
     try {
       await operation();
-    } catch (error) {
-      const err = error instanceof Error ? error : new Error(String(error));
-
+    } catch (bookkeepingError) {
+      const problem =
+        failure === undefined
+          ? undefined
+          : new CircuitBreakerBookkeepingProblem(
+              this.circuitId,
+              state,
+              failure.error,
+              bookkeepingError,
+            );
       try {
+        const err =
+          problem ??
+          (bookkeepingError instanceof Error
+            ? bookkeepingError
+            : new Error(String(bookkeepingError)));
         recordEvent("circuit_breaker.bookkeeping_failed", {
           "circuit.id": this.circuitId,
           "circuit.state": state,
           "error.message": err.message,
           "error.type": err.name,
-          "operation.succeeded": true,
+          ...(problem === undefined ? {} : { "error.code": problem.code }),
+          "operation.succeeded": failure === undefined,
         });
       } catch {
-        // Observation failures must not replace an already successful operation outcome.
+        // Observation failures must preserve the chosen operation outcome.
+        if (problem !== undefined) {
+          throw problem;
+        }
         return;
+      }
+      if (problem !== undefined) {
+        throw problem;
       }
     }
   }
