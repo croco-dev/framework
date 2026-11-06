@@ -212,7 +212,7 @@ export function createTestEvidenceRecord(input: TestEvidenceRecordInput): TestEv
   assertAttempts(input.id, attempts);
   const outcome = classifyTestEvidenceOutcome(attempts);
   const diagnostics = input.diagnostics ?? attempts.flatMap((attempt) => attempt.diagnostics ?? []);
-  const attachments = input.attachments ?? attempts.flatMap((attempt) => attempt.attachments ?? []);
+  const attachments = input.attachments ?? [];
   const record = redactTestEvidence(
     normalizeTestEvidenceRecord({
       ...input,
@@ -513,9 +513,9 @@ export function createTestEvidenceBundle(
     throw new TestEvidenceContractError(`Evidence bundle duplicates id '${duplicate.id}'.`);
   }
   const missingArtifacts = sortedRecords.flatMap((record) =>
-    record.attachments
-      .filter(({ path }) => !artifactExists(path))
-      .map(({ path }) => ({ path, recordId: record.id, required: true as const })),
+    [...new Set(record.attachments.map(({ path }) => path))]
+      .filter((path) => !artifactExists(path))
+      .map((path) => ({ path, recordId: record.id, required: true as const })),
   );
   const summary = summarizeRecords(sortedRecords);
   return deepFreeze({
@@ -577,7 +577,20 @@ function normalizeTestEvidenceRecord(record: TestEvidenceRecord): TestEvidenceRe
         ...(attempt.diagnostics ? { diagnostics: sortDiagnostics(attempt.diagnostics) } : {}),
       })),
     resources: { ...record.resources, leaks: sortStrings(record.resources.leaks) },
-    attachments: sortAttachments(record.attachments),
+    attachments: sortAttachments([
+      ...new Map(
+        [
+          ...record.attachments,
+          ...record.attempts.flatMap((attempt) => attempt.attachments ?? []),
+        ].map(
+          (attachment) =>
+            [
+              JSON.stringify([attachment.kind, attachment.path, attachment.schemaVersion]),
+              attachment,
+            ] as const,
+        ),
+      ).values(),
+    ]),
   };
 }
 

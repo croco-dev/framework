@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "testing",
+      "classification": "pure-contract",
+      "reason": "Aggregate record and attempt attachments before checking artifact completeness, including imported v1 records. Preserve attempt metadata and existing schema; missing paths fail the bundle and assurance eligibility.",
+      "files": {
+        "packages/testing/src/libs/test-evidence.mts": "6c1719def0c595f9e46428df49b517a71b5aad4ed246b145aecc0bfc16cf44f0"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Attachment normalization and completeness evaluation run in the test evidence consumer and use no application Host capabilities, storage Provider or deployment lifecycle.",
+          "providers": [],
+          "constraints": [
+            "Existence checks use the caller-supplied artifact probe. This change does not verify artifact contents or certify deployed infrastructure."
+          ],
+          "references": [
+            "packages/testing/src/libs/test-evidence.mts",
+            "packages/testing/src/tests/TestEvidence.spec.ts",
+            "packages/testing/src/tests/ExecutableAssuranceGraph.spec.ts",
+            "scripts/tests/test-evidence-bundle.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Attachment normalization and completeness evaluation run in the test evidence consumer and use no application Host capabilities, storage Provider or deployment lifecycle.",
+          "providers": [],
+          "constraints": [
+            "Existence checks use the caller-supplied artifact probe. This change does not verify artifact contents or certify deployed infrastructure."
+          ],
+          "references": [
+            "packages/testing/src/libs/test-evidence.mts",
+            "packages/testing/src/tests/TestEvidence.spec.ts",
+            "packages/testing/src/tests/ExecutableAssuranceGraph.spec.ts",
+            "scripts/tests/test-evidence-bundle.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Attachment normalization and completeness evaluation run in the test evidence consumer and use no application Host capabilities, storage Provider or deployment lifecycle.",
+          "providers": [],
+          "constraints": [
+            "Existence checks use the caller-supplied artifact probe. This change does not verify artifact contents or certify deployed infrastructure."
+          ],
+          "references": [
+            "packages/testing/src/libs/test-evidence.mts",
+            "packages/testing/src/tests/TestEvidence.spec.ts",
+            "packages/testing/src/tests/ExecutableAssuranceGraph.spec.ts",
+            "scripts/tests/test-evidence-bundle.spec.ts"
+          ]
+        }
+      }
+    }
+  ]
+}
