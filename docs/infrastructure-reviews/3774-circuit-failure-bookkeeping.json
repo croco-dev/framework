@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "retry-core",
+      "classification": "pure-contract",
+      "reason": "Preserve the primary operation or classifier error when failure bookkeeping throws and report the bookkeeping failure through the existing trace event. State writes and partial failure recovery remain owned by the existing state store.",
+      "files": {
+        "packages/retry-core/src/libs/CircuitBreaker.ts": "ad57bbeb10c5ba13e0c5d92cf2e8c8b744883a277fffe94de3b2584bef22f985"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "This changes host-independent circuit error precedence and event reporting. It adds no Kubernetes Node Host capability, storage provider or lifecycle requirement.",
+          "providers": ["@croco/retry-core:CircuitBreakerStateStore"],
+          "constraints": [
+            "Partial state writes are not rolled back. Existing provider locking, storage availability and recovery requirements still apply. No host execution, deployment or provider certification is claimed."
+          ],
+          "references": [
+            "packages/retry-core/src/libs/CircuitBreaker.ts",
+            "packages/retry-core/src/tests/CircuitBreaker.spec.ts",
+            "packages/retry-core/README.md"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "This changes host-independent circuit error precedence and event reporting. It adds no Lambda Host capability, storage provider or lifecycle requirement.",
+          "providers": ["@croco/retry-core:CircuitBreakerStateStore"],
+          "constraints": [
+            "Partial state writes are not rolled back. Existing provider locking, storage availability and recovery requirements still apply. No host execution, deployment or provider certification is claimed."
+          ],
+          "references": [
+            "packages/retry-core/src/libs/CircuitBreaker.ts",
+            "packages/retry-core/src/tests/CircuitBreaker.spec.ts",
+            "packages/retry-core/README.md"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "This changes host-independent circuit error precedence and event reporting. It adds no Workers or Node Container Host capability, storage provider or lifecycle requirement.",
+          "providers": ["@croco/retry-core:CircuitBreakerStateStore"],
+          "constraints": [
+            "Partial state writes are not rolled back. Existing provider locking, storage availability and recovery requirements still apply. No host execution, deployment or provider certification is claimed."
+          ],
+          "references": [
+            "packages/retry-core/src/libs/CircuitBreaker.ts",
+            "packages/retry-core/src/tests/CircuitBreaker.spec.ts",
+            "packages/retry-core/README.md"
+          ]
+        }
+      }
+    }
+  ]
+}

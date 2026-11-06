@@ -146,20 +146,26 @@ export class CircuitBreaker {
       try {
         shouldRecord = this.recordFailure(error);
       } catch (classificationError) {
-        await this.releaseHalfOpenSlot(slot);
+        await this.recordBookkeeping(CircuitState.HALF_OPEN, false, () =>
+          this.releaseHalfOpenSlot(slot),
+        );
         throw classificationError;
       }
 
       if (shouldRecord) {
-        await this.markHalfOpenFailure(slot);
+        await this.recordBookkeeping(CircuitState.HALF_OPEN, false, () =>
+          this.markHalfOpenFailure(slot),
+        );
       } else {
-        await this.releaseHalfOpenSlot(slot);
+        await this.recordBookkeeping(CircuitState.HALF_OPEN, false, () =>
+          this.releaseHalfOpenSlot(slot),
+        );
         throw error;
       }
       throw error instanceof Error ? error : new Error(String(error));
     }
 
-    await this.recordSuccessBookkeeping(CircuitState.HALF_OPEN, () =>
+    await this.recordBookkeeping(CircuitState.HALF_OPEN, true, () =>
       this.markHalfOpenSuccess(slot),
     );
     return result;
@@ -178,33 +184,33 @@ export class CircuitBreaker {
       if (!this.recordFailure(error)) {
         throw error;
       }
-      await this.recordClosedFailure();
+      await this.recordBookkeeping(CircuitState.CLOSED, false, () => this.recordClosedFailure());
       throw error instanceof Error ? error : new Error(String(error));
     }
 
-    await this.recordSuccessBookkeeping(CircuitState.CLOSED, () => this.recordClosedSuccess());
+    await this.recordBookkeeping(CircuitState.CLOSED, true, () => this.recordClosedSuccess());
     return result;
   }
 
-  private async recordSuccessBookkeeping(
+  private async recordBookkeeping(
     state: CircuitState,
+    operationSucceeded: boolean,
     operation: () => Promise<void>,
   ): Promise<void> {
     try {
       await operation();
     } catch (error) {
-      const err = error instanceof Error ? error : new Error(String(error));
-
       try {
+        const err = error instanceof Error ? error : new Error(String(error));
         recordEvent("circuit_breaker.bookkeeping_failed", {
           "circuit.id": this.circuitId,
           "circuit.state": state,
           "error.message": err.message,
           "error.type": err.name,
-          "operation.succeeded": true,
+          "operation.succeeded": operationSucceeded,
         });
       } catch {
-        // Observation failures must not replace an already successful operation outcome.
+        // Observation failures must not replace the original operation or classifier outcome.
         return;
       }
     }

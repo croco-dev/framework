@@ -124,7 +124,7 @@ HALF_OPEN 상태, generation marker(마지막 실패 시각), 활성 슬롯 및 
 
 `LambdaTimeoutGuard`는 다음 재시도를 시작할 시간이 부족하면 `LambdaTimeoutProblem`을 throw합니다. 열린 서킷은 `CircuitBreakerOpenProblem`을 throw하며 category는 `TooManyRequests`입니다. 두 실패 모두 generic `Error`가 아니라 Croco `Problem`이므로 호출자는 코드와 category로 복구 경로를 판단할 수 있습니다.
 
-서킷 브레이커의 보호 대상 작업이 성공한 뒤 상태 저장소의 성공 bookkeeping이 실패하더라도 완료된 작업 결과는 실패로 바뀌지 않으며 실패 카운터도 증가하지 않습니다. 활성 trace에는 `circuit_breaker.bookkeeping_failed` 이벤트가 기록되므로 저장소 장애를 업무 작업의 재시도와 분리해 관찰할 수 있습니다.
+서킷 브레이커의 보호 대상 작업이 성공한 뒤 상태 저장소의 성공 bookkeeping이 실패하더라도 완료된 작업 결과는 실패로 바뀌지 않으며 실패 카운터도 증가하지 않습니다. 활성 trace에는 `circuit_breaker.bookkeeping_failed` 이벤트가 기록되므로 저장소 장애를 업무 작업의 재시도와 분리해 관찰할 수 있습니다. 작업이 실패한 뒤 실패 횟수 기록, HALF_OPEN 실패 전이 또는 slot 반납이 실패해도 원래 작업 오류를 전달합니다. 사용자 `recordFailure`가 던진 오류도 slot 반납 장애로 덮지 않습니다. 같은 이벤트의 `operation.succeeded`가 `false`이면 실패한 작업의 상태 기록이 완료되지 않았다는 뜻이며, `error.message`와 `error.type`은 저장소 오류를 나타냅니다. 이벤트의 `circuit.state`는 기록을 시작한 상태이며 최종 저장 상태를 보장하지 않습니다. 일부 쓰기만 반영될 수 있으므로 upstream 작업이 종료된 것을 확인하고 저장소를 복구한 뒤 상태를 조회해야 합니다. HALF_OPEN slot이 남았다면 위의 `forceOpen()` 복구 절차를 따릅니다. trace가 없거나 telemetry 기록도 실패하면 이 이벤트는 남지 않지만 원래 작업 오류는 유지됩니다.
 
 업무 콜백이 성공한 뒤 `RetryListener.onSuccess` 또는 저수준 `RetryHooks.onSuccess`가 실패하면 콜백과 recovery는 다시 실행되지 않습니다. 대신 `RetrySuccessHookProblem`이 throw되며 `callbackSucceeded: true`, 훅 이름, 메서드 이름, 성공 시도 횟수와 원래 오류를 제공합니다. 따라서 호출자는 성공한 비멱등 작업을 재호출하지 않고 관측·리스너 장애를 별도로 처리해야 합니다.
 
