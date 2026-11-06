@@ -606,6 +606,69 @@ for (const [title, label] of ${JSON.stringify([
     }
   });
 
+  it("rejects prefixed Vitest names when optional parent metadata is absent", async () => {
+    const title = "returns (cached) [ready].+";
+    const write = vi.fn();
+    await new CrocoVitestEvidenceReporter({ fidelity: isolatedFidelity, write }).onTestCaseResult({
+      id: "parentless",
+      name: title,
+      fullName: title,
+      diagnostic: () => undefined,
+      result: () => ({ state: "passed" }),
+    });
+    const args = replayArguments(write.mock.calls[0]?.[0].replay.command);
+    const pattern = new RegExp(args[args.indexOf("-t") + 1] ?? "");
+    expect(pattern.test(title)).toBe(true);
+    expect(pattern.test(`other ${title}`)).toBe(false);
+    expect(pattern.test(`other suite ${title}`)).toBe(false);
+  });
+
+  it.each([
+    { mode: "value", manifest: "invalid JSON" },
+    { mode: "mapper", manifest: '{"name":42}' },
+  ])(
+    "writes evidence with an explicit $mode despite an unrelated invalid manifest",
+    async ({ mode, manifest }) => {
+      const workspace = mkdtempSync(resolve(tmpdir(), "croco-explicit-evidence-package-"));
+      try {
+        const sourceDirectory = resolve(workspace, "src");
+        mkdirSync(sourceDirectory);
+        writeFileSync(resolve(workspace, "package.json"), '{"name":"@croco/override-fixture"}');
+        writeFileSync(resolve(sourceDirectory, "package.json"), manifest);
+        const write = vi.fn();
+        const task = {
+          id: "explicit-package",
+          name: "returns (cached)",
+          fullName: "returns (cached)",
+          module: { moduleId: resolve(sourceDirectory, "Example.spec.ts") },
+          project: { name: "", config: { root: workspace } },
+          diagnostic: () => undefined,
+          result: () => ({ state: "passed" as const }),
+        };
+        await new CrocoVitestEvidenceReporter({
+          fidelity: isolatedFidelity,
+          packageName:
+            mode === "mapper" ? () => "@croco/override-fixture" : "@croco/override-fixture",
+          write,
+        }).onTestCaseResult(task);
+        expect(write).toHaveBeenCalledTimes(1);
+        const args = replayArguments(write.mock.calls[0]?.[0].replay.command);
+        expect(args.slice(0, 3)).toEqual(["--filter", "@croco/override-fixture", "exec"]);
+        expect(args.at(-1)).toBe("./src/Example.spec.ts");
+
+        // An optional path hint must not poison the authoritative inference cache.
+        await expect(
+          new CrocoVitestEvidenceReporter({ fidelity: isolatedFidelity, write }).onTestCaseResult(
+            task,
+          ),
+        ).rejects.toThrow(TestEvidenceContractError);
+        expect(write).toHaveBeenCalledTimes(1);
+      } finally {
+        rmSync(workspace, { recursive: true, force: true });
+      }
+    },
+  );
+
   it.each(["browser", ""])(
     "replays Playwright IDs independently of title and inherited tags in project %j",
     async (projectName) => {
@@ -751,7 +814,7 @@ for (const [title, label] of ${JSON.stringify([
         outcome: "flaky",
         packageName: "@croco/testing",
         replay: {
-          command: "pnpm --filter '@croco/testing' exec vitest run -t '(?:^| )example retries$'",
+          command: "pnpm --filter '@croco/testing' exec vitest run -t '^example retries$'",
         },
         runner: "vitest",
       }),
@@ -776,7 +839,7 @@ for (const [title, label] of ${JSON.stringify([
         packageName: "@croco/users",
         replay: {
           command:
-            "pnpm --filter '@croco/users' exec vitest run --project='@croco/users' -t '(?:^| )uses project package$'",
+            "pnpm --filter '@croco/users' exec vitest run --project='@croco/users' -t '^uses project package$'",
         },
       }),
     );
@@ -827,8 +890,8 @@ for (const [title, label] of ${JSON.stringify([
         "@croco/users",
       ]);
       expect(bundle.records.map(({ replay }) => replay.command)).toEqual([
-        `pnpm --filter '@croco/billing' exec vitest run --dir='../..' -t '(?:^| )account > loads an account$' --exclude='!(packages|packages/billing|packages/billing/src|packages/billing/src/Example.spec.ts)' './src/Example.spec.ts'`,
-        `pnpm --filter '@croco/users' exec vitest run --dir='../..' -t '(?:^| )account > loads an account$' --exclude='!(packages|packages/users|packages/users/src|packages/users/src/Example.spec.ts)' './src/Example.spec.ts'`,
+        `pnpm --filter '@croco/billing' exec vitest run --dir='../..' -t '^account > loads an account$' --exclude='!(packages|packages/billing|packages/billing/src|packages/billing/src/Example.spec.ts)' './src/Example.spec.ts'`,
+        `pnpm --filter '@croco/users' exec vitest run --dir='../..' -t '^account > loads an account$' --exclude='!(packages|packages/users|packages/users/src|packages/users/src/Example.spec.ts)' './src/Example.spec.ts'`,
       ]);
     } finally {
       rmSync(workspace, { force: true, recursive: true });

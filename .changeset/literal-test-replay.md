@@ -2,4 +2,4 @@
 "@croco/testing": patch
 ---
 
-Replay the original Vitest or Playwright test when its title contains regular expression or shell characters, preserving its file and suite identity.
+Keep literal test titles intact in Vitest and Playwright replay commands, using native test-name/file selection and Playwright test IDs.

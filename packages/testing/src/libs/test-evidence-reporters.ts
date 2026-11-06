@@ -214,12 +214,12 @@ function vitestReplayCommand(task: VitestTask, packageName: string | undefined):
   for (let parent = task.parent; parent?.type === "suite"; parent = parent.parent) {
     names.unshift(parent.name);
   }
-  const pattern = `${task.parent ? "^" : "(?:^| )"}${escapeRegExp(names.join(" "))}$`;
+  const pattern = `^${escapeRegExp(names.join(" "))}$`;
   const moduleId = task.module?.moduleId;
   const projectRoot = task.project?.config?.root;
   const modulePath = moduleId ? resolve(projectRoot ?? ".", moduleId) : undefined;
   const owningPackage =
-    modulePath && packageName ? findPackageIdentity(dirname(modulePath)) : undefined;
+    modulePath && packageName ? findPackageIdentity(dirname(modulePath), packageName) : undefined;
   const fileRoot =
     owningPackage && owningPackage.name === packageName ? owningPackage.directory : projectRoot;
   const scanRoot = task.project?.config?.dir ?? projectRoot;
@@ -297,25 +297,30 @@ function packageNameFromDirectory(directory: string | undefined): string | undef
   return directory ? findPackageIdentity(directory)?.name : undefined;
 }
 
-function findPackageIdentity(startDirectory: string): TestEvidencePackageIdentity | undefined {
+function findPackageIdentity(
+  startDirectory: string,
+  expectedName?: string,
+): TestEvidencePackageIdentity | undefined {
   let directory = resolve(startDirectory);
   const root = parse(directory).root;
   const visitedDirectories: string[] = [];
   while (true) {
     if (PACKAGE_IDENTITIES_BY_DIRECTORY.has(directory)) {
       const identity = PACKAGE_IDENTITIES_BY_DIRECTORY.get(directory);
-      for (const visited of visitedDirectories) {
-        PACKAGE_IDENTITIES_BY_DIRECTORY.set(visited, identity);
+      if (expectedName === undefined || identity?.name === expectedName) {
+        for (const visited of visitedDirectories) {
+          PACKAGE_IDENTITIES_BY_DIRECTORY.set(visited, identity);
+        }
+        return identity;
       }
-      return identity;
     }
-    visitedDirectories.push(directory);
+    if (expectedName === undefined) visitedDirectories.push(directory);
     const manifestPath = resolve(directory, "package.json");
     let manifest: unknown;
     try {
       manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
     } catch (error) {
-      if (!isMissingFile(error)) {
+      if (!isMissingFile(error) && expectedName === undefined) {
         throw new TestEvidenceContractError(
           `Unable to read package identity from '${manifestPath}'.`,
           error,
@@ -327,6 +332,23 @@ function findPackageIdentity(startDirectory: string): TestEvidencePackageIdentit
         }
         return undefined;
       }
+      directory = dirname(directory);
+      continue;
+    }
+    if (expectedName !== undefined) {
+      // The namespace is already known. This lookup is only a directory hint;
+      // unavailable or unrelated manifests must not reject evidence or hide
+      // invalid manifests from a later authoritative inference lookup.
+      if (
+        isRecord(manifest) &&
+        typeof manifest["name"] === "string" &&
+        manifest["name"].trim() === expectedName
+      ) {
+        const identity = { name: expectedName, directory };
+        PACKAGE_IDENTITIES_BY_DIRECTORY.set(directory, identity);
+        return identity;
+      }
+      if (directory === root) return undefined;
       directory = dirname(directory);
       continue;
     }
