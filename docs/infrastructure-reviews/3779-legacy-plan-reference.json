@@ -1,0 +1,105 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "entitlements-core",
+      "classification": "pure-contract",
+      "reason": "Enforce the existing expected-plan mismatch contract for legacy references; the Drizzle legacy branch reuses the base registry check. Version-bound lookup and legacy rule storage remain unchanged.",
+      "files": {
+        "packages/entitlements-core/src/libs/interfaces.ts": "958a7e479d2a1d66721db9b33d3b876ed79acaab9587c28d575be1ad58f727d6"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "The change rejects a legacy reference whose embedded plan ID disagrees with the expected plan before reading rules. This comparison adds no Kubernetes Node Host capability, storage or lifecycle dependency.",
+          "providers": [],
+          "constraints": [
+            "Existing adapter runtime, database connection and invocation lifecycle requirements still apply. No schema, migration, deployment support or provider certification claim is added."
+          ],
+          "references": [
+            "packages/entitlements-core/src/libs/interfaces.ts",
+            "packages/entitlements-drizzle/src/tests/DrizzleProviderConformance.spec.ts",
+            "packages/entitlements-drizzle/README.md"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "The change rejects a legacy reference whose embedded plan ID disagrees with the expected plan before reading rules. This comparison adds no AWS Lambda Host capability, storage or lifecycle dependency.",
+          "providers": [],
+          "constraints": [
+            "Existing adapter runtime, database connection and invocation lifecycle requirements still apply. No schema, migration, deployment support or provider certification claim is added."
+          ],
+          "references": [
+            "packages/entitlements-core/src/libs/interfaces.ts",
+            "packages/entitlements-drizzle/src/tests/DrizzleProviderConformance.spec.ts",
+            "packages/entitlements-drizzle/README.md"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "The change rejects a legacy reference whose embedded plan ID disagrees with the expected plan before reading rules. This comparison adds no Cloudflare Workers or Node Container Host capability, storage or lifecycle dependency.",
+          "providers": [],
+          "constraints": [
+            "Existing adapter runtime, database connection and invocation lifecycle requirements still apply. No schema, migration, deployment support or provider certification claim is added."
+          ],
+          "references": [
+            "packages/entitlements-core/src/libs/interfaces.ts",
+            "packages/entitlements-drizzle/src/tests/DrizzleProviderConformance.spec.ts",
+            "packages/entitlements-drizzle/README.md"
+          ]
+        }
+      }
+    },
+    {
+      "package": "entitlements-drizzle",
+      "classification": "pure-contract",
+      "reason": "Enforce the existing expected-plan mismatch contract for legacy references; the Drizzle legacy branch reuses the base registry check. Version-bound lookup and legacy rule storage remain unchanged.",
+      "files": {
+        "packages/entitlements-drizzle/src/libs/DrizzlePlanEntitlementRegistry.ts": "753fb5b2b4f059a488ed62b6b8501ef5b32c17c134e0678cf8d4968f453e380f"
+      },
+      "catalogRuntimes": ["node", "lambda"],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "The change rejects a legacy reference whose embedded plan ID disagrees with the expected plan before reading rules. This comparison adds no Kubernetes Node Host capability, storage or lifecycle dependency.",
+          "providers": ["@croco/entitlements-core/PlanEntitlementRegistry"],
+          "constraints": [
+            "Existing adapter runtime, database connection and invocation lifecycle requirements still apply. No schema, migration, deployment support or provider certification claim is added."
+          ],
+          "references": [
+            "packages/entitlements-drizzle/src/libs/DrizzlePlanEntitlementRegistry.ts",
+            "packages/entitlements-drizzle/src/tests/DrizzleProviderConformance.spec.ts",
+            "packages/entitlements-drizzle/README.md"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "The change rejects a legacy reference whose embedded plan ID disagrees with the expected plan before reading rules. This comparison adds no AWS Lambda Host capability, storage or lifecycle dependency.",
+          "providers": ["@croco/entitlements-core/PlanEntitlementRegistry"],
+          "constraints": [
+            "Existing adapter runtime, database connection and invocation lifecycle requirements still apply. No schema, migration, deployment support or provider certification claim is added."
+          ],
+          "references": [
+            "packages/entitlements-drizzle/src/libs/DrizzlePlanEntitlementRegistry.ts",
+            "packages/entitlements-drizzle/src/tests/DrizzleProviderConformance.spec.ts",
+            "packages/entitlements-drizzle/README.md"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "The change rejects a legacy reference whose embedded plan ID disagrees with the expected plan before reading rules. This comparison adds no Cloudflare Workers or Node Container Host capability, storage or lifecycle dependency.",
+          "providers": ["@croco/entitlements-core/PlanEntitlementRegistry"],
+          "constraints": [
+            "Existing adapter runtime, database connection and invocation lifecycle requirements still apply. No schema, migration, deployment support or provider certification claim is added."
+          ],
+          "references": [
+            "packages/entitlements-drizzle/src/libs/DrizzlePlanEntitlementRegistry.ts",
+            "packages/entitlements-drizzle/src/tests/DrizzleProviderConformance.spec.ts",
+            "packages/entitlements-drizzle/README.md"
+          ]
+        }
+      }
+    }
+  ]
+}

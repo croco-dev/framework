@@ -7,7 +7,6 @@ import { compileDiGraph, createDiPackageDescriptor, writeDiGraph } from "../libs
 
 const repositoryRoot = path.resolve(__dirname, "../../../..");
 const roots: string[] = [];
-const typecheckPrograms = new Map<string, ts.Program>();
 
 function fixture(options: Record<string, unknown>, packageType: string, extension: string): string {
   const root = fs.mkdtempSync(path.join(tmpdir(), "croco-di-imports-"));
@@ -26,12 +25,16 @@ function fixture(options: Record<string, unknown>, packageType: string, extensio
         typeRoots: [path.join(repositoryRoot, "node_modules/@types")],
         lib: ["esnext", "dom"],
         ignoreDeprecations: "6.0",
+        // Check consumers against built public contracts, not the runtime implementation.
         paths: {
           "@croco/framework-context": [
-            path.join(repositoryRoot, "packages/framework-context/src/index.ts"),
+            path.join(repositoryRoot, "packages/framework-context/dist/index.d.ts"),
           ],
           "@croco/problems-core": [
-            path.join(repositoryRoot, "packages/problems-core/src/index.ts"),
+            path.join(repositoryRoot, "packages/problems-core/dist/index.d.ts"),
+          ],
+          "@croco/diagnostics-core": [
+            path.join(repositoryRoot, "packages/diagnostics-core/dist/index.d.ts"),
           ],
         },
         ...options,
@@ -46,10 +49,10 @@ function fixture(options: Record<string, unknown>, packageType: string, extensio
   return root;
 }
 
-function typecheck(root: string): void {
+function typecheck(root: string): ts.Program {
   const config = ts.getParsedCommandLineOfConfigFile(
     path.join(root, "tsconfig.json"),
-    { noEmit: true },
+    {},
     {
       ...ts.sys,
       onUnRecoverableConfigFileDiagnostic: (diagnostic) => {
@@ -62,22 +65,44 @@ function typecheck(root: string): void {
   const program = ts.createProgram({
     rootNames: config.fileNames,
     options: config.options,
-    oldProgram: typecheckPrograms.get(root),
   });
-  typecheckPrograms.set(root, program);
-  expect(
-    ts
-      .getPreEmitDiagnostics(program)
-      .map((diagnostic) => ts.flattenDiagnosticMessageText(diagnostic.messageText, "\n")),
-  ).toEqual([]);
+  const diagnostics = ts
+    .getPreEmitDiagnostics(program)
+    .map((diagnostic) => ts.flattenDiagnosticMessageText(diagnostic.messageText, "\n"));
+  expect(diagnostics, diagnostics.join("\n")).toEqual([]);
+  return program;
 }
 
 afterEach(() => {
-  typecheckPrograms.clear();
   for (const root of roots.splice(0)) fs.rmSync(root, { recursive: true, force: true });
 });
 
 describe("DI graph consumer imports", () => {
+  it("rejects invalid consumer decorators and generated constructor calls", () => {
+    const root = fixture({ module: "NodeNext", moduleResolution: "NodeNext" }, "module", "ts");
+    const servicePath = path.join(root, "src/Service.ts");
+    const original = fs.readFileSync(servicePath, "utf8");
+    typecheck(root);
+
+    fs.writeFileSync(
+      servicePath,
+      original.replace("@Component()", '@Component({ scope: "invalid" })'),
+    );
+    expect(() => typecheck(root)).toThrow("not assignable");
+    fs.writeFileSync(servicePath, original);
+    const result = compileDiGraph({ baseDir: root, outFile: "src/di.generated.ts" });
+    writeDiGraph(result);
+    typecheck(root);
+
+    fs.writeFileSync(
+      result.outFile,
+      result.code.replace("new source0.Service(", "new source0.Service(19"),
+    );
+    expect(() => typecheck(root)).toThrow("Expected 0 arguments");
+    fs.writeFileSync(result.outFile, result.code);
+    typecheck(root);
+  }, 30_000);
+
   it.each([
     {
       module: "NodeNext",
@@ -185,17 +210,7 @@ describe("DI graph consumer imports", () => {
       typecheck(root);
       const result = compileDiGraph({ baseDir: root, outFile: "src/di.generated.ts" });
       writeDiGraph(result);
-      typecheck(root);
-      const config = ts.getParsedCommandLineOfConfigFile(
-        path.join(root, "tsconfig.json"),
-        {},
-        {
-          ...ts.sys,
-          onUnRecoverableConfigFileDiagnostic: () => {},
-        },
-      );
-      expect(config).toBeDefined();
-      const program = ts.createProgram(config?.fileNames ?? [], config?.options ?? {});
+      const program = typecheck(root);
       const emittedFiles: string[] = [];
       const emit = program.emit(
         program.getSourceFile(path.join(root, "src/Service.tsx")),
