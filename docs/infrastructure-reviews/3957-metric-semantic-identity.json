@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "warehouse-postgres",
+      "classification": "pure-contract",
+      "reason": "Reject a full metric source descriptor from a different semantic generation before compiling SQL, while retaining existing structural MetricFact binding.",
+      "files": {
+        "packages/warehouse-postgres/src/facts/compilePostgresMetric.ts": "9c1be1a012e24c9feb1965a2a4d2d3c39ae5e7da6b197742880c2702389bb228"
+      },
+      "catalogRuntimes": ["node", "lambda"],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Semantic identity validation is pure compilation before any PostgreSQL connection. It requires no Kubernetes Node Host capability, storage or lifecycle change.",
+          "providers": ["@croco/warehouse-core", "@croco/metrics-core"],
+          "constraints": [
+            "Existing PostgreSQL adapter runtime claims remain unchanged; no deployment or provider certification is claimed."
+          ],
+          "references": [
+            "packages/warehouse-postgres/src/facts/compilePostgresMetric.ts",
+            "packages/warehouse-core/src/libs/compiler.ts",
+            "packages/warehouse-postgres/src/facts/PostgresWarehouseReader.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Semantic identity validation is pure compilation before any PostgreSQL connection. It requires no Lambda Host capability, storage or lifecycle change.",
+          "providers": ["@croco/warehouse-core", "@croco/metrics-core"],
+          "constraints": [
+            "Existing PostgreSQL adapter runtime claims remain unchanged; no deployment or provider certification is claimed."
+          ],
+          "references": [
+            "packages/warehouse-postgres/src/facts/compilePostgresMetric.ts",
+            "packages/warehouse-core/src/libs/compiler.ts",
+            "packages/warehouse-postgres/src/facts/PostgresWarehouseReader.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Semantic identity validation is pure compilation before any PostgreSQL connection. It requires no Workers or explicit Node Container Host capability, storage or lifecycle change.",
+          "providers": ["@croco/warehouse-core", "@croco/metrics-core"],
+          "constraints": [
+            "Existing PostgreSQL adapter runtime claims remain unchanged; no deployment or provider certification is claimed."
+          ],
+          "references": [
+            "packages/warehouse-postgres/src/facts/compilePostgresMetric.ts",
+            "packages/warehouse-core/src/libs/compiler.ts",
+            "packages/warehouse-postgres/src/facts/PostgresWarehouseReader.ts"
+          ]
+        }
+      }
+    }
+  ]
+}
