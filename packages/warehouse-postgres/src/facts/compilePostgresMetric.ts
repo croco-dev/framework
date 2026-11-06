@@ -30,6 +30,11 @@ export function compilePostgresMetric(
     "METRIC_DESCRIPTOR_MISMATCH",
   );
   requireMetric(
+    !("semanticHash" in definition.from) ||
+      definition.from.semanticHash === descriptor.semanticHash,
+    "METRIC_DESCRIPTOR_MISMATCH",
+  );
+  requireMetric(
     Number.isSafeInteger(revision) &&
       revision >= 0 &&
       Number.isSafeInteger(maxRows) &&
@@ -44,7 +49,9 @@ export function compilePostgresMetric(
     requireMetric(
       bound &&
         Object.entries(column).every(
-          ([field, value]) => (bound as unknown as Record<string, unknown>)[field] === value,
+          ([field, value]) =>
+            field === "description" ||
+            (bound as unknown as Record<string, unknown>)[field] === value,
         ) &&
         Boolean(bound.nullable) === Boolean(column.nullable),
       "METRIC_DESCRIPTOR_MISMATCH",

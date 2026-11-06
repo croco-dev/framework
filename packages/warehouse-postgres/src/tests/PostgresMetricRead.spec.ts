@@ -28,7 +28,7 @@ const access: WarehouseAccess = {
   permissionEpoch: 0,
   privacyEpoch: 0,
 };
-function fixture() {
+function fixture(executionDescriptor = descriptor) {
   let current = access;
   let epoch = 0;
   const release = vi.fn();
@@ -49,9 +49,10 @@ function fixture() {
       return { rows: [{ exceeded: false, results: [{ group: {}, value: "9007199254740993" }] }] };
     return { rows: [] };
   });
+  const connect = vi.fn(async () => ({ release, query: pool.query }));
   const pool: WarehousePostgresPool = {
     query: async <T>(sql: string) => ({ rows: (await query(sql)).rows as T[] }),
-    connect: async () => ({ release, query: pool.query }),
+    connect,
   };
   const cancellation: WarehousePostgresPool = {
     query: async <T>() => ({ rows: [] as T[] }),
@@ -59,7 +60,7 @@ function fixture() {
   };
   const reader = new PostgresWarehouseReader(
     pool,
-    descriptor,
+    executionDescriptor,
     () => current,
     "x".repeat(32),
     cancellation,
@@ -76,6 +77,7 @@ function fixture() {
   return {
     reader,
     query,
+    connect,
     release,
     setAccess: (value: WarehouseAccess) => {
       current = value;
@@ -96,6 +98,32 @@ function fixture() {
 }
 
 describe("native metric read boundary", () => {
+  it.each(["version", "grain"] as const)(
+    "rejects a metric from another %s before connecting or querying",
+    async (change) => {
+      const execution = await compileFact({
+        ...descriptor,
+        ...(change === "version"
+          ? { version: 2 }
+          : { grain: { description: "event per value", key: ["id", "value"] } }),
+      });
+      const test = fixture(execution);
+      await expect(test.reader.readMetric(test.request)).rejects.toThrow(
+        "METRIC_DESCRIPTOR_MISMATCH",
+      );
+      expect(test.connect).not.toHaveBeenCalled();
+      expect(test.query).not.toHaveBeenCalled();
+      const current = defineMetric("current_total", {
+        ...test.request.definition,
+        from: execution,
+        time: project(execution, "at"),
+        measure: sum(project(execution, "value")),
+      });
+      expect((await test.reader.readMetric({ ...test.request, definition: current })).data).toEqual(
+        [{ group: {}, value: "9007199254740993" }],
+      );
+    },
+  );
   it("uses a read-only transaction and returns only exact aggregate strings without grain access", async () => {
     const test = fixture();
     const result = await test.reader.readMetric(test.request);

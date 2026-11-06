@@ -12,11 +12,11 @@ import {
   ratio,
   sum,
 } from "@croco/metrics-core";
-import type { MetricDefinition, MetricExpression } from "@croco/metrics-core";
+import type { MetricDefinition, MetricExpression, MetricFact } from "@croco/metrics-core";
 import { c, compileFact, defineFact } from "@croco/warehouse-core";
 import type { FactDescriptor } from "@croco/warehouse-core";
 import { compilePostgresMetric, decodePostgresMetricResult } from "../facts/compilePostgresMetric";
-import { factColumnName, quoteIdentifier } from "../facts/schema";
+import { factColumnName, factTableName, quoteIdentifier } from "../facts/schema";
 
 let fact: FactDescriptor;
 beforeAll(async () => {
@@ -140,6 +140,60 @@ describe("native PostgreSQL metric compiler", () => {
         defineMetric("nullable", { ...definition(), groupByRequired: [project(fact, "label")] }),
       ),
     ).toThrow("METRIC_INVALID_GROUP");
+  });
+  it.each(["version", "grain"] as const)(
+    "rejects a full descriptor from another %s with identical columns",
+    async (change) => {
+      const execution = await compileFact({
+        ...fact,
+        ...(change === "version"
+          ? { version: 2 }
+          : { grain: { description: "payment per currency", key: ["id", "currency"] } }),
+      });
+      expect(execution.columns).toEqual(fact.columns);
+      expect(execution.semanticHash).not.toBe(fact.semanticHash);
+      expect(() =>
+        compilePostgresMetric(execution, definition(), window, "scope", 3, 10, 4096),
+      ).toThrow("METRIC_DESCRIPTOR_MISMATCH");
+    },
+  );
+  it("retains identical SQL for independently compiled descriptors with description-only changes", async () => {
+    const source = await compileFact({
+      ...fact,
+      columns: { ...fact.columns, id: { ...fact.columns.id, description: "Payment ID" } },
+    });
+    const execution = await compileFact({
+      ...source,
+      description: "Updated documentation",
+      grain: { ...source.grain, description: "Updated payment documentation" },
+      columns: { ...source.columns, id: { ...source.columns.id, description: "Payment identity" } },
+    });
+    const metric = defineMetric("documented", {
+      ...definition(),
+      from: source,
+      time: project(source, "at"),
+    });
+    expect(execution).not.toEqual(source);
+    expect(execution.semanticHash).toBe(source.semanticHash);
+    expect(compilePostgresMetric(execution, metric, window, "scope", 3, 10, 4096)).toEqual(
+      compilePostgresMetric(source, metric, window, "scope", 3, 10, 4096),
+    );
+  });
+  it("continues to bind structural MetricFact inputs without semantic identity", async () => {
+    const source = {
+      name: fact.name,
+      kind: "transaction",
+      columns: { at: { type: "instant" } },
+    } as const satisfies MetricFact;
+    const metric = defineMetric("structural", {
+      ...definition(),
+      from: source,
+      time: project(source, "at"),
+    });
+    const execution = await compileFact({ ...fact, version: 2 });
+    const result = compilePostgresMetric(execution, metric, window, "scope", 3, 10, 4096);
+    expect(result.sql).toContain(quoteIdentifier(factTableName(execution)));
+    expect(result.params).toContain(execution.semanticHash);
   });
   it("rejects reversed or unsupported nanosecond windows", () => {
     expect(() =>
