@@ -56,6 +56,12 @@ accept(z.string());
         module: ts.ModuleKind.ESNext,
         moduleResolution: ts.ModuleResolutionKind.Bundler,
         noEmit: true,
+        // Keep the schema under test as source; consume its dependency's built public contract.
+        paths: {
+          "@croco/protocols-core": [
+            resolve(import.meta.dirname, "../../../protocols-core/dist/index.d.ts"),
+          ],
+        },
         skipLibCheck: true,
         strict: true,
         target: ts.ScriptTarget.ES2022,
