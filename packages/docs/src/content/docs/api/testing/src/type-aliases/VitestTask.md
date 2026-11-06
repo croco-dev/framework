@@ -47,6 +47,12 @@ title: "VitestTask"
 
 ---
 
+### parent?
+
+> `readonly` `optional` **parent?**: `VitestTaskParent`
+
+---
+
 ### project?
 
 > `readonly` `optional` **project?**: `object`
@@ -54,6 +60,10 @@ title: "VitestTask"
 #### config?
 
 > `readonly` `optional` **config?**: `object`
+
+##### config.dir?
+
+> `readonly` `optional` **dir?**: `string`
 
 ##### config.root?
 

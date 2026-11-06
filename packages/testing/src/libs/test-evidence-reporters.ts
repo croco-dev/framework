@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs";
-import { dirname, isAbsolute, parse, resolve } from "node:path";
+import { dirname, isAbsolute, parse, relative, resolve, sep } from "node:path";
 
 import { createTestEvidenceRecord, TestEvidenceContractError } from "./test-evidence.mjs";
 import {
@@ -67,14 +67,21 @@ const DEFAULT_VITEST_REPORTER_OPTIONS: TestEvidenceReporterOptions = {
   },
 };
 
-const PACKAGE_NAMES_BY_DIRECTORY = new Map<string, string | undefined>();
+type TestEvidencePackageIdentity = { readonly name: string; readonly directory: string };
+
+const PACKAGE_IDENTITIES_BY_DIRECTORY = new Map<string, TestEvidencePackageIdentity | undefined>();
+
+type VitestTaskParent =
+  | { readonly type: "module" }
+  | { readonly type: "suite"; readonly name: string; readonly parent: VitestTaskParent };
 
 export type VitestTask = {
   readonly id: string;
   readonly name: string;
   readonly module?: { readonly moduleId: string };
+  readonly parent?: VitestTaskParent;
   readonly project?: {
-    readonly config?: { readonly root?: string };
+    readonly config?: { readonly dir?: string; readonly root?: string };
     readonly name: string;
   };
   readonly fullName: string;
@@ -154,9 +161,7 @@ export class CrocoVitestEvidenceReporter {
         },
         observed: this.options.observed?.(context) ?? { contractIds: [] },
         replay: this.options.replay?.(context) ?? {
-          command: packageName
-            ? `pnpm --filter ${JSON.stringify(packageName)} exec vitest run -t ${JSON.stringify(task.fullName)}`
-            : `pnpm vitest run -t ${JSON.stringify(task.fullName)}`,
+          command: vitestReplayCommand(task, packageName),
         },
         diagnostics:
           this.options.diagnostics?.(context) ??
@@ -177,6 +182,74 @@ export class CrocoVitestEvidenceReporter {
       }),
     );
   }
+}
+
+function shellQuote(value: string): string {
+  return `'${value.split("'").join(`'"'"'`)}'`;
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function replayPrefix(packageName: string | undefined): string {
+  return packageName ? `pnpm --filter ${shellQuote(packageName)} exec` : "pnpm";
+}
+
+function vitestFileExclusion(file: string): string {
+  // Positional Vitest file filters match substrings. Keep only the exact file and
+  // its ancestor directories: excluding an ancestor would prune the file too.
+  const segments = file.split(sep).join("/").split("/");
+  const allowed = segments.map((_, index) =>
+    segments
+      .slice(0, index + 1)
+      .join("/")
+      .replace(/[!*?{}()[\]+@|\\]/g, "\\$&"),
+  );
+  return `!(${allowed.join("|")})`;
+}
+
+function vitestReplayCommand(task: VitestTask, packageName: string | undefined): string {
+  const names = [task.parent ? task.name : task.fullName];
+  for (let parent = task.parent; parent?.type === "suite"; parent = parent.parent) {
+    names.unshift(parent.name);
+  }
+  const pattern = `^${escapeRegExp(names.join(" "))}$`;
+  const moduleId = task.module?.moduleId;
+  const projectRoot = task.project?.config?.root;
+  const modulePath = moduleId ? resolve(projectRoot ?? ".", moduleId) : undefined;
+  const owningPackage =
+    modulePath && packageName ? findPackageIdentity(dirname(modulePath), packageName) : undefined;
+  const fileRoot =
+    owningPackage && owningPackage.name === packageName ? owningPackage.directory : projectRoot;
+  const scanRoot = task.project?.config?.dir ?? projectRoot;
+  const directory =
+    modulePath && scanRoot && fileRoot
+      ? ` --dir=${shellQuote(relative(fileRoot, scanRoot) || ".")}`
+      : "";
+  const file = modulePath
+    ? ` ${shellQuote(fileRoot ? `./${relative(fileRoot, modulePath)}` : modulePath)}`
+    : "";
+  const exclusion = modulePath
+    ? ` --exclude=${shellQuote(vitestFileExclusion(relative(scanRoot ?? fileRoot ?? ".", modulePath)))}`
+    : "";
+  const project = task.project?.name ? ` --project=${shellQuote(task.project.name)}` : "";
+  return `${replayPrefix(packageName)} vitest run${project}${directory} -t ${shellQuote(pattern)}${exclusion}${file}`;
+}
+
+function playwrightReplayCommand(
+  test: PlaywrightTestCase,
+  packageName: string | undefined,
+): string {
+  const prefix = `${replayPrefix(packageName)} playwright test`;
+  const owningProject = test.parent?.project();
+  const projectName = owningProject?.name;
+  const project = projectName ? ` --project=${shellQuote(projectName)}` : "";
+  // Public titlePath/tags cannot reconstruct Playwright's grep string losslessly.
+  // Its native last-failed selector accepts exact test IDs, including same-line
+  // parameterized cases. Isolate its writable state from the user's last run.
+  const selection = shellQuote(JSON.stringify({ failedTests: [test.id] }));
+  return `(croco_replay_file=$(mktemp) && trap 'rm -f "$croco_replay_file"' 0 && printf '%s' ${selection} > "$croco_replay_file" && ${prefix}${project} --last-failed --last-failed-file "$croco_replay_file")`;
 }
 
 function resolvePackageName(
@@ -217,32 +290,37 @@ function packageNameFromSource(
     : baseDirectory
       ? resolve(baseDirectory, source)
       : undefined;
-  return path ? findPackageName(dirname(path)) : undefined;
+  return path ? findPackageIdentity(dirname(path))?.name : undefined;
 }
 
 function packageNameFromDirectory(directory: string | undefined): string | undefined {
-  return directory ? findPackageName(directory) : undefined;
+  return directory ? findPackageIdentity(directory)?.name : undefined;
 }
 
-function findPackageName(startDirectory: string): string | undefined {
+function findPackageIdentity(
+  startDirectory: string,
+  expectedName?: string,
+): TestEvidencePackageIdentity | undefined {
   let directory = resolve(startDirectory);
   const root = parse(directory).root;
   const visitedDirectories: string[] = [];
   while (true) {
-    if (PACKAGE_NAMES_BY_DIRECTORY.has(directory)) {
-      const packageName = PACKAGE_NAMES_BY_DIRECTORY.get(directory);
-      for (const visited of visitedDirectories) {
-        PACKAGE_NAMES_BY_DIRECTORY.set(visited, packageName);
+    if (PACKAGE_IDENTITIES_BY_DIRECTORY.has(directory)) {
+      const identity = PACKAGE_IDENTITIES_BY_DIRECTORY.get(directory);
+      if (expectedName === undefined || identity?.name === expectedName) {
+        for (const visited of visitedDirectories) {
+          PACKAGE_IDENTITIES_BY_DIRECTORY.set(visited, identity);
+        }
+        return identity;
       }
-      return packageName;
     }
-    visitedDirectories.push(directory);
+    if (expectedName === undefined) visitedDirectories.push(directory);
     const manifestPath = resolve(directory, "package.json");
     let manifest: unknown;
     try {
       manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
     } catch (error) {
-      if (!isMissingFile(error)) {
+      if (!isMissingFile(error) && expectedName === undefined) {
         throw new TestEvidenceContractError(
           `Unable to read package identity from '${manifestPath}'.`,
           error,
@@ -250,10 +328,27 @@ function findPackageName(startDirectory: string): string | undefined {
       }
       if (directory === root) {
         for (const visited of visitedDirectories) {
-          PACKAGE_NAMES_BY_DIRECTORY.set(visited, undefined);
+          PACKAGE_IDENTITIES_BY_DIRECTORY.set(visited, undefined);
         }
         return undefined;
       }
+      directory = dirname(directory);
+      continue;
+    }
+    if (expectedName !== undefined) {
+      // The namespace is already known. This lookup is only a directory hint;
+      // unavailable or unrelated manifests must not reject evidence or hide
+      // invalid manifests from a later authoritative inference lookup.
+      if (
+        isRecord(manifest) &&
+        typeof manifest["name"] === "string" &&
+        manifest["name"].trim() === expectedName
+      ) {
+        const identity = { name: expectedName, directory };
+        PACKAGE_IDENTITIES_BY_DIRECTORY.set(directory, identity);
+        return identity;
+      }
+      if (directory === root) return undefined;
       directory = dirname(directory);
       continue;
     }
@@ -265,7 +360,7 @@ function findPackageName(startDirectory: string): string | undefined {
     if (!("name" in manifest)) {
       if (directory === root) {
         for (const visited of visitedDirectories) {
-          PACKAGE_NAMES_BY_DIRECTORY.set(visited, undefined);
+          PACKAGE_IDENTITIES_BY_DIRECTORY.set(visited, undefined);
         }
         return undefined;
       }
@@ -277,11 +372,11 @@ function findPackageName(startDirectory: string): string | undefined {
         `Package manifest '${manifestPath}' must declare a non-empty string name.`,
       );
     }
-    const packageName = manifest["name"].trim();
+    const identity = { name: manifest["name"].trim(), directory };
     for (const visited of visitedDirectories) {
-      PACKAGE_NAMES_BY_DIRECTORY.set(visited, packageName);
+      PACKAGE_IDENTITIES_BY_DIRECTORY.set(visited, identity);
     }
-    return packageName;
+    return identity;
   }
 }
 
@@ -368,9 +463,7 @@ export class CrocoPlaywrightEvidenceReporter {
         intent: this.options.intent?.(context) ?? { contractIds: [], description: test.title },
         observed: this.options.observed?.(context) ?? { contractIds: [] },
         replay: this.options.replay?.(context) ?? {
-          command: packageName
-            ? `pnpm --filter ${JSON.stringify(packageName)} exec playwright test --grep ${JSON.stringify(test.title)}`
-            : `pnpm playwright test --grep ${JSON.stringify(test.title)}`,
+          command: playwrightReplayCommand(test, packageName),
         },
         diagnostics:
           this.options.diagnostics?.(context) ??

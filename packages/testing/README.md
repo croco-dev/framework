@@ -269,6 +269,28 @@ observed contract ID matches the check ID, `metadata.commitSha` matches the exac
 `metadata.profile` matches the selected verification profile, `replay.command` exactly matches the command,
 and every required artifact is both attached to the record and still present. Stale, flaky, declared-only,
 unrelated, command-mismatched, wrong-profile, or incomplete records cause the command to execute normally.
+
+Default replay commands use the existing POSIX `sh -c` contract. Vitest commands escape the complete
+suite/test name and restrict discovery to the original file, including when another file contains the same
+relative path. Playwright commands use native test IDs through `--last-failed --last-failed-file` (verified
+with Playwright 1.62.0), avoiding ambiguity between titles and inherited tags. Each Playwright replay creates
+an isolated `mktemp` selection file and removes it when the shell exits; it preserves the runner's exit
+status and does not overwrite the project's last-run selection. These commands require the corresponding
+runner CLI, POSIX `sh`, and `mktemp` on the replay machine. Older Playwright CLIs without
+`--last-failed-file` require an explicit `replay(context)` mapper; its command and seed are preserved.
+
+Vitest retains its native space-joined test-name and project-glob keys. When those native keys are
+ambiguous, such as duplicate flattened names or wildcard project names, use an explicit replay mapper
+for a more specific runner selection.
+
+From the installed monorepo, run the browser-free native replay fixture with an existing Playwright
+installation. It collects real reporter metadata, moves the fixture directory, and checks the bodies
+executed by each generated command:
+
+```bash
+node packages/testing/scripts/verifyTestEvidenceReplay.mjs --playwright-package packages/docs/node_modules/@playwright/test
+```
+
 Sensitive keys used by the logger security policy (`authorization`, cookies, credentials, passwords, secrets,
 and tokens) and secret-like values are redacted before records are emitted; `assertNoTestEvidenceSecrets()`
 supports policy-owned secret samples for validation.
