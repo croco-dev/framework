@@ -29,10 +29,6 @@ title: "PlaywrightTestCase"
 
 > `readonly` **file**: `string`
 
-#### line?
-
-> `readonly` `optional` **line?**: `number`
-
 ---
 
 ### parent?
@@ -46,12 +42,6 @@ title: "PlaywrightTestCase"
 ##### Returns
 
 \{ `name`: `string`; `testDir`: `string`; \} \| `undefined`
-
----
-
-### tags?
-
-> `readonly` `optional` **tags?**: readonly `string`[]
 
 ---
 

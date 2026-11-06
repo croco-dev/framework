@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs";
-import { dirname, isAbsolute, parse, relative, resolve } from "node:path";
+import { dirname, isAbsolute, parse, relative, resolve, sep } from "node:path";
 
 import { createTestEvidenceRecord, TestEvidenceContractError } from "./test-evidence.mjs";
 import {
@@ -81,7 +81,7 @@ export type VitestTask = {
   readonly module?: { readonly moduleId: string };
   readonly parent?: VitestTaskParent;
   readonly project?: {
-    readonly config?: { readonly root?: string };
+    readonly config?: { readonly dir?: string; readonly root?: string };
     readonly name: string;
   };
   readonly fullName: string;
@@ -101,7 +101,7 @@ export type VitestTask = {
 export type PlaywrightTestCase = {
   readonly expectedStatus?: PlaywrightTestResult["status"];
   readonly id: string;
-  readonly location?: { readonly file: string; readonly line?: number };
+  readonly location?: { readonly file: string };
   readonly parent?: {
     readonly project: () =>
       | {
@@ -112,7 +112,6 @@ export type PlaywrightTestCase = {
   };
   readonly title: string;
   readonly titlePath?: () => readonly string[];
-  readonly tags?: readonly string[];
 };
 
 export type PlaywrightTestResult = {
@@ -197,6 +196,19 @@ function replayPrefix(packageName: string | undefined): string {
   return packageName ? `pnpm --filter ${shellQuote(packageName)} exec` : "pnpm";
 }
 
+function vitestFileExclusion(file: string): string {
+  // Positional Vitest file filters match substrings. Keep only the exact file and
+  // its ancestor directories: excluding an ancestor would prune the file too.
+  const segments = file.split(sep).join("/").split("/");
+  const allowed = segments.map((_, index) =>
+    segments
+      .slice(0, index + 1)
+      .join("/")
+      .replace(/[!*?{}()[\]+@|\\]/g, "\\$&"),
+  );
+  return `!(${allowed.join("|")})`;
+}
+
 function vitestReplayCommand(task: VitestTask, packageName: string | undefined): string {
   const names = [task.parent ? task.name : task.fullName];
   for (let parent = task.parent; parent?.type === "suite"; parent = parent.parent) {
@@ -210,11 +222,19 @@ function vitestReplayCommand(task: VitestTask, packageName: string | undefined):
     modulePath && packageName ? findPackageIdentity(dirname(modulePath)) : undefined;
   const fileRoot =
     owningPackage && owningPackage.name === packageName ? owningPackage.directory : projectRoot;
+  const scanRoot = task.project?.config?.dir ?? projectRoot;
+  const directory =
+    modulePath && scanRoot && fileRoot
+      ? ` --dir=${shellQuote(relative(fileRoot, scanRoot) || ".")}`
+      : "";
   const file = modulePath
     ? ` ${shellQuote(fileRoot ? `./${relative(fileRoot, modulePath)}` : modulePath)}`
     : "";
+  const exclusion = modulePath
+    ? ` --exclude=${shellQuote(vitestFileExclusion(relative(scanRoot ?? fileRoot ?? ".", modulePath)))}`
+    : "";
   const project = task.project?.name ? ` --project=${shellQuote(task.project.name)}` : "";
-  return `${replayPrefix(packageName)} vitest run${project} -t ${shellQuote(pattern)}${file}`;
+  return `${replayPrefix(packageName)} vitest run${project}${directory} -t ${shellQuote(pattern)}${exclusion}${file}`;
 }
 
 function playwrightReplayCommand(
@@ -225,24 +245,11 @@ function playwrightReplayCommand(
   const owningProject = test.parent?.project();
   const projectName = owningProject?.name;
   const project = projectName ? ` --project=${shellQuote(projectName)}` : "";
-  const location = test.location;
-  const titlePath = test.titlePath?.();
-  // Playwright reports root, project, then the file relative to testDir.
-  const reportedFile = titlePath?.[2];
-  const filePath =
-    location && reportedFile && location.file.replaceAll("\\", "/").endsWith(`/${reportedFile}`)
-      ? reportedFile
-      : location?.file;
-  const file =
-    location && filePath
-      ? ` ${shellQuote(`${escapeRegExp(filePath)}${location.line === undefined ? "" : `:${location.line}`}`)}`
-      : "";
-  const tags = test.tags?.length ? `(?: (?:${test.tags.map(escapeRegExp).join("|")}))*` : "";
-  const grepTitlePath = titlePath?.[0] === "" ? titlePath.slice(1) : titlePath;
-  const pattern = grepTitlePath
-    ? `^${grepTitlePath.map(escapeRegExp).join(`${tags} `)}${tags}$`
-    : `(?:^| )${escapeRegExp(test.title)}${tags}$`;
-  return `${prefix}${project} --grep ${shellQuote(pattern)}${file ? ` --${file}` : ""}`;
+  // Public titlePath/tags cannot reconstruct Playwright's grep string losslessly.
+  // Its native last-failed selector accepts exact test IDs, including same-line
+  // parameterized cases. Isolate its writable state from the user's last run.
+  const selection = shellQuote(JSON.stringify({ failedTests: [test.id] }));
+  return `(croco_replay_file=$(mktemp) && trap 'rm -f "$croco_replay_file"' 0 && printf '%s' ${selection} > "$croco_replay_file" && ${prefix}${project} --last-failed --last-failed-file "$croco_replay_file")`;
 }
 
 function resolvePackageName(

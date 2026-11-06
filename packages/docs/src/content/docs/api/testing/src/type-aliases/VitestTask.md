@@ -61,6 +61,10 @@ title: "VitestTask"
 
 > `readonly` `optional` **config?**: `object`
 
+##### config.dir?
+
+> `readonly` `optional` **dir?**: `string`
+
 ##### config.root?
 
 > `readonly` `optional` **root?**: `string`

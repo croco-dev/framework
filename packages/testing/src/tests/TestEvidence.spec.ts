@@ -1,5 +1,14 @@
 import { spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
+import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { dirname, resolve } from "node:path";
 
@@ -520,8 +529,12 @@ describe("runner reporters", () => {
       "vitest",
       "run",
       "--project=node-tests",
+      "--dir=.",
     ]);
-    expect(args.slice(args.indexOf("-t") + 2)).toEqual(["./--Replay [1].spec.ts"]);
+    expect(args.slice(args.indexOf("-t") + 2)).toEqual([
+      "--exclude=!(--Replay \\[1\\].spec.ts)",
+      "./--Replay [1].spec.ts",
+    ]);
     const pattern = new RegExp(args[args.indexOf("-t") + 1] ?? "");
     expect(pattern.test(`suite > literal nested ${title}`)).toBe(true);
     expect(pattern.test(`suite > literal nested ${title} extra`)).toBe(false);
@@ -529,10 +542,76 @@ describe("runner reporters", () => {
     expect(pattern.test("suite > literal nested returns cached rX 'value'")).toBe(false);
   });
 
+  it("runs only the original Vitest file when another path contains the same file filter", async () => {
+    const workspace = mkdtempSync(resolve(tmpdir(), "croco-native-evidence-replay-"));
+    try {
+      const vitestDirectory = dirname(
+        createRequire(import.meta.url).resolve("vitest/package.json"),
+      );
+      mkdirSync(resolve(workspace, "node_modules"));
+      symlinkSync(vitestDirectory, resolve(workspace, "node_modules/vitest"), "dir");
+      const title = "returns (cached) [ready].+";
+      const target = resolve(workspace, "src/Replay [1].spec.mjs");
+      for (const [file, label] of [
+        [target, "target"],
+        [resolve(workspace, "nested/src/Replay [1].spec.mjs"), "overlapping-file"],
+      ]) {
+        mkdirSync(dirname(file), { recursive: true });
+        writeFileSync(
+          file,
+          `import {test} from 'vitest'; import {appendFileSync} from 'node:fs';
+for (const [title, label] of ${JSON.stringify([
+            [title, label],
+            ["returns cached rX", "regex-only"],
+            [title + " extra", "suffix"],
+          ])})
+  test(title, () => appendFileSync('executed.jsonl', JSON.stringify(label) + '\\n'));`,
+        );
+      }
+      writeFileSync(
+        resolve(workspace, "vitest.config.mjs"),
+        "export default {test:{include:['**/*.spec.mjs'],maxWorkers:1}};",
+      );
+      const write = vi.fn();
+      const reporter = new CrocoVitestEvidenceReporter({ fidelity: isolatedFidelity, write });
+      await reporter.onTestCaseResult({
+        id: "native-vitest-target",
+        name: title,
+        fullName: title,
+        parent: { type: "module" },
+        module: { moduleId: target },
+        project: { name: "", config: { root: workspace } },
+        diagnostic: () => undefined,
+        result: () => ({ state: "passed" }),
+      });
+      const command = write.mock.calls[0]?.[0].replay.command;
+      const replay = spawnSync(
+        "sh",
+        ["-c", `pnpm() { shift; "$CROCO_REPLAY_NODE" "$CROCO_REPLAY_CLI" "$@"; }; ${command}`],
+        {
+          cwd: workspace,
+          env: {
+            ...process.env,
+            CROCO_REPLAY_NODE: process.execPath,
+            CROCO_REPLAY_CLI: resolve(vitestDirectory, "vitest.mjs"),
+          },
+          encoding: "utf8",
+          timeout: 5000,
+        },
+      );
+      expect(replay.status, replay.stdout + replay.stderr).toBe(0);
+      expect(readFileSync(resolve(workspace, "executed.jsonl"), "utf8")).toBe('"target"\n');
+    } finally {
+      rmSync(workspace, { recursive: true, force: true });
+    }
+  });
+
   it.each(["browser", ""])(
-    "replays literal Playwright paths with tags in project %j",
+    "replays Playwright IDs independently of title and inherited tags in project %j",
     async (projectName) => {
-      const title = "renders (cached) [ready].+ 'value' $CROCO_LITERAL `literal`\\path\nline";
+      const title =
+        "renders (cached) [ready].+ @group one 'value' $CROCO_LITERAL `literal`\\path\nline";
+      const id = "native/id 'quoted' $CROCO_LITERAL `literal`\\path\nline";
       const write = vi.fn();
       const reporter = new CrocoPlaywrightEvidenceReporter({
         fidelity: isolatedFidelity,
@@ -541,44 +620,67 @@ describe("runner reporters", () => {
       });
       reporter.onTestEnd(
         {
-          id: "literal-playwright",
+          id,
           title,
           titlePath: () => ["", projectName, "--Replay [1].spec.ts", "suite [a]", title],
-          location: { file: "/repo/--Replay [1].spec.ts", line: 12 },
+          location: { file: "/repo/--Replay [1].spec.ts" },
           parent: { project: () => ({ name: projectName, testDir: "/repo" }) },
-          tags: ["@group[1]", "@case.+"],
         },
         { duration: 1, status: "passed" },
       );
       await reporter.onEnd();
-      const args = replayArguments(write.mock.calls[0]?.[0].replay.command);
-      expect(args.slice(0, args.indexOf("--grep"))).toEqual([
+      const command = write.mock.calls[0]?.[0].replay.command;
+      const result = spawnSync(
+        "sh",
+        [
+          "-c",
+          `pnpm() { printf '%s\\0' "$@"; for croco_arg do croco_last_arg="$croco_arg"; done; cat "$croco_last_arg"; }; ${command}`,
+        ],
+        {
+          encoding: "utf8",
+          timeout: 5000,
+        },
+      );
+      expect(result.status, result.stderr).toBe(0);
+      const output = result.stdout.split("\0");
+      const selection = JSON.parse(output.pop() ?? "");
+      const file = output.pop() ?? "";
+      expect(output).toEqual([
         "--filter",
         "@croco/testing",
         "exec",
         "playwright",
         "test",
         ...(projectName ? ["--project=browser"] : []),
+        "--last-failed",
+        "--last-failed-file",
       ]);
-      expect(args.slice(args.indexOf("--grep") + 2)).toEqual([
-        "--",
-        "--Replay \\[1\\]\\.spec\\.ts:12",
-      ]);
-      const pattern = new RegExp(args[args.indexOf("--grep") + 1] ?? "");
-      expect(
-        pattern.test(`${projectName} --Replay [1].spec.ts suite [a] @group[1] ${title} @case.+`),
-      ).toBe(true);
-      expect(pattern.test(`${projectName} --Replay [1].spec.ts suite [a] ${title}`)).toBe(true);
-      expect(pattern.test(`${projectName} --Replay [1].spec.ts suite [a] ${title} extra`)).toBe(
-        false,
-      );
-      expect(pattern.test(`${projectName} --Replay [1].spec.ts other ${title}`)).toBe(false);
-      expect(pattern.test(`${projectName} nested/--Replay [1].spec.ts suite [a] ${title}`)).toBe(
-        false,
-      );
-      expect(pattern.test(`other --Replay [1].spec.ts suite [a] ${title}`)).toBe(false);
+      expect(selection).toEqual({ failedTests: [id] });
+      expect(() => readFileSync(file)).toThrow();
     },
   );
+
+  it("preserves a failed Playwright replay's exit status and removes its selection file", async () => {
+    const write = vi.fn();
+    const reporter = new CrocoPlaywrightEvidenceReporter({ fidelity: isolatedFidelity, write });
+    reporter.onTestEnd({ id: "failed-replay", title: "fails" }, { duration: 1, status: "failed" });
+    await reporter.onEnd();
+    const command = write.mock.calls[0]?.[0].replay.command;
+    const result = spawnSync(
+      "sh",
+      [
+        "-c",
+        `pnpm() { for croco_arg do croco_last_arg="$croco_arg"; done; printf '%s' "$croco_last_arg"; return 17; }; ${command}`,
+      ],
+      {
+        encoding: "utf8",
+        timeout: 5000,
+      },
+    );
+    expect(result.status, result.stderr).toBe(17);
+    expect(result.stdout).not.toBe("");
+    expect(() => readFileSync(result.stdout)).toThrow();
+  });
 
   it("preserves explicit replay callbacks for both runners", async () => {
     const replay = { command: "custom-runner --literal '(name)'", seed: "123" };
@@ -725,8 +827,8 @@ describe("runner reporters", () => {
         "@croco/users",
       ]);
       expect(bundle.records.map(({ replay }) => replay.command)).toEqual([
-        `pnpm --filter '@croco/billing' exec vitest run -t '(?:^| )account > loads an account$' './src/Example.spec.ts'`,
-        `pnpm --filter '@croco/users' exec vitest run -t '(?:^| )account > loads an account$' './src/Example.spec.ts'`,
+        `pnpm --filter '@croco/billing' exec vitest run --dir='../..' -t '(?:^| )account > loads an account$' --exclude='!(packages|packages/billing|packages/billing/src|packages/billing/src/Example.spec.ts)' './src/Example.spec.ts'`,
+        `pnpm --filter '@croco/users' exec vitest run --dir='../..' -t '(?:^| )account > loads an account$' --exclude='!(packages|packages/users|packages/users/src|packages/users/src/Example.spec.ts)' './src/Example.spec.ts'`,
       ]);
     } finally {
       rmSync(workspace, { force: true, recursive: true });
@@ -964,14 +1066,14 @@ describe("runner reporters", () => {
           id: "@croco/admin-web::shared-browser-id",
           packageName: "@croco/admin-web",
           replay: {
-            command: `pnpm --filter '@croco/admin-web' exec playwright test --project='chromium' --grep '(?:^| )creates a user$' -- '${resolve(workspace, "apps/admin-web/e2e/users")}\\.spec\\.ts'`,
+            command: `(croco_replay_file=$(mktemp) && trap 'rm -f "$croco_replay_file"' 0 && printf '%s' '{"failedTests":["shared-browser-id"]}' > "$croco_replay_file" && pnpm --filter '@croco/admin-web' exec playwright test --project='chromium' --last-failed --last-failed-file "$croco_replay_file")`,
           },
         }),
         expect.objectContaining({
           id: "@croco/console-web::shared-browser-id",
           packageName: "@croco/console-web",
           replay: {
-            command: `pnpm --filter '@croco/console-web' exec playwright test --project='chromium' --grep '(?:^| )creates a user$' -- '${resolve(workspace, "apps/console-web/e2e/users")}\\.spec\\.ts'`,
+            command: `(croco_replay_file=$(mktemp) && trap 'rm -f "$croco_replay_file"' 0 && printf '%s' '{"failedTests":["shared-browser-id"]}' > "$croco_replay_file" && pnpm --filter '@croco/console-web' exec playwright test --project='chromium' --last-failed --last-failed-file "$croco_replay_file")`,
           },
         }),
       ]);
