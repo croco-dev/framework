@@ -1109,6 +1109,21 @@ export const CROCO_DIAGNOSTIC_CODE_DEFINITIONS = [
     },
   }),
   createCliDiagnosticCodeDefinition({
+    code: "CROCO_CLI_JOBS_007",
+    category: "runtime",
+    title: "Jobs endpoint returned an invalid response",
+    cause:
+      "The jobs endpoint returned an unreadable body or fields that do not match the Jobs response contract.",
+    action:
+      "Check the app base URL and the server's Jobs API version before retrying. Inspect the job state before repeating cancel or replay.",
+    legacyCodes: ["cli/invalid-jobs-response"],
+    searchKeywords: ["croco jobs", "invalid response", "response contract"],
+    fixExample: {
+      label: "Inspect the job state",
+      command: "pnpm exec croco jobs show <job-id> --url http://localhost:3000",
+    },
+  }),
+  createCliDiagnosticCodeDefinition({
     code: "CROCO_CLI_DI_CHECK_001",
     category: "build-time",
     title: "DI check manifest is invalid",

@@ -10,7 +10,7 @@ import {
   type ListExecutionsOptions,
 } from "@croco/execution-core";
 import { Problem } from "@croco/problems-core";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { JobsCommandClient, JobsStatusFetch } from "../commands/jobs.js";
 import {
   formatJobDetails,
@@ -25,6 +25,7 @@ import {
   runJobsReplay,
   runJobsShow,
 } from "../commands/jobs.js";
+import { runCroco } from "../commands/root.js";
 import { CLI_DIAGNOSTIC_CODES, CLI_LEGACY_DIAGNOSTIC_CODES } from "../libs/diagnosticCodes.js";
 
 class TestExecutionStore implements ExecutionStore, ExecutionLogStore {
@@ -136,6 +137,10 @@ class TestExecutionStore implements ExecutionStore, ExecutionLogStore {
 describe("jobs command", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
   });
 
   it("registers Jobs v1 subcommands", () => {
@@ -347,6 +352,182 @@ describe("jobs command", () => {
       },
       status: 409,
     });
+  });
+
+  describe("HTTP response contract", () => {
+    const invalidCode = "CROCO_CLI_JOBS_007";
+    const validReport = () => ({
+      summary: "healthy",
+      generatedAt: "2026-01-01T00:00:00.000Z",
+      total: 1,
+      attentionCount: 0,
+      jobs: [createHttpJob("exec-1")],
+    });
+
+    it.each([
+      ["missing fields", { summary: "healthy" }],
+      ["invalid summary", { ...validReport(), summary: "ok" }],
+      ["wrong counter type", { ...validReport(), total: "1" }],
+      ["negative counter", { ...validReport(), attentionCount: -1 }],
+      ["invalid timestamp", { ...validReport(), generatedAt: false }],
+      ["missing job fields", { ...validReport(), jobs: [{ id: "exec-1" }] }],
+      [
+        "invalid policy",
+        {
+          ...validReport(),
+          jobs: [{ ...createHttpJob("exec-1"), failurePolicy: { needsAttention: false } }],
+        },
+      ],
+      [
+        "wrong boolean",
+        {
+          ...validReport(),
+          jobs: [
+            {
+              ...createHttpJob("exec-1"),
+              failurePolicy: { ...createHttpJob("exec-1").failurePolicy, needsAttention: "false" },
+            },
+          ],
+        },
+      ],
+    ])("rejects a list with %s", async (_name, body) => {
+      await expect(
+        runJobsList("https://api.example.test", {
+          fetch: async () => Response.json(body),
+        }),
+      ).rejects.toMatchObject({ code: invalidCode, status: 500 });
+    });
+
+    it.each([
+      ["show", runJobsShow],
+      ["cancel", runJobsCancel],
+      ["replay", runJobsReplay],
+    ] as const)(
+      "validates %s details including optional structured fields and logs",
+      async (_name, run) => {
+        for (const body of [
+          { ...createHttpJob("exec-1"), logs: undefined },
+          { ...createHttpJob("exec-1"), metadata: [] },
+          { ...createHttpJob("exec-1"), checkpoints: "bad" },
+          { ...createHttpJob("exec-1"), workflowName: 42 },
+          { ...createHttpJob("exec-1"), logs: [{ timestamp: "now", level: "info" }] },
+        ]) {
+          await expect(
+            run("exec-1", "https://api.example.test", {
+              fetch: async () => Response.json(body),
+            }),
+          ).rejects.toMatchObject({ code: invalidCode });
+        }
+      },
+    );
+
+    it.each(
+      [
+        { logs: [] },
+        [null],
+        [{ timestamp: 5, level: "info", message: "started" }],
+        [{ timestamp: "2026-01-01T00:00:00.000Z", level: "info", message: "started", data: [] }],
+      ].map((body) => ({ body })),
+    )("rejects malformed logs $body", async ({ body }) => {
+      await expect(
+        runJobsLogs("exec-1", "https://api.example.test", {
+          fetch: async () => Response.json(body),
+        }),
+      ).rejects.toMatchObject({ code: invalidCode });
+    });
+
+    it.each(["<html>credential-marker</html>", "", '{"summary":"healthy",', "null"])(
+      "rejects an invalid success body without exposing it: %j",
+      async (body) => {
+        const result = runJobsList("https://api.example.test", {
+          fetch: async () => new Response(body),
+          token: "token-marker",
+        });
+        await expect(result).rejects.toMatchObject({ code: invalidCode });
+        try {
+          await result;
+        } catch (error) {
+          expect(error).toBeInstanceOf(Problem);
+          expect(JSON.stringify(error)).not.toContain("credential-marker");
+          expect(JSON.stringify(error)).not.toContain("token-marker");
+        }
+      },
+    );
+
+    it("rejects a failed success-body read without exposing the thrown error", async () => {
+      await expect(
+        runJobsList("https://api.example.test", {
+          fetch: async () =>
+            new Response(
+              new ReadableStream({
+                start(controller) {
+                  controller.error(new Error("private-stream-marker"));
+                },
+              }),
+            ),
+        }),
+      ).rejects.toMatchObject({
+        code: invalidCode,
+        detail: expect.not.stringContaining("private-stream-marker"),
+      });
+    });
+
+    it.each([
+      "<html>private-error-marker</html>",
+      JSON.stringify({ credential: "private-error-marker" }),
+    ])("does not echo an unrecognized HTTP error body", async (body) => {
+      const result = runJobsList("https://api.example.test", {
+        fetch: async () => new Response(body, { status: 503 }),
+      });
+      await expect(result).rejects.toMatchObject({
+        code: CLI_DIAGNOSTIC_CODES.jobsHttpError,
+        detail: expect.not.stringContaining("private-error-marker"),
+      });
+    });
+
+    it("accepts serialized reports from the actual backend operations", async () => {
+      const manager = new ExecutionManagerImpl(new TestExecutionStore());
+      const operations = createExecutionJobsOperations(manager);
+      const job = await manager.create({ type: "workflow" });
+      const healthy = await runJobsList("https://api.example.test", {
+        fetch: async () => Response.json(await operations.list()),
+      });
+      expect(getJobsListExitCode(healthy)).toBe(0);
+      await manager.start(job.id);
+      await manager.fail(job.id, { message: "retry exhausted", retryable: true });
+      const attention = await runJobsList("https://api.example.test", {
+        fetch: async () => Response.json(await operations.list()),
+      });
+      expect(attention.attentionCount).toBe(1);
+      expect(getJobsListExitCode(attention)).toBe(1);
+      const details = await runJobsShow(job.id, "https://api.example.test", {
+        fetch: async () => Response.json(await operations.show(job.id)),
+      });
+      expect(getJobExitCode(details)).toBe(1);
+    });
+
+    it.each([false, true])(
+      "returns the same failed command result in JSON mode %s",
+      async (json) => {
+        vi.stubGlobal("fetch", async () =>
+          Response.json({ summary: "healthy", credential: "private-marker" }),
+        );
+        const stdout: string[] = [];
+        const stderr: string[] = [];
+        const result = await runCroco(
+          ["jobs", "list", "--url", "https://api.example.test", ...(json ? ["--json"] : [])],
+          {
+            stdout: (message) => stdout.push(message),
+            stderr: (message) => stderr.push(message),
+          },
+        );
+        expect(result.exitCode).toBe(1);
+        expect(stdout).toEqual([]);
+        expect(stderr).toHaveLength(1);
+        expect(stderr[0]).toContain(invalidCode);
+        expect(stderr[0]).not.toContain("private-marker");
+      },
+    );
   });
 
   describe.each([

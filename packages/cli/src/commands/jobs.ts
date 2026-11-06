@@ -130,6 +130,17 @@ class JobsHttpProblem extends Problem {
   }
 }
 
+class InvalidJobsResponseProblem extends Problem {
+  constructor() {
+    super(
+      CLI_DIAGNOSTIC_CODES.jobsInvalidResponse,
+      ProblemCategory.InternalServerError,
+      `${CLI_DIAGNOSTIC_CODES.jobsInvalidResponse}: Jobs endpoint returned an invalid response`,
+      withLegacyCode("jobsInvalidResponse"),
+    );
+  }
+}
+
 export const JOBS_ENDPOINT_NOT_FOUND_PROBLEM_REGISTRY_ENTRY = {
   code: CLI_DIAGNOSTIC_CODES.jobsEndpointNotFound,
   category: ProblemCategory.NotFound,
@@ -548,6 +559,7 @@ function createHttpJobsClient(target: string, options: RunJobsOptions): JobsComm
         tokenHeader,
         timeoutMs,
         query: filters,
+        validate: isJobListReport,
       });
     },
     show(id: string): Promise<JobDetails> {
@@ -556,6 +568,7 @@ function createHttpJobsClient(target: string, options: RunJobsOptions): JobsComm
         token: options.token,
         tokenHeader,
         timeoutMs,
+        validate: isJobDetails,
       });
     },
     logs(id: string): Promise<readonly JobLogEntry[]> {
@@ -564,6 +577,7 @@ function createHttpJobsClient(target: string, options: RunJobsOptions): JobsComm
         token: options.token,
         tokenHeader,
         timeoutMs,
+        validate: isJobLogs,
       });
     },
     cancel(id: string, params = {}): Promise<JobDetails> {
@@ -572,6 +586,7 @@ function createHttpJobsClient(target: string, options: RunJobsOptions): JobsComm
         token: options.token,
         tokenHeader,
         timeoutMs,
+        validate: isJobDetails,
         method: "POST",
         body: params,
       });
@@ -582,6 +597,7 @@ function createHttpJobsClient(target: string, options: RunJobsOptions): JobsComm
         token: options.token,
         tokenHeader,
         timeoutMs,
+        validate: isJobDetails,
         method: "POST",
         body: params,
       });
@@ -600,6 +616,7 @@ async function requestJobsEndpoint<T>(
     readonly method?: "GET" | "POST";
     readonly body?: unknown;
     readonly query?: Record<string, unknown>;
+    readonly validate: (body: unknown) => body is T;
   },
 ): Promise<T> {
   const controller = new AbortController();
@@ -620,16 +637,97 @@ async function requestJobsEndpoint<T>(
       body: options.body === undefined ? undefined : JSON.stringify(options.body),
       signal: controller.signal,
     });
-    const body = await readResponseBody(response);
+    let body: unknown;
+    try {
+      body = await readResponseBody(response);
+    } catch {
+      if (response.ok) {
+        throw new InvalidJobsResponseProblem();
+      }
+    }
 
     if (!response.ok) {
       throw new JobsHttpProblem(response.status, describeErrorBody(body));
     }
 
-    return body as T;
+    if (!options.validate(body)) {
+      throw new InvalidJobsResponseProblem();
+    }
+    return body;
   } finally {
     clearTimeout(timeout);
   }
+}
+
+// Match the wire fields produced by execution-core/JobsOperations. Additive fields
+// and server-owned policy strings remain extensible; the CLI does not derive policy.
+function isJobListReport(value: unknown): value is JobListReport {
+  return (
+    isRecord(value) &&
+    (value.summary === "healthy" || value.summary === "attention") &&
+    typeof value.generatedAt === "string" &&
+    isJobCount(value.total) &&
+    isJobCount(value.attentionCount) &&
+    Array.isArray(value.jobs) &&
+    value.jobs.every(isJobSummary)
+  );
+}
+
+function isJobCount(value: unknown): value is number {
+  return typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
+}
+
+function isJobSummary(value: unknown): value is JobSummary {
+  return (
+    isRecord(value) &&
+    typeof value.id === "string" &&
+    typeof value.type === "string" &&
+    typeof value.status === "string" &&
+    isJobCount(value.attempts) &&
+    isJobCount(value.maxAttempts) &&
+    typeof value.createdAt === "string" &&
+    isJobCount(value.logCount) &&
+    ["workflowName", "startedAt", "completedAt", "replayOf", "errorMessage"].every(
+      (key) => value[key] === undefined || typeof value[key] === "string",
+    ) &&
+    isJobFailurePolicy(value.failurePolicy)
+  );
+}
+
+function isJobFailurePolicy(value: unknown): value is JobFailurePolicy {
+  return (
+    isRecord(value) &&
+    typeof value.state === "string" &&
+    typeof value.needsAttention === "boolean" &&
+    typeof value.retryable === "boolean" &&
+    typeof value.replayable === "boolean" &&
+    typeof value.recoveryAction === "string" &&
+    typeof value.reason === "string"
+  );
+}
+
+function isJobDetails(value: unknown): value is JobDetails {
+  return (
+    isRecord(value) &&
+    (value.metadata === undefined || isRecord(value.metadata)) &&
+    (value.checkpoints === undefined || isRecord(value.checkpoints)) &&
+    isJobLogs(value.logs) &&
+    isJobSummary(value)
+  );
+}
+
+function isJobLogs(value: unknown): value is readonly JobLogEntry[] {
+  return Array.isArray(value) && value.every(isJobLogEntry);
+}
+
+function isJobLogEntry(value: unknown): value is JobLogEntry {
+  return (
+    isRecord(value) &&
+    typeof value.timestamp === "string" &&
+    typeof value.level === "string" &&
+    typeof value.message === "string" &&
+    (value.data === undefined || isRecord(value.data))
+  );
 }
 
 function resolveJobsUrl(target: string, path: string, query?: Record<string, unknown>): string {
@@ -681,7 +779,7 @@ function describeErrorBody(body: unknown): string {
     }
   }
 
-  return typeof body === "string" ? body : JSON.stringify(body);
+  return "Unable to read a Jobs Problem response";
 }
 
 function readJobsTarget(value: unknown): string {
@@ -720,7 +818,7 @@ function formatJobSummary(job: JobSummary): string {
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 class InvalidJobsIdProblem extends Problem {

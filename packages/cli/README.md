@@ -318,6 +318,11 @@ croco jobs list --url http://localhost:3000/ops
 
 Set `CROCO_JOBS_URL` to omit `--url`. `--json` prints machine-readable output. `list` and `show`
 return a non-zero exit code when any reported job needs operator attention.
+All HTTP jobs commands validate the response fields before formatting or choosing an exit code.
+Unreadable or malformed success responses fail with `CROCO_CLI_JOBS_007`
+(`cli/invalid-jobs-response`) in both human and JSON modes, without echoing the response body.
+Check the app URL and server Jobs API version. If `cancel` or `replay` returns this diagnostic,
+inspect the job state before repeating the mutation: response validation does not undo a server action.
 
 ### ops — Operational Checks
 
