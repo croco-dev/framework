@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs";
-import { dirname, isAbsolute, parse, resolve } from "node:path";
+import { dirname, isAbsolute, parse, relative, resolve } from "node:path";
 
 import { createTestEvidenceRecord, TestEvidenceContractError } from "./test-evidence.mjs";
 import {
@@ -201,7 +201,11 @@ function vitestReplayCommand(task: VitestTask, packageName: string | undefined):
     names.unshift(parent.name);
   }
   const pattern = `${task.parent ? "^" : "(?:^| )"}${escapeRegExp(names.join(" "))}$`;
-  const file = task.module ? ` ${shellQuote(task.module.moduleId)}` : "";
+  const moduleId = task.module?.moduleId;
+  const projectRoot = task.project?.config?.root;
+  const file = moduleId
+    ? ` ${shellQuote(projectRoot ? relative(projectRoot, moduleId) : moduleId)}`
+    : "";
   return `${replayPrefix(packageName)} vitest run${file} -t ${shellQuote(pattern)}`;
 }
 
@@ -210,15 +214,24 @@ function playwrightReplayCommand(
   packageName: string | undefined,
 ): string {
   const prefix = `${replayPrefix(packageName)} playwright test`;
-  const projectName = test.parent?.project()?.name;
+  const owningProject = test.parent?.project();
+  const projectName = owningProject?.name;
   const project = projectName ? ` --project=${shellQuote(projectName)}` : "";
   const location = test.location;
-  const file = location
-    ? ` ${shellQuote(`${escapeRegExp(location.file)}${location.line === undefined ? "" : `:${location.line}`}`)}`
-    : "";
+  const titlePath = test.titlePath?.();
+  // Playwright reports root, project, then the file relative to testDir.
+  const reportedFile = titlePath?.[2];
+  const filePath =
+    location && reportedFile && location.file.replaceAll("\\", "/").endsWith(`/${reportedFile}`)
+      ? reportedFile
+      : location?.file;
+  const file =
+    location && filePath
+      ? ` ${shellQuote(`${escapeRegExp(filePath)}${location.line === undefined ? "" : `:${location.line}`}`)}`
+      : "";
   const tags = test.tags?.length ? `(?: (?:${test.tags.map(escapeRegExp).join("|")}))*` : "";
-  const pattern = test.titlePath
-    ? `^${test.titlePath().filter(Boolean).map(escapeRegExp).join(`${tags} `)}${tags}$`
+  const pattern = titlePath
+    ? `^${titlePath.filter(Boolean).map(escapeRegExp).join(`${tags} `)}${tags}$`
     : `(?:^| )${escapeRegExp(test.title)}${tags}$`;
   return `${prefix}${project}${file} --grep ${shellQuote(pattern)}`;
 }

@@ -6,7 +6,7 @@
       "classification": "pure-contract",
       "reason": "Generate literal, file-scoped replay selectors for the existing Vitest and Playwright reporters while preserving caller-provided replay commands.",
       "files": {
-        "packages/testing/src/libs/test-evidence-reporters.ts": "1c075635a74c6d28be05926d95a3328f3fe6c060721885e47563104522efa39d"
+        "packages/testing/src/libs/test-evidence-reporters.ts": "014f44e1df2103d76afdf503b919defe47e8eb013cea9df1d7b6d7d3d8266cb0"
       },
       "catalogRuntimes": [],
       "profiles": {

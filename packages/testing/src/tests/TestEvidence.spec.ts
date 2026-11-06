@@ -508,6 +508,7 @@ describe("runner reporters", () => {
         parent: { type: "suite", name: "suite > literal", parent: { type: "module" } },
       },
       module: { moduleId: "/repo/Replay [1].spec.ts" },
+      project: { name: "", config: { root: "/repo" } },
       diagnostic: () => undefined,
       result: () => ({ state: "passed" }),
     });
@@ -518,7 +519,7 @@ describe("runner reporters", () => {
       "exec",
       "vitest",
       "run",
-      "/repo/Replay [1].spec.ts",
+      "Replay [1].spec.ts",
       "-t",
     ]);
     const pattern = new RegExp(args.at(-1) ?? "");
@@ -538,7 +539,7 @@ describe("runner reporters", () => {
         title,
         titlePath: () => ["", "browser", "Replay [1].spec.ts", "suite [a]", title],
         location: { file: "/repo/Replay [1].spec.ts", line: 12 },
-        parent: { project: () => ({ name: "browser", testDir: "/not-a-package" }) },
+        parent: { project: () => ({ name: "browser", testDir: "/repo" }) },
         tags: ["@group[1]", "@case.+"],
       },
       { duration: 1, status: "passed" },
@@ -552,7 +553,7 @@ describe("runner reporters", () => {
       "playwright",
       "test",
       "--project=browser",
-      "/repo/Replay \\[1\\]\\.spec\\.ts:12",
+      "Replay \\[1\\]\\.spec\\.ts:12",
       "--grep",
     ]);
     const pattern = new RegExp(args.at(-1) ?? "");
@@ -562,7 +563,7 @@ describe("runner reporters", () => {
     expect(pattern.test(`browser Replay [1].spec.ts suite [a] ${title}`)).toBe(true);
     expect(pattern.test(`browser Replay [1].spec.ts suite [a] ${title} extra`)).toBe(false);
     expect(pattern.test(`browser Replay [1].spec.ts other ${title}`)).toBe(false);
-    expect(pattern.test(`browser Other.spec.ts suite [a] ${title}`)).toBe(false);
+    expect(pattern.test(`browser nested/Replay [1].spec.ts suite [a] ${title}`)).toBe(false);
     expect(pattern.test(`other Replay [1].spec.ts suite [a] ${title}`)).toBe(false);
   });
 
@@ -710,8 +711,8 @@ describe("runner reporters", () => {
         "@croco/users",
       ]);
       expect(bundle.records.map(({ replay }) => replay.command)).toEqual([
-        `pnpm --filter '@croco/billing' exec vitest run '${packages[1]?.testFile}' -t '(?:^| )account > loads an account$'`,
-        `pnpm --filter '@croco/users' exec vitest run '${packages[0]?.testFile}' -t '(?:^| )account > loads an account$'`,
+        `pnpm --filter '@croco/billing' exec vitest run 'src/Example.spec.ts' -t '(?:^| )account > loads an account$'`,
+        `pnpm --filter '@croco/users' exec vitest run 'src/Example.spec.ts' -t '(?:^| )account > loads an account$'`,
       ]);
     } finally {
       rmSync(workspace, { force: true, recursive: true });
