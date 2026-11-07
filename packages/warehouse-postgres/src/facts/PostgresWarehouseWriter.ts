@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { isDeepStrictEqual } from "node:util";
 import {
   canonicalPayload,
   encodeIdentity,
@@ -6,6 +7,8 @@ import {
   validateRow,
   WarehouseContractError,
 } from "@croco/warehouse-core";
+import { appendWarehouseReceiptManifest } from "@croco/warehouse-core/runtime";
+import { factColumnName, factTableName, quoteIdentifier, scopeKey } from "./schema";
 import type { FactDescriptor } from "@croco/warehouse-core";
 import type {
   WarehouseAccess,
@@ -15,7 +18,6 @@ import type {
   WarehouseWriter,
   WriteReceipt,
 } from "@croco/warehouse-core/runtime";
-import { factColumnName, factTableName, quoteIdentifier, scopeKey } from "./schema";
 import type { WarehousePostgresConnection, WarehousePostgresPool } from "./client";
 
 type CandidateRow = {
@@ -109,7 +111,7 @@ export class PostgresWarehouseWriter implements WarehouseWriter {
     const db = await this.pool.connect();
     let committing = false;
     let indeterminate = false;
-    const receipt: WriteReceipt = {
+    let receipt: WriteReceipt = {
       batchId: request.batchId,
       attempt: request.attempt,
       state: "durable",
@@ -140,12 +142,34 @@ export class PostgresWarehouseWriter implements WarehouseWriter {
       if (payloadBytes > 8 * 1024 * 1024 || keys.length + 4 > 60_000)
         throw new WarehouseContractError("WAREHOUSE_BATCH_LIMIT");
       const digest = createHash("sha256").update(JSON.stringify(payloads)).digest("hex");
+      if (request.evidence) {
+        const evidence = request.evidence;
+        const verified = await appendWarehouseReceiptManifest(
+          {
+            formatVersion: evidence.formatVersion,
+            bindingHash: evidence.bindingHash,
+            count: evidence.sequence - 1,
+            hash: evidence.previousHash,
+          },
+          { ...evidence, batchId: request.batchId, payloadHash: digest },
+        );
+        if (
+          verified.evidence.hash !== evidence.hash ||
+          rows.length !==
+            evidence.through - evidence.from + 1 - evidence.rejected - evidence.filtered
+        )
+          throw new WarehouseContractError("WAREHOUSE_BATCH_CONFLICT");
+        receipt = { ...receipt, evidence: verified.evidence };
+      }
       const previous = await db.query<{ receipt: WriteReceipt; payload_hash: string }>(
         "SELECT receipt,payload_hash FROM warehouse_receipts WHERE candidate_id=$1 AND batch_id=$2",
         [request.candidateId, request.batchId],
       );
       if (previous.rows[0]) {
-        if (previous.rows[0].payload_hash !== digest)
+        if (
+          previous.rows[0].payload_hash !== digest ||
+          !isDeepStrictEqual(previous.rows[0].receipt.evidence ?? null, receipt.evidence ?? null)
+        )
           throw new WarehouseContractError("WAREHOUSE_BATCH_CONFLICT");
         await db.query("COMMIT");
         return previous.rows[0].receipt;

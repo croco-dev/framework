@@ -1,5 +1,6 @@
 import type { AggregateRange } from "./fixtureImporter";
 import type { CanonicalRow, FactDescriptor, TrustedScope } from "./types";
+import type { WarehouseBatchEvidence, WarehouseReceiptManifest } from "./receiptManifest";
 
 export type WarehouseRole = "read" | "import" | "export" | "drop" | "publish";
 
@@ -65,6 +66,7 @@ export type WarehouseSnapshot = {
 };
 
 export type WriteReceipt = {
+  readonly evidence?: WarehouseBatchEvidence;
   readonly batchId: string;
   readonly attempt: number;
   readonly state: "durable" | "indeterminate" | "rejected";
@@ -83,6 +85,7 @@ export type WarehouseWriteRequest = WarehouseCandidateRequest & {
   readonly batchId: string;
   readonly attempt: number;
   readonly rows: readonly CanonicalRow[];
+  readonly evidence?: WarehouseBatchEvidence;
 };
 
 export type WarehouseReceiptRequest = WarehouseCandidateRequest & {
@@ -106,9 +109,23 @@ export type WarehouseCreateCandidateRequest = {
 };
 
 export type WarehouseSealRequest = WarehouseCandidateRequest & {
-  readonly expectedBatchIds: readonly string[];
   readonly quality: WarehouseQuality;
   readonly audit: WarehouseAudit;
+} & (
+    | { readonly expectedBatchIds: readonly string[]; readonly expectedManifest?: never }
+    | {
+        readonly expectedManifest: WarehouseReceiptManifest;
+        readonly attempt: number;
+        readonly expectedBatchIds?: never;
+      }
+  );
+
+export type WarehouseReceiptPageRequest = {
+  readonly access: WarehouseAccess;
+  readonly candidateId: string;
+  readonly afterBatchId?: string;
+  /** Number of bounded range receipts, from 1 through 16. */
+  readonly limit: number;
 };
 
 export type WarehouseFailRequest = WarehouseCandidateRequest & {
@@ -167,6 +184,7 @@ export interface CatalogStore {
     readonly candidateId: string;
   }): Promise<WarehouseCandidate>;
   sealCandidate(request: WarehouseSealRequest): Promise<WarehouseCandidate>;
+  readReceipts(request: WarehouseReceiptPageRequest): Promise<readonly WriteReceipt[]>;
   failCandidate(request: WarehouseFailRequest): Promise<WarehouseCandidate>;
   publishCandidate(request: WarehousePublishRequest): Promise<WarehouseSnapshot>;
   pinSnapshot(request: WarehouseSnapshotRequest): Promise<WarehouseSnapshot>;

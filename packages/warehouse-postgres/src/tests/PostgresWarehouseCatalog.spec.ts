@@ -1,13 +1,18 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { c, compileFact, defineFact } from "@croco/warehouse-core";
+import {
+  appendWarehouseReceiptManifest,
+  createWarehouseReceiptManifest,
+} from "@croco/warehouse-core/runtime";
+import { PostgresWarehouseCatalog } from "../facts/PostgresWarehouseCatalog";
 import type { FactDescriptor } from "@croco/warehouse-core";
 import type {
   WarehouseAccess,
   WarehouseCandidate,
   WarehouseQuality,
   WarehouseSnapshot,
+  WriteReceipt,
 } from "@croco/warehouse-core/runtime";
-import { PostgresWarehouseCatalog } from "../facts/PostgresWarehouseCatalog";
 import type { WarehousePostgresPool } from "../facts/client";
 
 const access: WarehouseAccess = {
@@ -92,6 +97,169 @@ beforeEach(async () => {
 });
 
 describe("PostgresWarehouseCatalog", () => {
+  async function manifestFixture(count = 2) {
+    let manifest = createWarehouseReceiptManifest("a".repeat(64));
+    const rows: {
+      batch_id: string;
+      attempt: number;
+      payload_hash: string;
+      receipt: WriteReceipt;
+    }[] = [];
+    for (let i = 0; i < count; i++) {
+      const batchId = `batch-${i}`;
+      const payloadHash = "b".repeat(64);
+      const next = await appendWarehouseReceiptManifest(manifest, {
+        batchId,
+        payloadHash,
+        sourceId: "source",
+        from: i + 1,
+        through: i + 1,
+        rejected: 0,
+        filtered: 0,
+        rejections: [],
+      });
+      manifest = next.manifest;
+      rows.push({
+        batch_id: batchId,
+        attempt: 1,
+        payload_hash: payloadHash,
+        receipt: {
+          batchId,
+          attempt: 1,
+          state: "durable",
+          providerRef: JSON.stringify([candidate.id, batchId]),
+          inserted: 1,
+          identical: 0,
+          evidence: next.evidence,
+        },
+      });
+    }
+    let offset = 0;
+    const original = query.getMockImplementation();
+    query.mockImplementation(async (sql) => {
+      if (sql.startsWith("FETCH FORWARD")) {
+        const page = rows.slice(offset, offset + 16);
+        offset += page.length;
+        return { rows: page };
+      }
+      if (!original) throw new Error("Missing query mock");
+      return original(sql);
+    });
+    return {
+      rows,
+      request: {
+        access,
+        candidateId: candidate.id,
+        fence: 1,
+        expectedManifest: manifest,
+        attempt: 2,
+        quality,
+        audit,
+      },
+    };
+  }
+
+  it("verifies multiple bounded receipt pages without materializing an ID inventory", async () => {
+    const f = await manifestFixture(35);
+    expect((await catalog.sealCandidate(f.request)).state).toBe("sealed");
+    expect(query.mock.calls.filter(([sql]) => sql.startsWith("FETCH FORWARD 16"))).toHaveLength(4);
+    expect(query).toHaveBeenCalledWith("SET LOCAL work_mem = '1MB'");
+    expect(query).toHaveBeenCalledWith("CLOSE warehouse_receipt_manifest");
+    expect(query.mock.calls.some(([sql]) => sql.startsWith("SELECT batch_id,receipt"))).toBe(false);
+  });
+
+  it.each([
+    "missing",
+    "extra",
+    "duplicate-sequence",
+    "payload",
+    "binding",
+    "future-attempt",
+    "other-candidate",
+    "state",
+    "root",
+    "rejected",
+  ] as const)("refuses to seal %s receipt evidence", async (corruption) => {
+    const f = await manifestFixture();
+    const first = f.rows[0];
+    const evidence = first.receipt.evidence;
+    if (!evidence) throw new Error("Missing evidence");
+    if (corruption === "missing") f.rows.pop();
+    if (corruption === "extra") f.rows.push({ ...first, batch_id: "extra" });
+    if (corruption === "duplicate-sequence") f.rows[1] = first;
+    if (corruption === "payload") first.payload_hash = "d".repeat(64);
+    if (corruption === "binding")
+      first.receipt = { ...first.receipt, evidence: { ...evidence, bindingHash: "d".repeat(64) } };
+    if (corruption === "future-attempt") {
+      first.attempt = 3;
+      first.receipt = { ...first.receipt, attempt: 3 };
+    }
+    if (corruption === "other-candidate")
+      first.receipt = {
+        ...first.receipt,
+        providerRef: JSON.stringify(["foreign", first.batch_id]),
+      };
+    if (corruption === "state") first.receipt = { ...first.receipt, state: "indeterminate" };
+    if (corruption === "root")
+      f.request.expectedManifest = { ...f.request.expectedManifest, hash: "d".repeat(64) };
+    if (corruption === "rejected")
+      first.receipt = { ...first.receipt, evidence: { ...evidence, rejected: 1 } };
+    await expect(catalog.sealCandidate(f.request)).rejects.toThrow("WAREHOUSE_RECEIPTS_INCOMPLETE");
+    expect(query).toHaveBeenCalledWith("ROLLBACK");
+    expect(query.mock.calls.some(([sql]) => sql.startsWith("UPDATE warehouse_candidates"))).toBe(
+      false,
+    );
+  });
+
+  it("rejects ambiguous legacy and manifest inventories", async () => {
+    const f = await manifestFixture();
+    await expect(
+      catalog.sealCandidate({ ...f.request, expectedBatchIds: [] } as never),
+    ).rejects.toThrow("WAREHOUSE_RECEIPTS_INCOMPLETE");
+    expect(query).not.toHaveBeenCalled();
+  });
+
+  it("seals an empty root only when no durable receipts exist", async () => {
+    const f = await manifestFixture(0);
+    expect((await catalog.sealCandidate(f.request)).state).toBe("sealed");
+  });
+
+  it("pages diagnostic receipts under current read authority without catalog mutations", async () => {
+    const original = query.getMockImplementation();
+    query.mockImplementation(async (sql) => {
+      if (sql.startsWith("SELECT receipt FROM warehouse_receipts"))
+        return { rows: [{ receipt: { batchId: "next" } }] };
+      if (!original) throw new Error("Missing query mock");
+      return original(sql);
+    });
+    expect(
+      await catalog.readReceipts({
+        access,
+        candidateId: candidate.id,
+        afterBatchId: "last",
+        limit: 16,
+      }),
+    ).toEqual([{ batchId: "next" }]);
+    expect(query).toHaveBeenCalledWith(
+      "SELECT receipt FROM warehouse_receipts WHERE candidate_id=$1 AND ($2::text IS NULL OR batch_id>$2) ORDER BY batch_id LIMIT $3",
+      [candidate.id, "last", 16],
+    );
+    expect(query.mock.calls.some(([sql]) => /INSERT|UPDATE|DELETE|FOR UPDATE/.test(sql))).toBe(
+      false,
+    );
+    await expect(
+      catalog.readReceipts({ access, candidateId: candidate.id, limit: 17 }),
+    ).rejects.toThrow("WAREHOUSE_RECEIPTS_INCOMPLETE");
+    catalog = new PostgresWarehouseCatalog(
+      { query, connect: async () => ({ query, release }) } as WarehousePostgresPool,
+      descriptor,
+      () => ({ ...access, roles: ["import"] }),
+    );
+    await expect(
+      catalog.readReceipts({ access, candidateId: candidate.id, limit: 16 }),
+    ).rejects.toThrow("WAREHOUSE_ACCESS_DENIED");
+  });
+
   it.each(["describeDataset", "pinSnapshot", "getCandidate"] as const)(
     "%s does not write or lock catalog rows",
     async (operation) => {

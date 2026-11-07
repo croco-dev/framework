@@ -47333,6 +47333,18 @@
               "exportKind": "named",
               "source": "./libs/fixtureImporter",
               "declarationKind": "class"
+            },
+            {
+              "name": "appendWarehouseReceiptManifest",
+              "exportKind": "named",
+              "source": "./libs/receiptManifest",
+              "declarationKind": "function"
+            },
+            {
+              "name": "createWarehouseReceiptManifest",
+              "exportKind": "named",
+              "source": "./libs/receiptManifest",
+              "declarationKind": "function"
             }
           ],
           "typeExports": [
@@ -47370,6 +47382,16 @@
               "name": "WarehouseAudit",
               "exportKind": "named",
               "source": "./libs/warehouseRuntime"
+            },
+            {
+              "name": "WarehouseBatchEvidence",
+              "exportKind": "named",
+              "source": "./libs/receiptManifest"
+            },
+            {
+              "name": "WarehouseBatchSummary",
+              "exportKind": "named",
+              "source": "./libs/receiptManifest"
             },
             {
               "name": "WarehouseCandidate",
@@ -47442,9 +47464,24 @@
               "source": "./libs/warehouseRuntime"
             },
             {
+              "name": "WarehouseReceiptManifest",
+              "exportKind": "named",
+              "source": "./libs/receiptManifest"
+            },
+            {
+              "name": "WarehouseReceiptPageRequest",
+              "exportKind": "named",
+              "source": "./libs/warehouseRuntime"
+            },
+            {
               "name": "WarehouseReceiptRequest",
               "exportKind": "named",
               "source": "./libs/warehouseRuntime"
+            },
+            {
+              "name": "WarehouseRejection",
+              "exportKind": "named",
+              "source": "./libs/receiptManifest"
             },
             {
               "name": "WarehouseRemovePublicationRequest",

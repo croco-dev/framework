@@ -21,7 +21,7 @@ import { PostgresPipelinePublication } from "../pipeline/PostgresPipelinePublica
 import { defineProjection } from "@croco/etl-core/pipeline";
 import type { PostgresTestConnection } from "@croco/testing-resources";
 import type { FactDescriptor } from "@croco/warehouse-core";
-import type { WarehouseAccess } from "@croco/warehouse-core/runtime";
+import type { WarehouseAccess, WriteReceipt } from "@croco/warehouse-core/runtime";
 import type { PipelineDefinition, PipelineRuntime } from "@croco/etl-core/pipeline";
 import type { WarehousePostgresPool } from "../facts/client";
 
@@ -183,6 +183,284 @@ describe.skipIf(process.env.CROCO_TEST_REAL_RESOURCES !== "1")(
           }),
       };
     }
+
+    async function fileDefinition(input: typeof rows): Promise<PipelineDefinition> {
+      const content = input.map((row) => JSON.stringify(row)).join("\n");
+      const path = join(directory, `manifest-${randomUUID()}.jsonl`);
+      await writeFile(path, content);
+      const inputSchema = {
+        ...schema,
+        limits: { ...schema.limits, maxBytes: 200_000, maxRecords: 100 },
+      };
+      return {
+        ...definition,
+        project: defineProjection({ source: inputSchema, target: fact, columns: project.columns }),
+        source: {
+          ...definition.source,
+          partitions: [
+            {
+              ...definition.source.partitions[0],
+              path,
+              schema: inputSchema,
+              revision: createHash("sha256").update(content).digest("hex"),
+            },
+          ],
+        },
+      };
+    }
+
+    it.each([
+      "missing",
+      "extra",
+      "payload",
+      "binding",
+      "sequence",
+      "future-attempt",
+      "indeterminate",
+    ] as const)(
+      "keeps the prior snapshot when the bounded manifest has a %s receipt",
+      async (fault) => {
+        const store = services();
+        const prior = await createPipelineOperations(definition, store.runtime).run();
+        const seal = store.runtime.catalog.sealCandidate.bind(store.runtime.catalog);
+        vi.spyOn(store.runtime.catalog, "sealCandidate").mockImplementationOnce(async (request) => {
+          const stored = await connection.pool.query<{
+            batch_id: string;
+            receipt: WriteReceipt;
+            payload_hash: string;
+            attempt: number;
+          }>(
+            "SELECT batch_id,receipt,payload_hash,attempt FROM warehouse_receipts WHERE candidate_id=$1 ORDER BY receipt->'evidence'->>'sequence'",
+            [request.candidateId],
+          );
+          expect(stored.rows).toHaveLength(2);
+          const first = stored.rows[0];
+          if (fault === "missing") {
+            await connection.pool.query(
+              "DELETE FROM warehouse_receipts WHERE candidate_id=$1 AND batch_id=$2",
+              [request.candidateId, first.batch_id],
+            );
+          } else if (fault === "extra") {
+            await connection.pool.query(
+              "INSERT INTO warehouse_receipts(candidate_id,batch_id,attempt,payload_hash,receipt) VALUES($1,$2,$3,$4,$5)",
+              [
+                request.candidateId,
+                "unexpected-batch",
+                first.attempt,
+                first.payload_hash,
+                { ...first.receipt, batchId: "unexpected-batch" },
+              ],
+            );
+          } else if (fault === "payload") {
+            await connection.pool.query(
+              "UPDATE warehouse_receipts SET payload_hash=$3 WHERE candidate_id=$1 AND batch_id=$2",
+              [request.candidateId, first.batch_id, "c".repeat(64)],
+            );
+          } else {
+            const changed =
+              fault === "binding"
+                ? {
+                    ...first.receipt,
+                    evidence: { ...first.receipt.evidence, bindingHash: "d".repeat(64) },
+                  }
+                : fault === "sequence"
+                  ? {
+                      ...stored.rows[1].receipt,
+                      evidence: { ...stored.rows[1].receipt.evidence, sequence: 1 },
+                    }
+                  : fault === "future-attempt"
+                    ? { ...first.receipt, attempt: 2 }
+                    : { ...first.receipt, state: "indeterminate" };
+            await connection.pool.query(
+              "UPDATE warehouse_receipts SET receipt=$3,attempt=$4 WHERE candidate_id=$1 AND batch_id=$2",
+              [
+                request.candidateId,
+                fault === "sequence" ? stored.rows[1].batch_id : first.batch_id,
+                changed,
+                fault === "future-attempt" ? 2 : first.attempt,
+              ],
+            );
+          }
+          return seal(request);
+        });
+        await expect(createPipelineOperations(definition, store.runtime).run()).rejects.toThrow(
+          "WAREHOUSE_RECEIPTS_INCOMPLETE",
+        );
+        const dataset = await store.runtime.catalog.describeDataset({
+          access: store.resolveAccess(),
+        });
+        expect(dataset.headId).toBe(prior.snapshotId);
+        expect(dataset.revision).toBe(1);
+        expect((await store.read(prior.snapshotId as string)).rows).toEqual(rows);
+      },
+    );
+
+    it("denies cross-tenant receipt diagnostics and forged read authority", async () => {
+      const owner = services();
+      const result = await createPipelineOperations(definition, owner.runtime).run();
+      const request = {
+        access: owner.resolveAccess(),
+        candidateId: `etl:${result.executionId}`,
+        limit: 1,
+      };
+      const otherTenant = services();
+      await expect(otherTenant.runtime.catalog.readReceipts(request)).rejects.toThrow(
+        "WAREHOUSE_CANDIDATE_FENCE",
+      );
+      const noRead = new PostgresWarehouseCatalog(connection.pool, descriptor, () => ({
+        ...owner.resolveAccess(),
+        roles: ["import"],
+      }));
+      await expect(noRead.readReceipts(request)).rejects.toThrow("WAREHOUSE_ACCESS_DENIED");
+    });
+
+    it("seals across receipt pages and records an all-filtered final partial range", async () => {
+      const store = services();
+      const input = Array.from({ length: 35 }, (_, index) => ({
+        ...rows[index % 2],
+        id: `range-${String(index).padStart(2, "0")}`,
+      }));
+      const source = await fileDefinition(input);
+      const checkpointBytes: number[] = [];
+      const checkpoint = store.runtime.executions.checkpointAttempt.bind(store.runtime.executions);
+      vi.spyOn(store.runtime.executions, "checkpointAttempt").mockImplementation(
+        async (...args) => {
+          checkpointBytes.push(Buffer.byteLength(JSON.stringify(args[2])));
+          return checkpoint(...args);
+        },
+      );
+      const result = await createPipelineOperations(
+        {
+          ...source,
+          processor: {
+            artifactHash: "a".repeat(64),
+            dependencies: [],
+            process: (row) => (row.id === "range-34" ? null : row),
+          },
+        },
+        { ...store.runtime, chunkSize: 2 },
+      ).run();
+      expect(result).toMatchObject({
+        state: "published",
+        inputCount: 35,
+        outputCount: 34,
+        filteredCount: 1,
+      });
+      expect(Math.max(...checkpointBytes)).toBeLessThan(3000);
+      const all: WriteReceipt[] = [];
+      let afterBatchId: string | undefined;
+      for (;;) {
+        const page = await store.runtime.catalog.readReceipts({
+          access: store.resolveAccess(),
+          candidateId: `etl:${result.executionId}`,
+          afterBatchId,
+          limit: 7,
+        });
+        expect(page.length).toBeLessThanOrEqual(7);
+        all.push(...page);
+        expect(all.length).toBeLessThanOrEqual(18);
+        if (page.length < 7) break;
+        afterBatchId = page.at(-1)?.batchId;
+      }
+      expect(all).toHaveLength(18);
+      expect(new Set(all.map((receipt) => receipt.batchId)).size).toBe(18);
+      expect(all.find((receipt) => receipt.evidence?.sequence === 18)).toMatchObject({
+        inserted: 0,
+        identical: 0,
+        evidence: { from: 35, through: 35, filtered: 1, rejected: 0, rejections: [] },
+      });
+      const physical = await connection.pool.query<{ count: number }>(
+        "SELECT sum((receipt->>'inserted')::integer)::integer AS count FROM warehouse_receipts WHERE candidate_id=$1",
+        [`etl:${result.executionId}`],
+      );
+      expect(physical.rows).toEqual([{ count: 34 }]);
+    });
+
+    it("stores quarantine diagnostics in bounded receipt pages instead of checkpoints", async () => {
+      const store = services();
+      const sensitive = "private-invalid-amount";
+      const input = Array.from({ length: 80 }, (_, index) => ({
+        ...rows[0],
+        id: `rejected-${index}`,
+        amount: sensitive,
+      }));
+      const source = await fileDefinition(input);
+      const checkpointBytes: number[] = [];
+      const checkpoint = store.runtime.executions.checkpointAttempt.bind(store.runtime.executions);
+      vi.spyOn(store.runtime.executions, "checkpointAttempt").mockImplementation(
+        async (...args) => {
+          checkpointBytes.push(Buffer.byteLength(JSON.stringify(args[2])));
+          return checkpoint(...args);
+        },
+      );
+      const result = await createPipelineOperations(
+        { ...source, load: "quarantine" },
+        { ...store.runtime, chunkSize: 5 },
+      ).run();
+      expect(result).toMatchObject({
+        state: "partial",
+        inputCount: 80,
+        outputCount: 0,
+        rejectedCount: 80,
+        snapshotId: null,
+      });
+      expect(Math.max(...checkpointBytes)).toBeLessThan(3000);
+      const saved = await store.manager().get(result.executionId);
+      expect(JSON.stringify(saved.checkpoints)).not.toContain(sensitive);
+      const all: WriteReceipt[] = [];
+      let afterBatchId: string | undefined;
+      for (;;) {
+        const page = await store.runtime.catalog.readReceipts({
+          access: store.resolveAccess(),
+          candidateId: `etl:${result.executionId}`,
+          afterBatchId,
+          limit: 7,
+        });
+        expect(page.every((receipt) => (receipt.evidence?.rejections.length ?? 0) <= 5)).toBe(true);
+        all.push(...page);
+        expect(all.length).toBeLessThanOrEqual(16);
+        if (page.length < 7) break;
+        afterBatchId = page.at(-1)?.batchId;
+      }
+      const rejected = all.flatMap((receipt) => receipt.evidence?.rejections ?? []);
+      expect(rejected).toHaveLength(80);
+      expect(rejected.map((item) => item.record).sort((a, b) => a - b)).toEqual(
+        Array.from({ length: 80 }, (_, index) => index + 1),
+      );
+      expect(
+        rejected.every(
+          (item) =>
+            item.sourceId === "payments-partition" &&
+            item.reason.length > 0 &&
+            item.sensitivity === "sensitive",
+        ),
+      ).toBe(true);
+      expect(JSON.stringify(all)).not.toContain(sensitive);
+      await connection.pool.query(
+        "UPDATE warehouse_candidates SET created_at='2000-01-01' WHERE id=$1",
+        [`etl:${result.executionId}`],
+      );
+      await store.runtime.catalog.expireSnapshots({
+        access: store.resolveAccess(),
+        before: "2001-01-01T00:00:00Z",
+        audit: {
+          reason: "Expired diagnostic retention",
+          expectedRevision: 0,
+          idempotencyKey: "expire-diagnostics",
+        },
+      });
+      const retained = await connection.pool.query<{ count: number }>(
+        "SELECT count(*)::integer AS count FROM warehouse_receipts WHERE candidate_id=$1",
+        [`etl:${result.executionId}`],
+      );
+      expect(retained.rows).toEqual([{ count: 0 }]);
+      expect((await store.manager().get(result.executionId)).checkpoints).toEqual(
+        saved.checkpoints,
+      );
+      expect(
+        (await store.runtime.catalog.describeDataset({ access: store.resolveAccess() })).headId,
+      ).toBeNull();
+    });
 
     it("loads 1000 exact payments in ten atomic batches through the production pipeline", async () => {
       const store = services();

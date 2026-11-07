@@ -1,5 +1,10 @@
 import { createHash, randomUUID } from "node:crypto";
 import { parseDescriptor, WarehouseContractError } from "@croco/warehouse-core";
+import {
+  appendWarehouseReceiptManifest,
+  createWarehouseReceiptManifest,
+} from "@croco/warehouse-core/runtime";
+import { factColumnName, factTableName, quoteIdentifier, scopeKey } from "./schema";
 import type { FactDescriptor } from "@croco/warehouse-core";
 import type {
   CatalogStore,
@@ -16,9 +21,11 @@ import type {
   WarehouseSealRequest,
   WarehouseSnapshot,
   WarehouseSnapshotRequest,
+  WarehouseReceiptPageRequest,
+  WarehouseReceiptManifest,
+  WriteReceipt,
   WarehouseSuppressRequest,
 } from "@croco/warehouse-core/runtime";
-import { factColumnName, factTableName, quoteIdentifier, scopeKey } from "./schema";
 import type { WarehousePostgresConnection, WarehousePostgresPool } from "./client";
 
 type Head = {
@@ -265,8 +272,103 @@ export class PostgresWarehouseCatalog implements CatalogStore {
     }, access);
   }
 
+  async readReceipts(request: WarehouseReceiptPageRequest): Promise<readonly WriteReceipt[]> {
+    const access = this.access("read");
+    if (
+      !Number.isSafeInteger(request.limit) ||
+      request.limit < 1 ||
+      request.limit > 16 ||
+      (request.afterBatchId !== undefined && typeof request.afterBatchId !== "string")
+    )
+      throw new WarehouseContractError("WAREHOUSE_RECEIPTS_INCOMPLETE");
+    return this.transaction(async (db) => {
+      await this.readHead(db, access);
+      await this.candidate(db, access, request.candidateId, undefined, false);
+      const page = await db.query<{ receipt: WriteReceipt }>(
+        "SELECT receipt FROM warehouse_receipts WHERE candidate_id=$1 AND ($2::text IS NULL OR batch_id>$2) ORDER BY batch_id LIMIT $3",
+        [request.candidateId, request.afterBatchId ?? null, request.limit],
+      );
+      return page.rows.map((row) => row.receipt);
+    }, access);
+  }
+
+  private async verifyManifest(
+    db: WarehousePostgresConnection,
+    candidateId: string,
+    expected: WarehouseReceiptManifest | undefined,
+    attempt: number,
+  ): Promise<void> {
+    if (
+      !expected ||
+      expected.formatVersion !== 1 ||
+      !Number.isSafeInteger(expected.count) ||
+      expected.count < 0 ||
+      !/^[a-f0-9]{64}$/.test(expected.hash) ||
+      !Number.isSafeInteger(attempt) ||
+      attempt < 1
+    )
+      throw new WarehouseContractError("WAREHOUSE_RECEIPTS_INCOMPLETE");
+    let manifest = createWarehouseReceiptManifest(expected.bindingHash);
+    // The server sorts once, spilling beyond work_mem. Only sixteen bounded ranges reach JS at a time.
+    await db.query("SET LOCAL work_mem = '1MB'");
+    await db.query(
+      `DECLARE warehouse_receipt_manifest NO SCROLL CURSOR FOR
+      SELECT batch_id,attempt,payload_hash,receipt FROM warehouse_receipts WHERE candidate_id=$1
+      ORDER BY length(receipt->'evidence'->>'sequence'),(receipt->'evidence'->>'sequence') COLLATE "C",batch_id`,
+      [candidateId],
+    );
+    while (true) {
+      const page = await db.query<{
+        batch_id: string;
+        attempt: number;
+        payload_hash: string;
+        receipt: WriteReceipt;
+      }>("FETCH FORWARD 16 FROM warehouse_receipt_manifest");
+      if (!page.rows.length) break;
+      for (const row of page.rows) {
+        const evidence = row.receipt?.evidence;
+        if (
+          !evidence ||
+          evidence.formatVersion !== 1 ||
+          evidence.bindingHash !== expected.bindingHash ||
+          evidence.sequence !== manifest.count + 1 ||
+          evidence.previousHash !== manifest.hash ||
+          evidence.rejected !== 0 ||
+          row.receipt.state !== "durable" ||
+          row.receipt.batchId !== row.batch_id ||
+          row.receipt.providerRef !== JSON.stringify([candidateId, row.batch_id]) ||
+          !Number.isSafeInteger(row.receipt.inserted) ||
+          row.receipt.inserted < 0 ||
+          !Number.isSafeInteger(row.receipt.identical) ||
+          row.receipt.identical < 0 ||
+          row.receipt.inserted + row.receipt.identical !==
+            evidence.through - evidence.from + 1 - evidence.filtered ||
+          row.receipt.attempt !== row.attempt ||
+          !Number.isSafeInteger(row.attempt) ||
+          row.attempt < 1 ||
+          row.attempt > attempt ||
+          manifest.count >= expected.count
+        )
+          throw new WarehouseContractError("WAREHOUSE_RECEIPTS_INCOMPLETE");
+        const next = await appendWarehouseReceiptManifest(manifest, {
+          ...evidence,
+          batchId: row.batch_id,
+          payloadHash: row.payload_hash,
+        });
+        if (next.evidence.hash !== evidence.hash)
+          throw new WarehouseContractError("WAREHOUSE_RECEIPTS_INCOMPLETE");
+        manifest = next.manifest;
+      }
+    }
+    await db.query("CLOSE warehouse_receipt_manifest");
+    if (manifest.count !== expected.count || manifest.hash !== expected.hash)
+      throw new WarehouseContractError("WAREHOUSE_RECEIPTS_INCOMPLETE");
+  }
+
   async sealCandidate(request: WarehouseSealRequest): Promise<WarehouseCandidate> {
     const access = this.access("import");
+    if ("expectedManifest" in request === "expectedBatchIds" in request)
+      throw new WarehouseContractError("WAREHOUSE_RECEIPTS_INCOMPLETE");
     const { access: _access, audit, ...input } = request;
     return this.mutation(access, "seal", audit, input, async (db) => {
       const candidate = await this.candidate(db, access, request.candidateId, request.fence);
@@ -302,19 +404,30 @@ export class PostgresWarehouseCatalog implements CatalogStore {
         )
           throw new WarehouseContractError("WAREHOUSE_COVERAGE_INCOMPLETE");
       }
-      const receipts = await db.query<{ batch_id: string; receipt: { state: string } }>(
-        "SELECT batch_id,receipt FROM warehouse_receipts WHERE candidate_id=$1",
-        [candidate.id],
-      );
-      if (
-        new Set(request.expectedBatchIds).size !== request.expectedBatchIds.length ||
-        receipts.rows.length !== request.expectedBatchIds.length ||
-        receipts.rows.some(
-          (row) =>
-            row.receipt.state !== "durable" || !request.expectedBatchIds.includes(row.batch_id),
+      if ("expectedManifest" in request) {
+        await this.verifyManifest(
+          db,
+          candidate.id,
+          request.expectedManifest,
+          "attempt" in request ? request.attempt : 0,
+        );
+      } else {
+        if (!Array.isArray(request.expectedBatchIds))
+          throw new WarehouseContractError("WAREHOUSE_RECEIPTS_INCOMPLETE");
+        const expected = new Set(request.expectedBatchIds);
+        const receipts = await db.query<{ batch_id: string; receipt: { state: string } }>(
+          "SELECT batch_id,receipt FROM warehouse_receipts WHERE candidate_id=$1",
+          [candidate.id],
+        );
+        if (
+          expected.size !== request.expectedBatchIds.length ||
+          receipts.rows.length !== expected.size ||
+          receipts.rows.some(
+            (row) => row.receipt.state !== "durable" || !expected.has(row.batch_id),
+          )
         )
-      )
-        throw new WarehouseContractError("WAREHOUSE_RECEIPTS_INCOMPLETE");
+          throw new WarehouseContractError("WAREHOUSE_RECEIPTS_INCOMPLETE");
+      }
       const sealed: WarehouseCandidate = { ...candidate, state: "sealed", quality };
       await db.query("UPDATE warehouse_candidates SET state=$2,data=$3 WHERE id=$1", [
         candidate.id,
