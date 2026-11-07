@@ -4383,6 +4383,17 @@ const recoveryMetadataByCode = {
     redactionPolicy: "operator-only",
     severity: "error",
   }),
+  "framework-context/container-reset-failed": recovery({
+    cause:
+      "One or more provider destructors failed during synchronous container reset. All registrations were cleared after every tracked instance was attempted.",
+    userAction:
+      "Do not retry reset to recover failed cleanup; its registrations are already cleared. Ask the operator to release any resources left open.",
+    operatorAction:
+      "Inspect cleanupFailureCount, omittedCleanupFailureCount and cleanupFailures; truncated messages are marked, and the AggregateError cause retains every original failure. Release remaining resources and repair destructors before reusing the container.",
+    retryability: "not-retryable",
+    redactionPolicy: "operator-only",
+    severity: "error",
+  }),
   "framework-context/request-scope-disposed": recovery({
     cause:
       "A request provider was resolved or an instance was tracked after its request scope began cleanup.",

@@ -1,10 +1,11 @@
+import { describe, expect, it, vi } from "vitest";
 import {
   Container,
   Context,
   DEV_INSPECTOR_TOKEN,
   RuntimeInspector,
 } from "@croco/framework-context";
-import { describe, expect, it, vi } from "vitest";
+import { Problem } from "@croco/problems-core";
 import { NoBackoff } from "../libs/BackoffPolicy";
 import {
   RetryAbortedProblem,
@@ -15,6 +16,42 @@ import type { RetryListener } from "../libs/RetryListener";
 import { RetryTemplate } from "../libs/RetryTemplate";
 
 describe("RetryTemplate", () => {
+  it.each(["default", "application"] as const)(
+    "preserves container reset cleanup failures without retrying the cleared %s scope",
+    async (kind) => {
+      const scope = kind === "application" ? Container.createScope() : undefined;
+      const failure = new TypeError("provider cleanup failed");
+      let shouldFail = true;
+      const destroy = vi.fn(() => {
+        if (shouldFail) throw failure;
+      });
+      const reset = vi.fn(() => Container.reset());
+      const run = async () => {
+        Container.set("reset-retry-failure", { destroy });
+        const template = new RetryTemplate({ maxAttempts: 2, backoffPolicy: new NoBackoff() });
+        const result = template.execute(reset);
+        await expect(result).rejects.toMatchObject({
+          code: "framework-context/container-reset-failed",
+          extensions: { retryable: false },
+        });
+        const problem = (await result.catch((error: unknown) => error)) as Problem;
+        expect(problem).toBeInstanceOf(Problem);
+        expect((problem.cause as AggregateError).errors[0]).toBe(failure);
+        expect(reset).toHaveBeenCalledTimes(1);
+        expect(destroy).toHaveBeenCalledTimes(1);
+      };
+      try {
+        if (scope) await scope.run(run);
+        else await run();
+      } finally {
+        shouldFail = false;
+        if (scope) scope.run(() => Container.reset());
+        else Container.reset();
+        scope?.dispose();
+      }
+    },
+  );
+
   it("returns result on first success", async () => {
     const template = new RetryTemplate({
       maxAttempts: 3,

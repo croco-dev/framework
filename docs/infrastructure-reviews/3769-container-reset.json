@@ -1,0 +1,105 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "framework-context",
+      "classification": "pure-contract",
+      "reason": "Attempt cleanup across every container lifetime before clearing registrations and report all failures through one Problem, without changing low-level RuntimeContainer reset or Host lifecycles.",
+      "files": {
+        "packages/framework-context/src/libs/Container.ts": "3e6b469e7f614f699495ebaee1e2a573074d0f315587bc4027851927915c04c3"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "This change completes synchronous in-memory DI reset and failure reporting. It adds no Node Host capability, storage, deployment or invocation lifecycle dependency.",
+          "providers": ["@croco/framework-context/Container"],
+          "constraints": [
+            "Reset remains an idle-container operation. Destructors are synchronous; a failed destructor may leave its external resources open and is not retried. No deployment support or certification is claimed."
+          ],
+          "references": [
+            "packages/framework-context/src/libs/Container.ts",
+            "packages/framework-context/src/tests/ContainerReset.spec.ts",
+            "packages/framework-context/README.md"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "This change completes synchronous in-memory DI reset and failure reporting. It adds no Lambda Host capability, storage, deployment or invocation lifecycle dependency.",
+          "providers": ["@croco/framework-context/Container"],
+          "constraints": [
+            "Reset remains an idle-container operation. Destructors are synchronous; a failed destructor may leave its external resources open and is not retried. No deployment support or certification is claimed."
+          ],
+          "references": [
+            "packages/framework-context/src/libs/Container.ts",
+            "packages/framework-context/src/tests/ContainerReset.spec.ts",
+            "packages/framework-context/README.md"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "This change completes synchronous in-memory DI reset and failure reporting. It adds no Workers or Node Container Host capability, storage, deployment or invocation lifecycle dependency.",
+          "providers": ["@croco/framework-context/Container"],
+          "constraints": [
+            "Reset remains an idle-container operation. Destructors are synchronous; a failed destructor may leave its external resources open and is not retried. No deployment support or certification is claimed."
+          ],
+          "references": [
+            "packages/framework-context/src/libs/Container.ts",
+            "packages/framework-context/src/tests/ContainerReset.spec.ts",
+            "packages/framework-context/README.md"
+          ]
+        }
+      }
+    },
+    {
+      "package": "problems-core",
+      "classification": "pure-contract",
+      "reason": "Publish the deterministic registry entry and recovery metadata for the container reset failure, plus updated source locations. This is generated contract data and adds no runtime capability.",
+      "files": {
+        "packages/problems-core/src/generated/problem-code-registry.ts": "fc1812c2877af30880e3677c119e71cd5d88f77553f90cf9ec866eb8c830a624"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "This generated Problem registry describes synchronous DI cleanup failures and has no host, storage or deployment lifecycle dependency.",
+          "providers": ["@croco/problems-core/ProblemCodeRegistry"],
+          "constraints": [
+            "Generated from scripts/problem-registry.mts. The entry does not add a Host capability or certify infrastructure."
+          ],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "scripts/problem-registry.mts",
+            "packages/framework-context/src/tests/ContainerReset.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "This generated Problem registry describes synchronous DI cleanup failures and has no host, storage or deployment lifecycle dependency.",
+          "providers": ["@croco/problems-core/ProblemCodeRegistry"],
+          "constraints": [
+            "Generated from scripts/problem-registry.mts. The entry does not add a Host capability or certify infrastructure."
+          ],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "scripts/problem-registry.mts",
+            "packages/framework-context/src/tests/ContainerReset.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "This generated Problem registry describes synchronous DI cleanup failures and has no host, storage or deployment lifecycle dependency.",
+          "providers": ["@croco/problems-core/ProblemCodeRegistry"],
+          "constraints": [
+            "Generated from scripts/problem-registry.mts. The entry does not add a Host capability or certify infrastructure."
+          ],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "scripts/problem-registry.mts",
+            "packages/framework-context/src/tests/ContainerReset.spec.ts"
+          ]
+        }
+      }
+    }
+  ]
+}

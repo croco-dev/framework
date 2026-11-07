@@ -52,6 +52,8 @@ export type ContainerValidationOptions = {
 };
 
 const COMPONENT_METADATA_KEY = Symbol("component:metadata");
+const MAX_RESET_CLEANUP_FAILURE_MESSAGES = 100;
+const MAX_RESET_CLEANUP_FAILURE_MESSAGE_LENGTH = 2048;
 let containerScopeCounter = 0;
 
 type ContainerScopeState = {
@@ -688,88 +690,104 @@ export class Container {
     Container.setValidated(false);
   }
 
+  /**
+   * Attempts synchronous cleanup of instances present when each cleanup phase begins, then clears registrations.
+   * Call only while this container is idle. A later reset does not retry failed destructors.
+   * Cleanup failures declare `retryable: false` because registrations have already been cleared.
+   * @throws A `framework-context/container-reset-failed` Problem retaining every original cleanup failure.
+   */
   static reset(): void {
     const scope = Container.getScopeState();
-    if (scope) {
-      const disposedValues = new Set<unknown>();
-      scope.instance.reset({ strategy: "resetServices" }, disposedValues);
-      Container.destroyGeneratedTransients(scope.generatedTransients, disposedValues);
-      Container.destroyGeneratedSingletons(scope.generatedSingletons, disposedValues);
-      scope.componentRegistrationOrder.clear();
-      scope.componentSourceLocations.clear();
-      scope.components.clear();
-      scope.explicitComponentSourceLocations.clear();
-      scope.generatedProviders.clear();
-      scope.installedGraphs.clear();
-      scope.lazyProviders.clear();
-      scope.symbolTokens.clear();
-      scope.tokenIdentityIds.clear();
-      scope.tokenIdentityOwners.clear();
-      scope.tokens.clear();
-      delete scope.lastResolutionTrace;
-      scope.nextComponentRegistrationOrder = 1;
-      scope.validated = false;
-      return;
-    }
-
+    const runtime = scope?.instance ?? RuntimeContainerBackend.of();
+    const transients = scope?.generatedTransients ?? Container.generatedTransients;
+    const singletons = scope?.generatedSingletons ?? Container.generatedSingletons;
     const disposedValues = new Set<unknown>();
-    RuntimeContainerBackend.of().reset({ strategy: "resetServices" }, disposedValues);
-    Container.destroyGeneratedTransients(Container.generatedTransients, disposedValues);
-    Container.destroyGeneratedSingletons(Container.generatedSingletons, disposedValues);
-    // reset은 요청 처리가 없는 idle 시점에만 호출한다.
-    for (const { target } of MetadataStorage.getAll(COMPONENT_METADATA_KEY)) {
-      MetadataStorage.delete(COMPONENT_METADATA_KEY, target);
-    }
-    Container.lazyProviders.clear();
-    Container.symbolTokens.clear();
-    Container.componentSourceLocations.clear();
-    Container.explicitComponentSourceLocations.clear();
-    Container.generatedProviders.clear();
-    Container.installedGraphs.clear();
-    Container.componentRegistrationOrder.clear();
-    Container.tokenIdentityIds.clear();
-    Container.tokenIdentityOwners.clear();
-    Container.lastResolutionTrace = undefined;
-    Container.nextComponentRegistrationOrder = 1;
-    Container.validated = false;
-  }
-
-  private static destroyGeneratedSingletons(
-    singletons: Map<GeneratedProviderDefinition, unknown>,
-    disposedValues = new Set<unknown>(),
-  ): void {
     const failures: unknown[] = [];
-    for (const instance of [...singletons.values()].reverse()) {
-      if (disposedValues.has(instance)) continue;
-      disposedValues.add(instance);
-      try {
-        destroyGeneratedInstance(instance);
-      } catch (error) {
-        failures.push(error);
+    try {
+      for (const service of [...runtime.services].reverse()) {
+        try {
+          runtime.destroyServiceInstance(service, disposedValues);
+        } catch (error) {
+          failures.push(error);
+        }
+      }
+      runtime.services.splice(0, runtime.services.length);
+      for (const instances of [transients, singletons]) {
+        for (const instance of [...instances.values()].reverse()) {
+          if (disposedValues.has(instance)) continue;
+          disposedValues.add(instance);
+          try {
+            destroyGeneratedInstance(instance);
+          } catch (error) {
+            failures.push(error);
+          }
+        }
+        instances.clear();
+      }
+    } finally {
+      runtime.services.splice(0, runtime.services.length);
+      transients.clear();
+      singletons.clear();
+      if (scope) {
+        scope.componentRegistrationOrder.clear();
+        scope.componentSourceLocations.clear();
+        scope.components.clear();
+        scope.explicitComponentSourceLocations.clear();
+        scope.generatedProviders.clear();
+        scope.installedGraphs.clear();
+        scope.lazyProviders.clear();
+        scope.symbolTokens.clear();
+        scope.tokenIdentityIds.clear();
+        scope.tokenIdentityOwners.clear();
+        scope.tokens.clear();
+        delete scope.lastResolutionTrace;
+        scope.nextComponentRegistrationOrder = 1;
+        scope.validated = false;
+      } else {
+        // reset은 요청 처리가 없는 idle 시점에만 호출한다.
+        for (const { target } of MetadataStorage.getAll(COMPONENT_METADATA_KEY)) {
+          MetadataStorage.delete(COMPONENT_METADATA_KEY, target);
+        }
+        Container.lazyProviders.clear();
+        Container.symbolTokens.clear();
+        Container.componentSourceLocations.clear();
+        Container.explicitComponentSourceLocations.clear();
+        Container.generatedProviders.clear();
+        Container.installedGraphs.clear();
+        Container.componentRegistrationOrder.clear();
+        Container.tokenIdentityIds.clear();
+        Container.tokenIdentityOwners.clear();
+        Container.lastResolutionTrace = undefined;
+        Container.nextComponentRegistrationOrder = 1;
+        Container.validated = false;
       }
     }
-    singletons.clear();
     if (failures.length > 0) {
-      throw failures[0];
+      throw ProblemFactory.internalServerError(
+        "framework-context/container-reset-failed",
+        "Container registrations were reset after provider cleanup failed.",
+        {
+          cause: createResetCleanupCause(failures),
+          extensions: {
+            retryable: false,
+            cleanupFailureCount: failures.length,
+            cleanupFailures: failures.slice(0, MAX_RESET_CLEANUP_FAILURE_MESSAGES).map((error) => {
+              const message = describeResetCleanupFailure(error);
+              return message.length > MAX_RESET_CLEANUP_FAILURE_MESSAGE_LENGTH
+                ? {
+                    message: message.slice(0, MAX_RESET_CLEANUP_FAILURE_MESSAGE_LENGTH),
+                    truncated: true,
+                  }
+                : { message };
+            }),
+            omittedCleanupFailureCount: Math.max(
+              0,
+              failures.length - MAX_RESET_CLEANUP_FAILURE_MESSAGES,
+            ),
+          },
+        },
+      );
     }
-  }
-
-  private static destroyGeneratedTransients(
-    transients: Set<object>,
-    disposedValues: Set<unknown>,
-  ): void {
-    const failures: unknown[] = [];
-    for (const instance of [...transients].reverse()) {
-      if (disposedValues.has(instance)) continue;
-      disposedValues.add(instance);
-      try {
-        destroyGeneratedInstance(instance);
-      } catch (error) {
-        failures.push(error);
-      }
-    }
-    transients.clear();
-    if (failures.length > 0) throw failures[0];
   }
 
   static validate(options: ContainerValidationOptions = {}): void {
@@ -2660,3 +2678,21 @@ export class Container {
 }
 
 export type { Service };
+
+function describeResetCleanupFailure(error: unknown): string {
+  try {
+    return String(error instanceof Error ? error.message : error);
+  } catch {
+    return "Provider cleanup threw an unprintable value.";
+  }
+}
+
+function createResetCleanupCause(failures: readonly unknown[]): Error {
+  // Keep the native runtime error without requiring ES2021 lib declarations in source consumers.
+  const NativeAggregateError = (
+    globalThis as typeof globalThis & {
+      AggregateError: new (errors: readonly unknown[], message: string) => Error;
+    }
+  ).AggregateError;
+  return new NativeAggregateError(failures, "Container provider cleanup failed.");
+}

@@ -437,9 +437,17 @@ readonly [`InjectionInspection`](/api/framework-context/src/type-aliases/injecti
 
 > `static` **reset**(): `void`
 
+Attempts synchronous cleanup of instances present when each cleanup phase begins, then clears registrations.
+Call only while this container is idle. A later reset does not retry failed destructors.
+Cleanup failures declare `retryable: false` because registrations have already been cleared.
+
 #### Returns
 
 `void`
+
+#### Throws
+
+A `framework-context/container-reset-failed` Problem retaining every original cleanup failure.
 
 ---
 
