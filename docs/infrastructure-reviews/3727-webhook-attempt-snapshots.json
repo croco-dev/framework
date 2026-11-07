@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "webhooks-core",
+      "classification": "pure-contract",
+      "reason": "Snapshot declared outcome values with one captured discriminant on record and query, including inherited fields and getters, so caller mutations cannot rewrite evidence or mix variant fields. Conformance verifies all variants and timestamps while accepting readonly views that return false or throw on writes; public types and stored shapes are unchanged.",
+      "files": {
+        "packages/webhooks-core/src/libs/outbound/InMemoryOutboundWebhookStore.ts": "df77f0ccd4b3e1380deeedbc704e2a2aab604282c74dcd9cda4735f67e6cb39c",
+        "packages/webhooks-core/src/libs/outbound/conformance.ts": "21be126379e0c889233a5629bbd46be7e826d19d782bc0feebf35c49aeec5323"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Copying the existing scalar outcome union and Date values is in-memory value ownership independent of the Node Host; it adds no host capability, external storage or lifecycle requirement.",
+          "providers": ["@croco/webhooks-core:InMemoryOutboundWebhookStore"],
+          "constraints": [
+            "The store remains process-local and non-durable. Existing persisted representations, claim/retry semantics and runtime support claims are unchanged. No deployed infrastructure or provider certification is claimed."
+          ],
+          "references": [
+            "packages/webhooks-core/src/libs/outbound/InMemoryOutboundWebhookStore.ts",
+            "packages/webhooks-core/src/libs/outbound/conformance.ts",
+            "packages/webhooks-core/src/libs/outbound/types.ts",
+            "packages/webhooks-core/src/tests/OutboundWebhookRuntime.spec.ts",
+            "packages/webhooks-core/README.md"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Copying the existing scalar outcome union and Date values is in-memory value ownership independent of the Lambda Host; it adds no host capability, external storage or lifecycle requirement.",
+          "providers": ["@croco/webhooks-core:InMemoryOutboundWebhookStore"],
+          "constraints": [
+            "The store remains process-local and non-durable. Existing persisted representations, claim/retry semantics and runtime support claims are unchanged. No deployed infrastructure or provider certification is claimed."
+          ],
+          "references": [
+            "packages/webhooks-core/src/libs/outbound/InMemoryOutboundWebhookStore.ts",
+            "packages/webhooks-core/src/libs/outbound/conformance.ts",
+            "packages/webhooks-core/src/libs/outbound/types.ts",
+            "packages/webhooks-core/src/tests/OutboundWebhookRuntime.spec.ts",
+            "packages/webhooks-core/README.md"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Copying the existing scalar outcome union and Date values is in-memory value ownership independent of the Workers or explicit Node Container Host; it adds no host capability, external storage or lifecycle requirement.",
+          "providers": ["@croco/webhooks-core:InMemoryOutboundWebhookStore"],
+          "constraints": [
+            "The store remains process-local and non-durable. Existing persisted representations, claim/retry semantics and runtime support claims are unchanged. No deployed infrastructure or provider certification is claimed."
+          ],
+          "references": [
+            "packages/webhooks-core/src/libs/outbound/InMemoryOutboundWebhookStore.ts",
+            "packages/webhooks-core/src/libs/outbound/conformance.ts",
+            "packages/webhooks-core/src/libs/outbound/types.ts",
+            "packages/webhooks-core/src/tests/OutboundWebhookRuntime.spec.ts",
+            "packages/webhooks-core/README.md"
+          ]
+        }
+      }
+    }
+  ]
+}
