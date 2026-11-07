@@ -220,23 +220,35 @@ async function cancelFailedDownload(response: Response, signal?: AbortSignal): P
 
 function normalizeDownloadStream(stream: StorageStream, key: string): StorageStream {
   const reader = stream.getReader();
+  let finished = false;
 
   return new ReadableStream<Uint8Array>({
     async pull(controller) {
       try {
         const result = await reader.read();
+        if (finished) return;
         if (result.done) {
+          finished = true;
+          reader.releaseLock();
           controller.close();
           return;
         }
 
         controller.enqueue(result.value);
       } catch (error) {
+        if (finished) return;
+        finished = true;
+        reader.releaseLock();
         controller.error(normalizeCloudinaryStorageError(error, { key, operation: "get" }));
       }
     },
     async cancel(reason) {
-      await reader.cancel(reason);
+      finished = true;
+      try {
+        await reader.cancel(reason);
+      } finally {
+        reader.releaseLock();
+      }
     },
   });
 }
@@ -650,6 +662,7 @@ export class CloudinaryProvider extends BaseStorageProvider implements ImageProv
   ): StorageStream {
     const reader = source.getReader();
     let prefixSent = false;
+    let finished = false;
 
     return new ReadableStream<Uint8Array>({
       pull: async (controller) => {
@@ -659,17 +672,33 @@ export class CloudinaryProvider extends BaseStorageProvider implements ImageProv
           return;
         }
 
-        const result = await reader.read();
-        if (!result.done) {
-          controller.enqueue(result.value);
-          return;
-        }
+        try {
+          const result = await reader.read();
+          if (finished) return;
+          if (!result.done) {
+            controller.enqueue(result.value);
+            return;
+          }
 
-        controller.enqueue(suffix);
-        controller.close();
+          finished = true;
+          reader.releaseLock();
+          controller.enqueue(suffix);
+          controller.close();
+        } catch (error) {
+          if (finished) return;
+          finished = true;
+          reader.releaseLock();
+          throw error;
+        }
       },
       cancel: async (reason) => {
-        await reader.cancel(reason);
+        if (finished) return;
+        finished = true;
+        try {
+          await reader.cancel(reason);
+        } finally {
+          reader.releaseLock();
+        }
       },
     });
   }
