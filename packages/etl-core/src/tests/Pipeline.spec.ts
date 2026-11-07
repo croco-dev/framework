@@ -36,7 +36,7 @@ const schema = {
     { name: "count", type: "number" },
     { name: "at", type: "date" },
   ],
-  limits: { maxBytes: 100_000, maxRecords: 100, maxRowBytes: 1024 },
+  limits: { maxBytes: 20_000_000, maxRecords: 100_000, maxRowBytes: 1024 },
 } as const satisfies SourceSchema;
 const target = defineFact("pipeline_rows", {
   version: 1,
@@ -266,6 +266,140 @@ async function fixture(partitions = [[raw("a"), raw("b")]]) {
 }
 
 describe("pipeline operations", () => {
+  it("replays the same partition-local batches after a checkpoint failure with filters", async () => {
+    const f = await fixture([
+      [raw("a"), raw("skip"), raw("b")],
+      [raw("c"), raw("d")],
+    ]);
+    const definition = {
+      ...f.definition,
+      resume: "restart-partition" as const,
+      processor: {
+        artifactHash: "a".repeat(64),
+        dependencies: [],
+        process: (row: CanonicalRow) => (row.id === "skip" ? null : row),
+      },
+    };
+    let checkpoints = 0;
+    f.store.beforeCheckpoint = () => {
+      if (++checkpoints === 2) throw new PipelineProblem("invalid-checkpoint");
+    };
+    const runtime = { ...f.runtime, chunkSize: 2 };
+    await expect(createPipelineOperations(definition, runtime).run()).rejects.toThrow(
+      "invalid-checkpoint",
+    );
+    const first = vi.mocked(f.writer.write).mock.calls.map(([request]) => request);
+    expect(first.map((request) => request.rows.map((row) => row.id))).toEqual([["a"], ["b"]]);
+    await expect(
+      createPipelineOperations(definition, { ...runtime, chunkSize: 3 }).retry("execution-1"),
+    ).rejects.toThrow("binding-changed");
+    expect((await f.executions.get("execution-1")).attempts).toBe(1);
+    const result = await createPipelineOperations(definition, runtime).retry("execution-1");
+    expect(result).toMatchObject({ inputCount: 5, outputCount: 4, filteredCount: 1 });
+    const calls = vi.mocked(f.writer.write).mock.calls.map(([request]) => request);
+    expect(calls.slice(2, 4).map((request) => request.batchId)).toEqual(
+      first.map((request) => request.batchId),
+    );
+    expect(calls.at(-1)?.rows.map((row) => row.id)).toEqual(["c", "d"]);
+    expect(f.rows.size).toBe(4);
+  });
+
+  it("requires a new run for legacy row receipts", async () => {
+    const f = await fixture();
+    f.store.beforeCheckpoint = () => {
+      throw new PipelineProblem("invalid-checkpoint");
+    };
+    await expect(f.operations.run()).rejects.toThrow("invalid-checkpoint");
+    const saved = f.store.records.get("execution-1");
+    if (!saved) throw new Error("missing execution");
+    const payload = { ...(saved.payload as Record<string, unknown>) };
+    delete payload.formatVersion;
+    f.store.records.set(saved.id, { ...saved, payload });
+    await expect(f.operations.retry(saved.id)).rejects.toThrow("binding-changed");
+    expect(f.writer.write).toHaveBeenCalledTimes(1);
+  });
+
+  it("rejects an unversioned checkpoint instead of installing its row-receipt cursor", async () => {
+    const f = await fixture();
+    let count = 0;
+    f.store.beforeCheckpoint = () => {
+      if (++count === 2) throw new PipelineProblem("invalid-checkpoint");
+    };
+    await expect(f.operations.run()).rejects.toThrow("invalid-checkpoint");
+    const saved = f.store.records.get("execution-1");
+    if (!saved?.checkpoints) throw new Error("missing checkpoint");
+    const checkpoint = saved.checkpoints["pipeline.chunkCheckpoint"] as {
+      cursor: Record<string, unknown>;
+    };
+    delete checkpoint.cursor.formatVersion;
+    f.store.records.set(saved.id, saved);
+    await expect(f.operations.retry(saved.id)).rejects.toThrow("invalid-checkpoint");
+    expect(f.writer.write).toHaveBeenCalledTimes(2);
+    expect(f.catalog.publishCandidate).not.toHaveBeenCalled();
+  });
+
+  it("checkpoints fully filtered input ranges before replaying a later durable output batch", async () => {
+    const f = await fixture([[raw("skip-1"), raw("skip-2"), raw("a"), raw("b"), raw("skip-3")]]);
+    const definition = {
+      ...f.definition,
+      processor: {
+        artifactHash: "e".repeat(64),
+        dependencies: [],
+        process: (row: CanonicalRow) => (String(row.id).startsWith("skip-") ? null : row),
+      },
+    };
+    let count = 0;
+    f.store.beforeCheckpoint = () => {
+      if (++count === 2) throw new PipelineProblem("invalid-checkpoint");
+    };
+    const operations = createPipelineOperations(definition, { ...f.runtime, chunkSize: 2 });
+    await expect(operations.run()).rejects.toThrow("invalid-checkpoint");
+    expect(f.writer.write).toHaveBeenCalledTimes(1);
+    expect(await operations.retry("execution-1")).toMatchObject({
+      inputCount: 5,
+      outputCount: 2,
+      filteredCount: 3,
+    });
+    const calls = vi.mocked(f.writer.write).mock.calls;
+    expect(calls).toHaveLength(2);
+    expect(calls[1][0].batchId).toBe(calls[0][0].batchId);
+    expect(f.store.checkpointWrites.at(-1)?.value).toMatchObject({ processedCount: 3 });
+    expect(f.rows.size).toBe(2);
+  });
+
+  it.each([1000, 10_000, 100_000])(
+    "writes %i inputs as bounded batches and seals exactly their receipts",
+    async (count) => {
+      const started = performance.now();
+      const heapBefore = process.memoryUsage().heapUsed;
+      const f = await fixture([Array.from({ length: count }, (_, index) => raw(`row-${index}`))]);
+      const operations = createPipelineOperations(f.definition, {
+        ...f.runtime,
+        chunkSize: 100,
+        maxInputRecords: count,
+      });
+      expect(await operations.run()).toMatchObject({ inputCount: count, outputCount: count });
+      expect(f.writer.write).toHaveBeenCalledTimes(count / 100);
+      const requests = vi.mocked(f.writer.write).mock.calls.map(([request]) => request);
+      expect(requests.map((request) => request.rows.length)).toEqual(Array(count / 100).fill(100));
+      expect(new Set(requests.map((request) => request.batchId)).size).toBe(count / 100);
+      expect(f.catalog.sealCandidate).toHaveBeenCalledWith(
+        expect.objectContaining({ expectedBatchIds: requests.map((request) => request.batchId) }),
+      );
+      console.info(
+        JSON.stringify({
+          workload: "file-pipeline",
+          rows: count,
+          writerCalls: requests.length,
+          elapsedMs: performance.now() - started,
+          heapDeltaBytes: process.memoryUsage().heapUsed - heapBefore,
+          note: "In-memory execution/catalog/writer fixture; heap includes retained rows, receipts and spies.",
+        }),
+      );
+    },
+    120_000,
+  );
+
   it("validates and previews actual files without loading, then publishes normalized rows", async () => {
     const f = await fixture();
     expect(await f.operations.validate()).toMatchObject({ inputCount: 2 });

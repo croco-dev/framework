@@ -70,6 +70,13 @@ serving reads under the new policy.
 Create an unpublished candidate with the current head and revision, write stable batch IDs, and
 seal it with an explicit list of durable receipts and complete source coverage. A commit response
 failure returns an indeterminate receipt: call `reconcileReceipt` before retrying the same batch.
+Each `write` accepts at most 10,000 rows and an 8 MiB ordered canonical payload array (including JSON
+string escaping). Oversized batches fail with `WAREHOUSE_BATCH_LIMIT`; reduce the chunk size in a
+new pipeline run. Suppression and existing-fact checks use bounded identity sets. Native multi-row
+inserts use at most 60,000 parameters per statement, while all statements and the one batch receipt
+commit atomically. Identical repeated identities within the batch count as duplicates; conflicting
+payloads roll back the batch. The existing ordered-payload hash and uncertain-commit reconciliation
+remain unchanged. These limits bound one write, not the accumulated execution checkpoint history.
 Publication checks the candidate fence, quality, current head, and revision in one transaction.
 Catalog queries (`describeDataset`, `pinSnapshot`, and `getCandidate`) use read-only transactions
 and need only SELECT grants on `warehouse_heads`, `warehouse_candidates`, and `warehouse_snapshots`

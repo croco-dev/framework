@@ -1,5 +1,11 @@
 import { beforeAll, describe, expect, it, vi } from "vitest";
-import { c, canonicalPayload, compileFact, defineFact } from "@croco/warehouse-core";
+import {
+  c,
+  canonicalPayload,
+  compileFact,
+  defineFact,
+  encodeIdentity,
+} from "@croco/warehouse-core";
 import type { FactDescriptor } from "@croco/warehouse-core";
 import type {
   WarehouseAccess,
@@ -68,7 +74,7 @@ function fixture(
     privacyEpoch: 0,
     quality: null,
   };
-  let stored: { receipt: WriteReceipt; payload_hash: string } | undefined;
+  const stored = new Map<string, { receipt: WriteReceipt; payload_hash: string }>();
   let loseCommit = options.lostCommit;
   const release = vi.fn();
   const query = vi.fn(async (sql: string, values?: unknown[]): Promise<{ rows: unknown[] }> => {
@@ -87,15 +93,25 @@ function fixture(
     if (sql.startsWith("SELECT permission_epoch"))
       return { rows: [{ permission_epoch: 0, privacy_epoch: options.privacyEpoch ?? 0 }] };
     if (sql.startsWith("SELECT descriptor")) return { rows: [{ descriptor }] };
-    if (sql.startsWith("SELECT receipt")) return { rows: stored ? [stored] : [] };
+    if (sql.startsWith("SELECT receipt")) {
+      const receipt = stored.get(String(values?.[1]));
+      return { rows: receipt ? [receipt] : [] };
+    }
     if (sql.startsWith("SELECT identity FROM warehouse_suppressions"))
       return { rows: options.suppressed ? [{ identity: "capture" }] : [] };
-    if (sql.startsWith("SELECT _payload"))
-      return { rows: options.existing ? [{ _payload: options.existing }] : [] };
+    if (sql.startsWith("SELECT _identity,_payload"))
+      return {
+        rows: options.existing
+          ? [{ _identity: encodeIdentity(descriptor, row, scope), _payload: options.existing }]
+          : [],
+      };
     if (sql.startsWith('INSERT INTO "wh_fact_') && options.failInsert)
       throw new Error("storage failure");
     if (sql.startsWith("INSERT INTO warehouse_receipts"))
-      stored = { payload_hash: String(values?.[3]), receipt: values?.[4] as WriteReceipt };
+      stored.set(String(values?.[1]), {
+        payload_hash: String(values?.[3]),
+        receipt: values?.[4] as WriteReceipt,
+      });
     if (sql === "COMMIT" && loseCommit) {
       loseCommit = false;
       throw new Error("connection lost after commit");
@@ -126,6 +142,94 @@ function fixture(
 }
 
 describe("PostgresWarehouseWriter", () => {
+  it("counts identical rows within a batch once and rejects an intra-batch conflict atomically", async () => {
+    const test = fixture();
+    expect(
+      await test.writer.write({ ...test.request, rows: [row, row, { ...row, id: "other" }] }),
+    ).toMatchObject({ inserted: 2, identical: 1 });
+    const conflict = fixture();
+    await expect(
+      conflict.writer.write({ ...conflict.request, rows: [row, { ...row, amount: "7" }] }),
+    ).rejects.toThrow("WAREHOUSE_FACT_CONFLICT");
+    expect(conflict.query.mock.calls.some(([sql]) => sql.startsWith("INSERT"))).toBe(false);
+    expect(await conflict.writer.reconcileReceipt(conflict.request)).toBeNull();
+  });
+
+  it("bounds row count, serialized bytes and native query parameters", async () => {
+    const test = fixture();
+    await expect(
+      test.writer.write({ ...test.request, rows: Array(10_001).fill(row) }),
+    ).rejects.toThrow("WAREHOUSE_BATCH_LIMIT");
+    expect(test.query).not.toHaveBeenCalled();
+    await expect(
+      test.writer.write({
+        ...test.request,
+        rows: Array(10_000).fill({ ...row, id: "x".repeat(1000) }),
+      }),
+    ).rejects.toThrow("WAREHOUSE_BATCH_LIMIT");
+    expect(test.query.mock.calls.some(([sql]) => sql.startsWith("INSERT"))).toBe(false);
+    test.query.mockClear();
+    const rows = Array.from({ length: 10_000 }, (_, index) => ({ ...row, id: `row-${index}` }));
+    expect(await test.writer.write({ ...test.request, rows })).toMatchObject({ inserted: 10_000 });
+    const inserts = test.query.mock.calls.filter(([sql]) =>
+      sql.startsWith('INSERT INTO "wh_fact_'),
+    );
+    expect(inserts).toHaveLength(2);
+    expect(inserts.map(([, values]) => values?.length)).toEqual([59_997, 10_003]);
+  });
+
+  it.each([1000, 10_000, 100_000])(
+    "keeps SQL and transactions proportional to batches for %i synthetic rows",
+    async (count) => {
+      const test = fixture();
+      const started = performance.now();
+      const heapBefore = process.memoryUsage().heapUsed;
+      for (let start = 0; start < count; start += 100) {
+        const rows = Array.from({ length: 100 }, (_, index) => ({
+          ...row,
+          id: `row-${start + index}`,
+        }));
+        expect(
+          await test.writer.write({ ...test.request, batchId: `range-${start}`, rows }),
+        ).toMatchObject({ inserted: 100 });
+      }
+      expect(test.query.mock.calls).toHaveLength(count / 10);
+      expect(test.query.mock.calls.filter(([sql]) => sql === "BEGIN")).toHaveLength(count / 100);
+      expect(test.query.mock.calls.filter(([sql]) => sql === "COMMIT")).toHaveLength(count / 100);
+      console.info(
+        JSON.stringify({
+          workload: "synthetic-writer",
+          rows: count,
+          writerCalls: count / 100,
+          transactions: count / 100,
+          sqlCalls: test.query.mock.calls.length,
+          elapsedMs: performance.now() - started,
+          heapDeltaBytes: process.memoryUsage().heapUsed - heapBefore,
+          note: "Mock transport; heap includes retained spy calls, not a live database benchmark.",
+        }),
+      );
+    },
+    120_000,
+  );
+
+  it("uses set reads and a bounded multi-row insert for a batch", async () => {
+    const test = fixture();
+    const rows = Array.from({ length: 1000 }, (_, index) => ({ ...row, id: `row-${index}` }));
+    expect(await test.writer.write({ ...test.request, rows })).toMatchObject({
+      state: "durable",
+      inserted: 1000,
+      identical: 0,
+    });
+    expect(test.query.mock.calls.filter(([sql]) => sql === "BEGIN")).toHaveLength(1);
+    expect(test.query.mock.calls.filter(([sql]) => sql === "COMMIT")).toHaveLength(1);
+    expect(test.query.mock.calls).toHaveLength(10);
+    const inserts = test.query.mock.calls.filter(([sql]) =>
+      sql.startsWith('INSERT INTO "wh_fact_'),
+    );
+    expect(inserts).toHaveLength(1);
+    expect(inserts[0]?.[1]).toHaveLength(7000);
+  });
+
   it("stores typed values without rounding and locks head before candidate and writes", async () => {
     const test = fixture();
     expect(test.query).not.toHaveBeenCalled();

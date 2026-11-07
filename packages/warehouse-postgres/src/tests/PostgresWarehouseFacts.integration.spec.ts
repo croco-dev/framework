@@ -1142,11 +1142,15 @@ describe.skipIf(!realResourcesEnabled)("PostgreSQL warehouse facts", () => {
       fence: candidate.fence,
       batchId: "response-lost",
       attempt: 1,
-      rows: [row("fault", "10")],
+      rows: [row("fault", "10"), row("exact", "9007199254740993"), row("fault", "10")],
     };
     expect((await uncertain.write(request)).state).toBe("indeterminate");
-    expect((await store.writer.reconcileReceipt(request))?.state).toBe("durable");
-    expect((await store.writer.write(request)).state).toBe("durable");
+    const durable = await store.writer.reconcileReceipt(request);
+    expect(durable).toMatchObject({ state: "durable", inserted: 2, identical: 1 });
+    expect(await store.writer.write(request)).toEqual(durable);
+    await expect(store.writer.write({ ...request, rows: [row("fault", "11")] })).rejects.toThrow(
+      "WAREHOUSE_BATCH_CONFLICT",
+    );
   }, 120_000);
 
   it("reconciles an epoch-changing suppression after a committed response is lost", async () => {
