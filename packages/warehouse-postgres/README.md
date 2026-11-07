@@ -71,6 +71,13 @@ Create an unpublished candidate with the current head and revision, write stable
 seal it with an explicit list of durable receipts and complete source coverage. A commit response
 failure returns an indeterminate receipt: call `reconcileReceipt` before retrying the same batch.
 Publication checks the candidate fence, quality, current head, and revision in one transaction.
+Catalog queries (`describeDataset`, `pinSnapshot`, and `getCandidate`) use read-only transactions
+and need only SELECT grants on `warehouse_heads`, `warehouse_candidates`, and `warehouse_snapshots`
+after schema installation. They do not initialize missing heads or acquire row locks. An absent head
+is described as an empty dataset at revision zero; missing snapshots and candidates retain their
+explicit unavailable/fence errors. Mutations initialize and lock heads with separate writer credentials.
+Catalog reads explicitly use READ COMMITTED isolation so their final head-epoch check sees concurrent
+commits even when the pool defaults to a stronger isolation level. Results invalidated during the query fail explicitly.
 `describeDataset` returns management metadata under current server access. Its `headId` and
 `revision` are the publication CAS basis, including when `head` metadata is unavailable. `headStatus`
 is `empty` before publication, `stale` when retained metadata has old permission/privacy epochs,

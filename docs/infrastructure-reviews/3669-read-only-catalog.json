@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "warehouse-postgres",
+      "classification": "durable-provider",
+      "reason": "Catalog read APIs use SELECT-only transactions without initializing or locking heads or candidates. Mutation initialization, locking, epoch checks and publication CAS remain owned by the existing PostgreSQL provider.",
+      "files": {
+        "packages/warehouse-postgres/src/facts/PostgresWarehouseCatalog.ts": "3ea756ee98059a8080eec40345fe4b6847ab7f35b8d8ded39760c2f3202fd739"
+      },
+      "catalogRuntimes": ["node", "lambda"],
+      "profiles": {
+        "kubernetes": {
+          "result": "conditional",
+          "reason": "Reuse the existing Node PostgreSQL pool with SELECT-only catalog credentials after explicit schema installation.",
+          "providers": ["@croco/warehouse-postgres/facts"],
+          "constraints": [
+            "Provision schema and publications with writer credentials; queries require SELECT on catalog metadata tables.",
+            "Synthetic local PostgreSQL verification does not certify a deployed Kubernetes cluster."
+          ],
+          "references": [
+            "packages/warehouse-postgres/src/facts/PostgresWarehouseCatalog.ts",
+            "packages/warehouse-postgres/src/tests/PostgresWarehouseFacts.integration.spec.ts",
+            "packages/warehouse-postgres/README.md",
+            "docs/package-catalog.json"
+          ]
+        },
+        "aws-lambda": {
+          "result": "conditional",
+          "reason": "Reuse the Node PostgreSQL provider with invocation-bounded transactions and application-owned connections.",
+          "providers": ["@croco/warehouse-postgres/facts"],
+          "constraints": [
+            "Finish catalog transactions before returning from the invocation; configure and dispose pools in the owning application lifecycle.",
+            "No live Lambda or database deployment certification is claimed."
+          ],
+          "references": [
+            "packages/warehouse-postgres/src/facts/PostgresWarehouseCatalog.ts",
+            "packages/warehouse-postgres/src/tests/PostgresWarehouseFacts.integration.spec.ts",
+            "packages/warehouse-postgres/README.md",
+            "docs/package-catalog.json"
+          ]
+        },
+        "cloudflare": {
+          "result": "unsupported",
+          "reason": "The pg/Node provider has no Workers isolate runtime claim; this change introduces no Worker adapter or Node Container deployment.",
+          "providers": ["@croco/warehouse-postgres/facts"],
+          "constraints": [
+            "Do not infer warehouse provider support from the separate Hyperdrive transaction integration."
+          ],
+          "references": [
+            "packages/warehouse-postgres/src/facts/PostgresWarehouseCatalog.ts",
+            "packages/warehouse-postgres/src/tests/PostgresWarehouseFacts.integration.spec.ts",
+            "packages/warehouse-postgres/README.md",
+            "docs/package-catalog.json"
+          ]
+        }
+      }
+    }
+  ]
+}
