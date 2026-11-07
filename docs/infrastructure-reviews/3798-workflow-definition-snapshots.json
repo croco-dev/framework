@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "workflow-core",
+      "classification": "pure-contract",
+      "reason": "Registered workflow graphs and typed builder definitions retain their declared steps, execution policy and trigger configuration when caller or reader objects are mutated.",
+      "files": {
+        "packages/workflow-core/src/libs/WorkflowRegistry.ts": "68d30ae86b408d5d10e042d8d575b4c6d52c86105d01e2d76ace3af49deb35fa",
+        "packages/workflow-core/src/libs/defineWorkflow.ts": "9e081e1bfff04061e676958d499313db7a1219f3c7d5cb398722bd34ddb16305"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Definition snapshots copy and freeze only workflow-owned JavaScript structures. They introduce no host capabilities, storage, transport, initialization or shutdown boundary. Handler targets and resolver functions retain their identity.",
+          "providers": [],
+          "constraints": [
+            "This change does not establish deployment support or provider certification. Existing task execution, retry and cancellation contracts are unchanged."
+          ],
+          "references": [
+            "packages/workflow-core/src/libs/WorkflowRegistry.ts",
+            "packages/workflow-core/src/libs/defineWorkflow.ts",
+            "packages/workflow-core/src/tests/WorkflowCore.spec.ts",
+            "packages/workflow-core/src/libs/WorkflowRunner.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Definition snapshots copy and freeze only workflow-owned JavaScript structures. They introduce no host capabilities, storage, transport, initialization or shutdown boundary. Handler targets and resolver functions retain their identity.",
+          "providers": [],
+          "constraints": [
+            "This change does not establish deployment support or provider certification. Existing task execution, retry and cancellation contracts are unchanged."
+          ],
+          "references": [
+            "packages/workflow-core/src/libs/WorkflowRegistry.ts",
+            "packages/workflow-core/src/libs/defineWorkflow.ts",
+            "packages/workflow-core/src/tests/WorkflowCore.spec.ts",
+            "packages/workflow-core/src/libs/WorkflowRunner.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Definition snapshots copy and freeze only workflow-owned JavaScript structures. They introduce no host capabilities, storage, transport, initialization or shutdown boundary. Handler targets and resolver functions retain their identity.",
+          "providers": [],
+          "constraints": [
+            "This change does not establish deployment support or provider certification. Existing task execution, retry and cancellation contracts are unchanged."
+          ],
+          "references": [
+            "packages/workflow-core/src/libs/WorkflowRegistry.ts",
+            "packages/workflow-core/src/libs/defineWorkflow.ts",
+            "packages/workflow-core/src/tests/WorkflowCore.spec.ts",
+            "packages/workflow-core/src/libs/WorkflowRunner.ts"
+          ]
+        }
+      }
+    }
+  ]
+}
