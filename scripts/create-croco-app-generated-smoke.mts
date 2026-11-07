@@ -1404,6 +1404,11 @@ const smokeCaseDefinitionsWithoutLint: readonly Omit<SmokeCase, "tier" | "adviso
       { label: "product typecheck", packagePath: ["apps", "web"], args: ["typecheck"] },
       { label: "build", args: ["build"] },
       { label: "local product HTTP smoke", packagePath: ["apps", "web"], args: ["product:smoke"] },
+      {
+        label: "Next DI development HTTP smoke",
+        packagePath: ["apps", "web"],
+        args: ["di:dev:smoke"],
+      },
     ],
   },
   {

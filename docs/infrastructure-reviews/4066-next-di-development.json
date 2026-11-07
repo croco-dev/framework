@@ -1,0 +1,65 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "create-croco-app",
+      "classification": "pure-contract",
+      "reason": "The existing Node Next.js scaffold connects its development webpack lifecycle to generated DI and app-local runtime retirement. Production compilation remains one-shot; no deployment Host or Provider support is added.",
+      "files": {
+        "packages/create-croco-app/src/generator.ts": "95856c10133740f5e4e67043d8046d7720de8048e94a4527b252e5be1d85dbf4",
+        "packages/create-croco-app/src/installers/trpc-nextjs.ts": "6c89a2fcb64093a2bf78a03d8f20e2a8da1d05481f6bdda7b7c577f3d5822951"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "This is development-time Next/webpack tooling and its app-local scope boundary, not a deployed Node Host capability. Existing production graph generation and deployment selections remain unchanged.",
+          "providers": [
+            "@croco/esbuild-plugin:compileDiGraph",
+            "@croco/framework-module:ApplicationRuntime"
+          ],
+          "constraints": [
+            "Only the existing Node Next.js development path is exercised. No deployed infrastructure, Lambda/Workers execution or provider certification is claimed. Native Next owns watcher/process shutdown."
+          ],
+          "references": [
+            "packages/create-croco-app/templates/addons/trpc-nextjs/apps/web/scripts/di.mjs",
+            "packages/create-croco-app/src/tests/NextDiDevelopment.spec.ts",
+            "packages/create-croco-app/templates/addons/trpc-nextjs/apps/web/scripts/di-dev-smoke.mts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "This is development-time Next/webpack tooling and its app-local scope boundary, not a deployed Lambda Host capability. Existing production graph generation and deployment selections remain unchanged.",
+          "providers": [
+            "@croco/esbuild-plugin:compileDiGraph",
+            "@croco/framework-module:ApplicationRuntime"
+          ],
+          "constraints": [
+            "Only the existing Node Next.js development path is exercised. No deployed infrastructure, Lambda/Workers execution or provider certification is claimed. Native Next owns watcher/process shutdown."
+          ],
+          "references": [
+            "packages/create-croco-app/templates/addons/trpc-nextjs/apps/web/scripts/di.mjs",
+            "packages/create-croco-app/src/tests/NextDiDevelopment.spec.ts",
+            "packages/create-croco-app/templates/addons/trpc-nextjs/apps/web/scripts/di-dev-smoke.mts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "This is development-time Next/webpack tooling and its app-local scope boundary, not a deployed Workers Host or explicit Node Container capability. Existing production graph generation and deployment selections remain unchanged.",
+          "providers": [
+            "@croco/esbuild-plugin:compileDiGraph",
+            "@croco/framework-module:ApplicationRuntime"
+          ],
+          "constraints": [
+            "Only the existing Node Next.js development path is exercised. No deployed infrastructure, Lambda/Workers execution or provider certification is claimed. Native Next owns watcher/process shutdown."
+          ],
+          "references": [
+            "packages/create-croco-app/templates/addons/trpc-nextjs/apps/web/scripts/di.mjs",
+            "packages/create-croco-app/src/tests/NextDiDevelopment.spec.ts",
+            "packages/create-croco-app/templates/addons/trpc-nextjs/apps/web/scripts/di-dev-smoke.mts"
+          ]
+        }
+      }
+    }
+  ]
+}

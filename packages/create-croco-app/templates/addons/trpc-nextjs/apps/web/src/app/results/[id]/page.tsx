@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { application } from "../../../server/application";
+import { withApplication } from "../../../server/application";
 import { ProductTrials, TrialProblem } from "../../../server/product/ProductTrials";
 import type { TrialResult } from "../../../server/product/ProductTrials";
 import { requirePageIdentity } from "../../../server/pageIdentity";
@@ -11,7 +11,9 @@ export default async function ResultPage({ params }: { params: Promise<{ id: str
   const id = (await params).id;
   let result: TrialResult;
   try {
-    result = await application.run(() => application.get(ProductTrials).get(identity, id));
+    result = await withApplication((application) =>
+      application.get(ProductTrials).get(identity, id),
+    );
   } catch (error) {
     if (error instanceof TrialProblem && error.status === 404) notFound();
     throw error;

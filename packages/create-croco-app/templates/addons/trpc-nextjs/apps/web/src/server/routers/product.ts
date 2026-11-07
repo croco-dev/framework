@@ -1,6 +1,5 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { application } from "../application";
 import { isLocalSameOrigin } from "../LocalSessionProvider";
 import { ProductTrials, TrialProblem, trialInputSchema } from "../product/ProductTrials";
 import { publicProcedure, router } from "../trpc";
@@ -41,12 +40,12 @@ export const productRouter = router({
     .input(trialInputSchema)
     .mutation(({ ctx, input }) =>
       domainCall(() =>
-        application.get(ProductTrials).create(ctx.identity, input, ctx.correlationId),
+        ctx.application.get(ProductTrials).create(ctx.identity, input, ctx.correlationId),
       ),
     ),
   get: authenticated
     .input(z.object({ id: z.string().uuid() }))
     .query(({ ctx, input }) =>
-      domainCall(() => application.get(ProductTrials).get(ctx.identity, input.id)),
+      domainCall(() => ctx.application.get(ProductTrials).get(ctx.identity, input.id)),
     ),
 });
