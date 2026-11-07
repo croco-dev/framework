@@ -382,7 +382,7 @@ describe("createIsrMiddleware", () => {
     expect(renderCount).toBe(2);
   });
 
-  it("keeps caching when header names merely contain identity substrings", async () => {
+  it("keeps unrecognized Vary dimensions uncached", async () => {
     let renderCount = 0;
     const middleware = createIsrMiddleware({
       cache,
@@ -398,8 +398,8 @@ describe("createIsrMiddleware", () => {
     const second = await middleware(new Request("https://example.com/page"));
 
     await expect(first.text()).resolves.toBe("consent-1");
-    await expect(second.text()).resolves.toBe("consent-1");
-    expect(renderCount).toBe(1);
+    await expect(second.text()).resolves.toBe("consent-2");
+    expect(renderCount).toBe(2);
   });
 });
 
