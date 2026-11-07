@@ -170,6 +170,99 @@ describe("executeRetryLoop", () => {
     expect(waitSpy).toHaveBeenCalledTimes(1);
   });
 
+  it("should preserve a single failure when a policy rejects invalid attempt numbers", async () => {
+    const failure = new Error("upstream unavailable");
+    const shouldRetry = vi.fn((_error: unknown, attempt: number, maxAttempts: number) => {
+      if (attempt < 1) throw new Error(`invalid attempt ${attempt}`);
+      return attempt < maxAttempts;
+    });
+    const singleContext = new RetryContext("execute", [], 1);
+    const onExhausted = vi.fn();
+
+    await expect(
+      executeRetryLoop(
+        async () => {
+          throw failure;
+        },
+        {
+          maxAttempts: 1,
+          retryPolicy: { shouldRetry },
+          backoffPolicy,
+          context: singleContext,
+        },
+        { onExhausted },
+      ),
+    ).rejects.toBe(failure);
+
+    expect(shouldRetry).toHaveBeenCalledExactlyOnceWith(failure, 1, 1);
+    expect(singleContext.exhausted).toBe(false);
+    expect(onExhausted).not.toHaveBeenCalled();
+  });
+
+  it("should evaluate a stateful policy once for each actual failure", async () => {
+    const failures = [new Error("first"), new Error("second"), new Error("last")];
+    const shouldRetry = vi.fn(() => true);
+    const callback = vi
+      .fn()
+      .mockRejectedValueOnce(failures[0])
+      .mockRejectedValueOnce(failures[1])
+      .mockRejectedValueOnce(failures[2]);
+    const onExhausted = vi.fn();
+
+    await expect(
+      executeRetryLoop(
+        callback,
+        {
+          maxAttempts: 3,
+          retryPolicy: { shouldRetry },
+          backoffPolicy,
+          context,
+        },
+        { onExhausted },
+      ),
+    ).rejects.toMatchObject({ cause: failures[2] });
+
+    expect(shouldRetry.mock.calls).toEqual([
+      [failures[0], 1, 3],
+      [failures[1], 2, 3],
+      [failures[2], 3, 3],
+    ]);
+    expect(callback).toHaveBeenCalledTimes(3);
+    expect(context.exhausted).toBe(true);
+    expect(onExhausted).toHaveBeenCalledExactlyOnceWith(failures[2], context);
+  });
+
+  it.each([1, 3])(
+    "should keep a rejected failure terminal with attempt limit %i",
+    async (maxAttempts) => {
+      const failure = new Error("terminal failure");
+      const shouldRetry = vi.fn(() => false);
+      const isRetryable = vi.fn(() => false);
+      const onExhausted = vi.fn();
+      const rejectionContext = new RetryContext("execute", [], maxAttempts);
+
+      await expect(
+        executeRetryLoop(
+          async () => {
+            throw failure;
+          },
+          {
+            maxAttempts,
+            retryPolicy: { shouldRetry, isRetryable },
+            backoffPolicy,
+            context: rejectionContext,
+          },
+          { onExhausted },
+        ),
+      ).rejects.toBe(failure);
+
+      expect(shouldRetry).toHaveBeenCalledExactlyOnceWith(failure, 1, maxAttempts);
+      expect(isRetryable.mock.calls).toEqual(maxAttempts === 1 ? [[failure]] : []);
+      expect(rejectionContext.exhausted).toBe(false);
+      expect(onExhausted).not.toHaveBeenCalled();
+    },
+  );
+
   it("should abort before the first attempt", async () => {
     const controller = new AbortController();
     const callback = vi.fn().mockResolvedValue("result");

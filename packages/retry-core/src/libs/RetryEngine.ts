@@ -113,13 +113,7 @@ export async function executeRetryLoop<T>(
       const isRetryable = retryPolicy.shouldRetry(policyError, attempt, maxAttempts);
 
       if (!hasAttemptsLeft) {
-        const wasRetryablePreviously = retryPolicy.shouldRetry(
-          policyError,
-          attempt - 1,
-          maxAttempts,
-        );
-
-        if (!isRetryable && !wasRetryablePreviously) {
+        if (!isRetryable && !retryPolicy.isRetryable?.(policyError)) {
           throw retryError;
         }
 

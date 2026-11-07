@@ -114,6 +114,12 @@ HALF_OPEN 상태, generation marker(마지막 실패 시각), 활성 슬롯 및 
 
 ### 실패 분류
 
+사용자 `RetryPolicy.shouldRetry(error, attempt, maxAttempts)`는 실제 실패마다 한 번 호출됩니다. `attempt`는 1부터 시작하는 현재 시도이며 `maxAttempts`는 설정한 한도입니다. 마지막 실패에도 같은 실제 번호를 전달하며, `true`를 반환해도 한도를 넘겨 실행하지 않습니다. 마지막 `true`는 소진으로 처리되어 recovery와 exhausted 훅으로 이어집니다.
+
+시도 한도를 포함해 판단하는 정책은 선택적 `isRetryable(error)`로 오류 자체의 분류를 제공할 수 있습니다. 엔진은 마지막 `shouldRetry`가 `false`일 때만 이 분류를 호출합니다. 분류가 `true`이면 소진·복구 경로로 이어지고, `false`이거나 분류가 없으면 원래 오류를 바로 전달하며 recovery, exhausted 훅, `wrapExhausted`를 거치지 않습니다. 앞선 시도의 `false`에는 이 분류를 호출하지 않습니다. 기존 사용자 정책이 마지막 시도에서 한도 때문에 `false`를 반환하면서 recovery를 사용했다면 `isRetryable`에 해당 정책의 오류 분류를 제공해야 합니다. 엔진은 마지막 오류를 이전 시도 번호나 0번 시도로 다시 평가하지 않습니다.
+
+`DefaultRetryPolicy.shouldRetry`의 한도 검사는 유지됩니다. 기본 정책의 `isRetryable`은 같은 `retryFor`·`noRetryFor`·Problem 분류를 한도와 독립적으로 적용하므로 기본 소진·복구 동작은 유지됩니다. 기본 정책을 상속해 분류를 바꿀 때는 `isRetryable`을 재정의해 일반 시도와 마지막 소진 판단에 같은 분류를 적용합니다.
+
 기본 정책은 `ProblemCategory.InternalServerError`와 `ProblemCategory.TooManyRequests`를 재시도 가능한 transient 실패로 취급합니다. `BadRequest`, `ValidationError`, `BusinessRuleViolation`, `Conflict`, 인증/인가, not-found 계열은 기본적으로 terminal 실패입니다.
 
 오류가 재시도 분류를 명시하면 기본 정책은 category보다 그 값을 먼저 따릅니다. 최상위 `retryable` boolean, 그다음 `extensions.retryable` boolean을 `@croco/problems-core`의 `readExplicitRetryability()`로 읽습니다. 따라서 `extensions.retryable: false`인 `InternalServerError` Problem은 한 번만 실행되고, `extensions.retryable: true`인 `Conflict` Problem은 남은 시도 안에서 재시도됩니다. `noRetryFor`에 해당하는 오류는 명시 분류와 관계없이 재시도하지 않으며, 명시 분류가 없는 오류에는 기존 `retryFor`와 category 규칙이 그대로 적용됩니다. 명시 `false`는 다른 terminal 실패처럼 원래 오류를 바로 throw하므로 recovery 콜백, `@Recover`, exhausted 리스너, `wrapExhausted`를 거치지 않습니다. 반대로 명시 `true`인 오류는 terminal category라도 시도를 모두 소진한 뒤 recovery 콜백, `@Recover`, exhausted 리스너, `wrapExhausted`로 이어집니다. `Error`가 아닌 값을 throw하면 재시도 엔진이 `Error`로 감싸므로 그 값의 명시 분류는 정책에 전달되지 않습니다.

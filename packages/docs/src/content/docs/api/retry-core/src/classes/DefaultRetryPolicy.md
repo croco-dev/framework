@@ -29,11 +29,35 @@ Default retry policy that honors an error's explicit `retryable` classification 
 
 ## Methods
 
+### isRetryable()
+
+> **isRetryable**(`error`): `boolean`
+
+Classify an error without applying the attempt limit.
+
+#### Parameters
+
+##### error
+
+`unknown`
+
+#### Returns
+
+`boolean`
+
+#### Implementation of
+
+[`RetryPolicy`](/api/retry-core/src/interfaces/retrypolicy/).[`isRetryable`](/api/retry-core/src/interfaces/retrypolicy/#isretryable)
+
+---
+
 ### shouldRetry()
 
 > **shouldRetry**(`error`, `attempt`, `maxAttempts`): `boolean`
 
 Check if the given error should be retried.
+Called once per failed operation with its actual attempt and configured limit.
+A false result is terminal unless the final failure is classified by `isRetryable`.
 
 #### Parameters
 
