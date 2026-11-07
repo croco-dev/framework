@@ -1,6 +1,15 @@
 // croco-test-clock: controlled
+import { setImmediate as nextTurn } from "node:timers/promises";
 import { describe, expect, it } from "vitest";
 import { CircuitState, InMemoryCircuitBreakerStateStore } from "../libs/CircuitBreakerState";
+
+function createGate() {
+  let release!: () => void;
+  const promise = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  return { promise, release };
+}
 
 describe("InMemoryCircuitBreakerStateStore", () => {
   const fixedNow = () => 10_000;
@@ -94,6 +103,127 @@ describe("InMemoryCircuitBreakerStateStore", () => {
   });
 
   describe("reset", () => {
+    it.each([
+      { method: "reset", rejectOwner: false },
+      { method: "resetAll", rejectOwner: false },
+      { method: "reset", rejectOwner: true },
+      { method: "resetAll", rejectOwner: true },
+    ] as const)(
+      "$method preserves queued locks when rejectOwner=$rejectOwner",
+      async ({ method, rejectOwner }) => {
+        let now = 0;
+        const store = new InMemoryCircuitBreakerStateStore({
+          now: () => now,
+          maxEntries: 1,
+          idleTtlMs: 5,
+        });
+        const entered: string[] = [];
+        const firstEntered = createGate();
+        const releaseFirst = createGate();
+        const secondEntered = createGate();
+        const releaseSecond = createGate();
+        const failure = new Error("owner failed");
+        await store.setState("shared", CircuitState.HALF_OPEN);
+        await store.incrementFailureCount("shared");
+        await store.setLastFailureTime("shared", 123);
+        await store.setHalfOpenActiveCount("shared", 2);
+        await store.setHalfOpenSuccessCount("shared", 3);
+
+        const first = store.withCircuitLock("shared", async () => {
+          entered.push("first");
+          firstEntered.release();
+          await releaseFirst.promise;
+          if (rejectOwner) throw failure;
+          return "first result";
+        });
+        const firstOutcome = first.then(
+          (value) => ({ value }),
+          (error: unknown) => ({ error }),
+        );
+        await firstEntered.promise;
+        const second = store.withCircuitLock("shared", async () => {
+          entered.push("second");
+          secondEntered.release();
+          await releaseSecond.promise;
+          return "second result";
+        });
+        let third: Promise<number> | undefined;
+
+        try {
+          await store[method]("shared");
+          expect(await store.getState("shared")).toBe(CircuitState.CLOSED);
+          expect(await store.getFailureCount("shared")).toBe(0);
+          expect(await store.getLastFailureTime("shared")).toBeNull();
+          expect(await store.getHalfOpenActiveCount("shared")).toBe(0);
+          expect(await store.getHalfOpenSuccessCount("shared")).toBe(0);
+
+          third = store.withCircuitLock("shared", async () => {
+            entered.push("third");
+            return store.incrementFailureCount("shared");
+          });
+          now = 6;
+          await expect(store.withCircuitLock("independent", async () => "parallel")).resolves.toBe(
+            "parallel",
+          );
+          await nextTurn();
+          expect(entered).toEqual(["first"]);
+
+          releaseFirst.release();
+          expect(await firstOutcome).toEqual(
+            rejectOwner ? { error: failure } : { value: "first result" },
+          );
+          await secondEntered.promise;
+          await nextTurn();
+          expect(entered).toEqual(["first", "second"]);
+
+          releaseSecond.release();
+          await expect(second).resolves.toBe("second result");
+          await expect(third).resolves.toBe(1);
+          expect(entered).toEqual(["first", "second", "third"]);
+
+          now = 12;
+          expect(await store.getFailureCount("shared")).toBe(0);
+          await store.incrementFailureCount("shared");
+          await store.incrementFailureCount("replacement");
+          expect(await store.getFailureCount("shared")).toBe(0);
+          expect(await store.getFailureCount("replacement")).toBe(1);
+        } finally {
+          releaseFirst.release();
+          releaseSecond.release();
+          await Promise.allSettled([first, second, third]);
+        }
+      },
+    );
+
+    it.each(["reset", "resetAll"] as const)(
+      "%s inside a lock does not deadlock or admit another owner",
+      async (method) => {
+        const store = new InMemoryCircuitBreakerStateStore({ now: fixedNow });
+        const resetFinished = createGate();
+        const releaseOwner = createGate();
+        const entered: string[] = [];
+        const owner = store.withCircuitLock("shared", async () => {
+          await store[method]("shared");
+          entered.push("owner");
+          resetFinished.release();
+          await releaseOwner.promise;
+        });
+        let waiter: Promise<void> | undefined;
+        try {
+          await resetFinished.promise;
+          waiter = store.withCircuitLock("shared", async () => {
+            entered.push("waiter");
+          });
+          await nextTurn();
+          expect(entered).toEqual(["owner"]);
+        } finally {
+          releaseOwner.release();
+          await Promise.allSettled([owner, waiter]);
+        }
+        expect(entered).toEqual(["owner", "waiter"]);
+      },
+    );
+
     it("특정 회로의 상태를 초기화할 수 있어야 한다", async () => {
       const store = new InMemoryCircuitBreakerStateStore({ now: fixedNow });
       await store.setState("circuit-1", CircuitState.OPEN);
