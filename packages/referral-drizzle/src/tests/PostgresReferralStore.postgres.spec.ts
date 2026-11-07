@@ -1,7 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { PgDialect } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { PostgresReferralStore, ReferralPersistenceProblem } from "../index";
@@ -10,6 +10,7 @@ import { ReferralService } from "@croco/referral-core";
 import {
   ReferralAttributionStateConflictProblem,
   ReferralDuplicateClaimProblem,
+  ReferralExistingCustomerProblem,
   ReferralQualificationRejectedProblem,
   ReferralBudgetExhaustedProblem,
   ReferralSubjectLimitReachedProblem,
@@ -18,6 +19,8 @@ import type {
   ReferralFulfillmentPort,
   ReferralSubject,
   ReferralQualificationHook,
+  ReferralNoveltyHook,
+  ReferralNoveltyVerdict,
 } from "@croco/referral-core";
 
 const url = process.env.REFERRALS_TEST_DATABASE_URL;
@@ -102,6 +105,7 @@ function serviceFor(
   store: PostgresReferralStore,
   qualification: ReferralQualificationHook = () => ({ qualified: false, reason: "no purchase" }),
   fulfillment: ReferralFulfillmentPort = fulfillmentOk(),
+  novelty: ReferralNoveltyHook = () => ({ novelty: "new", reason: "new signup" }),
 ): ReferralService {
   return new ReferralService({
     store,
@@ -109,7 +113,7 @@ function serviceFor(
       generateToken: () => randomUUID(),
       hashToken: (token) => createHash("sha256").update(token).digest("hex"),
     },
-    novelty: () => ({ novelty: "new", reason: "new signup" }),
+    novelty,
     qualification,
     fulfillment,
     clock: () => new Date("2026-02-01T00:00:00Z"),
@@ -143,6 +147,64 @@ async function seed(
 }
 
 describe.skipIf(!url)("PostgreSQL referral budgets and attribution recovery", () => {
+  it.each(["unknown", "existing", "new"] as const)(
+    "rechecks held novelty as %s across independent stores without duplicate budget or benefits",
+    async (nextNovelty) => {
+      await withStores(async (pool, storeA, storeB) => {
+        let verdict: ReferralNoveltyVerdict = { novelty: "unknown", reason: "source unavailable" };
+        const novelty = vi.fn<ReferralNoveltyHook>(() => verdict);
+        const qualification = vi.fn<ReferralQualificationHook>(() => ({
+          qualified: true,
+          sourceEventId: "purchase-1",
+          qualifyingAction: "purchase",
+          eligibleReason: "paid",
+        }));
+        const a = serviceFor(storeA, qualification, fulfillmentOk(), novelty);
+        const b = serviceFor(storeB, qualification, fulfillmentOk(), novelty);
+        const { programId, token } = await seed(a);
+        const { attribution } = await a.claimAttribution({ token, recipient: subject("held") });
+        await a.claimAttribution({ token, recipient: subject("other") });
+        verdict = { novelty: nextNovelty, reason: "authoritative recheck" };
+        const input = { attributionId: attribution.id, recipient: subject("held") };
+        const results = await Promise.allSettled([
+          a.qualifyAttribution(input),
+          b.qualifyAttribution(input),
+        ]);
+        const stored = await storeB.getAttribution(attribution.id);
+        const intents = await storeB.listBenefitIntents({ attributionId: attribution.id });
+        const budget = await storeB.transact((tx) => tx.readBudgetReserved(programId, 1));
+        if (nextNovelty === "existing") {
+          expect(
+            results.filter((result) => result.status === "rejected").map((result) => result.reason),
+          ).toEqual(
+            expect.arrayContaining([
+              expect.any(ReferralExistingCustomerProblem),
+              expect.any(ReferralAttributionStateConflictProblem),
+            ]),
+          );
+          expect(stored).toMatchObject({
+            state: "rejected",
+            rejectReason: "existing-customer",
+          });
+          expect(stored?.holdReason).toBeUndefined();
+          expect(budget).toBe("10");
+          const audits = await pool.query(
+            "SELECT action FROM croco_referral_audit WHERE target_id = $1 AND action = 'attribution.rejected'",
+            [attribution.id],
+          );
+          expect(audits.rows).toHaveLength(1);
+        } else {
+          expect(results.every((result) => result.status === "fulfilled")).toBe(true);
+          expect(stored?.state).toBe(nextNovelty === "new" ? "benefits-pending" : "held");
+          expect(budget).toBe("20");
+        }
+        expect(intents).toHaveLength(nextNovelty === "new" ? 2 : 0);
+        expect(qualification).toHaveBeenCalledTimes(nextNovelty === "new" ? 1 : 0);
+        expect(novelty).toHaveBeenCalledTimes(nextNovelty === "unknown" ? 4 : 3);
+      });
+    },
+  );
+
   it("claims one return across independent stores and recovers its durable receipt after restart", async () => {
     await withStores(async (pool, a, b) => {
       let entered!: () => void;

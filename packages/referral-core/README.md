@@ -16,6 +16,19 @@ authoritative app-owned server sources, never from client assertions or
 IP/device similarity. Self-referrals are rejected, and claiming never joins
 the recipient to any organization.
 
+`qualifyAttribution` rechecks an `unknown-novelty` hold through the same authoritative
+novelty hook, using the stored attribution identity and pinned program version.
+`unknown` keeps the hold and reservation without invoking action qualification;
+`existing` commits rejection, releases that reservation once, and throws
+`ReferralExistingCustomerProblem`. Only `new` proceeds to action qualification.
+A novelty provider exception preserves the hold for retry. Conversion expiry
+still takes precedence, and duplicate-claim holds remain blocked. Already confirmed
+claims and qualifications retain their existing replay behavior.
+
+No storage migration is required. Drain older qualification workers before enabling
+the updated service: older workers can still qualify unresolved novelty holds.
+This check does not re-evaluate or reverse historical qualifications or grants.
+
 Positive qualification evidence must report the exact `qualifyingAction` of
 the attribution's pinned program version, with non-blank string `sourceEventId`
 and `eligibleReason` fields. Invalid positive evidence throws the exported

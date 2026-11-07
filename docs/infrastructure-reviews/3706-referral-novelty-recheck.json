@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "referral-core",
+      "classification": "pure-contract",
+      "reason": "Recheck unknown novelty before action qualification. Unknown remains held; existing customers are rejected with the reservation released in the same transaction; only new recipients proceed. Persisted shapes and runtime support are unchanged.",
+      "files": {
+        "packages/referral-core/src/libs/ReferralService.ts": "2755c1d07b27af9bca2f30b8d6f5466050f6b107cb1586637f2971aa0fe62470"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "The novelty admission decision is domain logic independent of the Node Host. It reuses the existing authoritative hook and serialized attribution transaction without a new capability, storage or lifecycle dependency.",
+          "providers": ["@croco/referral-core:ReferralService"],
+          "constraints": [
+            "Existing store transaction and attribution locking requirements remain. Drain older qualification workers before enabling this service. No deployed infrastructure or provider certification is claimed."
+          ],
+          "references": [
+            "packages/referral-core/src/libs/ReferralService.ts",
+            "packages/referral-core/src/tests/ReferralService.spec.ts",
+            "packages/referral-drizzle/src/tests/PostgresReferralStore.postgres.spec.ts",
+            "packages/referral-core/README.md"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "The novelty admission decision is domain logic independent of the Lambda Host. It reuses the existing authoritative hook and serialized attribution transaction without a new capability, storage or lifecycle dependency.",
+          "providers": ["@croco/referral-core:ReferralService"],
+          "constraints": [
+            "Existing store transaction and attribution locking requirements remain. Drain older qualification workers before enabling this service. No deployed infrastructure or provider certification is claimed."
+          ],
+          "references": [
+            "packages/referral-core/src/libs/ReferralService.ts",
+            "packages/referral-core/src/tests/ReferralService.spec.ts",
+            "packages/referral-drizzle/src/tests/PostgresReferralStore.postgres.spec.ts",
+            "packages/referral-core/README.md"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "The novelty admission decision is domain logic independent of the Workers or explicit Node Container Host. It reuses the existing authoritative hook and serialized attribution transaction without a new capability, storage or lifecycle dependency.",
+          "providers": ["@croco/referral-core:ReferralService"],
+          "constraints": [
+            "Existing store transaction and attribution locking requirements remain. Drain older qualification workers before enabling this service. No deployed infrastructure or provider certification is claimed."
+          ],
+          "references": [
+            "packages/referral-core/src/libs/ReferralService.ts",
+            "packages/referral-core/src/tests/ReferralService.spec.ts",
+            "packages/referral-drizzle/src/tests/PostgresReferralStore.postgres.spec.ts",
+            "packages/referral-core/README.md"
+          ]
+        }
+      }
+    }
+  ]
+}
