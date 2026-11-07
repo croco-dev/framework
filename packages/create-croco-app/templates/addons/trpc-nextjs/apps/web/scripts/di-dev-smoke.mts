@@ -402,6 +402,27 @@ try {
   );
   await first.value("removed");
 
+  write(root, "external/Tokens.ts", "export {};");
+  write(
+    root,
+    "di.config.json",
+    JSON.stringify({
+      bindings: [
+        {
+          token: { moduleSpecifier: "./external/Tokens", exportName: "EXTERNAL" },
+          useExisting: { moduleSpecifier: "./src/server/Probe", exportName: "Probe" },
+        },
+      ],
+    }),
+  );
+  await first.failed();
+  write(
+    root,
+    "external/Tokens.ts",
+    "import { Token } from '@croco/framework-context'; export const EXTERNAL = new Token<{value(): string}>('external');",
+  );
+  await first.value("removed");
+
   const secondRoot = roots[1];
   assert(secondRoot);
   const second = await start(secondRoot);

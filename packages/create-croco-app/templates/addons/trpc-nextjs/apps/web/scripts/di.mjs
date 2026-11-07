@@ -13,7 +13,7 @@ function writeChanged(file, content) {
 }
 
 async function compile(baseDir, files, directories) {
-  const { compileDiGraph } = await import("@croco/esbuild-plugin");
+  const { compileDiGraph, collectDiGraphWatchInputs } = await import("@croco/esbuild-plugin");
   const { default: ts } = await import("typescript");
   const configFile = resolve(baseDir, "di.config.json");
   const fromApp = createRequire(resolve(baseDir, "package.json"));
@@ -58,7 +58,14 @@ async function compile(baseDir, files, directories) {
     files.add(file);
     directories.add(dirname(file));
   }
-  return compileDiGraph({ ...options, baseDir });
+  try {
+    return compileDiGraph({ ...options, baseDir });
+  } catch (error) {
+    const inputs = collectDiGraphWatchInputs({ ...options, baseDir });
+    for (const file of inputs.watchFiles) files.add(file);
+    for (const directory of inputs.watchDirs) directories.add(directory);
+    throw error;
+  }
 }
 
 export async function generateDi(baseDir = process.cwd()) {

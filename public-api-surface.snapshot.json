@@ -15885,6 +15885,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "collectDiGraphWatchInputs",
+              "exportKind": "named",
+              "source": "./libs/DiCompiler",
+              "declarationKind": "function"
+            },
+            {
               "name": "compileDiGraph",
               "exportKind": "named",
               "source": "./libs/DiCompiler",

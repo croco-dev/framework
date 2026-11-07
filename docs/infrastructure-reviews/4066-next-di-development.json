@@ -60,6 +60,56 @@
           ]
         }
       }
+    },
+    {
+      "package": "esbuild-plugin",
+      "classification": "pure-contract",
+      "reason": "Expose the existing tolerant DI watch-input collector so the Next development compiler can retain external token sources after a failed compilation without duplicating scanner or module resolution policy.",
+      "files": {
+        "packages/esbuild-plugin/src/index.ts": "427dbf2c1313e1d2e5754bec9b018d6e38fc2215ec29267ad891a364ded73fa1"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "This exposes existing build-time source discovery, not a deployed Node Host capability. It adds no runtime storage, credentials or lifecycle requirement.",
+          "providers": ["@croco/esbuild-plugin:collectDiGraphWatchInputs"],
+          "constraints": [
+            "No deployed infrastructure or provider certification is claimed. The implementation is shared with the existing esbuild watch failure path."
+          ],
+          "references": [
+            "packages/esbuild-plugin/src/libs/DiCompiler.ts",
+            "packages/esbuild-plugin/src/tests/CrocoPlugin.spec.ts",
+            "packages/create-croco-app/templates/addons/trpc-nextjs/apps/web/scripts/di-dev-smoke.mts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "This exposes existing build-time source discovery, not a deployed Lambda Host capability. It adds no runtime storage, credentials or lifecycle requirement.",
+          "providers": ["@croco/esbuild-plugin:collectDiGraphWatchInputs"],
+          "constraints": [
+            "No deployed infrastructure or provider certification is claimed. The implementation is shared with the existing esbuild watch failure path."
+          ],
+          "references": [
+            "packages/esbuild-plugin/src/libs/DiCompiler.ts",
+            "packages/esbuild-plugin/src/tests/CrocoPlugin.spec.ts",
+            "packages/create-croco-app/templates/addons/trpc-nextjs/apps/web/scripts/di-dev-smoke.mts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "This exposes existing build-time source discovery, not a deployed Workers or Node Container Host capability. It adds no runtime storage, credentials or lifecycle requirement.",
+          "providers": ["@croco/esbuild-plugin:collectDiGraphWatchInputs"],
+          "constraints": [
+            "No deployed infrastructure or provider certification is claimed. The implementation is shared with the existing esbuild watch failure path."
+          ],
+          "references": [
+            "packages/esbuild-plugin/src/libs/DiCompiler.ts",
+            "packages/esbuild-plugin/src/tests/CrocoPlugin.spec.ts",
+            "packages/create-croco-app/templates/addons/trpc-nextjs/apps/web/scripts/di-dev-smoke.mts"
+          ]
+        }
+      }
     }
   ]
 }

@@ -15,6 +15,7 @@ export {
   DI_PACKAGE_DESCRIPTOR_VERSION,
   DiCompilerError,
   compileDiGraph,
+  collectDiGraphWatchInputs,
   createDiPackageDescriptor,
   writeDiPackageDescriptor,
   writeDiGraph,
