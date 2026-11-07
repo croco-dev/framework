@@ -112,16 +112,24 @@ export abstract class BaseStorageProvider implements StorageProvider {
 
     this.assertOperationNotAborted(options, operation, key);
     const reader = stream.getReader();
-    let aborted = false;
+    let finished = false;
     let removeAbortListener = () => {};
+
+    const cancelReader = async (reason: unknown) => {
+      finished = true;
+      removeAbortListener();
+      try {
+        await reader.cancel(reason);
+      } finally {
+        reader.releaseLock();
+      }
+    };
 
     return new ReadableStream<Uint8Array>({
       start: (controller) => {
         const onAbort = () => {
-          aborted = true;
           const problem = this.createOperationAbortedProblem(signal, operation, key);
-          removeAbortListener();
-          void reader.cancel(problem).catch(() => {});
+          void cancelReader(problem).catch(() => {});
           controller.error(problem);
         };
 
@@ -131,20 +139,24 @@ export abstract class BaseStorageProvider implements StorageProvider {
       pull: async (controller) => {
         try {
           const result = await reader.read();
-          if (aborted) {
+          if (finished) {
             return;
           }
           if (result.done) {
+            finished = true;
             removeAbortListener();
+            reader.releaseLock();
             controller.close();
             return;
           }
           controller.enqueue(result.value);
         } catch (error) {
-          if (aborted) {
+          if (finished) {
             return;
           }
+          finished = true;
           removeAbortListener();
+          reader.releaseLock();
           try {
             this.rethrowOperationAbort(error, options, operation, key);
           } catch (abortProblem) {
@@ -154,10 +166,7 @@ export abstract class BaseStorageProvider implements StorageProvider {
           controller.error(error);
         }
       },
-      cancel: async (reason) => {
-        removeAbortListener();
-        await reader.cancel(reason);
-      },
+      cancel: cancelReader,
     });
   }
 

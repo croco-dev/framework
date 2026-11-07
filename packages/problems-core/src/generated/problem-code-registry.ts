@@ -28401,7 +28401,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/storage-cloudinary/src/libs/CloudinaryProvider.ts";
-          readonly line: 498;
+          readonly line: 510;
           readonly column: 13;
           readonly kind: "problem-factory";
         },
@@ -64565,7 +64565,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/storage-cloudinary/src/libs/CloudinaryProvider.ts",
-          line: 498,
+          line: 510,
           column: 13,
           kind: "problem-factory",
         },
