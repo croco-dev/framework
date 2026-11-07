@@ -80,12 +80,15 @@ remain unchanged. Version-3 ETL checkpoints retain fixed-size manifest roots; in
 are atomic with each receipt in the existing JSON column. Legacy list-based callers remain supported.
 Manifest sealing verifies every durable receipt, its payload hash, binding, contiguous sequence and
 attempt (including receipts from a prior attempt of this candidate), then compares the final hash/count.
+The same sealed manifest can be replayed by a later execution attempt, including after checkpoint
+JSON key reordering. The attempt bounds verification without changing the seal's semantic identity.
 It rejects missing, extra, conflicting or future-attempt evidence. A server cursor sorts once and fetches
 16 receipts at a time; application receipt memory is bounded by 16 input ranges (each <=10,000 records).
 PostgreSQL `work_mem` is 1 MiB for this transaction's sort; larger sorts may use temporary disk. Receipt
 storage remains proportional to input ranges and their bounded diagnostics, separate from checkpoint size.
 No new schema migration is needed. `readReceipts` uses the existing candidate/batch primary key for
 bounded diagnostic pages; normal candidate receipt retention also removes those diagnostics.
+Evidence batch/source identifiers and rejection reason codes are limited to 256 UTF-16 code units.
 Publication checks the candidate fence, quality, current head, and revision in one transaction.
 Catalog queries (`describeDataset`, `pinSnapshot`, and `getCandidate`) use read-only transactions
 and need only SELECT grants on `warehouse_heads`, `warehouse_candidates`, and `warehouse_snapshots`

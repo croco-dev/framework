@@ -168,6 +168,40 @@ describe("PostgresWarehouseCatalog", () => {
     expect(query.mock.calls.some(([sql]) => sql.startsWith("SELECT batch_id,receipt"))).toBe(false);
   });
 
+  it("replays the same sealed manifest across attempts and checkpoint key ordering", async () => {
+    const f = await manifestFixture();
+    const original = query.getMockImplementation();
+    let outcome: unknown;
+    query.mockImplementation(async (sql, params) => {
+      if (sql.startsWith("SELECT outcome FROM warehouse_mutations"))
+        return { rows: outcome ? [{ outcome }] : [] };
+      if (sql.startsWith("INSERT INTO warehouse_mutations")) outcome = params?.[7];
+      if (!original) throw new Error("Missing query mock");
+      return original(sql, params);
+    });
+    const sealed = await catalog.sealCandidate({ ...f.request, attempt: 1 });
+    candidate = sealed;
+    const expectedManifest = {
+      hash: f.request.expectedManifest.hash,
+      count: f.request.expectedManifest.count,
+      bindingHash: f.request.expectedManifest.bindingHash,
+      formatVersion: 1 as const,
+    };
+    await expect(
+      catalog.sealCandidate({ ...f.request, expectedManifest, attempt: 2 }),
+    ).resolves.toEqual(sealed);
+    await expect(
+      catalog.sealCandidate({ ...f.request, expectedManifest, attempt: 0 }),
+    ).rejects.toThrow("WAREHOUSE_RECEIPTS_INCOMPLETE");
+    await expect(
+      catalog.sealCandidate({
+        ...f.request,
+        expectedManifest: { ...expectedManifest, hash: "d".repeat(64) },
+        attempt: 2,
+      }),
+    ).rejects.toThrow("WAREHOUSE_IDEMPOTENCY_CONFLICT");
+  });
+
   it.each([
     "missing",
     "extra",

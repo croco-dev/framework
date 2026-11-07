@@ -295,6 +295,36 @@ describe.skipIf(process.env.CROCO_TEST_REAL_RESOURCES !== "1")(
       },
     );
 
+    it("resumes a durable seal after interruption before publication", async () => {
+      const store = services();
+      const controller = new AbortController();
+      let executionId = "";
+      const seal = store.runtime.catalog.sealCandidate.bind(store.runtime.catalog);
+      vi.spyOn(store.runtime.catalog, "sealCandidate").mockImplementationOnce(async (request) => {
+        executionId = request.candidateId.slice("etl:".length);
+        const result = await seal(request);
+        controller.abort();
+        return result;
+      });
+      await expect(
+        createPipelineOperations(definition, { ...store.runtime, signal: controller.signal }).run(),
+      ).rejects.toMatchObject({ reason: "interrupted" });
+      expect(executionId).not.toBe("");
+      const failed = await store.manager().get(executionId);
+      expect(failed.status).toBe("failed");
+      expect(failed.error?.indeterminate).not.toBe(true);
+      expect(
+        await store.runtime.catalog.getCandidate({
+          access: store.resolveAccess(),
+          candidateId: `etl:${failed.id}`,
+        }),
+      ).toMatchObject({ state: "sealed" });
+      const result = await createPipelineOperations(definition, store.runtime).retry(failed.id);
+      expect(result).toMatchObject({ state: "published", inputCount: 2, outputCount: 2 });
+      expect((await store.read(result.snapshotId as string)).rows).toEqual(rows);
+      expect((await store.manager().get(failed.id)).attempts).toBe(2);
+    });
+
     it("denies cross-tenant receipt diagnostics and forged read authority", async () => {
       const owner = services();
       const result = await createPipelineOperations(definition, owner.runtime).run();

@@ -369,8 +369,30 @@ export class PostgresWarehouseCatalog implements CatalogStore {
     const access = this.access("import");
     if ("expectedManifest" in request === "expectedBatchIds" in request)
       throw new WarehouseContractError("WAREHOUSE_RECEIPTS_INCOMPLETE");
+    const attempt = "attempt" in request ? request.attempt : 0;
+    const manifest = request.expectedManifest;
+    if (
+      "expectedManifest" in request &&
+      (!manifest || !Number.isSafeInteger(attempt) || attempt < 1)
+    )
+      throw new WarehouseContractError("WAREHOUSE_RECEIPTS_INCOMPLETE");
     const { access: _access, audit, ...input } = request;
-    return this.mutation(access, "seal", audit, input, async (db) => {
+    // Attempts bound first-seal verification, while the immutable proof identifies a replay.
+    // A scalar tuple also survives checkpoint JSONB key reordering.
+    const identity = manifest
+      ? {
+          candidateId: request.candidateId,
+          fence: request.fence,
+          expectedManifest: [
+            manifest.formatVersion,
+            manifest.bindingHash,
+            manifest.count,
+            manifest.hash,
+          ],
+          quality: request.quality,
+        }
+      : input;
+    return this.mutation(access, "seal", audit, identity, async (db) => {
       const candidate = await this.candidate(db, access, request.candidateId, request.fence);
       if (candidate.state !== "open")
         throw new WarehouseContractError("WAREHOUSE_CANDIDATE_CLOSED");
@@ -405,12 +427,7 @@ export class PostgresWarehouseCatalog implements CatalogStore {
           throw new WarehouseContractError("WAREHOUSE_COVERAGE_INCOMPLETE");
       }
       if ("expectedManifest" in request) {
-        await this.verifyManifest(
-          db,
-          candidate.id,
-          request.expectedManifest,
-          "attempt" in request ? request.attempt : 0,
-        );
+        await this.verifyManifest(db, candidate.id, request.expectedManifest, attempt);
       } else {
         if (!Array.isArray(request.expectedBatchIds))
           throw new WarehouseContractError("WAREHOUSE_RECEIPTS_INCOMPLETE");

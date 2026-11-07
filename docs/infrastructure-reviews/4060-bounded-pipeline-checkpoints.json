@@ -60,7 +60,7 @@
       "classification": "durable-provider",
       "reason": "Verify versioned receipt manifests through a bounded PostgreSQL cursor and expose authorized receipt pages using the existing schema and retention owner.",
       "files": {
-        "packages/warehouse-postgres/src/facts/PostgresWarehouseCatalog.ts": "52ae5c0979cae2aaf33ce871496a22f27a019397de7bc96fa7e0f52b50b001e6",
+        "packages/warehouse-postgres/src/facts/PostgresWarehouseCatalog.ts": "4e633dac1483c18fd9de0d60b76f0a4db34ba48b6688bd1a0795a119aaf41ff6",
         "packages/warehouse-postgres/src/facts/PostgresWarehouseWriter.ts": "38200a91fc13f0a6bc245ed982fc58702bcc3b905ffad66cc2bea0e215c6e409"
       },
       "catalogRuntimes": ["node", "lambda"],
