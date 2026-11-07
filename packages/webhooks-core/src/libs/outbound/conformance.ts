@@ -1,6 +1,8 @@
 import { OutboundWebhookConfigurationProblem } from "./OutboundWebhookProblems";
 import type {
   OutboundWebhookAttempt,
+  OutboundWebhookAttemptOutcome,
+  OutboundWebhookDeliveryStatus,
   OutboundWebhookEndpoint,
   OutboundWebhookEvent,
   OutboundWebhookStore,
@@ -190,6 +192,170 @@ export function createOutboundWebhookStoreConformanceSuite(
               .map((item) => item.number)
               .join(",") === "1",
             "attempt evidence must remain ordered",
+          );
+        },
+      },
+      ...(
+        [
+          [{ kind: "http", status: 201 }, "delivered", "delivered"],
+          [
+            { kind: "redirect", status: 307, location: "https://receiver.example/next" },
+            "permanent",
+            "dead",
+          ],
+          [{ kind: "timeout" }, "retryable", "dead"],
+          [{ kind: "connection-reset" }, "retryable", "dead"],
+          [
+            { kind: "acceptance-unknown", reason: "receiver accepted before connection closed" },
+            "acceptance-unknown",
+            "acceptance-unknown",
+          ],
+        ] satisfies [
+          OutboundWebhookAttemptOutcome,
+          OutboundWebhookAttempt["classification"],
+          OutboundWebhookDeliveryStatus,
+        ][]
+      ).flatMap(([fixture, classification, status]) =>
+        (["own", "inherited"] as const).flatMap((representation) =>
+          (["input", "query result"] as const).map((boundary) => ({
+            name: `snapshots ${representation} ${fixture.kind} attempt evidence against ${boundary} mutation`,
+            run: async () => {
+              const store = await options.createStore();
+              const committed = await store.commitEvent({
+                event: options.event,
+                endpoints: [options.endpoint],
+              });
+              const delivery = committed.deliveries[0];
+              assert(delivery !== undefined, "delivery must exist");
+              const attempt: OutboundWebhookAttempt = {
+                ...createAttempt(delivery.id, 1, options, classification),
+                startedAt: new Date(options.event.committedAt.getTime() + 11),
+                completedAt: new Date(options.event.committedAt.getTime() + 29),
+                outcome:
+                  representation === "own"
+                    ? { ...fixture }
+                    : (Object.create(fixture) as OutboundWebhookAttemptOutcome),
+              };
+              await recordClaimedAttempt(store, options, {
+                tenantId: options.event.tenantId,
+                attempt,
+                status,
+              });
+              const reopened =
+                options.reopenStore === undefined ? store : await options.reopenStore(store);
+              const target =
+                boundary === "input"
+                  ? attempt
+                  : (await reopened.listAttempts(options.event.tenantId, delivery.id))[0];
+              assert(target !== undefined, "attempt evidence must exist");
+              // Readonly views may reject or throw on writes; only stored snapshot values are constrained.
+              await Promise.allSettled(
+                Object.entries({
+                  kind: "http",
+                  status: 599,
+                  location: "https://changed.example/",
+                  reason: "changed after recording",
+                }).map(async ([key, value]) => Reflect.set(target.outcome, key, value)),
+              );
+              target.startedAt.setTime(0);
+              target.completedAt.setTime(1);
+              const persisted = await reopened.listAttempts(options.event.tenantId, delivery.id);
+              assert(persisted.length === 1, "mutation must not change attempt count");
+              const saved = persisted[0];
+              assert(saved !== undefined, "stored attempt must exist");
+              assert(
+                Object.entries(fixture).every(
+                  ([key, value]) => Reflect.get(saved.outcome, key) === value,
+                ),
+                `${boundary} mutation must not change stored ${fixture.kind} outcome fields`,
+              );
+              assert(
+                saved.startedAt.getTime() === options.event.committedAt.getTime() + 11 &&
+                  saved.completedAt.getTime() === options.event.committedAt.getTime() + 29,
+                `${boundary} mutation must not change stored attempt timestamps`,
+              );
+              assert(
+                saved.classification === classification,
+                "attempt classification must be preserved",
+              );
+            },
+          })),
+        ),
+      ),
+      {
+        name: "snapshots inherited outcome getters as values",
+        run: async () => {
+          const store = await options.createStore();
+          const committed = await store.commitEvent({
+            event: options.event,
+            endpoints: [options.endpoint],
+          });
+          const delivery = committed.deliveries[0];
+          assert(delivery !== undefined, "delivery must exist");
+          let responseStatus = 201;
+          const outcome = new (class {
+            get kind(): "http" {
+              return "http";
+            }
+            get status(): number {
+              return responseStatus;
+            }
+          })();
+          await recordClaimedAttempt(store, options, {
+            tenantId: options.event.tenantId,
+            attempt: { ...createAttempt(delivery.id, 1, options, "delivered"), outcome },
+            status: "delivered",
+          });
+          responseStatus = 599;
+          const saved = (await store.listAttempts(options.event.tenantId, delivery.id))[0];
+          assert(
+            saved?.outcome.kind === "http" && saved.outcome.status === 201,
+            "inherited getters must retain their values at record time",
+          );
+        },
+      },
+      {
+        name: "snapshots a changing outcome discriminant",
+        run: async () => {
+          const store = await options.createStore();
+          const committed = await store.commitEvent({
+            event: options.event,
+            endpoints: [options.endpoint],
+          });
+          const delivery = committed.deliveries[0];
+          assert(delivery !== undefined, "delivery must exist");
+          let first = true;
+          const outcome: OutboundWebhookAttemptOutcome = new (class {
+            get kind(): "http" | "redirect" {
+              const kind = first ? "http" : "redirect";
+              first = false;
+              return kind;
+            }
+            readonly status = 201;
+            readonly location = "https://receiver.example/next";
+          })();
+          await recordClaimedAttempt(store, options, {
+            tenantId: options.event.tenantId,
+            attempt: { ...createAttempt(delivery.id, 1, options, "delivered"), outcome },
+            status: "delivered",
+          });
+          const firstRead = (await store.listAttempts(options.event.tenantId, delivery.id))[0];
+          assert(firstRead !== undefined, "attempt evidence must exist");
+          const capturedKind = firstRead.outcome.kind;
+          assert(
+            (capturedKind === "http" || capturedKind === "redirect") &&
+              Reflect.get(firstRead.outcome, "status") === 201 &&
+              (capturedKind !== "redirect" ||
+                Reflect.get(firstRead.outcome, "location") === "https://receiver.example/next"),
+            "the captured discriminant must agree with its declared outcome fields",
+          );
+          const secondRead = (await store.listAttempts(options.event.tenantId, delivery.id))[0];
+          assert(
+            secondRead?.outcome.kind === capturedKind &&
+              Reflect.get(secondRead.outcome, "status") === 201 &&
+              (capturedKind !== "redirect" ||
+                Reflect.get(secondRead.outcome, "location") === "https://receiver.example/next"),
+            "repeated queries must retain the captured outcome variant and fields",
           );
         },
       },

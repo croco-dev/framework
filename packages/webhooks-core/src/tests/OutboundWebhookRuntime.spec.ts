@@ -1697,9 +1697,32 @@ describe("outbound webhook signing and URL policy", () => {
   });
 });
 
-describe("outbound webhook store conformance", () => {
+describe.each([
+  ["plain", (outcome: OutboundWebhookAttemptOutcome) => outcome],
+  [
+    "inherited",
+    (outcome: OutboundWebhookAttemptOutcome) =>
+      Object.create(outcome) as OutboundWebhookAttemptOutcome,
+  ],
+  ["frozen", (outcome: OutboundWebhookAttemptOutcome) => Object.freeze(outcome)],
+  [
+    "rejecting",
+    (outcome: OutboundWebhookAttemptOutcome) =>
+      new Proxy(Object.freeze(outcome), {
+        set() {
+          throw new TypeError("readonly outcome");
+        },
+      }),
+  ],
+] as const)("outbound webhook store conformance (%s)", (_name, viewOutcome) => {
   const suite = createOutboundWebhookStoreConformanceSuite({
-    createStore: () => new InMemoryOutboundWebhookStore(),
+    createStore: () =>
+      new (class extends InMemoryOutboundWebhookStore {
+        override async listAttempts(tenantId: string, deliveryId: string) {
+          const attempts = await super.listAttempts(tenantId, deliveryId);
+          return attempts.map((attempt) => ({ ...attempt, outcome: viewOutcome(attempt.outcome) }));
+        }
+      })(),
     advanceStoreTime: (milliseconds) => {
       vi.setSystemTime(Date.now() + milliseconds);
     },

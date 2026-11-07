@@ -6,6 +6,7 @@ import {
 import { validateOutboundWebhookUrlSyntax } from "./signing";
 import type {
   OutboundWebhookAttempt,
+  OutboundWebhookAttemptOutcome,
   OutboundWebhookCommitResult,
   OutboundWebhookDelivery,
   OutboundWebhookDeliveryClaim,
@@ -511,11 +512,30 @@ function cloneDelivery(delivery: OutboundWebhookDelivery): OutboundWebhookDelive
 }
 
 function cloneAttempt(attempt: OutboundWebhookAttempt): OutboundWebhookAttempt {
+  const { outcome, startedAt, completedAt, ...metadata } = attempt;
   return {
-    ...attempt,
-    startedAt: new Date(attempt.startedAt),
-    completedAt: new Date(attempt.completedAt),
+    ...metadata,
+    outcome: cloneAttemptOutcome(outcome),
+    startedAt: new Date(startedAt),
+    completedAt: new Date(completedAt),
   };
+}
+
+function cloneAttemptOutcome(
+  outcome: OutboundWebhookAttemptOutcome,
+): OutboundWebhookAttemptOutcome {
+  const kind = outcome.kind;
+  switch (kind) {
+    case "http":
+      return { kind, status: outcome.status };
+    case "redirect":
+      return { kind, status: outcome.status, location: outcome.location };
+    case "acceptance-unknown":
+      return { kind, reason: outcome.reason };
+    case "timeout":
+    case "connection-reset":
+      return { kind };
+  }
 }
 
 function cloneIntent(intent: OutboundWebhookDispatchIntent): OutboundWebhookDispatchIntent {
