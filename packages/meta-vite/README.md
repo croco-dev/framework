@@ -317,6 +317,8 @@ request rules, `2xx`-only response caching, and `getOrSet()` singleflight behavi
 - cacheable requests are `GET` or `HEAD` without `Authorization` or `Cookie`;
 - only `2xx` responses are cached;
 - concurrent same-key misses rely on the cache store's `getOrSet()` singleflight behavior;
+- responses with any nonempty `Vary` token bypass storage and reuse, including entries from older
+  writers; concurrent waiters render their own negotiated response. Empty `Vary` retains TTL caching.
 - `InMemoryCacheStore` is for local, development, or single-process deployments only;
 - `RedisCacheStoreAdapter` is the shipped durable adapter for Node and Lambda;
 - `createDurableIsrCacheProfile()` only reports non-local stores as durable; known `InMemoryCacheStore`

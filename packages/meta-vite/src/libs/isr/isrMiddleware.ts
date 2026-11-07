@@ -4,7 +4,10 @@ const CACHEABLE_METHODS = new Set(["GET", "HEAD"]);
 const BYPASS_HEADERS = ["authorization", "cookie", "range", "if-range"] as const;
 
 class NonCacheableResponseError extends Error {
-  constructor(readonly response: Response) {
+  constructor(
+    readonly response: Response,
+    readonly request: Request,
+  ) {
     super("Response is not cacheable");
   }
 }
@@ -25,7 +28,7 @@ export function createIsrMiddleware(options: IsrMiddlewareOptions): IsrMiddlewar
           const rendered = await render(request);
 
           if (!isCacheableResponse(rendered)) {
-            throw new NonCacheableResponseError(rendered);
+            throw new NonCacheableResponseError(rendered, request);
           }
 
           return rendered.clone();
@@ -37,15 +40,20 @@ export function createIsrMiddleware(options: IsrMiddlewareOptions): IsrMiddlewar
         throw new Error("CacheStore returned no ISR response");
       }
 
-      // Older writers may have persisted a partial response under the full-response key.
+      // Older writers may have persisted a partial or negotiated response under this key.
       // The store only exposes getOrSet here, so bypass that entry until it expires.
-      if (isPartialResponse(response)) {
+      if (isPartialResponse(response) || hasVary(response)) {
         return render(request);
       }
 
       return response.clone();
     } catch (error) {
       if (error instanceof NonCacheableResponseError) {
+        // getOrSet shares a failed first fill with waiters. A Vary response belongs
+        // to its originating request; each waiter must negotiate its own response.
+        if (hasVary(error.response) && error.request !== request) {
+          return render(request);
+        }
         return error.response.clone();
       }
 
@@ -68,8 +76,7 @@ function isCacheableResponse(response: Response): boolean {
   }
 
   // Final personalized responses must never enter the shared cache:
-  // Set-Cookie, private/no-store directives, or Vary on identity headers
-  // mean the bytes are request-specific even when the status is 2xx.
+  // Set-Cookie and private/no-store directives mean the bytes are request-specific.
   if (response.headers.has("set-cookie")) {
     return false;
   }
@@ -82,19 +89,12 @@ function isCacheableResponse(response: Response): boolean {
     return false;
   }
 
-  const varyTokens = (response.headers.get("vary") ?? "")
-    .toLowerCase()
-    .split(",")
-    .map((part) => part.trim());
-  if (
-    varyTokens.includes("*") ||
-    varyTokens.includes("cookie") ||
-    varyTokens.includes("authorization")
-  ) {
-    return false;
-  }
+  // This exact-key TTL cache does not implement Vary-aware representation keys.
+  return !hasVary(response);
+}
 
-  return true;
+function hasVary(response: Response): boolean {
+  return (response.headers.get("vary") ?? "").split(",").some((part) => part.trim().length > 0);
 }
 
 function isPartialResponse(response: Response): boolean {

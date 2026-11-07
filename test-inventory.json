@@ -3762,6 +3762,12 @@
       "owner": "@croco/meta-vite"
     },
     {
+      "path": "packages/meta-vite/src/tests/IsrVary.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/meta-vite"
+    },
+    {
       "path": "packages/meta-vite/src/tests/LambdaProxyResponse.spec.ts",
       "lane": "fast",
       "qualifiers": [],
