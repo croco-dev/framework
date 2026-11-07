@@ -176,6 +176,35 @@ describe("isolated RSC encoder lifecycle", () => {
     expect(JSON.parse(await collect(stream)).context).toEqual({ platform: "node" });
   });
 
+  it("does not serialize dynamic host values after validating Node metadata", async () => {
+    let platformReads = 0;
+    let serializationCalls = 0;
+    const context = new Proxy({ platform: "node" } as const, {
+      get(target, key, receiver) {
+        if (key === "platform") {
+          platformReads += 1;
+          return {
+            toJSON() {
+              serializationCalls += 1;
+              return "node";
+            },
+          };
+        }
+        return Reflect.get(target, key, receiver);
+      },
+    });
+    const stream = await encodeRscFlightInIsolatedEncoder({
+      route: rscRoute("/rsc-node"),
+      request: new Request("https://example.com/rsc-node"),
+      encoderModule: await echoEncoderModule(),
+      context,
+    });
+
+    expect(JSON.parse(await collect(stream)).context).toEqual({ platform: "node" });
+    expect(platformReads).toBe(0);
+    expect(serializationCalls).toBe(0);
+  });
+
   it("delivers encoder rows before the child process exits", async () => {
     const stream = await encodeRscFlightInIsolatedEncoder({
       route: rscRoute("/rsc-streaming"),

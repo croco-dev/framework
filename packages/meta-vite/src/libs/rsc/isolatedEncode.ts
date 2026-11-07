@@ -171,8 +171,9 @@ export async function encodeRscFlightInIsolatedEncoder(
 ): Promise<ReadableStream<Uint8Array>> {
   // Only platform-only Node metadata crosses the JSON pipe. Refuse every
   // additional host field before serialization instead of silently dropping it.
-  if (input.context !== undefined && !isIsolatedRscNodeContext(input.context)) {
-    throw new RscFlightContextUnsupportedProblem(input.route.path, input.context.platform);
+  const context = input.context;
+  if (context !== undefined && !isIsolatedRscNodeContext(context)) {
+    throw new RscFlightContextUnsupportedProblem(input.route.path, context.platform);
   }
 
   const encoderModule = input.encoderModule ?? resolveEncoderModule();
@@ -199,10 +200,11 @@ export async function encodeRscFlightInIsolatedEncoder(
   // fields a document/Flight request carries and let the child rebuild it.
   // Guessing them from `route.path` alone would hand components the wrong URL,
   // query, and cookies.
+  // Copy the validated context literal: a Proxy can change a later property read.
   const payload = JSON.stringify({
     routePath: input.route.path,
     componentRef: input.route.componentRef,
-    ...(input.context ? { context: { platform: input.context.platform } } : {}),
+    ...(context === undefined ? {} : { context: { platform: "node" } }),
     request: {
       url: input.request.url,
       method: input.request.method,

@@ -7,7 +7,7 @@
       "reason": "The default isolated RSC encoder accepts and forwards exactly platform-only Node metadata; both sides validate the narrow context contract and continue refusing additional host values.",
       "files": {
         "packages/meta-vite/src/libs/rsc/isolatedContext.ts": "5148ded9b9bdfcbb1f6da541aa0181bbefc86162804e60c8ffc8daa25299d131",
-        "packages/meta-vite/src/libs/rsc/isolatedEncode.ts": "589d5427cfe5fdd0937390760783794692d3c52e6d03e8dd92adda27f18c02e0",
+        "packages/meta-vite/src/libs/rsc/isolatedEncode.ts": "27f06422b7fca1a195484fa6850ec95d89a47037dbfbd0a7bcd68ede50ea6a31",
         "packages/meta-vite/src/libs/rsc/flightEncode.entry.ts": "8484d33cc1847b2c88b0d91fd7b3e207df1781a4b0b21adf51629405f8a8e067"
       },
       "catalogRuntimes": ["node", "lambda", "cloudflare-workers", "browser"],
