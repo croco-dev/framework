@@ -11,7 +11,7 @@ export type HeadMetadata = {
   ogTitle?: string;
   /** Canonical URL override */
   canonical?: string;
-  /** Validated request-owned metadata for buffered SSR only; streaming and RSC do not consume it. */
+  /** Validated request-owned metadata for buffered and shell-first SSR; RSC does not consume it. */
   publicPage?: PublicPageMetadata;
 };
 

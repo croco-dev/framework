@@ -38,7 +38,7 @@ OpenGraph / Twitter card title override
 
 > `optional` **publicPage?**: [`PublicPageMetadata`](/api/seo-core/src/type-aliases/publicpagemetadata/)
 
-Validated request-owned metadata for buffered SSR only; streaming and RSC do not consume it.
+Validated request-owned metadata for buffered and shell-first SSR; RSC does not consume it.
 
 ---
 
