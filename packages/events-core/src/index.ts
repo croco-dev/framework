@@ -45,6 +45,7 @@ export {
 } from "./libs/EventBusLifecycle";
 export type {
   EventBusActiveHandler,
+  EventBusActiveReplay,
   EventBusLifecycle,
   EventBusShutdownOptions,
   EventBusShutdownResult,

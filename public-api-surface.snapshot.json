@@ -16717,6 +16717,11 @@
               "source": "./libs/EventBusLifecycle"
             },
             {
+              "name": "EventBusActiveReplay",
+              "exportKind": "named",
+              "source": "./libs/EventBusLifecycle"
+            },
+            {
               "name": "EventBusLifecycle",
               "exportKind": "named",
               "source": "./libs/EventBusLifecycle"

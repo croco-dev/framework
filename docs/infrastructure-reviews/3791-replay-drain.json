@@ -1,0 +1,129 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "events-core",
+      "classification": "pure-contract",
+      "reason": "Preserve admitted replay storage work through shutdown and expose incomplete replay evidence independently of handler capacity.",
+      "files": {
+        "packages/events-core/src/index.ts": "ff10d60f57b710589f2e58a214ed8b1f7c21db8b185f32c28e0285c90cea178a",
+        "packages/events-core/src/libs/EventBusLifecycle.ts": "54593de03b7829192537d3bb7cab4c01a02c333fba22cecfe3cc3b34c5755201",
+        "packages/events-core/src/libs/EventBusLifecycleTypes.ts": "23782f0f4eee8355d467fe26160ae8a997ccbfc1dcb2855dc440b182d46adac4",
+        "packages/events-core/src/libs/problems/EventsProblems.ts": "6888ffa1262a285b04e58bb338488aa10ce3a27fe92411df5e7936bfcc7c7d18"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Lifecycle evidence and hook forwarding are host-independent contracts with no direct storage or host APIs.",
+          "providers": ["@croco/events-core"],
+          "constraints": [],
+          "references": [
+            "packages/events-core/src/index.ts",
+            "packages/events-core/src/libs/EventBusLifecycle.ts",
+            "packages/events-core/src/libs/EventBusLifecycleTypes.ts",
+            "packages/events-core/src/libs/problems/EventsProblems.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Lifecycle evidence and hook forwarding are host-independent contracts with no direct storage or host APIs.",
+          "providers": ["@croco/events-core"],
+          "constraints": [],
+          "references": [
+            "packages/events-core/src/index.ts",
+            "packages/events-core/src/libs/EventBusLifecycle.ts",
+            "packages/events-core/src/libs/EventBusLifecycleTypes.ts",
+            "packages/events-core/src/libs/problems/EventsProblems.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Lifecycle evidence and hook forwarding are host-independent contracts with no direct storage or host APIs.",
+          "providers": ["@croco/events-core"],
+          "constraints": [],
+          "references": [
+            "packages/events-core/src/index.ts",
+            "packages/events-core/src/libs/EventBusLifecycle.ts",
+            "packages/events-core/src/libs/EventBusLifecycleTypes.ts",
+            "packages/events-core/src/libs/problems/EventsProblems.ts"
+          ]
+        }
+      }
+    },
+    {
+      "package": "events-inmemory",
+      "classification": "runtime-adapter",
+      "reason": "Preserve admitted replay storage work through shutdown and expose incomplete replay evidence independently of handler capacity.",
+      "files": {
+        "packages/events-inmemory/src/libs/InmemoryEventBus.ts": "72d7cf86dff892e95db8c1f2019f0bc1247ee5547c5d2ed4e530d8a8830bf52e"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "unverified",
+          "reason": "Replay accounting uses the existing injected queue and in-process lifecycle. Local controlled queue tests do not execute this deployment Host.",
+          "providers": ["@croco/events-inmemory"],
+          "constraints": [
+            "No new runtime support claim. Drain timeout/cancellation does not abort provider storage; callers must retain replay failure recovery evidence.",
+            "No live deployment or persistent queue certification."
+          ],
+          "references": ["packages/events-inmemory/src/libs/InmemoryEventBus.ts"]
+        },
+        "aws-lambda": {
+          "result": "unverified",
+          "reason": "Replay accounting uses the existing injected queue and in-process lifecycle. Local controlled queue tests do not execute this deployment Host.",
+          "providers": ["@croco/events-inmemory"],
+          "constraints": [
+            "No new runtime support claim. Drain timeout/cancellation does not abort provider storage; callers must retain replay failure recovery evidence.",
+            "No live deployment or persistent queue certification."
+          ],
+          "references": ["packages/events-inmemory/src/libs/InmemoryEventBus.ts"]
+        },
+        "cloudflare": {
+          "result": "unverified",
+          "reason": "Replay accounting uses the existing injected queue and in-process lifecycle. Local controlled queue tests do not execute this deployment Host.",
+          "providers": ["@croco/events-inmemory"],
+          "constraints": [
+            "No new runtime support claim. Drain timeout/cancellation does not abort provider storage; callers must retain replay failure recovery evidence.",
+            "No live deployment or persistent queue certification."
+          ],
+          "references": ["packages/events-inmemory/src/libs/InmemoryEventBus.ts"],
+          "host": "workers"
+        }
+      }
+    },
+    {
+      "package": "problems-core",
+      "classification": "pure-contract",
+      "reason": "Regenerate shipped Problem source-location metadata after adding replay drain evidence. Codes, recovery guidance and runtime classification are unchanged.",
+      "files": {
+        "packages/problems-core/src/generated/problem-code-registry.ts": "21f81434f2a6eb661a9e91b8e8ee5d38b5caf5c8b5c501149eeeb87bd9d2def4"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Generated source-location metadata has no host, storage or lifecycle dependency.",
+          "providers": [],
+          "constraints": [],
+          "references": ["packages/problems-core/src/generated/problem-code-registry.ts"]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Generated source-location metadata has no host, storage or lifecycle dependency.",
+          "providers": [],
+          "constraints": [],
+          "references": ["packages/problems-core/src/generated/problem-code-registry.ts"]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Generated source-location metadata has no host, storage or lifecycle dependency.",
+          "providers": [],
+          "constraints": [],
+          "references": ["packages/problems-core/src/generated/problem-code-registry.ts"]
+        }
+      }
+    }
+  ]
+}

@@ -79,8 +79,10 @@ ShutdownManager.getInstance().register(createEventBusShutdownHook(eventBus, { ti
 ```
 
 shutdown이 시작되면 새 publish는 `EventBusIntakeClosedProblem`으로 거부됩니다. drain 결과가 `timed-out` 또는
-`cancelled`이면 adapter는 남은 핸들러 수를 포함한 `EventBusDrainIncompleteProblem`을 발생시켜 framework shutdown이
-성공으로 잘못 보고되지 않게 합니다.
+`cancelled`이면 adapter는 남은 핸들러와 재생 배치를 포함한 `EventBusDrainIncompleteProblem`을 발생시켜 framework shutdown이
+성공으로 잘못 보고되지 않게 합니다. 재생을 추적하는 구현체는 `unfinishedReplays`에 배치 ID·진행 단계·시작 시각을
+반환하며, adapter는 이 snapshot과 `unfinishedReplayCount`를 보존합니다. 재생 기능이 없는 구현체는 해당 결과 필드를
+생략할 수 있습니다.
 
 ### 이벤트 직렬화
 

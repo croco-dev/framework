@@ -37,9 +37,10 @@ class ControlledDequeueQueue extends InMemoryDeadLetterQueue {
   readonly releaseDequeue = createDeferred();
 
   override async dequeue<TEvent extends DomainEvent>(limit?: number) {
+    const items = await super.dequeue<TEvent>(limit);
     this.dequeueStarted.resolve();
     await this.releaseDequeue.promise;
-    return super.dequeue<TEvent>(limit);
+    return items;
   }
 }
 
@@ -127,7 +128,13 @@ describe("InMemoryEventBus replay shutdown lifecycle", () => {
 
     const replay = bus.replayDeadLetters();
     await queue.dequeueStarted.promise;
-    await expect(bus.shutdown()).resolves.toMatchObject({ status: "drained" });
+    const shutdown = bus.shutdown();
+    let drained = false;
+    void shutdown.then(() => {
+      drained = true;
+    });
+    await Promise.resolve();
+    expect(drained).toBe(false);
     queue.releaseDequeue.resolve();
 
     await expect(replay).resolves.toMatchObject({
@@ -136,6 +143,7 @@ describe("InMemoryEventBus replay shutdown lifecycle", () => {
       failed: 1,
       failures: [{ requeued: true, error: { code: "events-core/event-bus-intake-closed" } }],
     });
+    await expect(shutdown).resolves.toEqual({ status: "drained", unfinishedHandlers: [] });
     expect(handle).not.toHaveBeenCalled();
     await expect(queue.size()).resolves.toBe(1);
   });
@@ -153,7 +161,13 @@ describe("InMemoryEventBus replay shutdown lifecycle", () => {
 
     const replay = bus.replayDeadLetters();
     await queue.dequeueStarted.promise;
-    await expect(bus.shutdown()).resolves.toMatchObject({ status: "drained" });
+    const shutdown = bus.shutdown();
+    let drained = false;
+    void shutdown.then(() => {
+      drained = true;
+    });
+    await Promise.resolve();
+    expect(drained).toBe(false);
     queue.releaseDequeue.resolve();
 
     await expect(replay).resolves.toMatchObject({
@@ -169,6 +183,7 @@ describe("InMemoryEventBus replay shutdown lifecycle", () => {
         },
       ],
     });
+    await expect(shutdown).resolves.toEqual({ status: "drained", unfinishedHandlers: [] });
     expect(enqueue).toHaveBeenCalledOnce();
     await expect(queue.size()).resolves.toBe(0);
   });
@@ -285,5 +300,137 @@ describe("InMemoryEventBus replay shutdown lifecycle", () => {
     await expect(queue.peek<ReplayLifecycleEvent>()).resolves.toEqual([
       expect.objectContaining({ event: expect.objectContaining({ value: "later" }) }),
     ]);
+  });
+
+  it.each(["timeout", "cancel"] as const)(
+    "reports pending dequeue on %s without consuming a handler slot",
+    async (ending) => {
+      vi.useFakeTimers();
+      try {
+        const queue = new ControlledDequeueQueue();
+        await queue.enqueue(deadLetter("pending"));
+        const bus = createTestEventBus<ReplayLifecycleEvent>({ deadLetterQueue: queue });
+        const replay = bus.replayDeadLetters();
+        await queue.dequeueStarted.promise;
+        const controller = new AbortController();
+        const shutdown = bus.shutdown({ timeoutMs: 100, signal: controller.signal });
+        expect(bus.getRunningHandlerCount()).toBe(0);
+        if (ending === "timeout") await vi.advanceTimersByTimeAsync(100);
+        else controller.abort();
+        const result = await shutdown;
+        expect(result).toMatchObject({
+          status: ending === "timeout" ? "timed-out" : "cancelled",
+          unfinishedHandlers: [],
+          unfinishedReplays: [
+            { replayId: expect.any(String), phase: "dequeue", startTime: expect.any(Number) },
+          ],
+        });
+        await expect(bus.replayDeadLetters()).rejects.toBeInstanceOf(EventBusIntakeClosedProblem);
+        queue.releaseDequeue.resolve();
+        await replay;
+        await expect(bus.shutdown()).resolves.toEqual({
+          status: "drained",
+          unfinishedHandlers: [],
+        });
+        expect(result).toMatchObject({ unfinishedReplays: [{ phase: "dequeue" }] });
+      } finally {
+        vi.useRealTimers();
+      }
+    },
+  );
+
+  it("waits for every replay requeue and preserves failed storage recovery evidence", async () => {
+    const queue = new ControlledDequeueQueue();
+    await queue.enqueue(deadLetter("first"));
+    await queue.enqueue(deadLetter("second"));
+    const bus = createTestEventBus<ReplayLifecycleEvent>({ deadLetterQueue: queue });
+    const first = bus.replayDeadLetters(1);
+    const second = bus.replayDeadLetters(1);
+    await queue.dequeueStarted.promise;
+    const requeueStarted = createDeferred();
+    const releaseRequeue = createDeferred();
+    const storageError = new Error("storage unavailable");
+    vi.spyOn(queue, "enqueue").mockImplementation(async (item) => {
+      if ((item.event as ReplayLifecycleEvent).value === "second") {
+        requeueStarted.resolve();
+        await releaseRequeue.promise;
+        throw storageError;
+      }
+      await InMemoryDeadLetterQueue.prototype.enqueue.call(queue, item);
+    });
+    const shutdown = bus.shutdown();
+    const anotherShutdown = bus.shutdown();
+    let drained = false;
+    void shutdown.then(() => {
+      drained = true;
+    });
+    queue.releaseDequeue.resolve();
+    await first;
+    await requeueStarted.promise;
+    expect(drained).toBe(false);
+    expect(bus.getRunningHandlerCount()).toBe(0);
+    const controller = new AbortController();
+    controller.abort();
+    await expect(bus.shutdown({ signal: controller.signal })).resolves.toMatchObject({
+      status: "cancelled",
+      unfinishedHandlers: [],
+      unfinishedReplays: [{ phase: "requeue" }],
+    });
+    releaseRequeue.resolve();
+    await expect(second).resolves.toMatchObject({
+      failed: 1,
+      failures: [{ requeued: false, storageError, item: { event: { value: "second" } } }],
+    });
+    await expect(Promise.all([shutdown, anotherShutdown])).resolves.toEqual([
+      { status: "drained", unfinishedHandlers: [] },
+      { status: "drained", unfinishedHandlers: [] },
+    ]);
+    await expect(queue.peek<ReplayLifecycleEvent>()).resolves.toMatchObject([
+      { event: { value: "first" } },
+    ]);
+  });
+
+  it("releases drain tracking when dequeue rejects", async () => {
+    const queue = new ControlledDequeueQueue();
+    const storageError = new Error("dequeue unavailable");
+    vi.spyOn(queue, "dequeue").mockImplementation(async () => {
+      queue.dequeueStarted.resolve();
+      await queue.releaseDequeue.promise;
+      throw storageError;
+    });
+    const bus = createTestEventBus<ReplayLifecycleEvent>({ deadLetterQueue: queue });
+    const replay = bus.replayDeadLetters();
+    const rejected = expect(replay).rejects.toBe(storageError);
+    await queue.dequeueStarted.promise;
+    const shutdown = bus.shutdown();
+    let drained = false;
+    void shutdown.then(() => {
+      drained = true;
+    });
+    await Promise.resolve();
+    expect(drained).toBe(false);
+    queue.releaseDequeue.resolve();
+    await rejected;
+    await expect(shutdown).resolves.toEqual({ status: "drained", unfinishedHandlers: [] });
+  });
+
+  it("keeps handler capacity available while a replay is waiting on storage", async () => {
+    class ReplayHandler implements EventHandler<ReplayLifecycleEvent> {
+      handle = vi.fn();
+    }
+    const queue = new ControlledDequeueQueue();
+    const bus = createTestEventBus<ReplayLifecycleEvent>({
+      deadLetterQueue: queue,
+      maxConcurrency: 1,
+    });
+    const handler = new ReplayHandler();
+    subscribe(bus, ReplayHandler, handler);
+    const replay = bus.replayDeadLetters();
+    await queue.dequeueStarted.promise;
+    await bus.publish(new ReplayLifecycleEvent("live"));
+    expect(handler.handle).toHaveBeenCalledOnce();
+    queue.releaseDequeue.resolve();
+    await expect(replay).resolves.toMatchObject({ attempted: 0 });
+    await expect(bus.shutdown()).resolves.toEqual({ status: "drained", unfinishedHandlers: [] });
   });
 });
