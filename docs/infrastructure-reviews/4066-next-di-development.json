@@ -2,6 +2,47 @@
   "schemaVersion": 1,
   "changes": [
     {
+      "package": "problems-core",
+      "classification": "pure-contract",
+      "reason": "The generated Problem registry includes the Next development graph-unavailable code. This adds static error metadata and public union types without a Host, Provider, storage or lifecycle dependency.",
+      "files": {
+        "packages/problems-core/src/generated/problem-code-registry.ts": "314e34fb6ddc6fe1fb63f62a1976297c48b70ab7fcd915a3cf91bfcf7d781420"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Generated static Problem metadata has no deployed Node Host capability, storage or lifecycle requirement.",
+          "providers": [],
+          "constraints": ["No runtime support or provider certification is claimed."],
+          "references": [
+            "scripts/problem-registry.mts",
+            "packages/problems-core/src/generated/problem-code-registry.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Generated static Problem metadata has no deployed Lambda Host capability, storage or lifecycle requirement.",
+          "providers": [],
+          "constraints": ["No runtime support or provider certification is claimed."],
+          "references": [
+            "scripts/problem-registry.mts",
+            "packages/problems-core/src/generated/problem-code-registry.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Generated static Problem metadata has no deployed Workers or Node Container Host capability, storage or lifecycle requirement.",
+          "providers": [],
+          "constraints": ["No runtime support or provider certification is claimed."],
+          "references": [
+            "scripts/problem-registry.mts",
+            "packages/problems-core/src/generated/problem-code-registry.ts"
+          ]
+        }
+      }
+    },
+    {
       "package": "create-croco-app",
       "classification": "pure-contract",
       "reason": "The existing Node Next.js scaffold connects its development webpack lifecycle to generated DI and app-local runtime retirement. Production compilation remains one-shot; no deployment Host or Provider support is added.",
