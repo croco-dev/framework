@@ -301,6 +301,14 @@ live AWS deployment certification.
 
 - **Node**: `createNodeComposedHandler({ apiHandlers, pageHandler })` — Returns `{ fetch }` for `@hono/node-server` or Node.js `http.createServer`.
 
+The default isolated RSC encoder forwards the Node adapters' platform-only context
+(`{ platform: "node" }`) to the server component alongside its request. URL, method and headers
+remain request-specific. Additional context fields, including `env`, `executionContext`, `event`
+and `lambdaContext`, are refused with `meta-vite/rsc-flight-context-unsupported` before encoding;
+they are never serialized or silently removed. This also applies to JSON-compatible host values.
+Lambda and Workers RSC host integration remains unverified; the isolated encoder requires a Node
+child process and does not accept those platforms' contexts.
+
 ## Production Runtime Matrix
 
 Detailed promotion gates live in [Presentation Runtime Support](../docs/src/content/docs/en/reference/presentation-runtime-support.md). The package-level support contract is:

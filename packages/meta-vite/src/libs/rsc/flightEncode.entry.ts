@@ -13,6 +13,7 @@
 import { Problem, ProblemCategory } from "@croco/problems-core";
 import { isAbsolute, join } from "node:path";
 import { createElement } from "react";
+import { isIsolatedRscNodeContext } from "./isolatedContext";
 import type { RenderRouteComponentProps, RenderRouteIR } from "../routes/types";
 
 // Lazily resolved inside main() so the SSR/HTML runtime never loads the
@@ -24,7 +25,6 @@ async function loadFlightEncoder(): Promise<{
     renderToReadableStream: (element: unknown, options?: unknown) => ReadableStream<Uint8Array>;
   };
 }
-
 export class RscEncoderEntryInputProblem extends Problem {
   readonly code = "meta-vite/rsc-encoder-entry-invalid-input";
   readonly category = ProblemCategory.BadRequest;
@@ -135,11 +135,18 @@ async function main(): Promise<void> {
     routePath: string;
     componentRef?: string;
     request?: unknown;
+    context?: unknown;
   };
   const routePath = body.routePath;
 
   if (!routePath || typeof routePath !== "string") {
     throw new RscEncoderEntryInputProblem("rsc encode entry requires a routePath");
+  }
+
+  if (body.context !== undefined && !isIsolatedRscNodeContext(body.context)) {
+    throw new RscEncoderEntryInputProblem(
+      "rsc encode entry accepts only platform-only Node context",
+    );
   }
 
   const loaderPath = process.env["CROCO_RSC_COMPONENT_PATH"];
@@ -164,7 +171,10 @@ async function main(): Promise<void> {
     );
   }
 
-  const element = createElement(component, { request });
+  const element = createElement(component, {
+    request,
+    ...(body.context ? { context: body.context } : {}),
+  });
   const { renderToReadableStream } = await loadFlightEncoder();
   const stream = renderToReadableStream(element) as ReadableStream<Uint8Array>;
   const reader = stream.getReader();

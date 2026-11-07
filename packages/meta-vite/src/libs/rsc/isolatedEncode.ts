@@ -4,9 +4,9 @@ import { existsSync } from "node:fs";
 import { createRequire } from "node:module";
 import { join } from "node:path";
 import { Problem, ProblemCategory } from "@croco/problems-core";
+import { isIsolatedRscNodeContext } from "./isolatedContext";
 import type { RenderRouteIR } from "../routes/types";
 import type { RuntimeContext } from "../render/types";
-
 export class RscFlightEncodeFailedProblem extends Problem {
   readonly code = "meta-vite/rsc-flight-encode-failed";
   readonly category = ProblemCategory.InternalServerError;
@@ -32,7 +32,7 @@ export class RscFlightEncodeFailedProblem extends Problem {
 
 /**
  * The isolated encoder renders in a child process over a JSON pipe, while a
- * `RuntimeContext` carries live host values (`env` records, a Cloudflare
+ * `RuntimeContext` can carry live host values (`env` records, a Cloudflare
  * `executionContext`, a Lambda context) that cannot cross that boundary.
  * Silently dropping them would hand a server component an `undefined` host
  * value — a wrong answer that renders fine — so the render is refused instead.
@@ -169,10 +169,9 @@ export type IsolatedRscEncodeInput = {
 export async function encodeRscFlightInIsolatedEncoder(
   input: IsolatedRscEncodeInput,
 ): Promise<ReadableStream<Uint8Array>> {
-  // The child renders over a JSON pipe, so a runtime context cannot travel
-  // with the request. Refuse before spawning: a component reading a host value
-  // would otherwise render `undefined` and look successful.
-  if (input.context) {
+  // Only platform-only Node metadata crosses the JSON pipe. Refuse every
+  // additional host field before serialization instead of silently dropping it.
+  if (input.context !== undefined && !isIsolatedRscNodeContext(input.context)) {
     throw new RscFlightContextUnsupportedProblem(input.route.path, input.context.platform);
   }
 
@@ -203,6 +202,7 @@ export async function encodeRscFlightInIsolatedEncoder(
   const payload = JSON.stringify({
     routePath: input.route.path,
     componentRef: input.route.componentRef,
+    ...(input.context ? { context: { platform: input.context.platform } } : {}),
     request: {
       url: input.request.url,
       method: input.request.method,

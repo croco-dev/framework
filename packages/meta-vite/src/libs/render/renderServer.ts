@@ -1120,9 +1120,8 @@ async function defaultRscFlightEncoder(
     throw new RscFlightNotAcceptableProblem(route.path);
   }
 
-  // `context` is forwarded so the isolated encoder can refuse it explicitly: a
-  // host context cannot cross the child-process boundary, and dropping it
-  // silently would render components against missing host values.
+  // The isolated encoder carries platform-only Node metadata and explicitly
+  // refuses live host values that cannot cross the child-process boundary.
   return encodeRscFlightInIsolatedEncoder({ route, request, context });
 }
 

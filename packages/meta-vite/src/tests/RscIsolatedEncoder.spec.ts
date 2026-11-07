@@ -10,6 +10,7 @@ import {
   RscFlightEncodeAbortedProblem,
 } from "../libs/rsc/isolatedEncode";
 import type { RenderRouteIR } from "../libs/routes/types";
+import type { RuntimeContext } from "../libs/render/types";
 
 // `src/tests` lives two directory levels below the package root, which owns the
 // manifest the workspace exports map resolves.
@@ -137,6 +138,42 @@ describe("isolated RSC encoder lifecycle", () => {
       status: 500,
       extensions: { route: "/rsc-context", platform: "cloudflare" },
     });
+  });
+
+  it.each([
+    { platform: "node", env: { SECRET: "value" } },
+    { platform: "node", executionContext: { waitUntil: () => {} } },
+    { platform: "node", event: {} },
+    { platform: "node", lambdaContext: {} },
+    { platform: "node", env: undefined },
+    { platform: "lambda" },
+    { platform: "cloudflare" },
+    Object.assign({ platform: "node" }, { extra: "must-not-disappear" }),
+    Object.defineProperty({ platform: "node" }, "env", { value: "hidden" }),
+    Object.assign({ platform: "node" }, { [Symbol("host")]: "hidden" }),
+    Object.create({ env: "inherited" }, { platform: { value: "node", enumerable: true } }),
+  ] satisfies RuntimeContext[])(
+    "refuses host context without serializing or stripping it: %j",
+    async (context) => {
+      await expect(
+        encodeRscFlightInIsolatedEncoder({
+          route: rscRoute("/rsc-context"),
+          request: new Request("https://example.com/rsc-context"),
+          encoderModule: await stubbedEncoderModule(),
+          context,
+        }),
+      ).rejects.toMatchObject({ code: "meta-vite/rsc-flight-context-unsupported", status: 500 });
+    },
+  );
+
+  it("carries only explicit Node platform metadata into the child", async () => {
+    const stream = await encodeRscFlightInIsolatedEncoder({
+      route: rscRoute("/rsc-node"),
+      request: new Request("https://example.com/rsc-node"),
+      encoderModule: await echoEncoderModule(),
+      context: { platform: "node" },
+    });
+    expect(JSON.parse(await collect(stream)).context).toEqual({ platform: "node" });
   });
 
   it("delivers encoder rows before the child process exits", async () => {
