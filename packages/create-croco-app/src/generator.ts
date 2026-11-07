@@ -39,6 +39,7 @@ import {
   installWebTrpc,
 } from "./installers/index.js";
 import { PnpmCommandProblem } from "./libs/problems/PnpmCommandProblem.js";
+import { configureTrpcNextjsDevelopment } from "./installers/trpc-nextjs.js";
 import { assertSupportedNodeVersion, writeGeneratedNodeRuntimeContract } from "./node-runtime.js";
 import { isSaasPreset, validateResolvedOptions } from "./options.js";
 import { getGeneratedAppDependencyRange } from "./package-version.js";
@@ -267,6 +268,10 @@ async function generateProject(
         });
       }
     }
+  }
+
+  if (!isLegacyVikeFullstackPreset && options.api === "trpc" && options.apiHosting === "nextjs") {
+    configureTrpcNextjsDevelopment(targetDir);
   }
 
   // Step 8: DB addons

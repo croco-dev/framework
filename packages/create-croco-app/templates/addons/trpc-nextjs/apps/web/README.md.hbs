@@ -14,6 +14,7 @@ pnpm dev:demo      # Explicit local identities; binds 127.0.0.1
 # Open http://127.0.0.1:3000/products/launch-brief
 pnpm typecheck
 pnpm test
+pnpm di:dev:smoke   # Disposable Next dev HTTP fixtures; leaves application sources untouched
 pnpm build
 pnpm product:smoke # Built server: SSR/status/auth/isolation/idempotency/restart/sink fault
 pnpm start:demo    # Run the production build locally, still with synthetic identities
@@ -56,9 +57,22 @@ observations are not automatically retried, and duplicate commands do not republ
 Edit `src/server/product/ProductTrials.ts` for business/growth definitions,
 `src/server/product/migrateProduct.ts` for the reviewed schema, `src/server/routers/product.ts`
 for typed operation inputs, and `src/app/products`, `src/app/try`, `src/app/results` for
-the product loop. Add `@Component` services under `src/server`; `pnpm di:generate`
-discovers them without service lists in bootstrap. HTTP callbacks and private page
-reads enter `src/server/application.ts`'s app scope.
+the product loop. Add `@Component` services under `src/server`; the development webpack
+build regenerates their factories and manifest, including unreferenced additions,
+dependency changes, renames and deletions. No bootstrap service list is needed.
+`di.config.json` supplies the same compiler options to development and `pnpm di:generate`.
+Build and typecheck retain one-shot generation before their normal commands.
+
+HTTP callbacks and private page reads use `withApplication()` in
+`src/server/application.ts`. Development callbacks reject rebuilding, invalid and stale
+graphs. Correct the source location reported by the compiler and save again to recover.
+Each replacement waits for active callbacks and disposes the previous app scopes before
+using the new graph; separate route bundles retain their own constructor identities.
+Development recompilation clears in-memory state, including local sessions: sign in again
+when needed. Runtime cleanup failures remain visible and require fixing the provider and
+restarting development. Native Next/webpack owns watching, debouncing and shutdown; this
+integration adds no watcher process or signal listener. It does not provide graceful
+shutdown of arbitrary application resources when Next exits.
 
 This example verifies local Node and browser behavior. It does not certify a production
 provider, deployment, Croco Flight/RSC, multi-process SQLite operation, real payment,

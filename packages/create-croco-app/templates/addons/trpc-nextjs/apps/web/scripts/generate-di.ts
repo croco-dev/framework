@@ -1,3 +1,6 @@
-import { compileDiGraph, writeDiGraph } from "@croco/esbuild-plugin";
+import { generateDi } from "./di.mjs";
 
-writeDiGraph(compileDiGraph({ baseDir: process.cwd() }));
+generateDi().catch((error: unknown) => {
+  console.error(error);
+  process.exitCode = 1;
+});
