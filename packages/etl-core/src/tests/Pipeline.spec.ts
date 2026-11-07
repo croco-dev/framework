@@ -391,7 +391,7 @@ describe("pipeline operations", () => {
       const operations = createPipelineOperations(f.definition, {
         ...f.runtime,
         chunkSize: 100,
-        maxInputRecords: count,
+        maxInputRecords: 100_000,
       });
       expect(await operations.run()).toMatchObject({ inputCount: count, outputCount: count });
       expect(f.writer.write).toHaveBeenCalledTimes(count / 100);
