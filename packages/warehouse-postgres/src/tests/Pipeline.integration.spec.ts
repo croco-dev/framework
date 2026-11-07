@@ -23,6 +23,7 @@ import type { PostgresTestConnection } from "@croco/testing-resources";
 import type { FactDescriptor } from "@croco/warehouse-core";
 import type { WarehouseAccess } from "@croco/warehouse-core/runtime";
 import type { PipelineDefinition, PipelineRuntime } from "@croco/etl-core/pipeline";
+import type { WarehousePostgresPool } from "../facts/client";
 
 const fact = defineFact("etl_pipeline_integration", {
   version: 1,
@@ -183,6 +184,106 @@ describe.skipIf(process.env.CROCO_TEST_REAL_RESOURCES !== "1")(
       };
     }
 
+    it("loads 1000 exact payments in ten atomic batches through the production pipeline", async () => {
+      const store = services();
+      const input = Array.from({ length: 1000 }, (_, index) => ({
+        ...rows[index % 2],
+        id: `payment-${String(index).padStart(4, "0")}`,
+      }));
+      const largeSchema = {
+        ...schema,
+        limits: { ...schema.limits, maxBytes: 200_000, maxRecords: 1000 },
+      };
+      const content = input.map((row) => JSON.stringify(row)).join("\n");
+      const path = join(directory, "batch-payments.jsonl");
+      await writeFile(path, content);
+      const statements: string[] = [];
+      let maxParameters = 0;
+      const pool: WarehousePostgresPool = {
+        async query<T>(sql: string, values?: unknown[]) {
+          const result = await connection.pool.query(sql, values);
+          return { rows: result.rows as T[] };
+        },
+        async connect() {
+          const client = await connection.pool.connect();
+          return {
+            async query<T>(sql: string, values?: unknown[]) {
+              statements.push(sql);
+              maxParameters = Math.max(maxParameters, values?.length ?? 0);
+              const result = await client.query(sql, values);
+              return { rows: result.rows as T[] };
+            },
+            release: (error?: Error | boolean) => client.release(error),
+          };
+        },
+      };
+      const writer = new PostgresWarehouseWriter(pool, descriptor, store.resolveAccess);
+      const writes = vi.spyOn(writer, "write");
+      const result = await createPipelineOperations(
+        {
+          ...definition,
+          project: defineProjection({
+            source: largeSchema,
+            target: fact,
+            columns: project.columns,
+          }),
+          source: {
+            ...definition.source,
+            partitions: [
+              {
+                ...definition.source.partitions[0],
+                path,
+                schema: largeSchema,
+                revision: createHash("sha256").update(content).digest("hex"),
+              },
+            ],
+          },
+        },
+        { ...store.runtime, writer, chunkSize: 100, maxInputRecords: 1000 },
+      ).run();
+      expect(result).toMatchObject({ state: "published", inputCount: 1000, outputCount: 1000 });
+      expect(writes).toHaveBeenCalledTimes(10);
+      expect(statements.filter((sql) => sql === "BEGIN")).toHaveLength(10);
+      expect(statements.filter((sql) => sql === "COMMIT")).toHaveLength(10);
+      expect(statements).toHaveLength(100);
+      expect(maxParameters).toBe(700);
+      const receipts = await connection.pool.query<{ count: number; inserted: number }>(
+        "SELECT count(*)::integer AS count, sum((receipt->>'inserted')::integer)::integer AS inserted FROM warehouse_receipts WHERE candidate_id=$1",
+        [`etl:${result.executionId}`],
+      );
+      expect(receipts.rows).toEqual([{ count: 10, inserted: 1000 }]);
+      const reader = new PostgresWarehouseReader(
+        connection.pool,
+        descriptor,
+        store.resolveAccess,
+        "etl-integration-cursor-secret-32bytes",
+        cancellationPool,
+      );
+      const request = {
+        access: store.resolveAccess(),
+        snapshotId: result.snapshotId as string,
+        projection: ["id", "amount", "occurredAt"],
+        filters: [],
+        order: [{ column: "id", direction: "asc" as const }],
+        maxRows: 100,
+        maxBytes: 200_000,
+        timeoutMs: 5000,
+      };
+      const actual = [];
+      let cursor: string | undefined;
+      do {
+        const page = await reader.read({ ...request, cursor });
+        actual.push(...page.rows);
+        cursor = page.nextCursor ?? undefined;
+      } while (cursor && actual.length <= input.length);
+      expect(cursor).toBeUndefined();
+      expect(actual).toEqual(input);
+      expect(await store.manager().get(result.executionId)).toMatchObject({
+        status: "completed",
+        result,
+      });
+    }, 60_000);
+
     it("publishes exact file values and durably completes the execution", async () => {
       const store = services();
       const operations = createPipelineOperations(definition, store.runtime);
@@ -214,7 +315,7 @@ describe.skipIf(process.env.CROCO_TEST_REAL_RESOURCES !== "1")(
       ).toBe(1);
     });
 
-    it("restores a nonzero durable cursor with a different chunk size after a checkpoint fault", async () => {
+    it("requires fixed batch boundaries when restoring a nonzero cursor after a checkpoint fault", async () => {
       const store = services();
       const saveCheckpoint = store.runtime.executions.checkpointAttempt.bind(
         store.runtime.executions,
@@ -254,7 +355,13 @@ describe.skipIf(process.env.CROCO_TEST_REAL_RESOURCES !== "1")(
         publication: restartedOwner,
         chunkSize: 3,
       });
-      const result = await restarted.retry(executionId);
+      await expect(restarted.retry(executionId)).rejects.toThrow("binding-changed");
+      expect((await store.manager().get(executionId)).attempts).toBe(1);
+      const result = await createPipelineOperations(definition, {
+        ...store.runtime,
+        executions: restartedOwner.executions,
+        publication: restartedOwner,
+      }).retry(executionId);
       expect(result).toMatchObject({ state: "published", inputCount: 2, outputCount: 2 });
       expect((await store.read(result.snapshotId as string)).rows).toEqual(rows);
       const finalReceipts = await connection.pool.query<{ count: string }>(
@@ -311,9 +418,8 @@ describe.skipIf(process.env.CROCO_TEST_REAL_RESOURCES !== "1")(
       expect(initial).toHaveLength(3);
       expect(initial.reduce((sum, receipt) => sum + receipt.inserted, 0)).toBe(2);
       expect(initial.reduce((sum, receipt) => sum + receipt.identical, 0)).toBe(1);
-      expect(reimported.map((receipt) => receipt.batch_id)).toEqual(
-        initial.map((receipt) => receipt.batch_id),
-      );
+      expect(reimported).toHaveLength(1);
+      expect(reimported[0].batch_id).not.toBe(initial[0].batch_id);
       expect(reimported.reduce((sum, receipt) => sum + receipt.inserted, 0)).toBe(0);
       expect(reimported.reduce((sum, receipt) => sum + receipt.identical, 0)).toBe(3);
       const binding = await connection.pool.query<{ table_name: string }>(

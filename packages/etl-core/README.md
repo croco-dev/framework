@@ -193,13 +193,19 @@ chunk writes and checkpoints atomic.
 - Mutable sources require `resume: "restart-partition"`. They restart the failed partition rather
   than treating an offset as reproducible; completed partitions retain their checkpoints. Changed
   bytes require a new revision and a new run. Non-replayable sources cannot retry an earlier attempt.
-- Run bindings include the pipeline version, source/input identity, target model, transform hash,
+- Run bindings include format version 2, the fixed `chunkSize`, pipeline version, source/input identity, target model, transform hash,
   expected warehouse head/revision, and trusted access. A changed binding fails explicitly instead
   of resuming an old run with new code or authority.
 - `Step` and `ChunkExecutor` write before recording a checkpoint. Delivery is at least once;
   warehouse writes and execution checkpoints are not one transaction. Stable batch identities and
   the target fact's grain/duplicate policy handle replay. Fully filtered chunks still advance input
   checkpoints; zero output does not establish complete source coverage.
+- `chunkSize` bounds source records per partition-local batch, including filtered and quarantined
+  records. Each nonempty output range makes one writer call with all its rows. A partial final range
+  ends at the partition boundary; it is never combined with another partition. The batch identity
+  binds source revision, partition and record range, transform, and target model, independently of
+  the attempt. Retry must retain `chunkSize`; changing it requires a new run. Executor processed
+  counts measure these input batches; pipeline result counts continue to measure source/output rows.
 - Strict mode fails on invalid rows. Quarantine handles projection/processor validation failures and
   records source/record position, reason codes, sensitivity, and counts without storing raw rejected
   rows. Malformed files and decoding errors still fail explicitly. Rejections or incomplete coverage
@@ -209,6 +215,14 @@ chunk writes and checkpoints atomic.
   proceed. Unpublished failures leave the previously published head available.
 
 ## Migration and boundaries
+
+Unversioned run bindings and checkpoints from row-at-a-time loading cannot resume as version 2.
+They fail with `binding-changed` (or `invalid-checkpoint` for an incompatible checkpoint). Inspect
+any uncertain receipt/publication first, retain the previous published snapshot, and start a new run
+with the same verified source revision and current access. Transaction fact grain and payload checks
+deduplicate identical facts across runs; an aggregate run still requires its explicit replacement range.
+There is no warehouse schema or receipt hash migration: existing ordered-payload receipt hashes remain
+valid. Checkpoints still retain the completed batch ID list; bounding that accumulated evidence is separate work.
 
 Existing `@croco/etl-core/source` consumers keep their imports and DB-free decoder behavior. Opt into
 `/pipeline` only where the Node.js application owns file access, execution persistence, and warehouse

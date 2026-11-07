@@ -1,0 +1,113 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "etl-core",
+      "classification": "runtime-adapter",
+      "reason": "Batch existing ETL loading without changing host ownership, provider selection or runtime support. New versioned run bindings reject unsafe row-receipt resumption.",
+      "files": {
+        "packages/etl-core/src/pipeline/definePipeline.ts": "993ae9437cb371af3c407d721ad60eda109bf854b933e3dd6003b351d4694b83"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "unverified",
+          "reason": "The existing Node file/execution/PostgreSQL composition is reused. Local fixtures do not verify deployment, Pod termination or pool lifecycle.",
+          "providers": ["@croco/etl-core/pipeline"],
+          "constraints": [
+            "Retain server-resolved access, current permission/privacy epochs, candidate fences and receipt reconciliation.",
+            "No live infrastructure or provider certification claim."
+          ],
+          "references": [
+            "packages/etl-core/README.md",
+            "packages/etl-core/src/pipeline/definePipeline.ts",
+            "docs/package-catalog.json"
+          ]
+        },
+        "aws-lambda": {
+          "result": "unverified",
+          "reason": "No new Lambda composition is introduced. File availability, invocation duration and owned connection cleanup remain unverified.",
+          "providers": ["@croco/etl-core/pipeline"],
+          "constraints": [
+            "Retain server-resolved access, current permission/privacy epochs, candidate fences and receipt reconciliation.",
+            "No live infrastructure or provider certification claim."
+          ],
+          "references": [
+            "packages/etl-core/README.md",
+            "packages/etl-core/src/pipeline/definePipeline.ts",
+            "docs/package-catalog.json"
+          ]
+        },
+        "cloudflare": {
+          "result": "unsupported",
+          "reason": "The file pipeline requires Node filesystem access and the existing PostgreSQL provider does not claim Worker isolate support.",
+          "providers": ["@croco/etl-core/pipeline"],
+          "constraints": [
+            "Retain server-resolved access, current permission/privacy epochs, candidate fences and receipt reconciliation.",
+            "No live infrastructure or provider certification claim."
+          ],
+          "references": [
+            "packages/etl-core/README.md",
+            "packages/etl-core/src/pipeline/definePipeline.ts",
+            "docs/package-catalog.json"
+          ],
+          "host": "workers"
+        }
+      }
+    },
+    {
+      "package": "warehouse-postgres",
+      "classification": "durable-provider",
+      "reason": "Replace per-row PostgreSQL queries with bounded set reads and multi-row inserts in the existing atomic receipt transaction; schema and payload hash semantics remain unchanged.",
+      "files": {
+        "packages/warehouse-postgres/src/facts/PostgresWarehouseWriter.ts": "7f10a5b4b317aac9252a027ceef068f2d0cda45125058977e18bc894b4f2eb04"
+      },
+      "catalogRuntimes": ["node", "lambda"],
+      "profiles": {
+        "kubernetes": {
+          "result": "unverified",
+          "reason": "The existing Node file/execution/PostgreSQL composition is reused. Local fixtures do not verify deployment, Pod termination or pool lifecycle.",
+          "providers": ["@croco/warehouse-postgres/facts"],
+          "constraints": [
+            "Retain server-resolved access, current permission/privacy epochs, candidate fences and receipt reconciliation.",
+            "No live infrastructure or provider certification claim."
+          ],
+          "references": [
+            "packages/warehouse-postgres/README.md",
+            "packages/warehouse-postgres/src/facts/PostgresWarehouseWriter.ts",
+            "docs/package-catalog.json"
+          ]
+        },
+        "aws-lambda": {
+          "result": "unverified",
+          "reason": "No new Lambda composition is introduced. File availability, invocation duration and owned connection cleanup remain unverified.",
+          "providers": ["@croco/warehouse-postgres/facts"],
+          "constraints": [
+            "Retain server-resolved access, current permission/privacy epochs, candidate fences and receipt reconciliation.",
+            "No live infrastructure or provider certification claim."
+          ],
+          "references": [
+            "packages/warehouse-postgres/README.md",
+            "packages/warehouse-postgres/src/facts/PostgresWarehouseWriter.ts",
+            "docs/package-catalog.json"
+          ]
+        },
+        "cloudflare": {
+          "result": "unsupported",
+          "reason": "The file pipeline requires Node filesystem access and the existing PostgreSQL provider does not claim Worker isolate support.",
+          "providers": ["@croco/warehouse-postgres/facts"],
+          "constraints": [
+            "Retain server-resolved access, current permission/privacy epochs, candidate fences and receipt reconciliation.",
+            "No live infrastructure or provider certification claim."
+          ],
+          "references": [
+            "packages/warehouse-postgres/README.md",
+            "packages/warehouse-postgres/src/facts/PostgresWarehouseWriter.ts",
+            "docs/package-catalog.json"
+          ],
+          "host": "workers"
+        }
+      }
+    }
+  ]
+}

@@ -131,6 +131,14 @@ export class PostgresWarehouseWriter implements WarehouseWriter {
         throw new WarehouseContractError("WAREHOUSE_COLUMN_DENIED");
       const rows = request.rows.map((row) => validateRow(descriptor, row));
       const payloads = rows.map((row) => canonicalPayload(descriptor, row));
+      // Bound both retained payloads and each native INSERT's protocol parameters.
+      const payloadBytes = payloads.reduce(
+        (sum, payload, index) =>
+          sum + Buffer.byteLength(JSON.stringify(payload)) + (index === 0 ? 0 : 1),
+        2,
+      );
+      if (payloadBytes > 8 * 1024 * 1024 || keys.length + 4 > 60_000)
+        throw new WarehouseContractError("WAREHOUSE_BATCH_LIMIT");
       const digest = createHash("sha256").update(JSON.stringify(payloads)).digest("hex");
       const previous = await db.query<{ receipt: WriteReceipt; payload_hash: string }>(
         "SELECT receipt,payload_hash FROM warehouse_receipts WHERE candidate_id=$1 AND batch_id=$2",
@@ -152,6 +160,7 @@ export class PostgresWarehouseWriter implements WarehouseWriter {
       const table = quoteIdentifier(factTableName(descriptor));
       let inserted = 0;
       let identical = 0;
+      const unique = new Map<string, number>();
       for (let index = 0; index < rows.length; index++) {
         const row = rows[index];
         if (descriptor.kind === "aggregate") {
@@ -167,31 +176,55 @@ export class PostgresWarehouseWriter implements WarehouseWriter {
             throw new WarehouseContractError("WAREHOUSE_ROW_OUTSIDE_PARTITION");
         }
         const identity = encodeIdentity(descriptor, row, request.access.scope);
+        const prior = unique.get(identity);
+        if (prior !== undefined) {
+          if (payloads[prior] !== payloads[index])
+            throw new WarehouseContractError("WAREHOUSE_FACT_CONFLICT");
+          identical++;
+        } else unique.set(identity, index);
+      }
+      const identities = [...unique.keys()];
+      if (identities.length) {
         const suppressed = await db.query(
-          "SELECT identity FROM warehouse_suppressions WHERE scope_key=$1 AND model_version=$2 AND identity=$3",
-          [candidate.scope_key, candidate.model_version, identity],
+          "SELECT identity FROM warehouse_suppressions WHERE scope_key=$1 AND model_version=$2 AND identity=ANY($3::text[])",
+          [candidate.scope_key, candidate.model_version, identities],
         );
         if (suppressed.rows.length)
           throw new WarehouseContractError("WAREHOUSE_IDENTITY_SUPPRESSED");
-        const existing = await db.query<{ _payload: string }>(
-          `SELECT _payload FROM ${table} WHERE _scope=$1 AND _identity=$2${descriptor.kind === "aggregate" ? " AND _candidate=$3" : " AND (_candidate=$3 OR (_visible_from IS NOT NULL AND _visible_to IS NULL))"}`,
-          [candidate.scope_key, identity, request.candidateId],
+        const existing = await db.query<{ _identity: string; _payload: string }>(
+          `SELECT _identity,_payload FROM ${table} WHERE _scope=$1 AND _identity=ANY($2::text[])${descriptor.kind === "aggregate" ? " AND _candidate=$3" : " AND (_candidate=$3 OR (_visible_from IS NOT NULL AND _visible_to IS NULL))"}`,
+          [candidate.scope_key, identities, request.candidateId],
         );
-        if (existing.rows.some((value) => value._payload !== payloads[index]))
-          throw new WarehouseContractError("WAREHOUSE_FACT_CONFLICT");
-        if (existing.rows.length) identical++;
-        else inserted++;
-        const values = [
-          candidate.scope_key,
-          identity,
-          request.candidateId,
-          payloads[index],
-          ...keys.map((key) => row[key]),
-        ];
-        await db.query(
-          `INSERT INTO ${table} (_scope,_identity,_candidate,_payload,${keys.map((key) => quoteIdentifier(factColumnName(descriptor, key))).join(",")}) VALUES (${values.map((_, i) => `$${i + 1}`).join(",")}) ON CONFLICT(_scope,_candidate,_identity) DO NOTHING`,
-          values,
-        );
+        const present = new Set<string>();
+        for (const value of existing.rows) {
+          const index = unique.get(value._identity);
+          if (index === undefined || value._payload !== payloads[index])
+            throw new WarehouseContractError("WAREHOUSE_FACT_CONFLICT");
+          present.add(value._identity);
+        }
+        identical += present.size;
+        inserted = unique.size - present.size;
+        const entries = [...unique];
+        const insertSize = Math.floor(60_000 / (keys.length + 4));
+        for (let offset = 0; offset < entries.length; offset += insertSize) {
+          const values: unknown[] = [];
+          const tuples = entries.slice(offset, offset + insertSize).map(([identity, index]) => {
+            const rowValues = [
+              candidate.scope_key,
+              identity,
+              request.candidateId,
+              payloads[index],
+              ...keys.map((key) => rows[index][key]),
+            ];
+            const placeholders = rowValues.map((_, index) => `$${values.length + index + 1}`);
+            values.push(...rowValues);
+            return `(${placeholders.join(",")})`;
+          });
+          await db.query(
+            `INSERT INTO ${table} (_scope,_identity,_candidate,_payload,${keys.map((key) => quoteIdentifier(factColumnName(descriptor, key))).join(",")}) VALUES ${tuples.join(",")} ON CONFLICT(_scope,_candidate,_identity) DO NOTHING`,
+            values,
+          );
+        }
       }
       const durable: WriteReceipt = { ...receipt, inserted, identical };
       await db.query(
