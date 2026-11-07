@@ -114,15 +114,27 @@ export abstract class BaseStorageProvider implements StorageProvider {
     const reader = stream.getReader();
     let finished = false;
     let removeAbortListener = () => {};
+    let cancellation: Promise<void> | undefined;
 
-    const cancelReader = async (reason: unknown) => {
+    const cancelReader = (reason: unknown): Promise<void> => {
+      if (cancellation !== undefined) {
+        return cancellation;
+      }
+      if (finished) {
+        return Promise.resolve();
+      }
       finished = true;
       removeAbortListener();
-      try {
-        await reader.cancel(reason);
-      } finally {
-        reader.releaseLock();
-      }
+
+      let beginCancellation = () => {};
+      cancellation = new Promise<void>((resolve, reject) => {
+        beginCancellation = () => {
+          void reader.cancel(reason).then(resolve, reject);
+        };
+      }).finally(() => reader.releaseLock());
+      // Publish the promise before source cancellation can re-enter the wrapper.
+      beginCancellation();
+      return cancellation;
     };
 
     return new ReadableStream<Uint8Array>({

@@ -6,7 +6,7 @@
       "classification": "pure-contract",
       "reason": "Release owned readers on EOF/error and after cancellation settlement, guarding pending reads against terminal races. Public signatures, storage mutation, retry and network semantics are unchanged.",
       "files": {
-        "packages/storage-core/src/libs/BaseStorageProvider.ts": "bb6fcf30558aefe1b96b7a29924a17574f027a94dea43215fe02256bfeb6b83c"
+        "packages/storage-core/src/libs/BaseStorageProvider.ts": "05ca3a0085d3d1a4adba67e71b70f88bdd53e847c00ba95657d8d7779ae210d2"
       },
       "catalogRuntimes": [],
       "profiles": {
