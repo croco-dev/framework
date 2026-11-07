@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { CreditLedgerService, InMemoryCreditLedgerStore } from "@croco/credits-core";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { FirstPartyReferralCreditGrantAdapter } from "../credit-grant";
 import { InMemoryReferralStore } from "../libs/InMemoryReferralStore";
 import { registerReferralProgram } from "../libs/ReferralProgram";
@@ -23,6 +23,8 @@ import type { ReferralTx } from "../libs/ReferralStore";
 import type {
   ReferralFulfillmentPort,
   ReferralFulfillmentResult,
+  ReferralNoveltyHook,
+  ReferralNoveltyVerdict,
   ReferralQualificationVerdict,
   ReferralSubject,
   RegisterReferralProgramInput,
@@ -329,6 +331,168 @@ describe("ReferralService", () => {
     expect(held.attribution.state).toBe("held");
     expect(held.attribution.holdReason).toBe("unknown-novelty");
     expect(() => registerReferralProgram({ ...programInput(), id: "  " })).toThrow();
+  });
+
+  describe("unknown novelty qualification", () => {
+    async function heldReferral() {
+      const store = new InMemoryReferralStore();
+      let verdict: ReferralNoveltyVerdict = { novelty: "unknown", reason: "source unavailable" };
+      const novelty = vi.fn<ReferralNoveltyHook>(() => verdict);
+      const qualification = vi.fn(() => ({
+        qualified: true as const,
+        sourceEventId: "purchase-1",
+        qualifyingAction: "first-purchase",
+        eligibleReason: "purchase confirmed",
+      }));
+      const fulfillment = { ...fulfillmentOk(), fulfill: vi.fn(fulfillmentOk().fulfill) };
+      const { service } = serviceWith({ store, novelty, qualification, fulfillment });
+      await service.registerProgram(programInput());
+      const { token } = await service.createReferralLink({
+        programId: "referral-welcome",
+        referrer: referrer(),
+      });
+      const { attribution } = await service.claimAttribution({ token, recipient: recipient() });
+      return {
+        service,
+        store,
+        token,
+        attribution,
+        novelty,
+        qualification,
+        fulfillment,
+        input: { attributionId: attribution.id, recipient: recipient() },
+        setNovelty: (next: ReferralNoveltyVerdict) => {
+          verdict = next;
+        },
+      };
+    }
+
+    it("keeps unknown novelty held without invoking action qualification or creating benefits", async () => {
+      const fixture = await heldReferral();
+      const { service, store, input, attribution, novelty, qualification, fulfillment } = fixture;
+      expect(await service.qualifyAttribution(input)).toEqual(attribution);
+      expect(await service.qualifyAttribution(input)).toEqual(attribution);
+      expect(novelty).toHaveBeenCalledTimes(3);
+      expect(qualification).not.toHaveBeenCalled();
+      expect(await store.listBenefitIntents({ attributionId: attribution.id })).toEqual([]);
+      expect(await store.readBudgetReserved("referral-welcome", 1)).toBe("20");
+      await expect(service.fulfillBenefits(input)).rejects.toBeInstanceOf(
+        ReferralAttributionStateConflictProblem,
+      );
+      expect(fulfillment.fulfill).not.toHaveBeenCalled();
+    });
+
+    it("commits existing-customer rejection and releases only its own reservation under competing retries", async () => {
+      const fixture = await heldReferral();
+      const { service, store, input, token, attribution, qualification, fulfillment } = fixture;
+      await service.claimAttribution({ token, recipient: recipient("other") });
+      fixture.setNovelty({ novelty: "existing", reason: "prior order confirmed" });
+      const results = await Promise.allSettled([
+        service.qualifyAttribution(input),
+        service.qualifyAttribution(input),
+      ]);
+      expect(results[0]).toMatchObject({
+        status: "rejected",
+        reason: expect.any(ReferralExistingCustomerProblem),
+      });
+      expect(results[1]).toMatchObject({
+        status: "rejected",
+        reason: expect.any(ReferralAttributionStateConflictProblem),
+      });
+      expect(await store.getAttribution(attribution.id)).toMatchObject({
+        state: "rejected",
+        rejectReason: "existing-customer",
+        holdReason: undefined,
+        qualification: undefined,
+      });
+      expect(await store.readBudgetReserved("referral-welcome", 1)).toBe("20");
+      expect(
+        (await store.listAudits()).filter((entry) => entry.action === "attribution.rejected"),
+      ).toMatchObject([{ targetId: attribution.id, reason: "prior order confirmed" }]);
+      expect(qualification).not.toHaveBeenCalled();
+      expect(await store.listBenefitIntents({ attributionId: attribution.id })).toEqual([]);
+      expect(fulfillment.fulfill).not.toHaveBeenCalled();
+    });
+
+    it("qualifies a newly confirmed recipient once with the pinned identity and budget", async () => {
+      const fixture = await heldReferral();
+      const { service, store, input, attribution, novelty, qualification } = fixture;
+      await service.registerProgram({
+        ...programInput(),
+        version: 2,
+        qualifyingAction: "second-purchase",
+        idempotencyKey: "program:referral-welcome:2",
+      });
+      fixture.setNovelty({ novelty: "new", reason: "signup confirmed" });
+      const results = await Promise.all([
+        service.qualifyAttribution(input),
+        service.qualifyAttribution(input),
+      ]);
+      expect(results[0]).toEqual(results[1]);
+      expect(results[0]).toMatchObject({ state: "benefits-pending", holdReason: undefined });
+      expect(novelty).toHaveBeenLastCalledWith({
+        recipient: recipient(),
+        attribution: { id: attribution.id, programId: "referral-welcome", programVersion: 1 },
+        now: new Date("2026-02-01T00:00:00Z"),
+      });
+      expect(novelty).toHaveBeenCalledTimes(2);
+      expect(qualification).toHaveBeenCalledTimes(1);
+      expect(await store.readBudgetReserved("referral-welcome", 1)).toBe("20");
+      expect(await store.listBenefitIntents({ attributionId: attribution.id })).toHaveLength(2);
+      const fulfilled = await service.fulfillBenefits(input);
+      expect(fulfilled.state).toBe("fulfilled");
+      expect(await service.fulfillBenefits(input)).toEqual(fulfilled);
+      expect(fixture.fulfillment.fulfill).toHaveBeenCalledTimes(2);
+    });
+
+    it("preserves a hold on novelty provider failure so a corrected retry can qualify", async () => {
+      const fixture = await heldReferral();
+      const failure = new Error("novelty source failed");
+      fixture.novelty.mockRejectedValueOnce(failure);
+      await expect(fixture.service.qualifyAttribution(fixture.input)).rejects.toBe(failure);
+      expect(await fixture.store.getAttribution(fixture.attribution.id)).toEqual(
+        fixture.attribution,
+      );
+      expect(fixture.qualification).not.toHaveBeenCalled();
+      expect(await fixture.store.readBudgetReserved("referral-welcome", 1)).toBe("20");
+      fixture.setNovelty({ novelty: "new", reason: "source recovered" });
+      expect(await fixture.service.qualifyAttribution(fixture.input)).toMatchObject({
+        state: "benefits-pending",
+      });
+    });
+
+    it("retains confirmed claim behavior without rechecking novelty", async () => {
+      const fixture = await heldReferral();
+      fixture.setNovelty({ novelty: "new", reason: "confirmed at claim" });
+      const { attribution } = await fixture.service.claimAttribution({
+        token: fixture.token,
+        recipient: recipient("confirmed"),
+      });
+      fixture.novelty.mockRejectedValue(new Error("later source outage"));
+      expect(
+        await fixture.service.qualifyAttribution({
+          attributionId: attribution.id,
+          recipient: recipient("confirmed"),
+        }),
+      ).toMatchObject({ state: "benefits-pending" });
+      expect(fixture.novelty).toHaveBeenCalledTimes(2);
+    });
+
+    it("expires an unresolved hold without querying novelty or releasing another claim's budget", async () => {
+      const fixture = await heldReferral();
+      await fixture.service.claimAttribution({
+        token: fixture.token,
+        recipient: recipient("other"),
+      });
+      const expired = await fixture.service.qualifyAttribution({
+        ...fixture.input,
+        now: fixture.attribution.expiresAt,
+      });
+      expect(expired.state).toBe("expired");
+      expect(fixture.novelty).toHaveBeenCalledTimes(2);
+      expect(fixture.qualification).not.toHaveBeenCalled();
+      expect(await fixture.store.readBudgetReserved("referral-welcome", 1)).toBe("20");
+    });
   });
 
   it("qualifies once and fulfills both sides with one benefit per side", async () => {

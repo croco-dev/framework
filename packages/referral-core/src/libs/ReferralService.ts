@@ -50,7 +50,10 @@ type CommittedOutcome<T> =
   | { readonly kind: "success"; readonly value: T }
   | {
       readonly kind: "rejected";
-      readonly problem: ReferralDuplicateClaimProblem | ReferralQualificationRejectedProblem;
+      readonly problem:
+        | ReferralDuplicateClaimProblem
+        | ReferralExistingCustomerProblem
+        | ReferralQualificationRejectedProblem;
     };
 
 const COUNTED_RECEIPT_STATES: readonly ReferralAttribution["state"][] = [
@@ -436,12 +439,49 @@ export class ReferralService {
         );
         return { kind: "success", value: expired };
       }
+      const program = await this.programFor(tx, stored);
+      if (stored.state === "held" && stored.holdReason === "unknown-novelty") {
+        const novelty = await this.novelty({
+          recipient: input.recipient,
+          attribution: {
+            id: stored.id,
+            programId: stored.programId,
+            programVersion: stored.programVersion,
+          },
+          now,
+        });
+        if (novelty.novelty === "unknown") return { kind: "success", value: stored };
+        if (novelty.novelty === "existing") {
+          await tx.compareAndSetAttribution(stored.id, ["held"], {
+            ...stored,
+            state: "rejected",
+            holdReason: undefined,
+            rejectReason: "existing-customer",
+            updatedAt: new Date(now.getTime()),
+          });
+          await tx.releaseBudgetReservation(
+            stored.programId,
+            stored.programVersion,
+            program.budgetPerAttribution,
+          );
+          await tx.recordAudit(
+            this.audit("attribution", stored.id, "attribution.rejected", program, {
+              actorId: "system",
+              reason: novelty.reason,
+              idempotencyKey: `reject:${stored.id}`,
+            }),
+          );
+          return {
+            kind: "rejected",
+            problem: new ReferralExistingCustomerProblem(input.recipient.id, novelty.reason),
+          };
+        }
+      }
       const verdict = await this.qualification({
         recipient: input.recipient,
         attribution: stored,
         now,
       });
-      const program = await this.programFor(tx, stored);
       if (!verdict.qualified) {
         const rejected: ReferralAttribution = {
           ...stored,
