@@ -2,7 +2,8 @@ import "reflect-metadata";
 import { readFileSync } from "node:fs";
 import { createApplicationRuntime } from "@croco/framework-module";
 import type { ApplicationRuntime } from "@croco/framework-module";
-import { Problem, ProblemCategory } from "@croco/problems-core";
+import { ProblemFactory } from "@croco/problems-core";
+import type { Problem } from "@croco/problems-core";
 import { generatedDiGraph } from "../../.croco/di.generated";
 
 type Entry = {
@@ -23,9 +24,8 @@ const developmentGlobal = globalThis as typeof globalThis & {
 let production: ApplicationRuntime | undefined;
 
 function unavailable(): Problem {
-  return new Problem(
+  return ProblemFactory.internalServerError(
     "CROCO_DI_DEVELOPMENT_UNAVAILABLE",
-    ProblemCategory.ServiceUnavailable,
     "The development DI graph is rebuilding, invalid or stale. Correct the compiler diagnostic and retry.",
   );
 }

@@ -3,7 +3,7 @@ import { fileURLToPath } from "node:url";
 import { runInNewContext } from "node:vm";
 import { ModuleKind, transpileModule } from "typescript";
 import { describe, expect, it, vi } from "vitest";
-import { Problem, ProblemCategory } from "@croco/problems-core";
+import { ProblemFactory } from "@croco/problems-core";
 
 const source = readFileSync(
   fileURLToPath(
@@ -42,7 +42,7 @@ function fixture() {
         if (specifier === "reflect-metadata") return {};
         if (specifier === "node:fs")
           return { readFileSync: (file: string) => JSON.stringify(states.get(file)) };
-        if (specifier === "@croco/problems-core") return { Problem, ProblemCategory };
+        if (specifier === "@croco/problems-core") return { ProblemFactory };
         if (specifier === "../../.croco/di.generated") return { generatedDiGraph: graph };
         if (specifier === "@croco/framework-module")
           return {
