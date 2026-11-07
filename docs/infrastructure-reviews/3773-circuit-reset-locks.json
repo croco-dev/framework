@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "retry-core",
+      "classification": "pure-contract",
+      "reason": "Preserve active and queued per-circuit lock ownership across reset/resetAll. The existing lock owner releases its chain on success or failure; TTL and capacity cleanup continue to exclude held locks and reclaim idle CLOSED state.",
+      "files": {
+        "packages/retry-core/src/libs/CircuitBreakerState.ts": "fd1dccc18666dec45096805605199af1c46bf4476a833736a54a15669081216d"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "In-process promise-chain ownership is independent of the Node Host. Reset clears circuit data without changing Host capabilities, storage or deployment lifecycle.",
+          "providers": ["@croco/retry-core:InMemoryCircuitBreakerStateStore"],
+          "constraints": [
+            "Serialization is local to this store instance; no cross-process locking, live infrastructure execution or provider certification is claimed."
+          ],
+          "references": [
+            "packages/retry-core/src/libs/CircuitBreakerState.ts",
+            "packages/retry-core/src/tests/CircuitBreakerState.spec.ts",
+            "packages/retry-core/README.md"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "In-process promise-chain ownership is independent of the Lambda Host. Reset clears circuit data without changing Host capabilities, storage or deployment lifecycle.",
+          "providers": ["@croco/retry-core:InMemoryCircuitBreakerStateStore"],
+          "constraints": [
+            "Serialization is local to this store instance; no cross-process locking, live infrastructure execution or provider certification is claimed."
+          ],
+          "references": [
+            "packages/retry-core/src/libs/CircuitBreakerState.ts",
+            "packages/retry-core/src/tests/CircuitBreakerState.spec.ts",
+            "packages/retry-core/README.md"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "In-process promise-chain ownership is independent of the Workers or Node Container Host. Reset clears circuit data without changing Host capabilities, storage or deployment lifecycle.",
+          "providers": ["@croco/retry-core:InMemoryCircuitBreakerStateStore"],
+          "constraints": [
+            "Serialization is local to this store instance; no cross-process locking, live infrastructure execution or provider certification is claimed."
+          ],
+          "references": [
+            "packages/retry-core/src/libs/CircuitBreakerState.ts",
+            "packages/retry-core/src/tests/CircuitBreakerState.spec.ts",
+            "packages/retry-core/README.md"
+          ]
+        }
+      }
+    }
+  ]
+}

@@ -311,7 +311,7 @@ export class InMemoryCircuitBreakerStateStore extends CircuitBreakerStateStore {
     this.lastFailures.delete(circuitId);
     this.halfOpenActiveCounts.delete(circuitId);
     this.halfOpenSuccessCounts.delete(circuitId);
-    this.locks.delete(circuitId);
+    // Active owners and waiters retain their chain until withCircuitLock releases it.
     this.lastAccessed.delete(circuitId);
   }
 
@@ -324,7 +324,6 @@ export class InMemoryCircuitBreakerStateStore extends CircuitBreakerStateStore {
     this.lastFailures.clear();
     this.halfOpenActiveCounts.clear();
     this.halfOpenSuccessCounts.clear();
-    this.locks.clear();
     this.lastAccessed.clear();
   }
 
