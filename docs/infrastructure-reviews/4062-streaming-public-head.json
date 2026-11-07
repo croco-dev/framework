@@ -6,8 +6,8 @@
       "classification": "protocol-render",
       "reason": "Buffered and shell-first SSR use one request-local head projection, preserving public-page language, robots, revision, alternates and safely escaped JSON-LD. The streamed head commits before deferred completion. The existing buffered public-page handler and RSC/SSG/ISR boundaries remain unchanged.",
       "files": {
-        "packages/meta-vite/src/libs/render/documentShell.ts": "1968510a87d1546d63b55099b805eaeea81ba6a7698794fb49d935d141a31596",
-        "packages/meta-vite/src/libs/render/renderServer.ts": "cec90d7bbac7326557f2fcaa7bea5660ba866899e14cf803b22ad0b9c3c11ce3",
+        "packages/meta-vite/src/libs/render/documentShell.ts": "e2f43565e7735b31b30cdcb8d2aa4e3c1695d72c36bab63d6046138d8aef263b",
+        "packages/meta-vite/src/libs/render/renderServer.ts": "b933bc2915a13096d6c7ab9a574d6f612aa927959eb6f9056c12d802ea680b96",
         "packages/meta-vite/src/libs/routes/head.ts": "20591601687283d70ecfeac6404488eedab3478649bf59f6840bbc8d256bec9f"
       },
       "catalogRuntimes": ["node", "lambda", "cloudflare-workers", "browser"],

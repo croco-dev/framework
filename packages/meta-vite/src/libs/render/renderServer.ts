@@ -1,7 +1,7 @@
 import { Suspense, createElement } from "react";
 import type { ComponentType, ReactNode } from "react";
 import { Problem } from "@croco/problems-core";
-import { renderToReadableStream, renderToStaticMarkup, renderToString } from "react-dom/server";
+import { renderToReadableStream, renderToString } from "react-dom/server";
 import {
   RscClientManifestMismatchProblem,
   RscClientReferenceMissingProblem,
@@ -26,7 +26,7 @@ import type { HeadMetadata } from "../routes/head";
 import type { ShellDecision, ShellSettleSummary } from "../routes/shell";
 import type { RenderRouteComponentProps, RenderRouteIR } from "../routes/types";
 import { createDeferredRegionStore } from "./deferredRegions";
-import { createSsrDocument } from "./documentShell";
+import { createSsrDocument, createSsrHtmlShell } from "./documentShell";
 import {
   SHELL_STREAM_DEFAULT_DEADLINE_MS,
   SHELL_STREAM_DEFAULT_MAX_BUFFERED_BYTES,
@@ -485,7 +485,7 @@ export class RenderServer {
       case "redirect": {
         const headers = new Headers(HTML_HEADERS);
         headers.set("location", decision.location);
-        return new Response(this.htmlShell(undefined, ""), {
+        return new Response(createSsrHtmlShell(undefined, ""), {
           status: decision.status ?? 302,
           headers,
         });
@@ -858,7 +858,7 @@ export class RenderServer {
   }
 
   private createHtmlResponse(body: string, status: number, headMetadata?: HeadMetadata): Response {
-    const shell = this.htmlShell(headMetadata, body);
+    const shell = createSsrHtmlShell(headMetadata, body);
 
     return new Response(shell, { status, headers: HTML_HEADERS });
   }
@@ -1086,15 +1086,6 @@ export class RenderServer {
       status: 200,
       headers: createRscFlightHeaders(this.rscClientManifestVersion),
     });
-  }
-
-  private htmlShell(headMetadata: HeadMetadata | undefined, bodyHtml: string): string {
-    return `<!DOCTYPE html>${renderToStaticMarkup(
-      createSsrDocument(
-        headMetadata,
-        createElement("div", { id: "root", dangerouslySetInnerHTML: { __html: bodyHtml } }),
-      ),
-    )}`;
   }
 }
 
