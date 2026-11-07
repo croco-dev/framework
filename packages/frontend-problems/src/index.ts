@@ -941,7 +941,11 @@ export function assertProblemExhaustive(problem: never): never {
 }
 
 function isAbortError(error: unknown): boolean {
-  return error instanceof Error && error.name === "AbortError";
+  try {
+    return isRecord(error) && error.name === "AbortError";
+  } catch {
+    return false;
+  }
 }
 
 export function toProblemFormProblem<FieldName extends string, Problem extends ProblemDeclaration>(

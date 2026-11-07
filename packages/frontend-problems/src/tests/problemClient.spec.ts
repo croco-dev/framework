@@ -1,3 +1,4 @@
+import { runInNewContext } from "node:vm";
 import { Problem, ProblemCategory } from "@croco/problems-core";
 import { describe, expect, expectTypeOf, it } from "vitest";
 import { restFormIssueCases } from "../../../../test-fixtures/restFormIssueCases";
@@ -377,8 +378,17 @@ describe("frontend Problem client runtime", () => {
       },
     );
 
-    it("preserves stream cancellation identity", async () => {
-      const cause = new DOMException("The operation was aborted.", "AbortError");
+    it.each([
+      ["local", () => new DOMException("The operation was aborted.", "AbortError")],
+      [
+        "cross-realm",
+        () =>
+          runInNewContext(
+            'Object.assign(new Error("The operation was aborted."), { name: "AbortError" })',
+          ) as unknown,
+      ],
+    ] as const)("preserves %s stream cancellation identity", async (_realm, createCause) => {
+      const cause = createCause();
       const response = new Response(
         new ReadableStream({
           start(controller) {
@@ -388,6 +398,28 @@ describe("frontend Problem client runtime", () => {
       );
 
       await expect(readResult(response)).rejects.toBe(cause);
+    });
+
+    it("preserves read failures whose name cannot be inspected", async () => {
+      const cause = Object.defineProperty({}, "name", {
+        get() {
+          throw new Error("Unreadable failure name");
+        },
+      });
+      const response = new Response(
+        new ReadableStream({
+          start(controller) {
+            controller.error(cause);
+          },
+        }),
+      );
+      const result = await readResult(response);
+
+      if (result.ok || result.kind !== "external") {
+        expect.fail("Expected an external body read failure.");
+      }
+      expect(result.response).toBe(response);
+      expect((result.error as ProblemResponseError).cause).toBe(cause);
     });
 
     it.each([

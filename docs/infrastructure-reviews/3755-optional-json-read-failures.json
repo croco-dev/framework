@@ -4,9 +4,9 @@
     {
       "package": "frontend-problems",
       "classification": "pure-contract",
-      "reason": "Optional JSON result readers preserve response-body read failures as external failures with the original cause, while retaining cancellation and existing JSON parsing evidence. Public signatures and runtime support claims remain unchanged.",
+      "reason": "Optional JSON result readers preserve response-body read failures as external failures with the original cause, while preserving cancellation identity across JavaScript realms and existing JSON parsing evidence. Public signatures and runtime support claims remain unchanged.",
       "files": {
-        "packages/frontend-problems/src/index.ts": "ed296f6e8803d912378aa6acf838155d5fccbc4698ad5aea6821c5e9878e6bb2"
+        "packages/frontend-problems/src/index.ts": "0abfc948679e4c11ca37b7942d0bb1d14bac9b6af24aa58f788f3aefdc33493e"
       },
       "catalogRuntimes": ["browser", "cloudflare-workers"],
       "profiles": {
