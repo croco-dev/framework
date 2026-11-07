@@ -207,6 +207,49 @@ describe("BaseStorageProvider signal stream ownership", () => {
   );
 
   it.each([false, true])(
+    "retains the source reader during reentrant cancellation (reject=%s)",
+    async (reject) => {
+      const abort = new AbortController();
+      const cleanup = createDeferred();
+      const reason = new Error("request aborted");
+      const failure = new Error("cancel failed");
+      let wrapped!: StorageStream;
+      let reentrantCancellation!: Promise<void>;
+      let reentrantCancellationSettled = false;
+      const cancel = vi.fn(() => {
+        reentrantCancellation = wrapped.cancel("reentrant consumer cancellation");
+        void reentrantCancellation.then(
+          () => {
+            reentrantCancellationSettled = true;
+          },
+          () => {
+            reentrantCancellationSettled = true;
+          },
+        );
+        return cleanup.promise;
+      });
+      const source = new ReadableStream<Uint8Array>({ cancel });
+      wrapped = provider.bindStream(source, { signal: abort.signal });
+
+      abort.abort(reason);
+      await new Promise<void>((resolve) => setImmediate(resolve));
+      const lockedWhileCleanupPending = source.locked;
+      const settledWhileCleanupPending = reentrantCancellationSettled;
+      if (reject) cleanup.reject(failure);
+      else cleanup.resolve();
+      if (reject) await expect(reentrantCancellation).rejects.toBe(failure);
+      else await expect(reentrantCancellation).resolves.toBeUndefined();
+
+      expect(lockedWhileCleanupPending).toBe(true);
+      expect(settledWhileCleanupPending).toBe(false);
+      expect(source.locked).toBe(false);
+      expect(cancel).toHaveBeenCalledExactlyOnceWith(
+        expect.objectContaining({ code: "STORAGE_OPERATION_ABORTED", cause: reason }),
+      );
+    },
+  );
+
+  it.each([false, true])(
     "preserves immediate abort while cleanup is pending (reject=%s)",
     async (reject) => {
       const abort = new AbortController();
