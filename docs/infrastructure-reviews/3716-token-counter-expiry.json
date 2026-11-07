@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "ratelimit-core",
+      "classification": "pure-contract",
+      "reason": "Token-bucket counter TTL changes preserve the independently managed admission bucket and refund receipts. Refill, pruning and reset retain their existing owners.",
+      "files": {
+        "packages/ratelimit-core/src/libs/InMemoryRateLimitStore.ts": "bf5f15eebcbc0ea46e33985c3cb006f4040183e5356d308b698aa54a6f3ca00f"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "The change isolates process-local counter expiry from admission and refund state. It adds no host capability, remote storage, transport or lifecycle requirement.",
+          "providers": [],
+          "constraints": [
+            "In-memory limits remain local to one store instance and are not a distributed quota guarantee. No deployment or provider certification is claimed."
+          ],
+          "references": [
+            "packages/ratelimit-core/src/libs/InMemoryRateLimitStore.ts",
+            "packages/ratelimit-core/src/tests/InMemoryRateLimitStore.spec.ts",
+            "packages/ratelimit-upstash/src/libs/UpstashRateLimitStore.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "The change isolates process-local counter expiry from admission and refund state. It adds no host capability, remote storage, transport or lifecycle requirement.",
+          "providers": [],
+          "constraints": [
+            "In-memory limits remain local to one store instance and are not a distributed quota guarantee. No deployment or provider certification is claimed."
+          ],
+          "references": [
+            "packages/ratelimit-core/src/libs/InMemoryRateLimitStore.ts",
+            "packages/ratelimit-core/src/tests/InMemoryRateLimitStore.spec.ts",
+            "packages/ratelimit-upstash/src/libs/UpstashRateLimitStore.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "The change isolates process-local counter expiry from admission and refund state. It adds no host capability, remote storage, transport or lifecycle requirement.",
+          "providers": [],
+          "constraints": [
+            "In-memory limits remain local to one store instance and are not a distributed quota guarantee. No deployment or provider certification is claimed."
+          ],
+          "references": [
+            "packages/ratelimit-core/src/libs/InMemoryRateLimitStore.ts",
+            "packages/ratelimit-core/src/tests/InMemoryRateLimitStore.spec.ts",
+            "packages/ratelimit-upstash/src/libs/UpstashRateLimitStore.ts"
+          ]
+        }
+      }
+    }
+  ]
+}
