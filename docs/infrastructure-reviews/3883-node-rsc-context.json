@@ -1,0 +1,67 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "meta-vite",
+      "classification": "protocol-render",
+      "reason": "The default isolated RSC encoder accepts and forwards exactly platform-only Node metadata; both sides validate the narrow context contract and continue refusing additional host values.",
+      "files": {
+        "packages/meta-vite/src/libs/rsc/isolatedContext.ts": "5148ded9b9bdfcbb1f6da541aa0181bbefc86162804e60c8ffc8daa25299d131",
+        "packages/meta-vite/src/libs/rsc/isolatedEncode.ts": "27f06422b7fca1a195484fa6850ec95d89a47037dbfbd0a7bcd68ede50ea6a31",
+        "packages/meta-vite/src/libs/rsc/flightEncode.entry.ts": "8484d33cc1847b2c88b0d91fd7b3e207df1781a4b0b21adf51629405f8a8e067"
+      },
+      "catalogRuntimes": ["node", "lambda", "cloudflare-workers", "browser"],
+      "profiles": {
+        "kubernetes": {
+          "result": "supported",
+          "reason": "The Node fetch adapters and default isolated encoder render the real server component as HTML and negotiated Flight in the local Node host harness.",
+          "providers": [
+            "@croco/meta-vite/createNodeHandler",
+            "@croco/meta-vite/createNodeComposedHandler"
+          ],
+          "constraints": [
+            "Node child_process and the installed encoder entry with React server dependencies are required.",
+            "Only platform-only Node metadata crosses the pipe; live host context is rejected.",
+            "Local host-runtime evidence does not certify a deployed Kubernetes cluster."
+          ],
+          "references": [
+            "packages/meta-vite/src/libs/providers/node.ts",
+            "packages/meta-vite/src/tests/NodeRscContext.spec.ts",
+            "packages/meta-vite/scripts/verify-node-rsc-context.mjs"
+          ],
+          "evidence": {
+            "kind": "host-runtime",
+            "runtime": "node",
+            "path": "packages/meta-vite/src/tests/NodeRscContext.spec.ts",
+            "testName": "Node RSC context through the standalone adapter renders the real component as HTML and negotiated Flight with Node metadata",
+            "sha256": "31173bca772c52886cc7cf8864ecfeb6879abfd8a18bd40c8690da8bde4aaa94"
+          }
+        },
+        "aws-lambda": {
+          "result": "unverified",
+          "reason": "This fix covers the Node adapters only. The Lambda adapter supplies event and invocation context that the default isolated encoder still rejects.",
+          "providers": ["@croco/meta-vite/createLambdaHandler"],
+          "constraints": [
+            "No Lambda RSC integration or deployment evidence is claimed.",
+            "The existing buffered Lambda response contract is unchanged."
+          ],
+          "references": [
+            "packages/meta-vite/src/libs/providers/lambda.ts",
+            "packages/meta-vite/README.md"
+          ]
+        },
+        "cloudflare": {
+          "result": "unsupported",
+          "reason": "The default isolated encoder needs Node child_process and cannot carry Workers bindings or executionContext.",
+          "providers": ["@croco/meta-vite/createCloudflareHandler"],
+          "constraints": ["No Workers isolate or Node Container support is added by this change."],
+          "references": [
+            "packages/meta-vite/src/libs/providers/cloudflare.ts",
+            "packages/meta-vite/src/libs/rsc/isolatedEncode.ts"
+          ],
+          "host": "workers"
+        }
+      }
+    }
+  ]
+}

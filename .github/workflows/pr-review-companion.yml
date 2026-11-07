@@ -38,8 +38,8 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build contract diff CLI and Workers evidence package
-        run: pnpm --filter @croco/cli... --filter @croco/notifications-resend... build
+      - name: Build contract diff CLI and host evidence packages
+        run: pnpm --filter @croco/cli... --filter @croco/meta-vite... --filter @croco/notifications-resend... build
 
       - name: Generate companion report
         run: |

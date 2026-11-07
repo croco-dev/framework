@@ -512,7 +512,7 @@ describe("pr-review-companion.mts", () => {
     expect(companionJob).toContain("timeout-minutes: 60");
     expect(workflow).toContain("pnpm pr-review-companion --");
     expect(workflow).toContain(
-      "pnpm --filter @croco/cli... --filter @croco/notifications-resend... build",
+      "pnpm --filter @croco/cli... --filter @croco/meta-vite... --filter @croco/notifications-resend... build",
     );
     expect(workflow).toContain("--head HEAD --github-annotations");
     expect(workflow).not.toContain("--run-required-checks");
@@ -522,14 +522,16 @@ describe("pr-review-companion.mts", () => {
     expect(workflow).toContain("name: pr-review-companion-report");
   });
 
-  it("builds the public Workers evidence package before reporting without an unused Turbo cache step", () => {
+  it("builds the public Node and Workers evidence packages before reporting without an unused Turbo cache step", () => {
     const workflow = readFileSync(workflowPath, "utf-8");
 
     expect(workflow).toContain(
-      "run: pnpm --filter @croco/cli... --filter @croco/notifications-resend... build",
+      "run: pnpm --filter @croco/cli... --filter @croco/meta-vite... --filter @croco/notifications-resend... build",
     );
     expect(
-      workflow.indexOf("pnpm --filter @croco/cli... --filter @croco/notifications-resend... build"),
+      workflow.indexOf(
+        "pnpm --filter @croco/cli... --filter @croco/meta-vite... --filter @croco/notifications-resend... build",
+      ),
     ).toBeLessThan(workflow.indexOf("pnpm pr-review-companion --"));
     expect(workflow).not.toContain("Turbo cache");
     expect(workflow).not.toContain("actions/cache");
