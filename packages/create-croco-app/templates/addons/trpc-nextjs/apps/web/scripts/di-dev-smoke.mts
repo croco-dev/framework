@@ -23,6 +23,7 @@ import {
   writeDiGraph,
   writeDiPackageDescriptor,
 } from "@croco/esbuild-plugin";
+import type { DiCompilerOptions } from "@croco/esbuild-plugin";
 
 const require = createRequire(import.meta.url);
 const source = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -216,7 +217,21 @@ async function start(root: string) {
     assert(status >= 500, "invalid edit must not succeed with the old graph");
     assert.match(logs, /CROCO_DI_COMPILE_|error TS|Syntax ?Error/);
   }
-  return { value, manifest, failed, stop, logs: () => logs };
+  function diagnostics() {
+    let state: unknown;
+    try {
+      state = JSON.parse(readFileSync(join(root, ".croco/di.development.json"), "utf8"));
+      const options = JSON.parse(readFileSync(join(root, "di.config.json"), "utf8")) as Omit<
+        DiCompilerOptions,
+        "baseDir"
+      >;
+      const result = compileDiGraph({ ...options, baseDir: root });
+      return { state, currentInputHash: result.manifest.inputHash, watchFiles: result.watchFiles };
+    } catch (error) {
+      return { state, diagnosticError: String(error) };
+    }
+  }
+  return { value, manifest, failed, stop, diagnostics, logs: () => logs };
 }
 
 const servers: Awaited<ReturnType<typeof start>>[] = [];
@@ -439,7 +454,10 @@ try {
     "Next DI development: discovery, injection, cleanup, invalid-edit recovery, rename, deletion, config recovery and two-app isolation pass.",
   );
 } catch (error) {
-  for (const server of servers) console.error(server.logs());
+  for (const server of servers) {
+    console.error("DI development failure state:", JSON.stringify(server.diagnostics()));
+    console.error(server.logs());
+  }
   throw error;
 } finally {
   await Promise.all(servers.map((server) => server.stop()));
