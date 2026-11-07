@@ -53,7 +53,15 @@ export class WorkflowRegistry {
     }
 
     this.assertTasksExist(workflow);
-    this.workflows.set(workflow.name, workflow);
+    this.workflows.set(
+      workflow.name,
+      Object.freeze({
+        ...workflow,
+        steps: Object.freeze(workflow.steps.map((step) => Object.freeze({ ...step }))),
+        options: Object.freeze({ ...workflow.options }),
+        triggers: Object.freeze(workflow.triggers.map((trigger) => this.snapshotTrigger(trigger))),
+      }),
+    );
   }
 
   get(name: string): WorkflowDefinition | undefined {
@@ -101,6 +109,33 @@ export class WorkflowRegistry {
 
   has(name: string): boolean {
     return this.workflows.has(name);
+  }
+
+  private snapshotTrigger(trigger: AnyTriggerMetadata): AnyTriggerMetadata {
+    if (trigger.type !== "webhook" || trigger.options?.cors === undefined) {
+      return Object.freeze({
+        ...trigger,
+        ...(trigger.options === undefined
+          ? {}
+          : { options: Object.freeze({ ...trigger.options }) }),
+      }) as AnyTriggerMetadata;
+    }
+
+    const cors = trigger.options.cors;
+    const snapshot = {
+      ...cors,
+      ...(Array.isArray(cors.origin) ? { origin: [...cors.origin] } : {}),
+      ...(cors.methods === undefined ? {} : { methods: [...cors.methods] }),
+      ...(cors.allowedHeaders === undefined ? {} : { allowedHeaders: [...cors.allowedHeaders] }),
+    };
+    if (Array.isArray(snapshot.origin)) Object.freeze(snapshot.origin);
+    if (snapshot.methods !== undefined) Object.freeze(snapshot.methods);
+    if (snapshot.allowedHeaders !== undefined) Object.freeze(snapshot.allowedHeaders);
+
+    return Object.freeze({
+      ...trigger,
+      options: Object.freeze({ ...trigger.options, cors: Object.freeze(snapshot) }),
+    });
   }
 
   private assertTasksExist(workflow: WorkflowDefinition): void {

@@ -11,7 +11,10 @@ class WorkflowBuilderImpl {
   constructor(
     private readonly options: Omit<WorkflowOptions, "steps"> & { readonly name: string },
     private readonly steps: readonly WorkflowTaskStepDeclaration[],
-  ) {}
+  ) {
+    this.options = Object.freeze({ ...options });
+    this.steps = Object.freeze([...steps]);
+  }
 
   step(nameOrTask: unknown, taskOrInput?: unknown, namedInput?: unknown): WorkflowBuilderImpl {
     const isNamedStep = typeof nameOrTask === "string";
@@ -20,19 +23,19 @@ class WorkflowBuilderImpl {
 
     return new WorkflowBuilderImpl(this.options, [
       ...this.steps,
-      {
+      Object.freeze({
         name: isNamedStep ? nameOrTask : task.name,
-        task,
+        task: Object.isFrozen(task) ? task : Object.freeze({ ...task }),
         ...(input === undefined ? {} : { input }),
-      },
+      }),
     ]);
   }
 
   build(): WorkflowOptions {
-    return {
+    return Object.freeze({
       ...this.options,
       steps: this.steps,
-    };
+    });
   }
 }
 

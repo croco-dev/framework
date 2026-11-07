@@ -888,6 +888,193 @@ describe("workflow-core", () => {
     );
   });
 
+  it("pins the registered graph while a task is awaiting and across later runs", async () => {
+    let enter!: () => void;
+    let unblock!: () => void;
+    const entered = new Promise<void>((resolve) => {
+      enter = resolve;
+    });
+    const released = new Promise<void>((resolve) => {
+      unblock = resolve;
+    });
+    const calls: string[] = [];
+    @Component()
+    class SnapshotTasks {
+      @Task({ name: "snapshot.first" })
+      async first() {
+        calls.push("first");
+        enter();
+        await released;
+        return "first-result";
+      }
+
+      @Task({ name: "snapshot.late" })
+      late() {
+        calls.push("late");
+      }
+    }
+    const reference = defineWorkflow({ name: "snapshot.workflow" })
+      .step("first", taskRef(SnapshotTasks, "first", "snapshot.first"))
+      .build();
+    const steps = [{ name: "first", task: "snapshot.first" }];
+    const registry = new WorkflowRegistry([
+      {
+        name: reference.name,
+        target: SnapshotTasks,
+        methodName: "first",
+        steps,
+        options: {},
+        triggers: [],
+      },
+    ]);
+    instances.set(SnapshotTasks, new SnapshotTasks());
+    const runner = createWorkflowRunner(manager, registry);
+    const pending = runner.execute(reference, {});
+    await entered;
+    steps.push({ name: "late", task: "snapshot.late" });
+    unblock();
+
+    const first = await pending;
+    expect(first.steps).toEqual([
+      { step: "first", task: "snapshot.first", result: "first-result" },
+    ]);
+    Reflect.set(first.workflow.steps, 0, { name: "late", task: "snapshot.late" });
+    const second = await runner.execute(reference, {});
+    expect(calls).toEqual(["first", "first"]);
+    expect(second.steps).toEqual(first.steps);
+    const firstRecord = await manager.get(first.executionId);
+    const secondRecord = await manager.get(second.executionId);
+    expect(firstRecord.metadata?.workflowSteps).toEqual(["first"]);
+    expect(secondRecord.metadata?.workflowSteps).toEqual(["first"]);
+    expect(firstRecord.metadata?.workflowContractFingerprint).toEqual(expect.any(String));
+    expect(secondRecord.metadata?.workflowContractFingerprint).toBe(
+      firstRecord.metadata?.workflowContractFingerprint,
+    );
+  });
+
+  it("isolates registered steps, policy and nested trigger options from callers and readers", () => {
+    @Component()
+    class SnapshotTasks {
+      @Task({ name: "snapshot.task" })
+      run() {}
+    }
+    const input = () => "original-input";
+    const idempotencyKey = () => "original-key";
+    const step = { name: "original", task: "snapshot.task", input };
+    const cors = { origin: ["https://original.test"], methods: ["POST"], allowedHeaders: ["X-Id"] };
+    const trigger = {
+      type: "webhook" as const,
+      target: SnapshotTasks,
+      methodName: "run",
+      path: "/original",
+      method: "POST" as const,
+      options: { auth: true, cors },
+    };
+    const definition = {
+      name: "snapshot.structure",
+      target: SnapshotTasks,
+      methodName: "run",
+      steps: [step],
+      options: { maxAttempts: 3, timeout: 4000, idempotencyKey },
+      triggers: [trigger],
+    };
+    const registry = new WorkflowRegistry([definition]);
+    step.name = "changed";
+    step.task = "missing";
+    step.input = () => "changed-input";
+    definition.options.maxAttempts = 9;
+    definition.options.timeout = 1;
+    definition.options.idempotencyKey = () => "changed-key";
+    trigger.path = "/changed";
+    trigger.options.auth = false;
+    cors.origin[0] = "https://changed.test";
+    cors.methods.push("DELETE");
+    cors.allowedHeaders.length = 0;
+    definition.triggers.length = 0;
+
+    for (const view of [registry.get(definition.name), ...registry.getAll()]) {
+      expect(view).toBeDefined();
+      if (!view) continue;
+      Reflect.set(view.steps[0] ?? {}, "task", "missing");
+      Reflect.set(view.steps[0] ?? {}, "input", () => "reader-input");
+      Reflect.set(view.options, "timeout", 2);
+      Reflect.set(view.options, "maxAttempts", 7);
+      const savedTrigger = view.triggers[0];
+      if (savedTrigger?.type === "webhook") {
+        Reflect.set(savedTrigger.options ?? {}, "auth", false);
+        Reflect.set(savedTrigger.options?.cors?.origin ?? {}, 0, "https://reader.test");
+        Reflect.set(savedTrigger.options?.cors?.methods ?? {}, 0, "PUT");
+        Reflect.set(savedTrigger.options?.cors?.allowedHeaders ?? {}, 0, "X-Changed");
+      }
+    }
+    const saved = registry.get(definition.name);
+    expect(saved).toMatchObject({
+      target: SnapshotTasks,
+      steps: [{ name: "original", task: "snapshot.task", input }],
+      options: { maxAttempts: 3, timeout: 4000, idempotencyKey },
+      triggers: [
+        {
+          path: "/original",
+          options: {
+            auth: true,
+            cors: {
+              origin: ["https://original.test"],
+              methods: ["POST"],
+              allowedHeaders: ["X-Id"],
+            },
+          },
+        },
+      ],
+    });
+    expect(saved?.steps[0]?.input).toBe(input);
+    expect(saved?.options.idempotencyKey).toBe(idempotencyKey);
+    expect(Object.isFrozen(SnapshotTasks)).toBe(false);
+    expect(Object.isFrozen(input)).toBe(false);
+    expect(Object.isFrozen(idempotencyKey)).toBe(false);
+  });
+
+  it("keeps builder options and build results independent without freezing handler targets", () => {
+    class BuilderTask {
+      run(value: number) {
+        return value;
+      }
+    }
+    const target = BuilderTask;
+    const task = { name: "builder.task", target, methodName: "run" };
+    const input = () => 42;
+    const options = { name: "builder.workflow", timeout: 4000, maxAttempts: 3 };
+    const builder = defineWorkflow<number>(options).step("first", task, input);
+    const first = builder.build();
+    options.name = "changed";
+    options.timeout = 1;
+    task.name = "changed.task";
+    const firstStep = first.steps[0];
+    if (typeof firstStep !== "string" && firstStep !== undefined) {
+      Reflect.set(firstStep, "name", "changed");
+      Reflect.set(firstStep, "input", () => 99);
+      if (typeof firstStep.task !== "string") Reflect.set(firstStep.task, "methodName", "missing");
+    }
+    Reflect.set(first.steps, "length", 0);
+    Reflect.set(first, "maxAttempts", 9);
+    const second = builder.build();
+    const extended = builder
+      .step("second", taskRef(BuilderTask, "run", "builder.task"), input)
+      .build();
+    expect(first).toEqual(second);
+    expect(second).toMatchObject({
+      name: "builder.workflow",
+      timeout: 4000,
+      maxAttempts: 3,
+      steps: [{ name: "first", task: { name: "builder.task", target, methodName: "run" }, input }],
+    });
+    expect(extended.steps).toHaveLength(2);
+    expect(second.steps).toHaveLength(1);
+    expect(Object.isFrozen(target)).toBe(false);
+    expect(Object.isFrozen(input)).toBe(false);
+    expect(Object.isFrozen(task)).toBe(false);
+    expect(Object.isFrozen(options)).toBe(false);
+  });
+
   it("executes typed task references while keeping normalized workflow steps name-only", async () => {
     type BillingPayload = { readonly subscriptionId: string };
 
@@ -926,6 +1113,24 @@ describe("workflow-core", () => {
     instances.set(TypedBillingWorkflows, new TypedBillingWorkflows());
     const registry = WorkflowRegistry.fromMetadata();
     const runner = createWorkflowRunner(manager, registry);
+
+    const declaration = definition.steps[0];
+    if (
+      declaration === undefined ||
+      typeof declaration === "string" ||
+      typeof declaration.task === "string"
+    ) {
+      throw new TestWorkflowProblem("Missing typed task declaration");
+    }
+    const taskRunner = new TaskRunner(manager, registry.taskRegistry, undefined, {
+      serviceResolver: () => new TypedBillingTasks(),
+    });
+    await expect(
+      taskRunner.execute(declaration.task, { subscriptionId: "sub_direct" }),
+    ).resolves.toEqual({
+      subscriptionId: "sub_direct",
+      plan: "pro",
+    });
 
     expect(registry.get(definition.name)?.steps).toEqual([
       { name: "billing.typed-fetch", task: "billing.typed-fetch" },
