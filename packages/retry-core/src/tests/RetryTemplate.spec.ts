@@ -13,6 +13,7 @@ import {
   RetrySuccessHookProblem,
 } from "../libs/errors";
 import type { RetryListener } from "../libs/RetryListener";
+import type { RetryContext } from "../libs/RetryContext";
 import { RetryTemplate } from "../libs/RetryTemplate";
 
 describe("RetryTemplate", () => {
@@ -172,9 +173,9 @@ describe("RetryTemplate", () => {
     ).rejects.toThrow("persistent failure");
   });
 
-  it("wraps error when wrapExhausted is true", async () => {
+  it.each([1, 2])("wraps error when wrapExhausted is true at %i attempts", async (maxAttempts) => {
     const template = new RetryTemplate({
-      maxAttempts: 2,
+      maxAttempts,
       wrapExhausted: true,
       backoffPolicy: new NoBackoff(),
     });
@@ -200,6 +201,112 @@ describe("RetryTemplate", () => {
     );
 
     expect(result).toBe("recovered after 2 attempts");
+  });
+
+  it.each([1, 3])(
+    "recovers a custom policy's classified exhaustion at %i attempts",
+    async (maxAttempts) => {
+      const failure = new Error("upstream unavailable");
+      const shouldRetry = vi.fn(
+        (_error: unknown, attempt: number, limit: number) => attempt < limit,
+      );
+      const isRetryable = vi.fn(() => true);
+      const recovery = vi.fn((ctx: RetryContext) => {
+        expect(ctx.lastError).toBe(failure);
+        expect(ctx.attempt).toBe(maxAttempts);
+        expect(ctx.exhausted).toBe(true);
+        return "recovered";
+      });
+      const callback = vi.fn().mockRejectedValue(failure);
+      const template = new RetryTemplate({
+        maxAttempts,
+        retryPolicy: { shouldRetry, isRetryable },
+        backoffPolicy: new NoBackoff(),
+      });
+
+      await expect(template.execute(callback, recovery)).resolves.toBe("recovered");
+      expect(callback).toHaveBeenCalledTimes(maxAttempts);
+      expect(shouldRetry.mock.calls).toEqual(
+        Array.from({ length: maxAttempts }, (_, index) => [failure, index + 1, maxAttempts]),
+      );
+      expect(isRetryable).toHaveBeenCalledExactlyOnceWith(failure);
+      expect(recovery).toHaveBeenCalledTimes(1);
+    },
+  );
+
+  it("propagates an unclassified custom policy's final rejection without exhaustion recovery", async () => {
+    const failure = new Error("upstream unavailable");
+    const recovery = vi.fn(() => "recovered");
+    const onExhausted = vi.fn();
+    const shouldRetry = vi.fn(
+      (_error: unknown, attempt: number, maxAttempts: number) => attempt < maxAttempts,
+    );
+    const callback = vi.fn().mockRejectedValue(failure);
+    const template = new RetryTemplate({
+      maxAttempts: 3,
+      wrapExhausted: true,
+      backoffPolicy: new NoBackoff(),
+      retryPolicy: { shouldRetry },
+      listeners: [{ onExhausted }],
+    });
+
+    await expect(template.execute(callback, recovery)).rejects.toBe(failure);
+    expect(callback).toHaveBeenCalledTimes(3);
+    expect(shouldRetry.mock.calls).toEqual([
+      [failure, 1, 3],
+      [failure, 2, 3],
+      [failure, 3, 3],
+    ]);
+    expect(recovery).not.toHaveBeenCalled();
+    expect(onExhausted).not.toHaveBeenCalled();
+  });
+
+  it.each([1, 3])(
+    "keeps default exhaustion and terminal failure distinct at %i attempts",
+    async (maxAttempts) => {
+      const failure = new Error("upstream unavailable");
+      const recovery = vi.fn(() => "recovered");
+      const onExhausted = vi.fn();
+      const callback = vi.fn().mockRejectedValue(failure);
+      const template = new RetryTemplate({
+        maxAttempts,
+        backoffPolicy: new NoBackoff(),
+        listeners: [{ onExhausted }],
+      });
+
+      await expect(template.execute(callback, recovery)).resolves.toBe("recovered");
+      expect(callback).toHaveBeenCalledTimes(maxAttempts);
+      expect(recovery).toHaveBeenCalledTimes(1);
+      expect(onExhausted).toHaveBeenCalledTimes(1);
+
+      const terminal = Object.assign(new TypeError("invalid input"), { retryable: true });
+      const terminalCallback = vi.fn().mockRejectedValue(terminal);
+      await expect(template.execute(terminalCallback, recovery)).rejects.toBe(terminal);
+      expect(terminalCallback).toHaveBeenCalledTimes(1);
+      expect(recovery).toHaveBeenCalledTimes(1);
+      expect(onExhausted).toHaveBeenCalledTimes(1);
+    },
+  );
+
+  it("does not recover or wrap a terminal final error after a transient failure", async () => {
+    const recovery = vi.fn(() => "recovered");
+    const onExhausted = vi.fn();
+    const terminal = new TypeError("invalid final input");
+    const callback = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("transient"))
+      .mockRejectedValue(terminal);
+    const template = new RetryTemplate({
+      maxAttempts: 2,
+      wrapExhausted: true,
+      backoffPolicy: new NoBackoff(),
+      listeners: [{ onExhausted }],
+    });
+
+    await expect(template.execute(callback, recovery)).rejects.toBe(terminal);
+    expect(callback).toHaveBeenCalledTimes(2);
+    expect(recovery).not.toHaveBeenCalled();
+    expect(onExhausted).not.toHaveBeenCalled();
   });
 
   it("does not retry non-retryable errors", async () => {

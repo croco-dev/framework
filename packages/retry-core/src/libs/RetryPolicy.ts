@@ -8,12 +8,21 @@ import { unwrapCircuitBreakerBookkeepingError } from "./errors/CircuitBreakerBoo
 export interface RetryPolicy {
   /**
    * Check if the given error should be retried.
+   * Called once per failed operation with its actual attempt and configured limit.
+   * A false result is terminal unless the final failure is classified by `isRetryable`.
    * @param error The error that occurred
    * @param attempt Current attempt number (1-based)
    * @param maxAttempts Maximum allowed attempts
    * @returns true if should retry, false otherwise
    */
   shouldRetry(error: unknown, attempt: number, maxAttempts: number): boolean;
+
+  /**
+   * Classify the final error independently of the attempt budget, without scheduling another attempt.
+   * Called only when `shouldRetry` rejects the final failure. A true result enables exhaustion
+   * hooks and recovery; false (or an absent classifier) propagates the original error directly.
+   */
+  isRetryable?(error: unknown): boolean;
 }
 
 /**
@@ -70,6 +79,11 @@ export class DefaultRetryPolicy implements RetryPolicy {
       return false;
     }
 
+    return this.isRetryable(error);
+  }
+
+  /** Classify an error without applying the attempt limit. */
+  isRetryable(error: unknown): boolean {
     error = unwrapCircuitBreakerBookkeepingError(error);
 
     if (error instanceof RetrySuccessHookProblem) {

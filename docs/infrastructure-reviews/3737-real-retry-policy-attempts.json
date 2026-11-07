@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "retry-core",
+      "classification": "pure-contract",
+      "reason": "Custom policies receive each actual failed attempt once. Optional error-only classification preserves exhaustion recovery without evaluating a synthetic earlier attempt. The default policy retains its existing classification and attempt limit.",
+      "files": {
+        "packages/retry-core/src/libs/RetryEngine.ts": "74cb20593c367647c167316a28b82120d530111e8f48598773491d9452abbe51",
+        "packages/retry-core/src/libs/RetryPolicy.ts": "92f3c6e2805fab8b7a078d3629179360802a33ef72b2db6749a86aac7bd6d717"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "This separates host-independent retry error classification from the attempt budget. It adds no Kubernetes Node Host capability, storage or lifecycle requirement.",
+          "providers": [],
+          "constraints": [
+            "Existing backoff, cancellation and provider runtime constraints remain unchanged. No deployment or provider certification is claimed."
+          ],
+          "references": [
+            "packages/retry-core/src/libs/RetryEngine.ts",
+            "packages/retry-core/src/libs/RetryPolicy.ts",
+            "packages/retry-core/src/tests/RetryEngine.spec.ts",
+            "packages/retry-core/src/tests/RetryTemplate.spec.ts",
+            "packages/retry-core/README.md"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "This separates host-independent retry error classification from the attempt budget. It adds no Lambda Host capability, storage or lifecycle requirement.",
+          "providers": [],
+          "constraints": [
+            "Existing backoff, cancellation and provider runtime constraints remain unchanged. No deployment or provider certification is claimed."
+          ],
+          "references": [
+            "packages/retry-core/src/libs/RetryEngine.ts",
+            "packages/retry-core/src/libs/RetryPolicy.ts",
+            "packages/retry-core/src/tests/RetryEngine.spec.ts",
+            "packages/retry-core/src/tests/RetryTemplate.spec.ts",
+            "packages/retry-core/README.md"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "This separates host-independent retry error classification from the attempt budget. It adds no Workers or Node Container Host capability, storage or lifecycle requirement.",
+          "providers": [],
+          "constraints": [
+            "Existing backoff, cancellation and provider runtime constraints remain unchanged. No deployment or provider certification is claimed."
+          ],
+          "references": [
+            "packages/retry-core/src/libs/RetryEngine.ts",
+            "packages/retry-core/src/libs/RetryPolicy.ts",
+            "packages/retry-core/src/tests/RetryEngine.spec.ts",
+            "packages/retry-core/src/tests/RetryTemplate.spec.ts",
+            "packages/retry-core/README.md"
+          ]
+        }
+      }
+    }
+  ]
+}
