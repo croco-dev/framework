@@ -23,6 +23,7 @@ import type { ReferralTx } from "../libs/ReferralStore";
 import type {
   ReferralFulfillmentPort,
   ReferralFulfillmentResult,
+  ReferralQualificationVerdict,
   ReferralSubject,
   RegisterReferralProgramInput,
 } from "../libs/types";
@@ -351,6 +352,121 @@ describe("ReferralService", () => {
     expect(new Set(intents.map((intent) => intent.idempotencyKey)).size).toBe(2);
     const again = await service.fulfillBenefits({ attributionId: claimed.attribution.id });
     expect(again.state).toBe("fulfilled");
+  });
+
+  it.each([
+    { qualifyingAction: "unrelated-page-view" },
+    { qualifyingAction: " first-purchase " },
+    { sourceEventId: "" },
+    { sourceEventId: " \t\n" },
+    { sourceEventId: 42 },
+    { eligibleReason: "" },
+    { eligibleReason: " \t\n" },
+    { eligibleReason: null },
+  ])("preserves the claim when positive qualification evidence is invalid: %j", async (invalid) => {
+    const store = new InMemoryReferralStore();
+    const { service } = serviceWith({
+      store,
+      qualification: () =>
+        ({
+          qualified: true,
+          sourceEventId: "purchase-42",
+          qualifyingAction: "first-purchase",
+          eligibleReason: "first purchase confirmed",
+          ...invalid,
+        }) as ReferralQualificationVerdict,
+    });
+    await service.registerProgram(programInput());
+    const { token } = await service.createReferralLink({
+      programId: "referral-welcome",
+      referrer: referrer(),
+    });
+    const { attribution } = await service.claimAttribution({ token, recipient: recipient() });
+    const audits = await store.listAudits();
+
+    await expect(
+      service.qualifyAttribution({ attributionId: attribution.id, recipient: recipient() }),
+    ).rejects.toMatchObject({
+      code: "referral-core/qualification-evidence-invalid",
+      status: 500,
+      extensions: { retryable: false },
+    });
+    expect(await store.getAttribution(attribution.id)).toEqual(attribution);
+    expect(await store.readBudgetReserved("referral-welcome", 1)).toBe("20");
+    expect(await service.listBenefitIntents({ attributionId: attribution.id })).toEqual([]);
+    expect(await store.listAudits()).toEqual(audits);
+    await expect(service.fulfillBenefits({ attributionId: attribution.id })).rejects.toBeInstanceOf(
+      ReferralAttributionStateConflictProblem,
+    );
+  });
+
+  it("validates against the pinned program and replays corrected evidence without duplicate intents", async () => {
+    let action = "second-purchase";
+    const { service, store } = serviceWith({
+      qualification: () => ({
+        qualified: true,
+        sourceEventId: "purchase-42",
+        qualifyingAction: action,
+        eligibleReason: "purchase confirmed",
+      }),
+    });
+    await service.registerProgram(programInput());
+    const { token } = await service.createReferralLink({
+      programId: "referral-welcome",
+      programVersion: 1,
+      referrer: referrer(),
+    });
+    const { attribution } = await service.claimAttribution({ token, recipient: recipient() });
+    await service.registerProgram({
+      ...programInput(),
+      version: 2,
+      qualifyingAction: "second-purchase",
+      idempotencyKey: "program:referral-welcome:2",
+    });
+    const input = { attributionId: attribution.id, recipient: recipient() };
+    await expect(service.qualifyAttribution(input)).rejects.toMatchObject({
+      code: "referral-core/qualification-evidence-invalid",
+    });
+    action = "first-purchase";
+    const qualified = await service.qualifyAttribution(input);
+    expect(qualified.state).toBe("benefits-pending");
+    expect(qualified.qualification).toMatchObject({
+      sourceEventId: "purchase-42",
+      qualifyingAction: "first-purchase",
+      eligibleReason: "purchase confirmed",
+    });
+    const audits = await store.listAudits();
+    const intents = await service.listBenefitIntents({ attributionId: attribution.id });
+    expect(intents).toHaveLength(2);
+    expect(await service.qualifyAttribution(input)).toEqual(qualified);
+    expect(await service.listBenefitIntents({ attributionId: attribution.id })).toEqual(intents);
+    expect(await store.listAudits()).toEqual(audits);
+    expect(await store.readBudgetReserved("referral-welcome", 1)).toBe("20");
+  });
+
+  it("preserves provider failures without rejecting the recipient or releasing its reservation", async () => {
+    const failure = new ReferralBenefitFailedProblem("source", "recipient", "source unavailable");
+    const store = new InMemoryReferralStore();
+    const { service } = serviceWith({
+      store,
+      qualification: async () => {
+        throw failure;
+      },
+    });
+    await service.registerProgram(programInput());
+    const { token } = await service.createReferralLink({
+      programId: "referral-welcome",
+      referrer: referrer(),
+    });
+    const { attribution } = await service.claimAttribution({ token, recipient: recipient() });
+    const audits = await store.listAudits();
+    await expect(
+      service.qualifyAttribution({ attributionId: attribution.id, recipient: recipient() }),
+    ).rejects.toBe(failure);
+    expect(await store.getAttribution(attribution.id)).toEqual(attribution);
+    expect(await store.readBudgetReserved("referral-welcome", 1)).toBe("20");
+    expect(await service.listBenefitIntents({ attributionId: attribution.id })).toEqual([]);
+    expect(await store.listAudits()).toEqual(audits);
   });
 
   it("keeps partial success per side without re-paying the completed side", async () => {

@@ -218,8 +218,11 @@ export type ReferralNoveltyVerdict =
 export type ReferralQualificationVerdict =
   | {
       readonly qualified: true;
+      /** Non-blank event identity from the authoritative action source. */
       readonly sourceEventId: string;
+      /** Must exactly match the attribution's pinned program version. */
       readonly qualifyingAction: string;
+      /** Non-blank explanation of the confirmed eligibility. */
       readonly eligibleReason: string;
     }
   | { readonly qualified: false; readonly reason: string };

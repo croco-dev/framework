@@ -58,6 +58,7 @@ export {
   ReferralBudgetExhaustedProblem,
   ReferralAttributionNotFoundProblem,
   ReferralAttributionStateConflictProblem,
+  ReferralQualificationEvidenceInvalidProblem,
   ReferralQualificationRejectedProblem,
   ReferralBenefitFailedProblem,
 } from "./libs/problems";

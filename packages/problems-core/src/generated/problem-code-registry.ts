@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export type CrocoProblemRegistry = {
   readonly version: "croco.problem-code-registry.v1";
-  readonly problemCount: 1161;
+  readonly problemCount: 1162;
   readonly problems: readonly [
     {
       readonly code: "ACCESS_DENIED";
@@ -26021,7 +26021,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/referral-core/src/libs/problems.ts";
-          readonly line: 210;
+          readonly line: 225;
           readonly column: 1;
           readonly kind: "problem-class";
         },
@@ -26336,6 +26336,34 @@ export type CrocoProblemRegistry = {
       ];
     },
     {
+      readonly code: "referral-core/qualification-evidence-invalid";
+      readonly category: "InternalServerError";
+      readonly status: 500;
+      readonly title: "Internal Server Error";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#referral-core-qualification-evidence-invalid";
+      readonly recovery: {
+        readonly cause: "The qualification adapter returned positive evidence that does not satisfy the pinned referral program.";
+        readonly userAction: "Ask the application owner to correct the qualification source before retrying.";
+        readonly operatorAction: "Match qualifyingAction to the attribution's pinned program version and supply non-blank string sourceEventId and eligibleReason fields. The claim and budget reservation remain unchanged; retry qualification after correcting the adapter.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "operator-only";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.error";
+          readonly severity: "error";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/referral-core/src/libs/problems.ts";
+          readonly line: 196;
+          readonly column: 1;
+          readonly kind: "problem-class";
+        },
+      ];
+    },
+    {
       readonly code: "referral-core/qualification-rejected";
       readonly category: "BusinessRuleViolation";
       readonly status: 422;
@@ -26357,7 +26385,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/referral-core/src/libs/problems.ts";
-          readonly line: 196;
+          readonly line: 211;
           readonly column: 1;
           readonly kind: "problem-class";
         },
@@ -32822,7 +32850,7 @@ export type CrocoProblemRegistry = {
 
 export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 1161,
+  problemCount: 1162,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -61875,7 +61903,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/referral-core/src/libs/problems.ts",
-          line: 210,
+          line: 225,
           column: 1,
           kind: "problem-class",
         },
@@ -62219,6 +62247,40 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       ],
     },
     {
+      code: "referral-core/qualification-evidence-invalid",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#referral-core-qualification-evidence-invalid",
+      recovery: {
+        cause:
+          "The qualification adapter returned positive evidence that does not satisfy the pinned referral program.",
+        userAction:
+          "Ask the application owner to correct the qualification source before retrying.",
+        operatorAction:
+          "Match qualifyingAction to the attribution's pinned program version and supply non-blank string sourceEventId and eligibleReason fields. The claim and budget reservation remain unchanged; retry qualification after correcting the adapter.",
+        retryability: "not-retryable",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/referral-core/src/libs/problems.ts",
+          line: 196,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
       code: "referral-core/qualification-rejected",
       category: "BusinessRuleViolation",
       status: 422,
@@ -62243,7 +62305,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/referral-core/src/libs/problems.ts",
-          line: 196,
+          line: 211,
           column: 1,
           kind: "problem-class",
         },

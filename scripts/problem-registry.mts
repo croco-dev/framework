@@ -3772,6 +3772,16 @@ const recoveryMetadataByCode = {
     redactionPolicy: "safe-message",
     severity: "error",
   }),
+  "referral-core/qualification-evidence-invalid": recovery({
+    cause:
+      "The qualification adapter returned positive evidence that does not satisfy the pinned referral program.",
+    userAction: "Ask the application owner to correct the qualification source before retrying.",
+    operatorAction:
+      "Match qualifyingAction to the attribution's pinned program version and supply non-blank string sourceEventId and eligibleReason fields. The claim and budget reservation remain unchanged; retry qualification after correcting the adapter.",
+    retryability: "not-retryable",
+    redactionPolicy: "operator-only",
+    severity: "error",
+  }),
   "transports-graphql/resolver-container-required": recovery({
     cause:
       "Application discovery selected a resolver without a registered Croco provider or custom container.",
