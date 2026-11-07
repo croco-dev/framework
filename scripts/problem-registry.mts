@@ -3762,6 +3762,16 @@ const recoveryMetadataByCategory = {
 } as const satisfies Record<ProblemCategory, ProblemRecoveryMetadata>;
 
 const recoveryMetadataByCode = {
+  STORAGE_R2_BUCKET_NOT_FOUND: recovery({
+    cause:
+      "The R2 S3-compatible API explicitly reported that the configured bucket does not exist.",
+    userAction: "Ask the application operator to verify the R2 bucket configuration.",
+    operatorAction:
+      "Verify R2_BUCKET and its account configuration. Preserve the upstream cause; do not treat this failure as a missing object or retry it without correcting configuration.",
+    retryability: "not-retryable",
+    redactionPolicy: "safe-message",
+    severity: "error",
+  }),
   "transports-graphql/resolver-container-required": recovery({
     cause:
       "Application discovery selected a resolver without a registered Croco provider or custom container.",

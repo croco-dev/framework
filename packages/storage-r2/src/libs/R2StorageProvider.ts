@@ -14,10 +14,15 @@ import type {
   StorageOperation,
   StorageOperationOptions,
 } from "@croco/storage-core";
-import { BaseStorageProvider, validateSignedUrlExpiry } from "@croco/storage-core";
+import {
+  BaseStorageProvider,
+  FileNotFoundProblem,
+  validateSignedUrlExpiry,
+} from "@croco/storage-core";
 import { storageStreamToNodeReadable } from "@croco/storage-core/node";
 import { MissingR2ConfigProblem } from "./problems/MissingR2ConfigProblem";
 import { EmptyR2BodyProblem } from "./problems/EmptyR2BodyProblem";
+import { R2BucketNotFoundProblem } from "./problems/R2BucketNotFoundProblem";
 import { readBufferedR2Stream } from "./readBufferedR2Stream";
 import { validateR2Options } from "./R2Config";
 import type { R2Options } from "./types";
@@ -271,7 +276,7 @@ export class R2StorageProvider extends BaseStorageProvider {
       );
     } catch (error) {
       this.rethrowOperationAbort(error, options, "getStream", key);
-      return this.handleNotFoundError(key, error);
+      throw this.normalizeReadError(key, error);
     }
   }
 
@@ -287,7 +292,7 @@ export class R2StorageProvider extends BaseStorageProvider {
       return bytes;
     } catch (error) {
       this.rethrowOperationAbort(error, options, "get", key);
-      return this.handleNotFoundError(key, error);
+      throw this.normalizeReadError(key, error);
     }
   }
 
@@ -345,10 +350,11 @@ export class R2StorageProvider extends BaseStorageProvider {
       return true;
     } catch (error) {
       this.rethrowOperationAbort(error, options, "exists", key);
-      if (this.isNotFoundError(error)) {
+      const readError = this.normalizeReadError(key, error);
+      if (readError instanceof FileNotFoundProblem) {
         return false;
       }
-      throw error;
+      throw readError;
     }
   }
 
@@ -421,12 +427,17 @@ export class R2StorageProvider extends BaseStorageProvider {
       };
     } catch (error) {
       this.rethrowOperationAbort(error, options, "getMetadata", key);
-      return this.handleNotFoundError(key, error);
+      throw this.normalizeReadError(key, error);
     }
   }
 
   private isNotFoundError(error: unknown): boolean {
-    if (error instanceof Error && (error.name === "NotFound" || error.name === "NoSuchKey")) {
+    const code = getErrorCode(error);
+    if (
+      code === "NotFound" ||
+      code === "NoSuchKey" ||
+      (error instanceof Error && (error.name === "NotFound" || error.name === "NoSuchKey"))
+    ) {
       return true;
     }
     if (error && typeof error === "object" && "$metadata" in error) {
@@ -436,11 +447,17 @@ export class R2StorageProvider extends BaseStorageProvider {
     return false;
   }
 
-  private handleNotFoundError(key: string, error: unknown): never {
-    if (this.isNotFoundError(error)) {
-      this.throwNotFound(key, error);
+  private normalizeReadError(key: string, error: unknown): unknown {
+    if (
+      error instanceof Error &&
+      (error.name === "NoSuchBucket" || getErrorCode(error) === "NoSuchBucket")
+    ) {
+      return new R2BucketNotFoundProblem(error, getErrorStatus(error));
     }
-    throw error;
+    if (this.isNotFoundError(error)) {
+      return new FileNotFoundProblem(key, error instanceof Error ? error : undefined);
+    }
+    return error;
   }
 
   private async executeWithRetry<T>(

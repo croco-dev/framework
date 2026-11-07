@@ -11,6 +11,7 @@ import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import type { ConfigService } from "@croco/framework-config";
 import { Container } from "@croco/framework-context";
 import type { Logger } from "@croco/framework-logger";
+import { RetryTemplate } from "@croco/retry-core";
 import {
   DeleteFailedProblem,
   FileNotFoundProblem,
@@ -27,6 +28,7 @@ import { createStorageProviderConformanceSuite } from "@croco/testing";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { EmptyR2BodyProblem } from "../libs/problems/EmptyR2BodyProblem";
 import { MissingR2ConfigProblem } from "../libs/problems/MissingR2ConfigProblem";
+import { R2BucketNotFoundProblem } from "../libs/problems/R2BucketNotFoundProblem";
 import { R2ObjectTooLargeProblem } from "../libs/problems/R2ObjectTooLargeProblem";
 import { R2StorageDiagnosticsProvider } from "../libs/R2StorageDiagnosticsProvider";
 import { R2StorageProvider } from "../libs/R2StorageProvider";
@@ -128,6 +130,115 @@ describe("R2StorageProvider", () => {
   });
 
   describe("missing object errors", () => {
+    describe.each(["get", "getStream", "getMetadata", "exists"] as const)("%s", (operation) => {
+      it.each(["name", "code"] as const)(
+        "rejects a NoSuchBucket 404 identified by %s as a configuration failure",
+        async (field) => {
+          const error = Object.assign(new Error("The specified bucket does not exist"), {
+            [field]: "NoSuchBucket",
+            $metadata: { httpStatusCode: 404 },
+          });
+          mockSend.mockRejectedValue(error);
+
+          const result = await provider[operation]("missing.txt").catch(
+            (failure: unknown) => failure,
+          );
+
+          expect(result).toBeInstanceOf(R2BucketNotFoundProblem);
+          expect(result).toMatchObject({
+            code: "STORAGE_R2_BUCKET_NOT_FOUND",
+            status: 500,
+            cause: error,
+            extensions: {
+              retryable: false,
+              upstreamCode: "NoSuchBucket",
+              upstreamStatus: 404,
+            },
+          });
+          expect((result as R2BucketNotFoundProblem).cause).toBe(error);
+          expect(mockSend).toHaveBeenCalledTimes(1);
+        },
+      );
+    });
+
+    it.each(["name", "code"] as const)(
+      "preserves a plain NoSuchBucket %s and status",
+      async (field) => {
+        mockSend.mockRejectedValue({
+          [field]: "NoSuchBucket",
+          message: "The specified bucket does not exist",
+          $metadata: { httpStatusCode: 404 },
+        });
+
+        for (const operation of ["get", "getStream", "getMetadata", "exists"] as const) {
+          await expect(provider[operation]("missing.txt")).rejects.toMatchObject({
+            code: "STORAGE_R2_BUCKET_NOT_FOUND",
+            cause: {
+              [field]: "NoSuchBucket",
+              message: "The specified bucket does not exist",
+              $metadata: { httpStatusCode: 404 },
+            },
+            extensions: { upstreamCode: "NoSuchBucket", upstreamStatus: 404 },
+          });
+        }
+        expect(mockSend).toHaveBeenCalledTimes(4);
+      },
+    );
+
+    it("retains the status-only 404 fallback when the SDK supplies no object or bucket code", async () => {
+      mockSend.mockRejectedValue({ $metadata: { httpStatusCode: 404 } });
+
+      for (const operation of ["get", "getStream", "getMetadata"] as const) {
+        await expect(provider[operation]("missing.txt")).rejects.toBeInstanceOf(
+          FileNotFoundProblem,
+        );
+      }
+      await expect(provider.exists("missing.txt")).resolves.toBe(false);
+    });
+
+    it("prioritizes explicit NoSuchBucket over a generic NotFound name", async () => {
+      const error = Object.assign(new Error("Missing bucket"), {
+        name: "NotFound",
+        code: "NoSuchBucket",
+        $metadata: { httpStatusCode: 404 },
+      });
+      mockSend.mockRejectedValue(error);
+
+      await expect(provider.exists("missing.txt")).rejects.toMatchObject({
+        code: "STORAGE_R2_BUCKET_NOT_FOUND",
+        cause: error,
+      });
+    });
+
+    it("does not retry a missing bucket through a default outer RetryTemplate", async () => {
+      mockSend.mockRejectedValue(
+        Object.assign(new Error("Missing bucket"), {
+          name: "NoSuchBucket",
+          $metadata: { httpStatusCode: 404 },
+        }),
+      );
+      const retry = new RetryTemplate({
+        maxAttempts: 3,
+        backoff: { delay: 0, jitter: false },
+      });
+
+      await expect(retry.execute(() => provider.exists("missing.txt"))).rejects.toBeInstanceOf(
+        R2BucketNotFoundProblem,
+      );
+      expect(mockSend).toHaveBeenCalledTimes(1);
+    });
+
+    it("recognizes code-only NoSuchKey without metadata", async () => {
+      mockSend.mockRejectedValue({ code: "NoSuchKey" });
+
+      for (const operation of ["get", "getStream", "getMetadata"] as const) {
+        await expect(provider[operation]("missing.txt")).rejects.toBeInstanceOf(
+          FileNotFoundProblem,
+        );
+      }
+      await expect(provider.exists("missing.txt")).resolves.toBe(false);
+    });
+
     describe.each(["NoSuchKey", "NotFound"])("%s", (name) => {
       it.each([
         ["absent", {}],
@@ -780,6 +891,26 @@ describe("R2StorageProvider", () => {
   });
 
   describe("cancellation", () => {
+    it.each(["get", "getStream", "getMetadata", "exists"] as const)(
+      "prioritizes %s cancellation over a concurrent missing-bucket response",
+      async (operation) => {
+        const controller = new AbortController();
+        const reason = new Error("cancel read");
+        mockSend.mockImplementation(async () => {
+          controller.abort(reason);
+          throw Object.assign(new Error("Missing bucket"), {
+            name: "NoSuchBucket",
+            $metadata: { httpStatusCode: 404 },
+          });
+        });
+
+        const result = provider[operation]("test/file.txt", { signal: controller.signal });
+        await expect(result).rejects.toBeInstanceOf(StorageOperationAbortedProblem);
+        await expect(result).rejects.toMatchObject({ cause: reason });
+        expect(mockSend).toHaveBeenCalledTimes(1);
+      },
+    );
+
     it("does not call the SDK or presigner for pre-aborted operations", async () => {
       const controller = new AbortController();
       const reason = new Error("cancelled before start");

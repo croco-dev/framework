@@ -71,12 +71,19 @@ const health = await diagnostics.getHealth();
 | `R2_OPTIONS`              | DI 등록용 토큰입니다.                                              |
 | `R2Options`               | 계정, 버킷, 공개 URL 설정 타입입니다.                              |
 | `MissingR2ConfigProblem`  | 필수 설정이 없을 때 발생합니다.                                    |
+| `R2BucketNotFoundProblem` | S3 API가 설정된 버킷의 미존재를 명시적으로 보고했을 때 발생합니다. |
 | `R2ReadinessProblem`      | live R2 readiness check가 upstream 실패를 감지했을 때 발생합니다.  |
 | `EmptyR2BodyProblem`      | 다운로드 응답 본문이 비었을 때 발생합니다.                         |
 | `R2ObjectTooLargeProblem` | `get()`으로 10MB 초과 객체를 읽으려 할 때 발생합니다.              |
 
 ## 동작 메모
 
+- S3 호환 API의 명시적인 `NoSuchBucket`은 `get`, `getStream`, `getMetadata`, `exists`에서
+  `STORAGE_R2_BUCKET_NOT_FOUND`(500, `retryable: false`)로 보고합니다. 원본 SDK 오류는 `cause`에,
+  upstream code와 HTTP status는 extensions에 보존합니다. `R2_BUCKET`과 해당 계정 설정을 확인해야 합니다.
+  `NoSuchKey`·`NotFound`는 기존 객체 미존재 계약을 유지합니다. SDK가 코드 없이 HTTP 404만 반환하면
+  객체와 버킷을 구별할 수 없으므로 기존 미존재 처리를 유지합니다. Workers의 `/workers` binding 경로는
+  별도 계약을 따릅니다.
 - 재사용 가능한 `Uint8Array` 업로드와 다운로드 요청은 최대 3회 재시도합니다.
 - Web `ReadableStream<Uint8Array>` 업로드는 소비 후 재사용할 수 없으므로 재시도하지 않습니다.
 - `get()`은 메모리 사용량 보호를 위해 10MB까지만 허용합니다.

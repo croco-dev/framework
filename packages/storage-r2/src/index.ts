@@ -4,6 +4,7 @@
 
 export { EmptyR2BodyProblem } from "./libs/problems/EmptyR2BodyProblem";
 export { MissingR2ConfigProblem } from "./libs/problems/MissingR2ConfigProblem";
+export { R2BucketNotFoundProblem } from "./libs/problems/R2BucketNotFoundProblem";
 export { R2ReadinessProblem } from "./libs/problems/R2ReadinessProblem";
 export { R2ObjectTooLargeProblem } from "./libs/problems/R2ObjectTooLargeProblem";
 export { R2StorageDiagnosticsProvider } from "./libs/R2StorageDiagnosticsProvider";

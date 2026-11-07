@@ -21,6 +21,7 @@ Storage 관련 기반 Problem 클래스
 - [`UploadFailedProblem`](/api/storage-core/src/classes/uploadfailedproblem/)
 - [`EmptyR2BodyProblem`](/api/storage-r2/src/classes/emptyr2bodyproblem/)
 - [`MissingR2ConfigProblem`](/api/storage-r2/src/classes/missingr2configproblem/)
+- [`R2BucketNotFoundProblem`](/api/storage-r2/src/classes/r2bucketnotfoundproblem/)
 - [`R2ObjectTooLargeProblem`](/api/storage-r2/src/classes/r2objecttoolargeproblem/)
 - [`R2ReadinessProblem`](/api/storage-r2/src/classes/r2readinessproblem/)
 - [`S3StorageProblem`](/api/storage-s3/src/classes/s3storageproblem/)
