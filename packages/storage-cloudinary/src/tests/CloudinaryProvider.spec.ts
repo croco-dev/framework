@@ -132,6 +132,156 @@ describe("CloudinaryProvider", () => {
     await expect(Promise.all([firstUpload, secondUpload])).resolves.toEqual([undefined, undefined]);
   });
 
+  describe("stream reader ownership", () => {
+    it.each([false, true])("unlocks downloads after EOF with signal=%s", async (withSignal) => {
+      const source = storageStreamFromBytes(new Uint8Array([13, 29]));
+      vi.mocked(global.fetch).mockResolvedValue(new Response(source));
+      const stream = await provider.getStream(
+        "test-key",
+        withSignal ? { signal: new AbortController().signal } : undefined,
+      );
+      await expect(new Response(stream).bytes()).resolves.toEqual(new Uint8Array([13, 29]));
+      expect(source.locked).toBe(false);
+    });
+
+    it("unlocks a failed download without replacing its upstream Problem", async () => {
+      const failure = new FileNotFoundProblem("stream-source");
+      const source = new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.error(failure);
+        },
+      });
+      vi.mocked(global.fetch).mockResolvedValue(new Response(source));
+      const stream = await provider.getStream("test-key");
+      await expect(new Response(stream).bytes()).rejects.toBe(failure);
+      expect(source.locked).toBe(false);
+    });
+
+    it.each([false, true])(
+      "unlocks cancelled downloads even when cleanup rejects=%s",
+      async (reject) => {
+        const failure = new Error("cancel failed");
+        const cancel = vi.fn(async () => {
+          if (reject) throw failure;
+        });
+        const source = new ReadableStream<Uint8Array>({ cancel });
+        vi.mocked(global.fetch).mockResolvedValue(new Response(source));
+        const stream = await provider.getStream("test-key", {
+          signal: new AbortController().signal,
+        });
+        const cancelled = stream.cancel("consumer finished");
+        if (reject) await expect(cancelled).rejects.toBe(failure);
+        else await cancelled;
+        expect(source.locked).toBe(false);
+        expect(cancel).toHaveBeenCalledExactlyOnceWith("consumer finished");
+      },
+    );
+
+    it("unlocks the original download after signal cancellation settles", async () => {
+      const abort = new AbortController();
+      const reason = new Error("download aborted");
+      let finishCleanup!: () => void;
+      const cleanup = new Promise<void>((resolve) => {
+        finishCleanup = resolve;
+      });
+      const source = new ReadableStream<Uint8Array>({ cancel: () => cleanup });
+      vi.mocked(global.fetch).mockResolvedValue(new Response(source));
+      const stream = await provider.getStream("test-key", { signal: abort.signal });
+      const result = expect(new Response(stream).bytes()).rejects.toMatchObject({
+        code: "STORAGE_OPERATION_ABORTED",
+        cause: reason,
+      });
+      abort.abort(reason);
+      await result;
+      expect(source.locked).toBe(true);
+      finishCleanup();
+      await vi.waitFor(() => expect(source.locked).toBe(false));
+    });
+
+    it.each([false, true])(
+      "unlocks multipart uploads after EOF with signal=%s",
+      async (withSignal) => {
+        vi.mocked(global.fetch).mockImplementation(async (_input, init) => {
+          const upload = await parseMultipartUpload(init);
+          expect(upload.data).toEqual(Buffer.from([13, 29]));
+          return jsonResponse({ public_id: upload.publicId });
+        });
+        const source = storageStreamFromBytes(new Uint8Array([13, 29]));
+        await provider.put(
+          "test-key",
+          source,
+          withSignal ? { signal: new AbortController().signal } : undefined,
+        );
+        expect(source.locked).toBe(false);
+      },
+    );
+
+    it("allows cancellation after multipart EOF while the suffix is queued", async () => {
+      const source = storageStreamFromBytes(new Uint8Array([13, 29]));
+      let cancellation: PromiseSettledResult<void> | undefined;
+      vi.mocked(global.fetch).mockImplementation(async (_input, init) => {
+        const body = init?.body;
+        if (!(body instanceof ReadableStream)) throw new Error("expected streaming upload");
+        const reader = body.getReader();
+        expect((await reader.read()).done).toBe(false);
+        await expect(reader.read()).resolves.toEqual({
+          done: false,
+          value: new Uint8Array([13, 29]),
+        });
+        await vi.waitFor(() => expect(source.locked).toBe(false));
+        [cancellation] = await Promise.allSettled([reader.cancel("upstream finished")]);
+        reader.releaseLock();
+        return jsonResponse({ public_id: "test-key" });
+      });
+
+      await provider.put("test-key", source);
+
+      expect(cancellation).toEqual({ status: "fulfilled", value: undefined });
+    });
+
+    it("unlocks a failed multipart input and preserves its original failure", async () => {
+      const failure = new FileNotFoundProblem("stream-input");
+      const source = new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.error(failure);
+        },
+      });
+      vi.mocked(global.fetch).mockImplementation(async (_input, init) => {
+        await new Response(init?.body).bytes();
+        return jsonResponse({ public_id: "test-key" });
+      });
+      await expect(provider.put("test-key", source)).rejects.toBe(failure);
+      expect(source.locked).toBe(false);
+    });
+
+    it.each([false, true])(
+      "unlocks multipart input after consumer cancellation rejects=%s",
+      async (reject) => {
+        const failure = new Error("input cancellation failed");
+        const cancel = vi.fn(async () => {
+          if (reject) throw failure;
+        });
+        const source = new ReadableStream<Uint8Array>({ cancel });
+        vi.mocked(global.fetch).mockImplementation(async (_input, init) => {
+          const body = init?.body;
+          if (!(body instanceof ReadableStream)) throw new Error("expected streaming upload");
+          const reader = body.getReader();
+          await reader.read();
+          const pending = reader.read();
+          const cancelled = reader.cancel("upstream finished");
+          if (reject) await expect(cancelled).rejects.toBe(failure);
+          else await cancelled;
+          await pending;
+          reader.releaseLock();
+          return jsonResponse({ public_id: "test-key" });
+        });
+        await provider.put("test-key", source);
+        expect(source.locked).toBe(false);
+        expect(cancel).toHaveBeenCalledExactlyOnceWith("upstream finished");
+      },
+    );
+  });
+
   describe("operation cancellation", () => {
     it("should reject pre-aborted operations before starting provider work", async () => {
       const controller = new AbortController();

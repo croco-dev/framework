@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { BaseStorageProvider } from "../libs/BaseStorageProvider";
 import { DeleteFailedProblem } from "../libs/problems/DeleteFailedProblem";
 import { FileNotFoundProblem } from "../libs/problems/FileNotFoundProblem";
@@ -10,7 +10,18 @@ import type {
   SignedUrlOptions,
   StorageBody,
   StorageStream,
+  StorageOperationOptions,
 } from "../libs/types";
+
+function createDeferred() {
+  let resolve!: () => void;
+  let reject!: (reason: unknown) => void;
+  const promise = new Promise<void>((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise;
+    reject = rejectPromise;
+  });
+  return { promise, resolve, reject };
+}
 
 class TestStorageProvider extends BaseStorageProvider {
   probeMode = false;
@@ -45,6 +56,10 @@ class TestStorageProvider extends BaseStorageProvider {
       size: 0,
       lastModified: new Date(),
     };
+  }
+
+  bindStream(stream: StorageStream, options: StorageOperationOptions): StorageStream {
+    return this.bindOperationSignal(stream, options, "put", "test/file.bin");
   }
 
   callThrowNotFound(key: string, cause?: unknown): never {
@@ -111,4 +126,164 @@ describe("BaseStorageProvider", () => {
       expect((error as DeleteFailedProblem).cause).toBe(cause);
     }
   });
+});
+
+describe("BaseStorageProvider signal stream ownership", () => {
+  const provider = new TestStorageProvider();
+
+  it.each(["complete", "error"])(
+    "releases the reader and listener on source %s",
+    async (outcome) => {
+      const abort = new AbortController();
+      const removeListener = vi.spyOn(abort.signal, "removeEventListener");
+      const failure = new Error("source failed");
+      const source = new ReadableStream<Uint8Array>({
+        start(controller) {
+          if (outcome === "error") controller.error(failure);
+          else controller.close();
+        },
+      });
+      const reader = provider.bindStream(source, { signal: abort.signal }).getReader();
+      if (outcome === "error") await expect(reader.read()).rejects.toBe(failure);
+      else await expect(reader.read()).resolves.toEqual({ done: true, value: undefined });
+      expect(source.locked).toBe(false);
+      expect(removeListener).toHaveBeenCalledWith("abort", expect.any(Function));
+      abort.abort();
+      reader.releaseLock();
+    },
+  );
+
+  it.each(["complete", "error"])(
+    "preserves abort when source %s races a pending read",
+    async (outcome) => {
+      const abort = new AbortController();
+      const reason = new Error("request aborted");
+      let sourceController!: ReadableStreamDefaultController<Uint8Array>;
+      const source = new ReadableStream<Uint8Array>({
+        start(controller) {
+          sourceController = controller;
+        },
+      });
+      const reader = provider.bindStream(source, { signal: abort.signal }).getReader();
+      const result = expect(reader.read()).rejects.toMatchObject({
+        code: "STORAGE_OPERATION_ABORTED",
+        cause: reason,
+      });
+      if (outcome === "complete") sourceController.close();
+      else sourceController.error(new Error("source failed"));
+      abort.abort(reason);
+      await result;
+      await vi.waitFor(() => expect(source.locked).toBe(false));
+      reader.releaseLock();
+    },
+  );
+
+  it.each([false, true])(
+    "releases after consumer cancellation settles (reject=%s)",
+    async (reject) => {
+      const abort = new AbortController();
+      const removeListener = vi.spyOn(abort.signal, "removeEventListener");
+      const cleanup = createDeferred();
+      const failure = new Error("cancel failed");
+      const cancel = vi.fn(() => cleanup.promise);
+      const source = new ReadableStream<Uint8Array>({ cancel });
+      const reader = provider.bindStream(source, { signal: abort.signal }).getReader();
+      const pendingRead = reader.read();
+      const cancelled = reader.cancel("consumer finished");
+      const result = reject
+        ? expect(cancelled).rejects.toBe(failure)
+        : expect(cancelled).resolves.toBeUndefined();
+      expect(source.locked).toBe(true);
+      abort.abort(new Error("late abort"));
+      if (reject) cleanup.reject(failure);
+      else cleanup.resolve();
+      await result;
+      await expect(pendingRead).resolves.toEqual({ done: true, value: undefined });
+      expect(source.locked).toBe(false);
+      expect(cancel).toHaveBeenCalledExactlyOnceWith("consumer finished");
+      expect(removeListener).toHaveBeenCalledWith("abort", expect.any(Function));
+      reader.releaseLock();
+    },
+  );
+
+  it.each([false, true])(
+    "retains the source reader during reentrant cancellation (reject=%s)",
+    async (reject) => {
+      const abort = new AbortController();
+      const cleanup = createDeferred();
+      const reason = new Error("request aborted");
+      const failure = new Error("cancel failed");
+      let wrapped!: StorageStream;
+      let reentrantCancellation!: Promise<void>;
+      let reentrantCancellationSettled = false;
+      const cancel = vi.fn(() => {
+        reentrantCancellation = wrapped.cancel("reentrant consumer cancellation");
+        void reentrantCancellation.then(
+          () => {
+            reentrantCancellationSettled = true;
+          },
+          () => {
+            reentrantCancellationSettled = true;
+          },
+        );
+        return cleanup.promise;
+      });
+      const source = new ReadableStream<Uint8Array>({ cancel });
+      wrapped = provider.bindStream(source, { signal: abort.signal });
+
+      abort.abort(reason);
+      await new Promise<void>((resolve) => setImmediate(resolve));
+      const lockedWhileCleanupPending = source.locked;
+      const settledWhileCleanupPending = reentrantCancellationSettled;
+      if (reject) cleanup.reject(failure);
+      else cleanup.resolve();
+      if (reject) await expect(reentrantCancellation).rejects.toBe(failure);
+      else await expect(reentrantCancellation).resolves.toBeUndefined();
+
+      expect(lockedWhileCleanupPending).toBe(true);
+      expect(settledWhileCleanupPending).toBe(false);
+      expect(source.locked).toBe(false);
+      expect(cancel).toHaveBeenCalledExactlyOnceWith(
+        expect.objectContaining({ code: "STORAGE_OPERATION_ABORTED", cause: reason }),
+      );
+    },
+  );
+
+  it.each([false, true])(
+    "preserves immediate abort while cleanup is pending (reject=%s)",
+    async (reject) => {
+      const abort = new AbortController();
+      const removeListener = vi.spyOn(abort.signal, "removeEventListener");
+      const cleanup = createDeferred();
+      const started = createDeferred();
+      const reason = new Error("request aborted");
+      const cancel = vi.fn(() => cleanup.promise);
+      const source = new ReadableStream<Uint8Array>({
+        pull() {
+          started.resolve();
+        },
+        cancel,
+      });
+      const reader = provider.bindStream(source, { signal: abort.signal }).getReader();
+      const pendingRead = reader.read();
+      const result = expect(pendingRead).rejects.toMatchObject({
+        code: "STORAGE_OPERATION_ABORTED",
+        cause: reason,
+      });
+      await started.promise;
+      abort.abort(reason);
+      await result;
+      expect(source.locked).toBe(true);
+      expect(cancel).toHaveBeenCalledOnce();
+      expect(removeListener).toHaveBeenCalledWith("abort", expect.any(Function));
+      if (reject) cleanup.reject(new Error("late cancellation failure"));
+      else cleanup.resolve();
+      await vi.waitFor(() => expect(source.locked).toBe(false));
+      await expect(reader.read()).rejects.toMatchObject({
+        code: "STORAGE_OPERATION_ABORTED",
+        cause: reason,
+      });
+      reader.releaseLock();
+    },
+  );
 });
