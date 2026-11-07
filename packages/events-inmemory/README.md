@@ -26,7 +26,7 @@ config.setEventBus(eventBus);
 export async function shutdownEventBus(): Promise<void> {
   const result = await eventBus.shutdown({ timeoutMs: 10_000 });
   if (result.status !== "drained") {
-    console.error(result.unfinishedHandlers);
+    console.error(result.unfinishedHandlers, result.unfinishedReplays);
   }
 }
 ```
@@ -103,9 +103,13 @@ DLQ를 사용하는 버스는 구독에 비어 있지 않은 `handlerId`를 명�
 마세요. 어댑터의 `dequeue`는 반환 전에 항목을 원자적으로 제거해야 하며, 별도 성공 확인이 필요한 lease 방식은 지원하지 않습니다.
 
 `shutdown` 후의 재생 요청은 큐에서 항목을 꺼내기 전에 `EventBusIntakeClosedProblem`으로 거부됩니다.
-재생 도중 종료가 시작되면 이미 실행 중인 핸들러만 drain 대상이 됩니다. 꺼낸 배치 중 아직 실행하지 않은 항목은
-실행하지 않고 다시 저장하며, `failures`에 intake 종료 오류와 재저장 결과를 반환합니다. 종료 호출은 저장소 작업의
-완료까지 기다리지 않으므로, 재생 호출의 결과도 확인해야 합니다.
+재생 도중 종료가 시작되면 실행 중인 핸들러와 이미 접수한 재생 배치의 dequeue·처리·재저장이 drain 대상이 됩니다.
+꺼낸 배치 중 아직 실행하지 않은 항목은 실행하지 않고 다시 저장하며, `failures`에 intake 종료 오류와 재저장 결과를
+반환합니다. `drained`는 저장소 작업의 완료까지 확인하지만 재저장 성공을 보장하지는 않습니다. 재생 호출의 결과에서
+`requeued: false`와 복구할 `item`도 확인해야 합니다. timeout이나 cancellation은 저장소 작업을 강제로 중단하지 않으며,
+`unfinishedReplays`에 배치별 `replayId`·`phase`·`startTime` snapshot을 반환합니다. `phase`는 dequeue 대기,
+처리(핸들러와 그 실패 저장 포함), 미실행 항목 재저장을 각각 `dequeue`·`replay`·`requeue`로 구분합니다.
+재생 배치는 핸들러 실행 슬롯을 차지하지 않습니다.
 
 ## API 레퍼런스
 
@@ -131,8 +135,8 @@ DLQ를 사용하는 버스는 구독에 비어 있지 않은 `handlerId`를 명�
 - `maxConcurrency`는 `1`부터 `Number.MAX_SAFE_INTEGER`까지의 정수이며 기본값은 `100`
 - `backpressureTimeoutMs`는 `1`부터 `2_147_483_647`까지의 정수이며 기본값은 `5000`
 - 잘못된 숫자 설정은 이벤트를 발행하기 전에 `InvalidEventBusConfigurationProblem`으로 거부
-- `shutdown`은 즉시 새 publish intake와 슬롯 대기를 닫고, 이미 시작된 핸들러만 제한 시간까지 drain
-- drain timeout 또는 cancellation은 `unfinishedHandlers` snapshot과 함께 구분된 결과로 반환
+- `shutdown`은 즉시 새 publish intake와 슬롯 대기를 닫고, 이미 시작된 핸들러와 재생 배치의 저장소 작업을 제한 시간까지 drain
+- drain timeout 또는 cancellation은 `unfinishedHandlers`·`unfinishedReplays` snapshot과 함께 구분된 결과로 반환
 - shutdown 이후 publish는 `EventBusIntakeClosedProblem`으로 거부
 - `block` 전략은 슬롯이 생길 때까지 대기하되, `backpressureTimeoutMs`를 초과하면 Problem을 발생
 - `drop` 전략은 일부 또는 전체 구독자를 생략하면 `EventPublishDroppedProblem`으로 발행을 거부

@@ -4,6 +4,7 @@ import type { EventBusShutdownOptions, EventBusShutdownResult } from "./EventBus
 
 export type {
   EventBusActiveHandler,
+  EventBusActiveReplay,
   EventBusShutdownOptions,
   EventBusShutdownResult,
 } from "./EventBusLifecycleTypes";
@@ -27,7 +28,11 @@ export function createEventBusShutdownHook(
         signal === undefined ? options : { ...options, signal },
       );
       if (result.status !== "drained") {
-        throw new EventBusDrainIncompleteProblem(result.status, result.unfinishedHandlers);
+        throw new EventBusDrainIncompleteProblem(
+          result.status,
+          result.unfinishedHandlers,
+          result.unfinishedReplays,
+        );
       }
     },
   };

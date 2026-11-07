@@ -5,6 +5,7 @@ import type {
   DomainEvent,
   EventBus,
   EventBusActiveHandler,
+  EventBusActiveReplay,
   EventBusLifecycle,
   EventBusShutdownOptions,
   EventBusShutdownResult,
@@ -183,6 +184,8 @@ export class InMemoryEventBus<TEvent extends DomainEvent = DomainEvent>
   private readonly deadLetterHandlerIds = new Map<EventHandlerClass<TEvent>, string>();
   private runningHandlers = new Map<string, EventBusActiveHandler>();
   private handlerCounter = 0;
+  private readonly activeReplays = new Map<string, EventBusActiveReplay>();
+  private replayCounter = 0;
   private readonly slotWaiters = new Set<() => void>();
   private readonly drainWaiters = new Set<() => void>();
   private intakeClosed = false;
@@ -320,70 +323,91 @@ export class InMemoryEventBus<TEvent extends DomainEvent = DomainEvent>
     this.validateReplayLimit(limit);
     this.assertIntakeOpen();
 
-    const items = await this.deadLetterQueue.dequeue<TEvent>(limit);
-    const result: DeadLetterReplayResult = {
-      attempted: items.length,
-      succeeded: 0,
-      failed: 0,
-      failures: [],
+    const replayId = `replay-${++this.replayCounter}`;
+    const activeReplay: {
+      phase: EventBusActiveReplay["phase"];
+      startTime: number;
+      replayId: string;
+    } = {
+      replayId,
+      phase: "dequeue",
+      startTime: Date.now(),
     };
+    this.activeReplays.set(replayId, activeReplay);
+    try {
+      const items = await this.deadLetterQueue.dequeue<TEvent>(limit);
+      const result: DeadLetterReplayResult = {
+        attempted: items.length,
+        succeeded: 0,
+        failed: 0,
+        failures: [],
+      };
 
-    for (const item of items) {
-      this.recordReplayInspection("started", item);
-      let execution: SubscriberExecutionResult<TEvent>;
-      try {
-        this.assertIntakeOpen();
-        const subscriber = this.resolveReplayHandler(item);
-        if (!subscriber) {
-          throw new DeadLetterReplayHandlerUnavailableProblem(item.event.eventName, item.handlerId);
-        }
-        while (!this.hasAvailableSlot()) {
-          if (this.backpressureStrategy !== "block") {
-            throw new BackpressureExceededProblem(this.runningHandlers.size);
-          }
-          await this.waitForSlot();
-        }
-        this.assertIntakeOpen();
-        execution = await this.executeSubscriberWithTracking(
-          subscriber,
-          this.cloneEvent(item.event),
-          item.event.eventName,
-          { source: "replay", priorRetryCount: item.retryCount },
-        );
-      } catch (error) {
-        execution = {
-          failure: { handlerName: item.handlerId ?? "", error: this.normalizeError(error) },
-        };
-      }
-      if (!execution.failure) {
-        result.succeeded++;
-        this.recordReplayInspection("succeeded", item);
-        continue;
-      }
-
-      const failedItem = execution.deadLetterItem ?? item;
-      let storageError = execution.storageError;
-      if (!execution.deadLetterItem) {
+      for (const item of items) {
+        activeReplay.phase = "replay";
+        this.recordReplayInspection("started", item);
+        let execution: SubscriberExecutionResult<TEvent>;
         try {
-          await this.deadLetterQueue.enqueue(failedItem);
+          this.assertIntakeOpen();
+          const subscriber = this.resolveReplayHandler(item);
+          if (!subscriber) {
+            throw new DeadLetterReplayHandlerUnavailableProblem(
+              item.event.eventName,
+              item.handlerId,
+            );
+          }
+          while (!this.hasAvailableSlot()) {
+            if (this.backpressureStrategy !== "block") {
+              throw new BackpressureExceededProblem(this.runningHandlers.size);
+            }
+            await this.waitForSlot();
+          }
+          this.assertIntakeOpen();
+          execution = await this.executeSubscriberWithTracking(
+            subscriber,
+            this.cloneEvent(item.event),
+            item.event.eventName,
+            { source: "replay", priorRetryCount: item.retryCount },
+          );
         } catch (error) {
-          storageError = this.normalizeError(error);
+          execution = {
+            failure: { handlerName: item.handlerId ?? "", error: this.normalizeError(error) },
+          };
         }
-      }
-      result.failed++;
-      result.failures.push({
-        eventId: failedItem.event.eventId,
-        eventName: failedItem.event.eventName,
-        handlerId: failedItem.handlerId,
-        error: execution.failure.error,
-        item: failedItem,
-        requeued: !storageError,
-        storageError,
-      });
-      this.recordReplayInspection("failed", failedItem, storageError ?? execution.failure.error);
-    }
+        if (!execution.failure) {
+          result.succeeded++;
+          this.recordReplayInspection("succeeded", item);
+          continue;
+        }
 
-    return result;
+        const failedItem = execution.deadLetterItem ?? item;
+        let storageError = execution.storageError;
+        if (!execution.deadLetterItem) {
+          try {
+            activeReplay.phase = "requeue";
+            await this.deadLetterQueue.enqueue(failedItem);
+          } catch (error) {
+            storageError = this.normalizeError(error);
+          }
+        }
+        result.failed++;
+        result.failures.push({
+          eventId: failedItem.event.eventId,
+          eventName: failedItem.event.eventName,
+          handlerId: failedItem.handlerId,
+          error: execution.failure.error,
+          item: failedItem,
+          requeued: !storageError,
+          storageError,
+        });
+        this.recordReplayInspection("failed", failedItem, storageError ?? execution.failure.error);
+      }
+
+      return result;
+    } finally {
+      this.activeReplays.delete(replayId);
+      this.notifyDrainCompleted();
+    }
   }
 
   private async finishPublishSpan(
@@ -1142,13 +1166,14 @@ export class InMemoryEventBus<TEvent extends DomainEvent = DomainEvent>
     this.intakeClosed = true;
     this.rejectSlotWaiters();
 
-    if (this.runningHandlers.size === 0) {
+    if (this.runningHandlers.size === 0 && this.activeReplays.size === 0) {
       return { status: "drained", unfinishedHandlers: [] };
     }
     if (options.signal?.aborted) {
       return {
         status: "cancelled",
         unfinishedHandlers: this.getRunningHandlers(),
+        unfinishedReplays: Array.from(this.activeReplays.values(), (replay) => ({ ...replay })),
       };
     }
 
@@ -1171,7 +1196,7 @@ export class InMemoryEventBus<TEvent extends DomainEvent = DomainEvent>
       };
 
       const onDrained = (): void => {
-        if (this.runningHandlers.size === 0) {
+        if (this.runningHandlers.size === 0 && this.activeReplays.size === 0) {
           finish({ status: "drained", unfinishedHandlers: [] });
         }
       };
@@ -1179,6 +1204,7 @@ export class InMemoryEventBus<TEvent extends DomainEvent = DomainEvent>
         finish({
           status: "cancelled",
           unfinishedHandlers: this.getRunningHandlers(),
+          unfinishedReplays: Array.from(this.activeReplays.values(), (replay) => ({ ...replay })),
         });
       };
 
@@ -1187,6 +1213,7 @@ export class InMemoryEventBus<TEvent extends DomainEvent = DomainEvent>
         finish({
           status: "timed-out",
           unfinishedHandlers: this.getRunningHandlers(),
+          unfinishedReplays: Array.from(this.activeReplays.values(), (replay) => ({ ...replay })),
         });
       }, timeoutMs);
       options.signal?.addEventListener("abort", onAbort, { once: true });
@@ -1201,7 +1228,7 @@ export class InMemoryEventBus<TEvent extends DomainEvent = DomainEvent>
   }
 
   private notifyDrainCompleted(): void {
-    if (this.runningHandlers.size !== 0) {
+    if (this.runningHandlers.size !== 0 || this.activeReplays.size !== 0) {
       return;
     }
 

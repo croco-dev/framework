@@ -52,4 +52,30 @@ describe("EventBusLifecycle", () => {
       await expect(rejection).rejects.toBeInstanceOf(EventBusDrainIncompleteProblem);
     },
   );
+
+  it("preserves replay-only shutdown evidence in the framework Problem", async () => {
+    const replay: { replayId: string; phase: "requeue" | "dequeue"; startTime: number } = {
+      replayId: "replay-3",
+      phase: "requeue",
+      startTime: 1_234,
+    };
+    const lifecycle: EventBusLifecycle = {
+      shutdown: vi.fn().mockResolvedValue({
+        status: "timed-out",
+        unfinishedHandlers: [],
+        unfinishedReplays: [replay],
+      }),
+    };
+    const problem = await createEventBusShutdownHook(lifecycle)
+      .onShutdown()
+      .catch((error: unknown) => error);
+    expect(problem).toBeInstanceOf(EventBusDrainIncompleteProblem);
+    expect(problem).toMatchObject({
+      unfinishedHandlers: [],
+      unfinishedReplays: [replay],
+      extensions: { unfinishedReplayCount: 1 },
+    });
+    replay.phase = "dequeue";
+    expect(problem).toMatchObject({ unfinishedReplays: [{ phase: "requeue" }] });
+  });
 });

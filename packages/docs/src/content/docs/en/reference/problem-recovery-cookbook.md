@@ -10008,7 +10008,7 @@ Sources:
 
 Sources:
 
-- `packages/events-core/src/libs/problems/EventsProblems.ts:158:1` (problem-class)
+- `packages/events-core/src/libs/problems/EventsProblems.ts:167:1` (problem-class)
 
 <a id="events-core-after-commit-publish-failed"></a>
 
@@ -10026,7 +10026,7 @@ Sources:
 
 Sources:
 
-- `packages/events-core/src/libs/problems/EventsProblems.ts:173:1` (problem-class)
+- `packages/events-core/src/libs/problems/EventsProblems.ts:182:1` (problem-class)
 
 <a id="events-core-after-commit-requires-active-transaction"></a>
 
@@ -10044,7 +10044,7 @@ Sources:
 
 Sources:
 
-- `packages/events-core/src/libs/problems/EventsProblems.ts:147:1` (problem-class)
+- `packages/events-core/src/libs/problems/EventsProblems.ts:156:1` (problem-class)
 
 <a id="events-core-deserialization-error"></a>
 
@@ -10062,7 +10062,7 @@ Sources:
 
 Sources:
 
-- `packages/events-core/src/libs/problems/EventsProblems.ts:106:1` (problem-class)
+- `packages/events-core/src/libs/problems/EventsProblems.ts:115:1` (problem-class)
 
 <a id="events-core-duplicate-event-field"></a>
 
@@ -10080,7 +10080,7 @@ Sources:
 
 Sources:
 
-- `packages/events-core/src/libs/problems/EventsProblems.ts:117:1` (problem-class)
+- `packages/events-core/src/libs/problems/EventsProblems.ts:126:1` (problem-class)
 
 <a id="events-core-duplicate-event-name"></a>
 
@@ -10098,7 +10098,7 @@ Sources:
 
 Sources:
 
-- `packages/events-core/src/libs/problems/EventsProblems.ts:132:1` (problem-class)
+- `packages/events-core/src/libs/problems/EventsProblems.ts:141:1` (problem-class)
 
 <a id="events-core-event-bus-drain-incomplete"></a>
 
@@ -10116,7 +10116,7 @@ Sources:
 
 Sources:
 
-- `packages/events-core/src/libs/problems/EventsProblems.ts:54:1` (problem-class)
+- `packages/events-core/src/libs/problems/EventsProblems.ts:58:1` (problem-class)
 
 <a id="events-core-event-bus-drain-timeout-invalid"></a>
 
@@ -10134,7 +10134,7 @@ Sources:
 
 Sources:
 
-- `packages/events-core/src/libs/problems/EventsProblems.ts:40:1` (problem-class)
+- `packages/events-core/src/libs/problems/EventsProblems.ts:44:1` (problem-class)
 
 <a id="events-core-event-bus-intake-closed"></a>
 
@@ -10152,7 +10152,7 @@ Sources:
 
 Sources:
 
-- `packages/events-core/src/libs/problems/EventsProblems.ts:30:1` (problem-class)
+- `packages/events-core/src/libs/problems/EventsProblems.ts:34:1` (problem-class)
 
 <a id="events-core-event-bus-not-set"></a>
 
@@ -10170,7 +10170,7 @@ Sources:
 
 Sources:
 
-- `packages/events-core/src/libs/problems/EventsProblems.ts:21:1` (problem-class)
+- `packages/events-core/src/libs/problems/EventsProblems.ts:25:1` (problem-class)
 
 <a id="events-core-event-definition-error"></a>
 
@@ -10188,7 +10188,7 @@ Sources:
 
 Sources:
 
-- `packages/events-core/src/libs/problems/EventsProblems.ts:84:1` (problem-class)
+- `packages/events-core/src/libs/problems/EventsProblems.ts:93:1` (problem-class)
 
 <a id="events-core-handler-resolver-required"></a>
 
@@ -10206,7 +10206,7 @@ Sources:
 
 Sources:
 
-- `packages/events-core/src/libs/problems/EventsProblems.ts:5:1` (problem-class)
+- `packages/events-core/src/libs/problems/EventsProblems.ts:9:1` (problem-class)
 
 <a id="events-core-transaction-context-unavailable"></a>
 
@@ -10248,7 +10248,7 @@ Sources:
 
 Sources:
 
-- `packages/events-core/src/libs/problems/EventsProblems.ts:95:1` (problem-class)
+- `packages/events-core/src/libs/problems/EventsProblems.ts:104:1` (problem-class)
 
 <a id="events-inmemory-backpressure-exceeded"></a>
 
@@ -10464,7 +10464,7 @@ Sources:
 
 Sources:
 
-- `packages/events-inmemory/src/libs/InmemoryEventBus.ts:105:1` (problem-class)
+- `packages/events-inmemory/src/libs/InmemoryEventBus.ts:106:1` (problem-class)
 
 <a id="events-inmemory-publish-failed"></a>
 
@@ -10482,7 +10482,7 @@ Sources:
 
 Sources:
 
-- `packages/events-inmemory/src/libs/InmemoryEventBus.ts:88:1` (problem-class)
+- `packages/events-inmemory/src/libs/InmemoryEventBus.ts:89:1` (problem-class)
 
 <a id="events-inmemory-unsupported-dead-letter-value"></a>
 

@@ -13644,7 +13644,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/events-core/src/libs/problems/EventsProblems.ts";
-          readonly line: 158;
+          readonly line: 167;
           readonly column: 1;
           readonly kind: "problem-class";
         },
@@ -13672,7 +13672,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/events-core/src/libs/problems/EventsProblems.ts";
-          readonly line: 173;
+          readonly line: 182;
           readonly column: 1;
           readonly kind: "problem-class";
         },
@@ -13700,7 +13700,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/events-core/src/libs/problems/EventsProblems.ts";
-          readonly line: 147;
+          readonly line: 156;
           readonly column: 1;
           readonly kind: "problem-class";
         },
@@ -13728,7 +13728,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/events-core/src/libs/problems/EventsProblems.ts";
-          readonly line: 106;
+          readonly line: 115;
           readonly column: 1;
           readonly kind: "problem-class";
         },
@@ -13756,7 +13756,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/events-core/src/libs/problems/EventsProblems.ts";
-          readonly line: 117;
+          readonly line: 126;
           readonly column: 1;
           readonly kind: "problem-class";
         },
@@ -13784,7 +13784,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/events-core/src/libs/problems/EventsProblems.ts";
-          readonly line: 132;
+          readonly line: 141;
           readonly column: 1;
           readonly kind: "problem-class";
         },
@@ -13812,7 +13812,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/events-core/src/libs/problems/EventsProblems.ts";
-          readonly line: 54;
+          readonly line: 58;
           readonly column: 1;
           readonly kind: "problem-class";
         },
@@ -13840,7 +13840,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/events-core/src/libs/problems/EventsProblems.ts";
-          readonly line: 40;
+          readonly line: 44;
           readonly column: 1;
           readonly kind: "problem-class";
         },
@@ -13868,7 +13868,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/events-core/src/libs/problems/EventsProblems.ts";
-          readonly line: 30;
+          readonly line: 34;
           readonly column: 1;
           readonly kind: "problem-class";
         },
@@ -13896,7 +13896,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/events-core/src/libs/problems/EventsProblems.ts";
-          readonly line: 21;
+          readonly line: 25;
           readonly column: 1;
           readonly kind: "problem-class";
         },
@@ -13924,7 +13924,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/events-core/src/libs/problems/EventsProblems.ts";
-          readonly line: 84;
+          readonly line: 93;
           readonly column: 1;
           readonly kind: "problem-class";
         },
@@ -13952,7 +13952,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/events-core/src/libs/problems/EventsProblems.ts";
-          readonly line: 5;
+          readonly line: 9;
           readonly column: 1;
           readonly kind: "problem-class";
         },
@@ -14008,7 +14008,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/events-core/src/libs/problems/EventsProblems.ts";
-          readonly line: 95;
+          readonly line: 104;
           readonly column: 1;
           readonly kind: "problem-class";
         },
@@ -14344,7 +14344,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/events-inmemory/src/libs/InmemoryEventBus.ts";
-          readonly line: 105;
+          readonly line: 106;
           readonly column: 1;
           readonly kind: "problem-class";
         },
@@ -14372,7 +14372,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/events-inmemory/src/libs/InmemoryEventBus.ts";
-          readonly line: 88;
+          readonly line: 89;
           readonly column: 1;
           readonly kind: "problem-class";
         },
@@ -48040,7 +48040,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/events-core/src/libs/problems/EventsProblems.ts",
-          line: 158,
+          line: 167,
           column: 1,
           kind: "problem-class",
         },
@@ -48072,7 +48072,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/events-core/src/libs/problems/EventsProblems.ts",
-          line: 173,
+          line: 182,
           column: 1,
           kind: "problem-class",
         },
@@ -48105,7 +48105,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/events-core/src/libs/problems/EventsProblems.ts",
-          line: 147,
+          line: 156,
           column: 1,
           kind: "problem-class",
         },
@@ -48137,7 +48137,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/events-core/src/libs/problems/EventsProblems.ts",
-          line: 106,
+          line: 115,
           column: 1,
           kind: "problem-class",
         },
@@ -48169,7 +48169,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/events-core/src/libs/problems/EventsProblems.ts",
-          line: 117,
+          line: 126,
           column: 1,
           kind: "problem-class",
         },
@@ -48201,7 +48201,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/events-core/src/libs/problems/EventsProblems.ts",
-          line: 132,
+          line: 141,
           column: 1,
           kind: "problem-class",
         },
@@ -48233,7 +48233,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/events-core/src/libs/problems/EventsProblems.ts",
-          line: 54,
+          line: 58,
           column: 1,
           kind: "problem-class",
         },
@@ -48264,7 +48264,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/events-core/src/libs/problems/EventsProblems.ts",
-          line: 40,
+          line: 44,
           column: 1,
           kind: "problem-class",
         },
@@ -48294,7 +48294,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/events-core/src/libs/problems/EventsProblems.ts",
-          line: 30,
+          line: 34,
           column: 1,
           kind: "problem-class",
         },
@@ -48326,7 +48326,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/events-core/src/libs/problems/EventsProblems.ts",
-          line: 21,
+          line: 25,
           column: 1,
           kind: "problem-class",
         },
@@ -48358,7 +48358,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/events-core/src/libs/problems/EventsProblems.ts",
-          line: 84,
+          line: 93,
           column: 1,
           kind: "problem-class",
         },
@@ -48390,7 +48390,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/events-core/src/libs/problems/EventsProblems.ts",
-          line: 5,
+          line: 9,
           column: 1,
           kind: "problem-class",
         },
@@ -48455,7 +48455,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/events-core/src/libs/problems/EventsProblems.ts",
-          line: 95,
+          line: 104,
           column: 1,
           kind: "problem-class",
         },
@@ -48843,7 +48843,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/events-inmemory/src/libs/InmemoryEventBus.ts",
-          line: 105,
+          line: 106,
           column: 1,
           kind: "problem-class",
         },
@@ -48875,7 +48875,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/events-inmemory/src/libs/InmemoryEventBus.ts",
-          line: 88,
+          line: 89,
           column: 1,
           kind: "problem-class",
         },

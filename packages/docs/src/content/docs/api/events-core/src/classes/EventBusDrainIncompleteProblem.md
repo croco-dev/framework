@@ -5,7 +5,7 @@ prev: false
 title: "EventBusDrainIncompleteProblem"
 ---
 
-A framework shutdown hook cannot report success while EventBus handlers remain unfinished.
+A framework shutdown hook cannot report success while EventBus handlers or replay batches remain unfinished.
 
 ## Extends
 
@@ -15,7 +15,7 @@ A framework shutdown hook cannot report success while EventBus handlers remain u
 
 ### Constructor
 
-> **new EventBusDrainIncompleteProblem**(`drainStatus`, `unfinishedHandlers`): `EventBusDrainIncompleteProblem`
+> **new EventBusDrainIncompleteProblem**(`drainStatus`, `unfinishedHandlers`, `unfinishedReplays?`): `EventBusDrainIncompleteProblem`
 
 #### Parameters
 
@@ -26,6 +26,10 @@ A framework shutdown hook cannot report success while EventBus handlers remain u
 ##### unfinishedHandlers
 
 readonly [`EventBusActiveHandler`](/api/events-core/src/type-aliases/eventbusactivehandler/)[]
+
+##### unfinishedReplays?
+
+readonly [`EventBusActiveReplay`](/api/events-core/src/type-aliases/eventbusactivereplay/)[] = `[]`
 
 #### Returns
 
@@ -146,6 +150,12 @@ readonly [`EventBusActiveHandler`](/api/events-core/src/type-aliases/eventbusact
 ### unfinishedHandlers
 
 > `readonly` **unfinishedHandlers**: readonly [`EventBusActiveHandler`](/api/events-core/src/type-aliases/eventbusactivehandler/)[]
+
+---
+
+### unfinishedReplays
+
+> `readonly` **unfinishedReplays**: readonly [`EventBusActiveReplay`](/api/events-core/src/type-aliases/eventbusactivereplay/)[]
 
 ---
 

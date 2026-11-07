@@ -1,5 +1,9 @@
 import { Problem, ProblemCategory } from "@croco/problems-core";
-import type { EventBusActiveHandler, EventBusShutdownResult } from "../EventBusLifecycleTypes";
+import type {
+  EventBusActiveHandler,
+  EventBusActiveReplay,
+  EventBusShutdownResult,
+} from "../EventBusLifecycleTypes";
 
 /** A subscription without an explicit handler requires an application-owned resolver. */
 export class EventHandlerResolverRequiredProblem extends Problem {
@@ -50,31 +54,36 @@ export class InvalidEventBusDrainTimeoutProblem extends Problem {
   }
 }
 
-/** A framework shutdown hook cannot report success while EventBus handlers remain unfinished. */
+/** A framework shutdown hook cannot report success while EventBus handlers or replay batches remain unfinished. */
 export class EventBusDrainIncompleteProblem extends Problem {
   readonly code = "events-core/event-bus-drain-incomplete";
   readonly category = ProblemCategory.InternalServerError;
   readonly drainStatus: Exclude<EventBusShutdownResult["status"], "drained">;
   readonly unfinishedHandlers: readonly EventBusActiveHandler[];
+  readonly unfinishedReplays: readonly EventBusActiveReplay[];
 
   constructor(
     drainStatus: Exclude<EventBusShutdownResult["status"], "drained">,
     unfinishedHandlers: readonly EventBusActiveHandler[],
+    unfinishedReplays: readonly EventBusActiveReplay[] = [],
   ) {
     const unfinishedHandlerSnapshot = unfinishedHandlers.map((handler) => ({ ...handler }));
+    const unfinishedReplaySnapshot = unfinishedReplays.map((replay) => ({ ...replay }));
     super(
       undefined,
       undefined,
-      `EventBus drain ${drainStatus} with ${unfinishedHandlerSnapshot.length} unfinished handler(s).`,
+      `EventBus drain ${drainStatus} with ${unfinishedHandlerSnapshot.length} unfinished handler(s) and ${unfinishedReplaySnapshot.length} unfinished replay batch(es).`,
       {
         extensions: {
           drainStatus,
           unfinishedHandlerCount: unfinishedHandlerSnapshot.length,
+          unfinishedReplayCount: unfinishedReplaySnapshot.length,
         },
       },
     );
     this.drainStatus = drainStatus;
     this.unfinishedHandlers = unfinishedHandlerSnapshot;
+    this.unfinishedReplays = unfinishedReplaySnapshot;
   }
 }
 

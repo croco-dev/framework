@@ -46,6 +46,7 @@ describe("EventsProblems", () => {
     expect(problem.extensions).toEqual({
       drainStatus: "timed-out",
       unfinishedHandlerCount: 1,
+      unfinishedReplayCount: 0,
     });
   });
 
