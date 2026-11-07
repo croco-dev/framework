@@ -58,13 +58,17 @@ export class PostgresWarehouseCatalog implements CatalogStore {
     return access;
   }
 
-  private async transaction<T>(run: (db: WarehousePostgresConnection) => Promise<T>): Promise<T> {
+  private async transaction<T>(
+    run: (db: WarehousePostgresConnection) => Promise<T>,
+    readAccess?: WarehouseAccess,
+  ): Promise<T> {
     const db = await this.pool.connect();
     let committing = false;
     let indeterminate = false;
     try {
-      await db.query("BEGIN");
+      await db.query(readAccess ? "BEGIN ISOLATION LEVEL READ COMMITTED READ ONLY" : "BEGIN");
       const result = await run(db);
+      if (readAccess) await this.readHead(db, readAccess);
       committing = true;
       await db.query("COMMIT");
       return result;
@@ -80,10 +84,29 @@ export class PostgresWarehouseCatalog implements CatalogStore {
     }
   }
 
-  private async head(
+  private async readHead(db: WarehousePostgresConnection, access: WarehouseAccess): Promise<Head> {
+    await parseDescriptor(JSON.stringify(this.descriptor));
+    const result = await db.query<Head>(
+      "SELECT * FROM warehouse_heads WHERE scope_key=$1 AND model_version=$2",
+      [scopeKey(access.scope), this.descriptor.semanticHash],
+    );
+    const head = result.rows[0] ?? {
+      snapshot_id: null,
+      revision: 0,
+      permission_epoch: access.permissionEpoch,
+      privacy_epoch: access.privacyEpoch,
+    };
+    if (
+      Number(head.permission_epoch) !== access.permissionEpoch ||
+      Number(head.privacy_epoch) !== access.privacyEpoch
+    )
+      throw new WarehouseContractError("WAREHOUSE_EPOCH_CHANGED");
+    return head;
+  }
+
+  private async mutationHead(
     db: WarehousePostgresConnection,
     access: WarehouseAccess,
-    checkEpoch = true,
   ): Promise<Head> {
     await parseDescriptor(JSON.stringify(this.descriptor));
     await db.query(
@@ -100,13 +123,7 @@ export class PostgresWarehouseCatalog implements CatalogStore {
       [scopeKey(access.scope), this.descriptor.semanticHash],
     );
     const head = result.rows[0];
-    if (
-      !head ||
-      (checkEpoch &&
-        (Number(head.permission_epoch) !== access.permissionEpoch ||
-          Number(head.privacy_epoch) !== access.privacyEpoch))
-    )
-      throw new WarehouseContractError("WAREHOUSE_EPOCH_CHANGED");
+    if (!head) throw new WarehouseContractError("WAREHOUSE_EPOCH_CHANGED");
     return head;
   }
 
@@ -128,7 +145,7 @@ export class PostgresWarehouseCatalog implements CatalogStore {
       .update(JSON.stringify([access.actor, audit, input]))
       .digest("hex");
     return this.transaction(async (db) => {
-      const head = await this.head(db, access, false);
+      const head = await this.mutationHead(db, access);
       const params = [
         scopeKey(access.scope),
         this.descriptor.semanticHash,
@@ -165,9 +182,10 @@ export class PostgresWarehouseCatalog implements CatalogStore {
     access: WarehouseAccess,
     id: string,
     fence?: number,
+    lock = true,
   ): Promise<WarehouseCandidate> {
     const rows = await db.query<{ data: WarehouseCandidate }>(
-      "SELECT data FROM warehouse_candidates WHERE id=$1 AND scope_key=$2 AND model_version=$3 FOR UPDATE",
+      `SELECT data FROM warehouse_candidates WHERE id=$1 AND scope_key=$2 AND model_version=$3${lock ? " FOR UPDATE" : ""}`,
       [id, scopeKey(access.scope), this.descriptor.semanticHash],
     );
     const candidate = rows.rows[0]?.data;
@@ -242,9 +260,9 @@ export class PostgresWarehouseCatalog implements CatalogStore {
   }): Promise<WarehouseCandidate> {
     const access = this.access("read");
     return this.transaction(async (db) => {
-      await this.head(db, access);
-      return this.candidate(db, access, request.candidateId);
-    });
+      await this.readHead(db, access);
+      return this.candidate(db, access, request.candidateId, undefined, false);
+    }, access);
   }
 
   async sealCandidate(request: WarehouseSealRequest): Promise<WarehouseCandidate> {
@@ -418,17 +436,17 @@ export class PostgresWarehouseCatalog implements CatalogStore {
   async pinSnapshot(request: WarehouseSnapshotRequest): Promise<WarehouseSnapshot> {
     const access = this.access("read");
     return this.transaction(async (db) => {
-      const head = await this.head(db, access);
+      const head = await this.readHead(db, access);
       const id = request.snapshotId ?? head.snapshot_id;
       if (!id) throw new WarehouseContractError("WAREHOUSE_SNAPSHOT_UNAVAILABLE");
       return this.snapshot(db, access, id);
-    });
+    }, access);
   }
 
   async describeDataset(_request: { access: WarehouseAccess }): Promise<WarehouseDataset> {
     const access = this.access("read");
     return this.transaction(async (db) => {
-      const head = await this.head(db, access);
+      const head = await this.readHead(db, access);
       const metadata = head.snapshot_id
         ? await db.query<{ data: WarehouseSnapshot }>(
             "SELECT data FROM warehouse_snapshots WHERE id=$1 AND scope_key=$2 AND model_version=$3 AND (expires_at IS NULL OR expires_at>now())",
@@ -458,7 +476,7 @@ export class PostgresWarehouseCatalog implements CatalogStore {
         permissionEpoch: access.permissionEpoch,
         privacyEpoch: access.privacyEpoch,
       };
-    });
+    }, access);
   }
 
   async suppress(request: WarehouseSuppressRequest): Promise<{ privacyEpoch: number }> {

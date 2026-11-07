@@ -1241,6 +1241,141 @@ describe.skipIf(!realResourcesEnabled)("PostgreSQL warehouse facts", () => {
     expect(restored.rows[0]?.created_at).toBeInstanceOf(Date);
   });
 
+  it.each(["read committed", "repeatable read"])(
+    "reads catalog metadata with SELECT-only grants with %s session isolation",
+    async (isolation) => {
+      const store = services(randomUUID());
+      const access = store.access();
+      const candidate = await store.catalog.createCandidate({
+        access,
+        id: randomUUID(),
+        transformHash: "read-only-catalog",
+        sourceRefs: ["captures"],
+        expectedHead: null,
+        partitionSelection: null,
+        audit: {
+          reason: "prepare read-only fixture",
+          expectedRevision: 0,
+          idempotencyKey: randomUUID(),
+        },
+      });
+      await store.catalog.sealCandidate({
+        access,
+        candidateId: candidate.id,
+        fence: candidate.fence,
+        expectedBatchIds: [],
+        quality,
+        audit: {
+          reason: "verify empty fixture",
+          expectedRevision: 0,
+          idempotencyKey: randomUUID(),
+        },
+      });
+      const snapshot = await store.catalog.publishCandidate({
+        access,
+        candidateId: candidate.id,
+        fence: candidate.fence,
+        audit: {
+          reason: "publish empty fixture",
+          expectedRevision: 0,
+          idempotencyKey: randomUUID(),
+        },
+      });
+      const role = `catalog_reader_${randomUUID().replaceAll("-", "")}`;
+      await connection.pool.query(`CREATE ROLE "${role}"`);
+      const readPool = new Pool({
+        connectionString: connection.connectionString,
+        options: `-c role=${role} -c default_transaction_read_only=on`,
+        max: 1,
+      });
+      try {
+        await connection.pool.query(`GRANT USAGE ON SCHEMA public TO "${role}"`);
+        await connection.pool.query(
+          `GRANT SELECT ON warehouse_heads, warehouse_candidates, warehouse_snapshots TO "${role}"`,
+        );
+        await readPool.query("SELECT set_config('default_transaction_isolation',$1,false)", [
+          isolation,
+        ]);
+        const readerAccess = { ...access, roles: ["read"] as const };
+        const catalog = new PostgresWarehouseCatalog(readPool, descriptor, () => readerAccess);
+        const session = await readPool.query(
+          "SELECT current_user, current_setting('transaction_read_only') AS read_only, current_setting('transaction_isolation') AS isolation",
+        );
+        expect(session.rows).toEqual([{ current_user: role, read_only: "on", isolation }]);
+        expect(await catalog.describeDataset({ access })).toMatchObject({
+          headId: snapshot.id,
+          headStatus: "readable",
+          revision: snapshot.revision,
+        });
+        expect(await catalog.pinSnapshot({ access })).toEqual(snapshot);
+        expect(await catalog.pinSnapshot({ access, snapshotId: snapshot.id })).toEqual(snapshot);
+        expect(await catalog.getCandidate({ access, candidateId: candidate.id })).toMatchObject({
+          id: candidate.id,
+          state: "published",
+        });
+
+        const invalidatingPool: WarehousePostgresPool = {
+          query: readPool.query.bind(readPool),
+          connect: async () => {
+            const db = await readPool.connect();
+            return {
+              query: async <T = Record<string, unknown>>(sql: string, params?: unknown[]) => {
+                const result = await db.query(sql, params);
+                if (sql.startsWith("SELECT data FROM warehouse_snapshots")) {
+                  await store.catalog.suppress({
+                    access,
+                    identities: ["erased-subject"],
+                    audit: {
+                      reason: "revoke during snapshot pinning",
+                      expectedRevision: snapshot.revision,
+                      idempotencyKey: randomUUID(),
+                    },
+                  });
+                }
+                return { rows: result.rows as T[], rowCount: result.rowCount };
+              },
+              release: (error?: Error | boolean) => db.release(error),
+            };
+          },
+        };
+        const invalidated = new PostgresWarehouseCatalog(
+          invalidatingPool,
+          descriptor,
+          () => readerAccess,
+        );
+        await expect(invalidated.pinSnapshot({ access })).rejects.toThrow(
+          "WAREHOUSE_EPOCH_CHANGED",
+        );
+
+        const emptyAccess = { ...readerAccess, scope: { ...access.scope, tenant: randomUUID() } };
+        const empty = new PostgresWarehouseCatalog(readPool, descriptor, () => emptyAccess);
+        const before = await connection.pool.query("SELECT count(*) FROM warehouse_heads");
+        expect(await empty.describeDataset({ access: emptyAccess })).toMatchObject({
+          headId: null,
+          headStatus: "empty",
+          revision: 0,
+          candidates: [],
+        });
+        await expect(empty.pinSnapshot({ access: emptyAccess })).rejects.toThrow(
+          "WAREHOUSE_SNAPSHOT_UNAVAILABLE",
+        );
+        await expect(
+          empty.getCandidate({ access: emptyAccess, candidateId: candidate.id }),
+        ).rejects.toThrow("WAREHOUSE_CANDIDATE_FENCE");
+        await expect(
+          empty.pinSnapshot({ access: emptyAccess, snapshotId: snapshot.id }),
+        ).rejects.toThrow("WAREHOUSE_SNAPSHOT_UNAVAILABLE");
+        expect((await connection.pool.query("SELECT count(*) FROM warehouse_heads")).rows).toEqual(
+          before.rows,
+        );
+      } finally {
+        await readPool.end();
+        await connection.pool.query(`DROP OWNED BY "${role}"`);
+        await connection.pool.query(`DROP ROLE "${role}"`);
+      }
+    },
+  );
+
   it("replays explicit runtime installers after artifact-created tables served all fact workflows", async () => {
     await installPostgresWarehouseSchema(connection.pool);
     await installPostgresWarehouseSchema(connection.pool);

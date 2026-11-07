@@ -92,6 +92,74 @@ beforeEach(async () => {
 });
 
 describe("PostgresWarehouseCatalog", () => {
+  it.each(["describeDataset", "pinSnapshot", "getCandidate"] as const)(
+    "%s does not write or lock catalog rows",
+    async (operation) => {
+      if (operation === "describeDataset") await catalog.describeDataset({ access });
+      if (operation === "pinSnapshot")
+        await expect(catalog.pinSnapshot({ access })).rejects.toThrow(
+          "WAREHOUSE_SNAPSHOT_UNAVAILABLE",
+        );
+      if (operation === "getCandidate")
+        expect(await catalog.getCandidate({ access, candidateId: candidate.id })).toEqual(
+          candidate,
+        );
+      expect(query.mock.calls.some(([sql]) => /INSERT|UPDATE|DELETE|FOR UPDATE/.test(sql))).toBe(
+        false,
+      );
+    },
+  );
+  it("describes an absent head without creating it", async () => {
+    const original = query.getMockImplementation();
+    query.mockImplementation(async (sql: string) => {
+      if (sql.startsWith("SELECT * FROM warehouse_heads")) return { rows: [] };
+      if (!original) throw new Error("Missing query mock");
+      return original(sql);
+    });
+    expect(await catalog.describeDataset({ access })).toMatchObject({
+      headId: null,
+      headStatus: "empty",
+      revision: 0,
+      permissionEpoch: 0,
+      privacyEpoch: 0,
+    });
+    await expect(catalog.pinSnapshot({ access })).rejects.toThrow("WAREHOUSE_SNAPSHOT_UNAVAILABLE");
+    expect(query.mock.calls.some(([sql]) => sql.startsWith("INSERT"))).toBe(false);
+  });
+  it.each(["describeDataset", "pinSnapshot", "getCandidate"] as const)(
+    "%s rejects an epoch change during its metadata query",
+    async (operation) => {
+      head.snapshot_id = "snapshot";
+      const snapshot: WarehouseSnapshot = {
+        id: "snapshot",
+        revision: 1,
+        modelVersion: descriptor.semanticHash,
+        segmentRefs: ["table"],
+        partitionSelection: [],
+        quality,
+        createdAt: "2026-01-01T00:00:00Z",
+        permissionEpoch: 0,
+        privacyEpoch: 0,
+      };
+      const original = query.getMockImplementation();
+      query.mockImplementation(async (sql: string) => {
+        if (sql.startsWith("SELECT data FROM warehouse_snapshots")) {
+          head.privacy_epoch = 1;
+          return { rows: [{ data: snapshot }] };
+        }
+        if (sql.startsWith("SELECT data FROM warehouse_candidates")) head.privacy_epoch = 1;
+        if (!original) throw new Error("Missing query mock");
+        return original(sql);
+      });
+      const result =
+        operation === "getCandidate"
+          ? catalog.getCandidate({ access, candidateId: candidate.id })
+          : operation === "pinSnapshot"
+            ? catalog.pinSnapshot({ access })
+            : catalog.describeDataset({ access });
+      await expect(result).rejects.toThrow("WAREHOUSE_EPOCH_CHANGED");
+    },
+  );
   it("requires all expected durable receipts before sealing", async () => {
     receipts = [];
     await expect(
@@ -165,12 +233,19 @@ describe("PostgresWarehouseCatalog", () => {
       "WAREHOUSE_ACCESS_DENIED",
     );
     await expect(catalog.describeDataset({ access })).rejects.toThrow("WAREHOUSE_ACCESS_DENIED");
+    await expect(catalog.pinSnapshot({ access })).rejects.toThrow("WAREHOUSE_ACCESS_DENIED");
+    await expect(catalog.getCandidate({ access, candidateId: candidate.id })).rejects.toThrow(
+      "WAREHOUSE_ACCESS_DENIED",
+    );
     expect(query).not.toHaveBeenCalled();
   });
   it("rejects stale privacy epochs", async () => {
     head.privacy_epoch = 1;
     await expect(catalog.describeDataset({ access })).rejects.toThrow("WAREHOUSE_EPOCH_CHANGED");
     await expect(catalog.pinSnapshot({ access, snapshotId: "old" })).rejects.toThrow(
+      "WAREHOUSE_EPOCH_CHANGED",
+    );
+    await expect(catalog.getCandidate({ access, candidateId: candidate.id })).rejects.toThrow(
       "WAREHOUSE_EPOCH_CHANGED",
     );
   });
