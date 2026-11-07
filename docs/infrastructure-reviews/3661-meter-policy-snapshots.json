@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "metering-core",
+      "classification": "pure-contract",
+      "reason": "Caller and repository mutations cannot alter cached quota, billing intent, nested metadata or dates without registration or tenant refresh.",
+      "files": {
+        "packages/metering-core/src/libs/MeterRegistry.ts": "ac044ea94ac4ea6db3b667514b4ece1fe56688787db19edb0e26473b47cf7b3e"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Registry snapshots copy local meter data at cache and caller boundaries. They require no host capability, storage operation, transport or lifecycle integration. Existing repository and journal contracts remain the owners of persistence and billing durability.",
+          "providers": [],
+          "constraints": [
+            "No new deployment support or live provider certification is claimed. Existing TTL and refresh generation fencing are preserved."
+          ],
+          "references": [
+            "packages/metering-core/src/libs/MeterRegistry.ts",
+            "packages/metering-core/src/tests/MeterRegistry.spec.ts",
+            "packages/metering-core/src/tests/MeteringService.spec.ts",
+            "packages/metering-core/src/libs/MeterRepository.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Registry snapshots copy local meter data at cache and caller boundaries. They require no host capability, storage operation, transport or lifecycle integration. Existing repository and journal contracts remain the owners of persistence and billing durability.",
+          "providers": [],
+          "constraints": [
+            "No new deployment support or live provider certification is claimed. Existing TTL and refresh generation fencing are preserved."
+          ],
+          "references": [
+            "packages/metering-core/src/libs/MeterRegistry.ts",
+            "packages/metering-core/src/tests/MeterRegistry.spec.ts",
+            "packages/metering-core/src/tests/MeteringService.spec.ts",
+            "packages/metering-core/src/libs/MeterRepository.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Registry snapshots copy local meter data at cache and caller boundaries. They require no host capability, storage operation, transport or lifecycle integration. Existing repository and journal contracts remain the owners of persistence and billing durability.",
+          "providers": [],
+          "constraints": [
+            "No new deployment support or live provider certification is claimed. Existing TTL and refresh generation fencing are preserved."
+          ],
+          "references": [
+            "packages/metering-core/src/libs/MeterRegistry.ts",
+            "packages/metering-core/src/tests/MeterRegistry.spec.ts",
+            "packages/metering-core/src/tests/MeteringService.spec.ts",
+            "packages/metering-core/src/libs/MeterRepository.ts"
+          ]
+        }
+      }
+    }
+  ]
+}

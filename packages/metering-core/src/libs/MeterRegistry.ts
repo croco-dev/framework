@@ -64,7 +64,7 @@ export class MeterRegistry {
 
     const cached = this.getFromCache(tenantId, meterId);
     if (cached) {
-      return cached;
+      return structuredClone(cached);
     }
 
     // 캐시에 없으면 DB 조회
@@ -74,7 +74,7 @@ export class MeterRegistry {
       this.addToCache(meter);
     }
 
-    return meter;
+    return meter ? structuredClone(meter) : null;
   }
 
   /**
@@ -94,10 +94,10 @@ export class MeterRegistry {
    */
   async register(options: MeterRegistrationOptions): Promise<MeterDefinition> {
     this.assertJournalConfigured(options);
-    const meter = await this.repository.save(options);
+    const meter = await this.repository.save(structuredClone(options));
     this.assertJournalConfigured(meter);
     this.addToCache(meter);
-    return meter;
+    return structuredClone(meter);
   }
 
   /**
@@ -111,7 +111,7 @@ export class MeterRegistry {
       snapshotUpdatedAt !== undefined &&
       Date.now() - snapshotUpdatedAt < this.cacheTtlMs
     ) {
-      return Array.from(tenantCache.values());
+      return structuredClone(Array.from(tenantCache.values()));
     }
 
     return this.refreshTenantCache(tenantId);
@@ -145,7 +145,7 @@ export class MeterRegistry {
       tenantCache = new Map();
       this.cache.set(meter.tenantId, tenantCache);
     }
-    tenantCache.set(meter.meterId, meter);
+    tenantCache.set(meter.meterId, structuredClone(meter));
     this.tenantCacheVersions.set(
       meter.tenantId,
       (this.tenantCacheVersions.get(meter.tenantId) ?? 0) + 1,
@@ -165,13 +165,13 @@ export class MeterRegistry {
       generation !== this.cacheGeneration ||
       version !== (this.tenantCacheVersions.get(tenantId) ?? 0)
     ) {
-      return Array.from(this.cache.get(tenantId)?.values() ?? []);
+      return structuredClone(Array.from(this.cache.get(tenantId)?.values() ?? []));
     }
     const tenantCache = new Map<string, MeterDefinition>();
 
     for (const meter of meters) {
       this.assertJournalConfigured(meter);
-      tenantCache.set(meter.meterId, meter);
+      tenantCache.set(meter.meterId, structuredClone(meter));
     }
 
     this.cache.set(tenantId, tenantCache);
@@ -180,7 +180,7 @@ export class MeterRegistry {
     this.cacheUpdatedAt.set(tenantId, updatedAt);
     this.tenantSnapshotUpdatedAt.set(tenantId, updatedAt);
 
-    return meters;
+    return structuredClone(meters);
   }
 
   private isCacheStale(tenantId: string): boolean {
