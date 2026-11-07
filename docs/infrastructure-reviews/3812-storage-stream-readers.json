@@ -1,0 +1,152 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "storage-core",
+      "classification": "pure-contract",
+      "reason": "Release owned readers on EOF/error and after cancellation settlement, guarding pending reads against terminal races. Public signatures, storage mutation, retry and network semantics are unchanged.",
+      "files": {
+        "packages/storage-core/src/libs/BaseStorageProvider.ts": "bb6fcf30558aefe1b96b7a29924a17574f027a94dea43215fe02256bfeb6b83c"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Reader ownership is local Web Streams cleanup with no Host capability, storage backend or deployment lifecycle dependency. The contract package adds no runtime support claim.",
+          "providers": ["@croco/storage-core"],
+          "constraints": [
+            "Cancellation that never settles retains reader ownership until settlement; abort delivery remains immediate."
+          ],
+          "references": [
+            "packages/storage-core/src/libs/BaseStorageProvider.ts",
+            "packages/storage-core/src/libs/types.ts",
+            "docs/package-catalog.json"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Reader ownership is local Web Streams cleanup with no Host capability, storage backend or deployment lifecycle dependency. The contract package adds no runtime support claim.",
+          "providers": ["@croco/storage-core"],
+          "constraints": [
+            "Cancellation that never settles retains reader ownership until settlement; abort delivery remains immediate."
+          ],
+          "references": [
+            "packages/storage-core/src/libs/BaseStorageProvider.ts",
+            "packages/storage-core/src/libs/types.ts",
+            "docs/package-catalog.json"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Reader ownership is local Web Streams cleanup with no Host capability, storage backend or deployment lifecycle dependency. The contract package adds no runtime support claim.",
+          "providers": ["@croco/storage-core"],
+          "constraints": [
+            "Cancellation that never settles retains reader ownership until settlement; abort delivery remains immediate."
+          ],
+          "references": [
+            "packages/storage-core/src/libs/BaseStorageProvider.ts",
+            "packages/storage-core/src/libs/types.ts",
+            "docs/package-catalog.json"
+          ]
+        }
+      }
+    },
+    {
+      "package": "storage-cloudinary",
+      "classification": "runtime-adapter",
+      "reason": "Release owned readers on EOF/error and after cancellation settlement, guarding pending reads against terminal races. Public signatures, storage mutation, retry and network semantics are unchanged.",
+      "files": {
+        "packages/storage-cloudinary/src/libs/CloudinaryProvider.ts": "52b0ea780c4856bf0f067ebd57d556253ffbd8c34642d407b14d8abad4865491"
+      },
+      "catalogRuntimes": ["node", "lambda"],
+      "profiles": {
+        "kubernetes": {
+          "result": "unverified",
+          "reason": "Reuse the existing Node Host adapter. Local controlled stream fixtures exercise reader cleanup but do not execute this deployment Host.",
+          "providers": ["@croco/storage-cloudinary", "@croco/preset-node"],
+          "constraints": [
+            "Requires the existing Node/Cloudinary adapter. Await consumption or cancellation before lifecycle completion. No live Cloudinary or deployment certification.",
+            "A cancellation that never settles retains its reader; no new cleanup deadline or network policy is introduced."
+          ],
+          "references": [
+            "packages/storage-cloudinary/src/libs/CloudinaryProvider.ts",
+            "packages/storage-core/src/libs/types.ts",
+            "docs/package-catalog.json",
+            "packages/storage-cloudinary/src/libs/CloudinaryStoragePlugin.ts",
+            "packages/preset-node/src/index.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "unverified",
+          "reason": "Reuse the existing Lambda Host adapter. Local controlled stream fixtures exercise reader cleanup but do not execute this deployment Host.",
+          "providers": ["@croco/storage-cloudinary", "@croco/preset-lambda"],
+          "constraints": [
+            "Requires the existing Node/Cloudinary adapter. Await consumption or cancellation before lifecycle completion. No live Cloudinary or deployment certification.",
+            "A cancellation that never settles retains its reader; no new cleanup deadline or network policy is introduced."
+          ],
+          "references": [
+            "packages/storage-cloudinary/src/libs/CloudinaryProvider.ts",
+            "packages/storage-core/src/libs/types.ts",
+            "docs/package-catalog.json",
+            "packages/storage-cloudinary/src/libs/CloudinaryStoragePlugin.ts",
+            "packages/preset-lambda/src/index.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "unsupported",
+          "host": "workers",
+          "reason": "The existing provider imports Node crypto and the Cloudinary SDK and claims Node/Lambda only; reader cleanup does not add Worker isolate support.",
+          "providers": ["@croco/storage-cloudinary"],
+          "constraints": ["No Workers or Node Container deployment support is added."],
+          "references": [
+            "packages/storage-cloudinary/src/libs/CloudinaryProvider.ts",
+            "packages/storage-core/src/libs/types.ts",
+            "docs/package-catalog.json",
+            "packages/storage-cloudinary/src/libs/CloudinaryStoragePlugin.ts"
+          ]
+        }
+      }
+    },
+    {
+      "package": "problems-core",
+      "classification": "pure-contract",
+      "reason": "Refresh generated diagnostic source locations after Cloudinary reader cleanup shifts lines; Problem identities and policies are unchanged.",
+      "files": {
+        "packages/problems-core/src/generated/problem-code-registry.ts": "e21f46d8c1e2fe198ee2061fc2f064198999d7c1b0510fc82c48662e07038379"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Static generated source locations need no Host, storage or lifecycle capability.",
+          "providers": [],
+          "constraints": ["No runtime or provider support claim changes."],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "scripts/problem-registry.mts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Static generated source locations need no Host, storage or lifecycle capability.",
+          "providers": [],
+          "constraints": ["No runtime or provider support claim changes."],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "scripts/problem-registry.mts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Static generated source locations need no Host, storage or lifecycle capability.",
+          "providers": [],
+          "constraints": ["No runtime or provider support claim changes."],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "scripts/problem-registry.mts"
+          ]
+        }
+      }
+    }
+  ]
+}

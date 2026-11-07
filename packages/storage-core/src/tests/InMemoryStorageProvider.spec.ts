@@ -102,6 +102,25 @@ describe("InMemoryStorageProvider", () => {
       expect(result).toEqual(data);
     });
 
+    it.each([false, true])(
+      "releases the input stream after put with signal=%s",
+      async (withSignal) => {
+        const source = new ReadableStream<Uint8Array>({
+          start(controller) {
+            controller.enqueue(new Uint8Array([13, 29]));
+            controller.close();
+          },
+        });
+        await provider.put(
+          "test/released.bin",
+          source,
+          withSignal ? { signal: new AbortController().signal } : undefined,
+        );
+        await expect(provider.get("test/released.bin")).resolves.toEqual(new Uint8Array([13, 29]));
+        expect(source.locked).toBe(false);
+      },
+    );
+
     it("메타데이터 함께 저장", async () => {
       const buffer = Buffer.from("Metadata test");
       await provider.put("test/meta.txt", buffer, {
