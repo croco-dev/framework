@@ -621,7 +621,7 @@ describe("InMemoryEventBus dead-letter execution", () => {
     expect(event.metadata.traceContext).toBeUndefined();
   });
 
-  it("rejects custom payloads before DLQ delivery without changing legacy delivery", async () => {
+  it("rejects custom payloads before delivery with or without DLQ", async () => {
     class CustomPayload {
       #value = 1;
       read(): number {
@@ -649,11 +649,13 @@ describe("InMemoryEventBus dead-letter execution", () => {
     };
     legacy.subscribe(subscription);
     withDlq.subscribe(subscription);
-    await expect(legacy.publish(new CustomEvent())).resolves.toBeUndefined();
+    await expect(legacy.publish(new CustomEvent())).rejects.toMatchObject({
+      code: "events-inmemory/unsupported-dead-letter-value",
+    });
     await expect(withDlq.publish(new CustomEvent())).rejects.toMatchObject({
       code: "events-inmemory/unsupported-dead-letter-value",
     });
-    expect(received).toEqual([1]);
+    expect(received).toEqual([]);
     expect(withDlq.getRunningHandlerCount()).toBe(0);
     await expect(queue.size()).resolves.toBe(0);
   });

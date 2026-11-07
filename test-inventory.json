@@ -2802,6 +2802,12 @@
       "owner": "@croco/events-inmemory"
     },
     {
+      "path": "packages/events-inmemory/src/tests/InMemoryEventBusPayload.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/events-inmemory"
+    },
+    {
       "path": "packages/events-tx/src/tests/DrizzleTransactionalEventStore.spec.ts",
       "lane": "fast",
       "qualifiers": ["coverage"],

@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "events-inmemory",
+      "classification": "pure-contract",
+      "reason": "Use the existing graph-aware snapshot copier for delivery regardless of DLQ configuration; preserve metadata aliases during trace injection and reject unsupported payloads before handlers run.",
+      "files": {
+        "packages/events-inmemory/src/libs/InmemoryEventBus.ts": "948fb0271741c4674994f14463a4b2ea3528fd168bacbe017e7df733da7ef158"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "This change only copies supported in-process event data. It requires no host API, durable storage, credentials or lifecycle hook, so no infrastructure-specific implementation is needed.",
+          "providers": ["@croco/events-inmemory"],
+          "constraints": [
+            "Process-local delivery remains unchanged; no host runtime or live infrastructure certification is claimed."
+          ],
+          "references": [
+            "packages/events-inmemory/src/libs/InmemoryEventBus.ts",
+            "packages/events-inmemory/src/libs/cloneDeadLetterValue.ts",
+            "packages/events-inmemory/src/tests/InMemoryEventBusPayload.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "This change only copies supported in-process event data. It requires no host API, durable storage, credentials or lifecycle hook, so no infrastructure-specific implementation is needed.",
+          "providers": ["@croco/events-inmemory"],
+          "constraints": [
+            "Process-local delivery remains unchanged; no host runtime or live infrastructure certification is claimed."
+          ],
+          "references": [
+            "packages/events-inmemory/src/libs/InmemoryEventBus.ts",
+            "packages/events-inmemory/src/libs/cloneDeadLetterValue.ts",
+            "packages/events-inmemory/src/tests/InMemoryEventBusPayload.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "This change only copies supported in-process event data. It requires no host API, durable storage, credentials or lifecycle hook, so no infrastructure-specific implementation is needed.",
+          "providers": ["@croco/events-inmemory"],
+          "constraints": [
+            "Process-local delivery remains unchanged; no host runtime or live infrastructure certification is claimed."
+          ],
+          "references": [
+            "packages/events-inmemory/src/libs/InmemoryEventBus.ts",
+            "packages/events-inmemory/src/libs/cloneDeadLetterValue.ts",
+            "packages/events-inmemory/src/tests/InMemoryEventBusPayload.spec.ts"
+          ]
+        }
+      }
+    }
+  ]
+}
