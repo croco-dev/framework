@@ -1,7 +1,7 @@
 import { Suspense, createElement } from "react";
 import type { ComponentType, ReactNode } from "react";
 import { Problem } from "@croco/problems-core";
-import { renderToReadableStream, renderToString } from "react-dom/server";
+import { renderToReadableStream, renderToStaticMarkup, renderToString } from "react-dom/server";
 import {
   RscClientManifestMismatchProblem,
   RscClientReferenceMissingProblem,
@@ -26,6 +26,7 @@ import type { HeadMetadata } from "../routes/head";
 import type { ShellDecision, ShellSettleSummary } from "../routes/shell";
 import type { RenderRouteComponentProps, RenderRouteIR } from "../routes/types";
 import { createDeferredRegionStore } from "./deferredRegions";
+import { createSsrDocument } from "./documentShell";
 import {
   SHELL_STREAM_DEFAULT_DEADLINE_MS,
   SHELL_STREAM_DEFAULT_MAX_BUFFERED_BYTES,
@@ -229,41 +230,16 @@ export class RenderServer {
       // commits with the critical shell before deferred regions resolve.
       // The tree keeps the `<div id="root">` container (and full head
       // metadata) that generated meta-vite clients hydrate.
-      const head = route.head?.() ?? {};
-      const element = createElement(
-        "html",
-        { lang: "en" },
+      const element = createSsrDocument(
+        route.head?.(),
         createElement(
-          "head",
-          null,
-          createElement("meta", { charSet: "utf-8" }),
-          createElement("meta", {
-            name: "viewport",
-            content: "width=device-width, initial-scale=1",
-          }),
-          createElement("title", null, head.title),
-          ...(head.description
-            ? [createElement("meta", { name: "description", content: head.description })]
-            : []),
-          ...(head.ogTitle
-            ? [createElement("meta", { property: "og:title", content: head.ogTitle })]
-            : []),
-          ...(head.canonical
-            ? [createElement("link", { rel: "canonical", href: head.canonical })]
-            : []),
-        ),
-        createElement(
-          "body",
-          null,
-          createElement(
-            "div",
-            { id: "root" },
-            this.withDeferredBoundaries(
-              module.default,
-              props,
-              route.path,
-              (route.regions ?? []).map((region) => region.id),
-            ),
+          "div",
+          { id: "root" },
+          this.withDeferredBoundaries(
+            module.default,
+            props,
+            route.path,
+            (route.regions ?? []).map((region) => region.id),
           ),
         ),
       );
@@ -1113,53 +1089,12 @@ export class RenderServer {
   }
 
   private htmlShell(headMetadata: HeadMetadata | undefined, bodyHtml: string): string {
-    const title = this.escapeHtml(headMetadata?.title ?? "Croco App");
-
-    let metaTags = "";
-    if (headMetadata?.description) {
-      metaTags += `\n    <meta name="description" content="${this.escapeHtml(headMetadata.description)}">`;
-    }
-    if (headMetadata?.ogTitle) {
-      metaTags += `\n    <meta property="og:title" content="${this.escapeHtml(headMetadata.ogTitle)}">`;
-    }
-    if (headMetadata?.canonical) {
-      metaTags += `\n    <link rel="canonical" href="${this.escapeHtml(headMetadata.canonical)}">`;
-    }
-
-    const publicPage = headMetadata?.publicPage;
-    if (publicPage) {
-      metaTags += `\n    <meta name="robots" content="${this.escapeHtml(publicPage.robots)}">`;
-      metaTags += `\n    <meta name="croco:revision" content="${this.escapeHtml(publicPage.revision)}">`;
-      for (const alternate of publicPage.alternates) {
-        metaTags += `\n    <link rel="alternate" hreflang="${this.escapeHtml(alternate.locale)}" href="${this.escapeHtml(alternate.href)}">`;
-      }
-      // Escape again at the output boundary even if a caller bypasses the resolver.
-      const jsonLd = publicPage.jsonLd
-        .replace(/</g, "\\u003c")
-        .replace(/>/g, "\\u003e")
-        .replace(/&/g, "\\u0026");
-      metaTags += `\n    <script type="application/ld+json">${jsonLd}</script>`;
-    }
-    return `<!DOCTYPE html>
-<html lang="${this.escapeHtml(publicPage?.lang ?? "en")}">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>${title}</title>${metaTags}
-  </head>
-  <body>
-    <div id="root">${bodyHtml}</div>
-  </body>
-</html>`;
-  }
-
-  private escapeHtml(text: string): string {
-    return text
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#x27;");
+    return `<!DOCTYPE html>${renderToStaticMarkup(
+      createSsrDocument(
+        headMetadata,
+        createElement("div", { id: "root", dangerouslySetInnerHTML: { __html: bodyHtml } }),
+      ),
+    )}`;
   }
 }
 

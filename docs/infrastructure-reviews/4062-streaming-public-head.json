@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "meta-vite",
+      "classification": "protocol-render",
+      "reason": "Buffered and shell-first SSR use one request-local head projection, preserving public-page language, robots, revision, alternates and safely escaped JSON-LD. The streamed head commits before deferred completion. The existing buffered public-page handler and RSC/SSG/ISR boundaries remain unchanged.",
+      "files": {
+        "packages/meta-vite/src/libs/render/documentShell.ts": "1968510a87d1546d63b55099b805eaeea81ba6a7698794fb49d935d141a31596",
+        "packages/meta-vite/src/libs/render/renderServer.ts": "cec90d7bbac7326557f2fcaa7bea5660ba866899e14cf803b22ad0b9c3c11ce3",
+        "packages/meta-vite/src/libs/routes/head.ts": "20591601687283d70ecfeac6404488eedab3478649bf59f6840bbc8d256bec9f"
+      },
+      "catalogRuntimes": ["node", "lambda", "cloudflare-workers", "browser"],
+      "profiles": {
+        "kubernetes": {
+          "result": "unverified",
+          "reason": "The existing Node fetch adapter and shell-first SSR are reused; this metadata projection adds no storage or lifecycle owner. Local Node/Chrome checks do not establish a deployed Kubernetes path.",
+          "providers": ["@croco/meta-vite/createNodeHandler"],
+          "constraints": [
+            "Head metadata must be bound to the same request-owned snapshot as the critical body.",
+            "No live cluster or provider certification is claimed."
+          ],
+          "references": [
+            "packages/meta-vite/src/libs/providers/node.ts",
+            "packages/meta-vite/src/tests/RenderServerPublicHead.spec.ts",
+            "packages/meta-vite/scripts/verify-public-pages-browser.mjs"
+          ]
+        },
+        "aws-lambda": {
+          "result": "unverified",
+          "reason": "The existing API Gateway adapter buffers the same SSR document; metadata does not introduce Lambda response streaming.",
+          "providers": ["@croco/meta-vite/createLambdaHandler"],
+          "constraints": [
+            "Await complete buffered rendering within the invocation deadline.",
+            "Local adapter fixtures do not establish live Lambda execution."
+          ],
+          "references": [
+            "packages/meta-vite/src/libs/providers/lambda.ts",
+            "packages/meta-vite/src/tests/RenderServerPublicHead.spec.ts",
+            "packages/meta-vite/scripts/verify-public-pages-browser.mjs"
+          ]
+        },
+        "cloudflare": {
+          "result": "unverified",
+          "reason": "The existing Workers fetch adapter and render core remain the path; Node core tests with a platform flag do not execute a Worker isolate.",
+          "providers": ["@croco/meta-vite/createCloudflareHandler"],
+          "constraints": [
+            "Worker isolate execution and deployment remain unverified.",
+            "No durable cache, Node Container or new runtime capability is introduced."
+          ],
+          "references": [
+            "packages/meta-vite/src/libs/providers/cloudflare.ts",
+            "packages/meta-vite/src/tests/RenderServerPublicHead.spec.ts",
+            "packages/meta-vite/scripts/verify-public-pages-browser.mjs"
+          ],
+          "host": "workers"
+        }
+      }
+    }
+  ]
+}

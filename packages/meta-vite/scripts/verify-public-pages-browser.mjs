@@ -10,12 +10,16 @@ const { chromium } = requireDocs("@playwright/test");
 const evidenceDir = await mkdtemp(join(tmpdir(), "croco-public-pages-browser-"));
 const requireBuild = createRequire(new URL("../package.json", import.meta.url));
 const { build } = requireBuild("tsup");
+const { createElement } = requireBuild("react");
 await build({
   entry: {
     application: fileURLToPath(
       new URL("../../../examples/public-pages/application.mjs", import.meta.url),
     ),
     inspection: fileURLToPath(new URL("../../seo-core/src/index.ts", import.meta.url)),
+    renderServer: fileURLToPath(new URL("../src/libs/render/renderServer.ts", import.meta.url)),
+    nodeAdapter: fileURLToPath(new URL("../src/libs/providers/node.ts", import.meta.url)),
+    lambdaAdapter: fileURLToPath(new URL("../src/libs/providers/lambda.ts", import.meta.url)),
   },
   outDir: evidenceDir,
   format: ["esm"],
@@ -48,9 +52,102 @@ await symlink(
 const { app, inspect, definition, handler } = await import(
   pathToFileURL(join(evidenceDir, "application.mjs")).href
 );
-const { validatePublicPageResponse } = await import(
+const { validatePublicPageResponse, resolvePublicPageMetadata } = await import(
   pathToFileURL(join(evidenceDir, "inspection.mjs")).href
 );
+const { RenderServer } = await import(pathToFileURL(join(evidenceDir, "renderServer.mjs")).href);
+const { createNodeHandler } = await import(
+  pathToFileURL(join(evidenceDir, "nodeAdapter.mjs")).href
+);
+const { createLambdaHandler } = await import(
+  pathToFileURL(join(evidenceDir, "lambdaAdapter.mjs")).href
+);
+const pendingRegions = new Set();
+const headCalls = new Map();
+const attack = '</script><script>window.injected=true</script>&"';
+async function streamHeadResponse(request) {
+  const url = new URL(request.url);
+  const locale = url.pathname.endsWith("/ko") ? "ko" : "en";
+  const delivery = url.searchParams.get("delivery");
+  const content = {
+    id: locale,
+    revision: `${locale}-revision&"`,
+    modifiedAt: "2026-11-01T02:00:00Z",
+    locale,
+    title: locale === "ko" ? `조명 ${attack}` : "Reading about light",
+    description: `Public ${locale} description & details`,
+    links: [],
+    product: {
+      price: "37.50",
+      currency: "USD",
+      availability: "OutOfStock",
+      availabilityLabel: "Sold out",
+    },
+  };
+  const definition = {
+    id: "stream-head",
+    origin: "https://shop.example",
+    pathname: () => `/stream-head/${locale}`,
+    meaningfulQuery: [],
+    alternates: () => [
+      { locale: "x-default", pathname: "/stream-head/en" },
+      { locale: "ko", pathname: "/stream-head/ko" },
+    ],
+    schema: locale === "ko" ? "Product" : "Article",
+    source: { load: async () => ({ state: "published", indexable: locale === "en", content }) },
+  };
+  const snapshot = await definition.source.load(request);
+  const metadata = resolvePublicPageMetadata(definition, request, snapshot);
+  // Deliberately undo the resolver's script escaping to exercise the renderer's
+  // own output boundary with attacker-controlled public text.
+  const publicPage = { ...metadata, jsonLd: JSON.stringify(JSON.parse(metadata.jsonLd)) };
+  const server = new RenderServer([
+    {
+      path: url.pathname,
+      mode: "ssr",
+      head: () => {
+        headCalls.set(request.url, (headCalls.get(request.url) ?? 0) + 1);
+        return { ...metadata, ogTitle: `Share ${locale}`, publicPage };
+      },
+      componentLoader: async () => ({
+        default: () =>
+          createElement(
+            "main",
+            { style: { overflowWrap: "anywhere" } },
+            createElement("h1", null, content.title),
+            createElement("p", { "data-public-price": true }, "USD 37.50"),
+          ),
+      }),
+      regions: [
+        {
+          id: "details",
+          loader: async () => {
+            if (delivery === "node") await new Promise((resolve) => pendingRegions.add(resolve));
+            return `LATE-${locale}`;
+          },
+        },
+      ],
+    },
+  ]);
+  const handle = (input, context) => server.handle(input, context);
+  if (delivery === "lambda") {
+    const result = await createLambdaHandler(handle)(
+      {
+        version: "2.0",
+        rawPath: url.pathname,
+        rawQueryString: url.search.slice(1),
+        requestContext: { http: { method: "GET" } },
+        headers: { host: url.host },
+      },
+      {},
+    );
+    return new Response(result.isBase64Encoded ? Buffer.from(result.body, "base64") : result.body, {
+      status: result.statusCode,
+      headers: result.headers,
+    });
+  }
+  return createNodeHandler(handle).fetch(request);
+}
 const server = createServer(async (request, response) => {
   try {
     if (request.url === "/favicon.ico") {
@@ -58,11 +155,15 @@ const server = createServer(async (request, response) => {
       response.end();
       return;
     }
-    const result = await app.fetch(
-      new Request(`http://127.0.0.1${request.url}`, { method: request.method }),
-    );
+    const input = new Request(`http://${request.headers.host}${request.url}`, {
+      method: request.method,
+    });
+    const result = input.url.includes("/stream-head/")
+      ? await streamHeadResponse(input)
+      : await app.fetch(input);
     response.writeHead(result.status, Object.fromEntries(result.headers));
-    response.end(Buffer.from(await result.arrayBuffer()));
+    if (result.body) for await (const chunk of result.body) response.write(chunk);
+    response.end();
   } catch {
     response.writeHead(500);
     response.end();
@@ -188,6 +289,98 @@ try {
       "'javascript' URLs may not be used as base URLs for a document. []",
       "'data' URLs may not be used as base URLs for a document. []",
     ]);
+    for (const delivery of ["node", "lambda"]) {
+      const pages = await Promise.all([context.newPage(), context.newPage()]);
+      try {
+        await Promise.all(
+          pages.map(async (headPage, index) => {
+            const pageErrors = [];
+            headPage.on("pageerror", (error) => pageErrors.push(error.message));
+            const consoleErrors = [];
+            headPage.on("console", (message) => {
+              if (message.type() === "error") consoleErrors.push(message.text());
+            });
+            const locale = index === 0 ? "ko" : "en";
+            const address = `${origin}/stream-head/${locale}?delivery=${delivery}&width=${viewport.width}`;
+            const result = await headPage.goto(address, { waitUntil: "commit" });
+            assert.equal(result.status(), 200);
+            assert.equal(
+              result.headers()["x-croco-delivery"],
+              `${delivery === "node" ? "stream" : "buffered"}; host=${delivery}`,
+            );
+            await headPage
+              .locator('script[type="application/ld+json"]')
+              .waitFor({ state: "attached" });
+            assert.equal(await headPage.locator("html").getAttribute("lang"), locale);
+            assert.equal(
+              await headPage.title(),
+              locale === "ko" ? `조명 ${attack}` : "Reading about light",
+            );
+            assert.equal(
+              await headPage.locator('meta[name="description"]').getAttribute("content"),
+              `Public ${locale} description & details`,
+            );
+            assert.equal(
+              await headPage.locator('meta[property="og:title"]').getAttribute("content"),
+              `Share ${locale}`,
+            );
+            assert.equal(
+              await headPage.locator('meta[name="robots"]').getAttribute("content"),
+              locale === "ko" ? "noindex,nofollow" : "index,follow",
+            );
+            assert.equal(
+              await headPage.locator('meta[name="croco:revision"]').getAttribute("content"),
+              `${locale}-revision&"`,
+            );
+            assert.equal(
+              await headPage.locator('link[rel="canonical"]').getAttribute("href"),
+              `https://shop.example/stream-head/${locale}`,
+            );
+            assert.equal(
+              await headPage.locator('link[hreflang="x-default"]').getAttribute("href"),
+              "https://shop.example/stream-head/en",
+            );
+            assert.equal(
+              await headPage.locator('link[hreflang="ko"]').getAttribute("href"),
+              "https://shop.example/stream-head/ko",
+            );
+            const json = JSON.parse(
+              await headPage.locator('head script[type="application/ld+json"]').textContent(),
+            );
+            assert.equal(json["@type"], locale === "ko" ? "Product" : "Article");
+            assert.equal(json.name, locale === "ko" ? `조명 ${attack}` : "Reading about light");
+            if (locale === "ko") assert.equal(json.offers.price, "37.50");
+            assert.equal(
+              await headPage
+                .locator('script:not([type="application/ld+json"])')
+                .filter({ hasText: "window.injected=true" })
+                .count(),
+              0,
+            );
+            assert.equal(await headPage.locator("main h1").innerText(), json.name);
+            assert.equal(await headPage.locator("[data-public-price]").innerText(), "USD 37.50");
+            if (delivery === "node")
+              assert.ok(!(await headPage.locator("body").innerText()).includes("LATE-"));
+            assert.ok(
+              await headPage.evaluate(
+                () => document.documentElement.scrollWidth <= window.innerWidth,
+              ),
+            );
+            assert.deepEqual(consoleErrors, []);
+            assert.deepEqual(pageErrors, []);
+            assert.equal(headCalls.get(address), 1);
+            await headPage.screenshot({
+              path: join(evidenceDir, `head-${delivery}-${locale}-${viewport.width}.png`),
+              fullPage: true,
+            });
+          }),
+        );
+      } finally {
+        for (const release of pendingRegions) release();
+        pendingRegions.clear();
+        await Promise.all(pages.map((headPage) => headPage.close()));
+      }
+    }
     await context.close();
   }
   for (const [path, status] of [
@@ -215,6 +408,13 @@ try {
     "</script><script>window.injected=true</script>",
   );
   assert.deepEqual(errors, []);
+  await page.goto(`${origin}/stream-head/ko?delivery=lambda&javascript=enabled`);
+  assert.equal(await page.evaluate(() => window.injected), undefined);
+  assert.equal(
+    JSON.parse(await page.locator('head script[type="application/ld+json"]').textContent()).name,
+    `조명 ${attack}`,
+  );
+  assert.deepEqual(errors, []);
   await context.close();
   console.log(
     JSON.stringify({
@@ -238,10 +438,13 @@ try {
       httpStatuses: [200, 403, 404, 410, 308, 503],
       pageErrors: [],
       unexpectedConsoleErrors: [],
+      publicHeadDeliveries: ["Node stream before deferred completion", "Lambda buffered adapter"],
+      publicHeadLocales: ["ko Product", "en Article"],
       expectedBaseUrlRejections: ["javascript", "data"],
     }),
   );
 } finally {
+  for (const release of pendingRegions) release();
   await browser?.close();
   server.closeAllConnections();
   await new Promise((resolve) => server.close(resolve));

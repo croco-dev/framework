@@ -182,6 +182,16 @@ and stacks never leak. Shell streams carry only safe aggregates in
 `streaming-response` is reported in the route manifest only for SSR pages with
 declared regions. Plain SSR pages remain on the buffered render path.
 
+Buffered and shell-first SSR share the same `head()` projection. A head callback
+is evaluated once per rendered request, before the shell commits, and its
+validated `publicPage` metadata preserves language, robots, revision, alternates
+and JSON-LD alongside title, description, OpenGraph title and canonical URL.
+The initial streamed head does not wait for deferred regions; Lambda's buffered
+delivery includes the same metadata. Keep metadata and critical body facts bound
+to the same request-owned source snapshot. `createPublicPageHandler` continues to
+resolve publication/access before buffered SSR with `private, no-store`; this
+head projection does not add public-page handling to RSC, SSG or ISR caches.
+
 ## Route Manifest
 
 Use the route manifest build helper when CI, docs, deployment tooling, or admin surfaces need a
