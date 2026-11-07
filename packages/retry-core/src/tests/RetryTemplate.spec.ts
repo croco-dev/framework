@@ -197,6 +197,33 @@ describe("RetryTemplate", () => {
     },
   );
 
+  it("propagates an unclassified custom policy's final rejection without exhaustion recovery", async () => {
+    const failure = new Error("upstream unavailable");
+    const recovery = vi.fn(() => "recovered");
+    const onExhausted = vi.fn();
+    const shouldRetry = vi.fn(
+      (_error: unknown, attempt: number, maxAttempts: number) => attempt < maxAttempts,
+    );
+    const callback = vi.fn().mockRejectedValue(failure);
+    const template = new RetryTemplate({
+      maxAttempts: 3,
+      wrapExhausted: true,
+      backoffPolicy: new NoBackoff(),
+      retryPolicy: { shouldRetry },
+      listeners: [{ onExhausted }],
+    });
+
+    await expect(template.execute(callback, recovery)).rejects.toBe(failure);
+    expect(callback).toHaveBeenCalledTimes(3);
+    expect(shouldRetry.mock.calls).toEqual([
+      [failure, 1, 3],
+      [failure, 2, 3],
+      [failure, 3, 3],
+    ]);
+    expect(recovery).not.toHaveBeenCalled();
+    expect(onExhausted).not.toHaveBeenCalled();
+  });
+
   it.each([1, 3])(
     "keeps default exhaustion and terminal failure distinct at %i attempts",
     async (maxAttempts) => {
