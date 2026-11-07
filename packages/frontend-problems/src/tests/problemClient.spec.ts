@@ -1,3 +1,4 @@
+import { runInNewContext } from "node:vm";
 import { Problem, ProblemCategory } from "@croco/problems-core";
 import { describe, expect, expectTypeOf, it } from "vitest";
 import { restFormIssueCases } from "../../../../test-fixtures/restFormIssueCases";
@@ -8,6 +9,7 @@ import {
   ProblemStatusMismatchError,
   assertProblemExhaustive,
   extractProblemFormFieldErrors,
+  fetchOptionalProblemJson,
   fetchProblemJson,
   handleJsonResponse,
   handleJsonResult,
@@ -340,6 +342,93 @@ describe("frontend Problem client runtime", () => {
     ).resolves.toMatchObject({
       ok: true,
       data: undefined,
+    });
+  });
+
+  describe.each([
+    ["optional result", (response: Response) => readOptionalJsonResult(response)],
+    ["optional Problem result", (response: Response) => readOptionalJsonProblemResult(response)],
+    [
+      "optional fetch result",
+      (response: Response) =>
+        fetchOptionalProblemJson("/users/1", undefined, { fetch: async () => response }),
+    ],
+  ] as const)("%s body reads", (_name, readResult) => {
+    it.each([new TypeError("Body read failed"), { reason: "connection lost" }])(
+      "returns an external failure preserving the response and cause: %s",
+      async (cause) => {
+        const response = new Response(
+          new ReadableStream({
+            start(controller) {
+              controller.error(cause);
+            },
+          }),
+          { headers: { "content-type": "application/json" } },
+        );
+        const result = await readResult(response);
+
+        if (result.ok || result.kind !== "external") {
+          expect.fail("Expected an external body read failure.");
+        }
+        expect(result.response).toBe(response);
+        expect(result.error).toBeInstanceOf(ProblemResponseError);
+        expect(result.error).toMatchObject({ response, contentType: "application/json" });
+        expect((result.error as ProblemResponseError).cause).toBe(cause);
+        expect(result.body).toBeUndefined();
+      },
+    );
+
+    it.each([
+      ["local", () => new DOMException("The operation was aborted.", "AbortError")],
+      [
+        "cross-realm",
+        () =>
+          runInNewContext(
+            'Object.assign(new Error("The operation was aborted."), { name: "AbortError" })',
+          ) as unknown,
+      ],
+    ] as const)("preserves %s stream cancellation identity", async (_realm, createCause) => {
+      const cause = createCause();
+      const response = new Response(
+        new ReadableStream({
+          start(controller) {
+            controller.error(cause);
+          },
+        }),
+      );
+
+      await expect(readResult(response)).rejects.toBe(cause);
+    });
+
+    it("preserves read failures whose name cannot be inspected", async () => {
+      const cause = Object.defineProperty({}, "name", {
+        get() {
+          throw new Error("Unreadable failure name");
+        },
+      });
+      const response = new Response(
+        new ReadableStream({
+          start(controller) {
+            controller.error(cause);
+          },
+        }),
+      );
+      const result = await readResult(response);
+
+      if (result.ok || result.kind !== "external") {
+        expect.fail("Expected an external body read failure.");
+      }
+      expect(result.response).toBe(response);
+      expect((result.error as ProblemResponseError).cause).toBe(cause);
+    });
+
+    it.each([
+      ["JSON", () => jsonResponse({ id: "1" }), { id: "1" }],
+      ["empty", () => new Response(""), undefined],
+      ["204", () => new Response(null, { status: 204 }), undefined],
+    ] as const)("preserves %s success", async (_body, createResponse, data) => {
+      const response = createResponse();
+      await expect(readResult(response)).resolves.toEqual({ ok: true, data, response });
     });
   });
 

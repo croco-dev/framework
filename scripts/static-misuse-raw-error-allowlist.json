@@ -51,7 +51,7 @@
     {
       "package": "@croco/frontend-problems",
       "file": "packages/frontend-problems/src/index.ts",
-      "line": 924,
+      "line": 940,
       "excerpt": "throw new Error(`Unhandled Problem variant${suffix}`);",
       "reason": "Reviewed 2026-10-30 (#4004): assertProblemExhaustive accepts never and throws for an unhandled runtime variant. This is a programmer assertion outside the declared domain Problem union; turning it into another domain Problem would change the exhaustive failure contract.",
       "owner": "framework-error-handling",
