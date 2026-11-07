@@ -89,6 +89,11 @@ async function fixture(partitions = [[raw("a"), raw("b")]]) {
   const receipts = new Map<string, WriteReceipt>();
   let head: WarehouseSnapshot | null = null;
   const catalog: CatalogStore = {
+    readReceipts: async (request) =>
+      [...receipts.values()]
+        .filter((receipt) => !request.afterBatchId || receipt.batchId > request.afterBatchId)
+        .sort((a, b) => (a.batchId < b.batchId ? -1 : 1))
+        .slice(0, request.limit),
     createCandidate: vi.fn<CatalogStore["createCandidate"]>(async (request) => {
       const previous = candidates.get(request.id);
       if (previous) return previous;
@@ -113,7 +118,11 @@ async function fixture(partitions = [[raw("a"), raw("b")]]) {
       requireCandidate(request.candidateId),
     ),
     sealCandidate: vi.fn<CatalogStore["sealCandidate"]>(async (request) => {
-      if (request.expectedBatchIds.some((id) => !receipts.has(id)))
+      if (
+        request.expectedBatchIds
+          ? request.expectedBatchIds.some((id) => !receipts.has(id))
+          : request.expectedManifest.count !== receipts.size
+      )
         throw new PipelineProblem("receipt-unresolved");
       const candidate: WarehouseCandidate = {
         ...requireCandidate(request.candidateId),
@@ -204,6 +213,7 @@ async function fixture(partitions = [[raw("a"), raw("b")]]) {
         providerRef: request.candidateId,
         inserted,
         identical,
+        evidence: request.evidence,
       };
       receipts.set(request.batchId, receipt);
       return receipt;
@@ -304,22 +314,25 @@ describe("pipeline operations", () => {
     expect(f.rows.size).toBe(4);
   });
 
-  it("requires a new run for legacy row receipts", async () => {
-    const f = await fixture();
-    f.store.beforeCheckpoint = () => {
-      throw new PipelineProblem("invalid-checkpoint");
-    };
-    await expect(f.operations.run()).rejects.toThrow("invalid-checkpoint");
-    const saved = f.store.records.get("execution-1");
-    if (!saved) throw new Error("missing execution");
-    const payload = { ...(saved.payload as Record<string, unknown>) };
-    delete payload.formatVersion;
-    f.store.records.set(saved.id, { ...saved, payload });
-    await expect(f.operations.retry(saved.id)).rejects.toThrow("binding-changed");
-    expect(f.writer.write).toHaveBeenCalledTimes(1);
-  });
+  it.each([undefined, 2])(
+    "requires a new run for legacy format %s receipts",
+    async (formatVersion) => {
+      const f = await fixture();
+      f.store.beforeCheckpoint = () => {
+        throw new PipelineProblem("invalid-checkpoint");
+      };
+      await expect(f.operations.run()).rejects.toThrow("invalid-checkpoint");
+      const saved = f.store.records.get("execution-1");
+      if (!saved) throw new Error("missing execution");
+      const payload = { ...(saved.payload as Record<string, unknown>) };
+      payload.formatVersion = formatVersion;
+      f.store.records.set(saved.id, { ...saved, payload });
+      await expect(f.operations.retry(saved.id)).rejects.toThrow("binding-changed");
+      expect(f.writer.write).toHaveBeenCalledTimes(1);
+    },
+  );
 
-  it("rejects an unversioned checkpoint instead of installing its row-receipt cursor", async () => {
+  it.each([undefined, 2])("rejects legacy checkpoint format %s", async (formatVersion) => {
     const f = await fixture();
     let count = 0;
     f.store.beforeCheckpoint = () => {
@@ -331,7 +344,7 @@ describe("pipeline operations", () => {
     const checkpoint = saved.checkpoints["pipeline.chunkCheckpoint"] as {
       cursor: Record<string, unknown>;
     };
-    delete checkpoint.cursor.formatVersion;
+    checkpoint.cursor.formatVersion = formatVersion;
     f.store.records.set(saved.id, saved);
     await expect(f.operations.retry(saved.id)).rejects.toThrow("invalid-checkpoint");
     expect(f.writer.write).toHaveBeenCalledTimes(2);
@@ -354,15 +367,17 @@ describe("pipeline operations", () => {
     };
     const operations = createPipelineOperations(definition, { ...f.runtime, chunkSize: 2 });
     await expect(operations.run()).rejects.toThrow("invalid-checkpoint");
-    expect(f.writer.write).toHaveBeenCalledTimes(1);
+    expect(f.writer.write).toHaveBeenCalledTimes(2);
     expect(await operations.retry("execution-1")).toMatchObject({
       inputCount: 5,
       outputCount: 2,
       filteredCount: 3,
     });
     const calls = vi.mocked(f.writer.write).mock.calls;
-    expect(calls).toHaveLength(2);
-    expect(calls[1][0].batchId).toBe(calls[0][0].batchId);
+    expect(calls).toHaveLength(4);
+    expect(calls[2][0].batchId).toBe(calls[1][0].batchId);
+    expect(calls[0][0].rows).toEqual([]);
+    expect(calls[3][0].rows).toEqual([]);
     expect(f.store.checkpointWrites.at(-1)?.value).toMatchObject({ processedCount: 3 });
     expect(f.rows.size).toBe(2);
   });
@@ -376,15 +391,36 @@ describe("pipeline operations", () => {
       const operations = createPipelineOperations(f.definition, {
         ...f.runtime,
         chunkSize: 100,
-        maxInputRecords: count,
+        maxInputRecords: 100_000,
       });
       expect(await operations.run()).toMatchObject({ inputCount: count, outputCount: count });
       expect(f.writer.write).toHaveBeenCalledTimes(count / 100);
       const requests = vi.mocked(f.writer.write).mock.calls.map(([request]) => request);
+      const checkpointBytes = f.store.checkpointWrites.map(({ value }) =>
+        Buffer.byteLength(JSON.stringify(value)),
+      );
+      process.stdout.write(
+        JSON.stringify({
+          workload: "checkpoint-growth",
+          rows: count,
+          maxCheckpointBytes: Math.max(...checkpointBytes),
+          cumulativeCheckpointBytes: checkpointBytes.reduce((sum, bytes) => sum + bytes, 0),
+          receiptBytes: Buffer.byteLength(JSON.stringify([...f.receipts.values()])),
+          heapDeltaBytes: process.memoryUsage().heapUsed - heapBefore,
+          note: "Heap includes retained source rows, fixture receipts, checkpoint history and spies; not peak production memory.",
+        }) + "\n",
+      );
+      expect(Math.max(...checkpointBytes)).toBeLessThan(3000);
       expect(requests.map((request) => request.rows.length)).toEqual(Array(count / 100).fill(100));
       expect(new Set(requests.map((request) => request.batchId)).size).toBe(count / 100);
       expect(f.catalog.sealCandidate).toHaveBeenCalledWith(
-        expect.objectContaining({ expectedBatchIds: requests.map((request) => request.batchId) }),
+        expect.objectContaining({
+          expectedManifest: expect.objectContaining({
+            formatVersion: 1,
+            count: requests.length,
+            hash: requests.at(-1)?.evidence?.hash,
+          }),
+        }),
       );
       console.info(
         JSON.stringify({
@@ -487,7 +523,10 @@ describe("pipeline operations", () => {
       outputCount: 0,
       filteredCount: 2,
     });
-    expect(f.writer.write).not.toHaveBeenCalled();
+    expect(f.writer.write).toHaveBeenCalledTimes(2);
+    expect(
+      vi.mocked(f.writer.write).mock.calls.every(([request]) => request.rows.length === 0),
+    ).toBe(true);
     expect(f.store.checkpointWrites.length).toBeGreaterThanOrEqual(2);
     expect(f.store.checkpointWrites.at(-1)?.value).toMatchObject({
       cursor: { cursor: { partition: 1, counts: { input: 2, filtered: 2 } } },
@@ -673,23 +712,78 @@ describe("pipeline operations", () => {
     expect(execution.status).toBe("failed");
     expect(execution.checkpoints).toMatchObject({
       "pipeline.chunkCheckpoint": {
-        cursor: {
-          cursor: {
-            rejections: [
-              {
-                sourceId: "partition-0",
-                record: 2,
-                reason: "etl-core/projection-failed",
-                sensitivity: "sensitive",
-              },
-            ],
-          },
-        },
+        cursor: { formatVersion: 3, cursor: { counts: { rejected: 1 }, manifest: { count: 2 } } },
         processedCount: 2,
       },
     });
+    const evidence = await f.catalog.readReceipts({
+      access,
+      candidateId: "etl:execution-1",
+      limit: 10,
+    });
+    expect(evidence.flatMap((receipt) => receipt.evidence?.rejections ?? [])).toEqual([
+      {
+        sourceId: "partition-0",
+        record: 2,
+        reason: "etl-core/projection-failed",
+        sensitivity: "sensitive",
+      },
+    ]);
     expect(f.catalog.publishCandidate).not.toHaveBeenCalled();
     expect(JSON.stringify(execution)).not.toContain("2026-10-01T00:00:00.000Z");
+  });
+
+  it("keeps quarantine checkpoints bounded while diagnostics stay in paginated receipts", async () => {
+    const f = await fixture([
+      Array.from({ length: 1000 }, (_, index) => raw(`rejected-${index}`, 1.5)),
+    ]);
+    const result = await createPipelineOperations(
+      { ...f.definition, load: "quarantine" },
+      {
+        ...f.runtime,
+        chunkSize: 100,
+        maxInputRecords: 1000,
+      },
+    ).run();
+    expect(result).toMatchObject({ state: "partial", rejectedCount: 1000, outputCount: 0 });
+    expect(
+      Math.max(
+        ...f.store.checkpointWrites.map(({ value }) => Buffer.byteLength(JSON.stringify(value))),
+      ),
+    ).toBeLessThan(3000);
+    const first = await f.catalog.readReceipts({
+      access,
+      candidateId: "etl:execution-1",
+      limit: 3,
+    });
+    const next = await f.catalog.readReceipts({
+      access,
+      candidateId: "etl:execution-1",
+      afterBatchId: first.at(-1)?.batchId,
+      limit: 3,
+    });
+    expect(first).toHaveLength(3);
+    expect(next).toHaveLength(3);
+    expect(next.some((receipt) => first.some((prior) => prior.batchId === receipt.batchId))).toBe(
+      false,
+    );
+    expect(
+      [...f.receipts.values()].flatMap((receipt) => receipt.evidence?.rejections ?? []),
+    ).toHaveLength(1000);
+    expect(JSON.stringify((await f.executions.get(result.executionId)).checkpoints)).not.toContain(
+      "rejected-999",
+    );
+    expect(f.catalog.publishCandidate).not.toHaveBeenCalled();
+  });
+
+  it("refuses durable receipts that do not prove the written input range", async () => {
+    const f = await fixture();
+    const original = f.writer.write;
+    f.writer.write = async (request) => ({ ...(await original(request)), evidence: undefined });
+    await expect(createPipelineOperations(f.definition, f.runtime).run()).rejects.toMatchObject({
+      reason: "receipt-unresolved",
+    });
+    expect(f.catalog.publishCandidate).not.toHaveBeenCalled();
   });
 
   it("does not publish interrupted or over-budget runs", async () => {

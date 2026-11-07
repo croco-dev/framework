@@ -1,7 +1,11 @@
 import { createHash } from "node:crypto";
 import { ChunkExecutor, Step } from "@croco/batch-core";
 import { Problem, ProblemCategory } from "@croco/problems-core";
-import { compileFact, validateRow } from "@croco/warehouse-core";
+import { canonicalPayload, compileFact, validateRow } from "@croco/warehouse-core";
+import {
+  appendWarehouseReceiptManifest,
+  createWarehouseReceiptManifest,
+} from "@croco/warehouse-core/runtime";
 import { openFileSource } from "./fileSource";
 import { PipelineProblem } from "./PipelineProblem";
 import type { Checkpointable, ItemReader } from "@croco/batch-core";
@@ -13,6 +17,9 @@ import type {
 } from "@croco/execution-core";
 import type { CanonicalRow, TrustedScope } from "@croco/warehouse-core";
 import type {
+  WarehouseBatchEvidence,
+  WarehouseReceiptManifest,
+  WarehouseRejection,
   AggregateRange,
   CatalogStore,
   SourceCoverage,
@@ -67,7 +74,7 @@ export type PipelineRuntime = {
   readonly maxInputRecords: number;
 };
 export type RunBinding = {
-  readonly formatVersion: 2;
+  readonly formatVersion: 3;
   readonly chunkSize: number;
   readonly pipelineId: string;
   readonly pipelineVersion: number;
@@ -80,12 +87,7 @@ export type RunBinding = {
   readonly scope: TrustedScope;
   readonly accessHash: string;
 };
-export type PipelineRejection = {
-  readonly sourceId: string;
-  readonly record: number;
-  readonly reason: string;
-  readonly sensitivity: "sensitive";
-};
+export type PipelineRejection = WarehouseRejection;
 type Counts = {
   input: number;
   output: number;
@@ -98,14 +100,16 @@ type Cursor = {
   record: number;
   counts: Counts;
   partitionStart: Counts;
-  batchIds: string[];
-  partitionStartBatchCount: number;
-  rejections: PipelineRejection[];
-  partitionStartRejectionCount: number;
+  manifest: WarehouseReceiptManifest;
+  partitionStartManifest: WarehouseReceiptManifest;
 };
 type RecordEnvelope = FileSourceRecord & { partition: number };
 type InputBatch = { readonly records: readonly RecordEnvelope[] };
-type ProjectedEnvelope = { readonly rows: readonly CanonicalRow[]; readonly batchId: string };
+type ProjectedEnvelope = {
+  readonly rows: readonly CanonicalRow[];
+  readonly batchId: string;
+  readonly evidence: WarehouseBatchEvidence;
+};
 export type PipelineResult = {
   readonly executionId: string;
   readonly state: "published" | "partial";
@@ -133,15 +137,13 @@ const digest = (value: unknown): string =>
 const canQuarantine = (error: unknown): error is Problem =>
   error instanceof Problem && error.category === ProblemCategory.ValidationError;
 const zeroCounts = (): Counts => ({ input: 0, output: 0, rejected: 0, filtered: 0, batches: 0 });
-const initialCursor = (): Cursor => ({
+const initialCursor = (bindingHash: string): Cursor => ({
   partition: 0,
   record: 0,
   counts: zeroCounts(),
   partitionStart: zeroCounts(),
-  batchIds: [],
-  partitionStartBatchCount: 0,
-  rejections: [],
-  partitionStartRejectionCount: 0,
+  manifest: createWarehouseReceiptManifest(bindingHash),
+  partitionStartManifest: createWarehouseReceiptManifest(bindingHash),
 });
 
 function freeze<T>(value: T): T {
@@ -156,6 +158,7 @@ function assertCursor(
   cursor: Cursor,
   readers: readonly FileSourceReader[],
   chunkSize: number,
+  bindingHash: string,
 ): void {
   const validCount = (value: unknown): value is number =>
     typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
@@ -163,7 +166,7 @@ function assertCursor(
     value &&
     [value.input, value.output, value.rejected, value.filtered, value.batches].every(validCount) &&
     Object.values(value).every(validCount) &&
-    value.batches <= value.output &&
+    value.batches <= value.input &&
     value.input === value.output + value.rejected + value.filtered;
   const prefix = readers
     .slice(0, cursor.partition)
@@ -175,17 +178,23 @@ function assertCursor(
     !validCounts(cursor.partitionStart) ||
     cursor.counts.input !== prefix + cursor.record ||
     cursor.partitionStart.input !== prefix ||
-    !Array.isArray(cursor.batchIds) ||
-    cursor.batchIds.some((id) => typeof id !== "string" || !/^[a-f0-9]{64}$/.test(id)) ||
-    new Set(cursor.batchIds).size !== cursor.batchIds.length ||
-    cursor.batchIds.length !== cursor.counts.batches ||
-    !validCount(cursor.partitionStartBatchCount) ||
-    cursor.partitionStartBatchCount > cursor.batchIds.length ||
-    cursor.partitionStartBatchCount !== cursor.partitionStart.batches ||
+    ![cursor.manifest, cursor.partitionStartManifest].every(
+      (manifest) =>
+        manifest &&
+        manifest.formatVersion === 1 &&
+        manifest.bindingHash === bindingHash &&
+        validCount(manifest.count) &&
+        /^[a-f0-9]{64}$/.test(manifest.hash) &&
+        (manifest.count !== 0 || manifest.hash === bindingHash),
+    ) ||
+    cursor.manifest.count !== cursor.counts.batches ||
+    cursor.manifest.count !==
+      readers
+        .slice(0, cursor.partition)
+        .reduce((sum, reader) => sum + Math.ceil(reader.recordCount / chunkSize), 0) +
+        Math.ceil(cursor.record / chunkSize) ||
+    cursor.partitionStartManifest.count !== cursor.partitionStart.batches ||
     (cursor.record % chunkSize !== 0 && cursor.record !== readers[cursor.partition]?.recordCount) ||
-    !Array.isArray(cursor.rejections) ||
-    cursor.rejections.length !== cursor.counts.rejected ||
-    cursor.partitionStartRejectionCount !== cursor.partitionStart.rejected ||
     Object.keys(cursor.partitionStart).some(
       (key) => cursor.partitionStart[key as keyof Counts] > cursor.counts[key as keyof Counts],
     )
@@ -364,7 +373,7 @@ export function createPipelineOperations(input: PipelineDefinition, runtime: Pip
     const access = runtime.resolveAccess();
     if (
       !binding ||
-      binding.formatVersion !== 2 ||
+      binding.formatVersion !== 3 ||
       binding.chunkSize !== runtime.chunkSize ||
       binding.pipelineId !== definition.id ||
       binding.pipelineVersion !== definition.version ||
@@ -385,7 +394,9 @@ export function createPipelineOperations(input: PipelineDefinition, runtime: Pip
     try {
       execution = await runtime.executions.start(executionId);
       const token = { executionId, attempt: execution.attempts };
-      let cursor = initialCursor();
+      const bindingHash = digest(binding);
+      const descriptor = await compileFact(definition.project.target);
+      let cursor = initialCursor(bindingHash);
       const assertActive = async () => {
         const state = await runtime.executions.get(executionId);
         if (
@@ -417,14 +428,13 @@ export function createPipelineOperations(input: PipelineDefinition, runtime: Pip
             cursor.partition++;
             cursor.record = 0;
             cursor.partitionStart = { ...cursor.counts };
-            cursor.partitionStartBatchCount = cursor.batchIds.length;
-            cursor.partitionStartRejectionCount = cursor.rejections.length;
+            cursor.partitionStartManifest = { ...cursor.manifest };
           }
           return null;
         },
         getCheckpoint() {
           return {
-            formatVersion: 2,
+            formatVersion: 3,
             bindingHash: digest(binding),
             cursor: structuredClone(cursor),
           };
@@ -436,7 +446,7 @@ export function createPipelineOperations(input: PipelineDefinition, runtime: Pip
           const saved = value as { formatVersion: number; bindingHash: string; cursor: Cursor };
           if (
             !saved ||
-            saved.formatVersion !== 2 ||
+            saved.formatVersion !== 3 ||
             saved.bindingHash !== digest(binding) ||
             !saved.cursor ||
             !Number.isSafeInteger(saved.cursor.partition) ||
@@ -444,7 +454,7 @@ export function createPipelineOperations(input: PipelineDefinition, runtime: Pip
             saved.cursor.partition > readers.length
           )
             throw new PipelineProblem("invalid-checkpoint");
-          assertCursor(saved.cursor, readers, binding.chunkSize);
+          assertCursor(saved.cursor, readers, binding.chunkSize, bindingHash);
           cursor = structuredClone(saved.cursor);
           while (
             cursor.partition < readers.length &&
@@ -453,16 +463,14 @@ export function createPipelineOperations(input: PipelineDefinition, runtime: Pip
             cursor.partition++;
             cursor.record = 0;
             cursor.partitionStart = { ...cursor.counts };
-            cursor.partitionStartBatchCount = cursor.batchIds.length;
-            cursor.partitionStartRejectionCount = cursor.rejections.length;
+            cursor.partitionStartManifest = { ...cursor.manifest };
           }
           if (cursor.partition < readers.length) {
             const source = definition.source.partitions[cursor.partition];
             if (source.replayability === "mutable" || definition.resume === "restart-partition") {
               cursor.record = 0;
               cursor.counts = { ...cursor.partitionStart };
-              cursor.batchIds.length = cursor.partitionStartBatchCount;
-              cursor.rejections.length = cursor.partitionStartRejectionCount;
+              cursor.manifest = { ...cursor.partitionStartManifest };
             }
             readers[cursor.partition].restoreCheckpoint({
               sourceId: source.id,
@@ -518,20 +526,24 @@ export function createPipelineOperations(input: PipelineDefinition, runtime: Pip
         processor: {
           async process({ records }) {
             const rows: CanonicalRow[] = [];
+            const rejections: PipelineRejection[] = [];
+            let filtered = 0;
             for (const record of records) {
               await assertActive();
               cursor.counts.input++;
               try {
                 const row = await project(record);
-                if (row === null) cursor.counts.filtered++;
-                else {
+                if (row === null) {
+                  cursor.counts.filtered++;
+                  filtered++;
+                } else {
                   cursor.counts.output++;
                   rows.push(row);
                 }
               } catch (error) {
                 if (definition.load === "strict" || !canQuarantine(error)) throw error;
                 cursor.counts.rejected++;
-                cursor.rejections.push({
+                rejections.push({
                   sourceId: definition.source.partitions[record.partition].id,
                   record: record.record,
                   reason: error.code,
@@ -539,7 +551,6 @@ export function createPipelineOperations(input: PipelineDefinition, runtime: Pip
                 });
               }
             }
-            if (!rows.length) return null;
             cursor.counts.batches++;
             const first = records[0];
             const last = records[records.length - 1];
@@ -552,8 +563,20 @@ export function createPipelineOperations(input: PipelineDefinition, runtime: Pip
               first.record,
               last.record,
             ]);
-            cursor.batchIds.push(batchId);
-            return { rows, batchId };
+            const next = await appendWarehouseReceiptManifest(cursor.manifest, {
+              batchId,
+              payloadHash: createHash("sha256")
+                .update(JSON.stringify(rows.map((row) => canonicalPayload(descriptor, row))))
+                .digest("hex"),
+              sourceId: definition.source.partitions[first.partition].id,
+              from: first.record,
+              through: last.record,
+              rejected: rejections.length,
+              filtered,
+              rejections,
+            });
+            cursor.manifest = next.manifest;
+            return { rows, batchId, evidence: next.evidence };
           },
         },
         writer: {
@@ -565,6 +588,7 @@ export function createPipelineOperations(input: PipelineDefinition, runtime: Pip
                 batchId: item.batchId,
                 attempt: token.attempt,
                 rows: item.rows,
+                evidence: item.evidence,
               });
               if (receipt.state === "indeterminate") {
                 unresolvedReceipt = true;
@@ -576,6 +600,16 @@ export function createPipelineOperations(input: PipelineDefinition, runtime: Pip
                 if (reconciled !== null) receipt = reconciled;
                 if (receipt.state === "durable") unresolvedReceipt = false;
               }
+              if (
+                receipt.state === "durable" &&
+                (receipt.batchId !== item.batchId ||
+                  !Number.isSafeInteger(receipt.attempt) ||
+                  receipt.attempt < 1 ||
+                  receipt.attempt > token.attempt ||
+                  !receipt.evidence ||
+                  digest(receipt.evidence) !== digest(item.evidence))
+              )
+                throw new PipelineProblem("receipt-unresolved");
               if (receipt.state !== "durable") {
                 unresolvedReceipt = receipt.state === "indeterminate";
                 throw new PipelineProblem("receipt-unresolved");
@@ -631,7 +665,8 @@ export function createPipelineOperations(input: PipelineDefinition, runtime: Pip
       };
       await runtime.catalog.sealCandidate({
         ...request,
-        expectedBatchIds: cursor.batchIds,
+        expectedManifest: cursor.manifest,
+        attempt: token.attempt,
         quality,
         audit: audit("seal"),
       });
@@ -673,7 +708,7 @@ export function createPipelineOperations(input: PipelineDefinition, runtime: Pip
     if (dataset.descriptor.semanticHash !== identity.targetModelVersion)
       throw new PipelineProblem("binding-changed");
     const binding: RunBinding = {
-      formatVersion: 2,
+      formatVersion: 3,
       chunkSize: runtime.chunkSize,
       pipelineId: definition.id,
       pipelineVersion: definition.version,
@@ -698,7 +733,7 @@ export function createPipelineOperations(input: PipelineDefinition, runtime: Pip
     const binding = execution.payload as RunBinding;
     const current = await identities();
     if (
-      binding.formatVersion !== 2 ||
+      binding.formatVersion !== 3 ||
       binding.chunkSize !== runtime.chunkSize ||
       binding.pipelineVersion !== definition.version ||
       Object.entries(current).some(

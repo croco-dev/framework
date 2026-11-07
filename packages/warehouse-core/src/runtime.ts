@@ -1,4 +1,14 @@
 export { FixtureImporter } from "./libs/fixtureImporter";
+export {
+  createWarehouseReceiptManifest,
+  appendWarehouseReceiptManifest,
+} from "./libs/receiptManifest";
+export type {
+  WarehouseReceiptManifest,
+  WarehouseBatchEvidence,
+  WarehouseBatchSummary,
+  WarehouseRejection,
+} from "./libs/receiptManifest";
 export type { AggregateRange, FixtureRow, FixtureRunMetadata } from "./libs/fixtureImporter";
 export type {
   WarehouseRole,
@@ -12,6 +22,7 @@ export type {
   WarehouseCandidateRequest,
   WarehouseWriteRequest,
   WarehouseReceiptRequest,
+  WarehouseReceiptPageRequest,
   WarehouseWriter,
   WarehouseCreateCandidateRequest,
   WarehouseSealRequest,

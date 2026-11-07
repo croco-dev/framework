@@ -6570,6 +6570,12 @@
       "owner": "@croco/warehouse-core"
     },
     {
+      "path": "packages/warehouse-core/src/tests/ReceiptManifest.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/warehouse-core"
+    },
+    {
       "path": "packages/warehouse-core/src/tests/WarehouseContract.spec.ts",
       "lane": "fast",
       "qualifiers": [],

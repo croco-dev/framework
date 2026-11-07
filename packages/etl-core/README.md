@@ -193,7 +193,7 @@ chunk writes and checkpoints atomic.
 - Mutable sources require `resume: "restart-partition"`. They restart the failed partition rather
   than treating an offset as reproducible; completed partitions retain their checkpoints. Changed
   bytes require a new revision and a new run. Non-replayable sources cannot retry an earlier attempt.
-- Run bindings include format version 2, the fixed `chunkSize`, pipeline version, source/input identity, target model, transform hash,
+- Run bindings include format version 3, the fixed `chunkSize`, pipeline version, source/input identity, target model, transform hash,
   expected warehouse head/revision, and trusted access. A changed binding fails explicitly instead
   of resuming an old run with new code or authority.
 - `Step` and `ChunkExecutor` write before recording a checkpoint. Delivery is at least once;
@@ -201,7 +201,7 @@ chunk writes and checkpoints atomic.
   the target fact's grain/duplicate policy handle replay. Fully filtered chunks still advance input
   checkpoints; zero output does not establish complete source coverage.
 - `chunkSize` bounds source records per partition-local batch, including filtered and quarantined
-  records. Each nonempty output range makes one writer call with all its rows. A partial final range
+  records. Each nonempty input range makes one writer call, including zero-row filtered/quarantined ranges. A partial final range
   ends at the partition boundary; it is never combined with another partition. The batch identity
   binds source revision, partition and record range, transform, and target model, independently of
   the attempt. Retry must retain `chunkSize`; changing it requires a new run. Executor processed
@@ -216,13 +216,23 @@ chunk writes and checkpoints atomic.
 
 ## Migration and boundaries
 
-Unversioned run bindings and checkpoints from row-at-a-time loading cannot resume as version 2.
+Unversioned and version-2 run bindings/checkpoints cannot resume as version 3.
 They fail with `binding-changed` (or `invalid-checkpoint` for an incompatible checkpoint). Inspect
 any uncertain receipt/publication first, retain the previous published snapshot, and start a new run
 with the same verified source revision and current access. Transaction fact grain and payload checks
 deduplicate identical facts across runs; an aggregate run still requires its explicit replacement range.
 There is no warehouse schema or receipt hash migration: existing ordered-payload receipt hashes remain
-valid. Checkpoints still retain the completed batch ID list; bounding that accumulated evidence is separate work.
+valid. Version-3 input-range evidence is stored in the existing receipt JSON together with its facts;
+there is no boot DDL or backfill. Version-1 manifests commit to the complete run binding, input order,
+batch IDs, ordered payload hashes, filtered/rejected counts and rejection locations/codes. Each
+checkpoint retains only counters, the current partition/record boundary and two fixed-size manifest
+roots (current and partition start). Size grows with numeric counter digits, not completed batch history.
+Quarantine diagnostics stay in per-range receipts (at most `chunkSize` entries), never raw rejected rows.
+`catalog.readReceipts({ access, candidateId, limit, afterBatchId? })` reads them in batch-ID order with
+at most 16 receipts per page. It uses server-resolved read authority and current epochs.
+Existing `expireSnapshots` retention removes receipt diagnostics together with failed/published candidate
+receipts; retain them until any uncertain attempt is reconciled. Clearing an execution checkpoint alone
+never removes durable receipt evidence.
 
 Existing `@croco/etl-core/source` consumers keep their imports and DB-free decoder behavior. Opt into
 `/pipeline` only where the Node.js application owns file access, execution persistence, and warehouse

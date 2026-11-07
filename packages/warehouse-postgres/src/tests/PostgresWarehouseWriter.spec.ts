@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import {
   c,
@@ -6,6 +7,10 @@ import {
   defineFact,
   encodeIdentity,
 } from "@croco/warehouse-core";
+import {
+  appendWarehouseReceiptManifest,
+  createWarehouseReceiptManifest,
+} from "@croco/warehouse-core/runtime";
 import type { FactDescriptor } from "@croco/warehouse-core";
 import type {
   WarehouseAccess,
@@ -142,6 +147,118 @@ function fixture(
 }
 
 describe("PostgresWarehouseWriter", () => {
+  it("persists verifiable range evidence and replays it across JSONB key ordering", async () => {
+    const test = fixture();
+    const payloadHash = createHash("sha256")
+      .update(JSON.stringify([canonicalPayload(descriptor, row)]))
+      .digest("hex");
+    const { evidence } = await appendWarehouseReceiptManifest(
+      createWarehouseReceiptManifest("a".repeat(64)),
+      {
+        batchId: "batch",
+        payloadHash,
+        sourceId: "payments",
+        from: 1,
+        through: 2,
+        rejected: 0,
+        filtered: 1,
+        rejections: [],
+      },
+    );
+    const receipt = await test.writer.write({ ...test.request, evidence });
+    expect(receipt.evidence).toEqual(evidence);
+    const reordered = Object.fromEntries(Object.entries(evidence).reverse()) as typeof evidence;
+    const original = test.query.getMockImplementation();
+    test.query.mockImplementation(async (sql, values) => {
+      if (sql.startsWith("SELECT receipt,payload_hash"))
+        return {
+          rows: [{ receipt: { ...receipt, evidence: reordered }, payload_hash: payloadHash }],
+        };
+      if (!original) throw new Error("Missing query mock");
+      return original(sql, values);
+    });
+    expect(await test.writer.write({ ...test.request, attempt: 2, evidence })).toEqual(receipt);
+    expect(
+      test.query.mock.calls.filter(([sql]) => sql.startsWith('INSERT INTO "wh_fact_')),
+    ).toHaveLength(1);
+    const changed = await appendWarehouseReceiptManifest(
+      createWarehouseReceiptManifest("b".repeat(64)),
+      {
+        ...evidence,
+        batchId: "batch",
+        payloadHash,
+      },
+    );
+    await expect(
+      test.writer.write({ ...test.request, evidence: changed.evidence }),
+    ).rejects.toThrow("WAREHOUSE_BATCH_CONFLICT");
+  });
+
+  it("rejects a manifest hash or output-count mismatch before writing facts or receipts", async () => {
+    const test = fixture();
+    const payloadHash = createHash("sha256")
+      .update(JSON.stringify([canonicalPayload(descriptor, row)]))
+      .digest("hex");
+    const { evidence } = await appendWarehouseReceiptManifest(
+      createWarehouseReceiptManifest("a".repeat(64)),
+      {
+        batchId: "batch",
+        payloadHash,
+        sourceId: "payments",
+        from: 1,
+        through: 1,
+        rejected: 0,
+        filtered: 0,
+        rejections: [],
+      },
+    );
+    await expect(
+      test.writer.write({ ...test.request, evidence: { ...evidence, hash: "f".repeat(64) } }),
+    ).rejects.toThrow("WAREHOUSE_BATCH_CONFLICT");
+    const wrongCount = await appendWarehouseReceiptManifest(
+      createWarehouseReceiptManifest("a".repeat(64)),
+      {
+        ...evidence,
+        batchId: "batch",
+        payloadHash,
+        through: 2,
+      },
+    );
+    await expect(
+      test.writer.write({ ...test.request, evidence: wrongCount.evidence }),
+    ).rejects.toThrow("WAREHOUSE_BATCH_CONFLICT");
+    expect(test.query.mock.calls.some(([sql]) => sql.startsWith("INSERT"))).toBe(false);
+  });
+
+  it("durably records a fully filtered range without inserting facts", async () => {
+    const test = fixture();
+    const payloadHash = createHash("sha256").update("[]").digest("hex");
+    const { evidence } = await appendWarehouseReceiptManifest(
+      createWarehouseReceiptManifest("a".repeat(64)),
+      {
+        batchId: "batch",
+        payloadHash,
+        sourceId: "payments",
+        from: 1,
+        through: 3,
+        rejected: 0,
+        filtered: 3,
+        rejections: [],
+      },
+    );
+    expect(await test.writer.write({ ...test.request, rows: [], evidence })).toMatchObject({
+      inserted: 0,
+      identical: 0,
+      evidence,
+    });
+    expect(test.query.mock.calls.some(([sql]) => sql.startsWith('INSERT INTO "wh_fact_'))).toBe(
+      false,
+    );
+    expect(
+      test.query.mock.calls.some(([sql]) => sql.startsWith("INSERT INTO warehouse_receipts")),
+    ).toBe(true);
+  });
+
   it("counts identical rows within a batch once and rejects an intra-batch conflict atomically", async () => {
     const test = fixture();
     expect(

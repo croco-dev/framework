@@ -1,0 +1,166 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "etl-core",
+      "classification": "runtime-adapter",
+      "reason": "Bound pipeline checkpoints with versioned hash manifests while durable receipts retain input-range and quarantine evidence; host and lifecycle ownership remain unchanged.",
+      "files": {
+        "packages/etl-core/src/pipeline/definePipeline.ts": "4632e441702cc82c4420c718247f6dabef8675375d2b8aca098e35242503c95f"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "unverified",
+          "reason": "The existing Node file/execution/PostgreSQL composition is reused. Local fixtures do not verify deployment, Pod termination or pool lifecycle.",
+          "providers": ["@croco/etl-core/pipeline"],
+          "constraints": [
+            "Retain server-resolved access, current permission/privacy epochs, candidate fences and receipt reconciliation.",
+            "No live infrastructure or provider certification claim."
+          ],
+          "references": [
+            "packages/etl-core/README.md",
+            "packages/etl-core/src/pipeline/definePipeline.ts",
+            "docs/package-catalog.json"
+          ]
+        },
+        "aws-lambda": {
+          "result": "unverified",
+          "reason": "No new Lambda composition is introduced. File availability, invocation duration and owned connection cleanup remain unverified.",
+          "providers": ["@croco/etl-core/pipeline"],
+          "constraints": [
+            "Retain server-resolved access, current permission/privacy epochs, candidate fences and receipt reconciliation.",
+            "No live infrastructure or provider certification claim."
+          ],
+          "references": [
+            "packages/etl-core/README.md",
+            "packages/etl-core/src/pipeline/definePipeline.ts",
+            "docs/package-catalog.json"
+          ]
+        },
+        "cloudflare": {
+          "result": "unsupported",
+          "reason": "The file pipeline requires Node filesystem access and the existing PostgreSQL provider does not claim Worker isolate support.",
+          "providers": ["@croco/etl-core/pipeline"],
+          "constraints": [
+            "Retain server-resolved access, current permission/privacy epochs, candidate fences and receipt reconciliation.",
+            "No live infrastructure or provider certification claim."
+          ],
+          "references": [
+            "packages/etl-core/README.md",
+            "packages/etl-core/src/pipeline/definePipeline.ts",
+            "docs/package-catalog.json"
+          ],
+          "host": "workers"
+        }
+      }
+    },
+    {
+      "package": "warehouse-postgres",
+      "classification": "durable-provider",
+      "reason": "Verify versioned receipt manifests through a bounded PostgreSQL cursor and expose authorized receipt pages using the existing schema and retention owner.",
+      "files": {
+        "packages/warehouse-postgres/src/facts/PostgresWarehouseCatalog.ts": "4e633dac1483c18fd9de0d60b76f0a4db34ba48b6688bd1a0795a119aaf41ff6",
+        "packages/warehouse-postgres/src/facts/PostgresWarehouseWriter.ts": "38200a91fc13f0a6bc245ed982fc58702bcc3b905ffad66cc2bea0e215c6e409"
+      },
+      "catalogRuntimes": ["node", "lambda"],
+      "profiles": {
+        "kubernetes": {
+          "result": "unverified",
+          "reason": "The existing Node file/execution/PostgreSQL composition is reused. Local fixtures do not verify deployment, Pod termination or pool lifecycle.",
+          "providers": ["@croco/warehouse-postgres/facts"],
+          "constraints": [
+            "Retain server-resolved access, current permission/privacy epochs, candidate fences and receipt reconciliation.",
+            "No live infrastructure or provider certification claim."
+          ],
+          "references": [
+            "packages/warehouse-postgres/README.md",
+            "packages/warehouse-postgres/src/facts/PostgresWarehouseWriter.ts",
+            "docs/package-catalog.json"
+          ]
+        },
+        "aws-lambda": {
+          "result": "unverified",
+          "reason": "No new Lambda composition is introduced. File availability, invocation duration and owned connection cleanup remain unverified.",
+          "providers": ["@croco/warehouse-postgres/facts"],
+          "constraints": [
+            "Retain server-resolved access, current permission/privacy epochs, candidate fences and receipt reconciliation.",
+            "No live infrastructure or provider certification claim."
+          ],
+          "references": [
+            "packages/warehouse-postgres/README.md",
+            "packages/warehouse-postgres/src/facts/PostgresWarehouseWriter.ts",
+            "docs/package-catalog.json"
+          ]
+        },
+        "cloudflare": {
+          "result": "unsupported",
+          "reason": "The file pipeline requires Node filesystem access and the existing PostgreSQL provider does not claim Worker isolate support.",
+          "providers": ["@croco/warehouse-postgres/facts"],
+          "constraints": [
+            "Retain server-resolved access, current permission/privacy epochs, candidate fences and receipt reconciliation.",
+            "No live infrastructure or provider certification claim."
+          ],
+          "references": [
+            "packages/warehouse-postgres/README.md",
+            "packages/warehouse-postgres/src/facts/PostgresWarehouseWriter.ts",
+            "docs/package-catalog.json"
+          ],
+          "host": "workers"
+        }
+      }
+    },
+    {
+      "package": "warehouse-core",
+      "classification": "pure-contract",
+      "reason": "Version the bounded receipt-manifest and diagnostic-page contracts. Pure validation and existing WebCrypto hashing introduce no host, storage or lifecycle dependency.",
+      "files": {
+        "packages/warehouse-core/src/libs/receiptManifest.ts": "0d6ef6575b1881ae043e850c3a83927f8d42e81840612be9a475e090c4ae2ff9",
+        "packages/warehouse-core/src/libs/warehouseRuntime.ts": "455c8ded93dfba76950faf7ed94c5448faf2e24f0aba850fa1e51ee749b591b8",
+        "packages/warehouse-core/src/runtime.ts": "7dffac5f020e898304f10fd0659c881448091ca7bc3f6895b9745cff5cd44690"
+      },
+      "catalogRuntimes": ["browser", "node", "lambda", "cloudflare-workers"],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "This contract and deterministic hashing do not provision infrastructure, persist data or own a Host lifecycle. Provider execution remains a separate warehouse-postgres responsibility.",
+          "providers": [],
+          "constraints": [
+            "Requires the same WebCrypto SHA-256 capability already used by fact compilation; no new platform support claim."
+          ],
+          "references": [
+            "packages/warehouse-core/src/libs/receiptManifest.ts",
+            "packages/warehouse-core/src/libs/compiler.ts",
+            "docs/package-catalog.json"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "This contract and deterministic hashing do not provision infrastructure, persist data or own a Host lifecycle. Provider execution remains a separate warehouse-postgres responsibility.",
+          "providers": [],
+          "constraints": [
+            "Requires the same WebCrypto SHA-256 capability already used by fact compilation; no new platform support claim."
+          ],
+          "references": [
+            "packages/warehouse-core/src/libs/receiptManifest.ts",
+            "packages/warehouse-core/src/libs/compiler.ts",
+            "docs/package-catalog.json"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "This contract and deterministic hashing do not provision infrastructure, persist data or own a Host lifecycle. Provider execution remains a separate warehouse-postgres responsibility.",
+          "providers": [],
+          "constraints": [
+            "Requires the same WebCrypto SHA-256 capability already used by fact compilation; no new platform support claim."
+          ],
+          "references": [
+            "packages/warehouse-core/src/libs/receiptManifest.ts",
+            "packages/warehouse-core/src/libs/compiler.ts",
+            "docs/package-catalog.json"
+          ]
+        }
+      }
+    }
+  ]
+}
