@@ -41137,6 +41137,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "R2BucketNotFoundProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/R2BucketNotFoundProblem",
+              "declarationKind": "class"
+            },
+            {
               "name": "R2ObjectTooLargeProblem",
               "exportKind": "named",
               "source": "./libs/problems/R2ObjectTooLargeProblem",

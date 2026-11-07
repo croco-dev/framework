@@ -1,0 +1,95 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "storage-r2",
+      "classification": "runtime-adapter",
+      "reason": "Distinguish explicit S3 NoSuchBucket failures from missing objects across all four R2 read operations; preserve upstream evidence and existing cancellation/retry behavior.",
+      "files": {
+        "packages/storage-r2/src/index.ts": "35e682bbcf5ff9864c0c3baf6074a7981c4082d59405ae95db25c4f8d36a67ac",
+        "packages/storage-r2/src/libs/R2StorageProvider.ts": "ee91a7ce6a9b9228ee4e121b9e8958a3b9090539d8c733180a52f9b100eaa057",
+        "packages/storage-r2/src/libs/problems/R2BucketNotFoundProblem.ts": "48cf6a8fdac38e8573001138542dc06dcbb1006422a22093c06dbce869c2e2f9"
+      },
+      "catalogRuntimes": ["node", "lambda"],
+      "profiles": {
+        "kubernetes": {
+          "result": "conditional",
+          "reason": "The existing S3-compatible R2 adapter reports explicit missing-bucket responses as configuration failures. No provider, storage, host capability or callback lifecycle changes.",
+          "providers": ["@croco/storage-r2", "@croco/storage-core"],
+          "constraints": [
+            "Requires the existing Node S3 SDK path and configured R2 account, credentials and bucket.",
+            "No live infrastructure or provider certification is claimed; Lambda invocation completion and resource lifetime remain owned by the selected Host."
+          ],
+          "references": [
+            "packages/storage-r2/src/libs/R2StorageProvider.ts",
+            "packages/storage-r2/src/libs/problems/R2BucketNotFoundProblem.ts",
+            "packages/storage-r2/README.md"
+          ]
+        },
+        "aws-lambda": {
+          "result": "conditional",
+          "reason": "The existing S3-compatible R2 adapter reports explicit missing-bucket responses as configuration failures. No provider, storage, host capability or callback lifecycle changes.",
+          "providers": ["@croco/storage-r2", "@croco/storage-core"],
+          "constraints": [
+            "Requires the existing Node S3 SDK path and configured R2 account, credentials and bucket.",
+            "No live infrastructure or provider certification is claimed; Lambda invocation completion and resource lifetime remain owned by the selected Host."
+          ],
+          "references": [
+            "packages/storage-r2/src/libs/R2StorageProvider.ts",
+            "packages/storage-r2/src/libs/problems/R2BucketNotFoundProblem.ts",
+            "packages/storage-r2/README.md"
+          ]
+        },
+        "cloudflare": {
+          "result": "unsupported",
+          "host": "workers",
+          "reason": "This change is confined to the root Node/Lambda S3 adapter. Workers use the separate /workers native R2 binding adapter, whose behavior and support claims are unchanged.",
+          "providers": ["@croco/storage-r2/workers"],
+          "constraints": [
+            "The root S3 adapter uses Node stream conversion and is not the native Workers binding path.",
+            "No live Cloudflare deployment or provider certification is claimed."
+          ],
+          "references": [
+            "packages/storage-r2/src/libs/R2StorageProvider.ts",
+            "packages/storage-r2/src/libs/problems/R2BucketNotFoundProblem.ts",
+            "packages/storage-r2/README.md",
+            "packages/storage-r2/src/workers.ts",
+            "packages/storage-r2/src/libs/R2BindingStorageProvider.ts"
+          ]
+        }
+      }
+    },
+    {
+      "package": "problems-core",
+      "classification": "pure-contract",
+      "reason": "Publish generated classification and recovery metadata for STORAGE_R2_BUCKET_NOT_FOUND.",
+      "files": {
+        "packages/problems-core/src/generated/problem-code-registry.ts": "c47b4d08bf49412f3e065d1fa1386735c51ea9c03e9c31e8a70846f99f90770b"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Generated Problem code and recovery metadata have no host capability, persistence or lifecycle dependency.",
+          "providers": ["@croco/problems-core"],
+          "constraints": [],
+          "references": ["packages/problems-core/src/generated/problem-code-registry.ts"]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Generated Problem code and recovery metadata have no host capability, persistence or lifecycle dependency.",
+          "providers": ["@croco/problems-core"],
+          "constraints": [],
+          "references": ["packages/problems-core/src/generated/problem-code-registry.ts"]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Generated Problem code and recovery metadata have no host capability, persistence or lifecycle dependency.",
+          "providers": ["@croco/problems-core"],
+          "constraints": [],
+          "references": ["packages/problems-core/src/generated/problem-code-registry.ts"]
+        }
+      }
+    }
+  ]
+}

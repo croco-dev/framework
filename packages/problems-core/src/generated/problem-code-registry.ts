@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export type CrocoProblemRegistry = {
   readonly version: "croco.problem-code-registry.v1";
-  readonly problemCount: 1160;
+  readonly problemCount: 1161;
   readonly problems: readonly [
     {
       readonly code: "ACCESS_DENIED";
@@ -3362,6 +3362,34 @@ export type CrocoProblemRegistry = {
           readonly line: 8;
           readonly column: 5;
           readonly kind: "problem-constructor";
+        },
+      ];
+    },
+    {
+      readonly code: "STORAGE_R2_BUCKET_NOT_FOUND";
+      readonly category: "InternalServerError";
+      readonly status: 500;
+      readonly title: "Internal Server Error";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#storage-r2-bucket-not-found";
+      readonly recovery: {
+        readonly cause: "The R2 S3-compatible API explicitly reported that the configured bucket does not exist.";
+        readonly userAction: "Ask the application operator to verify the R2 bucket configuration.";
+        readonly operatorAction: "Verify R2_BUCKET and its account configuration. Preserve the upstream cause; do not treat this failure as a missing object or retry it without correcting configuration.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "safe-message";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.error";
+          readonly severity: "error";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/storage-r2/src/libs/problems/R2BucketNotFoundProblem.ts";
+          readonly line: 5;
+          readonly column: 1;
+          readonly kind: "problem-class";
         },
       ];
     },
@@ -32794,7 +32822,7 @@ export type CrocoProblemRegistry = {
 
 export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 1160,
+  problemCount: 1161,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -36513,6 +36541,38 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
           line: 8,
           column: 5,
           kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "STORAGE_R2_BUCKET_NOT_FOUND",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#storage-r2-bucket-not-found",
+      recovery: {
+        cause:
+          "The R2 S3-compatible API explicitly reported that the configured bucket does not exist.",
+        userAction: "Ask the application operator to verify the R2 bucket configuration.",
+        operatorAction:
+          "Verify R2_BUCKET and its account configuration. Preserve the upstream cause; do not treat this failure as a missing object or retry it without correcting configuration.",
+        retryability: "not-retryable",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/storage-r2/src/libs/problems/R2BucketNotFoundProblem.ts",
+          line: 5,
+          column: 1,
+          kind: "problem-class",
         },
       ],
     },
