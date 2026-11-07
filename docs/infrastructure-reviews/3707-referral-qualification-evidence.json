@@ -1,0 +1,108 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "referral-core",
+      "classification": "pure-contract",
+      "reason": "Validate positive qualification evidence against the pinned program before admission checks, attribution writes or benefit intents, exposing a distinct non-retryable adapter contract Problem.",
+      "files": {
+        "packages/referral-core/src/index.ts": "a914d9f44ea089d6ff8ae2ba538a6549ad1a6ec6703ab9d64680ec6bc84dfc1a",
+        "packages/referral-core/src/libs/ReferralService.ts": "bbec1f922441b63116bb8383fa4319721981fabc1854c0ccfa374bdceba4e1fb",
+        "packages/referral-core/src/libs/problems.ts": "1d69f5e9b471c2d72ea921f209c0a9cb6ff395517ea228b656b82ca13c0d02c4",
+        "packages/referral-core/src/libs/types.ts": "6e3aededb1ab546697ce0c088ff8a6d2ead32a6ae3a0f35bb1a50d9e95fe7da2"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "This is domain evidence validation and generated failure metadata independent of the Node Host; it adds no host capability, storage or lifecycle dependency.",
+          "providers": ["@croco/referral-core:ReferralService"],
+          "constraints": [
+            "No deployed infrastructure or provider certification is claimed. Existing reservations and already-qualified attributions retain their current lifecycle; no persisted schema or runtime support claim changes."
+          ],
+          "references": [
+            "packages/referral-core/src/libs/ReferralService.ts",
+            "packages/referral-core/src/tests/ReferralService.spec.ts",
+            "packages/referral-core/README.md"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "This is domain evidence validation and generated failure metadata independent of the Lambda Host; it adds no host capability, storage or lifecycle dependency.",
+          "providers": ["@croco/referral-core:ReferralService"],
+          "constraints": [
+            "No deployed infrastructure or provider certification is claimed. Existing reservations and already-qualified attributions retain their current lifecycle; no persisted schema or runtime support claim changes."
+          ],
+          "references": [
+            "packages/referral-core/src/libs/ReferralService.ts",
+            "packages/referral-core/src/tests/ReferralService.spec.ts",
+            "packages/referral-core/README.md"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "This is domain evidence validation and generated failure metadata independent of the Workers or explicit Node Container Host; it adds no host capability, storage or lifecycle dependency.",
+          "providers": ["@croco/referral-core:ReferralService"],
+          "constraints": [
+            "No deployed infrastructure or provider certification is claimed. Existing reservations and already-qualified attributions retain their current lifecycle; no persisted schema or runtime support claim changes."
+          ],
+          "references": [
+            "packages/referral-core/src/libs/ReferralService.ts",
+            "packages/referral-core/src/tests/ReferralService.spec.ts",
+            "packages/referral-core/README.md"
+          ]
+        }
+      }
+    },
+    {
+      "package": "problems-core",
+      "classification": "pure-contract",
+      "reason": "Publish the generated qualification-evidence-invalid Problem code, recovery metadata and updated source locations.",
+      "files": {
+        "packages/problems-core/src/generated/problem-code-registry.ts": "fa4cf5afc486cb98b639354c55796e1567f09296d1b22b00afce45f7d528b88e"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "This is domain evidence validation and generated failure metadata independent of the Node Host; it adds no host capability, storage or lifecycle dependency.",
+          "providers": ["@croco/problems-core:ProblemCodeRegistry"],
+          "constraints": [
+            "No deployed infrastructure or provider certification is claimed. Existing reservations and already-qualified attributions retain their current lifecycle; no persisted schema or runtime support claim changes."
+          ],
+          "references": [
+            "packages/referral-core/src/libs/ReferralService.ts",
+            "packages/referral-core/src/tests/ReferralService.spec.ts",
+            "packages/referral-core/README.md"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "This is domain evidence validation and generated failure metadata independent of the Lambda Host; it adds no host capability, storage or lifecycle dependency.",
+          "providers": ["@croco/problems-core:ProblemCodeRegistry"],
+          "constraints": [
+            "No deployed infrastructure or provider certification is claimed. Existing reservations and already-qualified attributions retain their current lifecycle; no persisted schema or runtime support claim changes."
+          ],
+          "references": [
+            "packages/referral-core/src/libs/ReferralService.ts",
+            "packages/referral-core/src/tests/ReferralService.spec.ts",
+            "packages/referral-core/README.md"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "This is domain evidence validation and generated failure metadata independent of the Workers or explicit Node Container Host; it adds no host capability, storage or lifecycle dependency.",
+          "providers": ["@croco/problems-core:ProblemCodeRegistry"],
+          "constraints": [
+            "No deployed infrastructure or provider certification is claimed. Existing reservations and already-qualified attributions retain their current lifecycle; no persisted schema or runtime support claim changes."
+          ],
+          "references": [
+            "packages/referral-core/src/libs/ReferralService.ts",
+            "packages/referral-core/src/tests/ReferralService.spec.ts",
+            "packages/referral-core/README.md"
+          ]
+        }
+      }
+    }
+  ]
+}

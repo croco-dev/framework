@@ -192,6 +192,21 @@ export class ReferralAttributionStateConflictProblem extends Problem {
   }
 }
 
+/** Reports positive adapter evidence that cannot qualify the pinned program. */
+export class ReferralQualificationEvidenceInvalidProblem extends Problem {
+  readonly code = "referral-core/qualification-evidence-invalid";
+  readonly category = ProblemCategory.InternalServerError;
+
+  constructor(attributionId: string, reason: string) {
+    super(
+      undefined,
+      undefined,
+      `Qualification evidence for referral attribution '${attributionId}' is invalid: ${reason}.`,
+      { extensions: { retryable: false } },
+    );
+  }
+}
+
 /** Reports a qualification attempt rejected by the authoritative source. */
 export class ReferralQualificationRejectedProblem extends Problem {
   readonly code = "referral-core/qualification-rejected";

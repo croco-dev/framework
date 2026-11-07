@@ -16,6 +16,19 @@ authoritative app-owned server sources, never from client assertions or
 IP/device similarity. Self-referrals are rejected, and claiming never joins
 the recipient to any organization.
 
+Positive qualification evidence must report the exact `qualifyingAction` of
+the attribution's pinned program version, with non-blank string `sourceEventId`
+and `eligibleReason` fields. Invalid positive evidence throws the exported
+`ReferralQualificationEvidenceInvalidProblem`
+(`referral-core/qualification-evidence-invalid`, status 500, `retryable: false`)
+before changing the attribution, its reservation or benefit intents. Correct
+the qualification adapter and retry the claim's qualification; its reservation
+remains available until rejection or expiry. A negative verdict still rejects
+the qualification and releases the reservation; a thrown provider failure
+propagates without rejecting the recipient. Already qualified attributions
+retain their recorded evidence on replay. This validation does not re-evaluate
+or reverse previously confirmed grants.
+
 Benefits pin the program snapshot, and each side fulfills with a
 deterministic idempotency key (`referral-benefit:<attributionId>:<side>`),
 so one side may succeed while the other stays pending without re-paying the

@@ -580,6 +580,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`ReferralNoveltyUnknownProblem`](/api/referral-core/src/classes/referralnoveltyunknownproblem/)
 - [`ReferralProgramConflictProblem`](/api/referral-core/src/classes/referralprogramconflictproblem/)
 - [`ReferralProgramNotFoundProblem`](/api/referral-core/src/classes/referralprogramnotfoundproblem/)
+- [`ReferralQualificationEvidenceInvalidProblem`](/api/referral-core/src/classes/referralqualificationevidenceinvalidproblem/)
 - [`ReferralQualificationRejectedProblem`](/api/referral-core/src/classes/referralqualificationrejectedproblem/)
 - [`ReferralSelfReferralProblem`](/api/referral-core/src/classes/referralselfreferralproblem/)
 - [`ReferralSubjectLimitReachedProblem`](/api/referral-core/src/classes/referralsubjectlimitreachedproblem/)

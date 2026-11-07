@@ -17,6 +17,7 @@ import {
   ReferralLinkNotFoundProblem,
   ReferralLinkRevokedProblem,
   ReferralProgramNotFoundProblem,
+  ReferralQualificationEvidenceInvalidProblem,
   ReferralQualificationRejectedProblem,
   ReferralSelfReferralProblem,
   ReferralSubjectLimitReachedProblem,
@@ -466,6 +467,20 @@ export class ReferralService {
           kind: "rejected",
           problem: new ReferralQualificationRejectedProblem(stored.id, verdict.reason),
         };
+      }
+      if (verdict.qualifyingAction !== program.qualifyingAction) {
+        throw new ReferralQualificationEvidenceInvalidProblem(
+          stored.id,
+          "qualifyingAction must match the pinned program action",
+        );
+      }
+      for (const field of ["sourceEventId", "eligibleReason"] as const) {
+        if (typeof verdict[field] !== "string" || verdict[field].trim().length === 0) {
+          throw new ReferralQualificationEvidenceInvalidProblem(
+            stored.id,
+            `${field} must be a non-blank string`,
+          );
+        }
       }
       await this.assertSubjectReceiptLimits(tx, program, stored);
       const qualified: ReferralAttribution = {
