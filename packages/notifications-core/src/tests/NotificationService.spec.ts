@@ -726,6 +726,31 @@ describe("NotificationService", () => {
       });
     });
 
+    it.each(["subject", "content"] as const)(
+      "rejects a blank rendered PUSH %s before task dispatch",
+      async (field) => {
+        const template = { id: "empty-push", version: "v1", locale: "en-US" };
+        service.registerTemplate({
+          ...template,
+          channel: NotificationChannel.PUSH,
+          subject: "Title",
+          content: "Body",
+          [field]: "{{value}}",
+        });
+        await expect(
+          service.sendTemplate(
+            NotificationChannel.PUSH,
+            { to: "token", template, variables: { value: " " } },
+            createSendOptions(NotificationChannel.PUSH),
+          ),
+        ).rejects.toMatchObject({
+          code: "notifications-core/template-invalid",
+          extensions: { retryable: false },
+        });
+        expect(executeSpy).not.toHaveBeenCalled();
+      },
+    );
+
     it("should stop before dispatch when preference denies the notification", async () => {
       service.registerProvider(emailProvider, true);
       service.registerPreferenceRule({

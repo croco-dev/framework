@@ -31843,6 +31843,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "NotificationTemplateInvalidProblem",
+              "exportKind": "declaration",
+              "source": "./libs/problems/NotificationProblems",
+              "declarationKind": "class"
+            },
+            {
               "name": "NotificationTemplateNotFoundProblem",
               "exportKind": "declaration",
               "source": "./libs/problems/NotificationProblems",

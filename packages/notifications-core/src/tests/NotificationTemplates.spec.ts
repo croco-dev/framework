@@ -7,16 +7,93 @@ import {
 import {
   NotificationTemplateAlreadyRegisteredProblem,
   NotificationTemplateVariablesInvalidProblem,
+  NotificationTemplateInvalidProblem,
 } from "../libs/problems/NotificationProblems";
+import type { NotificationTemplate } from "../libs/NotificationTemplates";
 import { NotificationChannel } from "../libs/types";
 
 describe("NotificationTemplateRegistry", () => {
+  it.each([
+    { subject: undefined, content: "Body" },
+    { subject: " \t", content: "Body" },
+    { subject: "Title", content: undefined },
+    { subject: "Title", content: "\n" },
+  ])("rejects missing or blank PUSH text at registration", (fields) => {
+    const registry = new NotificationTemplateRegistry();
+    const template: NotificationTemplate = {
+      id: "invalid-push",
+      version: "v1",
+      locale: "en-US",
+      channel: NotificationChannel.PUSH,
+      ...fields,
+    } as NotificationTemplate;
+    expect(() => registry.registerTemplate(template)).toThrow(NotificationTemplateInvalidProblem);
+    expect(registry.getTemplate(template)).toBeUndefined();
+  });
+
+  it.each(["subject", "content"] as const)(
+    "rejects PUSH %s that renders to blank text",
+    (field) => {
+      const registry = new NotificationTemplateRegistry();
+      const template: NotificationTemplate = {
+        id: "empty-push",
+        version: "v1",
+        locale: "en-US",
+        channel: NotificationChannel.PUSH,
+        subject: "Title",
+        content: "Body",
+        [field]: "{{optional}}",
+        variablesSchema: { properties: { optional: { type: "string" } } },
+      };
+      registry.registerTemplate(template);
+      expect(() => registry.render(template)).toThrow(NotificationTemplateInvalidProblem);
+    },
+  );
+
+  it("requires metadata variables and renders them without HTML escaping", () => {
+    const registry = new NotificationTemplateRegistry();
+    const template: NotificationTemplate = {
+      id: "metadata-push",
+      version: "v1",
+      locale: "en-US",
+      channel: NotificationChannel.PUSH,
+      subject: "Title",
+      content: "Body",
+      push: { deepLink: "app://{{target}}", data: { label: "{{label}}" } },
+    };
+    registry.registerTemplate(template);
+    expect(() => registry.render({ ...template, variables: { target: "inbox" } })).toThrow(
+      NotificationTemplateVariablesInvalidProblem,
+    );
+    expect(
+      registry.render({ ...template, variables: { target: "inbox", label: "<읽음 & 새 소식>" } })
+        .push,
+    ).toEqual({
+      title: "Title",
+      body: "Body",
+      deepLink: "app://inbox",
+      data: { label: "<읽음 & 새 소식>" },
+    });
+  });
+
+  it("requires a PUSH title in the typed channel contract", () => {
+    // @ts-expect-error PUSH requires a subject for the canonical title.
+    const template: NotificationTemplate = {
+      id: "missing-title",
+      version: "v1",
+      locale: "en-US",
+      channel: NotificationChannel.PUSH,
+      content: "Body",
+    };
+    expect(template.channel).toBe(NotificationChannel.PUSH);
+  });
+
   it.each(["constructor", "toString", "__proto__"])(
     "should require an own value for %s with or without a schema",
     (name) => {
       for (const withSchema of [false, true]) {
         const registry = new NotificationTemplateRegistry();
-        const template = {
+        const template: NotificationTemplate = {
           id: "own-variable",
           version: "v1",
           locale: "en-US",
@@ -69,7 +146,7 @@ describe("NotificationTemplateRegistry", () => {
       },
     });
     const variables: Record<string, unknown> = Object.create(prototype);
-    const template = {
+    const template: NotificationTemplate = {
       id: "inherited-variables",
       version: "v1",
       locale: "en-US",
@@ -254,7 +331,7 @@ describe("NotificationTemplateRegistry", () => {
 
   it("should reject duplicate template contracts", () => {
     const registry = new NotificationTemplateRegistry();
-    const template = {
+    const template: NotificationTemplate = {
       id: "welcome",
       version: "v1",
       locale: "en-US",
@@ -297,14 +374,19 @@ describe("NotificationTemplateRegistry", () => {
     });
   });
 
-  it("should preserve variables by default for non-html channels", () => {
+  it.each([
+    NotificationChannel.SMS,
+    NotificationChannel.SLACK,
+    NotificationChannel.IN_APP,
+  ] as const)("should preserve non-html template rendering on %s", (channel) => {
     const registry = new NotificationTemplateRegistry();
 
     registry.registerTemplate({
       id: "sms-welcome",
       version: "v1",
       locale: "en-US",
-      channel: NotificationChannel.SMS,
+      channel,
+      subject: "Subject {{name}}",
       content: "Hello {{name}}",
     });
 
@@ -313,12 +395,12 @@ describe("NotificationTemplateRegistry", () => {
         id: "sms-welcome",
         version: "v1",
         locale: "en-US",
-        channel: NotificationChannel.SMS,
+        channel,
         variables: {
           name: "<Ada & Bob>",
         },
-      }).content,
-    ).toBe("Hello <Ada & Bob>");
+      }),
+    ).toMatchObject({ subject: "Subject <Ada & Bob>", content: "Hello <Ada & Bob>" });
   });
 
   it("should preserve subjects when content escaping is explicitly html", () => {
@@ -375,32 +457,36 @@ describe("NotificationTemplateRegistry", () => {
     ).toBe("Hello <Ada>");
   });
 
-  it("should preview templates with exported fixture utilities", () => {
-    const registry = new NotificationTemplateRegistry();
-    const template = createNotificationTemplateFixture({
-      id: "fixture-preview",
-      content: "Preview {{name}}",
-    });
-
-    registry.registerTemplate(template);
-
-    expect(
-      previewNotificationTemplate(registry, {
+  it.each([NotificationChannel.EMAIL, NotificationChannel.PUSH] as const)(
+    "should preview %s templates with exported fixture utilities",
+    (channel) => {
+      const registry = new NotificationTemplateRegistry();
+      const template = createNotificationTemplateFixture({
         id: "fixture-preview",
-        version: "v1",
-        locale: "en-US",
-        channel: NotificationChannel.EMAIL,
-        variables: {
-          name: "Ada",
+        content: "Preview {{name}}",
+        channel,
+      });
+
+      registry.registerTemplate(template);
+
+      expect(
+        previewNotificationTemplate(registry, {
+          id: "fixture-preview",
+          version: "v1",
+          locale: "en-US",
+          channel,
+          variables: {
+            name: "Ada",
+          },
+        }),
+      ).toMatchObject({
+        content: "Preview Ada",
+        template: {
+          id: "fixture-preview",
+          version: "v1",
+          locale: "en-US",
         },
-      }),
-    ).toMatchObject({
-      content: "Preview Ada",
-      template: {
-        id: "fixture-preview",
-        version: "v1",
-        locale: "en-US",
-      },
-    });
-  });
+      });
+    },
+  );
 });

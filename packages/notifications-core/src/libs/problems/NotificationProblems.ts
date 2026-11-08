@@ -390,3 +390,23 @@ export class NotificationTemplateVariablesInvalidProblem extends Problem {
     );
   }
 }
+
+export class NotificationTemplateInvalidProblem extends Problem {
+  constructor(template: NotificationTemplateProblemContract, issues: readonly string[]) {
+    super(
+      "notifications-core/template-invalid",
+      ProblemCategory.ValidationError,
+      `Notification template ${template.id}@${template.version} is invalid`,
+      {
+        extensions: {
+          templateId: template.id,
+          templateVersion: template.version,
+          locale: template.locale,
+          channel: template.channel,
+          issues,
+          retryable: false,
+        },
+      },
+    );
+  }
+}

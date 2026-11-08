@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export type CrocoProblemRegistry = {
   readonly version: "croco.problem-code-registry.v1";
-  readonly problemCount: 1165;
+  readonly problemCount: 1166;
   readonly problems: readonly [
     {
       readonly code: "ACCESS_DENIED";
@@ -22939,6 +22939,34 @@ export type CrocoProblemRegistry = {
       ];
     },
     {
+      readonly code: "notifications-core/template-invalid";
+      readonly category: "ValidationError";
+      readonly status: 422;
+      readonly title: "Validation Error";
+      readonly cookbookPath: "/reference/problem-recovery-cookbook/#notifications-core-template-invalid";
+      readonly recovery: {
+        readonly cause: "The request or generated contract failed schema or semantic validation.";
+        readonly userAction: "Fix the invalid fields and retry with schema-conformant input.";
+        readonly operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.";
+        readonly retryability: "not-retryable";
+        readonly redactionPolicy: "public";
+        readonly telemetry: {
+          readonly eventName: "croco.problem.info";
+          readonly severity: "info";
+          readonly attributes: readonly ["problem.code", "problem.category", "problem.status"];
+        };
+      };
+      readonly lifecycle: { readonly status: "active" };
+      readonly sources: readonly [
+        {
+          readonly file: "packages/notifications-core/src/libs/problems/NotificationProblems.ts";
+          readonly line: 396;
+          readonly column: 5;
+          readonly kind: "problem-constructor";
+        },
+      ];
+    },
+    {
       readonly code: "notifications-core/template-not-found";
       readonly category: "NotFound";
       readonly status: 404;
@@ -32803,7 +32831,7 @@ export type CrocoProblemRegistry = {
       readonly className: "RecordedEndpointFailureProblem";
       readonly source: {
         readonly file: "packages/notifications-core/src/libs/NotificationService.ts";
-        readonly line: 371;
+        readonly line: 372;
         readonly column: 1;
         readonly kind: "problem-class";
       };
@@ -32934,7 +32962,7 @@ export type CrocoProblemRegistry = {
 
 export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 1165,
+  problemCount: 1166,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -58535,6 +58563,36 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       ],
     },
     {
+      code: "notifications-core/template-invalid",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#notifications-core-template-invalid",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/notifications-core/src/libs/problems/NotificationProblems.ts",
+          line: 396,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
       code: "notifications-core/template-not-found",
       category: "NotFound",
       status: 404,
@@ -69665,7 +69723,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       className: "RecordedEndpointFailureProblem",
       source: {
         file: "packages/notifications-core/src/libs/NotificationService.ts",
-        line: 371,
+        line: 372,
         column: 1,
         kind: "problem-class",
       },
