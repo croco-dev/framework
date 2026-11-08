@@ -144,6 +144,10 @@ export function createControllerProject(
   // Declarations extend analysis, not the controller dependency closure emitted at runtime.
   project.addSourceFilesAtPaths(loadedConfig?.declarationPaths ?? []);
   resolveProjectSourceDependencies(project);
+  const diagnosticOwners = new Map(sourceOwners);
+  for (const declarationPath of loadedConfig?.declarationPaths ?? []) {
+    diagnosticOwners.set(normalizePath(declarationPath), project);
+  }
   const analysisContexts = analysisProjects.map((analysisProject) => ({
     project: analysisProject,
     sourceFiles: analysisProject
@@ -186,7 +190,7 @@ export function createControllerProject(
     emitDir,
     getPreEmitDiagnostics(): readonly Diagnostic[] {
       assertActive(disposed);
-      return collectPreEmitDiagnostics(analysisContexts, sourceOwners);
+      return collectPreEmitDiagnostics(analysisContexts, diagnosticOwners);
     },
     emit(): void {
       assertActive(disposed);

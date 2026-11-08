@@ -20,6 +20,34 @@ afterEach(() => {
 });
 
 describe("createControllerProject", () => {
+  it.each([false, true])(
+    "respects skipLibCheck=%s for selected ambient declarations",
+    (skipLibCheck) => {
+      const root = createTemporaryDirectory();
+      writeJson(path.join(root, "tsconfig.json"), {
+        compilerOptions: {
+          module: "ESNext",
+          moduleResolution: "Bundler",
+          target: "ES2022",
+          skipLibCheck,
+        },
+        include: ["*.ts"],
+      });
+      writeFile(path.join(root, "globals.d.ts"), "type AppId = MissingAppId;");
+      writeFile(path.join(root, "Controller.ts"), "export class Controller { value!: AppId; }");
+      const session = createControllerProject({ cwd: root, controllers: "Controller.ts" });
+      try {
+        const diagnostics = session.getPreEmitDiagnostics().map((diagnostic) => ({
+          code: diagnostic.getCode(),
+          file: diagnostic.getSourceFile()?.getBaseName(),
+        }));
+        expect(diagnostics).toEqual(skipLibCheck ? [] : [{ code: 2304, file: "globals.d.ts" }]);
+      } finally {
+        session.dispose();
+      }
+    },
+  );
+
   it.each(["module", "commonjs"] as const)(
     "resolves ambient type imports with the NodeNext %s package format",
     async (packageType) => {

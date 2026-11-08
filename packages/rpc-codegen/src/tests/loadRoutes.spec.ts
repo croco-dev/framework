@@ -18,6 +18,42 @@ const SHARED_FIXTURE_ROOT = new URL(
 );
 
 describe("loadRoutes", () => {
+  it(
+    "rejects selected ambient declaration errors before importing controllers",
+    async () => {
+      fs.writeFileSync(
+        path.join(tempRoot, "tsconfig.json"),
+        JSON.stringify({
+          compilerOptions: {
+            experimentalDecorators: true,
+            module: "CommonJS",
+            target: "ES2020",
+            skipLibCheck: false,
+          },
+          include: ["src/**/*.ts"],
+        }),
+      );
+      const declarationPath = path.join(sourceDir, "globals.d.ts");
+      fs.writeFileSync(declarationPath, "type AppId = MissingAppId;");
+      fs.writeFileSync(
+        path.join(sourceDir, "UsersController.ts"),
+        getMixedControllerSource().replace(
+          "readonly id = 'user-1';",
+          "readonly id: AppId = 'user-1';",
+        ),
+      );
+      await expect(loadRoutes(path.join(sourceDir, "*Controller.ts"))).rejects.toMatchObject({
+        extensions: {
+          crocoCode: "CROCO_BUILD_003",
+          diagnostics: expect.arrayContaining([
+            expect.objectContaining({ tsCode: "TS2304", file: declarationPath }),
+          ]),
+        },
+      });
+    },
+    LOAD_ROUTES_TIMEOUT_MS,
+  );
+
   it.each(["discovered", "explicit"] as const)(
     "loads controllers using ambient globals and module augmentations (%s config)",
     async (selection) => {
