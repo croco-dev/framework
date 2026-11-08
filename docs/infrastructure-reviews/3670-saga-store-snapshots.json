@@ -6,7 +6,7 @@
       "classification": "pure-contract",
       "reason": "Detach Saga create/update inputs and all returned execution records, preserving supported value graphs and rejecting unsupported values before writes. This host-independent ownership boundary changes no runtime support claim.",
       "files": {
-        "packages/workflow-core/src/libs/saga/InMemorySagaStore.ts": "b4010af67e44c76548d566b26ce2cddcba4798101c7535a51339f0ec7829e488"
+        "packages/workflow-core/src/libs/saga/InMemorySagaStore.ts": "49c41b863506907b7831d99003ceeaee7803a1535e07773b9d1be9acfd79d530"
       },
       "catalogRuntimes": [],
       "profiles": {

@@ -311,6 +311,47 @@ describe("InMemorySagaStore", () => {
     );
   });
 
+  it.each(["payload", "metadata"] as const)(
+    "returns the captured key's winner when a %s accessor creates it during snapshotting",
+    async (boundary) => {
+      const store = new InMemorySagaStore();
+      const nested: Promise<SagaExecution>[] = [];
+      const params = {
+        sagaName: "checkout",
+        idempotencyKey: "key",
+        requestFingerprint: "outer",
+        payload: { source: "outer" },
+        metadata: { source: "outer" },
+      };
+      Object.defineProperty(params[boundary], "value", {
+        enumerable: true,
+        get() {
+          nested.push(
+            store.create({
+              sagaName: "checkout",
+              idempotencyKey: "key",
+              requestFingerprint: "winner",
+              payload: { source: "nested" },
+              metadata: { source: "nested" },
+            }),
+          );
+          params.sagaName = "changed";
+          params.idempotencyKey = "changed";
+          return 7;
+        },
+      });
+      const outer = await store.create(params);
+      const [winner] = await Promise.all(nested);
+      expect(nested).toHaveLength(1);
+      expect(outer).toEqual(winner);
+      expect(outer).not.toBe(winner);
+      await expect(store.list()).resolves.toEqual([winner]);
+      Reflect.set(outer, "status", "completed");
+      (outer.payload as { source: string }).source = "changed";
+      await expect(store.findByIdempotencyKey("checkout", "key")).resolves.toEqual(winner);
+    },
+  );
+
   it.each(INVALID_PAGINATION_VALUES)(
     "rejects invalid $field value $value with a stable pagination Problem",
     async ({ field, value }) => {

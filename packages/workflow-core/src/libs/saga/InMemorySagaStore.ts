@@ -97,6 +97,14 @@ export class InMemorySagaStore implements SagaStore {
     };
 
     const snapshot = snapshotExecution(execution);
+    // Snapshot accessors may re-enter create before this record is installed.
+    if (snapshot.idempotencyKey !== undefined) {
+      const existing = this.findExistingByIdempotencyKey(
+        snapshot.sagaName,
+        snapshot.idempotencyKey,
+      );
+      if (existing) return snapshotExecution(existing);
+    }
     this.executions.set(snapshot.id, snapshot);
     return snapshotExecution(snapshot);
   }
