@@ -13,6 +13,7 @@ export {
   DI_COMPILER_VERSION,
   DI_MANIFEST_VERSION,
   DI_PACKAGE_DESCRIPTOR_VERSION,
+  DEFAULT_DI_SCAN_EXCLUDES,
   DiCompilerError,
   compileDiGraph,
   collectDiGraphWatchInputs,

@@ -2267,7 +2267,10 @@
           "fetch lifecycle host",
           "runtime context bridge",
           "ESM build target",
-          "alpha env-owned application bindings; no SaaS provider certification"
+          "alpha env-owned application bindings; no SaaS provider certification",
+          "native scheduled callback with generated Cron bindings",
+          "UTC Cron/Wrangler drift validation",
+          "application-owned execution identity and task timeout fencing"
         ]
       },
       "preset-lambda": {

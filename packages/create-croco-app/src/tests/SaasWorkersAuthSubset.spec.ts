@@ -36,6 +36,7 @@ it("loads optional Worker auth lazily without promoting bootstrap capability sta
     });
     expect(generated.generatedSaasProviderProfileManifest.packages).toEqual([
       "@croco/preset-cloudflare",
+      "@croco/triggers-core",
     ]);
     expect(() => generated.createGeneratedSaasApplicationDefinition()).toThrow(
       "CROCO_SAAS_PROFILE_RUNTIME_UNAVAILABLE",

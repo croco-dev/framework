@@ -384,7 +384,7 @@ export const SAAS_PROVIDER_PROFILES = {
     runtimeTarget: "cloudflare-workers",
     description:
       "Native Worker bootstrap only. SaaS providers are unavailable until separately implemented, connected and verified; this profile is not full SaaS or production certified.",
-    packages: ["@croco/preset-cloudflare"],
+    packages: ["@croco/preset-cloudflare", "@croco/triggers-core"],
     plugins: [
       plugin({
         factoryExport: "cloudflareWorkersHost",

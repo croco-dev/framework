@@ -1,0 +1,9 @@
+import type { ExecutionManager } from '@croco/execution-core';
+import type { CloudflareFetchEnv } from '@croco/preset-cloudflare';
+
+export const workerApplicationId = '{{projectName}}';
+
+/** Select a real Worker-compatible store explicitly before adding Cron services. */
+export function createWorkerExecutionManager(_env: CloudflareFetchEnv): ExecutionManager | undefined {
+  return undefined;
+}

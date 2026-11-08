@@ -1742,6 +1742,12 @@
       "owner": "create-croco-app"
     },
     {
+      "path": "packages/create-croco-app/src/tests/CloudflareCronScaffold.spec.ts",
+      "lane": "fast",
+      "qualifiers": ["coverage"],
+      "owner": "create-croco-app"
+    },
+    {
       "path": "packages/create-croco-app/src/tests/E2E.spec.ts",
       "lane": "integration",
       "qualifiers": ["coverage"],
@@ -4698,7 +4704,25 @@
       "owner": "@croco/presentation-preset"
     },
     {
+      "path": "packages/preset-cloudflare/src/tests/CloudflareCronManifest.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/preset-cloudflare"
+    },
+    {
       "path": "packages/preset-cloudflare/src/tests/CloudflareHostPlugin.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/preset-cloudflare"
+    },
+    {
+      "path": "packages/preset-cloudflare/src/tests/CloudflareScheduledHandler.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/preset-cloudflare"
+    },
+    {
+      "path": "packages/preset-cloudflare/src/tests/CloudflareScheduledWorker.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/preset-cloudflare"

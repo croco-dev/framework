@@ -9,6 +9,10 @@ import {
 } from "@croco/preset-cloudflare/application";
 import type { CloudflareFetchEnv, CloudflareHostAppFetch } from "@croco/preset-cloudflare";
 import { ProblemFactory } from "@croco/problems-core";
+import { createCloudflareScheduledHandler } from '@croco/preset-cloudflare/scheduled';
+import { generatedDiGraph as workerGraph } from '../.croco/worker-di.generated';
+import { workerCronManifest } from '../.croco/worker-crons.generated';
+import { createWorkerExecutionManager, workerApplicationId } from './workerScheduling';
 import { generatedSaasProviderProfileManifest as manifest } from "./generatedSaasProviderProfile";
 
 export async function createWorkerApplication(env: CloudflareFetchEnv) {
@@ -29,7 +33,7 @@ export async function createWorkerApplication(env: CloudflareFetchEnv) {
     return cloudflareWorkersHost(env);
   });
   const runtime = createApplicationRuntime(
-    defineCrocoApplication({ name: manifest.profile.name, imports }),
+    defineCrocoApplication({ name: manifest.profile.name, imports }), workerGraph,
   );
   try {
     await runtime.initialize();
@@ -62,7 +66,17 @@ export async function createWorkerApplication(env: CloudflareFetchEnv) {
       return workerProblemResponse("CROCO_SAAS_PROFILE_CAPABILITY_UNAVAILABLE");
     }),
   );
-  return { runtime, fetch: createCloudflareWorkersHost({ fetch }) };
+  try {
+    const scheduled = createCloudflareScheduledHandler({
+      runtime, graph: workerGraph, manifest: workerCronManifest, env,
+      applicationId: workerApplicationId,
+      executionManager: createWorkerExecutionManager(env),
+    });
+    return { runtime, fetch: createCloudflareWorkersHost({ fetch }), scheduled };
+  } catch (failure) {
+    await runtime.dispose();
+    throw failure;
+  }
 }
 
 export function assertWorkerProfileGraph(graph: ApplicationRuntimeGraphManifest): void {

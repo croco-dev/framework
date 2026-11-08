@@ -17,7 +17,8 @@
   "exports": {
     ".": "./src/index.ts",
     "./application": "./src/application.ts",
-    "./fetch": "./src/fetch.ts"
+    "./fetch": "./src/fetch.ts",
+    "./scheduled": "./src/scheduled.ts"
   },
   "publishConfig": {
     "main": "./dist/index.mjs",
@@ -35,6 +36,10 @@
       "./fetch": {
         "types": "./dist/fetch.d.mts",
         "import": "./dist/fetch.mjs"
+      },
+      "./scheduled": {
+        "types": "./dist/scheduled.d.mts",
+        "import": "./dist/scheduled.mjs"
       }
     },
     "access": "public"
@@ -48,12 +53,18 @@
     "docs:api:model": "node --experimental-strip-types ../docs/scripts/generate-package-api-model.mts"
   },
   "dependencies": {
+    "@croco/execution-core": "workspace:*",
     "@croco/framework-context": "workspace:*",
     "@croco/framework-module": "workspace:*",
     "@croco/framework-preset": "workspace:*",
-    "@croco/transports-http": "workspace:*"
+    "@croco/problems-core": "workspace:*",
+    "@croco/tasks-core": "workspace:*",
+    "@croco/transports-http": "workspace:*",
+    "@croco/triggers-core": "workspace:*"
   },
   "devDependencies": {
+    "esbuild": "0.27.7",
+    "miniflare": "4.20260312.0",
     "tsup": "8.5.1",
     "vitest": "4.1.8"
   }

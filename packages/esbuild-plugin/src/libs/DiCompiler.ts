@@ -10,7 +10,7 @@ export const DI_MANIFEST_VERSION = "croco.di-compiler.manifest.v1" as const;
 export const DI_PACKAGE_DESCRIPTOR_VERSION = "croco.di-package-descriptor.v1" as const;
 
 const DEFAULT_SCAN_DIRS = ["src"];
-export const DEFAULT_DI_SCAN_EXCLUDES = [
+export const DEFAULT_DI_SCAN_EXCLUDES = Object.freeze([
   "**/*.test.*",
   "**/*.spec.*",
   "**/*.bench.*",
@@ -22,7 +22,7 @@ export const DEFAULT_DI_SCAN_EXCLUDES = [
   "**/generated/**",
   "**/client/**",
   "**/node_modules/**",
-];
+]);
 const STEREOTYPES = new Set(["Component", "Controller", "GraphQLResolver"]);
 
 export type DiCompilerOptions = {

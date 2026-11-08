@@ -15867,6 +15867,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "DEFAULT_DI_SCAN_EXCLUDES",
+              "exportKind": "named",
+              "source": "./libs/DiCompiler",
+              "declarationKind": "const"
+            },
+            {
               "name": "DI_COMPILER_VERSION",
               "exportKind": "named",
               "source": "./libs/DiCompiler",
@@ -34015,6 +34021,83 @@
               "exportKind": "declaration",
               "source": null,
               "declarationKind": "type"
+            }
+          ]
+        },
+        {
+          "exportPath": "./scheduled",
+          "kind": "code",
+          "targets": [
+            {
+              "conditions": ["types"],
+              "target": "./dist/scheduled.d.mts"
+            },
+            {
+              "conditions": ["import"],
+              "target": "./dist/scheduled.mjs"
+            }
+          ],
+          "sourceEntrypoint": "packages/preset-cloudflare/src/scheduled.ts",
+          "runtimeExports": [
+            {
+              "name": "createCloudflareScheduledHandler",
+              "exportKind": "declaration",
+              "source": null,
+              "declarationKind": "function"
+            },
+            {
+              "name": "compileCloudflareCrons",
+              "exportKind": "named",
+              "source": "./cron",
+              "declarationKind": "function"
+            },
+            {
+              "name": "normalizeCloudflareCron",
+              "exportKind": "named",
+              "source": "./cron",
+              "declarationKind": "function"
+            }
+          ],
+          "typeExports": [
+            {
+              "name": "CloudflareCronInvocation",
+              "exportKind": "declaration",
+              "source": null,
+              "declarationKind": "type"
+            },
+            {
+              "name": "CloudflareScheduledContext",
+              "exportKind": "declaration",
+              "source": null,
+              "declarationKind": "type"
+            },
+            {
+              "name": "CloudflareScheduledController",
+              "exportKind": "declaration",
+              "source": null,
+              "declarationKind": "type"
+            },
+            {
+              "name": "CloudflareScheduledHandler",
+              "exportKind": "declaration",
+              "source": null,
+              "declarationKind": "type"
+            },
+            {
+              "name": "CloudflareScheduledHandlerOptions",
+              "exportKind": "declaration",
+              "source": null,
+              "declarationKind": "type"
+            },
+            {
+              "name": "CloudflareCronBinding",
+              "exportKind": "named",
+              "source": "./cron"
+            },
+            {
+              "name": "CloudflareCronManifest",
+              "exportKind": "named",
+              "source": "./cron"
             }
           ]
         }

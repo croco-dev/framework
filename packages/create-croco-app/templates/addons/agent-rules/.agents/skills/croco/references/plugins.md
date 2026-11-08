@@ -37,6 +37,33 @@ If every first-party option is unavailable, incompatible with the runtime, too i
 4. Add conformance and failure-path tests appropriate to that contract.
 5. Report that the adapter is application-scoped and not a certified Croco implementation.
 
+## Workers scheduled callbacks
+
+Use `@croco/preset-cloudflare/scheduled` for the native `scheduled` event. Compile only the
+application's generated DI graph with `compileCloudflareCrons`; bind its reviewed manifest,
+native env and explicitly selected `ExecutionManager` through `createCloudflareScheduledHandler`.
+Keep the generated Worker API package on ESM so services and the native entry share decorator metadata.
+The `saas-cloudflare` scaffold discovers `@Component` / `@Cron` services under `src/worker`
+and owns `worker:crons:write` / `worker:crons:check` plus the Wrangler schedule block. Do not
+maintain a second provider/handler list or expose scheduled dispatch as an unauthenticated HTTP route.
+Cron metadata is collected in local workerd through Wrangler, including static Worker-only imports,
+without constructing providers or attaching application resources. Import-time code still executes.
+Named-environment schedule overrides must match the compiled list; write/check reject divergent lists.
+
+Schedules use Cloudflare's native five-field UTC dialect (1=Sunday through 7=Saturday);
+named weekdays avoid migration ambiguity. Unsupported timezone/Quartz syntax and manifest
+drift fail explicitly. TaskRunner owns duplicate identity, attempt fencing, failure and timeout
+recovery. Select a durable Worker-compatible execution store before enabling schedules; no
+default store, new scheduler, host retry loop or exactly-once guarantee is supplied. Native
+workerd evidence does not certify Cloudflare deployment, the store or full SaaS providers.
+For operator recovery, use the returned callback's `retry` / `recoverTimeout` methods so the
+original Cron registry and application scope are retained. Inspect external effects first;
+timeout recovery records the operator reason and rejects another application's execution.
+Persisted provider/method identity must match the current Cron binding before any recovery mutation;
+reassigned names and missing target evidence fail closed.
+Native dispatch validates the record returned by common atomic admission before starting an
+attempt, so a retrying firing cannot resume on a reassigned target through duplicate delivery.
+
 ## Workers rate limiting
 
 `@croco/ratelimit-upstash` supports an explicit fetch-only `createUpstashRateLimitClient({ url, token })`

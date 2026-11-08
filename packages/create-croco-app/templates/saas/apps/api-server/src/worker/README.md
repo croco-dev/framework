@@ -1,0 +1,43 @@
+# Scheduled application services
+
+Put Worker-compatible `@Component` classes here. Add `@Cron` to a string-named method;
+the Worker compiler discovers it without a second handler/provider list.
+The generated Worker API package uses ESM so decorated services, the generated graph and
+the native Host read the same metadata module. Keep that module boundary when adding services.
+Inject `CLOUDFLARE_ENV_TOKEN` from `@croco/preset-cloudflare/application` for native bindings.
+The method receives `{ cron, scheduledTime }` and the common `TaskExecutionContext`.
+
+Schedules use Cloudflare's five-field UTC syntax: numeric weekdays are **1=Sunday through
+7=Saturday**. Named weekdays avoid ambiguity with other schedulers. The supported subset
+is wildcards, lists, ranges and steps, with named months/weekdays; Quartz extensions are rejected.
+Use `@Task({ timeout, maxAttempts, timeoutRetry })` on the same method to select common task
+policy. The default timeout is 30 seconds; zero/unbounded or over-15-minute timeouts fail.
+Long work belongs on a durable task/workflow transport, not inside a scheduled invocation.
+
+Before enabling a Cron, implement `createWorkerExecutionManager` in `workerScheduling.ts`
+using an explicitly selected Worker-compatible durable execution store. No in-memory store is
+selected by this template. The shared store must implement atomic identity/attempt fencing.
+Keep `applicationId` stable across replicas and different across independent applications.
+Duplicate deliveries share identity by application, binding, Cron and scheduled time; this
+does not guarantee exactly-once side effects. Failures and timeouts remain in the common
+execution ledger. The callback returned by `createWorkerApplication` exposes
+`scheduled.retry(executionId)` and `scheduled.recoverTimeout(executionId, reason)` using the same
+application registry and DI scope. Invoke them from an application-owned operator boundary after
+inspecting effects; no HTTP recovery route or automatic host retry loop is supplied.
+Cooperative abort does not undo or forcibly stop an external effect.
+
+Run `pnpm worker:crons:write` after changing declarations; review the manifest and
+Wrangler `[triggers].crons` diff. Build, dev and smoke run `worker:crons:check` and refuse stale
+output. Unsupported timezones/expressions and duplicate identities fail before deployment.
+Metadata collection runs a local workerd instance through the existing Wrangler toolchain,
+so services can statically import Worker modules such as `cloudflare:sockets`. It evaluates
+modules and decorators without constructing providers or invoking Cron methods. Keep import-time
+code free of resource access and side effects. No application bindings or secrets are attached.
+Named Wrangler environments inherit the compiled schedules unless they declare the same Cron list;
+divergent environment overrides fail both write and check. LF and CRLF ownership blocks are supported.
+Recovery also requires the persisted provider and method identity to match the current binding;
+reassigning a Cron name or missing identity evidence is rejected before recovery changes state.
+Native redelivery also validates the target returned by common atomic execution admission;
+the original target can still resume retrying attempts under the shared task policy.
+The scaffold remains bootstrap-only for SaaS capabilities. Local scheduled execution does
+not certify a live Cloudflare deployment or a persistence provider.

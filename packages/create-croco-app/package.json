@@ -67,12 +67,18 @@
     "yaml": "2.9.0"
   },
   "devDependencies": {
+    "@croco/esbuild-plugin": "workspace:*",
+    "@croco/preset-cloudflare": "workspace:*",
     "@croco/tenant-core": "workspace:*",
     "@types/fs-extra": "^11.0.0",
     "@types/handlebars": "^4.1.0",
+    "esbuild": "0.27.7",
+    "miniflare": "4.20260312.0",
     "tsup": "^8.5.1",
+    "tsx": "^4.0.0",
     "typescript": "^5.0.0",
-    "vitest": "4.1.8"
+    "vitest": "4.1.8",
+    "wrangler": "4.73.0"
   },
   "engines": {
     "node": ">=24"
