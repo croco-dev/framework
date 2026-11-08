@@ -9,7 +9,7 @@
         "packages/preset-cloudflare/package.json": "df2193f252d57d5ddc03cfeb3bfd71aa1ad7c9482ea99e1d0072159997723763",
         "packages/preset-cloudflare/tsup.config.ts": "536f871a143e477b26e62b3c6e66a7ae8dfaaaba5d38d7d45ea8de4073de7f31",
         "packages/preset-cloudflare/src/cron.ts": "f2a36d38103f5d9a3ccd1a864af7940876b597beb33b0d3202edcf9c7c3f19a6",
-        "packages/preset-cloudflare/src/scheduled.ts": "5c3319ec6dc5ca97df8beb8b2d0a86aaaf7812e1f7410ced815607af2e1ce6cb"
+        "packages/preset-cloudflare/src/scheduled.ts": "9198d8d7c145a0dc3eb2f7c7933125fa058442f6bb8728a8700719c0b40b658a"
       },
       "catalogRuntimes": ["cloudflare-workers"],
       "profiles": {
@@ -144,7 +144,7 @@
       "classification": "pure-contract",
       "reason": "Generated Problem registry types and runtime metadata include the scheduled Host and build-time Cron diagnostics; no Host, provider, storage or lifecycle behavior is added to the Kernel.",
       "files": {
-        "packages/problems-core/src/generated/problem-code-registry.ts": "85a05f643e0ae65b9ccb137651407d790f1be537f7352e2b1bf858c76e47bded"
+        "packages/problems-core/src/generated/problem-code-registry.ts": "ad016cfdf77a2e123523aa978b415a91f47d9ca01b646bc118426b3120b7507e"
       },
       "catalogRuntimes": [],
       "profiles": {

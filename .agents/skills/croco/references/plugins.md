@@ -53,6 +53,9 @@ drift fail explicitly. TaskRunner owns duplicate identity, attempt fencing, fail
 recovery. Select a durable Worker-compatible execution store before enabling schedules; no
 default store, new scheduler, host retry loop or exactly-once guarantee is supplied. Native
 workerd evidence does not certify Cloudflare deployment, the store or full SaaS providers.
+For operator recovery, use the returned callback's `retry` / `recoverTimeout` methods so the
+original Cron registry and application scope are retained. Inspect external effects first;
+timeout recovery records the operator reason and rejects another application's execution.
 
 ## Workers rate limiting
 

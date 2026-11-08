@@ -25,11 +25,17 @@ export type CloudflareCronInvocation = {
   readonly scheduledTime: number;
 };
 
-export type CloudflareScheduledHandler = (
-  controller: CloudflareScheduledController,
-  env: CloudflareFetchEnv,
-  context: CloudflareScheduledContext,
-) => Promise<void>;
+export type CloudflareScheduledHandler = {
+  (
+    controller: CloudflareScheduledController,
+    env: CloudflareFetchEnv,
+    context: CloudflareScheduledContext,
+  ): Promise<void>;
+  /** Retry through the same application-bound Cron registry and common task policy. */
+  readonly retry: (executionId: string) => Promise<unknown>;
+  /** Inspect external effects before recording operator recovery and retrying a timeout. */
+  readonly recoverTimeout: (executionId: string, reason: string) => Promise<unknown>;
+};
 
 export type CloudflareScheduledHandlerOptions = {
   readonly runtime: ApplicationRuntime;
@@ -152,7 +158,12 @@ export function createCloudflareScheduledHandler(
                   cron,
                   event.scheduledTime,
                 ]),
-                metadata: { host: "cloudflare-workers", cron, scheduledTime: event.scheduledTime },
+                metadata: {
+                  host: "cloudflare-workers",
+                  applicationId: options.applicationId,
+                  cron,
+                  scheduledTime: event.scheduledTime,
+                },
               });
             }),
           );
@@ -165,11 +176,39 @@ export function createCloudflareScheduledHandler(
     },
   );
 
-  return async (event, env, context) => {
-    const completion = invoke(event, env);
-    context.waitUntil(completion);
-    await completion;
-  };
+  const recover = options.runtime.bindHostCallback(async (executionId: string, reason?: string) => {
+    if (!runner || !options.executionManager) throw executionUnavailable();
+    const execution = await options.executionManager.get(executionId);
+    if (
+      execution.metadata?.host !== "cloudflare-workers" ||
+      execution.metadata.applicationId !== options.applicationId ||
+      !registry.get(execution.type)
+    ) {
+      throw ProblemFactory.badRequest(
+        "CLOUDFLARE_CRON_EXECUTION_MISMATCH",
+        "The execution does not belong to this application's Cron registry.",
+      );
+    }
+    return Context.run({ requestId: `cron:${options.applicationId}:recovery:${executionId}` }, () =>
+      reason === undefined ? runner.retry(executionId) : runner.recoverTimeout(executionId, reason),
+    );
+  });
+  const scheduled: CloudflareScheduledHandler = Object.assign(
+    async (
+      event: CloudflareScheduledController,
+      env: CloudflareFetchEnv,
+      context: CloudflareScheduledContext,
+    ) => {
+      const completion = invoke(event, env);
+      context.waitUntil(completion);
+      await completion;
+    },
+    {
+      retry: async (executionId: string) => recover(executionId),
+      recoverTimeout: async (executionId: string, reason: string) => recover(executionId, reason),
+    },
+  );
+  return scheduled;
 }
 
 export { compileCloudflareCrons, normalizeCloudflareCron } from "./cron";

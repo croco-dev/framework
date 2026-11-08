@@ -35,11 +35,12 @@ describe("Cloudflare scheduled handler", () => {
   async function fixture(
     method: (env: unknown, input: unknown, context: TaskExecutionContext) => Promise<unknown>,
     timeout = 30_000,
+    maxAttempts = 1,
   ) {
     class Reports {
       constructor(private readonly env: unknown) {}
       @Cron("*/5 * * * *", { name: "reports" })
-      @Task({ timeout })
+      @Task({ timeout, maxAttempts })
       run(input: unknown, task: TaskExecutionContext) {
         return method(this.env, input, task);
       }
@@ -69,7 +70,7 @@ describe("Cloudflare scheduled handler", () => {
     );
     await runtime.initialize();
     const store = new MemoryExecutionStore();
-    const manager = new ExecutionManagerImpl(store, { clock: () => new Date(event.scheduledTime) });
+    const manager = new ExecutionManagerImpl(store, { clock: () => new Date() });
     const options = {
       runtime,
       graph,
@@ -174,6 +175,105 @@ describe("Cloudflare scheduled handler", () => {
         { status: "failed", error: { code: "REPORT_INVALID" } },
       ]);
     } finally {
+      await app.runtime.dispose();
+    }
+  });
+
+  it("retries a named Cron execution with its original DI scope and rejects another application", async () => {
+    const seen: unknown[] = [];
+    const app = await fixture(
+      async (env, input, task) => {
+        seen.push({ env, input, attempt: task.attempt, requestId: Context.getRequestId() });
+        if (task.attempt === 1) throw ProblemFactory.badRequest("REPORT_INVALID", "Invalid report");
+        return "recovered";
+      },
+      30_000,
+      2,
+    );
+    try {
+      await expect(app.handler(event, app.options.env, context)).rejects.toThrow();
+      const execution = (await app.store.list()).at(0);
+      if (!execution) throw new Error("Missing failed execution");
+      const foreign = createCloudflareScheduledHandler({
+        ...app.options,
+        applicationId: "other-app",
+      });
+      await expect(foreign.retry(execution.id)).rejects.toMatchObject({
+        code: "CLOUDFLARE_CRON_EXECUTION_MISMATCH",
+      });
+      expect(await app.handler.retry(execution.id)).toBe("recovered");
+      expect(seen).toEqual([
+        {
+          env: app.options.env,
+          input: event,
+          attempt: 1,
+          requestId: `cron:reports-app:${event.scheduledTime}`,
+        },
+        {
+          env: app.options.env,
+          input: event,
+          attempt: 2,
+          requestId: `cron:reports-app:recovery:${execution.id}`,
+        },
+      ]);
+      expect(await app.store.list()).toMatchObject([
+        { status: "completed", attempts: 2, result: "recovered" },
+      ]);
+      expect(Context.get()).toBeNull();
+      await app.runtime.dispose();
+      await expect(app.handler.retry(execution.id)).rejects.toThrow();
+    } finally {
+      await app.runtime.dispose();
+    }
+  });
+
+  it("recovers an indeterminate timeout through the same Cron registry after recording operator evidence", async () => {
+    let entered: (() => void) | undefined;
+    let release: (() => void) | undefined;
+    const started = new Promise<void>((resolve) => {
+      entered = resolve;
+    });
+    const app = await fixture(
+      async (_env, _input, task) => {
+        if (task.attempt === 1) {
+          entered?.();
+          await new Promise<void>((resolve) => {
+            release = resolve;
+          });
+          return "late";
+        }
+        return "recovered";
+      },
+      25,
+      2,
+    );
+    try {
+      const rejected = expect(app.handler(event, app.options.env, context)).rejects.toMatchObject({
+        code: "tasks-core/execution-timeout",
+      });
+      await started;
+      await vi.advanceTimersByTimeAsync(25);
+      await rejected;
+      const execution = (await app.store.list()).at(0);
+      if (!execution) throw new Error("Missing timed out execution");
+      await expect(app.handler.retry(execution.id)).rejects.toMatchObject({
+        code: "execution/indeterminate-retry-blocked",
+      });
+      expect(await app.handler.recoverTimeout(execution.id, "External effects inspected")).toBe(
+        "recovered",
+      );
+      release?.();
+      await vi.advanceTimersByTimeAsync(0);
+      expect(await app.store.list()).toMatchObject([
+        {
+          status: "completed",
+          attempts: 2,
+          result: "recovered",
+          metadata: { timeoutRecovery: { reason: "External effects inspected" } },
+        },
+      ]);
+    } finally {
+      release?.();
       await app.runtime.dispose();
     }
   });

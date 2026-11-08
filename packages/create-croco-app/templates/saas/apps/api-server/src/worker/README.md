@@ -20,7 +20,10 @@ selected by this template. The shared store must implement atomic identity/attem
 Keep `applicationId` stable across replicas and different across independent applications.
 Duplicate deliveries share identity by application, binding, Cron and scheduled time; this
 does not guarantee exactly-once side effects. Failures and timeouts remain in the common
-execution ledger; use the existing task retry/recovery API instead of automatic host retries.
+execution ledger. The callback returned by `createWorkerApplication` exposes
+`scheduled.retry(executionId)` and `scheduled.recoverTimeout(executionId, reason)` using the same
+application registry and DI scope. Invoke them from an application-owned operator boundary after
+inspecting effects; no HTTP recovery route or automatic host retry loop is supplied.
 Cooperative abort does not undo or forcibly stop an external effect.
 
 Run `pnpm worker:crons:write` after changing declarations; review the manifest and

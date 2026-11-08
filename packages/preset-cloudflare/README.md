@@ -129,6 +129,13 @@ dispatch through the common task/workflow transport. Retryable failures follow T
 existing retry state; terminal failures and indeterminate timeouts require its existing recovery
 policy. There is no separate host retry loop or ledger.
 
+The returned scheduled callback also exposes `retry(executionId)` and
+`recoverTimeout(executionId, reason)`. Call these from an application-owned operator or
+transport boundary after inspecting the execution; the native entry exposes no HTTP recovery
+route. Both reuse the original Cron registry, task options and application DI scope, and reject
+executions from another application namespace before changing recovery state. Timeout recovery
+records the operator's reason through the common execution manager before retrying.
+
 The native scheduled adapter is Workers-only with `nodejs_compat`; Node and Lambda do not
 gain a scheduler. Local workerd tests cover DI/env forwarding, repeated firings, exception and
 timeout evidence, generated drift and the existing fetch path. Live Cloudflare deployment,
