@@ -204,7 +204,7 @@ describe.skipIf(connectionString.length === 0)(
       }
     });
 
-    it("rejects native JSONB null and string definitions instead of coercing metadata", async () => {
+    it("rejects non-object JSONB across readers without double-decoding string values", async () => {
       const client = new Client({ connectionString });
       await client.connect();
       try {
@@ -212,8 +212,20 @@ describe.skipIf(connectionString.length === 0)(
         const db = drizzle(client);
         await addMeterDefinitionFieldsPostgres(db);
         const repository = createRepository(db);
-        await repository.save({ tenantId: "t1", meterId: "api_calls", type: "COUNT" });
-        for (const metadata of [null, "{}"]) {
+        const saved = await repository.save({
+          tenantId: "t1",
+          meterId: "api_calls",
+          type: "COUNT",
+          metadata: { plan: "starter", effectiveAt: new Date("2026-01-02T03:04:05Z") },
+        });
+        expect(saved.metadata).toEqual({
+          plan: "starter",
+          effectiveAt: "2026-01-02T03:04:05.000Z",
+        });
+        expect((await repository.findByMeterIdAndTenant("api_calls", "t1"))?.metadata).toEqual(
+          saved.metadata,
+        );
+        for (const metadata of [null, [], 17, "{}", '{"plan":"starter"}']) {
           await client.query("UPDATE meters SET metadata = $1::jsonb WHERE tenant_id = $2", [
             JSON.stringify(metadata),
             "t1",
@@ -221,6 +233,10 @@ describe.skipIf(connectionString.length === 0)(
           await expect(repository.findByMeterIdAndTenant("api_calls", "t1")).rejects.toBeInstanceOf(
             InvalidMeterMetadataProblem,
           );
+          await expect(repository.findByTenant("t1")).rejects.toBeInstanceOf(
+            InvalidMeterMetadataProblem,
+          );
+          await expect(repository.findAll()).rejects.toBeInstanceOf(InvalidMeterMetadataProblem);
         }
       } finally {
         await client.end();

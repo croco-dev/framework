@@ -91,7 +91,7 @@ quota·billing 정책은 바뀌지 않으며, 정책 갱신에는 정상적인 �
 `@croco/metering-drizzle`도 저장 전에 같은 검증을 실행하며, 잘못된 저장 JSON이나 계약 밖의 조회 결과를
 빈 metadata로 대체하지 않습니다. 기존 행이 거절되면 오류의 meter/경로를 확인해 데이터를 수정한 후 다시
 조회·refresh해야 합니다. 최상위 JSON `null`·문자열이나 NULL metadata도 일반 객체로 정리해야 합니다.
-TEXT 컬럼의 JSON만 디코딩하며, 네이티브 JSON 컬럼의 문자열을 객체로 다시 해석하지 않습니다.
+TEXT와 PostgreSQL JSON/JSONB는 JSON 원문을 한 번 해석하며, JSON 문자열을 객체로 다시 해석하지 않습니다.
 저장 형식은 바뀌지 않습니다. 기본 Drizzle JSON codec은 metadata의 `Date`를 ISO
 문자열로 저장하고 조회에서도 문자열로 반환합니다. 메모리 내 `Date` 보존과 저장 후 날짜 복원은 별개입니다.
 

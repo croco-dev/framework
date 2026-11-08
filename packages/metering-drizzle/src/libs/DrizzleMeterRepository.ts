@@ -80,7 +80,7 @@ type DrizzleInsertQuery = {
 };
 
 type DrizzleMeterQueryClient = DrizzleInsertCapability<(table: Table) => DrizzleInsertQuery> &
-  DrizzleSelectCapability<() => DrizzleSelectQuery>;
+  DrizzleSelectCapability<(fields?: Record<string, AnyColumn | SQL>) => DrizzleSelectQuery>;
 
 function isOneOf<const T extends string>(values: readonly T[], value: unknown): value is T {
   return values.some((candidate) => candidate === value);
@@ -217,7 +217,7 @@ export class DrizzleMeterRepository extends MeterRepository {
     const client = this.getClient();
 
     const results = await client
-      .select()
+      .select(this.meterSelection())
       .from(this.meterTable)
       .where(and(eq(this.meterSchema.tenantId, tenantId), eq(this.meterSchema.meterId, meterId)))
       .limit(1);
@@ -292,7 +292,7 @@ export class DrizzleMeterRepository extends MeterRepository {
   async findAll(): Promise<MeterDefinition[]> {
     const client = this.getClient();
 
-    const results = await client.select().from(this.meterTable);
+    const results = await client.select(this.meterSelection()).from(this.meterTable);
 
     return (results as Record<string, unknown>[]).map((r) => this.mapToMeterDefinition(r));
   }
@@ -304,7 +304,7 @@ export class DrizzleMeterRepository extends MeterRepository {
     const client = this.getClient();
 
     const results = await client
-      .select()
+      .select(this.meterSelection())
       .from(this.meterTable)
       .where(eq(this.meterSchema.tenantId, tenantId));
 
@@ -397,6 +397,23 @@ export class DrizzleMeterRepository extends MeterRepository {
         await insertQuery.onConflictDoNothing();
       }
     }
+  }
+
+  private isPostgresJsonMetadata(): boolean {
+    return (
+      this.meterSchema.metadata.columnType === "PgJson" ||
+      this.meterSchema.metadata.columnType === "PgJsonb"
+    );
+  }
+
+  private meterSelection(): Record<string, AnyColumn | SQL> {
+    const columns = getTableColumns(this.meterTable);
+    if (!this.isPostgresJsonMetadata()) return columns;
+    // Read the JSON literal as text so the driver and column decoder cannot parse it twice.
+    return {
+      ...columns,
+      [this.meterColumnKeys.metadata]: sql`${this.meterSchema.metadata}::text`,
+    };
   }
 
   private isNativeJsonColumn(column: unknown): boolean {
@@ -496,7 +513,10 @@ export class DrizzleMeterRepository extends MeterRepository {
   ): MeterDefinitionMetadata | undefined {
     if (value === undefined) return undefined;
     let metadata: unknown = value;
-    if (typeof value === "string" && !this.isNativeJsonColumn(this.meterSchema.metadata)) {
+    if (
+      typeof value === "string" &&
+      (!this.isNativeJsonColumn(this.meterSchema.metadata) || this.isPostgresJsonMetadata())
+    ) {
       try {
         metadata = this.deserializeJson(value);
       } catch {

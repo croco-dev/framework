@@ -701,7 +701,7 @@ describe("DrizzleMeterRepository", () => {
     });
 
     it.each([null, [], 42, "{}", '{"plan":"starter"}'])(
-      "rejects non-object native JSONB metadata %s",
+      "rejects non-object PostgreSQL JSON literals %s",
       async (metadata) => {
         const limit = vi.fn().mockResolvedValue([
           {
@@ -714,7 +714,7 @@ describe("DrizzleMeterRepository", () => {
             unit: null,
             quota: null,
             allowOverQuota: 0,
-            metadata,
+            metadata: JSON.stringify(metadata),
             createdAt: new Date(),
             updatedAt: new Date(),
           },

@@ -61,7 +61,7 @@
       "classification": "pure-contract",
       "reason": "The existing Drizzle provider reuses the core metadata snapshot contract before writes and after JSON decoding. Invalid stored metadata fails explicitly; schema, codec representation and transaction ownership are unchanged.",
       "files": {
-        "packages/metering-drizzle/src/libs/DrizzleMeterRepository.ts": "b7e43282bfc48726671d33b0d8f4edcd3ceaa037d4c96d8d5048a6f8f3a1ee3a"
+        "packages/metering-drizzle/src/libs/DrizzleMeterRepository.ts": "6e241df6d3f2c99c2d64dc139e18ea3404ae606c35f2e6c48ebf2e4fe69fe0d3"
       },
       "catalogRuntimes": ["node", "lambda"],
       "profiles": {
