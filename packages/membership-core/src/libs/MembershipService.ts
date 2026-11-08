@@ -74,7 +74,7 @@ export class MembershipService implements MembershipManager {
     idempotencyKey: string,
   ): Promise<AddMembershipCommandResult> {
     this.ensureValidRole(role);
-    const alreadyExecuted = await this.store.hasExecutedCommand(idempotencyKey);
+    const alreadyExecuted = await this.store.hasExecutedCommand(tenantId, idempotencyKey);
     const configuredMaxSeats =
       !alreadyExecuted && this.seatLimitChecker
         ? await this.seatLimitChecker.getMaxSeats(tenantId)

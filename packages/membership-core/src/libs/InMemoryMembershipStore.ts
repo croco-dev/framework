@@ -39,8 +39,8 @@ export class InMemoryMembershipStore extends MembershipStore {
   private attemptOrdinal = 0;
   private commandTail: Promise<void> = Promise.resolve();
 
-  async hasExecutedCommand(idempotencyKey: string): Promise<boolean> {
-    return this.commandResults.has(idempotencyKey);
+  async hasExecutedCommand(tenantId: string, idempotencyKey: string): Promise<boolean> {
+    return this.commandResults.has(JSON.stringify([tenantId, idempotencyKey]));
   }
 
   async execute(command: MembershipCommand): Promise<MembershipCommandResult> {
@@ -60,7 +60,8 @@ export class InMemoryMembershipStore extends MembershipStore {
   private async executeAtomically(command: MembershipCommand): Promise<MembershipCommandResult> {
     this.validateCommand(command);
     const fingerprint = this.fingerprint(command);
-    const existing = this.commandResults.get(command.idempotencyKey);
+    const commandKey = JSON.stringify([command.tenantId, command.idempotencyKey]);
+    const existing = this.commandResults.get(commandKey);
     if (existing) {
       if (existing.fingerprint !== fingerprint) {
         throw new MembershipIdempotencyConflictProblem(command.idempotencyKey);
@@ -73,7 +74,7 @@ export class InMemoryMembershipStore extends MembershipStore {
       const result = await this.applyCommand(command);
       const storedResult = this.cloneResult(result, false);
       const intent = createMembershipEventIntent(command, storedResult, new Date());
-      this.commandResults.set(command.idempotencyKey, { fingerprint, result: storedResult });
+      this.commandResults.set(commandKey, { fingerprint, result: storedResult });
       if (intent) this.eventIntents.set(intent.intentId, intent);
       return this.cloneResult(storedResult, false);
     } catch (error) {
@@ -83,9 +84,12 @@ export class InMemoryMembershipStore extends MembershipStore {
     }
   }
 
-  async getPendingEventIntent(idempotencyKey: string): Promise<MembershipEventIntent | null> {
+  async getPendingEventIntent(
+    tenantId: string,
+    idempotencyKey: string,
+  ): Promise<MembershipEventIntent | null> {
     const intent = [...this.eventIntents.values()].find(
-      (candidate) => candidate.idempotencyKey === idempotencyKey,
+      (candidate) => candidate.tenantId === tenantId && candidate.idempotencyKey === idempotencyKey,
     );
     return intent ? cloneMembershipEventIntent(intent) : null;
   }

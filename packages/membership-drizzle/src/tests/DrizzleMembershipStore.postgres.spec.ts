@@ -22,7 +22,11 @@ import {
 import { addMembershipEventIntents } from "../migrations/membershipEventIntents";
 import { addMembershipSeatOrdinals } from "../migrations/addMembershipSeatOrdinals";
 
-import { addMembershipEventRelayAttempts, setMembershipTimestampDefaults } from "../index";
+import {
+  addMembershipEventRelayAttempts,
+  setMembershipTimestampDefaults,
+  scopeMembershipCommandsByTenant,
+} from "../index";
 
 const connectionString = process.env.MEMBERSHIP_POSTGRES_URL ?? "";
 
@@ -65,6 +69,7 @@ describe.skipIf(connectionString.length === 0)(
       await addMembershipSeatOrdinals({ execute: (query) => db.execute(query) });
       await setMembershipTimestampDefaults({ execute: (query) => db.execute(query) });
       await addMembershipEventIntents({ execute: (query) => db.execute(query) });
+      await scopeMembershipCommandsByTenant({ execute: (query) => db.execute(query) });
       await addMembershipEventRelayAttempts({ execute: (query) => db.execute(query) });
     });
 
@@ -82,6 +87,211 @@ describe.skipIf(connectionString.length === 0)(
     afterAll(async () => {
       await pool.end();
     });
+
+    it("allows another tenant's same key to commit before the first transaction releases", async () => {
+      let committed!: () => void;
+      const firstCommitted = new Promise<void>((resolve) => {
+        committed = resolve;
+      });
+      let release!: () => void;
+      const held = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      const first = txManager.run(async () => {
+        await service.addMember("tenant-held", "alice", "member", "shared");
+        committed();
+        await held;
+      });
+      try {
+        await Promise.race([firstCommitted, first]);
+        await txManager.run(async () => {
+          const client = txManager.getClient();
+          if (!client) throw new Error("test transaction missing");
+          await client.execute(sql`set local statement_timeout = '2s'`);
+          await expect(
+            service.addMember("tenant-free", "bob", "admin", "shared"),
+          ).resolves.toMatchObject({ tenantId: "tenant-free", role: "admin" });
+        });
+      } finally {
+        release();
+        await first;
+      }
+      await expect(store.listPendingEventIntents()).resolves.toHaveLength(2);
+    });
+
+    it.each(["constraint", "index"] as const)(
+      "atomically migrates legacy commands with a unique %s while preserving replay and publication identities",
+      async (legacyUnique) => {
+        const connection = await pool.connect();
+        try {
+          await connection.query("create schema legacy_membership_3660");
+          await connection.query(`
+          create schema legacy_membership_shadow_3660;
+          create table legacy_membership_shadow_3660.membership_event_intents (idempotency_key text);
+          create unique index membership_event_intents_idempotency_unique
+            on legacy_membership_shadow_3660.membership_event_intents(idempotency_key);
+          set search_path to legacy_membership_3660, legacy_membership_shadow_3660, public;
+        `);
+          await connection.query(`
+          create table memberships (like public.memberships including all);
+          create table membership_idempotency_records (
+            key text primary key, fingerprint text not null, result jsonb not null,
+            committed_at timestamptz not null default now()
+          );
+          create table membership_event_intents (
+            intent_id text primary key,
+            idempotency_key text not null references membership_idempotency_records(key),
+            events jsonb not null, published_at timestamptz,
+            last_attempted_at timestamptz, created_at timestamptz not null default now(),
+            constraint membership_event_intents_idempotency_unique unique (idempotency_key)
+          );
+        `);
+          if (legacyUnique === "index") {
+            await connection.query(`
+            alter table membership_event_intents drop constraint membership_event_intents_idempotency_unique;
+            create unique index membership_event_intents_idempotency_unique
+              on membership_event_intents(idempotency_key);
+          `);
+          }
+          const membership = {
+            id: "legacy-member",
+            tenantId: "legacy",
+            userId: "user",
+            role: "member",
+            createdAt: "2026-01-02T03:04:05.000Z",
+            updatedAt: "2026-01-02T03:04:05.000Z",
+          };
+          const results = [
+            { operation: "add", membership, replayed: false },
+            { operation: "remove", membership, replayed: false },
+            { operation: "update_role", membership, previousRole: "member", replayed: false },
+            {
+              operation: "transfer_ownership",
+              fromMembership: membership,
+              toMembership: { ...membership, id: "target", userId: "target", role: "owner" },
+              previousToRole: "member",
+              replayed: false,
+            },
+          ];
+          for (const result of results) {
+            const key = result.operation;
+            const fingerprint =
+              key === "add"
+                ? '{"operation":"add","role":"member","tenantId":"legacy","userId":"user"}'
+                : "retained-fingerprint";
+            await connection.query(
+              "insert into membership_idempotency_records (key, fingerprint, result) values ($1, $2, $3)",
+              [key, fingerprint, JSON.stringify(result)],
+            );
+          }
+          const events = [
+            {
+              eventId: "already-delivered-event",
+              eventName: "membership.created",
+              occurredAt: "2026-01-02T03:04:05.000Z",
+              data: { tenantId: "wrong", userId: "user", role: "member" },
+            },
+          ];
+          await connection.query(
+            `
+          insert into membership_event_intents
+            (intent_id, idempotency_key, events, published_at, last_attempted_at)
+          values ('legacy-intent', 'add', $1, null, '2026-01-03T00:00:00Z'),
+            ('published-intent', 'remove', $1, '2026-01-04T00:00:00Z', '2026-01-03T00:00:00Z')`,
+            [JSON.stringify(events)],
+          );
+          const db = drizzle(connection);
+          await addMembershipEventIntents(db);
+          await addMembershipEventRelayAttempts(db);
+          await expect(scopeMembershipCommandsByTenant(db)).rejects.toThrow();
+          // The failed statement must roll back its DDL as well as the backfill.
+          expect(
+            (
+              await connection.query(`
+          select column_name from information_schema.columns
+          where table_schema = 'legacy_membership_3660' and column_name = 'tenant_id'
+            and table_name in ('membership_idempotency_records', 'membership_event_intents')
+        `)
+            ).rows,
+          ).toEqual([]);
+          events[0].data.tenantId = "legacy";
+          await connection.query("update membership_event_intents set events = $1", [
+            JSON.stringify(events),
+          ]);
+          const beforeCommands = (
+            await connection.query("select * from membership_idempotency_records order by key")
+          ).rows;
+          const beforeIntents = (
+            await connection.query("select * from membership_event_intents order by intent_id")
+          ).rows;
+          await scopeMembershipCommandsByTenant(db);
+          await scopeMembershipCommandsByTenant(db);
+          expect(
+            (
+              await connection.query(`
+          select to_regclass('legacy_membership_shadow_3660.membership_event_intents_idempotency_unique') is not null as preserved
+        `)
+            ).rows,
+          ).toEqual([{ preserved: true }]);
+          await connection.query(`
+          insert into legacy_membership_shadow_3660.membership_event_intents values ('retained');
+        `);
+          await expect(
+            connection.query(`
+          insert into legacy_membership_shadow_3660.membership_event_intents values ('retained');
+        `),
+          ).rejects.toMatchObject({ code: "23505" });
+          expect(
+            (await connection.query("select * from membership_idempotency_records order by key"))
+              .rows,
+          ).toEqual(beforeCommands.map((row) => ({ ...row, tenant_id: "legacy" })));
+          expect(
+            (await connection.query("select * from membership_event_intents order by intent_id"))
+              .rows,
+          ).toEqual(beforeIntents.map((row) => ({ ...row, tenant_id: "legacy" })));
+          const client = db as unknown as DrizzleMembershipClient;
+          const migrated = new DrizzleMembershipStore(
+            client,
+            new TxManager(createDrizzleTxAdapter(client)),
+          );
+          const migratedService = new MembershipService({ store: migrated });
+          await expect(
+            migratedService.addMemberCommand("legacy", "user", "member", "add"),
+          ).resolves.toMatchObject({ replayed: true, membership: { id: "legacy-member" } });
+          await expect(
+            migratedService.addMemberCommand("other", "new-user", "admin", "add"),
+          ).resolves.toMatchObject({ replayed: false, membership: { tenantId: "other" } });
+          await expect(migrated.getPendingEventIntent("legacy", "add")).resolves.toMatchObject({
+            intentId: "legacy-intent",
+            events: [{ eventId: "already-delivered-event" }],
+          });
+          await expect(migrated.getPendingEventIntent("legacy", "remove")).resolves.toBeNull();
+          const delivered: string[] = [];
+          const relay = new MembershipService({
+            store: migrated,
+            eventPublisher: {
+              publishIdempotently: async (event) => {
+                delivered.push(event.eventId);
+              },
+            },
+          });
+          await expect(relay.publishPendingEvents()).resolves.toBe(2);
+          expect(delivered).toContain("already-delivered-event");
+          await expect(migrated.getPendingEventIntent("legacy", "add")).resolves.toBeNull();
+          await expect(
+            connection.query(`
+          insert into membership_event_intents (intent_id, tenant_id, idempotency_key, events)
+          values ('bad-reference', 'unknown-tenant', 'add', '[]')
+        `),
+          ).rejects.toMatchObject({ code: "23503" });
+        } finally {
+          await connection.query("set search_path to public");
+          await connection.query("drop schema if exists legacy_membership_3660 cascade");
+          await connection.query("drop schema if exists legacy_membership_shadow_3660 cascade");
+          connection.release();
+        }
+      },
+    );
 
     it("rotates failed tenant heads across relay restarts without overtaking pending transitions", async () => {
       for (let index = 0; index < 3; index += 1) {
@@ -118,7 +328,7 @@ describe.skipIf(connectionString.length === 0)(
         extensions: { publishedCount: 1, failedIdempotencyKeys: ["failed-2"] },
       });
       expect(delivered).toEqual(["healthy"]);
-      await expect(restartedStore.getPendingEventIntent("healthy")).resolves.toBeNull();
+      await expect(restartedStore.getPendingEventIntent("healthy", "healthy")).resolves.toBeNull();
       const pending = await pool.query(
         "select idempotency_key, last_attempted_at from membership_event_intents where published_at is null order by idempotency_key",
       );
@@ -196,8 +406,12 @@ describe.skipIf(connectionString.length === 0)(
       await expect(
         store.findByTenantAndUser("tenant-sole-demotion", "owner"),
       ).resolves.toMatchObject({ role: "owner" });
-      await expect(store.hasExecutedCommand("demote:sole-owner")).resolves.toBe(false);
-      await expect(store.getPendingEventIntent("demote:sole-owner")).resolves.toBeNull();
+      await expect(
+        store.hasExecutedCommand("tenant-sole-demotion", "demote:sole-owner"),
+      ).resolves.toBe(false);
+      await expect(
+        store.getPendingEventIntent("tenant-sole-demotion", "demote:sole-owner"),
+      ).resolves.toBeNull();
     });
 
     it("rejects sole-owner removal without recording a command or event intent", async () => {
@@ -212,8 +426,12 @@ describe.skipIf(connectionString.length === 0)(
       await expect(
         store.findByTenantAndUser("tenant-sole-removal", "owner"),
       ).resolves.toMatchObject({ role: "owner" });
-      await expect(store.hasExecutedCommand("remove:sole-owner")).resolves.toBe(false);
-      await expect(store.getPendingEventIntent("remove:sole-owner")).resolves.toBeNull();
+      await expect(
+        store.hasExecutedCommand("tenant-sole-removal", "remove:sole-owner"),
+      ).resolves.toBe(false);
+      await expect(
+        store.getPendingEventIntent("tenant-sole-removal", "remove:sole-owner"),
+      ).resolves.toBeNull();
     });
 
     it("replays a successful owner removal with one recoverable event intent", async () => {
@@ -234,7 +452,9 @@ describe.skipIf(connectionString.length === 0)(
       });
       await expect(store.findByTenantAndUser("tenant-1", "owner-a")).resolves.toBeNull();
       await expect(store.countByRole("tenant-1", "owner")).resolves.toBe(1);
-      await expect(store.getPendingEventIntent(command.idempotencyKey)).resolves.toMatchObject({
+      await expect(
+        store.getPendingEventIntent(command.tenantId, command.idempotencyKey),
+      ).resolves.toMatchObject({
         events: [{ eventName: "membership.removed" }],
       });
     });
@@ -259,7 +479,9 @@ describe.skipIf(connectionString.length === 0)(
         replayed: true,
       });
       await expect(store.countByRole("tenant-1", "owner")).resolves.toBe(1);
-      await expect(store.getPendingEventIntent(command.idempotencyKey)).resolves.toMatchObject({
+      await expect(
+        store.getPendingEventIntent(command.tenantId, command.idempotencyKey),
+      ).resolves.toMatchObject({
         events: [{ eventName: "membership.updated" }],
       });
     });
@@ -382,7 +604,7 @@ describe.skipIf(connectionString.length === 0)(
         }),
       ).rejects.toBeInstanceOf(SeatLimitExceededProblem);
       await expect(store.countAll("tenant-1")).resolves.toBe(2);
-      await expect(store.hasExecutedCommand("add:user-7")).resolves.toBe(false);
+      await expect(store.hasExecutedCommand("tenant-1", "add:user-7")).resolves.toBe(false);
     });
 
     it.each([
@@ -441,10 +663,13 @@ describe.skipIf(connectionString.length === 0)(
       await expect(
         store.findByTenantAndUser("tenant-rollback", "user-rollback"),
       ).resolves.toBeNull();
-      await expect(store.hasExecutedCommand("rollback-add")).resolves.toBe(false);
+      await expect(store.hasExecutedCommand("tenant-rollback", "rollback-add")).resolves.toBe(
+        false,
+      );
 
       const db = drizzle(pool);
       await addMembershipEventIntents({ execute: (query) => db.execute(query) });
+      await scopeMembershipCommandsByTenant({ execute: (query) => db.execute(query) });
       await addMembershipEventRelayAttempts({ execute: (query) => db.execute(query) });
     });
 
@@ -575,8 +800,8 @@ describe.skipIf(connectionString.length === 0)(
       await expect(store.countByRole("tenant-1", "owner")).resolves.toBe(1);
       await expect(
         Promise.all([
-          store.hasExecutedCommand("remove:owner-a"),
-          store.hasExecutedCommand("remove:owner-b"),
+          store.hasExecutedCommand("tenant-1", "remove:owner-a"),
+          store.hasExecutedCommand("tenant-1", "remove:owner-b"),
         ]),
       ).resolves.toEqual(expect.arrayContaining([true, false]));
       await expect(store.listPendingEventIntents()).resolves.toMatchObject([
@@ -611,6 +836,7 @@ describe.skipIf(connectionString.length === 0).each(["UTC", "Asia/Seoul"])(
       await addMembershipSeatOrdinals({ execute: (query) => db.execute(query) });
       await setMembershipTimestampDefaults({ execute: (query) => db.execute(query) });
       await addMembershipEventIntents({ execute: (query) => db.execute(query) });
+      await scopeMembershipCommandsByTenant({ execute: (query) => db.execute(query) });
       await addMembershipEventRelayAttempts({ execute: (query) => db.execute(query) });
     });
 

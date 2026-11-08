@@ -12,9 +12,12 @@ import type { MembershipEventIntent } from "./eventIntent";
 
 export abstract class MembershipStore {
   abstract readonly eventIntentDurability: "persistent" | "volatile";
-  abstract hasExecutedCommand(idempotencyKey: string): Promise<boolean>;
+  abstract hasExecutedCommand(tenantId: string, idempotencyKey: string): Promise<boolean>;
   abstract execute(command: MembershipCommand): Promise<MembershipCommandResult>;
-  abstract getPendingEventIntent(idempotencyKey: string): Promise<MembershipEventIntent | null>;
+  abstract getPendingEventIntent(
+    tenantId: string,
+    idempotencyKey: string,
+  ): Promise<MembershipEventIntent | null>;
   /** Returns only the oldest pending intent per tenant, least recently attempted first. */
   abstract listPendingEventIntents(limit?: number): Promise<readonly MembershipEventIntent[]>;
   /** Records an attempt before external publication so bounded retries rotate across tenants. */

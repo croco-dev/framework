@@ -8,20 +8,25 @@ export type MembershipMigrationClient = {
 export async function addMembershipEventIntents(client: MembershipMigrationClient): Promise<void> {
   await client.execute(sql`
     create table if not exists membership_idempotency_records (
-      key text primary key,
+      tenant_id text not null,
+      key text not null,
       fingerprint text not null,
       result jsonb not null,
-      committed_at timestamptz not null default now()
+      committed_at timestamptz not null default now(),
+      primary key (tenant_id, key)
     )
   `);
   await client.execute(sql`
     create table if not exists membership_event_intents (
       intent_id text primary key,
-      idempotency_key text not null references membership_idempotency_records(key),
+      tenant_id text not null,
+      idempotency_key text not null,
       events jsonb not null,
       published_at timestamptz,
       created_at timestamptz not null default now(),
-      constraint membership_event_intents_idempotency_unique unique (idempotency_key)
+      constraint membership_event_intents_tenant_idempotency_unique unique (tenant_id, idempotency_key),
+      constraint membership_event_intents_tenant_command_fk foreign key (tenant_id, idempotency_key)
+        references membership_idempotency_records(tenant_id, key)
     )
   `);
   await client.execute(sql`

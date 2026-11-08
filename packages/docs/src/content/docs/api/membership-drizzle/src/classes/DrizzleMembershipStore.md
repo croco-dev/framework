@@ -189,9 +189,13 @@ Drizzle 클라이언트와 트랜잭션 매니저를 받아 저장소를 초기�
 
 ### getPendingEventIntent()
 
-> **getPendingEventIntent**(`idempotencyKey`): `Promise`\<[`MembershipEventIntent`](/api/membership-core/src/type-aliases/membershipeventintent/) \| `null`\>
+> **getPendingEventIntent**(`tenantId`, `idempotencyKey`): `Promise`\<[`MembershipEventIntent`](/api/membership-core/src/type-aliases/membershipeventintent/) \| `null`\>
 
 #### Parameters
+
+##### tenantId
+
+`string`
 
 ##### idempotencyKey
 
@@ -209,9 +213,13 @@ Drizzle 클라이언트와 트랜잭션 매니저를 받아 저장소를 초기�
 
 ### hasExecutedCommand()
 
-> **hasExecutedCommand**(`idempotencyKey`): `Promise`\<`boolean`\>
+> **hasExecutedCommand**(`tenantId`, `idempotencyKey`): `Promise`\<`boolean`\>
 
 #### Parameters
+
+##### tenantId
+
+`string`
 
 ##### idempotencyKey
 

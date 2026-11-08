@@ -6,6 +6,8 @@ import type {
 import {
   bigint,
   index,
+  foreignKey,
+  primaryKey,
   jsonb,
   pgSequence,
   pgTable,
@@ -46,20 +48,24 @@ export const memberships = pgTable(
   ],
 );
 
-export const membershipIdempotencyRecords = pgTable("membership_idempotency_records", {
-  key: text("key").primaryKey(),
-  fingerprint: text("fingerprint").notNull(),
-  result: jsonb("result").notNull().$type<MembershipCommandResult>(),
-  committedAt: timestamp("committed_at", { withTimezone: true }).notNull().defaultNow(),
-});
+export const membershipIdempotencyRecords = pgTable(
+  "membership_idempotency_records",
+  {
+    tenantId: text("tenant_id").notNull(),
+    key: text("key").notNull(),
+    fingerprint: text("fingerprint").notNull(),
+    result: jsonb("result").notNull().$type<MembershipCommandResult>(),
+    committedAt: timestamp("committed_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [primaryKey({ columns: [table.tenantId, table.key] })],
+);
 
 export const membershipEventIntents = pgTable(
   "membership_event_intents",
   {
     intentId: text("intent_id").primaryKey(),
-    idempotencyKey: text("idempotency_key")
-      .notNull()
-      .references(() => membershipIdempotencyRecords.key),
+    tenantId: text("tenant_id").notNull(),
+    idempotencyKey: text("idempotency_key").notNull(),
     events: jsonb("events").notNull().$type<readonly MembershipEventIntentEvent[]>(),
     publishedAt: timestamp("published_at", { withTimezone: true }),
     lastAttemptedAt: timestamp("last_attempted_at", { withTimezone: true }),
@@ -68,7 +74,15 @@ export const membershipEventIntents = pgTable(
       .default(sql`clock_timestamp()`),
   },
   (table) => [
-    uniqueIndex("membership_event_intents_idempotency_unique").on(table.idempotencyKey),
+    uniqueIndex("membership_event_intents_tenant_idempotency_unique").on(
+      table.tenantId,
+      table.idempotencyKey,
+    ),
+    foreignKey({
+      name: "membership_event_intents_tenant_command_fk",
+      columns: [table.tenantId, table.idempotencyKey],
+      foreignColumns: [membershipIdempotencyRecords.tenantId, membershipIdempotencyRecords.key],
+    }),
     index("membership_event_intents_tenant_pending_idx")
       .on(sql`(${table.events}->0->'data'->>'tenantId')`, table.createdAt, table.intentId)
       .where(sql`${table.publishedAt} is null`),

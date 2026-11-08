@@ -85,3 +85,13 @@ await manager.publishPendingEvents();
 커스텀 `MembershipStore`는 `markEventIntentAttempted(intentId)`를 구현하고,
 `listPendingEventIntents()`에서 테넌트별 선행 intent와 가장 오래된 시도 순서를 보장해야 합니다.
 이 메서드는 전체 미발행 이력 조회가 아니라 다음 relay 처리 후보를 반환합니다.
+
+멱등성 키는 테넌트 안에서 유일합니다. 서로 다른 테넌트는 같은 키를 독립적으로 사용할 수 있고,
+같은 테넌트의 동일 요청은 최초 결과를 반환합니다. 같은 테넌트에서 다른 요청에 키를 재사용하면
+`MembershipIdempotencyConflictProblem`이 발생합니다. 커스텀 저장소도 명령 기록, 잠금, event intent를
+`tenantId`와 키의 조합으로 구분해야 합니다.
+
+저장소 조회는 `hasExecutedCommand(tenantId, idempotencyKey)`와
+`getPendingEventIntent(tenantId, idempotencyKey)`를 사용합니다. `MembershipEventIntent.tenantId`는
+명령의 테넌트이며, 새 intent와 event ID에는 이 테넌트가 포함됩니다. relay의 ID 기반 시도·완료 기록은
+해당 intent만 변경합니다. PostgreSQL 업그레이드는 `@croco/membership-drizzle`의 migration 지침을 따릅니다.

@@ -41,6 +41,54 @@ function createService(
 }
 
 describe("MembershipService atomic commands", () => {
+  it("keeps same-key commands, replays and publication independent across tenants", async () => {
+    const store = new InMemoryMembershipStore();
+    const delivered = new Map<string, string>();
+    const service = new MembershipService({
+      store,
+      eventDelivery: "development",
+      eventPublisher: {
+        publishIdempotently: async (event) => {
+          delivered.set(event.eventId, (event as MembershipCreatedEvent).data.tenantId);
+        },
+      },
+    });
+    const results = await Promise.all([
+      service.addMemberCommand("tenant-a", "alice", "admin", "create-owner"),
+      service.addMemberCommand("tenant-b", "bob", "member", "create-owner"),
+    ]);
+    expect(results.map((result) => result.replayed)).toEqual([false, false]);
+    await expect(
+      service.addMemberCommand("tenant-b", "bob", "member", "create-owner"),
+    ).resolves.toMatchObject({ replayed: true, membership: results[1]?.membership });
+    await expect(
+      service.addMemberCommand("tenant-a", "mallory", "admin", "create-owner"),
+    ).rejects.toBeInstanceOf(MembershipIdempotencyConflictProblem);
+    await expect(service.publishPendingEvents()).resolves.toBe(2);
+    expect([...delivered.values()].sort()).toEqual(["tenant-a", "tenant-b"]);
+    await expect(service.publishPendingEvents()).resolves.toBe(0);
+  });
+
+  it("checks a new tenant's seat quota when another tenant has used the same key", async () => {
+    const store = new InMemoryMembershipStore();
+    const getMaxSeats = vi.fn(async (tenantId: string) => (tenantId === "full" ? 0 : 2));
+    const service = new MembershipService({
+      store,
+      eventDelivery: "development",
+      seatLimitChecker: {
+        getMaxSeats,
+        getCurrentMemberCount: async (tenantId) => store.countAll(tenantId),
+        checkSeatAvailability: async () => ({ usage: 0, quota: 2, exceeded: false, remaining: 2 }),
+      },
+    });
+    await service.addMember("open", "alice", "member", "add-member");
+    await expect(service.addMember("full", "bob", "member", "add-member")).rejects.toBeInstanceOf(
+      SeatLimitExceededProblem,
+    );
+    expect(getMaxSeats.mock.calls).toEqual([["open"], ["full"]]);
+    await expect(store.countAll("full")).resolves.toBe(0);
+  });
+
   it.each(["admin", "member", "viewer"] as const)(
     "rejects %s promotion to owner without recording a command or event",
     async (role) => {
@@ -54,7 +102,9 @@ describe("MembershipService atomic commands", () => {
       await expect(store.findByTenantAndUser("tenant-1", "member")).resolves.toMatchObject({
         role,
       });
-      await expect(store.hasExecutedCommand("forbidden-promotion")).resolves.toBe(false);
+      await expect(store.hasExecutedCommand("tenant-1", "forbidden-promotion")).resolves.toBe(
+        false,
+      );
       await expect(store.listPendingEventIntents()).resolves.toHaveLength(0);
       await expect(
         store.execute({
@@ -325,7 +375,7 @@ describe("MembershipService atomic commands", () => {
       id: "membership-1",
       role: "member",
     });
-    await expect(store.getPendingEventIntent("add:user-1")).resolves.toMatchObject({
+    await expect(store.getPendingEventIntent("tenant-1", "add:user-1")).resolves.toMatchObject({
       idempotencyKey: "add:user-1",
     });
 
@@ -337,7 +387,7 @@ describe("MembershipService atomic commands", () => {
     await expect(service.publishPendingEvents()).resolves.toBe(1);
     expect(published).toHaveLength(1);
     expect(published[0]?.eventId).toMatch(/^[a-f0-9]{64}$/u);
-    await expect(store.getPendingEventIntent("add:user-1")).resolves.toBeNull();
+    await expect(store.getPendingEventIntent("tenant-1", "add:user-1")).resolves.toBeNull();
   });
 
   it("publishes an independent tenant after a failure without overtaking that tenant's pending transition", async () => {
@@ -359,9 +409,9 @@ describe("MembershipService atomic commands", () => {
     expect(error).toMatchObject({
       extensions: { publishedCount: 1, failedIdempotencyKeys: ["a-add"] },
     });
-    await expect(store.getPendingEventIntent("a-add")).resolves.not.toBeNull();
-    await expect(store.getPendingEventIntent("a-promote")).resolves.not.toBeNull();
-    await expect(store.getPendingEventIntent("b-add")).resolves.toBeNull();
+    await expect(store.getPendingEventIntent("tenant-a", "a-add")).resolves.not.toBeNull();
+    await expect(store.getPendingEventIntent("tenant-a", "a-promote")).resolves.not.toBeNull();
+    await expect(store.getPendingEventIntent("tenant-b", "b-add")).resolves.toBeNull();
     expect((error as Error).cause).toBeInstanceOf(AggregateError);
     expect(((error as Error).cause as AggregateError).errors[0].cause).toBe(failure);
   });
@@ -384,8 +434,8 @@ describe("MembershipService atomic commands", () => {
       expect(delivered).toEqual(
         method === "markEventIntentAttempted" ? ["tenant-b"] : ["tenant-a", "tenant-b"],
       );
-      await expect(store.getPendingEventIntent("a-add")).resolves.not.toBeNull();
-      await expect(store.getPendingEventIntent("b-add")).resolves.toBeNull();
+      await expect(store.getPendingEventIntent("tenant-a", "a-add")).resolves.not.toBeNull();
+      await expect(store.getPendingEventIntent("tenant-b", "b-add")).resolves.toBeNull();
       await expect(service.publishPendingEvents()).resolves.toBe(1);
     },
   );
@@ -414,7 +464,7 @@ describe("MembershipService atomic commands", () => {
       extensions: { publishedCount: 1, failedIdempotencyKeys: ["failed-2"] },
     });
     expect(delivered).toEqual(["healthy"]);
-    await expect(store.getPendingEventIntent("healthy")).resolves.toBeNull();
+    await expect(store.getPendingEventIntent("healthy", "healthy")).resolves.toBeNull();
   });
 
   it("rejects semantic reuse of an idempotency key", async () => {
@@ -474,7 +524,7 @@ describe("MembershipService atomic commands", () => {
     await expect(service.publishPendingEvents()).rejects.toBeInstanceOf(
       MembershipEventPublicationProblem,
     );
-    await expect(store.getPendingEventIntent("transfer-1")).resolves.toMatchObject({
+    await expect(store.getPendingEventIntent("tenant-1", "transfer-1")).resolves.toMatchObject({
       events: [{ eventName: "membership.updated" }, { eventName: "membership.updated" }],
     });
 

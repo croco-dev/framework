@@ -1,0 +1,116 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "membership-core",
+      "classification": "pure-contract",
+      "reason": "Bind membership command replay, lookup and event identities to tenant plus key; preserve recorded results and publication identities during PostgreSQL migration. Role authorization, membership invariants and runtime support claims are unchanged.",
+      "files": {
+        "packages/membership-core/src/libs/InMemoryMembershipStore.ts": "68ca4674b9d810d476ad4ff31aa4a7eaad38d1ce5815e23d05e24643c7642f5c",
+        "packages/membership-core/src/libs/MembershipService.ts": "a041262970728ed11296fedbb373785af0c8816233008cffdf9d27637f53aac1",
+        "packages/membership-core/src/libs/MembershipStore.ts": "182df68bf67fff5b99a72175e67c367194010ae50b0957d5b65b394a86c42986",
+        "packages/membership-core/src/libs/conformance.ts": "09d43b4fb15e6663ab1d5bbfb49c2b4499e51a703e559fb17505c7c6ac62ca03",
+        "packages/membership-core/src/libs/eventIntent.ts": "03a926f56c191b1e600de513a04945827accbcacf276a1caf130fe048d6bd1a2"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Tenant-scoped command identity and lookup contracts reuse existing pure in-process logic and hashing without adding Node Host capabilities, external storage or lifecycle requirements.",
+          "providers": ["@croco/membership-core::MembershipStore"],
+          "constraints": [
+            "The in-memory store is volatile. Runtime claims remain unchanged; this decision does not claim deployment or provider certification."
+          ],
+          "references": [
+            "packages/membership-core/README.md",
+            "packages/membership-core/src/libs/MembershipStore.ts",
+            "packages/membership-drizzle/src/tests/DrizzleMembershipStore.postgres.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Tenant-scoped command identity and lookup contracts reuse existing pure in-process logic and hashing without adding Lambda Host capabilities, external storage or lifecycle requirements.",
+          "providers": ["@croco/membership-core::MembershipStore"],
+          "constraints": [
+            "The in-memory store is volatile. Runtime claims remain unchanged; this decision does not claim deployment or provider certification."
+          ],
+          "references": [
+            "packages/membership-core/README.md",
+            "packages/membership-core/src/libs/MembershipStore.ts",
+            "packages/membership-drizzle/src/tests/DrizzleMembershipStore.postgres.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Tenant-scoped command identity and lookup contracts reuse existing pure in-process logic and hashing without adding Workers Host capabilities, external storage or lifecycle requirements.",
+          "providers": ["@croco/membership-core::MembershipStore"],
+          "constraints": [
+            "The in-memory store is volatile. Runtime claims remain unchanged; this decision does not claim deployment or provider certification."
+          ],
+          "references": [
+            "packages/membership-core/README.md",
+            "packages/membership-core/src/libs/MembershipStore.ts",
+            "packages/membership-drizzle/src/tests/DrizzleMembershipStore.postgres.spec.ts"
+          ]
+        }
+      }
+    },
+    {
+      "package": "membership-drizzle",
+      "classification": "durable-provider",
+      "reason": "Bind membership command replay, lookup and event identities to tenant plus key; preserve recorded results and publication identities during PostgreSQL migration. Role authorization, membership invariants and runtime support claims are unchanged.",
+      "files": {
+        "packages/membership-drizzle/src/index.ts": "d88e5aededb9271564ac0a55e8babbe7b3e3e243496503ac6deb8d6a63d71616",
+        "packages/membership-drizzle/src/libs/DrizzleMembershipStore.ts": "653bcf4bdfd12554b46fe2cceddc95e018763c08f6a9413f6dcc814a4beb39e0",
+        "packages/membership-drizzle/src/libs/schema.ts": "4f0161c00748ac21a372fcfe1bd303e77da06673b3cd6072625b796e4623c71d",
+        "packages/membership-drizzle/src/migrations/membershipEventIntents.ts": "58d99099947d3b9f14c66f4ea8834fb90ebbe5d49f9313c0923287b7d0163cd8",
+        "packages/membership-drizzle/src/migrations/scopeMembershipCommandsByTenant.ts": "176ee0e2ea4a3b7454af60ce12259febfa0e35dfa042a500a6b32bbf95a954eb"
+      },
+      "catalogRuntimes": ["node", "lambda"],
+      "profiles": {
+        "kubernetes": {
+          "result": "unverified",
+          "reason": "Tenant-scoped PostgreSQL keys and an explicit atomic backfill reuse the existing provider; no deployed Node Host path is executed by this change.",
+          "providers": ["@croco/membership-drizzle::DrizzleMembershipStore"],
+          "constraints": [
+            "Writers and relays must stop for the exclusive-lock migration and coordinated deployment. Existing event identities are preserved. Application-only rollback is unsupported after tenant key reuse.",
+            "Local PostgreSQL transaction, constraint and migration tests are separate from Kubernetes, AWS or Cloudflare deployment verification."
+          ],
+          "references": [
+            "packages/membership-drizzle/README.md",
+            "packages/membership-drizzle/src/libs/schema.ts",
+            "packages/membership-drizzle/src/tests/DrizzleMembershipStore.postgres.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "unverified",
+          "reason": "Tenant-scoped PostgreSQL keys and an explicit atomic backfill reuse the existing provider; no deployed Lambda Host path is executed by this change.",
+          "providers": ["@croco/membership-drizzle::DrizzleMembershipStore"],
+          "constraints": [
+            "Writers and relays must stop for the exclusive-lock migration and coordinated deployment. Existing event identities are preserved. Application-only rollback is unsupported after tenant key reuse.",
+            "Local PostgreSQL transaction, constraint and migration tests are separate from Kubernetes, AWS or Cloudflare deployment verification."
+          ],
+          "references": [
+            "packages/membership-drizzle/README.md",
+            "packages/membership-drizzle/src/libs/schema.ts",
+            "packages/membership-drizzle/src/tests/DrizzleMembershipStore.postgres.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "unsupported",
+          "reason": "This Node PostgreSQL provider has no catalog claim for Worker isolates; this migration does not add one.",
+          "providers": ["@croco/membership-drizzle::DrizzleMembershipStore"],
+          "constraints": [
+            "Writers and relays must stop for the exclusive-lock migration and coordinated deployment. Existing event identities are preserved. Application-only rollback is unsupported after tenant key reuse.",
+            "Local PostgreSQL transaction, constraint and migration tests are separate from Kubernetes, AWS or Cloudflare deployment verification."
+          ],
+          "references": [
+            "packages/membership-drizzle/README.md",
+            "packages/membership-drizzle/src/libs/schema.ts",
+            "packages/membership-drizzle/src/tests/DrizzleMembershipStore.postgres.spec.ts"
+          ]
+        }
+      }
+    }
+  ]
+}

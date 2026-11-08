@@ -13,3 +13,4 @@ export { addMembershipSeatOrdinals } from "./migrations/addMembershipSeatOrdinal
 export { setMembershipTimestampDefaults } from "./migrations/setMembershipTimestampDefaults";
 
 export { addMembershipEventRelayAttempts } from "./migrations/addMembershipEventRelayAttempts";
+export { scopeMembershipCommandsByTenant } from "./migrations/scopeMembershipCommandsByTenant";

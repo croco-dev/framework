@@ -154,9 +154,13 @@ class PostgresMembershipStore extends MembershipStore {
 
 ### getPendingEventIntent()
 
-> `abstract` **getPendingEventIntent**(`idempotencyKey`): `Promise`\<[`MembershipEventIntent`](/api/membership-core/src/type-aliases/membershipeventintent/) \| `null`\>
+> `abstract` **getPendingEventIntent**(`tenantId`, `idempotencyKey`): `Promise`\<[`MembershipEventIntent`](/api/membership-core/src/type-aliases/membershipeventintent/) \| `null`\>
 
 #### Parameters
+
+##### tenantId
+
+`string`
 
 ##### idempotencyKey
 
@@ -170,9 +174,13 @@ class PostgresMembershipStore extends MembershipStore {
 
 ### hasExecutedCommand()
 
-> `abstract` **hasExecutedCommand**(`idempotencyKey`): `Promise`\<`boolean`\>
+> `abstract` **hasExecutedCommand**(`tenantId`, `idempotencyKey`): `Promise`\<`boolean`\>
 
 #### Parameters
+
+##### tenantId
+
+`string`
 
 ##### idempotencyKey
 

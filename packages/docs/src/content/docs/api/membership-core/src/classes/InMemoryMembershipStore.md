@@ -184,9 +184,13 @@ const membership = await manager.addMember("tenant-1", "user-1", "admin", "membe
 
 ### getPendingEventIntent()
 
-> **getPendingEventIntent**(`idempotencyKey`): `Promise`\<[`MembershipEventIntent`](/api/membership-core/src/type-aliases/membershipeventintent/) \| `null`\>
+> **getPendingEventIntent**(`tenantId`, `idempotencyKey`): `Promise`\<[`MembershipEventIntent`](/api/membership-core/src/type-aliases/membershipeventintent/) \| `null`\>
 
 #### Parameters
+
+##### tenantId
+
+`string`
 
 ##### idempotencyKey
 
@@ -204,9 +208,13 @@ const membership = await manager.addMember("tenant-1", "user-1", "admin", "membe
 
 ### hasExecutedCommand()
 
-> **hasExecutedCommand**(`idempotencyKey`): `Promise`\<`boolean`\>
+> **hasExecutedCommand**(`tenantId`, `idempotencyKey`): `Promise`\<`boolean`\>
 
 #### Parameters
+
+##### tenantId
+
+`string`
 
 ##### idempotencyKey
 

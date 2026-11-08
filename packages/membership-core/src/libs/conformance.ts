@@ -14,6 +14,71 @@ export function createMembershipStoreConformanceSuite(options: {
   return {
     cases: [
       {
+        name: "isolates same-key commands and pending publications by tenant",
+        run: async () => {
+          const store = await options.createStore();
+          const commands = ["tenant-a", "tenant-b"].map((tenantId) => ({
+            operation: "add" as const,
+            tenantId,
+            idempotencyKey: "shared",
+            membershipId: `membership-${tenantId}`,
+            userId: `user-${tenantId}`,
+            role: "member" as const,
+            maxSeats: null,
+          }));
+          const originals = await Promise.all(commands.map((command) => store.execute(command)));
+          for (const [index, command] of commands.entries()) {
+            assert.equal(originals[index]?.replayed, false);
+            assert.equal(await store.hasExecutedCommand(command.tenantId, "shared"), true);
+            const replay = await store.execute({ ...command, membershipId: "ignored-on-replay" });
+            assert.deepEqual(replay, { ...originals[index], replayed: true });
+            await assert.rejects(
+              () => store.execute({ ...command, userId: "different" }),
+              MembershipIdempotencyConflictProblem,
+            );
+          }
+          assert.equal(await store.hasExecutedCommand("unknown", "shared"), false);
+          assert.equal(await store.getPendingEventIntent("unknown", "shared"), null);
+          const first = await store.getPendingEventIntent("tenant-a", "shared");
+          const second = await store.getPendingEventIntent("tenant-b", "shared");
+          assert.ok(first);
+          assert.ok(second);
+          assert.equal(first.tenantId, "tenant-a");
+          assert.equal(second.tenantId, "tenant-b");
+          assert.notEqual(first.intentId, second.intentId);
+          assert.notEqual(first.events[0]?.eventId, second.events[0]?.eventId);
+          await store.markEventIntentAttempted(first.intentId);
+          await store.markEventIntentPublished(first.intentId);
+          assert.equal(await store.getPendingEventIntent("tenant-a", "shared"), null);
+          assert.deepEqual(await store.getPendingEventIntent("tenant-b", "shared"), second);
+        },
+      },
+      {
+        name: "keeps delimiter-containing tenant and command tuples distinct",
+        run: async () => {
+          const store = await options.createStore();
+          for (const [tenantId, idempotencyKey] of [
+            ["a:b", "c"],
+            ["a", "b:c"],
+          ]) {
+            await store.execute({
+              operation: "add",
+              tenantId,
+              idempotencyKey,
+              membershipId: tenantId,
+              userId: "user",
+              role: "member",
+              maxSeats: null,
+            });
+          }
+          const intents = await store.listPendingEventIntents();
+          assert.equal(intents.length, 2);
+          assert.equal(new Set(intents.map((intent) => intent.intentId)).size, 2);
+          assert.equal(new Set(intents.map((intent) => intent.events[0]?.eventId)).size, 2);
+          for (const tenantId of ["a:b", "a"]) assert.equal(await store.countAll(tenantId), 1);
+        },
+      },
+      {
         name: "atomically retains and replays state with one recoverable intent",
         run: async () => {
           const store = await options.createStore();
@@ -66,7 +131,7 @@ export function createMembershipStoreConformanceSuite(options: {
             fromUserId: "owner",
             toUserId: "member",
           });
-          const intent = await store.getPendingEventIntent("conformance-transfer");
+          const intent = await store.getPendingEventIntent("tenant-2", "conformance-transfer");
           assert.equal(intent?.events.length, 2);
           assert.notEqual(intent?.events[0]?.eventId, intent?.events[1]?.eventId);
         },
@@ -126,7 +191,10 @@ export function createMembershipStoreConformanceSuite(options: {
           const replay = await store.execute(command);
           assert.equal(original.operation, "update_role");
           assert.equal(replay.replayed, true);
-          assert.equal(await store.getPendingEventIntent(command.idempotencyKey), null);
+          assert.equal(
+            await store.getPendingEventIntent(command.tenantId, command.idempotencyKey),
+            null,
+          );
           await assert.rejects(
             () => store.execute({ ...command, role: "admin" }),
             MembershipIdempotencyConflictProblem,
