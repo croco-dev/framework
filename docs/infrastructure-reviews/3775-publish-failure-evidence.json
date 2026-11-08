@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "events-inmemory",
+      "classification": "pure-contract",
+      "reason": "Preserve original execution failure identity when DLQ enqueue fails, with separate storageError and recoverable item fields. All three infrastructure decisions are independent of deployment because this only changes the local failure result.",
+      "files": {
+        "packages/events-inmemory/src/libs/InmemoryEventBus.ts": "210464cde7c45b126a37b5a738cc28964a3fb64505063b0bab8a128b98c76191"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "This change preserves in-process publish failure objects and exposes the existing failed enqueue item. It introduces no host API, storage protocol, credential, scheduler or lifecycle requirement.",
+          "providers": ["@croco/events-inmemory"],
+          "constraints": [
+            "The configured DeadLetterQueue retains its existing storage and recovery contract. No host-runtime or live-infrastructure certification is claimed."
+          ],
+          "references": [
+            "packages/events-inmemory/src/libs/InmemoryEventBus.ts",
+            "packages/events-core/src/libs/interfaces/DeadLetterQueue.ts",
+            "packages/events-inmemory/src/tests/InMemoryEventBus.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "This change preserves in-process publish failure objects and exposes the existing failed enqueue item. It introduces no host API, storage protocol, credential, scheduler or lifecycle requirement.",
+          "providers": ["@croco/events-inmemory"],
+          "constraints": [
+            "The configured DeadLetterQueue retains its existing storage and recovery contract. No host-runtime or live-infrastructure certification is claimed."
+          ],
+          "references": [
+            "packages/events-inmemory/src/libs/InmemoryEventBus.ts",
+            "packages/events-core/src/libs/interfaces/DeadLetterQueue.ts",
+            "packages/events-inmemory/src/tests/InMemoryEventBus.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "This change preserves in-process publish failure objects and exposes the existing failed enqueue item. It introduces no host API, storage protocol, credential, scheduler or lifecycle requirement.",
+          "providers": ["@croco/events-inmemory"],
+          "constraints": [
+            "The configured DeadLetterQueue retains its existing storage and recovery contract. No host-runtime or live-infrastructure certification is claimed."
+          ],
+          "references": [
+            "packages/events-inmemory/src/libs/InmemoryEventBus.ts",
+            "packages/events-core/src/libs/interfaces/DeadLetterQueue.ts",
+            "packages/events-inmemory/src/tests/InMemoryEventBus.spec.ts"
+          ]
+        }
+      }
+    }
+  ]
+}

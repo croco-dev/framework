@@ -50,7 +50,12 @@ import {
 
 export type EventPublishFailure = {
   handlerName: string;
+  /** Original execution failure; retained when dead-letter storage also fails. */
   error: Error;
+  /** Dead-letter enqueue failure, separate from the execution failure. */
+  storageError?: Error;
+  /** Failed enqueue item for caller-owned recovery. Contains event payload. */
+  item?: DeadLetterItem;
 };
 
 /** A dead-letter entry that could not be replayed successfully. */
@@ -473,7 +478,7 @@ export class InMemoryEventBus<TEvent extends DomainEvent = DomainEvent>
       }
 
       this.assertIntakeOpen();
-      const { failure, storageError } = await this.executeSubscriberWithTracking(
+      const { failure, storageError, deadLetterItem } = await this.executeSubscriberWithTracking(
         subscriber,
         baseEvent,
         eventName,
@@ -481,9 +486,7 @@ export class InMemoryEventBus<TEvent extends DomainEvent = DomainEvent>
       );
       deliveredCount++;
       if (failure) {
-        failures.push(
-          storageError ? { handlerName: failure.handlerName, error: storageError } : failure,
-        );
+        failures.push(storageError ? { ...failure, storageError, item: deadLetterItem } : failure);
       }
     }
 
