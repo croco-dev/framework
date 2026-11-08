@@ -238,38 +238,30 @@ export class FixedWindowInMemoryStore extends FixedWindowStore {
     key: string,
     entry: { count: number; windowStart: number; windowMs: number },
   ): Promise<void> {
-    this.counters.delete(key);
     this.windows.set(key, entry);
   }
 
   async increment(key: string, amount = 1): Promise<number> {
     return this.operations.run(key, async () => {
-      const entry = this.windows.get(key);
-      if (entry) {
-        entry.count += amount;
-        return entry.count;
-      }
       return incrementCounter(this.counters, key, amount, this.now());
     });
   }
 
   async getCount(key: string): Promise<number> {
     return this.operations.run(key, async () => {
-      return (
-        this.windows.get(key)?.count ?? getActiveCounter(this.counters, key, this.now())?.count ?? 0
-      );
+      return getActiveCounter(this.counters, key, this.now())?.count ?? 0;
     });
   }
 
   async reset(key: string): Promise<void> {
     return this.operations.run(key, async () => {
       await this.resetFixedWindowEntry(key);
+      this.counters.delete(key);
     });
   }
 
   protected async resetFixedWindowEntry(key: string): Promise<void> {
     this.windows.delete(key);
-    this.counters.delete(key);
     this.clearFixedWindowRefundReceipts(key);
   }
 

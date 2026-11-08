@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "ratelimit-core",
+      "classification": "pure-contract",
+      "reason": "Fixed-window counters keep independent values and TTL across admission, refunds and pruning. Explicit reset retains its existing responsibility for clearing both states and refund receipts.",
+      "files": {
+        "packages/ratelimit-core/src/libs/InMemoryRateLimitStore.ts": "9619ae36a8716d6f3ffdf0a474efb65b8f689aec340d6eb904ee75e02f071248"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Counter and admission isolation is process-local bookkeeping with no new host capability, external storage, transport or lifecycle requirement.",
+          "providers": [],
+          "constraints": [
+            "In-memory quota and counter state remain local to one store instance. No cross-process guarantee, deployment certification or new runtime support is claimed."
+          ],
+          "references": [
+            "packages/ratelimit-core/src/libs/InMemoryRateLimitStore.ts",
+            "packages/ratelimit-core/src/tests/InMemoryRateLimitStore.spec.ts",
+            "packages/ratelimit-upstash/src/libs/UpstashRateLimitStore.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Counter and admission isolation is process-local bookkeeping with no new host capability, external storage, transport or lifecycle requirement.",
+          "providers": [],
+          "constraints": [
+            "In-memory quota and counter state remain local to one store instance. No cross-process guarantee, deployment certification or new runtime support is claimed."
+          ],
+          "references": [
+            "packages/ratelimit-core/src/libs/InMemoryRateLimitStore.ts",
+            "packages/ratelimit-core/src/tests/InMemoryRateLimitStore.spec.ts",
+            "packages/ratelimit-upstash/src/libs/UpstashRateLimitStore.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Counter and admission isolation is process-local bookkeeping with no new host capability, external storage, transport or lifecycle requirement.",
+          "providers": [],
+          "constraints": [
+            "In-memory quota and counter state remain local to one store instance. No cross-process guarantee, deployment certification or new runtime support is claimed."
+          ],
+          "references": [
+            "packages/ratelimit-core/src/libs/InMemoryRateLimitStore.ts",
+            "packages/ratelimit-core/src/tests/InMemoryRateLimitStore.spec.ts",
+            "packages/ratelimit-upstash/src/libs/UpstashRateLimitStore.ts"
+          ]
+        }
+      }
+    }
+  ]
+}
