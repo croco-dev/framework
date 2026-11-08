@@ -150,46 +150,48 @@ describe("generated provider removal", () => {
       }
     });
 
-    it.each(["request first", "singleton first"] as const)(
-      "releases a shared request transient after %s",
-      (order) => {
-        const SERVICE = new Token<object>("request-shared-singleton");
-        const TRANSIENT = new Token<object>("request-shared-transient");
-        let disposed = 0;
-        const shared = {
-          destroy: () => {
-            disposed += 1;
-          },
-        };
-        const scope = target === "application" ? Container.createScope() : undefined;
-        const run = () => {
-          Container.installGeneratedGraph(
-            graph("request-sharing", [
-              singleton(SERVICE, "app:singleton", () => shared),
-              { ...singleton(TRANSIENT, "app:transient", () => shared), scope: "transient" },
-            ]),
-          );
-          expect(Container.get(SERVICE)).toBe(shared);
-          Context.run({ requestId: "shared-owner" }, () => {
-            expect(Container.get(TRANSIENT)).toBe(shared);
-            if (order === "singleton first") Container.remove(SERVICE);
-            expect(disposed).toBe(0);
-          });
-          if (order === "request first") {
-            expect(disposed).toBe(0);
-            Container.remove(SERVICE);
-          }
-          expect(disposed).toBe(1);
-        };
-        try {
-          if (scope) scope.run(run);
-          else run();
-        } finally {
-          scope?.dispose();
+    it.each([
+      ["request first", "transient"],
+      ["singleton first", "transient"],
+      ["request first", "request"],
+      ["singleton first", "request"],
+    ] as const)("releases a shared request owner after %s with %s scope", (order, requestScope) => {
+      const SERVICE = new Token<object>("request-shared-singleton");
+      const TRANSIENT = new Token<object>("request-shared-transient");
+      let disposed = 0;
+      const shared = {
+        destroy: () => {
+          disposed += 1;
+        },
+      };
+      const scope = target === "application" ? Container.createScope() : undefined;
+      const run = () => {
+        Container.installGeneratedGraph(
+          graph("request-sharing", [
+            singleton(SERVICE, "app:singleton", () => shared),
+            { ...singleton(TRANSIENT, "app:transient", () => shared), scope: requestScope },
+          ]),
+        );
+        expect(Container.get(SERVICE)).toBe(shared);
+        Context.run({ requestId: "shared-owner" }, () => {
+          expect(Container.get(TRANSIENT)).toBe(shared);
+          if (order === "singleton first") Container.remove(SERVICE);
+          expect(disposed).toBe(0);
+        });
+        if (order === "request first") {
+          expect(disposed).toBe(0);
+          Container.remove(SERVICE);
         }
         expect(disposed).toBe(1);
-      },
-    );
+      };
+      try {
+        if (scope) scope.run(run);
+        else run();
+      } finally {
+        scope?.dispose();
+      }
+      expect(disposed).toBe(1);
+    });
 
     it("retains shared values until all independently owned requests end", () => {
       const SERVICE = new Token<object>("concurrent-singleton");
@@ -1049,6 +1051,336 @@ describe("generated provider removal", () => {
       scope.dispose();
     }
     expect(disposed).toBe(1);
+  });
+
+  it("finishes a removal when a destructor closes the application and its request", () => {
+    const scope = Container.createScope();
+    const MULTI = new Token<object>("closing-multi");
+    const TRANSIENT = new Token<object>("closing-transient");
+    const disposed: string[] = [];
+    let request: ReturnType<typeof Context.createRequestScope> | undefined;
+    const second = { destroy: () => disposed.push("second") };
+    const first = {
+      destroy: () => {
+        disposed.push("first");
+        scope.dispose();
+        request?.dispose();
+      },
+    };
+    try {
+      scope.run(() => {
+        Container.installGeneratedGraph(
+          graph("closing-application", [
+            { ...singleton(MULTI, "app:multi", () => first), multiple: true },
+            { ...singleton(MULTI, "app:multi", () => second), multiple: true },
+            { ...singleton(TRANSIENT, "app:transient", () => second), scope: "transient" },
+          ]),
+        );
+        request = Context.createRequestScope({ requestId: "closing" });
+        request.run(() => Container.get(TRANSIENT));
+        Container.getMany(MULTI);
+        expect(() => Container.remove(MULTI)).not.toThrow();
+      });
+    } finally {
+      request?.dispose();
+      scope.dispose();
+    }
+    expect(disposed).toEqual(["first", "second"]);
+  });
+
+  it.each([1, 2])(
+    "cleans request-owned values after their application scope ends with %i request owners",
+    (owners) => {
+      const scope = Container.createScope();
+      const TRANSIENT = new Token<object>("late-request-cleanup");
+      let disposed = 0;
+      const shared = {
+        destroy: () => {
+          disposed += 1;
+        },
+      };
+      const requests = scope.run(() => {
+        Container.installGeneratedGraph(
+          graph("late-cleanup", [
+            { ...singleton(TRANSIENT, "app:transient", () => shared), scope: "transient" },
+          ]),
+        );
+        return Array.from({ length: owners }, (_, index) => {
+          const request = Context.createRequestScope({ requestId: `late-${index}` });
+          request.run(() => expect(Container.get(TRANSIENT)).toBe(shared));
+          return request;
+        });
+      });
+      scope.dispose();
+      expect(disposed).toBe(0);
+      for (const [index, request] of requests.entries()) {
+        expect(() => request.dispose()).not.toThrow();
+        expect(disposed).toBe(index === owners - 1 ? 1 : 0);
+        request.dispose();
+      }
+      expect(disposed).toBe(1);
+    },
+  );
+
+  it.each(["remove", "dispose", "reset", "rollback"] as const)(
+    "retains a physical singleton owned by a peer application during %s",
+    async (operation) => {
+      const SERVICE = new Token<object>("peer-singleton");
+      let disposed = 0;
+      const shared = {
+        destroy: () => {
+          disposed += 1;
+        },
+      };
+      const first = Container.createScope();
+      const second = Container.createScope();
+      const install = () => {
+        Container.installGeneratedGraph(
+          graph("peer", [singleton(SERVICE, "app:peer", () => shared)]),
+        );
+        expect(Container.get(SERVICE)).toBe(shared);
+      };
+      try {
+        second.run(install);
+        if (operation === "rollback") {
+          const failure = new Error("rollback peer binding");
+          await expect(
+            first.runWithRollback(async () => {
+              install();
+              throw failure;
+            }),
+          ).rejects.toBe(failure);
+        } else {
+          first.run(install);
+          if (operation === "dispose") first.dispose();
+          else
+            first.run(() =>
+              operation === "remove" ? Container.remove(SERVICE) : Container.reset(),
+            );
+        }
+        expect(disposed).toBe(0);
+        expect(second.run(() => Container.get(SERVICE))).toBe(shared);
+        second.run(() => Container.remove(SERVICE));
+        expect(disposed).toBe(1);
+      } finally {
+        first.dispose();
+        second.dispose();
+      }
+      expect(disposed).toBe(1);
+    },
+  );
+
+  it.each(["root", "application"] as const)(
+    "retains a shared root/application instance after releasing %s first",
+    (first) => {
+      const SERVICE = new Token<object>("root-application-singleton");
+      let disposed = 0;
+      const shared = {
+        destroy: () => {
+          disposed += 1;
+        },
+      };
+      Container.installGeneratedGraph(
+        graph("root-peer", [singleton(SERVICE, "app:root-peer", () => shared)]),
+      );
+      expect(Container.get(SERVICE)).toBe(shared);
+      const scope = Container.createScope();
+      try {
+        expect(scope.run(() => Container.get(SERVICE))).toBe(shared);
+        if (first === "root") {
+          Container.reset();
+          expect(disposed).toBe(0);
+          scope.dispose();
+        } else {
+          scope.dispose();
+          expect(disposed).toBe(0);
+          Container.remove(SERVICE);
+        }
+        expect(disposed).toBe(1);
+      } finally {
+        scope.dispose();
+      }
+    },
+  );
+
+  it.each(["commit", "rollback"] as const)(
+    "retains a peer transaction baseline until %s",
+    async (outcome) => {
+      const SERVICE = new Token<object>("peer-baseline");
+      let disposed = 0;
+      const shared = {
+        destroy: () => {
+          disposed += 1;
+        },
+      };
+      const first = Container.createScope();
+      const second = Container.createScope();
+      const failure = new Error("peer rollback");
+      first.run(() => Container.set(SERVICE, shared));
+      second.run(() => Container.set(SERVICE, shared));
+      try {
+        const attempt = first.runWithRollback(async () => {
+          Container.set(SERVICE, {});
+          second.run(() => Container.remove(SERVICE));
+          expect(disposed).toBe(0);
+          if (outcome === "rollback") throw failure;
+        });
+        if (outcome === "rollback") {
+          await expect(attempt).rejects.toBe(failure);
+          expect(first.run(() => Container.get(SERVICE))).toBe(shared);
+          expect(disposed).toBe(0);
+        } else {
+          await attempt;
+          expect(disposed).toBe(1);
+        }
+      } finally {
+        first.dispose();
+        second.dispose();
+      }
+      expect(disposed).toBe(1);
+    },
+  );
+
+  it("restores the exact binding snapshot after a rollback destructor registers values", async () => {
+    const scope = Container.createScope();
+    const SERVICE = new Token<object>("reentrant-rollback");
+    const EXTRA = new Token<object>("reentrant-rollback-extra");
+    const baseline = {};
+    let extraDisposed = 0;
+    const extra = {
+      destroy: () => {
+        extraDisposed += 1;
+      },
+    };
+    const failure = new Error("rollback destructor reentry");
+    scope.run(() => Container.set(SERVICE, baseline));
+    try {
+      await expect(
+        scope.runWithRollback(async () => {
+          Container.set(SERVICE, {
+            destroy: () =>
+              scope.run(() => {
+                Container.set(SERVICE, {});
+                Container.set(EXTRA, extra);
+              }),
+          });
+          throw failure;
+        }),
+      ).rejects.toBe(failure);
+      expect(scope.run(() => Container.get(SERVICE))).toBe(baseline);
+      expect(scope.run(() => Container.has(EXTRA))).toBe(false);
+      expect(extraDisposed).toBe(1);
+    } finally {
+      scope.dispose();
+    }
+  });
+
+  it("restores the snapshot after deferred intermediate destructors reenter the scope", async () => {
+    const scope = Container.createScope();
+    const SERVICE = new Token<object>("deferred-reentry");
+    const EXTRA = new Token<object>("deferred-reentry-extra");
+    let baselineDisposed = 0;
+    const baseline = {
+      destroy: () => {
+        baselineDisposed += 1;
+      },
+    };
+    const intermediate = {
+      destroy: () =>
+        scope.run(() => {
+          Container.set(SERVICE, {});
+          Container.set(EXTRA, {});
+        }),
+    };
+    const failure = new Error("deferred rollback");
+    scope.run(() => Container.set(SERVICE, baseline));
+    try {
+      await expect(
+        scope.runWithRollback(async () => {
+          Container.set(SERVICE, intermediate);
+          Container.set(SERVICE, {});
+          throw failure;
+        }),
+      ).rejects.toBe(failure);
+      expect(scope.run(() => Container.get(SERVICE))).toBe(baseline);
+      expect(scope.run(() => Container.has(EXTRA))).toBe(false);
+      expect(baselineDisposed).toBe(0);
+    } finally {
+      scope.dispose();
+    }
+    expect(baselineDisposed).toBe(1);
+  });
+
+  it.each(["current", "deferred"] as const)(
+    "protects a rollback baseline when a %s destructor releases its peer owner",
+    async (kind) => {
+      const first = Container.createScope();
+      const second = Container.createScope();
+      const SERVICE = new Token<object>("rollback-peer-release");
+      let disposed = 0;
+      const baseline = {
+        destroy: () => {
+          disposed += 1;
+        },
+      };
+      first.run(() => Container.set(SERVICE, baseline));
+      second.run(() => Container.set(SERVICE, baseline));
+      const replacement = { destroy: () => second.run(() => Container.remove(SERVICE)) };
+      const failure = new Error("rollback peer release");
+      try {
+        await expect(
+          first.runWithRollback(async () => {
+            Container.set(SERVICE, replacement);
+            if (kind === "deferred") Container.set(SERVICE, {});
+            throw failure;
+          }),
+        ).rejects.toBe(failure);
+        expect(disposed).toBe(0);
+        expect(first.run(() => Container.get(SERVICE))).toBe(baseline);
+        expect(second.run(() => Container.has(SERVICE))).toBe(false);
+      } finally {
+        first.dispose();
+        second.dispose();
+      }
+      expect(disposed).toBe(1);
+    },
+  );
+
+  it("keeps the original rollback cause when deferred cleanup throws an unprintable value", async () => {
+    const scope = Container.createScope();
+    const SERVICE = new Token<object>("unprintable-cleanup");
+    const baseline = {};
+    const intermediate = {
+      destroy: () => {
+        throw Object.create(null);
+      },
+    };
+    const failure = new Error("original operation");
+    scope.run(() => Container.set(SERVICE, baseline));
+    try {
+      await expect(
+        scope.runWithRollback(async () => {
+          Container.set(SERVICE, intermediate);
+          Container.set(SERVICE, {});
+          throw failure;
+        }),
+      ).rejects.toMatchObject({
+        code: "framework-context/container-scope-rollback-failed",
+        cause: failure,
+        extensions: {
+          cleanupFailures: [
+            {
+              phase: "rollback",
+              code: "framework-context/container-scope-rollback-cleanup-failed",
+              message: expect.any(String),
+            },
+          ],
+        },
+      });
+      expect(scope.run(() => Container.get(SERVICE))).toBe(baseline);
+    } finally {
+      scope.dispose();
+    }
   });
 
   it("keeps removals local to each application snapshot and copies root removals to new scopes", () => {

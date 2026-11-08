@@ -11723,7 +11723,7 @@ Sources:
 
 Sources:
 
-- `packages/framework-context/src/libs/Container.ts:1614:13` (problem-factory)
+- `packages/framework-context/src/libs/Container.ts:1593:13` (problem-factory)
 
 <a id="framework-context-container-reset-failed"></a>
 
@@ -11741,7 +11741,7 @@ Sources:
 
 Sources:
 
-- `packages/framework-context/src/libs/Container.ts:845:13` (problem-factory)
+- `packages/framework-context/src/libs/Container.ts:824:13` (problem-factory)
 
 <a id="framework-context-container-scope-disposal-failed"></a>
 
@@ -11759,7 +11759,7 @@ Sources:
 
 Sources:
 
-- `packages/framework-context/src/libs/Container.ts:299:13` (problem-factory)
+- `packages/framework-context/src/libs/Container.ts:296:13` (problem-factory)
 
 <a id="framework-context-container-scope-disposed"></a>
 
@@ -11777,7 +11777,7 @@ Sources:
 
 Sources:
 
-- `packages/framework-context/src/libs/Container.ts:173:10` (problem-factory)
+- `packages/framework-context/src/libs/Container.ts:178:10` (problem-factory)
 
 <a id="framework-context-container-scope-rollback-failed"></a>
 
@@ -11795,7 +11795,7 @@ Sources:
 
 Sources:
 
-- `packages/framework-context/src/libs/Container.ts:482:17` (problem-factory)
+- `packages/framework-context/src/libs/Container.ts:458:17` (problem-factory)
 
 <a id="framework-context-container-scope-snapshot-unavailable"></a>
 
@@ -11813,7 +11813,7 @@ Sources:
 
 Sources:
 
-- `packages/framework-context/src/libs/Container.ts:507:13` (problem-factory)
+- `packages/framework-context/src/libs/Container.ts:487:13` (problem-factory)
 
 <a id="framework-context-container-scope-transaction-active"></a>
 
@@ -11831,7 +11831,7 @@ Sources:
 
 Sources:
 
-- `packages/framework-context/src/libs/Container.ts:242:13` (problem-factory)
+- `packages/framework-context/src/libs/Container.ts:248:13` (problem-factory)
 
 <a id="framework-context-context-middleware-execution-error"></a>
 
@@ -11903,7 +11903,7 @@ Sources:
 
 Sources:
 
-- `packages/framework-context/src/libs/Container.ts:944:13` (problem-factory)
+- `packages/framework-context/src/libs/Container.ts:923:13` (problem-factory)
 
 <a id="framework-context-generated-di-graph-version-mismatch"></a>
 
@@ -11921,7 +11921,7 @@ Sources:
 
 Sources:
 
-- `packages/framework-context/src/libs/Container.ts:938:13` (problem-factory)
+- `packages/framework-context/src/libs/Container.ts:917:13` (problem-factory)
 
 <a id="framework-context-generated-di-provider-conflict"></a>
 
@@ -11939,7 +11939,7 @@ Sources:
 
 Sources:
 
-- `packages/framework-context/src/libs/Container.ts:1561:15` (problem-factory)
+- `packages/framework-context/src/libs/Container.ts:1540:15` (problem-factory)
 
 <a id="framework-context-generated-di-token-identity-conflict"></a>
 
@@ -11957,7 +11957,7 @@ Sources:
 
 Sources:
 
-- `packages/framework-context/src/libs/Container.ts:1712:13` (problem-factory)
+- `packages/framework-context/src/libs/Container.ts:1659:13` (problem-factory)
 
 <a id="framework-context-on-shutdown-decorator-invalid"></a>
 
@@ -12119,7 +12119,7 @@ Sources:
 
 Sources:
 
-- `packages/framework-context/src/libs/Container.ts:2799:12` (problem-factory)
+- `packages/framework-context/src/libs/Container.ts:2746:12` (problem-factory)
 
 <a id="framework-context-runtime-inspector-invalid-configuration"></a>
 

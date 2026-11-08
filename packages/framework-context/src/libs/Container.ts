@@ -121,6 +121,11 @@ type GeneratedProviderState = Pick<
   "generatedProviders" | "componentSourceLocations" | "tokenIdentityIds" | "tokenIdentityOwners"
 >;
 
+// RuntimeContainer already owns live container lifetimes; this index adds no strong scope roots.
+const containerScopeStates = new WeakMap<RuntimeContainerInstance, ContainerScopeState>();
+const rootGeneratedSingletons = new Map<GeneratedProviderDefinition, unknown>();
+const rootGeneratedTransients = new Set<object>();
+let cleanupAttempts: Set<unknown> | undefined;
 const containerScopeStorage = new AsyncLocalStorage<ContainerScopeState>();
 type ContainerScopeRollbackTransaction = {
   readonly retainedValues: ReadonlySet<unknown>;
@@ -149,7 +154,7 @@ function createContainerScopeCleanupFailure(
       phase === "dispose"
         ? "framework-context/container-scope-disposal-cleanup-failed"
         : "framework-context/container-scope-rollback-cleanup-failed",
-    message: error instanceof Error ? error.message : String(error),
+    message: describeProviderCleanupFailure(error),
   };
 }
 
@@ -207,6 +212,7 @@ export class ContainerScope implements AsyncDisposable {
       nextComponentRegistrationOrder: 1,
       validated: false,
     };
+    containerScopeStates.set(this.state.instance, this.state);
   }
 
   run<T>(fn: () => Promise<T>): Promise<T>;
@@ -261,37 +267,28 @@ export class ContainerScope implements AsyncDisposable {
     delete this.state.lastResolutionTrace;
     const access = this.getServiceAccess();
     const cleanupFailures: ContainerScopeCleanupFailure[] = [];
-    const disposedValues = new Set<unknown>();
+    const retired: { instance: unknown; cleanup?: () => void }[] = [
+      ...[...this.state.generatedTransients].reverse().map((instance) => ({ instance })),
+      ...[...this.state.generatedSingletons.values()].reverse().map((instance) => ({ instance })),
+      ...access.services.map((service) => ({
+        instance: service.value,
+        cleanup: () => access.destroyServiceInstance(service),
+      })),
+    ];
+    this.state.generatedTransients.clear();
+    this.state.generatedSingletons.clear();
+    access.services.splice(0, access.services.length);
     try {
-      for (const instance of [...this.state.generatedTransients].reverse()) {
-        if (disposedValues.has(instance)) continue;
-        disposedValues.add(instance);
-        try {
-          destroyGeneratedInstance(instance);
-        } catch (error) {
-          cleanupFailures.push(createContainerScopeCleanupFailure(error, "dispose"));
+      withCleanupBatch((disposedValues) => {
+        for (const entry of retired) {
+          try {
+            disposeUnownedInstance(entry.instance, disposedValues, entry.cleanup);
+          } catch (error) {
+            cleanupFailures.push(createContainerScopeCleanupFailure(error, "dispose"));
+          }
         }
-      }
-      this.state.generatedTransients.clear();
-      for (const instance of [...this.state.generatedSingletons.values()].reverse()) {
-        if (disposedValues.has(instance)) continue;
-        disposedValues.add(instance);
-        try {
-          destroyGeneratedInstance(instance);
-        } catch (error) {
-          cleanupFailures.push(createContainerScopeCleanupFailure(error, "dispose"));
-        }
-      }
-      this.state.generatedSingletons.clear();
-      for (const service of access.services.slice()) {
-        try {
-          access.destroyServiceInstance(service, disposedValues);
-        } catch (error) {
-          cleanupFailures.push(createContainerScopeCleanupFailure(error, "dispose"));
-        }
-      }
+      });
     } finally {
-      access.services.splice(0, access.services.length);
       RuntimeContainerBackend.reset(this.id);
     }
 
@@ -348,53 +345,29 @@ export class ContainerScope implements AsyncDisposable {
       snapshot.services.map((record) => [record.reference, record.values]),
     );
     const cleanupFailures: ContainerScopeCleanupFailure[] = [];
-    for (const service of access.services) {
-      const original = originalRecords.get(service);
-      if (
-        (!original || service.value !== original.value) &&
-        !retainedValues.has(service.value) &&
-        !hasRequestInstanceOwner(service.value)
-      ) {
+    withCleanupBatch((attempts) => {
+      const release = (instance: unknown, cleanup?: () => void) => {
+        if (retainedValues.has(instance)) return;
         try {
-          access.destroyServiceInstance(service, disposedValues);
+          disposeUnownedInstance(instance, attempts, cleanup, this.state.instance);
         } catch (error) {
           cleanupFailures.push(createContainerScopeCleanupFailure(error, "rollback"));
         }
+      };
+      // Keep live iteration: destructors can append values that this rollback must also release.
+      for (const service of access.services) {
+        const original = originalRecords.get(service);
+        if (!original || service.value !== original.value) {
+          release(service.value, () => access.destroyServiceInstance(service));
+        }
       }
-    }
-    for (const [provider, instance] of this.state.generatedSingletons) {
-      if (snapshot.generatedSingletons.get(provider) === instance) {
-        continue;
+      for (const [provider, instance] of this.state.generatedSingletons) {
+        if (snapshot.generatedSingletons.get(provider) !== instance) release(instance);
       }
-      if (
-        retainedValues.has(instance) ||
-        disposedValues.has(instance) ||
-        hasRequestInstanceOwner(instance)
-      )
-        continue;
-      disposedValues.add(instance);
-      try {
-        destroyGeneratedInstance(instance);
-      } catch (error) {
-        cleanupFailures.push(createContainerScopeCleanupFailure(error, "rollback"));
+      for (const instance of this.state.generatedTransients) {
+        if (!snapshot.generatedTransients.has(instance)) release(instance);
       }
-    }
-    for (const instance of this.state.generatedTransients) {
-      if (
-        snapshot.generatedTransients.has(instance) ||
-        retainedValues.has(instance) ||
-        disposedValues.has(instance) ||
-        hasRequestInstanceOwner(instance)
-      ) {
-        continue;
-      }
-      disposedValues.add(instance);
-      try {
-        destroyGeneratedInstance(instance);
-      } catch (error) {
-        cleanupFailures.push(createContainerScopeCleanupFailure(error, "rollback"));
-      }
-    }
+    }, disposedValues);
     for (const { reference, values } of snapshot.services) {
       Object.assign(reference, values);
     }
@@ -462,22 +435,25 @@ export class ContainerScope implements AsyncDisposable {
         );
       } catch (error) {
         transaction.active = false;
-        const disposedValues = new Set<unknown>();
-        const cleanupFailures = [...this.restoreSnapshot(snapshot, disposedValues, retainedValues)];
-        delete this.state.rollbackTransaction;
-        for (const value of disposedValues) transaction.replacedValues.delete(value);
-        try {
-          transaction.disposeReplacedValues?.();
-        } catch (cleanupError) {
-          const cause = cleanupError instanceof Problem ? cleanupError.cause : undefined;
-          const failures: readonly unknown[] =
-            cause && "errors" in cause && Array.isArray(cause.errors)
-              ? cause.errors
-              : [cleanupError];
-          for (const failure of failures) {
-            cleanupFailures.push(createContainerScopeCleanupFailure(failure, "rollback"));
+        const cleanupFailures: ContainerScopeCleanupFailure[] = [];
+        // Baselines remain owners until all rollback destructors finish; restore after their reentry.
+        withCleanupBatch((disposedValues) => {
+          try {
+            transaction.disposeReplacedValues?.();
+          } catch (cleanupError) {
+            const cause = cleanupError instanceof Problem ? cleanupError.cause : undefined;
+            const failures: readonly unknown[] =
+              cause && "errors" in cause && Array.isArray(cause.errors)
+                ? cause.errors
+                : [cleanupError];
+            for (const failure of failures) {
+              cleanupFailures.push(createContainerScopeCleanupFailure(failure, "rollback"));
+            }
           }
-        }
+          cleanupFailures.push(...this.restoreSnapshot(snapshot, disposedValues, retainedValues));
+        });
+        delete this.state.rollbackTransaction;
+        transaction.replacedValues.clear();
         if (cleanupFailures.length > 0) {
           throw ProblemFactory.internalServerError(
             "framework-context/container-scope-rollback-failed",
@@ -493,7 +469,11 @@ export class ContainerScope implements AsyncDisposable {
         transaction.active = false;
       }
       delete this.state.rollbackTransaction;
-      transaction.disposeReplacedValues?.();
+      try {
+        transaction.disposeReplacedValues?.();
+      } finally {
+        transaction.replacedValues.clear();
+      }
       return result;
     } finally {
       delete this.state.rollbackTransaction;
@@ -528,7 +508,6 @@ export class ContainerScope implements AsyncDisposable {
  */
 export class Container {
   private static validated = false;
-  private static cleanupAttempts: Set<unknown> | undefined;
   private static readonly lazyProviders = new Map<TokenIdentifier<unknown>, () => unknown>();
   private static readonly symbolTokens = new Map<symbol, CrocoToken<unknown>>();
   private static readonly componentSourceLocations = new Map<
@@ -544,8 +523,8 @@ export class Container {
     TokenIdentifier<unknown>,
     readonly GeneratedProviderDefinition[]
   >();
-  private static readonly generatedSingletons = new Map<GeneratedProviderDefinition, unknown>();
-  private static readonly generatedTransients = new Set<object>();
+  private static readonly generatedSingletons = rootGeneratedSingletons;
+  private static readonly generatedTransients = rootGeneratedTransients;
   private static readonly installedGraphs = new Map<string, GeneratedDiGraph>();
   private static readonly tokenIdentityIds = new Map<TokenIdentifier<unknown>, string>();
   private static readonly tokenIdentityOwners = new Map<string, TokenIdentifier<unknown>>();
@@ -646,9 +625,7 @@ export class Container {
         transaction.replacedValues.add(previous.value);
         transaction.disposeReplacedValues ??= () =>
           containerScopeStorage.run(scope, () => {
-            const replacedValues = [...transaction.replacedValues];
-            transaction.replacedValues.clear();
-            Container.disposeUnownedInstances(replacedValues);
+            Container.disposeUnownedInstances([...transaction.replacedValues]);
           });
       } else {
         Container.disposeUnownedInstances([previous.value]);
@@ -780,67 +757,69 @@ export class Container {
     const runtime = scope?.instance ?? RuntimeContainerBackend.of();
     const transients = scope?.generatedTransients ?? Container.generatedTransients;
     const singletons = scope?.generatedSingletons ?? Container.generatedSingletons;
-    const disposedValues = new Set<unknown>();
     const failures: unknown[] = [];
-    try {
-      for (const service of [...runtime.services].reverse()) {
-        try {
-          runtime.destroyServiceInstance(service, disposedValues);
-        } catch (error) {
-          failures.push(error);
-        }
-      }
-      runtime.services.splice(0, runtime.services.length);
-      for (const instances of [transients, singletons]) {
-        for (const instance of [...instances.values()].reverse()) {
-          if (disposedValues.has(instance)) continue;
-          disposedValues.add(instance);
+    withCleanupBatch((disposedValues) => {
+      try {
+        for (const service of [...runtime.services].reverse()) {
           try {
-            destroyGeneratedInstance(instance);
+            if (!hasInstanceOwner(service.value, runtime))
+              runtime.destroyServiceInstance(service, disposedValues);
           } catch (error) {
             failures.push(error);
           }
         }
-        instances.clear();
-      }
-    } finally {
-      runtime.services.splice(0, runtime.services.length);
-      transients.clear();
-      singletons.clear();
-      if (scope) {
-        scope.componentRegistrationOrder.clear();
-        scope.componentSourceLocations.clear();
-        scope.components.clear();
-        scope.explicitComponentSourceLocations.clear();
-        scope.generatedProviders.clear();
-        scope.installedGraphs.clear();
-        scope.lazyProviders.clear();
-        scope.symbolTokens.clear();
-        scope.tokenIdentityIds.clear();
-        scope.tokenIdentityOwners.clear();
-        scope.tokens.clear();
-        delete scope.lastResolutionTrace;
-        scope.nextComponentRegistrationOrder = 1;
-        scope.validated = false;
-      } else {
-        // reset은 요청 처리가 없는 idle 시점에만 호출한다.
-        for (const { target } of MetadataStorage.getAll(COMPONENT_METADATA_KEY)) {
-          MetadataStorage.delete(COMPONENT_METADATA_KEY, target);
+        runtime.services.splice(0, runtime.services.length);
+        for (const instances of [transients, singletons]) {
+          for (const instance of [...instances.values()].reverse()) {
+            if (disposedValues.has(instance) || hasInstanceOwner(instance, runtime)) continue;
+            disposedValues.add(instance);
+            try {
+              destroyGeneratedInstance(instance);
+            } catch (error) {
+              failures.push(error);
+            }
+          }
+          instances.clear();
         }
-        Container.lazyProviders.clear();
-        Container.symbolTokens.clear();
-        Container.componentSourceLocations.clear();
-        Container.explicitComponentSourceLocations.clear();
-        Container.generatedProviders.clear();
-        Container.installedGraphs.clear();
-        Container.componentRegistrationOrder.clear();
-        Container.tokenIdentityIds.clear();
-        Container.tokenIdentityOwners.clear();
-        Container.lastResolutionTrace = undefined;
-        Container.nextComponentRegistrationOrder = 1;
-        Container.validated = false;
+      } finally {
+        runtime.services.splice(0, runtime.services.length);
+        transients.clear();
+        singletons.clear();
+        if (scope) {
+          scope.componentRegistrationOrder.clear();
+          scope.componentSourceLocations.clear();
+          scope.components.clear();
+          scope.explicitComponentSourceLocations.clear();
+          scope.generatedProviders.clear();
+          scope.installedGraphs.clear();
+          scope.lazyProviders.clear();
+          scope.symbolTokens.clear();
+          scope.tokenIdentityIds.clear();
+          scope.tokenIdentityOwners.clear();
+          scope.tokens.clear();
+          delete scope.lastResolutionTrace;
+          scope.nextComponentRegistrationOrder = 1;
+          scope.validated = false;
+        } else {
+          // reset은 요청 처리가 없는 idle 시점에만 호출한다.
+          for (const { target } of MetadataStorage.getAll(COMPONENT_METADATA_KEY)) {
+            MetadataStorage.delete(COMPONENT_METADATA_KEY, target);
+          }
+          Container.lazyProviders.clear();
+          Container.symbolTokens.clear();
+          Container.componentSourceLocations.clear();
+          Container.explicitComponentSourceLocations.clear();
+          Container.generatedProviders.clear();
+          Container.installedGraphs.clear();
+          Container.componentRegistrationOrder.clear();
+          Container.tokenIdentityIds.clear();
+          Container.tokenIdentityOwners.clear();
+          Container.lastResolutionTrace = undefined;
+          Container.nextComponentRegistrationOrder = 1;
+          Container.validated = false;
+        }
       }
-    }
+    });
     if (failures.length > 0) {
       throw ProblemFactory.internalServerError(
         "framework-context/container-reset-failed",
@@ -851,7 +830,7 @@ export class Container {
             retryable: false,
             cleanupFailureCount: failures.length,
             cleanupFailures: failures.slice(0, MAX_RESET_CLEANUP_FAILURE_MESSAGES).map((error) => {
-              const message = describeResetCleanupFailure(error);
+              const message = describeProviderCleanupFailure(error);
               return message.length > MAX_RESET_CLEANUP_FAILURE_MESSAGE_LENGTH
                 ? {
                     message: message.slice(0, MAX_RESET_CLEANUP_FAILURE_MESSAGE_LENGTH),
@@ -1601,10 +1580,10 @@ export class Container {
   private static disposeUnownedInstances(instances: readonly unknown[]): void {
     if (instances.length === 0) return;
     const failures: unknown[] = [];
-    Container.withCleanupBatch((disposedValues) => {
+    withCleanupBatch((disposedValues) => {
       for (const instance of instances) {
         try {
-          Container.disposeUnownedInstance(instance, disposedValues);
+          disposeUnownedInstance(instance, disposedValues);
         } catch (error) {
           failures.push(error);
         }
@@ -1622,50 +1601,18 @@ export class Container {
     }
   }
 
-  private static withCleanupBatch(fn: (disposedValues: Set<unknown>) => void): void {
-    const parent = Container.cleanupAttempts;
-    const disposedValues = parent ?? new Set<unknown>();
-    Container.cleanupAttempts = disposedValues;
-    try {
-      fn(disposedValues);
-    } finally {
-      Container.cleanupAttempts = parent;
-    }
-  }
-
-  private static disposeUnownedInstance(instance: unknown, disposedValues: Set<unknown>): void {
-    if (disposedValues.has(instance) || Container.hasInstanceOwner(instance)) return;
-    disposedValues.add(instance);
-    Container.getScopeState()?.rollbackTransaction?.replacedValues.delete(instance);
-    destroyGeneratedInstance(instance);
-  }
-
-  private static hasInstanceOwner(instance: unknown): boolean {
-    if (instance === null || (typeof instance !== "object" && typeof instance !== "function")) {
-      return false;
-    }
-    const runtime = Container.getScopeState()?.instance ?? RuntimeContainerBackend.of();
-    return (
-      [...Container.getGeneratedSingletons().values()].includes(instance) ||
-      runtime.services.some((service) => service.value === instance) ||
-      Container.getGeneratedTransients().has(instance) ||
-      hasRequestInstanceOwner(instance)
-    );
-  }
-
   private static trackGeneratedRequestInstance(instance: object): void {
-    const run = Container.captureCurrentScopeRunner();
+    const scope = Container.getScopeState();
+    const release = () => {
+      // Request cleanup can outlive its application; business resolution still rejects disposed scopes.
+      const transaction = scope?.rollbackTransaction;
+      if (transaction?.retainedValues.has(instance) && transaction.replacedValues.has(instance)) {
+        return;
+      }
+      withCleanupBatch((disposedValues) => disposeUnownedInstance(instance, disposedValues));
+    };
     trackRequestInstance(instance, () =>
-      run(() => {
-        // Request release preserves snapshot ownership; explicit removal remains immediate.
-        const transaction = Container.getScopeState()?.rollbackTransaction;
-        if (transaction?.retainedValues.has(instance) && transaction.replacedValues.has(instance)) {
-          return;
-        }
-        Container.withCleanupBatch((disposedValues) =>
-          Container.disposeUnownedInstance(instance, disposedValues),
-        );
-      }),
+      scope ? containerScopeStorage.run(scope, release) : containerScopeStorage.exit(release),
     );
   }
 
@@ -2805,7 +2752,7 @@ export class Container {
 
 export type { Service };
 
-function describeResetCleanupFailure(error: unknown): string {
+function describeProviderCleanupFailure(error: unknown): string {
   try {
     return String(error instanceof Error ? error.message : error);
   } catch {
@@ -2821,4 +2768,58 @@ function createProviderCleanupCause(failures: readonly unknown[]): Error {
     }
   ).AggregateError;
   return new NativeAggregateError(failures, "Container provider cleanup failed.");
+}
+
+function withCleanupBatch(
+  fn: (disposedValues: Set<unknown>) => void,
+  initial = new Set<unknown>(),
+): void {
+  const parent = cleanupAttempts;
+  cleanupAttempts = parent ?? initial;
+  try {
+    fn(cleanupAttempts);
+  } finally {
+    cleanupAttempts = parent;
+  }
+}
+
+function disposeUnownedInstance(
+  instance: unknown,
+  disposedValues: Set<unknown>,
+  cleanup?: () => void,
+  excludedRuntime?: RuntimeContainerInstance,
+): void {
+  if (disposedValues.has(instance) || hasInstanceOwner(instance, excludedRuntime)) return;
+  disposedValues.add(instance);
+  for (const runtime of RuntimeContainerBackend.instances) {
+    containerScopeStates.get(runtime)?.rollbackTransaction?.replacedValues.delete(instance);
+  }
+  if (cleanup) cleanup();
+  else destroyGeneratedInstance(instance);
+}
+
+function hasInstanceOwner(instance: unknown, excludedRuntime?: RuntimeContainerInstance): boolean {
+  if (instance === null || (typeof instance !== "object" && typeof instance !== "function"))
+    return false;
+  if (hasRequestInstanceOwner(instance)) return true;
+  for (const runtime of RuntimeContainerBackend.instances) {
+    if (runtime === excludedRuntime) continue;
+    const scope = containerScopeStates.get(runtime);
+    if (scope?.disposed) continue;
+    const singletons =
+      scope?.generatedSingletons ??
+      (runtime.id === "default" ? rootGeneratedSingletons : undefined);
+    const transients =
+      scope?.generatedTransients ??
+      (runtime.id === "default" ? rootGeneratedTransients : undefined);
+    const transaction = scope?.rollbackTransaction;
+    if (
+      runtime.services.some((service) => service.value === instance) ||
+      (singletons && [...singletons.values()].includes(instance)) ||
+      transients?.has(instance) ||
+      (transaction?.retainedValues.has(instance) && transaction.replacedValues.has(instance))
+    )
+      return true;
+  }
+  return false;
 }
