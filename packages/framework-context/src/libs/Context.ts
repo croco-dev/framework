@@ -26,6 +26,15 @@ export type ContextRunOptions = {
 };
 
 const contextStorage = new AsyncLocalStorage<ContextData>();
+const requestInstanceOwners = new WeakMap<object, number>();
+
+export function hasRequestInstanceOwner(instance: unknown): boolean {
+  return (
+    instance !== null &&
+    (typeof instance === "object" || typeof instance === "function") &&
+    (requestInstanceOwners.get(instance) ?? 0) > 0
+  );
+}
 
 export function trackRequestInstance(instance: object, dispose: () => void): void {
   const data = contextStorage.getStore();
@@ -37,7 +46,13 @@ export function trackRequestInstance(instance: object, dispose: () => void): voi
   }
   assertRequestScopeActive(data.scope);
   if (!data.scope.disposables.has(instance)) {
-    data.scope.disposables.set(instance, dispose);
+    requestInstanceOwners.set(instance, (requestInstanceOwners.get(instance) ?? 0) + 1);
+    data.scope.disposables.set(instance, () => {
+      const remaining = (requestInstanceOwners.get(instance) ?? 1) - 1;
+      if (remaining > 0) requestInstanceOwners.set(instance, remaining);
+      else requestInstanceOwners.delete(instance);
+      dispose();
+    });
   }
 }
 

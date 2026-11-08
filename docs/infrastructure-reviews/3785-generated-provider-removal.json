@@ -4,9 +4,10 @@
     {
       "package": "framework-context",
       "classification": "pure-contract",
-      "reason": "Keep generated token removal stable, validate candidate graphs before changing bindings, and release shared values once after their final owner leaves. Preserve runtime replacement baselines through rollback and expose cleanup failures without retrying committed mutations.",
+      "reason": "Keep generated removal and graph replacement stable through validation and cleanup failures. Preserve shared registered, transient and active request owners, recheck ownership between destructors, and release each orphan once. Preserve runtime replacement rollback baselines and report non-retryable cleanup failures.",
       "files": {
-        "packages/framework-context/src/libs/Container.ts": "e597807cb280d3b769c4ed684a819714d6f3cf9c6354e89e578836b4355133dc"
+        "packages/framework-context/src/libs/Container.ts": "eba461166cf1beaf9d09536dbcc55b37757b818f8ce552bd3156501534b0428a",
+        "packages/framework-context/src/libs/Context.ts": "9edbd2bc183448cec2878455e742b11b63fb9888ad26e9e74b97022589a5d516"
       },
       "catalogRuntimes": [],
       "profiles": {
@@ -56,7 +57,7 @@
       "classification": "pure-contract",
       "reason": "Publish the provider cleanup failure contract and non-retryable operator recovery metadata with synchronized diagnostic source locations.",
       "files": {
-        "packages/problems-core/src/generated/problem-code-registry.ts": "a297c204f55b348cc2c8cf1fad55ebd91088e36c3873a979fda9b16e87823f04"
+        "packages/problems-core/src/generated/problem-code-registry.ts": "0b2486faaec98ee05617b04d3bd21a9cb39000341012317fae584c7dc636bc43"
       },
       "catalogRuntimes": [],
       "profiles": {
