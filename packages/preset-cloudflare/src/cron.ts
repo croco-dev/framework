@@ -102,6 +102,14 @@ export function compileCloudflareCrons(graph: GeneratedDiGraph): CloudflareCronM
       unsupported(`Cloudflare cron provider '${provider.tokenId}' requires a class prototype.`);
     }
 
+    for (const metadata of triggerRegistry.getTriggers(provider.token).values()) {
+      if (metadata.type === "cron" && metadata.options?.enabled !== false) {
+        unsupported(
+          `Cloudflare cron provider '${provider.tokenId}' requires instance methods; static Cron targets are unsupported.`,
+        );
+      }
+    }
+
     for (const metadata of triggerRegistry.getTriggers(target).values()) {
       if (metadata.type !== "cron" || metadata.options?.enabled === false) continue;
       const methodName = metadata.methodName;

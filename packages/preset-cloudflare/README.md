@@ -106,7 +106,7 @@ The supported syntax is five-field UTC cron with wildcards, lists, ascending ran
 positive steps, including named months and weekdays. It follows Cloudflare's native weekday
 numbering, **1=Sunday through 7=Saturday**; use names when migrating from another dialect.
 Non-UTC timezones, seconds fields, `L`, `W`, `#`, `?`, duplicate/blank binding names and
-symbol methods fail with `CLOUDFLARE_CRON_UNSUPPORTED` before deployment. Disabled Cron
+static/symbol methods fail with `CLOUDFLARE_CRON_UNSUPPORTED` before deployment. Disabled Cron
 methods are omitted. See the [Cloudflare Cron contract](https://developers.cloudflare.com/workers/configuration/cron-triggers/).
 
 A Cron method receives `{ cron, scheduledTime }` and the common `TaskExecutionContext`.

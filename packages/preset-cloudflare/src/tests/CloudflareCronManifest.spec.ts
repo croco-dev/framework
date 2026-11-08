@@ -180,6 +180,16 @@ describe("Cloudflare cron manifest", () => {
     ).toThrow(expect.objectContaining({ code: "CLOUDFLARE_CRON_UNSUPPORTED" }));
   });
 
+  it("rejects enabled static Cron methods instead of silently dropping them", () => {
+    class StaticJob {
+      @Cron("0 * * * *")
+      static run() {}
+    }
+    expect(() => compileCloudflareCrons(graph([provider(StaticJob, "static-job")]))).toThrow(
+      expect.objectContaining({ code: "CLOUDFLARE_CRON_UNSUPPORTED" }),
+    );
+  });
+
   it("rejects non-UTC timezone declarations from cron metadata", () => {
     class LocalJob {
       @Cron("0 8 * * *", { timezone: "Asia/Seoul" })

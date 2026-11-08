@@ -8,7 +8,7 @@
       "files": {
         "packages/preset-cloudflare/package.json": "df2193f252d57d5ddc03cfeb3bfd71aa1ad7c9482ea99e1d0072159997723763",
         "packages/preset-cloudflare/tsup.config.ts": "536f871a143e477b26e62b3c6e66a7ae8dfaaaba5d38d7d45ea8de4073de7f31",
-        "packages/preset-cloudflare/src/cron.ts": "fcffdc9a0715f5a356d04afc8c33acd5a63508a8a1c0e1dac7dae300c12e6e1b",
+        "packages/preset-cloudflare/src/cron.ts": "f2a36d38103f5d9a3ccd1a864af7940876b597beb33b0d3202edcf9c7c3f19a6",
         "packages/preset-cloudflare/src/scheduled.ts": "5c3319ec6dc5ca97df8beb8b2d0a86aaaf7812e1f7410ced815607af2e1ce6cb"
       },
       "catalogRuntimes": ["cloudflare-workers"],
