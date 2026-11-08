@@ -879,14 +879,8 @@ export class InMemoryEventBus<TEvent extends DomainEvent = DomainEvent>
 
   private createEventWithTraceContext(event: TEvent, traceContext: TraceInfo): TEvent {
     const eventCopy = this.cloneEvent(event);
-    const traceContextCopy = { ...traceContext };
-    if (this.deadLetterQueue) {
-      eventCopy.metadata.traceContext = traceContextCopy;
-    } else {
-      eventCopy.metadata = {
-        ...eventCopy.metadata,
-        traceContext: traceContextCopy,
-      };
+    if (event.metadata.traceContext !== traceContext) {
+      eventCopy.metadata.traceContext = { ...traceContext };
     }
 
     return eventCopy;
@@ -1031,40 +1025,7 @@ export class InMemoryEventBus<TEvent extends DomainEvent = DomainEvent>
   }
 
   private cloneEvent(event: TEvent): TEvent {
-    if (this.deadLetterQueue) {
-      return cloneDeadLetterEvent(event);
-    }
-    const clonedEvent = Object.create(Object.getPrototypeOf(event)) as TEvent;
-    Object.assign(clonedEvent, this.cloneValue({ ...event }));
-
-    return clonedEvent;
-  }
-
-  private cloneValue<T>(value: T): T {
-    if (value instanceof Date) {
-      return new Date(value.getTime()) as T;
-    }
-
-    if (Array.isArray(value)) {
-      return value.map((item) => this.cloneValue(item)) as T;
-    }
-
-    if (!value || typeof value !== "object") {
-      return value;
-    }
-
-    const prototype = Object.getPrototypeOf(value);
-
-    if (prototype !== Object.prototype && prototype !== null) {
-      return value;
-    }
-
-    const clonedEntries = Object.entries(value).map(([key, entryValue]) => [
-      key,
-      this.cloneValue(entryValue),
-    ]);
-
-    return Object.fromEntries(clonedEntries) as T;
+    return cloneDeadLetterEvent(event);
   }
 
   private normalizeError(error: unknown): Error {
