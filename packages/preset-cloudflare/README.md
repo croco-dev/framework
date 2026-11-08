@@ -135,6 +135,8 @@ transport boundary after inspecting the execution; the native entry exposes no H
 route. Both reuse the original Cron registry, task options and application DI scope, and reject
 executions from another application namespace before changing recovery state. Timeout recovery
 records the operator's reason through the common execution manager before retrying.
+The execution also records its provider token and method name. Recovery rejects reassigned
+Cron names or missing target evidence before mutating execution state, even within the same application.
 
 The native scheduled adapter is Workers-only with `nodejs_compat`; Node and Lambda do not
 gain a scheduler. Local workerd tests cover DI/env forwarding, repeated firings, exception and

@@ -36,6 +36,12 @@ describe("Cloudflare scheduled handler", () => {
     method: (env: unknown, input: unknown, context: TaskExecutionContext) => Promise<unknown>,
     timeout = 30_000,
     maxAttempts = 1,
+    fixtureOptions: {
+      store?: MemoryExecutionStore;
+      applicationId?: string;
+      providerTokenId?: string;
+      sibling?: () => Promise<unknown>;
+    } = {},
   ) {
     class Reports {
       constructor(private readonly env: unknown) {}
@@ -43,6 +49,10 @@ describe("Cloudflare scheduled handler", () => {
       @Task({ timeout, maxAttempts })
       run(input: unknown, task: TaskExecutionContext) {
         return method(this.env, input, task);
+      }
+      @Cron("*/5 * * * *", { name: "sibling", enabled: fixtureOptions.sibling !== undefined })
+      sibling() {
+        return fixtureOptions.sibling?.();
       }
     }
     const graph = defineGeneratedDiGraph({
@@ -53,7 +63,7 @@ describe("Cloudflare scheduled handler", () => {
       providers: [
         {
           token: Reports,
-          tokenId: "reports",
+          tokenId: fixtureOptions.providerTokenId ?? "reports",
           debugName: "Reports",
           scope: "request",
           dependencies: [{ token: CLOUDFLARE_ENV_TOKEN, tokenId: "env", parameterIndex: 0 }],
@@ -69,7 +79,7 @@ describe("Cloudflare scheduled handler", () => {
       graph,
     );
     await runtime.initialize();
-    const store = new MemoryExecutionStore();
+    const store = fixtureOptions.store ?? new MemoryExecutionStore();
     const manager = new ExecutionManagerImpl(store, {
       clock: () => new Date(vi.getMockedSystemTime()?.getTime() ?? event.scheduledTime),
     });
@@ -78,7 +88,7 @@ describe("Cloudflare scheduled handler", () => {
       graph,
       manifest: compileCloudflareCrons(graph),
       env,
-      applicationId: "reports-app",
+      applicationId: fixtureOptions.applicationId ?? "reports-app",
       executionManager: manager,
     };
     return { runtime, store, options, handler: createCloudflareScheduledHandler(options) };
@@ -180,6 +190,174 @@ describe("Cloudflare scheduled handler", () => {
       await app.runtime.dispose();
     }
   });
+
+  it("keeps a failed firing and waitUntil pending until every sibling settles", async () => {
+    const failure = ProblemFactory.badRequest("REPORT_INVALID", "Invalid report");
+    let release: (() => void) | undefined;
+    let failedEntered: (() => void) | undefined;
+    let siblingEntered: (() => void) | undefined;
+    const started = Promise.all([
+      new Promise<void>((resolve) => {
+        failedEntered = resolve;
+      }),
+      new Promise<void>((resolve) => {
+        siblingEntered = resolve;
+      }),
+    ]);
+    const app = await fixture(
+      async () => {
+        failedEntered?.();
+        throw failure;
+      },
+      30_000,
+      1,
+      {
+        sibling: () =>
+          new Promise<void>((resolve) => {
+            release = resolve;
+            siblingEntered?.();
+          }),
+      },
+    );
+    let handlerSettled = false;
+    let hostSettled = false;
+    let hostCompletion: Promise<unknown> | undefined;
+    try {
+      const pending = app.handler(event, app.options.env, {
+        waitUntil: (promise) => {
+          hostCompletion = promise;
+          void promise.then(
+            () => {
+              hostSettled = true;
+            },
+            () => {
+              hostSettled = true;
+            },
+          );
+        },
+      });
+      const outcome = pending.then(
+        () => {
+          handlerSettled = true;
+        },
+        (error: unknown) => {
+          handlerSettled = true;
+          return error;
+        },
+      );
+      await started;
+      await vi.advanceTimersByTimeAsync(0);
+      expect(await app.store.list()).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ type: "reports", status: "failed" }),
+          expect.objectContaining({ type: "sibling", status: "running" }),
+        ]),
+      );
+      expect(handlerSettled).toBe(false);
+      expect(hostSettled).toBe(false);
+      expect(release).toBeTypeOf("function");
+      release?.();
+      expect(await outcome).toBe(failure);
+      await expect(hostCompletion).rejects.toBe(failure);
+      expect(hostSettled).toBe(true);
+      expect(await app.store.list()).toEqual(
+        expect.arrayContaining([expect.objectContaining({ type: "sibling", status: "completed" })]),
+      );
+    } finally {
+      release?.();
+      await app.runtime.dispose();
+    }
+  });
+
+  it("runs the same firing once per application in one shared execution store", async () => {
+    const store = new MemoryExecutionStore();
+    const calls = vi.fn(async () => "stored");
+    const a = await fixture(calls, 30_000, 1, { store, applicationId: "app-a" });
+    const b = await fixture(calls, 30_000, 1, { store, applicationId: "app-b" });
+    try {
+      await a.handler(event, a.options.env, context);
+      await b.handler(event, b.options.env, context);
+      await a.handler(event, a.options.env, context);
+      await b.handler(event, b.options.env, context);
+      expect(calls).toHaveBeenCalledTimes(2);
+      expect(await store.list()).toHaveLength(2);
+      expect((await store.list()).map(({ metadata }) => metadata?.applicationId).sort()).toEqual([
+        "app-a",
+        "app-b",
+      ]);
+    } finally {
+      await Promise.all([a.runtime.dispose(), b.runtime.dispose()]);
+    }
+  });
+
+  it("rejects recovery when a Cron name is reassigned to another provider", async () => {
+    const original = await fixture(
+      async () => {
+        throw ProblemFactory.badRequest("REPORT_INVALID", "Invalid report");
+      },
+      30_000,
+      2,
+    );
+    const replacementCalls = vi.fn(async () => "wrong effect");
+    const replacement = await fixture(replacementCalls, 30_000, 2, {
+      store: original.store,
+      providerTokenId: "replacement-reports",
+    });
+    try {
+      await expect(original.handler(event, original.options.env, context)).rejects.toThrow();
+      const execution = (await original.store.list()).at(0);
+      if (!execution) throw new Error("Missing failed execution");
+      await expect(replacement.handler.retry(execution.id)).rejects.toMatchObject({
+        code: "CLOUDFLARE_CRON_EXECUTION_MISMATCH",
+      });
+      expect(replacementCalls).not.toHaveBeenCalled();
+      expect(await original.store.findById(execution.id)).toMatchObject({
+        status: "failed",
+        attempts: 1,
+      });
+    } finally {
+      await Promise.all([original.runtime.dispose(), replacement.runtime.dispose()]);
+    }
+  });
+
+  it.each(["cronMethodName", "cronProviderTokenId"])(
+    "rejects changed or missing persisted %s before retry or timeout recovery mutates execution",
+    async (field) => {
+      const calls = vi.fn(async () => {
+        throw ProblemFactory.badRequest("REPORT_INVALID", "Invalid report");
+      });
+      const app = await fixture(calls, 30_000, 2);
+      try {
+        await expect(app.handler(event, app.options.env, context)).rejects.toThrow();
+        const execution = (await app.store.list()).at(0);
+        if (!execution) throw new Error("Missing failed execution");
+        expect(execution.metadata).toMatchObject({
+          cronProviderTokenId: "reports",
+          cronMethodName: "run",
+        });
+        const metadata = { ...execution.metadata };
+        if (field === "cronMethodName") metadata[field] = "retiredMethod";
+        else delete metadata[field];
+        await app.store.update(execution.id, { metadata });
+        await expect(app.handler.retry(execution.id)).rejects.toMatchObject({
+          code: "CLOUDFLARE_CRON_EXECUTION_MISMATCH",
+        });
+        await expect(
+          app.handler.recoverTimeout(execution.id, "Effects inspected"),
+        ).rejects.toMatchObject({
+          code: "CLOUDFLARE_CRON_EXECUTION_MISMATCH",
+        });
+        expect(calls).toHaveBeenCalledOnce();
+        expect(await app.store.findById(execution.id)).toMatchObject({
+          status: "failed",
+          attempts: 1,
+          metadata,
+        });
+      } finally {
+        await app.runtime.dispose();
+      }
+    },
+  );
 
   it("retries a named Cron execution with its original DI scope and rejects another application", async () => {
     const seen: unknown[] = [];

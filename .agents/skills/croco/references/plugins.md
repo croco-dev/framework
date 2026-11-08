@@ -46,6 +46,9 @@ Keep the generated Worker API package on ESM so services and the native entry sh
 The `saas-cloudflare` scaffold discovers `@Component` / `@Cron` services under `src/worker`
 and owns `worker:crons:write` / `worker:crons:check` plus the Wrangler schedule block. Do not
 maintain a second provider/handler list or expose scheduled dispatch as an unauthenticated HTTP route.
+Cron metadata is collected in local workerd through Wrangler, including static Worker-only imports,
+without constructing providers or attaching application resources. Import-time code still executes.
+Named-environment schedule overrides must match the compiled list; write/check reject divergent lists.
 
 Schedules use Cloudflare's native five-field UTC dialect (1=Sunday through 7=Saturday);
 named weekdays avoid migration ambiguity. Unsupported timezone/Quartz syntax and manifest
@@ -56,6 +59,8 @@ workerd evidence does not certify Cloudflare deployment, the store or full SaaS 
 For operator recovery, use the returned callback's `retry` / `recoverTimeout` methods so the
 original Cron registry and application scope are retained. Inspect external effects first;
 timeout recovery records the operator reason and rejects another application's execution.
+Persisted provider/method identity must match the current Cron binding before any recovery mutation;
+reassigned names and missing target evidence fail closed.
 
 ## Workers rate limiting
 

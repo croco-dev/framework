@@ -163,6 +163,8 @@ export function createCloudflareScheduledHandler(
                   applicationId: options.applicationId,
                   cron,
                   scheduledTime: event.scheduledTime,
+                  cronProviderTokenId: binding.providerTokenId,
+                  cronMethodName: binding.methodName,
                 },
               });
             }),
@@ -179,9 +181,13 @@ export function createCloudflareScheduledHandler(
   const recover = options.runtime.bindHostCallback(async (executionId: string, reason?: string) => {
     if (!runner || !options.executionManager) throw executionUnavailable();
     const execution = await options.executionManager.get(executionId);
+    const binding = manifest.bindings.find(({ id }) => id === execution.type);
     if (
       execution.metadata?.host !== "cloudflare-workers" ||
       execution.metadata.applicationId !== options.applicationId ||
+      !binding ||
+      execution.metadata.cronProviderTokenId !== binding.providerTokenId ||
+      execution.metadata.cronMethodName !== binding.methodName ||
       !registry.get(execution.type)
     ) {
       throw ProblemFactory.badRequest(

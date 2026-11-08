@@ -9,7 +9,7 @@
         "packages/preset-cloudflare/package.json": "df2193f252d57d5ddc03cfeb3bfd71aa1ad7c9482ea99e1d0072159997723763",
         "packages/preset-cloudflare/tsup.config.ts": "536f871a143e477b26e62b3c6e66a7ae8dfaaaba5d38d7d45ea8de4073de7f31",
         "packages/preset-cloudflare/src/cron.ts": "f2a36d38103f5d9a3ccd1a864af7940876b597beb33b0d3202edcf9c7c3f19a6",
-        "packages/preset-cloudflare/src/scheduled.ts": "9198d8d7c145a0dc3eb2f7c7933125fa058442f6bb8728a8700719c0b40b658a"
+        "packages/preset-cloudflare/src/scheduled.ts": "512498a6f668776afea5772ca79f30ca4215eaac2c2527de39872435353614b6"
       },
       "catalogRuntimes": ["cloudflare-workers"],
       "profiles": {
@@ -78,10 +78,10 @@
       "classification": "deployment-profile",
       "reason": "The generator emits Worker-only DI scanning, Cron/Wrangler drift gates and a native scheduled entry without choosing an execution store or introducing a scheduler.",
       "files": {
-        "packages/create-croco-app/package.json": "ce446393b0d6f3e0e783f4be91cb161216864e5b19091b3cea2c450af74c8684",
+        "packages/create-croco-app/package.json": "57c3bddf3b83ea80d192001fb1881467ecd31fdc33b54f41e57e598ee134d14a",
         "packages/create-croco-app/src/generator.ts": "d26d6cef544efa94d01fa2122ac859b71e02779bab305638e90d5544e4b9837d",
         "packages/create-croco-app/src/helpers/croco-ranges.ts": "204fd6e18bab947e9040f6d7a6f1073155bcb01b6894987d5ddc13f6a6c1caf8",
-        "packages/create-croco-app/templates/saas/apps/api-server/scripts/worker-crons.ts": "27d3efdca077ea22174bf87f5c603351245f9b02305c47cc8e51a3ff23677e8f",
+        "packages/create-croco-app/templates/saas/apps/api-server/scripts/worker-crons.ts": "b9e29e44bf88e62c92f507bec25ed5e273a913795f00cdcb9483500c65636c70",
         "packages/create-croco-app/templates/saas/apps/api-server/src/worker.ts": "850adee76d02c6c40069d0f06d848100d52636fb241b06057092ece591c32806",
         "packages/create-croco-app/templates/saas/apps/api-server/src/workerBootstrap.ts.hbs": "e3cecaf95426748f7147243311bd239b0a445728f015892d489388804ea5199a",
         "packages/create-croco-app/templates/saas/apps/api-server/src/workerScheduling.ts.hbs": "d82c2127e2c92822a58388d3cf3e7b6dd8f767e0b8622bf260f705f04cc8f4fb",

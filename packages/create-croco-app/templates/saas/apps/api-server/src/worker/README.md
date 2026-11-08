@@ -29,5 +29,13 @@ Cooperative abort does not undo or forcibly stop an external effect.
 Run `pnpm worker:crons:write` after changing declarations; review the manifest and
 Wrangler `[triggers].crons` diff. Build, dev and smoke run `worker:crons:check` and refuse stale
 output. Unsupported timezones/expressions and duplicate identities fail before deployment.
+Metadata collection runs a local workerd instance through the existing Wrangler toolchain,
+so services can statically import Worker modules such as `cloudflare:sockets`. It evaluates
+modules and decorators without constructing providers or invoking Cron methods. Keep import-time
+code free of resource access and side effects. No application bindings or secrets are attached.
+Named Wrangler environments inherit the compiled schedules unless they declare the same Cron list;
+divergent environment overrides fail both write and check. LF and CRLF ownership blocks are supported.
+Recovery also requires the persisted provider and method identity to match the current binding;
+reassigning a Cron name or missing identity evidence is rejected before recovery changes state.
 The scaffold remains bootstrap-only for SaaS capabilities. Local scheduled execution does
 not certify a live Cloudflare deployment or a persistence provider.

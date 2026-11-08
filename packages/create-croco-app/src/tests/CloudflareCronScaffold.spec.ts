@@ -96,8 +96,90 @@ async function scaffold(root: string) {
     join(nodeModules, "smol-toml"),
     "dir",
   );
+  symlinkSync(
+    resolve(require.resolve("wrangler/package.json"), ".."),
+    join(nodeModules, "wrangler"),
+    "dir",
+  );
   return { api, nodeModules, repositoryPackages };
 }
+
+it.each(["environment", "crlf", "native-module"] as const)(
+  "validates Cron metadata and Wrangler output across the %s boundary",
+  async (boundary) => {
+    const root = mkdtempSync(join(tmpdir(), "croco-worker-cron-boundary-"));
+    try {
+      const { api } = await scaffold(root);
+      writeFileSync(
+        join(api, "src/worker/MetadataOnly.ts"),
+        `
+        import { Component } from '@croco/framework-context';
+        import { Cron } from '@croco/triggers-core';
+        ${boundary === "native-module" ? "import { connect } from 'cloudflare:sockets';" : ""}
+        @Component()
+        export class MetadataOnly {
+          constructor() { throw new Error('metadata-constructor-executed'); }
+          @Cron('*/5 * * * *', { name: 'metadata-only' })
+          run() {
+            ${boundary === "native-module" ? "void connect;" : ""}
+            throw new Error('metadata-method-executed');
+          }
+        }
+      `,
+      );
+      const run = (...args: string[]) =>
+        spawnSync(
+          process.execPath,
+          ["--import", require.resolve("tsx"), "scripts/worker-crons.ts", ...args],
+          { cwd: api, encoding: "utf8", timeout: 30_000 },
+        );
+      const written = run("--write");
+      expect(written.status, written.stderr).toBe(0);
+      const wranglerFile = join(api, "wrangler.toml");
+      const config = readFileSync(wranglerFile, "utf8");
+      const declarationFile = join(api, "worker-crons.manifest.json");
+      const declaration = readFileSync(declarationFile, "utf8");
+      if (boundary === "environment") {
+        writeFileSync(
+          wranglerFile,
+          `${config}\n[env.production.triggers]\ncrons = ["0 1 * * *"]\n`,
+        );
+        const drift = run();
+        expect(drift.status, drift.stderr).toBe(1);
+        expect(drift.stderr).toContain("CLOUDFLARE_CRON_OUTPUT_DRIFT");
+        const refusedWrite = run("--write");
+        expect(refusedWrite.status, refusedWrite.stderr).toBe(1);
+        expect(readFileSync(declarationFile, "utf8")).toBe(declaration);
+        writeFileSync(wranglerFile, `${config}\n[env.production]\nname = "production-worker"\n`);
+      } else if (boundary === "crlf") {
+        writeFileSync(wranglerFile, config.replace(/\n/g, "\r\n"));
+        const rewritten = run("--write");
+        expect(rewritten.status, rewritten.stderr).toBe(0);
+        expect(readFileSync(wranglerFile, "utf8")).toBe(config.replace(/\n/g, "\r\n"));
+      } else {
+        const nodeImport = spawnSync(
+          process.execPath,
+          [
+            "--import",
+            require.resolve("tsx"),
+            "--input-type=module",
+            "-e",
+            "await import('./.croco/worker-di.generated.ts')",
+          ],
+          { cwd: api, encoding: "utf8", timeout: 30_000 },
+        );
+        expect(nodeImport.status).toBe(1);
+        expect(nodeImport.stderr).toContain("cloudflare:");
+      }
+      const checked = run();
+      expect(checked.status, checked.stderr).toBe(0);
+      expect(readFileSync(declarationFile, "utf8")).toBe(declaration);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  },
+  90_000,
+);
 
 it("compiles published Cron services into Wrangler and invokes the same DI graph in workerd", async () => {
   const root = mkdtempSync(join(tmpdir(), "croco-worker-crons-"));
