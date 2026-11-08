@@ -18,6 +18,116 @@ const SHARED_FIXTURE_ROOT = new URL(
 );
 
 describe("loadRoutes", () => {
+  it.each(["root", "reference", "package-root"] as const)(
+    "rejects selected ambient declaration errors before importing controllers (%s)",
+    async (declarationKind) => {
+      fs.writeFileSync(
+        path.join(tempRoot, "tsconfig.json"),
+        JSON.stringify({
+          compilerOptions: {
+            experimentalDecorators: true,
+            module: "CommonJS",
+            target: "ES2020",
+            skipLibCheck: false,
+          },
+          files: [
+            "src/UsersController.ts",
+            declarationKind === "package-root"
+              ? "node_modules/app-ambient/globals.d.ts"
+              : "src/globals.d.ts",
+          ],
+        }),
+      );
+      const globalsPath =
+        declarationKind === "package-root"
+          ? path.join(tempRoot, "node_modules", "app-ambient", "globals.d.ts")
+          : path.join(sourceDir, "globals.d.ts");
+      const declarationPath =
+        declarationKind === "reference" ? path.join(sourceDir, "extra", "types.d.ts") : globalsPath;
+      fs.mkdirSync(path.dirname(declarationPath), { recursive: true });
+      fs.writeFileSync(
+        globalsPath,
+        declarationKind === "reference"
+          ? "/// <reference path='./extra/types.d.ts' />\ntype AppId = ExtraId;"
+          : "type AppId = MissingAppId;",
+      );
+      if (declarationKind === "reference") {
+        fs.writeFileSync(declarationPath, "type ExtraId = MissingAppId;");
+      }
+      const markerKey = `ambient-controller-import:${tempRoot}`;
+      const importMarker = Symbol.for(markerKey);
+      try {
+        const controllerSource = getMixedControllerSource().replace(
+          "readonly id = 'user-1';",
+          "readonly id: AppId = 'user-1';",
+        );
+        fs.writeFileSync(
+          path.join(sourceDir, "UsersController.ts"),
+          `(globalThis as unknown as Record<PropertyKey, unknown>)[Symbol.for(${JSON.stringify(markerKey)})] = true;\n${controllerSource}`,
+        );
+        await expect(loadRoutes(path.join(sourceDir, "*Controller.ts"))).rejects.toMatchObject({
+          extensions: {
+            crocoCode: "CROCO_BUILD_003",
+            diagnostics: expect.arrayContaining([
+              expect.objectContaining({ tsCode: "TS2304", file: declarationPath }),
+            ]),
+          },
+        });
+        expect(Reflect.has(globalThis, importMarker)).toBe(false);
+        fs.writeFileSync(
+          declarationPath,
+          declarationKind === "reference" ? "type ExtraId = string;" : "type AppId = string;",
+        );
+        await loadRoutes(path.join(sourceDir, "*Controller.ts"));
+        expect(Reflect.get(globalThis, importMarker)).toBe(true);
+      } finally {
+        Reflect.deleteProperty(globalThis, importMarker);
+      }
+    },
+    LOAD_ROUTES_TIMEOUT_MS,
+  );
+
+  it.each(["discovered", "explicit"] as const)(
+    "loads controllers using ambient globals and module augmentations (%s config)",
+    async (selection) => {
+      const tsconfigPath = path.join(tempRoot, "tsconfig.json");
+      fs.writeFileSync(
+        tsconfigPath,
+        JSON.stringify({
+          compilerOptions: { experimentalDecorators: true, module: "CommonJS", target: "ES2020" },
+          files: ["src/UsersController.ts", "src/globals.d.ts", "src/augment.d.ts"],
+        }),
+      );
+      fs.writeFileSync(path.join(sourceDir, "globals.d.ts"), "type AppId = string;");
+      fs.writeFileSync(
+        path.join(sourceDir, "model.ts"),
+        "export interface Model { name: string; }",
+      );
+      fs.writeFileSync(
+        path.join(sourceDir, "augment.d.ts"),
+        "import './model'; declare module './model' { interface Model { id: AppId; } }",
+      );
+      fs.writeFileSync(
+        path.join(sourceDir, "UsersController.ts"),
+        getMixedControllerSource().replace(
+          "readonly id = 'user-1';",
+          "readonly id: AppId = 'user-1'; readonly model: import('./model').Model = { name: 'app', id: 'app-1' };",
+        ),
+      );
+      const result = await loadRoutes(
+        path.join(sourceDir, "*Controller.ts"),
+        selection === "explicit" ? { tsconfigPath } : {},
+      );
+      expect(result).toHaveLength(1);
+      expect(result[0]).toMatchObject({
+        path: "/users",
+        methodName: "listUsers",
+        httpMethod: "GET",
+      });
+    },
+    LOAD_ROUTES_TIMEOUT_MS,
+  );
+
   beforeEach(() => {
     tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "rpc-load-routes-"));
     sourceDir = path.join(tempRoot, "src");
@@ -348,6 +458,14 @@ schema.parse({ id: 'user-1' });`,
   it(
     "fails before importing emitted controllers when controller TypeScript has errors",
     async () => {
+      fs.writeFileSync(
+        path.join(tempRoot, "tsconfig.json"),
+        JSON.stringify({
+          compilerOptions: { experimentalDecorators: true, module: "CommonJS", target: "ES2020" },
+          include: ["src/**/*.ts"],
+        }),
+      );
+      fs.writeFileSync(path.join(sourceDir, "globals.d.ts"), "type AppId = string;");
       const controllerPath = path.join(sourceDir, "BrokenController.ts");
       fs.writeFileSync(controllerPath, readSharedFixture("BrokenController.ts.fixture"));
 

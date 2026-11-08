@@ -1,0 +1,106 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "protocol-codegen",
+      "classification": "pure-contract",
+      "reason": "Preserve application ambient type context and explicitly selected declaration errors during shared build-time contract generation without widening runtime imports or emission. The Tooling catalog has no deployed runtime claims.",
+      "files": {
+        "packages/protocol-codegen/src/libs/ControllerProject.ts": "94a1791fa65ed4ee4b7757a7aa980e3defe0091f576198d802610aaafcbf1c1f",
+        "packages/protocol-codegen/src/libs/RestControllerSources.ts": "430c0ddee4c4d3b28e3e9ef67a4238c06c9100bde2735e7e3b2693541654fe11"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Ambient type context is loaded during Node-based contract generation before deployment to the Kubernetes Node Host. The change adds no deployed host, provider, storage or application lifecycle requirement.",
+          "providers": [],
+          "constraints": [
+            "The existing generator requires Node filesystem and compiler access in the build environment; this is not a deployed host support claim."
+          ],
+          "references": [
+            "packages/protocol-codegen/src/libs/ControllerProject.ts",
+            "packages/protocol-codegen/src/tests/ControllerProject.spec.ts",
+            "packages/protocol-codegen/src/libs/RestControllerSources.ts",
+            "packages/protocol-codegen/src/tests/RestControllerSources.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Ambient type context is loaded during Node-based contract generation before deployment to the Lambda Host. The change adds no deployed host, provider, storage or application lifecycle requirement.",
+          "providers": [],
+          "constraints": [
+            "The existing generator requires Node filesystem and compiler access in the build environment; this is not a deployed host support claim."
+          ],
+          "references": [
+            "packages/protocol-codegen/src/libs/ControllerProject.ts",
+            "packages/protocol-codegen/src/tests/ControllerProject.spec.ts",
+            "packages/protocol-codegen/src/libs/RestControllerSources.ts",
+            "packages/protocol-codegen/src/tests/RestControllerSources.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Ambient type context is loaded during Node-based contract generation before deployment to the Workers or Node Container Host. The change adds no deployed host, provider, storage or application lifecycle requirement.",
+          "providers": [],
+          "constraints": [
+            "The existing generator requires Node filesystem and compiler access in the build environment; this is not a deployed host support claim."
+          ],
+          "references": [
+            "packages/protocol-codegen/src/libs/ControllerProject.ts",
+            "packages/protocol-codegen/src/tests/ControllerProject.spec.ts",
+            "packages/protocol-codegen/src/libs/RestControllerSources.ts",
+            "packages/protocol-codegen/src/tests/RestControllerSources.spec.ts"
+          ]
+        }
+      }
+    },
+    {
+      "package": "problems-core",
+      "classification": "pure-contract",
+      "reason": "Synchronize generated Problem source-location line metadata after the loader change; no error code, serialization format or host execution contract changes.",
+      "files": {
+        "packages/problems-core/src/generated/problem-code-registry.ts": "94441fb36eee67a5b79b8c25912e1516050961fd168dcc24b9c3b141f3fc9101"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Generated Problem source-location metadata follows the build-time loader source. Diagnostic codes, status, recovery behavior and deployed host requirements are unchanged.",
+          "providers": [],
+          "constraints": [
+            "The existing generator requires Node filesystem and compiler access in the build environment; this is not a deployed host support claim."
+          ],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "docs/problem-code-registry.json"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Generated Problem source-location metadata follows the build-time loader source. Diagnostic codes, status, recovery behavior and deployed host requirements are unchanged.",
+          "providers": [],
+          "constraints": [
+            "The existing generator requires Node filesystem and compiler access in the build environment; this is not a deployed host support claim."
+          ],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "docs/problem-code-registry.json"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Generated Problem source-location metadata follows the build-time loader source. Diagnostic codes, status, recovery behavior and deployed host requirements are unchanged.",
+          "providers": [],
+          "constraints": [
+            "The existing generator requires Node filesystem and compiler access in the build environment; this is not a deployed host support claim."
+          ],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "docs/problem-code-registry.json"
+          ]
+        }
+      }
+    }
+  ]
+}

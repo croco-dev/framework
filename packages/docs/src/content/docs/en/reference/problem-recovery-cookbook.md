@@ -17584,7 +17584,7 @@ Sources:
 
 Sources:
 
-- `packages/protocol-codegen/src/libs/ControllerProject.ts:60:5` (problem-constructor)
+- `packages/protocol-codegen/src/libs/ControllerProject.ts:61:5` (problem-constructor)
 
 <a id="protocol-codegen-controller-project-jsx-runtime"></a>
 
@@ -17602,7 +17602,7 @@ Sources:
 
 Sources:
 
-- `packages/protocol-codegen/src/libs/ControllerProject.ts:95:5` (problem-constructor)
+- `packages/protocol-codegen/src/libs/ControllerProject.ts:96:5` (problem-constructor)
 
 <a id="protocol-codegen-controller-project-state"></a>
 
@@ -17620,7 +17620,7 @@ Sources:
 
 Sources:
 
-- `packages/protocol-codegen/src/libs/ControllerProject.ts:81:5` (problem-constructor)
+- `packages/protocol-codegen/src/libs/ControllerProject.ts:82:5` (problem-constructor)
 
 <a id="protocols-core-contract-graph-diagnostics"></a>
 

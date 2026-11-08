@@ -25228,7 +25228,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/protocol-codegen/src/libs/ControllerProject.ts";
-          readonly line: 60;
+          readonly line: 61;
           readonly column: 5;
           readonly kind: "problem-constructor";
         },
@@ -25256,7 +25256,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/protocol-codegen/src/libs/ControllerProject.ts";
-          readonly line: 95;
+          readonly line: 96;
           readonly column: 5;
           readonly kind: "problem-constructor";
         },
@@ -25284,7 +25284,7 @@ export type CrocoProblemRegistry = {
       readonly sources: readonly [
         {
           readonly file: "packages/protocol-codegen/src/libs/ControllerProject.ts";
-          readonly line: 81;
+          readonly line: 82;
           readonly column: 5;
           readonly kind: "problem-constructor";
         },
@@ -61445,7 +61445,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/protocol-codegen/src/libs/ControllerProject.ts",
-          line: 60,
+          line: 61,
           column: 5,
           kind: "problem-constructor",
         },
@@ -61479,7 +61479,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/protocol-codegen/src/libs/ControllerProject.ts",
-          line: 95,
+          line: 96,
           column: 5,
           kind: "problem-constructor",
         },
@@ -61512,7 +61512,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY: CrocoProblemRegistry = {
       sources: [
         {
           file: "packages/protocol-codegen/src/libs/ControllerProject.ts",
-          line: 81,
+          line: 82,
           column: 5,
           kind: "problem-constructor",
         },

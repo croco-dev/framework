@@ -1,9 +1,11 @@
 import * as fs from "node:fs";
+import { createRequire } from "node:module";
 import { execFileSync } from "node:child_process";
 import * as os from "node:os";
 import * as path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ts } from "ts-morph";
+import * as typescript from "typescript";
 import { ControllerProjectConfigProblem, createControllerProject } from "../libs/ControllerProject";
 
 const temporaryDirectories: string[] = [];
@@ -18,6 +20,261 @@ afterEach(() => {
 });
 
 describe("createControllerProject", () => {
+  it.each([
+    { skipLibCheck: false, dependencyExtension: "d.ts" },
+    { skipLibCheck: true, dependencyExtension: "d.ts" },
+    { skipLibCheck: true, dependencyExtension: "ts" },
+  ])(
+    "preserves ambient dependency diagnostics ($dependencyExtension, skipLibCheck=$skipLibCheck)",
+    ({ skipLibCheck, dependencyExtension }) => {
+      const root = createTemporaryDirectory();
+      const configPath = path.join(root, "tsconfig.json");
+      writeJson(configPath, {
+        compilerOptions: {
+          module: "CommonJS",
+          target: "ES2020",
+          skipLibCheck,
+        },
+        files: ["Controller.ts", "globals.d.ts"],
+      });
+      writeFile(
+        path.join(root, "globals.d.ts"),
+        dependencyExtension === "d.ts"
+          ? "/// <reference path='./extra/types.d.ts' />\ntype AppId = ExtraId;"
+          : "import type { ExtraId } from './extra/types'; declare global { type AppId = ExtraId; }",
+      );
+      writeFile(
+        path.join(root, "extra", `types.${dependencyExtension}`),
+        `${dependencyExtension === "ts" ? "export " : ""}type ExtraId = MissingAppId;`,
+      );
+      writeFile(path.join(root, "Controller.ts"), "export class Controller { value!: AppId; }");
+      const expected =
+        skipLibCheck && dependencyExtension === "d.ts"
+          ? []
+          : [{ code: 2304, file: `types.${dependencyExtension}` }];
+      const parsed = typescript.getParsedCommandLineOfConfigFile(
+        configPath,
+        {},
+        {
+          ...typescript.sys,
+          onUnRecoverableConfigFileDiagnostic: () => {},
+        },
+      );
+      expect(parsed).toBeDefined();
+      const application = typescript.createProgram(parsed?.fileNames ?? [], parsed?.options ?? {});
+      expect(
+        typescript.getPreEmitDiagnostics(application).map((diagnostic) => ({
+          code: diagnostic.code,
+          file: diagnostic.file ? path.basename(diagnostic.file.fileName) : undefined,
+        })),
+      ).toEqual(expected);
+      const session = createControllerProject({ cwd: root, controllers: "Controller.ts" });
+      try {
+        expect(
+          session.getPreEmitDiagnostics().map((diagnostic) => ({
+            code: diagnostic.getCode(),
+            file: diagnostic.getSourceFile()?.getBaseName(),
+          })),
+        ).toEqual(expected);
+      } finally {
+        session.dispose();
+      }
+    },
+  );
+
+  it.each([false, true])(
+    "respects skipLibCheck=%s for selected ambient declarations",
+    (skipLibCheck) => {
+      const root = createTemporaryDirectory();
+      writeJson(path.join(root, "tsconfig.json"), {
+        compilerOptions: {
+          module: "ESNext",
+          moduleResolution: "Bundler",
+          target: "ES2022",
+          skipLibCheck,
+        },
+        include: ["*.ts"],
+      });
+      writeFile(path.join(root, "globals.d.ts"), "type AppId = MissingAppId;");
+      writeFile(path.join(root, "Controller.ts"), "export class Controller { value!: AppId; }");
+      const session = createControllerProject({ cwd: root, controllers: "Controller.ts" });
+      try {
+        const diagnostics = session.getPreEmitDiagnostics().map((diagnostic) => ({
+          code: diagnostic.getCode(),
+          file: diagnostic.getSourceFile()?.getBaseName(),
+        }));
+        expect(diagnostics).toEqual(skipLibCheck ? [] : [{ code: 2304, file: "globals.d.ts" }]);
+      } finally {
+        session.dispose();
+      }
+    },
+  );
+
+  it.each([
+    { packageType: "module", typeDependency: "direct" },
+    { packageType: "commonjs", typeDependency: "direct" },
+    { packageType: "module", typeDependency: "source" },
+    { packageType: "commonjs", typeDependency: "source" },
+  ])(
+    "resolves ambient type imports with the NodeNext $packageType package format ($typeDependency)",
+    async ({ packageType, typeDependency }) => {
+      const root = createTemporaryDirectory();
+      const expected = packageType === "module" ? "esm" : "cjs";
+      writeJson(path.join(root, "package.json"), { type: packageType });
+      writeJson(path.join(root, "tsconfig.json"), {
+        compilerOptions: {
+          module: "NodeNext",
+          moduleResolution: "NodeNext",
+          target: "ES2022",
+          experimentalDecorators: true,
+          emitDecoratorMetadata: true,
+        },
+        include: ["src/**/*.ts"],
+      });
+      const dependency = path.join(root, "node_modules", "ambient-format");
+      writeJson(path.join(dependency, "package.json"), {
+        name: "ambient-format",
+        exports: {
+          ".": {
+            import: { types: "./esm.d.mts" },
+            require: { types: "./cjs.d.cts" },
+          },
+        },
+      });
+      writeFile(
+        path.join(dependency, "esm.d.mts"),
+        "export type Selected = 'esm'; export type Value = string;",
+      );
+      writeFile(
+        path.join(dependency, "cjs.d.cts"),
+        "export type Selected = 'cjs'; export type Value = number;",
+      );
+      fs.symlinkSync(
+        path.dirname(createRequire(import.meta.url).resolve("reflect-metadata")),
+        path.join(root, "node_modules", "reflect-metadata"),
+        "dir",
+      );
+      if (typeDependency === "source") {
+        writeFile(
+          path.join(root, "src", "type-defs.ts"),
+          "export type { Selected, Value } from 'ambient-format'; throw new Error('analysis-only source executed');",
+        );
+      }
+      const typeSource = typeDependency === "source" ? "./type-defs.js" : "ambient-format";
+      writeFile(
+        path.join(root, "src", "globals.d.ts"),
+        `import type { Selected, Value } from '${typeSource}'; declare global { type AppSelected = Selected; type AppValue = Value; }`,
+      );
+      writeFile(
+        path.join(root, "src", "Controller.ts"),
+        `import 'reflect-metadata'; function Tag(): PropertyDecorator { return () => {}; } export class Controller { static value: AppSelected = '${expected}'; @Tag() value!: AppValue; static get valueType() { return Reflect.getMetadata('design:type', Controller.prototype, 'value'); } }`,
+      );
+      const parsed = typescript.getParsedCommandLineOfConfigFile(
+        path.join(root, "tsconfig.json"),
+        {},
+        { ...typescript.sys, onUnRecoverableConfigFileDiagnostic: () => {} },
+      );
+      expect(parsed).toBeDefined();
+      const application = typescript.createProgram(parsed?.fileNames ?? [], parsed?.options ?? {});
+      expect(typescript.getPreEmitDiagnostics(application)).toEqual([]);
+      const session = createControllerProject({ cwd: root, controllers: "src/Controller.ts" });
+      try {
+        expect(
+          session.getPreEmitDiagnostics().map((diagnostic) => diagnostic.getMessageText()),
+        ).toEqual([]);
+        session.emit();
+        const [exports] = await session.importControllerModules();
+        expect((exports.Controller as { value: string }).value).toBe(expected);
+        expect((exports.Controller as { valueType: unknown }).valueType).toBe(
+          packageType === "module" ? String : Number,
+        );
+        expect(fs.readdirSync(session.emitDir, { recursive: true })).not.toContain("type-defs.js");
+      } finally {
+        session.dispose();
+      }
+    },
+  );
+
+  it.each(["discovered", "explicit"] as const)(
+    "includes configured ambient declarations for %s configs without widening runtime sources",
+    async (configSelection) => {
+      const root = createTemporaryDirectory();
+      writeJson(path.join(root, "tsconfig.base.json"), {
+        compilerOptions: { module: "ESNext", moduleResolution: "Bundler", target: "ES2022" },
+        include: ["src/**/*.ts"],
+      });
+      writeJson(path.join(root, "tsconfig.json"), { extends: "./tsconfig.base.json" });
+      writeFile(path.join(root, "src", "ControllerTypes.d.ts"), "type AppId = string;");
+      writeFile(
+        path.join(root, "src", "augmentation.d.ts"),
+        "import './model'; declare module './model' { interface Model { id: AppId; } }",
+      );
+      writeFile(path.join(root, "src", "model.ts"), "export interface Model { name: string; }");
+      writeFile(
+        path.join(root, "src", "ControllerAmbient.d.ts"),
+        "import type { Extra } from './types-only'; declare global { type ExtraId = Extra['id']; }",
+      );
+      writeFile(
+        path.join(root, "src", "types-only.ts"),
+        "export interface Extra { id: string; } throw new Error('type-only source executed');",
+      );
+      writeFile(
+        path.join(root, "src", "Unmatched.ts"),
+        "throw new Error('unmatched entry executed'); export class Unmatched {}",
+      );
+      writeFile(
+        path.join(root, "src", "Controller.ts"),
+        "import type { Model } from './model'; export class Controller { static value: Model = { id: 'app-1', name: 'app' }; extra!: ExtraId; }",
+      );
+      writeFile(path.join(root, "excluded.d.ts"), "type AppId = number;");
+      const configPath = path.join(root, "tsconfig.json");
+      const parsed = typescript.getParsedCommandLineOfConfigFile(
+        configPath,
+        {},
+        {
+          ...typescript.sys,
+          onUnRecoverableConfigFileDiagnostic: () => {},
+        },
+      );
+      expect(parsed).toBeDefined();
+      const application = typescript.createProgram(parsed?.fileNames ?? [], parsed?.options ?? {});
+      expect(
+        typescript
+          .getPreEmitDiagnostics(application)
+          .map((diagnostic) =>
+            typescript.flattenDiagnosticMessageText(diagnostic.messageText, "\n"),
+          ),
+      ).toEqual([]);
+
+      const session = createControllerProject({
+        cwd: root,
+        controllers: "src/Controller*.ts",
+        ...(configSelection === "explicit" ? { tsconfigPath: configPath } : {}),
+      });
+      try {
+        expect(
+          session.getPreEmitDiagnostics().map((diagnostic) => diagnostic.getMessageText()),
+        ).toEqual([]);
+        expect(session.controllerSourceFiles.map((sourceFile) => sourceFile.getBaseName())).toEqual(
+          ["Controller.ts"],
+        );
+        session.emit();
+        const [exports] = await session.importControllerModules();
+        expect((exports.Controller as { value: unknown }).value).toEqual({
+          id: "app-1",
+          name: "app",
+        });
+        const output = fs.readdirSync(session.emitDir, { recursive: true });
+        expect(output).not.toContain("ControllerTypes.js");
+        expect(output).not.toContain("augmentation.js");
+        expect(output).not.toContain("types-only.js");
+        expect(output).not.toContain("Unmatched.js");
+      } finally {
+        session.dispose();
+      }
+    },
+  );
+
   it.each(["CommonJS", "ESNext", "NodeNext"] as const)(
     "imports a TSX controller with jsx preserve in %s without changing analysis options",
     async (module) => {
