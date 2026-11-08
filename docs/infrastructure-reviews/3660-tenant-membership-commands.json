@@ -64,7 +64,7 @@
         "packages/membership-drizzle/src/libs/DrizzleMembershipStore.ts": "653bcf4bdfd12554b46fe2cceddc95e018763c08f6a9413f6dcc814a4beb39e0",
         "packages/membership-drizzle/src/libs/schema.ts": "4f0161c00748ac21a372fcfe1bd303e77da06673b3cd6072625b796e4623c71d",
         "packages/membership-drizzle/src/migrations/membershipEventIntents.ts": "58d99099947d3b9f14c66f4ea8834fb90ebbe5d49f9313c0923287b7d0163cd8",
-        "packages/membership-drizzle/src/migrations/scopeMembershipCommandsByTenant.ts": "7cdaf025df71ed4421d220957dd3d5d22bfba7bb053dba48323c109ed45a7d1f"
+        "packages/membership-drizzle/src/migrations/scopeMembershipCommandsByTenant.ts": "176ee0e2ea4a3b7454af60ce12259febfa0e35dfa042a500a6b32bbf95a954eb"
       },
       "catalogRuntimes": ["node", "lambda"],
       "profiles": {

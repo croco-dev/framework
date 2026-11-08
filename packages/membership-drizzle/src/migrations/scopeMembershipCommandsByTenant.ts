@@ -10,6 +10,7 @@ export async function scopeMembershipCommandsByTenant(
     do $$
     declare
       legacy_constraint text;
+      legacy_index record;
     begin
       lock table membership_idempotency_records, membership_event_intents in access exclusive mode;
       alter table membership_idempotency_records add column if not exists tenant_id text;
@@ -69,7 +70,16 @@ export async function scopeMembershipCommandsByTenant(
       end loop;
       alter table membership_event_intents
         drop constraint if exists membership_event_intents_idempotency_unique;
-      drop index if exists membership_event_intents_idempotency_unique;
+      for legacy_index in
+        select namespace.nspname as schema_name, index_relation.relname as index_name
+        from pg_index as index_metadata
+        join pg_class as index_relation on index_relation.oid = index_metadata.indexrelid
+        join pg_namespace as namespace on namespace.oid = index_relation.relnamespace
+        where index_metadata.indrelid = 'membership_event_intents'::regclass
+          and index_relation.relname = 'membership_event_intents_idempotency_unique'
+      loop
+        execute format('drop index %I.%I', legacy_index.schema_name, legacy_index.index_name);
+      end loop;
 
       for legacy_constraint in
         select conname from pg_constraint

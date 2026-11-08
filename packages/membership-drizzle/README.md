@@ -94,6 +94,8 @@ intents have a composite foreign key and a unique `(tenant_id, idempotency_key)`
 backfill and constraint replacement is one atomic SQL statement and can be run repeatedly. Existing
 results, fingerprints, timestamps, publication markers, intent IDs and event IDs remain unchanged,
 including partially published intents whose publisher has already seen an event ID.
+Legacy unique constraints and standalone unique indexes are both supported. Index removal is bound to
+the selected intent table and its schema; later schemas in `search_path` retain their own indexes.
 
 Missing or inconsistent tenant evidence aborts the migration and rolls back its DDL and updates.
 Inspect and reconcile those records from authoritative evidence before trying again; do not infer a
