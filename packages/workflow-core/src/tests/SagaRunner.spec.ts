@@ -248,7 +248,8 @@ describe("SagaRunner", () => {
     const execution = await runner.getExecution(failedExecution.id);
     const queried = await runner.getExecution(execution.id);
 
-    expect(queried).toBe(execution);
+    expect(queried).toEqual(execution);
+    expect(queried).not.toBe(execution);
     expect(execution.status).toBe("compensated");
     expect(execution.error).toEqual(
       expect.objectContaining({
@@ -2023,7 +2024,8 @@ describe("SagaRunner", () => {
     const primary = runner.execute(definition, payload);
     payload.quantity = 99;
     const first = await primary;
-    expect(first.execution.payload).toEqual({ quantity: 5 });
+    expect(first.execution.payload).toEqual({ quantity: 3 });
+    expect(first.execution.steps[0]?.input).toEqual({ quantity: 5 });
     await expect(runner.execute(definition, { quantity: 3 })).resolves.toMatchObject({
       reused: true,
     });
@@ -2031,6 +2033,50 @@ describe("SagaRunner", () => {
       code: "workflow-core/saga-store-conflict",
     });
     expect(run).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps completed evidence and outbox content intact after caller mutations", async () => {
+    const runner = new SagaRunner();
+    const receipt = { payment: { id: "pay-original" } };
+    const payload = { quantity: 3 };
+    const published: SagaOutboxMessage[] = [];
+    const definition: SagaDefinition = {
+      name: "detached-evidence",
+      idempotencyKey: "order-123",
+      outbox: {
+        publish: (message) => {
+          published.push(message);
+        },
+      },
+      steps: [
+        {
+          id: "charge",
+          run: (input, { enqueueOutbox }) => {
+            enqueueOutbox({ id: "charged", topic: "billing.charged", payload: input });
+            return receipt;
+          },
+        },
+      ],
+    };
+    const first = await runner.execute(definition, payload);
+    receipt.payment.id = "changed";
+    payload.quantity = 99;
+    const view = await runner.getExecution(first.executionId);
+    Reflect.set(view, "status", "running");
+    (view.steps[0]?.outboxMessages[0]?.payload as { quantity: number }).quantity = 100;
+    const reused = await runner.execute(definition, { quantity: 3 });
+    expect(reused.reused).toBe(true);
+    expect(reused.execution).toMatchObject({
+      status: "completed",
+      payload: { quantity: 3 },
+      result: {
+        sagaName: "detached-evidence",
+        steps: [{ stepId: "charge", result: { payment: { id: "pay-original" } } }],
+      },
+    });
+    expect(published).toHaveLength(1);
+    await expect(runner.replay(definition, first.executionId)).rejects.toThrow("not replayable");
+    expect(published.map((message) => message.payload)).toEqual([{ quantity: 3 }]);
   });
 
   it.each([

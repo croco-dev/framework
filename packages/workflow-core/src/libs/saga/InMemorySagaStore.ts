@@ -1,4 +1,5 @@
 import {
+  SagaDefinitionProblem,
   SagaExecutionNotFoundProblem,
   SagaStoreConflictProblem,
 } from "../problems/WorkflowProblems";
@@ -10,6 +11,61 @@ import type {
   SagaStore,
 } from "./types";
 
+function snapshotExecution(execution: SagaExecution): SagaExecution {
+  const copies = new Map<object, object>();
+  function copy(value: unknown): unknown {
+    if (typeof value === "function" || typeof value === "symbol") {
+      throw new SagaDefinitionProblem(execution.sagaName, "store data contains unsupported values");
+    }
+    if (value === null || typeof value !== "object") return value;
+    const previous = copies.get(value);
+    if (previous) return previous;
+
+    let result: object;
+    if (value instanceof Date) {
+      const timestamp = Date.prototype.getTime.call(value);
+      if (!Number.isFinite(timestamp)) {
+        throw new SagaDefinitionProblem(execution.sagaName, "store data contains an invalid date");
+      }
+      result = new Date(timestamp);
+    } else if (Array.isArray(value)) {
+      result = Array<unknown>(value.length);
+    } else {
+      const prototype: unknown = Object.getPrototypeOf(value);
+      if (prototype !== Object.prototype && prototype !== null) {
+        throw new SagaDefinitionProblem(
+          execution.sagaName,
+          "store data contains an unsupported object type",
+        );
+      }
+      result = Object.create(prototype) as object;
+    }
+    copies.set(value, result);
+    for (const key of Reflect.ownKeys(value)) {
+      if (!Object.prototype.propertyIsEnumerable.call(value, key)) continue;
+      if (typeof key === "symbol") {
+        throw new SagaDefinitionProblem(
+          execution.sagaName,
+          "store data contains symbol-keyed data",
+        );
+      }
+      Object.defineProperty(result, key, {
+        value: copy(Reflect.get(value, key)),
+        enumerable: true,
+        writable: true,
+        configurable: true,
+      });
+    }
+    return result;
+  }
+  try {
+    return copy(execution) as SagaExecution;
+  } catch (error) {
+    if (error instanceof SagaDefinitionProblem) throw error;
+    throw new SagaDefinitionProblem(execution.sagaName, "store data could not be snapshotted");
+  }
+}
+
 export class InMemorySagaStore implements SagaStore {
   private readonly executions = new Map<string, SagaExecution>();
   private idCounter = 0;
@@ -20,7 +76,7 @@ export class InMemorySagaStore implements SagaStore {
     if (params.idempotencyKey !== undefined) {
       const existing = this.findExistingByIdempotencyKey(params.sagaName, params.idempotencyKey);
       if (existing) {
-        return existing;
+        return snapshotExecution(existing);
       }
     }
 
@@ -40,16 +96,27 @@ export class InMemorySagaStore implements SagaStore {
       ...(params.metadata !== undefined ? { metadata: params.metadata } : {}),
     };
 
-    this.executions.set(execution.id, execution);
-    return execution;
+    const snapshot = snapshotExecution(execution);
+    // Snapshot accessors may re-enter create before this record is installed.
+    if (snapshot.idempotencyKey !== undefined) {
+      const existing = this.findExistingByIdempotencyKey(
+        snapshot.sagaName,
+        snapshot.idempotencyKey,
+      );
+      if (existing) return snapshotExecution(existing);
+    }
+    this.executions.set(snapshot.id, snapshot);
+    return snapshotExecution(snapshot);
   }
 
   async findById(id: string): Promise<SagaExecution | null> {
-    return this.executions.get(id) ?? null;
+    const execution = this.executions.get(id);
+    return execution ? snapshotExecution(execution) : null;
   }
 
   async findByIdempotencyKey(sagaName: string, key: string): Promise<SagaExecution | null> {
-    return this.findExistingByIdempotencyKey(sagaName, key);
+    const execution = this.findExistingByIdempotencyKey(sagaName, key);
+    return execution ? snapshotExecution(execution) : null;
   }
 
   private findExistingByIdempotencyKey(sagaName: string, key: string): SagaExecution | null {
@@ -63,7 +130,7 @@ export class InMemorySagaStore implements SagaStore {
   }
 
   async update(id: string, data: Partial<SagaExecution>): Promise<SagaExecution> {
-    const existing = await this.findById(id);
+    const existing = this.executions.get(id);
     if (!existing) {
       throw new SagaExecutionNotFoundProblem(id);
     }
@@ -77,9 +144,10 @@ export class InMemorySagaStore implements SagaStore {
       ...data,
       id,
     };
-    this.executions.set(id, updated);
+    const snapshot = snapshotExecution(updated);
+    this.executions.set(id, snapshot);
 
-    return updated;
+    return snapshotExecution(snapshot);
   }
 
   async list(options: ListSagaExecutionsOptions = {}): Promise<SagaExecution[]> {
@@ -101,9 +169,8 @@ export class InMemorySagaStore implements SagaStore {
     }
 
     const offset = options.offset ?? 0;
-    return executions.slice(
-      offset,
-      options.limit === undefined ? undefined : offset + options.limit,
-    );
+    return executions
+      .slice(offset, options.limit === undefined ? undefined : offset + options.limit)
+      .map(snapshotExecution);
   }
 }

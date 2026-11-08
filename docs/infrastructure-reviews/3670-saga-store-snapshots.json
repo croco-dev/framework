@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "workflow-core",
+      "classification": "pure-contract",
+      "reason": "Detach Saga create/update inputs and all returned execution records, preserving supported value graphs and rejecting unsupported values before writes. This host-independent ownership boundary changes no runtime support claim.",
+      "files": {
+        "packages/workflow-core/src/libs/saga/InMemorySagaStore.ts": "49c41b863506907b7831d99003ceeaee7803a1535e07773b9d1be9acfd79d530"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Saga snapshots copy only process-local JavaScript data. No host capability, external storage, transport, startup or shutdown contract changes.",
+          "providers": [],
+          "constraints": [
+            "The in-memory store is non-durable. These tests do not certify a deployed infrastructure profile or provider."
+          ],
+          "references": [
+            "packages/workflow-core/src/libs/saga/InMemorySagaStore.ts",
+            "packages/workflow-core/src/tests/InMemorySagaStore.spec.ts",
+            "packages/workflow-core/src/tests/SagaRunner.spec.ts",
+            "packages/workflow-core/README.md"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Saga snapshots copy only process-local JavaScript data. No host capability, external storage, transport, startup or shutdown contract changes.",
+          "providers": [],
+          "constraints": [
+            "The in-memory store is non-durable. These tests do not certify a deployed infrastructure profile or provider."
+          ],
+          "references": [
+            "packages/workflow-core/src/libs/saga/InMemorySagaStore.ts",
+            "packages/workflow-core/src/tests/InMemorySagaStore.spec.ts",
+            "packages/workflow-core/src/tests/SagaRunner.spec.ts",
+            "packages/workflow-core/README.md"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Saga snapshots copy only process-local JavaScript data. No host capability, external storage, transport, startup or shutdown contract changes.",
+          "providers": [],
+          "constraints": [
+            "The in-memory store is non-durable. These tests do not certify a deployed infrastructure profile or provider."
+          ],
+          "references": [
+            "packages/workflow-core/src/libs/saga/InMemorySagaStore.ts",
+            "packages/workflow-core/src/tests/InMemorySagaStore.spec.ts",
+            "packages/workflow-core/src/tests/SagaRunner.spec.ts",
+            "packages/workflow-core/README.md"
+          ]
+        }
+      }
+    }
+  ]
+}
