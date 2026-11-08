@@ -143,7 +143,7 @@ export function createControllerProject(
   const sourceOwners = getSourceOwners(project, controllerSourceFiles, referenceProjects);
   // Declarations extend analysis, not the controller dependency closure emitted at runtime.
   project.addSourceFilesAtPaths(loadedConfig?.declarationPaths ?? []);
-  project.resolveSourceFileDependencies();
+  resolveProjectSourceDependencies(project);
   const analysisContexts = analysisProjects.map((analysisProject) => ({
     project: analysisProject,
     sourceFiles: analysisProject
@@ -378,7 +378,10 @@ function createEmitContext(
     skipFileDependencyResolution: true,
   });
   for (const sourceFile of analysisContext.project.getSourceFiles()) {
-    if (sourceFile.isDeclarationFile()) project.addSourceFileAtPath(sourceFile.getFilePath());
+    if (sourceFile.isDeclarationFile()) {
+      const declaration = project.addSourceFileAtPath(sourceFile.getFilePath());
+      applyNodeModuleFormat(declaration, project.getCompilerOptions());
+    }
   }
   const sourceFiles = analysisContext.sourceFiles.map((sourceFile) => {
     const emittedSource = project.addSourceFileAtPath(sourceFile.getFilePath());

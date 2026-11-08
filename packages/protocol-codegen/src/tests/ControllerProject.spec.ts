@@ -1,4 +1,5 @@
 import * as fs from "node:fs";
+import { createRequire } from "node:module";
 import { execFileSync } from "node:child_process";
 import * as os from "node:os";
 import * as path from "node:path";
@@ -19,6 +20,70 @@ afterEach(() => {
 });
 
 describe("createControllerProject", () => {
+  it.each(["module", "commonjs"] as const)(
+    "resolves ambient type imports with the NodeNext %s package format",
+    async (packageType) => {
+      const root = createTemporaryDirectory();
+      const expected = packageType === "module" ? "esm" : "cjs";
+      writeJson(path.join(root, "package.json"), { type: packageType });
+      writeJson(path.join(root, "tsconfig.json"), {
+        compilerOptions: {
+          module: "NodeNext",
+          moduleResolution: "NodeNext",
+          target: "ES2022",
+          experimentalDecorators: true,
+          emitDecoratorMetadata: true,
+        },
+        include: ["src/**/*.ts"],
+      });
+      const dependency = path.join(root, "node_modules", "ambient-format");
+      writeJson(path.join(dependency, "package.json"), {
+        name: "ambient-format",
+        exports: {
+          ".": {
+            import: { types: "./esm.d.mts" },
+            require: { types: "./cjs.d.cts" },
+          },
+        },
+      });
+      writeFile(
+        path.join(dependency, "esm.d.mts"),
+        "export type Selected = 'esm'; export type Value = string;",
+      );
+      writeFile(
+        path.join(dependency, "cjs.d.cts"),
+        "export type Selected = 'cjs'; export type Value = number;",
+      );
+      fs.symlinkSync(
+        path.dirname(createRequire(import.meta.url).resolve("reflect-metadata")),
+        path.join(root, "node_modules", "reflect-metadata"),
+        "dir",
+      );
+      writeFile(
+        path.join(root, "src", "globals.d.ts"),
+        "import type { Selected, Value } from 'ambient-format'; declare global { type AppSelected = Selected; type AppValue = Value; }",
+      );
+      writeFile(
+        path.join(root, "src", "Controller.ts"),
+        `import 'reflect-metadata'; function Tag(): PropertyDecorator { return () => {}; } export class Controller { static value: AppSelected = '${expected}'; @Tag() value!: AppValue; static get valueType() { return Reflect.getMetadata('design:type', Controller.prototype, 'value'); } }`,
+      );
+      const session = createControllerProject({ cwd: root, controllers: "src/Controller.ts" });
+      try {
+        expect(
+          session.getPreEmitDiagnostics().map((diagnostic) => diagnostic.getMessageText()),
+        ).toEqual([]);
+        session.emit();
+        const [exports] = await session.importControllerModules();
+        expect((exports.Controller as { value: string }).value).toBe(expected);
+        expect((exports.Controller as { valueType: unknown }).valueType).toBe(
+          packageType === "module" ? String : Number,
+        );
+      } finally {
+        session.dispose();
+      }
+    },
+  );
+
   it.each(["discovered", "explicit"] as const)(
     "includes configured ambient declarations for %s configs without widening runtime sources",
     async (configSelection) => {

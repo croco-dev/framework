@@ -6,7 +6,7 @@
       "classification": "pure-contract",
       "reason": "Keep application ambient declarations in the shared build-time TypeScript context without widening controller imports or runtime emission. The Tooling catalog has no deployed runtime claims.",
       "files": {
-        "packages/protocol-codegen/src/libs/ControllerProject.ts": "0bdc34aa92eb5e490fd310b577ffa1fd1b327340cf2398481b62983831eb85d6"
+        "packages/protocol-codegen/src/libs/ControllerProject.ts": "61d0788a26e071c144d006f799795dd33c1af37b8353ffef1b3eb1aab929bcb3"
       },
       "catalogRuntimes": [],
       "profiles": {
