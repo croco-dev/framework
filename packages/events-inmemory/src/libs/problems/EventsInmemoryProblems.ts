@@ -38,7 +38,7 @@ export class InvalidBackpressureStrategyProblem extends Problem {
   }
 }
 
-/** A dead-letter snapshot cannot retain mutable values it cannot safely copy. */
+/** Event delivery and dead-letter snapshots require values that can be safely copied. */
 export class UnsupportedDeadLetterValueProblem extends Problem {
   readonly code = "events-inmemory/unsupported-dead-letter-value";
   readonly category = ProblemCategory.InternalServerError;
@@ -47,7 +47,7 @@ export class UnsupportedDeadLetterValueProblem extends Problem {
     super(
       undefined,
       undefined,
-      "Dead-letter snapshots require supported data values, not custom instances or executable values",
+      "Event payloads and dead-letter snapshots require supported data; convert custom instances or executable values before publishing or storing",
     );
   }
 }

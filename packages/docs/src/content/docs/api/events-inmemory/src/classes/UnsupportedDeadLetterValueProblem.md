@@ -5,7 +5,7 @@ prev: false
 title: "UnsupportedDeadLetterValueProblem"
 ---
 
-A dead-letter snapshot cannot retain mutable values it cannot safely copy.
+Event delivery and dead-letter snapshots require values that can be safely copied.
 
 ## Extends
 

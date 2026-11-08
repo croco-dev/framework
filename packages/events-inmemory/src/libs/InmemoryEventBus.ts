@@ -879,8 +879,9 @@ export class InMemoryEventBus<TEvent extends DomainEvent = DomainEvent>
 
   private createEventWithTraceContext(event: TEvent, traceContext: TraceInfo): TEvent {
     const eventCopy = this.cloneEvent(event);
-    const traceContextCopy = { ...traceContext };
-    eventCopy.metadata.traceContext = traceContextCopy;
+    if (event.metadata.traceContext !== traceContext) {
+      eventCopy.metadata.traceContext = { ...traceContext };
+    }
 
     return eventCopy;
   }

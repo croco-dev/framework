@@ -6,7 +6,8 @@
       "classification": "pure-contract",
       "reason": "Use the existing graph-aware snapshot copier for delivery regardless of DLQ configuration; preserve metadata aliases during trace injection and reject unsupported payloads before handlers run.",
       "files": {
-        "packages/events-inmemory/src/libs/InmemoryEventBus.ts": "948fb0271741c4674994f14463a4b2ea3528fd168bacbe017e7df733da7ef158"
+        "packages/events-inmemory/src/libs/InmemoryEventBus.ts": "1f1a1306bb87829d748936f0fa76bb1f584b62e8a09922b63182b4e895472cbb",
+        "packages/events-inmemory/src/libs/problems/EventsInmemoryProblems.ts": "3226dd9db5fd41289a4ae269cf4867c1d45cd14d256d89246ecd07a678ceaf38"
       },
       "catalogRuntimes": [],
       "profiles": {
@@ -20,7 +21,7 @@
           "references": [
             "packages/events-inmemory/src/libs/InmemoryEventBus.ts",
             "packages/events-inmemory/src/libs/cloneDeadLetterValue.ts",
-            "packages/events-inmemory/src/tests/InMemoryEventBusPayload.spec.ts"
+            "packages/events-inmemory/src/tests/InMemoryEventBus.spec.ts"
           ]
         },
         "aws-lambda": {
@@ -33,7 +34,7 @@
           "references": [
             "packages/events-inmemory/src/libs/InmemoryEventBus.ts",
             "packages/events-inmemory/src/libs/cloneDeadLetterValue.ts",
-            "packages/events-inmemory/src/tests/InMemoryEventBusPayload.spec.ts"
+            "packages/events-inmemory/src/tests/InMemoryEventBus.spec.ts"
           ]
         },
         "cloudflare": {
@@ -46,7 +47,7 @@
           "references": [
             "packages/events-inmemory/src/libs/InmemoryEventBus.ts",
             "packages/events-inmemory/src/libs/cloneDeadLetterValue.ts",
-            "packages/events-inmemory/src/tests/InMemoryEventBusPayload.spec.ts"
+            "packages/events-inmemory/src/tests/InMemoryEventBus.spec.ts"
           ]
         }
       }
