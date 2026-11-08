@@ -20,6 +20,7 @@ export {
   addPlanVersionEntitlementsPostgres,
   backfillPlanVersionEntitlementsPostgres,
 } from "./migrations/addPlanVersionEntitlements";
+export { widenEntitlementNumericColumnsPostgres } from "./migrations/widenEntitlementNumericColumns";
 export type {
   EntitlementMigrationClient,
   PlanVersionEntitlementMigrationMapping,

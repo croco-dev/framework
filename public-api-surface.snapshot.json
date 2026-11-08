@@ -15786,6 +15786,12 @@
               "exportKind": "named",
               "source": "./libs/schema",
               "declarationKind": "const"
+            },
+            {
+              "name": "widenEntitlementNumericColumnsPostgres",
+              "exportKind": "named",
+              "source": "./migrations/widenEntitlementNumericColumns",
+              "declarationKind": "function"
             }
           ],
           "typeExports": [

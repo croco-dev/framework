@@ -66,3 +66,20 @@ const entitlements = plan
 `backfillPlanVersionEntitlementsPostgres()`가 transaction을 지원하는 client에서 운영자가 전달한 one-to-one mapping만 backfill합니다. `addPlanVersionEntitlementsPostgres()`는 legacy `(plan_id, feature_key)` 중복을 plan과 feature identifier가 포함된 진단으로 먼저 보고한 뒤 partial unique index를 생성합니다. 기존 reference가 다른 plan family에 속하거나, 같은 version에 feature rule이 중복되거나, inline quota 및 billable meter binding이 누락되면 mutation 전에 실패합니다. Legacy row가 없는 빈 entitlement set은 mapping에 `allowEmpty: true`를 명시해야만 발행됩니다.
 
 버전 조회는 먼저 `plan_entitlement_sets`의 등록 여부를 확인합니다. 등록되지 않은 reference는 빈 entitlement set이나 최신 plan fallback으로 처리하지 않고 `entitlements-core/plan-version-not-found` Problem으로 실패합니다.
+
+### 소수 값과 큰 quota를 저장하는 기존 테이블 업그레이드
+
+`planEntitlements.value`와 `quota`는 PostgreSQL `double precision`으로 JavaScript `number`를 저장합니다.
+소수와 32-bit 정수 범위를 넘는 값도 보존하며, 레지스트리는 공통 validator로 NaN·Infinity·음수를
+`entitlements-core/definition-invalid` Problem으로 거부합니다. 기존 nullable 컬럼과 boolean 규칙의 의미는 유지됩니다.
+
+기존 `integer` 테이블은 새 값을 쓰기 전에, 애플리케이션의 명시적 migration 단계에서 공개 함수
+`widenEntitlementNumericColumnsPostgres(db)`를 실행합니다. `db`는 `EntitlementMigrationClient`이며,
+이 함수는 두 컬럼을 하나의 `ALTER TABLE` 문으로 변환합니다. 어느 컬럼에서든 실패하면 문 전체가
+취소됩니다. 기존 값·plan version reference·FK·partial unique index는 유지되고, 재실행할 수 있습니다.
+앱 시작 시 자동 실행하지 않으며 plan-version backfill과도 별개입니다.
+
+타입 변환은 테이블 rewrite와 배타적 lock이 필요하므로 테이블 크기와 운영 중인 transaction을 확인하고
+유지보수 시간에 적용합니다. 기존 정수 값만 쓰는 애플리케이션은 변환 후에도 동작합니다. 변환 후에는
+소수와 큰 값이 들어갈 수 있으므로 `integer`로 되돌리는 migration은 제공하지 않습니다. 이전 스키마로
+복구해야 한다면 새 값의 쓰기를 중단하고 데이터가 정수 범위에 들어오는지 별도로 검토해야 합니다.

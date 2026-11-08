@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "entitlements-drizzle",
+      "classification": "durable-provider",
+      "reason": "Align PostgreSQL value/quota storage with the existing finite nonnegative JavaScript number contract and expose one atomic explicit migration for existing integer columns. Existing identities and constraints remain intact.",
+      "files": {
+        "packages/entitlements-drizzle/src/index.ts": "1d6a2673b81edf6d62aedfc9cae181e0298be5013bb89da6579879075f0e9d9a",
+        "packages/entitlements-drizzle/src/libs/schema.ts": "a8c062051f975691d362d59b2d3895d9bd59efea9b5c56f4817ee400e50ceb83",
+        "packages/entitlements-drizzle/src/migrations/widenEntitlementNumericColumns.ts": "9b72bb6099651926a8c8a54d7d94654deb8a3b06c692725de4b0ca04ebce6758"
+      },
+      "catalogRuntimes": ["node", "lambda"],
+      "profiles": {
+        "kubernetes": {
+          "result": "conditional",
+          "reason": "Reuse the existing Node PostgreSQL/Drizzle provider. Numeric column widening is an explicit database migration and does not change host lifecycle or connections.",
+          "providers": ["@croco/entitlements-drizzle", "@croco/tx-drizzle"],
+          "constraints": [
+            "Apply the reviewed migration outside application startup before writing fractional or large values; plan for a table rewrite and exclusive lock.",
+            "Supply the existing PostgreSQL connection through the application; Lambda retains its existing invocation connection lifecycle.",
+            "Local PostgreSQL 16 regression coverage does not certify a Kubernetes deployment or an AWS Lambda deployment."
+          ],
+          "references": [
+            "docs/package-catalog.json",
+            "packages/entitlements-drizzle/README.md",
+            "packages/entitlements-drizzle/src/tests/LegacyEntitlementRules.postgres.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "conditional",
+          "reason": "Reuse the existing Node PostgreSQL/Drizzle provider. Numeric column widening is an explicit database migration and does not change host lifecycle or connections.",
+          "providers": ["@croco/entitlements-drizzle", "@croco/tx-drizzle"],
+          "constraints": [
+            "Apply the reviewed migration outside application startup before writing fractional or large values; plan for a table rewrite and exclusive lock.",
+            "Supply the existing PostgreSQL connection through the application; Lambda retains its existing invocation connection lifecycle.",
+            "Local PostgreSQL 16 regression coverage does not certify a Kubernetes deployment or an AWS Lambda deployment."
+          ],
+          "references": [
+            "docs/package-catalog.json",
+            "packages/entitlements-drizzle/README.md",
+            "packages/entitlements-drizzle/src/tests/LegacyEntitlementRules.postgres.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "unsupported",
+          "host": "workers",
+          "reason": "The package catalog claims Node and Lambda only; this change does not add a Workers provider or a Node Container deployment path.",
+          "providers": ["@croco/entitlements-drizzle"],
+          "constraints": [
+            "No Workers isolate support or live Cloudflare certification is claimed."
+          ],
+          "references": [
+            "docs/package-catalog.json",
+            "packages/entitlements-drizzle/README.md",
+            "packages/entitlements-drizzle/src/tests/LegacyEntitlementRules.postgres.spec.ts"
+          ]
+        }
+      }
+    }
+  ]
+}
