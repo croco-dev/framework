@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "events-tx",
+      "classification": "pure-contract",
+      "reason": "Keep nested outbox/inbox data independent across store and transaction boundaries, and reject values that cannot be snapshotted before writes.",
+      "files": {
+        "packages/events-tx/src/libs/InMemoryTransactionalEventStore.ts": "6376076197e3b0891bec9445256c47b7899d5a85b9ff28a7dd7b22a571643840"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "This change isolates values in the process-local test store. It introduces no deployed Host, durable storage, external Provider or lifecycle requirement and makes no runtime support claim.",
+          "providers": [],
+          "constraints": [
+            "The in-memory store remains non-durable test/local storage; no live infrastructure or provider certification is claimed."
+          ],
+          "references": [
+            "packages/events-tx/src/libs/InMemoryTransactionalEventStore.ts",
+            "packages/events-tx/src/tests/TransactionalEventSnapshots.spec.ts",
+            "packages/events-tx/README.md"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "This change isolates values in the process-local test store. It introduces no deployed Host, durable storage, external Provider or lifecycle requirement and makes no runtime support claim.",
+          "providers": [],
+          "constraints": [
+            "The in-memory store remains non-durable test/local storage; no live infrastructure or provider certification is claimed."
+          ],
+          "references": [
+            "packages/events-tx/src/libs/InMemoryTransactionalEventStore.ts",
+            "packages/events-tx/src/tests/TransactionalEventSnapshots.spec.ts",
+            "packages/events-tx/README.md"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "This change isolates values in the process-local test store. It introduces no deployed Host, durable storage, external Provider or lifecycle requirement and makes no runtime support claim.",
+          "providers": [],
+          "constraints": [
+            "The in-memory store remains non-durable test/local storage; no live infrastructure or provider certification is claimed."
+          ],
+          "references": [
+            "packages/events-tx/src/libs/InMemoryTransactionalEventStore.ts",
+            "packages/events-tx/src/tests/TransactionalEventSnapshots.spec.ts",
+            "packages/events-tx/README.md"
+          ]
+        }
+      }
+    }
+  ]
+}

@@ -2826,6 +2826,12 @@
       "owner": "@croco/events-tx"
     },
     {
+      "path": "packages/events-tx/src/tests/TransactionalEventSnapshots.spec.ts",
+      "lane": "fast",
+      "qualifiers": ["coverage"],
+      "owner": "@croco/events-tx"
+    },
+    {
       "path": "packages/events-tx/src/tests/TransactionalEventsConfiguration.spec.ts",
       "lane": "fast",
       "qualifiers": ["coverage"],
