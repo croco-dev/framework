@@ -64,7 +64,7 @@
       "classification": "pure-contract",
       "reason": "Regenerate the public Problem registry for notifications-core/template-invalid and its source locations. This deterministic contract data introduces no runtime capability or lifecycle requirement.",
       "files": {
-        "packages/problems-core/src/generated/problem-code-registry.ts": "65e5812a438454102c934f67e0d9fd583cbbb9f9f5d2c52c5d76595e7814b5b5"
+        "packages/problems-core/src/generated/problem-code-registry.ts": "fd0b588ce6ba1dddf5662201fb4c8ccc9f630e8953295525bbf54ea08c27d449"
       },
       "catalogRuntimes": [],
       "profiles": {
