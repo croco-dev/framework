@@ -5,7 +5,24 @@ import { BillableUsageJournalRequiredProblem } from "./problems/BillableUsageJou
 import { InvalidMeterProblem } from "./problems/InvalidMeterProblem";
 import { snapshotMeterMetadata } from "./meterMetadata";
 import { InvalidMeterMetadataProblem } from "./problems/InvalidMeterMetadataProblem";
+import { InvalidStoredMeterMetadataProblem } from "./problems/InvalidStoredMeterMetadataProblem";
 import type { MeterDefinition, MeterRegistrationOptions } from "./types";
+
+// Keep declared fields materialized even when a repository uses getters or non-enumerable properties.
+const METER_DEFINITION_FIELDS = {
+  id: true,
+  tenantId: true,
+  meterId: true,
+  type: true,
+  billing: true,
+  aggregation: true,
+  unit: true,
+  quota: true,
+  allowOverQuota: true,
+  metadata: true,
+  createdAt: true,
+  updatedAt: true,
+} satisfies Record<keyof MeterDefinition, true>;
 
 /**
  * Meter 정의 레지스트리
@@ -40,8 +57,9 @@ export class MeterRegistry {
    */
   async loadAll(): Promise<void> {
     const meters = (await this.repository.findAll()).map((meter) => {
-      this.assertJournalConfigured(meter);
-      return this.snapshotDefinition(meter);
+      const snapshot = this.snapshotDefinition(meter);
+      this.assertJournalConfigured(snapshot);
+      return snapshot;
     });
     this.clearCache();
 
@@ -71,12 +89,9 @@ export class MeterRegistry {
 
     // 캐시에 없으면 DB 조회
     const meter = await this.repository.findByMeterIdAndTenant(meterId, tenantId);
-    if (meter) {
-      this.assertJournalConfigured(meter);
-      this.addToCache(meter);
-    }
+    if (meter) return structuredClone(this.addToCache(meter));
 
-    return meter ? structuredClone(meter) : null;
+    return null;
   }
 
   /**
@@ -95,11 +110,10 @@ export class MeterRegistry {
    * 새 Meter 등록
    */
   async register(options: MeterRegistrationOptions): Promise<MeterDefinition> {
-    this.assertJournalConfigured(options);
-    const meter = await this.repository.save(this.snapshotDefinition(options));
-    this.assertJournalConfigured(meter);
-    this.addToCache(meter);
-    return structuredClone(meter);
+    const submitted = this.snapshotDefinition(options, "registration");
+    this.assertJournalConfigured(submitted);
+    const meter = await this.repository.save(submitted);
+    return structuredClone(this.addToCache(meter));
   }
 
   /**
@@ -141,18 +155,21 @@ export class MeterRegistry {
     return meter.billing === "required" ? "required" : "local";
   }
 
-  private addToCache(meter: MeterDefinition): void {
-    let tenantCache = this.cache.get(meter.tenantId);
+  private addToCache(meter: MeterDefinition): MeterDefinition {
+    const snapshot = this.snapshotDefinition(meter);
+    this.assertJournalConfigured(snapshot);
+    let tenantCache = this.cache.get(snapshot.tenantId);
     if (!tenantCache) {
       tenantCache = new Map();
-      this.cache.set(meter.tenantId, tenantCache);
+      this.cache.set(snapshot.tenantId, tenantCache);
     }
-    tenantCache.set(meter.meterId, this.snapshotDefinition(meter));
+    tenantCache.set(snapshot.meterId, snapshot);
     this.tenantCacheVersions.set(
-      meter.tenantId,
-      (this.tenantCacheVersions.get(meter.tenantId) ?? 0) + 1,
+      snapshot.tenantId,
+      (this.tenantCacheVersions.get(snapshot.tenantId) ?? 0) + 1,
     );
-    this.cacheUpdatedAt.set(meter.tenantId, Date.now());
+    this.cacheUpdatedAt.set(snapshot.tenantId, Date.now());
+    return snapshot;
   }
 
   private getFromCache(tenantId: string, meterId: string): MeterDefinition | null {
@@ -162,19 +179,21 @@ export class MeterRegistry {
   private async refreshTenantCache(tenantId: string): Promise<MeterDefinition[]> {
     const generation = this.cacheGeneration;
     const version = this.tenantCacheVersions.get(tenantId) ?? 0;
-    const meters = await this.repository.findByTenant(tenantId);
-    if (
+    const superseded = () =>
       generation !== this.cacheGeneration ||
-      version !== (this.tenantCacheVersions.get(tenantId) ?? 0)
-    ) {
+      version !== (this.tenantCacheVersions.get(tenantId) ?? 0);
+    const meters = await this.repository.findByTenant(tenantId);
+    if (superseded()) {
       return structuredClone(Array.from(this.cache.get(tenantId)?.values() ?? []));
     }
-    const tenantCache = new Map<string, MeterDefinition>();
-
-    for (const meter of meters) {
-      this.assertJournalConfigured(meter);
-      tenantCache.set(meter.meterId, this.snapshotDefinition(meter));
-    }
+    const snapshots = meters.map((meter) => {
+      const snapshot = this.snapshotDefinition(meter);
+      this.assertJournalConfigured(snapshot);
+      return snapshot;
+    });
+    // Repository getters may clear or replace the cache while their fields are materialized.
+    if (superseded()) return structuredClone(Array.from(this.cache.get(tenantId)?.values() ?? []));
+    const tenantCache = new Map(snapshots.map((meter) => [meter.meterId, meter]));
 
     this.cache.set(tenantId, tenantCache);
     this.tenantCacheVersions.set(tenantId, version + 1);
@@ -182,24 +201,44 @@ export class MeterRegistry {
     this.cacheUpdatedAt.set(tenantId, updatedAt);
     this.tenantSnapshotUpdatedAt.set(tenantId, updatedAt);
 
-    return structuredClone(meters);
+    return structuredClone(snapshots);
   }
 
-  private snapshotDefinition<T extends MeterRegistrationOptions>(meter: T): T {
-    const metadata = meter.metadata;
-    let snapshot: T;
+  private snapshotDefinition<T extends MeterRegistrationOptions>(
+    meter: T,
+    source: "registration" | "repository" = "repository",
+  ): T {
     try {
-      snapshot = structuredClone({ ...meter, metadata: undefined });
-    } catch {
-      throw new InvalidMeterMetadataProblem(
-        meter,
-        "/metadata",
-        "meter definition could not be copied",
-      );
+      const definition: Record<string, unknown> = {};
+      const keys = new Set([...Object.keys(meter), ...Object.keys(METER_DEFINITION_FIELDS)]);
+      for (const key of keys) {
+        if (!(key in meter)) continue;
+        Object.defineProperty(definition, key, {
+          value: Reflect.get(meter, key),
+          enumerable: true,
+          configurable: true,
+          writable: true,
+        });
+      }
+      const hadMetadata = Object.hasOwn(definition, "metadata");
+      const metadata = definition.metadata;
+      delete definition.metadata;
+      const snapshot = structuredClone(definition) as T;
+      if (metadata !== undefined) snapshot.metadata = snapshotMeterMetadata(metadata, snapshot);
+      else if (hadMetadata) snapshot.metadata = undefined;
+      return snapshot;
+    } catch (error) {
+      const invalid =
+        error instanceof InvalidMeterMetadataProblem
+          ? error
+          : new InvalidMeterMetadataProblem(
+              meter,
+              "/metadata",
+              "meter definition could not be copied",
+            );
+      if (source === "registration") throw invalid;
+      throw new InvalidStoredMeterMetadataProblem(meter, invalid);
     }
-    if (metadata !== undefined) snapshot.metadata = snapshotMeterMetadata(metadata, meter);
-    else if (!Object.hasOwn(meter, "metadata")) delete snapshot.metadata;
-    return snapshot;
   }
 
   private isCacheStale(tenantId: string): boolean {

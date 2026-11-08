@@ -66,6 +66,23 @@ describe("meter definition metadata", () => {
     },
   );
 
+  it("does not disclose a rejected symbol value in message or serialized Problem", () => {
+    const privateValue = "rejected-symbol-private-marker-3661";
+    try {
+      snapshotMeterMetadata({ value: Symbol(privateValue) }, meter);
+      expect.fail("Expected invalid metadata");
+    } catch (error) {
+      expect(error).toBeInstanceOf(InvalidMeterMetadataProblem);
+      const problem = error as InvalidMeterMetadataProblem;
+      expect(problem.toJSON()).toMatchObject({
+        status: 422,
+        code: "metering/invalid-meter-metadata",
+      });
+      expect(problem.message).not.toContain(privateValue);
+      expect(JSON.stringify(problem.toJSON())).not.toContain(privateValue);
+    }
+  });
+
   it("rejects cycles but accepts repeated acyclic references", () => {
     const cyclic: Record<string, unknown> = {};
     cyclic.self = cyclic;

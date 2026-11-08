@@ -2,6 +2,7 @@ import { and, eq, getTableColumns, sql } from "drizzle-orm";
 import {
   snapshotMeterMetadata,
   InvalidMeterMetadataProblem,
+  InvalidStoredMeterMetadataProblem,
   InvalidUsageValueProblem,
   MeterRepository,
 } from "@croco/metering-core";
@@ -512,29 +513,33 @@ export class DrizzleMeterRepository extends MeterRepository {
     meter: { tenantId: string; meterId: string },
   ): MeterDefinitionMetadata | undefined {
     if (value === undefined) return undefined;
-    let metadata: unknown = value;
-    if (
-      typeof value === "string" &&
-      (!this.isNativeJsonColumn(this.meterSchema.metadata) || this.isPostgresJsonMetadata())
-    ) {
-      try {
-        metadata = this.deserializeJson(value);
-      } catch {
-        const problem = new InvalidMeterMetadataProblem(
-          meter,
-          "/metadata",
-          "repository metadata must contain valid JSON",
-        );
-        this.logger?.warn(problem.message, {
-          code: problem.code,
-          tenantId: meter.tenantId,
-          meterId: meter.meterId,
-        });
-        throw problem;
+    try {
+      let metadata: unknown = value;
+      if (
+        typeof value === "string" &&
+        (!this.isNativeJsonColumn(this.meterSchema.metadata) || this.isPostgresJsonMetadata())
+      ) {
+        metadata = this.isPostgresJsonMetadata() ? JSON.parse(value) : this.deserializeJson(value);
       }
+      const snapshot = snapshotMeterMetadata(metadata, meter);
+      return Object.keys(snapshot).length === 0 ? undefined : snapshot;
+    } catch (error) {
+      const invalid =
+        error instanceof InvalidMeterMetadataProblem
+          ? error
+          : new InvalidMeterMetadataProblem(
+              meter,
+              "/metadata",
+              "repository metadata must contain valid JSON",
+            );
+      const problem = new InvalidStoredMeterMetadataProblem(meter, invalid);
+      this.logger?.warn(problem.message, {
+        code: problem.code,
+        tenantId: meter.tenantId,
+        meterId: meter.meterId,
+      });
+      throw problem;
     }
-    const snapshot = snapshotMeterMetadata(metadata, meter);
-    return Object.keys(snapshot).length === 0 ? undefined : snapshot;
   }
 
   private parseDate(value: unknown): Date {

@@ -6,12 +6,13 @@
       "classification": "pure-contract",
       "reason": "Meter definitions admit only JSON and valid Date metadata, reject unsupported data with a stable Problem, and isolate registration, repository and reader snapshots before installing policy cache entries.",
       "files": {
-        "packages/metering-core/src/index.ts": "e0a3fe89742d5498c2eb9fc0188811ea3641b5f4a685504f30b71adcf4c46f19",
-        "packages/metering-core/src/libs/MeterRegistry.ts": "6ae17b67a111e6cec0ece667b02941c2ea4314ae5defd7866217ac18ab9d25f8",
+        "packages/metering-core/src/index.ts": "a4eae1e1e93e8122e94987ea673de34d037bb7652cce95279c3b1d269f8e7920",
+        "packages/metering-core/src/libs/MeterRegistry.ts": "93a0791c052a316e56b45c8fccbaf5f52f9bc940630ddb72ce4c6195faf0b7b8",
         "packages/metering-core/src/libs/MeterRepository.ts": "50b0c8c85283ec00abf8666ed6abab6018afb7a410bf6400ce533f95e6d95c5b",
         "packages/metering-core/src/libs/meterMetadata.ts": "b701757906751d6bf6786c9599739f1ebc68c4ac3a996500bf4e24ddf50869e0",
         "packages/metering-core/src/libs/problems/InvalidMeterMetadataProblem.ts": "2cae95ca35d90fff4b08cbc1c11c695bcf9e2142ba8524b987ef8e17f10fec29",
-        "packages/metering-core/src/libs/types.ts": "f5924a7a1ea35c7f5c1b795eec182df0e43b3d64bb3602adf4b2965fcfd96e70"
+        "packages/metering-core/src/libs/types.ts": "f5924a7a1ea35c7f5c1b795eec182df0e43b3d64bb3602adf4b2965fcfd96e70",
+        "packages/metering-core/src/libs/problems/InvalidStoredMeterMetadataProblem.ts": "e508b0c77b51e4e563febdef482a536d643fd89b0e907c16b424be0e0b2fc17f"
       },
       "catalogRuntimes": [],
       "profiles": {
@@ -61,7 +62,7 @@
       "classification": "pure-contract",
       "reason": "The existing Drizzle provider reuses the core metadata snapshot contract before writes and after JSON decoding. Invalid stored metadata fails explicitly; schema, codec representation and transaction ownership are unchanged.",
       "files": {
-        "packages/metering-drizzle/src/libs/DrizzleMeterRepository.ts": "6e241df6d3f2c99c2d64dc139e18ea3404ae606c35f2e6c48ebf2e4fe69fe0d3"
+        "packages/metering-drizzle/src/libs/DrizzleMeterRepository.ts": "a7df322e435d3b358e158e5ebcb731ed53d6af1348728261a1d1b2ac451f5916"
       },
       "catalogRuntimes": ["node", "lambda"],
       "profiles": {
@@ -120,7 +121,7 @@
       "classification": "pure-contract",
       "reason": "The generated Problem registry exposes the new metering metadata validation diagnostic and its canonical source location.",
       "files": {
-        "packages/problems-core/src/generated/problem-code-registry.ts": "91db46f9786df056683877379f578ab632fb49f8950514d997c8fa73b8eff387"
+        "packages/problems-core/src/generated/problem-code-registry.ts": "0fdaa50a78c7db9d8ea346f8ededfb88be373a4030d435c4fb423134dd173a86"
       },
       "catalogRuntimes": [],
       "profiles": {

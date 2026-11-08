@@ -358,6 +358,7 @@ export { DuplicateRecordProblem } from "./libs/problems/DuplicateRecordProblem";
 export { InvalidMeterDimensionProblem } from "./libs/problems/InvalidMeterDimensionProblem";
 export { MeteringTransitionProblem } from "./libs/problems/MeteringTransitionProblem";
 export { InvalidMeterMetadataProblem } from "./libs/problems/InvalidMeterMetadataProblem";
+export { InvalidStoredMeterMetadataProblem } from "./libs/problems/InvalidStoredMeterMetadataProblem";
 
 /**
  * 등록되지 않은 Meter를 사용할 때 발생하는 문제 타입입니다.

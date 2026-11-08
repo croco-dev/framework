@@ -1,4 +1,4 @@
-import { InvalidMeterMetadataProblem, MeterRegistry } from "@croco/metering-core";
+import { InvalidStoredMeterMetadataProblem, MeterRegistry } from "@croco/metering-core";
 import type { BillableUsageJournal } from "@croco/metering-core";
 import { TxManager } from "@croco/tx-core";
 import { createDrizzleTxAdapter } from "@croco/tx-drizzle";
@@ -70,12 +70,16 @@ async function hasMeterUniqueIndex(client: Client): Promise<boolean> {
   return result.rows[0]?.exists === true;
 }
 
-function createRepository(db: NodePgDatabase): DrizzleMeterRepository {
+function createRepository(
+  db: NodePgDatabase,
+  deserializeJson?: (value: string) => unknown,
+): DrizzleMeterRepository {
   return new DrizzleMeterRepository(db, new TxManager(createDrizzleTxAdapter(db)), {
     meterTable: metersPg,
     meterSchema: metersPg,
     usageRecordTable: usageRecordsPg,
     usageRecordSchema: usageRecordsPg,
+    ...(deserializeJson ? { deserializeJson } : {}),
   });
 }
 
@@ -204,44 +208,49 @@ describe.skipIf(connectionString.length === 0)(
       }
     });
 
-    it("rejects non-object JSONB across readers without double-decoding string values", async () => {
-      const client = new Client({ connectionString });
-      await client.connect();
-      try {
-        await createLegacyMetersTable(client);
-        const db = drizzle(client);
-        await addMeterDefinitionFieldsPostgres(db);
-        const repository = createRepository(db);
-        const saved = await repository.save({
-          tenantId: "t1",
-          meterId: "api_calls",
-          type: "COUNT",
-          metadata: { plan: "starter", effectiveAt: new Date("2026-01-02T03:04:05Z") },
-        });
-        expect(saved.metadata).toEqual({
-          plan: "starter",
-          effectiveAt: "2026-01-02T03:04:05.000Z",
-        });
-        expect((await repository.findByMeterIdAndTenant("api_calls", "t1"))?.metadata).toEqual(
-          saved.metadata,
-        );
-        for (const metadata of [null, [], 17, "{}", '{"plan":"starter"}']) {
-          await client.query("UPDATE meters SET metadata = $1::jsonb WHERE tenant_id = $2", [
-            JSON.stringify(metadata),
-            "t1",
-          ]);
-          await expect(repository.findByMeterIdAndTenant("api_calls", "t1")).rejects.toBeInstanceOf(
-            InvalidMeterMetadataProblem,
+    it.each([false, true])(
+      "rejects non-object JSONB across readers (pass-through codec: %s)",
+      async (passThrough) => {
+        const client = new Client({ connectionString });
+        await client.connect();
+        try {
+          await createLegacyMetersTable(client);
+          const db = drizzle(client);
+          await addMeterDefinitionFieldsPostgres(db);
+          const repository = createRepository(db, passThrough ? (value) => value : undefined);
+          const saved = await repository.save({
+            tenantId: "t1",
+            meterId: "api_calls",
+            type: "COUNT",
+            metadata: { plan: "starter", effectiveAt: new Date("2026-01-02T03:04:05Z") },
+          });
+          expect(saved.metadata).toEqual({
+            plan: "starter",
+            effectiveAt: "2026-01-02T03:04:05.000Z",
+          });
+          expect((await repository.findByMeterIdAndTenant("api_calls", "t1"))?.metadata).toEqual(
+            saved.metadata,
           );
-          await expect(repository.findByTenant("t1")).rejects.toBeInstanceOf(
-            InvalidMeterMetadataProblem,
-          );
-          await expect(repository.findAll()).rejects.toBeInstanceOf(InvalidMeterMetadataProblem);
+          for (const metadata of [null, [], 17, "{}", '{"plan":"starter"}']) {
+            await client.query("UPDATE meters SET metadata = $1::jsonb WHERE tenant_id = $2", [
+              JSON.stringify(metadata),
+              "t1",
+            ]);
+            await expect(
+              repository.findByMeterIdAndTenant("api_calls", "t1"),
+            ).rejects.toBeInstanceOf(InvalidStoredMeterMetadataProblem);
+            await expect(repository.findByTenant("t1")).rejects.toBeInstanceOf(
+              InvalidStoredMeterMetadataProblem,
+            );
+            await expect(repository.findAll()).rejects.toBeInstanceOf(
+              InvalidStoredMeterMetadataProblem,
+            );
+          }
+        } finally {
+          await client.end();
         }
-      } finally {
-        await client.end();
-      }
-    });
+      },
+    );
 
     it("keeps billing-required meters required across re-registration and restart", async () => {
       const client = new Client({ connectionString });

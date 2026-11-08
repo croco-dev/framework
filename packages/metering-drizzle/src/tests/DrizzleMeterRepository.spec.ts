@@ -1,6 +1,7 @@
 import type { ILogger } from "@croco/framework-context";
 import {
   InvalidMeterMetadataProblem,
+  InvalidStoredMeterMetadataProblem,
   InvalidUsageValueProblem,
   MeterRegistry,
   UsageAggregator,
@@ -735,7 +736,7 @@ describe("DrizzleMeterRepository", () => {
         await expect(
           pgRepository.findByMeterIdAndTenant("api_calls", "tenant-pg"),
         ).rejects.toMatchObject({
-          code: "metering/invalid-meter-metadata",
+          code: "metering/invalid-stored-meter-metadata",
           extensions: { path: "/metadata" },
         });
       },
@@ -842,15 +843,15 @@ describe("DrizzleMeterRepository", () => {
         await repository.save({ tenantId: "tenant-1", meterId: "api_calls", type: "COUNT" });
         sqlite.prepare("UPDATE meters SET metadata = ?").run(metadata);
         await expect(repository.findAll()).rejects.toMatchObject({
-          code: "metering/invalid-meter-metadata",
+          code: "metering/invalid-stored-meter-metadata",
           extensions: { meterId: "api_calls", tenantId: "tenant-1" },
         });
         await expect(repository.findByTenant("tenant-1")).rejects.toBeInstanceOf(
-          InvalidMeterMetadataProblem,
+          InvalidStoredMeterMetadataProblem,
         );
         await expect(
           repository.findByMeterIdAndTenant("api_calls", "tenant-1"),
-        ).rejects.toBeInstanceOf(InvalidMeterMetadataProblem);
+        ).rejects.toBeInstanceOf(InvalidStoredMeterMetadataProblem);
       },
     );
 
@@ -2172,9 +2173,9 @@ describe("DrizzleMeterRepository", () => {
 
       await expect(
         repoWithLogger.findByMeterIdAndTenant("bad_json", "tenant-1"),
-      ).rejects.toBeInstanceOf(InvalidMeterMetadataProblem);
+      ).rejects.toBeInstanceOf(InvalidStoredMeterMetadataProblem);
       expect(logger.warn).toHaveBeenCalledWith(expect.any(String), {
-        code: "metering/invalid-meter-metadata",
+        code: "metering/invalid-stored-meter-metadata",
         tenantId: "tenant-1",
         meterId: "bad_json",
       });

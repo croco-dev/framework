@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MeterRegistry } from "../libs/MeterRegistry";
 import type { MeterRepository } from "../libs/MeterRepository";
-import { InvalidMeterMetadataProblem } from "../libs/problems/InvalidMeterMetadataProblem";
+import { InvalidStoredMeterMetadataProblem } from "../libs/problems/InvalidStoredMeterMetadataProblem";
 import { InvalidMeterProblem } from "../libs/problems/InvalidMeterProblem";
 import type { BillableUsageJournal } from "../libs/BillableUsageJournal";
 import type { MeterDefinition, MeterRegistrationOptions } from "../libs/types";
@@ -158,6 +158,116 @@ describe("MeterRegistry", () => {
     });
   });
 
+  it.each(["get", "register", "getByTenant"] as const)(
+    "preserves repository metadata properties in the first and cached %s responses",
+    async (operation) => {
+      for (const inherited of [false, true]) {
+        registry.clearCache();
+        const metadata = { plan: { name: "starter" } };
+        const source = createMeter();
+        if (inherited)
+          Object.setPrototypeOf(source, {
+            get metadata() {
+              return metadata;
+            },
+          });
+        else Object.defineProperty(source, "metadata", { value: metadata });
+        vi.mocked(mockRepository.findByMeterIdAndTenant).mockResolvedValue(source);
+        vi.mocked(mockRepository.save).mockResolvedValue(source);
+        vi.mocked(mockRepository.findByTenant).mockResolvedValue([source]);
+        const first =
+          operation === "getByTenant"
+            ? (await registry.getByTenant("tenant-1"))[0]
+            : operation === "register"
+              ? await registry.register({
+                  tenantId: "tenant-1",
+                  meterId: "api_calls",
+                  type: "COUNT",
+                })
+              : await registry.getOrThrow("tenant-1", "api_calls");
+        expect(first.metadata).toEqual(metadata);
+        (first.metadata as { plan: { name: string } }).plan.name = "changed";
+        expect(metadata.plan.name).toBe("starter");
+        expect((await registry.getOrThrow("tenant-1", "api_calls")).metadata).toEqual(metadata);
+      }
+    },
+  );
+
+  it.each(["loadAll", "get", "register", "getByTenant"] as const)(
+    "preserves every declared policy field from repository descriptors through %s",
+    async (operation) => {
+      registry = new MeterRegistry(mockRepository, 60_000, {
+        durability: "persistent",
+      } as BillableUsageJournal);
+      for (const inherited of [false, true]) {
+        registry.clearCache();
+        const values = createMeter({
+          billing: "required",
+          aggregation: "COUNT",
+          unit: "request",
+          quota: 17,
+          allowOverQuota: false,
+          metadata: { plan: "starter" },
+        });
+        const descriptors = Object.fromEntries(
+          Object.entries(values).map(([key, value]) => [
+            key,
+            inherited ? { get: () => value } : { value },
+          ]),
+        );
+        const source = (
+          inherited
+            ? Object.create(Object.defineProperties({}, descriptors))
+            : Object.defineProperties({}, descriptors)
+        ) as MeterDefinition;
+        vi.mocked(mockRepository.findAll).mockResolvedValue([source]);
+        vi.mocked(mockRepository.findByMeterIdAndTenant).mockResolvedValue(source);
+        vi.mocked(mockRepository.save).mockResolvedValue(source);
+        vi.mocked(mockRepository.findByTenant).mockResolvedValue([source]);
+        if (operation === "loadAll") await registry.loadAll();
+        const first =
+          operation === "getByTenant"
+            ? (await registry.getByTenant("tenant-1"))[0]
+            : operation === "register"
+              ? await registry.register(source)
+              : await registry.getOrThrow("tenant-1", "api_calls");
+        expect(first).toEqual(values);
+        if (operation === "register") expect(mockRepository.save).toHaveBeenLastCalledWith(values);
+        expect(registry.getCachedBillingRequirement("tenant-1", "api_calls")).toBe("required");
+        first.quota = 999;
+        first.billing = "local";
+        expect((await registry.getOrThrow("tenant-1", "api_calls")).quota).toBe(17);
+        expect(source.billing).toBe("required");
+      }
+    },
+  );
+
+  it("checks the captured billing intent before saving and reads its getter only once", async () => {
+    let reads = 0;
+    const input = { tenantId: "tenant-1", meterId: "api_calls", type: "COUNT" as const };
+    Object.defineProperty(input, "billing", {
+      enumerable: true,
+      get: () => (++reads === 1 ? "local" : "required"),
+    });
+    vi.mocked(mockRepository.save).mockImplementation(async (submitted) => createMeter(submitted));
+    expect((await registry.register(input)).billing).toBe("local");
+    expect(reads).toBe(1);
+    expect(mockRepository.save).toHaveBeenCalledWith(expect.objectContaining({ billing: "local" }));
+  });
+
+  it("does not reinstall a refresh cleared while materializing repository policy getters", async () => {
+    const source = createMeter();
+    Object.defineProperty(source, "quota", {
+      get: () => {
+        registry.clearCache();
+        return 17;
+      },
+    });
+    vi.mocked(mockRepository.findByTenant).mockResolvedValue([source]);
+    expect(await registry.getByTenant("tenant-1")).toEqual([]);
+    expect(registry.getCachedBillingRequirement("tenant-1", "api_calls")).toBe("unknown");
+  });
+
   describe("metadata admission", () => {
     const invalid = () =>
       createMeter({
@@ -194,7 +304,15 @@ describe("MeterRegistry", () => {
               : operation === "register"
                 ? registry.register({ tenantId: "tenant-1", meterId: "api_calls", type: "COUNT" })
                 : (registry.clearCache(), registry.getByTenant("tenant-1"));
-        await expect(reading).rejects.toBeInstanceOf(InvalidMeterMetadataProblem);
+        await expect(reading).rejects.toBeInstanceOf(InvalidStoredMeterMetadataProblem);
+        const failure = await reading.catch((error: unknown) => error);
+        expect(failure).toBeInstanceOf(InvalidStoredMeterMetadataProblem);
+        if (failure instanceof InvalidStoredMeterMetadataProblem) {
+          expect(failure.toJSON()).toMatchObject({
+            status: 500,
+            code: "metering/invalid-stored-meter-metadata",
+          });
+        }
         if (operation !== "getByTenant")
           expect(await registry.getOrThrow("tenant-1", "previous")).toEqual(previous);
         vi.mocked(mockRepository.findByMeterIdAndTenant).mockResolvedValue(null);
@@ -208,7 +326,7 @@ describe("MeterRegistry", () => {
       await registry.getOrThrow("tenant-1", "api_calls");
       vi.mocked(mockRepository.findByTenant).mockResolvedValue([invalid()]);
       await expect(registry.getByTenant("tenant-1")).rejects.toBeInstanceOf(
-        InvalidMeterMetadataProblem,
+        InvalidStoredMeterMetadataProblem,
       );
       expect(await registry.getOrThrow("tenant-1", "api_calls")).toEqual(previous);
     });

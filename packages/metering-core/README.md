@@ -70,12 +70,15 @@ export const metadata: MeterDefinitionMetadata = snapshotMeterMetadata(
 함수, 중첩 `undefined`, symbol, bigint, `NaN`·Infinity, `Map`·`Set`, 클래스 인스턴스, 유효하지 않은 날짜는
 거절됩니다. 객체의 속성은 열거 가능한 문자열 key의 data property여야 하므로 getter/setter, 숨겨진 속성,
 symbol key도 거절합니다. 배열의 빈칸·추가 속성과 `Date`의 사용자 정의 데이터 속성도 지원하지 않습니다.
-검증 중 getter를 실행하거나 잘못된 값을 문자열·`null`로 바꾸지 않습니다.
+metadata 내부 getter를 실행하거나 잘못된 값을 문자열·`null`로 바꾸지 않습니다.
 
-잘못된 값은 `InvalidMeterMetadataProblem` (`metering/invalid-meter-metadata`)으로 실패합니다.
+잘못된 등록 입력은 `InvalidMeterMetadataProblem` (`metering/invalid-meter-metadata`, HTTP 422)으로 실패합니다.
+저장소가 반환한 잘못된 값은 `InvalidStoredMeterMetadataProblem` (`metering/invalid-stored-meter-metadata`, HTTP 500)이며
+일반 사용량 요청 수정으로 복구되지 않습니다. 운영자가 해당 정의를 수정한 뒤 다시 조회·refresh해야 합니다.
 `extensions`의 `tenantId`, `meterId`, JSON Pointer `path`, `reason`으로 수정할 위치를 확인할 수 있으며
 거절한 값 자체는 오류에 포함하지 않습니다. `snapshotMeterMetadata()`는 외부 입력이나 커스텀 repository의
-반환값을 검증하고 독립 복사본을 반환하는 동일한 경계입니다. 호출자 객체를 freeze하지 않습니다.
+반환값을 검증하고 독립 복사본을 반환하는 동일한 경계입니다. 호출자 객체를 freeze하지 않습니다. 복사는 런타임의
+`structuredClone` 한계를 따르며, 너무 깊은 데이터 등 복사할 수 없는 값도 입력·저장소 경계에 맞는 Problem으로 실패합니다.
 
 `MeterRegistry`는 등록 입력을 repository I/O 전에 검증하고 복사합니다. repository 반환값도 캐시 설치 전에
 검증하므로 잘못된 `loadAll`이나 tenant refresh는 이전 캐시를 교체하지 않습니다. 해당 호출은 Problem으로

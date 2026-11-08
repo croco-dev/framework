@@ -29030,6 +29030,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "InvalidStoredMeterMetadataProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/InvalidStoredMeterMetadataProblem",
+              "declarationKind": "class"
+            },
+            {
               "name": "InvalidUsageEnvelopeProblem",
               "exportKind": "named",
               "source": "./libs/problems/InvalidUsageEnvelopeProblem",
