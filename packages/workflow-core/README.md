@@ -199,6 +199,23 @@ Saga store and performs no database migration. A legacy adapter that drops the f
 comparison but must preserve the original payload as immutable evidence. New adapters must persist
 the fingerprint so later handler mutation cannot redefine the accepted request.
 
+### In-memory Saga snapshots
+
+`InMemorySagaStore` owns detached snapshots of create/update inputs, including the injected clock's
+Date. Every returned execution is detached, including duplicate creates, key lookups and lists.
+Changing a handler result or a queried step/outbox record cannot rewrite stored recovery evidence.
+Inputs are not frozen, and changes are persisted only through `update()`.
+
+Store values may contain primitives (including undefined, bigint and non-finite numbers), valid
+Dates, arrays and plain objects with `Object.prototype` or a null prototype. Enumerable string
+properties, array holes, shared references and cycles are preserved; accessors are read once into
+ordinary properties. Non-enumerable properties and property descriptors are not stored. Functions,
+symbols, enumerable symbol keys, invalid Dates and other object types (including Map, Set, typed
+arrays and class instances) fail with non-retryable `workflow-core/saga-definition-invalid` before
+the create/update changes stored state. Convert those values to plain data before storing them.
+Keyed requests and outbox identity still use the narrower canonical rules below, which reject cycles.
+The store remains process-local and does not provide durable recovery across process restarts.
+
 ### Saga outbox replay identity
 
 Publishers must deduplicate by the opaque `SagaOutboxRecord.deliveryId`. New IDs bind the
