@@ -2,6 +2,16 @@
 
 `@croco/metering-core`용 Drizzle 저장소입니다.
 
+## Meter 정의 metadata 호환성
+
+Meter 정의의 metadata는 core의 `MeterDefinitionMetadata` 계약(JSON 데이터와 유효한 `Date`)을 따릅니다.
+함수·Map·Set 같은 임의 값은 저장 전에 `metering/invalid-meter-metadata` Problem으로 거절하며,
+잘못된 저장 JSON이나 계약 밖의 조회 결과는 `metering/invalid-stored-meter-metadata` 서버 Problem으로 실패하며
+빈 metadata로 대체하지 않습니다. 기존 호출자와 저장 데이터를
+업그레이드 전에 검증해야 합니다. 기본 JSON codec의 Date → ISO 문자열 저장·조회 형식은 그대로입니다.
+허용값, 오류 경로와 데이터 정리 방법은 [core 호환성 안내](../metering-core/README.md#meter-정의-metadata와-호환성)를
+따릅니다. 자동 데이터 수정이나 schema migration은 실행하지 않습니다.
+
 ## 설치
 
 ```bash

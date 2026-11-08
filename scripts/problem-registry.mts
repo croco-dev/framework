@@ -3762,6 +3762,16 @@ const recoveryMetadataByCategory = {
 } as const satisfies Record<ProblemCategory, ProblemRecoveryMetadata>;
 
 const recoveryMetadataByCode = {
+  "metering/invalid-stored-meter-metadata": recovery({
+    cause: "A meter repository returned malformed or unsupported definition metadata.",
+    userAction:
+      "Ask the application operator to repair the meter definition; changing a usage request cannot repair stored metadata.",
+    operatorAction:
+      "Use tenantId, meterId and path to locate the invalid definition. Normalize it to the documented JSON and Date contract, then retry the read or cache refresh. Do not drop metadata or replace the policy silently.",
+    retryability: "not-retryable",
+    redactionPolicy: "operator-only",
+    severity: "error",
+  }),
   STORAGE_R2_BUCKET_NOT_FOUND: recovery({
     cause:
       "The R2 S3-compatible API explicitly reported that the configured bucket does not exist.",

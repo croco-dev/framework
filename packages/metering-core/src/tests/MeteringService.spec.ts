@@ -15,7 +15,8 @@ import type {
 import { MeteringService } from "../libs/MeteringService";
 import type { MeterRecordInput } from "../libs/MeterRef";
 import { defineMeter, dimension } from "../libs/MeterRef";
-import type { MeterRegistry } from "../libs/MeterRegistry";
+import { MeterRegistry } from "../libs/MeterRegistry";
+import type { MeterRepository } from "../libs/MeterRepository";
 import { DuplicateRecordProblem } from "../libs/problems/DuplicateRecordProblem";
 import { InvalidMeterProblem } from "../libs/problems/InvalidMeterProblem";
 import { InvalidUsageEnvelopeProblem } from "../libs/problems/InvalidUsageEnvelopeProblem";
@@ -143,6 +144,44 @@ describe("MeteringService", () => {
       idempotencyManager: mockIdempotency,
       eventBus: mockEventBus,
     });
+  });
+
+  it("should enforce the registered quota after registry snapshots are mutated", async () => {
+    const stored = createMeter({ quota: 17, billing: "local", allowOverQuota: false });
+    const repository = {
+      findAll: vi.fn().mockResolvedValue([stored]),
+    } as unknown as MeterRepository;
+    const registry = new MeterRegistry(repository);
+    await registry.loadAll();
+    const snapshot = await registry.getOrThrow("tenant-1", "api_calls");
+    snapshot.quota = 999;
+    snapshot.allowOverQuota = true;
+    stored.quota = 888;
+    stored.allowOverQuota = true;
+    vi.mocked(mockStorage.checkAndRecordWithinQuota).mockResolvedValue({
+      exceeded: true,
+      newUsage: 18,
+    });
+    const actualService = new MeteringService({
+      meterRegistry: registry,
+      usageStorage: mockStorage,
+      idempotencyManager: mockIdempotency,
+    });
+
+    await expect(
+      actualService.record({
+        tenantId: "tenant-1",
+        meterId: "api_calls",
+        value: 18,
+        idempotencyKey: "over-quota",
+      }),
+    ).rejects.toBeInstanceOf(QuotaExceededProblem);
+    expect(mockStorage.checkAndRecordWithinQuota).toHaveBeenCalledWith(
+      expect.objectContaining({
+        quota: 17,
+        allowOverQuota: false,
+      }),
+    );
   });
 
   it("should expose the idempotent record delivery status", async () => {

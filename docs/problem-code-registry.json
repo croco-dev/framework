@@ -1,6 +1,6 @@
 {
   "version": "croco.problem-code-registry.v1",
-  "problemCount": 1163,
+  "problemCount": 1165,
   "problems": [
     {
       "code": "ACCESS_DENIED",
@@ -22088,7 +22088,7 @@
       "sources": [
         {
           "file": "packages/metering-drizzle/src/libs/DrizzleMeterRepository.ts",
-          "line": 272,
+          "line": 281,
           "column": 13,
           "kind": "problem-factory"
         }
@@ -22118,7 +22118,7 @@
       "sources": [
         {
           "file": "packages/metering-drizzle/src/libs/DrizzleMeterRepository.ts",
-          "line": 186,
+          "line": 193,
           "column": 17,
           "kind": "problem-factory"
         }
@@ -22484,6 +22484,66 @@
         {
           "file": "packages/metering-core/src/libs/problems/InvalidMeterDimensionProblem.ts",
           "line": 6,
+          "column": 5,
+          "kind": "problem-constructor"
+        }
+      ]
+    },
+    {
+      "code": "metering/invalid-meter-metadata",
+      "category": "ValidationError",
+      "status": 422,
+      "title": "Validation Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#metering-invalid-meter-metadata",
+      "recovery": {
+        "cause": "The request or generated contract failed schema or semantic validation.",
+        "userAction": "Fix the invalid fields and retry with schema-conformant input.",
+        "operatorAction": "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "public",
+        "telemetry": {
+          "eventName": "croco.problem.info",
+          "severity": "info",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/metering-core/src/libs/problems/InvalidMeterMetadataProblem.ts",
+          "line": 6,
+          "column": 5,
+          "kind": "problem-constructor"
+        }
+      ]
+    },
+    {
+      "code": "metering/invalid-stored-meter-metadata",
+      "category": "InternalServerError",
+      "status": 500,
+      "title": "Internal Server Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#metering-invalid-stored-meter-metadata",
+      "recovery": {
+        "cause": "A meter repository returned malformed or unsupported definition metadata.",
+        "userAction": "Ask the application operator to repair the meter definition; changing a usage request cannot repair stored metadata.",
+        "operatorAction": "Use tenantId, meterId and path to locate the invalid definition. Normalize it to the documented JSON and Date contract, then retry the read or cache refresh. Do not drop metadata or replace the policy silently.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "operator-only",
+        "telemetry": {
+          "eventName": "croco.problem.error",
+          "severity": "error",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/metering-core/src/libs/problems/InvalidStoredMeterMetadataProblem.ts",
+          "line": 7,
           "column": 5,
           "kind": "problem-constructor"
         }

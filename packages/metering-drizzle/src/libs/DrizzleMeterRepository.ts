@@ -1,5 +1,11 @@
 import { and, eq, getTableColumns, sql } from "drizzle-orm";
-import { InvalidUsageValueProblem, MeterRepository } from "@croco/metering-core";
+import {
+  snapshotMeterMetadata,
+  InvalidMeterMetadataProblem,
+  InvalidStoredMeterMetadataProblem,
+  InvalidUsageValueProblem,
+  MeterRepository,
+} from "@croco/metering-core";
 import { ProblemFactory } from "@croco/problems-core";
 
 import type { AnyColumn, SQL, Table } from "drizzle-orm";
@@ -8,6 +14,7 @@ import type {
   MeterAggregation,
   MeterBillingIntent,
   MeterDefinition,
+  MeterDefinitionMetadata,
   MeterRegistrationOptions,
   UsageRecord,
 } from "@croco/metering-core";
@@ -74,7 +81,7 @@ type DrizzleInsertQuery = {
 };
 
 type DrizzleMeterQueryClient = DrizzleInsertCapability<(table: Table) => DrizzleInsertQuery> &
-  DrizzleSelectCapability<() => DrizzleSelectQuery>;
+  DrizzleSelectCapability<(fields?: Record<string, AnyColumn | SQL>) => DrizzleSelectQuery>;
 
 function isOneOf<const T extends string>(values: readonly T[], value: unknown): value is T {
   return values.some((candidate) => candidate === value);
@@ -211,7 +218,7 @@ export class DrizzleMeterRepository extends MeterRepository {
     const client = this.getClient();
 
     const results = await client
-      .select()
+      .select(this.meterSelection())
       .from(this.meterTable)
       .where(and(eq(this.meterSchema.tenantId, tenantId), eq(this.meterSchema.meterId, meterId)))
       .limit(1);
@@ -231,6 +238,8 @@ export class DrizzleMeterRepository extends MeterRepository {
    * 되며, `id`와 `createdAt`은 처음 저장한 값을 유지합니다.
    */
   async save(meter: MeterRegistrationOptions): Promise<MeterDefinition> {
+    const metadata =
+      meter.metadata === undefined ? undefined : snapshotMeterMetadata(meter.metadata, meter);
     const client = this.getClient();
     const now = new Date();
 
@@ -250,7 +259,7 @@ export class DrizzleMeterRepository extends MeterRepository {
       [keys.unit]: billingContract.unit,
       [keys.quota]: meter.quota ?? null,
       [keys.allowOverQuota]: meter.allowOverQuota ? 1 : 0,
-      [keys.metadata]: this.encodeJsonColumn(meter.metadata ?? {}, this.meterSchema.metadata),
+      [keys.metadata]: this.encodeJsonColumn(metadata ?? {}, this.meterSchema.metadata),
       [keys.updatedAt]: this.encodeDateColumn(now, this.meterSchema.updatedAt),
     };
 
@@ -284,7 +293,7 @@ export class DrizzleMeterRepository extends MeterRepository {
   async findAll(): Promise<MeterDefinition[]> {
     const client = this.getClient();
 
-    const results = await client.select().from(this.meterTable);
+    const results = await client.select(this.meterSelection()).from(this.meterTable);
 
     return (results as Record<string, unknown>[]).map((r) => this.mapToMeterDefinition(r));
   }
@@ -296,7 +305,7 @@ export class DrizzleMeterRepository extends MeterRepository {
     const client = this.getClient();
 
     const results = await client
-      .select()
+      .select(this.meterSelection())
       .from(this.meterTable)
       .where(eq(this.meterSchema.tenantId, tenantId));
 
@@ -391,10 +400,29 @@ export class DrizzleMeterRepository extends MeterRepository {
     }
   }
 
+  private isPostgresJsonMetadata(): boolean {
+    return (
+      this.meterSchema.metadata.columnType === "PgJson" ||
+      this.meterSchema.metadata.columnType === "PgJsonb"
+    );
+  }
+
+  private meterSelection(): Record<string, AnyColumn | SQL> {
+    const columns = getTableColumns(this.meterTable);
+    if (!this.isPostgresJsonMetadata()) return columns;
+    // Read the JSON literal as text so the driver and column decoder cannot parse it twice.
+    return {
+      ...columns,
+      [this.meterColumnKeys.metadata]: sql`${this.meterSchema.metadata}::text`,
+    };
+  }
+
+  private isNativeJsonColumn(column: unknown): boolean {
+    return DRIZZLE_JSON_COLUMN_TYPES.has((column as { columnType?: string }).columnType ?? "");
+  }
+
   private encodeJsonColumn(value: unknown, column: unknown): unknown {
-    return DRIZZLE_JSON_COLUMN_TYPES.has((column as { columnType?: string }).columnType ?? "")
-      ? value
-      : this.serializeJson(value);
+    return this.isNativeJsonColumn(column) ? value : this.serializeJson(value);
   }
 
   private encodeDateColumn(value: Date, column: AnyColumn): Date | number {
@@ -450,7 +478,7 @@ export class DrizzleMeterRepository extends MeterRepository {
       unit: billingContract.unit ?? undefined,
       quota,
       allowOverQuota: Boolean(raw[keys.allowOverQuota]),
-      metadata: this.deserializeMetadata(raw[keys.metadata]),
+      metadata: this.deserializeMetadata(raw[keys.metadata], { tenantId, meterId }),
       createdAt: this.parseDate(raw[keys.createdAt]),
       updatedAt: this.parseDate(raw[keys.updatedAt]),
     };
@@ -480,24 +508,38 @@ export class DrizzleMeterRepository extends MeterRepository {
     }
   }
 
-  private deserializeMetadata(value: unknown): Record<string, unknown> | undefined {
-    if (value === null || value === undefined) {
-      return undefined;
-    }
-    if (typeof value === "string") {
-      try {
-        const parsed = this.deserializeJson(value) as Record<string, unknown>;
-        return Object.keys(parsed).length === 0 ? undefined : parsed;
-      } catch (error) {
-        this.logger?.warn("Failed to deserialize metadata JSON", { error });
-        return undefined;
+  private deserializeMetadata(
+    value: unknown,
+    meter: { tenantId: string; meterId: string },
+  ): MeterDefinitionMetadata | undefined {
+    if (value === undefined) return undefined;
+    try {
+      let metadata: unknown = value;
+      if (
+        typeof value === "string" &&
+        (!this.isNativeJsonColumn(this.meterSchema.metadata) || this.isPostgresJsonMetadata())
+      ) {
+        metadata = this.isPostgresJsonMetadata() ? JSON.parse(value) : this.deserializeJson(value);
       }
+      const snapshot = snapshotMeterMetadata(metadata, meter);
+      return Object.keys(snapshot).length === 0 ? undefined : snapshot;
+    } catch (error) {
+      const invalid =
+        error instanceof InvalidMeterMetadataProblem
+          ? error
+          : new InvalidMeterMetadataProblem(
+              meter,
+              "/metadata",
+              "repository metadata must contain valid JSON",
+            );
+      const problem = new InvalidStoredMeterMetadataProblem(meter, invalid);
+      this.logger?.warn(problem.message, {
+        code: problem.code,
+        tenantId: meter.tenantId,
+        meterId: meter.meterId,
+      });
+      throw problem;
     }
-    if (typeof value === "object" && value !== null) {
-      const obj = value as Record<string, unknown>;
-      return Object.keys(obj).length === 0 ? undefined : obj;
-    }
-    return undefined;
   }
 
   private parseDate(value: unknown): Date {

@@ -10,6 +10,8 @@ Meter 정의 및 Usage 데이터를 DB에 저장하는 추상 클래스
 ## Description
 
 구현체는 사용자가 제공 (예: Drizzle, Prisma 등)
+Meter definition metadata must satisfy MeterDefinitionMetadata. Validate externally decoded data with
+snapshotMeterMetadata and use its returned snapshot; do not silently drop unsupported values.
 metering-core는 이 추상 클래스만 의존
 
 ## Extended by

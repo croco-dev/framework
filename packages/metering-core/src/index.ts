@@ -291,6 +291,7 @@ export { defineMeter, dimension } from "./libs/MeterRef";
  * ```
  */
 export { MeterRegistry } from "./libs/MeterRegistry";
+export { snapshotMeterMetadata } from "./libs/meterMetadata";
 
 // ==================== Repository Interface ====================
 
@@ -356,6 +357,8 @@ export { BillableUsageJournalRequiredProblem } from "./libs/problems/BillableUsa
 export { DuplicateRecordProblem } from "./libs/problems/DuplicateRecordProblem";
 export { InvalidMeterDimensionProblem } from "./libs/problems/InvalidMeterDimensionProblem";
 export { MeteringTransitionProblem } from "./libs/problems/MeteringTransitionProblem";
+export { InvalidMeterMetadataProblem } from "./libs/problems/InvalidMeterMetadataProblem";
+export { InvalidStoredMeterMetadataProblem } from "./libs/problems/InvalidStoredMeterMetadataProblem";
 
 /**
  * 등록되지 않은 Meter를 사용할 때 발생하는 문제 타입입니다.
@@ -497,6 +500,8 @@ export type {
   AggregationPeriod,
   FlushResult,
   MeterDefinition,
+  MeterDefinitionMetadata,
+  MeterDefinitionMetadataValue,
   MeterRegistrationOptions,
   MeterType,
   RecordOptions,

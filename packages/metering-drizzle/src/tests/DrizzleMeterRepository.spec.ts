@@ -1,7 +1,14 @@
 import type { ILogger } from "@croco/framework-context";
-import { InvalidUsageValueProblem, MeterRegistry, UsageAggregator } from "@croco/metering-core";
+import {
+  InvalidMeterMetadataProblem,
+  InvalidStoredMeterMetadataProblem,
+  InvalidUsageValueProblem,
+  MeterRegistry,
+  UsageAggregator,
+} from "@croco/metering-core";
 import type {
   BillableUsageJournal,
+  MeterDefinitionMetadata,
   MeterRegistrationOptions,
   UsageRecord,
   UsageStorage,
@@ -694,6 +701,47 @@ describe("DrizzleMeterRepository", () => {
       expectTypeOf(createPostgresRepository).returns.toEqualTypeOf<DrizzleMeterRepository>();
     });
 
+    it.each([null, [], 42, "{}", '{"plan":"starter"}'])(
+      "rejects non-object PostgreSQL JSON literals %s",
+      async (metadata) => {
+        const limit = vi.fn().mockResolvedValue([
+          {
+            id: "pg-meter",
+            tenantId: "tenant-pg",
+            meterId: "api_calls",
+            type: "COUNT",
+            billing: "local",
+            aggregation: null,
+            unit: null,
+            quota: null,
+            allowOverQuota: 0,
+            metadata: JSON.stringify(metadata),
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          },
+        ]);
+        const pgDb = {
+          select: () => ({ from: () => ({ where: () => ({ limit }) }) }),
+        } as unknown as DrizzleMeterDatabase;
+        const pgRepository = new DrizzleMeterRepository(
+          pgDb,
+          { getClient: () => undefined } as unknown as TxManager<DrizzleMeterDatabase>,
+          {
+            meterTable: metersPg,
+            meterSchema: metersPg,
+            usageRecordTable: usageRecordsPg,
+            usageRecordSchema: usageRecordsPg,
+          },
+        );
+        await expect(
+          pgRepository.findByMeterIdAndTenant("api_calls", "tenant-pg"),
+        ).rejects.toMatchObject({
+          code: "metering/invalid-stored-meter-metadata",
+          extensions: { path: "/metadata" },
+        });
+      },
+    );
+
     it("should encode PostgreSQL meter timestamps as dates", async () => {
       const onConflictDoUpdate = vi.fn().mockReturnValue({
         returning: vi.fn().mockResolvedValue([
@@ -754,6 +802,58 @@ describe("DrizzleMeterRepository", () => {
         },
       });
     });
+
+    it("rejects invalid definition metadata before storing or replacing a meter", async () => {
+      const options = {
+        tenantId: "tenant-1",
+        meterId: "api_calls",
+        type: "COUNT" as const,
+        metadata: { plan: "starter" },
+      };
+      await repository.save(options);
+      await expect(
+        repository.save({
+          ...options,
+          metadata: { callback: () => "private" } as unknown as MeterDefinitionMetadata,
+        }),
+      ).rejects.toBeInstanceOf(InvalidMeterMetadataProblem);
+      expect((await repository.findByMeterIdAndTenant("api_calls", "tenant-1"))?.metadata).toEqual({
+        plan: "starter",
+      });
+      expect(await repository.findAll()).toHaveLength(1);
+    });
+
+    it("keeps existing JSON Date serialization when a registry uses the SQLite provider", async () => {
+      const registry = new MeterRegistry(repository);
+      const saved = await registry.register({
+        tenantId: "tenant-1",
+        meterId: "api_calls",
+        type: "COUNT",
+        metadata: { effectiveAt: new Date("2026-01-02T03:04:05Z"), nested: [true, null, 17] },
+      });
+      expect(saved.metadata).toEqual({
+        effectiveAt: "2026-01-02T03:04:05.000Z",
+        nested: [true, null, 17],
+      });
+    });
+
+    it.each(["not-json", "null", "[]", '{"nested":1e1000}'])(
+      "rejects invalid stored metadata %s instead of dropping it",
+      async (metadata) => {
+        await repository.save({ tenantId: "tenant-1", meterId: "api_calls", type: "COUNT" });
+        sqlite.prepare("UPDATE meters SET metadata = ?").run(metadata);
+        await expect(repository.findAll()).rejects.toMatchObject({
+          code: "metering/invalid-stored-meter-metadata",
+          extensions: { meterId: "api_calls", tenantId: "tenant-1" },
+        });
+        await expect(repository.findByTenant("tenant-1")).rejects.toBeInstanceOf(
+          InvalidStoredMeterMetadataProblem,
+        );
+        await expect(
+          repository.findByMeterIdAndTenant("api_calls", "tenant-1"),
+        ).rejects.toBeInstanceOf(InvalidStoredMeterMetadataProblem);
+      },
+    );
 
     it("should create meter definition", async () => {
       const meter = await repository.save({
@@ -2048,7 +2148,7 @@ describe("DrizzleMeterRepository", () => {
   });
 
   describe("deserializeMetadata JSON parse failure", () => {
-    it("should log warn and return undefined on invalid JSON", async () => {
+    it("should log safe diagnostics and reject invalid JSON", async () => {
       const logger: ILogger = {
         debug: vi.fn(),
         info: vi.fn(),
@@ -2071,14 +2171,15 @@ describe("DrizzleMeterRepository", () => {
         )
         .run("tenant-1", "bad_json", "COUNT", null, 0, "{invalid json}", Date.now(), Date.now());
 
-      const result = await repoWithLogger.findByMeterIdAndTenant("bad_json", "tenant-1");
-
-      expect(result).not.toBeNull();
-      expect(result!.meterId).toBe("bad_json");
-      expect(result!.metadata).toBeUndefined();
-      expect(logger.warn).toHaveBeenCalledWith("Failed to deserialize metadata JSON", {
-        error: expect.any(SyntaxError),
+      await expect(
+        repoWithLogger.findByMeterIdAndTenant("bad_json", "tenant-1"),
+      ).rejects.toBeInstanceOf(InvalidStoredMeterMetadataProblem);
+      expect(logger.warn).toHaveBeenCalledWith(expect.any(String), {
+        code: "metering/invalid-stored-meter-metadata",
+        tenantId: "tenant-1",
+        meterId: "bad_json",
       });
+      expect(vi.mocked(logger.warn).mock.calls[0]?.[0]).not.toContain("{invalid json}");
     });
   });
 
