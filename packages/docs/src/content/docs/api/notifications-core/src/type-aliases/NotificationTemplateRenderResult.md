@@ -15,6 +15,12 @@ title: "NotificationTemplateRenderResult"
 
 ---
 
+### push?
+
+> `readonly` `optional` **push?**: [`PushContent`](/api/engagement-core/src/type-aliases/pushcontent/)
+
+---
+
 ### subject?
 
 > `readonly` `optional` **subject?**: `string`

@@ -93,6 +93,22 @@ optional `deepLink`, `imageUrl`, string-valued `data`, `collapseKey`, `ttlSecond
 provider maps these fields to Firebase Admin requests. `content` remains required by the shared
 payload contract; engagement dispatch fills it from the push body.
 
+For `NotificationTemplate` with `channel: NotificationChannel.PUSH`, `subject` is required and
+renders to `push.title`; `content` renders to `push.body`. Optional `push` fields accept the same
+metadata as `PushContent`, excluding `title` and `body`. Placeholders in `deepLink`, `imageUrl`,
+`collapseKey` and `data` values use the template's validated variables without HTML escaping.
+PUSH title and body must be non-empty at registration and after rendering; invalid text fails
+with `notifications-core/template-invalid` before task dispatch. EMAIL, SMS, Slack and IN_APP
+retain their existing subject/content rendering and escaping rules.
+Declare reusable template objects with `satisfies NotificationTemplate` or a
+`NotificationTemplate` annotation so their channel stays a discriminant; PUSH definitions
+without a subject are rejected by the type checker.
+
+`sendTemplate()` passes the rendered canonical push content through `SendNotificationTask`,
+including the template ID, version, locale and dispatch idempotency key. FCM's
+`supportsRenderedTemplates` covers this path; provider-native templates remain unsupported.
+Provider-specific metadata constraints are validated by the provider before its client sends.
+
 For durable push jobs, keep `to` as an opaque vault reference and resolve the token inside the
 provider. Do not resolve tokens before serializing jobs, or put raw tokens in metadata or diagnostic
 output. Provider acceptance does not establish device delivery, and a Croco idempotency key does

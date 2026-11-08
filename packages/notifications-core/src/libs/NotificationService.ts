@@ -139,6 +139,7 @@ export class NotificationService {
         to: request.to,
         ...(rendered.subject === undefined ? {} : { subject: rendered.subject }),
         content: rendered.content,
+        ...(rendered.push === undefined ? {} : { push: rendered.push }),
         ...(request.metadata === undefined ? {} : { metadata: request.metadata }),
         templateId: rendered.template.id,
         templateVersion: rendered.template.version,

@@ -2,8 +2,10 @@ import {
   NotificationTemplateAlreadyRegisteredProblem,
   NotificationTemplateNotFoundProblem,
   NotificationTemplateVariablesInvalidProblem,
+  NotificationTemplateInvalidProblem,
 } from "./problems/NotificationProblems";
 import { NotificationChannel } from "./types";
+import type { PushContent } from "./types";
 
 export type NotificationTemplateRef = {
   readonly id: string;
@@ -26,12 +28,22 @@ export type NotificationTemplateVariablesSchema = {
 };
 
 export type NotificationTemplate = NotificationTemplateRef & {
-  readonly channel: NotificationChannel;
-  readonly subject?: string;
   readonly content: string;
   readonly variablesSchema?: NotificationTemplateVariablesSchema;
   readonly variableEscaping?: NotificationTemplateVariableEscaping;
-};
+} & (
+    | {
+        readonly channel: NotificationChannel.PUSH;
+        /** Rendered as PushContent.title; content is rendered as PushContent.body. */
+        readonly subject: string;
+        readonly push?: Omit<PushContent, "title" | "body">;
+      }
+    | {
+        readonly channel: Exclude<NotificationChannel, NotificationChannel.PUSH>;
+        readonly subject?: string;
+        readonly push?: never;
+      }
+  );
 
 export type NotificationTemplateRenderRequest = NotificationTemplateRef & {
   readonly channel: NotificationChannel;
@@ -42,6 +54,7 @@ export type NotificationTemplateRenderResult = {
   readonly template: NotificationTemplateRef;
   readonly subject?: string;
   readonly content: string;
+  readonly push?: PushContent;
   readonly variables: Record<string, unknown>;
 };
 
@@ -66,6 +79,9 @@ export class NotificationTemplateRegistry {
       throw new NotificationTemplateAlreadyRegisteredProblem(template);
     }
 
+    if (template.channel === NotificationChannel.PUSH) {
+      validatePushTemplateText(template, template.subject, template.content);
+    }
     this.templates.set(key, template);
   }
 
@@ -85,6 +101,42 @@ export class NotificationTemplateRegistry {
     const defaultVariableEscaping: NotificationTemplateVariableEscaping =
       template.channel === NotificationChannel.EMAIL ? "html" : "none";
     const variableEscaping = template.variableEscaping ?? defaultVariableEscaping;
+    const subject =
+      template.subject === undefined
+        ? undefined
+        : renderTemplateString(template.subject, variables, "none");
+    const content = renderTemplateString(template.content, variables, variableEscaping);
+
+    let push: PushContent | undefined;
+    if (template.channel === NotificationChannel.PUSH) {
+      validatePushTemplateText(template, subject, content);
+      push = {
+        ...template.push,
+        title: subject,
+        body: content,
+        ...(template.push?.deepLink === undefined
+          ? {}
+          : { deepLink: renderTemplateString(template.push.deepLink, variables, "none") }),
+        ...(template.push?.imageUrl === undefined
+          ? {}
+          : { imageUrl: renderTemplateString(template.push.imageUrl, variables, "none") }),
+        ...(template.push?.collapseKey === undefined
+          ? {}
+          : {
+              collapseKey: renderTemplateString(template.push.collapseKey, variables, "none"),
+            }),
+        ...(template.push?.data === undefined
+          ? {}
+          : {
+              data: Object.fromEntries(
+                Object.entries(template.push.data).map(([key, value]) => [
+                  key,
+                  renderTemplateString(value, variables, "none"),
+                ]),
+              ),
+            }),
+      };
+    }
 
     return {
       template: {
@@ -92,10 +144,9 @@ export class NotificationTemplateRegistry {
         version: template.version,
         locale: template.locale,
       },
-      ...(template.subject === undefined
-        ? {}
-        : { subject: renderTemplateString(template.subject, variables, "none") }),
-      content: renderTemplateString(template.content, variables, variableEscaping),
+      ...(subject === undefined ? {} : { subject }),
+      content,
+      ...(push === undefined ? {} : { push }),
       variables,
     };
   }
@@ -111,20 +162,22 @@ export function previewNotificationTemplate(
 export function createNotificationTemplateFixture(
   overrides: Partial<NotificationTemplate> = {},
 ): NotificationTemplate {
-  return {
+  const { channel = NotificationChannel.EMAIL, ...fields } = overrides;
+  const template = {
     id: "fixture-template",
     version: "v1",
     locale: "en-US",
-    channel: NotificationChannel.EMAIL,
     content: "Hello {{name}}",
     variablesSchema: {
       additionalProperties: false,
-      properties: {
-        name: { type: "string", required: true },
-      },
+      properties: { name: { type: "string" as const, required: true } },
     },
-    ...overrides,
+    ...fields,
   };
+  if (channel === NotificationChannel.PUSH) {
+    return { ...template, channel, subject: overrides.subject ?? "Hello {{name}}" };
+  }
+  return { ...template, channel, push: undefined };
 }
 
 export function createNotificationTemplateKey(ref: NotificationTemplateRef): string {
@@ -190,8 +243,31 @@ function extractTemplatePlaceholders(template: NotificationTemplate): string[] {
   if (template.subject !== undefined) {
     collectTemplatePlaceholders(template.subject, placeholders);
   }
+  if (template.channel === NotificationChannel.PUSH && template.push !== undefined) {
+    for (const value of [
+      template.push.deepLink,
+      template.push.imageUrl,
+      template.push.collapseKey,
+      ...Object.values(template.push.data ?? {}),
+    ]) {
+      if (value !== undefined) collectTemplatePlaceholders(value, placeholders);
+    }
+  }
 
   return [...placeholders].sort();
+}
+
+function validatePushTemplateText(
+  template: Extract<NotificationTemplate, { channel: NotificationChannel.PUSH }>,
+  subject: string | undefined,
+  content: string,
+): asserts subject is string {
+  const issues: string[] = [];
+  if (typeof subject !== "string" || !subject.trim())
+    issues.push("PUSH subject must be a non-empty title");
+  if (typeof content !== "string" || !content.trim())
+    issues.push("PUSH content must be a non-empty body");
+  if (issues.length > 0) throw new NotificationTemplateInvalidProblem(template, issues);
 }
 
 function collectTemplatePlaceholders(value: string, placeholders: Set<string>): void {

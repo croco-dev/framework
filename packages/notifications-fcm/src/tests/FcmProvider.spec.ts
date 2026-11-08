@@ -1,8 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
 import { NotificationChannel } from "@croco/notifications-core";
 import { ProblemCategory } from "@croco/problems-core";
-import type { NotificationPayload } from "@croco/notifications-core";
+import type { NotificationJobPayload, NotificationPayload } from "@croco/notifications-core";
 import { FcmProvider, FcmDiagnosticsProvider, FcmProblem, normalizeFcmProblem } from "../index";
+import { NotificationProviderRegistry } from "../../../notifications-core/src/libs/NotificationProviderRegistry";
+import { NotificationService } from "../../../notifications-core/src/libs/NotificationService";
+import { SendNotificationTask } from "../../../notifications-core/src/libs/SendNotificationTask";
 import type { FcmConfig, FcmFailureKind } from "../index";
 
 const config: FcmConfig = {
@@ -12,6 +15,87 @@ const config: FcmConfig = {
 const payload = { to: "[redacted-token]", content: "body", push: { title: "Title", body: "Body" } };
 
 describe("FcmProvider", () => {
+  it.each([false, true])(
+    "delivers a rendered PUSH template with metadata=%s and provenance",
+    async (withMetadata) => {
+      const send = vi.fn().mockResolvedValue("projects/fixture/messages/template");
+      const registry = new NotificationProviderRegistry();
+      registry.registerProvider(new FcmProvider(config, { send }), true);
+      const task = new SendNotificationTask(registry);
+      const executeTracked = vi.fn(async (_name: string, job: NotificationJobPayload) => ({
+        executionId: "template-execution",
+        result: await task.handle(job),
+      }));
+      const runner = { executeTracked } as unknown as ConstructorParameters<
+        typeof NotificationService
+      >[0];
+      const service = new NotificationService(runner, registry);
+      const template = { id: "welcome-push", version: "v2", locale: "ko-KR" };
+      service.registerTemplate({
+        ...template,
+        channel: NotificationChannel.PUSH,
+        subject: "안녕하세요 {{name}} 👋",
+        content: "새 소식: {{message}}",
+        ...(withMetadata
+          ? {
+              push: {
+                deepLink: "app://inbox/{{name}}",
+                imageUrl: "https://example.test/{{image}}.png",
+                collapseKey: "inbox-{{name}}",
+                data: { label: "{{message}}" },
+                ttlSeconds: 60,
+                priority: "high" as const,
+              },
+            }
+          : {}),
+      });
+      await service.sendTemplate(
+        NotificationChannel.PUSH,
+        {
+          to: "fixture-token",
+          template,
+          variables: { name: "수진", message: "<A & B>", image: "welcome" },
+          metadata: { campaign: "welcome" },
+        },
+        {
+          idempotencyKey: "welcome:recipient-7",
+          preferenceContext: {
+            tenantId: "tenant-1",
+            userId: "recipient-7",
+            channel: NotificationChannel.PUSH,
+            topic: "welcome",
+          },
+        },
+      );
+      expect(send).toHaveBeenCalledExactlyOnceWith("fixture-token", {
+        title: "안녕하세요 수진 👋",
+        body: "새 소식: <A & B>",
+        ...(withMetadata
+          ? {
+              deepLink: "app://inbox/수진",
+              imageUrl: "https://example.test/welcome.png",
+              collapseKey: "inbox-수진",
+              data: { label: "<A & B>" },
+              ttlSeconds: 60,
+              priority: "high",
+            }
+          : {}),
+      });
+      expect(executeTracked).toHaveBeenCalledWith(
+        "send-notification",
+        expect.objectContaining({
+          idempotencyKey: "welcome:recipient-7",
+          templateId: "welcome-push",
+          templateVersion: "v2",
+          locale: "ko-KR",
+          metadata: { campaign: "welcome" },
+          dispatchContext: expect.objectContaining({ template }),
+        }),
+        { idempotencyKey: "welcome:recipient-7" },
+      );
+    },
+  );
+
   it.each<[FcmFailureKind, ProblemCategory]>([
     ["configuration", ProblemCategory.InternalServerError],
     ["authentication", ProblemCategory.InternalServerError],

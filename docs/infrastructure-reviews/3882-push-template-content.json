@@ -1,0 +1,110 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "notifications-core",
+      "classification": "pure-contract",
+      "reason": "Render PUSH subject/content and optional metadata into the existing PushContent contract, rejecting missing or empty title/body before dispatch. No Host, Provider, storage or lifecycle implementation changes.",
+      "files": {
+        "packages/notifications-core/src/libs/NotificationTemplates.ts": "399fa2e48a48f2f3bd8701412cc0d43bce5b34448e2f04342bc505d5c8d0aaec",
+        "packages/notifications-core/src/libs/NotificationService.ts": "c0f4d50fa2168796eab8c1bde793d80d56087a0178d464dee4da888aa973cbe5",
+        "packages/notifications-core/src/libs/problems/NotificationProblems.ts": "7229399c49f1bd8399aa70dc21a92f1a042f77b983ad45c0c23f9a2a06571b09"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Render PUSH subject/content and optional metadata into the existing PushContent contract, rejecting missing or empty title/body before dispatch. No Host, Provider, storage or lifecycle implementation changes.",
+          "providers": [],
+          "constraints": [
+            "Host-independent contract data and rendering only; no deployed infrastructure, provider certification or live FCM delivery is claimed. Existing FCM Node/Lambda runtime restrictions are unchanged."
+          ],
+          "references": [
+            "packages/notifications-core/src/libs/NotificationTemplates.ts",
+            "packages/notifications-core/src/libs/NotificationService.ts",
+            "packages/notifications-core/src/libs/problems/NotificationProblems.ts",
+            "packages/notifications-fcm/src/tests/FcmProvider.spec.ts",
+            "packages/notifications-core/README.md"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Render PUSH subject/content and optional metadata into the existing PushContent contract, rejecting missing or empty title/body before dispatch. No Host, Provider, storage or lifecycle implementation changes.",
+          "providers": [],
+          "constraints": [
+            "Host-independent contract data and rendering only; no deployed infrastructure, provider certification or live FCM delivery is claimed. Existing FCM Node/Lambda runtime restrictions are unchanged."
+          ],
+          "references": [
+            "packages/notifications-core/src/libs/NotificationTemplates.ts",
+            "packages/notifications-core/src/libs/NotificationService.ts",
+            "packages/notifications-core/src/libs/problems/NotificationProblems.ts",
+            "packages/notifications-fcm/src/tests/FcmProvider.spec.ts",
+            "packages/notifications-core/README.md"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Render PUSH subject/content and optional metadata into the existing PushContent contract, rejecting missing or empty title/body before dispatch. No Host, Provider, storage or lifecycle implementation changes.",
+          "providers": [],
+          "constraints": [
+            "Host-independent contract data and rendering only; no deployed infrastructure, provider certification or live FCM delivery is claimed. Existing FCM Node/Lambda runtime restrictions are unchanged."
+          ],
+          "references": [
+            "packages/notifications-core/src/libs/NotificationTemplates.ts",
+            "packages/notifications-core/src/libs/NotificationService.ts",
+            "packages/notifications-core/src/libs/problems/NotificationProblems.ts",
+            "packages/notifications-fcm/src/tests/FcmProvider.spec.ts",
+            "packages/notifications-core/README.md"
+          ]
+        }
+      }
+    },
+    {
+      "package": "problems-core",
+      "classification": "pure-contract",
+      "reason": "Regenerate the public Problem registry for notifications-core/template-invalid and its source locations. This deterministic contract data introduces no runtime capability or lifecycle requirement.",
+      "files": {
+        "packages/problems-core/src/generated/problem-code-registry.ts": "fd0b588ce6ba1dddf5662201fb4c8ccc9f630e8953295525bbf54ea08c27d449"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Regenerate the public Problem registry for notifications-core/template-invalid and its source locations. This deterministic contract data introduces no runtime capability or lifecycle requirement.",
+          "providers": [],
+          "constraints": [
+            "Host-independent contract data and rendering only; no deployed infrastructure, provider certification or live FCM delivery is claimed. Existing FCM Node/Lambda runtime restrictions are unchanged."
+          ],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "docs/problem-code-registry.json"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Regenerate the public Problem registry for notifications-core/template-invalid and its source locations. This deterministic contract data introduces no runtime capability or lifecycle requirement.",
+          "providers": [],
+          "constraints": [
+            "Host-independent contract data and rendering only; no deployed infrastructure, provider certification or live FCM delivery is claimed. Existing FCM Node/Lambda runtime restrictions are unchanged."
+          ],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "docs/problem-code-registry.json"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Regenerate the public Problem registry for notifications-core/template-invalid and its source locations. This deterministic contract data introduces no runtime capability or lifecycle requirement.",
+          "providers": [],
+          "constraints": [
+            "Host-independent contract data and rendering only; no deployed infrastructure, provider certification or live FCM delivery is claimed. Existing FCM Node/Lambda runtime restrictions are unchanged."
+          ],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "docs/problem-code-registry.json"
+          ]
+        }
+      }
+    }
+  ]
+}

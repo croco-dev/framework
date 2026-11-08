@@ -1,6 +1,6 @@
 {
   "version": "croco.problem-code-registry.v1",
-  "problemCount": 1165,
+  "problemCount": 1166,
   "problems": [
     {
       "code": "ACCESS_DENIED",
@@ -24500,6 +24500,36 @@
       ]
     },
     {
+      "code": "notifications-core/template-invalid",
+      "category": "ValidationError",
+      "status": 422,
+      "title": "Validation Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#notifications-core-template-invalid",
+      "recovery": {
+        "cause": "The request or generated contract failed schema or semantic validation.",
+        "userAction": "Fix the invalid fields and retry with schema-conformant input.",
+        "operatorAction": "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "public",
+        "telemetry": {
+          "eventName": "croco.problem.info",
+          "severity": "info",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/notifications-core/src/libs/problems/NotificationProblems.ts",
+          "line": 396,
+          "column": 5,
+          "kind": "problem-constructor"
+        }
+      ]
+    },
+    {
       "code": "notifications-core/template-not-found",
       "category": "NotFound",
       "status": 404,
@@ -35050,7 +35080,7 @@
       "className": "RecordedEndpointFailureProblem",
       "source": {
         "file": "packages/notifications-core/src/libs/NotificationService.ts",
-        "line": 371,
+        "line": 372,
         "column": 1,
         "kind": "problem-class"
       },
