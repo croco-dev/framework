@@ -115,9 +115,16 @@ type ContainerScopeSnapshot = {
   readonly validated: boolean;
 };
 
+type GeneratedProviderState = Pick<
+  ContainerScopeState,
+  "generatedProviders" | "componentSourceLocations" | "tokenIdentityIds" | "tokenIdentityOwners"
+>;
+
 const containerScopeStorage = new AsyncLocalStorage<ContainerScopeState>();
 type ContainerScopeRollbackTransaction = {
   readonly state: ContainerScopeState;
+  readonly replacedValues: Set<unknown>;
+  disposeReplacedValues?: () => void;
   active: boolean;
 };
 const containerScopeRollbackStorage = new AsyncLocalStorage<ContainerScopeRollbackTransaction>();
@@ -145,7 +152,7 @@ function createContainerScopeCleanupFailure(
 }
 
 function destroyGeneratedInstance(instance: unknown): void {
-  if (typeof instance !== "object" || instance === null) {
+  if ((typeof instance !== "object" && typeof instance !== "function") || instance === null) {
     return;
   }
   const disposable = instance as {
@@ -331,6 +338,7 @@ export class ContainerScope implements AsyncDisposable {
 
   private restoreSnapshot(
     snapshot: ContainerScopeSnapshot,
+    disposedValues: Set<unknown>,
   ): readonly ContainerScopeCleanupFailure[] {
     const access = this.getServiceAccess();
     const originalRecords = new Map(
@@ -342,8 +350,6 @@ export class ContainerScope implements AsyncDisposable {
       ...snapshot.generatedTransients,
       ...snapshot.services.map((record) => record.values.value),
     ]);
-    const disposedValues = new Set<unknown>();
-
     for (const service of access.services) {
       const original = originalRecords.get(service);
       if ((!original || service.value !== original.value) && !retainedValues.has(service.value)) {
@@ -429,13 +435,33 @@ export class ContainerScope implements AsyncDisposable {
     this.activeRollbackTransactions += 1;
     try {
       const snapshot = this.createSnapshot();
-      const transaction: ContainerScopeRollbackTransaction = { state: this.state, active: true };
+      const transaction: ContainerScopeRollbackTransaction = {
+        state: this.state,
+        active: true,
+        replacedValues: new Set(),
+      };
+      let result: T;
       try {
-        return await containerScopeRollbackStorage.run(transaction, () =>
+        result = await containerScopeRollbackStorage.run(transaction, () =>
           containerScopeStorage.run(this.state, fn),
         );
       } catch (error) {
-        const cleanupFailures = this.restoreSnapshot(snapshot);
+        transaction.active = false;
+        const disposedValues = new Set<unknown>();
+        const cleanupFailures = [...this.restoreSnapshot(snapshot, disposedValues)];
+        for (const value of disposedValues) transaction.replacedValues.delete(value);
+        try {
+          transaction.disposeReplacedValues?.();
+        } catch (cleanupError) {
+          const cause = cleanupError instanceof Problem ? cleanupError.cause : undefined;
+          const failures: readonly unknown[] =
+            cause && "errors" in cause && Array.isArray(cause.errors)
+              ? cause.errors
+              : [cleanupError];
+          for (const failure of failures) {
+            cleanupFailures.push(createContainerScopeCleanupFailure(failure, "rollback"));
+          }
+        }
         if (cleanupFailures.length > 0) {
           throw ProblemFactory.internalServerError(
             "framework-context/container-scope-rollback-failed",
@@ -450,6 +476,8 @@ export class ContainerScope implements AsyncDisposable {
       } finally {
         transaction.active = false;
       }
+      transaction.disposeReplacedValues?.();
+      return result;
     } finally {
       this.activeRollbackTransactions -= 1;
     }
@@ -577,6 +605,11 @@ export class Container {
 
   static set<T>(token: TokenIdentifier<T>, instance: T): T {
     const scope = Container.getScopeState();
+    const runtime = scope?.instance ?? RuntimeContainerBackend.of();
+    const identifier = Container.toServiceIdentifier(token);
+    const previous = runtime.services.find(
+      (service) => service.id === identifier && !service.multiple,
+    );
     if (scope) {
       Container.setScopedValue(scope.instance, token, instance);
       scope.tokens.add(token);
@@ -588,6 +621,20 @@ export class Container {
     }
     Container.getLazyProviders().delete(token);
     Container.setValidated(false);
+    if (previous && previous.value !== instance) {
+      const transaction = containerScopeRollbackStorage.getStore();
+      if (scope && transaction?.active && transaction.state === scope) {
+        transaction.replacedValues.add(previous.value);
+        transaction.disposeReplacedValues ??= () =>
+          containerScopeStorage.run(scope, () => {
+            const replacedValues = [...transaction.replacedValues];
+            transaction.replacedValues.clear();
+            Container.disposeUnownedInstances(replacedValues);
+          });
+      } else {
+        Container.disposeUnownedInstances([previous.value]);
+      }
+    }
     return instance;
   }
 
@@ -666,27 +713,20 @@ export class Container {
   }
 
   static remove<T>(token: TokenIdentifier<T>): void {
-    const hasGeneratedProvider = Container.getGeneratedProviders().has(token);
-    if (hasGeneratedProvider) {
-      const scope = Container.getScopeState();
-      const runtime = scope?.instance ?? RuntimeContainerBackend.of();
-      const identifier = Container.toServiceIdentifier(token);
-      const removed = runtime.services.filter((service) => service.id === identifier);
-      runtime.services.splice(
-        0,
-        runtime.services.length,
-        ...runtime.services.filter((service) => service.id !== identifier),
-      );
-      scope?.tokens.delete(token);
-      const retainedValues = new Set([
-        ...Container.getGeneratedSingletons().values(),
-        ...Container.getGeneratedTransients(),
-        ...runtime.services.map((service) => service.value),
-      ]);
-      for (const service of removed) runtime.destroyServiceInstance(service, retainedValues);
-    } else {
-      Container.removeRegisteredValue(token);
+    let retiredSingletons: readonly unknown[] = [];
+    if (Container.getGeneratedProviders().has(token)) {
+      const graphs = new Map(Container.getInstalledGraphs());
+      for (const [graphId, graph] of graphs) {
+        if (!graph.providers.some((provider) => provider.token === token)) continue;
+        graphs.set(graphId, {
+          ...graph,
+          providers: graph.providers.filter((provider) => provider.token !== token),
+          roots: graph.roots.filter((root) => root !== token),
+        });
+      }
+      retiredSingletons = Container.rebuildGeneratedProviders(graphs);
     }
+    const removedValues = Container.removeRegisteredValue(token);
     Container.getLazyProviders().delete(token);
     if (Container.isConstructorToken(token)) {
       const label = Container.getConstructorTokenLabel(token);
@@ -707,18 +747,7 @@ export class Container {
     }
     Container.clearTokenIdentity(token);
     Container.setValidated(false);
-    if (hasGeneratedProvider) {
-      const graphs = Container.getInstalledGraphs();
-      for (const [graphId, graph] of graphs) {
-        if (!graph.providers.some((provider) => provider.token === token)) continue;
-        graphs.set(graphId, {
-          ...graph,
-          providers: graph.providers.filter((provider) => provider.token !== token),
-          roots: graph.roots.filter((root) => root !== token),
-        });
-      }
-      Container.rebuildGeneratedProviders();
-    }
+    Container.disposeUnownedInstances([...removedValues, ...retiredSingletons]);
   }
 
   /**
@@ -798,7 +827,7 @@ export class Container {
         "framework-context/container-reset-failed",
         "Container registrations were reset after provider cleanup failed.",
         {
-          cause: createResetCleanupCause(failures),
+          cause: createProviderCleanupCause(failures),
           extensions: {
             retryable: false,
             cleanupFailureCount: failures.length,
@@ -903,25 +932,27 @@ export class Container {
     const previous = graphs.get(graph.graphId);
     graphs.set(graph.graphId, graph);
     try {
-      Container.rebuildGeneratedProviders();
+      Container.disposeUnownedInstances(Container.rebuildGeneratedProviders());
     } catch (error) {
       if (previous) {
         graphs.set(graph.graphId, previous);
       } else {
         graphs.delete(graph.graphId);
       }
-      Container.rebuildGeneratedProviders();
+      Container.disposeUnownedInstances(Container.rebuildGeneratedProviders());
       throw error;
     }
     Container.setValidated(false);
   }
 
   static removeGeneratedGraph(graphId: string): void {
-    if (!Container.getInstalledGraphs().delete(graphId)) {
+    const graphs = new Map(Container.getInstalledGraphs());
+    if (!graphs.delete(graphId)) {
       return;
     }
-    Container.rebuildGeneratedProviders();
+    const retiredSingletons = Container.rebuildGeneratedProviders(graphs);
     Container.setValidated(false);
+    Container.disposeUnownedInstances(retiredSingletons);
   }
 
   static getGeneratedProviderTokens(kind: GeneratedProviderKind): readonly Constructor[] {
@@ -1491,25 +1522,32 @@ export class Container {
     return Container.getScopeState()?.generatedTransients ?? Container.generatedTransients;
   }
 
-  private static rebuildGeneratedProviders(): void {
-    const providers = Container.getGeneratedProviders();
-    const sourceLocations = Container.getComponentSourceLocations();
-    Container.clearGeneratedProviderMetadata([...providers.values()].flat());
-    providers.clear();
-
-    const definitions = [...Container.getInstalledGraphs().values()]
+  private static rebuildGeneratedProviders(
+    graphs: ReadonlyMap<string, GeneratedDiGraph> = Container.getInstalledGraphs(),
+  ): readonly unknown[] {
+    const next: GeneratedProviderState = {
+      generatedProviders: new Map(),
+      componentSourceLocations: new Map(Container.getComponentSourceLocations()),
+      tokenIdentityIds: new Map(Container.getTokenIdentityIds()),
+      tokenIdentityOwners: new Map(Container.getTokenIdentityOwners()),
+    };
+    Container.clearGeneratedProviderMetadata(
+      [...Container.getGeneratedProviders().values()].flat(),
+      next,
+    );
+    const definitions = [...graphs.values()]
       .sort((left, right) => left.graphId.localeCompare(right.graphId))
       .flatMap((graph) =>
         [...graph.providers].sort((left, right) => left.tokenId.localeCompare(right.tokenId)),
       );
 
     for (const provider of definitions) {
-      Container.registerGeneratedTokenIdentity(provider.token, provider.tokenId);
+      Container.registerGeneratedTokenIdentity(provider.token, provider.tokenId, next);
       for (const dependency of provider.dependencies) {
-        Container.registerGeneratedTokenIdentity(dependency.token, dependency.tokenId);
+        Container.registerGeneratedTokenIdentity(dependency.token, dependency.tokenId, next);
       }
 
-      const existing = providers.get(provider.token) ?? [];
+      const existing = next.generatedProviders.get(provider.token) ?? [];
       if (existing.length > 0 && !provider.multiple && existing.some((entry) => !entry.multiple)) {
         throw ProblemFactory.conflict(
           "framework-context/generated-di-provider-conflict",
@@ -1517,40 +1555,85 @@ export class Container {
           { extensions: { tokenId: provider.tokenId } },
         );
       }
-      providers.set(provider.token, [...existing, provider]);
+      next.generatedProviders.set(provider.token, [...existing, provider]);
       if (Container.isConstructorToken(provider.token)) {
-        sourceLocations.set(provider.token, provider.sourceLocation);
+        next.componentSourceLocations.set(provider.token, provider.sourceLocation);
       }
     }
 
+    Container.replaceMapContents(Container.getGeneratedProviders(), next.generatedProviders);
+    Container.replaceMapContents(
+      Container.getComponentSourceLocations(),
+      next.componentSourceLocations,
+    );
+    Container.replaceMapContents(Container.getTokenIdentityIds(), next.tokenIdentityIds);
+    Container.replaceMapContents(Container.getTokenIdentityOwners(), next.tokenIdentityOwners);
+    Container.replaceMapContents(Container.getInstalledGraphs(), graphs);
     const activeDefinitions = new Set(definitions);
     const singletons = Container.getGeneratedSingletons();
-    const runtime = Container.getScopeState()?.instance ?? RuntimeContainerBackend.of();
+    const retiredSingletons: unknown[] = [];
+    for (const [provider, instance] of singletons) {
+      if (activeDefinitions.has(provider)) continue;
+      singletons.delete(provider);
+      retiredSingletons.push(instance);
+    }
+    return retiredSingletons;
+  }
+
+  private static replaceMapContents<TKey, TValue>(
+    target: Map<TKey, TValue>,
+    source: ReadonlyMap<TKey, TValue>,
+  ): void {
+    if (target === source) return;
+    target.clear();
+    for (const [key, value] of source) target.set(key, value);
+  }
+
+  private static disposeUnownedInstances(instances: readonly unknown[]): void {
+    if (instances.length === 0) return;
+    const scope = Container.getScopeState();
+    const runtime = scope?.instance ?? RuntimeContainerBackend.of();
+    const transaction = containerScopeRollbackStorage.getStore();
     const retainedValues = new Set([
-      ...[...singletons]
-        .filter(([provider]) => activeDefinitions.has(provider))
-        .map(([, value]) => value),
+      ...Container.getGeneratedSingletons().values(),
       ...runtime.services.map((service) => service.value),
       ...Container.getGeneratedTransients(),
     ]);
     const disposedValues = new Set<unknown>();
-    for (const [provider, instance] of singletons) {
-      if (activeDefinitions.has(provider)) {
-        continue;
-      }
-      singletons.delete(provider);
+    const failures: unknown[] = [];
+    for (const instance of instances) {
       if (retainedValues.has(instance) || disposedValues.has(instance)) continue;
       disposedValues.add(instance);
-      destroyGeneratedInstance(instance);
+      if (transaction?.active && transaction.state === scope) {
+        transaction.replacedValues.delete(instance);
+      }
+      try {
+        destroyGeneratedInstance(instance);
+      } catch (error) {
+        failures.push(error);
+      }
+    }
+    if (failures.length > 0) {
+      throw ProblemFactory.internalServerError(
+        "framework-context/container-provider-cleanup-failed",
+        "Provider bindings changed, but one or more instances could not be cleaned up.",
+        {
+          cause: createProviderCleanupCause(failures),
+          extensions: { cleanupFailureCount: failures.length, retryable: false },
+        },
+      );
     }
   }
 
   private static clearGeneratedProviderMetadata(
     definitions: readonly GeneratedProviderDefinition[],
+    state: GeneratedProviderState,
   ): void {
-    const tokenIdentityIds = Container.getTokenIdentityIds();
-    const tokenIdentityOwners = Container.getTokenIdentityOwners();
-    const sourceLocations = Container.getComponentSourceLocations();
+    const {
+      tokenIdentityIds,
+      tokenIdentityOwners,
+      componentSourceLocations: sourceLocations,
+    } = state;
     for (const definition of definitions) {
       const identities = [
         { token: definition.token, tokenId: definition.tokenId },
@@ -1577,9 +1660,9 @@ export class Container {
   private static registerGeneratedTokenIdentity(
     token: TokenIdentifier<unknown>,
     tokenId: string,
+    state: GeneratedProviderState,
   ): void {
-    const tokenIdentityIds = Container.getTokenIdentityIds();
-    const tokenIdentityOwners = Container.getTokenIdentityOwners();
+    const { tokenIdentityIds, tokenIdentityOwners } = state;
     const existingOwner = tokenIdentityOwners.get(tokenId);
     if (existingOwner && existingOwner !== token) {
       throw ProblemFactory.conflict(
@@ -1757,53 +1840,18 @@ export class Container {
     return container.has(Container.toServiceIdentifier(token));
   }
 
-  private static removeRegisteredValue<T>(token: TokenIdentifier<T>): void {
+  private static removeRegisteredValue<T>(token: TokenIdentifier<T>): readonly unknown[] {
     const scope = Container.getScopeState();
-    if (scope) {
-      Container.removeScopedValue(scope.instance, token);
-      scope.tokens.delete(token);
-      return;
-    }
-
-    const target = RuntimeContainerBackend;
-    if (typeof token === "symbol") {
-      target.remove(Container.getOrCreateSymbolToken(token));
-      return;
-    }
-
-    if (typeof token === "string") {
-      target.remove(token);
-      return;
-    }
-
-    if (token instanceof CrocoToken) {
-      target.remove(token);
-      return;
-    }
-
-    target.remove(Container.toRuntimeConstructable(token));
-  }
-
-  private static removeScopedValue<T>(
-    container: RuntimeContainerInstance,
-    token: TokenIdentifier<T>,
-  ): void {
-    if (typeof token === "symbol") {
-      container.remove(Container.getOrCreateSymbolToken(token));
-      return;
-    }
-
-    if (typeof token === "string") {
-      container.remove(token);
-      return;
-    }
-
-    if (token instanceof CrocoToken) {
-      container.remove(token);
-      return;
-    }
-
-    container.remove(Container.toRuntimeConstructable(token));
+    const runtime = scope?.instance ?? RuntimeContainerBackend.of();
+    const identifier = Container.toServiceIdentifier(token);
+    const removed = runtime.services.filter((service) => service.id === identifier);
+    runtime.services.splice(
+      0,
+      runtime.services.length,
+      ...runtime.services.filter((service) => service.id !== identifier),
+    );
+    scope?.tokens.delete(token);
+    return removed.map((service) => service.value);
   }
 
   private static toRuntimeConstructable<T>(token: Constructor<T>): RuntimeConstructable<T> {
@@ -2721,7 +2769,7 @@ function describeResetCleanupFailure(error: unknown): string {
   }
 }
 
-function createResetCleanupCause(failures: readonly unknown[]): Error {
+function createProviderCleanupCause(failures: readonly unknown[]): Error {
   // Keep the native runtime error without requiring ES2021 lib declarations in source consumers.
   const NativeAggregateError = (
     globalThis as typeof globalThis & {

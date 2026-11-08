@@ -4413,6 +4413,17 @@ const recoveryMetadataByCode = {
     redactionPolicy: "operator-only",
     severity: "error",
   }),
+  "framework-context/container-provider-cleanup-failed": recovery({
+    cause:
+      "One or more provider destructors failed after provider registrations changed. Every unowned value selected for cleanup was attempted once.",
+    userAction:
+      "Do not retry the operation to recover failed cleanup. Ask the operator to release any resources left open.",
+    operatorAction:
+      "Inspect current registrations, cleanupFailureCount and every original failure in the native AggregateError cause. Release remaining resources and repair destructors before further registration changes.",
+    retryability: "not-retryable",
+    redactionPolicy: "operator-only",
+    severity: "error",
+  }),
   "framework-context/container-reset-failed": recovery({
     cause:
       "One or more provider destructors failed during synchronous container reset. All registrations were cleared after every tracked instance was attempted.",

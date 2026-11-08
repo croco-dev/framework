@@ -45,7 +45,17 @@ and existing application scopes keep their own registrations.
 Removal synchronously cleans up generated singletons after their last binding is removed. A value still
 owned by another resolved generated binding, a registered value, or the container's transient lifetime
 is retained for that owner. Request and transient instances keep their existing cleanup boundaries.
-Like graph replacement, removal can destroy resources immediately; rollback does not undo that cleanup.
+Replacing a registered value with `Container.set()` also releases its previous value after the last owner
+is gone. Within `runWithRollback`, replacement cleanup waits for commit; rollback preserves the original
+binding and cleans intermediate replacements once. Explicit removal can destroy resources immediately;
+rollback does not undo that cleanup.
+
+Graph validation completes before removal changes registrations. A validation failure leaves existing
+bindings and instances intact. After removal or replacement commits, cleanup attempts every unowned value
+once, including when another destructor throws. Failures use `framework-context/container-provider-cleanup-failed`
+with `retryable: false`, `cleanupFailureCount`, and a native `AggregateError` cause retaining every original
+failure. Release any external resources left open and repair destructors; retrying the registration operation
+does not retry failed cleanup. A commit-time replacement cleanup failure leaves the committed bindings in place.
 
 Call `Container.reset()` only while the selected container is idle. Reset attempts synchronous cleanup
 of registered values, generated transients, and generated singletons in that order, once per object, then clears
