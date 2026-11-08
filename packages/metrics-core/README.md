@@ -2,6 +2,14 @@
 
 MRR, churn, NRR, GRR, Quick Ratio, LTV, carrying capacity를 계산하는 SaaS 지표 엔진입니다.
 
+## 실험의 cluster 배정 검증
+
+`summarizeExperiment`에서 `randomizationUnit: "cluster"`를 사용하면 같은 `clusterId`의 모든 구성원은
+하나의 variant에 배정되어야 합니다. 여러 variant에 걸친 cluster는 집계와 SRM 계산 전에
+`ExperimentInputProblem` (`metrics-core/experiment-input-invalid`)으로 거절됩니다.
+배정 원천에서 cluster별 variant를 바로잡은 뒤 다시 계산하세요. 한 variant 안의 여러 구성원은 계속
+하나의 cluster 표본으로 계산하며, `randomizationUnit: "unit"`에서는 이 제약을 적용하지 않습니다.
+
 ## 배정자당 수납·환불·비용 비교
 
 `OutcomeLedgerNormalizer`와 `compareAssignedOutcomes`는 고정 배정표에 포함된 모든 unit을 분모로 사용합니다.

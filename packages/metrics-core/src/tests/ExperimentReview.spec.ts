@@ -153,6 +153,57 @@ describe("ExperimentReview", () => {
     expect(review.srm.status).toBe("not_assessed");
   });
 
+  it.each([false, true])("rejects cross-variant clusters with reversed order %s", (reverse) => {
+    const dataset = makeDataset();
+    const assignments = dataset.assignments.map((row, index) => ({
+      ...row,
+      clusterId: `cluster-${index % 10}`,
+    }));
+    if (reverse) assignments.reverse();
+
+    expect(() =>
+      summarizeExperiment({
+        ...dataset,
+        plan: { ...dataset.plan, randomizationUnit: "cluster" },
+        assignments,
+      }),
+    ).toThrow(ExperimentInputProblem);
+  });
+
+  it("preserves balanced SRM and estimates for valid repeated cluster members", () => {
+    const dataset = makeDataset();
+    const review = summarizeExperiment({
+      ...dataset,
+      plan: { ...dataset.plan, randomizationUnit: "cluster" },
+      assignments: dataset.assignments.map((row, index) => ({
+        ...row,
+        clusterId: `${row.variantId}-${Math.floor((index % 100) / 10)}`,
+      })),
+    });
+
+    expect(review.primary.control?.n).toBe(10);
+    expect(review.primary.treatment?.n).toBe(10);
+    expect(review.primary.control?.estimate).toBeCloseTo(0.2, 10);
+    expect(review.primary.treatment?.estimate).toBeCloseTo(0.3, 10);
+    expect(review.srm.status).toBe("pass_signal");
+    expect(review.srm.detail?.actualCounts).toEqual({ control: 10, treatment: 10 });
+    expect(review.srm.detail?.pValue).toBe(1);
+  });
+
+  it("does not constrain shared cluster metadata under unit randomization", () => {
+    const dataset = makeDataset();
+    const review = summarizeExperiment({
+      ...dataset,
+      assignments: dataset.assignments.map((row) => ({ ...row, clusterId: "shared" })),
+    });
+
+    expect(review.primary.control?.n).toBe(100);
+    expect(review.primary.treatment?.n).toBe(100);
+    expect(review.primary.control?.estimate).toBeCloseTo(0.2, 10);
+    expect(review.primary.treatment?.estimate).toBeCloseTo(0.3, 10);
+    expect(review.srm.status).toBe("pass_signal");
+  });
+
   it("reports exposed-only conditional aggregates apart from the randomized denominator", () => {
     const review = summarizeExperiment(makeDataset());
     expect(review.primary.control?.n).toBe(100);
