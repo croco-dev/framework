@@ -65,13 +65,14 @@ export class QStashTaskRunner implements TaskDispatcher {
     validateRequiredString(taskId, "taskId");
     const delay = options?.delay ?? this.defaultDelay;
     validateDelay(delay, "delay");
-    validateIdempotencyKey(options?.idempotencyKey);
+    const idempotencyKey = options?.idempotencyKey;
+    validateIdempotencyKey(idempotencyKey);
     const headers = {
       ...this.defaultHeaders,
       ...options?.headers,
     };
 
-    const response = await runQStashTaskOperation(() =>
+    const response = await runQStashTaskOperation(async () =>
       this.client.publishJSON({
         url: this.destinationUrl,
         body: {
@@ -80,12 +81,35 @@ export class QStashTaskRunner implements TaskDispatcher {
         },
         delay,
         headers,
-        ...(options?.idempotencyKey ? { deduplicationId: options.idempotencyKey } : {}),
+        ...(idempotencyKey
+          ? {
+              deduplicationId: await createTaskDeduplicationId(
+                this.destinationUrl,
+                taskId,
+                idempotencyKey,
+              ),
+            }
+          : {}),
       }),
     );
 
     return { messageId: response.messageId };
   }
+}
+
+async function createTaskDeduplicationId(
+  destinationUrl: string,
+  taskId: string,
+  key: string,
+): Promise<string> {
+  const digest = await globalThis.crypto.subtle.digest(
+    "SHA-256",
+    new TextEncoder().encode(JSON.stringify([1, destinationUrl, taskId, key])),
+  );
+  const fingerprint = Array.from(new Uint8Array(digest))
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("");
+  return `croco-task-v1:${fingerprint}`;
 }
 
 function validateRequiredString(value: string, configKey: string): void {

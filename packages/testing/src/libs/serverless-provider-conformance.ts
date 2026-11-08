@@ -528,11 +528,31 @@ export function createQStashTaskConformanceSuite(
         assert.ok(published, `${options.providerName} must publish one QStash message.`);
         assert.equal(published.delay, 15);
         assert.equal(published.headers?.["X-Croco-Conformance"], "qstash");
-        assert.equal(published.deduplicationId, "qstash-conformance-key");
+        assert.equal(typeof published.deduplicationId, "string");
+        assert.ok(
+          published.deduplicationId,
+          `${options.providerName} must provide a deduplication id.`,
+        );
         assertRecord(published.body, `${options.providerName} must publish an object body.`);
         assert.equal(published.body.taskId, "conformance.task");
         assert.deepEqual(published.body.payload, payload);
         assertNoSecretLeak(JSON.stringify(published), options.secretSamples);
+
+        await harness.publisher.execute("conformance.task", payload, {
+          idempotencyKey: "qstash-conformance-key",
+        });
+        await harness.publisher.execute("conformance.other-task", payload, {
+          idempotencyKey: "qstash-conformance-key",
+        });
+        await harness.publisher.execute("conformance.task", payload, {
+          idempotencyKey: "qstash-other-key",
+        });
+        const [, repeated, otherTask, otherKey] = harness.getPublishedMessages();
+        assert.equal(repeated?.deduplicationId, published.deduplicationId);
+        assert.ok(otherTask?.deduplicationId);
+        assert.notEqual(otherTask.deduplicationId, published.deduplicationId);
+        assert.ok(otherKey?.deduplicationId);
+        assert.notEqual(otherKey.deduplicationId, published.deduplicationId);
       },
     },
     {

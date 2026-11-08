@@ -1,0 +1,105 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "tasks-qstash",
+      "classification": "runtime-adapter",
+      "reason": "Scope QStash task deduplication by destination, task and caller key; preserve stable retries without changing payloads or public signatures.",
+      "files": {
+        "packages/tasks-qstash/src/libs/QStashTaskRunner.ts": "6c7a02acd12296e2be7acde364e76f57ca4a9ec0667d0a32f751a043ae1cad00"
+      },
+      "catalogRuntimes": ["node", "lambda"],
+      "profiles": {
+        "kubernetes": {
+          "result": "conditional",
+          "reason": "Reuse the existing QStash TaskDispatcher; only the deterministic deduplication identity changes. The external publish and SDK remain unchanged.",
+          "providers": ["@croco/tasks-qstash/qstashTasks", "@croco/tasks-core/TaskDispatcher"],
+          "constraints": [
+            "Requires Web Crypto SHA-256 and outbound HTTPS with a QStash token.",
+            "Await publication before the owning request or Lambda invocation completes.",
+            "New digest IDs do not deduplicate against legacy raw keys; receiver business idempotency is required across rollout and rollback.",
+            "Tests use the real SDK with synthetic HTTP or a provider deduplication fixture; deployed Kubernetes, AWS and live QStash remain unverified."
+          ],
+          "references": [
+            "packages/tasks-qstash/src/libs/QStashTaskRunner.ts",
+            "packages/tasks-qstash/src/tests/QStashTaskRunner.spec.ts",
+            "packages/tasks-qstash/src/tests/QStashTasksPlugin.spec.ts",
+            "packages/tasks-qstash/README.md"
+          ]
+        },
+        "aws-lambda": {
+          "result": "conditional",
+          "reason": "Reuse the existing QStash TaskDispatcher; only the deterministic deduplication identity changes. The external publish and SDK remain unchanged.",
+          "providers": ["@croco/tasks-qstash/qstashTasks", "@croco/tasks-core/TaskDispatcher"],
+          "constraints": [
+            "Requires Web Crypto SHA-256 and outbound HTTPS with a QStash token.",
+            "Await publication before the owning request or Lambda invocation completes.",
+            "New digest IDs do not deduplicate against legacy raw keys; receiver business idempotency is required across rollout and rollback.",
+            "Tests use the real SDK with synthetic HTTP or a provider deduplication fixture; deployed Kubernetes, AWS and live QStash remain unverified."
+          ],
+          "references": [
+            "packages/tasks-qstash/src/libs/QStashTaskRunner.ts",
+            "packages/tasks-qstash/src/tests/QStashTaskRunner.spec.ts",
+            "packages/tasks-qstash/src/tests/QStashTasksPlugin.spec.ts",
+            "packages/tasks-qstash/README.md"
+          ]
+        },
+        "cloudflare": {
+          "result": "unsupported",
+          "host": "workers",
+          "reason": "The existing qstashTasks plugin and catalog claim Node and Lambda only. A portable digest does not establish Workers Host or provider support.",
+          "providers": ["@croco/tasks-qstash/qstashTasks"],
+          "constraints": ["No Workers execution or deployed QStash certification is claimed."],
+          "references": [
+            "packages/tasks-qstash/src/libs/QStashTaskRunner.ts",
+            "packages/tasks-qstash/src/tests/QStashTaskRunner.spec.ts",
+            "packages/tasks-qstash/src/tests/QStashTasksPlugin.spec.ts",
+            "packages/tasks-qstash/README.md",
+            "packages/tasks-qstash/src/libs/QStashTasksPlugin.ts"
+          ]
+        }
+      }
+    },
+    {
+      "package": "testing",
+      "classification": "pure-contract",
+      "reason": "Verify stable task-scoped publisher deduplication instead of requiring raw caller keys.",
+      "files": {
+        "packages/testing/src/libs/serverless-provider-conformance.ts": "9f5db6e4786336d65d4f1a701892d2df6fda1893da5fd25f7a354e0cb5486f3c"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "The shared conformance helper checks captured publisher identities. It introduces no runtime provider, storage or Host lifecycle dependency.",
+          "providers": [],
+          "constraints": ["Fixtures are not live QStash certification."],
+          "references": [
+            "packages/testing/src/libs/serverless-provider-conformance.ts",
+            "packages/testing/src/tests/testing.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "The shared conformance helper checks captured publisher identities. It introduces no runtime provider, storage or Host lifecycle dependency.",
+          "providers": [],
+          "constraints": ["Fixtures are not live QStash certification."],
+          "references": [
+            "packages/testing/src/libs/serverless-provider-conformance.ts",
+            "packages/testing/src/tests/testing.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "The shared conformance helper checks captured publisher identities. It introduces no runtime provider, storage or Host lifecycle dependency.",
+          "providers": [],
+          "constraints": ["Fixtures are not live QStash certification."],
+          "references": [
+            "packages/testing/src/libs/serverless-provider-conformance.ts",
+            "packages/testing/src/tests/testing.spec.ts"
+          ]
+        }
+      }
+    }
+  ]
+}

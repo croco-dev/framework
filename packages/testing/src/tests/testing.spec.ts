@@ -464,7 +464,10 @@ class FakeQStashTaskPublisher implements QStashTaskPublisher {
 
     this.published.push({
       body: { taskId, payload },
-      deduplicationId: options.idempotencyKey,
+      deduplicationId:
+        options.idempotencyKey === undefined
+          ? undefined
+          : JSON.stringify([taskId, options.idempotencyKey]),
       delay: options.delay,
       headers: options.headers,
       url: "https://example.com/tasks",
@@ -2581,6 +2584,33 @@ describe("@croco/testing", () => {
   });
 
   describe("serverless provider conformance", () => {
+    it.each(["unscoped", "unstable"])("rejects %s task deduplication evidence", async (fault) => {
+      const published: QStashTaskPublishRecord[] = [];
+      const suite = createQStashTaskConformanceSuite({
+        providerName: "faulty-qstash-tasks",
+        createPublisher: () => ({
+          publisher: {
+            async execute(taskId, payload, options) {
+              published.push({
+                body: { taskId, payload },
+                deduplicationId:
+                  fault === "unscoped" ? options?.idempotencyKey : `id-${published.length}`,
+                delay: options?.delay,
+                headers: options?.headers,
+              });
+              return { messageId: "msg-fixture" };
+            },
+          },
+          getPublishedMessages: () => published,
+        }),
+      });
+      const publishingCase = suite.cases.find((testCase) =>
+        testCase.name.startsWith("publishes task envelopes"),
+      );
+      expect(publishingCase).toBeDefined();
+      await expect(publishingCase?.run()).rejects.toThrow();
+    });
+
     it.each(
       createUpstashRedisRateLimitConformanceSuite({
         createMissingConfig: () => {
