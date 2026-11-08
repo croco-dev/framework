@@ -54,7 +54,7 @@ export type EventPublishFailure = {
   error: Error;
   /** Dead-letter enqueue failure, separate from the execution failure. */
   storageError?: Error;
-  /** Failed enqueue item for caller-owned recovery. Contains event payload. */
+  /** Non-enumerable failed enqueue item for explicit caller recovery. Contains event payload. */
   item?: DeadLetterItem;
 };
 
@@ -486,7 +486,16 @@ export class InMemoryEventBus<TEvent extends DomainEvent = DomainEvent>
       );
       deliveredCount++;
       if (failure) {
-        failures.push(storageError ? { ...failure, storageError, item: deadLetterItem } : failure);
+        failures.push(
+          storageError
+            ? Object.defineProperty({ ...failure, storageError }, "item", {
+                value: deadLetterItem,
+                enumerable: false,
+                configurable: true,
+                writable: true,
+              })
+            : failure,
+        );
       }
     }
 

@@ -29,7 +29,7 @@ Original execution failure; retained when dead-letter storage also fails.
 
 > `optional` **item?**: [`DeadLetterItem`](/api/events-core/src/type-aliases/deadletteritem/)
 
-Failed enqueue item for caller-owned recovery. Contains event payload.
+Non-enumerable failed enqueue item for explicit caller recovery. Contains event payload.
 
 ---
 

@@ -4,9 +4,9 @@
     {
       "package": "events-inmemory",
       "classification": "pure-contract",
-      "reason": "Preserve original execution failure identity when DLQ enqueue fails, with separate storageError and recoverable item fields. All three infrastructure decisions are independent of deployment because this only changes the local failure result.",
+      "reason": "Preserve original execution failure identity when DLQ enqueue fails, with a separate storageError and non-enumerable recoverable item. The existing item is available by explicit access while ordinary error diagnostics omit its payload. These local failure results require no deployment-specific implementation.",
       "files": {
-        "packages/events-inmemory/src/libs/InmemoryEventBus.ts": "210464cde7c45b126a37b5a738cc28964a3fb64505063b0bab8a128b98c76191"
+        "packages/events-inmemory/src/libs/InmemoryEventBus.ts": "4602ed4455ffa659c1ac5d5c1a84d17a2191048f5c02d87b1a0dd632c9213a5b"
       },
       "catalogRuntimes": [],
       "profiles": {

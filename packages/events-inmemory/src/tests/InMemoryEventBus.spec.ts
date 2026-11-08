@@ -1,3 +1,4 @@
+import { inspect } from "node:util";
 import {
   createEventBusShutdownHook,
   DomainEvent,
@@ -153,6 +154,8 @@ describe("InMemoryEventBus", () => {
           reason: "handler-retries-exhausted",
           retryCount: 0,
         });
+        expect(inspect(result, { depth: null })).not.toContain(event.message);
+        expect(JSON.stringify(result.failures)).not.toContain(event.message);
         await expect(queue.size()).resolves.toBe(0);
 
         await queue.enqueue(failure.item);
