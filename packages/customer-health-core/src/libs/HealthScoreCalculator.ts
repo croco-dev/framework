@@ -53,6 +53,13 @@ export class HealthScoreCalculator {
     }
     assertScore("profile.thresholds.healthy", profile.thresholds.healthy);
     assertScore("profile.thresholds.atRisk", profile.thresholds.atRisk);
+    if (profile.thresholds.healthy <= profile.thresholds.atRisk) {
+      throw new InvalidHealthScoreInputProblem(
+        "profile.thresholds.healthy",
+        profile.thresholds.healthy,
+        "greater than profile.thresholds.atRisk",
+      );
+    }
 
     if (signals.length === 0) {
       return {

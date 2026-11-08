@@ -123,6 +123,34 @@ describe("CustomerHealthService", () => {
     expect(mockEventPublisher.publishIdempotently).not.toHaveBeenCalled();
   });
 
+  it.each([
+    { healthy: 40, atRisk: 80 },
+    { healthy: 60, atRisk: 60 },
+  ])("rejects unordered thresholds %j before saving or publishing", async (thresholds) => {
+    mockRegistry.addProvider("usage", [healthSignal(75, "2026-03-15T10:00:00Z")]);
+    const profile: HealthScoreProfile = {
+      id: "profile-1",
+      name: "Default Profile",
+      weights: { usage: 1, business: 0, engagement: 0 },
+      thresholds: { healthy: 80, atRisk: 50 },
+    };
+    const original = await service.calculateAndStore("tenant-1", profile);
+    const saveTransition = vi.spyOn(store, "saveTransition");
+
+    await expect(
+      service.calculateAndStore("tenant-1", { ...profile, thresholds }),
+    ).rejects.toMatchObject({
+      code: "customer-health-core/invalid-score-input",
+      input: "profile.thresholds.healthy",
+      receivedValue: String(thresholds.healthy),
+    });
+    expect(saveTransition).not.toHaveBeenCalled();
+    await expect(store.findLatest("tenant-1")).resolves.toEqual(original);
+    await expect(store.findHistory("tenant-1", 10)).resolves.toEqual([original]);
+    await expect(store.listPendingEventIntents("tenant-1")).resolves.toEqual([]);
+    expect(mockEventPublisher.publishIdempotently).not.toHaveBeenCalled();
+  });
+
   it("should stop retrying when transition persistence never commits", async () => {
     const profile: HealthScoreProfile = {
       id: "profile-1",
