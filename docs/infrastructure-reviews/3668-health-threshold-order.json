@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "customer-health-core",
+      "classification": "pure-contract",
+      "reason": "Reject equal or reversed health thresholds using the existing validation Problem before calculating or persisting a score. Valid profile scoring and runtime support remain unchanged.",
+      "files": {
+        "packages/customer-health-core/src/libs/HealthScoreCalculator.ts": "78a8ce1e5700b65ea31eeeb8514a3b3ceac7e6e25508cd98239a4ddf4156ab4b"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "Threshold ordering is pure domain validation before score persistence and event publication. It requires no host capability, storage adapter, transport or lifecycle change.",
+          "providers": [],
+          "constraints": ["No deployed infrastructure or provider certification is claimed."],
+          "references": [
+            "packages/customer-health-core/src/libs/HealthScoreCalculator.ts",
+            "packages/customer-health-core/src/tests/HealthScoreCalculator.spec.ts",
+            "packages/customer-health-core/src/tests/CustomerHealthService.spec.ts",
+            "packages/customer-health-core/README.md"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "Threshold ordering is pure domain validation before score persistence and event publication. It requires no host capability, storage adapter, transport or lifecycle change.",
+          "providers": [],
+          "constraints": ["No deployed infrastructure or provider certification is claimed."],
+          "references": [
+            "packages/customer-health-core/src/libs/HealthScoreCalculator.ts",
+            "packages/customer-health-core/src/tests/HealthScoreCalculator.spec.ts",
+            "packages/customer-health-core/src/tests/CustomerHealthService.spec.ts",
+            "packages/customer-health-core/README.md"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "Threshold ordering is pure domain validation before score persistence and event publication. It requires no host capability, storage adapter, transport or lifecycle change.",
+          "providers": [],
+          "constraints": ["No deployed infrastructure or provider certification is claimed."],
+          "references": [
+            "packages/customer-health-core/src/libs/HealthScoreCalculator.ts",
+            "packages/customer-health-core/src/tests/HealthScoreCalculator.spec.ts",
+            "packages/customer-health-core/src/tests/CustomerHealthService.spec.ts",
+            "packages/customer-health-core/README.md"
+          ]
+        }
+      }
+    }
+  ]
+}

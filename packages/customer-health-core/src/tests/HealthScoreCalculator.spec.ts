@@ -379,6 +379,66 @@ describe("HealthScoreCalculator", () => {
       );
     });
 
+    it.each([
+      { healthy: 40, atRisk: 80 },
+      { healthy: 60, atRisk: 60 },
+      { healthy: 0, atRisk: 0 },
+      { healthy: 100, atRisk: 100 },
+    ])("rejects unordered thresholds %j with and without signals", (thresholds) => {
+      const profile: HealthScoreProfile = {
+        id: "unordered-thresholds",
+        name: "Unordered Thresholds",
+        weights: { usage: 1, business: 0, engagement: 0 },
+        thresholds,
+      };
+      const signal: HealthSignal = {
+        category: "usage",
+        name: "api_calls",
+        value: 75,
+        weight: 1,
+        rawValue: 7500,
+        collectedAt: new Date("2026-03-15T10:00:00Z"),
+      };
+
+      for (const signals of [[], [signal]]) {
+        expect(() => calculator.calculate(signals, profile)).toThrow(
+          InvalidHealthScoreInputProblem,
+        );
+        expect(() => calculator.calculate(signals, profile)).toThrow(
+          expect.objectContaining({
+            code: "customer-health-core/invalid-score-input",
+            input: "profile.thresholds.healthy",
+            receivedValue: String(thresholds.healthy),
+          }),
+        );
+      }
+    });
+
+    it("includes the atRisk threshold in the at_risk range", () => {
+      const profile: HealthScoreProfile = {
+        id: "default",
+        name: "Default Profile",
+        weights: { usage: 1, business: 0, engagement: 0 },
+        thresholds: { healthy: 80, atRisk: 50 },
+      };
+      const result = calculator.calculate(
+        [
+          {
+            category: "usage",
+            name: "api_calls",
+            value: 50,
+            weight: 1,
+            rawValue: 5000,
+            collectedAt: new Date(),
+          },
+        ],
+        profile,
+      );
+
+      expect(result.overallScore).toBe(50);
+      expect(result.status).toBe("at_risk");
+    });
+
     it("preserves valid score, weight, and threshold boundaries", () => {
       const signals: HealthSignal[] = [
         {

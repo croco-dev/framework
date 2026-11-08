@@ -116,6 +116,10 @@ const profile: HealthScoreProfile = {
 const score = await service.calculateAndStore("tenant-1", profile);
 ```
 
+`thresholds.healthy`는 `thresholds.atRisk`보다 커야 합니다. 같거나 역전된 임계값은 신호가 없는
+경우에도 `InvalidHealthScoreInputProblem`으로 거부하며, 점수와 이벤트 의도를 저장하거나 이벤트를
+발행하지 않습니다. 두 임계값은 각각 0부터 100까지의 유한한 값이어야 합니다.
+
 `idempotentEventPublisher`는 `event.eventId`를 기준으로 재시도와 동시 발행을 중복 제거해야 합니다.
 `calculateAndStore`는 새 점수와 상태 변경/점수 급락 이벤트 의도를 원자적으로 저장한 뒤, 이전 실패로
 남은 의도를 재발행합니다. 동시 갱신으로 저장이 충돌하면 짧은 지수 백오프와 함께 최대 세 번까지
