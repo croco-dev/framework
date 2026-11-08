@@ -97,7 +97,13 @@ export async function loadRestControllerSources(
     const sourceLocations = collectControllerSourceLocations(sourceFiles, sourceLocationRoot);
     assertNoControllerTypeScriptErrors(
       controllerProject.getPreEmitDiagnostics(),
-      sourceFiles,
+      [
+        ...sourceFiles,
+        // Project-owned declarations can be explicit roots under node_modules.
+        ...controllerProject.project
+          .getSourceFiles()
+          .filter((sourceFile) => sourceFile.isDeclarationFile()),
+      ],
       controllerPatterns,
       options.problems,
     );
@@ -256,13 +262,15 @@ function toSourceLocation(decorator: Decorator, sourceRoot: string): RouteContra
 
 function assertNoControllerTypeScriptErrors(
   projectDiagnostics: readonly Diagnostic[],
-  sourceFiles: readonly SourceFile[],
+  diagnosticSources: readonly SourceFile[],
   controllerPatterns: string,
   problems: RestControllerSourceProblems,
 ): void {
-  const sourceFilePaths = new Set(sourceFiles.map((sourceFile) => sourceFile.getFilePath()));
+  const diagnosticSourcePaths = new Set(
+    diagnosticSources.map((sourceFile) => sourceFile.getFilePath()),
+  );
   const diagnostics = projectDiagnostics
-    .filter((diagnostic) => isControllerTypeScriptError(diagnostic, sourceFilePaths))
+    .filter((diagnostic) => isControllerTypeScriptError(diagnostic, diagnosticSourcePaths))
     .map(toControllerTypeScriptDiagnostic);
 
   if (diagnostics.length > 0) {
@@ -272,13 +280,13 @@ function assertNoControllerTypeScriptErrors(
 
 function isControllerTypeScriptError(
   diagnostic: Diagnostic,
-  sourceFilePaths: ReadonlySet<string>,
+  diagnosticSourcePaths: ReadonlySet<string>,
 ): boolean {
   const compilerDiagnostic = diagnostic.compilerObject;
   if (compilerDiagnostic.category !== ts.DiagnosticCategory.Error) return false;
 
   const fileName = compilerDiagnostic.file?.fileName;
-  return !fileName || sourceFilePaths.has(fileName) || !isNodeModulesPath(fileName);
+  return !fileName || diagnosticSourcePaths.has(fileName) || !isNodeModulesPath(fileName);
 }
 
 function toControllerTypeScriptDiagnostic(diagnostic: Diagnostic): ControllerTypeScriptDiagnostic {

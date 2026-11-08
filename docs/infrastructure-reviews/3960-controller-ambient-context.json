@@ -4,9 +4,10 @@
     {
       "package": "protocol-codegen",
       "classification": "pure-contract",
-      "reason": "Keep application ambient declarations in the shared build-time TypeScript context without widening controller imports or runtime emission. The Tooling catalog has no deployed runtime claims.",
+      "reason": "Preserve application ambient type context and explicitly selected declaration errors during shared build-time contract generation without widening runtime imports or emission. The Tooling catalog has no deployed runtime claims.",
       "files": {
-        "packages/protocol-codegen/src/libs/ControllerProject.ts": "64c5a101ca618dc80ffec15b2d710a4b17e7db0a58402382eec2ef2269e85245"
+        "packages/protocol-codegen/src/libs/ControllerProject.ts": "64c5a101ca618dc80ffec15b2d710a4b17e7db0a58402382eec2ef2269e85245",
+        "packages/protocol-codegen/src/libs/RestControllerSources.ts": "430c0ddee4c4d3b28e3e9ef67a4238c06c9100bde2735e7e3b2693541654fe11"
       },
       "catalogRuntimes": [],
       "profiles": {
@@ -19,7 +20,9 @@
           ],
           "references": [
             "packages/protocol-codegen/src/libs/ControllerProject.ts",
-            "packages/protocol-codegen/src/tests/ControllerProject.spec.ts"
+            "packages/protocol-codegen/src/tests/ControllerProject.spec.ts",
+            "packages/protocol-codegen/src/libs/RestControllerSources.ts",
+            "packages/protocol-codegen/src/tests/RestControllerSources.spec.ts"
           ]
         },
         "aws-lambda": {
@@ -31,7 +34,9 @@
           ],
           "references": [
             "packages/protocol-codegen/src/libs/ControllerProject.ts",
-            "packages/protocol-codegen/src/tests/ControllerProject.spec.ts"
+            "packages/protocol-codegen/src/tests/ControllerProject.spec.ts",
+            "packages/protocol-codegen/src/libs/RestControllerSources.ts",
+            "packages/protocol-codegen/src/tests/RestControllerSources.spec.ts"
           ]
         },
         "cloudflare": {
@@ -43,7 +48,9 @@
           ],
           "references": [
             "packages/protocol-codegen/src/libs/ControllerProject.ts",
-            "packages/protocol-codegen/src/tests/ControllerProject.spec.ts"
+            "packages/protocol-codegen/src/tests/ControllerProject.spec.ts",
+            "packages/protocol-codegen/src/libs/RestControllerSources.ts",
+            "packages/protocol-codegen/src/tests/RestControllerSources.spec.ts"
           ]
         }
       }

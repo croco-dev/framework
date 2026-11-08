@@ -20,7 +20,7 @@ const SHARED_FIXTURE_ROOT = new URL(
 );
 
 describe("loadControllers", () => {
-  it.each(["root", "reference"] as const)(
+  it.each(["root", "reference", "package-root"] as const)(
     "rejects selected ambient declaration errors before importing controllers (%s)",
     async (declarationKind) => {
       fs.writeFileSync(
@@ -32,37 +32,61 @@ describe("loadControllers", () => {
             target: "ES2020",
             skipLibCheck: false,
           },
-          files: ["src/UsersController.ts", "src/globals.d.ts"],
+          files: [
+            "src/UsersController.ts",
+            declarationKind === "package-root"
+              ? "node_modules/app-ambient/globals.d.ts"
+              : "src/globals.d.ts",
+          ],
         }),
       );
-      const globalsPath = path.join(sourceDir, "globals.d.ts");
+      const globalsPath =
+        declarationKind === "package-root"
+          ? path.join(tempRoot, "node_modules", "app-ambient", "globals.d.ts")
+          : path.join(sourceDir, "globals.d.ts");
       const declarationPath =
-        declarationKind === "root" ? globalsPath : path.join(sourceDir, "extra", "types.d.ts");
+        declarationKind === "reference" ? path.join(sourceDir, "extra", "types.d.ts") : globalsPath;
       fs.mkdirSync(path.dirname(declarationPath), { recursive: true });
       fs.writeFileSync(
         globalsPath,
-        declarationKind === "root"
-          ? "type AppId = MissingAppId;"
-          : "/// <reference path='./extra/types.d.ts' />\ntype AppId = ExtraId;",
+        declarationKind === "reference"
+          ? "/// <reference path='./extra/types.d.ts' />\ntype AppId = ExtraId;"
+          : "type AppId = MissingAppId;",
       );
       if (declarationKind === "reference") {
         fs.writeFileSync(declarationPath, "type ExtraId = MissingAppId;");
       }
-      fs.writeFileSync(
-        path.join(sourceDir, "UsersController.ts"),
-        getMixedControllerSource().replace(
+      const markerKey = `ambient-controller-import:${tempRoot}`;
+      const importMarker = Symbol.for(markerKey);
+      try {
+        const controllerSource = getMixedControllerSource().replace(
           "readonly id = 'user-1';",
           "readonly id: AppId = 'user-1';",
-        ),
-      );
-      await expect(loadControllers(path.join(sourceDir, "*Controller.ts"))).rejects.toMatchObject({
-        extensions: {
-          crocoCode: "CROCO_BUILD_003",
-          diagnostics: expect.arrayContaining([
-            expect.objectContaining({ tsCode: "TS2304", file: declarationPath }),
-          ]),
-        },
-      });
+        );
+        fs.writeFileSync(
+          path.join(sourceDir, "UsersController.ts"),
+          `(globalThis as unknown as Record<PropertyKey, unknown>)[Symbol.for(${JSON.stringify(markerKey)})] = true;\n${controllerSource}`,
+        );
+        await expect(loadControllers(path.join(sourceDir, "*Controller.ts"))).rejects.toMatchObject(
+          {
+            extensions: {
+              crocoCode: "CROCO_BUILD_003",
+              diagnostics: expect.arrayContaining([
+                expect.objectContaining({ tsCode: "TS2304", file: declarationPath }),
+              ]),
+            },
+          },
+        );
+        expect(Reflect.has(globalThis, importMarker)).toBe(false);
+        fs.writeFileSync(
+          declarationPath,
+          declarationKind === "reference" ? "type ExtraId = string;" : "type AppId = string;",
+        );
+        await loadControllers(path.join(sourceDir, "*Controller.ts"));
+        expect(Reflect.get(globalThis, importMarker)).toBe(true);
+      } finally {
+        Reflect.deleteProperty(globalThis, importMarker);
+      }
     },
     LOAD_CONTROLLER_TIMEOUT_MS,
   );
