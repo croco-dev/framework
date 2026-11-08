@@ -2033,6 +2033,7 @@ describe("E2E: generate()", () => {
         },
         "packages": [
           "@croco/preset-cloudflare",
+          "@croco/triggers-core",
         ],
         "profile": {
           "description": "Native Worker bootstrap only. SaaS providers are unavailable until separately implemented, connected and verified; this profile is not full SaaS or production certified.",
@@ -2633,7 +2634,7 @@ describe("E2E: generate()", () => {
     );
     rmSync(providerFixture, { recursive: true });
     rmSync(contractFixture);
-    expect(profileManifest.packages).toEqual(["@croco/preset-cloudflare"]);
+    expect(profileManifest.packages).toEqual(["@croco/preset-cloudflare", "@croco/triggers-core"]);
     for (const packageName of [
       ...(profileManifest.packages as string[]),
       ...(profileManifest.tenantModel.requiredPackages as string[]),

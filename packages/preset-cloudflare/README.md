@@ -81,3 +81,50 @@ Native Workers execution still requires `nodejs_compat` for framework AsyncLocal
 The application subpath also exports `createCloudflareWorkersHost`. Its ESM module
 can be loaded by the generated CommonJS tooling on Node.js 24. The existing fetch
 entrypoint keeps its independent dependency boundary.
+
+## Native scheduled callbacks
+
+`@croco/preset-cloudflare/scheduled` exports `compileCloudflareCrons`,
+`normalizeCloudflareCron` and `createCloudflareScheduledHandler`. The compiler selects
+`@Cron` methods only from the application's generated DI graph and emits deterministic
+provider/method bindings plus deduplicated schedules. The handler verifies this manifest
+against the current graph before accepting invocations.
+
+The `saas-cloudflare` scaffold supplies a separate `src/worker` scan root, the native
+`scheduled(event, env, ctx)` entry and `worker:crons:write` / `worker:crons:check` commands.
+Add a Worker-compatible `@Component` service under that root and annotate its method with
+`@Cron`. No second service, dependency or handler list is required. Inject
+`CLOUDFLARE_ENV_TOKEN` for native bindings. Select an application-owned `ExecutionManager`
+in `workerScheduling.ts` before enabling a schedule; the scaffold supplies no default store.
+
+`worker:crons:write` updates the reviewed `worker-crons.manifest.json` and the owned
+Wrangler `[triggers].crons` block. The check rebuilds DI/runtime artifacts and fails when
+the declaration or Wrangler output is stale. Build, development and smoke run this check;
+they never adopt changed schedules automatically. Runtime imports start no scheduler.
+
+The supported syntax is five-field UTC cron with wildcards, lists, ascending ranges and
+positive steps, including named months and weekdays. It follows Cloudflare's native weekday
+numbering, **1=Sunday through 7=Saturday**; use names when migrating from another dialect.
+Non-UTC timezones, seconds fields, `L`, `W`, `#`, `?`, duplicate/blank binding names and
+symbol methods fail with `CLOUDFLARE_CRON_UNSUPPORTED` before deployment. Disabled Cron
+methods are omitted. See the [Cloudflare Cron contract](https://developers.cloudflare.com/workers/configuration/cron-triggers/).
+
+A Cron method receives `{ cron, scheduledTime }` and the common `TaskExecutionContext`.
+The adapter binds the callback to its `ApplicationRuntime`, forwards completion to
+`waitUntil`, and uses TaskRunner for identity, attempt fencing, exceptions and timeouts.
+Repeated firings share identity by application id, binding id, cron and scheduled time.
+Independent applications need distinct stable ids or stores. Atomic durable identity and
+attempt fencing remain the selected execution store's responsibility; local fixtures do not
+prove distributed persistence or exactly-once effects.
+
+The default timeout is 30 seconds. An optional `@Task` on the same method retains its
+`maxAttempts`, retry classifier and timeout/recovery policy. Timeouts must be positive and
+at most 15 minutes. Abort is cooperative and cannot undo external effects. Long work should
+dispatch through the common task/workflow transport. Retryable failures follow TaskRunner's
+existing retry state; terminal failures and indeterminate timeouts require its existing recovery
+policy. There is no separate host retry loop or ledger.
+
+The native scheduled adapter is Workers-only with `nodejs_compat`; Node and Lambda do not
+gain a scheduler. Local workerd tests cover DI/env forwarding, repeated firings, exception and
+timeout evidence, generated drift and the existing fetch path. Live Cloudflare deployment,
+execution-store certification and full SaaS provider integration remain unverified.

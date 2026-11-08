@@ -1,0 +1,238 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "package": "preset-cloudflare",
+      "classification": "runtime-adapter",
+      "reason": "An opt-in native scheduled Host adapter compiles only application-selected Cron metadata, validates manifest drift and delegates execution policy to TaskRunner.",
+      "files": {
+        "packages/preset-cloudflare/package.json": "df2193f252d57d5ddc03cfeb3bfd71aa1ad7c9482ea99e1d0072159997723763",
+        "packages/preset-cloudflare/tsup.config.ts": "536f871a143e477b26e62b3c6e66a7ae8dfaaaba5d38d7d45ea8de4073de7f31",
+        "packages/preset-cloudflare/src/cron.ts": "fcffdc9a0715f5a356d04afc8c33acd5a63508a8a1c0e1dac7dae300c12e6e1b",
+        "packages/preset-cloudflare/src/scheduled.ts": "5c3319ec6dc5ca97df8beb8b2d0a86aaaf7812e1f7410ced815607af2e1ce6cb"
+      },
+      "catalogRuntimes": ["cloudflare-workers"],
+      "profiles": {
+        "kubernetes": {
+          "result": "unsupported",
+          "reason": "This native scheduled entry receives Workers controllers and does not provide a Kubernetes Node Host or scheduler.",
+          "providers": ["@croco/preset-cloudflare/scheduled"],
+          "constraints": [
+            "Use a separately selected Node scheduler/transport; this change does not alter Node or QStash execution."
+          ],
+          "references": [
+            "packages/preset-cloudflare/README.md",
+            "packages/preset-cloudflare/src/scheduled.ts",
+            "packages/preset-cloudflare/src/tests/CloudflareScheduledWorker.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "unsupported",
+          "reason": "A Workers scheduled controller is not a Lambda event and this adapter owns no AWS invocation, scheduling or flush boundary.",
+          "providers": ["@croco/preset-cloudflare/scheduled"],
+          "constraints": [
+            "Use the existing Lambda Host and an explicit scheduler integration separately."
+          ],
+          "references": [
+            "packages/preset-cloudflare/README.md",
+            "packages/preset-cloudflare/src/scheduled.ts",
+            "packages/preset-cloudflare/src/tests/CloudflareScheduledWorker.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "supported",
+          "host": "workers",
+          "reason": "The native scheduled callback executes in local workerd with application DI/env isolation and common task execution outcomes.",
+          "providers": [
+            "@croco/preset-cloudflare/application",
+            "@croco/preset-cloudflare/scheduled",
+            "@croco/tasks-core",
+            "@croco/execution-core"
+          ],
+          "constraints": [
+            "Requires nodejs_compat for AsyncLocalStorage.",
+            "Select an application-owned Worker-compatible durable ExecutionManager with atomic identity and attempt fencing before enabling Cron declarations.",
+            "Local tests use a synthetic in-memory execution store; no distributed durability, exactly-once effects, live Cloudflare deployment, provider certification or npm release is claimed.",
+            "UTC five-field subset only; numeric weekdays use the native 1=Sunday through 7=Saturday dialect.",
+            "Task timeout is cooperative and bounded; long work is dispatched separately."
+          ],
+          "references": [
+            "packages/preset-cloudflare/README.md",
+            "packages/preset-cloudflare/src/scheduled.ts",
+            "packages/preset-cloudflare/src/tests/CloudflareScheduledWorker.spec.ts",
+            "packages/create-croco-app/src/tests/CloudflareCronScaffold.spec.ts"
+          ],
+          "evidence": {
+            "kind": "host-runtime",
+            "runtime": "cloudflare-workers",
+            "path": "packages/preset-cloudflare/src/tests/CloudflareScheduledWorker.spec.ts",
+            "testName": "runs native scheduled callbacks in workerd with DI bindings and persisted duplicate outcomes",
+            "sha256": "a0b23a6dbd31944b845e00fd73b75a6ee581f54ef520a0098827200f2ecd8d58"
+          }
+        }
+      }
+    },
+    {
+      "package": "create-croco-app",
+      "classification": "deployment-profile",
+      "reason": "The generator emits Worker-only DI scanning, Cron/Wrangler drift gates and a native scheduled entry without choosing an execution store or introducing a scheduler.",
+      "files": {
+        "packages/create-croco-app/package.json": "ce446393b0d6f3e0e783f4be91cb161216864e5b19091b3cea2c450af74c8684",
+        "packages/create-croco-app/src/generator.ts": "76e64b54ee222fa716d149a6af291cc69dc78fac26218f3410eba1921702398c",
+        "packages/create-croco-app/src/helpers/croco-ranges.ts": "204fd6e18bab947e9040f6d7a6f1073155bcb01b6894987d5ddc13f6a6c1caf8",
+        "packages/create-croco-app/templates/saas/apps/api-server/scripts/worker-crons.ts": "27d3efdca077ea22174bf87f5c603351245f9b02305c47cc8e51a3ff23677e8f",
+        "packages/create-croco-app/templates/saas/apps/api-server/src/worker.ts": "f9a7d8162f39e7d92432e15142cde879c018f07ac2400bda7659764843937325",
+        "packages/create-croco-app/templates/saas/apps/api-server/src/workerBootstrap.ts.hbs": "e3cecaf95426748f7147243311bd239b0a445728f015892d489388804ea5199a",
+        "packages/create-croco-app/templates/saas/apps/api-server/src/workerScheduling.ts.hbs": "d82c2127e2c92822a58388d3cf3e7b6dd8f767e0b8622bf260f705f04cc8f4fb",
+        "packages/create-croco-app/templates/saas/apps/api-server/worker.di.config.ts": "84a04126a765efa173c56a763bdac5dc32f82bec99781489003814cada5dcb6e",
+        "packages/create-croco-app/templates/saas/apps/api-server/worker-crons.manifest.json": "2e566842ba0c2693710b81ce0b6233885d81ab81e708ed6b1de4b85d8a29f99c",
+        "packages/create-croco-app/templates/saas/apps/api-server/wrangler.toml.hbs": "768a0f7fb9ca145822a8641084f463acbeba1b67ac41b3cc71077c2521aac7bb",
+        "packages/create-croco-app/src/saas-provider-profiles.ts": "8dccb110fc9d2f8ff765ca132d4f460a281b247529a4295feede8fcca428fa98",
+        "packages/create-croco-app/templates/saas/apps/api-server/scripts/generate-di.ts": "8b0a5000b2427aee51eb9b16e15a0ac075b1665d63b2435d861152aac1546569"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "The CLI is build-time Tooling, not a deployed Host. It emits Workers-only Cron artifacts whose native runtime is reviewed separately in preset-cloudflare; existing Node and Lambda paths are preserved.",
+          "providers": [],
+          "constraints": [
+            "Tooling catalog runtimes remain unclaimed.",
+            "Generated Worker services use an explicit scan root and selected durable store; bootstrap-only SaaS capability states and live certification limits are unchanged."
+          ],
+          "references": [
+            "packages/create-croco-app/src/generator.ts",
+            "packages/create-croco-app/src/tests/CloudflareCronScaffold.spec.ts",
+            "packages/create-croco-app/templates/saas/apps/api-server/src/workerBootstrap.ts.hbs"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "The CLI is build-time Tooling, not a deployed Host. It emits Workers-only Cron artifacts whose native runtime is reviewed separately in preset-cloudflare; existing Node and Lambda paths are preserved.",
+          "providers": [],
+          "constraints": [
+            "Tooling catalog runtimes remain unclaimed.",
+            "Generated Worker services use an explicit scan root and selected durable store; bootstrap-only SaaS capability states and live certification limits are unchanged."
+          ],
+          "references": [
+            "packages/create-croco-app/src/generator.ts",
+            "packages/create-croco-app/src/tests/CloudflareCronScaffold.spec.ts",
+            "packages/create-croco-app/templates/saas/apps/api-server/src/workerBootstrap.ts.hbs"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "The CLI is build-time Tooling, not a deployed Host. It emits Workers-only Cron artifacts whose native runtime is reviewed separately in preset-cloudflare; existing Node and Lambda paths are preserved.",
+          "providers": [],
+          "constraints": [
+            "Tooling catalog runtimes remain unclaimed.",
+            "Generated Worker services use an explicit scan root and selected durable store; bootstrap-only SaaS capability states and live certification limits are unchanged."
+          ],
+          "references": [
+            "packages/create-croco-app/src/generator.ts",
+            "packages/create-croco-app/src/tests/CloudflareCronScaffold.spec.ts",
+            "packages/create-croco-app/templates/saas/apps/api-server/src/workerBootstrap.ts.hbs"
+          ]
+        }
+      }
+    },
+    {
+      "package": "problems-core",
+      "classification": "pure-contract",
+      "reason": "Generated Problem registry types and runtime metadata include the scheduled Host and build-time Cron diagnostics; no Host, provider, storage or lifecycle behavior is added to the Kernel.",
+      "files": {
+        "packages/problems-core/src/generated/problem-code-registry.ts": "85a05f643e0ae65b9ccb137651407d790f1be537f7352e2b1bf858c76e47bded"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "This is generated diagnostic metadata shared by consumers; it performs no infrastructure I/O, scheduling or resource ownership.",
+          "providers": [],
+          "constraints": [
+            "Native scheduled runtime support is reviewed under preset-cloudflare; metadata is not provider certification."
+          ],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "docs/problem-code-registry.json"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "This is generated diagnostic metadata shared by consumers; it performs no infrastructure I/O, scheduling or resource ownership.",
+          "providers": [],
+          "constraints": [
+            "Native scheduled runtime support is reviewed under preset-cloudflare; metadata is not provider certification."
+          ],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "docs/problem-code-registry.json"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "This is generated diagnostic metadata shared by consumers; it performs no infrastructure I/O, scheduling or resource ownership.",
+          "providers": [],
+          "constraints": [
+            "Native scheduled runtime support is reviewed under preset-cloudflare; metadata is not provider certification."
+          ],
+          "references": [
+            "packages/problems-core/src/generated/problem-code-registry.ts",
+            "docs/problem-code-registry.json"
+          ]
+        }
+      }
+    },
+    {
+      "package": "esbuild-plugin",
+      "classification": "pure-contract",
+      "reason": "Expose the existing default scan exclusions as a frozen readonly value so generated Worker tooling can extend the canonical policy without copying it or changing ordinary compilation.",
+      "files": {
+        "packages/esbuild-plugin/src/index.ts": "0ff91189cecad4b7670ccbeda1ee827d83f266872e77326ab59b98d9603fff8c",
+        "packages/esbuild-plugin/src/libs/DiCompiler.ts": "a88a052f3e66c105f8d1f80b128bc977de58389a4144ff5172777307574a4969"
+      },
+      "catalogRuntimes": [],
+      "profiles": {
+        "kubernetes": {
+          "result": "not-applicable",
+          "reason": "The static compiler exclusion list has no deployed Host, provider, storage or lifecycle dependency. Worker-only scan selection is a build-time consumer of this existing policy.",
+          "providers": [],
+          "constraints": [
+            "This does not implement or certify a runtime scheduler; the native scheduled adapter is reviewed under preset-cloudflare."
+          ],
+          "references": [
+            "packages/esbuild-plugin/src/index.ts",
+            "packages/esbuild-plugin/src/libs/DiCompiler.ts",
+            "packages/create-croco-app/src/tests/CloudflareCronScaffold.spec.ts"
+          ]
+        },
+        "aws-lambda": {
+          "result": "not-applicable",
+          "reason": "The static compiler exclusion list has no deployed Host, provider, storage or lifecycle dependency. Worker-only scan selection is a build-time consumer of this existing policy.",
+          "providers": [],
+          "constraints": [
+            "This does not implement or certify a runtime scheduler; the native scheduled adapter is reviewed under preset-cloudflare."
+          ],
+          "references": [
+            "packages/esbuild-plugin/src/index.ts",
+            "packages/esbuild-plugin/src/libs/DiCompiler.ts",
+            "packages/create-croco-app/src/tests/CloudflareCronScaffold.spec.ts"
+          ]
+        },
+        "cloudflare": {
+          "result": "not-applicable",
+          "reason": "The static compiler exclusion list has no deployed Host, provider, storage or lifecycle dependency. Worker-only scan selection is a build-time consumer of this existing policy.",
+          "providers": [],
+          "constraints": [
+            "This does not implement or certify a runtime scheduler; the native scheduled adapter is reviewed under preset-cloudflare."
+          ],
+          "references": [
+            "packages/esbuild-plugin/src/index.ts",
+            "packages/esbuild-plugin/src/libs/DiCompiler.ts",
+            "packages/create-croco-app/src/tests/CloudflareCronScaffold.spec.ts"
+          ]
+        }
+      }
+    }
+  ]
+}

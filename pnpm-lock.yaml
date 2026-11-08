@@ -3215,6 +3215,12 @@ importers:
         specifier: 2.9.0
         version: 2.9.0
     devDependencies:
+      '@croco/esbuild-plugin':
+        specifier: workspace:*
+        version: link:../esbuild-plugin
+      '@croco/preset-cloudflare':
+        specifier: workspace:*
+        version: link:../preset-cloudflare
       '@croco/tenant-core':
         specifier: workspace:*
         version: link:../tenant-core
@@ -3224,9 +3230,18 @@ importers:
       '@types/handlebars':
         specifier: ^4.1.0
         version: 4.1.0
+      esbuild:
+        specifier: 0.27.7
+        version: 0.27.7
+      miniflare:
+        specifier: 4.20260312.0
+        version: 4.20260312.0(@types/node@24.13.2)
       tsup:
         specifier: ^8.5.1
         version: 8.5.1(patch_hash=ce9dbc714c187cea78868f1e68c1a0e5097ddbceb7e976a564d94f2291b5bcb9)(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.18)(supports-color@10.2.2)(tsx@4.21.0)(typescript@6.0.3)(yaml@2.9.0)
+      tsx:
+        specifier: ^4.0.0
+        version: 4.21.0
       typescript:
         specifier: 6.0.3
         version: 6.0.3
@@ -5465,6 +5480,9 @@ importers:
 
   packages/preset-cloudflare:
     dependencies:
+      '@croco/execution-core':
+        specifier: workspace:*
+        version: link:../execution-core
       '@croco/framework-context':
         specifier: workspace:*
         version: link:../framework-context
@@ -5474,10 +5492,25 @@ importers:
       '@croco/framework-preset':
         specifier: workspace:*
         version: link:../framework-preset
+      '@croco/problems-core':
+        specifier: workspace:*
+        version: link:../problems-core
+      '@croco/tasks-core':
+        specifier: workspace:*
+        version: link:../tasks-core
       '@croco/transports-http':
         specifier: workspace:*
         version: link:../transports-http
+      '@croco/triggers-core':
+        specifier: workspace:*
+        version: link:../triggers-core
     devDependencies:
+      esbuild:
+        specifier: 0.27.7
+        version: 0.27.7
+      miniflare:
+        specifier: 4.20260312.0
+        version: 4.20260312.0(@types/node@24.13.2)
       tsup:
         specifier: 8.5.1
         version: 8.5.1(patch_hash=ce9dbc714c187cea78868f1e68c1a0e5097ddbceb7e976a564d94f2291b5bcb9)(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.18)(supports-color@10.2.2)(tsx@4.21.0)(typescript@6.0.3)(yaml@2.9.0)

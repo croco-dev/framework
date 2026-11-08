@@ -37,6 +37,22 @@ If every first-party option is unavailable, incompatible with the runtime, too i
 4. Add conformance and failure-path tests appropriate to that contract.
 5. Report that the adapter is application-scoped and not a certified Croco implementation.
 
+## Workers scheduled callbacks
+
+Use `@croco/preset-cloudflare/scheduled` for the native `scheduled` event. Compile only the
+application's generated DI graph with `compileCloudflareCrons`; bind its reviewed manifest,
+native env and explicitly selected `ExecutionManager` through `createCloudflareScheduledHandler`.
+The `saas-cloudflare` scaffold discovers `@Component` / `@Cron` services under `src/worker`
+and owns `worker:crons:write` / `worker:crons:check` plus the Wrangler schedule block. Do not
+maintain a second provider/handler list or expose scheduled dispatch as an unauthenticated HTTP route.
+
+Schedules use Cloudflare's native five-field UTC dialect (1=Sunday through 7=Saturday);
+named weekdays avoid migration ambiguity. Unsupported timezone/Quartz syntax and manifest
+drift fail explicitly. TaskRunner owns duplicate identity, attempt fencing, failure and timeout
+recovery. Select a durable Worker-compatible execution store before enabling schedules; no
+default store, new scheduler, host retry loop or exactly-once guarantee is supplied. Native
+workerd evidence does not certify Cloudflare deployment, the store or full SaaS providers.
+
 ## Workers rate limiting
 
 `@croco/ratelimit-upstash` supports an explicit fetch-only `createUpstashRateLimitClient({ url, token })`

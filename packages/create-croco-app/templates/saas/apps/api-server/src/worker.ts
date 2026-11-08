@@ -1,4 +1,5 @@
 import type { CloudflareFetchEnv, CloudflareHostFetchHandler } from "@croco/preset-cloudflare";
+import type { CloudflareScheduledHandler } from "@croco/preset-cloudflare/scheduled";
 import { createWorkerApplication, workerProblemResponse } from "./workerBootstrap";
 
 const applications = new WeakMap<
@@ -6,14 +7,18 @@ const applications = new WeakMap<
   Promise<Awaited<ReturnType<typeof createWorkerApplication>>>
 >();
 
-const fetch: CloudflareHostFetchHandler = async (request, env, context) => {
+function getApplication(env: CloudflareFetchEnv) {
   let ready = applications.get(env);
   if (ready === undefined) {
     ready = createWorkerApplication(env);
     applications.set(env, ready);
   }
+  return ready;
+}
+
+const fetch: CloudflareHostFetchHandler = async (request, env, context) => {
   try {
-    const app = await ready;
+    const app = await getApplication(env);
     return await app.fetch(request, env, context);
   } catch {
     // Native binding values, credentials and provider causes never enter public Problems.
@@ -21,4 +26,9 @@ const fetch: CloudflareHostFetchHandler = async (request, env, context) => {
   }
 };
 
-export default { fetch };
+const scheduled: CloudflareScheduledHandler = async (event, env, context) => {
+  const app = await getApplication(env);
+  await app.scheduled(event, env, context);
+};
+
+export default { fetch, scheduled };

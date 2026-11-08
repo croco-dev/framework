@@ -516,12 +516,18 @@ function writeSaasProviderPackageDependencies(
   if (manifest.profile.runtimeTarget === "node") {
     scripts["dev"] = "tsx watch src/index.ts";
   } else if (manifest.profile.runtimeTarget === "cloudflare-workers") {
-    scripts["dev:worker"] = "wrangler dev --config wrangler.toml";
-    scripts["build:worker"] = "wrangler deploy --dry-run --outdir dist/wrangler";
-    scripts["worker:smoke"] = "node scripts/worker-smoke.mjs";
+    scripts["worker:crons:write"] = "tsx scripts/worker-crons.ts --write";
+    scripts["worker:crons:check"] = "tsx scripts/worker-crons.ts";
+    scripts["di:generate"] =
+      "tsx scripts/generate-di.ts --worker-tooling && pnpm worker:crons:check";
+    scripts["dev:worker"] = "pnpm di:generate && wrangler dev --config wrangler.toml";
+    scripts["build:worker"] =
+      "pnpm di:generate && wrangler deploy --dry-run --outdir dist/wrangler";
+    scripts["worker:smoke"] = "pnpm di:generate && node scripts/worker-smoke.mjs";
     packageJson.devDependencies = {
       ...packageJson.devDependencies,
       wrangler: "^4.73.0",
+      "smol-toml": "1.7.0",
     };
   }
   packageJson.scripts = scripts;
@@ -540,6 +546,18 @@ function writeSaasProviderPackageDependencies(
     });
   }
   if (manifest.profile.runtimeTarget !== "cloudflare-workers") {
+    for (const path of [
+      "worker.di.config.ts",
+      "worker-crons.manifest.json",
+      "scripts/worker-crons.ts",
+      "src/workerScheduling.ts",
+    ]) {
+      rmSync(join(targetDir, "apps", "api-server", path), { force: true });
+    }
+    rmSync(join(targetDir, "apps", "api-server", "src", "worker"), {
+      recursive: true,
+      force: true,
+    });
     rmSync(join(targetDir, "apps", "api-server", "scripts", "worker-smoke.mjs"), { force: true });
     rmSync(join(targetDir, "apps", "api-server", "src", "tests", "WorkerBootstrap.spec.ts"), {
       force: true,
@@ -572,6 +590,8 @@ function writeSaasRootHostScripts(
     scripts["dev:worker"] = "pnpm --filter ./apps/api-server dev:worker";
     scripts["build:worker"] = "pnpm --filter ./apps/api-server build:worker";
     scripts["worker:smoke"] = "pnpm --filter ./apps/api-server worker:smoke";
+    scripts["worker:crons:write"] = "pnpm --filter ./apps/api-server worker:crons:write";
+    scripts["worker:crons:check"] = "pnpm --filter ./apps/api-server worker:crons:check";
     packageJson.scripts = scripts;
   }
 

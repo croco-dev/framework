@@ -5,6 +5,7 @@ export default defineConfig({
     index: "src/index.ts",
     application: "src/application.ts",
     fetch: "src/fetch.ts",
+    scheduled: "src/scheduled.ts",
   },
   format: ["esm"],
   dts: true,

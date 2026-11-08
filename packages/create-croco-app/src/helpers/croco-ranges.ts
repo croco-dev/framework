@@ -61,6 +61,7 @@ const EXTERNAL_CROCO_PACKAGE_RANGES = {
   "@croco/transports-cloudflare-workers": "^0.0.4",
   "@croco/transports-http": "^0.0.4",
   "@croco/triggers-qstash": "^0.0.4",
+  "@croco/triggers-core": "^0.0.4",
   "@croco/tx-core": "^0.0.4",
   "@croco/tx-drizzle": "^0.0.4",
   "@croco/ui-astryx": "^0.1.0",
