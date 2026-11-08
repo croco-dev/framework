@@ -385,16 +385,13 @@ function createEmitContext(
     skipFileDependencyResolution: true,
   });
   for (const sourceFile of analysisContext.project.getSourceFiles()) {
-    if (sourceFile.isDeclarationFile()) {
-      const declaration = project.addSourceFileAtPath(sourceFile.getFilePath());
-      applyNodeModuleFormat(declaration, project.getCompilerOptions());
-    }
+    const analysisSource = project.addSourceFileAtPath(sourceFile.getFilePath());
+    applyNodeModuleFormat(analysisSource, project.getCompilerOptions());
   }
-  const sourceFiles = analysisContext.sourceFiles.map((sourceFile) => {
-    const emittedSource = project.addSourceFileAtPath(sourceFile.getFilePath());
-    applyNodeModuleFormat(emittedSource, project.getCompilerOptions());
-    return emittedSource;
-  });
+  // The compiler keeps analysis-only sources; this list alone controls runtime emission.
+  const sourceFiles = analysisContext.sourceFiles.map((sourceFile) =>
+    project.addSourceFileAtPath(sourceFile.getFilePath()),
+  );
   return { project, sourceFiles };
 }
 

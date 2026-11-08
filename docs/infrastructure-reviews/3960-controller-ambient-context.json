@@ -6,7 +6,7 @@
       "classification": "pure-contract",
       "reason": "Preserve application ambient type context and explicitly selected declaration errors during shared build-time contract generation without widening runtime imports or emission. The Tooling catalog has no deployed runtime claims.",
       "files": {
-        "packages/protocol-codegen/src/libs/ControllerProject.ts": "64c5a101ca618dc80ffec15b2d710a4b17e7db0a58402382eec2ef2269e85245",
+        "packages/protocol-codegen/src/libs/ControllerProject.ts": "94a1791fa65ed4ee4b7757a7aa980e3defe0091f576198d802610aaafcbf1c1f",
         "packages/protocol-codegen/src/libs/RestControllerSources.ts": "430c0ddee4c4d3b28e3e9ef67a4238c06c9100bde2735e7e3b2693541654fe11"
       },
       "catalogRuntimes": [],
@@ -60,7 +60,7 @@
       "classification": "pure-contract",
       "reason": "Synchronize generated Problem source-location line metadata after the loader change; no error code, serialization format or host execution contract changes.",
       "files": {
-        "packages/problems-core/src/generated/problem-code-registry.ts": "dcb6605164df934ea0a0edf13dfbbc5bdcf1585bb8ae65f25e9115a2fb8f6613"
+        "packages/problems-core/src/generated/problem-code-registry.ts": "94441fb36eee67a5b79b8c25912e1516050961fd168dcc24b9c3b141f3fc9101"
       },
       "catalogRuntimes": [],
       "profiles": {

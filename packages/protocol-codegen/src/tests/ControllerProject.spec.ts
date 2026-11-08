@@ -110,9 +110,14 @@ describe("createControllerProject", () => {
     },
   );
 
-  it.each(["module", "commonjs"] as const)(
-    "resolves ambient type imports with the NodeNext %s package format",
-    async (packageType) => {
+  it.each([
+    { packageType: "module", typeDependency: "direct" },
+    { packageType: "commonjs", typeDependency: "direct" },
+    { packageType: "module", typeDependency: "source" },
+    { packageType: "commonjs", typeDependency: "source" },
+  ])(
+    "resolves ambient type imports with the NodeNext $packageType package format ($typeDependency)",
+    async ({ packageType, typeDependency }) => {
       const root = createTemporaryDirectory();
       const expected = packageType === "module" ? "esm" : "cjs";
       writeJson(path.join(root, "package.json"), { type: packageType });
@@ -149,14 +154,29 @@ describe("createControllerProject", () => {
         path.join(root, "node_modules", "reflect-metadata"),
         "dir",
       );
+      if (typeDependency === "source") {
+        writeFile(
+          path.join(root, "src", "type-defs.ts"),
+          "export type { Selected, Value } from 'ambient-format'; throw new Error('analysis-only source executed');",
+        );
+      }
+      const typeSource = typeDependency === "source" ? "./type-defs.js" : "ambient-format";
       writeFile(
         path.join(root, "src", "globals.d.ts"),
-        "import type { Selected, Value } from 'ambient-format'; declare global { type AppSelected = Selected; type AppValue = Value; }",
+        `import type { Selected, Value } from '${typeSource}'; declare global { type AppSelected = Selected; type AppValue = Value; }`,
       );
       writeFile(
         path.join(root, "src", "Controller.ts"),
         `import 'reflect-metadata'; function Tag(): PropertyDecorator { return () => {}; } export class Controller { static value: AppSelected = '${expected}'; @Tag() value!: AppValue; static get valueType() { return Reflect.getMetadata('design:type', Controller.prototype, 'value'); } }`,
       );
+      const parsed = typescript.getParsedCommandLineOfConfigFile(
+        path.join(root, "tsconfig.json"),
+        {},
+        { ...typescript.sys, onUnRecoverableConfigFileDiagnostic: () => {} },
+      );
+      expect(parsed).toBeDefined();
+      const application = typescript.createProgram(parsed?.fileNames ?? [], parsed?.options ?? {});
+      expect(typescript.getPreEmitDiagnostics(application)).toEqual([]);
       const session = createControllerProject({ cwd: root, controllers: "src/Controller.ts" });
       try {
         expect(
@@ -168,6 +188,7 @@ describe("createControllerProject", () => {
         expect((exports.Controller as { valueType: unknown }).valueType).toBe(
           packageType === "module" ? String : Number,
         );
+        expect(fs.readdirSync(session.emitDir, { recursive: true })).not.toContain("type-defs.js");
       } finally {
         session.dispose();
       }
